@@ -16,7 +16,7 @@ export type FreeTimeFirstDay = "eventDay" | "nextDay";
 
 /**
  * The tariff terms a free-time count needs. Free time is set by carrier, lane, trade and service
- * contract, never by port, so every term is a parameter and none has a default.
+ * contract, never by port, so every term is a parameter and no counting term has a default.
  *
  * - `basis`: `"calendar"` counts every local day, so a weekend burns two free days while the
  *   terminal is shut; `"working"` counts only the days `calendar` marks as working, and the

@@ -26,8 +26,7 @@ No world regulation or industry standard governs how demurrage and detention day
   - `demurrageClock(events: { type: 'discharged' | 'available' | 'gatedOut' | 'emptyReturned' | 'emptyReleased' | 'gatedIn' | 'loaded', at: string }[], scope: 'demurrage' | 'detention' | 'storage' | 'combined', options: { direction: 'import' | 'export', startEvent?: 'discharged' | 'available' }): { start: string, end: string } | null` — Selects the correct start and end events for the requested charge and leg. Import: demurrage and storage run from discharge (or availability) to gate-out, detention from gate-out to empty return, combined from discharge to empty return. Export: demurrage and storage run from full gate-in to loaded on board, detention from empty release to full gate-in, combined from empty release to loaded.
 - Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)):
   - `guides/industries/intermodal-free-time-and-demurrage.mdx` — the three clocks, which day is
-    day one, calendar or working days, the half-open expiry, charged dates and tiers, and what
-    the US invoice rule (46 CFR 541.6), ported from the README section.
+    day one, calendar or working days, the half-open expiry, charged dates and tiers, and what the US invoice rule (46 CFR 541.6) requires an invoice to print, ported from the README section.
   - Scenarios: `free-time-start-day` (`freeTimeExpiry`), `demurrage-across-a-weekend`
     (`chargeableDays`), `detention-is-not-demurrage` (`demurrageClock`).
   - `mistakes/intermodal.mdx` — a defaulted `firstDay`, a per-port free-time table, counting in
@@ -51,7 +50,7 @@ No world regulation or industry standard governs how demurrage and detention day
 - **`chargedDates` makes the count auditable instead of asserted.** It is the list a carrier's day-numbered tariff grid is applied to, and on US trades the list the invoice must print ("the specific date(s) for which demurrage and/or detention were charged", 46 CFR 541.6(b)(8), the US invoice rule).
 - **Tiers are day bands, not rates.** Carrier tariffs escalate by day band; `byTier` returns the days in each band so the consumer can apply its own rates. GMT computes days, never money.
 - `available` exists because some tariffs start the import clock at the container availability date rather than at discharge, and 46 CFR 541.6 requires that date on the invoice. `startEvent` selects it explicitly; the default is `'discharged'` because that is the classic definition of demurrage.
-- Storage as a third clock with its own free time is the terminal's charge, not the carrier's: ACL's tariff lists "Import Quay Rent" for Liverpool, Dublin and Cork with its own counting rule beside demurrage ([ACL](https://www.aclcargo.com/free-time-demurrage/)). 46 CFR 541.3 folds terminal space into its single "demurrage or detention" definition, so the invoice rules apply to it too.
+- Storage is the charge for the terminal's space, paid "to the terminal/port or to the shipping line/carrier on behalf of the terminal/port" ([DCSA glossary](https://dcsa.org/standards/shipping-glossary)); it has its own free time and counting rule, as ACL's "Import Quay Rent" entries for Liverpool, Dublin and Cork show, paid there to the carrier ([ACL](https://www.aclcargo.com/free-time-demurrage/)). 46 CFR 541.3 folds terminal space into its single "demurrage or detention" definition, so the invoice rules apply to it too.
 - Working-day basis suspends the clock on weekends and holidays; calendar basis does not. Both are implemented over the same interval algebra so they cannot drift apart.
 - Invoice, dispute and resolution deadlines under 46 CFR 541.7–541.8 are INT-58's problem; this story stops at the day count.
 
@@ -94,16 +93,15 @@ Decisions of record (owner, 2026-09-24):
   materialised with `Array.from` and checked with `Number.isSafeInteger` before it is read.
 - **`chargeBasis` is a separate term with no default** (decided against the published tariffs,
   2026-09-24; research record linked above). No regulation or standard fixes how days after
-  expiry are counted. The dominant published shape is working-day free time with every calendar
-  day charged after it (CMA CGM US: "FREE DAYS ARE IN WORKING DAYS ... BILLABLE IN CALENDAR
+  expiry are counted. Outside the US free time and charges are mostly both calendar days; where free time is in working days (the usual US shape), every calendar day is mostly charged after it (CMA CGM US: "FREE DAYS ARE IN WORKING DAYS ... BILLABLE IN CALENDAR
   DAYS"; Hapag-Lloyd US "Rate per Calendar day"; ACL "Once free time expires ... charged on
   calendar days"; Maersk and Hapag-Lloyd switched US charging to calendar days in 2024). Working-day
   charging is real and a legal requirement in one place: Cal. Bus. & Prof. Code § 22928 forbids
   charges while the gate is closed or on a holiday. The first draft let `basis: "working"` also
-  suspend charging, which matches neither shape's name and under-bills the dominant one.
+  suspend charging, which matches neither shape's name and under-bills the usual US one.
   `chargeBasis` has no default, on the story's own rule: it is worth every closed day after expiry.
 - **`demurrageClock` covers both legs and the combined clock** (same research). Maersk's terms,
-  CMA CGM's general terms, Hapag-Lloyd and ACL agree on the events: export demurrage from full
+  CMA CGM's general terms and ACL agree on the events on both legs, Hapag-Lloyd on imports: export demurrage from full
   gate-in to loaded on board, export detention from empty release to full gate-in, and a named
   merged product ("Combined", "merged", "Combined Detention and Demurrage Tariff") from discharge to
   empty return or empty release to loaded. `direction` is required because the same scope selects

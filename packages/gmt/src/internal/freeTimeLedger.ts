@@ -158,6 +158,11 @@ export function bandsByTier(
 export interface LedgerDay {
   start: Temporal.ZonedDateTime;
   date: string;
+  /**
+   * True when the date began before the first instant Temporal represents, so `start` is the
+   * clock start standing in for it. Such a start is never output: it can only anchor the walk.
+   */
+  clamped?: boolean;
 }
 
 /** What `walkFreeTime` returns: the free days, the expiry, and what the dwell used and owes. */
@@ -174,7 +179,20 @@ export interface FreeTimeLedger {
 
 /** The local day holding `zoned`, or `null` when its start cannot be found. */
 function localDayOf(zoned: Temporal.ZonedDateTime): LedgerDay | null {
-  const start = zonedUnitStart(zoned, "day");
+  let start: Temporal.ZonedDateTime | null;
+  try {
+    start = zonedUnitStart(zoned, "day");
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    // The event day began before Temporal's first instant (-271821-04-20T00:00Z in a zone west
+    // of UTC). Its date is still known, and every later day boundary is representable, so the
+    // clock start anchors the walk in its place.
+    return {
+      start: zoned,
+      date: zoned.toPlainDate().toString(),
+      clamped: true,
+    };
+  }
   return start === null
     ? null
     : { start, date: start.toPlainDate().toString() };
@@ -230,8 +248,10 @@ function nextLocalDay(day: LedgerDay): LedgerDay | null | undefined {
  *   starts before `clockEnd`, and a zero-length dwell touches the day it sits on, as `dwellTime`
  *   counts. `used` is the free days touched; `charged` the days from `expiresAt` touched that count
  *   on `chargeCalendar`.
+ * - An event day that began before the first representable instant is still walked from the
+ *   clock start; only an expiry that would be that unrepresentable start is refused.
  * - Returns `null` when the walk would visit more than `MAX_WALKED_DAYS` local days, when a day
- *   boundary cannot be found, or when the expiry lies past the last representable instant.
+ *   boundary cannot be found, or when the expiry lies outside the representable range.
  */
 export function walkFreeTime(
   clockStart: Temporal.ZonedDateTime,
@@ -278,6 +298,8 @@ export function walkFreeTime(
       expiryPending = false;
     } else if (expiresAt === null && counted) {
       if (freeDays === 0) {
+        // With no free time the expiry is day one's start, which must be a real instant.
+        if (day.clamped) return null;
         expiresAt = day.start;
       } else {
         free.push(day);

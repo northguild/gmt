@@ -282,7 +282,7 @@ skills:
       - Measure dwell as elapsed duration plus local calendar days crossed
       - Lay out a container's free time and its half-open expiry in the terminal's local days
       - Count and list the chargeable days of a dwell, with tier bands
-      - Select the events a demurrage, detention or storage clock runs between
+      - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg
 
   - name: GMT Integration
     slug: gmt-integration

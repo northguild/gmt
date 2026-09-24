@@ -64,7 +64,10 @@ const CLOCK_SCOPES: readonly ClockScope[] = [
   "storage",
   "combined",
 ];
-const CLOCK_START_EVENTS: readonly ClockStartEvent[] = ["discharged", "available"];
+const CLOCK_START_EVENTS: readonly ClockStartEvent[] = [
+  "discharged",
+  "available",
+];
 
 /** The export clocks: fixed pairs, no start-event choice. */
 const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
@@ -78,9 +81,11 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  * Pick the two events a charge's clock runs between.
  *
  * No regulation or industry standard fixes these events; the carriers' published tariffs agree
- * on them (Maersk's terms, CMA CGM's general terms, Hapag-Lloyd, ACL), and DCSA's glossary draws
- * the line they rest on: demurrage is charged while the container is inside the terminal or
- * depot, detention while it is outside, and storage is the terminal's own charge for its space.
+ * on them (import: Maersk's terms, CMA CGM's general terms, Hapag-Lloyd, ACL; export: Maersk, CMA
+ * CGM, ACL), and DCSA's glossary draws the line they rest on: demurrage is charged while the
+ * container is inside the terminal or depot, detention while it is outside, and storage is the
+ * charge for the terminal's space, paid to the terminal or to the carrier on its behalf. Export
+ * storage (`gatedIn` → `loaded`) follows from that storage definition; no tariff read quotes it.
  * The merged clock runs demurrage and detention as one period, a named tariff product at Maersk
  * ("Combined"), CMA CGM ("merged") and MSC. `demurrageClock` selects the pair for the charge and
  * direction asked for, so the wrong pair can never reach `chargeableDays`.
@@ -176,7 +181,9 @@ export function demurrageClock(
         : [startEvent, scope === "combined" ? "emptyReturned" : "gatedOut"];
 
   const only = (type: ClockEventType): string | null => {
-    const matches = (list as ClockEvent[]).filter((event) => event.type === type);
+    const matches = (list as ClockEvent[]).filter(
+      (event) => event.type === type,
+    );
     return matches.length === 1 ? matches[0].at : null;
   };
 

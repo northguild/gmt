@@ -266,6 +266,8 @@ which are named, published tariff shapes at three of the four carriers read.
 
 ## Recommendation for GMT
 
+> **Superseded in part (2026-09-24):** the owner-approved spec makes `chargeBasis` required with no default, on the story's own no-default rule; see `issues/INT-12.md` Design notes. The evidence below stands.
+
 **Decision 1 — charge basis is a separate term, calendar by default.** Rung: published tariff (no
 regulation or standard fixes it), with California § 22928 as the one statute mandating the other
 shape. `basis` keeps its meaning from `freeTimeExpiry` (how free days are counted). `chargeableDays`

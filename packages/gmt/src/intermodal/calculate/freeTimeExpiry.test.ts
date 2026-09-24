@@ -116,19 +116,19 @@ describe("freeTimeExpiry", () => {
   // Probe-zone transitions (coding-standards § Calendar & zone semantics): the expiry is the real
   // first instant of the next local date, and a date is counted once whatever the clock did.
   it.each`
-    clockStart                | freeDays | timeZone               | freeTimeStart   | lastFreeDay     | expiresAt                 | transition
-    ${"2024-09-07T15:00:00Z"} | ${1}     | ${"America/Santiago"}  | ${"2024-09-07"} | ${"2024-09-07"} | ${"2024-09-08T04:00:00Z"} | ${"the 8th's midnight is skipped, so the day starts at 01:00"}
-    ${"2011-12-29T10:00:00Z"} | ${2}     | ${"Pacific/Apia"}      | ${"2011-12-29"} | ${"2011-12-31"} | ${"2011-12-31T10:00:00Z"} | ${"the 30th was deleted and is never a free day"}
-    ${"2010-11-06T12:00:00Z"} | ${1}     | ${"America/Goose_Bay"} | ${"2010-11-06"} | ${"2010-11-06"} | ${"2010-11-07T03:00:00Z"} | ${"the 7th starts at 00:00 -03:00 before falling back into the 6th"}
-    ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/New_York"}  | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"the 25-hour fall-back day is one day"}
-    ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/Havana"}    | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"a repeated midnight on the same date is one day"}
-    ${"2024-09-28T12:00:00Z"} | ${1}     | ${"Pacific/Chatham"}   | ${"2024-09-29"} | ${"2024-09-29"} | ${"2024-09-29T10:15:00Z"} | ${"a +12:45 spring-forward day ends at 00:00 +13:45"}
-    ${"2010-11-07T03:00:30Z"} | ${1}     | ${"America/Goose_Bay"} | ${"2010-11-07"} | ${"2010-11-07"} | ${"2010-11-08T04:00:00Z"} | ${"the clock starts in the one-minute first pass of the 7th: the re-entered 6th is never a free day"}
-    ${"2010-11-07T03:00:30Z"} | ${2}     | ${"America/Goose_Bay"} | ${"2010-11-07"} | ${"2010-11-08"} | ${"2010-11-09T04:00:00Z"} | ${"the same start with two free days runs forward, not back into the 6th"}
-    ${"1844-12-30T12:00:00Z"} | ${1}     | ${"Asia/Manila"}       | ${"1844-12-29"} | ${"1844-12-29"} | ${"1844-12-30T15:56:08Z"} | ${"the date line crossing before the polyfill's transition search floor"}
+    clockStart                | freeDays | timeZone                 | freeTimeStart   | lastFreeDay     | expiresAt                 | transition
+    ${"2024-09-07T15:00:00Z"} | ${1}     | ${"America/Santiago"}    | ${"2024-09-07"} | ${"2024-09-07"} | ${"2024-09-08T04:00:00Z"} | ${"the 8th's midnight is skipped, so the day starts at 01:00"}
+    ${"2011-12-29T10:00:00Z"} | ${2}     | ${"Pacific/Apia"}        | ${"2011-12-29"} | ${"2011-12-31"} | ${"2011-12-31T10:00:00Z"} | ${"the 30th was deleted and is never a free day"}
+    ${"2010-11-06T12:00:00Z"} | ${1}     | ${"America/Goose_Bay"}   | ${"2010-11-06"} | ${"2010-11-06"} | ${"2010-11-07T03:00:00Z"} | ${"the 7th starts at 00:00 -03:00 before falling back into the 6th"}
+    ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/New_York"}    | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"the 25-hour fall-back day is one day"}
+    ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/Havana"}      | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"a repeated midnight on the same date is one day"}
+    ${"2024-09-28T12:00:00Z"} | ${1}     | ${"Pacific/Chatham"}     | ${"2024-09-29"} | ${"2024-09-29"} | ${"2024-09-29T10:15:00Z"} | ${"a +12:45 spring-forward day ends at 00:00 +13:45"}
+    ${"2010-11-07T03:00:30Z"} | ${1}     | ${"America/Goose_Bay"}   | ${"2010-11-07"} | ${"2010-11-07"} | ${"2010-11-08T04:00:00Z"} | ${"the clock starts in the one-minute first pass of the 7th: the re-entered 6th is never a free day"}
+    ${"2010-11-07T03:00:30Z"} | ${2}     | ${"America/Goose_Bay"}   | ${"2010-11-07"} | ${"2010-11-08"} | ${"2010-11-09T04:00:00Z"} | ${"the same start with two free days runs forward, not back into the 6th"}
+    ${"1844-12-30T12:00:00Z"} | ${1}     | ${"Asia/Manila"}         | ${"1844-12-29"} | ${"1844-12-29"} | ${"1844-12-30T15:56:08Z"} | ${"the date line crossing before the polyfill's transition search floor"}
     ${"2024-04-06T12:00:00Z"} | ${2}     | ${"Australia/Lord_Howe"} | ${"2024-04-06"} | ${"2024-04-07"} | ${"2024-04-07T13:30:00Z"} | ${"a 30-minute fall-back day is one day"}
-    ${"2020-10-03T12:00:00Z"} | ${2}     | ${"Antarctica/Casey"}  | ${"2020-10-03"} | ${"2020-10-04"} | ${"2020-10-04T13:00:00Z"} | ${"a three-hour jump on the 4th is one day"}
-    ${"2024-06-14T19:00:00Z"} | ${1}     | ${"+02:00"}            | ${"2024-06-14"} | ${"2024-06-14"} | ${"2024-06-14T22:00:00Z"} | ${"a fixed offset counts days with no DST"}
+    ${"2020-10-03T12:00:00Z"} | ${2}     | ${"Antarctica/Casey"}    | ${"2020-10-03"} | ${"2020-10-04"} | ${"2020-10-04T13:00:00Z"} | ${"a three-hour jump on the 4th is one day"}
+    ${"2024-06-14T19:00:00Z"} | ${1}     | ${"+02:00"}              | ${"2024-06-14"} | ${"2024-06-14"} | ${"2024-06-14T22:00:00Z"} | ${"a fixed offset counts days with no DST"}
   `(
     "finds the real day boundary in $timeZone where $transition",
     ({
@@ -222,30 +222,60 @@ describe("freeTimeExpiry", () => {
     },
   );
 
+  // Temporal's first instant is -271821-04-20T00:00:00Z. West of UTC the event day began before
+  // it, but the date is known and every later boundary is representable, so free time is laid out.
   it.each`
-    clockStart                | freeDays | options                                                                      | reason
-    ${123}                    | ${3}     | ${calendar}                                                                  | ${"non-string clock start"}
-    ${""}                     | ${3}     | ${calendar}                                                                  | ${"empty clock start"}
-    ${"2024-06-14T19:00:00"}  | ${3}     | ${calendar}                                                                  | ${"no offset designator: not an instant"}
-    ${"2024-06-14"}           | ${3}     | ${calendar}                                                                  | ${"a date is not an instant"}
-    ${"2016-12-31T23:59:60Z"} | ${3}     | ${calendar}                                                                  | ${"leap second"}
-    ${friday}                 | ${0}     | ${calendar}                                                                  | ${"no free days means no last free day"}
-    ${friday}                 | ${-1}    | ${calendar}                                                                  | ${"negative free days"}
-    ${friday}                 | ${2.5}   | ${calendar}                                                                  | ${"fractional free days"}
-    ${friday}                 | ${"3"}   | ${calendar}                                                                  | ${"free days as a string"}
-    ${friday}                   | ${2 ** 53} | ${calendar}                                                             | ${"free days past the safe integer range"}
-    ${friday}                 | ${3}     | ${undefined}                                                                 | ${"no options"}
-    ${friday}                 | ${3}     | ${null}                                                                      | ${"null options"}
-    ${friday}                 | ${3}     | ${"calendar"}                                                                | ${"options as a string"}
-    ${friday}                 | ${3}     | ${{ basis: "calendar", timeZone: "America/New_York" }}                       | ${"firstDay has no default"}
-    ${friday}                 | ${3}     | ${{ ...calendar, firstDay: "sameDay" }}                                      | ${"unknown firstDay"}
-    ${friday}                 | ${3}     | ${{ ...calendar, basis: "business" }}                                        | ${"unknown basis"}
-    ${friday}                 | ${3}     | ${{ timeZone: "America/New_York", firstDay: "eventDay" }}                    | ${"basis has no default"}
-    ${friday}                 | ${3}     | ${{ ...calendar, timeZone: "America/Nueva_York" }}                           | ${"invalid timeZone"}
-    ${friday}                 | ${3}     | ${{ ...calendar, timeZone: undefined }}                                      | ${"missing timeZone"}
-    ${friday}                 | ${3}     | ${{ ...calendar, basis: "working" }}                                         | ${"working basis without a calendar"}
-    ${friday}                 | ${3}     | ${{ ...working, calendar: { ...weekdays, weekend: [1, 2, 3, 4, 5, 6, 7] } }} | ${"working basis with a calendar that has no working day"}
-    ${friday}                 | ${3}     | ${{ ...working, calendar: { ...weekdays, holidays: ["2024-02-30"] } }}       | ${"working basis with a holiday that does not exist"}
+    timeZone              | freeTimeStart      | expiresAt
+    ${"Etc/GMT+12"}       | ${"-271821-04-19"} | ${"-271821-04-20T12:00:00Z"}
+    ${"America/New_York"} | ${"-271821-04-19"} | ${"-271821-04-20T04:56:02Z"}
+    ${"Etc/GMT-14"}       | ${"-271821-04-20"} | ${"-271821-04-20T10:00:00Z"}
+    ${"UTC"}              | ${"-271821-04-20"} | ${"-271821-04-21T00:00:00Z"}
+  `(
+    "lays out a free day from the range minimum in $timeZone",
+    ({ timeZone, freeTimeStart, expiresAt }) => {
+      expect(
+        freeTimeExpiry("-271821-04-20T00:00:00Z", 1, { ...calendar, timeZone }),
+      ).toEqual({
+        freeTimeStart,
+        lastFreeDay: freeTimeStart,
+        expiresAt,
+      });
+    },
+  );
+
+  it("returns the sentinel when the expiry itself would pass the range maximum east of UTC", () => {
+    expect(
+      freeTimeExpiry("+275760-09-12T23:00:00Z", 1, {
+        ...calendar,
+        timeZone: "Etc/GMT-14",
+      }),
+    ).toBeNull();
+  });
+
+  it.each`
+    clockStart                | freeDays   | options                                                                      | reason
+    ${123}                    | ${3}       | ${calendar}                                                                  | ${"non-string clock start"}
+    ${""}                     | ${3}       | ${calendar}                                                                  | ${"empty clock start"}
+    ${"2024-06-14T19:00:00"}  | ${3}       | ${calendar}                                                                  | ${"no offset designator: not an instant"}
+    ${"2024-06-14"}           | ${3}       | ${calendar}                                                                  | ${"a date is not an instant"}
+    ${"2016-12-31T23:59:60Z"} | ${3}       | ${calendar}                                                                  | ${"leap second"}
+    ${friday}                 | ${0}       | ${calendar}                                                                  | ${"no free days means no last free day"}
+    ${friday}                 | ${-1}      | ${calendar}                                                                  | ${"negative free days"}
+    ${friday}                 | ${2.5}     | ${calendar}                                                                  | ${"fractional free days"}
+    ${friday}                 | ${"3"}     | ${calendar}                                                                  | ${"free days as a string"}
+    ${friday}                 | ${2 ** 53} | ${calendar}                                                                  | ${"free days past the safe integer range"}
+    ${friday}                 | ${3}       | ${undefined}                                                                 | ${"no options"}
+    ${friday}                 | ${3}       | ${null}                                                                      | ${"null options"}
+    ${friday}                 | ${3}       | ${"calendar"}                                                                | ${"options as a string"}
+    ${friday}                 | ${3}       | ${{ basis: "calendar", timeZone: "America/New_York" }}                       | ${"firstDay has no default"}
+    ${friday}                 | ${3}       | ${{ ...calendar, firstDay: "sameDay" }}                                      | ${"unknown firstDay"}
+    ${friday}                 | ${3}       | ${{ ...calendar, basis: "business" }}                                        | ${"unknown basis"}
+    ${friday}                 | ${3}       | ${{ timeZone: "America/New_York", firstDay: "eventDay" }}                    | ${"basis has no default"}
+    ${friday}                 | ${3}       | ${{ ...calendar, timeZone: "America/Nueva_York" }}                           | ${"invalid timeZone"}
+    ${friday}                 | ${3}       | ${{ ...calendar, timeZone: undefined }}                                      | ${"missing timeZone"}
+    ${friday}                 | ${3}       | ${{ ...calendar, basis: "working" }}                                         | ${"working basis without a calendar"}
+    ${friday}                 | ${3}       | ${{ ...working, calendar: { ...weekdays, weekend: [1, 2, 3, 4, 5, 6, 7] } }} | ${"working basis with a calendar that has no working day"}
+    ${friday}                 | ${3}       | ${{ ...working, calendar: { ...weekdays, holidays: ["2024-02-30"] } }}       | ${"working basis with a holiday that does not exist"}
   `("returns the sentinel for $reason", ({ clockStart, freeDays, options }) => {
     expect(freeTimeExpiry(clockStart, freeDays, options)).toBeNull();
   });

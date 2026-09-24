@@ -2,22 +2,19 @@
 name: gmt-timezone
 description: >
   Timezone-aware operations — get zoned now, format zoned datetimes/ranges,
-  convert between plain↔zoned↔UTC↔Unix, DST disambiguation control on
-  construction and arithmetic, the instant-plus-offset pair, classifying a
-  zoneless wall time before resolving it, real zone unit boundaries
-  (startOfZoned/endOfZoned/startOfUnix/endOfUnix, never after the input), hours
-  in a local day, and flooring or bucketing instants on local calendar
-  boundaries (floorToZone/bucketRange) instead of roundZoned, calendar-annotated
-  zoned strings, zoned values exact at the range limits (Australia/Sydney at the
-  maximum, Etc/GMT+12 at the minimum), and the transport leg primitives —
-  transitTime (exact elapsed time in the departure's zone), etaAtZone (render an
-  instant where it lands) and dwellTime (elapsed duration plus local calendar
-  days crossed), and the intermodal free-time primitives — freeTimeExpiry (the
-  free window and its half-open expiry in the terminal's local days),
-  chargeableDays (the days and dates charged, with tier bands) and
-  demurrageClock (which two events a demurrage, detention, storage or combined
-  clock runs between, on the import or export leg). Reads the installed package README.md and source JSDoc for API
-  details; this skill is a routing pointer, not an API dump.
+  convert between plain↔zoned↔UTC↔Unix, DST disambiguation on construction and
+  arithmetic, the instant-plus-offset pair, classifying a zoneless wall time
+  before resolving it, real zone unit boundaries
+  (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a local day,
+  flooring or bucketing on local boundaries (floorToZone/bucketRange),
+  calendar-annotated zoned strings, zoned values at the range limits, the
+  transport legs transitTime, etaAtZone and dwellTime (local calendar days
+  crossed), and intermodal free time — freeTimeExpiry (the free window and its
+  half-open expiry in the terminal's local days), chargeableDays (the dates
+  charged, with tier bands) and demurrageClock (which events a demurrage,
+  detention, storage or combined clock runs between, import or export). Reads
+  the installed package README.md and source JSDoc for API details; this skill
+  is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -202,9 +199,9 @@ converting between time zones, or doing arithmetic that must respect DST.
     `firstDay` (`"eventDay"` | `"nextDay"`) has no default because the two
     differ by a day of charges; `basis: "working"` needs a `BusinessCalendar`
     and returns `null` without one. `chargeableDays(clockStart, clockEnd,
-    freeDays, options)` also needs `chargeBasis` (no default): most tariffs
-    count free time in working days and then charge every calendar day,
-    California charges working days only. It counts the days on or after
+    freeDays, options)` also needs `chargeBasis` (no default): outside the US both are mostly calendar days; where free time is in working
+    days (the usual US shape) the days after it are mostly charged as calendar
+    days; California charges working days only. It counts the days on or after
     `expiresAt` the half-open dwell touched, lists them as `chargedDates`, and
     splits them into `tiers` bands; `freeDays: 0` is allowed there.
     `demurrageClock(events, scope, { direction, startEvent? })` selects the

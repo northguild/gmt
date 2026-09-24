@@ -68,16 +68,19 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  *   tariff never counts a date before the event day.
  * - **The free-time terms are `freeTimeExpiry`'s**: `basis`, `timeZone`, `firstDay` and
  *   `calendar` mean the same, and `firstDay` has no default.
- * - **`chargeBasis` says how days after expiry are charged, and has no default.** Published
- *   tariffs mostly grant free time in working days and then charge every calendar day, weekends
- *   and holidays included (Hapag-Lloyd's US tables: "Rate per Calendar day"; ACL: "Once free time
- *   expires ... charged on calendar days"): `basis: "working", chargeBasis: "calendar"`. Some
- *   charge working days only, and California law requires it at its terminals (Cal. Bus. & Prof.
- *   Code § 22928: no charges while the gate is closed or on a holiday): `chargeBasis: "working"`.
+ * - **`chargeBasis` says how days after expiry are charged, and has no default.** Outside the
+ *   US, free time and charges are mostly both calendar days. Where free time is granted in
+ *   working days (the usual US shape), the days after it are mostly charged as calendar days,
+ *   weekends and holidays included (Hapag-Lloyd's US tables: "Rate per Calendar day"; ACL: "Once
+ *   free time expires ... charged on calendar days"): `basis: "working", chargeBasis: "calendar"`.
+ *   Some tariffs charge working days only, and California law requires it at its terminals, for
+ *   free time and charges alike (Cal. Bus. & Prof. Code § 22928: neither while the gate is closed
+ *   nor on a holiday): both `"working"`.
  *   Either `"working"` needs `calendar`. The two differ by every closed day after expiry, so
  *   neither is assumed.
- * - **`freeDays` may be `0`** for a tariff with no free time: every counted day is charged and
- *   `expiresAt` is the start of the first counted day.
+ * - **`freeDays` may be `0`** for a tariff with no free time: `expiresAt` is the start of day one,
+ *   the first day counted on `basis` (under `"nextDay"`, the first after the event day), and days
+ *   before it are neither free nor charged.
  * - **`tiers` are day bands, not rates.** `[5, 10]` names the last chargeable-day ordinal of
  *   each band: days 1–5, 6–10 and 11 onward. Every band is returned, an empty one with
  *   `days: 0`, and the last is always open. Omitted, `byTier` is the single open band

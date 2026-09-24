@@ -34,7 +34,9 @@ describe("parseFreeTimeTerms", () => {
     const bag = { basis: "calendar", timeZone: "UTC", firstDay: "eventDay" };
     expect(parseFreeTimeTerms(bag)).not.toBeNull();
     expect(parseFreeTimeTerms(bag, true)).toBeNull();
-    expect(parseFreeTimeTerms({ ...bag, chargeBasis: "calendar" }, true)).toEqual({
+    expect(
+      parseFreeTimeTerms({ ...bag, chargeBasis: "calendar" }, true),
+    ).toEqual({
       timeZone: "UTC",
       firstDay: "eventDay",
       calendar: null,
@@ -44,23 +46,48 @@ describe("parseFreeTimeTerms", () => {
 
   it("resolves one calendar for whichever basis is working", () => {
     const free = parseFreeTimeTerms(
-      { basis: "working", chargeBasis: "calendar", timeZone: "UTC", firstDay: "eventDay", calendar: weekdays },
+      {
+        basis: "working",
+        chargeBasis: "calendar",
+        timeZone: "UTC",
+        firstDay: "eventDay",
+        calendar: weekdays,
+      },
       true,
     );
     expect(free?.calendar?.weekend).toEqual(new Set([6, 7]));
     expect(free?.chargeCalendar).toBeNull();
     const charge = parseFreeTimeTerms(
-      { basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay", calendar: weekdays },
+      {
+        basis: "calendar",
+        chargeBasis: "working",
+        timeZone: "UTC",
+        firstDay: "eventDay",
+        calendar: weekdays,
+      },
       true,
     );
     expect(charge?.calendar).toBeNull();
     expect(charge?.chargeCalendar?.weekend).toEqual(new Set([6, 7]));
     expect(
-      parseFreeTimeTerms({ basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay" }, true),
+      parseFreeTimeTerms(
+        {
+          basis: "calendar",
+          chargeBasis: "working",
+          timeZone: "UTC",
+          firstDay: "eventDay",
+        },
+        true,
+      ),
     ).toBeNull();
     // Without a charge basis to read, a stray `chargeBasis` is ignored, as freeTimeExpiry ignores it.
     expect(
-      parseFreeTimeTerms({ basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay" }),
+      parseFreeTimeTerms({
+        basis: "calendar",
+        chargeBasis: "working",
+        timeZone: "UTC",
+        firstDay: "eventDay",
+      }),
     ).not.toBeNull();
   });
 
@@ -101,7 +128,7 @@ describe("parseFreeDays", () => {
     ${2.5}      | ${0}    | ${null}
     ${"3"}      | ${0}    | ${null}
     ${Infinity} | ${0}    | ${null}
-    ${2 ** 53}   | ${0}    | ${null}
+    ${2 ** 53}  | ${0}    | ${null}
     ${NaN}      | ${0}    | ${null}
   `(
     "reads $freeDays with minimum $minimum as $expected",
@@ -113,21 +140,21 @@ describe("parseFreeDays", () => {
 
 describe("parseTiers", () => {
   it.each`
-    tiers        | expected
-    ${undefined} | ${[]}
-    ${[]}        | ${[]}
-    ${[5, 10]}   | ${[5, 10]}
-    ${[1]}       | ${[1]}
-    ${[10, 5]}   | ${null}
-    ${[5, 5]}    | ${null}
-    ${[0]}       | ${null}
-    ${[2.5]}     | ${null}
-    ${["5"]}     | ${null}
-    ${trailingHole}     | ${null}
-    ${leadingHole}       | ${null}
-    ${[2 ** 53]}   | ${null}
-    ${"5"}       | ${null}
-    ${null}      | ${null}
+    tiers           | expected
+    ${undefined}    | ${[]}
+    ${[]}           | ${[]}
+    ${[5, 10]}      | ${[5, 10]}
+    ${[1]}          | ${[1]}
+    ${[10, 5]}      | ${null}
+    ${[5, 5]}       | ${null}
+    ${[0]}          | ${null}
+    ${[2.5]}        | ${null}
+    ${["5"]}        | ${null}
+    ${trailingHole} | ${null}
+    ${leadingHole}  | ${null}
+    ${[2 ** 53]}    | ${null}
+    ${"5"}          | ${null}
+    ${null}         | ${null}
   `("reads $tiers as $expected", ({ tiers, expected }) => {
     expect(parseTiers(tiers)).toEqual(expected);
   });
