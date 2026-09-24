@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  classifyPlaygroundResult,
   evaluateArg,
   renderResult,
   sentinelFor,
@@ -261,6 +262,7 @@ describe("sentinelFor", () => {
     expect(sentinelFor("array", false)).toEqual([]);
     expect(sentinelFor("array", true)).toBe("");
     expect(sentinelFor("string", false)).toBe("");
+    expect(sentinelFor("object", false)).toBeNull();
   });
   it("gives bigint a sentinel no bigint can equal", () => {
     // `0n` is gmt's invalid-input signal but also a legitimate result
@@ -271,15 +273,84 @@ describe("sentinelFor", () => {
   });
 });
 
+describe("classifyPlaygroundResult", () => {
+  it("treats null from an object function as the sentinel", () => {
+    // dwellTime with bare instants and no zone: invalid input, never an answer.
+    expect(classifyPlaygroundResult(null, { returnType: "object" })).toBe(
+      "sentinel",
+    );
+    expect(
+      classifyPlaygroundResult(
+        { duration: "PT2H", calendarDays: 2 },
+        { returnType: "object" },
+      ),
+    ).toBe("live");
+  });
+
+  it("treats null as empty when the function says null can be an answer", () => {
+    // A disjoint intersection: correct, and must not look like signal lost.
+    expect(
+      classifyPlaygroundResult(null, {
+        returnType: "object",
+        nullIsEmpty: true,
+      }),
+    ).toBe("empty");
+  });
+
+  it("treats null from a string function as the sentinel", () => {
+    // `minZoned([])` and `classifyLocal` return `string | null`; the string
+    // sentinel is "" and null used to render as a live value.
+    expect(classifyPlaygroundResult(null, { returnType: "string" })).toBe(
+      "sentinel",
+    );
+    expect(classifyPlaygroundResult("", { returnType: "string" })).toBe(
+      "sentinel",
+    );
+    expect(classifyPlaygroundResult("unique", { returnType: "string" })).toBe(
+      "live",
+    );
+  });
+
+  it("keeps 0, false and 0n live", () => {
+    expect(classifyPlaygroundResult(0, { returnType: "number" })).toBe("live");
+    expect(classifyPlaygroundResult(false, { returnType: "boolean" })).toBe(
+      "live",
+    );
+    expect(classifyPlaygroundResult(0n, { returnType: "bigint" })).toBe("live");
+  });
+
+  it("renders an allowed empty array as empty, not live", () => {
+    expect(
+      classifyPlaygroundResult([], { returnType: "array", allowEmptyArray: true }),
+    ).toBe("empty");
+    expect(classifyPlaygroundResult([], { returnType: "array" })).toBe(
+      "sentinel",
+    );
+    expect(classifyPlaygroundResult(["a"], { returnType: "array" })).toBe(
+      "live",
+    );
+  });
+});
+
 describe("renderResult", () => {
+  it("renders the empty state quietly and says what it means", () => {
+    const el = document.createElement("output");
+    renderResult(el, null, "empty");
+    expect(el.textContent).toBe("null — empty, or invalid input");
+    expect(el.classList.contains("gmt-widget-output--empty")).toBe(true);
+    expect(el.classList.contains("gmt-playground-live")).toBe(false);
+    renderResult(el, [], "empty");
+    expect(el.textContent).toBe("[] — empty, or invalid input");
+  });
+
   it("renders a live value and stringifies objects", () => {
     const el = document.createElement("output");
-    renderResult(el, "hi", false);
+    renderResult(el, "hi", "live");
     expect(el.textContent).toBe("hi");
     expect(el.classList.contains("gmt-playground-live")).toBe(true);
-    renderResult(el, [1, 2, 3], false);
+    renderResult(el, [1, 2, 3], "live");
     expect(el.textContent).toBe("[1,2,3]");
-    renderResult(el, 1710072000123456789n, false);
+    renderResult(el, 1710072000123456789n, "live");
     expect(el.textContent).toBe("1710072000123456789");
   });
 });
@@ -304,8 +375,8 @@ describe("PlaygroundForm run() flow", () => {
     const outputEl = document.createElement("output");
     renderResult(
       outputEl,
-      result as unknown as string,
-      (result as unknown) === sentinelFor("number", false),
+      result,
+      classifyPlaygroundResult(result, { returnType: "number" }),
     );
 
     expect(outputEl.textContent).toBe("26.5");
@@ -314,7 +385,7 @@ describe("PlaygroundForm run() flow", () => {
 
   it("renders NO SIGNAL when the call throws", () => {
     const outputEl = document.createElement("output");
-    renderResult(outputEl, "", true);
+    renderResult(outputEl, "", "sentinel");
     expect(outputEl.textContent).toBe("NO SIGNAL");
     expect(outputEl.classList.contains("gmt-playground-sentinel")).toBe(true);
   });

@@ -28,11 +28,32 @@ export function isoStringBody(value: string): string {
 
 /**
  * An ISO 8601 extended UTC offset, as RFC 3339 §5.6 `time-numoffset` writes it (`±HH:MM`), with
- * the seconds and fraction Temporal's `UTCOffset` grammar adds (`±HH:MM:SS[.fraction]`). Hours
+ * the seconds and fraction Temporal's `UTCOffset` grammar adds (`±HH:MM:SS[.fraction]`, the
+ * fraction after either decimal sign, `.` or `,`, as `TemporalDecimalSeparator` allows). Hours
  * 00–23. Basic (`-0400`) and hour-only (`-04`) offsets, which Temporal also reads, do not match.
+ *
+ * A regular-expression source with no anchors and no capture groups, so callers can embed it:
+ * GMT's one statement of the offset grammar its instant and zoned validators accept.
+ *
+ * @example new RegExp(`^${EXTENDED_UTC_OFFSET}$`).test("+05:30:00,5") // true
+ * @example new RegExp(`^${EXTENDED_UTC_OFFSET}$`).test("-0400") // false (basic format)
  */
-const EXTENDED_UTC_OFFSET =
+export const EXTENDED_UTC_OFFSET =
   "[+-](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:[.,]\\d{1,9})?)?";
+
+/**
+ * An RFC 9557 time-zone annotation: a bracket whose content has no `=` (§4.1 `time-zone`,
+ * against `suffix-tag`'s `key=value`), with an optional leading `!` marking it critical (§3.3).
+ * `[Europe/London]`, `[!+01:00]`; never `[u-ca=hebrew]` or `[!foo=bar]`. Every `key=value`
+ * bracket is a tagged annotation, which Temporal reads (or rejects) on its own.
+ *
+ * A regular-expression source with no anchors and no capture groups, so callers can embed or
+ * anchor it: GMT's one statement of "this bracket names a time zone".
+ *
+ * @example new RegExp(TIME_ZONE_ANNOTATION).test("2024-06-15T10:00:00Z[!Europe/London]") // true
+ * @example new RegExp(TIME_ZONE_ANNOTATION).test("2024-06-15T10:00:00Z[u-ca=gregory]") // false
+ */
+export const TIME_ZONE_ANNOTATION = "\\[!?[^\\]=]+\\]";
 
 /** `plainDateTime` without its anchors: `<date>T<time>` with an optional fraction. */
 const EXTENDED_DATE_TIME = plainDateTime.source.slice(1, -1);

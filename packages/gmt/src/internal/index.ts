@@ -66,7 +66,11 @@ export {
   halfOpenUnion,
   halfOpenXor,
 } from "./halfOpenIntervals";
-export { isoStringBody } from "./isoStringBody";
+export {
+  EXTENDED_UTC_OFFSET,
+  isoStringBody,
+  TIME_ZONE_ANNOTATION,
+} from "./isoStringBody";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
 export { parseInstantNanoseconds } from "./instantNanoseconds";
@@ -120,7 +124,11 @@ export {
   zonedUnitStart,
 } from "./zonedBucket";
 export { countZonedLocalDates } from "./zonedLocalDates";
-export { zonedDateTimeFrom } from "./zonedWallClock";
+export {
+  utcOffsetStringNanoseconds,
+  zonedDateTimeFrom,
+} from "./zonedWallClock";
+export { wallClockAtOffset } from "./wallClockAtOffset";
 export {
   durationCompare,
   durationRound,

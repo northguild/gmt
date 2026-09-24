@@ -4,6 +4,8 @@
  * These run in the browser so they must have zero Node/TS dependencies.
  */
 
+import { renderWidgetOutput, type WidgetOutputState } from "./widget-ui";
+
 export function evaluateArg(raw: string): unknown {
   const t = raw.trim();
   if (!t) return "";
@@ -25,22 +27,56 @@ export function sentinelFor(
   // reason: return a value no bigint can equal, and show the result verbatim.
   if (returnType === "bigint") return null;
   if (returnType === "boolean") return false;
+  if (returnType === "object") return null;
   if (returnType === "array" && !allowEmptyArray) return [];
   return "";
 }
 
+export interface ResultShape {
+  returnType: string;
+  allowEmptyArray?: boolean;
+  nullIsEmpty?: boolean;
+}
+
+/**
+ * Decide how a playground result renders: a live value, the sentinel (invalid
+ * input), or a correct empty answer.
+ *
+ * `null` is the sentinel for every return kind unless the template says it can
+ * be an answer (`nullIsEmpty`): gmt never returns `null` as a successful value
+ * otherwise, and a `string | null` function (`minZoned([])`) would slip past a
+ * `""` comparison and show `null` as though it were a result.
+ */
+export function classifyPlaygroundResult(
+  result: unknown,
+  shape: ResultShape,
+): WidgetOutputState {
+  const allowEmptyArray = shape.allowEmptyArray ?? false;
+  if (result === null) return shape.nullIsEmpty ? "empty" : "sentinel";
+  if (Array.isArray(result) && result.length === 0) {
+    return allowEmptyArray ? "empty" : "sentinel";
+  }
+  const sentinel = sentinelFor(shape.returnType, allowEmptyArray);
+  // 0 and false are real answers for number and boolean functions.
+  if (result === sentinel && result !== 0 && result !== false) {
+    return "sentinel";
+  }
+  return "live";
+}
+
+/** Render a result in one of the three output states. */
 export function renderResult(
   outputEl: HTMLElement,
   value: unknown,
-  isError: boolean,
+  state: WidgetOutputState,
 ): void {
-  outputEl.classList.remove("gmt-playground-live", "gmt-playground-sentinel");
-  if (isError) {
-    outputEl.classList.add("gmt-playground-sentinel");
-    outputEl.textContent = "NO SIGNAL";
-  } else {
-    outputEl.classList.add("gmt-playground-live");
-    outputEl.textContent =
-      typeof value === "object" ? JSON.stringify(value) : String(value);
-  }
+  const text =
+    state === "sentinel"
+      ? "NO SIGNAL"
+      : state === "empty"
+        ? `${Array.isArray(value) ? "[]" : "null"} — empty, or invalid input`
+        : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value);
+  renderWidgetOutput(outputEl, text, state);
 }

@@ -17,7 +17,7 @@ sources:
 metadata:
   type: composition
   library: '@northguild/gmt'
-  library_version: '1.16.0'
+  library_version: '1.17.0'
 ---
 
 # GMT Integration

@@ -1,0 +1,101 @@
+---
+title: Transport
+description: Common mistakes with transit legs, arrivals and dwell in GMT's transport layer.
+---
+
+The transport layer is three functions, `transitTime`, `etaAtZone` and `dwellTime`, and the
+mistakes around them are the ones every transport mode makes on its own: treating a running
+time as a wall-clock interval, treating an offset as a place, and turning elapsed hours into
+chargeable days by division. Every output shown here is what the function returns.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Dividing dwell hours by 24 to get chargeable days"
+  description="Terminals count the local calendar days a container was present, not elapsed time rounded up. Two hours across a local midnight is two days. dwellTime returns calendarDays from the zone's real day boundaries; the duration is there too, for a different question."
+  wrongCode={`const hours = 2; // gated in 23:00, out 01:00
+Math.ceil(hours / 24);
+// 1 — the terminal bills 2`}
+  rightCode={`import { dwellTime } from "@northguild/gmt/transport";
+
+dwellTime("2024-06-15T23:00:00-04:00[America/New_York]", "2024-06-16T01:00:00-04:00[America/New_York]");
+// { duration: "PT2H", enter: "2024-06-15T23:00:00-04:00[America/New_York]", exit: "2024-06-16T01:00:00-04:00[America/New_York]", calendarDays: 2 }`}
+  rightSpecId="dwellTime"
+/>
+
+<Mistake
+  severity="high"
+  title="Counting dwell days from bare instants with no zone"
+  description="A day count needs a place. Z and offset-only strings name a moment and nothing else, so with no targetZone there is no locality to count days in and dwellTime returns null rather than guessing. Pass the IANA zone of the terminal, or use entry strings that carry one."
+  wrongCode={`dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z");
+// null — no place to count days in`}
+  rightCode={`import { dwellTime } from "@northguild/gmt/transport";
+
+dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "America/New_York").calendarDays; // 2
+dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "Europe/Amsterdam").calendarDays; // 1`}
+/>
+
+<Mistake
+  severity="high"
+  title="Adding a running time as a wall-clock duration"
+  description="addZoned moves the wall clock by the date part of a duration, which is right for a recurring meeting and wrong for a running time. Across a spring-forward, one day and two hours on the wall clock is 25 elapsed hours. transitTime adds exact time, so P1DT2H is 26 hours and the arrival is an hour later, when the train is actually there."
+  wrongCode={`addZoned("2024-03-09T20:00:00-05:00[America/New_York]", { days: 1, hours: 2 });
+// "2024-03-10T22:00:00-04:00[America/New_York]" — only 25 elapsed hours`}
+  rightCode={`import { transitTime } from "@northguild/gmt/transport";
+
+transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "P1DT2H");
+// "2024-03-10T23:00:00-04:00[America/New_York]" — 26 elapsed hours`}
+  rightSpecId="transitTime"
+/>
+
+<Mistake
+  severity="medium"
+  title="Giving transitTime a calendar duration"
+  description="Years, months and weeks have no fixed length, and a leg is measured in elapsed time, so transitTime returns the empty string for them rather than picking a month length. A dated connection, the same wall time a month on, is addZoned's job."
+  wrongCode={`transitTime("2024-06-15T10:00:00Z", "P1M");
+// "" — no leg takes "a month" without a reference point`}
+  rightCode={`import { addZoned } from "@northguild/gmt/zoned";
+
+addZoned("2024-06-15T10:00:00+02:00[Europe/Berlin]", { months: 1 });
+// "2024-07-15T10:00:00+02:00[Europe/Berlin]"`}
+/>
+
+<Mistake
+  severity="high"
+  title="Carrying last winter's offset into a summer departure"
+  description="A bracketed zone whose offset contradicts it is rejected, not reinterpreted: New York is -04:00 in June, so a departure written -05:00[America/New_York] is not a moment the zone ever showed, and transitTime returns the empty string as isValidZonedDateTime does. Write the offset the zone kept at that moment, or drop the bracket and keep only the offset if that is really all you know."
+  wrongCode={`transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H");
+// "" — the offset contradicts the zone`}
+  rightCode={`import { transitTime } from "@northguild/gmt/transport";
+
+transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "PT2H");
+// "2024-06-15T12:00:00-04:00[America/New_York]"`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Rendering an arrival in a fixed offset instead of the destination's zone"
+  description="etaAtZone accepts a fixed offset as a zone, as Temporal does, but an offset observes no DST. On the fall-back night the destination is still on -04:00 for the first arrival and already on -05:00 for the second, so a fixed -05:00 shows the first an hour early (00:30 instead of 01:30). The second comes out right only because New York has just moved to -05:00, and all summer every arrival shows an hour early. GMT does not resolve an airport code to a zone, so pass the IANA identifier."
+  wrongCode={`etaAtZone("2024-11-03T05:30:00Z", "-05:00");
+// "2024-11-03T00:30:00-05:00[-05:00]" — New York was still on EDT; the board is an hour early`}
+  rightCode={`import { etaAtZone } from "@northguild/gmt/transport";
+
+etaAtZone("2024-11-03T05:30:00Z", "America/New_York");
+// "2024-11-03T01:30:00-04:00[America/New_York]"`}
+  rightSpecId="etaAtZone"
+/>
+
+<Mistake
+  severity="medium"
+  title="Passing a zoneless wall time as an arrival"
+  description="etaAtZone renders a moment, and a datetime with no offset designator is not a moment. It returns the empty string rather than assuming UTC. Resolve the local time to an instant first with resolveLocal or convertPlainDateTimeToZoned, stating the zone it was read in."
+  wrongCode={`etaAtZone("2024-06-15T12:30:00", "Asia/Tokyo");
+// "" — no offset: not a moment`}
+  rightCode={`import { etaAtZone } from "@northguild/gmt/transport";
+
+etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokyo");
+// "2024-06-15T21:30:00+09:00[Asia/Tokyo]"`}
+/>

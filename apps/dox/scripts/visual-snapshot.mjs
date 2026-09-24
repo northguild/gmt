@@ -104,6 +104,7 @@ const PAGES = [
   { slug: "tool-dst-inspector", path: "/tools/dst-inspector/" },
   { slug: "tool-interval-visualizer", path: "/tools/interval-visualizer/" },
   { slug: "tool-converter-bench", path: "/tools/converter-bench/" },
+  { slug: "tool-dwell-ledger", path: "/tools/dwell-ledger/" },
   /* Added last, deliberately. Through DOX-C3b this was the page being changed
      on almost every step, so covering it earlier would have meant a gate that
      failed by design and got ignored. It is stable now, and it is the only page
@@ -240,9 +241,16 @@ async function compareOne(name, beforePath, afterPath) {
     : { failed: true, line: `✗ ${name.padEnd(32)} ${percent} — DIFFERS` };
 }
 
-/** A snapshot present on only one side cannot be compared, so it is reported as missing. */
-const missingLine = (name, hasBefore) =>
-  `✗ ${name.padEnd(32)} MISSING (${hasBefore ? "no after" : "no before"})`;
+/**
+ * A snapshot present on only one side cannot be compared, so it is reported as missing.
+ *
+ * A function declaration, not a `const` arrow: `diffSnapshots()` runs from a top-level
+ * `await` near the top of this module, before any `const` below it is initialised, so an
+ * arrow here threw a ReferenceError the first time a snapshot was missing.
+ */
+function missingLine(name, hasBefore) {
+  return `✗ ${name.padEnd(32)} MISSING (${hasBefore ? "no after" : "no before"})`;
+}
 
 async function reportSnapshot(name, dirs, presence) {
   if (!presence.hasBefore || !presence.hasAfter) {

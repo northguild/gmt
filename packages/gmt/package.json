@@ -163,6 +163,15 @@
       "span/validate": [
         "./dist/span/validate/index.d.ts"
       ],
+      "transport": [
+        "./dist/transport/index.d.ts"
+      ],
+      "transport/calculate": [
+        "./dist/transport/calculate/index.d.ts"
+      ],
+      "transport/convert": [
+        "./dist/transport/convert/index.d.ts"
+      ],
       "types": [
         "./dist/types/index.d.ts"
       ],
@@ -418,6 +427,18 @@
     "./span/validate": {
       "types": "./dist/span/validate/index.d.ts",
       "default": "./dist/span/validate/index.js"
+    },
+    "./transport": {
+      "types": "./dist/transport/index.d.ts",
+      "default": "./dist/transport/index.js"
+    },
+    "./transport/calculate": {
+      "types": "./dist/transport/calculate/index.d.ts",
+      "default": "./dist/transport/calculate/index.js"
+    },
+    "./transport/convert": {
+      "types": "./dist/transport/convert/index.d.ts",
+      "default": "./dist/transport/convert/index.js"
     },
     "./types": {
       "types": "./dist/types/index.d.ts",

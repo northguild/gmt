@@ -160,9 +160,14 @@ export default defineConfig({
           })();`,
         },
       ],
+      /* Every group starts collapsed. Starlight still opens any group that
+         contains the current page (SidebarSublist: open when an entry is
+         current or the group is not collapsed), so a page opens only its own
+         ancestors. */
       sidebar: [
         {
           label: "Start here",
+          collapsed: true,
           items: [
             { slug: "why-gmt" },
             { slug: "upstream" },
@@ -170,22 +175,26 @@ export default defineConfig({
             { slug: "install" },
           ],
         },
-        { label: "API Reference", items: referenceSidebar },
+        { label: "API Reference", collapsed: true, items: referenceSidebar },
         {
           label: "Guides",
-          items: [{ autogenerate: { directory: "guides" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "guides", collapsed: true } }],
         },
         {
           label: "Tools",
-          items: [{ autogenerate: { directory: "tools" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "tools", collapsed: true } }],
         },
         {
           label: "Scenarios",
-          items: [{ autogenerate: { directory: "scenarios" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "scenarios", collapsed: true } }],
         },
         {
           label: "Mistakes",
-          items: [{ autogenerate: { directory: "mistakes" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "mistakes", collapsed: true } }],
         },
       ],
       components: {
@@ -210,6 +219,7 @@ export default defineConfig({
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
+        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

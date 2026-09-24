@@ -1,0 +1,34 @@
+---
+title: "Two Arrivals, One Wall Time: The Fall-Back Night"
+description: Two flights land in New York an hour apart on the night clocks fall back, and the arrivals board shows 01:30 for both.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Two Arrivals, One Wall Time: The Fall-Back Night"
+  description="Two flights land in New York on 3 November 2024, one at 05:30Z and one at 06:30Z. The arrivals board shows local time. What does each one say?"
+  naiveCode={`// The naive approach: format the local wall time and drop the rest
+const first = new Date("2024-11-03T05:30:00Z");
+const second = new Date("2024-11-03T06:30:00Z");
+const opts = { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false };
+first.toLocaleTimeString("en-US", opts);  // "01:30"
+second.toLocaleTimeString("en-US", opts); // "01:30"
+// Two aircraft an hour apart, one line on the board.`}
+  explanation={`At 02:00 EDT on 3 November 2024 New York's clocks go back to 01:00 EST, so the hour from 01:00 to 02:00 happens twice. A bare wall time cannot tell the two passes apart, and a board that shows only "01:30" has lost an hour of information. No disambiguation is needed to *render* an instant: a moment has exactly one wall time in a zone. What is needed is to keep the offset. \`etaAtZone\` renders the instant in the destination zone and returns the RFC 9557 string with its offset and zone, so the two arrivals read \`-04:00\` and \`-05:00\`, and anything downstream can still order them.`}
+  gmtCode={`import { etaAtZone } from "@northguild/gmt/transport";
+
+etaAtZone("2024-11-03T05:30:00Z", "America/New_York");
+// "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30, still EDT
+
+etaAtZone("2024-11-03T06:30:00Z", "America/New_York");
+// "2024-11-03T01:30:00-05:00[America/New_York]" — the second 01:30, now EST`}
+  fixedSpecId="etaAtZone"
+/>
+
+The zone is yours to supply. GMT does not resolve an airport code to a time zone, so pass
+`America/New_York`, not `JFK`, and not the `-05:00` printed on last winter's timetable: a
+fixed offset is accepted as a zone but observes no DST, which on this night is the whole
+point. Try the [Zone Planner](/tools/zone-planner/?tz=America/New_York,Europe/London,Asia/Tokyo&t=2024-11-03T05:45:00Z)
+from 15 minutes before the fall-back and watch New York's offset change while the wall clock
+repeats.

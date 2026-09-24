@@ -1,0 +1,33 @@
+---
+/**
+ * Dwell Ledger widget (TRAN-8).
+ *
+ * A dwell drawn on a zone's real local-day grid: drag the entry and exit, or
+ * type them, and watch `dwellTime` count elapsed hours and the local calendar
+ * days the half-open dwell touched. An optional second zone is drawn on the
+ * same canvas, so one pair of instants can be two days in one place and one in
+ * another.
+ *
+ * **The markup and the wiring both live in `lib/dwell-ledger-mount.ts`**, so the
+ * chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderDwellLedgerTemplate } from "../lib/dwell-ledger-mount";
+---
+
+<Fragment set:html={renderDwellLedgerTemplate()} />
+
+<script>
+  import { mountDwellLedger } from "../lib/dwell-ledger-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=dwell&wa=` permalink seeds the widget with the dwell it names; see
+       lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("dwell");
+    document.querySelectorAll<HTMLElement>(".gmt-dwell").forEach((el) => {
+      void mountDwellLedger(el, seed, new AbortController().signal);
+    });
+  }
+</script>

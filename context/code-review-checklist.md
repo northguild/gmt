@@ -15,7 +15,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
 - [ ] All Temporal method calls wrapped in `try-catch`
-- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `instant/`, `plain/`, `precision/`, `regex/`, `span/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `instant/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
 - [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
 - [ ] Repeated calendar steps are computed from the anchor (`start.add(amount × k)`), not by compounding the previous result

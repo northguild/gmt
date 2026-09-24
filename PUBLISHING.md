@@ -54,7 +54,12 @@ Merge that PR, and the next one, and the one after that. Changesets pile up on
 `main` unreleased. The `Release` workflow runs on each push and decides there is
 nothing to do; its summary says so.
 
-Stay in this step as long as you like.
+Stay in this step as long as you like. The docs site deploys every merge, so a
+merged function is documented before it is on npm; its reference page and sidebar
+entry carry an Unreleased badge until a release tag includes it. When to cut a
+release is the `Release` column in
+[`context/domination/tracker.md`](./context/domination/tracker.md), which the
+owner maintains.
 
 ### 3. When you want to release: make a release PR
 
@@ -76,7 +81,10 @@ version numbers and that CHANGELOG text are exactly what goes to npm. It is an
 ordinary PR, so the ordinary required checks run on it.
 
 **Merging it publishes.** CI packs the tarballs, publishes to npm with
-provenance, pushes the tags, cuts the GitHub Releases, and posts to #gmt.
+provenance, pushes the tags, cuts the GitHub Releases, and posts to #gmt. The
+docs site deploys after that run finishes, so the new tag exists and the
+Unreleased badges drop off what it shipped. Then set the tracker's `Release`
+column to the new version on every row it shipped.
 
 Keep the release PR pure — version bumps and changelogs only. If it also adds a
 new changeset, the workflow sees pending changesets and declines to publish.

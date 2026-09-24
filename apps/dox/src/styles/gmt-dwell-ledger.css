@@ -1,0 +1,229 @@
+/*
+ * Dwell Ledger widget (TRAN-8).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. This
+ * sheet holds what is specific to the ledger: a track divided into local-day
+ * cells of their real width, the elapsed bar over them, its two handles, and
+ * the axis.
+ *
+ * The cells are content, not housing: which days are shaded is the answer the
+ * widget exists to show, so a counted cell carries a fill, a border, bold text
+ * and an aria-label, and never relies on colour alone.
+ */
+
+/* Starlight's content layer gives every block after a sibling a top margin.
+   These are positioned by percentage or spaced by `gap`, so a margin would
+   push the second cell, handle or row out of line. */
+.gmt-dwell-timeline > *,
+.gmt-dwell-track > *,
+.gmt-dwell-cell,
+.gmt-dwell-cell > *,
+.gmt-dwell-handle,
+.gmt-dwell-compare-result > * {
+  margin: 0;
+}
+
+.gmt-dwell-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) 0;
+}
+
+.gmt-dwell-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-dwell-row[hidden] {
+  display: none;
+}
+
+.gmt-dwell-row-label {
+  flex: 0 0 auto;
+  width: 8.5rem;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  color: var(--gmt-ice-dim);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.gmt-dwell-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 52px;
+  background: var(--gmt-fill-subtle);
+  border-radius: var(--gmt-radius-sm);
+  overflow: visible;
+}
+
+.gmt-dwell-cells {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--gmt-radius-sm);
+}
+
+/* One local day. Its left edge is that zone's midnight. */
+.gmt-dwell-cell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  padding: 3px 5px;
+  border-left: 1px solid var(--gmt-border);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-dwell-cell--touched {
+  background: color(from var(--gmt-cyan) srgb r g b / 0.18);
+  box-shadow: inset 0 0 0 1px var(--gmt-cyan);
+  font-weight: 700;
+}
+
+.gmt-dwell-cell--narrow .gmt-dwell-cell-label,
+.gmt-dwell-cell--narrow .gmt-dwell-cell-hours {
+  display: none;
+}
+
+/* A 23- or 25-hour day: still one cell, flagged. */
+.gmt-dwell-cell-hours {
+  margin-left: auto;
+  padding: 0 3px;
+  border: 1px dashed var(--gmt-dst-gold);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-dst-gold);
+  font-weight: 600;
+}
+
+/* Elapsed time: the hours, drawn under the day labels. */
+.gmt-dwell-bar {
+  position: absolute;
+  top: 26px;
+  bottom: 6px;
+  min-width: 2px;
+  background: color(from var(--gmt-spring) srgb r g b / 0.35);
+  border: 1px solid var(--gmt-spring);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-spring);
+}
+
+.gmt-dwell-bar--invalid {
+  background: var(--gmt-signal-fill);
+  border-color: var(--gmt-signal-border);
+  color: var(--gmt-signal);
+}
+
+.gmt-dwell-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--gmt-void);
+  border: 2px solid currentColor;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    transform var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+/* A 44px target around a 14px dot. */
+.gmt-dwell-handle::before {
+  content: "";
+  position: absolute;
+  inset: -15px;
+}
+
+.gmt-dwell-handle:first-child {
+  left: 0;
+}
+
+.gmt-dwell-handle:last-child {
+  left: 100%;
+}
+
+.gmt-dwell-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.gmt-dwell-handle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--gmt-void),
+    0 0 0 4px currentColor;
+}
+
+.gmt-dwell-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: calc(8.5rem + var(--gmt-space-2));
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+}
+
+/* The library's numbers, in words. */
+.gmt-dwell-summary {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-dwell-summary:empty {
+  display: none;
+}
+
+.gmt-dwell-compare-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-dwell-compare-result[hidden] {
+  display: none;
+}
+
+/* Narrow: labels above their track, axis full width. */
+@media (max-width: 40rem) {
+  .gmt-dwell-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+  }
+
+  .gmt-dwell-row-label {
+    width: auto;
+    text-align: left;
+  }
+
+  .gmt-dwell-track {
+    flex: 0 0 auto;
+  }
+
+  .gmt-dwell-axis {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-dwell-cell,
+  .gmt-dwell-handle {
+    transition: none;
+  }
+}

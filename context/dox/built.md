@@ -71,6 +71,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `@example` is one inline line, `fn(args) // result (note)`, split on `/\s+\/\/\s/`. The
     one multi-line example is `getDstTransitions`.
   - `plain/calculate/weekOfYear.ts` is the only file exporting two functions.
+  - **Unreleased badge.** The site deploys from `main`, but npm moves only when a human
+    merges a release PR. A reference page whose export is not in the newest stable
+    `@northguild/gmt@X.Y.Z` tag gets a caution aside naming that version, and a sidebar
+    badge. A module or namespace group gets the badge too when every page in it is
+    unreleased. `scripts/build-utils/released-exports.ts` reads the names with `git grep` at
+    the tag. With no tags (a shallow checkout) nothing is badged. The tag is part of the
+    input hash, so a release regenerates. A push that publishes needs its tag before the site builds,
+    which is why `deploy-dox.yml` runs after the Release workflow (PR #280); otherwise what it
+    released stays badged until the next deploy. Locally the new tag does not exist yet, so a branch's new
+    functions show the badge.
+  - Two exports whose page paths differ only by case (a `DwellTime` type beside a `dwellTime`
+    function) are one file on macOS and Windows, so one page overwrites the other and the
+    sidebar points at a missing slug. The generator refuses such a pair before writing, and
+    `reference-corpus.test.ts` checks the manifest. The fix is a rename in `packages/gmt/src`.
   - The source has no `@category` / `@see` / `@since` tags. Taxonomy comes from the
     directory tree, cross-links from signature types. `src/regex/*` documents with `//`
     comments, not JSDoc.
@@ -98,13 +112,21 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   module-granularity dynamic imports, so gmt chunks load only where a playground renders.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input
   renders as `⟨ NO SIGNAL ⟩` in amber, and a correct empty result is shown distinctly
-  (`renderWidgetOutput` in `src/lib/widget-ui.ts`).
-- **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), and the converter
-  bench with format and regex tester (`B2d`). Each is a `src/lib/<widget>-mount.ts` exporting
+  (`renderWidgetOutput` in `src/lib/widget-ui.ts`). In the playground,
+  `classifyPlaygroundResult` (`src/lib/playground-client.ts`) makes that call for every
+  form. The generator classifies `object | null` returns as `object`, from the TypeScript
+  type flags rather than the printed type. `null` is the sentinel for every kind unless the
+  function is in `NULL_IS_EMPTY` (`scripts/build-utils/null-is-empty.ts`), the interval
+  functions whose `null` also means "no shared span". Those render `null` as empty. The
+  generator refuses an entry that is missing or not an object.
+- **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), the converter
+  bench with format and regex tester (`B2d`), and the Dwell Ledger (TRAN-8, the first a realm
+  story shipped; its day cells come from Temporal's `startOfDay`, so a 23-hour day is drawn
+  23 hours wide). Each is a `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
-  `/tools/converter-bench/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
+  `/tools/converter-bench/`, `/tools/dwell-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
   Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`, with structural checks
   rather than zod so a docs page never pulls in the `ai` package.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
@@ -117,7 +139,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `buildZonedValueFromMinutes` deliberately omits an offset — resolving the ambiguity is
   what `startOfZoned` exists to show.
 - **Gates:** `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
-  ~ only the page around it did); `visual:diff` is the pixel gate.
+  ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
+  pixel gate.
 
 ## Tier 3 · HUD chrome
 
@@ -286,11 +309,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Widget tools
 
-- **Four tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
+- **Five tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
   - `showGlobe({ zone })`
   - `showConverterBench({ value, from, to, locale? })`
   - `showIntervalVisualizer({ aStart, aEnd, bStart, bEnd })`
   - `showDstInspector({ zone, year, preset?, disambiguation?, offset? })`
+  - `showDwellLedger({ entry, exit, zone, compareZone? })`: a zoneless wall time is read in
+    `zone` with `disambiguation: "reject"`, so a skipped hour is never moved silently.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

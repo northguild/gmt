@@ -41,6 +41,7 @@ This is the least commercially urgent story in the epic and the most differentia
 ## What gmt provides (do not re-implement)
 
 - `toJulianDateParts` / `toJ2000Seconds` from SPA-49 — the J2000 offset the MSD formula takes
+- `toTDB` from SPA-74 — the barycentric scale the J2000 offset is expressed in
 - `toTT` from SPA-47 — the terrestrial scale underlying the conversion
 - `toNanoseconds` from CORE-1 — precision conversion
 

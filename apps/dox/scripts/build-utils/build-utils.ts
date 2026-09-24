@@ -16,12 +16,20 @@ import {
   splitTopLevel,
 } from "../../src/lib/playground-parsers";
 
+/**
+ * What a function returns, as far as sentinel detection cares.
+ *
+ * `object` covers results that are neither primitives nor arrays: an interface
+ * (`Dwell`), a literal shape (`{ start, end }`), a class instance
+ * (`Temporal.PlainDate`). Their sentinel is `null`.
+ */
 export type ReturnTypeKind =
   | "string"
   | "number"
   | "bigint"
   | "boolean"
-  | "array";
+  | "array"
+  | "object";
 
 export type ParamType =
   | "string"
@@ -493,10 +501,37 @@ export function classifyTypeFromString(s: string): ClassifiedType {
  */
 export function classifyReturnTypeFromString(rs: string): ReturnTypeKind {
   if (rs.endsWith("[]") || rs.includes("[]")) return "array";
+  /* Before the substring checks: `{ year: number; … } | null` contains the word
+     "number" and is still an object. */
+  const members = unionMembers(rs).filter(
+    (m) => m !== "null" && m !== "undefined",
+  );
+  if (members.length > 0 && members.every((m) => m.startsWith("{"))) {
+    return "object";
+  }
   if (rs.includes("boolean")) return "boolean";
   if (rs.includes("bigint")) return "bigint";
   if (rs.includes("number")) return "number";
   return "string";
+}
+
+/** Split a printed type on its top-level `|`, ignoring any inside brackets. */
+function unionMembers(rs: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of rs) {
+    if ("{[(<".includes(ch)) depth++;
+    if ("}])>".includes(ch)) depth--;
+    if (ch === "|" && depth === 0) {
+      out.push(cur.trim());
+      cur = "";
+      continue;
+    }
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out.filter((m) => m !== "");
 }
 
 /** Classify a function's return type from its TS signature. */
@@ -505,8 +540,31 @@ export function classifyReturnType(
   sig: ts.Signature | undefined,
 ): ReturnTypeKind {
   if (!sig) return "string";
-  return classifyReturnTypeFromString(
-    checker.typeToString(sig.getReturnType()),
+  const type = sig.getReturnType();
+  if (isObjectResult(checker, type)) return "object";
+  return classifyReturnTypeFromString(checker.typeToString(type));
+}
+
+/**
+ * True when every non-null member of the return type is an object type that is
+ * not an array or tuple.
+ *
+ * Decided from type flags rather than the printed type, because the printed
+ * form cannot tell an interface from a string-literal alias: `Dwell | null` and
+ * `LocalTimeClassification | null` look alike, and only the first is an object.
+ */
+function isObjectResult(checker: ts.TypeChecker, type: ts.Type): boolean {
+  const members = (type.isUnion() ? type.types : [type]).filter(
+    (m) => (m.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) === 0,
+  );
+  return (
+    members.length > 0 &&
+    members.every(
+      (m) =>
+        (m.flags & ts.TypeFlags.Object) !== 0 &&
+        !checker.isArrayType(m) &&
+        !checker.isTupleType(m),
+    )
   );
 }
 

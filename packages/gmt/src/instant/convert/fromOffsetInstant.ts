@@ -3,6 +3,7 @@ import {
   formatUtcOffset,
   parseInstantNanoseconds,
   parseUtcOffsetNanoseconds,
+  wallClockAtOffset,
 } from "../../internal";
 import { utcOffset } from "../../regex";
 import type { OffsetInstant } from "./toOffsetInstant";
@@ -90,16 +91,8 @@ export function fromOffsetInstant(value: OffsetInstant): string {
       }
 
       // With no zone, the offset is the only thing that can shift the instant onto a wall
-      // clock. The shift happens on the wall clock, never on the instant: `PlainDateTime`
-      // reaches a day further either side than `Instant` does, so shifting the instant first
-      // would reject the last 14 hours of the representable range — where a pair like
-      // `{ "+275760-09-13T00:00:00Z", "+14:00" }` names a local time that exists. No offset
-      // time zone is used either, since Temporal refuses to build one from a sub-minute
-      // offset.
-      const wallClock = instant
-        .toZonedDateTimeISO("UTC")
-        .toPlainDateTime()
-        .add({ nanoseconds: Number(offsetNanoseconds) });
+      // clock (`wallClockAtOffset` keeps both range limits and sub-minute offsets).
+      const wallClock = wallClockAtOffset(instant, offsetNanoseconds);
 
       return `${wallClock.toString()}${offset}`;
     } catch {

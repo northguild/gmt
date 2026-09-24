@@ -1,64 +1,61 @@
-# SPA-47 — Space: TT and TDB scale conversion
+# SPA-47 — Space: TT and TCG scale conversion
 
-**Scope:** Terrestrial Time and Barycentric Dynamical Time.
+**Scope:** Terrestrial Time and Geocentric Coordinate Time — the two scales that are a constant offset or a constant rate from TAI and need no Julian Date to compute.
 
 ## Gap
 
-Spacecraft navigation and orbital mechanics use TT and TDB as the independent variable of motion. TT is a constant offset from TAI. TDB differs from TT by a periodic relativistic correction of roughly 1.6 milliseconds, arising because a clock on Earth's surface moves through the Sun's gravitational potential.
+Spacecraft navigation and orbital mechanics use TT as the independent variable of Earth-based ephemerides. TT is a constant offset from TAI. TCG, the coordinate time of the geocentric reference system, differs from TT by a constant rate fixed by IAU resolution. Both are exactly defined, and both are prerequisites for the Julian Date story and for the barycentric scales.
+
+The first draft bundled TT with TDB in one story. TDB needs the two-part Julian Date (SPA-49) for its periodic correction, while SPA-49 needs `toTT` to express a JD in a scale other than UTC — a mutual dependency the tracker flagged as unbuildable. Splitting the JD-free scales here and moving TDB/TCB to SPA-74 resolves it: SPA-49 depends on this story alone.
 
 ## Scope
 
 - `packages/gmt/src/space/convert/tt.ts`:
   - `toTT(isoString: string): string` — ISO UTC to a TT scale string.
   - `fromTT(ttString: string): string` — TT to ISO UTC.
-- `packages/gmt/src/space/convert/tdb.ts`:
-  - `toTDB(isoString: string): string` — ISO UTC to a TDB scale string.
-  - `fromTDB(tdbString: string): string` — TDB to ISO UTC.
-  - `tdbMinusTt(isoString: string): number` — The correction in seconds, exposed so callers can see the magnitude they are accepting.
+- `packages/gmt/src/space/convert/tcg.ts`:
+  - `toTCG(isoString: string): string` — ISO UTC to a TCG scale string.
+  - `fromTCG(tcgString: string): string` — TCG to ISO UTC.
+  - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed like the TDB correction so callers see the magnitude.
 
 ## Key constants
 
-- **TT = TAI + 32.184 seconds**, exact and constant by definition.
-- **TDB − TT** is periodic, amplitude roughly 1.6 ms, dominated by Earth's orbital eccentricity.
+- **TT = TAI + 32.184 seconds** — "TAI is a realization of TT, apart from a constant offset: TT = TAI + 32.184 s" (IERS Conventions 2010).
+- **TT differs from TCG by a constant rate**: "dTT/dTCG = 1 − L_G, where L_G = 6.969 290 134 × 10⁻¹⁰" is a defining constant (IAU 2000 Resolution B1.9, which fixes only the rate). The IERS Conventions give the working formula, eq. (10.1): **TCG − TT = (L_G / (1 − L_G)) × (JD_TT − T₀) × 86400 s**, with **T₀ = 2443144.5003725**, the TT Julian date of 1977 January 1, 0h TAI, where TT and TCG coincide. The difference grows by about 22 ms per year.
 
-## TDB − TT correction
-
-The simplified formula, accurate to roughly 50 µs:
-
-```
-TDB - TT = 0.001657 * sin(g) + 0.000022 * sin(l - l_j)
-where g is the Earth's mean anomaly
-```
-
-A first implementation may use the leading term alone. The full Fairhead & Bretagnon (1990) series, as implemented in ERFA and SOFA, reaches better than 10 ns and is parked as a later story — see [../painpoints.md](../painpoints.md).
+([IAU 2000 Resolution B1.9, via SYRTE](https://syrte.obspm.fr/IAU_resolutions/Resol-UAI.htm), [IERS Conventions (2010), IERS TN 36, Chapter 10, eq. (10.1)](https://iers-conventions.obspm.fr/content/chapter10/tn36_c10.pdf))
 
 ## String format
 
-```
+```text
 '2026-01-01T00:00:00 TT'
-'2026-01-01T00:00:00 TDB'
+'2026-01-01T00:00:00 TCG'
 ```
 
 ## Design notes
 
-- **`tdbMinusTt` is exported deliberately.** A caller working at millisecond precision needs to know the correction is being applied and how large it is; a caller at 50 µs needs to know the approximation's error bound exceeds their tolerance. Hiding it inside the conversion makes the accuracy limit invisible.
-- **The accuracy limit must be in the JSDoc**, stated as a number. "Approximate" is not actionable.
-- TDB is a barycentric scale and TT is geocentric. For solar-system ephemerides TDB is the correct argument, and substituting TT introduces the full 1.6 ms error. Note the distinction rather than assuming callers know it.
-- The Julian Date input to the correction formula must not lose precision — use the two-part form from SPA-49.
+- **No Julian Date is needed here.** Eq. (10.1) is linear in elapsed TT from a fixed epoch; `(JD_TT − T₀) × 86400` is simply TT seconds since 1977-01-01T00:00:32.184 TT, and that is computed from nanoseconds since the epoch (CORE-1), which is exact, not from a JD, which is not. That is what lets SPA-49 depend on this story without a cycle. The `1 / (1 − L_G)` factor is kept, not dropped: the IERS note that it "may be approximated" away is a 10⁻¹⁸ rate statement, and an exact formula costs nothing.
+- **`tcgMinusTt` is exported for the same reason SPA-74 exports `tdbMinusTt`:** a caller at millisecond precision needs to know a ~1 second-per-50-years drift is being applied; hiding it inside the conversion makes the difference between "TT" and "TCG" look like a label.
+- TT is the geocentric scale for Earth ephemerides; barycentric work needs TDB (SPA-74). Note the distinction rather than assuming callers know it.
+- Pre-1972 input inherits SPA-46's sentinel: no integer TAI − UTC exists before then.
+
+## Corrections
+
+The first draft's `tdbMinusTt`, `toTDB` and `fromTDB` moved to SPA-74 together with the TDB − TT series, and this story took TCG in exchange. Nothing about their definitions changed; only the dependency graph did.
 
 ## What gmt provides (do not re-implement)
 
 - `toTAI` / `fromTAI` from SPA-46 — TT is a constant offset from TAI
-- `toJulianDateParts` from SPA-49 — the two-part JD the correction formula needs
-- `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
+- `toNanoseconds` / `fromNanoseconds` from CORE-1 — exact elapsed time since the 1977 epoch for the TCG rate
 
 ## Verification
 
-- `toTT('2026-01-01T00:00:00Z')` returns `'2026-01-01T00:00:32.184 TT'` offset from TAI exactly
+- `toTT('2026-01-01T00:00:00Z')` returns `'2026-01-01T00:01:09.184 TT'` — TAI + 32.184 s exactly
 - TT minus TAI is exactly 32.184 seconds for every test date
 - Round-trip for TT returns an equivalent UTC string
-- Round-trip for TDB returns an equivalent UTC string to within the documented tolerance
-- `tdbMinusTt` peaks near the documented amplitude and changes sign across the year
-- `tdbMinusTt` at two dates six months apart has opposite signs
-- The TDB correction is computed from a two-part JD, asserted by comparing against a single-double computation at a date where they diverge
+- `tcgMinusTt` at the 1977-01-01T00:00:32.184 TT epoch is `0` to nanosecond precision
+- `tcgMinusTt` grows linearly: its value at 2027-01-01 minus its value at 2026-01-01 equals `L_G × 365 × 86400` seconds to within 1 ns
+- `tcgMinusTt('2000-01-01T12:00:00Z')` is about `0.5057` seconds, asserted against the IAU constant, not a hardcoded number
+- Round-trip for TCG returns an equivalent UTC string to nanosecond precision
+- A date before 1972-01-01 returns the sentinel
 - `pnpm run validate` stays green

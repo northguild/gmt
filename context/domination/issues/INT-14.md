@@ -25,7 +25,7 @@ A bill of lading carries several dates with different legal meanings and differe
 
 - **Date, not timestamp.** These are contractual dates in a jurisdiction's local calendar. Rendering an instant as a B/L date requires the origin timezone, otherwise a 21:00 local loading in Shanghai is dated the following day. `timeZone` is required for any local-dated event.
 - `multimodalETA` reports transit and dwell separately rather than summing them into one opaque number, because the two have different reliability and consumers forecast them differently.
-- Dwell is caller-supplied. It is not estimated — see INT-11's Corrections for why estimating dwell is out of scope.
+- Dwell is caller-supplied. It is not estimated — see TRAN-8's Corrections for why free time is a contract term rather than a port fact, and INT-13 for why estimating processing time is out of scope.
 
 ## Corrections
 
@@ -34,7 +34,7 @@ The original INT-2 specced `multimodalETA(legs, { portDwellDays, customsDays })`
 ## What gmt provides (do not re-implement)
 
 - `scheduleDelivery` from TRAN-9 — multi-leg scheduling
-- `containerLeg` from INT-11 — single-leg arrival
+- `transitTime` / `etaAtZone` from TRAN-8 — single-leg arrival
 - `sumIntervals` from CORE-6 — dwell totals
 - `floorToZone` from CORE-5 — local date derivation for B/L dates
 

@@ -345,9 +345,9 @@ function renderProbeResult(
   }
 
   if (result === "") {
-    renderResult(outputEl, classification.explanation, true);
+    renderResult(outputEl, classification.explanation, "sentinel");
   } else {
-    renderResult(outputEl, result, false);
+    renderResult(outputEl, result, "live");
   }
 }
 

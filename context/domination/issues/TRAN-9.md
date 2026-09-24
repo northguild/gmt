@@ -11,14 +11,15 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 - `packages/gmt/src/transport/calculate/crossingTime.ts`:
   - `crossingTime(entry: string, exit: string, targetZone: string): { duration: string, enter: string, exit: string } | null` — Zone-local entry and exit for a crossing.
 - `packages/gmt/src/transport/calculate/scheduleDelivery.ts`:
-  - `scheduleDelivery(legs: Leg[], options?: { startTimeZone?: string }): { eta: string, legTimes: { arrival: string, localArrival: string, dwellAfter: string }[] } | null` — End-to-end ETA across legs.
-- `Leg` is `{ departure?: string, duration: string, timeZone: string, dwellAfter?: string, mode?: string }`.
+  - `scheduleDelivery(legs: Leg[], options?: { startTimeZone?: string }): { eta: string, legTimes: LegTime[] } | null` — End-to-end ETA across legs.
+- `Leg` is `{ departure?: string, duration: string, timeZone: string, dwellAfter?: string, mode?: string, origin?: string, destination?: string }`.
+- `LegTime` is `{ arrival: string, localArrival: string, dwellAfter: string, mode?: string, origin?: string, destination?: string }` — the leg's tags echoed back so a caller can join results to its own records.
 
 ## Design notes
 
 - Each leg's arrival is the next leg's departure unless the next leg carries an explicit `departure`, which models a scheduled connection the cargo waits for. An explicit departure earlier than the previous arrival is invalid input, not a negative wait — that is a missed connection and the caller must be told.
 - `dwellAfter` sits between legs rather than inside them, because dwell is a property of the handoff.
-- `mode` is an opaque tag. GMT does not validate or interpret transport modes.
+- `mode`, `origin` and `destination` are opaque tags. GMT does not validate or interpret transport modes, and it does not resolve an origin or destination code to a zone — `timeZone` is the caller's fact. The tags exist so a container move (ship → rail → truck) can be reported leg by leg without the consumer re-joining by index.
 - Every leg boundary is an instant. Local rendering happens at the edges via `etaAtZone`.
 
 ## What gmt provides (do not re-implement)
@@ -32,7 +33,9 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 - Single-leg `scheduleDelivery` matches `transitTime` composed with `etaAtZone`
 - Multi-leg: each leg's arrival equals the next leg's departure when no explicit departure is given
 - A leg crossing the International Date Line yields a local arrival on the expected local date
+- A leg arriving at 23:30 local returns a `localArrival` on the expected local date
 - Explicit departure earlier than the previous arrival returns the sentinel
 - Empty legs array returns `{ eta: '', legTimes: [] }`
 - Total dwell equals the sum of `dwellAfter` values
+- `mode`, `origin` and `destination` are echoed unchanged on each `LegTime`, and absent when not supplied
 - `pnpm run validate` stays green

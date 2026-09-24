@@ -45,6 +45,7 @@ import {
   ENABLED_TOOL_NAMES,
   showConverterBenchInput,
   showDstInspectorInput,
+  showDwellLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
 } from "../src/lib/dox-tools";
@@ -128,6 +129,22 @@ export function buildWorkerTools(
               `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
             )
           : accept("converter-bench");
+      },
+    }),
+
+    showDwellLedger: tool({
+      description: docFor("showDwellLedger"),
+      inputSchema: showDwellLedgerInput,
+      execute: ({ zone, compareZone }) => {
+        const unknown = unknownZones(
+          compareZone === undefined ? [zone] : [zone, compareZone],
+        );
+        return unknown.length > 0
+          ? reject(
+              "dwell-ledger",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("dwell-ledger");
       },
     }),
   };

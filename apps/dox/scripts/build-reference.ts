@@ -24,6 +24,16 @@ import type {
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
+import { NULL_IS_EMPTY } from "./build-utils/null-is-empty";
+import {
+  UNRELEASED_BADGE,
+  baselineKey,
+  insertAfterFrontmatter,
+  isUnreleased,
+  releasedBaseline,
+  unreleasedNote,
+  type ReleasedBaseline,
+} from "./build-utils/released-exports";
 import {
   hashFiles,
   syncTree,
@@ -847,6 +857,12 @@ function buildLivePlaygroundTemplate(
     doc.playgroundSpec?.allowEmptyArray ??
     (returnType === "array" &&
       doc.examples.some((e) => e.result.trim() === "[]"));
+  const nullIsEmpty = NULL_IS_EMPTY.has(doc.name);
+  if (nullIsEmpty && returnType !== "object") {
+    throw new Error(
+      `[reference] ${doc.name} is in NULL_IS_EMPTY but returns ${returnType}, not an object. Remove it from scripts/build-utils/null-is-empty.ts.`,
+    );
+  }
 
   const formFields = doc.playgroundSpec
     ? buildPlaygroundFields(doc.playgroundSpec, template)
@@ -858,6 +874,7 @@ function buildLivePlaygroundTemplate(
     template,
     returnType,
     allowEmptyArray,
+    ...(nullIsEmpty ? { nullIsEmpty: true } : {}),
     ...(formFields
       ? {
           fields: formFields.fields,
@@ -1604,6 +1621,8 @@ function escapeMd(s: string): string {
 interface SymbolEntry {
   name: string;
   slug: string;
+  /** Documented but not in the newest published release: badged in the sidebar. */
+  unreleased?: boolean;
 }
 
 /**
@@ -1617,7 +1636,18 @@ interface SymbolEntry {
  * - Ordering inside a namespace: multi-symbol module groups first (alpha),
  *   then hoisted single-symbol items (alpha by symbol name).
  */
-function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
+export function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
+  const item = (sym: SymbolEntry) =>
+    sym.unreleased
+      ? `{ slug: "${sym.slug}", badge: ${UNRELEASED_BADGE} }`
+      : `{ slug: "${sym.slug}" }`;
+  /* Groups start collapsed, so a group whose every page is unreleased (a new
+     namespace) carries the badge too, or nobody sees it until they expand it. */
+  const groupBadge = (syms: SymbolEntry[]) =>
+    syms.length > 0 && syms.every((s) => s.unreleased)
+      ? `badge: ${UNRELEASED_BADGE}, `
+      : "";
+
   // Group symbols by namespace
   const byNs = new Map<string, Map<string, SymbolEntry[]>>();
   for (const [key, syms] of moduleSymbols) {
@@ -1659,6 +1689,8 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 
     lines.push("  {");
     lines.push(`    label: ${JSON.stringify(ns)},`);
+    const nsBadge = groupBadge([...mods.values()].flat());
+    if (nsBadge) lines.push(`    ${nsBadge.trim()}`);
     lines.push("    collapsed: true,");
     lines.push("    items: [");
 
@@ -1667,10 +1699,12 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
       const sortedSyms = [...syms].sort((a, b) => a.name.localeCompare(b.name));
       lines.push("      {");
       lines.push(`        label: ${JSON.stringify(mod)},`);
+      const modBadge = groupBadge(syms);
+      if (modBadge) lines.push(`        ${modBadge.trim()}`);
       lines.push("        collapsed: true,");
       lines.push("        items: [");
       for (const sym of sortedSyms) {
-        lines.push(`          { slug: "${sym.slug}" },`);
+        lines.push(`          ${item(sym)},`);
       }
       lines.push("        ],");
       lines.push("      },");
@@ -1678,7 +1712,7 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 
     // Then hoisted single-symbol items
     for (const sym of singleSyms) {
-      lines.push(`      { slug: "${sym.slug}" },`);
+      lines.push(`      ${item(sym)},`);
     }
 
     lines.push("    ],");
@@ -1708,7 +1742,14 @@ function main() {
     join(outGen, "live-playground-templates.ts"),
     join(outGen, "sidebar.ts"),
   ];
-  const hash = hashFiles(referenceInputs());
+  /* The newest published tag decides which pages are badged Unreleased. It is
+     part of the hash so a release, which pushes a tag and changes no source,
+     still regenerates. */
+  const baseline = releasedBaseline(repoRoot);
+  if ("none" in baseline) {
+    console.log(`[reference] no published gmt tag (${baseline.none}); no Unreleased badges`);
+  }
+  const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}`;
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can
   // leave the generated modules in place while this directory is gone.
   const upToDate =
@@ -1722,7 +1763,7 @@ function main() {
     console.log("[reference] outputs up-to-date, skipping");
     return;
   }
-  runGeneration();
+  runGeneration(baseline);
   writeIfChanged(inputsStamp, hash);
 }
 
@@ -1739,6 +1780,8 @@ function referenceInputs(): string[] {
     resolve(gmtSrc, "..", "package.json"),
     fileURLToPath(import.meta.url),
     resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
+    resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
+    resolve(appRoot, "scripts", "build-utils", "released-exports.ts"),
     resolve(appRoot, "src", "lib", "playground-parsers.ts"),
   ];
 }
@@ -1807,7 +1850,7 @@ export function declaredTypeString(
   return text.replace(/ \| undefined$/, "");
 }
 
-function runGeneration() {
+function runGeneration(baseline: ReleasedBaseline) {
   const files = walk(gmtSrc).sort();
   const program = ts.createProgram(files, REFERENCE_COMPILER_OPTIONS);
   const checker = program.getTypeChecker();
@@ -1855,6 +1898,22 @@ function runGeneration() {
     return true;
   });
 
+  // Two pages whose paths differ only by case (a `Dwell` type beside a `dwellTime` function
+  // would have been `DwellTime`) are one file on a case-insensitive filesystem, so one page
+  // silently overwrites the other and the sidebar then points at a slug that does not exist.
+  // Refuse before anything is written: the fix is a rename in `packages/gmt/src`.
+  const byFoldedUrl = new Map<string, string>();
+  for (const d of dedupedDocs) {
+    const url = pageUrl(d.namespace, d.module, d.name);
+    const clash = byFoldedUrl.get(url.toLowerCase());
+    if (clash !== undefined) {
+      throw new Error(
+        `[reference] two exports would share one page on a case-insensitive filesystem: ${clash} and ${url}. Rename one of them.`,
+      );
+    }
+    byFoldedUrl.set(url.toLowerCase(), url);
+  }
+
   const usedBy = buildUsedBy(dedupedDocs);
 
   // Every page this run emits, keyed by its path under `outMdx`. `syncTree` writes only the
@@ -1872,12 +1931,17 @@ function runGeneration() {
     else if (doc.kind === "type") mdx = renderType(doc, usedBy);
     else mdx = renderRegex(doc);
 
+    const unreleased = isUnreleased(baseline, doc.name);
+    if (unreleased && "tag" in baseline) {
+      mdx = insertAfterFrontmatter(mdx, unreleasedNote(baseline.version));
+    }
+
     pages.set(join(doc.namespace, doc.module, `${doc.name}.mdx`), mdx);
 
     // collect for sidebar
     const key = `${doc.namespace}/${doc.module}`;
     if (!moduleSymbols.has(key)) moduleSymbols.set(key, []);
-    moduleSymbols.get(key)!.push({ name: doc.name, slug });
+    moduleSymbols.get(key)!.push({ name: doc.name, slug, unreleased });
   }
 
   const pageChanges = syncTree(outMdx, pages);
@@ -1937,6 +2001,14 @@ export const corpus: CorpusEntry[] = data as CorpusEntry[];
     if (d.kind === "function" && d.livePlaygroundTemplate) {
       templatesRecord[d.name] = d.livePlaygroundTemplate;
     }
+  }
+  const staleNullIsEmpty = [...NULL_IS_EMPTY.keys()].filter(
+    (name) => !templatesRecord[name]?.nullIsEmpty,
+  );
+  if (staleNullIsEmpty.length > 0) {
+    throw new Error(
+      `[reference] NULL_IS_EMPTY names functions with no playground: ${staleNullIsEmpty.join(", ")}. Rename or remove them in scripts/build-utils/null-is-empty.ts.`,
+    );
   }
   const templatesTs = `// GENERATED FILE — do not edit by hand.
 // Produced by apps/dox/scripts/build-reference.ts (\`pnpm dox:generate\`).

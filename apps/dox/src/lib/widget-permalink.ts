@@ -32,7 +32,7 @@
  * fixed object literal. See `widget-registry.ts`.
  */
 
-export type WidgetKind = "globe" | "dst" | "interval" | "converter";
+export type WidgetKind = "globe" | "dst" | "interval" | "converter" | "dwell";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -53,6 +53,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   dst: "/tools/dst-inspector/",
   interval: "/tools/interval-visualizer/",
   converter: "/tools/converter-bench/",
+  dwell: "/tools/dwell-ledger/",
 };
 
 export function encodeWidgetPermalink(
