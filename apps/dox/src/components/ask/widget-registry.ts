@@ -48,6 +48,10 @@ import {
   type DwellLedgerArgs,
 } from "~/lib/dwell-ledger-mount";
 import {
+  renderFreeTimeLedgerTemplate,
+  type FreeTimeLedgerArgs,
+} from "~/lib/free-time-ledger-mount";
+import {
   renderIntervalTemplate,
   type IntervalArgs,
 } from "~/lib/interval-visualizer-mount";
@@ -55,6 +59,7 @@ import {
   showConverterBenchInput,
   showDstInspectorInput,
   showDwellLedgerInput,
+  showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
 } from "~/lib/dox-tools";
@@ -147,7 +152,8 @@ const globeEntry = defineWidget<GlobeArgs>({
 /**
  * A literal object with literal keys. Do not make this dynamic.
  *
- * The four Tier 2 widgets and the Dwell Ledger (TRAN-8) are registered.
+ * The four Tier 2 widgets, the Dwell Ledger (TRAN-8) and the Free Time Ledger
+ * (INT-12) are registered.
  * `ENABLED_TOOL_NAMES` remains the declaration of what the model is offered,
  * and a test asserts the two sets are equal — so a tool cannot be offered
  * without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
@@ -248,12 +254,35 @@ const dwellEntry = defineWidget<DwellLedgerArgs>({
     checkZones([zone, compareZone].filter((z): z is string => !!z)),
 });
 
+const freeTimeEntry = defineWidget<FreeTimeLedgerArgs>({
+  title: "Free time ledger",
+  kind: "freetime",
+  parse: (input) => {
+    const result = showFreeTimeLedgerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template, like the Dwell Ledger: every argument is a control
+     value. The mount then reads a zoneless wall time in `zone`. */
+  renderTemplate: (_idPrefix, args) => renderFreeTimeLedgerTemplate(args),
+  load: () =>
+    import("~/lib/free-time-ledger-mount").then((m) => ({
+      mount: m.mountFreeTimeLedger,
+    })),
+  validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
   showIntervalVisualizer: intervalEntry,
   showDstInspector: dstEntry,
   showDwellLedger: dwellEntry,
+  showFreeTimeLedger: freeTimeEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

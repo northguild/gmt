@@ -84,6 +84,25 @@ export const showDwellLedgerInput = z.object({
   compareZone: zoneSchema.optional(),
 });
 
+/**
+ * A container's clock and the tariff it is read against.
+ *
+ * `firstDay` and `basis` are required here as they are in the library: the two
+ * start-day conventions differ by a day of charges, so a model must say which
+ * the reader meant rather than have one picked for them. `zone` is the terminal's.
+ */
+export const showFreeTimeLedgerInput = z.object({
+  clockStart: dateTimeSchema,
+  clockEnd: dateTimeSchema,
+  freeDays: z.number().int().min(0).max(365),
+  firstDay: z.enum(["eventDay", "nextDay"]),
+  basis: z.enum(["calendar", "working"]),
+  zone: zoneSchema,
+  weekend: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+  holidays: z.array(z.string().min(10).max(10)).max(64).optional(),
+  tiers: z.array(z.number().int().min(1)).max(16).optional(),
+});
+
 export const showConverterBenchInput = z.object({
   value: dateTimeSchema,
   from: zoneSchema,
@@ -110,7 +129,8 @@ export type DoxToolName =
   | "showDstInspector"
   | "showIntervalVisualizer"
   | "showConverterBench"
-  | "showDwellLedger";
+  | "showDwellLedger"
+  | "showFreeTimeLedger";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -118,6 +138,7 @@ export const DOX_TOOL_INPUTS = {
   showIntervalVisualizer: showIntervalVisualizerInput,
   showConverterBench: showConverterBenchInput,
   showDwellLedger: showDwellLedgerInput,
+  showFreeTimeLedger: showFreeTimeLedgerInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -162,6 +183,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks how long something sat somewhere, or how many days a dwell, stay, layover or visit counts",
     args: "entry, exit (ISO date-times; a plain 2024-06-15T23:00:00 is read as wall time in zone), zone (IANA id the days are counted in), compareZone (optional second IANA id, to show the same instants counted elsewhere)",
   },
+  {
+    name: "showFreeTimeLedger",
+    purpose:
+      "A container's free time and demurrage drawn on the terminal's real local-day grid: the free days, the expiry, the chargeable days and their dates, counted by freeTimeExpiry and chargeableDays.",
+    when: "the reader asks when free time ends, how many days of demurrage or detention are due, which dates are charged, or how the start-day convention or a working-day tariff changes the answer",
+    args: "clockStart, clockEnd (ISO date-times; a plain 2024-06-14T15:00:00 is read as wall time in zone), freeDays (whole number), firstDay (eventDay | nextDay: whether the event day is free day one; ask if the reader did not say), basis (calendar | working), zone (the terminal's IANA id), weekend (optional ISO weekday numbers, working basis), holidays (optional ISO dates, working basis), tiers (optional last chargeable-day ordinal of each band)",
+  },
 ];
 
 /**
@@ -190,6 +218,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[4].purpose,
     inputSchema: showDwellLedgerInput,
   }),
+  showFreeTimeLedger: tool({
+    description: DOX_TOOL_DOCS[5].purpose,
+    inputSchema: showFreeTimeLedgerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -210,7 +242,7 @@ export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
  * here without registering its widget fails the suite rather than reaching a
  * reader.
  *
- * All five are enabled, every one backed by a registered widget.
+ * All six are enabled, every one backed by a registered widget.
  */
 export const ENABLED_TOOL_NAMES = [
   "showGlobe",
@@ -218,6 +250,7 @@ export const ENABLED_TOOL_NAMES = [
   "showIntervalVisualizer",
   "showDstInspector",
   "showDwellLedger",
+  "showFreeTimeLedger",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

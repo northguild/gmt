@@ -120,13 +120,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   functions whose `null` also means "no shared span". Those render `null` as empty. The
   generator refuses an entry that is missing or not an object.
 - **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), the converter
-  bench with format and regex tester (`B2d`), and the Dwell Ledger (TRAN-8, the first a realm
+  bench with format and regex tester (`B2d`), the Dwell Ledger (TRAN-8, the first a realm
   story shipped; its day cells come from Temporal's `startOfDay`, so a 23-hour day is drawn
-  23 hours wide). Each is a `src/lib/<widget>-mount.ts` exporting
+  23 hours wide), and the Free Time Ledger (INT-12, the same day grid with each day coloured
+  as the tariff reads it; it imports the Dwell Ledger's grid helpers rather than copying them). Each is a `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
-  `/tools/converter-bench/`, `/tools/dwell-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
+  `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
   Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`, with structural checks
   rather than zod so a docs page never pulls in the `ai` package.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
@@ -309,13 +310,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Widget tools
 
-- **Five tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
+- **Six tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
   - `showGlobe({ zone })`
   - `showConverterBench({ value, from, to, locale? })`
   - `showIntervalVisualizer({ aStart, aEnd, bStart, bEnd })`
   - `showDstInspector({ zone, year, preset?, disambiguation?, offset? })`
   - `showDwellLedger({ entry, exit, zone, compareZone? })`: a zoneless wall time is read in
     `zone` with `disambiguation: "reject"`, so a skipped hour is never moved silently.
+  - `showFreeTimeLedger({ clockStart, clockEnd, freeDays, firstDay, basis, zone, weekend?, holidays?, tiers? })`:
+    `firstDay` and `basis` are required, as the library requires them; a zoneless wall time is
+    read in `zone` with `disambiguation: "reject"`. Its permalink carries every list and number
+    as a string, because `seedFromLocation` passes only strings and years.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

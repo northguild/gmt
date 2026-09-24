@@ -1,0 +1,34 @@
+---
+/**
+ * Free Time Ledger widget (INT-12).
+ *
+ * A container's clock drawn on a terminal's real local-day grid, each day
+ * coloured the way the tariff reads it: the uncounted event day, the free days,
+ * the closed days a working-day tariff skips, and the chargeable days with
+ * their tier bands. Drag the clock start and the gate-out, flip the start-day
+ * convention and the basis, and watch `freeTimeExpiry` and `chargeableDays`
+ * answer.
+ *
+ * **The markup and the wiring both live in `lib/free-time-ledger-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderFreeTimeLedgerTemplate } from "../lib/free-time-ledger-mount";
+---
+
+<Fragment set:html={renderFreeTimeLedgerTemplate()} />
+
+<script>
+  import { mountFreeTimeLedger } from "../lib/free-time-ledger-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=freetime&wa=` permalink seeds the widget with the clock it names;
+       see lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("freetime");
+    document.querySelectorAll<HTMLElement>(".gmt-freetime").forEach((el) => {
+      void mountFreeTimeLedger(el, seed, new AbortController().signal);
+    });
+  }
+</script>

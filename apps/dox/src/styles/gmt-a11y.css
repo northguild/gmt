@@ -123,7 +123,8 @@
   .gmt-select:focus,
   .gmt-field:focus-visible,
   .gmt-button:focus-visible,
-  .gmt-dwell-handle:focus-visible {
+  .gmt-dwell-handle:focus-visible,
+  .gmt-freetime-handle:focus-visible {
     outline: 2px solid Highlight;
   }
 
@@ -133,6 +134,20 @@
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;
+  }
+
+  /* The Free Time Ledger's answer is which days are free and which are
+     chargeable: keep both distinguishable when fills are dropped. */
+  .gmt-freetime-cell--free,
+  .gmt-freetime-cell--chargeable {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .gmt-freetime-cell--chargeable {
+    outline: 2px solid HighlightText;
+    outline-offset: -3px;
   }
 
   .gmt-popover {

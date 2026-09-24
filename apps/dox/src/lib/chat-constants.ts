@@ -384,4 +384,8 @@ export const CHAT_STARTERS: readonly {
     text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
     widget: "showDwellLedger",
   },
+  {
+    text: "Discharged in New York on Friday afternoon, three free days, out Tuesday morning: what is chargeable?",
+    widget: "showFreeTimeLedger",
+  },
 ];
