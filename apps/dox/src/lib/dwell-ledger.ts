@@ -116,16 +116,14 @@ export function toEpochMs(iso: string): number {
   }
 }
 
-/** A bracketed annotation that names a zone rather than a calendar. */
-const ZONE_ANNOTATION = /\[!?(?!u-ca=)([^\]]+)\]/;
-
 /**
  * The zone the grid is drawn in: the chosen zone, else the entry's own
  * bracketed zone (which is what `dwellTime` falls back to), else none.
+ * `Temporal.ZonedDateTime.from` is the judge of whether the entry names a zone:
+ * it throws when no bracket does (RFC 9557 §4.1).
  */
 export function gridZone(entry: string, zone: string): string | null {
   if (zone !== NO_ZONE) return isKnownZone(zone) ? zone : null;
-  if (!ZONE_ANNOTATION.test(entry)) return null;
   try {
     return Temporal.ZonedDateTime.from(entry).timeZoneId;
   } catch {

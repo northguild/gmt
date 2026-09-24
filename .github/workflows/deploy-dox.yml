@@ -1,18 +1,9 @@
 name: Deploy Dox
 
 on:
-  # After Release, never alongside it. Release runs on every push to main, so this
-  # still deploys every merge. A push that publishes pushes its
-  # `@northguild/gmt@X.Y.Z` tag before Release completes, and the reference reads
-  # the newest tag to decide which functions are badged Unreleased
-  # (apps/dox/scripts/build-utils/released-exports.ts). Running in parallel, as
-  # this used to, could build before the tag existed and badge functions that
-  # were already on npm. The site deploys whatever Release concluded: a failed
-  # publish leaves no tag, so the badges stay, which is true.
-  workflow_run:
-    workflows: [Release]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
   # Refreshes the /upstream/ tracker even on a week with no push — see
   # scripts/upstream.mjs. workflow_dispatch is the manual "refresh it now" button.
   schedule:
@@ -37,11 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The commit Release ran on, not whatever main is now; the schedule and
-          # manual runs have no workflow_run, so they take main's head.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          # Full history and every tag: the Unreleased badges compare against the
-          # newest @northguild/gmt tag.
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4

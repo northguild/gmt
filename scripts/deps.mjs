@@ -36,11 +36,16 @@ const STORY_ID = /\b(?:CORE|TRAN|INT|MAR|ROAD|RAI|AV|IOT|HLTH|FIN|SPA)-\d+\b/g;
  * number in its ID. The two agreed until CORE-8 took slot 8, and the Core primitives added
  * later (CORE-54, CORE-55, CORE-56) sit among realm rows with smaller numbers, so the ID
  * number can no longer tell "built earlier" from "built later". `dominationTracker()` fills
- * the map; a story with no tracker row yet sorts last so `check` still reports it as missing.
+ * the map, and `orderOf` calls it on first use, so the order never depends on which command
+ * happened to parse the tracker first. A story with no tracker row yet sorts last so `check`
+ * still reports it as missing. (`dominationTracker` is declared further down; `orderOf` only
+ * calls it at run time, after every module-level `const` is initialised.)
  */
 const buildOrder = new Map();
-const orderOf = (id) =>
-  buildOrder.get(id) ?? 100000 + Number(id.split("-")[1]);
+const orderOf = (id) => {
+  if (buildOrder.size === 0) dominationTracker();
+  return buildOrder.get(id) ?? 100000 + Number(id.split("-")[1]);
+};
 
 /** Row shape: { line, id, cells: string[], deps: string[], status } */
 

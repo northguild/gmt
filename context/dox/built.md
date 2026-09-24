@@ -74,9 +74,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     badge. A module or namespace group gets the badge too when every page in it is
     unreleased. `scripts/build-utils/released-exports.ts` reads the names with `git grep` at
     the tag. With no tags (a shallow checkout) nothing is badged. The tag is part of the
-    input hash, so a release regenerates. `deploy-dox.yml` runs after the Release workflow,
-    not beside it, so a push that publishes has its tag before the site builds and shows no
-    badge for what it released. Locally the new tag does not exist yet, so a branch's new
+    input hash, so a release regenerates. A push that publishes needs its tag before the site builds,
+    which is why `deploy-dox.yml` runs after the Release workflow (PR #280); otherwise what it
+    released stays badged until the next deploy. Locally the new tag does not exist yet, so a branch's new
     functions show the badge.
   - Two exports whose page paths differ only by case (a `DwellTime` type beside a `dwellTime`
     function) are one file on macOS and Windows, so one page overwrites the other and the

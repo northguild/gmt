@@ -3,10 +3,14 @@ import {
   formatUtcOffset,
   isoStringBody,
   parseInstantNanoseconds,
+  TIME_ZONE_ANNOTATION,
   zonedDateTimeFrom,
 } from "../../internal";
 import { utcOffset } from "../../regex";
 import { isValidTimeZone } from "../../zoned/validate";
+
+/** A leading RFC 9557 time zone annotation: `[zone]` or `[!zone]`, with no `=`. */
+const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
 
 /**
  * An absolute instant paired with the local UTC offset in force where the event happened.
@@ -31,9 +35,6 @@ import { isValidTimeZone } from "../../zoned/validate";
  *   timeZone: "America/New_York",
  * };
  */
-/** A leading RFC 9557 time zone annotation: `[zone]` or `[!zone]`, with no `=`. */
-const timeZoneAnnotation = /^\[!?[^\]=]+\]/;
-
 export interface OffsetInstant {
   instant: string;
   offset: string;

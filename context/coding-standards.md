@@ -183,7 +183,7 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
 - `zoned/` — IANA timezone-aware operations (`ZonedDateTime`)
 - Never mix the two in the same function or module.
-- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `precision/`, `duration/`, `regex/` (see `packages/gmt/src/`).
+- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/` (see `packages/gmt/src/`).
 
 ## Calendar & zone semantics
 

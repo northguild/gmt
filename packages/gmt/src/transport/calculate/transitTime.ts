@@ -1,18 +1,29 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { utcOffsetStringNanoseconds, zonedDateTimeFrom } from "../../internal";
+import {
+  EXTENDED_UTC_OFFSET,
+  TIME_ZONE_ANNOTATION,
+  utcOffsetStringNanoseconds,
+  wallClockAtOffset,
+  zonedDateTimeFrom,
+} from "../../internal";
 import { isValidDuration } from "../../duration/validate/isValidDuration";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
 
-/** Trailing `Z` or `±HH:MM[:SS[.fraction]]` offset of an instant string, before any annotation. */
-const trailingOffset = /(Z|[+-]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?)(?:\[[^\]]*\])*$/;
+/**
+ * Trailing `Z` or extended offset of an instant string, before any annotation. The offset grammar
+ * is `isValidInstant`'s own (`EXTENDED_UTC_OFFSET`), so every offset it accepts, `,` fractions
+ * included, is captured as written.
+ */
+const trailingOffset = new RegExp(
+  `(Z|${EXTENDED_UTC_OFFSET})(?:\\[[^\\]]*\\])*$`,
+);
 
 /**
- * A time-zone annotation: a bracket whose content has no `=` (RFC 9557 §4.1). Every `key=value`
- * bracket is a tagged annotation — a calendar, or an unknown key that is ignored when elective
- * and rejected when critical (§3.3), as `isValidInstant` already decides.
+ * A time-zone annotation anywhere in the string (`TIME_ZONE_ANNOTATION`). Every `key=value`
+ * bracket is a tagged annotation, which `isValidInstant` already decides.
  */
-const zoneAnnotation = /\[!?[^\]=]+\]/;
+const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
 
 /**
  * Add a transit duration to a departure and return the arrival, in the departure's own zone.
@@ -74,7 +85,10 @@ export function transitTime(departure: string, duration: string): string {
   const zoned = isValidZonedDateTime(departure);
   // A string that names a zone must name a real one that agrees with its offset; only a string
   // that names none may fall back to the instant path.
-  if (!zoned && (zoneAnnotation.test(departure) || !isValidInstant(departure))) {
+  if (
+    !zoned &&
+    (zoneAnnotation.test(departure) || !isValidInstant(departure))
+  ) {
     return "";
   }
 
@@ -96,13 +110,7 @@ export function transitTime(departure: string, duration: string): string {
       return arrival.toString();
     }
     // The arrival's wall clock in the departure's own offset, written with that offset's text.
-    // Not `toZonedDateTimeISO(offset)`: an offset time zone is minute precision, and an instant
-    // may carry `+05:30:15`. The wall clock is shifted as a PlainDateTime, whose range reaches a
-    // day past the instant range, so an arrival at either limit still renders.
-    const wall = arrival
-      .toZonedDateTimeISO("UTC")
-      .toPlainDateTime()
-      .add({ nanoseconds: Number(utcOffsetStringNanoseconds(offset)) });
+    const wall = wallClockAtOffset(arrival, utcOffsetStringNanoseconds(offset));
     return `${wall.toString()}${offset}`;
   } catch {
     return "";

@@ -8,9 +8,9 @@
  *
  * - Locally, a branch that has bumped `package.json` but not published sees the
  *   previous release's tag, so its new functions are badged.
- * - In production, `deploy-dox.yml` runs after the Release workflow finishes,
- *   so a push that publishes has its tag by the time this runs, and the
- *   functions it released are not badged.
+ * - In production, a push that publishes must have its tag before this runs,
+ *   or the functions it released stay badged until the next deploy. That is
+ *   why `deploy-dox.yml` runs after the Release workflow (PR #280).
  * - With no tags at all (a shallow checkout), nothing is badged. A missing
  *   badge is safer than badging every page.
  *

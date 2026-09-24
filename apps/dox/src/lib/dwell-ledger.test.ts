@@ -50,6 +50,19 @@ describe("gridZone", () => {
     expect(gridZone("2024-06-15T22:30:00Z[u-ca=gregory]", NO_ZONE)).toBeNull();
     expect(gridZone("2024-06-15T22:30:00Z", "Mars/Olympus_Mons")).toBeNull();
   });
+
+  // RFC 9557 §3.3/§4.1: only a bracket without `=` names a zone; `!` marks it critical.
+  it.each`
+    entry                                     | expected           | reason
+    ${"2024-06-15T22:30:00Z[foo=bar]"}        | ${null}            | ${"elective unknown tag, no zone"}
+    ${"2024-06-15T22:30:00Z[!u-ca=gregory]"}  | ${null}            | ${"critical calendar tag, no zone"}
+    ${"2024-06-15T22:30:00Z[!Europe/London]"} | ${"Europe/London"} | ${"critical zone annotation"}
+  `(
+    "reads $entry with no chosen zone as $expected ($reason)",
+    ({ entry, expected }) => {
+      expect(gridZone(entry, NO_ZONE)).toBe(expected);
+    },
+  );
 });
 
 describe("resolveWallTime", () => {
