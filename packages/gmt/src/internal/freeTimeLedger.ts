@@ -37,17 +37,8 @@ export type FreeTimeTerms = {
   chargeCalendar: ResolvedBusinessCalendar | null;
 };
 
-/**
- * Read a `FreeTimeOptions` bag, or `null` when it is not one: a non-object, an unknown `basis`
- * or `firstDay`, a missing `firstDay` (no default: the two conventions differ by a day of
- * charges), an invalid `timeZone`, or a `"working"` basis without a valid `BusinessCalendar`.
- * The `calendar` is read only when a basis that needs it is `"working"`.
- *
- * With `readChargeBasis`, `chargeBasis` is required too, and has no default for the same reason:
- * published tariffs mostly charge every calendar day after free time, but California law and
- * some tariffs charge working days only, and the two differ by the weekend.
- */
-export function parseFreeTimeTerms(
+/** `parseFreeTimeTerms` without the guard; every read of `options` happens here. */
+function readFreeTimeTerms(
   options: unknown,
   readChargeBasis = false,
 ): FreeTimeTerms | null {
@@ -88,6 +79,29 @@ export function parseFreeTimeTerms(
     chargeCalendar:
       readChargeBasis && chargeBasis === "working" ? resolved : null,
   };
+}
+
+/**
+ * Read a `FreeTimeOptions` bag, or `null` when it is not one: a non-object, an unknown `basis`
+ * or `firstDay`, a missing `firstDay` (no default: the two conventions differ by a day of
+ * charges), an invalid `timeZone`, or a `"working"` basis without a valid `BusinessCalendar`.
+ * The `calendar` is read only when a basis that needs it is `"working"`.
+ *
+ * With `readChargeBasis`, `chargeBasis` is required too, and has no default for the same reason:
+ * where free time is in working days (the usual US shape) tariffs mostly charge every calendar day
+ * after it, but California law and some tariffs charge working days only, and the two differ by
+ * every closed day after expiry.
+ */
+export function parseFreeTimeTerms(
+  options: unknown,
+  readChargeBasis = false,
+): FreeTimeTerms | null {
+  try {
+    return readFreeTimeTerms(options, readChargeBasis);
+  } catch {
+    // Never throws (Core Rule 3): a Proxy or getter that throws on access is invalid input.
+    return null;
+  }
 }
 
 /** A whole number of free days no smaller than `minimum`, or `null`. */

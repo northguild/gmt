@@ -2,6 +2,7 @@ import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { dwellTime } from "../../transport/calculate/dwellTime";
 import { chargeableDays } from "./chargeableDays";
+import { hostileProxy, revokedProxy } from "../../test/noThrow";
 
 /** A Friday afternoon discharge in New York: 15:00 EDT on 14 June 2024. Free time ends Monday 00:00. */
 const friday = "2024-06-14T19:00:00Z";
@@ -25,6 +26,16 @@ const trailingHole: number[] = [5];
 trailingHole.length = 2;
 const leadingHole: number[] = [];
 leadingHole[1] = 5;
+
+/** An options bag whose `key` getter throws: the harness cannot see a hostile member. */
+function throwingMember<T extends object>(base: T, key: string): T {
+  return Object.defineProperty({ ...base }, key, {
+    enumerable: true,
+    get(): never {
+      throw new Error(`hostile ${key}`);
+    },
+  }) as T;
+}
 
 describe("chargeableDays", () => {
   it("returns the spec's own example: twelve chargeable days in bands of 5, 5 and 2", () => {
@@ -418,5 +429,26 @@ describe("chargeableDays", () => {
   it("returns the sentinel when the instant parse throws", () => {
     mockTemporalInstantFromThrow();
     expect(chargeableDays(friday, expiry, 3, calendar)).toBeNull();
+  });
+
+  // Core Rule 3: a value hostile to every access returns the sentinel, never throws (PR #281).
+  it.each([
+    ["a Proxy that throws on any trap", () => hostileProxy()],
+    ["a revoked Proxy", () => revokedProxy()],
+    [
+      "a throwing chargeBasis getter",
+      () => throwingMember(calendar, "chargeBasis"),
+    ],
+    [
+      "a throwing tiers getter",
+      () => throwingMember({ ...calendar, tiers: [5] }, "tiers"),
+    ],
+    ["a tiers Proxy", () => ({ ...calendar, tiers: hostileProxy() })],
+    ["a calendar Proxy", () => ({ ...working, calendar: revokedProxy() })],
+  ])("returns the sentinel for options that are %s", (_label, make) => {
+    expect(() =>
+      chargeableDays(friday, expiry, 3, make() as never),
+    ).not.toThrow();
+    expect(chargeableDays(friday, expiry, 3, make() as never)).toBeNull();
   });
 });

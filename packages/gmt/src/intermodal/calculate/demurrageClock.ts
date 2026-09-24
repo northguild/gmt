@@ -140,6 +140,21 @@ export function demurrageClock(
   scope: ClockScope,
   options: ClockOptions,
 ): Interval | null {
+  try {
+    return selectClock(events, scope, options);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
+  }
+}
+
+/** `demurrageClock` without the guard; every read of its arguments happens here. */
+function selectClock(
+  events: ClockEvent[],
+  scope: ClockScope,
+  options: ClockOptions,
+): Interval | null {
   if (
     !Array.isArray(events) ||
     !CLOCK_SCOPES.includes(scope) ||
@@ -193,14 +208,10 @@ export function demurrageClock(
     return null;
   }
 
-  try {
-    return Temporal.Instant.compare(
-      Temporal.Instant.from(start),
-      Temporal.Instant.from(end),
-    ) > 0
-      ? null
-      : { start, end };
-  } catch {
-    return null;
-  }
+  return Temporal.Instant.compare(
+    Temporal.Instant.from(start),
+    Temporal.Instant.from(end),
+  ) > 0
+    ? null
+    : { start, end };
 }

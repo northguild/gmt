@@ -78,14 +78,13 @@ export function freeTimeExpiry(
   freeDays: number,
   options: FreeTimeOptions,
 ): FreeTime | null {
-  const terms = parseFreeTimeTerms(options);
-  const allowed = parseFreeDays(freeDays, 1);
-
-  if (!isValidInstant(clockStart) || terms === null || allowed === null) {
-    return null;
-  }
-
   try {
+    const terms = parseFreeTimeTerms(options);
+    const allowed = parseFreeDays(freeDays, 1);
+    if (!isValidInstant(clockStart) || terms === null || allowed === null) {
+      return null;
+    }
+
     const start = Temporal.Instant.from(clockStart).toZonedDateTimeISO(
       terms.timeZone,
     );
@@ -100,6 +99,8 @@ export function freeTimeExpiry(
       expiresAt: ledger.expiresAt.toInstant().toString(),
     };
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -116,21 +116,21 @@ export function chargeableDays(
   freeDays: number,
   options: FreeTimeChargeOptions,
 ): FreeTimeCharges | null {
-  const terms = parseFreeTimeTerms(options, true);
-  const allowed = parseFreeDays(freeDays, 0);
-  const tiers = terms === null ? null : parseTiers(options.tiers);
-
-  if (
-    !isValidInstant(clockStart) ||
-    !isValidInstant(clockEnd) ||
-    terms === null ||
-    allowed === null ||
-    tiers === null
-  ) {
-    return null;
-  }
-
   try {
+    const terms = parseFreeTimeTerms(options, true);
+    const allowed = parseFreeDays(freeDays, 0);
+    // Read after the terms, so a non-object `options` is never read from.
+    const tiers = terms === null ? null : parseTiers(options.tiers);
+    if (
+      !isValidInstant(clockStart) ||
+      !isValidInstant(clockEnd) ||
+      terms === null ||
+      allowed === null ||
+      tiers === null
+    ) {
+      return null;
+    }
+
     const start = Temporal.Instant.from(clockStart).toZonedDateTimeISO(
       terms.timeZone,
     );
@@ -154,6 +154,8 @@ export function chargeableDays(
       byTier: bandsByTier(tiers, ledger.charged.length),
     };
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

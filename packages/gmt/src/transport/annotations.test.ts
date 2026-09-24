@@ -1,4 +1,5 @@
 import { dwellTime, etaAtZone, transitTime } from "./index";
+import { hostileProxy, revokedProxy } from "../test/noThrow";
 
 /**
  * RFC 9557 annotations on a transport instant, read by all three functions.
@@ -61,6 +62,46 @@ describe("transport annotations (RFC 9557)", () => {
       expect(
         transitTime(`2024-06-15T10:00:00+09:00${annotation}`, "PT1H"),
       ).toBe(transit);
+    },
+  );
+});
+
+// Core Rule 3: every transport function returns the sentinel for a value hostile to string
+// coercion or to every access, never throws (PR #281; transitTime threw on all five).
+const HOSTILE: [string, () => unknown][] = [
+  [
+    "{ toString() { throw } }",
+    () => ({
+      toString: (): never => {
+        throw new Error("hostile toString");
+      },
+    }),
+  ],
+  ["Object.create(null)", () => Object.create(null)],
+  ["Symbol()", () => Symbol("hostile")],
+  ["a Proxy that throws on any trap", () => hostileProxy()],
+  ["a revoked Proxy", () => revokedProxy()],
+];
+
+describe("transport functions never throw", () => {
+  it.each(HOSTILE)(
+    "return the sentinel for %s in every position",
+    (_label, make) => {
+      const ok = "2024-06-15T10:00:00Z";
+      for (const call of [
+        () => transitTime(make() as never, "PT1H"),
+        () => transitTime(ok, make() as never),
+        () => etaAtZone(make() as never, "UTC"),
+        () => etaAtZone(ok, make() as never),
+        () => dwellTime(make() as never, ok, "UTC"),
+        () => dwellTime(ok, make() as never, "UTC"),
+        () => dwellTime(ok, ok, make() as never),
+      ]) {
+        expect(call).not.toThrow();
+      }
+      expect(transitTime(make() as never, "PT1H")).toBe("");
+      expect(etaAtZone(ok, make() as never)).toBe("");
+      expect(dwellTime(ok, ok, make() as never)).toBeNull();
     },
   );
 });

@@ -1,5 +1,6 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { type ClockEvent, demurrageClock } from "./demurrageClock";
+import { hostileProxy, revokedProxy } from "../../test/noThrow";
 
 // An import: discharged Friday, available Saturday, out the next Thursday, empty back a week later.
 const discharged: ClockEvent = {
@@ -165,5 +166,47 @@ describe("demurrageClock", () => {
   it("returns the sentinel when the instant parse throws", () => {
     mockTemporalInstantFromThrow();
     expect(demurrageClock(imported, "demurrage", IMPORT)).toBeNull();
+  });
+
+  // Core Rule 3: a value hostile to every access returns the sentinel, never throws (PR #281).
+  const hostileAt = Object.defineProperty({ type: "discharged" }, "at", {
+    enumerable: true,
+    get(): never {
+      throw new Error("hostile at");
+    },
+  });
+  const hostileDirection = Object.defineProperty({}, "direction", {
+    enumerable: true,
+    get(): never {
+      throw new Error("hostile direction");
+    },
+  });
+  it.each([
+    [
+      "events: a Proxy that throws on any trap",
+      () => [hostileProxy(), "demurrage", IMPORT],
+    ],
+    ["events: a revoked Proxy", () => [revokedProxy(), "demurrage", IMPORT]],
+    [
+      "an event that is a revoked Proxy",
+      () => [[discharged, revokedProxy()], "demurrage", IMPORT],
+    ],
+    [
+      "an event whose at getter throws",
+      () => [[hostileAt, gatedOut], "demurrage", IMPORT],
+    ],
+    [
+      "options: a Proxy that throws on any trap",
+      () => [imported, "demurrage", hostileProxy()],
+    ],
+    ["options: a revoked Proxy", () => [imported, "demurrage", revokedProxy()]],
+    [
+      "a direction getter that throws",
+      () => [imported, "demurrage", hostileDirection],
+    ],
+  ])("returns the sentinel for %s", (_label, make) => {
+    const args = make() as [never, never, never];
+    expect(() => demurrageClock(...args)).not.toThrow();
+    expect(demurrageClock(...(make() as [never, never, never]))).toBeNull();
   });
 });

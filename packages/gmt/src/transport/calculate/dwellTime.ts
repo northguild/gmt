@@ -104,16 +104,16 @@ export function dwellTime(
   exit: string,
   targetZone?: string,
 ): Dwell | null {
-  if (!isValidInstant(entry) || !isValidInstant(exit)) {
-    return null;
-  }
-
-  const zone = dwellZone(entry, targetZone);
-  if (zone === null) {
-    return null;
-  }
-
   try {
+    if (!isValidInstant(entry) || !isValidInstant(exit)) {
+      return null;
+    }
+
+    const zone = dwellZone(entry, targetZone);
+    if (zone === null) {
+      return null;
+    }
+
     const entryInstant = Temporal.Instant.from(entry);
     const exitInstant = Temporal.Instant.from(exit);
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
@@ -144,6 +144,8 @@ export function dwellTime(
       calendarDays,
     };
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

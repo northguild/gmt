@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { freeTimeExpiry } from "./freeTimeExpiry";
+import { hostileProxy, revokedProxy } from "../../test/noThrow";
 
 /** A Friday afternoon discharge in New York: 15:00 EDT on 14 June 2024. */
 const friday = "2024-06-14T19:00:00Z";
@@ -16,6 +17,16 @@ const weekdays = {
   timeZone: "America/New_York",
 };
 const working = { ...calendar, basis: "working", calendar: weekdays } as const;
+
+/** An options bag whose `key` getter throws: the harness cannot see a hostile member. */
+function throwingMember<T extends object>(base: T, key: string): T {
+  return Object.defineProperty({ ...base }, key, {
+    enumerable: true,
+    get(): never {
+      throw new Error(`hostile ${key}`);
+    },
+  }) as T;
+}
 
 describe("freeTimeExpiry", () => {
   it("returns the spec's own example: a Friday discharge with three calendar days consumes the weekend", () => {
@@ -283,5 +294,17 @@ describe("freeTimeExpiry", () => {
   it("returns the sentinel when the instant parse throws", () => {
     mockTemporalInstantFromThrow();
     expect(freeTimeExpiry(friday, 3, calendar)).toBeNull();
+  });
+
+  // Core Rule 3: a value hostile to every access returns the sentinel, never throws (PR #281).
+  it.each([
+    ["a Proxy that throws on any trap", () => hostileProxy()],
+    ["a revoked Proxy", () => revokedProxy()],
+    ["a throwing basis getter", () => throwingMember(calendar, "basis")],
+    ["a throwing timeZone getter", () => throwingMember(calendar, "timeZone")],
+    ["a throwing calendar getter", () => throwingMember(working, "calendar")],
+  ])("returns the sentinel for options that are %s", (_label, make) => {
+    expect(() => freeTimeExpiry(friday, 3, make() as never)).not.toThrow();
+    expect(freeTimeExpiry(friday, 3, make() as never)).toBeNull();
   });
 });
