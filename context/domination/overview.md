@@ -28,7 +28,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 66 stories in build order, and [research/realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md) records the September 2026 research pass over every realm.
+realm. [tracker.md](tracker.md) has the 66 stories in build order.
 
 ---
 
@@ -143,11 +143,10 @@ entry per category barrel, mirrored in `typesVersions`).
 
 These are universal primitives. `interval/` and `calendar/` in particular are consumed by
 laytime, hours-of-work rules, free time, market sessions and medication windows — five realms
-that would otherwise each implement interval arithmetic and disagree about boundaries. The
-September 2026 spike added `CORE-54` … `CORE-56` for the same reason: holiday rules, weekly
-opening windows and identifier timestamps were each about to be written several times.
-`CORE-76` exists for the same reason: every hours-of-work rule is the same duty-log engine with
-different numbers.
+that would otherwise each implement interval arithmetic and disagree about boundaries.
+`CORE-54` … `CORE-56` and `CORE-76` exist for the same reason: holiday rules, weekly opening
+windows, identifier timestamps and hours-of-work rules would otherwise each be written several
+times.
 
 ---
 
@@ -238,7 +237,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
 - [tracker.md](tracker.md) — 66 stories, `Blocked by` column, Definition of Done
-- [research/realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md) — the September 2026 research spike: corrections, additions and what could not be verified
+- [research/spike-2026-09/](research/spike-2026-09/) — verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/](issues/) — story specs, one file per story, named by story ID
 - [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
 

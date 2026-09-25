@@ -392,15 +392,14 @@ Best-specified realm in the original plan, with real gaps.
 
 ---
 
-## Additions from the September 2026 realm spike
+## Findings by realm
 
-After 1.16.0 shipped Core, every remaining story was read against its primary source, and every
-realm was searched for calculations its industry runs on that the roadmap lacked. The full
-record, with quotes and clauses, is in
-[research/realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md) and its four
-verification files. What follows is the painpoint each finding traces to.
+Every story was read against its primary source, and every realm was searched for calculations
+its industry runs on. The quotes and clauses are in the verification files under
+[research/spike-2026-09/](research/spike-2026-09/). What follows is the painpoint each finding
+traces to.
 
-### Spike findings — Cross-cutting
+### Findings — Cross-cutting
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |
@@ -410,7 +409,7 @@ verification files. What follows is the painpoint each finding traces to.
 | Planned versus actual is every mode's question | "On-time" is "less than 15 minutes after its published arrival time" ([14 CFR 234.2](https://www.law.cornell.edu/cfr/text/14/234.2)); DCSA classifies every timestamp `PLN`/`EST`/`REQ`/`ACT` ([JIT OpenAPI 1.2.0-Beta-2](https://raw.githubusercontent.com/dcsaorg/DCSA-OpenAPI/master/jit/v1/jit_v1.2.0-Beta-2.yaml)); comparing an estimate to an actual is the standard dashboard bug. | TRAN-57 |
 | One duty-log shape, five regulators | Drivers, seafarers, train crews, flight crews and residents all have rolling-window hours rules over a status log; `DutyEntry` is shared so they cannot disagree about a window; the rules are one engine with the caller's numbers. | CORE-76 |
 
-### Spike findings — Shipping and logistics
+### Findings — Shipping and logistics
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |
@@ -436,7 +435,7 @@ verification files. What follows is the painpoint each finding traces to.
 | FTL vocabulary is defined | Acclimated 72 h / 36 h, theater 60°, WOCL 0200–0559, local night 8 h in 22:00–08:00, early start and late finish bands by schedule type. | AV-27 |
 | NOTAM D) is a schedule with grammar | Days or dates, never both; first activity at B), last at C); gaps ≤ 7 days; `SR MINUS30`; no oblique ([OPADD 4.1](https://www.icao.int/sites/default/files/sp-files/APAC/Documents/EUROCONTROL%20Operating%20Procedures%20for%20AIS%20Dynamic%20Data%20(OPADD)%20Edition%204.1.pdf)); TAF `DDHH/DDHH` with `DD24`, PROB only 30/40 ([WMO 306 FM 51](https://www.eoas.ubc.ca/courses/atsc303/Instruments/wmo_guides/wmo_306-vI1_en-2013.pdf)). | AV-28 |
 
-### Spike findings — IoT and continuous time
+### Findings — IoT and continuous time
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |
@@ -444,7 +443,7 @@ verification files. What follows is the painpoint each finding traces to.
 | Ordering across devices needs a rule | HLC's Figure 5 send/receive rules with `\|l − pt\| ≤ ε` ([Kulkarni et al. 2014](https://cse.buffalo.edu/tech-reports/2014-04.pdf)); TrueTime's `[earliest, latest]` and commit wait ([Spanner §3, §4.1.2](https://static.googleusercontent.com/media/research.google.com/en//archive/spanner-osdi2012.pdf)). | IOT-66 |
 | Window assignment is time math | "Fixed windows are really a special case of sliding windows where size equals period"; sessions "defined by a timeout gap" ([Dataflow Model §1.2](https://www.vldb.org/pvldb/vol8/p1792-Akidau.pdf)). | IOT-32 |
 
-### Spike findings — Healthcare
+### Findings — Healthcare
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |
@@ -457,7 +456,7 @@ verification files. What follows is the painpoint each finding traces to.
 | Inpatient days are midnights | "The midnight-to-midnight method"; admission day counts, discharge day does not, same-day is one ([MBPM ch. 3 §20.1](https://www.cms.gov/Regulations-and-Guidance/Guidance/Manuals/Downloads/bp102c03pdf.pdf)); two-midnight benchmark ([42 CFR 412.3(d)(1)](https://www.law.cornell.edu/cfr/text/42/412.3)) — the same primitive as terminal dwell. | TRAN-8 (`dwellTime`), shown on HLTH-38's guide |
 | Residents have hours rules too | 80 hours "averaged over a four-week period", 24 + 4, 14 hours after 24-hour call, one day in seven, every third night; renumbered 6.20–6.28 in 2025 ([ACGME CPR](https://www.acgme.org/globalassets/pfassets/programrequirements/2025-reformatted-requirements/cprresidency_2025_reformatted.pdf)). | CORE-76 |
 
-### Spike findings — Finance
+### Findings — Finance
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |
@@ -469,7 +468,7 @@ verification files. What follows is the painpoint each finding traces to.
 | RFR conventions are date structures | Lookback, observation period shift, lockout, payment delay, with weights by the calculation or observation calendar ([ISDA memo §1.1–1.4](https://www.isda.org/a/alEgE/A40393158-v18.0-ISDA_Memorandum_Compounding-RFRs-under-2006-Definitions.pdf), [ARRC guide pp. 17–19](https://www.newyorkfed.org/medialibrary/Microsites/arrc/files/2021/users-guide-to-sofr2021-update.pdf)). | FIN-72 |
 | Trading and payments have their own formats | FIX `UTCTimestamp` to picoseconds with `60` "only if UTC leap second", `TZTimestamp`, `MonthYear` `w1`–`w5` ([FIX Latest](https://fiximate.fixtrading.org/en/FIX.Latest/fix_datatypes.html)); SWIFT 32A `YYMMDD`, 13C/13D offsets; RTS 25 granularity tables ([2017/574](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017R0574)). | FIN-73 |
 
-### Spike findings — Space and celestial
+### Findings — Space and celestial
 
 | Painpoint | Why it hurts | Story |
 | --- | --- | --- |

@@ -109,7 +109,7 @@ Questions:
   container within the terminal beyond the free time period. Detention refers to the charge ...
   outside of the terminal or depot". Commentary, not a standard. **Global, PRIMARY.**
   https://unctad.org/news/demurrage-and-detention-charges-container-shipping
-- **BIMCO Laytime Definitions 2013** govern charter parties only (see the spike record); they do not
+- **BIMCO Laytime Definitions 2013** govern charter parties only (see `spike-2026-09/transport-maritime.md`); they do not
   reach container D&D.
 
 ### 1c. Published tariffs

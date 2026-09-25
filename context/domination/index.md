@@ -11,7 +11,8 @@ This file is a progressive-disclosure entry point. Read what you need:
 - [issues/](issues/) — Full specs, one file per story, named by story ID.
 - [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on
   the docs site, and the rules for them.
-- [research/](research/) — Research records; start with [realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md), the September 2026 pass over every realm.
+- [research/](research/) — Research records: the primary-source evidence behind specs, including the
+  verification files in [research/spike-2026-09/](research/spike-2026-09/).
 
 ## Orientation
 
