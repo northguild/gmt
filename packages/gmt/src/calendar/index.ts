@@ -2,4 +2,5 @@
 export * from "@js-temporal/polyfill";
 export * from "./business";
 export * from "./calculate";
+export * from "./hours";
 export * from "./validate";

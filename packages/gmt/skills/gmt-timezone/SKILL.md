@@ -1,21 +1,19 @@
 ---
 name: gmt-timezone
 description: >
-  Timezone-aware operations — get zoned now, format zoned datetimes/ranges,
-  convert between plain↔zoned↔UTC↔Unix, DST disambiguation on construction and
-  arithmetic, the instant-plus-offset pair, classifying a zoneless wall time
-  before resolving it, real zone unit boundaries
-  (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a local day,
-  flooring or bucketing on local boundaries (floorToZone/bucketRange),
-  calendar-annotated zoned strings, zoned values at the range limits, the
-  transport legs transitTime, etaAtZone and dwellTime (local calendar days
-  crossed), intermodal free time — freeTimeExpiry (the free window and its
-  half-open expiry), chargeableDays (the dates charged, with tier bands),
-  demurrageClock (which events a demurrage, detention, storage or combined clock
-  runs between) — and billingTimeline (invoice, dispute and resolution
-  deadlines, windows as caller parameters). Reads the installed package
-  README.md and source JSDoc for API details; this skill is a routing pointer,
-  not an API dump.
+  Timezone-aware operations — zoned now, formatting zoned datetimes/ranges,
+  plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
+  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal for
+  zoneless wall times, real zone unit boundaries (startOfZoned/endOfZoned/
+  startOfUnix/endOfUnix), hours in a local day, floorToZone/bucketRange,
+  calendar-annotated zoned strings, range limits, transport legs
+  (transitTime, etaAtZone, dwellTime), intermodal free time (freeTimeExpiry,
+  chargeableDays, demurrageClock), billingTimeline deadlines, and operating
+  hours — OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
+  nextOpenAt, nextCloseAt, operatingTimeBetween and addOperatingTime (open
+  time elapsed, working-hours SLA deadlines, midnight-wrapping curfews).
+  Reads the installed package README.md and source JSDoc for API details;
+  this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -34,6 +32,8 @@ sources:
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
   - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/intermodal/calculate/index.ts'
@@ -66,6 +66,10 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user is working out when a container's free time ends, how many days of
   demurrage or detention are chargeable and for which dates, or which events a
   charge's clock runs between.
+- The user is asking whether a gate, desk, office or venue is open at an
+  instant, when it next opens or closes, how many working hours passed between
+  two instants, or when an SLA measured in open hours falls due — or is
+  expanding a recurring local window such as a night curfew.
 
 ## Core rules
 
@@ -227,7 +231,23 @@ converting between time zones, or doing arithmetic that must respect DST.
     `convertUtcToPlainDate(instant, { timeZone })`. A request before its
     invoice, or an agreed date before the request, returns `null`. GMT
     computes dates, not liability.
-18. **Read the README.** This skill is a routing pointer. For the full DST
+18. **Operating hours are local windows resolved in the schedule's zone.** An
+    `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
+    `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
+    (`{ from: "09:00", to: "17:00" }`); a `to` at or before `from` wraps past
+    midnight and the window belongs to the date it starts on. Holidays are local
+    dates (a `BusinessCalendar` is accepted; only its `holidays` are read); an
+    override replaces one date's windows, holiday or not. Every edge goes
+    through `resolveLocal` with `disambiguation` (default `"compatible"`), so a
+    23:00–06:00 window is 8 real hours across New York's fall-back night.
+    `recurringWindows(weekly, range, zone)` and `operatingIntervals(schedule,
+    range)` return merged open intervals; `isOpenAt`, `nextOpenAt` and
+    `nextCloseAt` answer point questions; `operatingTimeBetween(start, end,
+    schedule)` is open time elapsed (hours as the largest unit), and
+    `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
+    stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
+    open time and returns `""`.
+19. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -257,6 +277,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`
+- **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
+  `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
 
 ## References
 
