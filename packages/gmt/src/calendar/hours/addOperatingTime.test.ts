@@ -222,6 +222,31 @@ describe("addOperatingTime across a skipped local midnight", () => {
   );
 });
 
+describe("addOperatingTime at the search cap", () => {
+  // From Saturday 2024-06-15, the 10,000th local date is 2051-11-01: a deadline anywhere on it is
+  // answered, and one on the date after is not, even at its first instant. So an hour ending at
+  // that midnight is past the cap.
+  it.each`
+    date            | windows                             | expected
+    ${"2051-11-01"} | ${[{ from: "09:00", to: "17:00" }]} | ${"2051-11-01T10:00:00Z"}
+    ${"2051-11-01"} | ${[{ from: "22:00", to: "23:00" }]} | ${"2051-11-01T23:00:00Z"}
+    ${"2051-11-01"} | ${[{ from: "23:00", to: "00:00" }]} | ${""}
+    ${"2051-11-02"} | ${[{ from: "00:00", to: "01:00" }]} | ${""}
+  `(
+    "returns $expected for one open hour on $date under a 30-year horizon",
+    ({ date, windows, expected }) => {
+      expect(
+        addOperatingTime(
+          "2024-06-15T12:00:00Z",
+          "PT1H",
+          { timeZone: "UTC", weekly: {}, overrides: [{ date, windows }] },
+          { within: "P30Y" },
+        ),
+      ).toBe(expected);
+    },
+  );
+});
+
 describe("addOperatingTime with a long horizon", () => {
   const allDay = [{ from: "00:00", to: "00:00" }];
   const always = {

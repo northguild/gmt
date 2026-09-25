@@ -131,6 +131,26 @@ describe("nextOpenAt", () => {
       ).toBe("2025-06-20T09:00:00Z");
     });
 
+    // From Saturday 2024-06-15, the 10,000th local date is 2051-11-01. A search answers anywhere
+    // on it, and nowhere on the date after, even at its first instant.
+    it.each`
+      date            | windows                             | expected
+      ${"2051-11-01"} | ${nineToFive}                       | ${"2051-11-01T09:00:00Z"}
+      ${"2051-11-01"} | ${[{ from: "23:00", to: "23:30" }]} | ${"2051-11-01T23:00:00Z"}
+      ${"2051-11-02"} | ${[{ from: "00:00", to: "01:00" }]} | ${""}
+    `(
+      "returns $expected for an opening on $date under a 30-year horizon",
+      ({ date, windows, expected }) => {
+        expect(
+          nextOpenAt(
+            "2024-06-15T12:00:00Z",
+            { timeZone: "UTC", weekly: {}, overrides: [{ date, windows }] },
+            { within: "P30Y" },
+          ),
+        ).toBe(expected);
+      },
+    );
+
     it("returns the sentinel for a schedule that never opens", () => {
       expect(nextOpenAt(saturdayNoon, { timeZone: "UTC", weekly: {} })).toBe(
         "",
@@ -193,27 +213,6 @@ describe("nextOpenAt", () => {
       ${saturdayNoon}          | ${office}                                   | ${"P1D"}                         | ${"a string options argument"}
     `("returns the sentinel for $reads", ({ from, schedule, options }) => {
       expect(nextOpenAt(from, schedule, options)).toBe("");
-    });
-
-    it("returns the sentinel when the search would walk past 10,000 local days", () => {
-      // 2024-06-15 to 2052-06-17 is 10,229 days: inside a 30-year horizon, past the walk's cap.
-      const farOpening = {
-        timeZone: "UTC",
-        weekly: {},
-        overrides: [{ date: "2052-06-17", windows: nineToFive }],
-      };
-      expect(nextOpenAt(saturdayNoon, farOpening, { within: "P30Y" })).toBe("");
-      // The same schedule answers once the opening is inside the cap.
-      expect(
-        nextOpenAt(
-          saturdayNoon,
-          {
-            ...farOpening,
-            overrides: [{ date: "2050-06-17", windows: nineToFive }],
-          },
-          { within: "P30Y" },
-        ),
-      ).toBe("2050-06-17T09:00:00Z");
     });
 
     it("returns the sentinel rather than throwing for hostile arguments", () => {

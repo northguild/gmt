@@ -267,9 +267,11 @@ export function parseScheduleDisambiguation(
 
 /**
  * The last instant a search may answer with: `from` plus `within` (default one year), added in
- * the schedule's zone so `P1D` is one local day. A horizon past Temporal's last instant is that
- * instant, since nothing after it can be answered. `null` when `within` is not a non-negative
- * ISO duration.
+ * the schedule's zone so `P1D` is one local day. It is clamped to the search cap: the last instant
+ * before the local date `MAX_SCHEDULE_DAYS + 1` after the one `from` falls on, so a search answers
+ * anywhere on the 10,000th date and nowhere after it. A horizon past Temporal's last instant is
+ * that instant, since nothing after it can be answered. `null` when `within` is not a
+ * non-negative ISO duration.
  */
 export function parseSearchHorizon(
   fromNs: bigint,
@@ -294,10 +296,24 @@ export function parseSearchHorizon(
     return null;
   }
 
+  const from =
+    Temporal.Instant.fromEpochNanoseconds(fromNs).toZonedDateTimeISO(timeZone);
+  const horizon = clampedToRange(() => from.add(duration).epochNanoseconds);
+  const cap = clampedToRange(
+    () =>
+      from
+        .toPlainDate()
+        .add({ days: MAX_SCHEDULE_DAYS + 1 })
+        .toZonedDateTime(timeZone).epochNanoseconds - 1n,
+  );
+
+  return horizon < cap ? horizon : cap;
+}
+
+/** An instant computed by `instant`, or Temporal's last instant when it lies past the range. */
+function clampedToRange(instant: () => bigint): bigint {
   try {
-    return Temporal.Instant.fromEpochNanoseconds(fromNs)
-      .toZonedDateTimeISO(timeZone)
-      .add(duration).epochNanoseconds;
+    return instant();
   } catch (error) {
     if (error instanceof RangeError) {
       return MAX_INSTANT_NANOSECONDS;
@@ -524,7 +540,9 @@ export type ScheduleWalk = { unresolvedStart: bigint | undefined };
  * - When the visitor stops the walk from `day`, or the last representable day is reached, the
  *   runs still pending are handed over too.
  * - Returns `null` when a day bucket could not be found, or the walk would resolve a date
- *   `MAX_SCHEDULE_DAYS + 1` after the one `fromNs` falls on.
+ *   `MAX_SCHEDULE_DAYS + 2` after the one `fromNs` falls on. Neither use reaches that: a range
+ *   is refused up front past `MAX_SCHEDULE_DAYS` dates, and a search's horizon ends with the
+ *   `MAX_SCHEDULE_DAYS`th date, so its walk stops by the horizon one date later.
  */
 export function walkSchedule(
   schedule: ResolvedSchedule,
@@ -545,9 +563,9 @@ export function walkSchedule(
     return finish();
   };
 
-  // One date past the span a range may cover: the date after a range's last is resolved to
-  // settle it, since its windows can start before its own first instant.
-  const limitDate = dateLimit(schedule, fromNs, MAX_SCHEDULE_DAYS + 1);
+  // The span a range or search may cover, plus the date after its last, which is resolved to
+  // settle it because its windows can start before its own first instant.
+  const limitDate = dateLimit(schedule, fromNs, MAX_SCHEDULE_DAYS + 2);
   let current = firstWalkBucket(schedule, fromNs);
   let lastDate: Temporal.PlainDate | null = null;
   let bound: bigint | undefined;
