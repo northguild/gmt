@@ -55,6 +55,13 @@
     -webkit-backdrop-filter: none !important;
     background: color(from var(--gmt-void) srgb r g b / 0.92);
   }
+
+  /* The globe's atmosphere glow and limb haze are translucent washes. */
+  :root,
+  [data-theme="light"] {
+    --gmt-globe-atmosphere-alpha: 0;
+    --gmt-globe-haze-alpha: 0;
+  }
 }
 
 /* =======================================================================
@@ -70,6 +77,8 @@
     --gmt-fill: var(--gmt-fill-deep);
     --gmt-fill-subtle: var(--gmt-fill-strong);
     --gmt-glass-tint-subtle: var(--gmt-glass-tint);
+    --gmt-globe-atmosphere-alpha: 0;
+    --gmt-globe-haze-alpha: 0;
   }
 
   *,
