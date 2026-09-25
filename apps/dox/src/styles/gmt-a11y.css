@@ -150,6 +150,35 @@
     outline-offset: -3px;
   }
 
+  /* The Billing Deadlines strip's answer is the three lanes and their
+     deadlines: gradients drop under forced colours, so the border style is
+     what keeps them apart, and the badges keep their own outline. */
+  .gmt-billing-lane {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-billing-lane--in,
+  .gmt-billing-lane--deadline {
+    background: Highlight;
+  }
+
+  /* Bug fixed (INT-58 fix loop): `forced-color-adjust: none` opts the badge
+     out of the browser's automatic remap, so leaving only `color: CanvasText`
+     kept whichever non-system background the light/dark theme had declared
+     (`--gmt-ice`, or a lane's ink token) — in a light forced-colors palette
+     that background is near-black and CanvasText is also near-black, so the
+     A/I/R letter and the lane number vanish. An inverted-video pair
+     (CanvasText fill, Canvas glyph) is guaranteed readable in every
+     forced-colors palette, because Canvas and CanvasText are defined as a
+     contrasting pair by the browser, not by this stylesheet. */
+  .gmt-billing-badge {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+
   .gmt-popover {
     background: Canvas;
     border: 1px solid CanvasText;

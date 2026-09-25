@@ -91,7 +91,7 @@
 
 .gmt-hive-back:hover,
 .gmt-hive-back:focus-visible {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-strip-end {
@@ -116,7 +116,7 @@
   font-size: var(--gmt-text-xs);
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -140,11 +140,11 @@
    green for the deployed one: the same colour the design system already uses
    for live, ticking values (visual-design.md §3). */
 .gmt-hive-env[data-env="local"] {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 .gmt-hive-env[data-env="live"] {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 /* The chat itself: transcript + composer, host-agnostic. Grows to fill
@@ -302,7 +302,7 @@
 }
 
 .gmt-hive-artifact-link:hover {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
 
@@ -325,7 +325,7 @@
   align-items: flex-start;
   gap: var(--gmt-space-2);
   padding: var(--gmt-space-3) var(--gmt-space-4);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-md);
@@ -384,7 +384,7 @@
   margin: auto;
   max-width: 32rem;
   padding: var(--gmt-space-4);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-md);
@@ -405,7 +405,7 @@
   padding: var(--gmt-space-1) var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: none;
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-sm);
@@ -446,7 +446,7 @@
 
 .gmt-hive-receipt-open {
   font: inherit;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: none;
   border: none;
   padding: 0;
@@ -783,7 +783,7 @@
    directly rather than reaching for that selector. */
 .gmt-hive-prompt code {
   background: var(--gmt-code-bg);
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -795,7 +795,7 @@
 /* The character's own name gets the role colour it speaks in, so "Dox" here
    and every Dox crystal in the transcript are visibly the same entity. */
 .gmt-hive-name {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   border-color: var(--gmt-border-strong);
 }
 
@@ -930,7 +930,7 @@
   gap: var(--gmt-space-2);
   align-self: stretch;
   padding: var(--gmt-space-3) var(--gmt-space-4);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-md);
@@ -959,7 +959,7 @@
   padding: var(--gmt-space-1) var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: none;
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-sm);
@@ -991,7 +991,14 @@
 }
 
 /* The brain badge and the reset clock chip are one family in the composer's
-   control bar: the same quiet surface, so neither competes with Send. */
+   control bar: the same quiet surface, so neither competes with Send — quiet
+   by default, full `--gmt-ice` on hover/focus below. `--gmt-ice-dim` briefly
+   moved to `--gmt-ice` here (INT-58 fix loop) because the *old* `--gmt-ice-dim`
+   (#7a9baa/#666666) only cleared 6.48:1 dark / 5.27:1 light against
+   `--gmt-fill-subtle`. `--gmt-ice-dim` itself is now retuned (gmt-tokens.css)
+   and clears 8.06:1 dark / 8.36:1 light against this badge's own
+   `--gmt-fill-subtle` background, so this reverts back to it — quiet by
+   default again, and passing. */
 .gmt-hive-brain-badge,
 .gmt-hive-clock {
   display: inline-flex;
@@ -1020,7 +1027,7 @@
 }
 
 .gmt-hive-brain-name {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   text-transform: uppercase;
 }
 
@@ -1029,7 +1036,7 @@
 }
 
 .gmt-hive-brain-dev {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 /* Placement, stacking and dismissal belong to Radix's portalled menu (see
@@ -1088,7 +1095,7 @@
 /* Radix's own checked state. The indicator dot carries this too, so selection
    is not signalled by colour alone. */
 .gmt-hive-brain-option[data-state="checked"] {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
 
@@ -1123,7 +1130,7 @@
   margin-bottom: var(--gmt-space-3);
   padding: var(--gmt-space-2) var(--gmt-space-3);
   font-size: var(--gmt-text-sm);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-md);
@@ -1158,7 +1165,7 @@
 }
 
 .gmt-hive-brain-group-name {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   text-transform: uppercase;
 }
 
@@ -1172,7 +1179,7 @@
  * a long format (an RFC 9557 string) never pushes Send out of the bar. */
 .gmt-hive-clock-glyph {
   flex: 0 0 auto;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-clock-readout {
@@ -1217,7 +1224,7 @@
   margin-inline-start: var(--gmt-space-2);
   letter-spacing: 0.02em;
   text-transform: none;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-clock-resets {
@@ -1246,7 +1253,7 @@
 /* The row the chip is showing. */
 .gmt-hive-clock-reset[data-current] dt,
 .gmt-hive-clock-reset[data-current] dd {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-clock-format {
@@ -1266,7 +1273,7 @@
 }
 
 .gmt-hive-clock-format[data-checked] .gmt-hive-clock-format-label {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-clock-format input {
@@ -1315,6 +1322,8 @@
   border-color: var(--gmt-hairline);
 }
 
+/* An SVG search-icon glyph inside the command palette input, not text
+   (INT-58 fix loop reverted this from an earlier blanket sweep). */
 .gmt-hive-clock-zones [data-slot="command-input-wrapper"] svg {
   color: var(--gmt-cyan);
   opacity: 0.7;
@@ -1352,11 +1361,11 @@
 }
 
 .gmt-hive-clock-zone-option[data-current] {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-clock-zone-option[data-selected="true"] {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
 
@@ -1380,7 +1389,7 @@
 
 .gmt-hive-clock-call:hover,
 .gmt-hive-clock-call:focus-visible {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1511,6 +1520,8 @@
    action while still belonging to the page. Doubles as Stop mid-stream —
    PromptInputSubmit swaps its own icon by status. */
 .gmt-hive-submit {
+  /* Icon colour (PromptInputSubmit swaps an SVG icon by status, no visible
+     label) — INT-58 fix loop reverted this from an earlier blanket sweep. */
   min-width: 2.75rem;
   min-height: 2.75rem;
   background: var(--gmt-fill-strong);
@@ -1556,13 +1567,15 @@
 }
 
 .gmt-hive-starter:hover {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-border-strong);
 }
 
 /* Jump-to-latest. Dead code until the scroll container was fixed — `isAtBottom`
    could never be false — so it has never been themed. */
+/* Icon colour (a scroll-to-bottom arrow, no visible label) — INT-58 fix loop
+   reverted both rules below from an earlier blanket sweep. */
 .gmt-hive-jump {
   background: var(--gmt-surface-2);
   color: var(--gmt-cyan);

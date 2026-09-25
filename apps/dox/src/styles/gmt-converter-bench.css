@@ -55,8 +55,8 @@
 }
 
 .gmt-converter-chip--match {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
   background: color(from var(--gmt-spring) srgb r g b / 0.12);
   border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
-  text-shadow: 0 0 6px color(from var(--gmt-spring) srgb r g b / 0.3);
+  text-shadow: 0 0 6px color(from var(--gmt-spring-ink) srgb r g b / 0.3);
 }

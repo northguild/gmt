@@ -1,0 +1,36 @@
+---
+title: "A Dispute Window from a Contract"
+description: A service contract gives 14 days to dispute. Code that hard-codes 30 gives the wrong deadline.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Dispute Window from a Contract"
+  description="A service contract gives 14 days to dispute an invoice. Hard-coding 30, the window most contracts use, misses the deadline by two weeks."
+  naiveCode={`// The naive approach: a dispute window copied from somewhere else
+const DISPUTE_DAYS = 30;
+const invoiced = new Date("2026-03-05T00:00:00Z");
+new Date(invoiced.getTime() + DISPUTE_DAYS * 86400e3).toISOString().slice(0, 10); // "2026-04-04"
+// This contract gives 14 days: the dispute deadline is 2026-03-19`}
+  explanation={`The windows are the contract's. GMT carries no number, so the caller passes 14, 14 and 45.`}
+  gmtCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+const contract = { issueDays: 14, disputeDays: 14, resolutionDays: 45 };
+
+// A request received on or before the 14-day dispute deadline.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, contract);
+// { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19",
+//   requestedByDeadline: true, resolutionDeadline: "2026-05-02" }
+
+// The same contract, a request received two days later: after the dispute deadline.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-20" }, contract);
+// { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19",
+//   requestedByDeadline: false, resolutionDeadline: "2026-05-04" }`}
+  fixedSpecId="billingTimeline"
+/>
+
+Change the dispute window to `30` in the [Billing Deadlines
+widget](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-03-05%22%2C%22requestReceivedOn%22%3A%222026-03-18%22%2C%22issueDays%22%3A%2214%22%2C%22disputeDays%22%3A%2214%22%2C%22resolutionDays%22%3A%2245%22%7D)
+and watch every later date move. The full rules are in [Intermodal: Billing
+Deadlines](/guides/industries/intermodal-billing-deadlines/).

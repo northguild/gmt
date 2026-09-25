@@ -446,6 +446,18 @@ export const CHAT_STARTERS: readonly {
       zone: "America/New_York",
     },
   },
+  {
+    text: "Charges last accrued 1 March 2026, every window 30 days: is an invoice dated 1 April by the deadline?",
+    widget: "showBillingDeadlines",
+    // Names all three windows, so the model has no default to guess at.
+    args: {
+      anchorOn: "2026-03-01",
+      invoiceIssuedOn: "2026-04-01",
+      issueDays: 30,
+      disputeDays: 30,
+      resolutionDays: 30,
+    },
+  },
 ];
 
 /** The rail call a starter pill makes on click: a stable id per starter, so a

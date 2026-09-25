@@ -132,7 +132,7 @@ h1[data-page-title] {
 
 .sidebar-pane a[aria-current="page"],
 .sidebar-pane a:hover {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
 

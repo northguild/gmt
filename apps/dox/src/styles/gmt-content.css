@@ -15,13 +15,13 @@
   margin-top: var(--gmt-space-8);
   padding-bottom: var(--gmt-space-2);
   border-bottom: 1px solid var(--gmt-hairline);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-size: 1.3rem;
   letter-spacing: var(--gmt-tracking-wide);
 }
 
 .sl-markdown-content h3 {
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   font-size: 1.05rem;
 }
 
@@ -42,7 +42,7 @@
 /* inline code (--gmt-code-bg / --gmt-code-border flip for light mode) */
 .sl-markdown-content :not(pre) > code {
   background: var(--gmt-code-bg);
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
@@ -195,7 +195,7 @@ dialog > .dialog-frame {
 
 /* thead background handled by gmt-glass.css (translucent + backdrop-filter) */
 .sl-markdown-content th {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-family: var(--gmt-font-display);
   font-weight: 600;
   letter-spacing: var(--gmt-tracking-wide);
@@ -244,7 +244,7 @@ dialog > .dialog-frame {
 
 /* ---- Links ---- */
 .sl-markdown-content a:not(:where(.not-content *)) {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   text-decoration: none;
 
   transition:
@@ -253,7 +253,7 @@ dialog > .dialog-frame {
 }
 
 .sl-markdown-content a:not(:where(.not-content *)):hover {
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
 }
 
 /* ---- Starlight tabs ---- */
@@ -302,13 +302,13 @@ dialog > .dialog-frame {
 }
 
 .sl-markdown-content .tab > [role="tab"]:hover {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   border-color: var(--gmt-border-strong);
   background: var(--gmt-fill-strong);
 }
 
 .sl-markdown-content .tab [role="tab"][aria-selected="true"] {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   border-color: color(from var(--gmt-cyan) srgb r g b / 0.45);
   background: var(--gmt-fill-deep);
   box-shadow:

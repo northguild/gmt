@@ -38,11 +38,11 @@
   /* Icon, "Search" label and ⌘K hint all in primary blue, both themes
      (Starlight defaults them to muted gray). */
   site-search button[data-open-modal] {
-    color: var(--gmt-cyan);
+    color: var(--gmt-cyan-ink);
   }
 
   site-search button[data-open-modal]:hover {
-    color: var(--gmt-cyan-bright);
+    color: var(--gmt-cyan-ink);
   }
 
   [data-theme="light"] site-search button[data-open-modal] {
@@ -64,7 +64,7 @@ site-search button[data-open-modal] {
    instead of Starlight's muted text on a flat --sl-color-gray-6 chip. */
 site-search button[data-open-modal] > kbd {
   background: var(--gmt-code-bg);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -95,14 +95,14 @@ site-search button[data-open-modal] > kbd {
 
 [data-theme="light"] [role="option"][aria-selected="true"] {
   background-color: var(--gmt-fill-deep);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* Main CTA buttons (Install, etc.) — glass effect in light mode */
 [data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
   background: var(--gmt-fill-strong);
   border: 1px solid var(--gmt-border);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   corner-shape: bevel;
   backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
 }
@@ -122,7 +122,7 @@ site-search button[data-open-modal] > kbd {
 [data-theme="light"]
   main
   a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]) {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* Sidebar link color flips via --gmt-sidebar-link (gmt-tokens.css); the
@@ -152,10 +152,20 @@ a[rel="next"] .link-title {
   font-size: 20px;
 }
 
-/* Inner-page navigation and content rendered by Starlight components. */
+/* Inner-page navigation and content rendered by Starlight components.
+   `:not(.sl-badge)` (INT-58 fix loop): `.group-label > span` was also
+   matching the group's own "Unreleased" `<Badge variant="caution">` (a
+   direct-child span, same as the group's name span) and overriding its
+   white text with `--gmt-ice` — GMT's unlayered CSS beats Starlight's own
+   `@layer`-scoped `.sl-badge { color: var(--sl-color-text-badge) }`
+   regardless of specificity, so this was winning even though it was never
+   meant to touch the badge. Measured live at 2.44:1; the sibling badge on a
+   leaf link (not caught by this selector) was already 7.14:1 with the same
+   background, confirming the badge's own white text is correct once this
+   rule stops overriding it. */
 [data-theme="light"] #starlight__sidebar summary,
 [data-theme="light"] #starlight__sidebar summary .group-label,
-[data-theme="light"] #starlight__sidebar summary .group-label > span {
+[data-theme="light"] #starlight__sidebar summary .group-label > span:not(.sl-badge) {
   color: var(--gmt-ice);
 }
 

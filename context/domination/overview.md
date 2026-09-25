@@ -205,7 +205,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied by default. Opt-in reference calendars carry coverage windows.        |
 | IERS data staleness           | Bundle Bulletin C and A at build. `isTableStale` / `isUt1Stale` surface expiry.       |
-| Regulatory tables drift       | FDP tables, driver hours and filing rules are parameters or opt-in data, not logic.   |
+| Regulatory tables drift       | GMT tracks no law: windows, limits and tables are caller parameters, never logic or docs text (tracker, "Added for this epic"). |
 | Transport scope creep         | Time math only. Routing and optimisation are the consumer's problem.                  |
 | Safety-critical approximation | AV-27 and ROAD-* document unimplemented rules rather than approximating them.         |
 | Space realm complexity        | Model against `astrotime` and ERFA. Accuracy limits stated as numbers in JSDoc.       |

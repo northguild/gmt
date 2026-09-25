@@ -57,7 +57,7 @@ npm. A Core primitive ships with the realm that first uses it.
 
 | Cut after | Ships | Why here |
 | --- | --- | --- |
-| INT-58 (#11) | TRAN-8, INT-12, INT-58 | Dwell plus free time, demurrage and the FMC billing timelines: the demurrage calculations, complete |
+| INT-58 (#11) | TRAN-8, INT-12, INT-58 | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete |
 | TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57 | The rest of the transport primitives, with operating hours |
 | INT-15 (#18) | INT-13 … INT-15 | Intermodal complete: filing deadlines, B/L, EDI interop |
 | ROAD-62 (#22) | ROAD-20, ROAD-21, ROAD-61, ROAD-62 | Driver hours for the US, EU and Canada |
@@ -88,7 +88,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 8  | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                     | —                      | #251  | 1.16.0  | Done        |
 | 9  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                      | —                      | #189  | —       | Done        |
 | 10 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                         | —                      | #193  | —       | Done        |
-| 11 | INT-58  | Intermodal | FMC demurrage and detention billing<br>timelines (46 CFR 541)                     | —                      | #260  | Cut     | Not started |
+| 11 | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                   | —                      | #260  | Cut     | Done        |
 | 12 | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                | —                      | #257  | —       | Not started |
 | 13 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                               | —                      | #190  | —       | Not started |
 | 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff`                                 | —                      | #191  | —       | Not started |
@@ -311,6 +311,15 @@ Highest commercial value and the thinnest coverage in the original plan.
 - **Every behaviour-changing story gets a standards review.** `gmt-reviewer` (read-only) runs
   after `tdd-dev` and `tester` in categories A, B and G; its report goes in the PR's Validation
   section; an open blocking finding blocks closure. It is what verifies the citations above.
+- **GMT tracks no law.** Windows, limits and tables from a regulation are caller parameters
+  with no defaults, the same rule as tariff terms. Library code rests on TC39 Temporal, ISO 8601,
+  the RFCs and the realm's industry standards only; no statute is quoted, no regulation's numbers
+  are carried and no court decision is named, in code or on the docs site. A function is generic
+  or it is not shipped; a jurisdiction's numbers are the caller's, and a docs example is labelled
+  by its numbers ("30-day windows", "a 14/14/45 contract"), never by a jurisdiction. Set by
+  INT-58 (2026-09-24); when ROAD-20, ROAD-61, ROAD-62, MAR-60, RAI-63, AV-65, INT-13 or HLTH-69
+  is picked up, it is re-scoped to the generic calculation or cut. Reading public regulation
+  text during research is fine; shipping it is not.
 
 ---
 

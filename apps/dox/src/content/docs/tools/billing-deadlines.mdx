@@ -1,0 +1,39 @@
+---
+title: Billing Deadlines
+description: Set the anchor, the invoice and dispute dates as they exist, and the windows your tariff or contract names, and watch billingTimeline lay out the deadline chain around a demurrage or detention invoice on a day strip.
+---
+
+import BillingDeadlines from "../../../components/BillingDeadlines.astro";
+
+Each deadline below is a date, counted in calendar days from day zero, with
+the deadline day itself inside the window. There is no clock time to it and
+no instant to compare against — only whole dates, on the ISO calendar.
+
+The three windows — issue, dispute, resolve — are yours, and none is
+defaulted: a blank window is left out of the call rather than filled in, and
+the result names which one is missing and says why it is `null`. Lane 1 is the
+issue window, lane 2 the dispute window and lane 3 the resolution window, each
+drawn with its own pattern and number so the strip reads without relying on
+colour alone; the anchor, the invoice date and the request date are each
+lettered.
+
+The strip and the verdicts below are the real
+[`billingTimeline`](/reference/intermodal/calculate/billingTimeline/) call for
+what is on screen. Nothing here computes a deadline — it only draws what the
+function returned.
+
+<BillingDeadlines />
+
+**Worth trying:** [the same 30-day windows, invoiced one day
+later](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-04-01%22%2C%22issueDays%22%3A%2230%22%2C%22disputeDays%22%3A%2230%22%2C%22resolutionDays%22%3A%2230%22%7D) —
+the invoice deadline does not move, but the verdict turns to after the
+deadline. Then [a 14/14/45 contract with the request moved to 20
+March](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-03-05%22%2C%22requestReceivedOn%22%3A%222026-03-20%22%2C%22issueDays%22%3A%2214%22%2C%22disputeDays%22%3A%2214%22%2C%22resolutionDays%22%3A%2245%22%7D) —
+one day past the 14-day dispute deadline, and the request verdict turns to
+after the deadline while the resolution deadline stays `null`.
+
+Reference: [`billingTimeline`](/reference/intermodal/calculate/billingTimeline/)
+lays out the chain; [`convertUtcToPlainDate`](/reference/utc/convert/convertUtcToPlainDate/)
+reduces an instant to the billing party's local date before it is passed in.
+The rules for reading the strip are in
+[Intermodal: Billing Deadlines](/guides/industries/intermodal-billing-deadlines/).

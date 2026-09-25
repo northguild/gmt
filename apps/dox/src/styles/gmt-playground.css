@@ -40,32 +40,25 @@
   flex-shrink: 0;
 }
 
+/* INT-58 fix loop: `color: var(--gmt-void)` on the raw severity fills only
+   cleared 7:1 for "medium" (16.00:1 dark, 17.40:1 light). "critical" failed
+   in light theme (3.68:1) and "high" failed in *both* (3.75:1 dark, 1.81:1
+   light — `--gmt-severity-high` is `--gmt-teal`, tuned for a glass tint, not
+   a void-text fill, in either theme). The `-ink` severity tokens
+   (gmt-tokens.css) fix both without touching `--gmt-cyan`/`--gmt-teal`
+   themselves, which are still fills and borders elsewhere. "medium" already
+   passed and keeps the plain token — no `-ink` variant exists for it. */
 .gmt-mistake-badge--critical {
   color: var(--gmt-void);
-  background: var(--gmt-severity-critical);
+  background: var(--gmt-severity-critical-ink);
 }
 
 .gmt-mistake-badge--high {
   color: var(--gmt-void);
-  background: var(--gmt-severity-high);
+  background: var(--gmt-severity-high-ink);
 }
 
 .gmt-mistake-badge--medium {
-  color: var(--gmt-void);
-  background: var(--gmt-severity-medium);
-}
-
-[data-theme="light"] .gmt-mistake-badge--critical {
-  color: var(--gmt-void);
-  background: var(--gmt-severity-critical);
-}
-
-[data-theme="light"] .gmt-mistake-badge--high {
-  color: var(--gmt-void);
-  background: var(--gmt-severity-high);
-}
-
-[data-theme="light"] .gmt-mistake-badge--medium {
   color: var(--gmt-void);
   background: var(--gmt-severity-medium);
 }
@@ -106,11 +99,11 @@
 }
 
 .gmt-mistake-side--wrong h4 {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 .gmt-mistake-side--right h4 {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 .gmt-mistake-side--wrong .frame {

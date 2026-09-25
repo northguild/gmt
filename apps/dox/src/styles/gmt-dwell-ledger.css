@@ -115,13 +115,13 @@
   background: color(from var(--gmt-spring) srgb r g b / 0.35);
   border: 1px solid var(--gmt-spring);
   border-radius: var(--gmt-radius-sm);
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 .gmt-dwell-bar--invalid {
   background: var(--gmt-signal-fill);
   border-color: var(--gmt-signal-border);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 .gmt-dwell-handle {
