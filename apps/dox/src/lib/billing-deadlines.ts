@@ -12,6 +12,12 @@
  * real package. `@js-temporal/polyfill` is imported for drawing only — turning
  * the library's own ISO dates into a day strip — never to compute a deadline.
  *
+ * Nor does it order dates as strings. A typed date may carry an RFC 9557
+ * annotation or an expanded year, and even canonical ISO strings sort wrongly
+ * outside years 0000–9999, so every ordering is `Temporal.PlainDate.compare`
+ * and every drawn or labelled date is the canonical form the library emits.
+ * Only the printed call keeps the text as typed, because it is the real call.
+ *
  * GMT tracks no law: every preset label, description and reason string here
  * names no statute, regulator, docket or jurisdiction, and none of the words
  * `timely`, `untimely`, `late`, `void`, `payable` or `compliant` appears. The
@@ -298,6 +304,19 @@ function valueLiteral(v: string | boolean | null): string {
   return JSON.stringify(v);
 }
 
+/** A valid ISO date in the canonical bare form `billingTimeline` emits. */
+function isoOf(date: string): string {
+  return Temporal.PlainDate.from(date.trim()).toString();
+}
+
+/** `Temporal.PlainDate.compare` for two valid ISO date strings. */
+function compareDates(a: string, b: string): number {
+  return Temporal.PlainDate.compare(
+    Temporal.PlainDate.from(a),
+    Temporal.PlainDate.from(b),
+  );
+}
+
 /** What `billingTimeline` returns, one key per line, as the guide writes it. */
 export function formatDeadlines(r: BillingDeadlines): string {
   return (
@@ -314,7 +333,8 @@ export type VerdictKind = "issued" | "requested";
 /**
  * The only verdict strings the widget shows. Date comparisons, never a
  * liability finding: `on or before the deadline` or `after the deadline`,
- * and nothing else.
+ * and nothing else. A non-null `value` means the library accepted `date`, so
+ * it is shown in the canonical form the library emits.
  */
 export function verdictText(
   kind: VerdictKind,
@@ -322,15 +342,11 @@ export function verdictText(
   value: boolean | null,
 ): string {
   if (kind === "issued") {
-    if (value === true)
-      return `Invoice issued ${date}: on or before the deadline`;
-    if (value === false) return `Invoice issued ${date}: after the deadline`;
-    return "No invoice date yet: this is a forecast";
+    if (value === null) return "No invoice date yet: this is a forecast";
+    return `Invoice issued ${isoOf(date!)}: ${value ? "on or before" : "after"} the deadline`;
   }
-  if (value === true)
-    return `Request received ${date}: on or before the deadline`;
-  if (value === false) return `Request received ${date}: after the deadline`;
-  return "No request date yet";
+  if (value === null) return "No request date yet";
+  return `Request received ${isoOf(date!)}: ${value ? "on or before" : "after"} the deadline`;
 }
 
 // ---------------------------------------------------------------------------
@@ -440,14 +456,20 @@ export function dayStrip(
   result: BillingDeadlines | null,
 ): DayStripResult | null {
   if (result === null) return null;
-  const dates = datesOf(state);
+  // A non-null result means every given date is valid: draw their canonical form.
+  const typed = datesOf(state);
+  const dates: DatesArg = { anchorOn: isoOf(typed.anchorOn) };
+  if (typed.invoiceIssuedOn !== undefined)
+    dates.invoiceIssuedOn = isoOf(typed.invoiceIssuedOn);
+  if (typed.requestReceivedOn !== undefined)
+    dates.requestReceivedOn = isoOf(typed.requestReceivedOn);
   const lanes = laneDefs(dates, result);
+  const before = (a: string, b: string) => compareDates(a, b) < 0;
 
   const spanStart =
-    dates.invoiceIssuedOn !== undefined
-      ? dates.anchorOn < dates.invoiceIssuedOn
-        ? dates.anchorOn
-        : dates.invoiceIssuedOn
+    dates.invoiceIssuedOn !== undefined &&
+    before(dates.invoiceIssuedOn, dates.anchorOn)
+      ? dates.invoiceIssuedOn
       : dates.anchorOn;
 
   const endCandidates: string[] = [
@@ -458,7 +480,7 @@ export function dayStrip(
     ...(result.disputeDeadline !== null ? [result.disputeDeadline] : []),
     ...(result.resolutionDeadline !== null ? [result.resolutionDeadline] : []),
   ];
-  const spanEnd = endCandidates.reduce((a, b) => (a > b ? a : b));
+  const spanEnd = endCandidates.reduce((a, b) => (before(a, b) ? b : a));
 
   const marksOf = (date: string): MarkKind[] => {
     const m: MarkKind[] = [];
@@ -476,7 +498,7 @@ export function dayStrip(
   const lanesOf = (date: string): LaneCellState[] => {
     const out: LaneCellState[] = [];
     for (const lane of lanes) {
-      if (date < lane.start || date > lane.end) continue;
+      if (before(date, lane.start) || before(lane.end, date)) continue;
       const deadline = date === lane.end;
       const day = daysBetween(lane.start, date);
       out.push({
@@ -489,7 +511,7 @@ export function dayStrip(
   };
 
   const dayItem = (date: string): DayStripDay => {
-    const padding = date < spanStart || date > spanEnd;
+    const padding = before(date, spanStart) || before(spanEnd, date);
     return {
       kind: "day",
       date,
@@ -506,7 +528,7 @@ export function dayStrip(
 
   if (totalDays <= MAX_STRIP_CELLS) {
     const items: DayStripItem[] = [];
-    for (let d = paddedStart; d <= paddedEnd; d = addDays(d, 1)) {
+    for (let d = paddedStart; !before(paddedEnd, d); d = addDays(d, 1)) {
       items.push(dayItem(d));
     }
     return {
@@ -540,7 +562,7 @@ export function dayStrip(
     droppedStart = null;
     droppedDays = 0;
   };
-  for (let w = paddedStart; w <= paddedEnd; w = addDays(w, 7)) {
+  for (let w = paddedStart; !before(paddedEnd, w); w = addDays(w, 7)) {
     if (keptWeeks.has(w)) {
       flushGap();
       for (let i = 0; i < 7; i++) items.push(dayItem(addDays(w, i)));
@@ -676,7 +698,8 @@ export function explainNull(
 
   if (request !== "") {
     if (invoice === "") return { reason: "request-without-invoice" };
-    if (request < invoice) return { reason: "request-before-invoice" };
+    if (compareDates(request, invoice) < 0)
+      return { reason: "request-before-invoice" };
   }
 
   for (const field of WINDOW_FIELDS) {
@@ -688,7 +711,7 @@ export function explainNull(
   const agreed = state.agreedResolutionOn.trim();
   if (agreed !== "" && !v.isValidDate(agreed))
     return { reason: "invalid-agreed" };
-  if (agreed !== "" && request !== "" && agreed < request)
+  if (agreed !== "" && request !== "" && compareDates(agreed, request) < 0)
     return { reason: "agreed-before-request" };
 
   if (isOutOfRange(state)) return { reason: "out-of-range" };

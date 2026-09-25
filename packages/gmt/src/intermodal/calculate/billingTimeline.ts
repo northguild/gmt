@@ -15,7 +15,7 @@ export interface BillingDates {
   requestReceivedOn?: string;
 }
 
-/** The three windows the caller supplies, in calendar days. None has a default. */
+/** The three windows the caller supplies, in calendar days, none defaulted, and an optional agreed resolution date. */
 export interface BillingWindows {
   /** Days from `anchorOn` within which the invoice must be issued. */
   issueDays: number;

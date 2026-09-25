@@ -497,3 +497,154 @@ describe("mountBillingDeadlines", () => {
     }).not.toThrow();
   });
 });
+
+/**
+ * The widget draws and labels the library's canonical dates and orders them
+ * with `Temporal.PlainDate.compare`, never by string. An annotated or
+ * expanded-year date the library accepts must draw exactly as its bare ISO
+ * form does, and string order breaks outside years 0000–9999.
+ */
+describe("mountBillingDeadlines: dates the library accepts in any ISO form", () => {
+  const WINDOWS = { issueDays: "30", disputeDays: "30", resolutionDays: "30" };
+
+  /** Real (non-padding) cells, as `[date, marks, lanes]`. */
+  function cells(root: HTMLElement) {
+    return qa(root, "strip").flatMap((strip) =>
+      [
+        ...strip.querySelectorAll<HTMLElement>(".gmt-billing-cell[data-marks]"),
+      ].map((el) => ({
+        date: el.dataset.date!,
+        marks: el.dataset.marks!.split(" ").filter(Boolean),
+        lanes: el.dataset.lanes!.split(" ").filter(Boolean),
+      })),
+    );
+  }
+  const laneCells = (root: HTMLElement, lane: number) =>
+    cells(root).filter((c) => c.lanes.some((l) => l.startsWith(`${lane}-`)));
+
+  it.each([
+    "2026-03-01[u-ca=iso8601]",
+    "2026-03-01[foo=bar]",
+    "2026-03-01[Europe/London]",
+    "+002026-03-01",
+  ])(
+    "draws anchor %s exactly as 2026-03-01: its mark, 31 lane cells, a bare summary",
+    async (anchorOn) => {
+      const { root } = await mount();
+      typeState(root, { anchorOn, ...WINDOWS });
+      expect(q(root, "billing-output").textContent).toContain(
+        'invoiceDeadline: "2026-03-31"',
+      );
+      const lane1 = laneCells(root, 1);
+      expect(lane1).toHaveLength(31);
+      expect(lane1[0]).toMatchObject({
+        date: "2026-03-01",
+        marks: ["anchor"],
+        lanes: ["1-zero"],
+      });
+      expect(lane1.at(-1)).toMatchObject({
+        date: "2026-03-31",
+        lanes: ["1-deadline"],
+      });
+      expect(q(root, "strip-summary").textContent).toBe(
+        "31 days from 2026-03-01 to 2026-03-31.",
+      );
+    },
+  );
+
+  it("prints the call with the date as typed, so the printed call stays the real call", async () => {
+    const { root } = await mount();
+    typeState(root, { anchorOn: "2026-03-01[u-ca=iso8601]", ...WINDOWS });
+    expect(q(root, "copy-billing").dataset.copyText).toBe(
+      'billingTimeline({ anchorOn: "2026-03-01[u-ca=iso8601]" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })',
+    );
+  });
+
+  it("marks, lanes and labels annotated invoice and request dates by their bare ISO form", async () => {
+    const { root } = await mount();
+    typeState(root, {
+      anchorOn: "2026-03-01",
+      invoiceIssuedOn: "2026-03-20[u-ca=iso8601]",
+      requestReceivedOn: "2026-04-19[foo=bar]",
+      ...WINDOWS,
+    });
+    const byDate = new Map(cells(root).map((c) => [c.date, c]));
+    expect(byDate.get("2026-03-20")!.marks).toContain("invoice");
+    expect(byDate.get("2026-03-20")!.lanes).toContain("2-zero");
+    expect(byDate.get("2026-04-19")!.marks).toContain("request");
+    expect(byDate.get("2026-04-19")!.lanes).toContain("3-zero");
+    expect(laneCells(root, 2)).toHaveLength(31);
+    expect(laneCells(root, 3)).toHaveLength(31);
+    expect(q(root, "verdict-issued").textContent).toBe(
+      "Invoice issued 2026-03-20: on or before the deadline",
+    );
+    expect(q(root, "verdict-requested").textContent).toBe(
+      "Request received 2026-04-19: on or before the deadline",
+    );
+  });
+
+  it("orders dates across year 9999 by date, not by string", async () => {
+    const { root } = await mount();
+    typeState(root, {
+      anchorOn: "9999-12-01",
+      issueDays: "60",
+      disputeDays: "30",
+      resolutionDays: "30",
+    });
+    expect(q(root, "billing-output").textContent).toContain(
+      'invoiceDeadline: "+010000-01-30"',
+    );
+    expect(laneDeadlineDates(root, 1)).toEqual(["+010000-01-30"]);
+    expect(laneCells(root, 1)).toHaveLength(61);
+    expect(q(root, "strip-summary").textContent).toBe(
+      "61 days from 9999-12-01 to +010000-01-30.",
+    );
+  });
+
+  it("orders negative years by date, not by string", async () => {
+    const { root } = await mount();
+    typeState(root, {
+      anchorOn: "-000002-12-01",
+      issueDays: "60",
+      disputeDays: "30",
+      resolutionDays: "30",
+    });
+    expect(q(root, "billing-output").textContent).toContain(
+      'invoiceDeadline: "-000001-01-30"',
+    );
+    expect(laneDeadlineDates(root, 1)).toEqual(["-000001-01-30"]);
+    expect(laneCells(root, 1)).toHaveLength(61);
+    expect(q(root, "strip-summary").textContent).toBe(
+      "61 days from -000002-12-01 to -000001-01-30.",
+    );
+  });
+
+  it("explains a request dated before an expanded-year invoice", async () => {
+    const { root } = await mount();
+    typeState(root, {
+      anchorOn: "2026-03-01",
+      invoiceIssuedOn: "+002026-03-20",
+      requestReceivedOn: "2026-03-10",
+      ...WINDOWS,
+    });
+    expect(q(root, "billing-output").textContent).toBe("NO SIGNAL");
+    expect(q(root, "reason-aside").textContent).toContain(
+      NULL_REASON_TEXT["request-before-invoice"],
+    );
+  });
+
+  it("explains an agreed date before an expanded-year request", async () => {
+    const { root } = await mount();
+    typeState(root, {
+      anchorOn: "2026-03-01",
+      invoiceIssuedOn: "2026-03-20",
+      requestReceivedOn: "+002026-04-10",
+      ...WINDOWS,
+      agreedResolutionOn: "2026-04-01",
+    });
+    expect(q(root, "billing-output").textContent).toBe("NO SIGNAL");
+    expect(q(root, "reason-aside").textContent).toContain(
+      NULL_REASON_TEXT["agreed-before-request"],
+    );
+  });
+});
