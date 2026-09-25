@@ -16,7 +16,7 @@ never publishes anything.
 | `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
 Each is versioned independently, so tags are per-package —
-`@northguild/gmt@1.16.0`. There is no repo-wide `vX.Y.Z` tag.
+`@northguild/gmt@1.17.0`. There is no repo-wide `vX.Y.Z` tag.
 
 ---
 
@@ -123,7 +123,7 @@ workflow. A manual dispatch bypasses the version guard deliberately.
 with `announce` set to the published tags, space-separated:
 
 ```bash
-gh workflow run release.yml -f announce="@northguild/gmt@1.16.0 @northguild/gmt-biome@1.1.1"
+gh workflow run release.yml -f announce="@northguild/gmt@1.17.0 @northguild/gmt-biome@1.1.1"
 ```
 
 That run posts the message and publishes nothing.

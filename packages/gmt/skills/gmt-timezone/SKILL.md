@@ -11,11 +11,11 @@ description: >
   transport legs transitTime, etaAtZone and dwellTime (local calendar days
   crossed), intermodal free time — freeTimeExpiry (the free window and its
   half-open expiry), chargeableDays (the dates charged, with tier bands),
-  demurrageClock (which events a demurrage, detention, storage or combined
-  clock runs between) — and billingTimeline (invoice, dispute and resolution
-  deadlines, windows as caller parameters). Reads
-  the installed package README.md and source JSDoc for API details; this skill
-  is a routing pointer, not an API dump.
+  demurrageClock (which events a demurrage, detention, storage or combined clock
+  runs between) — and billingTimeline (invoice, dispute and resolution
+  deadlines, windows as caller parameters). Reads the installed package
+  README.md and source JSDoc for API details; this skill is a routing pointer,
+  not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'

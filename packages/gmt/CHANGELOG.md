@@ -1,5 +1,123 @@
 # @northguild/gmt
 
+## 1.17.0
+
+### Minor Changes
+
+- d896085: Add the `intermodal/` namespace: `freeTimeExpiry`, `chargeableDays` and `demurrageClock` (Story INT-12).
+  
+  Free time is the money calculation in container logistics, and none of its terms is a fact about the port or fixed by a world standard. How many days are free, whether the day of discharge is free day one, how free days and charged days are counted, and which clock a charge runs on are set by the carrier's tariff and the service contract. DCSA defines what demurrage, detention and storage are, but not how their days are counted. So every term is a parameter, no counting term has a default, and what comes back is the free-time window and the specific dates charged.
+  
+  ```typescript
+  import { chargeableDays, demurrageClock, freeTimeExpiry } from "@northguild/gmt";
+  
+  const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+  
+  // A Friday afternoon discharge in New York with three free calendar days.
+  freeTimeExpiry("2024-06-14T19:00:00Z", 3, tariff);
+  // { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }
+  freeTimeExpiry("2024-06-14T19:00:00Z", 3, { ...tariff, firstDay: "nextDay" });
+  // { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T04:00:00Z" }
+  // — the same tariff read the other way: one more day
+  
+  // Out exactly as free time ends, and one second later.
+  chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff);
+  // { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
+  //   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
+  chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
+  // { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
+  //   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
+  
+  // Which two events a charge runs between, per leg.
+  demurrageClock(
+    [
+      { type: "discharged", at: "2024-06-14T19:00:00Z" },
+      { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
+      { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
+    ],
+    "detention",
+    { direction: "import" },
+  );
+  // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" } — gate-out to empty return
+  ```
+  
+  - **Days are the terminal's local days.** `clockStart` and `clockEnd` are instants; their local dates in `options.timeZone` are what is counted, over the zone's real day boundaries, the same ones `dwellTime` and `floorToZone` find. A 23- or 25-hour day is one day, a date the zone deleted is never a free or charged day, and a date the clock falls back into counts once. On the calendar basis with `firstDay: "eventDay"`, `freeDaysUsed + chargeableDays` is exactly `dwellTime(...).calendarDays` for the same dwell, except that a fall-back re-entering the day before the event day (Goose Bay, 7 November 2010) is a date `dwellTime` counts and a tariff never does.
+  - **`firstDay` has no default.** `"eventDay"` makes the event day free day one; `"nextDay"` starts free time the following counted day. The two differ by a full day of charges, so omitting it returns `null`.
+  - **`basis` counts free days; `chargeBasis` counts charged days.** `"calendar"` counts every local day; `"working"` counts only the working days of `options.calendar`, a `BusinessCalendar`, and returns `null` without one. Many tariffs count both in calendar days; where a tariff grants free time in working days, the days after it are mostly charged as calendar days, and some tariffs charge working days only. Neither term has a default, because each is worth days of charges.
+  - **Expiry is half-open.** `expiresAt` is the first instant of the local day after `lastFreeDay`, as a UTC instant. A gate-out at exactly `expiresAt` is not a chargeable day; one nanosecond later is.
+  - **`chargedDates` makes the count auditable.** It is the list a carrier's day-numbered tariff grid is applied to, and the dates an itemised invoice can list.
+  - **Tiers are day bands, not rates.** `tiers: [5, 10]` names days 1–5, 6–10 and 11 onward; `byTier` says how many charged days fell in each band, empty bands included, so a rate table applies by index. GMT computes days, never money.
+  - **`freeDays: 0`** is a tariff with no free time: `chargeableDays` charges every counted day from day one, and `freeTimeExpiry` returns `null` because there is no last free day to name.
+  - **`demurrageClock` selects the pair for a leg.** Import demurrage and storage run from `startEvent` (`"discharged"` by default, or `"available"`) to `gatedOut`, detention from `gatedOut` to `emptyReturned`, and the combined clock from `startEvent` to `emptyReturned`. Export demurrage and storage run from `gatedIn` to `loaded`, detention from `emptyReleased` to `gatedIn`, and the combined clock from `emptyReleased` to `loaded`. `direction` has no default. The event names follow DCSA's Track & Trace equipment events. A required event that is missing or present twice, or an end before its start, returns `null`; the result is an `Interval` in the caller's own strings.
+  - Also exported: the `FreeTime`, `FreeTimeCharges`, `FreeTimeChargeOptions`, `TierBand`, `ClockEvent`, `ClockEventType`, `ClockScope`, `ClockDirection`, `ClockStartEvent` and `ClockOptions` result and argument types, and `FreeTimeOptions`, `FreeTimeBasis` and `FreeTimeFirstDay` under `/types`. Subpaths `@northguild/gmt/intermodal` and `…/intermodal/calculate` join the package exports.
+- df33b58: Add the `transport/` namespace: `transitTime`, `etaAtZone` and `dwellTime` (Story TRAN-8).
+  
+  Every transport mode shares three operations — add a leg's duration to a departure, show the arrival where it lands, and measure how long something sat somewhere — and every mode gets the same two things wrong: a leg across a DST transition is a fixed number of *elapsed* hours, and dwell is charged in *local calendar days*, not hours.
+  
+  ```typescript
+  import { dwellTime, etaAtZone, transitTime } from "@northguild/gmt";
+  
+  transitTime("2024-03-09T23:00:00-05:00[America/New_York]", "PT4H");
+  // "2024-03-10T04:00:00-04:00[America/New_York]" — four elapsed hours across the spring-forward
+  
+  etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokyo");
+  // "2024-06-15T21:30:00+09:00[Asia/Tokyo]"
+  
+  dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/London");
+  // { duration: "PT2H30M", enter: "2024-06-15T23:30:00+01:00[Europe/London]",
+  //   exit: "2024-06-16T02:00:00+01:00[Europe/London]", calendarDays: 2 }
+  dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam");
+  // { duration: "PT2H30M", enter: "2024-06-16T00:30:00+02:00[Europe/Amsterdam]",
+  //   exit: "2024-06-16T03:00:00+02:00[Europe/Amsterdam]", calendarDays: 1 }
+  // — the same two instants, one fewer day: the zone decides
+  ```
+  
+  - **`transitTime` adds exact time.** Hours, minutes and seconds are elapsed time and a `D` component is 24 hours exactly; the wall clock at arrival reflects any DST shift in between. Years, months and weeks return `""` — no leg takes "a month" without a reference point. The departure's zone is preserved: a bracketed IANA zone stays that zone, `Z` stays `Z`, an offset stays an offset. A bracketed zone that does not exist or contradicts its offset is rejected, not silently reinterpreted.
+  - **`etaAtZone` renders a moment in a zone**, so no disambiguation arises: on a fall-back night two arrivals an hour apart print the same wall time with different offsets, and the offset in the result tells them apart. The zone is the caller's fact — GMT does not resolve a port, airport or station code to a timezone.
+  - **`dwellTime.calendarDays` is the library's one "local days crossed" count.** It is the number of distinct local dates the half-open interval `[entry, exit)` touches: same date is `1`, across one local midnight is `2`, an exit exactly at local midnight does not touch the new day. It is counted across the zone's real transitions, so a 23- or 25-hour local day is one day, a date the zone skipped is not counted, and a date it re-entered counts once. Free time and demurrage, laytime and hospital length of stay will all count from here rather than each deciding what a midnight is.
+  - **A day count needs a place.** `dwellTime` takes the zone from `targetZone`, or from the entry's bracketed IANA zone. Bare instants (`Z` or an offset) with no `targetZone` return `null`: an offset is not a zone, and a day count in an unstated locality would be a guess.
+  - **All three never throw.** A non-string, a throwing `toString`, a symbol or a hostile Proxy returns the sentinel (`""` or `null`), as every GMT function does.
+  - Also exported: the `Dwell` result type. Subpaths `@northguild/gmt/transport`, `…/transport/calculate` and `…/transport/convert` join the package exports.
+- c05dcf9: Add `billingTimeline` to the `intermodal/` namespace: the invoice, dispute and resolution deadlines around a demurrage or detention invoice, with every window a caller parameter (Story INT-58).
+  
+  A billing regime or service contract can set up to three windows around an invoice: one to issue it, counted from an anchor date; one to dispute it, counted from issuance; and one to resolve the dispute, counted from the request, unless the parties agree a date instead. The number of days in each is the caller's fact; GMT carries none of them. The arithmetic is the function's: each deadline is a date, counted in calendar days from a date, with the anchor as day zero and the deadline day itself inside the window.
+  
+  ```typescript
+  import { billingTimeline } from "@northguild/gmt";
+  
+  const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+  
+  // Charges last accrued on 1 March. Day 30 is the last day by the deadline; day 31 is not.
+  billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, windows);
+  // { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30",
+  //   requestedByDeadline: null, resolutionDeadline: null }
+  billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-01" }, windows);
+  // { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-01",
+  //   requestedByDeadline: null, resolutionDeadline: null }
+  
+  // A dispute received on the dispute deadline; the resolution deadline is counted from it.
+  billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19" }, windows);
+  // { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+  //   requestedByDeadline: true, resolutionDeadline: "2026-05-19" }
+  
+  // A 14/14/45 service contract through the same chain: the numbers are the caller's.
+  billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, { issueDays: 14, disputeDays: 14, resolutionDays: 45 });
+  // { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19",
+  //   requestedByDeadline: true, resolutionDeadline: "2026-05-02" }
+  
+  // Windows have no defaults.
+  billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { disputeDays: 30, resolutionDays: 30 }); // null
+  ```
+  
+  - **Day zero is the anchor and the deadline is `anchor + days`** on the ISO calendar; a date is by the deadline when it is on or before it. Thirty days across a leap day, a month end, a year end or a DST change is thirty dates, never thirty times 24 hours. That is the function's stated contract, not a reading of any rule; a regime that counts differently passes a different number.
+  - **Deadlines are dates, never instants.** Reduce an instant to the billing party's local date first with `convertUtcToPlainDate(instant, { timeZone })`; the function does not guess a zone.
+  - **Windows have no defaults.** Each is a safe integer of at least `0`; a missing, negative or non-integer window returns `null`, the same rule as `firstDay`.
+  - **The anchor is whatever date the caller counts from**: the last charged date (`chargeableDays(...).chargedDates.at(-1)`), or for a party re-billing a charge it was itself billed, the issuance date of the invoice it received. The chain is the same.
+  - **The chain fills in as its dates exist.** With only `anchorOn` the result is a forecast: `invoiceDeadline` is set and every other field is `null`. An invoice date sets `issuedByDeadline` and `disputeDeadline`; a request date sets `requestedByDeadline` and `resolutionDeadline`. A request without an invoice, or dated before it, returns `null`.
+  - **An agreed date replaces the computed resolution deadline.** `agreedResolutionOn` must be a valid date on or after `requestReceivedOn`, else `null`. Every emitted date is bare ISO.
+  - **GMT computes dates, not liability.** `issuedByDeadline` and `requestedByDeadline` compare dates and say nothing else; whether a charge is payable is the consumer's question, the sibling of "GMT computes days, never money".
+  - Also exported: the `BillingDates` and `BillingWindows` argument types and the `BillingDeadlines` result type, from the package root, `@northguild/gmt/intermodal` and `…/intermodal/calculate`.
+
 ## 1.16.0
 
 ### Minor Changes
