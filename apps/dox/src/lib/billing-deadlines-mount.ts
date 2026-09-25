@@ -117,11 +117,7 @@ export function renderBillingDeadlinesTemplate(
   const presetId = matchPreset(state);
   const preset = BILLING_PRESETS.find((p) => p.id === presetId);
 
-  const dateField = (
-    role: string,
-    label: string,
-    value: string,
-  ): string =>
+  const dateField = (role: string, label: string, value: string): string =>
     `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
     `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" placeholder="YYYY-MM-DD" value="${escapeAttr(value)}"></label>`;
 
@@ -236,7 +232,12 @@ async function loadModules(): Promise<Modules> {
 // Drawing the strip
 // ---------------------------------------------------------------------------
 
-function dateText(iso: string): { weekday: string; day: number; month: string; year: number } {
+function dateText(iso: string): {
+  weekday: string;
+  day: number;
+  month: string;
+  year: number;
+} {
   const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
   // Sakamoto's algorithm — proleptic Gregorian day of week, Monday-first
   // (0 = Monday). No Temporal here: this runs per cell on every render, and
@@ -244,9 +245,21 @@ function dateText(iso: string): { weekday: string; day: number; month: string; y
   // bare ISO date's weekday.
   const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
   const yy = m < 3 ? y - 1 : y;
-  const sunday0 = (yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) + t[m - 1]! + d) % 7;
+  const sunday0 =
+    (yy +
+      Math.floor(yy / 4) -
+      Math.floor(yy / 100) +
+      Math.floor(yy / 400) +
+      t[m - 1]! +
+      d) %
+    7;
   const mondayFirst = (sunday0 + 6) % 7;
-  return { weekday: WEEKDAY_NAMES[mondayFirst]!, day: d, month: MONTH_NAMES[m - 1]!, year: y };
+  return {
+    weekday: WEEKDAY_NAMES[mondayFirst]!,
+    day: d,
+    month: MONTH_NAMES[m - 1]!,
+    year: y,
+  };
 }
 
 function ariaLabelFor(item: DayStripDay): string {
@@ -518,8 +531,7 @@ function applyArgs(root: HTMLElement, args: BillingDeadlinesArgs): void {
     const desc = q("preset-description");
     if (desc) {
       desc.textContent =
-        BILLING_PRESETS.find((p) => p.id === presetEl.value)?.description ??
-        "";
+        BILLING_PRESETS.find((p) => p.id === presetEl.value)?.description ?? "";
     }
   }
 }

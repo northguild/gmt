@@ -142,9 +142,9 @@ describe("matchPreset", () => {
 
 describe("datesOf and windowsOf", () => {
   it("always includes anchorOn, and omits blank optional dates", () => {
-    expect(datesOf({ ...base, invoiceIssuedOn: "", requestReceivedOn: "" })).toEqual(
-      { anchorOn: base.anchorOn },
-    );
+    expect(
+      datesOf({ ...base, invoiceIssuedOn: "", requestReceivedOn: "" }),
+    ).toEqual({ anchorOn: base.anchorOn });
     expect(
       datesOf({ ...base, invoiceIssuedOn: "2026-03-31" }).invoiceIssuedOn,
     ).toBe("2026-03-31");
@@ -246,11 +246,12 @@ describe("dayStrip", () => {
   });
 
   it("pads the first and last weeks, drawing every real day between", () => {
-    const strip = dayStrip({ ...base, ...W, invoiceIssuedOn: "2026-03-31" }, V2);
-    expect(strip).not.toBeNull();
-    const days = strip!.items.filter(
-      (i): i is DayStripDay => i.kind === "day",
+    const strip = dayStrip(
+      { ...base, ...W, invoiceIssuedOn: "2026-03-31" },
+      V2,
     );
+    expect(strip).not.toBeNull();
+    const days = strip!.items.filter((i): i is DayStripDay => i.kind === "day");
     expect(days.length % 7).toBe(0);
     const real = days.filter((d) => !d.padding);
     expect(real[0]!.date).toBe("2026-03-01");
@@ -368,10 +369,7 @@ describe("explainNull", () => {
       explainNull(withDates({ anchorOn: "not-a-date" }), validators),
     ).toEqual({ reason: "invalid-anchor" });
     expect(
-      explainNull(
-        withDates({ invoiceIssuedOn: "not-a-date" }),
-        validators,
-      ),
+      explainNull(withDates({ invoiceIssuedOn: "not-a-date" }), validators),
     ).toEqual({ reason: "invalid-invoice" });
     expect(
       explainNull(
@@ -397,26 +395,28 @@ describe("explainNull", () => {
         validators,
       ),
     ).toEqual({ reason: "request-before-invoice" });
+    expect(explainNull(withDates({ issueDays: "" }), validators)).toEqual({
+      reason: "missing-window",
+      field: "issueDays",
+    });
+    expect(explainNull(withDates({ disputeDays: "" }), validators)).toEqual({
+      reason: "missing-window",
+      field: "disputeDays",
+    });
+    expect(explainNull(withDates({ resolutionDays: "" }), validators)).toEqual({
+      reason: "missing-window",
+      field: "resolutionDays",
+    });
+    expect(explainNull(withDates({ issueDays: "-1" }), validators)).toEqual({
+      reason: "invalid-window",
+      field: "issueDays",
+    });
+    expect(explainNull(withDates({ issueDays: "30.5" }), validators)).toEqual({
+      reason: "invalid-window",
+      field: "issueDays",
+    });
     expect(
-      explainNull(withDates({ issueDays: "" }), validators),
-    ).toEqual({ reason: "missing-window", field: "issueDays" });
-    expect(
-      explainNull(withDates({ disputeDays: "" }), validators),
-    ).toEqual({ reason: "missing-window", field: "disputeDays" });
-    expect(
-      explainNull(withDates({ resolutionDays: "" }), validators),
-    ).toEqual({ reason: "missing-window", field: "resolutionDays" });
-    expect(
-      explainNull(withDates({ issueDays: "-1" }), validators),
-    ).toEqual({ reason: "invalid-window", field: "issueDays" });
-    expect(
-      explainNull(withDates({ issueDays: "30.5" }), validators),
-    ).toEqual({ reason: "invalid-window", field: "issueDays" });
-    expect(
-      explainNull(
-        withDates({ agreedResolutionOn: "not-a-date" }),
-        validators,
-      ),
+      explainNull(withDates({ agreedResolutionOn: "not-a-date" }), validators),
     ).toEqual({ reason: "invalid-agreed" });
     expect(
       explainNull(
@@ -443,7 +443,9 @@ describe("explainNull", () => {
   });
 
   it("names the field in missing- and invalid-window text", () => {
-    expect(nullReasonText({ reason: "missing-window", field: "issueDays" })).toBe(
+    expect(
+      nullReasonText({ reason: "missing-window", field: "issueDays" }),
+    ).toBe(
       "issueDays is missing. Windows have no defaults: type the number your tariff or contract sets.",
     );
     expect(

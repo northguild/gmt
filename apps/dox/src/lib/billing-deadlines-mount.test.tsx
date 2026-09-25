@@ -9,10 +9,7 @@
  */
 /// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
-import {
-  encodeWidgetPermalink,
-  seedFromLocation,
-} from "./widget-permalink";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { BILLING_PRESETS, NULL_REASON_TEXT } from "./billing-deadlines";
 import {
   mountBillingDeadlines,
@@ -204,9 +201,9 @@ describe("mountBillingDeadlines", () => {
       const [call, result] = EXPECTED[id]!;
 
       expect(q(root, "copy-billing").dataset.copyText).toBe(call);
-      expect(q(root, "billing-output").textContent!.replace(/\n\s+/g, " ")).toBe(
-        result,
-      );
+      expect(
+        q(root, "billing-output").textContent!.replace(/\n\s+/g, " "),
+      ).toBe(result);
 
       const invoiceDeadline = /invoiceDeadline: "([^"]+)"/.exec(result)![1]!;
       expect(laneDeadlineDates(root, 1)).toEqual([invoiceDeadline]);
@@ -312,7 +309,12 @@ describe("mountBillingDeadlines", () => {
   const REASON_CASES: [string, Record<string, string>, string][] = [
     [
       "invalid-anchor",
-      { anchorOn: "not-a-date", issueDays: "30", disputeDays: "30", resolutionDays: "30" },
+      {
+        anchorOn: "not-a-date",
+        issueDays: "30",
+        disputeDays: "30",
+        resolutionDays: "30",
+      },
       "anchor date is not a valid date",
     ],
     [
@@ -451,9 +453,7 @@ describe("mountBillingDeadlines", () => {
       const url = encodeWidgetPermalink("billing", state);
       const seeded = seedFromLocation("billing", url.slice(url.indexOf("?")));
       const again = await mount(seeded);
-      expect(q<HTMLSelectElement>(again.root, "preset").value).toBe(
-        preset.id,
-      );
+      expect(q<HTMLSelectElement>(again.root, "preset").value).toBe(preset.id);
       expect(
         q(again.root, "billing-output").textContent!.replace(/\n\s+/g, " "),
       ).toBe(EXPECTED[preset.id]![1]);
@@ -473,7 +473,9 @@ describe("mountBillingDeadlines", () => {
       ".gmt-billing-cell, .gmt-billing-cell--padding",
     );
     expect(cells.length).toBeLessThanOrEqual(120);
-    expect(qa(root, "strip")[0]!.querySelector(".gmt-billing-gap")).not.toBeNull();
+    expect(
+      qa(root, "strip")[0]!.querySelector(".gmt-billing-gap"),
+    ).not.toBeNull();
     expect(q(root, "strip-summary").textContent).toContain("days not drawn");
   });
 

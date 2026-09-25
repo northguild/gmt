@@ -11,8 +11,7 @@ Design notes, `## Corrections`), the tracker policy "GMT tracks no law"
 "Docs site" section. This spec wins over the plan where they differ. The differences are listed
 under **Risks**.
 
-Every value in this spec was run against `packages/gmt/dist` on 2026-09-24 (section 9 has the
-script). Do not type a result that is not in section 9's table. If you need a new value, run it
+Every value in this spec was run against `packages/gmt/dist` (section 9 has the script). Do not type a result that is not in section 9's table. If you need a new value, run it
 against dist first and add it to the table.
 
 ---
@@ -741,19 +740,16 @@ and `$SP` is the session scratchpad.
 - **R14. `api-surface.mjs` skips blocks with no import**, such as `wrongCode` and `naiveCode`.
   *Resolution:* D4's script checks every value, not only import-bound ones.
 
-## Blocked on the library pipeline (report, do not build around)
+## Outside this spec
 
-- `packages/gmt/src/calendar/calculate/getFiscalPeriod.ts:49` and
-  `packages/gmt/src/internal/fiscalCalendar.ts:44` cite "26 CFR 1.441-2". That is a US tax
-  regulation's section number, so it breaks "GMT tracks no law" (tracker, epic-wide), and it
-  reaches the generated `reference/calendar/calculate/getFiscalPeriod.mdx`. It predates INT-58
-  and is outside the INT-12 scope the owner decision named. Fixing it is a JSDoc edit in
-  `packages/gmt` (`architect` → `tdd-dev`). The main session decides whether it joins this PR.
-  Dox then regenerates with no hand edit.
+- The fiscal-period JSDoc (`getFiscalPeriod`, `internal/fiscalCalendar`) carries a tax-regulation
+  citation that reaches its generated reference page. It is not intermodal, so a separate story
+  removes it in `packages/gmt`; Dox regenerates with no hand edit. The final law grep allows
+  that one generated page.
 
 ---
 
-## 9. Verified values (run against `packages/gmt/dist`, 2026-09-24)
+## 9. Verified values (run against `packages/gmt/dist`)
 
 `W = { issueDays: 30, disputeDays: 30, resolutionDays: 30 }`, and `C = { issueDays: 14, disputeDays: 14, resolutionDays: 45 }`.
 V1–V9 are verbatim `billingTimeline.ts` JSDoc examples. V10 is the JSDoc request-without-invoice

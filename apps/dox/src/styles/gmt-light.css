@@ -165,7 +165,11 @@ a[rel="next"] .link-title {
    rule stops overriding it. */
 [data-theme="light"] #starlight__sidebar summary,
 [data-theme="light"] #starlight__sidebar summary .group-label,
-[data-theme="light"] #starlight__sidebar summary .group-label > span:not(.sl-badge) {
+[data-theme="light"]
+  #starlight__sidebar
+  summary
+  .group-label
+  > span:not(.sl-badge) {
   color: var(--gmt-ice);
 }
 

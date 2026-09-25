@@ -258,8 +258,7 @@ export function callSource(state: BillingState): [string, string] {
   ): string =>
     `{ ${entries
       .map(
-        ([k, val]) =>
-          `${k}: ${typeof val === "number" ? num(val) : str(val)}`,
+        ([k, val]) => `${k}: ${typeof val === "number" ? num(val) : str(val)}`,
       )
       .join(", ")} }`;
 
@@ -323,11 +322,13 @@ export function verdictText(
   value: boolean | null,
 ): string {
   if (kind === "issued") {
-    if (value === true) return `Invoice issued ${date}: on or before the deadline`;
+    if (value === true)
+      return `Invoice issued ${date}: on or before the deadline`;
     if (value === false) return `Invoice issued ${date}: after the deadline`;
     return "No invoice date yet: this is a forecast";
   }
-  if (value === true) return `Request received ${date}: on or before the deadline`;
+  if (value === true)
+    return `Request received ${date}: on or before the deadline`;
   if (value === false) return `Request received ${date}: after the deadline`;
   return "No request date yet";
 }
@@ -452,14 +453,10 @@ export function dayStrip(
   const endCandidates: string[] = [
     dates.anchorOn,
     ...(dates.invoiceIssuedOn !== undefined ? [dates.invoiceIssuedOn] : []),
-    ...(dates.requestReceivedOn !== undefined
-      ? [dates.requestReceivedOn]
-      : []),
+    ...(dates.requestReceivedOn !== undefined ? [dates.requestReceivedOn] : []),
     result.invoiceDeadline,
     ...(result.disputeDeadline !== null ? [result.disputeDeadline] : []),
-    ...(result.resolutionDeadline !== null
-      ? [result.resolutionDeadline]
-      : []),
+    ...(result.resolutionDeadline !== null ? [result.resolutionDeadline] : []),
   ];
   const spanEnd = endCandidates.reduce((a, b) => (a > b ? a : b));
 
@@ -521,14 +518,10 @@ export function dayStrip(
   const keyDates = new Set<string>([
     dates.anchorOn,
     ...(dates.invoiceIssuedOn !== undefined ? [dates.invoiceIssuedOn] : []),
-    ...(dates.requestReceivedOn !== undefined
-      ? [dates.requestReceivedOn]
-      : []),
+    ...(dates.requestReceivedOn !== undefined ? [dates.requestReceivedOn] : []),
     result.invoiceDeadline,
     ...(result.disputeDeadline !== null ? [result.disputeDeadline] : []),
-    ...(result.resolutionDeadline !== null
-      ? [result.resolutionDeadline]
-      : []),
+    ...(result.resolutionDeadline !== null ? [result.resolutionDeadline] : []),
   ]);
   const keptWeeks = new Set<string>([paddedStart, weekStart(paddedEnd)]);
   for (const d of keyDates) keptWeeks.add(weekStart(d));
