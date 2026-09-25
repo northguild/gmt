@@ -34,10 +34,17 @@ const DISAMBIGUATIONS: readonly string[] = [
 const WEEKDAY_KEYS: readonly string[] = ["1", "2", "3", "4", "5", "6", "7"];
 
 /**
- * Local days one walk may visit before giving up: about 27 years, the same bound `bucketRange`
+ * Local dates one walk may span before giving up: about 27 years, the same bound `bucketRange`
  * puts on a day walk. A walk that runs out answers with the sentinel, never a partial list.
  */
 export const MAX_SCHEDULE_DAYS = 10_000;
+
+/**
+ * Day buckets one walk may step through. A fall-back that re-enters the previous date adds a
+ * bucket without adding a date, so this sits above `MAX_SCHEDULE_DAYS`; the date limit is the
+ * one that binds.
+ */
+const MAX_SCHEDULE_BUCKETS = 2 * MAX_SCHEDULE_DAYS;
 
 /**
  * How far before the first instant of interest the walk starts. A window is at most one local
@@ -277,6 +284,31 @@ export function parseSearchHorizon(
   }
 }
 
+/** The local date of an instant in the schedule's zone. */
+function localDateOf(
+  schedule: ResolvedSchedule,
+  ns: bigint,
+): Temporal.PlainDate {
+  return Temporal.Instant.fromEpochNanoseconds(ns)
+    .toZonedDateTimeISO(schedule.timeZone)
+    .toPlainDate();
+}
+
+/**
+ * The first local date a walk from `fromNs` may not reach: `MAX_SCHEDULE_DAYS` after the date
+ * the walk starts on, 72 hours before `fromNs`.
+ */
+function walkLimitDate(
+  schedule: ResolvedSchedule,
+  fromNs: bigint,
+): Temporal.PlainDate {
+  return localDateOf(
+    schedule,
+    Temporal.Instant.fromEpochNanoseconds(fromNs).subtract(LOOKBACK)
+      .epochNanoseconds,
+  ).add({ days: MAX_SCHEDULE_DAYS });
+}
+
 /** The windows that apply on `date`: an override, else nothing on a holiday, else the weekday's. */
 function windowsOn(
   schedule: ResolvedSchedule,
@@ -386,7 +418,7 @@ export type ScheduleWalk = { unresolvedStart: bigint | undefined };
  *   before it is final. When the visitor stops the walk, or the last representable day is
  *   reached, the runs still pending are handed over too.
  * - Returns `null` when an edge is outside Temporal's range, a day bucket could not be found, or
- *   `MAX_SCHEDULE_DAYS` dates went by first.
+ *   the walk would reach a date `MAX_SCHEDULE_DAYS` after the one it started on.
  */
 export function walkSchedule(
   schedule: ResolvedSchedule,
@@ -414,8 +446,9 @@ export function walkSchedule(
     "day",
   );
   let lastDate: Temporal.PlainDate | null = null;
+  const limitDate = walkLimitDate(schedule, fromNs);
 
-  for (let day = 0; day < MAX_SCHEDULE_DAYS; day++) {
+  for (let bucket = 0; bucket < MAX_SCHEDULE_BUCKETS; bucket++) {
     if (current === null) {
       return null;
     }
@@ -436,6 +469,10 @@ export function walkSchedule(
     }
 
     const date = current.toPlainDate();
+
+    if (Temporal.PlainDate.compare(date, limitDate) >= 0) {
+      return null;
+    }
 
     // A fall-back that re-enters the previous date opens a second bucket for it; its windows
     // were already resolved on the first visit.
@@ -483,6 +520,19 @@ export function scheduleRunsWithin(
   range: IntervalNanoseconds,
   disambiguation: Disambiguation,
 ): IntervalNanoseconds[] | null {
+  // Refuse a range the walk cannot finish before walking it: the last date it would visit holds
+  // the range's last instant. Walking thousands of dates only to return the sentinel took seconds.
+  const lastInstant = range.end > range.start ? range.end - 1n : range.end;
+
+  if (
+    Temporal.PlainDate.compare(
+      localDateOf(schedule, lastInstant),
+      walkLimitDate(schedule, range.start),
+    ) >= 0
+  ) {
+    return null;
+  }
+
   const runs: IntervalNanoseconds[] = [];
 
   const walked = walkSchedule(schedule, range.start, disambiguation, {

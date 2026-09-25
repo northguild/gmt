@@ -238,6 +238,32 @@ describe("operatingIntervals", () => {
       expect(operatingIntervals(valid, range, options)).toEqual([]);
     });
 
+    it("answers a range whose last instant is on the walk's last allowed date, and refuses one a nanosecond longer", () => {
+      // The walk starts 72 hours before the range, on 2000-01-01, and may span 10,000 dates:
+      // up to 2027-05-18, never 2027-05-19.
+      const lateOpening = {
+        timeZone: "UTC",
+        weekly: {},
+        overrides: [
+          { date: "2027-05-18", windows: [{ from: "23:00", to: "00:00" }] },
+        ],
+      };
+      expect(
+        operatingIntervals(lateOpening, {
+          start: "2000-01-04T00:00:00Z",
+          end: "2027-05-19T00:00:00Z",
+        }),
+      ).toEqual([
+        { start: "2027-05-18T23:00:00Z", end: "2027-05-19T00:00:00Z" },
+      ]);
+      expect(
+        operatingIntervals(lateOpening, {
+          start: "2000-01-04T00:00:00Z",
+          end: "2027-05-19T00:00:00.000000001Z",
+        }),
+      ).toEqual([]);
+    });
+
     it("returns [] rather than throwing for hostile arguments", () => {
       expect(operatingIntervals(hostileProxy() as never, day)).toEqual([]);
       expect(operatingIntervals(revokedProxy() as never, day)).toEqual([]);

@@ -51,7 +51,7 @@ One implementation of "weekday × local time window, with holidays and one-off o
 - **The interval algebra is the CORE-6 internal** (`coalesceIntervalNanoseconds`), not the public string functions. That is the same code, run on bigint nanoseconds. `operatingTimeBetween` equals `sumIntervals` of `intersectIntervals(operatingIntervals(...), range)`, and the tests assert it.
 - **A `BusinessCalendar` passed as `holidays`** contributes its `holidays` only. `weekly` says which weekdays open, and `timeZone` on the schedule is the zone.
 - **Two overrides for one date make the schedule invalid.** An override wins over a holiday on the same date.
-- **The horizon defaults to `"P1Y"`**, added in the schedule's zone, and is inclusive. Walks cap at 10,000 local days (`bucketRange`'s cap); running out returns the sentinel.
+- **The horizon defaults to `"P1Y"`**, added in the schedule's zone, and is inclusive. Walks cap at 10,000 local dates (`bucketRange`'s cap); running out returns the sentinel. A range longer than that is refused before walking, so it answers at once instead of after seconds of walking.
 - **`addOperatingTime` takes hours and smaller units.** `P1D` of open time could mean 24 open hours or one working day, so it returns `''`. `PT0S` returns the start.
 
 ## What gmt provides (do not re-implement)
