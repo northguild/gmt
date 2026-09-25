@@ -28,6 +28,17 @@ const juneWeekend = {
 };
 const fridayNight = { 5: [{ from: "23:00", to: "06:00" }] };
 
+// Cairo skipped local midnight on Friday 2024-04-26 (00:00 → 01:00, +02 → +03), and Santiago on
+// Sunday 2024-09-08 (-04 → -03). Under "earlier" a 00:30 edge in the gap moves back an hour, onto
+// the previous date: Cairo's to 23:30 +02 (21:30Z), half an hour before Friday's first instant.
+const cairo = {
+  timeZone: "Africa/Cairo",
+  weekly: {
+    4: [{ from: "22:00", to: "23:45" }],
+    5: [{ from: "00:30", to: "03:00" }],
+  },
+};
+
 function local(dateTime: string, timeZone: string): string {
   return Temporal.PlainDateTime.from(dateTime)
     .toZonedDateTime(timeZone)
@@ -239,8 +250,8 @@ describe("operatingIntervals", () => {
     });
 
     it("answers a range whose last instant is on the walk's last allowed date, and refuses one a nanosecond longer", () => {
-      // The walk starts 72 hours before the range, on 2000-01-01, and may span 10,000 dates:
-      // up to 2027-05-18, never 2027-05-19.
+      // A range may span 10,000 local dates from its start's: 2000-01-01 to 2027-05-18, never
+      // 2027-05-19.
       const lateOpening = {
         timeZone: "UTC",
         weekly: {},
@@ -250,7 +261,7 @@ describe("operatingIntervals", () => {
       };
       expect(
         operatingIntervals(lateOpening, {
-          start: "2000-01-04T00:00:00Z",
+          start: "2000-01-01T00:00:00Z",
           end: "2027-05-19T00:00:00Z",
         }),
       ).toEqual([
@@ -258,7 +269,7 @@ describe("operatingIntervals", () => {
       ]);
       expect(
         operatingIntervals(lateOpening, {
-          start: "2000-01-04T00:00:00Z",
+          start: "2000-01-01T00:00:00Z",
           end: "2027-05-19T00:00:00.000000001Z",
         }),
       ).toEqual([]);
@@ -284,6 +295,56 @@ describe("operatingIntervals", () => {
       );
     });
   });
+});
+
+describe("operatingIntervals across a skipped local midnight", () => {
+  const cairoDays = {
+    start: "2024-04-25T00:00:00Z",
+    end: "2024-04-27T00:00:00Z",
+  };
+
+  it.each`
+    schedule                                                                                                                  | range                                                             | disambiguation  | expected
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"earlier"}    | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-26T00:00:00Z" }]}
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"compatible"} | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-25T21:45:00Z" }, { start: "2024-04-25T22:30:00Z", end: "2024-04-26T00:00:00Z" }]}
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"reject"}     | ${[]}
+    ${{ timeZone: "America/Santiago", weekly: { 6: [{ from: "22:00", to: "23:45" }], 7: [{ from: "00:30", to: "03:00" }] } }} | ${{ start: "2024-09-07T00:00:00Z", end: "2024-09-09T00:00:00Z" }} | ${"earlier"}    | ${[{ start: "2024-09-08T02:00:00Z", end: "2024-09-08T06:00:00Z" }]}
+  `(
+    "merges a window moved onto the previous date under $disambiguation",
+    ({ schedule, range, disambiguation, expected }) => {
+      expect(operatingIntervals(schedule, range, { disambiguation })).toEqual(
+        expected,
+      );
+    },
+  );
+});
+
+describe("operatingIntervals at the limits of the instant range", () => {
+  const allDay = [{ from: "00:00", to: "00:00" }];
+  const always = {
+    timeZone: "UTC",
+    weekly: {
+      1: allDay,
+      2: allDay,
+      3: allDay,
+      4: allDay,
+      5: allDay,
+      6: allDay,
+      7: allDay,
+    },
+  };
+
+  it.each`
+    range                                                                   | reads
+    ${{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-13T00:00:00Z" }} | ${"the last representable day"}
+    ${{ start: "-271821-04-20T00:00:00Z", end: "-271821-04-21T00:00:00Z" }} | ${"the first representable day"}
+    ${{ start: "+275734-01-01T00:00:00Z", end: "+275734-01-02T00:00:00Z" }} | ${"a day within 10,000 days of the end"}
+  `(
+    "returns the whole range for a schedule open around the clock on $reads",
+    ({ range }) => {
+      expect(operatingIntervals(always, range)).toEqual([range]);
+    },
+  );
 });
 
 describe("operatingIntervals when Temporal throws", () => {

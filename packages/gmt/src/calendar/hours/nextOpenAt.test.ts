@@ -93,6 +93,12 @@ describe("nextOpenAt", () => {
       expect(nextOpenAt(saturdayNoon, office, { within })).toBe(expected);
     });
 
+    it("clamps a horizon past Temporal's last instant to that instant", () => {
+      expect(nextOpenAt(saturdayNoon, office, { within: "P1000000Y" })).toBe(
+        "2024-06-17T13:00:00Z",
+      );
+    });
+
     it("returns an open input even with a zero horizon", () => {
       expect(
         nextOpenAt("2024-06-17T14:00:00Z", office, { within: "PT0S" }),
@@ -182,7 +188,6 @@ describe("nextOpenAt", () => {
       ${saturdayNoon}          | ${office}                                   | ${{ within: "-P1D" }}            | ${"a negative horizon"}
       ${saturdayNoon}          | ${office}                                   | ${{ within: "1 day" }}           | ${"a malformed horizon"}
       ${saturdayNoon}          | ${office}                                   | ${{ within: 86400 }}             | ${"a numeric horizon"}
-      ${saturdayNoon}          | ${office}                                   | ${{ within: "P1000000Y" }}       | ${"a horizon past Temporal's range"}
       ${saturdayNoon}          | ${office}                                   | ${{ disambiguation: "nearest" }} | ${"an unknown disambiguation"}
       ${saturdayNoon}          | ${office}                                   | ${null}                          | ${"null options"}
       ${saturdayNoon}          | ${office}                                   | ${"P1D"}                         | ${"a string options argument"}
@@ -218,6 +223,47 @@ describe("nextOpenAt", () => {
         "",
       );
     });
+  });
+});
+
+describe("nextOpenAt across a skipped local midnight", () => {
+  it("finds a window moved onto the previous date under earlier", () => {
+    // Africa/Cairo: Friday 00:30 read "earlier" is Thursday 23:30 +02, 21:30Z.
+    expect(
+      nextOpenAt(
+        "2024-04-25T20:00:00Z",
+        {
+          timeZone: "Africa/Cairo",
+          weekly: { 5: [{ from: "00:30", to: "03:00" }] },
+        },
+        { disambiguation: "earlier" },
+      ),
+    ).toBe("2024-04-25T21:30:00Z");
+  });
+});
+
+describe("nextOpenAt with a long horizon or at the limits", () => {
+  const allDay = [{ from: "00:00", to: "00:00" }];
+  const always = {
+    timeZone: "UTC",
+    weekly: {
+      1: allDay,
+      2: allDay,
+      3: allDay,
+      4: allDay,
+      5: allDay,
+      6: allDay,
+      7: allDay,
+    },
+  };
+
+  it.each`
+    from                         | within       | reads
+    ${"2024-06-15T12:00:00Z"}    | ${"P30Y"}    | ${"an open input under a 30-year horizon"}
+    ${"+275760-09-12T12:00:00Z"} | ${undefined} | ${"an input whose default horizon passes the last instant"}
+    ${"-271821-04-20T12:00:00Z"} | ${undefined} | ${"an input on the first representable day"}
+  `("returns $reads itself", ({ from, within }) => {
+    expect(nextOpenAt(from, always, { within })).toBe(from);
   });
 });
 

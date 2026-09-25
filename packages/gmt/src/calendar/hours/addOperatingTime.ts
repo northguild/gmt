@@ -22,7 +22,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *   months or years returns `""`: `P1D` of open time could mean 24 open hours or one working
  *   day, and GMT does not guess. `"PT0S"` returns `start` itself, in UTC.
  * - Searches up to `within` after `start` (default `"P1Y"`), an ISO duration added in the
- *   schedule's zone, so `"P1D"` is one local day. A deadline exactly at the horizon counts.
+ *   schedule's zone, so `"P1D"` is one local day. A deadline exactly at the horizon counts, and a
+ *   horizon past Temporal's last instant stops there.
  *   Returns `""` when the deadline would fall past it, rather than searching forever.
  * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
  *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
@@ -31,7 +32,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - Returns `""` on invalid input: an invalid instant, duration or `OperatingSchedule`, a
  *   negative `duration`, a `within` that is not a non-negative ISO duration, a `disambiguation`
- *   that is not one of the four values, and a search that would walk more than 10,000 local days.
+ *   that is not one of the four values, and a search that would go more than 10,000 local dates past the input's date.
  *
  * @param start ISO 8601 instant string where the clock starts
  * @param duration ISO 8601 duration of open time, hours and smaller units (e.g. "PT8H")

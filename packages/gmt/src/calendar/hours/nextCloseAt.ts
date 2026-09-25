@@ -17,7 +17,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Already closed at `isoString`: returns `isoString` itself, in UTC. Pair it with
  *   `nextOpenAt` to find the next open interval: `nextCloseAt(nextOpenAt(t, s), s)`.
  * - Searches up to `within` after `isoString` (default `"P1Y"`), an ISO duration added in the
- *   schedule's zone. A closing exactly at the horizon counts. Returns `""` when the schedule
+ *   schedule's zone. A closing exactly at the horizon counts, and a horizon past
+ *   Temporal's last instant stops there. Returns `""` when the schedule
  *   stays open past it — a schedule open around the clock never closes.
  * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
  *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
@@ -28,7 +29,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required.
  * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, a `within` that is
  *   not a non-negative ISO duration, a `disambiguation` that is not one of the four values, and
- *   a search that would walk more than 10,000 local days.
+ *   a search that would go more than 10,000 local dates past the input's date.
  *
  * @param isoString ISO 8601 instant string to search from, inclusive
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule

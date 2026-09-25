@@ -27,7 +27,8 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  * - Returns `[]` when `schedule` is not a valid `OperatingSchedule` (a weekday key other than
  *   `"1"`–`"7"`, a malformed window, an invalid zone, holiday or override date, or two overrides
  *   for one date), when `range` is not a valid `Interval`, when `disambiguation` is not one of
- *   the four values, and when the range spans more than about 27 years (10,000 local days).
+ *   the four values, and when the range spans more than 10,000 local dates (about 27 years)
+ *   counted from the date `range.start` falls on.
  *
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the schedule inside

@@ -19,7 +19,10 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Each window edge is a local wall time resolved with `resolveLocal` under `disambiguation`
  *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier** instant,
  *   and an edge in a skipped spring-forward hour the **later** one, shifted forward by the gap.
- *   `"earlier"` and `"later"` pick that instant instead, and `"reject"` guesses nothing:
+ *   `"earlier"` and `"later"` pick that instant instead. Under `"earlier"`, an edge in a skipped
+ *   hour moves back by the gap (TC39 DisambiguatePossibleEpochNanoseconds), so in a zone that
+ *   skips midnight a date's early window can open on the previous local date, before the date's
+ *   own first instant; it still belongs to its own date. `"reject"` guesses nothing:
  *   it returns `[]` when a window with an ambiguous or nonexistent edge reaches the range —
  *   when the widest span it could cover (its `from` read `"earlier"`, its `to` read `"later"`)
  *   overlaps `range`. A rejected window elsewhere does not matter.
@@ -36,8 +39,8 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - `[]` is both a legitimate result (closed throughout, or an empty `range`) and the sentinel.
  * - Returns `[]` when `weekly` has a key other than `"1"`–`"7"` or a malformed window, when
  *   `range` is not a valid `Interval`, when `timeZone` is invalid, when `disambiguation` is not
- *   one of the four values, and when the range spans more than about 27 years (10,000 local
- *   days), rather than a truncated list.
+ *   one of the four values, and when the range spans more than 10,000 local dates (about 27
+ *   years) counted from the date `range.start` falls on, rather than a truncated list.
  *
  * @param weekly windows by ISO weekday, `{ 1: [{ from: "09:00", to: "17:00" }], … }`
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the pattern inside

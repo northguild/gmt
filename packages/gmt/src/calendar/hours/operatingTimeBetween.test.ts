@@ -233,6 +233,32 @@ describe("operatingTimeBetween", () => {
   });
 });
 
+describe("operatingTimeBetween across a skipped local midnight", () => {
+  // Africa/Cairo, 2024-04-26: see operatingIntervals.test.ts. Thursday 20:00Z–21:45Z, Friday
+  // 00:30–03:00 read "earlier" as 21:30Z–00:00Z; merged, four hours.
+  const cairo = {
+    timeZone: "Africa/Cairo",
+    weekly: {
+      4: [{ from: "22:00", to: "23:45" }],
+      5: [{ from: "00:30", to: "03:00" }],
+    },
+  };
+
+  it.each`
+    start                     | end                       | disambiguation | expected
+    ${"2024-04-25T00:00:00Z"} | ${"2024-04-27T00:00:00Z"} | ${"earlier"}   | ${"PT4H"}
+    ${"2024-04-25T20:00:00Z"} | ${"2024-04-25T21:45:00Z"} | ${"reject"}    | ${""}
+    ${"2024-04-25T20:00:00Z"} | ${"2024-04-25T21:30:00Z"} | ${"reject"}    | ${"PT1H30M"}
+  `(
+    "is $expected from $start to $end under $disambiguation",
+    ({ start, end, disambiguation, expected }) => {
+      expect(operatingTimeBetween(start, end, cairo, { disambiguation })).toBe(
+        expected,
+      );
+    },
+  );
+});
+
 describe("operatingTimeBetween when Temporal throws", () => {
   const schedule = {
     timeZone: "America/New_York",

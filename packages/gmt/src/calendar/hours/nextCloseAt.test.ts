@@ -190,6 +190,60 @@ describe("nextCloseAt", () => {
   });
 });
 
+describe("nextCloseAt across a skipped local midnight", () => {
+  // Africa/Cairo, 2024-04-26: Thursday 20:00Z–21:45Z, Friday 00:30–03:00 read "earlier" as
+  // 21:30Z–00:00Z, so the two are one run to 00:00Z.
+  const cairo = {
+    timeZone: "Africa/Cairo",
+    weekly: {
+      4: [{ from: "22:00", to: "23:45" }],
+      5: [{ from: "00:30", to: "03:00" }],
+    },
+  };
+
+  it.each`
+    from                      | disambiguation  | expected
+    ${"2024-04-25T21:00:00Z"} | ${"earlier"}    | ${"2024-04-26T00:00:00Z"}
+    ${"2024-04-25T21:00:00Z"} | ${"compatible"} | ${"2024-04-25T21:45:00Z"}
+    ${"2024-04-25T20:30:00Z"} | ${"reject"}     | ${""}
+  `(
+    "returns $expected from $from under $disambiguation",
+    ({ from, disambiguation, expected }) => {
+      expect(nextCloseAt(from, cairo, { disambiguation })).toBe(expected);
+    },
+  );
+});
+
+describe("nextCloseAt with a long horizon or at the limits", () => {
+  const allDay = [{ from: "00:00", to: "00:00" }];
+  const always = {
+    timeZone: "UTC",
+    weekly: {
+      1: allDay,
+      2: allDay,
+      3: allDay,
+      4: allDay,
+      5: allDay,
+      6: allDay,
+      7: allDay,
+    },
+  };
+
+  it("answers a closed input at once, before a run that never ends", () => {
+    expect(
+      nextCloseAt(
+        "2024-06-15T12:00:00Z",
+        { ...always, overrides: [{ date: "2024-06-15", windows: [] }] },
+        { within: "P30Y" },
+      ),
+    ).toBe("2024-06-15T12:00:00Z");
+  });
+
+  it("returns the sentinel when the schedule stays open to the last instant", () => {
+    expect(nextCloseAt("+275760-09-12T12:00:00Z", always)).toBe("");
+  });
+});
+
 describe("nextCloseAt when Temporal throws", () => {
   const schedule = {
     timeZone: "America/New_York",

@@ -34,25 +34,37 @@ const DISAMBIGUATIONS: readonly string[] = [
 const WEEKDAY_KEYS: readonly string[] = ["1", "2", "3", "4", "5", "6", "7"];
 
 /**
- * Local dates one walk may span before giving up: about 27 years, the same bound `bucketRange`
- * puts on a day walk. A walk that runs out answers with the sentinel, never a partial list.
+ * Local dates a range may span, counted from the date its start falls on: about 27 years, the
+ * same bound `bucketRange` puts on a day walk. A walk that runs out answers with the sentinel,
+ * never a partial list.
  */
 export const MAX_SCHEDULE_DAYS = 10_000;
 
 /**
- * Day buckets one walk may step through. A fall-back that re-enters the previous date adds a
- * bucket without adding a date, so this sits above `MAX_SCHEDULE_DAYS`; the date limit is the
- * one that binds.
+ * Day buckets one walk may step through: the lookback, the dates, the one date past them that
+ * settles the last, and the extra bucket a fall-back into the previous date opens. The date
+ * limit is the one that binds.
  */
 const MAX_SCHEDULE_BUCKETS = 2 * MAX_SCHEDULE_DAYS;
 
 /**
- * How far before the first instant of interest the walk starts. A window is at most one local
- * day of wall time, but a resolved edge can land a whole deleted day later (`Pacific/Apia`
- * skipped 2011-12-30), so a window that started up to two days earlier can still be open.
- * Three days clears that with room to spare.
+ * How far before the first instant of interest the walk starts, in nanoseconds (72 hours). A
+ * window is at most one local day of wall time, but a resolved edge can land a whole deleted day
+ * later (`Pacific/Apia` skipped 2011-12-30), so a window that started up to two days earlier can
+ * still be open. Three days clears that with room to spare.
  */
-const LOOKBACK = Temporal.Duration.from({ hours: 72 });
+const LOOKBACK_NANOSECONDS = 259_200_000_000_000n;
+
+/** TC39 `nsMinInstant` and `nsMaxInstant`: ±10^8 days from the epoch. */
+const MIN_INSTANT_NANOSECONDS = -8_640_000_000_000_000_000_000n;
+const MAX_INSTANT_NANOSECONDS = 8_640_000_000_000_000_000_000n;
+
+/**
+ * Where an edge whose wall time lies past Temporal's range resolves: just outside it. Such an
+ * edge has no string, so it is only ever clipped to a range or compared, never returned.
+ */
+const PAST_LAST_INSTANT = MAX_INSTANT_NANOSECONDS + 1n;
+const BEFORE_FIRST_INSTANT = MIN_INSTANT_NANOSECONDS - 1n;
 
 /**
  * The search horizon of `nextOpenAt`, `nextCloseAt` and `addOperatingTime` when the caller
@@ -255,8 +267,9 @@ export function parseScheduleDisambiguation(
 
 /**
  * The last instant a search may answer with: `from` plus `within` (default one year), added in
- * the schedule's zone so `P1D` is one local day. `null` when `within` is not a non-negative ISO
- * duration or the horizon is not representable.
+ * the schedule's zone so `P1D` is one local day. A horizon past Temporal's last instant is that
+ * instant, since nothing after it can be answered. `null` when `within` is not a non-negative
+ * ISO duration.
  */
 export function parseSearchHorizon(
   fromNs: bigint,
@@ -269,18 +282,27 @@ export function parseSearchHorizon(
     return null;
   }
 
+  let duration: Temporal.Duration;
+
   try {
-    const duration = Temporal.Duration.from(text);
+    duration = Temporal.Duration.from(text);
+  } catch {
+    return null;
+  }
 
-    if (duration.sign < 0) {
-      return null;
-    }
+  if (duration.sign < 0) {
+    return null;
+  }
 
+  try {
     return Temporal.Instant.fromEpochNanoseconds(fromNs)
       .toZonedDateTimeISO(timeZone)
       .add(duration).epochNanoseconds;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return MAX_INSTANT_NANOSECONDS;
+    }
+    throw error;
   }
 }
 
@@ -295,18 +317,49 @@ function localDateOf(
 }
 
 /**
- * The first local date a walk from `fromNs` may not reach: `MAX_SCHEDULE_DAYS` after the date
- * the walk starts on, 72 hours before `fromNs`.
+ * The local date `days` after the one `fromNs` falls on, or `null` when that is past Temporal's
+ * last date: no walk from `fromNs` can reach it before time runs out.
  */
-function walkLimitDate(
+function dateLimit(
   schedule: ResolvedSchedule,
   fromNs: bigint,
-): Temporal.PlainDate {
-  return localDateOf(
-    schedule,
-    Temporal.Instant.fromEpochNanoseconds(fromNs).subtract(LOOKBACK)
-      .epochNanoseconds,
-  ).add({ days: MAX_SCHEDULE_DAYS });
+  days: number,
+): Temporal.PlainDate | null {
+  try {
+    return localDateOf(schedule, fromNs).add({ days });
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * The day bucket the walk starts in: the one holding the instant 72 hours before `fromNs`, or
+ * Temporal's first instant when that is earlier. When the bucket's own start is not
+ * representable, the walk starts at that instant instead, the earliest of its date there is.
+ */
+function firstWalkBucket(
+  schedule: ResolvedSchedule,
+  fromNs: bigint,
+): Temporal.ZonedDateTime | null {
+  const startNs =
+    fromNs - LOOKBACK_NANOSECONDS < MIN_INSTANT_NANOSECONDS
+      ? MIN_INSTANT_NANOSECONDS
+      : fromNs - LOOKBACK_NANOSECONDS;
+  const zoned = Temporal.Instant.fromEpochNanoseconds(
+    startNs,
+  ).toZonedDateTimeISO(schedule.timeZone);
+
+  try {
+    return zonedUnitStart(zoned, "day");
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return zoned;
+    }
+    throw error;
+  }
 }
 
 /** The windows that apply on `date`: an override, else nothing on a holiday, else the weekday's. */
@@ -327,60 +380,107 @@ function windowsOn(
 /** A window whose edge did not resolve under `"reject"`: the widest span it could cover. */
 type Unresolved = { start: bigint; end: bigint };
 
+/** A resolved edge: its instant, and its UTC string (empty past Temporal's range). */
+type ResolvedEdge = { ns: bigint; text: string };
+
+/**
+ * Resolve one window edge with `resolveLocal`. `local` is `null` for a wrap past Temporal's last
+ * date. A wall time outside Temporal's range fails under every policy, so it resolves just
+ * outside the range, on the side its date lies. `undefined` means `"reject"` refused it.
+ */
+function resolveEdge(
+  local: string | null,
+  date: Temporal.PlainDate,
+  timeZone: string,
+  disambiguation: Disambiguation,
+): ResolvedEdge | undefined {
+  if (local === null) {
+    return { ns: PAST_LAST_INSTANT, text: "" };
+  }
+
+  const text = resolveLocal(local, timeZone, { disambiguation });
+
+  if (text !== "") {
+    return { ns: Temporal.Instant.from(text).epochNanoseconds, text };
+  }
+
+  if (disambiguation === "reject" && resolveLocal(local, timeZone) !== "") {
+    return undefined;
+  }
+
+  return {
+    ns: date.year > 0 ? PAST_LAST_INSTANT : BEFORE_FIRST_INSTANT,
+    text: "",
+  };
+}
+
 /**
  * Resolve one date's windows to instants with `resolveLocal`. Each edge is resolved on its own
  * under `disambiguation`; a wrapping window's `to` is read on the next date. An edge pair that
  * resolves to an empty or inverted span (a window shorter than the gap it straddles) is dropped.
  *
+ * Under `"earlier"`, an edge in a gap moves back by the gap's length (TC39
+ * DisambiguatePossibleEpochNanoseconds), so a date whose midnight is skipped can open before its
+ * own first instant, on the previous date. No zone has jumped forward by more than a day, so a
+ * window never starts before the previous date's first instant.
+ *
  * Under `"reject"`, a window with an ambiguous or nonexistent edge is not guessed: it is returned
  * in `unresolved` as the widest span it could cover (its start read `"earlier"`, its end
  * `"later"`), so the caller can refuse an answer it might change and ignore it elsewhere.
- * Returns `null` when an edge is outside Temporal's range.
  */
 function resolveDateWindows(
   schedule: ResolvedSchedule,
   date: Temporal.PlainDate,
   disambiguation: Disambiguation,
-): { records: IntervalNanoseconds[]; unresolved: Unresolved[] } | null {
+): { records: IntervalNanoseconds[]; unresolved: Unresolved[] } {
   const records: IntervalNanoseconds[] = [];
   const unresolved: Unresolved[] = [];
+  const { timeZone } = schedule;
 
   for (const window of windowsOn(schedule, date)) {
-    const endDate = window.wraps ? date.add({ days: 1 }) : date;
-    const startLocal = `${date.toString()}T${window.from}`;
-    const endLocal = `${endDate.toString()}T${window.to}`;
-    const startText = resolveLocal(startLocal, schedule.timeZone, {
-      disambiguation,
-    });
-    const endText = resolveLocal(endLocal, schedule.timeZone, {
-      disambiguation,
-    });
+    let endDate: Temporal.PlainDate | null = date;
 
-    if (startText === "" || endText === "") {
-      const earliest = resolveLocal(startLocal, schedule.timeZone, {
-        disambiguation: "earlier",
-      });
-      const latest = resolveLocal(endLocal, schedule.timeZone, {
-        disambiguation: "later",
-      });
-
-      // Outside Temporal's range, or a policy other than "reject" failing: no answer at all.
-      if (disambiguation !== "reject" || earliest === "" || latest === "") {
-        return null;
+    if (window.wraps) {
+      try {
+        endDate = date.add({ days: 1 });
+      } catch (error) {
+        if (!(error instanceof RangeError)) {
+          throw error;
+        }
+        endDate = null;
       }
+    }
+
+    const startLocal = `${date.toString()}T${window.from}`;
+    const endLocal =
+      endDate === null ? null : `${endDate.toString()}T${window.to}`;
+    const start = resolveEdge(startLocal, date, timeZone, disambiguation);
+    const end = resolveEdge(
+      endLocal,
+      endDate ?? date,
+      timeZone,
+      disambiguation,
+    );
+
+    if (start === undefined || end === undefined) {
+      // "earlier" and "later" always resolve, so the widest span is always known.
+      const earliest = resolveEdge(startLocal, date, timeZone, "earlier");
+      const latest = resolveEdge(endLocal, endDate ?? date, timeZone, "later");
 
       unresolved.push({
-        start: Temporal.Instant.from(earliest).epochNanoseconds,
-        end: Temporal.Instant.from(latest).epochNanoseconds,
+        start: earliest?.ns ?? BEFORE_FIRST_INSTANT,
+        end: latest?.ns ?? PAST_LAST_INSTANT,
       });
       continue;
     }
 
-    const start = Temporal.Instant.from(startText).epochNanoseconds;
-    const end = Temporal.Instant.from(endText).epochNanoseconds;
-
-    if (start < end) {
-      records.push({ start, end, startText, endText });
+    if (start.ns < end.ns) {
+      records.push({
+        start: start.ns,
+        end: end.ns,
+        startText: start.text,
+        endText: end.text,
+      });
     }
   }
 
@@ -391,19 +491,23 @@ function resolveDateWindows(
  * What the walk tells its caller.
  *
  * - `run` is a finished open run: sorted, disjoint, non-touching and never extended later.
- * - `day` announces that every window still to come starts at or after `dayStart`. Returning
- *   `true` from either stops the walk.
+ * - `day` announces that every window still to come starts at or after `bound`, and passes the
+ *   runs still `pending`: sorted and disjoint, each ending at or after `bound`, so a later window
+ *   may extend them but cannot add open time before `bound`. A caller can answer from them once
+ *   its answer lies at or before `bound`.
+ * - Returning `true` from either stops the walk; stopping from `day` hands the pending runs to
+ *   `run` first.
  */
 export type ScheduleVisitor = {
   run: (run: IntervalNanoseconds) => boolean;
-  day: (dayStart: bigint) => boolean;
+  day: (bound: bigint, pending: readonly IntervalNanoseconds[]) => boolean;
 };
 
 /**
  * How a walk ended. `unresolvedStart` is the earliest instant a window rejected under
  * `"reject"` could open at, among those that could still be open at or after `fromNs`;
- * `undefined` when there is none. Every such window on a date the walk did not reach starts
- * after every run it handed over.
+ * `undefined` when there is none. A rejected window on a date the walk did not reach starts at
+ * or after the last `bound` it announced.
  */
 export type ScheduleWalk = { unresolvedStart: bigint | undefined };
 
@@ -414,11 +518,13 @@ export type ScheduleWalk = { unresolvedStart: bigint | undefined };
  * - Dates come from the day buckets `floorToZone` and `bucketRange` use, so a deleted date
  *   (`Pacific/Apia`, 2011-12-30) is never visited, and a date the clock re-enters after a
  *   fall-back (`America/Goose_Bay`, 2010-11-06) is visited once.
- * - Every window of a later date starts at or after that date's first instant, so a run ending
- *   before it is final. When the visitor stops the walk, or the last representable day is
- *   reached, the runs still pending are handed over too.
- * - Returns `null` when an edge is outside Temporal's range, a day bucket could not be found, or
- *   the walk would reach a date `MAX_SCHEDULE_DAYS` after the one it started on.
+ * - A window can start as early as the previous date's first instant (see `resolveDateWindows`),
+ *   so the walk settles one date behind: once a date is resolved, the first instant of the date
+ *   resolved before it is the `bound` no later window starts before.
+ * - When the visitor stops the walk from `day`, or the last representable day is reached, the
+ *   runs still pending are handed over too.
+ * - Returns `null` when a day bucket could not be found, or the walk would resolve a date
+ *   `MAX_SCHEDULE_DAYS + 1` after the one `fromNs` falls on.
  */
 export function walkSchedule(
   schedule: ResolvedSchedule,
@@ -439,49 +545,50 @@ export function walkSchedule(
     return finish();
   };
 
-  let current: Temporal.ZonedDateTime | null = zonedUnitStart(
-    Temporal.Instant.fromEpochNanoseconds(fromNs)
-      .subtract(LOOKBACK)
-      .toZonedDateTimeISO(schedule.timeZone),
-    "day",
-  );
+  // One date past the span a range may cover: the date after a range's last is resolved to
+  // settle it, since its windows can start before its own first instant.
+  const limitDate = dateLimit(schedule, fromNs, MAX_SCHEDULE_DAYS + 1);
+  let current = firstWalkBucket(schedule, fromNs);
   let lastDate: Temporal.PlainDate | null = null;
-  const limitDate = walkLimitDate(schedule, fromNs);
+  let bound: bigint | undefined;
 
   for (let bucket = 0; bucket < MAX_SCHEDULE_BUCKETS; bucket++) {
     if (current === null) {
       return null;
     }
 
-    const dayStart = current.epochNanoseconds;
-    const settled = pending.filter((run) => run.end < dayStart);
+    if (bound !== undefined) {
+      const settleBefore = bound;
 
-    for (const run of settled) {
-      if (visitor.run(run)) {
-        return finish();
+      for (const run of pending) {
+        if (run.end >= settleBefore) {
+          break;
+        }
+        if (visitor.run(run)) {
+          return finish();
+        }
       }
-    }
 
-    pending = pending.filter((run) => run.end >= dayStart);
+      pending = pending.filter((run) => run.end >= settleBefore);
 
-    if (visitor.day(dayStart)) {
-      return flush();
+      if (visitor.day(settleBefore, pending)) {
+        return flush();
+      }
     }
 
     const date = current.toPlainDate();
 
-    if (Temporal.PlainDate.compare(date, limitDate) >= 0) {
-      return null;
-    }
-
     // A fall-back that re-enters the previous date opens a second bucket for it; its windows
     // were already resolved on the first visit.
     if (lastDate === null || Temporal.PlainDate.compare(date, lastDate) > 0) {
-      const resolved = resolveDateWindows(schedule, date, disambiguation);
-
-      if (resolved === null) {
+      if (
+        limitDate !== null &&
+        Temporal.PlainDate.compare(date, limitDate) >= 0
+      ) {
         return null;
       }
+
+      const resolved = resolveDateWindows(schedule, date, disambiguation);
 
       for (const window of resolved.unresolved) {
         if (
@@ -494,6 +601,7 @@ export function walkSchedule(
 
       pending = coalesceIntervalNanoseconds([...pending, ...resolved.records]);
       lastDate = date;
+      bound = current.epochNanoseconds;
     }
 
     try {
@@ -520,15 +628,14 @@ export function scheduleRunsWithin(
   range: IntervalNanoseconds,
   disambiguation: Disambiguation,
 ): IntervalNanoseconds[] | null {
-  // Refuse a range the walk cannot finish before walking it: the last date it would visit holds
-  // the range's last instant. Walking thousands of dates only to return the sentinel took seconds.
+  // Refuse a range spanning more than MAX_SCHEDULE_DAYS local dates before walking it. Walking
+  // thousands of dates only to return the sentinel took seconds.
   const lastInstant = range.end > range.start ? range.end - 1n : range.end;
+  const limit = dateLimit(schedule, range.start, MAX_SCHEDULE_DAYS);
 
   if (
-    Temporal.PlainDate.compare(
-      localDateOf(schedule, lastInstant),
-      walkLimitDate(schedule, range.start),
-    ) >= 0
+    limit !== null &&
+    Temporal.PlainDate.compare(localDateOf(schedule, lastInstant), limit) >= 0
   ) {
     return null;
   }
@@ -555,7 +662,7 @@ export function scheduleRunsWithin(
 
       return false;
     },
-    day: (dayStart) => dayStart >= range.end,
+    day: (bound) => bound >= range.end,
   });
 
   if (
@@ -568,9 +675,15 @@ export function scheduleRunsWithin(
   return runs.filter((run) => run.start < run.end);
 }
 
+/** The later of two instants. */
+function later(a: bigint, b: bigint): bigint {
+  return a > b ? a : b;
+}
+
 /**
  * The first instant at or after `fromNs` that the schedule is open: `fromNs` itself inside an
- * open run, else the start of the next run. `undefined` when none falls at or before
+ * open run, else the start of the next run. Answered as soon as no later window can open
+ * sooner, without waiting for the run to close. `undefined` when none falls at or before
  * `horizonNs`, `null` when the walk fails or a window rejected under `"reject"` could open
  * sooner.
  */
@@ -584,13 +697,29 @@ export function firstOpenInstant(
 
   const walked = walkSchedule(schedule, fromNs, disambiguation, {
     run: (run) => {
+      if (answer !== undefined) {
+        return true;
+      }
       if (run.end <= fromNs) {
         return false;
       }
-      answer = run.start > fromNs ? run.start : fromNs;
+      answer = later(run.start, fromNs);
       return true;
     },
-    day: (dayStart) => dayStart > horizonNs,
+    day: (bound, pending) => {
+      if (bound > horizonNs) {
+        return true;
+      }
+
+      const next = pending.find((run) => run.end > fromNs);
+
+      if (next !== undefined && later(next.start, fromNs) <= bound) {
+        answer = later(next.start, fromNs);
+        return true;
+      }
+
+      return false;
+    },
   });
 
   if (walked === null) {
@@ -612,9 +741,9 @@ export function firstOpenInstant(
 
 /**
  * The first instant at or after `fromNs` that the schedule is closed: `fromNs` itself outside
- * every open run, else the end of the run holding it. `undefined` when that falls after
- * `horizonNs`, `null` when the walk fails or a window rejected under `"reject"` could keep the
- * schedule open past it.
+ * every open run, else the end of the run holding it. A closed `fromNs` is answered as soon as
+ * no later window can cover it. `undefined` when the answer falls after `horizonNs`, `null` when
+ * the walk fails or a window rejected under `"reject"` could keep the schedule open past it.
  */
 export function firstClosedInstant(
   schedule: ResolvedSchedule,
@@ -622,41 +751,59 @@ export function firstClosedInstant(
   horizonNs: bigint,
   disambiguation: Disambiguation,
 ): bigint | undefined | null {
-  let answer = fromNs;
+  let answer: bigint | undefined;
 
   const walked = walkSchedule(schedule, fromNs, disambiguation, {
     run: (run) => {
+      if (answer !== undefined) {
+        return true;
+      }
       if (run.end <= fromNs) {
         return false;
       }
-      if (run.start <= fromNs) {
-        answer = run.end;
-      }
+      answer = run.start <= fromNs ? run.end : fromNs;
       return true;
     },
-    day: (dayStart) => dayStart > horizonNs,
+    day: (bound, pending) => {
+      if (bound > horizonNs) {
+        return true;
+      }
+
+      const next = pending.find((run) => run.end > fromNs);
+
+      // Closed at `fromNs`, and every later window starts after it.
+      if (fromNs < bound && (next === undefined || next.start > fromNs)) {
+        answer = fromNs;
+        return true;
+      }
+
+      return false;
+    },
   });
 
   if (walked === null) {
     return null;
   }
 
-  if (answer > horizonNs) {
+  const closed = answer ?? fromNs;
+
+  if (closed > horizonNs) {
     return undefined;
   }
 
   const { unresolvedStart } = walked;
 
-  return unresolvedStart !== undefined && unresolvedStart <= answer
+  return unresolvedStart !== undefined && unresolvedStart <= closed
     ? null
-    : answer;
+    : closed;
 }
 
 /**
  * The instant at which `amountNs` of open time has elapsed since `fromNs`: the earliest `X`
  * with exactly that much open time in `[fromNs, X)`. `fromNs` itself when `amountNs` is zero.
- * `undefined` when `X` falls after `horizonNs`, `null` when the walk fails or a window rejected
- * under `"reject"` could add open time before `X`.
+ * Answered as soon as no later window can add open time before `X`. `undefined` when `X` falls
+ * after `horizonNs`, `null` when the walk fails or a window rejected under `"reject"` could add
+ * open time before `X`.
  */
 export function instantAfterOpenTime(
   schedule: ResolvedSchedule,
@@ -674,11 +821,14 @@ export function instantAfterOpenTime(
 
   const walked = walkSchedule(schedule, fromNs, disambiguation, {
     run: (run) => {
+      if (answer !== undefined) {
+        return true;
+      }
       if (run.end <= fromNs) {
         return false;
       }
 
-      const start = run.start > fromNs ? run.start : fromNs;
+      const start = later(run.start, fromNs);
 
       if (run.end - start >= remaining) {
         answer = start + remaining;
@@ -688,7 +838,26 @@ export function instantAfterOpenTime(
       remaining -= run.end - start;
       return false;
     },
-    day: (dayStart) => dayStart > horizonNs,
+    day: (bound, pending) => {
+      if (bound > horizonNs) {
+        return true;
+      }
+
+      // Every pending run ends at or after `bound`, so only the first can hold a deadline at or
+      // before it; open time before `bound` is final.
+      const next = pending.find((run) => run.end > fromNs);
+
+      if (next !== undefined) {
+        const deadline = later(next.start, fromNs) + remaining;
+
+        if (deadline <= next.end && deadline <= bound) {
+          answer = deadline;
+          return true;
+        }
+      }
+
+      return false;
+    },
   });
 
   if (walked === null) {

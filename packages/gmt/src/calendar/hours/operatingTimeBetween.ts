@@ -23,8 +23,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - `start === end` returns `"PT0S"`.
  * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, `start` after
- *   `end`, a `disambiguation` that is not one of the four values, and a range of more than about
- *   27 years (10,000 local days).
+ *   `end`, a `disambiguation` that is not one of the four values, and a range spanning more than
+ *   10,000 local dates (about 27 years) counted from the date `start` falls on.
  *
  * @param start ISO 8601 instant string where the clock starts (inclusive)
  * @param end ISO 8601 instant string where the clock stops (exclusive)

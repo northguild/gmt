@@ -152,6 +152,54 @@ describe("isOpenAt", () => {
   });
 });
 
+describe("isOpenAt across a skipped local midnight", () => {
+  it("is open inside a window moved onto the previous date under earlier", () => {
+    // Africa/Cairo: Friday 00:30–03:00 read "earlier" is 21:30Z–00:00Z.
+    const fridayOnly = {
+      timeZone: "Africa/Cairo",
+      weekly: { 5: [{ from: "00:30", to: "03:00" }] },
+    };
+    expect(
+      isOpenAt("2024-04-25T21:50:00Z", fridayOnly, {
+        disambiguation: "earlier",
+      }),
+    ).toBe(true);
+    expect(isOpenAt("2024-04-25T21:50:00Z", fridayOnly)).toBe(false);
+  });
+});
+
+describe("isOpenAt at the limits of the instant range", () => {
+  const allDay = [{ from: "00:00", to: "00:00" }];
+  const always = {
+    timeZone: "UTC",
+    weekly: {
+      1: allDay,
+      2: allDay,
+      3: allDay,
+      4: allDay,
+      5: allDay,
+      6: allDay,
+      7: allDay,
+    },
+  };
+
+  it.each`
+    at                                     | expected | reads
+    ${"+275734-01-01T12:00:00Z"}           | ${true}  | ${"within 10,000 days of the last instant"}
+    ${"+275760-09-12T12:00:00Z"}           | ${true}  | ${"on the last whole day"}
+    ${"+275760-09-13T00:00:00Z"}           | ${true}  | ${"the last representable instant"}
+    ${"+275760-09-13T00:00:00.000000001Z"} | ${false} | ${"one nanosecond past it (not an instant)"}
+    ${"-271821-04-20T12:00:00Z"}           | ${true}  | ${"on the first representable day"}
+    ${"-271821-04-20T00:00:00Z"}           | ${true}  | ${"the first representable instant"}
+    ${"-271821-04-19T23:59:59.999999999Z"} | ${false} | ${"one nanosecond before it (not an instant)"}
+  `(
+    "is $expected $reads for a schedule open around the clock",
+    ({ at, expected }) => {
+      expect(isOpenAt(at, always)).toBe(expected);
+    },
+  );
+});
+
 describe("isOpenAt when Temporal throws", () => {
   const schedule = {
     timeZone: "America/New_York",
