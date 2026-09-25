@@ -205,17 +205,27 @@
      same bright value works for that in both themes since night is dark in
      both. */
   --gmt-globe-gold: #fde047;
-  /* Day-hemisphere brightening wash (globe.ts's dayGeometry(), painted right
-     after the base ocean fill, before the night overlay). In dark theme, the
-     day side's low oceanAlpha above reads as barely distinguishable from the
+  /* Day-hemisphere brightening wash (globe-shading.ts, painted right after
+     the base ocean fill, in the same pass as the night wash). In dark theme,
+     the day side's low oceanAlpha above reads as barely distinguishable from the
      near-black page behind the (transparent) stage — the night overlay's own
      dark navy doesn't have much darker to go, so the two hemispheres read as
      almost the same tone. Cheaper to fix by brightening day than by trying
      to darken night further: a stronger cyan wash on the day hemisphere
      only. Light theme barely needs it (day already reads bright against the
      page), so it's a small top-up there rather than 0 — still visibly a
-     single mechanism in both themes, just tuned. */
-  --gmt-globe-day-alpha: 0.14;
+     single mechanism in both themes, just tuned.
+     The value is the *peak*, reached only where the sun is overhead: the wash
+     falls off with Lambert's cosine law towards the terminator (see
+     dayFactor() in globe-shading.ts), so the sphere reads as lit from the
+     real sun's side. */
+  --gmt-globe-day-alpha: 0.26;
+  /* Atmosphere: a glow ring just outside the sphere, strongest on the limb
+     facing the sun and faint on the night limb, and a thin haze rim just
+     inside the lit limb that fades out through twilight. Decoration only —
+     gmt-a11y.css zeroes both under reduced transparency and raised contrast. */
+  --gmt-globe-atmosphere-alpha: 0.42;
+  --gmt-globe-haze-alpha: 0.2;
   /* Graticule (lat/long grid line) stroke alpha — theme-tuned like the
      fills above, not a fixed literal in globe.ts's draw call. */
   --gmt-globe-grid-alpha: 0.18;
@@ -330,7 +340,9 @@
   --gmt-globe-night-alpha: 0.8;
   /* Day already reads bright against the light theme's pale page — a small
      top-up, not the dark-theme fix this token exists for. */
-  --gmt-globe-day-alpha: 0.06;
+  --gmt-globe-day-alpha: 0.12;
+  --gmt-globe-atmosphere-alpha: 0.36;
+  --gmt-globe-haze-alpha: 0.24;
   /* Dark theme's 0.18 all but disappears against this theme's much more
      opaque night wash (0.8 alpha navy, above) and barely registers on the
      pale day side either — raised well past the dark-theme value so the
