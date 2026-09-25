@@ -2,7 +2,7 @@
 /**
  * Print the Discord announcement for a set of published package versions.
  *
- * Run as: PUBLISHED='[{"name":"@northguild/gmt","version":"1.16.0"}]' node scripts/release-announcement.mjs
+ * Run as: PUBLISHED='[{"name":"@northguild/gmt","version":"1.17.0"}]' node scripts/release-announcement.mjs
  *
  * PUBLISHED is the `published-packages` output of changesets/action/publish.
  */
