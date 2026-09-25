@@ -85,12 +85,12 @@
 .gmt-clock-offset {
   font-family: var(--gmt-font-mono);
   font-size: 0.65rem;
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
   white-space: nowrap;
 }
 
 .gmt-clock-time {
   font-family: var(--gmt-font-mono);
   font-size: 0.8rem;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }

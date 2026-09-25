@@ -42,7 +42,9 @@ It is also a Dox chat tool, because the chat can only offer a widget it can moun
 - a starter pill in `CHAT_STARTERS` (`lib/chat-constants.ts`).
 
 `widget-registry.test.ts`, `chat-starters.test.ts`, `widget-permalink.test.ts` and
-`client-graph.test.ts` fail if any of these is missing. Add the tool page to
+`client-graph.test.ts` fail if any of these is missing. Two lists are kept by hand and fail
+nothing when forgotten: add the mount to `MOUNTS` in `lib/widget-load-error.test.tsx`, and add
+its heavy modules to the `heavy` list in `components/ask/widget-graph.test.ts`. Add the tool page to
 `scripts/html-diff.mjs` and `scripts/visual-snapshot.mjs`. Every preset shows the function's
 real output, asserted in the mount test.
 
@@ -73,5 +75,5 @@ real output, asserted in the mount test.
 - `pnpm --filter @gmt/dox test` and `pnpm --filter @gmt/dox check` pass; `pnpm run validate`
   passes.
 - After `pnpm run generate`, the scenario index lists the new scenarios.
-- Every internal link resolves to a page in the build output or a route in the reference
-  manifest.
+- Every internal link and permalink resolves to a page in the build output or a route in the
+  reference manifest.

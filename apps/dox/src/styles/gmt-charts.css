@@ -45,7 +45,7 @@
   font-weight: 400;
   letter-spacing: var(--gmt-tracking-wider);
   text-transform: uppercase;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   margin: 0 0 var(--gmt-space-3) 0;
 }
 

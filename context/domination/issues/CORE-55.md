@@ -8,9 +8,9 @@ CORE-7 answers "is this a business day". Nothing in the library answers "is this
 
 - INT-12 working-day free time suspends the clock outside gate hours.
 - FIN-40 session templates are opening hours with named phases.
-- AV-27's WOCL (02:00–05:59 local) and AV-28's curfews (23:00–06:00 local) are recurring windows that wrap midnight.
+- AV-27's circadian windows and AV-28's curfews (a 23:00–06:00 example) are recurring windows that wrap midnight.
 - MAR-19 office hours decide when a Notice of Readiness can be tendered.
-- ROAD truck-ban regimes (Sunday bans, holiday bans) are recurring closed windows.
+- Truck-ban regimes (Sunday bans, holiday bans) are recurring closed windows.
 - HLTH turnaround targets and IOT maintenance windows are open-time SLAs.
 
 One implementation of "weekday × local time window, with holidays and one-off overrides, resolved to instants in a zone" is what stops seven realms disagreeing about a midnight wrap or a DST-night window.
@@ -35,7 +35,7 @@ One implementation of "weekday × local time window, with holidays and one-off o
 ## Design notes
 
 - **Windows are local wall times, so every edge inherits CORE-4.** A window edge that falls in a nonexistent local hour on a spring-forward night, or in a repeated hour on a fall-back night, is resolved with `resolveLocal` under the `disambiguation` option, whose default (`'compatible'`) and behaviour are stated in the JSDoc using the [LOCAL_TIME_RESOLUTION.md](../../reference/LOCAL_TIME_RESOLUTION.md) vocabulary. A 23:00–06:00 window is 23 or 25 hours long on those nights, and the function says which.
-- **Midnight wrap is explicit in the type.** `{ from: '23:00', to: '06:00' }` on weekday 5 is Friday night into Saturday morning; the window is attributed to the weekday it starts on. Callers building curfews, night bans and WOCL windows get one rule instead of five.
+- **Midnight wrap is explicit in the type.** `{ from: '23:00', to: '06:00' }` on weekday 5 is Friday night into Saturday morning; the window is attributed to the weekday it starts on. Callers building curfews, night bans and circadian windows get one rule instead of five.
 - **Holidays and overrides are dates in the schedule's zone**, consistent with CORE-7's `BusinessCalendar`, and a `BusinessCalendar` can be passed as `holidays` directly.
 - **`operatingTimeBetween` and `addOperatingTime` are interval algebra**, not loops over minutes: intersect the open intervals with the range and sum (CORE-6), or walk open intervals until the duration is consumed. A deadline that would fall past `within` returns `''` rather than searching forever; the horizon default is stated.
 - **This is not RFC 5545.** Weekly patterns with dated exceptions cover every consumer in the epic; monthly and yearly recurrence stay parked (see painpoints). The type is deliberately too small to become a recurrence engine.

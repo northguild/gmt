@@ -113,7 +113,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 .gmt-scrubber-readout {
   text-align: center;
   font-size: 0.8rem;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   margin-bottom: var(--gmt-space-4);
 }
 
@@ -143,19 +143,21 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 }
 
 .gmt-scrubber-time {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
   font-size: 0.9rem;
 }
 
 .gmt-scrubber-offset {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-size: 0.7rem;
 }
 
 .gmt-scrubber-bite {
+  /* void text on a solid fill (INT-58 fix loop): the base cyan only cleared
+     3.68:1 in light theme; cyan-ink clears 8.71:1. */
   font-size: 0.62rem;
   color: var(--gmt-void);
-  background: var(--gmt-cyan);
+  background: var(--gmt-cyan-ink);
   padding: 1px var(--gmt-space-1);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -179,12 +181,12 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 
 .gmt-scrubber-remove:hover,
 .gmt-scrubber-remove:focus-visible {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   outline: none;
 }
 
 .gmt-scrubber .gmt-signal-lost {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 .gmt-scrubber-share {

@@ -100,22 +100,25 @@
   right: 5px;
   bottom: 3px;
   font-weight: 700;
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
-/* A weekend day or holiday on the working basis: visited, not counted. */
+/* A weekend day or holiday on the working basis: visited, not counted. The
+   hatch is a decorative pattern, not text — kept on the pre-INT-58 muted
+   value (`--gmt-ice-dim-fill`) so the pattern's tone doesn't shift with the
+   text retune below it. */
 .gmt-freetime-cell--closed {
   background: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
-    color(from var(--gmt-ice-dim) srgb r g b / 0.28) 4px 6px
+    color(from var(--gmt-ice-dim-fill) srgb r g b / 0.28) 4px 6px
   );
   color: var(--gmt-ice-dim);
 }
 
 /* The event day under nextDay: the dwell touched it, the tariff did not count it. */
 .gmt-freetime-cell--event {
-  background: color(from var(--gmt-ice-dim) srgb r g b / 0.12);
+  background: color(from var(--gmt-ice-dim-fill) srgb r g b / 0.12);
   color: var(--gmt-ice-dim);
   font-style: italic;
 }
@@ -149,13 +152,13 @@
   background: color(from var(--gmt-cyan) srgb r g b / 0.3);
   border: 1px solid var(--gmt-cyan);
   border-radius: var(--gmt-radius-sm);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-freetime-bar--invalid {
   background: var(--gmt-signal-fill);
   border-color: var(--gmt-signal-border);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 /* The instant free time ends. */
@@ -178,7 +181,7 @@
   left: 3px;
   font-family: var(--gmt-font-mono);
   font-size: 0.62rem;
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   white-space: nowrap;
 }
 

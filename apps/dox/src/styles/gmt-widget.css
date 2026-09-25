@@ -134,7 +134,7 @@
 }
 
 .gmt-codeframe-copy--copied {
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 .gmt-code-fn {
@@ -166,20 +166,20 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-playground-live {
-  color: var(--gmt-spring);
-  text-shadow: 0 0 8px color(from var(--gmt-spring) srgb r g b / 0.4);
+  color: var(--gmt-spring-ink);
+  text-shadow: 0 0 8px color(from var(--gmt-spring-ink) srgb r g b / 0.4);
 }
 
 .gmt-playground-sentinel {
   display: inline-block;
   padding: var(--gmt-space-1) var(--gmt-space-2);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   font-size: 0.8rem;
-  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+  text-shadow: 0 0 6px color(from var(--gmt-signal-ink) srgb r g b / 0.3);
 }
 
 /* Genuine effect change, not a color override — the base rule's color/glow
@@ -204,10 +204,10 @@
 }
 
 .gmt-widget-output.gmt-playground-sentinel {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border-color: var(--gmt-signal-border);
-  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+  text-shadow: 0 0 6px color(from var(--gmt-signal-ink) srgb r g b / 0.3);
 }
 
 /* A correct, genuinely empty answer — quiet and unglowing, deliberately not
@@ -234,7 +234,7 @@
 .gmt-widget-unavailable {
   margin: 0 0 var(--gmt-space-3);
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-md);

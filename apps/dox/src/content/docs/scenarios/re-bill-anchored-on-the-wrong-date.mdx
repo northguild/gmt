@@ -1,0 +1,29 @@
+---
+title: "A Re-Bill Anchored on the Wrong Date"
+description: A party re-billing a charge it was itself billed counts its 30-day window from the charge, not from the invoice it received.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Re-Bill Anchored on the Wrong Date"
+  description="A party re-billing a charge it was itself billed counts its 30-day issue window from the date it was itself charged, not from the invoice it received."
+  naiveCode={`// The naive approach: anchored on the original charge
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-05" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-05",
+//   requestedByDeadline: null, resolutionDeadline: null } — counted from the charge, so the re-bill reads after the deadline`}
+  explanation={`The anchor is whatever date the caller counts from. The received invoice was issued on 10 March, so the re-bill's window runs from that date.`}
+  gmtCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+billingTimeline({ anchorOn: "2026-03-10", invoiceIssuedOn: "2026-04-05" }, windows);
+// { invoiceDeadline: "2026-04-09", issuedByDeadline: true, disputeDeadline: "2026-05-05",
+//   requestedByDeadline: null, resolutionDeadline: null }`}
+  fixedSpecId="billingTimeline"
+/>
+
+Change the anchor between `2026-03-01` and `2026-03-10` in the [Billing Deadlines
+widget](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-04-05%22%2C%22issueDays%22%3A%2230%22%2C%22disputeDays%22%3A%2230%22%2C%22resolutionDays%22%3A%2230%22%7D)
+and watch the verdict flip. The full rules are in [Intermodal: Billing
+Deadlines](/guides/industries/intermodal-billing-deadlines/).

@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~55× more CI test executions than all four competitors combined**: 1,106,400 from 36,880 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~96× more test cases than `@internationalized/date`**: 36,880 vs. 386 — Adobe's own library, run at its own commit.
+- **~55× more CI test executions than all four competitors combined**: 1,109,250 from 36,975 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~96× more test cases than `@internationalized/date`**: 36,975 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 36,880 tests across 673 files that exercise real behavior differences without redundant permutations. They run in CI as 1,106,400 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 36,975 tests across 674 files that exercise real behavior differences without redundant permutations. They run in CI as 1,109,250 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 673                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **36,880**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,106,400**<br>(36,880 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 674                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **36,975**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,109,250**<br>(36,975 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~55×                                                  | 1,106,400 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~55×                                                  | 1,109,250 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -170,7 +170,7 @@ The fourteen namespace subpaths:
 - `@northguild/gmt/precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `@northguild/gmt/span`: elapsed and wall-clock durations between two timestamps, as raw numbers
 - `@northguild/gmt/transport`: transit legs as exact elapsed time, arrivals rendered where they land, and dwell measured in local calendar days
-- `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count
+- `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count, and the invoice, dispute and resolution deadline chain with every window a caller parameter
 - `@northguild/gmt/zoned`: timezone-aware helpers
 - `@northguild/gmt/unix`: Unix epoch (seconds or milliseconds) helpers
 - `@northguild/gmt/utc`: UTC instant helpers
@@ -2299,8 +2299,8 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
 // { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
 //   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
 
-// Charged days are counted on their own basis. Where free time is in working days (the usual
-// US shape), the days after it are mostly charged as calendar days; California charges working days.
+// Charged days are counted on their own basis. Where a tariff grants free time in working days,
+// the days after it are mostly charged as calendar days; some tariffs charge working days only.
 const juneteenth = { ...terminal, holidays: ["2024-06-19"] };
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { ...tariff, basis: "working", calendar: juneteenth });
 // { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-06-19T04:00:00Z",
@@ -2353,15 +2353,14 @@ demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage"
   returns `null`.
 - **`basis` counts free days; `chargeBasis` counts charged days.** `"calendar"` counts every local
   day; `"working"` counts only the working days of `options.calendar`, a `BusinessCalendar` (its
-  weekend and holidays; its `timeZone` is not read), and returns `null` without one. Outside the US both are mostly calendar days. Where free time is in working days (the usual US
-  shape), the days after it are mostly charged as calendar days; California law (Cal. Bus. & Prof.
-  Code § 22928) and some tariffs charge working days only. Neither has a default.
+  weekend and holidays; its `timeZone` is not read), and returns `null` without one. Many tariffs
+  count both in calendar days. Where a tariff grants free time in working days, the days after it
+  are mostly charged as calendar days; some tariffs charge working days only. Neither has a default.
   "Calendar days excluding bank holidays" is `"working"` with an empty `weekend`.
 - **Expiry is half-open.** `expiresAt` is the first instant of the local day after `lastFreeDay`, as
   a UTC instant. A gate-out at exactly `expiresAt` is not a chargeable day; one nanosecond later is.
 - **`chargedDates` makes the count auditable.** It is the list a carrier's day-numbered tariff grid
-  is applied to. On US trades the invoice must also print it (46 CFR 541.6, the US invoice rule;
-  no world regulation of these invoices exists).
+  is applied to, and the dates an itemised invoice can list.
 - **Tiers are day bands, not rates.** `tiers: [5, 10]` names days 1–5, 6–10 and 11 onward; `byTier`
   says how many charged days fell in each band, empty bands included, so a rate table applies by
   index. Omitted, it is the single open band. GMT computes days, never money.
@@ -2377,6 +2376,88 @@ demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage"
   that is missing or present twice, or an end before its start, returns `null`, and the result is an
   `Interval` in the caller's own strings, ready for `chargeableDays(start, end, …)`.
 
+### Billing deadlines
+
+A billing regime or service contract can set up to three windows around a demurrage or
+detention invoice: one to issue it, counted from an anchor date; one to dispute it, counted from
+issuance; and one to resolve the dispute, counted from the request, unless the parties
+agree a date instead. The number of days in each is the caller's fact; GMT carries none of them. The arithmetic
+is the function's: each deadline is a date, counted in calendar days from a date, with the anchor
+as day zero and the deadline day itself inside the window.
+
+```typescript
+import { billingTimeline, convertUtcToPlainDate } from "@northguild/gmt";
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+
+// Charges last accrued on 1 March. Day 30 is the last day by the deadline; day 31 is not.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30",
+//   requestedByDeadline: null, resolutionDeadline: null }
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-01" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-01",
+//   requestedByDeadline: null, resolutionDeadline: null }
+
+// No invoice yet: a forecast. Only the invoice deadline is known.
+billingTimeline({ anchorOn: "2026-03-01" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null,
+//   requestedByDeadline: null, resolutionDeadline: null }
+
+// A dispute received on the dispute deadline, and one received a day later with a resolution
+// date the parties agreed, which replaces the computed one.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+//   requestedByDeadline: true, resolutionDeadline: "2026-05-19" }
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-20" }, { ...windows, agreedResolutionOn: "2026-06-01" });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+//   requestedByDeadline: false, resolutionDeadline: "2026-06-01" }
+
+// A re-bill is anchored on the invoice it received (issued 10 March), not on the charge.
+billingTimeline({ anchorOn: "2026-03-10", invoiceIssuedOn: "2026-04-05" }, windows);
+// { invoiceDeadline: "2026-04-09", issuedByDeadline: true, disputeDeadline: "2026-05-05",
+//   requestedByDeadline: null, resolutionDeadline: null }
+
+// A 14/14/45 service contract through the same chain: the numbers are the caller's.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, { issueDays: 14, disputeDays: 14, resolutionDays: 45 });
+// { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19",
+//   requestedByDeadline: true, resolutionDeadline: "2026-05-02" }
+
+// Windows have no defaults.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { disputeDays: 30, resolutionDays: 30 }); // null
+
+// Deadlines are dates. Reduce an instant to the billing party's local date first.
+convertUtcToPlainDate("2024-06-17T04:00:01Z", { timeZone: "America/New_York" }); // "2024-06-17"
+```
+
+- **Day zero is the anchor and the deadline is `anchor + days`** on the ISO calendar
+  (`Temporal.PlainDate.add`); a date is by the deadline when it is on or before it
+  (`Temporal.PlainDate.compare(date, deadline) <= 0`). That is the function's stated contract, not
+  a reading of any rule; a regime that counts differently passes a different number. Thirty days
+  across a leap day, a month end, a year end or a DST change is thirty dates, never thirty times
+  24 hours: `2028-01-30` plus 30 is `2028-02-29`.
+- **Deadlines are dates, never instants.** Reduce an instant to the billing party's local date
+  first with `convertUtcToPlainDate(instant, { timeZone })`; the function does not guess a zone,
+  and a date-time or an instant passed as a date returns `null`.
+- **Windows have no defaults.** Each is a safe integer of at least `0`; a missing, negative or
+  non-integer window returns `null`, because a silently defaulted window is a wrong deadline. The
+  same rule as `firstDay`.
+- **The anchor is whatever date the caller counts from.** The last date a charge accrued is
+  `chargeableDays(...).chargedDates.at(-1)`. A party re-billing a charge it was itself billed
+  passes the issuance date of the invoice it received; the chain is the same.
+- **The chain fills in as its dates exist.** With only `anchorOn` the result is a forecast:
+  `invoiceDeadline` is set and every other field is `null`. An invoice date sets
+  `issuedByDeadline` and `disputeDeadline`; a request date sets `requestedByDeadline` and
+  `resolutionDeadline`. A request without an invoice, or dated before it, is a data error and
+  returns `null`; an invoice dated before the anchor is allowed, because an invoice may be issued
+  while charges still accrue.
+- **An agreed date replaces the computed resolution deadline.** `agreedResolutionOn` must be a
+  valid date on or after `requestReceivedOn`, else `null`; it is validated even when no request
+  exists, but cannot act without one. Every emitted date is bare ISO, so an input annotation such
+  as `[u-ca=iso8601]` does not reach the output.
+- **GMT computes dates, not liability.** `issuedByDeadline` and `requestedByDeadline` compare
+  dates and say nothing else. Whether a charge is payable, whether a dispute must be heard, and
+  any consequence are the consumer's, the sibling of "GMT computes days, never money".
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -2390,7 +2471,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days
-- [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates (which a US invoice must print)
+- [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates an itemised invoice can list, plus the deadline chain around the invoice with every window a caller parameter
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns

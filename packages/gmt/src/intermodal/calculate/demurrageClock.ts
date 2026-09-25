@@ -8,8 +8,8 @@ import type { Interval } from "../../types";
  * equipment events they correspond to (`equipmentEventTypeCode` with `emptyIndicatorCode`):
  *
  * - `discharged`: DISC, laden — the full container is discharged from the vessel (import).
- * - `available`: no DCSA event — the container availability date some import tariffs start at,
- *   and which the US invoice rule requires (46 CFR 541.6(b)(6)).
+ * - `available`: no DCSA event — the container availability date some import tariffs start the
+ *   clock at.
  * - `gatedOut`: GTOT, laden — the full container leaves the terminal (import).
  * - `emptyReturned`: GTIN, empty — the empty is returned to the terminal or depot (import).
  * - `emptyReleased`: GTOT or PICK, empty — the empty is picked up for stuffing (export).
@@ -107,7 +107,7 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  *   valid instant, used or not, with no holes in the array: a list with a bad entry is a bad list.
  * - The result is an `Interval`, half-open `[start, end)`, in the caller's own strings, and feeds
  *   `chargeableDays(start, end, …)` directly.
- * - US usage differs in words, not events: MSC USA calls the in-terminal container charge
+ * - Some tariffs differ in words, not events: MSC USA calls the in-terminal container charge
  *   "detention" and the out-of-terminal one "per diem". GMT's scope names follow the global usage.
  * - Returns `null` when `events` is not an array or holds an invalid event or a hole, `scope`,
  *   `direction` or `startEvent` is unknown, `options` is not an object, a required event is

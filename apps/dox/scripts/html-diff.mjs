@@ -50,6 +50,10 @@ const PAGES = [
     path: "tools/free-time-ledger",
     widget: "gmt-freetime gmt-widget",
   },
+  {
+    path: "tools/billing-deadlines",
+    widget: "gmt-billing gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

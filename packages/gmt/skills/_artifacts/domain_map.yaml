@@ -203,7 +203,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, freeTimeExpiry/chargeableDays/demurrageClock
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline
     type: core
     packages:
       - '@northguild/gmt'
@@ -254,6 +254,7 @@ skills:
       - freeTimeExpiry
       - chargeableDays
       - demurrageClock
+      - billingTimeline
     tasks:
       - Get current time in a timezone
       - Format datetime in a timezone
@@ -283,6 +284,7 @@ skills:
       - Lay out a container's free time and its half-open expiry in the terminal's local days
       - Count and list the chargeable days of a dwell, with tier bands
       - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg
+      - Lay out the invoice, dispute and resolution deadlines around an invoice from an anchor date, with the caller's windows
 
   - name: GMT Integration
     slug: gmt-integration

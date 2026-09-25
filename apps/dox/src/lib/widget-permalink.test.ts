@@ -2,6 +2,7 @@
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
+  seedFromLocation,
   WIDGET_PAGE_PATHS,
   type WidgetKind,
 } from "./widget-permalink";
@@ -79,5 +80,43 @@ describe("widget permalinks", () => {
 
   it("rejects an unknown widget kind", () => {
     expect(decodeWidgetPermalink('?w=evil&wa={"a":1}')).toBeNull();
+  });
+
+  it("keeps every key of every permalink written into a guide, scenario, mistake or tool page", () => {
+    /* R1: `seedFromLocation` drops numbers outside 1900-2100 and empty
+       strings, so a widget arg sent as a number in a hand-written link is
+       silently lost. Every `?w=<kind>&wa=<...>` link under content/docs
+       (outside the generated reference pages) is checked here, so a link
+       written with the wrong type — a number where the widget wants a
+       string, as `freeDays` on `scenarios/demurrage-across-a-weekend.mdx`
+       and `scenarios/free-time-start-day.mdx` used to be — fails the suite
+       instead of silently falling back to a preset. */
+    const files = import.meta.glob("../content/docs/**/*.mdx", {
+      eager: true,
+      query: "?raw",
+      import: "default",
+    }) as Record<string, string>;
+
+    const linkPattern = /\?w=([a-z]+)&wa=([^)"'\s]+)/g;
+    let checked = 0;
+    for (const [path, source] of Object.entries(files)) {
+      if (path.includes("/content/docs/reference/")) continue;
+      for (const [, kind, encoded] of source.matchAll(linkPattern)) {
+        const search = `?w=${kind}&wa=${encoded}`;
+        const decoded = decodeWidgetPermalink(search);
+        expect(decoded, `${path}: ${search}`).not.toBeNull();
+        const args = decoded!.args as Record<string, unknown>;
+        const seeded = seedFromLocation(decoded!.kind, search);
+        for (const key of Object.keys(args)) {
+          expect(seeded, `${path}: ${search} lost "${key}"`).toHaveProperty(
+            key,
+          );
+        }
+        checked++;
+      }
+    }
+    // The walk itself must be real: fail loudly if nothing was found rather
+    // than passing on an empty glob.
+    expect(checked).toBeGreaterThan(0);
   });
 });

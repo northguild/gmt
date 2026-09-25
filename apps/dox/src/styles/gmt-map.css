@@ -69,14 +69,14 @@
 
 .gmt-timezone-map .ts-chart-tooltip__row > span:last-child {
   font-size: 0.65rem;
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
   text-align: right;
   white-space: nowrap;
 }
 
 .gmt-timezone-map .ts-chart-tooltip__row:nth-child(2) > span:nth-child(2) {
   font-size: 0.8rem;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   text-align: left;
 }
 

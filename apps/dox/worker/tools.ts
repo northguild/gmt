@@ -43,6 +43,7 @@ import { tool, type InferUITools, type UIDataTypes, type UIMessage } from "ai";
 import {
   DOX_TOOL_DOCS,
   ENABLED_TOOL_NAMES,
+  showBillingDeadlinesInput,
   showConverterBenchInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -159,6 +160,15 @@ export function buildWorkerTools(
               "free-time-ledger",
               `"${zone}" is not an IANA time zone this runtime knows.`,
             ),
+    }),
+
+    // No zones to check — every argument is a date or a window. An invalid
+    // date is the widget's sentinel to show, not something this runtime can
+    // reject in advance.
+    showBillingDeadlines: tool({
+      description: docFor("showBillingDeadlines"),
+      inputSchema: showBillingDeadlinesInput,
+      execute: () => accept("billing-deadlines"),
     }),
   };
 

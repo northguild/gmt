@@ -154,6 +154,10 @@
 .gmt-icon-button,
 .expressive-code .copy button,
 .gmt-ask [data-streamdown] button {
+  /* Icon colour, not text — these buttons carry an SVG icon and no visible
+     label (INT-58 fix loop: reverted from an earlier blanket sweep that
+     caught this by mistake). Non-text needs only 3:1, which the base
+     `--gmt-cyan` already clears. */
   color: var(--gmt-cyan);
   background: transparent;
   border: 1px solid transparent;
@@ -251,6 +255,9 @@
 }
 
 .expressive-code .copy:has(.feedback.show) button {
+  /* Icon-only (the "Copied!" `.feedback` text stays `display: none` above) —
+     a graphical object, not text, so the 3:1 non-text bar applies and the
+     base hue already clears it. No `-ink` swap needed here. */
   color: var(--gmt-spring);
   --ec-frm-inlBtnFg: var(--gmt-spring);
 }
@@ -462,7 +469,7 @@
 
 .gmt-button:hover,
 .gmt-button:focus-visible {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: var(--gmt-fill-strong);
 }
 

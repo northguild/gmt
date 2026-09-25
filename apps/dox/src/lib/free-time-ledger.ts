@@ -132,7 +132,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     id: "working-days",
     label: "Working-day free time, calendar-day charges",
     description:
-      "The usual US shape: free time counted in working days, then every calendar day charged. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
+      "Free time counted in working days, then every calendar day charged, the most common shape where free time is in working days. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",
@@ -146,9 +146,9 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
   },
   {
     id: "terminal-holiday",
-    label: "Working days throughout (California)",
+    label: "Working days throughout",
     description:
-      "The same dwell charged on working days only, as California law requires at its terminals: the Juneteenth holiday and the weekend after expiry are not charged, so three days are billed instead of six.",
+      "The same dwell on a tariff that charges working days only: the Juneteenth holiday and the weekend after expiry are not charged, so three days are billed instead of six.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",

@@ -128,9 +128,9 @@ describe("chargeableDays", () => {
     });
   });
 
-  // Free days and charged days are counted on their own terms. Outside the US both are mostly
-  // calendar days; the usual US shape is working-day free time with every calendar day charged
-  // after it (Hapag-Lloyd US, ACL, CMA CGM US); California law and some tariffs charge working days only (Cal. Bus. & Prof. Code 22928).
+  // Free days and charged days are counted on their own terms. Many tariffs count both in calendar
+  // days; a tariff that grants working-day free time mostly charges every calendar day after it
+  // (Hapag-Lloyd, ACL, CMA CGM); some tariffs charge working days only.
   // Discharged Friday 14 June, three free days, terminal shut on Juneteenth (Wednesday 19 June).
   it.each`
     basis         | chargeBasis   | expiresAt                 | chargedDates                                                                                                        | shape

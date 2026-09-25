@@ -19,6 +19,7 @@ FHIR's `Timing.repeat` carries more than frequency and period: `count`/`countMax
 - `packages/gmt/src/health/calculate/administrationWindow.ts`:
   - `administrationWindow(scheduledAt: string, tolerance: string): Interval` — The window in which an administration counts as on time.
   - `classifyAdministration(administeredAt: string, scheduledAt: string, tolerance: string): 'early' | 'onTime' | 'late' | 'missed'`
+- Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)): the health guide gains "Encounter durations", with no new function — midnights crossed as `dwellTime(admitted, discharged, hospitalZone).calendarDays - 1`, calendar days touched as `calendarDays`, exact elapsed time as `duration`, and observation hours as `sumIntervals(subtractIntervals([stay], excluded))` rounded down to whole hours. Examples are labelled by their numbers: a stay from 23:30 to 00:30 crosses one midnight in one hour; a stay crossing two midnights; a stay across a fall-back night whose elapsed time is one hour longer than its wall-clock span. Which counts a payer or a policy uses is the caller's.
 
 ## Design notes
 
@@ -32,11 +33,17 @@ FHIR's `Timing.repeat` carries more than frequency and period: `count`/`countMax
 - `'missed'` is distinct from `'late'` and is determined by the tolerance window, which is caller-supplied — tolerance varies by drug and by institutional policy.
 - This expands a schedule. It does not decide whether a dose is due, which depends on clinical state GMT has no access to.
 
+## Corrections
+
+- A length-of-stay story was cut. Midnights crossed are `dwellTime(...).calendarDays - 1` and observation hours are CORE-6 interval sums, both already shipped; the inpatient-day counting rule and the two-midnight test it specced were a payer's law (tracker, "GMT tracks no law"). The hospital example lives on this story's guide, since local-day boundaries in the hospital's zone are already its subject.
+
 ## What gmt provides (do not re-implement)
 
 - `resolveLocal` / `classifyLocal` from CORE-4 — nonexistent and ambiguous local times, which is precisely the DST anomaly detection
 - `bucketRange` from CORE-5 — zone-aware interval walking
 - `intervalContains` from CORE-6 — window membership
+- `subtractIntervals` / `sumIntervals` from CORE-6 — observation hours on the guide
+- `dwellTime` from TRAN-8 — midnights crossed and calendar days touched on the guide
 - `addDuration` — interval arithmetic
 
 ## Verification
@@ -52,5 +59,6 @@ FHIR's `Timing.repeat` carries more than frequency and period: `count`/`countMax
 - `when: ['ACM']` with `eventTimes: { ACM: '07:30' }` and `offset: 30` yields 08:00 doses; without `eventTimes` it returns the sentinel
 - `classifyAdministration` returns `'onTime'` at the tolerance boundary and `'late'` one second beyond
 - Missing `dstPolicy` returns the sentinel
+- The guide's encounter-duration examples match `dwellTime`, `subtractIntervals` and `sumIntervals` in the built package: the 23:30-to-00:30 stay reports `calendarDays: 2` and one midnight; the fall-back stay reports elapsed time one hour longer than its wall-clock span
 - `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - `pnpm run validate` stays green

@@ -1,0 +1,177 @@
+---
+title: "Intermodal: Billing Deadlines"
+description: billingTimeline — the last date to issue, dispute and resolve a demurrage or detention invoice, counted in calendar days from a date you name, with every window a number you pass and none defaulted.
+sidebar:
+  order: 3
+---
+
+A billing regime or service contract can set up to three windows around a demurrage or
+detention invoice: one to issue it, one to dispute it, and one to resolve the dispute. The
+number of days in each is yours, and GMT carries none. Each deadline is a date, counted in
+calendar days from a date, with the anchor as day zero and the deadline day itself inside the
+window.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+```
+
+The function lives under `@northguild/gmt/intermodal/calculate`.
+
+## Day zero is the anchor, and the deadline is a date
+
+Each deadline is `anchor + days` on the ISO calendar (`Temporal.PlainDate.add`), and a date is by
+the deadline when it is on or before it. Thirty days across a leap day, a month end, a year end
+or a DST change is thirty dates, never thirty times 24 hours.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+
+// No invoice yet: a forecast. Only the invoice deadline is known.
+billingTimeline({ anchorOn: "2026-03-01" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null,
+//   requestedByDeadline: null, resolutionDeadline: null }
+
+// Thirty days across a leap day.
+billingTimeline({ anchorOn: "2028-01-30" }, windows);
+// { invoiceDeadline: "2028-02-29", issuedByDeadline: null, disputeDeadline: null,
+//   requestedByDeadline: null, resolutionDeadline: null }
+```
+
+A date-time or an instant passed as a date returns `null`: reduce it to the billing party's
+local date first, not to its UTC date.
+
+```typescript
+import { convertUtcToPlainDate } from "@northguild/gmt/utc";
+
+convertUtcToPlainDate("2026-04-01T02:30:00Z", { timeZone: "America/New_York" });
+// "2026-03-31"
+```
+
+The UTC date of that instant is `2026-04-01`, a day later.
+[`convertUtcToPlainDate`](/reference/utc/convert/convertUtcToPlainDate/) is the function that
+reduces it.
+
+## The chain: `billingTimeline`
+
+The chain fills in as its dates exist. With only `anchorOn`, the result above is a forecast; an
+invoice date sets `issuedByDeadline` and `disputeDeadline`.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+
+// Charges last accrued on 1 March. Day 30 is the last day by the deadline; day 31 is not.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30",
+//   requestedByDeadline: null, resolutionDeadline: null }
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-01" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-01",
+//   requestedByDeadline: null, resolutionDeadline: null }
+```
+
+A request date sets `requestedByDeadline` and `resolutionDeadline`, and an agreed date replaces
+the computed resolution deadline.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+
+// A dispute received on the dispute deadline itself.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+//   requestedByDeadline: true, resolutionDeadline: "2026-05-19" }
+
+// The same dispute a day later, with a resolution date the parties agreed.
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-20" }, { ...windows, agreedResolutionOn: "2026-06-01" });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+//   requestedByDeadline: false, resolutionDeadline: "2026-06-01" }
+```
+
+A request without an invoice, or dated before it, returns `null`:
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", requestReceivedOn: "2026-04-19" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// null
+```
+
+An invoice dated before the anchor is allowed — an invoice may be issued while charges still
+accrue. `agreedResolutionOn` must be on or after the request. Every emitted date is bare ISO.
+
+`issuedByDeadline` and `requestedByDeadline` compare dates and say nothing else. What follows
+from a date after a deadline is yours: GMT computes dates, not liability.
+
+## Windows have no defaults
+
+Each window is a safe integer of at least `0`. A missing, negative or non-integer window
+returns `null` — the same rule as `firstDay` in
+[Intermodal: Free Time and Demurrage](/guides/industries/intermodal-free-time-and-demurrage/#which-day-is-day-one-firstday).
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { disputeDays: 30, resolutionDays: 30 });
+// null
+```
+
+The numbers are the caller's: a 14/14/45 service contract runs through the same call.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, { issueDays: 14, disputeDays: 14, resolutionDays: 45 });
+// { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19",
+//   requestedByDeadline: true, resolutionDeadline: "2026-05-02" }
+```
+
+## A re-bill is anchored on the invoice it received
+
+A party that re-bills a charge it was itself billed passes the issuance date of the invoice it
+received as `anchorOn`. The chain is the same, and no second function is needed.
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+// A re-bill is anchored on the invoice it received (issued 10 March), not on the charge.
+billingTimeline({ anchorOn: "2026-03-10", invoiceIssuedOn: "2026-04-05" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-04-09", issuedByDeadline: true, disputeDeadline: "2026-05-05",
+//   requestedByDeadline: null, resolutionDeadline: null }
+```
+
+## Where the numbers come from
+
+The windows and the anchor come from the document you bill under: the tariff, the service
+contract, or the rules that apply to you. GMT names none of them and carries no default. A
+regime that counts differently, or from a different date, passes a different number or a
+different anchor.
+
+## The dates on the invoice
+
+The usual anchor is the last charged date, `chargeableDays(...).chargedDates.at(-1)`.
+
+```typescript
+import { billingTimeline, chargeableDays } from "@northguild/gmt/intermodal";
+
+const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+const lastCharged = chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, tariff).chargedDates.at(-1);
+// "2024-06-24"
+billingTimeline({ anchorOn: "2024-06-24" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2024-07-24", issuedByDeadline: null, disputeDeadline: null,
+//   requestedByDeadline: null, resolutionDeadline: null }
+```
+
+The other dates an itemised invoice can list come from the free-time functions, mapped in
+[The dates an invoice can list](/guides/industries/intermodal-free-time-and-demurrage/#the-dates-an-invoice-can-list).
+
+## See it break, then work
+
+- [Billing Deadlines: move an invoice across the deadline](/tools/billing-deadlines/)
+- [Invoice a day late](/scenarios/invoice-a-day-late/)
+- [A re-bill anchored on the wrong date](/scenarios/re-bill-anchored-on-the-wrong-date/)
+- [A dispute window from a contract](/scenarios/dispute-window-from-a-contract/)
+- [Intermodal mistakes](/mistakes/intermodal/#billing-deadlines)

@@ -26,7 +26,7 @@ An AIS Class A position report (messages 1, 2, 3) does not carry a date or even 
 | 62 | Electronic position fixing system in estimated (dead reckoning) mode |
 | 63 | Positioning system inoperative |
 
-([USCG NAVCEN, Class A position report](https://www.navcen.uscg.gov/ais-class-a-reports))
+([ITU-R M.1371-5, Technical characteristics for an automatic identification system, Table 47 "Time stamp"](https://www.itu.int/rec/R-REC-M.1371/en) — table number secondary until verified)
 
 ## Corrections
 

@@ -24,6 +24,20 @@
   --sl-color-accent: var(--gmt-cyan);
   --sl-color-accent-high: var(--gmt-cyan-bright);
   --sl-color-accent-low: var(--gmt-teal);
+  /* INT-58 fix loop: `<Badge>`'s "default" variant (`user-components/Badge.astro`)
+     pairs white text with `--sl-color-accent-low` in dark mode and
+     `--sl-color-accent-high` in light mode. Both happen to resolve to the
+     same `#0e7490` here (`--gmt-teal` dark and `--gmt-cyan-bright` light are
+     coincidentally identical), and white-on-`#0e7490` measures only 5.36:1
+     in both themes — under this site's 7:1 floor, and not fixable by
+     changing the text (white is already the lightest colour available).
+     One unlayered override beats Starlight's own `@layer`-scoped default in
+     both themes at once, the same hue darkened until white clears 7:1 with
+     margin (7.44:1, live). No content currently uses the default variant —
+     every generated "Unreleased" badge is `variant="caution"` — but the
+     component is public API, so it gets fixed rather than left for whoever
+     reaches for it next. */
+  --sl-badge-default-bg: #0b5d73;
   --sl-color-text: var(--gmt-ice);
   --sl-color-text-accent: var(--gmt-cyan);
   --sl-color-bg: var(--gmt-void);

@@ -24,9 +24,8 @@ export interface FreeTime {
  * about the port: the number of free days, whether the day of discharge is free day one, and
  * whether weekends count are all set by the carrier's tariff or the service contract. So every
  * term is a parameter. No regulation or industry standard fixes how free time is counted (DCSA types only its unit: calendar days, working days, hours or day of discharge; GMT counts
- * days); the result is the window every tariff states,
- * and on US trades the US invoice rule requires an invoice to print it: the allowed free time and
- * the start and end dates of free time (46 CFR 541.6(b)(3)–(5)).
+ * days); the result is the window every tariff states, and what an invoice can print about it:
+ * the free time allowed and the dates it starts and ends.
  *
  * - **Days are the terminal's local days.** `clockStart` is an instant (`Z`, an offset, or a
  *   bracketed zone, of which only the instant is read); its local date in `options.timeZone` is

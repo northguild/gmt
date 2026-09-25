@@ -29,7 +29,7 @@ export interface FreeTimeCharges {
   expiresAt: string;
   /**
    * The local dates charged, ascending. Carriers' day-numbered tariff grids and progressive tiers
-   * are applied to this list; on US trades, 46 CFR 541.6(b)(8) also requires the invoice to print it.
+   * are applied to this list, and its entries are the dates an itemised invoice can list.
    */
   chargedDates: string[];
   /** The charged days split into the `tiers` bands; one open band when no tiers were given. */
@@ -53,11 +53,10 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  * Lays out free time with the same walk as `freeTimeExpiry`, then counts the days on or after
  * the expiry that the half-open dwell `[clockStart, clockEnd)` touched. The result is the
  * auditable form of a demurrage or detention charge: `chargedDates` lists the days behind the
- * count, which is what a carrier's day-numbered tariff grid is applied to, and on US trades is
- * what the US invoice rule requires an invoice to print ("the specific date(s) for which
- * demurrage and/or detention were charged", 46 CFR 541.6(b)(8)). No regulation or industry
- * standard fixes how the days are counted; every term below is the tariff's. GMT computes days,
- * never money: `byTier` says how many days fell in each band so the caller can apply its rates.
+ * count, which is the list a day-numbered tariff grid is applied to, and the dates an itemised
+ * invoice can list. No regulation or industry standard fixes how the days are counted; every term
+ * below is the tariff's. GMT computes days, never money: `byTier` says how many days fell in each
+ * band so the caller can apply its rates.
  *
  * - **Half-open at the exit.** A day is charged when it started before `clockEnd`, so a
  *   gate-out at exactly `expiresAt` is `0` chargeable days and one nanosecond later is `1`. A
@@ -68,14 +67,13 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  *   tariff never counts a date before the event day.
  * - **The free-time terms are `freeTimeExpiry`'s**: `basis`, `timeZone`, `firstDay` and
  *   `calendar` mean the same, and `firstDay` has no default.
- * - **`chargeBasis` says how days after expiry are charged, and has no default.** Outside the
- *   US, free time and charges are mostly both calendar days. Where free time is granted in
- *   working days (the usual US shape), the days after it are mostly charged as calendar days,
- *   weekends and holidays included (Hapag-Lloyd's US tables: "Rate per Calendar day"; ACL: "Once
- *   free time expires ... charged on calendar days"): `basis: "working", chargeBasis: "calendar"`.
- *   Some tariffs charge working days only, and California law requires it at its terminals, for
- *   free time and charges alike (Cal. Bus. & Prof. Code § 22928: neither while the gate is closed
- *   nor on a holiday): both `"working"`.
+ * - **`chargeBasis` says how days after expiry are charged, and has no default.** Many
+ *   tariffs count free time and charges alike in calendar days. Where a tariff grants free time in
+ *   working days, the days after it are mostly charged as calendar days, weekends and holidays
+ *   included (Hapag-Lloyd's tables: "Rate per Calendar day"; ACL: "Once free time expires ...
+ *   charged on calendar days"): `basis: "working", chargeBasis: "calendar"`. Some tariffs charge
+ *   working days only, for free time and charges alike, so neither counts a day the gate is
+ *   closed or a holiday: both `"working"`.
  *   Either `"working"` needs `calendar`. The two differ by every closed day after expiry, so
  *   neither is assumed.
  * - **`freeDays` may be `0`** for a tariff with no free time: `expiresAt` is the start of day one,
@@ -102,7 +100,7 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "nextDay" }) // { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-18T04:00:00Z", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (the other start-day convention: still free)
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [5, 10] }) // { freeDaysUsed: 3, chargeableDays: 12, expiresAt: "2024-06-17T04:00:00Z", chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26", "2024-06-27", "2024-06-28"], byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { basis: "working", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" } }) // { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-06-19T04:00:00Z", chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"], byTier: [{ from: 1, to: null, days: 6 }] } (free days in working days, every calendar day after expiry charged)
- * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { basis: "working", chargeBasis: "working", timeZone: "America/New_York", firstDay: "eventDay", calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" } }) // { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z", chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"], byTier: [{ from: 1, to: null, days: 3 }] } (California-style: closed days after expiry are not charged)
+ * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { basis: "working", chargeBasis: "working", timeZone: "America/New_York", firstDay: "eventDay", calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" } }) // { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z", chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"], byTier: [{ from: 1, to: null, days: 3 }] } (working days throughout: closed days after expiry are not charged)
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-15T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // { freeDaysUsed: 2, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (out on the second free day)
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T15:00:00Z", 0, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // { freeDaysUsed: 0, chargeableDays: 3, expiresAt: "2024-06-14T04:00:00Z", chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"], byTier: [{ from: 1, to: null, days: 3 }] } (no free time: every day is charged)
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [10, 5] }) // null (tiers must ascend)

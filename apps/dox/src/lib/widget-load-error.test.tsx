@@ -10,6 +10,10 @@
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { GMT_MODULES } from "./gmt-modules";
 import {
+  mountBillingDeadlines,
+  renderBillingDeadlinesTemplate,
+} from "./billing-deadlines-mount";
+import {
   mountConverterBench,
   renderConverterTemplate,
 } from "./converter-bench-mount";
@@ -45,6 +49,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "free time ledger",
     () => renderFreeTimeLedgerTemplate(),
     mountFreeTimeLedger as MountFn<never>,
+  ],
+  [
+    "billing deadlines",
+    () => renderBillingDeadlinesTemplate(),
+    mountBillingDeadlines as MountFn<never>,
   ],
   [
     "DST inspector",

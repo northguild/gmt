@@ -79,15 +79,22 @@
   letter-spacing: 0.04em;
 }
 
+/* Text vs. its own low-alpha wash reads close to text-on-page-surface, not
+   text-on-solid-fill: `--gmt-dst-gold`/`--gmt-dst-purple` only cleared
+   2.92:1 / 2.50:1 in light theme (INT-58 fix loop). Wash and border stay on
+   the base hue — 3:1 is enough for a non-text fill/border. */
 .gmt-dst-badge-gap {
   background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
-  color: var(--gmt-dst-gold);
+  color: var(--gmt-dst-gold-ink);
   border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.3);
 }
 
 .gmt-dst-badge-overlap {
   background: color(from var(--gmt-dst-purple) srgb r g b / 0.15);
-  color: var(--gmt-dst-purple);
+  /* `--gmt-dst-purple-ink`, not `--gmt-purple-ink`: this badge's own dark
+     value is broken as text (5.82:1 live), even though it's fine as the
+     lane-3 billing badge's *fill* under void text (gmt-tokens.css). */
+  color: var(--gmt-dst-purple-ink);
   border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 0.3);
 }
 

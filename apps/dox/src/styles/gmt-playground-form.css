@@ -109,7 +109,7 @@
 }
 
 .gmt-pf-remove:hover {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   border-color: var(--gmt-signal-border);
 }
 
@@ -120,7 +120,7 @@
   font-size: 0.75rem;
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   background: transparent;
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);

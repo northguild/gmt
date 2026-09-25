@@ -38,6 +38,14 @@ export const zoneSchema = z
 export const dateTimeSchema = z.string().min(4).max(64);
 
 /**
+ * An ISO date, as `billingTimeline` reads `anchorOn` and the other billing
+ * dates. This checks shape, not validity — an invalid date is the widget's
+ * sentinel to show, not a reason to refuse the call before it reaches the
+ * library.
+ */
+export const plainDateSchema = z.string().min(10).max(64);
+
+/**
  * One zone, not a list.
  *
  * The spec sketched `showGlobe({ zones })`, which presumes the globe can pin a
@@ -112,6 +120,22 @@ export const showConverterBenchInput = z.object({
 });
 
 /**
+ * The deadline chain around a demurrage or detention invoice: the anchor, the
+ * dates as they exist, and the three windows. Windows are required here as
+ * they are in the library — a missing window is a wrong deadline, so a model
+ * must say which the reader meant rather than have one defaulted.
+ */
+export const showBillingDeadlinesInput = z.object({
+  anchorOn: plainDateSchema,
+  invoiceIssuedOn: plainDateSchema.optional(),
+  requestReceivedOn: plainDateSchema.optional(),
+  issueDays: z.number().int().min(0).max(3650),
+  disputeDays: z.number().int().min(0).max(3650),
+  resolutionDays: z.number().int().min(0).max(3650),
+  agreedResolutionOn: plainDateSchema.optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -131,7 +155,8 @@ export type DoxToolName =
   | "showIntervalVisualizer"
   | "showConverterBench"
   | "showDwellLedger"
-  | "showFreeTimeLedger";
+  | "showFreeTimeLedger"
+  | "showBillingDeadlines";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -140,6 +165,7 @@ export const DOX_TOOL_INPUTS = {
   showConverterBench: showConverterBenchInput,
   showDwellLedger: showDwellLedgerInput,
   showFreeTimeLedger: showFreeTimeLedgerInput,
+  showBillingDeadlines: showBillingDeadlinesInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -189,7 +215,14 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "A container's free time and demurrage drawn on the terminal's real local-day grid: the free days, the expiry, the chargeable days and their dates, counted by freeTimeExpiry and chargeableDays.",
     when: "the reader asks when free time ends, how many days of demurrage or detention are due, which dates are charged, or how the start-day convention or a working-day tariff changes the answer",
-    args: "clockStart, clockEnd (ISO date-times; a plain 2024-06-14T15:00:00 is read as wall time in zone), freeDays (whole number), firstDay (eventDay | nextDay: whether the event day is free day one; ask if the reader did not say), basis (calendar | working: how free days are counted), chargeBasis (calendar | working: how days after free time are charged; outside the US both are mostly calendar days; where free time is in working days, the usual US shape, most tariffs charge calendar days, California terminals working days; ask if the reader did not say), zone (the terminal's IANA id), weekend (optional ISO weekday numbers, working basis), holidays (optional ISO dates, working basis), tiers (optional last chargeable-day ordinal of each band)",
+    args: "clockStart, clockEnd (ISO date-times; a plain 2024-06-14T15:00:00 is read as wall time in zone), freeDays (whole number), firstDay (eventDay | nextDay: whether the event day is free day one; ask if the reader did not say), basis (calendar | working: how free days are counted), chargeBasis (calendar | working: how days after free time are charged; many tariffs count both in calendar days, and where free time is in working days most charge calendar days after it, some working days only; ask if the reader did not say), zone (the terminal's IANA id), weekend (optional ISO weekday numbers, working basis), holidays (optional ISO dates, working basis), tiers (optional last chargeable-day ordinal of each band)",
+  },
+  {
+    name: "showBillingDeadlines",
+    purpose:
+      "The deadline chain around a demurrage or detention invoice on a day strip: the last date to issue it, to dispute it and to resolve the dispute, each counted in calendar days by billingTimeline, with every window a number the reader supplies.",
+    when: "the reader asks for the last date to issue, dispute or resolve a demurrage or detention invoice, or whether an invoice or dispute date falls on or before such a deadline",
+    args: "anchorOn (ISO date the issue window counts from: the last date a charge accrued, or for a re-bill the issuance date of the invoice received), invoiceIssuedOn (optional ISO date), requestReceivedOn (optional ISO date; needs invoiceIssuedOn), issueDays, disputeDays, resolutionDays (whole numbers of calendar days from the reader's tariff or contract; never assume them: ask if the reader did not say), agreedResolutionOn (optional ISO date the parties agreed). Dates only: reduce a date-time to the billing party's local date.",
   },
 ];
 
@@ -223,6 +256,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[5].purpose,
     inputSchema: showFreeTimeLedgerInput,
   }),
+  showBillingDeadlines: tool({
+    description: DOX_TOOL_DOCS[6].purpose,
+    inputSchema: showBillingDeadlinesInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -243,7 +280,7 @@ export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
  * here without registering its widget fails the suite rather than reaching a
  * reader.
  *
- * All six are enabled, every one backed by a registered widget.
+ * Every tool is enabled, every one backed by a registered widget.
  */
 export const ENABLED_TOOL_NAMES = [
   "showGlobe",
@@ -252,6 +289,7 @@ export const ENABLED_TOOL_NAMES = [
   "showDstInspector",
   "showDwellLedger",
   "showFreeTimeLedger",
+  "showBillingDeadlines",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

@@ -218,8 +218,10 @@
 
 .gmt-globe-zoom button:hover,
 .gmt-globe-zoom button:focus-visible {
+  /* void text (the "+"/"−" character) on a solid fill (INT-58 fix loop): the
+     base cyan only cleared 3.68:1 in light theme; cyan-ink clears 8.71:1. */
   color: var(--gmt-void);
-  background: var(--gmt-cyan);
+  background: var(--gmt-cyan-ink);
   outline: none;
 }
 
@@ -255,12 +257,12 @@
 
 .gmt-globe-tooltip-time {
   font-size: 0.95rem;
-  color: var(--gmt-spring);
+  color: var(--gmt-spring-ink);
 }
 
 .gmt-globe-tooltip-meta {
   font-size: 0.65rem;
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* Zone search ------------------------------------------------------- */
@@ -348,7 +350,7 @@
 .gmt-combobox-option[aria-selected="true"],
 .gmt-combobox-option:hover {
   background: var(--gmt-fill-strong);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* Scrollable pinned-zone list (replaces gmt-map.css's 2-row grid, which was
@@ -587,7 +589,7 @@
 }
 
 .gmt-globe .gmt-signal-lost {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
 }
 
 .gmt-globe-caption {

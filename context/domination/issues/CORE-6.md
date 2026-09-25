@@ -7,7 +7,7 @@
 Four realms need the same operation and none of them can express it: sum the parts of an interval that fall inside a set of allowed windows.
 
 - Laytime counts only the hours a SHEX or weather-working-day clause allows (MAR-19).
-- Driver hours split a duty period around mandatory breaks and rest (ROAD-20, ROAD-21).
+- Driver hours split a duty period around mandatory breaks and rest (CORE-76).
 - Free time counts only working days when the tariff says working days (INT-12).
 - Market session logic asks how much of a window fell inside continuous trading (FIN-40).
 

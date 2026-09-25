@@ -129,6 +129,7 @@ describe("the chat island's static import graph", () => {
       "lib/gmt-modules.ts",
       "lib/dwell-ledger.ts",
       "lib/free-time-ledger.ts",
+      "lib/billing-deadlines.ts",
       "lib/dst-inspector.ts",
       "lib/interval-visualizer.ts",
       "lib/globe.ts",

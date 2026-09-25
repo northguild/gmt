@@ -1,0 +1,37 @@
+---
+title: "Invoice a Day Late"
+description: An invoice issued on day 30 of a 30-day window, flagged as a day late by millisecond arithmetic.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Invoice a Day Late"
+  description="An invoice issued on day 30 of a 30-day issue window, compared as an instant against a millisecond deadline instead of as a date."
+  naiveCode={`// The naive approach: a 30-day window as milliseconds, compared with an instant
+const anchor = new Date("2026-03-01T00:00:00-05:00"); // midnight, 1 March, New York
+const deadline = new Date(anchor.getTime() + 30 * 86400e3); // 2026-03-31T05:00:00.000Z
+const invoiced = new Date("2026-03-31T09:00:00-04:00"); // 09:00 on day 30
+invoiced <= deadline; // false — an invoice on day 30 is flagged a day late`}
+  explanation={`Two mistakes stack. The deadline is a date, not an instant, so comparing an instant with it flags anything issued on the deadline day after the anchor's time of day. And 30 × 86,400,000 ms from a New York midnight crosses the 8 March clock change, so it lands at 01:00 on 31 March, not at midnight. The chain counts dates: day 30 is by the deadline, and day 31 is not.`}
+  gmtCode={`import { convertUtcToPlainDate } from "@northguild/gmt/utc";
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+convertUtcToPlainDate("2026-03-31T14:00:00Z", { timeZone: "America/New_York" });
+// "2026-03-31"
+
+const windows = { issueDays: 30, disputeDays: 30, resolutionDays: 30 };
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30",
+//   requestedByDeadline: null, resolutionDeadline: null }
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-01" }, windows);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-01",
+//   requestedByDeadline: null, resolutionDeadline: null }`}
+  fixedSpecId="billingTimeline"
+/>
+
+Change the invoice date to `2026-04-01` and the verdict turns to "after the deadline": try it in the
+[Billing Deadlines
+widget](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-03-31%22%2C%22issueDays%22%3A%2230%22%2C%22disputeDays%22%3A%2230%22%2C%22resolutionDays%22%3A%2230%22%7D).
+The full rules are in [Intermodal: Billing
+Deadlines](/guides/industries/intermodal-billing-deadlines/).

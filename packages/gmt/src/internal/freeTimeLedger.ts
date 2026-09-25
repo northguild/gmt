@@ -88,9 +88,8 @@ function readFreeTimeTerms(
  * The `calendar` is read only when a basis that needs it is `"working"`.
  *
  * With `readChargeBasis`, `chargeBasis` is required too, and has no default for the same reason:
- * where free time is in working days (the usual US shape) tariffs mostly charge every calendar day
- * after it, but California law and some tariffs charge working days only, and the two differ by
- * every closed day after expiry.
+ * where free time is in working days, tariffs mostly charge every calendar day after it, but some
+ * tariffs charge working days only, and the two differ by every closed day after expiry.
  */
 export function parseFreeTimeTerms(
   options: unknown,

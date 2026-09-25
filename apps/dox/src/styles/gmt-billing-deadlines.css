@@ -1,0 +1,279 @@
+/*
+ * Billing Deadlines widget (INT-58).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. This
+ * sheet holds what is specific to the strip: a 7-column week grid, the three
+ * lanes drawn under the day text, the marks and deadline badges, and the
+ * static legend.
+ *
+ * Colour is never the only signal: each lane carries a fill token *and* a
+ * border style (lane 1 solid, lane 2 dashed, lane 3 dotted), and a deadline
+ * cell also carries its lane's number badge. Marks are letters. The verdicts
+ * use body-copy colour in both states — a verdict is a date comparison, never
+ * a compliance finding, so it never reads as success or error. Amber stays
+ * reserved for `.gmt-playground-sentinel`.
+ */
+
+.gmt-billing-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-billing-group > legend {
+  padding: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-billing-verdicts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  /* A date comparison, not a finding: no success or error colour. */
+  color: var(--gmt-ice);
+}
+
+.gmt-billing-deadlines {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-billing-liability-note {
+  margin: 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * The strip: a 7-column ISO week grid, container-queried because the /dox
+ * rail is narrow on a wide viewport.
+ * --------------------------------------------------------------------------- */
+
+.gmt-billing {
+  container-type: inline-size;
+}
+
+.gmt-billing-weekdays,
+.gmt-billing-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(2.5rem, 1fr));
+  gap: 2px;
+}
+
+.gmt-billing-weekdays {
+  margin-bottom: var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+  text-align: center;
+}
+
+.gmt-billing-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 3.6rem;
+  padding: 3px 4px;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.68rem;
+  color: var(--gmt-ice);
+  overflow: hidden;
+}
+
+.gmt-billing-cell--padding {
+  background: none;
+  border-color: transparent;
+}
+
+.gmt-billing-cell-date {
+  white-space: nowrap;
+}
+
+.gmt-billing-marks,
+.gmt-billing-deadline-badges {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.gmt-billing-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  height: 1.1em;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+}
+
+.gmt-billing-badge--mark {
+  color: var(--gmt-void);
+  background: var(--gmt-ice);
+}
+
+.gmt-billing-badge--deadline {
+  color: var(--gmt-void);
+}
+
+/* The "-ink" tokens, not the base hues: the base cyan/spring/purple only
+   clear ~2.7-3.7:1 against white badge text in light theme (INT-58 fix loop).
+   The lane bars keep the base hue — a border only needs 3:1. */
+.gmt-billing-badge--lane-1 {
+  background: var(--gmt-cyan-ink);
+}
+
+.gmt-billing-badge--lane-2 {
+  background: var(--gmt-spring-ink);
+}
+
+.gmt-billing-badge--lane-3 {
+  background: var(--gmt-purple-ink);
+}
+
+/* Three lane bars, always three slots so a date without a given lane still
+   holds its column — the absence is itself informative once you read one
+   row. Bars sit below the day text, never behind it, so text contrast
+   never depends on what is drawn under it. */
+.gmt-billing-lanes {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gmt-billing-lane {
+  height: 4px;
+  border-radius: 2px;
+  border-width: 2px;
+  border-style: none;
+}
+
+.gmt-billing-lane--none {
+  visibility: hidden;
+}
+
+.gmt-billing-lane--1 {
+  border-style: solid;
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-billing-lane--2 {
+  border-style: dashed;
+  border-color: var(--gmt-spring);
+}
+
+.gmt-billing-lane--3 {
+  border-style: dotted;
+  border-color: var(--gmt-dst-purple);
+}
+
+.gmt-billing-lane--zero,
+.gmt-billing-lane--in {
+  background: none;
+}
+
+/* The deadline day: the bar ends in a filled cap. */
+.gmt-billing-lane--deadline.gmt-billing-lane--1 {
+  background: color(from var(--gmt-cyan) srgb r g b / 0.35);
+}
+
+.gmt-billing-lane--deadline.gmt-billing-lane--2 {
+  background: color(from var(--gmt-spring) srgb r g b / 0.35);
+}
+
+.gmt-billing-lane--deadline.gmt-billing-lane--3 {
+  background: color(from var(--gmt-dst-purple) srgb r g b / 0.35);
+}
+
+.gmt-billing-gap {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gmt-space-2);
+  border: 1px dashed var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-billing-strip-summary {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-billing-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-billing-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-billing-legend .gmt-billing-badge {
+  color: var(--gmt-void);
+  background: var(--gmt-ice);
+}
+
+.gmt-billing-legend .gmt-billing-lane {
+  width: 1.4rem;
+  visibility: visible;
+}
+
+/* Narrow rail: keep 7 columns but shrink the minimum cell width so the strip
+   still fits without a horizontal scroll. */
+@container (max-width: 26rem) {
+  .gmt-billing-weekdays,
+  .gmt-billing-strip {
+    grid-template-columns: repeat(7, minmax(1.8rem, 1fr));
+  }
+
+  .gmt-billing-cell {
+    min-height: 3rem;
+    font-size: 0.6rem;
+  }
+}
+
+/* Values the reader is reading never animate. */
+.gmt-billing-cell,
+.gmt-billing-lane,
+.gmt-billing-badge {
+  transition: none;
+  animation: none;
+}

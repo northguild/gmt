@@ -3,12 +3,13 @@ title: Intermodal
 description: Common mistakes with free time, demurrage and detention in GMT's intermodal layer.
 ---
 
-The intermodal layer is three functions, `freeTimeExpiry`, `chargeableDays` and
-`demurrageClock`, and the mistakes around them are the ones that turn into disputed invoices:
-a defaulted start day, a free-time table keyed by port, a clock counted from the wrong event,
-and a day count taken from elapsed hours. Every output shown here is what the function returns.
+The intermodal layer is four functions, `freeTimeExpiry`, `chargeableDays`, `demurrageClock`
+and `billingTimeline`, and the mistakes around them are the ones that turn into disputed
+invoices: a defaulted start day, a free-time table keyed by port, a clock counted from the
+wrong event, a day count taken from elapsed hours, and a deadline window hard-coded or counted
+from the wrong date. Every output shown here is what the function returns.
 
-## Mistakes
+## Free time and demurrage
 
 import Mistake from "../../../components/Mistake.astro";
 
@@ -108,7 +109,7 @@ demurrageClock(events, "detention", { direction: "import" });
 <Mistake
   severity="high"
   title="Assuming working-day free time means working-day charges"
-  description="How free days are counted and how charged days are counted are separate tariff terms. Where free time is granted in working days, the usual US shape, most tariffs then charge every calendar day, weekends and holidays included; California law and some tariffs charge working days only. Charging on the free-time basis under-bills the first and over-bills the second, so chargeBasis has no default."
+  description="How free days are counted and how charged days are counted are separate tariff terms. Where a tariff grants free time in working days, most then charge every calendar day, weekends and holidays included; some tariffs charge working days only. Charging on the free-time basis under-bills the first and over-bills the second, so chargeBasis has no default."
   wrongCode={`// Free time in working days, so charge working days too?
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
   basis: "working",
@@ -156,4 +157,111 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "cale
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [5, 10] }).byTier;
 // [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }]`}
   rightSpecId="chargeableDays"
+/>
+
+## Billing deadlines
+
+<Mistake
+  severity="high"
+  title="Hard-coding a deadline window"
+  description="The windows are the contract's own numbers, not a constant reused across every contract. This one gives 14/14/45; passing 30/30/30 computes real dates for a window that is not this contract's."
+  wrongCode={`const WINDOWS = { issueDays: 30, disputeDays: 30, resolutionDays: 30 }; // for every contract
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, WINDOWS);
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-04", requestedByDeadline: true, resolutionDeadline: "2026-04-17" } — this contract's own windows are 14/14/45`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-05", requestReceivedOn: "2026-03-18" }, { issueDays: 14, disputeDays: 14, resolutionDays: 45 });
+// { invoiceDeadline: "2026-03-15", issuedByDeadline: true, disputeDeadline: "2026-03-19", requestedByDeadline: true, resolutionDeadline: "2026-05-02" }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="high"
+  title="Counting working days where the window is in calendar days"
+  description="billingTimeline counts every window in calendar days, never working days. A loop that skips weekends counts a longer window than the one the contract names."
+  wrongCode={`let d = new Date("2026-03-01T00:00:00Z"), n = 0;
+while (n < 30) {
+  d = new Date(d.getTime() + 86400e3);
+  if (d.getUTCDay() % 6 !== 0) n++;
+}
+d.toISOString().slice(0, 10);
+// "2026-04-10" — 30 working days, ten days later than 30 calendar days`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null, requestedByDeadline: null, resolutionDeadline: null }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="high"
+  title="Anchoring a re-bill on the charge"
+  description="A party re-billing a charge it was itself billed counts its own window from the invoice it received, not from the original charge. Anchoring on the charge computes a deadline that has often already passed."
+  wrongCode={`billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-05" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-05", requestedByDeadline: null, resolutionDeadline: null } — counted from the charge, so the re-bill reads after the deadline`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-10", invoiceIssuedOn: "2026-04-05" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-04-09", issuedByDeadline: true, disputeDeadline: "2026-05-05", requestedByDeadline: null, resolutionDeadline: null }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="medium"
+  title="Moving the anchor to a reissue date"
+  description="The anchor is the date the regime or contract names, such as the last date a charge accrued. Correcting or reissuing an invoice does not move it. Whether a reissue opens a new window is the regime's rule, not GMT's, so pass the anchor that rule names."
+  wrongCode={`billingTimeline({ anchorOn: "2026-03-20", invoiceIssuedOn: "2026-04-10" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-04-19", issuedByDeadline: true, disputeDeadline: "2026-05-10", requestedByDeadline: null, resolutionDeadline: null } — anchored on the first invoice's own date`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-10" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-10", requestedByDeadline: null, resolutionDeadline: null }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="high"
+  title="Reducing an instant to its UTC date"
+  description="The window counts from the billing party's local date, not the UTC date of an instant. Slicing an ISO string reads the wrong calendar day whenever the local offset crosses midnight."
+  wrongCode={`"2026-04-01T02:30:00Z".slice(0, 10);
+// "2026-04-01"
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-04-01" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: false, disputeDeadline: "2026-05-01", requestedByDeadline: null, resolutionDeadline: null } — a day off from the UTC date`}
+  rightCode={`import { convertUtcToPlainDate } from "@northguild/gmt/utc";
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+convertUtcToPlainDate("2026-04-01T02:30:00Z", { timeZone: "America/New_York" });
+// "2026-03-31"
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30", requestedByDeadline: null, resolutionDeadline: null }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="medium"
+  title="Treating the deadline day as late"
+  description="Comparing dates with strict less-than instead of on-or-before excludes the deadline day itself. billingTimeline compares with `<=`: the deadline day is on or before the deadline."
+  wrongCode={`"2026-03-31" < "2026-03-31";
+// false — used as "on time", this reads the deadline day itself as late`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-30", requestedByDeadline: null, resolutionDeadline: null }`}
+  rightSpecId="billingTimeline"
+/>
+
+<Mistake
+  severity="medium"
+  title="A dispute request dated before its invoice"
+  description="A dispute request cannot precede the invoice it disputes. billingTimeline returns null both when the request has no invoice date and when it is dated earlier than one."
+  wrongCode={`billingTimeline({ anchorOn: "2026-03-01", requestReceivedOn: "2026-04-19" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// null — a request needs the invoice it disputes
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-03-19" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// null — the request is dated before the invoice it disputes`}
+  rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19", requestedByDeadline: true, resolutionDeadline: "2026-05-19" }`}
+  rightSpecId="billingTimeline"
 />

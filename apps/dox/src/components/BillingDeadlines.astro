@@ -1,0 +1,35 @@
+---
+/**
+ * Billing Deadlines widget (INT-58).
+ *
+ * A day strip wrapped by ISO week, with the three windows around a demurrage
+ * or detention invoice — issue, dispute, resolve — drawn as numbered, patterned
+ * lanes. Set the anchor, the dates as they exist, and the windows, and watch
+ * `billingTimeline` lay out the chain.
+ *
+ * **The markup and the wiring both live in `lib/billing-deadlines-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderBillingDeadlinesTemplate } from "../lib/billing-deadlines-mount";
+---
+
+<Fragment set:html={renderBillingDeadlinesTemplate()} />
+
+<script>
+  import { mountBillingDeadlines } from "../lib/billing-deadlines-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=billing&wa=` permalink seeds the widget with the dates and windows
+       it names; see lib/widget-permalink.ts. Absent or malformed, the widget
+       opens on its first preset. */
+    const seed = seedFromLocation("billing");
+    document.querySelectorAll<HTMLElement>(".gmt-billing").forEach((el) => {
+      mountBillingDeadlines(el, seed, new AbortController().signal).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>
