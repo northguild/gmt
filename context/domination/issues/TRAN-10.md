@@ -9,6 +9,8 @@ Logistics runs on deadlines that are not fixed timestamps. They are offsets from
 A representative shape: vessel departs Friday 18:00, so documentation closes Wednesday 17:00, VGM Thursday 10:00, gate-in Thursday 18:00. Reschedule the vessel and all four move.
 ([DCSA](https://dcsa.org/newsroom/cut-off-times-in-shipping), [BRF Logistics](https://brf-logistics.com/sailing-schedules-si-cut-off-port-cut-off-and-customs-cut-off/))
 
+Advance filing and pre-arrival notice deadlines are the same shape with a stricter anchor rule. They are stated as hours before a named cargo or vessel event, and the event differs by regime — loading, departure from the load port, or arrival at the first port — so the same offset from the wrong event is late by days. The anchor is the caller's event, with no default; GMT ships no regime table.
+
 ## Scope
 
 - `packages/gmt/src/transport/calculate/cutoffAt.ts`:
@@ -18,6 +20,11 @@ A representative shape: vessel departs Friday 18:00, so documentation closes Wed
 - `packages/gmt/src/transport/compare/isPastCutoff.ts`:
   - `isPastCutoff(now: string, cutoff: string): boolean`
   - `timeToCutoff(now: string, cutoff: string): string` — ISO duration, negative when the cut-off has passed.
+- Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)):
+  - `guides/industries/transport-legs-and-dwell.mdx` gains "Deadlines from an anchor", one `##` per function: the cut-off stack, `atLocalTime` versus subtracting a duration, and the anchor — `cutoffAt(loading, 'PT24H', …)` beside `cutoffAt(departure, 'PT24H', …)` for the same shipment, a 96-hour offset from arrival, a 2-day offset pinned to 17:00 local. Examples are labelled by their numbers only.
+  - Scenarios: `filing-anchored-to-the-wrong-event` (`cutoffAt`), `two-days-before-is-not-48-hours` (`cutoffAt`).
+  - `mistakes/transport.mdx` gains an entry: an offset counted from departure when the rule says loading, and a `P2D` subtraction where the rule means 17:00 local.
+  - Index entries in `guides/industries/index.mdx` and `mistakes/index.mdx`.
 
 ## Design notes
 
@@ -25,6 +32,11 @@ A representative shape: vessel departs Friday 18:00, so documentation closes Wed
 - The anchor moves. These functions are pure and take the anchor as an argument, so a schedule change is a recomputation, not a mutation. Callers should not cache cut-offs derived from an ETD.
 - A cut-off that lands on a weekend or holiday rolls with `preceding` by default — a deadline never moves *later* to accommodate a closure.
 - Cut-offs are local wall times, so they inherit CORE-4's ambiguity handling. A cut-off falling in a nonexistent local hour returns the sentinel rather than silently shifting.
+- **The anchor is the caller's event.** Loading, departure and arrival are different instants; `cutoffAt` takes one and never guesses which a rule means. An instant offset with no `atLocalTime` is the advance-filing shape; `atLocalTime` is the ocean cut-off shape. Both are the same function.
+
+## Corrections
+
+- The advance-filing story specced `filingDeadline`, `filingStatus` and an opt-in regime table keyed by filing scheme. `filingDeadline` was `cutoffAt` without `atLocalTime`; `filingStatus` was `isPastCutoff` plus `timeToCutoff`; the table was law and is not shipped (tracker, "GMT tracks no law"). What survives is the lesson that the anchor is the caller's event, recorded in the design note above and shown in the guide. Its ETA-movement test — whether a revised estimate has moved far enough to require a new filing — is TRAN-57's `estimateDrift` against a tolerance.
 
 ## What gmt provides (do not re-implement)
 
@@ -42,4 +54,7 @@ A representative shape: vessel departs Friday 18:00, so documentation closes Wed
 - `timeToCutoff` returns a negative duration after the cut-off
 - `cutoffSchedule` returns entries sorted earliest first
 - Nonexistent local time returns the sentinel
+- Anchoring the same 24-hour offset to departure rather than loading yields a different deadline, asserted side by side; a 96-hour offset from arrival is exact elapsed time across a DST transition
+- A deadline landing on a holiday with `roll: 'preceding'` moves backward, never forward
+- Every result on the guide, the scenarios and the mistakes page matches the built package; no example names a jurisdiction or a filing scheme
 - `pnpm run validate` stays green

@@ -46,11 +46,13 @@
    fails if a value import creeps back in. */
 import type { ConverterArgs } from "~/lib/converter-bench-mount";
 import type { GlobeArgs } from "~/lib/globe-mount";
+import type { BillingDeadlinesArgs } from "~/lib/billing-deadlines-mount";
 import type { DstArgs } from "~/lib/dst-inspector-mount";
 import type { DwellLedgerArgs } from "~/lib/dwell-ledger-mount";
 import type { FreeTimeLedgerArgs } from "~/lib/free-time-ledger-mount";
 import type { IntervalArgs } from "~/lib/interval-visualizer-mount";
 import {
+  showBillingDeadlinesInput,
   showConverterBenchInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -153,8 +155,8 @@ const globeEntry = defineWidget<GlobeArgs>({
 /**
  * A literal object with literal keys. Do not make this dynamic.
  *
- * The four Tier 2 widgets, the Dwell Ledger (TRAN-8) and the Free Time Ledger
- * (INT-12) are registered.
+ * The four Tier 2 widgets, the Dwell Ledger (TRAN-8), the Free Time Ledger
+ * (INT-12) and the Billing Deadlines widget (INT-58) are registered.
  * `ENABLED_TOOL_NAMES` remains the declaration of what the model is offered,
  * and a test asserts the two sets are equal — so a tool cannot be offered
  * without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
@@ -277,6 +279,28 @@ const freeTimeEntry = defineWidget<FreeTimeLedgerArgs>({
   validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
 });
 
+const billingEntry = defineWidget<BillingDeadlinesArgs>({
+  title: "Billing deadlines",
+  kind: "billing",
+  parse: (input) => {
+    const result = showBillingDeadlinesInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template, like the Free Time Ledger: every argument is a
+     control value. No zones to check, so no `validate`. */
+  load: () =>
+    import("~/lib/billing-deadlines-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderBillingDeadlinesTemplate(args),
+      mount: m.mountBillingDeadlines,
+    })),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
@@ -284,6 +308,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDstInspector: dstEntry,
   showDwellLedger: dwellEntry,
   showFreeTimeLedger: freeTimeEntry,
+  showBillingDeadlines: billingEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

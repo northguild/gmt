@@ -107,7 +107,7 @@
 }
 
 .gmt-interval-bar--a .gmt-interval-handle {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-interval-bar--b .gmt-interval-handle {

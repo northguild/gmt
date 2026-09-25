@@ -38,7 +38,8 @@ export type WidgetKind =
   | "interval"
   | "converter"
   | "dwell"
-  | "freetime";
+  | "freetime"
+  | "billing";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -61,6 +62,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   converter: "/tools/converter-bench/",
   dwell: "/tools/dwell-ledger/",
   freetime: "/tools/free-time-ledger/",
+  billing: "/tools/billing-deadlines/",
 };
 
 export function encodeWidgetPermalink(

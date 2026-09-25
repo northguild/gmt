@@ -25,11 +25,11 @@ A bill of lading carries several dates with different legal meanings and differe
 
 - **Date, not timestamp.** These are contractual dates in a jurisdiction's local calendar. Rendering an instant as a B/L date requires the origin timezone, otherwise a 21:00 local loading in Shanghai is dated the following day. `timeZone` is required for any local-dated event.
 - `multimodalETA` reports transit and dwell separately rather than summing them into one opaque number, because the two have different reliability and consumers forecast them differently.
-- Dwell is caller-supplied. It is not estimated — see TRAN-8's Corrections for why free time is a contract term rather than a port fact, and INT-13 for why estimating processing time is out of scope.
+- Dwell is caller-supplied. It is not estimated — see TRAN-8's Corrections for why free time is a contract term rather than a port fact, and TRAN-10's Corrections for why estimating processing time is out of scope.
 
 ## Corrections
 
-The original INT-2 specced `multimodalETA(legs, { portDwellDays, customsDays })`, which folded an invented customs-processing estimate into the ETA. `customsDays` is removed for the same reason `customsClearance` was (INT-13). Dwell is now an explicit per-handoff input, and the function no longer pretends to know how long customs takes.
+The original INT-2 specced `multimodalETA(legs, { portDwellDays, customsDays })`, which folded an invented customs-processing estimate into the ETA. `customsDays` is removed for the same reason `customsClearance` was (recorded under TRAN-10). Dwell is now an explicit per-handoff input, and the function no longer pretends to know how long customs takes.
 
 ## What gmt provides (do not re-implement)
 

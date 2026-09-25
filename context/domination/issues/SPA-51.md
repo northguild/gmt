@@ -47,7 +47,7 @@ So `24001.50000000` is 2024-01-01 12:00 UTC.
 ## Design notes
 
 - **The TLE century pivot is 57, not 50 or 69.** It is anchored to Sputnik, since no element set predates 1957. Guessing the pivot silently misdates historical elements by a century, and the rule must be a documented constant rather than an inherited runtime default.
-- **`sclkToScet` requires a correlation and cannot invent one.** The tick rate and the reference point come from the ground segment; there is no default. This is the same principle as the FDP tables in AV-27 and the filing rules in INT-13 — GMT supplies the arithmetic, the operator supplies the facts.
+- **`sclkToScet` requires a correlation and cannot invent one.** The tick rate and the reference point come from the ground segment; there is no default. This is the same principle as the FDP tables in AV-27 and the cut-off anchors in TRAN-10 — GMT supplies the arithmetic, the operator supplies the facts.
 - **`driftPerTick` is optional** because many missions use a linear correlation and some need a drift term. Omitting it means no drift, stated explicitly rather than assumed.
 - **Negative MET is valid** and is how every launch countdown is expressed. Returning a sentinel for pre-launch times would break the primary use case.
 - **OWLT is an input, not a computation from an ephemeris.** Range comes from the navigation solution; `oneWayLightTime` is the only derived form, and it uses the SI defining constant so the JSDoc can state the exact arithmetic. Relativistic and atmospheric delay corrections are the navigation team's problem and are documented as not applied.

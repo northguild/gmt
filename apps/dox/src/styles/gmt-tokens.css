@@ -25,7 +25,23 @@
   --gmt-surface: #061018; /* elevated bg / nav / sidebar (was --mg-void-2) */
   --gmt-surface-2: #0a1a24; /* inline-code bg / hover (was --mg-void-3) */
   --gmt-cyan-bright: #67e8f9; /* h3 / hover accent (was --mg-cyan-glow) */
-  --gmt-ice-dim: #7a9baa; /* muted text (was --mg-ice-dim) */
+  /* INT-58 fix loop: retuned from #7a9baa. Overwhelmingly a TEXT colour —
+     captions, hints, table headers, the sidebar's idle links, Starlight's
+     `--sl-color-gray-2`, Pagefind's `--pagefind-ui-text`, shadcn's
+     `--muted-foreground` all resolve through this one token — and the old
+     value only reached 5.4–6.8:1 against the surfaces it actually sits on
+     (`--gmt-void`, `--gmt-surface`, `--gmt-surface-2`), under this site's
+     7:1 floor. Retuned along its own hue until the *lowest* of those three
+     clears 7:1 with margin: 7.32:1 against `--gmt-surface-2`, 7.93:1 against
+     `--gmt-surface`, 8.32:1 against `--gmt-void`. Still visibly quieter than
+     `--gmt-ice` (14.08:1 against the same `--gmt-surface-2`) — this raises
+     the floor, not the ceiling. The two non-text consumers that would have
+     looked wrong re-tinted (the Free Time Ledger's closed-day hatch and
+     event-day wash, both a low-alpha decorative pattern, not a fill meant to
+     read as this exact colour) keep the old value under `--gmt-ice-dim-fill`
+     instead — see the light block for its value and the matching note. */
+  --gmt-ice-dim: #8fabb8; /* muted text (was --mg-ice-dim) */
+  --gmt-ice-dim-fill: #7a9baa; /* pre-INT-58 muted value, non-text only */
   --gmt-hairline: rgba(34, 211, 238, 0.18); /* border hairline */
   --gmt-accent-wash: rgba(
     34,
@@ -114,6 +130,46 @@
   --gmt-severity-critical: var(--gmt-cyan);
   --gmt-severity-high: var(--gmt-teal);
   --gmt-severity-medium: var(--gmt-ice);
+
+  /* INT-58 fix loop: `.gmt-mistake-badge` pairs `color: var(--gmt-void)` with
+     one of the three severity fills above. `--gmt-severity-medium` (ice)
+     already clears 7:1 in both themes (16.00:1 dark, 17.40:1 light) and needs
+     no variant. The other two do not:
+       critical (cyan)  dark 11.13:1 (fine) — light only 3.68:1
+       high (teal)      dark  3.75:1 — light  1.81:1 (fails both; `--gmt-teal`
+                         is muted/dark in dark theme and deliberately
+                         re-tinted BRIGHT in light theme for its own glass-tint
+                         role, so void text against it never lands right)
+     `-critical-ink` is a pure alias onto `--gmt-cyan-ink` (identical pairing,
+     no separate value needed). `-high-ink` needs its own values in *both*
+     themes — the current dark value is itself broken, so it is not aliased —
+     picked along teal's own hue/saturation until void/white text clears 7:1
+     with margin (verified 7.64:1 dark, 7.52:1 light). */
+  --gmt-severity-critical-ink: var(--gmt-cyan-ink);
+  --gmt-severity-high-ink: #15add6;
+
+  /* `.gmt-dst-badge-gap` (gmt-dst-inspector.css) pairs `--gmt-dst-gold` as TEXT
+     against its own low-alpha wash sitting on the DST table's 6%-alpha cyan
+     tint over the page — not a flat swatch. Measured live on
+     `/tools/dst-inspector/` with full alpha compositing (getComputedStyle,
+     both `background-color` layers blended in DOM order, WCAG relative
+     luminance): dark 8.56:1 (fine, unchanged) but light only 6.54:1 — an
+     earlier pass had measured light against a flat `#f5f5f5` swatch instead
+     of this badge's real composited background and read 7.32:1, which does
+     not hold on the actual page. Retuned further: 7.42:1 live. */
+  --gmt-dst-gold-ink: var(--gmt-dst-gold);
+
+  /* `.gmt-dst-badge-overlap` has the same shape with `--gmt-dst-purple`, but
+     could not reuse `--gmt-purple-ink`: that token's dark value is an alias
+     onto the unmodified base purple (correct for its own job — void/white
+     text on a *solid* purple fill, the billing lane-3 badge — measured
+     7.61:1 dark / 8.05:1 light there, unaffected by anything below). As
+     purple TEXT on this badge's own translucent wash the compositing is the
+     opposite shape, and the alias measured only 5.82:1 dark live (2.50:1
+     light, from the same flat-swatch reading `--gmt-purple-ink` was built
+     for). A dedicated token, values in *both* themes, not an alias: 7.43:1
+     dark, 7.41:1 light, live. */
+  --gmt-dst-purple-ink: #cfa1fd;
 
   /* Scrollbar — was hard-coded rgba(14,116,144,…) literals. Deep-teal, fixed
      (not palette-derived); the light block re-tints track/thumb to cyan. */
@@ -252,6 +308,40 @@
      state (visual-design.md) and must not be reused here. No role in the six
      named colors covers this, so it's a new token, not a re-tint. */
   --gmt-danger: #f87171;
+
+  /* INT-58 fix loop: "ink" variants of cyan/spring/purple/signal, for a small
+     amount of TEXT painted in that hue (a live value, a warning banner, a
+     lane badge's numeral) rather than a fill or a border. `--gmt-spring` and
+     `--gmt-signal` read fine against the near-black dark-theme page — this
+     site shipped with dozens of `color: var(--gmt-spring/--gmt-signal)`
+     call sites (gmt-widget.css, gmt-hive.css, gmt-scrubber.css, …) — but the
+     light theme's re-tint (#16a34a, #ea580c) only reaches ~3.3:1 and ~3.6:1
+     against the near-white page, well under this site's 7:1 body-text floor
+     (context/dox/reference/verification-and-risks.md). Re-tinting
+     `--gmt-spring`/`--gmt-signal`/`--gmt-cyan`/`--gmt-dst-purple` themselves
+     would drag every *fill* and *border* use (which only need 3:1) down to
+     the same dark, muddy shade for no reason — a genuinely new token per
+     maintenance rule 1 (design-system.md), dark value unchanged, light value
+     darkened until it clears 7:1 against white with margin (verified ≥7.4:1
+     against both #ffffff and the page's #f5f5f5 — see the light block). */
+  --gmt-cyan-ink: var(--gmt-cyan);
+  --gmt-spring-ink: var(--gmt-spring);
+  --gmt-purple-ink: var(--gmt-dst-purple);
+  --gmt-signal-ink: var(--gmt-signal);
+
+  /* `--gmt-cyan` was the biggest of these: it is the site's link/accent
+     colour, so every `color:` use of `--gmt-cyan` *and* `--gmt-cyan-bright`
+     (the same problem — light-theme #0e7490 only reaches ~5:1) now reads
+     `--gmt-cyan-ink` — links, buttons, `LinkButton.astro`, pagination,
+     search, the menu button, combobox options, the sidebar current link,
+     markdown tabs, the scrubber offset, and the hive submit/jump/starter/
+     artifact-link/brain-option. One token covers both: `--gmt-cyan-ink`
+     already clears 7:1 against every light-theme surface `--gmt-cyan-bright`
+     sits on (7.37:1 against `#ececec`, the darkest tested), so a second,
+     near-identical `-bright-ink` token would only have duplicated it.
+     Fills, borders, outlines, focus rings and strokes — a focus ring is
+     non-text and stays ≥3:1 (`--gmt-cyan` on `#f5f5f5` measures 3.38:1) —
+     keep the bright token; only `color:` moved. */
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -282,7 +372,14 @@
   --gmt-cyan-bright: #0e7490;
   --gmt-spring: #16a34a;
   --gmt-ice: #1a1a1a;
-  --gmt-ice-dim: #666666;
+  /* INT-58 fix loop: retuned from #666666 (5.3–5.7:1 against `--gmt-void`/
+     `--gmt-surface`, 4.9:1 against `--gmt-surface-2`) — darkened along its
+     own hue until the lowest of those three clears 7:1: 7.38:1 against
+     `--gmt-surface-2`, 8.00:1 against `--gmt-surface`, 8.72:1 against
+     `--gmt-void`. Still visibly quieter than `--gmt-ice` (14.73:1 against
+     the same `--gmt-surface-2`). */
+  --gmt-ice-dim: #4b4b4b;
+  --gmt-ice-dim-fill: #666666; /* pre-INT-58 muted value, non-text only */
   --gmt-signal: #ea580c;
   --gmt-dst-gold: #d97706;
   --gmt-dst-purple: #a78bfa;
@@ -325,6 +422,45 @@
   /* DOX-C0 (#171): a darker, more saturated red reads correctly against the
      light background — the dark-mode value is tuned for a near-black one. */
   --gmt-danger: #dc2626;
+
+  /* INT-58 fix loop: "ink" text variants — same hue, darkened past the base
+     re-tint until white/near-white text or fill combinations clear 7:1.
+     Each measured against #ffffff and #f5f5f5 (WCAG relative-luminance
+     formula):
+       cyan-ink   #045268  8.71:1 / 7.99:1  (base cyan   #0891b2 was 3.68:1;
+                                              base cyan-bright #0e7490 was ~5:1
+                                              and reuses this same value — see
+                                              the :root comment)
+       spring-ink #0b5c29  8.15:1 / 7.47:1  (base spring #16a34a was 3.30:1)
+       purple-ink #4a1de6  8.05:1 / 7.38:1  (base purple #a78bfa was 2.72:1)
+       signal-ink #8a3407  8.16:1 / 7.48:1  (base signal #ea580c was 3.56:1)
+     `--gmt-cyan-ink` also measures 7.37:1 against `#ececec`, the darkest
+     light-theme surface it's used against. */
+  --gmt-cyan-ink: #045268;
+  --gmt-spring-ink: #0b5c29;
+  --gmt-purple-ink: #4a1de6;
+  --gmt-signal-ink: #8a3407;
+
+  /* `--gmt-severity-high-ink`'s dark value (above, in :root) is also broken
+     (3.75:1) — not an alias, its own value in both themes. Light: teal's own
+     hue/saturation, darkened until white text clears 7:1 (7.52:1, verified).
+     `-critical-ink` needs no light override: it aliases `--gmt-cyan-ink`,
+     which already re-tints itself above. */
+  --gmt-severity-high-ink: #0b5c73;
+
+  /* `--gmt-dst-gold-ink`: dark stays `--gmt-dst-gold` (8.56:1 live, fine).
+     Light is gold's own hue/saturation, darkened until text clears 7:1
+     against the badge's *real* composited background (its own translucent
+     wash over the DST table's cyan tint over the page — 6.54:1 live at the
+     previous value, retuned to 7.42:1). */
+  --gmt-dst-gold-ink: #6e3c03;
+
+  /* `--gmt-dst-purple-ink`: dark is its own value, not an alias — see the
+     `:root` comment for why `--gmt-purple-ink` doesn't serve this badge.
+     Light: purple's own hue/saturation, darkened until text clears 7:1
+     against the same real composited background (6.79:1 live at the
+     previous `--gmt-purple-ink` value, retuned to 7.41:1). */
+  --gmt-dst-purple-ink: #4418db;
 
   /* ---- Globe (light values) ---- */
   --gmt-globe-ocean-alpha: 0.2;

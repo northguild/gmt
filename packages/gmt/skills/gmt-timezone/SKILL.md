@@ -9,10 +9,11 @@ description: >
   flooring or bucketing on local boundaries (floorToZone/bucketRange),
   calendar-annotated zoned strings, zoned values at the range limits, the
   transport legs transitTime, etaAtZone and dwellTime (local calendar days
-  crossed), and intermodal free time — freeTimeExpiry (the free window and its
-  half-open expiry in the terminal's local days), chargeableDays (the dates
-  charged, with tier bands) and demurrageClock (which events a demurrage,
-  detention, storage or combined clock runs between, import or export). Reads
+  crossed), intermodal free time — freeTimeExpiry (the free window and its
+  half-open expiry), chargeableDays (the dates charged, with tier bands),
+  demurrageClock (which events a demurrage, detention, storage or combined
+  clock runs between) — and billingTimeline (invoice, dispute and resolution
+  deadlines, windows as caller parameters). Reads
   the installed package README.md and source JSDoc for API details; this skill
   is a routing pointer, not an API dump.
 sources:
@@ -199,18 +200,34 @@ converting between time zones, or doing arithmetic that must respect DST.
     `firstDay` (`"eventDay"` | `"nextDay"`) has no default because the two
     differ by a day of charges; `basis: "working"` needs a `BusinessCalendar`
     and returns `null` without one. `chargeableDays(clockStart, clockEnd,
-    freeDays, options)` also needs `chargeBasis` (no default): outside the US both are mostly calendar days; where free time is in working
-    days (the usual US shape) the days after it are mostly charged as calendar
-    days; California charges working days only. It counts the days on or after
+    freeDays, options)` also needs `chargeBasis` (no default): many tariffs
+    count both in calendar days; where a tariff grants free time in working
+    days the days after it are mostly charged as calendar days, and some
+    tariffs charge working days only. It counts the days on or after
     `expiresAt` the half-open dwell touched, lists them as `chargedDates`, and
     splits them into `tiers` bands; `freeDays: 0` is allowed there.
     `demurrageClock(events, scope, { direction, startEvent? })` selects the
     events per leg: import demurrage and storage run discharge (or
     availability) to gate-out, detention gate-out to empty return; export
     demurrage gate-in to loaded, detention empty release to gate-in; `combined`
-    runs both as one period. No world regulation exists; 46 CFR 541.6 is the
-    US invoice rule only.
-17. **Read the README.** This skill is a routing pointer. For the full DST
+    runs both as one period. No standard fixes how these days are counted;
+    every term is the tariff's.
+17. **Billing deadlines are dates counted from an anchor, and every window is
+    the caller's.** `billingTimeline({ anchorOn, invoiceIssuedOn?,
+    requestReceivedOn? }, { issueDays, disputeDays, resolutionDays,
+    agreedResolutionOn? })` returns `{ invoiceDeadline, issuedByDeadline,
+    disputeDeadline, requestedByDeadline, resolutionDeadline }`. Day zero is
+    the anchor and each deadline is `date + days` on the ISO calendar; a date
+    is by the deadline when it is on or before it. No window has a default (a
+    missing one returns `null`); fields whose input does not exist yet are
+    `null`, so an anchor alone is a forecast. The anchor is whatever date the
+    caller counts from: the last charged date
+    (`chargedDates.at(-1)`), or for a re-bill the issuance date of the invoice
+    received. Reduce an instant to the billing party's local date first with
+    `convertUtcToPlainDate(instant, { timeZone })`. A request before its
+    invoice, or an agreed date before the request, returns `null`. GMT
+    computes dates, not liability.
+18. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -239,6 +256,7 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
+- **Billing deadlines**: `billingTimeline`
 
 ## References
 

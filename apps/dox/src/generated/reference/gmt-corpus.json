@@ -1445,6 +1445,91 @@
     ]
   },
   {
+    "url": "/reference/intermodal/calculate/BillingDates",
+    "name": "BillingDates",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The BillingDates type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/billingTimeline.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/BillingWindows",
+    "name": "BillingWindows",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The BillingWindows type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/billingTimeline.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/BillingDeadlines",
+    "name": "BillingDeadlines",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The BillingDeadlines type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/billingTimeline.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/billingTimeline",
+    "name": "billingTimeline",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "billingTimeline(dates: BillingDates, windows: BillingWindows): BillingDeadlines | null",
+    "description": "Lay out the deadline chain around a demurrage or detention invoice: the last date it may be",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/billingTimeline.ts",
+    "examples": [
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2026-03-31\", issuedByDeadline: null, disputeDeadline: null, requestedByDeadline: null, resolutionDeadline: null } (no invoice yet: a forecast)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-03-31\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2026-03-31\", issuedByDeadline: true, disputeDeadline: \"2026-04-30\", requestedByDeadline: null, resolutionDeadline: null } (day 30 is the last day by the deadline)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-04-01\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2026-03-31\", issuedByDeadline: false, disputeDeadline: \"2026-05-01\", requestedByDeadline: null, resolutionDeadline: null } (day 31)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-03-20\", requestReceivedOn: \"2026-04-19\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2026-03-31\", issuedByDeadline: true, disputeDeadline: \"2026-04-19\", requestedByDeadline: true, resolutionDeadline: \"2026-05-19\" }"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-03-20\", requestReceivedOn: \"2026-04-20\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30, agreedResolutionOn: \"2026-06-01\" })",
+        "result": "{ invoiceDeadline: \"2026-03-31\", issuedByDeadline: true, disputeDeadline: \"2026-04-19\", requestedByDeadline: false, resolutionDeadline: \"2026-06-01\" } (an agreed date replaces the computed one)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-10\", invoiceIssuedOn: \"2026-04-05\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2026-04-09\", issuedByDeadline: true, disputeDeadline: \"2026-05-05\", requestedByDeadline: null, resolutionDeadline: null } (a re-bill anchored on the invoice it received, not on the charge)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-03-05\", requestReceivedOn: \"2026-03-18\" }, { issueDays: 14, disputeDays: 14, resolutionDays: 45 })",
+        "result": "{ invoiceDeadline: \"2026-03-15\", issuedByDeadline: true, disputeDeadline: \"2026-03-19\", requestedByDeadline: true, resolutionDeadline: \"2026-05-02\" } (a service contract's own windows)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2028-01-30\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "{ invoiceDeadline: \"2028-02-29\", issuedByDeadline: null, disputeDeadline: null, requestedByDeadline: null, resolutionDeadline: null } (calendar days across a leap day)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", invoiceIssuedOn: \"2026-03-31\" }, { disputeDays: 30, resolutionDays: 30 })",
+        "result": "null (issueDays has no default)"
+      },
+      {
+        "call": "billingTimeline({ anchorOn: \"2026-03-01\", requestReceivedOn: \"2026-04-19\" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 })",
+        "result": "null (a request cannot precede the invoice it disputes)"
+      }
+    ]
+  },
+  {
     "url": "/reference/intermodal/calculate/TierBand",
     "name": "TierBand",
     "namespace": "intermodal",
@@ -1509,7 +1594,7 @@
       },
       {
         "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-24T15:00:00Z\", 3, { basis: \"working\", chargeBasis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\", calendar: { weekend: [6, 7], holidays: [\"2024-06-19\"], timeZone: \"America/New_York\" } })",
-        "result": "{ freeDaysUsed: 3, chargeableDays: 3, expiresAt: \"2024-06-19T04:00:00Z\", chargedDates: [\"2024-06-20\", \"2024-06-21\", \"2024-06-24\"], byTier: [{ from: 1, to: null, days: 3 }] } (California-style: closed days after expiry are not charged)"
+        "result": "{ freeDaysUsed: 3, chargeableDays: 3, expiresAt: \"2024-06-19T04:00:00Z\", chargedDates: [\"2024-06-20\", \"2024-06-21\", \"2024-06-24\"], byTier: [{ from: 1, to: null, days: 3 }] } (working days throughout: closed days after expiry are not charged)"
       },
       {
         "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-15T15:00:00Z\", 3, { basis: \"calendar\", chargeBasis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",

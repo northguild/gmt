@@ -109,23 +109,23 @@
 }
 
 .gmt-ask-response h1 {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-size: var(--gmt-text-xl);
   letter-spacing: var(--gmt-tracking-wide);
 }
 
 .gmt-ask-response h2 {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-size: var(--gmt-text-lg);
 }
 
 .gmt-ask-response h3 {
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   font-size: var(--gmt-text-md);
 }
 
 .gmt-ask-response a {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   text-decoration: none;
   border-bottom: 1px solid var(--gmt-teal);
   transition:
@@ -134,13 +134,13 @@
 }
 
 .gmt-ask-response a:hover {
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   border-bottom-color: var(--gmt-cyan);
 }
 
 .gmt-ask-response :not(pre) > code {
   background: var(--gmt-code-bg);
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
@@ -197,7 +197,7 @@
 }
 
 .gmt-ask-response th {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   font-family: var(--gmt-font-display);
   font-weight: 600;
   font-size: var(--gmt-text-xs);

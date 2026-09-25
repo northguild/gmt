@@ -18,7 +18,7 @@
 }
 
 [data-theme="dark"] .sl-link-button.secondary {
-  color: var(--gmt-cyan-bright);
+  color: var(--gmt-cyan-ink);
 }
 
 .sl-link-button.secondary:hover {
@@ -95,7 +95,7 @@
 .pagination-links a:hover {
   background: color(from var(--gmt-teal) srgb r g b / 0.25);
   border-color: color(from var(--gmt-cyan) srgb r g b / 0.55);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
   box-shadow:
     0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
     inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
@@ -106,7 +106,7 @@
 }
 
 .pagination-links a:hover .link-title {
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 /* ---- Icon buttons ---- */
@@ -117,7 +117,7 @@
 /* Mobile search button — match icon buttons, only on small screens */
 @media (max-width: 49.99rem) {
   site-search button[data-open-modal] {
-    color: var(--gmt-cyan-bright);
+    color: var(--gmt-cyan-ink);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--gmt-radius-sm);
@@ -128,7 +128,7 @@
   }
 
   site-search button[data-open-modal]:hover {
-    color: var(--gmt-cyan);
+    color: var(--gmt-cyan-ink);
     background: var(--gmt-fill-strong);
     border-color: var(--gmt-border);
     box-shadow: 0 0 8px var(--gmt-glow);
@@ -155,6 +155,8 @@ starlight-menu-button button {
   padding: 0.5rem;
   cursor: pointer;
 
+  /* Icon colour (bars/close, no visible label) — INT-58 fix loop reverted
+     this from an earlier blanket sweep; non-text needs only 3:1. */
   color: var(--gmt-cyan-bright);
   background: transparent;
   border: 1px solid transparent;

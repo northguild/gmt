@@ -6,7 +6,7 @@
 
 GMT can parse ISO 8601. The freight industry mostly does not send ISO 8601. It sends EDIFACT `DTM` segments, X12 date/time elements, EPCIS events and DCSA payloads — and the recurring defect across all of them is that some formats carry a UTC offset and some do not, with no in-band signal beyond a format qualifier.
 
-X12 is the North American half of the problem and the first draft left it out entirely, on the grounds that trading-partner maps vary. The partner maps do vary; the two data elements underneath them do not. Data element **1250** (Date Time Period Format Qualifier) and data element **623** (Time Code) are fixed enumerations published by X12, used identically in a 214 motor-carrier status, a 315 ocean status, a 404 rail bill of lading and a healthcare 837 claim. Parsing them is standards work, not partner work.
+X12 is the other half of the problem and the first draft left it out entirely, on the grounds that trading-partner maps vary. The partner maps do vary; the two data elements underneath them do not. Data element **1250** (Date Time Period Format Qualifier) and data element **623** (Time Code) are fixed enumerations published by X12, used identically in a 214 motor-carrier status, a 315 ocean status, a 404 rail bill of lading and a healthcare 837 claim. Parsing them is standards work, not partner work.
 
 ## Scope
 
@@ -16,7 +16,7 @@ X12 is the North American half of the problem and the first draft left it out en
 - `packages/gmt/src/intermodal/parse/parseX12DateTime.ts`:
   - `parseX12DateTime(value: string, formatQualifier: string): { instant?: string, local?: string, date?: string, time?: string, periodEnd?: string } | null` — Data element 1250 formats.
   - `formatX12DateTime(isoString: string, formatQualifier: string): string`
-  - `x12TimeCodeOffset(timeCode: string): { offset: string, source: 'x12' | 'zoneDefinition' } | { candidates: string[], generic: true } | null` — Data element 623. The ISO-style codes carry their offset in X12's own text: `01`–`12` are "Equivalent to ISO P01" … `P12` (UTC+1 … UTC+12), `13`–`24` are `M12` … `M01` in **descending** order (13 = UTC−12, 24 = UTC−1), `25`–`29` are the half-hour offsets M2:30, M3:30, P5:30, P9:30, P10:30, and `GM`/`UT` are UTC. The named standard/daylight codes (`AD`/`AS` Alaska, `CD`/`CS` Central, `ED`/`ES` Eastern, `HD`/`HS` Hawaii-Aleutian, `MD`/`MS` Mountain, `ND`/`NS` Newfoundland, `PD`/`PS` Pacific, `TD`/`TS` Atlantic) name a zone whose offset X12 does **not** state; the function returns the offset that zone's legal definition gives (15 U.S.C. §263 for the US standard zones, with daylight time one hour ahead under §260a; the Canadian provincial definitions for Newfoundland and Atlantic, cited at implementation) and marks `source: 'zoneDefinition'`. Generic codes (`AT`, `CT`, `ET`, `HT`, `MT`, `NT`, `PT`, `TT`, `LT`) cannot resolve: they return the standard and daylight candidates and a `generic` flag, and the caller resolves against a date and zone.
+  - `x12TimeCode(timeCode: string): { offset: string } | { zone: string, daylight: boolean | null } | null` — Data element 623. The ISO-style codes carry their offset in X12's own text and return `{ offset }`: `01`–`12` are "Equivalent to ISO P01" … `P12` (UTC+1 … UTC+12), `13`–`24` are `M12` … `M01` in **descending** order (13 = UTC−12, 24 = UTC−1), `25`–`29` are the half-hour offsets M2:30, M3:30, P5:30, P9:30, P10:30, and `GM`/`UT` are UTC. The named standard/daylight codes (`AD`/`AS` Alaska, `CD`/`CS` Central, `ED`/`ES` Eastern, `HD`/`HS` Hawaii-Aleutian, `MD`/`MS` Mountain, `ND`/`NS` Newfoundland, `PD`/`PS` Pacific, `TD`/`TS` Atlantic) name a zone whose offset X12 does **not** state; the function returns `{ zone, daylight }` with X12's zone name and a daylight flag and no offset, and the caller resolves the name against an IANA zone. Generic codes (`AT`, `CT`, `ET`, `HT`, `MT`, `NT`, `PT`, `TT`, `LT`) say neither standard nor daylight and return `{ zone, daylight: null }`, so the caller resolves against a date as well as a zone.
 - `packages/gmt/src/intermodal/parse/parseEpcisEvent.ts`:
   - `parseEpcisEvent(event: { eventTime: string, eventTimeZoneOffset: string }): { instant: string, offset: string, local: string } | null`
   - `formatEpcisEvent(value: { instant: string, offset: string }): { eventTime: string, eventTimeZoneOffset: string }`
@@ -62,12 +62,16 @@ X12 is the North American half of the problem and the first draft left it out en
 ## Design notes
 
 - **A qualifier without an offset must not silently become UTC.** `203` means local time at an unstated place. Returning `local` without `instant` forces the caller to supply the zone, which is the only correct resolution. This is the single most common EDI timestamp bug.
-- **A generic X12 time code is not an offset.** `ET` is "Eastern Time" with no statement of standard or daylight; the standard itself provides `ED` and `ES` for that. Resolving `ET` needs the date and a zone, so the function returns the candidates and says so. Mapping `ET` to `America/New_York` would be a place-registry assertion and is out of scope; the candidates are the two offsets the standard's own `ED`/`ES` codes define.
+- **A named X12 time code is a zone name, not an offset.** `ES` names a zone and says standard time; X12 states no offset, and the legal offset of a named zone is a jurisdiction's fact GMT does not carry. Returning the name and the daylight flag is all the standard supports; mapping the name to an IANA zone is the caller's, and would otherwise be a place-registry assertion. `ET` says neither standard nor daylight, so it returns `daylight: null` and the caller resolves against a date as well as a zone.
 - **EPCIS requires both fields.** `eventTime` is UTC and `eventTimeZoneOffset` is the offset in force where the event happened, precisely so the event can be displayed in local time. Neither derives from the other, which is why CORE-4 exists.
   ([OpenEPCIS](https://openepcis.io/docs/epcis/))
 - **Partner maps are still not bundled.** Which qualifier a given 214 or 315 uses in which segment is implementation-guide data. This story parses the values those guides name; it does not know which segment holds the estimated arrival.
 - **Healthcare X12 uses the same elements.** 837 and 834 `DTP` segments carry `D8` and `RD8`; HLTH consumers import this parser rather than duplicating it, and its location under `intermodal/` reflects where the EDI expertise lives, not where it is used.
 - DCSA carries `eventDateTime` with an `eventClassifierCode` marking a value planned, estimated or actual. That vocabulary is TRAN-57's; this story parses timestamps and does not interpret classifiers.
+
+## Corrections
+
+- Named X12 623 codes returned a statute's offset, tagged with a `source` marker saying the offset came from a zone's legal definition, with that statute and a second jurisdiction's definitions cited for implementation; they now return `{ zone, daylight }` and no offset, and the function is `x12TimeCode`. Generic codes returned two candidate offsets derived from the same statute; they return `daylight: null` instead.
 
 ## What gmt provides (do not re-implement)
 
@@ -84,7 +88,7 @@ X12 is the North American half of the problem and the first draft left it out en
 - Round-trip through `formatEdifactDtm` for every supported code
 - An unknown format code returns the sentinel rather than guessing a format
 - `parseX12DateTime('20240615', 'D8')` returns a `date`; `'20240615-20240620'` with `'RD8'` returns a period
-- `x12TimeCodeOffset('ES')` returns `-05:00` with `source: 'zoneDefinition'`; `'ED'` returns `-04:00`; `'ET'` returns both as candidates with `generic: true`; `'UT'` and `'GM'` return `+00:00` with `source: 'x12'`; `'01'` returns `+01:00`, `'13'` returns `-12:00` and `'24'` returns `-01:00` (the descending run, asserted); `'27'` returns `+05:30`; an unknown code returns the sentinel
+- `x12TimeCode('ES')` returns `{ zone: 'Eastern', daylight: false }` and no offset; `'ED'` returns `daylight: true`; `'ET'` returns `daylight: null`; `'UT'` and `'GM'` return `{ offset: '+00:00' }`; `'01'` returns `+01:00`, `'13'` returns `-12:00` and `'24'` returns `-01:00` (the descending run, asserted); `'27'` returns `+05:30`; an unknown code returns the sentinel
 - `parseX12DateTime('20240615143000', 'RTS')` returns one local date-time, not a range; `'166'` with `'TC'` returns day 166 as an ordinal needing a year; `'UN'` returns the sentinel
 - `parseEpcisEvent` preserves the original offset through a round-trip, including a negative offset
 - An EPCIS event missing `eventTimeZoneOffset` returns the sentinel

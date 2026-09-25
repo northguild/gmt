@@ -58,6 +58,6 @@
 }
 
 .gmt-label-required {
-  color: var(--gmt-signal);
+  color: var(--gmt-signal-ink);
   margin-left: 2px;
 }

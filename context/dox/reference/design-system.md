@@ -43,6 +43,13 @@ redefine them.
   `--gmt-fill-*`.
 - **Theme-role tokens** (`--gmt-code-surface`, `--gmt-sidebar-link`, …) resolve to a different
   token per theme, so the rule that uses one needs no light block.
+- **`-ink` tokens** (`--gmt-cyan-ink`, `--gmt-spring-ink`, `--gmt-purple-ink`, `--gmt-signal-ink`,
+  `--gmt-severity-critical-ink`, `--gmt-severity-high-ink`, `--gmt-dst-gold-ink`) are the
+  text-safe variant of an accent. See rule 6.
+- **`--gmt-ice-dim`** is the muted/secondary text tier — retuned per theme so every `color:` use
+  clears 7:1 while staying visibly quieter than `--gmt-ice`. `--gmt-ice-dim-fill` keeps the old
+  (pre-retune) value for the handful of non-text consumers — a low-alpha wash or hatch pattern,
+  never a rule's `color:` — that would have looked wrong re-tinted alongside it.
 
 ## Maintenance rules
 
@@ -56,6 +63,28 @@ redefine them.
    equal-specificity rules wins — verify with the visual gate below.
 5. **No `@layer` in the GMT sheets.** Tailwind's layers exist only inside the chat island, under
    the constraints below.
+6. **An accent used as text uses its `-ink` theme-role token; the bright accent is for fills,
+   borders and non-text only.** `--gmt-cyan`, `--gmt-cyan-bright`, `--gmt-spring`, `--gmt-signal`
+   and `--gmt-dst-purple` are tuned to read well as a *fill* or a *border* against the page — a
+   3:1 bar — and several of their light-theme re-tints fall to ~2.5–3.7:1 once painted as
+   `color:` on a light surface, under this site's 7:1 text floor
+   (`context/dox/reference/verification-and-risks.md`). Each has an `-ink` sibling in
+   `gmt-tokens.css`: dark value an alias onto the base token (pixel-identical, unchanged), light
+   value the same hue darkened until every surface it sits on clears 7:1.
+   `--gmt-cyan-bright` reuses `--gmt-cyan-ink` rather than getting its own token — the two land
+   within a few hex digits of each other once both are darkened for 7:1, so a second token would
+   only have duplicated it. `--gmt-severity-critical-ink` (an alias onto `--gmt-cyan-ink`),
+   `--gmt-severity-high-ink` and `--gmt-dst-gold-ink` are the same pattern one level down, for
+   the two tokens whose own base value is already a fill/border colour
+   (`--gmt-severity-high` is `--gmt-teal`; the DST inspector's gap/overlap badges pair
+   `--gmt-dst-gold`/`--gmt-dst-purple` with their own wash). A drag handle, an SVG icon glyph or
+   any other non-text use of an accent stays on the bright token — a focus ring only needs 3:1,
+   and `--gmt-cyan` already clears it (3.38:1 against `#f5f5f5`). `--gmt-ice-dim` is the one
+   token retuned directly rather than split: it is overwhelmingly a `color:` use (captions, table
+   headers, idle sidebar links, and the tokens that alias it — Starlight's `--sl-color-gray-2`,
+   Pagefind's `--pagefind-ui-text`, shadcn's `--muted-foreground`), so the base value moved and
+   `--gmt-ice-dim-fill` keeps the old one for the few non-text consumers a retune would have
+   changed the look of.
 
 ## `/dox` and the header
 
@@ -129,8 +158,8 @@ pnpm build && pnpm visual:after
 pnpm visual:diff                   # exits non-zero over threshold
 ```
 
-- Ten pages — landing, a dense reference page, the tool pages, one page per teaching widget —
-  plus the search modal and mobile menu, in both themes at 1440×900 and 390×844.
+- The captured pages — landing, a dense reference page, the tool pages, one page per teaching
+  widget — plus the search modal and mobile menu, in both themes at 1440×900 and 390×844.
 - A perceptual pixel diff (pixelmatch), not a hash: GPU blur re-encodes differently on every
   capture. `MAX_DIFF_PIXEL_RATIO` is 0.2%.
 - Masked: live clock text and the globe canvas (the day/night terminator moves with time).
