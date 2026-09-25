@@ -122,20 +122,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), the converter
   bench with format and regex tester (`B2d`), the Dwell Ledger (TRAN-8, the first a realm
   story shipped; its day cells come from Temporal's `startOfDay`, so a 23-hour day is drawn
-  23 hours wide), and the Free Time Ledger (INT-12, the same day grid with each day coloured
-  as the tariff reads it; it imports the Dwell Ledger's grid helpers rather than copying them). Each is a `src/lib/<widget>-mount.ts` exporting
+  23 hours wide), the Free Time Ledger (INT-12, the same day grid with each day coloured
+  as the tariff reads it; it imports the Dwell Ledger's grid helpers rather than copying them),
+  and the Billing Deadlines widget (INT-58, a day strip wrapped by ISO week, with the three
+  windows around a demurrage or detention invoice — issue, dispute, resolve — as numbered,
+  patterned lanes; it draws the deadlines `billingTimeline` returns and computes none. Past
+  120 cells it collapses weeks with no marked date and says so). Each is a
+  `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
-  left controls that looked live and did nothing. Every `.astro` shell — the five teaching
-  widgets, the globe, the scrubber and the timezone map — catches its mount and calls
+  left controls that looked live and did nothing. Every `.astro` shell — every teaching
+  widget, the globe, the scrubber and the timezone map — catches its mount and calls
   `showUnavailable(root, error)`: `data-state="unavailable"` dims and disables the
   server-rendered markup (`gmt-widget.css`), and one amber notice offers a reload.
   `widget-load-error.test.tsx` runs every library-backed mount against a `GMT_MODULES`
   whose imports all reject.
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
-  `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
+  `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
+  `/tools/billing-deadlines/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
   Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`, with structural checks
   rather than zod so a docs page never pulls in the `ai` package.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
@@ -187,6 +193,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - Features: drag and inertia, zoom scalar `[1, 5]` (wheel, pinch, buttons),
     `land-110m`, a day/night terminator from the current instant, and an arrow-key
     `listbox` for zone selection.
+  - Shading (`src/lib/globe-shading.ts`): day light, twilight and night are shaded per
+    pixel from the sun's elevation into a half-resolution buffer, then scaled up. Stacked
+    translucent caps were tried first and showed as rings and limb stripes. An atmosphere
+    ring outside the limb follows the sun. Both washes are tokens that `gmt-a11y.css`
+    zeroes under reduced transparency and raised contrast.
   - `rAF` and the 1 s clock tick both stop on `visibilitychange`; reduced motion gives a
     static globe with selection still working.
   - Lazy-mounted by `IntersectionObserver`. No globe JS reaches reference pages (verified),
@@ -346,7 +357,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Widget tools
 
-- **Six tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
+- **Seven tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
   - `showGlobe({ zone })`
   - `showConverterBench({ value, from, to, locale? })`
   - `showIntervalVisualizer({ aStart, aEnd, bStart, bEnd })`
@@ -357,6 +368,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `firstDay`, `basis` and `chargeBasis` are required, as the library requires them; a zoneless wall time is
     read in `zone` with `disambiguation: "reject"`. Its permalink carries every list and number
     as a string, because `seedFromLocation` passes only strings and years.
+  - `showBillingDeadlines({ anchorOn, invoiceIssuedOn?, requestReceivedOn?, issueDays, disputeDays, resolutionDays, agreedResolutionOn? })`
+    (INT-58): the windows are required, as the library requires them, and a blank window
+    stays blank, never defaulted. Its permalink carries every window as a string, because
+    `seedFromLocation` drops other numbers.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

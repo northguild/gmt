@@ -22,7 +22,6 @@
  */
 
 import {
-  geoCircle,
   geoContains,
   geoDistance,
   geoGraticule10,
@@ -34,6 +33,7 @@ import { feature } from "topojson-client";
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned/get";
 import land110m from "world-atlas/land-110m.json";
+import { cityLightsOn, paintShading, type Rgb } from "./globe-shading";
 import { antisolarPoint } from "./globe-terminator";
 import {
   COORDINATES_BY_ID,
@@ -117,8 +117,8 @@ interface Palette {
   oceanAlpha: number;
   landAlpha: number;
   /**
-   * Extra brightening wash painted over the day hemisphere only (see
-   * `dayGeometry()`) — in dark theme, the day side's low `oceanAlpha` alone
+   * Peak of the brightening wash painted over the day hemisphere only (see
+   * globe-shading.ts) — in dark theme, the day side's low `oceanAlpha` alone
    * reads as barely distinguishable from the near-black page behind the
    * (transparent) stage, so the night/day contrast the terminator exists to
    * show falls flat. Cheaper to brighten day than to darken night further
@@ -134,6 +134,10 @@ interface Palette {
    * globe alphas rather than a literal in the draw call.
    */
   gridAlpha: number;
+  /** Peak alpha of the glow ring outside the sphere; 0 turns it off. */
+  atmosphereAlpha: number;
+  /** Alpha of the haze just inside the limb; 0 turns it off. */
+  hazeAlpha: number;
 }
 
 function readPalette(el: HTMLElement): Palette {
@@ -155,8 +159,10 @@ function readPalette(el: HTMLElement): Palette {
     gold: pick("--gmt-globe-gold", "#fde047"),
     oceanAlpha: pickNumber("--gmt-globe-ocean-alpha", 0.07),
     landAlpha: pickNumber("--gmt-globe-land-alpha", 0.12),
-    dayAlpha: pickNumber("--gmt-globe-day-alpha", 0.22),
+    dayAlpha: pickNumber("--gmt-globe-day-alpha", 0.26),
     gridAlpha: pickNumber("--gmt-globe-grid-alpha", 0.18),
+    atmosphereAlpha: pickNumber("--gmt-globe-atmosphere-alpha", 0.42),
+    hazeAlpha: pickNumber("--gmt-globe-haze-alpha", 0.2),
   };
 }
 
@@ -164,8 +170,29 @@ function readPalette(el: HTMLElement): Palette {
  * active, matching the pre-existing 0.1/0.18 ≈ 0.56 dark-theme ratio. */
 const GRID_QUIET_FACTOR = 0.56;
 
-/** `#rrggbb` (or `#rgb`) + alpha -> `rgba(...)`, leaving non-hex values alone. */
-function withAlpha(color: string, alpha: number): string {
+/** How far the atmosphere glow reaches past the limb, as a multiple of the
+ * sphere's radius. Zoom 1 leaves the sphere ~6% of its radius clear of the
+ * stage edge (see `measure()`), so the glow fits without being clipped. */
+const ATMOSPHERE_REACH = 1.06;
+
+/** Share of the atmosphere glow the night limb keeps, so the ring never
+ * vanishes outright on the side facing away from the sun. */
+const ATMOSPHERE_NIGHT_FLOOR = 0.15;
+
+/**
+ * How much brighter the whole ring gets with the sun straight behind the
+ * globe. Air scatters sunlight mostly forwards, so a backlit atmosphere glows
+ * all round the limb — the eclipse-rim look of photos taken from orbit.
+ */
+const ATMOSPHERE_BACKLIGHT = 0.8;
+
+/** The shading buffer's resolution per CSS pixel. The shading is all smooth
+ * gradients, so half resolution scaled up with smoothing looks the same and
+ * shades a quarter of the pixels. */
+const SHADE_RESOLUTION = 0.5;
+
+/** `#rrggbb` (or `#rgb`) -> `[r, g, b]`, or null for anything else. */
+function hexToRgb(color: string): Rgb | null {
   const hex = color.replace("#", "");
   const full =
     hex.length === 3
@@ -174,11 +201,18 @@ function withAlpha(color: string, alpha: number): string {
           .map((c) => c + c)
           .join("")
       : hex;
-  if (full.length !== 6) return color;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  if (!/^[0-9a-f]{6}$/i.test(full)) return null;
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+/** `#rrggbb` (or `#rgb`) + alpha -> `rgba(...)`, leaving non-hex values alone. */
+function withAlpha(color: string, alpha: number): string {
+  const rgb = hexToRgb(color);
+  return rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : color;
 }
 
 export async function initGlobe(
@@ -320,19 +354,133 @@ export async function initGlobe(
   resizeObserver.observe(host);
 
   // --- rendering -------------------------------------------------------
-  function nightGeometry(antisolar: [number, number]): GeoPermissibleObjects {
-    return geoCircle().center(antisolar).radius(90)() as GeoPermissibleObjects;
+  /** Offscreen buffer the sun-lit shading is painted into, then scaled up. */
+  const shadeCanvas = document.createElement("canvas");
+  const shadeCtx = shadeCanvas.getContext("2d");
+  let shadeImage: ImageData | null = null;
+  /** Inputs the buffer was last painted from; unchanged means reuse it. */
+  let shadeKey = "";
+
+  /**
+   * Day wash, limb haze and night wash in one pass (see globe-shading.ts),
+   * clipped to the sphere. `sun` is the unit vector towards the sun in view
+   * space: x right, y down, z towards the viewer.
+   */
+  function drawShading(
+    path: ReturnType<typeof geoPath>,
+    cx: number,
+    cy: number,
+    radius: number,
+    sun: [number, number, number],
+  ): void {
+    if (!shadeCtx) return;
+    const shadeWidth = Math.max(1, Math.ceil(width * SHADE_RESOLUTION));
+    const shadeHeight = Math.max(1, Math.ceil(height * SHADE_RESOLUTION));
+    if (
+      !shadeImage ||
+      shadeImage.width !== shadeWidth ||
+      shadeImage.height !== shadeHeight
+    ) {
+      shadeCanvas.width = shadeWidth;
+      shadeCanvas.height = shadeHeight;
+      shadeImage = shadeCtx.createImageData(shadeWidth, shadeHeight);
+    }
+    const scaleX = shadeWidth / width;
+    const scaleY = shadeHeight / height;
+    // The sun drifts ~0.004° a second. Rounding its vector to 0.001 of the
+    // radius (a quarter of a pixel at hero size) repaints on about one clock
+    // tick in 14 while the globe is still; a selection change never repaints.
+    const key = [
+      shadeWidth,
+      shadeHeight,
+      cx,
+      cy,
+      radius,
+      ...sun.map((n) => n.toFixed(3)),
+      palette.cyan,
+      palette.night,
+      palette.dayAlpha,
+      palette.nightAlpha,
+      palette.hazeAlpha,
+    ].join("|");
+    if (key !== shadeKey) {
+      shadeKey = key;
+      paintShading(shadeImage.data, {
+        width: shadeWidth,
+        height: shadeHeight,
+        cx: cx * scaleX,
+        cy: cy * scaleY,
+        radius: radius * scaleX,
+        sun,
+        day: hexToRgb(palette.cyan) ?? [34, 211, 238],
+        night: hexToRgb(palette.night) ?? [3, 8, 12],
+        dayAlpha: palette.dayAlpha,
+        nightAlpha: palette.nightAlpha,
+        hazeAlpha: palette.hazeAlpha,
+      });
+      shadeCtx.putImageData(shadeImage, 0, 0);
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    path(sphere);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(shadeCanvas, 0, 0, width, height);
+    ctx.restore();
   }
 
-  /** The exact geometric complement of nightGeometry() — a 90°-radius circle
-   * centered on the antipode of the antisolar point, i.e. the subsolar point
-   * (where the sun is directly overhead). Used to paint a brightening wash
-   * over just the day hemisphere; see `--gmt-globe-day-alpha`. */
-  function dayGeometry(antisolar: [number, number]): GeoPermissibleObjects {
-    const [lng, lat] = antisolar;
-    return geoCircle()
-      .center([lng + 180, -lat])
-      .radius(90)() as GeoPermissibleObjects;
+  /**
+   * The glow ring outside the limb. Its strength round the ring follows how
+   * lit each limb point is: `sunX`/`sunY` are the sun's direction projected
+   * onto the screen, as a fraction of the radius. Near 0 the sun is straight
+   * ahead or straight behind, the whole limb is on the terminator and the ring
+   * is even; near 1 the sun is off to one side, which lights that limb and
+   * leaves the opposite one at `ATMOSPHERE_NIGHT_FLOOR`. `sunZ` below 0 means
+   * the sun is behind the globe, which brightens the whole ring (see
+   * `ATMOSPHERE_BACKLIGHT`).
+   *
+   * Drawn first, on the cleared canvas, so the `destination-in` mask below
+   * shapes the ring alone.
+   */
+  function drawAtmosphere(
+    cx: number,
+    cy: number,
+    radius: number,
+    sunX: number,
+    sunY: number,
+    sunZ: number,
+  ): void {
+    const outer = radius * ATMOSPHERE_REACH;
+    const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
+    const glow = ctx.createRadialGradient(cx, cy, radius, cx, cy, outer);
+    glow.addColorStop(
+      0,
+      withAlpha(palette.cyan, Math.min(1, palette.atmosphereAlpha * backlight)),
+    );
+    glow.addColorStop(1, withAlpha(palette.cyan, 0));
+    ctx.beginPath();
+    ctx.arc(cx, cy, outer, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+    ctx.fillStyle = glow;
+    ctx.fill("evenodd");
+
+    // Older engines without conic gradients keep an even ring.
+    if (typeof ctx.createConicGradient !== "function") return;
+    const tilt = Math.min(Math.hypot(sunX, sunY), 1);
+    const mask = ctx.createConicGradient(Math.atan2(sunY, sunX), cx, cy);
+    const steps = 16;
+    for (let i = 0; i <= steps; i++) {
+      const lit = 0.5 + 0.5 * tilt * Math.cos((i / steps) * Math.PI * 2);
+      const strength =
+        ATMOSPHERE_NIGHT_FLOOR + (1 - ATMOSPHERE_NIGHT_FLOOR) * lit;
+      mask.addColorStop(i / steps, `rgba(0, 0, 0, ${strength})`);
+    }
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.fillStyle = mask;
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = "source-over";
   }
 
   /** Map an IANA id to the boundary dataset's `tzid` value. */
@@ -386,14 +534,30 @@ export async function initGlobe(
       antisolarReading.lng,
       antisolarReading.lat,
     ];
+    const subsolar: [number, number] = [antisolar[0] + 180, -antisolar[1]];
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = projection.scale();
+
+    // Projecting a point does not clip it, so a subsolar point on the far
+    // side still lands where the sun's direction meets the screen plane; its
+    // depth comes from the angle to the view centre.
+    const sunOnScreen = projection(subsolar);
+    const sun: [number, number, number] = [
+      sunOnScreen ? (sunOnScreen[0] - cx) / radius : 0,
+      sunOnScreen ? (sunOnScreen[1] - cy) / radius : 0,
+      Math.cos(geoDistance(subsolar, [-rotation[0], -rotation[1]])),
+    ];
+
+    if (palette.atmosphereAlpha > 0) {
+      drawAtmosphere(cx, cy, radius, sun[0], sun[1], sun[2]);
+    }
 
     ctx.beginPath();
     path(sphere);
     ctx.fillStyle = withAlpha(palette.teal, palette.oceanAlpha);
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = withAlpha(palette.cyan, 0.4);
-    ctx.stroke();
 
     // Day/night terminator: painted right after the sphere base and before
     // the grid/land/highlight/dots, so the night side is a dark backdrop
@@ -405,21 +569,21 @@ export async function initGlobe(
     // 0.5 into light theme's much paler base landed on a washed-out
     // grey-blue mid-tone instead of reading as night.
     //
-    // The day hemisphere gets its own brightening wash first — in dark
-    // theme, the base ocean fill above is already tuned low (oceanAlpha) to
-    // read cleanly against the near-black page, which left day and night
-    // barely distinguishable from each other. Brightening day (cheap: it's
-    // just a stronger cyan wash) reads better than trying to darken night
-    // any further against an already near-black backdrop.
-    ctx.beginPath();
-    path(dayGeometry(antisolar));
-    ctx.fillStyle = withAlpha(palette.cyan, palette.dayAlpha);
-    ctx.fill();
+    // The day hemisphere gets its own brightening wash — in dark theme, the
+    // base ocean fill above is already tuned low (oceanAlpha) to read
+    // cleanly against the near-black page, which left day and night barely
+    // distinguishable from each other. Brightening day (cheap: it's just a
+    // stronger cyan wash) reads better than trying to darken night any
+    // further against an already near-black backdrop. The wash is brightest
+    // under the sun and fades towards the terminator, and night eases in
+    // across twilight, which is what makes the sphere read as round.
+    drawShading(path, cx, cy, radius, sun);
 
     ctx.beginPath();
-    path(nightGeometry(antisolar));
-    ctx.fillStyle = withAlpha(palette.night, palette.nightAlpha);
-    ctx.fill();
+    path(sphere);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = withAlpha(palette.cyan, 0.4);
+    ctx.stroke();
 
     ctx.beginPath();
     path(graticule);
@@ -467,13 +631,16 @@ export async function initGlobe(
       const radius = isSelected ? 4 : zone.primary ? 3 : 2.2;
       ctx.beginPath();
       ctx.arc(point[0], point[1], radius, 0, Math.PI * 2);
-      // Gold only on the night side — real Earth-at-night photos show city
+      // Gold only once it is dark — real Earth-at-night photos show city
       // lights because it's dark; the same dot in daylight isn't a "light"
-      // at all, so day-side dots keep the original cyan/ice. `isSelected`
-      // stays spring green regardless of hemisphere — a distinct "currently
-      // focused" signal, not part of the city-lights palette.
-      const inNight =
-        geoDistance([zone.lng, zone.lat], antisolar) <= Math.PI / 2;
+      // at all, so day-side dots keep the original cyan/ice. The switch is
+      // at civil dusk, where the shading's daylight has faded out, not at
+      // the horizon, where the ground is still lit. `isSelected` stays
+      // spring green regardless — a distinct "currently focused" signal,
+      // not part of the city-lights palette.
+      const inNight = cityLightsOn(
+        Math.cos(geoDistance([zone.lng, zone.lat], subsolar)),
+      );
       ctx.fillStyle = isSelected
         ? palette.spring
         : inNight
@@ -846,6 +1013,20 @@ export async function initGlobe(
     attributeFilter: ["data-theme"],
   });
 
+  // gmt-a11y.css zeroes the atmosphere tokens under these preferences, and
+  // the canvas only sees a token when the palette is re-read.
+  const preferenceQueries = [
+    "(prefers-reduced-transparency: reduce)",
+    "(prefers-contrast: more)",
+  ].flatMap((query) => globalThis.matchMedia?.(query) ?? []);
+  function onPreferenceChange(): void {
+    palette = readPalette(host);
+    render();
+  }
+  for (const query of preferenceQueries) {
+    query.addEventListener("change", onPreferenceChange);
+  }
+
   // --- wire up --------------------------------------------------
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
@@ -894,6 +1075,9 @@ export async function initGlobe(
       clearInterval(clockTimer);
       resizeObserver.disconnect();
       themeObserver.disconnect();
+      for (const query of preferenceQueries) {
+        query.removeEventListener("change", onPreferenceChange);
+      }
       document.removeEventListener("visibilitychange", onVisibility);
       zoneClockList?.destroy();
       canvas.remove();
