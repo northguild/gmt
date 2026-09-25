@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
     inputs:
       announce:
-        description: Post only the Discord announcement for these already-published tags, space-separated (e.g. @northguild/gmt@1.16.0). Publishes nothing. Leave empty to publish.
+        description: Post only the Discord announcement for these already-published tags, space-separated (e.g. @northguild/gmt@1.17.0). Publishes nothing. Leave empty to publish.
         type: string
         default: ""
 
