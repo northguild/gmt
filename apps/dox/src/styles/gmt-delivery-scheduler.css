@@ -56,18 +56,44 @@
  * has no such truncation. `minmax(0, …)` on every track, and `width: 100%`
  * overriding the shared `.gmt-input`/`.gmt-select` 140px `min-width` (gmt-
  * form-controls.css) — which is exactly what forced the old five-column grid
- * to overflow its card. The card itself carries its leg's own colour as a
- * left accent bar, and its `<legend>` carries the number badge.
+ * to overflow its card. Each leg card gets L-shaped corner brackets (top-left
+ * + bottom-right) in its own leg colour — the same `.gmt-brackets` recipe used
+ * on the home page — instead of a left accent bar.
  * --------------------------------------------------------------------------- */
 
 .gmt-delivery-leg-fieldset {
   container-type: inline-size;
-  border-left-width: 3px;
-  border-left-style: solid;
-  border-left-color: var(--leg-color, var(--gmt-border));
+  position: relative;
   padding-top: var(--gmt-space-1);
   padding-bottom: var(--gmt-space-2);
   margin-bottom: var(--gmt-space-2);
+}
+
+.gmt-delivery-leg-fieldset::before,
+.gmt-delivery-leg-fieldset::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--leg-color, var(--gmt-cyan));
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.gmt-delivery-leg-fieldset::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.gmt-delivery-leg-fieldset::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
 }
 
 .gmt-delivery-leg-number {

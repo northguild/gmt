@@ -30,8 +30,9 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 ## What gmt provides (do not re-implement)
 
 - `transitTime` / `etaAtZone` from TRAN-8 — the single-leg case
-- `mergeIntervals` / `sumIntervals` from CORE-6 — total dwell
-- `convertZonedToZoned` — timezone conversion
+- `isValidInstant` / `isValidZonedDateTime` / `isValidDateTime` — the departure gates: an exact instant, a zoned string, or a zoneless first-leg wall time
+- `isValidTimeZone` — `timeZone` and `startTimeZone` validation
+- `isValidDuration` — `duration` and `dwellAfter` validation
 
 ## Verification
 
