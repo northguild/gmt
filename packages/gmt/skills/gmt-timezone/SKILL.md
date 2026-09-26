@@ -7,15 +7,14 @@ description: >
   before resolving it, real zone unit boundaries
   (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a local day,
   flooring or bucketing on local boundaries (floorToZone/bucketRange),
-  calendar-annotated zoned strings, zoned values at the range limits, the
-  transport legs transitTime, etaAtZone and dwellTime (local calendar days
-  crossed), intermodal free time — freeTimeExpiry (the free window and its
-  half-open expiry), chargeableDays (the dates charged, with tier bands),
-  demurrageClock (which events a demurrage, detention, storage or combined clock
-  runs between) — and billingTimeline (invoice, dispute and resolution
-  deadlines, windows as caller parameters). Reads the installed package
-  README.md and source JSDoc for API details; this skill is a routing pointer,
-  not an API dump.
+  calendar-annotated zoned strings, zoned values at the range limits,
+  transport — transitTime, etaAtZone, dwellTime (local calendar days crossed),
+  crossingTime, scheduleDelivery (multi-leg ETA, missed connections) —
+  intermodal free time — freeTimeExpiry, chargeableDays (dates charged, tier
+  bands), demurrageClock (which events a clock runs between) — and
+  billingTimeline (invoice, dispute and resolution deadlines). Reads the
+  installed package README.md and source JSDoc for API details; this skill is
+  a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -40,7 +39,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.17.0'
+  library_version: '1.18.0'
 ---
 
 # GMT Timezone
@@ -192,6 +191,19 @@ converting between time zones, or doing arithmetic that must respect DST.
     (a skipped date is not counted, a re-entered one only once), and is the
     library's one "local days crossed" count.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
+    `crossingTime(entry, exit, targetZone)` returns `{ duration, enter, exit }`
+    with no day count (a crossing that needs one is a dwell); `targetZone` is
+    required and always the rendering zone — a bracket on the input is ignored.
+    `scheduleDelivery(legs, { startTimeZone? })` chains legs into `{ eta,
+    legTimes }`: each leg leaves at its explicit `departure` or at the previous
+    arrival plus that leg's `dwellAfter`, the minimum connect time. A scheduled
+    departure earlier than that is a missed connection and returns `null`
+    (equal passes). Departures must be exact (instant or zoned string); only a
+    zoneless first-leg departure is read in `startTimeZone`, with
+    `"compatible"` resolution (ambiguous → earlier, skipped → later). A
+    negative leg `duration` is `null`; the last leg's `dwellAfter` is echoed,
+    never added. `mode`, `origin` and `destination` are opaque tags echoed on
+    each `LegTime`. An empty array returns `{ eta: "", legTimes: [] }`.
 16. **Free time is counted in the terminal's local days; the start day and the
     basis are tariff terms, never defaults.**
     `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
@@ -253,7 +265,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
-- **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`
+- **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`,
+  `crossingTime`, `scheduleDelivery`
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`

@@ -89,10 +89,10 @@ npm. A Core primitive ships with the realm that first uses it.
 | 10  | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                        | —                      | #193  | 1.17.0  | Done        |
 | 11  | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                  | —                      | #260  | 1.17.0  | Done        |
 | 12  | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic               | —                      | #257  | —       | Not started |
-| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                              | —                      | #190  | —       | Not started |
+| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                              | —                      | #190  | —       | Done        |
 | 14  | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff`                                | —                      | #191  | —       | Not started |
 | 15  | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`             | —                      | #259  | Cut     | Not started |
-| 16  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                 | TRAN-9                 | #195  | —       | Not started |
+| 16  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                 | —                      | #195  | —       | Not started |
 | 17  | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                      | —                      | #196  | Cut     | Not started |
 | 18  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report     | —                      | #283  | Cut     | Not started |
 | 19  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover     | (SPA-46), (SPA-48)     | #197  | —       | Not started |
@@ -106,7 +106,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 27  | AV-27   | Aviation   | Crew FDP table lookup, acclimatisation,<br>recurring local windows               | CORE-55, AV-25         | #208  | —       | Not started |
 | 28  | AV-28   | Aviation   | NOTAM validity and D) schedules,<br>METAR/TAF times, curfews, CTOT slots         | CORE-55                | #209  | —       | Not started |
 | 29  | AV-64   | Aviation   | AIRAC cycles and publication<br>deadlines                                        | —                      | #266  | Cut     | Not started |
-| 30  | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` +<br>operating bitmasks                        | TRAN-9, AV-26          | #203  | —       | Not started |
+| 30  | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` +<br>operating bitmasks                        | AV-26                  | #203  | —       | Not started |
 | 31  | RAI-23  | Rail       | `stationDwell` + `blockingTime` +<br>`shuntingWindow`                            | —                      | #204  | —       | Not started |
 | 32  | RAI-24  | Rail       | GTFS service day, times beyond<br>24:00:00                                       | —                      | #205  | Cut     | Not started |
 | 33  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf | —                      | #258  | —       | Not started |
