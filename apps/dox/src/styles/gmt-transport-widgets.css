@@ -1,0 +1,160 @@
+/*
+ * Shared rules for the four multi-leg scheduling widgets (TRAN-9): the
+ * Delivery Scheduler, the Connection Checker, the Timetable Reader and the
+ * Crossing Clock.
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css. This sheet holds what two
+ * or more of the four share: the leg fieldset grid, the verdict line, the
+ * naive row and its disagreement badge, and the reason-aside spacing —
+ * merged here per the style guide's "when two components share a rule,
+ * merge it".
+ *
+ * Tokens only; no colour literal. Each widget root gets
+ * `container-type: inline-size` so its own sheet can write `@container`
+ * rules for the `/dox` rail, which is narrow on a wide viewport.
+ */
+
+.gmt-delivery,
+.gmt-crossing,
+.gmt-connection,
+.gmt-timetable {
+  container-type: inline-size;
+}
+
+/* ---------------------------------------------------------------------------
+ * Leg fieldsets (Delivery Scheduler; reused by the Timetable Reader's rows)
+ * --------------------------------------------------------------------------- */
+
+.gmt-transport-leg {
+  margin: 0 0 var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-transport-leg > legend {
+  padding: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-transport-leg-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(7rem, 1fr));
+  gap: var(--gmt-space-2);
+}
+
+@container (max-width: 34rem) {
+  .gmt-transport-leg-grid {
+    grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The verdict line: made/missed/no-verdict is worded, never coloured
+ * success/error. A date or instant comparison, not a finding.
+ * --------------------------------------------------------------------------- */
+
+.gmt-transport-verdict {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-md);
+  color: var(--gmt-ice);
+}
+
+.gmt-transport-verdict-detail {
+  margin: var(--gmt-space-1) 0 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * The naive row: the widget's own labelled arithmetic, shown beside the real
+ * result. Never amber — that colour is the sentinel's alone — and never a
+ * success/error hue: "disagrees" is a fact about two numbers, not a verdict.
+ * --------------------------------------------------------------------------- */
+
+.gmt-transport-naive {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin: var(--gmt-space-1) 0 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-transport-naive-label {
+  font-style: italic;
+}
+
+.gmt-transport-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  background: var(--gmt-fill);
+}
+
+.gmt-transport-badge--disagrees {
+  border-style: dashed;
+}
+
+/* The one accent variant: "this is the answer" (an ETA tag), never a
+   success/error hue — the site's link/accent cyan, bordered and bold.
+   Added for the Delivery Scheduler's route map and ETA summary card
+   (TRAN-9); any transport widget that needs to mark its own headline result
+   can reuse it rather than inventing a bespoke tag class. */
+.gmt-transport-badge--accent {
+  border-color: var(--gmt-cyan);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------------
+ * Reason aside spacing (shared with the DST/billing asides via gmt-glass.css)
+ * --------------------------------------------------------------------------- */
+
+.gmt-transport-reason {
+  margin-top: var(--gmt-space-2);
+}
+
+/* ---------------------------------------------------------------------------
+ * Visually hidden — real text, kept out of the visual layout rather than
+ * shown as a redundant paragraph, for a strip or timeline whose visual form
+ * already carries the same values (`role="img"` `aria-labelledby`). Added
+ * for the Crossing Clock's crossing strip (TRAN-9); identical to
+ * `.gmt-delivery-visually-hidden` in gmt-delivery-scheduler.css, which
+ * predates this shared home and is left as its own copy rather than risk
+ * a cross-sheet rename mid-widget.
+ * --------------------------------------------------------------------------- */
+
+.gmt-transport-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Values the reader is reading never animate. */
+.gmt-transport-verdict,
+.gmt-transport-naive,
+.gmt-transport-badge {
+  transition: none;
+  animation: none;
+}
