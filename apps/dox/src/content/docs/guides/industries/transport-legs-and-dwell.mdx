@@ -9,6 +9,8 @@ Every transport mode shares three operations: add a leg's duration to a departur
 arrival in the zone where it lands, and measure how long something sat at a terminal, berth,
 gate or yard. Every mode also gets the same two things wrong: a leg across a DST transition is
 a fixed number of *elapsed* hours, and dwell is charged in *local calendar days*, not hours.
+Chaining legs into one journey, with scheduled connections and crossings, is
+[Transport: Multi-leg Scheduling](/guides/industries/transport-multi-leg-scheduling/).
 
 ```typescript
 import { dwellTime, etaAtZone, transitTime } from "@northguild/gmt/transport";
