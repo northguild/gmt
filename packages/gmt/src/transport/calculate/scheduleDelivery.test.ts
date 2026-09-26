@@ -431,17 +431,17 @@ describe("scheduleDelivery", () => {
   });
 
   it.each`
-    legs                                                                                   | options                           | reason
-    ${[{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }]}           | ${undefined}                      | ${"a zoneless departure without startTimeZone is not a moment"}
-    ${[validLeg]}                                                                          | ${{ startTimeZone: "Not/AZone" }} | ${"an invalid startTimeZone is invalid input even when unused"}
-    ${[validLeg]}                                                                          | ${{ startTimeZone: 5 }}           | ${"a non-string startTimeZone"}
-    ${[validLeg]}                                                                          | ${null}                           | ${"options is null (GetOptionsObject)"}
-    ${[validLeg]}                                                                          | ${"x"}                            | ${"options is a string (GetOptionsObject)"}
-    ${[validLeg]}                                                                          | ${1}                              | ${"options is a number (GetOptionsObject)"}
-    ${[]}                                                                                  | ${null}                           | ${"options is checked before the empty-legs result"}
-    ${[]}                                                                                  | ${{ startTimeZone: "Not/AZone" }} | ${"an invalid startTimeZone beats the empty-legs result"}
-    ${[{ departure: "2024-06-15", duration: "PT1H", timeZone: "UTC" }]}                    | ${{ startTimeZone: "UTC" }}       | ${"a date-only departure is not a wall time"}
-    ${[firstLeg, { duration: "PT1H", timeZone: "Asia/Tokio" }]}                            | ${undefined}                      | ${"a later leg is invalid: no partial schedule"}
+    legs                                                                         | options                           | reason
+    ${[{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }]} | ${undefined}                      | ${"a zoneless departure without startTimeZone is not a moment"}
+    ${[validLeg]}                                                                | ${{ startTimeZone: "Not/AZone" }} | ${"an invalid startTimeZone is invalid input even when unused"}
+    ${[validLeg]}                                                                | ${{ startTimeZone: 5 }}           | ${"a non-string startTimeZone"}
+    ${[validLeg]}                                                                | ${null}                           | ${"options is null (GetOptionsObject)"}
+    ${[validLeg]}                                                                | ${"x"}                            | ${"options is a string (GetOptionsObject)"}
+    ${[validLeg]}                                                                | ${1}                              | ${"options is a number (GetOptionsObject)"}
+    ${[]}                                                                        | ${null}                           | ${"options is checked before the empty-legs result"}
+    ${[]}                                                                        | ${{ startTimeZone: "Not/AZone" }} | ${"an invalid startTimeZone beats the empty-legs result"}
+    ${[{ departure: "2024-06-15", duration: "PT1H", timeZone: "UTC" }]}          | ${{ startTimeZone: "UTC" }}       | ${"a date-only departure is not a wall time"}
+    ${[firstLeg, { duration: "PT1H", timeZone: "Asia/Tokio" }]}                  | ${undefined}                      | ${"a later leg is invalid: no partial schedule"}
   `("returns the sentinel when $reason", ({ legs, options }) => {
     expect(scheduleDelivery(legs as never, options as never)).toBeNull();
   });
@@ -479,7 +479,14 @@ describe("scheduleDelivery", () => {
   it("resolves a later leg's zoneless departure via the previous leg's zone even when a different startTimeZone is supplied", () => {
     expect(
       scheduleDelivery(
-        [firstLeg, { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" }],
+        [
+          firstLeg,
+          {
+            departure: "2024-06-15T13:00:00",
+            duration: "PT1H",
+            timeZone: "UTC",
+          },
+        ],
         { startTimeZone: "Asia/Tokyo" },
       )?.legTimes[1]?.arrival,
     ).toBe("2024-06-15T14:00:00Z");

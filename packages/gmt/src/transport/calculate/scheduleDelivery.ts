@@ -261,7 +261,12 @@ function chainLegs(
     if (tags === null) {
       return null;
     }
-    const departure = legDeparture(leg, cursor, startTimeZone, previousTimeZone);
+    const departure = legDeparture(
+      leg,
+      cursor,
+      startTimeZone,
+      previousTimeZone,
+    );
     if (departure === null) {
       return null;
     }

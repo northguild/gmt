@@ -198,9 +198,7 @@ describe("unitVector / dot3", () => {
       ], // identical point
     ];
     for (const [[lngA, latA], [lngB, latB]] of cases) {
-      const expected = Math.cos(
-        geoDistance([lngA, latA], [lngB, latB]),
-      );
+      const expected = Math.cos(geoDistance([lngA, latA], [lngB, latB]));
       const actual = dot3(unitVector(lngA, latA), unitVector(lngB, latB));
       expect(actual).toBeCloseTo(expected, 9);
     }

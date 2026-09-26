@@ -575,7 +575,13 @@ export async function initGlobe(
       }
     }
 
-    ctx.drawImage(atmosphereCanvas, cx - outer, cy - outer, outer * 2, outer * 2);
+    ctx.drawImage(
+      atmosphereCanvas,
+      cx - outer,
+      cy - outer,
+      outer * 2,
+      outer * 2,
+    );
   }
 
   /**
