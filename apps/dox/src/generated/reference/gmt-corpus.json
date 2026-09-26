@@ -468,6 +468,254 @@
     ]
   },
   {
+    "url": "/reference/calendar/hours/addOperatingTime",
+    "name": "addOperatingTime",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "addOperatingTime(start: string, duration: string, schedule: OperatingSchedule, optionsArg?: { within?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
+    "description": "Return the instant at which `duration` of open time has elapsed since `start`: the deadline",
+    "sourcePath": "packages/gmt/src/calendar/hours/addOperatingTime.ts",
+    "examples": [
+      {
+        "call": "addOperatingTime(\"2024-06-14T20:00:00Z\", \"PT2H\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }], 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-17T14:00:00Z\" — Friday 16:00 to Monday 10:00 local"
+      },
+      {
+        "call": "addOperatingTime(\"2024-06-14T20:00:00Z\", \"PT1H\", { timeZone: \"America/New_York\", weekly: { 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-14T21:00:00Z\" — due at closing, not at the next opening"
+      },
+      {
+        "call": "addOperatingTime(\"2024-06-14T20:00:00Z\", \"PT2H\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }], 5: [{ from: \"09:00\", to: \"17:00\" }] } }, { within: \"P1D\" })",
+        "result": "\"\" — past the horizon"
+      },
+      {
+        "call": "addOperatingTime(\"2024-06-15T12:00:00Z\", \"PT0S\", { timeZone: \"UTC\", weekly: {} })",
+        "result": "\"2024-06-15T12:00:00Z\""
+      },
+      {
+        "call": "addOperatingTime(\"2024-06-14T20:00:00Z\", \"P1D\", { timeZone: \"UTC\", weekly: { 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"\" — days are not open time"
+      },
+      {
+        "call": "addOperatingTime(\"2024-06-14T20:00:00Z\", \"-PT1H\", { timeZone: \"UTC\", weekly: { 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/isOpenAt",
+    "name": "isOpenAt",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "isOpenAt(isoString: string, schedule: OperatingSchedule, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): boolean",
+    "description": "Return true when `schedule` is open at the instant `isoString`.",
+    "sourcePath": "packages/gmt/src/calendar/hours/isOpenAt.ts",
+    "examples": [
+      {
+        "call": "isOpenAt(\"2024-06-17T14:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "true — Monday 10:00 local"
+      },
+      {
+        "call": "isOpenAt(\"2024-06-17T21:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "false — 17:00 local, the window has closed"
+      },
+      {
+        "call": "isOpenAt(\"2024-06-15T01:00:00Z\", { timeZone: \"UTC\", weekly: { 5: [{ from: \"23:00\", to: \"06:00\" }] } })",
+        "result": "true — Friday's night window, on Saturday morning"
+      },
+      {
+        "call": "isOpenAt(\"2024-07-04T14:00:00Z\", { timeZone: \"America/New_York\", weekly: { 4: [{ from: \"09:00\", to: \"17:00\" }] }, holidays: [\"2024-07-04\"] })",
+        "result": "false — a holiday"
+      },
+      {
+        "call": "isOpenAt(\"2024-06-17T14:00:00\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "false — no offset, not an instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/nextCloseAt",
+    "name": "nextCloseAt",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "nextCloseAt(isoString: string, schedule: OperatingSchedule, optionsArg?: { within?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
+    "description": "Return the first instant at or after `isoString` that `schedule` is closed, as a UTC instant.",
+    "sourcePath": "packages/gmt/src/calendar/hours/nextCloseAt.ts",
+    "examples": [
+      {
+        "call": "nextCloseAt(\"2024-06-17T14:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-17T21:00:00Z\" — Monday 10:00 to 17:00 local"
+      },
+      {
+        "call": "nextCloseAt(\"2024-06-15T16:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-15T16:00:00Z\" — already closed"
+      },
+      {
+        "call": "nextCloseAt(\"2024-06-14T23:30:00Z\", { timeZone: \"UTC\", weekly: { 5: [{ from: \"23:00\", to: \"06:00\" }] } })",
+        "result": "\"2024-06-15T06:00:00Z\" — Friday's night window"
+      },
+      {
+        "call": "nextCloseAt(\"2024-06-17T14:00:00Z\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"00:00\", to: \"00:00\" }], 2: [{ from: \"00:00\", to: \"00:00\" }] } })",
+        "result": "\"2024-06-19T00:00:00Z\" — two touching days are one interval"
+      },
+      {
+        "call": "nextCloseAt(\"2024-06-17T14:00:00Z\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } }, { within: \"PT1H\" })",
+        "result": "\"\" — still open an hour later"
+      },
+      {
+        "call": "nextCloseAt(\"invalid\", { timeZone: \"UTC\", weekly: {} })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/nextOpenAt",
+    "name": "nextOpenAt",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "nextOpenAt(isoString: string, schedule: OperatingSchedule, optionsArg?: { within?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
+    "description": "Return the first instant at or after `isoString` that `schedule` is open, as a UTC instant.",
+    "sourcePath": "packages/gmt/src/calendar/hours/nextOpenAt.ts",
+    "examples": [
+      {
+        "call": "nextOpenAt(\"2024-06-15T16:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }], 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-17T13:00:00Z\" — Saturday noon to Monday 09:00 local"
+      },
+      {
+        "call": "nextOpenAt(\"2024-06-17T14:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"2024-06-17T14:00:00Z\" — already open"
+      },
+      {
+        "call": "nextOpenAt(\"2024-06-15T16:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } }, { within: \"P1D\" })",
+        "result": "\"\" — Monday is past the horizon"
+      },
+      {
+        "call": "nextOpenAt(\"2024-06-15T16:00:00Z\", { timeZone: \"UTC\", weekly: {} })",
+        "result": "\"\" — never opens"
+      },
+      {
+        "call": "nextOpenAt(\"2024-06-15T16:00:00Z\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } }, { within: \"-P1D\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/operatingIntervals",
+    "name": "operatingIntervals",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "operatingIntervals(schedule: OperatingSchedule, range: Interval, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): Interval[]",
+    "description": "Return the instants an `OperatingSchedule` is open inside `range`: its weekly windows with",
+    "sourcePath": "packages/gmt/src/calendar/hours/operatingIntervals.ts",
+    "examples": [
+      {
+        "call": "operatingIntervals({ timeZone: \"America/New_York\", weekly: { 4: [{ from: \"09:00\", to: \"17:00\" }], 5: [{ from: \"09:00\", to: \"17:00\" }] }, holidays: [\"2024-07-04\"] }, { start: \"2024-07-04T00:00:00Z\", end: \"2024-07-06T00:00:00Z\" })",
+        "result": "[{ start: \"2024-07-05T13:00:00Z\", end: \"2024-07-05T21:00:00Z\" }] — the holiday is closed"
+      },
+      {
+        "call": "operatingIntervals({ timeZone: \"America/New_York\", weekly: { 4: [{ from: \"09:00\", to: \"17:00\" }] }, holidays: [\"2024-07-04\"], overrides: [{ date: \"2024-07-04\", windows: [{ from: \"10:00\", to: \"12:00\" }] }] }, { start: \"2024-07-04T00:00:00Z\", end: \"2024-07-05T00:00:00Z\" })",
+        "result": "[{ start: \"2024-07-04T14:00:00Z\", end: \"2024-07-04T16:00:00Z\" }] — the override wins"
+      },
+      {
+        "call": "operatingIntervals({ timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } }, { start: \"2024-06-10T12:00:00Z\", end: \"2024-06-10T14:00:00Z\" })",
+        "result": "[{ start: \"2024-06-10T12:00:00Z\", end: \"2024-06-10T14:00:00Z\" }] — clipped to the range"
+      },
+      {
+        "call": "operatingIntervals({ timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] }, overrides: [{ date: \"2024-06-10\", windows: [] }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" })",
+        "result": "[] — closed by override"
+      },
+      {
+        "call": "operatingIntervals({ timeZone: \"Invalid/Zone\", weekly: {} }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" })",
+        "result": "[]"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/operatingTimeBetween",
+    "name": "operatingTimeBetween",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "operatingTimeBetween(start: string, end: string, schedule: OperatingSchedule, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
+    "description": "Return how much open time `schedule` has between two instants, as an exact ISO duration.",
+    "sourcePath": "packages/gmt/src/calendar/hours/operatingTimeBetween.ts",
+    "examples": [
+      {
+        "call": "operatingTimeBetween(\"2024-06-14T20:00:00Z\", \"2024-06-17T14:00:00Z\", { timeZone: \"America/New_York\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }], 5: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"PT2H\" — Friday 16:00 to Monday 10:00 local"
+      },
+      {
+        "call": "operatingTimeBetween(\"2024-06-15T00:00:00Z\", \"2024-06-16T00:00:00Z\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"PT0S\" — a closed Saturday"
+      },
+      {
+        "call": "operatingTimeBetween(\"2024-11-03T04:00:00Z\", \"2024-11-04T05:00:00Z\", { timeZone: \"America/New_York\", weekly: { 7: [{ from: \"00:00\", to: \"00:00\" }] } })",
+        "result": "\"PT25H\" — the fall-back day"
+      },
+      {
+        "call": "operatingTimeBetween(\"2024-06-10T09:00:00Z\", \"2024-06-10T09:30:00.5Z\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "\"PT30M0.5S\""
+      },
+      {
+        "call": "operatingTimeBetween(\"2024-06-17T00:00:00Z\", \"2024-06-10T00:00:00Z\", { timeZone: \"UTC\", weekly: {} })",
+        "result": "\"\" — start after end"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/hours/recurringWindows",
+    "name": "recurringWindows",
+    "namespace": "calendar",
+    "module": "hours",
+    "kind": "function",
+    "signature": "recurringWindows(weekly: Partial<Record<IsoWeekday, LocalWindow[]>>, range: Interval, timeZone: string, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): Interval[]",
+    "description": "Return the instants a weekly pattern of local windows is open inside `range`, read in",
+    "sourcePath": "packages/gmt/src/calendar/hours/recurringWindows.ts",
+    "examples": [
+      {
+        "call": "recurringWindows({ 1: [{ from: \"09:00\", to: \"17:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" }, \"America/New_York\")",
+        "result": "[{ start: \"2024-06-10T13:00:00Z\", end: \"2024-06-10T21:00:00Z\" }]"
+      },
+      {
+        "call": "recurringWindows({ 5: [{ from: \"23:00\", to: \"06:00\" }] }, { start: \"2024-06-14T00:00:00Z\", end: \"2024-06-16T00:00:00Z\" }, \"UTC\")",
+        "result": "[{ start: \"2024-06-14T23:00:00Z\", end: \"2024-06-15T06:00:00Z\" }] — Friday night into Saturday"
+      },
+      {
+        "call": "recurringWindows({ 6: [{ from: \"23:00\", to: \"06:00\" }] }, { start: \"2024-11-02T00:00:00Z\", end: \"2024-11-04T00:00:00Z\" }, \"America/New_York\")",
+        "result": "[{ start: \"2024-11-03T03:00:00Z\", end: \"2024-11-03T11:00:00Z\" }] — 8 hours across the fall-back night"
+      },
+      {
+        "call": "recurringWindows({ 7: [{ from: \"02:30\", to: \"04:00\" }] }, { start: \"2024-03-10T00:00:00Z\", end: \"2024-03-11T00:00:00Z\" }, \"America/New_York\")",
+        "result": "[{ start: \"2024-03-10T07:30:00Z\", end: \"2024-03-10T08:00:00Z\" }] — 02:30 does not exist; \"compatible\" reads it as 03:30"
+      },
+      {
+        "call": "recurringWindows({ 7: [{ from: \"02:30\", to: \"04:00\" }] }, { start: \"2024-03-10T00:00:00Z\", end: \"2024-03-11T00:00:00Z\" }, \"America/New_York\", { disambiguation: \"reject\" })",
+        "result": "[]"
+      },
+      {
+        "call": "recurringWindows({ 1: [{ from: \"00:00\", to: \"00:00\" }], 2: [{ from: \"00:00\", to: \"00:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-13T00:00:00Z\" }, \"UTC\")",
+        "result": "[{ start: \"2024-06-10T00:00:00Z\", end: \"2024-06-12T00:00:00Z\" }] — touching days merge"
+      },
+      {
+        "call": "recurringWindows({ 8: [{ from: \"09:00\", to: \"17:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" }, \"UTC\")",
+        "result": "[] — not an ISO weekday"
+      },
+      {
+        "call": "recurringWindows({ 1: [{ from: \"9am\", to: \"17:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" }, \"UTC\")",
+        "result": "[] — malformed window"
+      },
+      {
+        "call": "recurringWindows({ 1: [{ from: \"09:00\", to: \"17:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" }, \"Invalid/Zone\")",
+        "result": "[]"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidBusinessCalendar",
     "name": "isValidBusinessCalendar",
     "namespace": "calendar",
@@ -1124,7 +1372,7 @@
     "namespace": "duration",
     "module": "parse",
     "kind": "function",
-    "signature": "parseDuration(value: string, options?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; fractionalSecondDigits?: 0 | \"auto\" | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | undefined; roundingMode?: RoundingMode | undefined; }): string",
+    "signature": "parseDuration(value: string, options?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; fractionalSecondDigits?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | \"auto\" | 8 | 9 | undefined; roundingMode?: RoundingMode | undefined; }): string",
     "description": "Parse and re-normalize an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/parse/parseDuration.ts",
     "examples": [
@@ -11785,6 +12033,50 @@
     "signature": "",
     "description": "used alongside disambiguation in Temporal with()/from() methods like Temporal.ZonedDateTime.prototype.with(item, { disambiguation, offset })",
     "sourcePath": "packages/gmt/src/types/offset.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/operating-schedule/IsoWeekday",
+    "name": "IsoWeekday",
+    "namespace": "types",
+    "module": "operating-schedule",
+    "kind": "type",
+    "signature": "",
+    "description": "The IsoWeekday type.",
+    "sourcePath": "packages/gmt/src/types/operating-schedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/operating-schedule/LocalWindow",
+    "name": "LocalWindow",
+    "namespace": "types",
+    "module": "operating-schedule",
+    "kind": "type",
+    "signature": "",
+    "description": "The LocalWindow type.",
+    "sourcePath": "packages/gmt/src/types/operating-schedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/operating-schedule/OperatingOverride",
+    "name": "OperatingOverride",
+    "namespace": "types",
+    "module": "operating-schedule",
+    "kind": "type",
+    "signature": "",
+    "description": "The OperatingOverride type.",
+    "sourcePath": "packages/gmt/src/types/operating-schedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/operating-schedule/OperatingSchedule",
+    "name": "OperatingSchedule",
+    "namespace": "types",
+    "module": "operating-schedule",
+    "kind": "type",
+    "signature": "",
+    "description": "The OperatingSchedule type.",
+    "sourcePath": "packages/gmt/src/types/operating-schedule.ts",
     "examples": []
   },
   {
