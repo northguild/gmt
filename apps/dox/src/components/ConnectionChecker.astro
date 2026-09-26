@@ -1,0 +1,31 @@
+---
+/**
+ * Connection Checker widget (TRAN-9).
+ *
+ * One handoff — an arriving leg, a handling-time slider (the minimum connect
+ * time) and a scheduled onward departure — checked by the real
+ * `scheduleDelivery`, beside the naive check of the times as printed.
+ *
+ * **The markup and the wiring both live in `lib/connection-checker-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderConnectionCheckerTemplate } from "../lib/connection-checker-mount";
+---
+
+<Fragment set:html={renderConnectionCheckerTemplate()} />
+
+<script>
+  import { mountConnectionChecker } from "../lib/connection-checker-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("connection");
+    document.querySelectorAll<HTMLElement>(".gmt-connection").forEach((el) => {
+      mountConnectionChecker(el, seed, new AbortController().signal).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>

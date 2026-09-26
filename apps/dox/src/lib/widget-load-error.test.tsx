@@ -14,10 +14,26 @@ import {
   renderBillingDeadlinesTemplate,
 } from "./billing-deadlines-mount";
 import {
+  mountConnectionChecker,
+  renderConnectionCheckerTemplate,
+} from "./connection-checker-mount";
+import {
   mountConverterBench,
   renderConverterTemplate,
 } from "./converter-bench-mount";
+import {
+  mountDeliveryScheduler,
+  renderDeliverySchedulerTemplate,
+} from "./delivery-scheduler-mount";
 import { mountDstInspector, renderDstTemplate } from "./dst-inspector-mount";
+import {
+  mountTimetableReader,
+  renderTimetableReaderTemplate,
+} from "./timetable-reader-mount";
+import {
+  mountCrossingClock,
+  renderCrossingClockTemplate,
+} from "./crossing-clock-mount";
 import {
   mountDwellLedger,
   renderDwellLedgerTemplate,
@@ -69,6 +85,26 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "converter bench",
     () => renderConverterTemplate(),
     mountConverterBench as MountFn<never>,
+  ],
+  [
+    "delivery scheduler",
+    () => renderDeliverySchedulerTemplate(),
+    mountDeliveryScheduler as MountFn<never>,
+  ],
+  [
+    "connection checker",
+    () => renderConnectionCheckerTemplate(),
+    mountConnectionChecker as MountFn<never>,
+  ],
+  [
+    "timetable reader",
+    () => renderTimetableReaderTemplate(),
+    mountTimetableReader as MountFn<never>,
+  ],
+  [
+    "crossing clock",
+    () => renderCrossingClockTemplate(),
+    mountCrossingClock as MountFn<never>,
   ],
 ];
 
