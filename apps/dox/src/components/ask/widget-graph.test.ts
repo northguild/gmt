@@ -134,6 +134,12 @@ describe("the chat island's static import graph", () => {
       "lib/interval-visualizer.ts",
       "lib/globe.ts",
       "lib/playground-client.ts",
+      "lib/transport-widgets.ts",
+      "lib/transport-lib.ts",
+      "lib/delivery-scheduler.ts",
+      "lib/connection-checker.ts",
+      "lib/timetable-reader.ts",
+      "lib/crossing-clock.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

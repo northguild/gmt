@@ -44,12 +44,16 @@ import {
   DOX_TOOL_DOCS,
   ENABLED_TOOL_NAMES,
   showBillingDeadlinesInput,
+  showConnectionCheckerInput,
   showConverterBenchInput,
+  showCrossingClockInput,
+  showDeliverySchedulerInput,
   showDstInspectorInput,
   showDwellLedgerInput,
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showTimetableReaderInput,
 } from "../src/lib/dox-tools";
 
 const docFor = (name: string) =>
@@ -169,6 +173,65 @@ export function buildWorkerTools(
       description: docFor("showBillingDeadlines"),
       inputSchema: showBillingDeadlinesInput,
       execute: () => accept("billing-deadlines"),
+    }),
+
+    showDeliveryScheduler: tool({
+      description: docFor("showDeliveryScheduler"),
+      inputSchema: showDeliverySchedulerInput,
+      execute: ({ legs, startTimeZone }) => {
+        const unknown = unknownZones([
+          ...(Array.isArray(legs) ? legs.map((l) => l.timeZone) : []),
+          ...(startTimeZone ? [startTimeZone] : []),
+        ]);
+        return unknown.length > 0
+          ? reject(
+              "delivery-scheduler",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("delivery-scheduler");
+      },
+    }),
+
+    showConnectionChecker: tool({
+      description: docFor("showConnectionChecker"),
+      inputSchema: showConnectionCheckerInput,
+      execute: ({ portZone, onwardZone }) => {
+        const unknown = unknownZones(
+          onwardZone ? [portZone, onwardZone] : [portZone],
+        );
+        return unknown.length > 0
+          ? reject(
+              "connection-checker",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("connection-checker");
+      },
+    }),
+
+    showTimetableReader: tool({
+      description: docFor("showTimetableReader"),
+      inputSchema: showTimetableReaderInput,
+      execute: ({ startTimeZone, timeZone }) => {
+        const unknown = unknownZones([startTimeZone, timeZone]);
+        return unknown.length > 0
+          ? reject(
+              "timetable-reader",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("timetable-reader");
+      },
+    }),
+
+    showCrossingClock: tool({
+      description: docFor("showCrossingClock"),
+      inputSchema: showCrossingClockInput,
+      execute: ({ targetZone }) =>
+        isValidTimeZone(targetZone)
+          ? accept("crossing-clock")
+          : reject(
+              "crossing-clock",
+              `"${targetZone}" is not an IANA time zone this runtime knows.`,
+            ),
     }),
   };
 

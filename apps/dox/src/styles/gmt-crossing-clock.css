@@ -1,0 +1,363 @@
+/*
+ * Crossing Clock widget (TRAN-9).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css; the verdict line and
+ * reason-aside spacing in gmt-transport-widgets.css. This sheet restyles the
+ * entry/exit/zone row, lays out the two crystal clocks and draws the
+ * proportional crossing strip beneath them.
+ */
+
+/* Entry and exit take a double share, so a full zoned string such as
+   2024-03-10T00:00:00-05:00[America/New_York] shows unclipped; the zone
+   picker takes a single share. */
+.gmt-crossing-fields > .gmt-label {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.gmt-crossing-fields > .gmt-label:nth-child(-n + 2) {
+  flex: 2 1 20rem;
+}
+
+.gmt-crossing-fields .gmt-input,
+.gmt-crossing-fields .gmt-select {
+  width: 100%;
+}
+
+@container (max-width: 34rem) {
+  .gmt-crossing-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gmt-crossing-fields > .gmt-label,
+  .gmt-crossing-fields > .gmt-label:nth-child(-n + 2) {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The clocks: Entry and Exit crystal faces, with the true-elapsed /
+ * naive-wall-clock connector between them. `gmt-crystal-clock.css` owns the
+ * face itself; this is the widget's own layout around it.
+ *
+ * A five-row grid, not a pair of independent flex columns (owner review:
+ * the two columns were drifting out of vertical alignment — a flex row's
+ * `align-items` centres each *column* by its own total height, and entry
+ * and exit only coincidentally had the same total height before). Every
+ * row here is shared by both columns, so `align-items: start` top-aligns
+ * every heading/face/time/meta/date pair exactly, and the connector —
+ * placed only in the face row — is centred with `align-self: center`
+ * against that row's height alone, never the whole column's.
+ * --------------------------------------------------------------------------- */
+
+.gmt-crossing-clocks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6rem, auto) minmax(0, 1fr);
+  grid-template-areas:
+    "eh . xh"
+    "ef co xf"
+    "et . xt"
+    "em . xm"
+    "ed . xd";
+  column-gap: var(--gmt-space-4);
+  row-gap: var(--gmt-space-1);
+  align-items: start;
+  justify-items: center;
+  margin: var(--gmt-space-3) 0;
+}
+
+[data-role="entry-heading"] {
+  grid-area: eh;
+}
+[data-role="entry-clock"] {
+  grid-area: ef;
+}
+[data-role="entry-time"] {
+  grid-area: et;
+}
+[data-role="entry-meta"] {
+  grid-area: em;
+}
+[data-role="entry-date"] {
+  grid-area: ed;
+}
+
+[data-role="exit-heading"] {
+  grid-area: xh;
+}
+[data-role="exit-clock"] {
+  grid-area: xf;
+}
+[data-role="exit-time"] {
+  grid-area: xt;
+}
+[data-role="exit-meta"] {
+  grid-area: xm;
+}
+[data-role="exit-date"] {
+  grid-area: xd;
+}
+
+.gmt-crossing-clock-heading {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-crossing-clock-face {
+  width: clamp(6rem, 20vw, 8.5rem);
+  aspect-ratio: 1 / 1;
+}
+
+.gmt-crossing-clock-time {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xl, 1.5rem);
+  font-weight: 600;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.gmt-crossing-clock-meta {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-cyan);
+  white-space: nowrap;
+}
+
+.gmt-crossing-clock-date {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* The connector: the real elapsed duration above a horizontal line, the
+ * naive wall-clock reading below it — worded, never coloured, except for
+ * the shared "disagrees" badge (`.gmt-transport-badge--disagrees`, a dashed
+ * border, from gmt-transport-widgets.css) when the two differ. Centred on
+ * the face row only — see the grid comment above. */
+[data-role="connector"] {
+  grid-area: co;
+  align-self: center;
+}
+
+.gmt-crossing-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  text-align: center;
+}
+
+.gmt-crossing-connector .gmt-transport-verdict,
+.gmt-crossing-connector .gmt-transport-verdict-detail {
+  margin: 0;
+}
+
+.gmt-crossing-connector-line {
+  inline-size: 100%;
+  block-size: 1px;
+  background: var(--gmt-border-strong);
+}
+
+@container (max-width: 30rem) {
+  .gmt-crossing-clocks {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "eh"
+      "ef"
+      "et"
+      "em"
+      "ed"
+      "co"
+      "xh"
+      "xf"
+      "xt"
+      "xm"
+      "xd";
+  }
+
+  [data-role="connector"] {
+    width: 100%;
+  }
+
+  .gmt-crossing-clock-face {
+    width: clamp(7rem, 40vw, 9rem);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The crossing strip — one compact proportional bar, entry → exit, in
+ * place of the old chip-per-hour ruler (owner review: eleven wrapping
+ * chips plus a prose paragraph repeating every one of them read as "a
+ * massive amount of text"). Faint, unlabelled hour ticks give the bar its
+ * scale; a marker is drawn only where the zone's offset actually changes,
+ * and only those changes get a written line below the bar. A crossing with
+ * no DST transition in it gets one quiet sentence instead of an empty
+ * list.
+ * --------------------------------------------------------------------------- */
+
+.gmt-crossing-strip-wrap {
+  padding-top: var(--gmt-space-2);
+  border-top: 1px solid var(--gmt-hairline-faint);
+}
+
+.gmt-crossing-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  /* Room below the bar for the elapsed-hour tick labels. */
+  padding-block-end: 1.25rem;
+}
+
+.gmt-crossing-strip-end {
+  flex: 0 0 auto;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-crossing-strip-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-inline-size: 6rem;
+  block-size: 0.5rem;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+/* Scale tick — slightly prominent but unlabelled at entry/exit. */
+.gmt-crossing-strip-tick {
+  position: absolute;
+  inset-block: -4px;
+  inline-size: 1px;
+  background: var(--gmt-border-strong);
+  transform: translateX(-50%);
+}
+
+/* Labeled tick — taller so the ::after label anchors cleanly below. */
+.gmt-crossing-strip-tick--labeled {
+  inset-block: -6px;
+}
+
+.gmt-crossing-strip-tick--labeled::after {
+  content: attr(data-label);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.gmt-crossing-strip-marker {
+  position: absolute;
+  inset-block: -4px;
+  inline-size: 3px;
+  transform: translateX(-50%);
+  background: transparent;
+}
+
+/* Skipped: a dashed marker — the same language the change list's own mark
+   uses below, and the ruler's old skip cue. Purple matches the clock face
+   highlight so the two readings tie together visually. */
+.gmt-crossing-strip-marker--skip {
+  border-inline: 1px dashed var(--gmt-dst-purple);
+  inline-size: 5px;
+}
+
+/* Repeated: a doubled marker — "double border" carries the same meaning
+   here as it did on the old ruler's chips. Purple matches the clock face
+   highlight so the two readings tie together visually. */
+.gmt-crossing-strip-marker--repeat {
+  border-inline: 3px double var(--gmt-dst-purple);
+  inline-size: 7px;
+}
+
+@container (max-width: 26rem) {
+  .gmt-crossing-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+  }
+
+  .gmt-crossing-strip-end {
+    text-align: center;
+  }
+}
+
+/* The change list: one line per DST transition inside the crossing, or the
+   single quiet sentence when there is none. Never a colour verdict — made
+   or missed, disagreement, all worded, and this is no different. */
+.gmt-crossing-strip-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin-top: var(--gmt-space-2);
+}
+
+.gmt-crossing-strip-change,
+.gmt-crossing-strip-quiet {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.gmt-crossing-strip-quiet {
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+}
+
+.gmt-crossing-strip-change-mark {
+  flex: 0 0 auto;
+  align-self: center;
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-crossing-strip-change--skip .gmt-crossing-strip-change-mark {
+  border: 1px dashed var(--gmt-dst-purple);
+}
+
+.gmt-crossing-strip-change--repeat .gmt-crossing-strip-change-mark {
+  border: 3px double var(--gmt-dst-purple);
+}
+
+/* The legend only exists when at least one change occurred — collapse it
+   rather than leave an empty hinted line. */
+[data-role="legend"]:empty {
+  display: none;
+  margin: 0;
+}
+
+[data-role="ruler"] {
+  overflow-x: auto;
+}
+
+/* Values the reader is reading never animate. */
+.gmt-crossing-strip-tick,
+.gmt-crossing-strip-marker,
+.gmt-crossing-strip-change,
+.gmt-crossing-strip-quiet {
+  transition: none;
+  animation: none;
+}

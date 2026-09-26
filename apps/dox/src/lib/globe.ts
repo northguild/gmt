@@ -80,6 +80,30 @@ const land = feature(topology, landObject) as unknown as GeoPermissibleObjects;
 const graticule = geoGraticule10() as unknown as GeoPermissibleObjects;
 const sphere = { type: "Sphere" } as unknown as GeoPermissibleObjects;
 
+/**
+ * Unit vector for a lng/lat pair (degrees). Its dot product with another
+ * point's unit vector equals `Math.cos(geoDistance(...))` between the two —
+ * used in the zone-dot loop to replace a `geoDistance` call (and the
+ * `[lng, lat]` tuple it allocates) with a plain multiply-add per zone.
+ */
+export function unitVector(
+  lngDeg: number,
+  latDeg: number,
+): [number, number, number] {
+  const lambda = (lngDeg * Math.PI) / 180;
+  const phi = (latDeg * Math.PI) / 180;
+  const cosPhi = Math.cos(phi);
+  return [cosPhi * Math.cos(lambda), cosPhi * Math.sin(lambda), Math.sin(phi)];
+}
+
+/** Dot product of two unit vectors from `unitVector` — see there. */
+export function dot3(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
 interface Palette {
   /**
    * The day/night terminator's night-side tint. Deliberately its own token
@@ -224,6 +248,9 @@ export async function initGlobe(
   );
 
   const zones = resolveGlobeZones(getTimeZones());
+  // Parallel to `zones`, computed once: lets the per-frame loop below replace
+  // `geoDistance` (and the `[lng, lat]` tuple it needs) with a dot product.
+  const zoneVecs = zones.map((zone) => unitVector(zone.lng, zone.lat));
 
   // Default to the viewer's own zone when we can place it.
   const systemZone = getSystemTimeZone();
@@ -372,6 +399,7 @@ export async function initGlobe(
     cy: number,
     radius: number,
     sun: [number, number, number],
+    moving: boolean,
   ): void {
     if (!shadeCtx) return;
     const shadeWidth = Math.max(1, Math.ceil(width * SHADE_RESOLUTION));
@@ -390,13 +418,18 @@ export async function initGlobe(
     // The sun drifts ~0.004° a second. Rounding its vector to 0.001 of the
     // radius (a quarter of a pixel at hero size) repaints on about one clock
     // tick in 14 while the globe is still; a selection change never repaints.
+    // While dragging/inertia/ambient spin move the sun's *screen* vector every
+    // frame regardless, so the rounding widens to 0.01 — reusing the buffer
+    // across most motion frames instead of repainting every pixel on every
+    // one — and tightens back up the instant the globe settles.
+    const precision = moving ? 2 : 3;
     const key = [
       shadeWidth,
       shadeHeight,
       cx,
       cy,
       radius,
-      ...sun.map((n) => n.toFixed(3)),
+      ...sun.map((n) => n.toFixed(precision)),
       palette.cyan,
       palette.night,
       palette.dayAlpha,
@@ -431,6 +464,17 @@ export async function initGlobe(
     ctx.restore();
   }
 
+  /** Offscreen buffer for the atmosphere glow ring (radial glow + conic
+   * day/night mask). Its shape depends only on the outer radius, the sun's
+   * screen-space direction, and the palette — never on the globe's screen
+   * position — so it is painted once per changed key and blitted into place
+   * each frame, instead of rebuilding the 16-stop conic gradient and running
+   * a full-canvas `destination-in` composite every frame regardless of
+   * whether anything about the ring actually changed. */
+  const atmosphereCanvas = document.createElement("canvas");
+  const atmosphereCtx = atmosphereCanvas.getContext("2d");
+  let atmosphereKey = "";
+
   /**
    * The glow ring outside the limb. Its strength round the ring follows how
    * lit each limb point is: `sunX`/`sunY` are the sun's direction projected
@@ -441,8 +485,10 @@ export async function initGlobe(
    * the sun is behind the globe, which brightens the whole ring (see
    * `ATMOSPHERE_BACKLIGHT`).
    *
-   * Drawn first, on the cleared canvas, so the `destination-in` mask below
-   * shapes the ring alone.
+   * Drawn first, on the cleared canvas, so the buffer (its own
+   * `destination-in` mask already baked in) composites over an empty canvas.
+   * `moving` widens the cache key's rounding — like `drawShading` — so the
+   * buffer is reused across most frames of a drag/inertia/ambient spin.
    */
   function drawAtmosphere(
     cx: number,
@@ -451,36 +497,78 @@ export async function initGlobe(
     sunX: number,
     sunY: number,
     sunZ: number,
+    moving: boolean,
   ): void {
+    if (!atmosphereCtx) return;
     const outer = radius * ATMOSPHERE_REACH;
-    const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
-    const glow = ctx.createRadialGradient(cx, cy, radius, cx, cy, outer);
-    glow.addColorStop(
-      0,
-      withAlpha(palette.cyan, Math.min(1, palette.atmosphereAlpha * backlight)),
-    );
-    glow.addColorStop(1, withAlpha(palette.cyan, 0));
-    ctx.beginPath();
-    ctx.arc(cx, cy, outer, 0, Math.PI * 2);
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
-    ctx.fillStyle = glow;
-    ctx.fill("evenodd");
+    const size = Math.max(1, Math.ceil(outer * 2 * dpr));
+    const precision = moving ? 2 : 3;
+    const key = [
+      size,
+      sunX.toFixed(precision),
+      sunY.toFixed(precision),
+      sunZ.toFixed(precision),
+      palette.cyan,
+      palette.atmosphereAlpha,
+    ].join("|");
 
-    // Older engines without conic gradients keep an even ring.
-    if (typeof ctx.createConicGradient !== "function") return;
-    const tilt = Math.min(Math.hypot(sunX, sunY), 1);
-    const mask = ctx.createConicGradient(Math.atan2(sunY, sunX), cx, cy);
-    const steps = 16;
-    for (let i = 0; i <= steps; i++) {
-      const lit = 0.5 + 0.5 * tilt * Math.cos((i / steps) * Math.PI * 2);
-      const strength =
-        ATMOSPHERE_NIGHT_FLOOR + (1 - ATMOSPHERE_NIGHT_FLOOR) * lit;
-      mask.addColorStop(i / steps, `rgba(0, 0, 0, ${strength})`);
+    if (key !== atmosphereKey) {
+      atmosphereKey = key;
+      if (atmosphereCanvas.width !== size || atmosphereCanvas.height !== size) {
+        atmosphereCanvas.width = size;
+        atmosphereCanvas.height = size;
+      }
+      atmosphereCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      atmosphereCtx.clearRect(0, 0, outer * 2, outer * 2);
+
+      const bufferCx = outer;
+      const bufferCy = outer;
+      const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
+      const glow = atmosphereCtx.createRadialGradient(
+        bufferCx,
+        bufferCy,
+        radius,
+        bufferCx,
+        bufferCy,
+        outer,
+      );
+      glow.addColorStop(
+        0,
+        withAlpha(
+          palette.cyan,
+          Math.min(1, palette.atmosphereAlpha * backlight),
+        ),
+      );
+      glow.addColorStop(1, withAlpha(palette.cyan, 0));
+      atmosphereCtx.beginPath();
+      atmosphereCtx.arc(bufferCx, bufferCy, outer, 0, Math.PI * 2);
+      atmosphereCtx.arc(bufferCx, bufferCy, radius, 0, Math.PI * 2, true);
+      atmosphereCtx.fillStyle = glow;
+      atmosphereCtx.fill("evenodd");
+
+      // Older engines without conic gradients keep an even ring.
+      if (typeof atmosphereCtx.createConicGradient === "function") {
+        const tilt = Math.min(Math.hypot(sunX, sunY), 1);
+        const mask = atmosphereCtx.createConicGradient(
+          Math.atan2(sunY, sunX),
+          bufferCx,
+          bufferCy,
+        );
+        const steps = 16;
+        for (let i = 0; i <= steps; i++) {
+          const lit = 0.5 + 0.5 * tilt * Math.cos((i / steps) * Math.PI * 2);
+          const strength =
+            ATMOSPHERE_NIGHT_FLOOR + (1 - ATMOSPHERE_NIGHT_FLOOR) * lit;
+          mask.addColorStop(i / steps, `rgba(0, 0, 0, ${strength})`);
+        }
+        atmosphereCtx.globalCompositeOperation = "destination-in";
+        atmosphereCtx.fillStyle = mask;
+        atmosphereCtx.fillRect(0, 0, outer * 2, outer * 2);
+        atmosphereCtx.globalCompositeOperation = "source-over";
+      }
     }
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.fillStyle = mask;
-    ctx.fillRect(0, 0, width, height);
-    ctx.globalCompositeOperation = "source-over";
+
+    ctx.drawImage(atmosphereCanvas, cx - outer, cy - outer, outer * 2, outer * 2);
   }
 
   /** Map an IANA id to the boundary dataset's `tzid` value. */
@@ -524,6 +612,11 @@ export async function initGlobe(
 
     const path = geoPath(projection, ctx);
     const quiet = dragging || inertiaActive;
+    // Distinct from `quiet`: also true during ambient auto-spin, which keeps
+    // the grid/labels at full strength (that's `quiet`'s job) but still
+    // benefits from the shading/atmosphere buffers below being reused across
+    // frames instead of repainted on every one of a continuous rotation.
+    const inMotion = quiet || ambientActive;
     // Computed once per frame (not once per call site) so the day/night
     // wash, the terminator line, and each dot's night/day classification
     // below all agree on the exact same instant — `getUnixNow()` ticking
@@ -551,7 +644,7 @@ export async function initGlobe(
     ];
 
     if (palette.atmosphereAlpha > 0) {
-      drawAtmosphere(cx, cy, radius, sun[0], sun[1], sun[2]);
+      drawAtmosphere(cx, cy, radius, sun[0], sun[1], sun[2], inMotion);
     }
 
     ctx.beginPath();
@@ -577,7 +670,7 @@ export async function initGlobe(
     // further against an already near-black backdrop. The wash is brightest
     // under the sun and fades towards the terminator, and night eases in
     // across twilight, which is what makes the sphere read as round.
-    drawShading(path, cx, cy, radius, sun);
+    drawShading(path, cx, cy, radius, sun, inMotion);
 
     ctx.beginPath();
     path(sphere);
@@ -618,10 +711,22 @@ export async function initGlobe(
       }
     }
 
-    const centre: [number, number] = [-rotation[0], -rotation[1]];
-    for (const zone of zones) {
-      if (geoDistance([zone.lng, zone.lat], centre) > Math.PI / 2) continue;
-      const point = projection([zone.lng, zone.lat]);
+    // Dot products against the precomputed `zoneVecs`, not `geoDistance`
+    // calls against a fresh `[lng, lat]` tuple: with ~570 zones this loop ran
+    // twice that many `geoDistance` calls and allocated twice that many
+    // tuples every single frame. `cos(geoDistance(a, b)) === dot(unit(a),
+    // unit(b))`, so the horizon cull (`geoDistance > π/2`) becomes `dot < 0`,
+    // and the day/night cosine becomes the dot product directly — both exact,
+    // not approximations.
+    const centreVec = unitVector(-rotation[0], -rotation[1]);
+    const subsolarVec = unitVector(subsolar[0], subsolar[1]);
+    const zoneCoord: [number, number] = [0, 0];
+    for (let i = 0; i < zones.length; i++) {
+      const zone = zones[i];
+      if (dot3(zoneVecs[i], centreVec) < 0) continue;
+      zoneCoord[0] = zone.lng;
+      zoneCoord[1] = zone.lat;
+      const point = projection(zoneCoord);
       if (!point) continue;
       const isSelected = zone.id === selectedId;
       // Every dot here is a real, resolvable IANA zone (resolveGlobeZones only
@@ -638,9 +743,7 @@ export async function initGlobe(
       // the horizon, where the ground is still lit. `isSelected` stays
       // spring green regardless — a distinct "currently focused" signal,
       // not part of the city-lights palette.
-      const inNight = cityLightsOn(
-        Math.cos(geoDistance([zone.lng, zone.lat], subsolar)),
-      );
+      const inNight = cityLightsOn(dot3(zoneVecs[i], subsolarVec));
       ctx.fillStyle = isSelected
         ? palette.spring
         : inNight
@@ -984,7 +1087,14 @@ export async function initGlobe(
       selectedReading = readZoneNow(selectedId);
       renderTooltip();
     }
-    render(); // moves the terminator
+    // While the rAF loop is animating (drag, inertia, ambient spin, a focus
+    // tween or zoom easing) it already redraws every frame, so this second,
+    // unsynchronised `render()` on top of it was pure extra work — a full
+    // scene redraw landing at an arbitrary point between two rAF frames,
+    // every second, for as long as the globe kept moving. Only force a
+    // render here when the rAF loop is idle, so the terminator still moves
+    // once a second while the globe is at rest.
+    if (!needsFrame()) render();
   }
   let clockTimer = setInterval(tickClocks, 1000);
 

@@ -10,7 +10,7 @@
   flex-direction: column;
   gap: var(--gmt-space-1);
   margin-top: 0;
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);

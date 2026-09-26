@@ -24,7 +24,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.17.0'
+  library_version: '1.18.0'
 ---
 
 # GMT Basics

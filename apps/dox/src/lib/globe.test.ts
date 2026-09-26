@@ -1,8 +1,10 @@
 /// <reference types="vitest/globals" />
 
 import { convertUtcToUnix } from "@northguild/gmt";
+import { geoDistance } from "d3-geo";
 import { describe, expect, it } from "vitest";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import { dot3, unitVector } from "./globe";
 import {
   antisolarPoint,
   subsolarPoint,
@@ -151,5 +153,65 @@ describe("rotationForZone", () => {
     expect(rotationForZone({ id: "x", lat: 35, lng: 139 })).toEqual([
       -139, -35,
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// unitVector / dot3 (globe.ts) — the per-frame zone-loop replacement for
+// `Math.cos(geoDistance(...))`. Must be exact, not an approximation: any
+// drift here would shift the horizon cull or the day/night dot classification.
+// ---------------------------------------------------------------------------
+
+describe("unitVector / dot3", () => {
+  it("is a unit vector for any lng/lat", () => {
+    for (const [lng, lat] of [
+      [0, 0],
+      [180, 0],
+      [-73.99, 40.73],
+      [139.69, 35.68],
+      [0, 90],
+      [0, -90],
+    ] as const) {
+      const [x, y, z] = unitVector(lng, lat);
+      expect(x * x + y * y + z * z).toBeCloseTo(1, 10);
+    }
+  });
+
+  it("matches cos(geoDistance(...)) exactly, for both nearby and antipodal points", () => {
+    const cases: [[number, number], [number, number]][] = [
+      [
+        [-73.99, 40.73],
+        [139.69, 35.68],
+      ], // New York vs Tokyo
+      [
+        [0, 51.5],
+        [2.35, 48.85],
+      ], // London vs Paris — nearby
+      [
+        [10, 20],
+        [-170, -20],
+      ], // near-antipodal
+      [
+        [0, 0],
+        [0, 0],
+      ], // identical point
+    ];
+    for (const [[lngA, latA], [lngB, latB]] of cases) {
+      const expected = Math.cos(
+        geoDistance([lngA, latA], [lngB, latB]),
+      );
+      const actual = dot3(unitVector(lngA, latA), unitVector(lngB, latB));
+      expect(actual).toBeCloseTo(expected, 9);
+    }
+  });
+
+  it("is negative exactly where geoDistance exceeds a quarter turn", () => {
+    const centre = unitVector(0, 0);
+    expect(dot3(unitVector(89, 0), centre)).toBeGreaterThan(0);
+    expect(dot3(unitVector(91, 0), centre)).toBeLessThan(0);
+    expect(
+      Math.cos(geoDistance([89, 0], [0, 0])) > 0 &&
+        Math.cos(geoDistance([91, 0], [0, 0])) < 0,
+    ).toBe(true);
   });
 });

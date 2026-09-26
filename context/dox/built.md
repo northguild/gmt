@@ -30,6 +30,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Restyle native controls; never rebuild them from `div`s.**
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
+- **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.
 
 ---
 
@@ -127,7 +128,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   and the Billing Deadlines widget (INT-58, a day strip wrapped by ISO week, with the three
   windows around a demurrage or detention invoice — issue, dispute, resolve — as numbered,
   patterned lanes; it draws the deadlines `billingTimeline` returns and computes none. Past
-  120 cells it collapses weeks with no marked date and says so). Each is a
+  120 cells it collapses weeks with no marked date and says so), and the four multi-leg
+  scheduling widgets (TRAN-9): the Delivery Scheduler, a multi-leg journey on one exact-time
+  timeline, with a local-clock row per zone and an offset-table row where a fixed offset
+  misreads a handoff; the Connection Checker, one handoff, with a handling-time slider, made
+  or missed beside the times as printed; the Timetable Reader, printed wall times read
+  through `startTimeZone`, with the earlier-or-later badge; and the Crossing Clock, exact
+  elapsed hours beside the wall-clock difference, on an hour ruler. All four import
+  `transport-widgets.ts`: they find the failing leg and every ready or departure instant by
+  calling `scheduleDelivery` on prefixes and zero-length legs, never by arithmetic, and each
+  computes one labelled naive value of its own. Each is a
   `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
@@ -139,11 +149,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   server-rendered markup (`gmt-widget.css`), and one amber notice offers a reload.
   `widget-load-error.test.tsx` runs every library-backed mount against a `GMT_MODULES`
   whose imports all reject.
+- **Trap: Starlight's `Icon` is not an override slot.** Importing
+  `{ Icon }` from `@astrojs/starlight/components` and expecting `transport-*` names to
+  resolve does nothing useful — that component never sees this repo's icon set. Icons
+  live in the repo's own `src/components/Icon.astro` (`BuiltInIcons`, which the transport
+  set is added to, not replaces). A widget's plain-DOM template calls `transportIcon()`
+  from `src/lib/transport-icons.ts`; an MDX page imports `~/components/Icon.astro`, never
+  Starlight's own.
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
   `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
-  `/tools/billing-deadlines/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
-  Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`, with structural checks
-  rather than zod so a docs page never pulls in the `ai` package.
+  `/tools/billing-deadlines/`, `/tools/delivery-scheduler/`, `/tools/connection-checker/`,
+  `/tools/timetable-reader/`, `/tools/crossing-clock/`, plus the Tier 4 `/tools/zoned-earth/`
+  and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
+  with structural checks rather than zod so a docs page never pulls in the `ai` package.
+- **`seedFromLocation` keeps only top-level strings of 1–64 characters and years.** A widget
+  whose arguments are lists or objects flattens them into numbered string keys (Delivery
+  Scheduler, Timetable Reader) or joined strings (Free Time Ledger), and the
+  content-permalink test checks every key survives.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
@@ -357,7 +379,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Widget tools
 
-- **Seven tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
+- **The widget tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
   - `showGlobe({ zone })`
   - `showConverterBench({ value, from, to, locale? })`
   - `showIntervalVisualizer({ aStart, aEnd, bStart, bEnd })`
@@ -372,6 +394,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (INT-58): the windows are required, as the library requires them, and a blank window
     stays blank, never defaulted. Its permalink carries every window as a string, because
     `seedFromLocation` drops other numbers.
+  - `showDeliveryScheduler({ legs, startTimeZone? })` (TRAN-9): `legs` is an array of objects,
+    so its permalink flattens them to `departure1`…`mode4` plus `legCount`, because
+    `seedFromLocation` keeps only top-level strings.
+  - `showCrossingClock({ entry, exit, targetZone })` (TRAN-9): a zoneless wall time is read in
+    `targetZone` with `disambiguation: "reject"`, as `showDwellLedger` does.
+  - `showConnectionChecker({ inboundDeparture, inboundDuration, portZone, handlingMinutes, onwardDeparture, onwardDuration?, onwardZone? })`
+    (TRAN-9).
+  - `showTimetableReader({ startTimeZone, departures, offsets?, duration, timeZone })`
+    (TRAN-9): a zoneless departure is the point, and it is never pre-resolved.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

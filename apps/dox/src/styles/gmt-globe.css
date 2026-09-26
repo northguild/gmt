@@ -251,7 +251,7 @@
 }
 
 .gmt-globe-tooltip-zone {
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
 }
 
@@ -261,7 +261,7 @@
 }
 
 .gmt-globe-tooltip-meta {
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-cyan-ink);
 }
 
@@ -272,7 +272,7 @@
   gap: var(--gmt-space-1);
   margin-bottom: var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
 }
 
@@ -295,7 +295,7 @@
   flex-direction: column;
   gap: var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
 }
 
@@ -422,7 +422,7 @@
 }
 
 .gmt-globe-clocks .gmt-clock-time {
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
 }
 
 @container gmt-globe (min-width: 40rem) {

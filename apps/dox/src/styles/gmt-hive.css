@@ -1284,7 +1284,7 @@
 .gmt-hive-clock-format-fn {
   margin-inline-start: auto;
   padding: 0;
-  font-size: 0.68rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
   background: none;
 }
@@ -1382,7 +1382,7 @@
 
 .gmt-hive-clock-call code {
   padding: 0;
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   color: inherit;
   background: none;
 }

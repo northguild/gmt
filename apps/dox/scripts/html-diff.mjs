@@ -54,6 +54,22 @@ const PAGES = [
     path: "tools/billing-deadlines",
     widget: "gmt-billing gmt-widget",
   },
+  {
+    path: "tools/delivery-scheduler",
+    widget: "gmt-delivery gmt-widget",
+  },
+  {
+    path: "tools/connection-checker",
+    widget: "gmt-connection gmt-widget",
+  },
+  {
+    path: "tools/timetable-reader",
+    widget: "gmt-timetable gmt-widget",
+  },
+  {
+    path: "tools/crossing-clock",
+    widget: "gmt-crossing gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

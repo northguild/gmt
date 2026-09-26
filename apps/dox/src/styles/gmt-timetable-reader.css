@@ -1,0 +1,199 @@
+/*
+ * Timetable Reader widget (TRAN-9).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css; the leg fieldset, verdict
+ * line and reason-aside spacing in gmt-transport-widgets.css. This sheet
+ * restyles the row fields and draws the rows table.
+ *
+ * Badges are text with an outline, never colour alone, and never amber —
+ * "twice" and "skipped" are readings of a real instant, not invalid input.
+ */
+
+/* The row fields: the printed departure first, at a double share, so a
+   written offset such as -05:00 never crowds it. Same shape as the top
+   Printed in / Run time / Arrives in row. */
+.gmt-timetable-fields > .gmt-label {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.gmt-timetable-fields > .gmt-label:first-child {
+  flex: 2 1 20rem;
+}
+
+.gmt-timetable-fields .gmt-input,
+.gmt-timetable-fields .gmt-select {
+  width: 100%;
+}
+
+@container (max-width: 30rem) {
+  .gmt-timetable-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gmt-timetable-fields > .gmt-label,
+  .gmt-timetable-fields > .gmt-label:first-child {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* The rows table — same recipe as the DST Inspector's transition table. */
+.gmt-timetable-rows {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin: var(--gmt-space-2) 0;
+}
+
+/* `.sl-markdown-content th:first-child, .sl-markdown-content td:first-child`
+   (gmt-content.css) is the site's "keep the first column of a parameter
+   table compact" rule — `white-space: nowrap; width: 1%`. This table lives
+   inside the MDX flow, so it inherited that rule too, collapsing the
+   Printed column to a sliver a few px wide (measured 3px at 390px) and
+   forcing every value onto one character per line regardless of viewport —
+   this, not `overflow-wrap: anywhere` alone, is why the wrap broke
+   mid-token even at 1440px. Same specificity, loaded after
+   gmt-content.css in astro.config.mjs, so this wins on source order. */
+.gmt-timetable-rows th:first-child,
+.gmt-timetable-rows td:first-child {
+  white-space: normal;
+  width: auto;
+}
+
+.gmt-timetable-rows th {
+  text-align: left;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 2px solid var(--gmt-border);
+  color: var(--gmt-ice-dim);
+  font-weight: 600;
+  font-size: var(--gmt-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gmt-timetable-rows td {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 1px solid var(--gmt-border);
+  vertical-align: middle;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  /* No `overflow-wrap: anywhere` here: that broke an ISO value mid-token
+     (`…01:30:00-` / `05:00[America/New_York]`). A long zoned string instead
+     carries its own `<wbr>` before the offset sign and before `[` — see
+     wbrBeforeOffsetAndBracket() (timetable-reader-mount.ts) and
+     .gmt-timetable-time-full below — so it only ever breaks at one of those
+     two natural boundaries. */
+}
+
+/* Leaves (exact) and Local arrival: the readable local HH:MM at normal
+   size, the full zoned value beneath it in smaller, muted text — exact and
+   never dropped, but never the long wrapped ISO prose the table would be
+   if that were the only size shown. */
+.gmt-timetable-time {
+  display: block;
+  color: var(--gmt-ice);
+}
+
+.gmt-timetable-time-full {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+@container (max-width: 30rem) {
+  .gmt-timetable-rows {
+    font-size: var(--gmt-text-xs);
+  }
+
+  .gmt-timetable-rows th,
+  .gmt-timetable-rows td {
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Below the narrow container breakpoint, a 4-column row no longer has room
+ * for its cells side by side without forcing a mid-token break. Each row
+ * becomes its own labelled card instead: real `<table>`/`<tr>`/`<td>`
+ * markup throughout (kept a table — with explicit roles — for assistive
+ * tech, per the responsive-table pattern), restyled to `display: block` and
+ * given a `data-label` per cell so `td::before` draws "Printed", "Leaves
+ * (exact)", "Badge" and "Local arrival" as its line label. The header row is
+ * visually hidden rather than removed, since the labels now live per-cell.
+ * --------------------------------------------------------------------------- */
+@container (max-width: 30rem) {
+  .gmt-timetable-rows thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .gmt-timetable-rows,
+  .gmt-timetable-rows tbody,
+  .gmt-timetable-rows tr {
+    display: block;
+    width: 100%;
+  }
+
+  .gmt-timetable-rows tr {
+    margin: 0 0 var(--gmt-space-2);
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+    border: 1px solid var(--gmt-border);
+    border-radius: var(--gmt-radius-sm);
+  }
+
+  /* Label in the first column; the short time and the full zoned value stack
+     in the second, so the short time never splits from its offset. */
+  .gmt-timetable-rows td {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    column-gap: var(--gmt-space-2);
+    align-items: baseline;
+    padding: var(--gmt-space-1) 0;
+    border-bottom: none;
+  }
+
+  .gmt-timetable-rows td > * {
+    grid-column: 2;
+  }
+
+  /* A row with no badge has nothing to say in that cell. */
+  .gmt-timetable-rows td:empty {
+    display: none;
+  }
+
+  .gmt-timetable-time {
+    white-space: nowrap;
+  }
+
+  .gmt-timetable-rows td:not(:last-child) {
+    border-bottom: 1px dashed var(--gmt-border);
+  }
+
+  .gmt-timetable-rows td::before {
+    content: attr(data-label);
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-timetable-time,
+  .gmt-timetable-time-full {
+    min-width: 0;
+  }
+}

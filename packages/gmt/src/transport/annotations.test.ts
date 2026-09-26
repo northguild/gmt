@@ -1,16 +1,25 @@
-import { dwellTime, etaAtZone, transitTime } from "./index";
+import {
+  crossingTime,
+  dwellTime,
+  etaAtZone,
+  scheduleDelivery,
+  transitTime,
+} from "./index";
 import { hostileProxy, revokedProxy } from "../test/noThrow";
 
 /**
- * RFC 9557 annotations on a transport instant, read by all three functions.
+ * RFC 9557 annotations on a transport instant, read by all five functions.
  *
  * RFC 9557 §3.3: an elective annotation with an unknown key is ignored and a critical one
  * (`!`) is rejected; `u-ca` is a known key, so a calendar is accepted either way. A time-zone
  * annotation is a bracket without `=` (RFC 9557 §4.1 `time-zone`), and `!` on it is allowed.
- * `Temporal.Instant.from` and `isValidInstant` follow the same rules, so `etaAtZone` and
- * `dwellTime` (which read only the instant when a target zone is given) accept exactly what
- * `transitTime` accepts, except a zone that does not exist: `transitTime` keeps the departure's
- * zone, so it must be real, while the other two never read it.
+ * `Temporal.Instant.from` and `isValidInstant` follow the same rules, so `etaAtZone`,
+ * `dwellTime` (which read only the instant when a target zone is given) and `crossingTime`
+ * (whose target zone is always the rendering zone) accept exactly what `transitTime` accepts,
+ * except a zone that does not exist: `transitTime` keeps the departure's zone, so it must be
+ * real, while those three never read it. A `scheduleDelivery` departure reads its bracket the
+ * way `transitTime` does — the bracket makes the departure exact, so it must be real — and its
+ * sentinel is `null`.
  */
 const departure = "2024-06-15T10:00:00Z";
 
@@ -47,6 +56,35 @@ describe("transport annotations (RFC 9557)", () => {
               calendarDays: 1,
             }
           : null,
+      );
+      expect(crossingTime(value, value, "UTC")).toEqual(
+        instantAccepted
+          ? {
+              duration: "PT0S",
+              enter: "2024-06-15T10:00:00+00:00[UTC]",
+              exit: "2024-06-15T10:00:00+00:00[UTC]",
+            }
+          : null,
+      );
+      // The departure reads its bracket, so scheduleDelivery accepts exactly what transitTime
+      // accepts; the arrival instant (10:00Z + 1h) is the same whatever zone rendered the input.
+      expect(
+        scheduleDelivery([
+          { departure: value, duration: "PT1H", timeZone: "UTC" },
+        ]),
+      ).toEqual(
+        transit === ""
+          ? null
+          : {
+              eta: "2024-06-15T11:00:00+00:00[UTC]",
+              legTimes: [
+                {
+                  arrival: "2024-06-15T11:00:00Z",
+                  localArrival: "2024-06-15T11:00:00+00:00[UTC]",
+                  dwellAfter: "PT0S",
+                },
+              ],
+            },
       );
     },
   );
@@ -96,12 +134,32 @@ describe("transport functions never throw", () => {
         () => dwellTime(make() as never, ok, "UTC"),
         () => dwellTime(ok, make() as never, "UTC"),
         () => dwellTime(ok, ok, make() as never),
+        () => crossingTime(make() as never, ok, "UTC"),
+        () => crossingTime(ok, make() as never, "UTC"),
+        () => crossingTime(ok, ok, make() as never),
+        () => scheduleDelivery(make() as never),
+        () => scheduleDelivery([make()] as never),
+        () =>
+          scheduleDelivery([
+            { departure: make() as never, duration: "PT1H", timeZone: "UTC" },
+          ]),
+        () =>
+          scheduleDelivery([
+            { departure: ok, duration: make() as never, timeZone: "UTC" },
+          ]),
+        () =>
+          scheduleDelivery(
+            [{ departure: ok, duration: "PT1H", timeZone: "UTC" }],
+            make() as never,
+          ),
       ]) {
         expect(call).not.toThrow();
       }
       expect(transitTime(make() as never, "PT1H")).toBe("");
       expect(etaAtZone(ok, make() as never)).toBe("");
       expect(dwellTime(ok, ok, make() as never)).toBeNull();
+      expect(crossingTime(ok, ok, make() as never)).toBeNull();
+      expect(scheduleDelivery([make()] as never)).toBeNull();
     },
   );
 });
