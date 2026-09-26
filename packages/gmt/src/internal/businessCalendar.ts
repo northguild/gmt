@@ -48,7 +48,11 @@ function parseWeekend(weekend: unknown): Set<number> | null {
   return days.size < ISO_WEEKDAYS ? days : null;
 }
 
-function parseHolidays(holidays: unknown): Set<string> | null {
+/**
+ * Reduce a holiday list to its normalised ISO dates, or `null` when it is not an array of ISO
+ * PlainDate strings. Shared with `OperatingSchedule.holidays`, which takes the same list.
+ */
+export function parseHolidays(holidays: unknown): Set<string> | null {
   if (!Array.isArray(holidays)) {
     return null;
   }

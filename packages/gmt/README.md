@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~55× more CI test executions than all four competitors combined**: 1,109,250 from 36,975 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~96× more test cases than `@internationalized/date`**: 36,975 vs. 386 — Adobe's own library, run at its own commit.
+- **~56× more CI test executions than all four competitors combined**: 1,125,180 from 37,506 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~97× more test cases than `@internationalized/date`**: 37,506 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 36,975 tests across 674 files that exercise real behavior differences without redundant permutations. They run in CI as 1,109,250 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 37,506 tests across 681 files that exercise real behavior differences without redundant permutations. They run in CI as 1,125,180 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 674                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **36,975**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,109,250**<br>(36,975 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 681                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **37,506**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,125,180**<br>(37,506 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~55×                                                  | 1,109,250 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~56×                                                  | 1,125,180 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -162,7 +162,7 @@ import { addDate, getNow, formatRelativeZoned, Temporal } from "@northguild/gmt"
 
 The fourteen namespace subpaths:
 
-- `@northguild/gmt/calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
+- `@northguild/gmt/calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars with holiday sets and roll conventions, and operating hours with open-time SLA arithmetic
 - `@northguild/gmt/duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `@northguild/gmt/instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
 - `@northguild/gmt/interval`: half-open `[start, end)` interval algebra over instants — overlap, intersect, clamp, merge, subtract, split, sum
@@ -2181,6 +2181,89 @@ isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" });
   is both a legitimate result (a fully covered subtraction) and the invalid-input sentinel.
   `isValidInterval` tells them apart.
 
+### Operating hours and open-time SLAs
+
+A business day answers "is Thursday a working day". A terminal gate, a support desk, a customs
+office and a night curfew ask a finer question: is it open right now, how many open hours have
+passed, and when does an SLA measured in open hours fall due. `calendar/hours` answers them from
+one `OperatingSchedule`: a zone, windows of local wall time for each ISO weekday, holiday dates,
+and dated overrides.
+
+```typescript
+import {
+  addOperatingTime,
+  isOpenAt,
+  nextCloseAt,
+  nextOpenAt,
+  operatingIntervals,
+  operatingTimeBetween,
+  recurringWindows,
+} from "@northguild/gmt";
+import type { OperatingSchedule } from "@northguild/gmt/types";
+
+const nineToFive = [{ from: "09:00", to: "17:00" }];
+const desk: OperatingSchedule = {
+  timeZone: "America/New_York",
+  weekly: { 1: nineToFive, 2: nineToFive, 3: nineToFive, 4: nineToFive, 5: nineToFive },
+  holidays: ["2024-07-04"],
+  overrides: [{ date: "2024-07-05", windows: [{ from: "10:00", to: "12:00" }] }],
+};
+
+operatingIntervals(desk, { start: "2024-07-04T04:00:00Z", end: "2024-07-06T04:00:00Z" });
+// [{ start: "2024-07-05T14:00:00Z", end: "2024-07-05T16:00:00Z" }] — the holiday is closed, the override replaces Friday
+
+isOpenAt("2024-06-17T14:00:00Z", desk); // true — Monday 10:00 local
+nextOpenAt("2024-06-15T16:00:00Z", desk); // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
+nextCloseAt("2024-06-17T14:00:00Z", desk); // "2024-06-17T21:00:00Z" — 17:00 local
+
+operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", desk); // "PT2H" — Friday 16:00 to Monday 10:00
+addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk); // "2024-06-17T20:00:00Z" — an 8-hour SLA from Friday 16:00: Monday 16:00
+addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk, { within: "P1D" }); // "" — not due within a day
+
+// A curfew wraps midnight and belongs to the night it starts on.
+recurringWindows(
+  { 6: [{ from: "23:00", to: "06:00" }] },
+  { start: "2024-11-02T00:00:00Z", end: "2024-11-04T00:00:00Z" },
+  "America/New_York",
+);
+// [{ start: "2024-11-03T03:00:00Z", end: "2024-11-03T11:00:00Z" }] — 8 hours across the fall-back night
+```
+
+- **Windows are half-open local wall time.** `{ from: "09:00", to: "17:00" }` is open at 09:00
+  and closed at 17:00. A `to` at or before its `from` wraps past midnight: `23:00`–`06:00` is a
+  night and `00:00`–`00:00` a whole day. A window belongs to the date it starts on, so a holiday
+  or override on Friday removes or replaces a Friday-night window, and one on Saturday does not.
+  Windows that overlap or touch merge, so a run of whole days is one interval.
+- **Every edge goes through `resolveLocal`.** The default `disambiguation` is `"compatible"`: an
+  edge in a repeated fall-back hour takes the earlier instant, and one in a skipped
+  spring-forward hour moves forward by the gap. So a 23:00–06:00 window is 8 real hours across
+  New York's fall-back night and 6 across its spring-forward night. Under `"earlier"`, a skipped
+  midnight can move a date's first window onto the previous date. `"earlier"` and `"later"`
+  pick the other instant. `"reject"` guesses nothing: it returns the sentinel when a window with
+  an ambiguous or nonexistent edge could change the answer, and ignores one that cannot.
+- **Dates are the zone's real local dates.** Holidays and overrides are ISO dates in the
+  schedule's zone. A `BusinessCalendar` can be passed as `holidays`; its `holidays` are read, and
+  its `weekend` is not, because `weekly` already says which weekdays open. A date the zone
+  deleted (`Pacific/Apia`, 2011-12-30) has no windows. An override wins over a holiday on the
+  same date, and `windows: []` closes a date.
+- **Open time is elapsed time.** `operatingTimeBetween` is the length of the open intervals
+  inside `[start, end)`, the same number `sumIntervals` gives for their intersections with the
+  range, with hours as the largest unit. `addOperatingTime` is its inverse: the earliest instant
+  at which that much open time has passed, so a deadline that lands on a closing time is that
+  closing time. Its duration is hours and smaller units: `P1D` of open time could mean 24 open
+  hours or one working day, so it returns `""`.
+- **Searches stop at a horizon.** `nextOpenAt`, `nextCloseAt` and `addOperatingTime` search up to
+  `within` after the input (default `"P1Y"`), added in the schedule's zone so `"P1D"` is one local
+  day. An answer exactly at the horizon counts; one past it returns `""`. A 24/7 schedule never
+  closes, so `nextCloseAt` returns `""` for it.
+- **Bounded walks.** A range spanning more than 10,000 local dates (about 27 years), counted from
+  its start's date, or a search that would go that far past its input, returns the sentinel
+  rather than a truncated answer. A search answers as soon as the answer is certain, so a long
+  `within` costs nothing when the answer is near. A horizon past Temporal's last instant stops
+  there.
+- **Not a recurrence engine.** A weekly pattern with dated exceptions covers gate hours, office
+  hours, trading sessions and curfews. Monthly and yearly RFC 5545 rules are out of scope.
+
 ### Transport legs and dwell
 
 Every transport mode shares three operations: add a leg's duration to a departure, show the
@@ -2468,7 +2551,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation, NTP / FILETIME / .NET ticks / Excel / PostgreSQL epoch bridges
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
-- [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
+- [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars with holiday sets and roll conventions, and operating hours: open intervals, open or closed now, open time elapsed and SLA deadlines
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days
 - [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates an itemised invoice can list, plus the deadline chain around the invoice with every window a caller parameter
