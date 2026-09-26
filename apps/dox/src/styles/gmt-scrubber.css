@@ -11,6 +11,10 @@
 .gmt-scrubber {
   margin: var(--gmt-space-6) 0;
   font-family: var(--gmt-font-mono);
+  /* So this sheet's own @container rule below can react to the widget's
+     rendered width rather than the viewport's — the same reasoning
+     gmt-transport-widgets.css gives for its four widgets. */
+  container-type: inline-size;
 }
 
 /* A compact toolbar row — [datetime input] [Jump to a DST transition]
@@ -19,7 +23,11 @@
    `auto` for the two button-ish columns keeps them their natural width;
    the datetime field and the zone search each get an explicit share of
    whatever's left, biased toward the field since its content
-   (`YYYY-MM-DDTHH:MM`) is the widest fixed-format value in the row. */
+   (`YYYY-MM-DDTHH:MM`) is the widest fixed-format value in the row.
+   Below `gmt-scrubber` (`@container`), that three-column floor — 12rem +
+   auto + 10rem, plus two gaps — no longer fits without pushing the page
+   into horizontal scroll (found on /tools/zone-planner/ at 390px; the grid
+   had no narrow breakpoint at all), so it collapses to one column. */
 .gmt-scrubber-controls {
   display: grid;
   grid-template-columns: minmax(12rem, 1.2fr) auto minmax(10rem, 1fr);
@@ -28,11 +36,17 @@
   margin-bottom: var(--gmt-space-4);
 }
 
+@container (max-width: 30rem) {
+  .gmt-scrubber-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 .gmt-scrubber-controls label {
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
@@ -69,7 +83,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 .gmt-scrubber-controls .gmt-button,
 .gmt-scrubber-share .gmt-button {
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   white-space: nowrap;
 }
 
@@ -136,7 +150,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 
 .gmt-scrubber-zone {
   color: var(--gmt-ice);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -149,13 +163,13 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 
 .gmt-scrubber-offset {
   color: var(--gmt-cyan-ink);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
 }
 
 .gmt-scrubber-bite {
   /* void text on a solid fill (INT-58 fix loop): the base cyan only cleared
      3.68:1 in light theme; cyan-ink clears 8.71:1. */
-  font-size: 0.62rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-void);
   background: var(--gmt-cyan-ink);
   padding: 1px var(--gmt-space-1);
@@ -194,7 +208,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   display: flex;
   gap: var(--gmt-space-2);
   align-items: center;
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 

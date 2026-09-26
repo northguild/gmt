@@ -31,7 +31,7 @@
   flex: 0 0 auto;
   width: 5.5rem;
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
@@ -51,7 +51,7 @@
   justify-content: space-between;
   margin: var(--gmt-space-1) 0 0 calc(5.5rem + var(--gmt-space-2));
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 

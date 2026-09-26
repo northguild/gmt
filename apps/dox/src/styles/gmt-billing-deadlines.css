@@ -23,7 +23,7 @@
 .gmt-billing-group > legend {
   padding: 0 0 var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
@@ -75,7 +75,7 @@
 .gmt-billing-weekdays {
   margin-bottom: var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
-  font-size: 0.62rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
@@ -93,7 +93,7 @@
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   font-family: var(--gmt-font-mono);
-  font-size: 0.68rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
   overflow: hidden;
 }
@@ -122,7 +122,7 @@
   height: 1.1em;
   padding: 0 2px;
   border-radius: 2px;
-  font-size: 0.62rem;
+  font-size: var(--gmt-text-xs);
   font-weight: 700;
   font-style: normal;
   line-height: 1;
@@ -216,7 +216,7 @@
   border: 1px dashed var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   font-style: italic;
   color: var(--gmt-ice-dim);
 }
@@ -236,7 +236,7 @@
   padding: 0;
   list-style: none;
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
@@ -266,7 +266,7 @@
 
   .gmt-billing-cell {
     min-height: 3rem;
-    font-size: 0.6rem;
+    font-size: var(--gmt-text-xs);
   }
 }
 

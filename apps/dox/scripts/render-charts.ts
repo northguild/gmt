@@ -135,7 +135,7 @@ export function renderLocaleMatrixChart(): string {
         y: "row",
         text: (d) => `${d.locale}  ${d.name}`,
         fill: "var(--gmt-ice)",
-        fontSize: 11,
+        fontSize: 12,
         anchor: "middle",
       }),
     ],

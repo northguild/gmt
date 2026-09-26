@@ -31,7 +31,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   font-weight: 600;
   letter-spacing: var(--gmt-tracking-wider);
   text-transform: uppercase;
@@ -89,6 +89,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
+  /* Load-bearing: a flex container's default `min-width: auto` sizes it to
+     its content's natural width, which for a code block is its longest
+     unwrapped line — `.gmt-mistake-pair pre { overflow-x: auto }` (its own
+     scroll container) is not enough on its own, because *this* flex box,
+     one level up, is the actual grid item and was still being sized to fit
+     the pre rather than the grid track, pushing the whole page wide (found
+     on /mistakes/format-date-time/ and /mistakes/zoned-date-ops/ at 390px). */
+  min-width: 0;
 }
 
 .gmt-mistake-side h4 {

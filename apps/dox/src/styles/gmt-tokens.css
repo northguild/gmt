@@ -13,6 +13,10 @@
 
   /* ---- Six named roles (overview.md §3) ---- */
   --gmt-void: #03080c;
+  /* Near-black that does NOT flip with the theme (the light theme redefines
+     `--gmt-void` as white). For marks that must stay black in both themes:
+     the clock's night-light ticks and hands, shadows. */
+  --gmt-ink-fixed: #03080c;
   --gmt-cyan: #22d3ee;
   --gmt-spring: #4ade80;
   --gmt-teal: #0e7490;
@@ -211,12 +215,20 @@
    * (0.62rem-1.3rem, a dozen near-duplicate values). New widget work should pick
    * from this scale rather than a fresh literal; existing sheets migrate as they're
    * touched, not in one sweep — see context/dox/reference/design-system.md.
+   *
+   * 12px (0.75rem) is a site-wide a11y floor: no rendered text may compute
+   * smaller, enforced by src/lib/font-floor.test.ts. --gmt-text-2xs and
+   * --gmt-text-xs both used to sit under that floor (0.65rem/0.7rem) as two
+   * distinct steps; raising either without the other would have left them out
+   * of order, so both now sit exactly at the floor and read identically. --gmt-text-sm,
+   * --gmt-text-base and --gmt-text-md are nudged up by one 0.05rem step each so the scale
+   * stays strictly increasing above the floor; --gmt-text-lg/xl are unchanged.
    */
-  --gmt-text-2xs: 0.65rem;
-  --gmt-text-xs: 0.7rem;
-  --gmt-text-sm: 0.75rem;
-  --gmt-text-base: 0.8rem;
-  --gmt-text-md: 0.85rem;
+  --gmt-text-2xs: 0.75rem;
+  --gmt-text-xs: 0.75rem;
+  --gmt-text-sm: 0.8rem;
+  --gmt-text-base: 0.85rem;
+  --gmt-text-md: 0.9rem;
   --gmt-text-lg: 0.95rem;
   --gmt-text-xl: 1.3rem;
 
@@ -413,8 +425,13 @@
   --gmt-pagination-title: var(--gmt-ice);
 
   /* ---- Syntax highlight (light values) ---- */
-  --gmt-syntax-fn: #3b61b0;
-  --gmt-syntax-str: #984e4d;
+  /* --gmt-syntax-fn and --gmt-syntax-str measured 5.96:1 and
+     5.95:1 against white — below the 7:1 code-frame floor. Darkened, same
+     hue, to 7.71:1 and 7.84:1 (WCAG relative-luminance formula). Dark theme
+     already clears 7:1 and is untouched. --gmt-syntax-num was not measured
+     and is left as-is. */
+  --gmt-syntax-fn: #315192;
+  --gmt-syntax-str: #7d403f;
   --gmt-syntax-num: #aa0982;
 
   --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
