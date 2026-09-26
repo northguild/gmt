@@ -211,11 +211,9 @@ export function verdict(
   const portZone = legs[0]!.timeZone;
   const result = lib.scheduleDelivery(legs);
   const ready = readyAt(legs, 0, undefined, lib);
-  const onwardDeparture = legs[1]!.departure;
-  const dep =
-    onwardDeparture !== undefined
-      ? departureAt(onwardDeparture, false, undefined, lib)
-      : null;
+  // A zoneless onward departure — the train's printed local time — is read
+  // in the port's zone, the inbound leg's own `timeZone`, as the library does.
+  const dep = departureAt(legs, 1, undefined, lib);
   const readyLocal = ready ? lib.etaAtZone(ready, portZone) : undefined;
   const departureLocal = dep ? lib.etaAtZone(dep, portZone) : undefined;
 

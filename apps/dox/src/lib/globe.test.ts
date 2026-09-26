@@ -158,8 +158,9 @@ describe("rotationForZone", () => {
 
 // ---------------------------------------------------------------------------
 // unitVector / dot3 (globe.ts) — the per-frame zone-loop replacement for
-// `Math.cos(geoDistance(...))`. Must be exact, not an approximation: any
-// drift here would shift the horizon cull or the day/night dot classification.
+// `Math.cos(geoDistance(...))`. Must be mathematically equivalent, not an
+// approximation: any drift here would shift the horizon cull or the
+// day/night dot classification.
 // ---------------------------------------------------------------------------
 
 describe("unitVector / dot3", () => {

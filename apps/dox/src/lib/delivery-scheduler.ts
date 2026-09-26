@@ -1101,7 +1101,6 @@ const FAILURE_HEADLINE: Record<NullReason, string> = {
   "invalid-start-zone": "Start zone invalid",
   "no-departure": "No departure",
   "zoneless-first": "No zone on the first departure",
-  "zoneless-later": "No zone on a later departure",
   "invalid-departure": "Invalid departure",
   "missed-connection": "Missed connection",
   "invalid-duration": "Invalid duration",

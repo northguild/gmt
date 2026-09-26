@@ -11653,6 +11653,14 @@
         "result": "{ eta: \"2024-06-15T15:00:00+00:00[UTC]\", legTimes: [{ arrival: \"2024-06-15T15:00:00Z\", localArrival: \"2024-06-15T15:00:00+00:00[UTC]\", dwellAfter: \"PT0S\" }] } (a published 10:00 wall time, read in New York)"
       },
       {
+        "call": "scheduleDelivery([{ departure: \"2024-06-15T00:00:00Z\", duration: \"PT10H\", timeZone: \"UTC\", dwellAfter: \"PT2H\" }, { departure: \"2024-06-15T13:00:00\", duration: \"PT1H\", timeZone: \"UTC\" }])",
+        "result": "{ eta: \"2024-06-15T14:00:00+00:00[UTC]\", legTimes: [{ arrival: \"2024-06-15T10:00:00Z\", localArrival: \"2024-06-15T10:00:00+00:00[UTC]\", dwellAfter: \"PT2H\" }, { arrival: \"2024-06-15T14:00:00Z\", localArrival: \"2024-06-15T14:00:00+00:00[UTC]\", dwellAfter: \"PT0S\" }] } (leg 2's zoneless 13:00 is read in leg 1's UTC destination zone, not startTimeZone, since none was supplied)"
+      },
+      {
+        "call": "scheduleDelivery([{ departure: \"2024-06-15T00:00:00Z\", duration: \"PT10H\", timeZone: \"UTC\", dwellAfter: \"PT2H\" }, { departure: \"2024-06-15T11:00:00\", duration: \"PT1H\", timeZone: \"UTC\" }])",
+        "result": "null (leg 2's zoneless 11:00, read in UTC, falls inside leg 1's dwell: a missed connection)"
+      },
+      {
         "call": "scheduleDelivery([])",
         "result": "{ eta: \"\", legTimes: [] }"
       },

@@ -16,9 +16,11 @@ import { transitTime } from "./transitTime";
 /** One leg of a multi-modal journey: a departure, how long it takes, and where it lands. */
 export interface Leg {
   /**
-   * Exact departure: an instant (`Z`/offset) or a zoned string. Required on the first leg;
-   * on later legs it is the scheduled connection the cargo waits for, and omitting it means
-   * the leg leaves as soon as the previous leg's arrival plus its `dwellAfter` allows.
+   * Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the
+   * first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone`
+   * (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the
+   * first leg; on later legs it is the scheduled connection the cargo waits for, and omitting
+   * it means the leg leaves as soon as the previous leg's arrival plus its `dwellAfter` allows.
    */
   departure?: string;
   /** ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule). */
@@ -82,12 +84,13 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  * An instant (`Z`/offset) is already exact; a zoned string is exact through its bracket, which
  * is read and must be real and agree with its offset (unlike `crossingTime`, which never reads
  * one). A zoneless wall time is a published local schedule time, exact only through
- * `startTimeZone`, which is passed for the first leg alone; without it, anything else is not a
- * moment.
+ * `wallTimeZone` — the caller decides which zone that is: `startTimeZone` for the first leg,
+ * the previous leg's `timeZone` for any other leg (see `legDeparture`). Without one, a
+ * zoneless departure is not a moment.
  */
 function departureInstant(
   departure: unknown,
-  startTimeZone?: string,
+  wallTimeZone?: string,
 ): Temporal.Instant | null {
   if (typeof departure !== "string") {
     return null;
@@ -101,10 +104,10 @@ function departureInstant(
   if (isValidInstant(departure)) {
     return Temporal.Instant.from(departure);
   }
-  if (startTimeZone !== undefined && isValidDateTime(departure)) {
+  if (wallTimeZone !== undefined && isValidDateTime(departure)) {
     // resolveLocal's core: the zone the schedule's wall time is exact in. "compatible": an
     // ambiguous wall time takes the earlier instant, a nonexistent one the later instant.
-    return zonedDateTimeFrom(`${isoStringBody(departure)}[${startTimeZone}]`, {
+    return zonedDateTimeFrom(`${isoStringBody(departure)}[${wallTimeZone}]`, {
       disambiguation: "compatible",
     }).toInstant();
   }
@@ -137,23 +140,26 @@ function legTags(
 
 /**
  * The instant this leg leaves: its scheduled `departure`, or the connection cursor (the previous
- * arrival plus its dwell) it chains from. A scheduled departure before the cursor — inside the
- * previous handoff's minimum connect time, or before the arrival itself — is a missed
- * connection, invalid input rather than a negative wait; equal passes, a zero-slack connection
- * is feasible. `null` on the first leg (no cursor) means the leg's departure did not resolve.
+ * arrival plus its dwell) it chains from. A zoneless `departure` is read as a wall time in
+ * `startTimeZone` on the first leg (`cursor === null`), or in `previousTimeZone` — the previous
+ * leg's own `timeZone`, already proven real by that leg's `legBoundaries` call — on any other
+ * leg; `previousTimeZone` is `undefined`, and ignored, on the first leg. A scheduled departure
+ * before the cursor — inside the previous handoff's minimum connect time, or before the arrival
+ * itself — is a missed connection, invalid input rather than a negative wait; equal passes, a
+ * zero-slack connection is feasible. `null` on the first leg (no cursor) means the leg's
+ * departure did not resolve.
  */
 function legDeparture(
   leg: Leg,
   cursor: Temporal.Instant | null,
   startTimeZone: string | undefined,
+  previousTimeZone: string | undefined,
 ): Temporal.Instant | null {
   if (cursor !== null && leg.departure === undefined) {
     return cursor;
   }
-  const departure = departureInstant(
-    leg.departure,
-    cursor === null ? startTimeZone : undefined,
-  );
+  const wallTimeZone = cursor === null ? startTimeZone : previousTimeZone;
+  const departure = departureInstant(leg.departure, wallTimeZone);
   if (departure === null) {
     return null;
   }
@@ -234,8 +240,11 @@ function legBoundaries(
 
 /**
  * Chain the legs: each leg leaves at its scheduled departure or at the cursor the previous leg
- * released, and lands as `legBoundaries` computes. `null` when any leg is malformed, misses its
- * connection, or leaves the instant range.
+ * released, and lands as `legBoundaries` computes. `previousTimeZone` carries leg N-1's own
+ * `timeZone` forward so leg N's zoneless departure can be read in it; it stays `undefined`
+ * before leg 0 (where `startTimeZone` applies instead, never this) and is captured only once
+ * `legBoundaries` has proven that zone real, never speculatively. `null` when any leg is
+ * malformed, misses its connection, or leaves the instant range.
  */
 function chainLegs(
   legs: Leg[],
@@ -243,6 +252,7 @@ function chainLegs(
 ): LegTime[] | null {
   const legTimes: LegTime[] = [];
   let cursor: Temporal.Instant | null = null;
+  let previousTimeZone: string | undefined;
   for (const [index, leg] of legs.entries()) {
     if (typeof leg !== "object" || leg === null) {
       return null;
@@ -251,7 +261,7 @@ function chainLegs(
     if (tags === null) {
       return null;
     }
-    const departure = legDeparture(leg, cursor, startTimeZone);
+    const departure = legDeparture(leg, cursor, startTimeZone, previousTimeZone);
     if (departure === null) {
       return null;
     }
@@ -260,6 +270,7 @@ function chainLegs(
       return null;
     }
     cursor = boundaries.released;
+    previousTimeZone = leg.timeZone;
     legTimes.push({
       arrival: boundaries.arrival,
       localArrival: boundaries.localArrival,
@@ -289,16 +300,25 @@ function chainLegs(
  *   and echoed, but never added to an instant: it cannot turn a representable ETA into `null`.
  * - **`departure` must be exact:** an instant (`Z`/offset) or a zoned string, whose bracketed
  *   zone is read and must be real and agree with its offset. The first leg requires one.
- * - **`startTimeZone` covers the one exception:** schedules are published as zone-local wall
+ * - **`startTimeZone` resolves the first leg alone:** schedules are published as zone-local wall
  *   times, so a zoneless first-leg departure is read in `startTimeZone`. Zoneless without the
- *   option, or on any later leg, is `null`; the option is ignored when the departure is already
- *   exact; an invalid `startTimeZone` is `null` even when unused.
+ *   option is `null`; the option is ignored when the departure is already exact; an invalid
+ *   `startTimeZone` is `null` even when unused; it is never applied to a later leg — see the next
+ *   rule for those.
+ * - **A later leg's zoneless departure is read in the previous leg's `timeZone`:** a real
+ *   timetable publishes a local wall time at every hub, not just at origin, and leg N−1's
+ *   `timeZone` is exactly leg N's departure zone. So a zoneless departure on any leg but the
+ *   first is read there, with the same `"compatible"` disambiguation as `startTimeZone`. This is
+ *   a separate, always-on mechanism — `startTimeZone` still names only the first leg's zone and
+ *   cannot be used for a later one. The missed-connection check still runs after resolution, so a
+ *   later zoneless departure that resolves earlier than the cursor is still `null`.
  * - **Local-time resolution policy (`"compatible"`).** A zoned departure written without an
- *   offset (`"2024-11-03T01:30:00[America/New_York]"`) and a zoneless first departure read in
- *   `startTimeZone` are wall times. An **ambiguous** wall time — a fall-back hour the clock ran
- *   through twice — resolves to the **earlier** instant; a **nonexistent** one — a
- *   spring-forward hour the clock skipped — resolves to the **later** instant. Write the offset
- *   to pick the other pass of a repeated hour.
+ *   offset (`"2024-11-03T01:30:00[America/New_York]"`), a zoneless first departure read in
+ *   `startTimeZone`, and a zoneless later-leg departure read in the previous leg's `timeZone`
+ *   are all wall times. An **ambiguous** wall time — a fall-back hour the clock ran through
+ *   twice — resolves to the **earlier** instant; a **nonexistent** one — a spring-forward hour
+ *   the clock skipped — resolves to the **later** instant. Write the offset to pick the other
+ *   pass of a repeated hour.
  * - `duration` follows `transitTime`: time units are elapsed time, a day is exactly 24 hours,
  *   and calendar units (years, months, weeks) return `null`. `transitTime` accepts a negative
  *   duration (to recover a departure from an arrival), but a leg cannot arrive before it
@@ -320,6 +340,8 @@ function chainLegs(
  * @example scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { duration: "PT5H", timeZone: "Asia/Tokyo" }]) // { eta: "2024-06-16T02:00:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T10:00:00+00:00[UTC]", dwellAfter: "PT2H" }, { arrival: "2024-06-15T17:00:00Z", localArrival: "2024-06-16T02:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S" }] } (the second leg leaves at 12:00Z, after the dwell)
  * @example scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC", mode: "ship" }]) // { eta: "2024-06-15T11:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T11:00:00Z", localArrival: "2024-06-15T11:00:00+00:00[UTC]", dwellAfter: "PT0S", mode: "ship" }] } (tags echo back; unsupplied tag keys stay absent)
  * @example scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/New_York" }) // { eta: "2024-06-15T15:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T15:00:00Z", localArrival: "2024-06-15T15:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } (a published 10:00 wall time, read in New York)
+ * @example scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" }]) // { eta: "2024-06-15T14:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T10:00:00+00:00[UTC]", dwellAfter: "PT2H" }, { arrival: "2024-06-15T14:00:00Z", localArrival: "2024-06-15T14:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } (leg 2's zoneless 13:00 is read in leg 1's UTC destination zone, not startTimeZone, since none was supplied)
+ * @example scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { departure: "2024-06-15T11:00:00", duration: "PT1H", timeZone: "UTC" }]) // null (leg 2's zoneless 11:00, read in UTC, falls inside leg 1's dwell: a missed connection)
  * @example scheduleDelivery([]) // { eta: "", legTimes: [] }
  * @example scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { departure: "2024-06-15T11:00:00Z", duration: "PT1H", timeZone: "UTC" }]) // null (the scheduled connection leaves inside the dwell: a missed connection)
  * @example scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }]) // null (a zoneless departure without startTimeZone is not a moment)

@@ -17,15 +17,10 @@
  * Scans `.css`, `.astro`, `.ts` and `.tsx` under `src/`, plus `scripts/`
  * (`render-charts.ts` sets a chart mark's `fontSize` as a plain number, not
  * CSS, and that number becomes real SVG text on the rendered page — a
- * violation there is exactly as real as one in a stylesheet). Three files
- * this repo assigns to the Delivery Scheduler build (TRAN-9) are excluded:
- * they already read the shared `--gmt-text-*` tokens exclusively, so this
- * file's token check (below) covers them without racing that story's own
- * edits.
+ * violation there is exactly as real as one in a stylesheet).
  *
- * `--gmt-text-2xs`/`--gmt-text-xs` sit exactly at the floor (0.75rem): the
- * scale used to have two distinct steps under 12px, and once both are
- * raised to the floor they read as the same value (gmt-tokens.css).
+ * `--gmt-text-xs` sits exactly at the floor (0.75rem): the scale used to have
+ * a step under 12px, raised to sit at it (gmt-tokens.css).
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -38,17 +33,6 @@ const FLOOR_PX = 12;
 const ROOT_PX = 16; // html { font-size } is never overridden — verified alongside the scan below.
 
 const SCANNED_EXTENSIONS = new Set([".css", ".astro", ".ts", ".tsx"]);
-
-/** TRAN-9's own story, mid-edit on the same rule; it already reads only `--gmt-text-*` tokens. */
-const EXEMPT = new Set(
-  [
-    "src/styles/gmt-delivery-scheduler.css",
-    "src/lib/delivery-scheduler.ts",
-    "src/lib/delivery-scheduler.test.ts",
-    "src/lib/delivery-scheduler-mount.ts",
-    "src/lib/delivery-scheduler-mount.test.tsx",
-  ].map((rel) => path.join(DOX, rel)),
-);
 
 const ROOTS = [path.join(DOX, "src"), path.join(DOX, "scripts")];
 
@@ -63,9 +47,7 @@ function walk(dir: string): string[] {
   });
 }
 
-const FILES = ROOTS.flatMap(walk)
-  .filter((full) => !EXEMPT.has(full))
-  .sort();
+const FILES = ROOTS.flatMap(walk).sort();
 
 /** Splits a `func(...)` argument list on its top-level commas only. */
 function splitTopLevel(inner: string): string[] {
@@ -176,7 +158,7 @@ describe("Font floor (12px / 0.75rem)", () => {
           : Number.parseFloat(num) * ROOT_PX,
     }));
 
-    expect(tokens.length).toBeGreaterThanOrEqual(7);
+    expect(tokens.length).toBeGreaterThanOrEqual(6);
     for (const { name, px } of tokens) {
       expect(px, `${name} resolves to ${px}px`).toBeGreaterThanOrEqual(
         FLOOR_PX,

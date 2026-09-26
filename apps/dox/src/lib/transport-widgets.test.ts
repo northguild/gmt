@@ -213,14 +213,44 @@ describe("readyAt / departureAt", () => {
   });
 
   it("departureAt resolves V43's alone-standing departure", () => {
-    expect(
-      departureAt(
-        "2024-03-10T06:30:00[America/Los_Angeles]",
-        false,
-        undefined,
-        lib,
+    const legs = [
+      legObject(truck),
+      legObject(ship("2024-03-10T06:30:00[America/Los_Angeles]")),
+    ];
+    expect(departureAt(legs, 1, undefined, lib)).toBe("2024-03-10T13:30:00Z");
+  });
+
+  // The truck lands in Los Angeles, so the ship's printed 06:30 is read on Los
+  // Angeles' clock — after that morning's spring-forward, -07:00 — as 13:30Z,
+  // the same instant the bracketed form names. startTimeZone names only the
+  // first leg's zone, so Tokyo here changes nothing.
+  it("departureAt reads a later leg's zoneless departure in the previous leg's zone", () => {
+    const legs = [legObject(truck), legObject(ship("2024-03-10T06:30:00"))];
+    expect(departureAt(legs, 1, undefined, lib)).toBe("2024-03-10T13:30:00Z");
+    expect(departureAt(legs, 1, { startTimeZone: "Asia/Tokyo" }, lib)).toBe(
+      "2024-03-10T13:30:00Z",
+    );
+  });
+
+  it("departureAt reads a first leg's zoneless departure in startTimeZone only", () => {
+    const legs = [
+      legObject(
+        blank({
+          departure: "2024-06-15T10:00:00",
+          duration: "PT1H",
+          timeZone: "UTC",
+        }),
       ),
-    ).toBe("2024-03-10T13:30:00Z");
+    ];
+    expect(
+      departureAt(legs, 0, { startTimeZone: "America/New_York" }, lib),
+    ).toBe("2024-06-15T14:00:00Z");
+    expect(departureAt(legs, 0, undefined, lib)).toBeNull();
+  });
+
+  it("departureAt is null for a leg with no departure", () => {
+    const legs = [legObject(truck), legObject(rail)];
+    expect(departureAt(legs, 1, undefined, lib)).toBeNull();
   });
 });
 
@@ -263,7 +293,10 @@ describe("diagnose", () => {
     });
   });
 
-  it("zoneless-later (V16)", () => {
+  // Leg 1 lands 11:00Z in UTC with no dwell; leg 2's zoneless 12:00 is read on
+  // leg 1's UTC clock as 12:00Z — after the arrival — so it resolves and there
+  // is nothing to diagnose.
+  it("a zoneless later departure resolves in the previous leg's zone (V16)", () => {
     const legs = [
       legObject(
         blank({
@@ -280,10 +313,37 @@ describe("diagnose", () => {
         }),
       ),
     ];
+    expect(scheduleDelivery(legs)?.legTimes[1]?.arrival).toBe(
+      "2024-06-15T13:00:00Z",
+    );
+    expect(diagnose(legs, undefined, lib)).toBeNull();
+  });
+
+  // The same zoneless 12:00Z, but leg 1 now dwells 2 h, so it is not ready
+  // until 13:00Z. The departure resolves — it is a missed connection, not a
+  // departure with no zone.
+  it("a zoneless later departure inside the dwell is a missed connection", () => {
+    const legs = [
+      legObject(
+        blank({
+          departure: "2024-06-15T10:00:00Z",
+          duration: "PT1H",
+          timeZone: "UTC",
+          dwellAfter: "PT2H",
+        }),
+      ),
+      legObject(
+        blank({
+          departure: "2024-06-15T12:00:00",
+          duration: "PT1H",
+          timeZone: "UTC",
+        }),
+      ),
+    ];
     expect(scheduleDelivery(legs)).toBeNull();
     expect(diagnose(legs, undefined, lib)).toEqual({
       leg: 1,
-      reason: "zoneless-later",
+      reason: "missed-connection",
     });
   });
 
@@ -375,7 +435,6 @@ describe("diagnose", () => {
       "invalid-start-zone",
       "no-departure",
       "zoneless-first",
-      "zoneless-later",
       "invalid-departure",
       "missed-connection",
       "invalid-duration",

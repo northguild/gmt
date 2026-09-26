@@ -204,9 +204,11 @@ converting between time zones, or doing arithmetic that must respect DST.
     legTimes }`: each leg leaves at its explicit `departure` or at the previous
     arrival plus that leg's `dwellAfter`, the minimum connect time. A scheduled
     departure earlier than that is a missed connection and returns `null`
-    (equal passes). Departures must be exact (instant or zoned string); only a
-    zoneless first-leg departure is read in `startTimeZone`, with
-    `"compatible"` resolution (ambiguous → earlier, skipped → later). A
+    (equal passes). A departure is exact (instant or zoned string) or a
+    zoneless wall time: on the first leg it is read in `startTimeZone`, on a
+    later leg in the previous leg's `timeZone` (where that leg leaves from),
+    both with `"compatible"` resolution (ambiguous → earlier, skipped →
+    later). A
     negative leg `duration` is `null`; the last leg's `dwellAfter` is echoed,
     never added. `mode`, `origin` and `destination` are opaque tags echoed on
     each `LegTime`. An empty array returns `{ eta: "", legTimes: [] }`.

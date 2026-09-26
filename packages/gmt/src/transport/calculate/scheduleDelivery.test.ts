@@ -440,11 +440,70 @@ describe("scheduleDelivery", () => {
     ${[validLeg]}                                                                          | ${1}                              | ${"options is a number (GetOptionsObject)"}
     ${[]}                                                                                  | ${null}                           | ${"options is checked before the empty-legs result"}
     ${[]}                                                                                  | ${{ startTimeZone: "Not/AZone" }} | ${"an invalid startTimeZone beats the empty-legs result"}
-    ${[firstLeg, { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" }]} | ${{ startTimeZone: "UTC" }}       | ${"a zoneless departure on a later leg is never resolved"}
     ${[{ departure: "2024-06-15", duration: "PT1H", timeZone: "UTC" }]}                    | ${{ startTimeZone: "UTC" }}       | ${"a date-only departure is not a wall time"}
     ${[firstLeg, { duration: "PT1H", timeZone: "Asia/Tokio" }]}                            | ${undefined}                      | ${"a later leg is invalid: no partial schedule"}
   `("returns the sentinel when $reason", ({ legs, options }) => {
     expect(scheduleDelivery(legs as never, options as never)).toBeNull();
+  });
+
+  // A later leg's zoneless departure is a published local wall time, read in the *previous*
+  // leg's own timeZone — leg N-1's destination is exactly leg N's departure zone. firstLeg lands
+  // 10:00Z in UTC and dwells 2h (cursor 12:00Z); leg 2's zoneless "13:00:00" is read in firstLeg's
+  // UTC, not any startTimeZone: 13:00Z, after the dwell, so the connection is feasible and leg 2
+  // arrives 14:00Z.
+  it("resolves a later leg's zoneless departure in the previous leg's timeZone", () => {
+    expect(
+      scheduleDelivery([
+        firstLeg,
+        { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" },
+      ])?.legTimes[1]?.arrival,
+    ).toBe("2024-06-15T14:00:00Z");
+  });
+
+  // Same previous-leg zone (UTC), but 11:00Z falls inside firstLeg's 2-hour dwell (cursor
+  // 12:00Z): still a missed connection even though the departure now resolves.
+  it("returns the sentinel when a later leg's inferred zoneless departure misses the connection", () => {
+    expect(
+      scheduleDelivery([
+        firstLeg,
+        { departure: "2024-06-15T11:00:00", duration: "PT1H", timeZone: "UTC" },
+      ]),
+    ).toBeNull();
+  });
+
+  // startTimeZone is supplied but irrelevant here (leg 1's departure is already exact); if leg
+  // 2's zoneless departure were wrongly read in startTimeZone (Asia/Tokyo, +09:00) instead of
+  // firstLeg's own UTC destination zone, 13:00 Tokyo would be 04:00Z — before the 12:00Z cursor —
+  // and this would (wrongly) return null. It must resolve the same as with no startTimeZone at
+  // all: 14:00Z.
+  it("resolves a later leg's zoneless departure via the previous leg's zone even when a different startTimeZone is supplied", () => {
+    expect(
+      scheduleDelivery(
+        [firstLeg, { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" }],
+        { startTimeZone: "Asia/Tokyo" },
+      )?.legTimes[1]?.arrival,
+    ).toBe("2024-06-15T14:00:00Z");
+  });
+
+  // Leg 1 (New York, -04:00 in June) arrives 10:00Z, dwells 1h -> cursor 11:00Z. Leg 2 (implicit
+  // departure = cursor) lands in Tokyo (+09:00, no DST) at 16:00Z, dwells 30m -> cursor 16:30Z.
+  // Leg 3's zoneless "2024-06-16T02:00:00" is read in leg 2's Asia/Tokyo, not leg 1's New York or
+  // any startTimeZone: 02:00 - 09:00 = 2024-06-15T17:00:00Z, after the 16:30Z cursor, so it
+  // resolves and leg 3 arrives 19:00Z. (New York's -04:00 would instead give 06:00Z on the 16th —
+  // a different, clearly distinguishable instant — confirming which zone was actually used.)
+  it("resolves leg 3's zoneless departure via leg 2's timeZone, not leg 1's or startTimeZone", () => {
+    expect(
+      scheduleDelivery([
+        {
+          departure: "2024-06-15T00:00:00Z",
+          duration: "PT10H",
+          timeZone: "America/New_York",
+          dwellAfter: "PT1H",
+        },
+        { duration: "PT5H", timeZone: "Asia/Tokyo", dwellAfter: "PT30M" },
+        { departure: "2024-06-16T02:00:00", duration: "PT2H", timeZone: "UTC" },
+      ])?.legTimes[2]?.arrival,
+    ).toBe("2024-06-15T19:00:00Z");
   });
 
   // Temporal's last instant is +275760-09-13T00:00:00Z (TC39 nsMaxInstant): a leg may arrive

@@ -166,12 +166,14 @@ Sections, in this order. Each function gets one `##` headed with a claim, in the
      `null`, not a negative wait. Equal passes. Code: V6 (`null`) and V14 (equal passes). Then
      V22: the last leg's dwell is validated and echoed, but moves nothing, and V23: it is still
      validated. Link the [Connection Checker](/tools/connection-checker/).
-   - `### A departure must be exact, and a timetable names its zone`. The first leg needs a
+   - `### A departure is exact, or a local time read in a known zone`. The first leg needs a
      departure that is an instant or a zoned string (V9, V7). `startTimeZone` reads a zoneless
      first departure as a published local time (V4). It is ignored when the departure is already
      exact (V26). An invalid `startTimeZone` returns `null` even when unused (V17). A zoneless
-     departure on a later leg returns `null` (V16), and a bracket that contradicts its offset
-     returns `null` (V28). Then the resolution rule, stated once: an ambiguous wall time
+     departure on a later leg is read in the previous leg's `timeZone` — a timetable prints a
+     local time at every hub — and `startTimeZone` never applies to it (V100); the
+     missed-connection check still runs (V101). A bracket that contradicts its offset returns
+     `null` (V28). Then the resolution rule, stated once: an ambiguous wall time
      resolves to the earlier instant and a nonexistent one to the later instant. Code: V18
      (01:30 on the fall-back night, the earlier pass), V19 (writing `-05:00` picks the later
      pass), V20 (02:30 on the spring-forward night becomes 03:30) and V83 (no offset makes a
@@ -263,22 +265,23 @@ Copy `container-dwell-days.mdx`'s shape. `scenarios/index.mdx` is generated: nev
 - Append `## Multi-leg scheduling`. Its first paragraph links the four tools: "Each of these
   has a live tool: the [Delivery Scheduler](/tools/delivery-scheduler/), the [Connection
   Checker](/tools/connection-checker/), the [Timetable Reader](/tools/timetable-reader/) and
-  the [Crossing Clock](/tools/crossing-clock/)." Then six `<Mistake>` entries. Every
+  the [Crossing Clock](/tools/crossing-clock/)." Then five `<Mistake>` entries. Every
   `rightCode` imports from `@northguild/gmt/transport`. `rightSpecId` is `scheduleDelivery`
-  for M1–M4 and M6, and `crossingTime` for M5.
+  for M1–M3 and M5, and `crossingTime` for M4.
 
 | # | severity | title | wrongCode | rightCode |
 | --- | --- | --- | --- | --- |
 | M1 | high | Reading a handoff through an offset table | N1 lines up to `toLocal(arrived); // "2024-03-10T04:00"` | `const truck = {…}` then V41 |
 | M2 | high | Checking a connection against the arrival, not the arrival plus handling | N2: `Date.parse("2024-03-10T13:30:00Z") >= Date.parse("2024-03-10T12:00:00Z"); // true — but the handoff needs two hours` | V36 (`null`), then V37 |
-| M3 | medium | Giving a later leg a published local time with no zone | V40 (`null`), with its import | V37 |
-| M4 | medium | Stamping a published local time as UTC | V39 (a `Z` added to New York's 10:00) | V4 (`startTimeZone`) |
-| M5 | medium | Timing a crossing from its wall clocks | N3: `(Date.parse("2024-11-03T01:30:00") - Date.parse("2024-11-03T01:30:00")) / 36e5; // 0 — both ends read 01:30` | V49 |
-| M6 | medium | Writing an offset into a skipped hour | V83 (`null`) | V81 (the zoneless form resolves to the later instant) |
+| M3 | medium | Stamping a published local time as UTC | V39 (a `Z` added to New York's 10:00) | V4 (`startTimeZone`) |
+| M4 | medium | Timing a crossing from its wall clocks | N3: `(Date.parse("2024-11-03T01:30:00") - Date.parse("2024-11-03T01:30:00")) / 36e5; // 0 — both ends read 01:30` | V49 |
+| M5 | medium | Writing an offset into a skipped hour | V83 (`null`) | V81 (the zoneless form resolves to the later instant) |
 
-Descriptions are one or two sentences and name no standard. M3's: "Only the first leg can be
-read in `startTimeZone`. A later scheduled departure must be exact, so write its zone in
-brackets: `2024-03-10T07:30:00[America/Los_Angeles]`." M6's: "02:30 on 10 March 2024 never
+A later leg's published local time with no zone is not a mistake: it is read in the previous
+leg's `timeZone` (V40 names the same schedule as the bracketed V37), and the guide teaches it
+directly.
+
+Descriptions are one or two sentences and name no standard. M5's: "02:30 on 10 March 2024 never
 showed on a New York clock, so no offset names it. Leave the offset off and it resolves to the
 later instant, 03:30."
 
@@ -346,9 +349,12 @@ It may import `@js-temporal/polyfill` for drawing only, and `CURATED_TIMEZONES`.
     `scheduleDelivery([...legs.slice(0, k + 1), ZERO_LEG], options)?.legTimes[k + 1].arrival`,
     or `null`. Leg `k` is non-final in this call, so its dwell is applied exactly as in the
     real call (V35).
-  - `departureAt(departure, isFirst, options, lib)`: the instant a written departure names,
-    which is `scheduleDelivery([{ departure, ...ZERO_LEG }], isFirst ? options : undefined)`, or
-    `null` (V43).
+  - `departureAt(legs, k, options, lib)`: the instant leg `k`'s written departure names alone,
+    which is `scheduleDelivery([{ departure, ...ZERO_LEG }], wallOptions)`, or `null` (V43).
+    A lone leg carries no cursor, so a missed connection never enters. `wallOptions` makes the
+    library read a zoneless wall time where the real chain reads it: `options` on leg 0, and
+    `{ startTimeZone: legs[k - 1].timeZone }` on a later leg when that zone is real (the
+    library reads both the same way), else `undefined`.
 - `diagnose(legs, options, lib)`: why `scheduleDelivery` returned `null`, checked in the
   library's order (`scheduleDelivery` → `chainLegs` → `legTags`, `legDeparture`,
   `legBoundaries`). It returns `{ leg: k, reason }` or `null`.
@@ -356,11 +362,12 @@ It may import `@js-temporal/polyfill` for drawing only, and `CURATED_TIMEZONES`.
   2. `k` is the smallest index for which
      `scheduleDelivery([...legs.slice(0, k + 1), ...(k + 1 < legs.length ? [ZERO_LEG] : [])], options)`
      is `null`. Appending `ZERO_LEG` keeps leg `k` non-final, as it is in the full call.
-  3. The departure. `k === 0` with a blank departure → `no-departure`. A departure present on
-     leg 0, or on a later leg, that `departureAt` cannot resolve → `zoneless-first` (leg 0, no
-     `startTimeZone`) or `zoneless-later` (a later leg) when it is zoneless, else
-     `invalid-departure`. Zoneless means `isValidDateTime` is true and the text has no `Z`, no
-     numeric offset and no `[`.
+  3. The departure. `k === 0` with a blank departure → `no-departure`. A departure present that
+     `departureAt` cannot resolve → `invalid-departure` when it is not zoneless; when it is,
+     `zoneless-first` on leg 0 with no `startTimeZone`, else `out-of-range` — a zoneless
+     departure with a zone to be read in (`startTimeZone`, or a later leg's previous
+     `timeZone`) fails only by leaving the instant range. Zoneless means `isValidDateTime` is
+     true and the text has no `Z`, no numeric offset and no `[`.
   4. A later leg whose departure resolves, when
      `scheduleDelivery([...legs.slice(0, k), { departure, ...ZERO_LEG }], options)` is `null`
      → `missed-connection`.
@@ -378,8 +385,6 @@ It may import `@js-temporal/polyfill` for drawing only, and `CURATED_TIMEZONES`.
     date-time."
   - `zoneless-first`: "Leg 1 leaves at a wall time with no offset or zone, so it is not a
     moment. Set the start zone to read it as a published local time, or write its offset."
-  - `zoneless-later`: "Leg n's scheduled departure has no offset or zone. Only the first leg is
-    read in the start zone. A later departure must be exact, so write its zone in brackets."
   - `invalid-departure`: "Leg n's departure is not an instant, or a zoned date-time whose zone
     is real and agrees with its offset."
   - `missed-connection`: "Missed connection: leg n is scheduled to leave at {dep}, but leg n−1
@@ -419,12 +424,16 @@ This test imports the real gmt modules (by module path) to build a `TransportLib
 - `scheduleCallSource` (V2 and V4 JSDoc text verbatim; `startTimeZone` omitted when blank).
 - `formatSchedule` and `formatCrossing` (collapsing to V1, V2, V5 and V46 literals).
 - `minutesText`.
-- `readyAt` (V35: `"2024-03-10T14:00:00Z"`) and `departureAt` (V43: `"2024-03-10T13:30:00Z"`).
+- `readyAt` (V35: `"2024-03-10T14:00:00Z"`) and `departureAt` (V43: `"2024-03-10T13:30:00Z"`;
+  the zoneless `2024-03-10T06:30:00` after the Los Angeles truck gives the same instant, with
+  or without a `startTimeZone`; a zoneless first departure resolves only in `startTimeZone`; a
+  leg with no departure is `null`).
 - `diagnose`: one state per reason, asserting both the reason and that the real
   `scheduleDelivery` returns `null` for it. Use V17 `invalid-start-zone`, V9 `no-departure`,
-  V7 `zoneless-first`, V16 `zoneless-later`, V28 `invalid-departure`, V32 `missed-connection`
-  (leg index 1), V10 `invalid-duration`, V8 `negative-duration`, an unknown zone
-  `invalid-zone`, and V29 `invalid-dwell`.
+  V7 `zoneless-first`, V28 `invalid-departure`, V32 `missed-connection` (leg index 1), V10
+  `invalid-duration`, V8 `negative-duration`, an unknown zone `invalid-zone`, and V29
+  `invalid-dwell`. V16 resolves, so `diagnose` is `null` for it; with a `PT2H` dwell on leg 1
+  the same zoneless departure is `missed-connection`, not a zone problem.
 - `collectJourneyFacts` for V30 and V32.
 - `offsetTableReading("2024-03-10T12:00:00Z", "America/Los_Angeles", "2024-03-08T14:00:00Z")` →
   `{ wall: "2024-03-10T04:00", offset: "-08:00", deltaMinutes: -60 }`.
@@ -660,8 +669,8 @@ schematic Route map and a real-time-axis To-scale Gantt — behind a toggle. Wha
      leg, including blanking fields, hiding fieldsets, and inserting a mode option a preset does
      not otherwise offer.
   5. The permalink state is `permalinkOf(state)`.
-- **Do not copy `resolveWallTime`.** A zoneless departure on a later leg is `null` by the
-  library's rule, and the widget shows that rule.
+- **Do not copy `resolveWallTime`.** The widget reads a zoneless departure only through the
+  library: on leg 1 in the start zone, on a later leg in the previous leg's `timeZone`.
 - **`src/lib/transport-icons.ts`** (new, generic — not a `delivery-*` file, and imports nothing
   from one): inline SVG icons for `truck`, `rail`, `ship`, `barge`, `air` and a `generic`
   fallback, 24×24, stroke-based, `currentColor`, legible at 16px. `transportIcon(mode, options?)`
@@ -706,8 +715,8 @@ schematic Route map and a real-time-axis To-scale Gantt — behind a toggle. Wha
 - The offset-table badge reads "1 h early" on leg 1 of `truck-ship-rail` and "1 h late" on both
   legs of `fall-back-night`, and no badge disagrees on `trans-pacific`.
 - The chat seed V38 (`legs` array, no `legCount`) renders V38 and sets the leg count to 2.
-- Typing `2024-03-10T07:30:00` (zoneless) into leg 2 of `truck-ship-rail` gives `NO SIGNAL`
-  and `zoneless-later` (V34).
+- Typing `2024-03-10T07:30:00` (zoneless) into leg 2 of `truck-ship-rail` reads it on Los
+  Angeles' clock, leg 1's zone, and renders V34's ETA.
 - For each `diagnose` reason, the rendered aside text is `SCHEDULE_NULL_TEXT`'s.
 - Permalinks round-trip for every preset: `getPermalinkState()` holds only strings, and
   `encodeWidgetPermalink("delivery", s)` → `seedFromLocation` → remount gives the same output.
@@ -738,7 +747,7 @@ Copy `DwellLedger.astro`: `renderDeliverySchedulerTemplate()`, `seedFromLocation
   [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) call.
 - `<DeliveryScheduler />`.
 - "**Worth trying:**" PD1 (the ship at 06:30, a missed connection) and PD2 (leg 2's departure
-  typed with no zone).
+  typed with no zone, read on Los Angeles' clock: the connection is made).
 - A Reference paragraph linking `scheduleDelivery`, `transitTime`, `etaAtZone`, the
   [Connection Checker](/tools/connection-checker/) and the guide.
 
@@ -1256,7 +1265,7 @@ where leg 2 is `"departure2":<below>,"duration2":"P11D","timeZone2":"Asia/Tokyo"
 | id | kind | JSON | shows |
 | --- | --- | --- | --- |
 | PD1 | delivery | `TSR` with `departure2` `"2024-03-10T06:30:00[America/Los_Angeles]"` | V32 `null`, missed |
-| PD2 | delivery | `TSR` with `departure2` `"2024-03-10T07:30:00"` | V34 `null`, `zoneless-later` |
+| PD2 | delivery | `TSR` with `departure2` `"2024-03-10T07:30:00"` | V34, read on Los Angeles' clock |
 | PC1 | connection | `{"inboundDeparture":"2024-06-14T22:10:00+02:00[Europe/Berlin]","inboundDuration":"PT15H","portZone":"Europe/Amsterdam","handlingMinutes":"51","onwardDeparture":"2024-06-15T14:00:00[Europe/Amsterdam]","onwardDuration":"PT12H","onwardZone":"Europe/Rome"}` | V61 `null`, missed by 1 min |
 | PC2 | connection | the `spring-forward` preset's fields, `handlingMinutes` `"45"` | V62 `null` |
 | PC3 | connection | `{"inboundDeparture":"2024-03-08T08:00:00-06:00[America/Chicago]","inboundDuration":"PT46H","portZone":"America/Los_Angeles","handlingMinutes":"120","onwardDeparture":"2024-03-10T06:30:00[America/Los_Angeles]","onwardDuration":"P11D","onwardZone":"Asia/Tokyo"}` | V73 `null` (V74 at 90, V75 at 91) |
@@ -1424,7 +1433,7 @@ Prefix every shell with `eval "$(fnm env)" && fnm use`. `$WT` is
   the axis would break the exact-time rule the owner asked for.
 - **R10. Writing an offset "picks the other pass" only in a repeated hour.** In a skipped
   hour, every offset returns `null` (V83). *Resolution:* the Timetable Reader states both, and
-  mistake M6 covers the second.
+  mistake M5 covers the second.
 - **R11. The Connection Checker's onward leg falls back to `PT0S` in the port zone** when the
   chat omits it. That is a default, but it cannot change the verdict. *Resolution:* the hint
   says so, and the printed call shows it.
@@ -1447,7 +1456,7 @@ Nothing. The contract matches the final source, and all section 9 rows pass agai
 ## 9. Verified values
 
 Computed from the final `packages/gmt/src` (compiled with the package's own
-`tsconfig.build.json`), in `TZ=UTC`, `America/Los_Angeles` and `Asia/Tokyo`. All 103 rows pass.
+`tsconfig.build.json`), in `TZ=UTC`, `America/Los_Angeles` and `Asia/Tokyo`. All 107 rows pass.
 Appendix Z is the script and holds every value in full. The table below names each row. A
 result is written out in full in appendix Z, and pages copy it from there.
 
@@ -1462,11 +1471,11 @@ Shorthand used only in this table: `truck` = `{ departure: "2024-03-08T08:00:00-
 
 | id | what | result, in short |
 | --- | --- | --- |
-| V1–V11 | the `scheduleDelivery` JSDoc examples, verbatim, in file order (V8 is the negative leg, V9 no departure, V10 `P1M`, V11 `"legs"`) | as in the JSDoc |
+| V1–V11 | the `scheduleDelivery` JSDoc examples, verbatim, in file order, with V98 and V99 between V4 and V5 (V8 is the negative leg, V9 no departure, V10 `P1M`, V11 `"legs"`) | as in the JSDoc |
 | V12, V13 | `transitTime("2024-06-15T10:00:00Z", "PT36H")`, `etaAtZone("2024-06-16T22:00:00Z", "Asia/Tokyo")` | `"2024-06-16T22:00:00Z"`, `"2024-06-17T07:00:00+09:00[Asia/Tokyo]"` |
 | V14 | V6 with the second departure at 12:00Z: equal passes | eta `2024-06-15T13:00:00+00:00[UTC]` |
 | V15 | a `PT0S` leg | eta `2024-06-15T10:00:00+00:00[UTC]` |
-| V16 | a zoneless departure on leg 2 | `null` |
+| V16 | a zoneless 12:00 on leg 2, read in leg 1's UTC | eta `2024-06-15T13:00:00+00:00[UTC]` |
 | V17 | `startTimeZone: "Mars/Olympus_Mons"`, unused | `null` |
 | V18 | `2024-11-03T01:30:00[America/New_York]`, `PT1H` | arrival `06:30Z` (it left 05:30Z, the earlier pass) |
 | V19 | `2024-11-03T01:30:00-05:00[America/New_York]`, `PT1H` | arrival `07:30Z` (the later pass) |
@@ -1483,12 +1492,12 @@ Shorthand used only in this table: `truck` = `{ departure: "2024-03-08T08:00:00-
 | V31 | `[truck, ship("…07:30:00[America/Los_Angeles]"), rail]` | eta `2024-03-23T02:00:00+09:00[Asia/Tokyo]` |
 | V32 | the same at 06:30 | `null` |
 | V33 | the same at 07:00 | as V30 |
-| V34 | the same at a zoneless `2024-03-10T07:30:00` | `null` |
+| V34 | the same at a zoneless `2024-03-10T07:30:00`, read in Los Angeles | as V31 |
 | V35 | `[truck, ZERO]` | leg 2 arrival `2024-03-10T14:00:00Z` (the ready instant) |
 | V36, V37 | `[truck, shipNoDwell(06:30 LA)]`, `[truck, shipNoDwell(07:30 LA)]` | `null`; eta `2024-03-21T23:30:00+09:00[Asia/Tokyo]` |
 | V38 | the Delivery Scheduler starter | eta `2024-03-21T21:00:00+09:00[Asia/Tokyo]` |
 | V39 | New York's 10:00 stamped `Z` | eta `2024-06-15T11:00:00+00:00[UTC]` |
-| V40 | `[truck, shipNoDwell("2024-03-10T07:30:00")]` | `null` |
+| V40 | `[truck, shipNoDwell("2024-03-10T07:30:00")]`, read in Los Angeles | as V37 |
 | V41 | `[truck]` | eta `2024-03-10T05:00:00-07:00[America/Los_Angeles]` |
 | V42, V43 | the probe for 06:30 LA after the truck; 06:30 LA alone | `null`; `2024-03-10T13:30:00Z` |
 | V44, V45 | `etaAtZone` of 14:00Z and 13:30Z in Los Angeles | `07:00-07:00`, `06:30-07:00` |
@@ -1510,6 +1519,8 @@ Shorthand used only in this table: `truck` = `{ departure: "2024-03-08T08:00:00-
 | V94 | the Crossing Clock starter, resolved | `PT7H` |
 | V95, V96 | Timetable Reader `leavesAt`, `fall-back`'s once-only rows: `00:30` and `02:30` | `2024-11-03T00:30:00-04:00[America/New_York]`; `2024-11-03T02:30:00-05:00[America/New_York]` |
 | V97 | Timetable Reader `leavesAt`, `offset-picks`' `01:30` with `-05:00` written | `2024-11-03T01:30:00-05:00[America/New_York]` |
+| V98, V99 | the two later-leg wall-time JSDoc examples: a zoneless 13:00, then 11:00, after a UTC leg with a `PT2H` dwell | eta `2024-06-15T14:00:00+00:00[UTC]`; `null` (inside the dwell) |
+| V100, V101 | the guide's Tokyo pair: a zoneless 20:00, then 18:30, after a leg landing in Tokyo at 19:00 | eta `2024-06-15T12:00:00+00:00[UTC]`; `null` (before the arrival) |
 | N1a–N1d, N2, N3 | the naive plain-JavaScript values | `"2024-03-10T12:00:00.000Z"`, `"2024-03-10T04:00"`, `"2024-03-10T06:00"`, `true`; `true`; `0` |
 
 ## 10. Internal-link check (D6)
@@ -1617,7 +1628,8 @@ const rows = [
     { eta: "2024-06-15T13:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T10:00:00+00:00[UTC]", dwellAfter: "PT2H" }, { arrival: "2024-06-15T13:00:00Z", localArrival: "2024-06-15T13:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
   ["V15", () => scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT0S", timeZone: "UTC" }]),
     { eta: "2024-06-15T10:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T10:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
-  ["V16", () => scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }, { departure: "2024-06-15T12:00:00", duration: "PT1H", timeZone: "UTC" }]), null],
+  ["V16", () => scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }, { departure: "2024-06-15T12:00:00", duration: "PT1H", timeZone: "UTC" }]),
+    { eta: "2024-06-15T13:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T11:00:00Z", localArrival: "2024-06-15T11:00:00+00:00[UTC]", dwellAfter: "PT0S" }, { arrival: "2024-06-15T13:00:00Z", localArrival: "2024-06-15T13:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
   ["V17", () => scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Mars/Olympus_Mons" }), null],
   ["V18", () => scheduleDelivery([{ departure: "2024-11-03T01:30:00[America/New_York]", duration: "PT1H", timeZone: "America/New_York" }]),
     { eta: "2024-11-03T01:30:00-05:00[America/New_York]", legTimes: [{ arrival: "2024-11-03T06:30:00Z", localArrival: "2024-11-03T01:30:00-05:00[America/New_York]", dwellAfter: "PT0S" }] }],
@@ -1648,7 +1660,8 @@ const rows = [
   ["V32", () => scheduleDelivery([truck, ship("2024-03-10T06:30:00[America/Los_Angeles]"), rail]), null],
   ["V33", () => scheduleDelivery([truck, ship("2024-03-10T07:00:00[America/Los_Angeles]"), rail]),
     { eta: "2024-03-23T01:30:00+09:00[Asia/Tokyo]", legTimes: [LA_TRUCK, { arrival: "2024-03-21T14:00:00Z", localArrival: "2024-03-21T23:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-03-22T16:30:00Z", localArrival: "2024-03-23T01:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }],
-  ["V34", () => scheduleDelivery([truck, ship("2024-03-10T07:30:00"), rail]), null],
+  ["V34", () => scheduleDelivery([truck, ship("2024-03-10T07:30:00"), rail]),
+    { eta: "2024-03-23T02:00:00+09:00[Asia/Tokyo]", legTimes: [LA_TRUCK, { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-03-22T17:00:00Z", localArrival: "2024-03-23T02:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }],
   ["V35", () => scheduleDelivery([truck, ZERO]),
     { eta: "2024-03-10T14:00:00+00:00[UTC]", legTimes: [LA_TRUCK, { arrival: "2024-03-10T14:00:00Z", localArrival: "2024-03-10T14:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
   ["V36", () => scheduleDelivery([truck, shipNoDwell("2024-03-10T06:30:00[America/Los_Angeles]")]), null],
@@ -1658,7 +1671,8 @@ const rows = [
     { eta: "2024-03-21T21:00:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT0S", mode: "truck" }, { arrival: "2024-03-21T12:00:00Z", localArrival: "2024-03-21T21:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] }],
   ["V39", () => scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }]),
     { eta: "2024-06-15T11:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T11:00:00Z", localArrival: "2024-06-15T11:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
-  ["V40", () => scheduleDelivery([truck, shipNoDwell("2024-03-10T07:30:00")]), null],
+  ["V40", () => scheduleDelivery([truck, shipNoDwell("2024-03-10T07:30:00")]),
+    { eta: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", legTimes: [LA_TRUCK, { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] }],
   ["V41", () => scheduleDelivery([truck]), { eta: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", legTimes: [LA_TRUCK] }],
   // widget probes: a departure resolved alone; the scheduled departure before the cursor
   ["V42", () => scheduleDelivery([truck, { departure: "2024-03-10T06:30:00[America/Los_Angeles]", ...ZERO }]), null],
@@ -1739,6 +1753,14 @@ rows.push(
   ["V95", () => T("2024-11-03T00:30:00", NY, "PT0S", NY).legTimes[0].localArrival, "2024-11-03T00:30:00-04:00[America/New_York]"],
   ["V96", () => T("2024-11-03T02:30:00", NY, "PT0S", NY).legTimes[0].localArrival, "2024-11-03T02:30:00-05:00[America/New_York]"],
   ["V97", () => T("2024-11-03T01:30:00-05:00[America/New_York]", NY, "PT0S", NY).legTimes[0].localArrival, "2024-11-03T01:30:00-05:00[America/New_York]"],
+  // scheduleDelivery JSDoc, verbatim: the two later-leg wall-time examples (between V4 and V5 in the file)
+  ["V98", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { departure: "2024-06-15T13:00:00", duration: "PT1H", timeZone: "UTC" }]),
+    { eta: "2024-06-15T14:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T10:00:00+00:00[UTC]", dwellAfter: "PT2H" }, { arrival: "2024-06-15T14:00:00Z", localArrival: "2024-06-15T14:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
+  ["V99", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { departure: "2024-06-15T11:00:00", duration: "PT1H", timeZone: "UTC" }]), null],
+  // the guide: a later leg's printed time read on the previous leg's clock (Tokyo)
+  ["V100", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" }, { departure: "2024-06-15T20:00:00", duration: "PT1H", timeZone: "UTC" }]),
+    { eta: "2024-06-15T12:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T19:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S" }, { arrival: "2024-06-15T12:00:00Z", localArrival: "2024-06-15T12:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
+  ["V101", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" }, { departure: "2024-06-15T18:30:00", duration: "PT1H", timeZone: "UTC" }]), null],
 );
 
 // Naive plain JavaScript, TZ-independent (every parsed string carries Z or an offset, or both sides are zoneless)

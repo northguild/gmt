@@ -364,13 +364,18 @@ describe("mountDeliveryScheduler", () => {
     ).toContain("2024-03-21T21:00:00+09:00[Asia/Tokyo]");
   });
 
-  it("gives NO SIGNAL and zoneless-later for a zoneless leg 2 departure", async () => {
+  // The truck lands in Los Angeles at 12:00Z on 10 March and is ready at
+  // 14:00Z after its 2-hour dwell. The ship's printed 07:30 is read on Los
+  // Angeles' clock — -07:00 after that morning's spring-forward — as 14:30Z,
+  // so the connection is made and the rail leg lands in Tokyo on the 23rd.
+  it("reads a zoneless leg 2 departure on leg 1's clock", async () => {
     const { root } = await mount();
     choosePreset(root, "truck-ship-rail");
     type(root, "departure-2", "2024-03-10T07:30:00");
-    expect(q(root, "delivery-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "Only the first leg is read in the start zone",
+    const output = q(root, "delivery-output").textContent!;
+    expect(output).not.toBe("NO SIGNAL");
+    expect(output.replace(/\n\s+/g, " ")).toContain(
+      "2024-03-23T02:00:00+09:00[Asia/Tokyo]",
     );
   });
 

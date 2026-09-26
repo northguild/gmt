@@ -295,22 +295,47 @@ export function readyAt(
 }
 
 /**
- * The exact instant a written `departure` names, alone: a single zero-length
- * leg with that departure. `isFirst` decides whether `options` (and so
- * `startTimeZone`) applies — only the first leg ever reads it. `null` when
- * the departure does not resolve.
+ * The exact instant leg `k`'s written `departure` names, alone: a single
+ * zero-length leg with that departure, so no cursor — and no missed
+ * connection — enters. Its zoneless wall time is read where
+ * `scheduleDelivery` reads it: in `startTimeZone` on the first leg, in the
+ * previous leg's own `timeZone` on any later one. `null` when the leg has no
+ * departure or it does not resolve.
  */
 export function departureAt(
-  departure: string,
-  isFirst: boolean,
+  legs: readonly ScheduleLeg[],
+  k: number,
   options: ScheduleOptions | undefined,
   lib: TransportLib,
 ): string | null {
+  const departure = legs[k]?.departure;
+  if (departure === undefined) return null;
   const result = lib.scheduleDelivery(
     [{ departure, ...ZERO_LEG }],
-    isFirst ? options : undefined,
+    wallTimeOptions(legs, k, options, lib),
   );
   return result?.legTimes[0]?.arrival ?? null;
+}
+
+/**
+ * The options under which a lone first leg reads leg `k`'s departure the way
+ * the real chain does. The first leg keeps `options` itself, so an invalid
+ * `startTimeZone` still fails it. A later leg reads its wall time in the
+ * previous leg's `timeZone`, passed as the start zone — the library resolves
+ * both the same way — or in no zone when that one is not real, since the
+ * real chain fails at the previous leg before it gets this far.
+ */
+function wallTimeOptions(
+  legs: readonly ScheduleLeg[],
+  k: number,
+  options: ScheduleOptions | undefined,
+  lib: TransportLib,
+): ScheduleOptions | undefined {
+  if (k === 0) return options;
+  const previous = legs[k - 1]?.timeZone;
+  return previous !== undefined && lib.isValidTimeZone(previous)
+    ? { startTimeZone: previous }
+    : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -321,7 +346,6 @@ export type NullReason =
   | "invalid-start-zone"
   | "no-departure"
   | "zoneless-first"
-  | "zoneless-later"
   | "invalid-departure"
   | "missed-connection"
   | "invalid-duration"
@@ -398,15 +422,19 @@ export function diagnose(
 
   let depInstant: string | null;
   if (departure !== undefined) {
-    depInstant = departureAt(departure, k === 0, options, lib);
+    depInstant = departureAt(legs, k, options, lib);
     if (depInstant === null) {
+      // A zoneless departure with a zone to be read in — `startTimeZone` on
+      // the first leg, the previous leg's own `timeZone` on any later one —
+      // fails only by leaving the instant range. Only the first leg can lack
+      // that zone.
       return {
         leg: k,
-        reason: isZonelessDeparture(departure, lib)
-          ? k === 0
+        reason: !isZonelessDeparture(departure, lib)
+          ? "invalid-departure"
+          : k === 0 && startTimeZone === undefined
             ? "zoneless-first"
-            : "zoneless-later"
-          : "invalid-departure",
+            : "out-of-range",
       };
     }
     if (k > 0) {
@@ -455,8 +483,6 @@ export function scheduleNullText(
       return `Leg ${n} has no departure. The first leg needs one: an instant, or a zoned date-time.`;
     case "zoneless-first":
       return `Leg ${n} leaves at a wall time with no offset or zone, so it is not a moment. Set the start zone to read it as a published local time, or write its offset.`;
-    case "zoneless-later":
-      return `Leg ${n}'s scheduled departure has no offset or zone. Only the first leg is read in the start zone. A later departure must be exact, so write its zone in brackets.`;
     case "invalid-departure":
       return `Leg ${n}'s departure is not an instant, or a zoned date-time whose zone is real and agrees with its offset.`;
     case "missed-connection":
@@ -529,7 +555,7 @@ export function collectJourneyFacts(
     scheduled.push(leg.departure);
     departures.push(
       leg.departure !== undefined
-        ? departureAt(leg.departure, i === 0, options, lib)
+        ? departureAt(legs, i, options, lib)
         : (readies[i - 1] ?? null),
     );
     const isFinal = result !== null && i === legs.length - 1;
@@ -543,12 +569,7 @@ export function collectJourneyFacts(
     // where it was scheduled to leave.
     const missedLeg = legs[failure.leg]!;
     scheduled[failure.leg] = missedLeg.departure;
-    departures[failure.leg] = departureAt(
-      missedLeg.departure!,
-      failure.leg === 0,
-      options,
-      lib,
-    );
+    departures[failure.leg] = departureAt(legs, failure.leg, options, lib);
   }
 
   return {

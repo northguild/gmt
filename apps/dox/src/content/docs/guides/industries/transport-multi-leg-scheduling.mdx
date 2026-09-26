@@ -128,7 +128,7 @@ scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZon
 
 Open the handoff on its own in the [Connection Checker](/tools/connection-checker/).
 
-### A departure must be exact, and a timetable names its zone
+### A departure is exact, or a local time read in a known zone
 
 The first leg needs a departure that is an instant or a zoned string.
 
@@ -152,16 +152,28 @@ scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZon
 // null — an invalid startTimeZone returns null even unused
 ```
 
-A zoneless departure on a later leg returns `null` — only the first leg is ever read in
-`startTimeZone` — and a bracket that contradicts its offset also returns `null`.
+A timetable prints a local time at every hub, not just at the origin. A zoneless departure on a
+later leg is read in the previous leg's `timeZone`, because that is where the leg leaves from.
+`startTimeZone` never applies to it, and the missed-connection check still runs.
 
 ```typescript
 scheduleDelivery([
-  { departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" },
-  { departure: "2024-06-15T12:00:00", duration: "PT1H", timeZone: "UTC" },
+  { departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" },
+  { departure: "2024-06-15T20:00:00", duration: "PT1H", timeZone: "UTC" },
 ]);
-// null — leg 2's departure has no offset or zone
+// { eta: "2024-06-15T12:00:00+00:00[UTC]", … } — leg 1 lands in Tokyo at 19:00, and leg 2's
+// printed 20:00 is read on Tokyo's clock: 11:00Z
 
+scheduleDelivery([
+  { departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" },
+  { departure: "2024-06-15T18:30:00", duration: "PT1H", timeZone: "UTC" },
+]);
+// null — 18:30 in Tokyo is 09:30Z, before leg 1 lands: a missed connection
+```
+
+A bracket that contradicts its offset returns `null`.
+
+```typescript
 scheduleDelivery([{ departure: "2024-06-15T10:00:00-05:00[America/New_York]", duration: "PT1H", timeZone: "UTC" }]);
 // null — New York is -04:00 in June: the bracket and the offset disagree
 ```

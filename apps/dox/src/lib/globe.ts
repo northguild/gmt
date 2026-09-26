@@ -499,7 +499,14 @@ export async function initGlobe(
     sunZ: number,
     moving: boolean,
   ): void {
-    if (!atmosphereCtx) return;
+    if (!atmosphereCtx) {
+      // No offscreen 2D context available: skip the buffer entirely rather
+      // than lose the ring outright. Same even-ring degradation as the
+      // "older engines" conic-gradient fallback below, just painted straight
+      // onto the main canvas every frame instead of cached.
+      drawAtmosphereDirect(cx, cy, radius, sunZ);
+      return;
+    }
     const outer = radius * ATMOSPHERE_REACH;
     const size = Math.max(1, Math.ceil(outer * 2 * dpr));
     const precision = moving ? 2 : 3;
@@ -571,6 +578,34 @@ export async function initGlobe(
     ctx.drawImage(atmosphereCanvas, cx - outer, cy - outer, outer * 2, outer * 2);
   }
 
+  /**
+   * Fallback for `drawAtmosphere` when the offscreen 2D context is
+   * unavailable: the plain radial glow, painted straight onto `ctx` every
+   * frame, same as before the buffer existed. No conic day/night mask — that
+   * needs the buffer to composite into in isolation — so this is always the
+   * even ring, like the "older engines" case above.
+   */
+  function drawAtmosphereDirect(
+    cx: number,
+    cy: number,
+    radius: number,
+    sunZ: number,
+  ): void {
+    const outer = radius * ATMOSPHERE_REACH;
+    const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
+    const glow = ctx.createRadialGradient(cx, cy, radius, cx, cy, outer);
+    glow.addColorStop(
+      0,
+      withAlpha(palette.cyan, Math.min(1, palette.atmosphereAlpha * backlight)),
+    );
+    glow.addColorStop(1, withAlpha(palette.cyan, 0));
+    ctx.beginPath();
+    ctx.arc(cx, cy, outer, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+    ctx.fillStyle = glow;
+    ctx.fill("evenodd");
+  }
+
   /** Map an IANA id to the boundary dataset's `tzid` value. */
   function boundaryKey(id: string): string {
     return id === "UTC" ? "Etc/UTC" : id;
@@ -612,11 +647,13 @@ export async function initGlobe(
 
     const path = geoPath(projection, ctx);
     const quiet = dragging || inertiaActive;
-    // Distinct from `quiet`: also true during ambient auto-spin, which keeps
-    // the grid/labels at full strength (that's `quiet`'s job) but still
-    // benefits from the shading/atmosphere buffers below being reused across
-    // frames instead of repainted on every one of a continuous rotation.
-    const inMotion = quiet || ambientActive;
+    // Every animating state `needsFrame()` tracks — drag, inertia, ambient
+    // spin, a focus tween or zoom easing — redraws every frame, so all five
+    // benefit from the shading/atmosphere buffers below being reused across
+    // frames instead of repainted on every one. Distinct from `quiet`, which
+    // deliberately excludes ambient spin/focus/zoom so the grid/labels stay
+    // at full strength during those.
+    const inMotion = needsFrame();
     // Computed once per frame (not once per call site) so the day/night
     // wash, the terminator line, and each dot's night/day classification
     // below all agree on the exact same instant — `getUnixNow()` ticking
@@ -716,8 +753,8 @@ export async function initGlobe(
     // twice that many `geoDistance` calls and allocated twice that many
     // tuples every single frame. `cos(geoDistance(a, b)) === dot(unit(a),
     // unit(b))`, so the horizon cull (`geoDistance > π/2`) becomes `dot < 0`,
-    // and the day/night cosine becomes the dot product directly — both exact,
-    // not approximations.
+    // and the day/night cosine becomes the dot product directly — both
+    // mathematically equivalent, not approximations.
     const centreVec = unitVector(-rotation[0], -rotation[1]);
     const subsolarVec = unitVector(subsolar[0], subsolar[1]);
     const zoneCoord: [number, number] = [0, 0];

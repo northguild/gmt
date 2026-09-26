@@ -159,6 +159,44 @@ describe("verdict", () => {
     expect(v.kind).toBe("missed");
     expect(v.text).toContain("1 min");
   });
+
+  // The train's printed 14:00, with no zone, is read on the port's clock —
+  // the inbound leg lands in Amsterdam — as 12:00Z, the same instant the
+  // bracketed form names. At 45 min handling the cargo is ready at 11:55Z.
+  it("reads a zoneless onward departure on the port's clock: made", () => {
+    const state: ConnectionState = {
+      inboundDeparture: "2024-06-14T22:10:00+02:00[Europe/Berlin]",
+      inboundDuration: "PT15H",
+      portZone: "Europe/Amsterdam",
+      handlingMinutes: "45",
+      onwardDeparture: "2024-06-15T14:00:00",
+      onwardDuration: "PT12H",
+      onwardZone: "Europe/Rome",
+    };
+    const v = verdict(legsOf(state), lib);
+    expect(v.kind).toBe("made");
+    expect(v.text).toContain("5 min");
+    expect(v.departureLocal).toBe(
+      "2024-06-15T14:00:00+02:00[Europe/Amsterdam]",
+    );
+  });
+
+  // Same zoneless 14:00, but 51 min handling makes the cargo ready at 12:01Z:
+  // the departure resolves, so this is a missed connection, not "no verdict".
+  it("reads a zoneless onward departure on the port's clock: missed by 1 minute", () => {
+    const state: ConnectionState = {
+      inboundDeparture: "2024-06-14T22:10:00+02:00[Europe/Berlin]",
+      inboundDuration: "PT15H",
+      portZone: "Europe/Amsterdam",
+      handlingMinutes: "51",
+      onwardDeparture: "2024-06-15T14:00:00",
+      onwardDuration: "PT12H",
+      onwardZone: "Europe/Rome",
+    };
+    const v = verdict(legsOf(state), lib);
+    expect(v.kind).toBe("missed");
+    expect(v.text).toContain("1 min");
+  });
 });
 
 describe("readArgs / matchPreset / permalinkOf", () => {

@@ -157,6 +157,16 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
+  /* The canvas is appended to the stage *after* this cluster (globe.ts appends it
+      to the host the template already populated), and both are absolutely
+      positioned with `z-index: auto` — so tree order alone put the full-stage
+      canvas on top, swallowing every click meant for these buttons. 3 puts the
+      cluster above the canvas and above .gmt-globe-tooltip (z-index 2), so a
+      selected zone near the corner cannot paint over the controls either. Scoped
+      inside .gmt-globe's own stacking context (container-type: inline-size
+      implies layout containment), so it can never climb over the sticky header
+      or the chat rail's chrome. */
+  z-index: 3;
   /* Ambient chrome: hidden at rest so the globe reads as a clean object, and
      fade-scaled in only on pointer hover or keyboard focus (below).
      `pointer-events: none` while hidden so an invisible button can never take

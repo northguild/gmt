@@ -148,27 +148,6 @@ scheduleDelivery([truck, laterShip]);
 
 <Mistake
   severity="medium"
-  title="Giving a later leg a published local time with no zone"
-  description="Only the first leg can be read in startTimeZone. A later scheduled departure must be exact, so write its zone in brackets: 2024-03-10T07:30:00[America/Los_Angeles]."
-  wrongCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
-
-const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
-const ship = { departure: "2024-03-10T07:30:00", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
-scheduleDelivery([truck, ship]);
-// null — leg 2's departure has no offset or zone`}
-  rightCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
-
-const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
-const ship = { departure: "2024-03-10T07:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
-scheduleDelivery([truck, ship]);
-// { eta: "2024-03-21T23:30:00+09:00[Asia/Tokyo]",
-//   legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" },
-//     { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] }`}
-  rightSpecId="scheduleDelivery"
-/>
-
-<Mistake
-  severity="medium"
   title="Stamping a published local time as UTC"
   description="A published departure with no offset is a local time in the zone it was announced in, not UTC. Adding a bare Z reads New York's 10:00 as 10:00 UTC — four hours early in June. Read it through startTimeZone and scheduleDelivery adds the zone's real offset."
   wrongCode={`import { scheduleDelivery } from "@northguild/gmt/transport";

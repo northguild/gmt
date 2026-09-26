@@ -217,14 +217,11 @@
    * touched, not in one sweep — see context/dox/reference/design-system.md.
    *
    * 12px (0.75rem) is a site-wide a11y floor: no rendered text may compute
-   * smaller, enforced by src/lib/font-floor.test.ts. --gmt-text-2xs and
-   * --gmt-text-xs both used to sit under that floor (0.65rem/0.7rem) as two
-   * distinct steps; raising either without the other would have left them out
-   * of order, so both now sit exactly at the floor and read identically. --gmt-text-sm,
+   * smaller, enforced by src/lib/font-floor.test.ts. --gmt-text-xs used to sit
+   * under that floor (0.7rem); raised to sit exactly at it. --gmt-text-sm,
    * --gmt-text-base and --gmt-text-md are nudged up by one 0.05rem step each so the scale
    * stays strictly increasing above the floor; --gmt-text-lg/xl are unchanged.
    */
-  --gmt-text-2xs: 0.75rem;
   --gmt-text-xs: 0.75rem;
   --gmt-text-sm: 0.8rem;
   --gmt-text-base: 0.85rem;

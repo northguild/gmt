@@ -45,7 +45,8 @@ connection](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22
 scheduleDelivery returns null, and the reason aside names why. Then [leg 2's
 departure typed with no
 zone](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-03-08T08%3A00%3A00-06%3A00%5BAmerica%2FChicago%5D%22%2C%22duration1%22%3A%22PT46H%22%2C%22timeZone1%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter1%22%3A%22PT2H%22%2C%22mode1%22%3A%22truck%22%2C%22duration2%22%3A%22P11D%22%2C%22timeZone2%22%3A%22Asia%2FTokyo%22%2C%22dwellAfter2%22%3A%22PT24H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT2H30M%22%2C%22timeZone3%22%3A%22Asia%2FTokyo%22%2C%22mode3%22%3A%22rail%22%2C%22departure2%22%3A%222024-03-10T07%3A30%3A00%22%7D) —
-a later leg's departure must be exact, so a bare wall time returns null too.
+the timetable's printed 07:30 is read on Los Angeles' clock, where the truck
+lands, and the ship makes the connection.
 
 Reference: [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/),
 [`transitTime`](/reference/transport/calculate/transitTime/) and
