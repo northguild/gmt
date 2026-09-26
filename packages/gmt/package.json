@@ -55,6 +55,9 @@
       "calendar/calculate": [
         "./dist/calendar/calculate/index.d.ts"
       ],
+      "calendar/hours": [
+        "./dist/calendar/hours/index.d.ts"
+      ],
       "calendar/validate": [
         "./dist/calendar/validate/index.d.ts"
       ],
@@ -289,6 +292,10 @@
     "./calendar/calculate": {
       "types": "./dist/calendar/calculate/index.d.ts",
       "default": "./dist/calendar/calculate/index.js"
+    },
+    "./calendar/hours": {
+      "types": "./dist/calendar/hours/index.d.ts",
+      "default": "./dist/calendar/hours/index.js"
     },
     "./calendar/validate": {
       "types": "./dist/calendar/validate/index.d.ts",

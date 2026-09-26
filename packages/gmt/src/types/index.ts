@@ -18,6 +18,7 @@ export * from "./free-time-options";
 export * from "./interval";
 export * from "./now-unit";
 export * from "./offset";
+export * from "./operating-schedule";
 export * from "./overflow";
 export * from "./relative-date-time-unit";
 export * from "./relative-date-unit";

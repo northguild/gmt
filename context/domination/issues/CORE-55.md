@@ -19,27 +19,44 @@ One implementation of "weekday × local time window, with holidays and one-off o
 
 - `packages/gmt/src/types/operating-schedule.ts`:
   - `LocalWindow` is `{ from: string, to: string }` — local wall times; `to` at or before `from` means the window wraps past midnight.
-  - `OperatingSchedule` is `{ timeZone: string, weekly: Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7, LocalWindow[]>>, holidays?: string[], overrides?: { date: string, windows: LocalWindow[] }[] }` — ISO weekdays; a holiday date is closed unless an override says otherwise; an override replaces that date's windows entirely.
+  - `OperatingSchedule` is `{ timeZone: string, weekly: Partial<Record<IsoWeekday, LocalWindow[]>>, holidays?: string[] | BusinessCalendar, overrides?: OperatingOverride[] }` — ISO weekdays; a holiday date is closed unless an override says otherwise; an override replaces that date's windows entirely. `IsoWeekday` is `1 | 2 | 3 | 4 | 5 | 6 | 7`; `OperatingOverride` is `{ date: string, windows: LocalWindow[] }`.
 - `packages/gmt/src/calendar/hours/recurringWindows.ts`:
   - `recurringWindows(weekly: OperatingSchedule['weekly'], range: Interval, timeZone: string, options?: { disambiguation?: Disambiguation }): Interval[]` — The concrete instants of a weekly pattern inside a range, merged where windows touch. No holidays; the primitive under everything else.
 - `packages/gmt/src/calendar/hours/operatingIntervals.ts`:
   - `operatingIntervals(schedule: OperatingSchedule, range: Interval, options?): Interval[]` — `recurringWindows` with holidays removed and overrides applied.
-- `packages/gmt/src/calendar/hours/operatingState.ts`:
-  - `isOpenAt(isoString: string, schedule: OperatingSchedule): boolean`
-  - `nextOpenAt(isoString: string, schedule: OperatingSchedule, options?: { within?: string }): string` — The next opening instant at or after the input; `''` when none within the search horizon.
-  - `nextCloseAt(isoString: string, schedule: OperatingSchedule, options?): string`
-- `packages/gmt/src/calendar/hours/operatingTime.ts`:
-  - `operatingTimeBetween(start: string, end: string, schedule: OperatingSchedule): string` — Exact open time elapsed, as an ISO duration.
-  - `addOperatingTime(start: string, duration: string, schedule: OperatingSchedule, options?: { within?: string }): string` — The instant at which `duration` of open time has elapsed; the service-level deadline.
+- `packages/gmt/src/calendar/hours/isOpenAt.ts`, `nextOpenAt.ts`, `nextCloseAt.ts` (one public function per file, the repo's convention):
+  - `isOpenAt(isoString: string, schedule: OperatingSchedule, options?: { disambiguation? }): boolean`
+  - `nextOpenAt(isoString: string, schedule: OperatingSchedule, options?: { within?: string, disambiguation? }): string` — The first open instant at or after the input (the input itself when open); `''` when none within the search horizon.
+  - `nextCloseAt(isoString: string, schedule: OperatingSchedule, options?: { within?: string, disambiguation? }): string` — The first closed instant at or after the input (the input itself when closed).
+- `packages/gmt/src/calendar/hours/operatingTimeBetween.ts`, `addOperatingTime.ts`:
+  - `operatingTimeBetween(start: string, end: string, schedule: OperatingSchedule, options?: { disambiguation? }): string` — Exact open time elapsed, as an ISO duration.
+  - `addOperatingTime(start: string, duration: string, schedule: OperatingSchedule, options?: { within?: string, disambiguation? }): string` — The instant at which `duration` of open time has elapsed; the service-level deadline.
+- One walker, `packages/gmt/src/internal/operatingSchedule.ts`, serves all seven. Subpath `@northguild/gmt/calendar/hours`.
 
 ## Design notes
 
-- **Windows are local wall times, so every edge inherits CORE-4.** A window edge that falls in a nonexistent local hour on a spring-forward night, or in a repeated hour on a fall-back night, is resolved with `resolveLocal` under the `disambiguation` option, whose default (`'compatible'`) and behaviour are stated in the JSDoc using the [LOCAL_TIME_RESOLUTION.md](../../reference/LOCAL_TIME_RESOLUTION.md) vocabulary. A 23:00–06:00 window is 23 or 25 hours long on those nights, and the function says which.
+- **Windows are local wall times, so every edge inherits CORE-4.** A window edge that falls in a nonexistent local hour on a spring-forward night, or in a repeated hour on a fall-back night, is resolved with `resolveLocal` under the `disambiguation` option, which applies Temporal's [DisambiguatePossibleEpochNanoseconds](https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds), whose default (`'compatible'`) and behaviour are stated in the JSDoc using the [LOCAL_TIME_RESOLUTION.md](../../reference/LOCAL_TIME_RESOLUTION.md) vocabulary. A 23:00–06:00 window is 23 or 25 hours long on those nights, and the function says which.
+- **Windows are half-open**, as [RFC 5545 §3.6.1](https://www.rfc-editor.org/rfc/rfc5545#section-3.6.1) (`DTEND` is non-inclusive) and SQL:2011's closed-open `PERIOD` (ISO/IEC 9075-2:2011) define a period: open at `from`, closed at `to`, consistent with CORE-6.
 - **Midnight wrap is explicit in the type.** `{ from: '23:00', to: '06:00' }` on weekday 5 is Friday night into Saturday morning; the window is attributed to the weekday it starts on. Callers building curfews, night bans and circadian windows get one rule instead of five.
 - **Holidays and overrides are dates in the schedule's zone**, consistent with CORE-7's `BusinessCalendar`, and a `BusinessCalendar` can be passed as `holidays` directly.
 - **`operatingTimeBetween` and `addOperatingTime` are interval algebra**, not loops over minutes: intersect the open intervals with the range and sum (CORE-6), or walk open intervals until the duration is consumed. A deadline that would fall past `within` returns `''` rather than searching forever; the horizon default is stated.
 - **This is not RFC 5545.** Weekly patterns with dated exceptions cover every consumer in the epic; monthly and yearly recurrence stay parked (see painpoints). The type is deliberately too small to become a recurrence engine.
 - FIN-40's `MarketCalendar.sessions` are `LocalWindow`s with a phase tag and are resolved through `recurringWindows`; the two types share the edge semantics by construction.
+
+## Decisions of record
+
+- **Every function takes `disambiguation`.** The spec gave it to `recurringWindows` and `operatingIntervals` only; the LOCAL_TIME_RESOLUTION binding rule makes every function that resolves a wall time state and accept its policy, and `"reject"` is what a demurrage or duty clock wants.
+- **Edges resolve independently with `resolveLocal`.** An edge pair that resolves to an empty or inverted span is dropped. The only case is a window no longer than the gap it straddles: Pacific/Chatham's 03:00–04:00 on 2024-09-29 moves its 03:00 edge an hour forward onto its own 04:00. A window is elapsed time between its resolved edges: New York's 23:00–06:00 is 8 hours across the fall-back night and 6 across the spring-forward one; 00:00–00:00 is 25 and 23.
+- **`"reject"` is scoped to the answer.** A window with an ambiguous or nonexistent edge is not resolved. Its widest span (its `from` read `"earlier"`, its `to` read `"later"`) returns the sentinel only when it could change the answer: it overlaps the range; it could open before `nextOpenAt`'s answer; it starts at or before `nextCloseAt`'s answer; or it could add open time before `addOperatingTime`'s deadline. Without this, the result would depend on how far back the walk looks.
+- **Dates come from the day walker behind `bucketRange` / `floorToZone`** (`internal/zonedBucket.ts`), from 72 hours before the first instant asked about. A window starting two days earlier can still be open when a deleted day lies between (Apia's Thursday 23:00 window ends at Saturday 06:00). A deleted date has no windows. A date the clock re-enters is resolved once.
+- **The walk settles one date behind.** Under `"earlier"`, an edge in a gap moves back by the gap, so where a zone skips midnight a date's first window can open on the previous date (Africa/Cairo 2024-04-26, America/Santiago 2024-09-08). No zone has jumped forward by more than a day, so no window starts before the previous date's first instant, and a run is final once it ends before that. `"reject"`'s widest span uses the same `"earlier"` start and the same bound (PR #286 review).
+- **Searches answer as soon as the answer is certain**, not when the run holding it closes: an open input is its own `nextOpenAt`, a closed one its own `nextCloseAt`, and a deadline inside an unending run is known once no later window can add time before it. A long `within` costs nothing when the answer is near.
+- **Temporal's range limits clamp, never throw.** The lookback, the date limit and the horizon stop at Temporal's first and last instants, and an edge past them resolves just outside the range: it is clipped, never returned. A 24/7 schedule is open at both limit instants.
+- **The interval algebra is the CORE-6 internal** (`coalesceIntervalNanoseconds`), not the public string functions. That is the same code, run on bigint nanoseconds. `operatingTimeBetween` equals `sumIntervals` of `intersectIntervals(operatingIntervals(...), range)`, and the tests assert it.
+- **A `BusinessCalendar` passed as `holidays`** contributes its `holidays` only. `weekly` says which weekdays open, and `timeZone` on the schedule is the zone.
+- **Two overrides for one date make the schedule invalid.** An override wins over a holiday on the same date.
+- **The horizon defaults to `"P1Y"`**, added in the schedule's zone, and is inclusive. A range may span 10,000 local dates (`bucketRange`'s cap) counted from its start's date; a longer one is refused before walking, so it answers at once. A search's horizon is clamped to the last instant of the 10,000th local date after its input's date: it answers anywhere on that date, and returns the sentinel for anything later, even the next date's first instant (PR #286 second review).
+- **`addOperatingTime` takes hours and smaller units.** `P1D` of open time could mean 24 open hours or one working day, so it returns `''`. `PT0S` returns the start.
 
 ## What gmt provides (do not re-implement)
 
