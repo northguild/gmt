@@ -458,6 +458,56 @@ export const CHAT_STARTERS: readonly {
       resolutionDays: 30,
     },
   },
+  {
+    text: "A truck leaves Chicago at 08:00 on 8 March 2024: 46 h to Los Angeles, then 11 days by ship to Tokyo. ETA?",
+    widget: "showDeliveryScheduler",
+    // The question names no handling time, so there is no dwell.
+    args: {
+      legs: [
+        {
+          departure: "2024-03-08T08:00:00-06:00[America/Chicago]",
+          duration: "PT46H",
+          timeZone: "America/Los_Angeles",
+          mode: "truck",
+        },
+        { duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" },
+      ],
+    },
+  },
+  {
+    text: "Barge leaves Duisburg 22:10, 30 March 2024, 15 h to Amsterdam, 45 min handling: does it make the 14:00 train?",
+    widget: "showConnectionChecker",
+    // Duisburg is on Europe/Berlin's clock. The night of 30-31 March 2024
+    // springs forward, so the printed-clock check says made and
+    // scheduleDelivery says missed.
+    args: {
+      inboundDeparture: "2024-03-30T22:10:00+01:00[Europe/Berlin]",
+      inboundDuration: "PT15H",
+      portZone: "Europe/Amsterdam",
+      handlingMinutes: 45,
+      onwardDeparture: "2024-03-31T14:00:00[Europe/Amsterdam]",
+    },
+  },
+  {
+    text: "A timetable prints 02:30 on 27 October 2024 in Berlin, a 1 h run to Amsterdam. Which instant is that?",
+    widget: "showTimetableReader",
+    args: {
+      startTimeZone: "Europe/Berlin",
+      departures: ["2024-10-27T02:30:00"],
+      duration: "PT1H",
+      timeZone: "Europe/Amsterdam",
+    },
+  },
+  {
+    text: "A border crossing in New York runs 00:00 to 08:00 on 10 March 2024. How many hours really passed?",
+    widget: "showCrossingClock",
+    // Wall times, read in targetZone by the widget.
+    args: {
+      entry: "2024-03-10T00:00",
+      exit: "2024-03-10T08:00",
+      targetZone: "America/New_York",
+    },
+  },
 ];
 
 /** The rail call a starter pill makes on click: a stable id per starter, so a

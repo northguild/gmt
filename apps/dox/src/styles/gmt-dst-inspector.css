@@ -22,7 +22,7 @@
   border-bottom: 2px solid var(--gmt-border);
   color: var(--gmt-ice-dim);
   font-weight: 600;
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -73,7 +73,7 @@
   display: inline-block;
   padding: 0.15em 0.5em;
   border-radius: var(--gmt-radius-sm);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -110,7 +110,7 @@
 .gmt-dst-ticker-status {
   margin-bottom: var(--gmt-space-2);
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
@@ -152,7 +152,7 @@
   position: absolute;
   top: -1.4em;
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
   transform: translateX(-50%);
   white-space: nowrap;
@@ -204,7 +204,7 @@
 .gmt-dst-ticker-tick {
   position: absolute;
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
   transform: translateX(-50%);
 }

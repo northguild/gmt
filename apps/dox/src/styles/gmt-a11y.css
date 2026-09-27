@@ -192,4 +192,65 @@
     background: Canvas;
     border: 1px solid CanvasText;
   }
+
+  /* Delivery Scheduler (TRAN-9): the two chart views are TanStack Charts
+     SVGs — their own forced-colours and reduced-transparency handling lives
+     in the shared gmt-charts.css (`.gmt-chart`, `.gmt-chart-toggle__button`)
+     since it applies to every chart on the site, not just this widget's.
+     Leg identity there survives forced colours through the number badge
+     text (①②③④) alone, never colour alone. What remains widget-specific is
+     the itinerary rail: kind is carried by border style (solid departure/
+     arrival, dashed handoff, dotted missed/DST note), so only the dot fills
+     and the leg card's own accent need help. `.gmt-delivery-event` is an
+     itinerary row; `.gmt-delivery-rail-dot` its stop. */
+  .gmt-delivery-event {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .gmt-delivery-rail-dot {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: CanvasText;
+  }
+
+  .gmt-delivery-rail-dot--handoff {
+    background: Canvas;
+  }
+
+  .gmt-delivery-leg-fieldset {
+    border-left-color: CanvasText;
+  }
+
+  .gmt-transport-badge {
+    forced-color-adjust: none;
+    color: CanvasText;
+    outline: 1px solid CanvasText;
+  }
+
+  /* Crossing Clock (TRAN-9): the tick mark, the repeat double border and the
+     skipped gap's dashed border all carry meaning by shape, not colour. */
+  .gmt-crossing-tick {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  /* Crystal clock (TRAN-9): the bezel, ticks and hands carry meaning by
+     shape and position, not colour. The ice-glass pane and hand shadow are
+     dropped entirely (gmt-crystal-clock.css), so the dial's boundary here
+     is the bezel stroke alone. */
+  .gmt-crystal-clock-edge,
+  .gmt-crystal-clock-tick,
+  .gmt-crystal-clock-hand,
+  .gmt-crystal-clock-repeat-ring,
+  .gmt-crystal-clock-skip-ring,
+  .gmt-crystal-clock-skip-mark {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+  }
+
+  .gmt-crystal-clock-cap {
+    forced-color-adjust: none;
+    fill: CanvasText;
+  }
 }

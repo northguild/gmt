@@ -1,0 +1,46 @@
+---
+title: "A Connection Missed at the Spring-Forward Handoff"
+description: A truck reaches the Los Angeles port the morning clocks spring forward. An offset table says the ship connection holds with 30 minutes to spare. It is missed by 30 minutes.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Connection Missed at the Spring-Forward Handoff"
+  description="A truck leaves Chicago at 08:00 on 8 March 2024 on a 46-hour run to the Los Angeles port. Handling there takes two hours. The ship to Tokyo is published to sail at 06:30 on 10 March. Is the connection made?"
+  naiveCode={`// The naive approach: one UTC offset per place, from a table
+const OFFSET_HOURS = { "America/Los_Angeles": -8 }; // Los Angeles, as the table was built in winter
+const departed = Date.parse("2024-03-08T08:00:00-06:00"); // Chicago, 08:00
+const arrived = departed + 46 * 36e5; // 2024-03-10T12:00:00.000Z
+const toLocal = (ms) => new Date(ms + OFFSET_HOURS["America/Los_Angeles"] * 36e5).toISOString().slice(0, 16);
+toLocal(arrived); // "2024-03-10T04:00"
+const ready = arrived + 2 * 36e5; // two hours of handling: "2024-03-10T06:00" local
+const sails = Date.parse("2024-03-10T06:30:00Z") - OFFSET_HOURS["America/Los_Angeles"] * 36e5; // 06:30 local, by the table
+ready <= sails; // true — "made, with 30 minutes to spare"`}
+  explanation={`A fixed offset is a place's offset at one moment. The table's −08:00 was Los Angeles's offset when the truck left. Clocks sprang forward at 02:00 on 10 March, and the truck arrived at 12:00Z, which is 05:00 PDT. The naive code reads the arrival and the ship's published 06:30 through that same stale offset, so the handoff looks 30 minutes early. In fact the cargo is ready at 07:00, and the ship sailed at 06:30. \`scheduleDelivery\` keeps every handoff an exact instant. It reads the ship's published time in the port's own zone. It treats a departure before the arrival plus the handling time as a missed connection, and returns \`null\` rather than a negative wait.`}
+  gmtCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
+
+const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
+const ship = { departure: "2024-03-10T06:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
+const laterShip = { departure: "2024-03-10T07:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
+
+scheduleDelivery([truck]);
+// { eta: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" }] } — 05:00, not 04:00
+
+scheduleDelivery([truck, ship]);
+// null — the ship sails inside the two-hour handoff: a missed connection
+
+scheduleDelivery([truck, laterShip]);
+// { eta: "2024-03-21T23:30:00+09:00[Asia/Tokyo]",
+//   legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" },
+//     { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] } — a half hour later, the connection holds`}
+  fixedSpecId="scheduleDelivery"
+/>
+
+Open the handoff in the [Connection
+Checker](/tools/connection-checker/?w=connection&wa=%7B%22inboundDeparture%22%3A%222024-03-08T08%3A00%3A00-06%3A00%5BAmerica%2FChicago%5D%22%2C%22inboundDuration%22%3A%22PT46H%22%2C%22portZone%22%3A%22America%2FLos_Angeles%22%2C%22handlingMinutes%22%3A%22120%22%2C%22onwardDeparture%22%3A%222024-03-10T06%3A30%3A00%5BAmerica%2FLos_Angeles%5D%22%2C%22onwardDuration%22%3A%22P11D%22%2C%22onwardZone%22%3A%22Asia%2FTokyo%22%7D)
+and slide the handling time down: at 90 minutes the ship sails exactly when the cargo is
+ready, and equal passes. At 91 it is missed. Or open the whole journey in the [Delivery
+Scheduler](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-03-08T08%3A00%3A00-06%3A00%5BAmerica%2FChicago%5D%22%2C%22duration1%22%3A%22PT46H%22%2C%22timeZone1%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter1%22%3A%22PT2H%22%2C%22mode1%22%3A%22truck%22%2C%22duration2%22%3A%22P11D%22%2C%22timeZone2%22%3A%22Asia%2FTokyo%22%2C%22dwellAfter2%22%3A%22PT24H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT2H30M%22%2C%22timeZone3%22%3A%22Asia%2FTokyo%22%2C%22mode3%22%3A%22rail%22%2C%22departure2%22%3A%222024-03-10T06%3A30%3A00%5BAmerica%2FLos_Angeles%5D%22%7D)
+and change the ship's departure to 07:30. The full rules are in [Transport: Multi-leg
+Scheduling](/guides/industries/transport-multi-leg-scheduling/#a-scheduled-departure-is-a-connection-and-dwell-is-the-minimum-connect-time).

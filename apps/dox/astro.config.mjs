@@ -235,11 +235,17 @@ export default defineConfig({
         "./src/styles/gmt-playground.css", // mistake component styles
         "./src/styles/gmt-form-controls.css", // shared label/input/select styles
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
+        "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
         "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
         "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
         "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)
+        "./src/styles/gmt-transport-widgets.css", // Transport widgets, shared (TRAN-9)
+        "./src/styles/gmt-delivery-scheduler.css", // Delivery Scheduler widget (TRAN-9)
+        "./src/styles/gmt-connection-checker.css", // Connection Checker widget (TRAN-9)
+        "./src/styles/gmt-timetable-reader.css", // Timetable Reader widget (TRAN-9)
+        "./src/styles/gmt-crossing-clock.css", // Crossing Clock widget (TRAN-9)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

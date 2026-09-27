@@ -47,18 +47,26 @@
 import type { ConverterArgs } from "~/lib/converter-bench-mount";
 import type { GlobeArgs } from "~/lib/globe-mount";
 import type { BillingDeadlinesArgs } from "~/lib/billing-deadlines-mount";
+import type { ConnectionCheckerArgs } from "~/lib/connection-checker-mount";
+import type { DeliverySchedulerArgs } from "~/lib/delivery-scheduler-mount";
 import type { DstArgs } from "~/lib/dst-inspector-mount";
 import type { DwellLedgerArgs } from "~/lib/dwell-ledger-mount";
 import type { FreeTimeLedgerArgs } from "~/lib/free-time-ledger-mount";
 import type { IntervalArgs } from "~/lib/interval-visualizer-mount";
+import type { CrossingClockArgs } from "~/lib/crossing-clock-mount";
+import type { TimetableReaderArgs } from "~/lib/timetable-reader-mount";
 import {
   showBillingDeadlinesInput,
+  showConnectionCheckerInput,
   showConverterBenchInput,
+  showCrossingClockInput,
+  showDeliverySchedulerInput,
   showDstInspectorInput,
   showDwellLedgerInput,
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showTimetableReaderInput,
 } from "~/lib/dox-tools";
 import type { MountFn } from "~/lib/widget-mount";
 import type { WidgetKind } from "~/lib/widget-permalink";
@@ -301,6 +309,101 @@ const billingEntry = defineWidget<BillingDeadlinesArgs>({
     })),
 });
 
+const deliveryEntry = defineWidget<DeliverySchedulerArgs>({
+  title: "Delivery scheduler",
+  kind: "delivery",
+  parse: (input) => {
+    const result = showDeliverySchedulerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template, like the Free Time Ledger: every argument is a
+     control value. The mount then reads each leg's own departure. */
+  load: () =>
+    import("~/lib/delivery-scheduler-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderDeliverySchedulerTemplate(args),
+      mount: m.mountDeliveryScheduler,
+    })),
+  validate: (a) =>
+    checkZones([
+      ...(a.legs ?? []).map((l) => l.timeZone).filter((z): z is string => !!z),
+      ...(a.startTimeZone ? [a.startTimeZone] : []),
+    ]),
+});
+
+const connectionEntry = defineWidget<ConnectionCheckerArgs>({
+  title: "Connection checker",
+  kind: "connection",
+  parse: (input) => {
+    const result = showConnectionCheckerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/connection-checker-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderConnectionCheckerTemplate(args),
+      mount: m.mountConnectionChecker,
+    })),
+  validate: ({ portZone, onwardZone }) =>
+    checkZones([
+      ...(portZone ? [portZone] : []),
+      ...(onwardZone ? [onwardZone] : []),
+    ]),
+});
+
+const timetableEntry = defineWidget<TimetableReaderArgs>({
+  title: "Timetable reader",
+  kind: "timetable",
+  parse: (input) => {
+    const result = showTimetableReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/timetable-reader-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderTimetableReaderTemplate(args),
+      mount: m.mountTimetableReader,
+    })),
+  validate: ({ startTimeZone, timeZone }) =>
+    checkZones([startTimeZone, timeZone].filter((z): z is string => !!z)),
+});
+
+const crossingEntry = defineWidget<CrossingClockArgs>({
+  title: "Crossing clock",
+  kind: "crossing",
+  parse: (input) => {
+    const result = showCrossingClockInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/crossing-clock-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderCrossingClockTemplate(args),
+      mount: m.mountCrossingClock,
+    })),
+  validate: ({ targetZone }) =>
+    targetZone ? checkZones([targetZone]) : Promise.resolve(null),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
@@ -309,6 +412,10 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDwellLedger: dwellEntry,
   showFreeTimeLedger: freeTimeEntry,
   showBillingDeadlines: billingEntry,
+  showDeliveryScheduler: deliveryEntry,
+  showConnectionChecker: connectionEntry,
+  showTimetableReader: timetableEntry,
+  showCrossingClock: crossingEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

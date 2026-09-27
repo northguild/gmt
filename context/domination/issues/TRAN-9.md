@@ -18,6 +18,13 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 ## Design notes
 
 - Each leg's arrival is the next leg's departure unless the next leg carries an explicit `departure`, which models a scheduled connection the cargo waits for. An explicit departure earlier than the previous arrival is invalid input, not a negative wait — that is a missed connection and the caller must be told.
+- **Missed-connection rule (decided):** `dwellAfter` is the minimum connect time. A connection is feasible when the scheduled departure is at or after the previous arrival plus the previous leg's `dwellAfter`; earlier — inside the dwell or before the arrival — is a missed connection and returns `null`. Equal passes: a zero-slack connection is feasible.
+- **Departure exactness and `startTimeZone` (decided):** every leg boundary is an exact instant. A departure is accepted when it is already exact — an instant (`Z`/offset) or a zoned string, whose bracketed zone is read and must be real and agree with its offset. The one exception is the first leg: schedules are published as zone-local wall times, so a zoneless first-leg departure is read in `options.startTimeZone` (an IANA timeZone identifier or a fixed offset). Zoneless without the option returns `null`; a later leg instead reads its zoneless departure from the previous leg's `timeZone` (see the next rule); the option is ignored when the departure is already exact; an invalid `startTimeZone` returns `null` even when unused.
+- **Later-leg wall-time inference (decided):** a zoneless departure on any leg but the first is read in the _previous_ leg's `timeZone` — leg N−1's destination zone is exactly leg N's departure zone in a real timetable. This is separate from `startTimeZone`, which still names only the first leg's zone; the two never both apply to one departure. The missed-connection check still runs after resolution.
+- **Local-time resolution policy (decided, `compatible`):** a zoned departure written without an offset (`2024-11-03T01:30:00[America/New_York]`), a zoneless first departure read in `startTimeZone`, and a zoneless later-leg departure read in the previous leg's `timeZone` are all wall times. An ambiguous wall time resolves to the earlier instant; a nonexistent wall time resolves to the later instant.
+- **A repeated hour at a hub (decided, cursor-aware):** on any leg but the first, an ambiguous wall time resolves to the earliest pass at or after the cursor — the previous arrival plus its dwell — because a printed timetable never says which pass it means, and the one a shipper catches is the first the cargo is ready for. When neither pass is at or after the cursor it falls back to `compatible`, so a real miss still returns `null`. A nonexistent wall time, and the first leg, which has no cursor, keep `compatible`. Repeated and skipped are told apart without new API: resolve with `earlier` and `later`; both keep the requested wall time only in a repeated hour.
+- **A negative leg is invalid input (decided):** a leg cannot arrive before it departs, so a negative `duration` returns `null`, although `transitTime` alone accepts one. A zero duration, including `-PT0S`, passes.
+- **The last leg's `dwellAfter` moves nothing (decided):** it is validated as a duration (no years, months or weeks; not negative) and echoed, but never added to an instant, so it cannot turn a representable ETA into `null`.
 - `dwellAfter` sits between legs rather than inside them, because dwell is a property of the handoff.
 - `mode`, `origin` and `destination` are opaque tags. GMT does not validate or interpret transport modes, and it does not resolve an origin or destination code to a zone — `timeZone` is the caller's fact. The tags exist so a container move (ship → rail → truck) can be reported leg by leg without the consumer re-joining by index.
 - Every leg boundary is an instant. Local rendering happens at the edges via `etaAtZone`.
@@ -25,8 +32,9 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 ## What gmt provides (do not re-implement)
 
 - `transitTime` / `etaAtZone` from TRAN-8 — the single-leg case
-- `mergeIntervals` / `sumIntervals` from CORE-6 — total dwell
-- `convertZonedToZoned` — timezone conversion
+- `isValidInstant` / `isValidZonedDateTime` / `isValidDateTime` — the departure gates: an exact instant, a zoned string, or a zoneless wall time (first leg via `startTimeZone`, any other leg via the previous leg's `timeZone`)
+- `isValidTimeZone` — `timeZone` and `startTimeZone` validation
+- `isValidDuration` — `duration` and `dwellAfter` validation
 
 ## Verification
 
@@ -35,6 +43,7 @@ A multi-modal move (truck → ship → rail) has a departure, a duration and a d
 - A leg crossing the International Date Line yields a local arrival on the expected local date
 - A leg arriving at 23:30 local returns a `localArrival` on the expected local date
 - Explicit departure earlier than the previous arrival returns the sentinel
+- A later leg's zoneless departure resolves via the previous leg's `timeZone`, distinct from `startTimeZone`, and still honors the missed-connection check
 - Empty legs array returns `{ eta: '', legTimes: [] }`
 - Total dwell equals the sum of `dwellAfter` values
 - `mode`, `origin` and `destination` are echoed unchanged on each `LegTime`, and absent when not supplied

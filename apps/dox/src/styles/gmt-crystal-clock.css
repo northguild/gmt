@@ -1,0 +1,313 @@
+/*
+ * The crystal clock (TRAN-9) — a shared, reusable analog dial, first drawn
+ * for the Crossing Clock's entry/exit pair. Geometry, including the glass
+ * pane's own gradients/clip-path/filter, is `src/lib/crystal-clock.ts`
+ * (those have to live in the SVG markup, not here — see that file's doc).
+ *
+ * Deliberately *not* a Dox-mark treatment at clock size (owner review,
+ * first pass): no facet ring, no spokes. The only thing borrowed from the
+ * house style is the polygon outline, drawn as a single hairline stroke —
+ * the same weight as a card's own border — and, on top of the dial, the
+ * site's own ice-glass material (owner review, later passes): a restrained
+ * translucent pane, painted edge to edge on a copy of the bezel's own
+ * shape so it reaches the frame on every side rather than floating inside
+ * it as an isolated shape, with a curved sheen from the upper-left corner
+ * and a faint lower falloff — never a heavy blur or a copy of the Dox
+ * mark's gradient face. The dial fills nearly the whole shape, with only a
+ * small inset between the outline and the tick ring, and reads as a
+ * precise instrument: fine ticks, slim hands, generous open space.
+ *
+ * `renderCrystalClock` always emits the same markup: a repeat ring, a skip
+ * ring and a skip-strike line are drawn for every state, and the state
+ * modifier below is what shows or mutes them. No colour literal — every
+ * stroke and fill is a token.
+ *
+ * The night light (owner ask, an easter egg — never named after the
+ * trademarked feature it's inspired by, here or anywhere else in this
+ * module): the face wraps in a real `<button>`
+ * (`.gmt-crystal-clock-toggle`), reset to plain and sized to change no
+ * layout, whose `aria-pressed` this sheet reads. On, `--gmt-cyan` floods
+ * the face and the ticks/hands/cap flip to `--gmt-ink-fixed` so they read
+ * against it instead of vanishing into it; the ice-glass pane stays on top
+ * unchanged, so it still reads as glass over a lit face. The frame's stroke
+ * also flips to `--gmt-ink-fixed` for the same reason.
+ */
+
+.gmt-crystal-clock {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The button reset: an interactive element that must look exactly like the
+   plain face did before it became one, and never nudge the layout around
+   it — `display: block` plus the clock's own 100%-width rule is what makes
+   the button the same box the bare svg used to be. */
+.gmt-crystal-clock-toggle {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The bezel: one hairline stroke, the same weight as the site's card
+   borders (compare `.gmt-widget-card`'s 1px border), not a heavy ring. */
+.gmt-crystal-clock-edge {
+  fill: none;
+  stroke: var(--gmt-border-strong);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-crystal-clock-tick {
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-crystal-clock-tick--major {
+  stroke: var(--gmt-ice);
+  stroke-width: 1.5;
+}
+
+.gmt-crystal-clock-hand {
+  /* `--gmt-cyan-ink` is the text-safe cyan this repo already keeps for
+     exactly this reason: raw `--gmt-cyan` only reaches 3.38:1 against a
+     light-theme surface (measured), well under the 4.5:1 a foreground
+     stroke needs; `-ink` clears 7.99:1 there and is a no-op in dark theme
+     (`--gmt-cyan-ink` is `var(--gmt-cyan)` there already). */
+  stroke: var(--gmt-cyan-ink);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 150ms ease; /* the night light's fade; position never animates */
+}
+
+/* The minute hand reaches further and is the thinner of the two — the
+   usual analog-clock convention, and it keeps the hour hand reading as the
+   "heavier" pointer even though both are slim. */
+.gmt-crystal-clock-hand--hour {
+  stroke-width: 1.75;
+}
+
+.gmt-crystal-clock-hand--minute {
+  stroke-width: 1.25;
+}
+
+.gmt-crystal-clock-cap {
+  fill: var(--gmt-cyan-ink);
+  transition: fill 150ms ease;
+}
+
+/* The night light's own flood. Transparent until `.gmt-crystal-clock--glow`
+   is toggled on the root by `bindClockGlow`'s click handler. */
+.gmt-crystal-clock-glow {
+  fill: transparent;
+  transition: fill 150ms ease;
+}
+
+/* Drawn for every state; shown only by the modifiers below. */
+.gmt-crystal-clock-repeat-ring,
+.gmt-crystal-clock-skip-ring,
+.gmt-crystal-clock-skip-mark {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * The ice-glass pane — a clear layer over the whole dial, clipped to the
+ * bezel's own dodecagon in the markup. Both layers are painted on a copy of
+ * the same outer polygon the bezel uses (never a smaller shape), so the
+ * ice always reaches every edge of the frame instead of floating inside
+ * it. Restrained on purpose: the tint and sheen both stay under 25%
+ * opacity at their brightest, so ticks and hands keep their contrast
+ * underneath it in both themes.
+ * --------------------------------------------------------------------------- */
+
+.gmt-crystal-clock-glass-tint,
+.gmt-crystal-clock-glass-sheen {
+  mix-blend-mode: normal;
+}
+
+/* ---------------------------------------------------------------------------
+ * States
+ * --------------------------------------------------------------------------- */
+
+/* Repeated: a second, dashed hairline just inside the bezel — the same
+ * "double border" language `.gmt-crossing-tick--repeat` uses on the ruler —
+ * for a reading like the fall-back night's two 01:30s: identical faces,
+ * told apart only by the offset chip beneath them. */
+.gmt-crystal-clock--repeated .gmt-crystal-clock-repeat-ring {
+  display: block;
+  fill: none;
+  stroke: var(--gmt-cyan);
+  stroke-width: 1;
+  stroke-dasharray: 2.5 2;
+  vector-effect: non-scaling-stroke;
+  transform-origin: 50px 50px;
+  transform: scale(0.92);
+}
+
+/* Skipped: the wall time a clock jumped over. A dashed tick-ring and a
+ * faint strike through the face mark it as a reading that never happened;
+ * the hands stay in place but read as ghosted. */
+.gmt-crystal-clock--skipped .gmt-crystal-clock-skip-ring {
+  display: block;
+  fill: none;
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-crystal-clock--skipped .gmt-crystal-clock-skip-mark {
+  display: block;
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-crystal-clock--skipped .gmt-crystal-clock-hand,
+.gmt-crystal-clock--skipped .gmt-crystal-clock-cap {
+  opacity: 0.4;
+}
+
+/* Naive: a reading arrived at by wall-clock arithmetic, not by the library.
+ * Muted and dashed, never amber — amber is the sentinel's colour alone. */
+.gmt-crystal-clock--naive .gmt-crystal-clock-hand {
+  stroke: var(--gmt-ice-dim);
+  stroke-dasharray: 2 1.5;
+}
+
+.gmt-crystal-clock--naive .gmt-crystal-clock-cap {
+  fill: var(--gmt-ice-dim);
+}
+
+.gmt-crystal-clock--naive .gmt-crystal-clock-edge {
+  opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------------------
+ * The highlight — one wall-clock hour drawn as a sector, between the tick
+ * ring and the centre. Shape carries the distinction, not colour alone:
+ * `skipped` is a single dashed pie-wedge outline, `repeated` two concentric
+ * solid arcs (drawn as two separate <path>s in the markup, so no
+ * "double"-style border trick is needed here). The DST token colour ties it
+ * to the same purple the Delivery Scheduler's own transition rows use.
+ * --------------------------------------------------------------------------- */
+
+.gmt-crystal-clock-highlight {
+  fill: none;
+  stroke: var(--gmt-dst-purple);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-crystal-clock-highlight--skipped {
+  stroke-dasharray: 2.5 2;
+}
+
+/* Under the night light the face floods cyan, and a mid-tone purple loses
+   ground against it — a touch heavier, plus a small dark drop-shadow on
+   the token colour itself (never a colour swap: the DST identity stays
+   purple, only its edge gets help). */
+.gmt-crystal-clock--glow .gmt-crystal-clock-highlight {
+  stroke-width: 1.75;
+  filter: drop-shadow(0 0 0.5px var(--gmt-ink-fixed));
+}
+
+/* The night light. Placed after every other state rule above and matched
+   on two classes throughout, so it wins any tie with `--repeated` /
+   `--skipped` / `--naive` on the same face (both can be true at once — the
+   fall-back preset's clocks can glow too) rather than the two fighting.
+   Ticks, hands and the cap all flip to `--gmt-ink-fixed` (black in both themes): the owner's explicit
+   requirement is that they are never left cyan-on-cyan, in either theme. */
+.gmt-crystal-clock--glow .gmt-crystal-clock-glow {
+  fill: var(--gmt-cyan);
+}
+
+.gmt-crystal-clock--glow .gmt-crystal-clock-edge {
+  stroke: var(--gmt-ink-fixed);
+}
+
+.gmt-crystal-clock--glow .gmt-crystal-clock-tick {
+  stroke: var(--gmt-ink-fixed);
+}
+
+.gmt-crystal-clock--glow .gmt-crystal-clock-hand,
+.gmt-crystal-clock--glow .gmt-crystal-clock-cap {
+  stroke: var(--gmt-ink-fixed);
+  fill: var(--gmt-ink-fixed);
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+/* A dashed cyan ring would vanish into a cyan flood. */
+.gmt-crystal-clock--glow .gmt-crystal-clock-repeat-ring {
+  stroke: var(--gmt-ink-fixed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-crystal-clock-hand,
+  .gmt-crystal-clock-cap,
+  .gmt-crystal-clock-glow {
+    transition: none;
+  }
+}
+
+/* prefers-reduced-transparency: the glass pane is exactly the translucency
+   this preference asks to drop, and the hand shadow is a soft blur effect
+   in the same spirit — both go. */
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-crystal-clock-glass {
+    display: none;
+  }
+
+  .gmt-crystal-clock-hands {
+    filter: none;
+  }
+}
+
+/* forced-colors (Windows High Contrast): the glass pane and the hand
+   shadow are both decorative washes with no OS-safe colour to remap to, so
+   they drop and the dial stays plain — the bezel/tick/hand rules in
+   gmt-a11y.css already give those shape-only meaning. The night light is
+   ignored the same way: `--gmt-cyan` and `--gmt-void` are not system
+   colours, and the whole point of forced-colors is that nothing overrides
+   the reader's own palette. */
+@media (forced-colors: active) {
+  .gmt-crystal-clock-glass {
+    display: none;
+  }
+
+  .gmt-crystal-clock-hands {
+    filter: none;
+  }
+
+  .gmt-crystal-clock-glow {
+    display: none;
+  }
+
+  .gmt-crystal-clock--glow .gmt-crystal-clock-edge,
+  .gmt-crystal-clock--glow .gmt-crystal-clock-tick,
+  .gmt-crystal-clock--glow .gmt-crystal-clock-hand,
+  .gmt-crystal-clock--glow .gmt-crystal-clock-repeat-ring {
+    stroke: CanvasText;
+  }
+
+  .gmt-crystal-clock--glow .gmt-crystal-clock-cap {
+    fill: CanvasText;
+  }
+
+  /* The highlight's dashed-vs-doubled shape already carries "skipped" vs
+     "repeated"; only the colour needs to drop. */
+  .gmt-crystal-clock-highlight {
+    stroke: CanvasText;
+    filter: none;
+  }
+}

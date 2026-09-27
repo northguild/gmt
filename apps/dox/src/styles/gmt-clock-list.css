@@ -75,7 +75,7 @@
 
 .gmt-clock-name {
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,7 +84,7 @@
 
 .gmt-clock-offset {
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-spring-ink);
   white-space: nowrap;
 }

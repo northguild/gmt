@@ -5,7 +5,7 @@ description: >
   invalid-input fallback assertions, locale-matrix coverage, and DST/timezone
   boundary cases required by project policy.
 metadata:
-  library_version: 1.17.0
+  library_version: 1.18.0
 ---
 
 # Unit Test Generation

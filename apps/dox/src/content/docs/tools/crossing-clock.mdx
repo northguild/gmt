@@ -1,0 +1,40 @@
+---
+title: Crossing Clock
+description: "Time a canal, strait or border crossing with crossingTime: exact elapsed hours, the entry and exit on the clock that administers it, and the wall-clock subtraction that is an hour off on a DST night."
+---
+
+import CrossingClock from "../../../components/CrossingClock.astro";
+
+A crossing — a canal transit, a strait passage, a border queue — is logged
+as two instants and read on the clock of whoever administers it.
+`crossingTime` gives the exact elapsed hours, with the entry and exit
+rendered in that one zone. Subtracting the two ends' printed wall clocks
+instead gives the wrong answer whenever a DST transition falls between
+them.
+
+Entry and exit each get their own analog face, reading the local time,
+offset, zone and date `crossingTime` returned — never a second computation.
+Between them, the true elapsed duration sits above the naive wall-clock
+subtraction, flagged when the two disagree. A skipped or repeated hour is
+drawn right on both faces, as a sector between the tick ring and the
+centre — dashed for an hour that never showed, doubled for one the clock
+ran through twice — and the same hour is marked on the strip below the
+clocks, so the dial and the bar always agree. On the fall-back night, both
+faces read identically and are marked repeated, so identical clocks don't
+read as a bug.
+
+<CrossingClock />
+
+**Worth trying:** the default preset already shows a skipped hour — New
+York's clocks jump from 02:00 to 03:00, seven hours actually pass, and
+subtracting the wall clocks says eight. Switch to [the added-hour
+preset](/tools/crossing-clock/?w=crossing&wa=%7B%22entry%22%3A%222024-11-03T05%3A30%3A00Z%22%2C%22exit%22%3A%222024-11-03T06%3A30%3A00Z%22%2C%22targetZone%22%3A%22America%2FNew_York%22%7D)
+to see the opposite: one hour actually passes, but both ends read 01:30, so
+subtracting the wall clocks says zero. Then [the same spring-forward
+night read on a fixed
+−05:00](/tools/crossing-clock/?w=crossing&wa=%7B%22entry%22%3A%222024-03-10T05%3A00%3A00Z%22%2C%22exit%22%3A%222024-03-10T12%3A00%3A00Z%22%2C%22targetZone%22%3A%22-05%3A00%22%7D) —
+a fixed offset observes no DST, so the wall-clock subtraction agrees and no
+sector is drawn at all.
+
+A day count for a stay is [`dwellTime`](/reference/transport/calculate/dwellTime/),
+drawn in the [Dwell Ledger](/tools/dwell-ledger/).

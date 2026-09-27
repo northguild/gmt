@@ -1,0 +1,32 @@
+---
+/**
+ * Crossing Clock widget (TRAN-9).
+ *
+ * A crossing — a canal transit, a strait passage, a border queue — logged as
+ * two instants and read on the clock of the zone that administers it, with
+ * the real `crossingTime`'s exact elapsed hours beside the wall-clock
+ * subtraction that is an hour off across a DST transition.
+ *
+ * **The markup and the wiring both live in `lib/crossing-clock-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderCrossingClockTemplate } from "../lib/crossing-clock-mount";
+---
+
+<Fragment set:html={renderCrossingClockTemplate()} />
+
+<script>
+  import { mountCrossingClock } from "../lib/crossing-clock-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("crossing");
+    document.querySelectorAll<HTMLElement>(".gmt-crossing").forEach((el) => {
+      mountCrossingClock(el, seed, new AbortController().signal).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>

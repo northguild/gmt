@@ -1,0 +1,619 @@
+/*
+ * Delivery Scheduler widget (TRAN-9).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css; the shared leg fieldset
+ * border/legend, verdict line, naive badge and reason-aside spacing in
+ * gmt-transport-widgets.css. This sheet holds everything specific to this
+ * widget: its own leg-card grid (overriding the shared one's five equal
+ * columns, which clipped both the long zoned departure string and the zone
+ * name — `.gmt-transport-leg-grid` stays untouched for the other three
+ * widgets), the ETA summary card, the route map, and the itinerary rail.
+ *
+ * Every value shown here comes from `buildItinerary` / `buildEtaSummary`
+ * (delivery-scheduler.ts), themselves reading `collectJourneyFacts`' real
+ * `scheduleDelivery` output — nothing here computes an arrival, a ready
+ * instant, a verdict or the door-to-door span. Nothing here animates a value
+ * the reader is reading.
+ *
+ * **Leg colour and number (owner re-evaluation, TRAN-9).** Every leg-coloured
+ * element — a leg card, a route segment or station, an itinerary stop —
+ * carries `data-leg="1".."4"` (`legAccentAttr`, delivery-scheduler-mount.ts),
+ * matched below to set that element's own `--leg-color` / `--leg-ink` custom
+ * properties, which its children then read with `var()`. Four house tokens,
+ * each already a contrast-checked "ink" pair in both themes (gmt-tokens.css):
+ * cyan, spring, the DST purple and the teal-based "severity-high" pair —
+ * never amber, which stays the sentinel's alone (§ binding rules).
+ */
+
+.gmt-delivery [data-leg="1"] {
+  --leg-color: var(--gmt-cyan);
+  --leg-ink: var(--gmt-cyan-ink);
+}
+.gmt-delivery [data-leg="2"] {
+  --leg-color: var(--gmt-spring);
+  --leg-ink: var(--gmt-spring-ink);
+}
+.gmt-delivery [data-leg="3"] {
+  --leg-color: var(--gmt-dst-purple);
+  --leg-ink: var(--gmt-purple-ink);
+}
+.gmt-delivery [data-leg="4"] {
+  --leg-color: var(--gmt-severity-high);
+  --leg-ink: var(--gmt-severity-high-ink);
+}
+
+/* ---------------------------------------------------------------------------
+ * Leg cards
+ *
+ * Row 1 (Mode | Duration | Arrives in) is three columns: a `<select>`
+ * truncates its own displayed value with an ellipsis rather than clipping
+ * mid-character the way a text `<input>` does, so `America/Los_Angeles`
+ * sharing a row is fine — the full text is still in the option list and the
+ * accessible name. Departs / Scheduled departure and Dwell after each keep a
+ * row entirely their own: a full zoned departure
+ * (`2024-03-08T08:00:00-06:00[America/Chicago]`) is a text `<input>`, which
+ * has no such truncation. `minmax(0, …)` on every track, and `width: 100%`
+ * overriding the shared `.gmt-input`/`.gmt-select` 140px `min-width` (gmt-
+ * form-controls.css) — which is exactly what forced the old five-column grid
+ * to overflow its card. Each leg card gets L-shaped corner brackets (top-left
+ * + bottom-right) in its own leg colour — the same `.gmt-brackets` recipe used
+ * on the home page — instead of a left accent bar.
+ * --------------------------------------------------------------------------- */
+
+.gmt-delivery-leg-fieldset {
+  container-type: inline-size;
+  position: relative;
+  padding-top: var(--gmt-space-1);
+  padding-bottom: var(--gmt-space-2);
+  margin-bottom: var(--gmt-space-2);
+}
+
+.gmt-delivery-leg-fieldset::before,
+.gmt-delivery-leg-fieldset::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--leg-color, var(--gmt-cyan));
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.gmt-delivery-leg-fieldset::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.gmt-delivery-leg-fieldset::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+.gmt-delivery-leg-number {
+  margin-right: 2px;
+  font-weight: 700;
+  color: var(--leg-ink, var(--gmt-ice));
+}
+
+.gmt-delivery-leg-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.75fr) minmax(0, 1.15fr);
+  grid-template-areas:
+    "mode duration arrives"
+    "departs departs departs"
+    "dwell dwell dwell";
+  gap: var(--gmt-space-1) var(--gmt-space-2);
+}
+
+.gmt-delivery-leg-grid select.gmt-select {
+  text-overflow: ellipsis;
+}
+
+.gmt-delivery-field--mode {
+  grid-area: mode;
+}
+.gmt-delivery-field--duration {
+  grid-area: duration;
+}
+.gmt-delivery-field--arrives {
+  grid-area: arrives;
+}
+.gmt-delivery-field--departs {
+  grid-area: departs;
+}
+.gmt-delivery-field--dwell {
+  grid-area: dwell;
+}
+
+.gmt-delivery-leg-grid .gmt-input,
+.gmt-delivery-leg-grid .gmt-select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* A narrow host (the `/dox` rail) stacks every field, one per row. */
+@container (max-width: 22rem) {
+  .gmt-delivery-leg-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "mode"
+      "duration"
+      "arrives"
+      "departs"
+      "dwell";
+  }
+}
+
+/* Below this, a full zoned departure such as
+   `2024-11-02T22:00:00-04:00[America/New_York]` (45 characters) no longer
+   fits `.gmt-input`'s 0.85rem text in a single-column field, however wide the
+   row — scrollWidth exceeded clientWidth by up to 72px, measured at 390px.
+   Text-only inputs shrink to `--gmt-text-sm` (12px, the legibility floor) and
+   trim their own padding; the card and leg-card chrome around them trims its
+   horizontal padding too, so the fix is shared between "smaller text" and
+   "more room", rather than pushing font-size below 12px on its own. Queried
+   on `.gmt-delivery` (the root container), because `.gmt-widget-card` is an
+   ancestor of the per-leg container queried above, not a descendant of it. */
+@container (max-width: 24rem) {
+  .gmt-delivery .gmt-widget-card {
+    padding-left: var(--gmt-space-2);
+    padding-right: var(--gmt-space-2);
+  }
+
+  .gmt-delivery .gmt-transport-leg {
+    padding-left: var(--gmt-space-2);
+    padding-right: var(--gmt-space-2);
+  }
+
+  .gmt-delivery input.gmt-input[type="text"] {
+    font-size: var(--gmt-text-sm);
+    padding-left: var(--gmt-space-1);
+    padding-right: var(--gmt-space-1);
+  }
+}
+
+/* The two charts' shared accessible name (`aria-labelledby` on
+   `.gmt-delivery-charts`): real text, kept out of the visual layout rather
+   than shown as a redundant paragraph — the itinerary below already
+   carries everything in it. */
+.gmt-delivery-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gmt-delivery-optional {
+  margin-left: var(--gmt-space-1);
+  font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--gmt-ice-dim);
+}
+
+/* The mode icon inside a leg's own `<legend>`, or beside its itinerary event
+   line — always inline with text, never a block of its own. */
+.gmt-delivery-leg-icon,
+.gmt-delivery-event-icon {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: var(--gmt-space-1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Legend
+ *
+ * `.sl-markdown-content ul li::before` (gmt-content.css) draws every markdown
+ * bullet as a glowing cyan dash, absolutely positioned into the `padding-left`
+ * it also sets on every `<li>` — a site-wide rule that does not know this
+ * `<ul>` is a widget's own swatch key, not page prose. `list-style: none`
+ * alone does not reach it (a `::before` is not a marker), and left the stray
+ * dash and the misaligned swatch (sharing a line box with padding meant for
+ * that dash). Reset both explicitly here, scoped to this legend alone.
+ * --------------------------------------------------------------------------- */
+
+.gmt-delivery-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0 0 var(--gmt-space-4);
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* `ul.gmt-delivery-legend` (not just `.gmt-delivery-legend`): the site rule
+   this overrides is `.sl-markdown-content ul li::before`, three type/pseudo
+   selectors deep, and a plain class-plus-type override loses that
+   specificity fight regardless of source order. Matching its selector depth
+   here, with one more class, wins on specificity rather than by luck of
+   load order. */
+ul.gmt-delivery-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  padding-left: 0;
+  margin-bottom: 0;
+  min-height: 0;
+  line-height: 1;
+}
+
+ul.gmt-delivery-legend > li::before {
+  content: none;
+}
+
+/* Same geometry the rail and route-map dots actually use (12px, a 2px
+   border) — the legend is a key to the real glyphs, not an approximation
+   of them. */
+.gmt-delivery-swatch {
+  display: inline-block;
+  /* Starlight's markdown flow rules give a block child a margin (the same
+     bug already documented on the itinerary's own event body, below) —
+     here it inflated the `<li>`'s own flex cross-size to more than double
+     the swatch's height and left the swatch sitting at the top of that
+     tall box instead of centred in it. Reset directly. */
+  margin: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.gmt-delivery-swatch--stop {
+  border: 2px solid var(--gmt-ice);
+  background: var(--gmt-ice);
+}
+
+.gmt-delivery-swatch--handoff {
+  border: 2px solid var(--gmt-ice-dim);
+  background: var(--gmt-surface);
+}
+
+.gmt-delivery-swatch--missed {
+  border: 2px dotted var(--gmt-dst-purple);
+  background: var(--gmt-surface);
+}
+
+.gmt-delivery-swatch--dst {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--gmt-dst-purple);
+  transform: rotate(45deg);
+}
+
+/* ---------------------------------------------------------------------------
+ * The ETA summary card — the answer, first (target A of the owner's route-
+ * map re-evaluation). A quiet card, not a success/error banner: `data-
+ * state="failed"` (a missed connection, or any other reason
+ * `scheduleDelivery` returned null) borrows the same dashed dst-purple
+ * treatment the itinerary already uses for a missed handoff — never amber,
+ * red or green (§ binding rules, "made/missed/early/late never use amber,
+ * success or error colours").
+ * --------------------------------------------------------------------------- */
+
+.gmt-delivery-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--gmt-space-4);
+  row-gap: var(--gmt-space-1);
+  margin: 0 0 var(--gmt-space-4);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-delivery-summary[data-state="failed"] {
+  border-style: dashed;
+  border-color: var(--gmt-dst-purple);
+}
+
+.gmt-delivery-summary-headline {
+  flex: 1 1 100%;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xl);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-delivery-summary[data-state="failed"] .gmt-delivery-summary-headline {
+  color: var(--gmt-dst-purple-ink);
+}
+
+.gmt-delivery-summary .gmt-transport-verdict {
+  flex: 1 1 100%;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-delivery-summary-duration {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-md);
+  color: var(--gmt-ice);
+}
+
+.gmt-delivery-summary-legs {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* Same bug, same fix as the legend (above): `.sl-markdown-content ul li` /
+   `::before` (gmt-content.css) reaches any plain `<ul><li>` in the page body,
+   including this one — a stray cyan tick or dash bleeding into the top-left
+   corner of every flag pill if left unreset. Matched at the same selector
+   depth so the override wins on specificity. */
+ul.gmt-delivery-summary-flags > li {
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+ul.gmt-delivery-summary-flags > li::before {
+  content: none;
+}
+
+.gmt-delivery-summary-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * The two chart views (target B, TanStack Charts): a Route schematic and a
+ * To-scale Gantt, behind the shared `.gmt-chart-toggle` pattern
+ * (gmt-charts.css). `.gmt-chart` itself, the toggle buttons, the tooltip
+ * and the forced-colours/reduced-motion handling are all that shared sheet
+ * — this widget only adds the wrapper spacing and the font-size floor its
+ * own chart text needs, since a chart mark's `fontSize` is a plain
+ * SVG attribute the shared stylesheet's tokens do not reach.
+ * --------------------------------------------------------------------------- */
+
+.gmt-delivery-charts {
+  margin: 0 0 var(--gmt-space-3);
+}
+
+.gmt-delivery-charts .gmt-chart-view {
+  margin: 0;
+}
+
+/* Every text node TanStack Charts draws in this widget's two charts, mark
+   text and axis alike — some (the axis's own label) are not reachable
+   through the mark options this widget passes and default smaller. */
+.gmt-delivery-charts .gmt-chart text {
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+ * The itinerary (target C): a vertical route line in the same leg colours.
+ * Each stop is a dot on a rail drawn per event (`::before`, so a handoff's
+ * own rail segment can be dashed and lighter while a departure/arrival's
+ * stays solid) rather than one continuous line the events sit on top of.
+ * Date groups and their events stay in normal document flow — nothing here
+ * is absolutely positioned except the dot and rail themselves, so nothing
+ * here can overprint.
+ * --------------------------------------------------------------------------- */
+
+.gmt-delivery-itinerary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-delivery-day {
+  padding-top: var(--gmt-space-3);
+  border-top: 1px solid var(--gmt-border);
+}
+
+.gmt-delivery-day:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.gmt-delivery-day-heading {
+  margin: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice);
+}
+
+.gmt-delivery-day-anomaly {
+  margin: 0 0 var(--gmt-space-2);
+  padding: 2px var(--gmt-space-2);
+  display: inline-block;
+  border: 1px dashed var(--gmt-dst-purple);
+  border-radius: var(--gmt-radius-sm);
+  font-size: var(--gmt-text-sm);
+  font-style: italic;
+  color: var(--gmt-dst-purple-ink);
+}
+
+.gmt-delivery-events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Every stop is a positioning context for its own rail dot and rail
+   segment. The rail's own colour is the leg's; a handoff (lighter, dashed)
+   never shares the departure/arrival's solid weight. */
+.gmt-delivery-event {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-1) 0 var(--gmt-space-1) var(--gmt-space-4);
+  min-width: 0;
+  color: var(--gmt-ice);
+}
+
+.gmt-delivery-event::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: -var(--gmt-space-3);
+  left: 5px;
+  border-left: 2px solid var(--leg-color, var(--gmt-border-strong));
+}
+
+.gmt-delivery-event:last-child::before {
+  bottom: 50%;
+}
+
+.gmt-delivery-event--handoff::before {
+  border-left-style: dashed;
+  border-left-color: var(--gmt-ice-dim);
+  opacity: 0.7;
+}
+
+.gmt-delivery-event--missed::before {
+  border-left-style: dotted;
+  border-left-color: var(--gmt-dst-purple);
+}
+
+/* A DST / Date Line note keeps the rail passing through it — thin and
+   dotted, in the DST/purple ink — rather than breaking the line, so it
+   reads as an annotation ON the journey, not a gap in it. */
+.gmt-delivery-event--dst::before {
+  border-left-width: 1px;
+  border-left-style: dotted;
+  border-left-color: var(--gmt-dst-purple);
+}
+
+/* One dot geometry for every stop: 12px, filled for a departure/arrival,
+   hollow for a handoff (fill vs no fill is the distinction — never a
+   different size or a dashed outline), a small solid purple diamond for a
+   DST / Date Line annotation. */
+.gmt-delivery-rail-dot {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--leg-color, var(--gmt-ice-dim));
+  border-radius: 50%;
+  background: var(--leg-color, var(--gmt-ice-dim));
+  flex: none;
+}
+
+.gmt-delivery-rail-dot--handoff {
+  background: var(--gmt-surface);
+}
+
+.gmt-delivery-event--missed .gmt-delivery-rail-dot--handoff {
+  border-style: dotted;
+  border-color: var(--gmt-dst-purple);
+}
+
+.gmt-delivery-rail-dot--dst {
+  top: 8px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-color: var(--gmt-dst-purple);
+  background: var(--gmt-dst-purple);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+/* Starlight's markdown flow rules give a `<li>`'s block children a top and
+   bottom margin; inside an event row that reads as a blank line above and
+   below two lines of text. Matched deep enough to win on specificity. */
+.gmt-delivery .gmt-delivery-event > .gmt-delivery-event-body {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.gmt-delivery-event-headline .gmt-transport-badge {
+  margin-left: var(--gmt-space-2);
+}
+
+.gmt-delivery-event-headline {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Departures and arrivals read prominent (bold time, regular body weight);
+   a handoff is deliberately lighter — smaller, muted, never bold. */
+.gmt-delivery-event--handoff .gmt-delivery-event-headline {
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* A DST / Date Line note is an annotation beside the line, not a boxed row:
+   small, italic, indented to the same column as an event's own body, never
+   bordered. */
+.gmt-delivery-event--dst .gmt-delivery-event-headline {
+  font-size: var(--gmt-text-sm);
+  font-style: italic;
+  color: var(--gmt-dst-purple-ink);
+}
+
+.gmt-delivery-offset {
+  color: var(--gmt-ice-dim);
+}
+
+/* The full exact ISO value — precision stays visible, not tooltip-only. */
+.gmt-delivery-event-iso {
+  margin: 2px 0 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+.gmt-delivery-naive {
+  margin-left: var(--gmt-space-1);
+  font-style: italic;
+  color: var(--gmt-ice-dim);
+}
+
+/* Values the reader is reading never animate. */
+.gmt-delivery-summary,
+.gmt-delivery-rail-dot,
+.gmt-delivery-event {
+  transition: none;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-delivery * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -38,6 +38,14 @@ export const zoneSchema = z
 export const dateTimeSchema = z.string().min(4).max(64);
 
 /**
+ * An ISO 8601 duration, as `scheduleDelivery` and `crossingTime` read a
+ * leg's `duration` or `dwellAfter`. This checks shape, not validity — an
+ * invalid duration is the widget's sentinel to show, not a reason to refuse
+ * the call before it reaches the library.
+ */
+export const durationSchema = z.string().min(3).max(32);
+
+/**
  * An ISO date, as `billingTimeline` reads `anchorOn` and the other billing
  * dates. This checks shape, not validity — an invalid date is the widget's
  * sentinel to show, not a reason to refuse the call before it reaches the
@@ -136,6 +144,69 @@ export const showBillingDeadlinesInput = z.object({
 });
 
 /**
+ * A multi-leg journey (TRAN-9): 1 to 4 legs chained by `scheduleDelivery`.
+ * `departure` is optional on every leg here — the library requires it only
+ * on the first, and a later leg either chains from the previous leg's
+ * arrival plus its `dwellAfter` or names its own scheduled departure — so the
+ * shape schema cannot enforce which; that is the widget's sentinel to show.
+ */
+export const showDeliverySchedulerInput = z.object({
+  legs: z
+    .array(
+      z.object({
+        departure: dateTimeSchema.optional(),
+        duration: durationSchema,
+        timeZone: zoneSchema,
+        dwellAfter: durationSchema.optional(),
+        mode: z.string().min(1).max(16).optional(),
+      }),
+    )
+    .min(1)
+    .max(4),
+  startTimeZone: zoneSchema.optional(),
+});
+
+/**
+ * One handoff (TRAN-9): an arriving leg, the handling time at the port (the
+ * minimum connect time) and a scheduled onward departure, checked by
+ * `scheduleDelivery`.
+ */
+export const showConnectionCheckerInput = z.object({
+  inboundDeparture: dateTimeSchema,
+  inboundDuration: durationSchema,
+  portZone: zoneSchema,
+  handlingMinutes: z.number().int().min(0).max(240),
+  onwardDeparture: dateTimeSchema,
+  onwardDuration: durationSchema.optional(),
+  onwardZone: zoneSchema.optional(),
+});
+
+/**
+ * A transport timetable's printed local departure times (TRAN-9), read as
+ * exact instants through `scheduleDelivery`'s `startTimeZone`. `offsets` is
+ * optional and, when given, one entry per `departures` entry — a blank entry
+ * leaves that row's offset unset.
+ */
+export const showTimetableReaderInput = z.object({
+  startTimeZone: zoneSchema,
+  departures: z.array(dateTimeSchema).min(1).max(4),
+  offsets: z.array(z.string().max(9)).max(4).optional(),
+  duration: durationSchema,
+  timeZone: zoneSchema,
+});
+
+/**
+ * A crossing (TRAN-9): a canal transit, a strait passage, a border queue,
+ * logged as two instants and read on the clock of the zone that
+ * administers it.
+ */
+export const showCrossingClockInput = z.object({
+  entry: dateTimeSchema,
+  exit: dateTimeSchema,
+  targetZone: zoneSchema,
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -156,7 +227,11 @@ export type DoxToolName =
   | "showConverterBench"
   | "showDwellLedger"
   | "showFreeTimeLedger"
-  | "showBillingDeadlines";
+  | "showBillingDeadlines"
+  | "showDeliveryScheduler"
+  | "showConnectionChecker"
+  | "showTimetableReader"
+  | "showCrossingClock";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -166,6 +241,10 @@ export const DOX_TOOL_INPUTS = {
   showDwellLedger: showDwellLedgerInput,
   showFreeTimeLedger: showFreeTimeLedgerInput,
   showBillingDeadlines: showBillingDeadlinesInput,
+  showDeliveryScheduler: showDeliverySchedulerInput,
+  showConnectionChecker: showConnectionCheckerInput,
+  showTimetableReader: showTimetableReaderInput,
+  showCrossingClock: showCrossingClockInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -224,6 +303,34 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks for the last date to issue, dispute or resolve a demurrage or detention invoice, or whether an invoice or dispute date falls on or before such a deadline",
     args: "anchorOn (ISO date the issue window counts from: the last date a charge accrued, or for a re-bill the issuance date of the invoice received), invoiceIssuedOn (optional ISO date), requestReceivedOn (optional ISO date; needs invoiceIssuedOn), issueDays, disputeDays, resolutionDays (whole numbers of calendar days from the reader's tariff or contract; never assume them: ask if the reader did not say), agreedResolutionOn (optional ISO date the parties agreed). Dates only: reduce a date-time to the billing party's local date.",
   },
+  {
+    name: "showDeliveryScheduler",
+    purpose:
+      "A multi-leg journey — truck, ship, rail — chained by scheduleDelivery into one ETA, with every handoff an exact instant, each arrival shown in the zone it lands in, and a missed connection shown as null.",
+    when: "the reader asks when a multi-leg or multi-modal shipment arrives, or what local time each leg lands at across a DST change or the Date Line",
+    args: "legs (1 to 4, in travel order): departure (ISO date-time with an offset or a bracketed zone; required on the first leg; on a later leg only when it has a scheduled departure), duration (ISO 8601 time units such as PT46H or P11D; no months or years), timeZone (IANA id where the leg arrives), dwellAfter (optional handling time at the handoff after the leg), mode (optional tag such as truck, ship or rail). startTimeZone (optional IANA id a zoneless first departure is read in). Never invent a zone: ask if the reader did not name one.",
+  },
+  {
+    name: "showConnectionChecker",
+    purpose:
+      "One handoff checked by scheduleDelivery: an arriving leg, the handling time at the port (the minimum connect time) and a scheduled onward departure, made or missed, beside the naive check of the times as printed.",
+    when: "the reader asks whether cargo or a passenger makes a scheduled onward departure after a handoff with a given handling time",
+    args: "inboundDeparture (ISO date-time with an offset or a bracketed zone), inboundDuration (ISO 8601 time units), portZone (IANA id of the handoff), handlingMinutes (whole minutes, 0 to 240; ask if the reader did not say), onwardDeparture (the scheduled departure, with a bracketed zone, e.g. 2024-03-31T14:00:00[Europe/Amsterdam]), onwardDuration and onwardZone (optional)",
+  },
+  {
+    name: "showTimetableReader",
+    purpose:
+      "A transport timetable's printed local departure times read as exact instants through scheduleDelivery's startTimeZone, marking a time the clock shows twice (the earlier instant) or never (the later instant).",
+    when: "the reader asks which instant a printed timetable or schedule departure time means, especially on a night the clocks change",
+    args: "startTimeZone (IANA id the timetable is printed in), departures (1 to 4 wall times as printed, e.g. 2024-10-27T02:30:00, with no offset), offsets (optional, one per departure, to pick a pass), duration (the run time, ISO 8601 time units), timeZone (IANA id where it arrives)",
+  },
+  {
+    name: "showCrossingClock",
+    purpose:
+      "A crossing — a canal transit, a strait passage, a border queue — timed by crossingTime: the exact elapsed hours, with the entry and exit read on the clock of the zone that administers it.",
+    when: "the reader asks how long a crossing, transit or passage between two logged times really took, or what the entry and exit read on one zone's clock, especially across a DST change",
+    args: "entry, exit (ISO date-times; a plain 2024-03-10T00:00 is read as wall time in targetZone), targetZone (IANA id of the clock the crossing is read on)",
+  },
 ];
 
 /**
@@ -260,6 +367,22 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[6].purpose,
     inputSchema: showBillingDeadlinesInput,
   }),
+  showDeliveryScheduler: tool({
+    description: DOX_TOOL_DOCS[7].purpose,
+    inputSchema: showDeliverySchedulerInput,
+  }),
+  showConnectionChecker: tool({
+    description: DOX_TOOL_DOCS[8].purpose,
+    inputSchema: showConnectionCheckerInput,
+  }),
+  showTimetableReader: tool({
+    description: DOX_TOOL_DOCS[9].purpose,
+    inputSchema: showTimetableReaderInput,
+  }),
+  showCrossingClock: tool({
+    description: DOX_TOOL_DOCS[10].purpose,
+    inputSchema: showCrossingClockInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -290,6 +413,10 @@ export const ENABLED_TOOL_NAMES = [
   "showDwellLedger",
   "showFreeTimeLedger",
   "showBillingDeadlines",
+  "showDeliveryScheduler",
+  "showConnectionChecker",
+  "showTimetableReader",
+  "showCrossingClock",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

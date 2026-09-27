@@ -40,7 +40,7 @@
   flex: 0 0 auto;
   width: 8.5rem;
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
   text-align: right;
   overflow-wrap: anywhere;
@@ -73,7 +73,7 @@
   padding: 3px 5px;
   border-left: 1px solid var(--gmt-border);
   font-family: var(--gmt-font-mono);
-  font-size: 0.68rem;
+  font-size: var(--gmt-text-xs);
   line-height: 1.2;
   color: var(--gmt-ice);
   white-space: nowrap;
@@ -180,7 +180,7 @@
   top: -1.1rem;
   left: 3px;
   font-family: var(--gmt-font-mono);
-  font-size: 0.62rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-signal-ink);
   white-space: nowrap;
 }
@@ -233,7 +233,7 @@
   justify-content: space-between;
   margin-left: calc(8.5rem + var(--gmt-space-2));
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
@@ -245,7 +245,7 @@
   padding: 0;
   list-style: none;
   font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
@@ -284,7 +284,7 @@
 .gmt-freetime-weekend > legend {
   padding: 0 var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
@@ -293,7 +293,7 @@
   align-items: center;
   gap: 4px;
   font-family: var(--gmt-font-mono);
-  font-size: 0.72rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
 }
 

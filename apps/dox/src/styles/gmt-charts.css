@@ -168,7 +168,7 @@
 }
 
 .gmt-chart .ts-chart__axis text {
-  font-size: 11px;
+  font-size: var(--gmt-text-xs);
   fill: var(--gmt-ice-dim);
 }
 
