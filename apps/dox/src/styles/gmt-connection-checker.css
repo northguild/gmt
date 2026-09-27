@@ -1,0 +1,169 @@
+/*
+ * Connection Checker widget (TRAN-9).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css; the verdict line, naive
+ * row/badge and reason-aside spacing in gmt-transport-widgets.css. This
+ * sheet restyles the handling-time range input and draws the mini handoff
+ * strip.
+ *
+ * The verdicts use body-copy colour: made and missed are words, never
+ * colours — a connection check is a comparison, not a status light.
+ */
+
+.gmt-range {
+  appearance: none;
+  width: 100%;
+  min-width: 12rem;
+  height: 2px;
+  background: var(--gmt-border);
+  border-radius: 0;
+}
+
+.gmt-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 20px;
+  background: var(--gmt-cyan);
+  border: 0;
+  cursor: ew-resize;
+}
+
+.gmt-range::-moz-range-thumb {
+  width: 14px;
+  height: 20px;
+  background: var(--gmt-cyan);
+  border: 0;
+  border-radius: 0;
+  cursor: ew-resize;
+}
+
+.gmt-range:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 4px;
+}
+
+[data-role="handling-value"] {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* The two three-field rows fill the card. The departure field takes a double
+   share so a full zoned string such as
+   2024-06-15T14:00:00[Europe/Amsterdam] shows unclipped. */
+.gmt-connection-fields > .gmt-label {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.gmt-connection-fields > .gmt-label:first-child {
+  flex: 2 1 20rem;
+}
+
+.gmt-connection-fields .gmt-input,
+.gmt-connection-fields .gmt-select {
+  width: 100%;
+}
+
+/* Below this, three shrinking fields on one line stop being readable —
+   `min-width: 0` lets flexbox shrink them past the point a zoned string
+   fits, rather than wrapping. Stack instead, each field at full width, the
+   same breakpoint `.gmt-connection-verdicts` collapses at. */
+@container (max-width: 30rem) {
+  .gmt-connection-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gmt-connection-fields > .gmt-label,
+  .gmt-connection-fields > .gmt-label:first-child {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* Even stacked full-width, a full zoned departure such as
+   `2024-06-14T22:10:00+02:00[Europe/Berlin]` (41 characters) still overran
+   its input's clientWidth by 22px at 390px, measured. `--gmt-text-sm` (12px,
+   the legibility floor) plus a trimmed side padding closes it, with no
+   change to the card chrome around it needed (unlike the Delivery
+   Scheduler's per-leg cards, this field has no extra fieldset padding to
+   spend). */
+@container (max-width: 26rem) {
+  .gmt-connection input.gmt-input[type="text"] {
+    font-size: var(--gmt-text-sm);
+    padding-left: var(--gmt-space-1);
+    padding-right: var(--gmt-space-1);
+  }
+}
+
+/* Two verdict rows side by side; stack below a narrow container. */
+.gmt-connection-verdicts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gmt-space-3);
+  margin: var(--gmt-space-2) 0;
+}
+
+@container (max-width: 30rem) {
+  .gmt-connection-verdicts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The mini strip: arrival, a hatched handling bar to ready, the departure
+   marker. Kind is carried by marker shape/border, never colour alone. */
+[data-role="handoff-strip"] {
+  position: relative;
+  height: 1.6rem;
+  margin: var(--gmt-space-2) 0;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-connection-strip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.gmt-connection-bar {
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  min-inline-size: 3px;
+  border: 1px dashed var(--gmt-spring);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-spring) srgb r g b / 0.3) 0,
+    color(from var(--gmt-spring) srgb r g b / 0.3) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+.gmt-connection-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-left: 2px solid var(--gmt-cyan);
+}
+
+.gmt-connection-mark--departure {
+  border-left-style: dotted;
+  border-left-color: var(--gmt-ice-dim);
+}
+
+.gmt-connection-mark--missed {
+  border-left-color: var(--gmt-dst-purple);
+}
+
+/* Values the reader is reading never animate. */
+.gmt-connection-bar,
+.gmt-connection-mark,
+.gmt-range {
+  transition: none;
+  animation: none;
+}

@@ -13,7 +13,7 @@
 }
 
 .gmt-pf-output-label {
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);

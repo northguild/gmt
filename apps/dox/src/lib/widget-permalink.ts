@@ -39,7 +39,11 @@ export type WidgetKind =
   | "converter"
   | "dwell"
   | "freetime"
-  | "billing";
+  | "billing"
+  | "delivery"
+  | "connection"
+  | "timetable"
+  | "crossing";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -63,6 +67,10 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   dwell: "/tools/dwell-ledger/",
   freetime: "/tools/free-time-ledger/",
   billing: "/tools/billing-deadlines/",
+  delivery: "/tools/delivery-scheduler/",
+  connection: "/tools/connection-checker/",
+  timetable: "/tools/timetable-reader/",
+  crossing: "/tools/crossing-clock/",
 };
 
 export function encodeWidgetPermalink(

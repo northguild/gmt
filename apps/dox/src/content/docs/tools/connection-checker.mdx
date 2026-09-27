@@ -1,0 +1,33 @@
+---
+title: Connection Checker
+description: Will the cargo make its onward departure? scheduleDelivery checks a scheduled connection against the arrival plus the handling time, and equal passes, beside the wall-clock check that says made when it is not.
+---
+
+import ConnectionChecker from "../../../components/ConnectionChecker.astro";
+
+One handoff: an inbound leg, a handling time at the port — the minimum
+connect time — and a scheduled onward departure. `scheduleDelivery` checks
+the onward departure against the arrival plus the handling time; a departure
+before that is a missed connection, and returns `null`. A departure exactly
+on it is a made connection with zero slack: equal passes.
+
+Slide the handling time and watch made turn to missed. Beside the real
+verdict is the naive check of the times as printed — a wall-clock addition
+with no zone and no DST — which agrees when nothing moves the port's offset
+between the two ends, and disagrees when a DST transition or a zone change
+does.
+
+<ConnectionChecker />
+
+**Worth trying:** [handling 51, missed by a
+minute](/tools/connection-checker/?w=connection&wa=%7B%22inboundDeparture%22%3A%222024-06-14T22%3A10%3A00%2B02%3A00%5BEurope%2FBerlin%5D%22%2C%22inboundDuration%22%3A%22PT15H%22%2C%22portZone%22%3A%22Europe%2FAmsterdam%22%2C%22handlingMinutes%22%3A%2251%22%2C%22onwardDeparture%22%3A%222024-06-15T14%3A00%3A00%5BEurope%2FAmsterdam%5D%22%2C%22onwardDuration%22%3A%22PT12H%22%2C%22onwardZone%22%3A%22Europe%2FRome%22%7D) —
+one minute inside the handling time is still a missed connection. Then [the
+same barge the night the clocks spring
+forward](/tools/connection-checker/?w=connection&wa=%7B%22inboundDeparture%22%3A%222024-03-30T22%3A10%3A00%2B01%3A00%5BEurope%2FBerlin%5D%22%2C%22inboundDuration%22%3A%22PT15H%22%2C%22portZone%22%3A%22Europe%2FAmsterdam%22%2C%22handlingMinutes%22%3A%2245%22%2C%22onwardDeparture%22%3A%222024-03-31T14%3A00%3A00%5BEurope%2FAmsterdam%5D%22%2C%22onwardDuration%22%3A%22PT12H%22%2C%22onwardZone%22%3A%22Europe%2FRome%22%7D) —
+the printed-clock check still says made; scheduleDelivery says missed.
+
+Reference: [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/)
+is the real call behind every verdict here. For the full journey this handoff
+sits inside, see the [Delivery Scheduler](/tools/delivery-scheduler/). See the
+guide's
+[section on scheduled connections and the minimum connect time](/guides/industries/transport-multi-leg-scheduling/#a-scheduled-departure-is-a-connection-and-dwell-is-the-minimum-connect-time).

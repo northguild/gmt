@@ -1,0 +1,32 @@
+---
+/**
+ * Timetable Reader widget (TRAN-9).
+ *
+ * A printed timetable's wall times, read through `scheduleDelivery`'s
+ * `startTimeZone`: a repeated hour resolves to the earlier instant, a
+ * skipped one to the later instant, and a written offset picks the other
+ * pass of a repeated hour.
+ *
+ * **The markup and the wiring both live in `lib/timetable-reader-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderTimetableReaderTemplate } from "../lib/timetable-reader-mount";
+---
+
+<Fragment set:html={renderTimetableReaderTemplate()} />
+
+<script>
+  import { mountTimetableReader } from "../lib/timetable-reader-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("timetable");
+    document.querySelectorAll<HTMLElement>(".gmt-timetable").forEach((el) => {
+      mountTimetableReader(el, seed, new AbortController().signal).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>

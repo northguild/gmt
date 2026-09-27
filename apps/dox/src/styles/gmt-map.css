@@ -68,7 +68,7 @@
 }
 
 .gmt-timezone-map .ts-chart-tooltip__row > span:last-child {
-  font-size: 0.65rem;
+  font-size: var(--gmt-text-xs);
   color: var(--gmt-spring-ink);
   text-align: right;
   white-space: nowrap;

@@ -25,6 +25,17 @@
   font-size: 1.05rem;
 }
 
+/* A heading with no spaces to break at — several function names joined by
+   `/`, e.g. — has nowhere for normal wrapping to give, and pushed the whole
+   page into horizontal scroll rather than wrapping (found on
+   /mistakes/parse-date-time/'s "Checking for null on
+   parseRfc2822/parseHttp/parseSql/parseRfc3339" title). Headings may break
+   anywhere once they run out of natural breaks; this is the site-wide fix,
+   not a one-off on that page. */
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+  overflow-wrap: anywhere;
+}
+
 /* ---- Code blocks ---- */
 .sl-markdown-content pre {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */
@@ -32,6 +43,13 @@
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
   position: relative;
+  /* `white-space: pre` never wraps, so an unbroken line (the naive-vs-gmt
+     scenario snippets, e.g.) must scroll inside its own box rather than
+     widen the page — found on /scenarios/monthly-billing/, whose <pre> has
+     no `<style>` of its own and so never got this. Expressive Code blocks
+     already scroll themselves; this makes it true for every `pre`, not
+     just theirs. */
+  overflow-x: auto;
 }
 
 .sl-markdown-content pre code {
@@ -39,7 +57,10 @@
   color: var(--gmt-ice);
 }
 
-/* inline code (--gmt-code-bg / --gmt-code-border flip for light mode) */
+/* inline code (--gmt-code-bg / --gmt-code-border flip for light mode).
+   `overflow-wrap: anywhere` lets a long unbroken value (a path, an ISO
+   string) break mid-token in flowing prose rather than push the page wide —
+   a code *block* never needs this, since it already scrolls itself above. */
 .sl-markdown-content :not(pre) > code {
   background: var(--gmt-code-bg);
   color: var(--gmt-cyan-ink);
@@ -47,6 +68,7 @@
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
   font-size: 0.9em;
+  overflow-wrap: anywhere;
 }
 
 /* ---- Expressive Code frames ---- */

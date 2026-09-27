@@ -1,0 +1,33 @@
+---
+/**
+ * Delivery Scheduler widget (TRAN-9).
+ *
+ * A multi-leg journey — truck, ship, rail, up to four legs — chained by the
+ * real `scheduleDelivery` into one ETA. Every arrival, local arrival, ready
+ * instant and missed-connection verdict comes from the library; the
+ * itinerary's offset-table check on each arrival is the widget's one
+ * labelled naive value.
+ *
+ * **The markup and the wiring both live in `lib/delivery-scheduler-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderDeliverySchedulerTemplate } from "../lib/delivery-scheduler-mount";
+---
+
+<Fragment set:html={renderDeliverySchedulerTemplate()} />
+
+<script>
+  import { mountDeliveryScheduler } from "../lib/delivery-scheduler-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("delivery");
+    document.querySelectorAll<HTMLElement>(".gmt-delivery").forEach((el) => {
+      mountDeliveryScheduler(el, seed, new AbortController().signal).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>

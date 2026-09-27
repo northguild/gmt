@@ -29,7 +29,7 @@ import { readZoneNow } from "./zone-clock";
 // Corrected by real measurement (via measureElement) after each row's first
 // paint — only needs to be in the right ballpark so the initial totalSize
 // (and thus scrollbar/scrollToIndex math) isn't wildly off before that.
-const ROW_HEIGHT_ESTIMATE = 52;
+const ROW_HEIGHT_ESTIMATE = 54;
 const OVERSCAN = 8;
 // Mirrors --gmt-space-1 (gmt-tokens.css) — the virtualizer's `gap` is a plain
 // number, it can't read a CSS custom property.
@@ -237,8 +237,16 @@ export function mountZoneClockList(
       if (index === -1) return;
       // "instant" bypasses the panel's CSS `scroll-behavior: smooth` outright
       // (unlike "auto", which defers to it) — the initial reveal must not
-      // visibly scroll from the top.
-      const behavior = hasSelectedOnce ? "auto" : "instant";
+      // visibly scroll from the top. A jump of more than one viewport is
+      // instant too: rows measured on the way in move the target off the
+      // estimate, and the virtualizer re-aims every frame, restarting the
+      // native smooth scroll each time — so a long smooth jump crawls and
+      // stops short. A short hop stays smooth.
+      const target = virtualizer.getOffsetForIndex(index, "center")?.[0];
+      const far =
+        target === undefined ||
+        Math.abs(target - panel.scrollTop) > panel.clientHeight;
+      const behavior = hasSelectedOnce && !far ? "auto" : "instant";
       hasSelectedOnce = true;
       virtualizer.scrollToIndex(index, { align: "center", behavior });
     },
