@@ -178,7 +178,7 @@ describe("unitVector / dot3", () => {
     }
   });
 
-  it("matches cos(geoDistance(...)) exactly, for both nearby and antipodal points", () => {
+  it("matches cos(geoDistance(...)) to 9 places, for both nearby and antipodal points", () => {
     const cases: [[number, number], [number, number]][] = [
       [
         [-73.99, 40.73],
@@ -204,7 +204,7 @@ describe("unitVector / dot3", () => {
     }
   });
 
-  it("is negative exactly where geoDistance exceeds a quarter turn", () => {
+  it("is negative where geoDistance exceeds a quarter turn", () => {
     const centre = unitVector(0, 0);
     expect(dot3(unitVector(89, 0), centre)).toBeGreaterThan(0);
     expect(dot3(unitVector(91, 0), centre)).toBeLessThan(0);

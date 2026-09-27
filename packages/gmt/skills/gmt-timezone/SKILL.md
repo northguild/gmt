@@ -208,7 +208,8 @@ converting between time zones, or doing arithmetic that must respect DST.
     zoneless wall time: on the first leg it is read in `startTimeZone`, on a
     later leg in the previous leg's `timeZone` (where that leg leaves from),
     both with `"compatible"` resolution (ambiguous → earlier, skipped →
-    later). A
+    later). On a later leg, a repeated hour instead takes the earliest pass
+    at or after the previous arrival plus its dwell. A
     negative leg `duration` is `null`; the last leg's `dwellAfter` is echoed,
     never added. `mode`, `origin` and `destination` are opaque tags echoed on
     each `LegTime`. An empty array returns `{ eta: "", legTimes: [] }`.

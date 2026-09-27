@@ -177,7 +177,9 @@ Sections, in this order. Each function gets one `##` headed with a claim, in the
      resolves to the earlier instant and a nonexistent one to the later instant. Code: V18
      (01:30 on the fall-back night, the earlier pass), V19 (writing `-05:00` picks the later
      pass), V20 (02:30 on the spring-forward night becomes 03:30) and V83 (no offset makes a
-     skipped time exist: `null`). Link the [Timetable Reader](/tools/timetable-reader/) and,
+     skipped time exist: `null`). Then the one exception, at a hub: on any leg but the first a
+     repeated hour takes the earliest pass at or after the previous arrival plus its dwell, and
+     falls back to the earlier pass (a miss) when neither is that late. Code: V102. Link the [Timetable Reader](/tools/timetable-reader/) and,
      for the general DST rule, the [DST Inspector](/tools/dst-inspector/).
    - `### Tags, zones and the sentinels`. `mode`, `origin` and `destination` are opaque tags
      echoed onto each `LegTime` and absent when not supplied (V25, then V1 has none). `timeZone`
@@ -1456,7 +1458,7 @@ Nothing. The contract matches the final source, and all section 9 rows pass agai
 ## 9. Verified values
 
 Computed from the final `packages/gmt/src` (compiled with the package's own
-`tsconfig.build.json`), in `TZ=UTC`, `America/Los_Angeles` and `Asia/Tokyo`. All 107 rows pass.
+`tsconfig.build.json`), in `TZ=UTC`, `America/Los_Angeles` and `Asia/Tokyo`. All 108 rows pass.
 Appendix Z is the script and holds every value in full. The table below names each row. A
 result is written out in full in appendix Z, and pages copy it from there.
 
@@ -1521,6 +1523,7 @@ Shorthand used only in this table: `truck` = `{ departure: "2024-03-08T08:00:00-
 | V97 | Timetable Reader `leavesAt`, `offset-picks`' `01:30` with `-05:00` written | `2024-11-03T01:30:00-05:00[America/New_York]` |
 | V98, V99 | the two later-leg wall-time JSDoc examples: a zoneless 13:00, then 11:00, after a UTC leg with a `PT2H` dwell | eta `2024-06-15T14:00:00+00:00[UTC]`; `null` (inside the dwell) |
 | V100, V101 | the guide's Tokyo pair: a zoneless 20:00, then 18:30, after a leg landing in Tokyo at 19:00 | eta `2024-06-15T12:00:00+00:00[UTC]`; `null` (before the arrival) |
+| V102 | a zoneless 01:30 on New York's fall-back night, after a leg landing at 01:00 EST (06:00Z) | eta `2024-11-03T07:30:00+00:00[UTC]` (the later pass, 06:30Z) |
 | N1a–N1d, N2, N3 | the naive plain-JavaScript values | `"2024-03-10T12:00:00.000Z"`, `"2024-03-10T04:00"`, `"2024-03-10T06:00"`, `true`; `true`; `0` |
 
 ## 10. Internal-link check (D6)
@@ -1761,6 +1764,9 @@ rows.push(
   ["V100", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" }, { departure: "2024-06-15T20:00:00", duration: "PT1H", timeZone: "UTC" }]),
     { eta: "2024-06-15T12:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T10:00:00Z", localArrival: "2024-06-15T19:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S" }, { arrival: "2024-06-15T12:00:00Z", localArrival: "2024-06-15T12:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
   ["V101", () => scheduleDelivery([{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "Asia/Tokyo" }, { departure: "2024-06-15T18:30:00", duration: "PT1H", timeZone: "UTC" }]), null],
+  // the guide: a repeated hour at a hub takes the pass the cargo can catch
+  ["V102", () => scheduleDelivery([{ departure: "2024-11-03T06:00:00Z", duration: "PT0S", timeZone: "America/New_York" }, { departure: "2024-11-03T01:30:00", duration: "PT1H", timeZone: "UTC" }]),
+    { eta: "2024-11-03T07:30:00+00:00[UTC]", legTimes: [{ arrival: "2024-11-03T06:00:00Z", localArrival: "2024-11-03T01:00:00-05:00[America/New_York]", dwellAfter: "PT0S" }, { arrival: "2024-11-03T07:30:00Z", localArrival: "2024-11-03T07:30:00+00:00[UTC]", dwellAfter: "PT0S" }] }],
 );
 
 // Naive plain JavaScript, TZ-independent (every parsed string carries Z or an offset, or both sides are zoneless)

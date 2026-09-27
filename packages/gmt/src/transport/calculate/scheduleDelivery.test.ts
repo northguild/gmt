@@ -513,6 +513,32 @@ describe("scheduleDelivery", () => {
     ).toBe("2024-06-15T19:00:00Z");
   });
 
+  // A repeated hour at a hub takes the pass the cargo can catch. New York falls back at 06:00Z on
+  // 3 November 2024, so 01:30 happens twice: 05:30Z (EDT) and 06:30Z (EST). Leg 1 is a zero-length
+  // leg with no dwell, so the cursor is its departure. Leg 2 then runs PT1H from the pass taken.
+  // The skipped-hour row is the guard: 02:30 on 10 March never happens, "compatible" gives 07:30Z,
+  // and reading it as a repeat would take 06:30Z instead.
+  it.each`
+    landed                    | departure                                  | arrival                   | kind
+    ${"2024-11-03T06:00:00Z"} | ${"2024-11-03T01:30:00"}                   | ${"2024-11-03T07:30:00Z"} | ${"lands 01:00 EST: the earlier pass is gone, so the later one (06:30Z)"}
+    ${"2024-11-03T06:00:00Z"} | ${"2024-11-03T01:30:00[America/New_York]"} | ${"2024-11-03T07:30:00Z"} | ${"the same with the zone bracketed and no offset"}
+    ${"2024-11-03T04:00:00Z"} | ${"2024-11-03T01:30:00"}                   | ${"2024-11-03T06:30:00Z"} | ${"lands 00:00 EDT: both passes are ahead, so the earlier (05:30Z)"}
+    ${"2024-11-03T07:00:00Z"} | ${"2024-11-03T01:30:00"}                   | ${null}                   | ${"lands 02:00 EST: both passes are gone, a real miss"}
+    ${"2024-11-03T06:00:00Z"} | ${"2024-11-03T01:30:00-04:00"}             | ${null}                   | ${"a written -04:00 names the earlier pass, and it wins: missed"}
+    ${"2024-03-10T06:00:00Z"} | ${"2024-03-10T02:30:00"}                   | ${"2024-03-10T08:30:00Z"} | ${"a skipped hour keeps compatible (07:30Z), not the earlier read"}
+  `(
+    "resolves a hub's repeated hour after a leg that $kind",
+    ({ landed, departure, arrival }) => {
+      const result = scheduleDelivery([
+        { departure: landed, duration: "PT0S", timeZone: "America/New_York" },
+        { departure, duration: "PT1H", timeZone: "UTC" },
+      ]);
+      expect(result === null ? null : result.legTimes[1]?.arrival).toBe(
+        arrival,
+      );
+    },
+  );
+
   // Temporal's last instant is +275760-09-13T00:00:00Z (TC39 nsMaxInstant): a leg may arrive
   // exactly there (the zero dwell adds nothing), and one that would pass it is not a schedule.
   it("arrives exactly at the instant range maximum", () => {

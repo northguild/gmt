@@ -181,6 +181,28 @@ describe("verdict", () => {
     );
   });
 
+  // New York falls back at 06:00Z on 3 November 2024, so a printed 01:30 happens
+  // twice: 05:30Z and 06:30Z. The cargo is ready at 06:00Z (01:00 EST), so the
+  // train it can catch is the later pass: made with 30 min to spare, and the
+  // departure shows as 01:30 EST, not the earlier pass it already missed.
+  it("reads a printed onward time in a repeated hour as the pass the cargo can catch", () => {
+    const state: ConnectionState = {
+      inboundDeparture: "2024-11-03T05:00:00Z",
+      inboundDuration: "PT1H",
+      portZone: "America/New_York",
+      handlingMinutes: "0",
+      onwardDeparture: "2024-11-03T01:30:00",
+      onwardDuration: "PT1H",
+      onwardZone: "America/New_York",
+    };
+    const v = verdict(legsOf(state), lib);
+    expect(v.kind).toBe("made");
+    expect(v.text).toContain("30 min");
+    expect(v.departureLocal).toBe(
+      "2024-11-03T01:30:00-05:00[America/New_York]",
+    );
+  });
+
   // Same zoneless 14:00, but 51 min handling makes the cargo ready at 12:01Z:
   // the departure resolves, so this is a missed connection, not "no verdict".
   it("reads a zoneless onward departure on the port's clock: missed by 1 minute", () => {

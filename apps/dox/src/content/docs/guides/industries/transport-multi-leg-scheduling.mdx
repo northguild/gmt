@@ -201,6 +201,20 @@ scheduleDelivery([{ departure: "2024-03-10T02:30:00-05:00[America/New_York]", du
 // null — no offset names a time the clock skipped
 ```
 
+One exception applies at a hub. A printed timetable never says which pass of a repeated hour it
+means, so on any leg but the first a repeated hour takes the earliest pass the cargo can catch:
+the first at or after the previous arrival plus its dwell. When neither pass is that late, it
+takes the earlier pass, and the connection is missed.
+
+```typescript
+// Leg 1 lands in New York at 01:00 EST (06:00Z), after the 01:30 EDT pass has gone
+scheduleDelivery([
+  { departure: "2024-11-03T06:00:00Z", duration: "PT0S", timeZone: "America/New_York" },
+  { departure: "2024-11-03T01:30:00", duration: "PT1H", timeZone: "UTC" },
+]);
+// { eta: "2024-11-03T07:30:00+00:00[UTC]", … } — it left at the later pass, 01:30 EST (06:30Z)
+```
+
 Read a printed timetable this way in the [Timetable Reader](/tools/timetable-reader/), and see
 the general DST rule in the [DST Inspector](/tools/dst-inspector/).
 

@@ -86,17 +86,19 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  * one). A zoneless wall time is a published local schedule time, exact only through
  * `wallTimeZone` — the caller decides which zone that is: `startTimeZone` for the first leg,
  * the previous leg's `timeZone` for any other leg (see `legDeparture`). Without one, a
- * zoneless departure is not a moment.
+ * zoneless departure is not a moment. `cursor` picks the pass of a repeated hour (see
+ * `wallTimeInstant`).
  */
 function departureInstant(
   departure: unknown,
-  wallTimeZone?: string,
+  wallTimeZone: string | undefined,
+  cursor: Temporal.Instant | null,
 ): Temporal.Instant | null {
   if (typeof departure !== "string") {
     return null;
   }
   if (isValidZonedDateTime(departure)) {
-    return zonedDateTimeFrom(departure).toInstant();
+    return wallTimeInstant(departure, cursor);
   }
   if (zoneAnnotation.test(departure)) {
     return null;
@@ -105,13 +107,44 @@ function departureInstant(
     return Temporal.Instant.from(departure);
   }
   if (wallTimeZone !== undefined && isValidDateTime(departure)) {
-    // resolveLocal's core: the zone the schedule's wall time is exact in. "compatible": an
-    // ambiguous wall time takes the earlier instant, a nonexistent one the later instant.
-    return zonedDateTimeFrom(`${isoStringBody(departure)}[${wallTimeZone}]`, {
-      disambiguation: "compatible",
-    }).toInstant();
+    // resolveLocal's core: the zone the schedule's wall time is exact in.
+    return wallTimeInstant(
+      `${isoStringBody(departure)}[${wallTimeZone}]`,
+      cursor,
+    );
   }
   return null;
+}
+
+/**
+ * The instant a zoned string names. On a later leg (`cursor` set), a wall time the clock showed
+ * twice — a fall-back hour — resolves to the earliest pass at or after `cursor`, the first
+ * moment the cargo can leave: a printed hub time never says which pass it means, and the one a
+ * shipper would catch is the first the cargo is ready for. Otherwise, and when neither pass is
+ * at or after `cursor` (a real miss), it resolves `"compatible"`: the earlier pass of a
+ * repeated hour, the later instant of a skipped one. A written offset names one pass, so both
+ * reads agree and it always wins. A repeated hour is told apart from a skipped one by whether
+ * both passes keep the wall time asked for.
+ */
+function wallTimeInstant(
+  zoned: string,
+  cursor: Temporal.Instant | null,
+): Temporal.Instant {
+  if (cursor !== null) {
+    const earlier = zonedDateTimeFrom(zoned, { disambiguation: "earlier" });
+    const later = zonedDateTimeFrom(zoned, { disambiguation: "later" });
+    const repeated =
+      !earlier.toInstant().equals(later.toInstant()) &&
+      earlier.toPlainDateTime().equals(later.toPlainDateTime());
+    if (repeated) {
+      for (const pass of [earlier.toInstant(), later.toInstant()]) {
+        if (Temporal.Instant.compare(pass, cursor) >= 0) {
+          return pass;
+        }
+      }
+    }
+  }
+  return zonedDateTimeFrom(zoned, { disambiguation: "compatible" }).toInstant();
 }
 
 /** The three opaque tag keys of a leg, echoed onto its LegTime. */
@@ -159,7 +192,7 @@ function legDeparture(
     return cursor;
   }
   const wallTimeZone = cursor === null ? startTimeZone : previousTimeZone;
-  const departure = departureInstant(leg.departure, wallTimeZone);
+  const departure = departureInstant(leg.departure, wallTimeZone, cursor);
   if (departure === null) {
     return null;
   }
@@ -324,6 +357,11 @@ function chainLegs(
  *   twice — resolves to the **earlier** instant; a **nonexistent** one — a spring-forward hour
  *   the clock skipped — resolves to the **later** instant. Write the offset to pick the other
  *   pass of a repeated hour.
+ * - **A repeated hour at a hub takes the pass the cargo can catch.** On any leg but the first, an
+ *   ambiguous wall time resolves to the earliest pass at or after the previous arrival plus its
+ *   dwell — a printed timetable never says which pass it means. When neither pass is that late,
+ *   it resolves to the earlier pass as above, and the connection is missed. A skipped hour, and
+ *   the first leg, which has no arrival to wait for, keep the rule above.
  * - `duration` follows `transitTime`: time units are elapsed time, a day is exactly 24 hours,
  *   and calendar units (years, months, weeks) return `null`. `transitTime` accepts a negative
  *   duration (to recover a departure from an arrival), but a leg cannot arrive before it

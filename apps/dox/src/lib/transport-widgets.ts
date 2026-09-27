@@ -295,12 +295,15 @@ export function readyAt(
 }
 
 /**
- * The exact instant leg `k`'s written `departure` names, alone: a single
- * zero-length leg with that departure, so no cursor — and no missed
- * connection — enters. Its zoneless wall time is read where
- * `scheduleDelivery` reads it: in `startTimeZone` on the first leg, in the
- * previous leg's own `timeZone` on any later one. `null` when the leg has no
- * departure or it does not resolve.
+ * The exact instant leg `k`'s written `departure` names, as `scheduleDelivery`
+ * reads it. On a later leg it asks the real chain first, with the departure
+ * on a zero-length leg: a repeated hour at a hub resolves to the pass the
+ * cargo can catch, and only the chain knows when the cargo is ready. When the
+ * chain fails — a missed connection — it asks again with the leg alone, so no
+ * cursor enters: the zoneless wall time is read in `startTimeZone` on the
+ * first leg and in the previous leg's own `timeZone` on any later one, and a
+ * repeated hour takes its earlier pass, which is the pass the library compared
+ * and missed. `null` when the leg has no departure or it does not resolve.
  */
 export function departureAt(
   legs: readonly ScheduleLeg[],
@@ -310,8 +313,14 @@ export function departureAt(
 ): string | null {
   const departure = legs[k]?.departure;
   if (departure === undefined) return null;
+  const leg = { departure, ...ZERO_LEG };
+  if (k > 0) {
+    const chained = lib.scheduleDelivery([...legs.slice(0, k), leg], options);
+    const at = chained?.legTimes[k]?.arrival;
+    if (at !== undefined) return at;
+  }
   const result = lib.scheduleDelivery(
-    [{ departure, ...ZERO_LEG }],
+    [leg],
     wallTimeOptions(legs, k, options, lib),
   );
   return result?.legTimes[0]?.arrival ?? null;
