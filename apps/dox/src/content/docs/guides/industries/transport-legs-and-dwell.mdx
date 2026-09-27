@@ -1,6 +1,6 @@
 ---
 title: "Transport: Legs and Dwell"
-description: transitTime, etaAtZone and dwellTime — the three operations every transport mode shares, with exact elapsed legs, arrivals rendered where they land, and dwell counted in local calendar days.
+description: transitTime, etaAtZone and dwellTime — the three operations every transport mode shares, with exact elapsed legs, arrivals rendered where they land, and dwell counted in local calendar days — and cutoffAt, cutoffSchedule, isPastCutoff and timeToCutoff for deadlines counted back from an anchor event.
 sidebar:
   order: 1
 ---
@@ -11,6 +11,8 @@ gate or yard. Every mode also gets the same two things wrong: a leg across a DST
 a fixed number of *elapsed* hours, and dwell is charged in *local calendar days*, not hours.
 Chaining legs into one journey, with scheduled connections and crossings, is
 [Transport: Multi-leg Scheduling](/guides/industries/transport-multi-leg-scheduling/).
+Deadlines counted back from a departure, a loading or an arrival are
+[Deadlines from an anchor](#deadlines-from-an-anchor), at the end of this page.
 
 ```typescript
 import { dwellTime, etaAtZone, transitTime } from "@northguild/gmt/transport";
@@ -169,10 +171,176 @@ calendar or working depends on a contract, not on the place. Free time and demur
 and hospital length of stay will all count from this one day boundary rather than each
 deciding what a midnight is.
 
+## Deadlines from an anchor
+
+A logistics deadline is not a fixed timestamp. It counts back from an event, such as a
+vessel's departure, a container's loading or an arrival, in the local time of the place that
+enforces it, and it moves when that event moves. The four functions live in
+`@northguild/gmt/transport`, split into `@northguild/gmt/transport/calculate` (`cutoffAt`,
+`cutoffSchedule`) and `@northguild/gmt/transport/compare` (`isPastCutoff`, `timeToCutoff`).
+
+```typescript
+import { cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff } from "@northguild/gmt/transport";
+```
+
+## Two days before is not 48 hours: `cutoffAt`
+
+[`cutoffAt(anchor, offset, options)`](/reference/transport/calculate/cutoffAt) takes an offset
+off an anchor event and reads the result in `options.timeZone`. A cut-off stated as "two days
+before, 17:00" is 17:00 local on the date two days earlier. That is not the anchor minus 48
+hours, which keeps the anchor's time of day. `atLocalTime` pins the time of day.
+
+```typescript
+import { cutoffAt } from "@northguild/gmt/transport";
+
+// A vessel sails Friday 14 June 2024 at 18:00 in Amsterdam (16:00Z).
+cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
+// "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"
+
+// Subtracting 48 hours keeps the departure's 18:00: an hour late for a close-of-business rule.
+cutoffAt("2024-06-14T16:00:00Z", "PT48H", { timeZone: "Europe/Amsterdam" });
+// "2024-06-12T18:00:00+02:00[Europe/Amsterdam]"
+```
+
+With `atLocalTime`, only the day the offset lands on matters. The offset's exact part (hours
+and smaller) comes off the anchor's instant, its calendar part (years, months, weeks, days)
+comes off that local date, and the cut-off is `atLocalTime` on that day. Across a DST
+transition the local time of day holds and the elapsed time moves. New York sprang forward on
+Sunday 10 March 2024, so the pinned cut-off before a Monday 18:00 departure is 48 elapsed
+hours earlier, not 49.
+
+```typescript
+// Monday 11 March 2024, 18:00 EDT (22:00Z).
+cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" });
+// "2024-03-09T17:00:00-05:00[America/New_York]"
+```
+
+Without `atLocalTime`, the offset comes off the way Temporal's `ZonedDateTime#subtract` takes
+it: the calendar part keeps the anchor's wall clock, and the exact part is exact elapsed time.
+This is the shape of an advance-filing deadline stated in hours. 96 hours before an arrival is
+96 hours, whatever the clock does in between.
+
+```typescript
+// Arrival Tuesday 5 November 2024, 12:00 EST (17:00Z). New York fell back on the 3rd.
+cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" });
+// "2024-11-01T13:00:00-04:00[America/New_York]" — 96 hours; the clock reads 13:00
+cutoffAt("2024-11-05T17:00:00Z", "P4D", { timeZone: "America/New_York" });
+// "2024-11-01T12:00:00-04:00[America/New_York]" — four calendar days keep 12:00, 97 hours
+```
+
+### The anchor is your event
+
+Loading, departure and arrival are different instants, and the same offset from the wrong
+one is late by days. `cutoffAt` takes the event you pass and never guesses which one a rule
+means. The anchor is exact: an instant (`Z` or an offset) or a zoned string, whose bracket is
+not read. `timeZone` alone is the local frame, and it may be a fixed offset such as `"+02:00"`,
+which observes no DST.
+
+```typescript
+// One shipment: loaded at 08:00Z on 10 June, departing at 20:00Z on 12 June.
+cutoffAt("2024-06-10T08:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-09T16:00:00+08:00[Asia/Shanghai]" — 24 hours before loading
+cutoffAt("2024-06-12T20:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-12T04:00:00+08:00[Asia/Shanghai]" — 24 hours before departure, 60 hours later
+```
+
+### Closures roll backward
+
+With `calendar`, a [`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar), a cut-off on a
+weekend or holiday moves by `roll`. The default is `"preceding"`, because a deadline never
+moves later to fit a closure. The rolled day keeps the cut-off's local time of day. Any
+[`RollConvention`](/reference/types/roll-convention/RollConvention) that
+[`rollDate`](/reference/calendar/business/rollDate) takes is accepted, and `roll` without a
+`calendar` returns `""`.
+
+```typescript
+// Tuesday 18 June 2024, 18:00 in Amsterdam. Two days before is Sunday.
+const calendar = { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" };
+cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar });
+// "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" — back to Friday
+```
+
+### Skipped and repeated hours
+
+A cut-off is a local wall time, so it inherits
+[`resolveLocal`](/reference/instant/convert/resolveLocal)'s vocabulary. `atLocalTime`, the
+calendar part of an unpinned offset and a rolled day all land on wall times. A repeated hour
+takes the earlier pass, so the deadline never moves later. A skipped hour, or a day a zone
+deleted, returns `""` rather than shifting the deadline.
+
+```typescript
+cutoffAt("2024-11-04T23:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "01:30" });
+// "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30
+cutoffAt("2024-03-11T22:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "02:30" });
+// "" — 02:30 on 10 March never happened
+```
+
+## The whole stack: `cutoffSchedule`
+
+[`cutoffSchedule(anchor, cutoffs, options)`](/reference/transport/calculate/cutoffSchedule)
+computes every cut-off against one anchor, earliest first. Each entry is `cutoffAt` with its
+own `offset` and `atLocalTime`, and `options` carries the zone, calendar and roll they share.
+Reschedule the vessel and call it again: the functions are pure, so every deadline follows the
+new departure and nothing cached goes stale.
+
+```typescript
+import { cutoffSchedule } from "@northguild/gmt/transport";
+
+cutoffSchedule("2024-06-14T16:00:00Z", [
+  { name: "gate-in", offset: "P1D" },
+  { name: "document", offset: "P2D", atLocalTime: "17:00" },
+  { name: "customs", offset: "PT30H" },
+  { name: "VGM", offset: "P1D", atLocalTime: "10:00" },
+], { timeZone: "Europe/Amsterdam" });
+// [ { name: "document", at: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" },
+//   { name: "VGM", at: "2024-06-13T10:00:00+02:00[Europe/Amsterdam]" },
+//   { name: "customs", at: "2024-06-13T12:00:00+02:00[Europe/Amsterdam]" },
+//   { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" } ]
+```
+
+The sort is by instant, not by the text of the local time: on a fall-back night the first
+01:30 comes before the second 01:15. Entries on the same instant keep the order you gave. One
+invalid entry, or one cut-off in a skipped hour, returns `[]`, never a stack with a deadline
+silently missing.
+
+## Has it passed: `isPastCutoff`
+
+[`isPastCutoff(now, cutoff)`](/reference/transport/compare/isPastCutoff) is `true` from the
+cut-off instant on. The window to meet a cut-off is half-open, like GMT's
+[intervals](/guides/intervals/interval-basics/): at the cut-off itself it has closed. Both
+arguments are compared as instants, and `now` is always yours, so the answer is reproducible.
+
+```typescript
+import { isPastCutoff } from "@northguild/gmt/transport";
+
+isPastCutoff("2024-06-12T14:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // false
+isPastCutoff("2024-06-12T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // true — at the cut-off
+```
+
+`isPastCutoff` returns `false` for invalid input, including `cutoffAt`'s `""`, and `false`
+reads as "not past". Check the cut-off is not `""` before trusting a `false`.
+
+## How long is left: `timeToCutoff`
+
+[`timeToCutoff(now, cutoff)`](/reference/transport/compare/timeToCutoff) returns the exact time
+to the cut-off as an ISO 8601 duration with hours as the largest unit. It is `PT0S` at the
+cut-off and negative after it, which tells you how late you are.
+
+```typescript
+import { timeToCutoff } from "@northguild/gmt/transport";
+
+timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "PT48H"
+timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "-PT1H"
+timeToCutoff("2024-11-02T17:00:00-04:00[America/New_York]", "2024-11-03T17:00:00-05:00[America/New_York]");
+// "PT25H" — across the fall-back
+```
+
 ## See it break, then work
 
 - [Dwell Ledger: drag a dwell across local midnights](/tools/dwell-ledger/)
 - [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
 - [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
 - [Two arrivals, one wall time: the fall-back night](/scenarios/arrival-on-a-fall-back-night/)
+- [Two days before is not 48 hours](/scenarios/two-days-before-is-not-48-hours/)
+- [A filing deadline anchored to the wrong event](/scenarios/filing-anchored-to-the-wrong-event/)
 - [Transport mistakes](/mistakes/transport/)

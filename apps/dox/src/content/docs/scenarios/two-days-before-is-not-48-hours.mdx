@@ -1,0 +1,36 @@
+---
+title: "Two Days Before Is Not 48 Hours"
+description: A documentation cut-off is 17:00 local two days before the vessel sails. Subtracting 48 hours from the departure puts it an hour late, and a DST weekend moves it again.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Two Days Before Is Not 48 Hours"
+  description="A vessel sails at 18:00 on Friday 14 June 2024 from Amsterdam. The tariff closes documentation at 17:00 local, two days before sailing. When is the cut-off?"
+  naiveCode={`// The naive approach: two days is 48 hours
+const sails = Date.parse("2024-06-14T16:00:00Z"); // Friday 18:00 in Amsterdam
+const cutoff = new Date(sails - 48 * 36e5);
+cutoff.toISOString(); // "2024-06-12T16:00:00.000Z" — Wednesday 18:00 in Amsterdam
+// The terminal closed documentation at 17:00. Every filing made in that hour is late.`}
+  explanation={`"Two days before, 17:00" names a day and a time of day on the terminal's clock, not a length of time. Subtracting 48 hours keeps the departure's own time of day, 18:00, so the cut-off is an hour late whenever the vessel sails at any time other than 17:00. When a DST transition falls between the two dates, 48 hours also lands on a different wall-clock hour: before a Monday 18:00 departure in New York, across the 10 March 2024 spring-forward, the pinned cut-off is 48 elapsed hours earlier, not 49. \`cutoffAt\` with \`atLocalTime\` takes the two days off the local date and pins the time of day, so the cut-off is 17:00 on the terminal's clock whatever the departure time or the DST calendar.`}
+  gmtCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
+// "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" — Wednesday 17:00, 49 hours before sailing
+
+cutoffAt("2024-06-14T16:00:00Z", "PT48H", { timeZone: "Europe/Amsterdam" });
+// "2024-06-12T18:00:00+02:00[Europe/Amsterdam]" — what subtracting 48 hours gives
+
+// Across the spring-forward the local time holds and the elapsed time moves.
+cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" });
+// "2024-03-09T17:00:00-05:00[America/New_York]" — 48 elapsed hours before Monday 18:00 EDT`}
+  fixedSpecId="cutoffAt"
+/>
+
+In the playground, change `atLocalTime` to `"10:00"` for a VGM cut-off, or remove it to see the
+cut-off keep the departure's 18:00. Add
+`calendar: { weekend: [6, 7], holidays: ["2024-06-12"], timeZone: "Europe/Amsterdam" }` to make
+Wednesday a holiday: the cut-off rolls back to Tuesday, never forward to Thursday. The rules are
+in [Transport: Legs and
+Dwell](/guides/industries/transport-legs-and-dwell/#two-days-before-is-not-48-hours-cutoffat).

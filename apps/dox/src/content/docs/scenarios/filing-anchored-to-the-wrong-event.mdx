@@ -1,0 +1,34 @@
+---
+title: "A Filing Deadline Anchored to the Wrong Event"
+description: A rule says 24 hours before loading. The system counts 24 hours before departure, which is two and a half days later, and every filing it schedules is late.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Filing Deadline Anchored to the Wrong Event"
+  description="A container is loaded at 16:00 local on 10 June 2024 in Shanghai. The vessel departs at 04:00 local on 13 June. An advance filing is due 24 hours before loading. When is it due?"
+  naiveCode={`// The naive approach: the booking has one date on it, so count from that
+const booking = { loading: "2024-06-10T08:00:00Z", departure: "2024-06-12T20:00:00Z" };
+const due = new Date(Date.parse(booking.departure) - 24 * 36e5);
+due.toISOString(); // "2024-06-11T20:00:00.000Z" — 04:00 on 12 June in Shanghai
+// The rule counts from loading. This deadline is 60 hours after the real one.`}
+  explanation={`An advance filing rule is stated as hours before a named cargo or vessel event, and the event differs from rule to rule: loading, departure from the load port, or arrival at the first port. Loading and departure here are 60 hours apart, so the same 24 hours counted from the wrong event is late by two and a half days. No calculation can recover that: the error is in which event was chosen. \`cutoffAt\` takes the anchor as an argument and never guesses which event a rule means, so the choice is written in the call where a reviewer can see it. An offset in hours with no \`atLocalTime\` is exact elapsed time, so the deadline is exactly 24 hours before the event you pass.`}
+  gmtCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+const loading = "2024-06-10T08:00:00Z"; // 16:00 in Shanghai
+const departure = "2024-06-12T20:00:00Z"; // 04:00 on 13 June in Shanghai
+
+cutoffAt(loading, "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-09T16:00:00+08:00[Asia/Shanghai]" — 24 hours before loading
+
+cutoffAt(departure, "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-12T04:00:00+08:00[Asia/Shanghai]" — 24 hours before departure: a different deadline`}
+  fixedSpecId="cutoffAt"
+/>
+
+In the playground, move the anchor by a day and watch the deadline move with it: a rescheduled
+event is a new call, not a stored deadline to fix. Try a 96-hour offset from an arrival,
+`cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" })`, which is exact
+elapsed time across New York's fall-back and reads 13:00, not the arrival's 12:00. The rules are
+in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/#the-anchor-is-your-event).

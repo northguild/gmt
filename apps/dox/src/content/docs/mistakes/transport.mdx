@@ -1,14 +1,15 @@
 ---
 title: Transport
-description: Common mistakes with transit legs, arrivals and dwell in GMT's transport layer.
+description: Common mistakes with transit legs, arrivals, dwell, connections and cut-offs in GMT's transport layer.
 ---
 
-The transport layer is `transitTime`, `etaAtZone`, `dwellTime`, `scheduleDelivery` and
-`crossingTime`, and the mistakes around them are the ones every transport mode makes on its
-own: treating a running time as a wall-clock interval, treating an offset as a place, turning
-elapsed hours into chargeable days by division, reading a handoff through a fixed offset, and
-checking a connection against the arrival instead of the arrival plus its handling time. Every
-output shown here is what the function returns.
+The transport layer is `transitTime`, `etaAtZone`, `dwellTime`, `scheduleDelivery`,
+`crossingTime` and the cut-off functions, and the mistakes around them are the ones every
+transport mode makes on its own: treating a running time as a wall-clock interval, treating an
+offset as a place, turning elapsed hours into chargeable days by division, reading a handoff
+through a fixed offset, checking a connection against the arrival instead of the arrival plus
+its handling time, and counting a deadline from the wrong event or as the wrong kind of
+offset. Every output shown here is what the function returns.
 
 ## Legs and dwell
 
@@ -190,4 +191,38 @@ scheduleDelivery([{ departure: "2024-03-10T02:30:00", duration: "PT1H", timeZone
 // { eta: "2024-03-10T04:30:00-04:00[America/New_York]",
 //   legTimes: [{ arrival: "2024-03-10T08:30:00Z", localArrival: "2024-03-10T04:30:00-04:00[America/New_York]", dwellAfter: "PT0S" }] } — resolves to 03:30, the later instant`}
   rightSpecId="scheduleDelivery"
+/>
+
+## Cut-offs
+
+<Mistake
+  severity="high"
+  title="Counting a filing deadline from departure when the rule says loading"
+  description="An advance filing rule names the event it counts from: loading, departure or arrival. They are different instants, so the same 24 hours from the wrong one is late by days. cutoffAt takes the event as its anchor and never guesses which one a rule means, so pass the one the rule names."
+  wrongCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+// The rule: 24 hours before loading. Loading is 08:00Z on 10 June; departure is 20:00Z on 12 June.
+cutoffAt("2024-06-12T20:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-12T04:00:00+08:00[Asia/Shanghai]" — counted from departure: 60 hours late`}
+  rightCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+cutoffAt("2024-06-10T08:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
+// "2024-06-09T16:00:00+08:00[Asia/Shanghai]" — 24 hours before loading`}
+  rightSpecId="cutoffAt"
+/>
+
+<Mistake
+  severity="high"
+  title="Subtracting P2D where the rule means 17:00 local two days before"
+  description="A cut-off of two days before, 17:00, names a day and a time of day on the terminal's clock. Subtracting P2D keeps the departure's own time of day, so an 18:00 sailing gets an 18:00 cut-off, an hour after the terminal closed. atLocalTime pins the time of day on the date two days earlier."
+  wrongCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+// The vessel sails Friday 14 June 2024 at 18:00 in Amsterdam.
+cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam" });
+// "2024-06-12T18:00:00+02:00[Europe/Amsterdam]" — an hour after documentation closed`}
+  rightCode={`import { cutoffAt } from "@northguild/gmt/transport";
+
+cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
+// "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"`}
+  rightSpecId="cutoffAt"
 />

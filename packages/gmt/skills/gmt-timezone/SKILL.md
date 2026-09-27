@@ -8,13 +8,14 @@ description: >
   startOfUnix/endOfUnix), hours in a local day, floorToZone/bucketRange,
   calendar-annotated zoned strings, range limits, transport legs
   (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery for
-  multi-leg ETAs and missed connections), intermodal free time (freeTimeExpiry,
+  multi-leg ETAs and missed connections), cut-offs (cutoffAt, cutoffSchedule,
+  isPastCutoff, timeToCutoff), intermodal free time (freeTimeExpiry,
   chargeableDays, demurrageClock), billingTimeline deadlines, and operating
   hours — OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
-  nextOpenAt, nextCloseAt, operatingTimeBetween and addOperatingTime (open
-  time elapsed, working-hours SLA deadlines, midnight-wrapping curfews).
-  Reads the installed package README.md and source JSDoc for API details;
-  this skill is a routing pointer, not an API dump.
+  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime (open
+  time elapsed, SLA deadlines, midnight-wrapping curfews).
+  Reads the installed README.md and source JSDoc for API details; a routing
+  pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -36,6 +37,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
   - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/transport/compare/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/intermodal/calculate/index.ts'
 metadata:
@@ -213,6 +215,20 @@ converting between time zones, or doing arithmetic that must respect DST.
     negative leg `duration` is `null`; the last leg's `dwellAfter` is echoed,
     never added. `mode`, `origin` and `destination` are opaque tags echoed on
     each `LegTime`. An empty array returns `{ eta: "", legTimes: [] }`.
+    `cutoffAt(anchor, offset, { timeZone, atLocalTime?, calendar?, roll? })`
+    counts a deadline back from the caller's event (loading, departure or
+    arrival are different instants; it never guesses which). With
+    `atLocalTime` the offset's exact part comes off the anchor's instant, its
+    calendar part off the local date, and the cut-off is that time of day:
+    `P2D` at `"17:00"` is 17:00 two days before, not 48 hours. Without it the
+    offset is `ZonedDateTime#subtract` (`P2D` keeps the wall clock, `PT96H` is
+    96 exact hours). With `calendar`, a closed day rolls by `roll`, default
+    `"preceding"`; `roll` without `calendar` is `""`. Every wall time it lands
+    on takes the earlier pass of a repeated hour and returns `""` for a
+    skipped one. `cutoffSchedule(anchor, [{ name, offset, atLocalTime? }],
+    options)` sorts the stack by instant and returns `[]` if any entry fails.
+    `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on;
+    `timeToCutoff(now, cutoff)` is exact hours, `PT0S` at it, negative after.
 16. **Free time is counted in the terminal's local days; the start day and the
     basis are tariff terms, never defaults.**
     `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
@@ -292,6 +308,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `isValidZoneBucketUnit`
 - **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`,
   `crossingTime`, `scheduleDelivery`
+- **Cut-offs and deadlines**: `cutoffAt`, `cutoffSchedule`, `isPastCutoff`,
+  `timeToCutoff`
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`
