@@ -11557,8 +11557,12 @@
         "result": "\"2024-03-09T17:00:00-05:00[America/New_York]\" (17:00 local, across the spring-forward)"
       },
       {
-        "call": "cutoffAt(\"2024-06-18T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" } })",
+        "call": "cutoffAt(\"2024-06-18T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" }, roll: \"preceding\" })",
         "result": "\"2024-06-14T17:00:00+02:00[Europe/Amsterdam]\" (Sunday rolls back to Friday)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-18T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" } })",
+        "result": "\"\" (a calendar needs a roll convention)"
       },
       {
         "call": "cutoffAt(\"2024-11-04T23:00:00Z\", \"P1D\", { timeZone: \"America/New_York\", atLocalTime: \"01:30\" })",
@@ -11626,7 +11630,7 @@
         "result": "[{ name: \"document\", at: \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\" }, { name: \"VGM\", at: \"2024-06-13T10:00:00+02:00[Europe/Amsterdam]\" }, { name: \"gate-in\", at: \"2024-06-13T18:00:00+02:00[Europe/Amsterdam]\" }]"
       },
       {
-        "call": "cutoffSchedule(\"2024-06-18T16:00:00Z\", [{ name: \"document\", offset: \"P2D\", atLocalTime: \"17:00\" }, { name: \"VGM\", offset: \"P1D\", atLocalTime: \"10:00\" }], { timeZone: \"Europe/Amsterdam\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" } })",
+        "call": "cutoffSchedule(\"2024-06-18T16:00:00Z\", [{ name: \"document\", offset: \"P2D\", atLocalTime: \"17:00\" }, { name: \"VGM\", offset: \"P1D\", atLocalTime: \"10:00\" }], { timeZone: \"Europe/Amsterdam\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" }, roll: \"preceding\" })",
         "result": "[{ name: \"document\", at: \"2024-06-14T17:00:00+02:00[Europe/Amsterdam]\" }, { name: \"VGM\", at: \"2024-06-17T10:00:00+02:00[Europe/Amsterdam]\" }] (Sunday's document cut-off rolls back to Friday)"
       },
       {

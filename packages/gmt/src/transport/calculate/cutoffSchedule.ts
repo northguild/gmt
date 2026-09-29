@@ -24,9 +24,9 @@ export interface CutoffTime {
 export interface CutoffScheduleOptions {
   /** IANA timeZone identifier or fixed offset every cut-off is read in. */
   timeZone: string;
-  /** Working week and holidays every cut-off's local date is rolled against. */
+  /** Working week and holidays every cut-off's local date is rolled against. Requires `roll`. */
   calendar?: CutoffOptions["calendar"];
-  /** How a cut-off on a non-business day moves. Default `"preceding"`; needs `calendar`. */
+  /** How a cut-off on a non-business day moves. No default; requires `calendar`. */
   roll?: CutoffOptions["roll"];
 }
 
@@ -51,11 +51,11 @@ export interface CutoffScheduleOptions {
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadlines count back from
  * @param cutoffs the named deadlines, each with an offset and an optional local time of day
- * @param options timeZone (IANA identifier or fixed offset, required); optional calendar and roll, as cutoffAt takes them
+ * @param options timeZone (IANA identifier or fixed offset, required); optional calendar and roll, together or not at all, as cutoffAt takes them
  * @returns the named cut-offs, earliest first, or [] on invalid input
  *
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "document", offset: "P2D", atLocalTime: "17:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam" }) // [{ name: "document", at: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-13T10:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" }]
- * @example cutoffSchedule("2024-06-18T16:00:00Z", [{ name: "document", offset: "P2D", atLocalTime: "17:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }) // [{ name: "document", at: "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-17T10:00:00+02:00[Europe/Amsterdam]" }] (Sunday's document cut-off rolls back to Friday)
+ * @example cutoffSchedule("2024-06-18T16:00:00Z", [{ name: "document", offset: "P2D", atLocalTime: "17:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }) // [{ name: "document", at: "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-17T10:00:00+02:00[Europe/Amsterdam]" }] (Sunday's document cut-off rolls back to Friday)
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [], { timeZone: "Europe/Amsterdam" }) // []
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [{ name: "document", offset: "2 days" }], { timeZone: "Europe/Amsterdam" }) // []
  * @example cutoffSchedule("2024-03-11T22:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "VGM", offset: "P1D", atLocalTime: "02:30" }], { timeZone: "America/New_York" }) // [] (02:30 on 10 March never happened)

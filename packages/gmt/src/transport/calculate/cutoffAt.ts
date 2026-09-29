@@ -20,18 +20,20 @@ export interface CutoffOptions {
    * for a cut-off that is an exact offset from the anchor.
    */
   atLocalTime?: string;
-  /** Working week and holidays the cut-off's local date is rolled against. */
+  /**
+   * Working week and holidays the cut-off's local date is rolled against. Its `timeZone` is not
+   * read: `timeZone` above is the local frame. Requires `roll`.
+   */
   calendar?: BusinessCalendar;
-  /** How a cut-off on a non-business day moves. Default `"preceding"`; needs `calendar`. */
+  /** How a cut-off on a non-business day moves. No default; requires `calendar`. */
   roll?: RollConvention;
 }
 
-/** The validated options, with the default roll applied. */
+/** The validated options. `rolling` is present exactly when a calendar and a convention are. */
 type ResolvedCutoffOptions = {
   timeZone: string;
   atLocalTime: Temporal.PlainTime | null;
-  calendar: BusinessCalendar | null;
-  roll: RollConvention;
+  rolling: { calendar: BusinessCalendar; roll: RollConvention } | null;
 };
 
 function resolveOptions(options: unknown): ResolvedCutoffOptions | null {
@@ -49,25 +51,27 @@ function resolveOptions(options: unknown): ResolvedCutoffOptions | null {
   if (calendar !== undefined && !isValidBusinessCalendar(calendar)) {
     return null;
   }
-  // A roll with nothing to roll against is a missing calendar, not a no-op.
-  if (
-    roll !== undefined &&
-    (calendar === undefined || !isValidRollConvention(roll))
-  ) {
+  if (roll !== undefined && !isValidRollConvention(roll)) {
+    return null;
+  }
+  // Rolling needs both a calendar and a direction, and no standard supplies either one by
+  // default: a calendar without a roll, or a roll without a calendar, is a missing term.
+  if ((calendar === undefined) !== (roll === undefined)) {
     return null;
   }
   return {
     timeZone,
     atLocalTime:
       atLocalTime === undefined ? null : Temporal.PlainTime.from(atLocalTime),
-    calendar: calendar ?? null,
-    roll: roll ?? "preceding",
+    rolling:
+      calendar === undefined || roll === undefined ? null : { calendar, roll },
   };
 }
 
 /**
- * The instant a local wall time names, for a deadline: the earlier pass of a repeated hour, so
- * a deadline never moves later, and `null` for a skipped one, which is never shifted.
+ * The instant a local wall time names: the first occurrence of a repeated hour, as RFC 5545
+ * §3.3.5 reads a local time that "occurs more than once", and `null` for a skipped one, which
+ * is never shifted.
  */
 function resolveWallTime(
   wall: Temporal.PlainDateTime,
@@ -134,10 +138,11 @@ function rolledDate(
   date: Temporal.PlainDate,
   options: ResolvedCutoffOptions,
 ): Temporal.PlainDate | null {
-  if (options.calendar === null) {
+  if (options.rolling === null) {
     return date;
   }
-  const rolled = rollDate(date.toString(), options.roll, options.calendar);
+  const { calendar, roll } = options.rolling;
+  const rolled = rollDate(date.toString(), roll, calendar);
   return rolled === "" ? null : Temporal.PlainDate.from(rolled);
 }
 
@@ -156,6 +161,8 @@ function rolledDate(
  *   between. With `atLocalTime` only the day of the offset result matters: the offset's exact
  *   part (hours and smaller) comes off the anchor's instant, its calendar part (years, months,
  *   weeks, days) off that local date, and the cut-off is `atLocalTime` on the day it lands on.
+ *   Because the exact part is taken off before the day is found, it can change the day: from
+ *   midnight, `P2DT0.000000001S` lands a day earlier than `P2D`.
  * - **Without `atLocalTime` the offset is taken off as Temporal's `ZonedDateTime#subtract`
  *   takes it:** the calendar part moves the local wall clock — `P2D` from 18:00 is 18:00, 47,
  *   48 or 49 hours earlier — and the exact part is exact elapsed time — `PT96H` is 96 hours,
@@ -165,20 +172,26 @@ function rolledDate(
  *   which event a rule means. The anchor is exact: an instant (`Z`/offset) or a zoned string,
  *   whose bracket is not read — `timeZone` alone is the local frame. It is not cached: a
  *   rescheduled departure is a new call.
- * - **Non-business days roll backward.** With `calendar`, a cut-off on a weekend or holiday
- *   moves by `roll`, default `"preceding"`: a deadline never moves later to fit a closure. The
- *   rolled day keeps the cut-off's local time of day. `roll` without `calendar` returns `""`.
+ * - **Non-business days roll as the caller says.** With `calendar`, a cut-off on a weekend or
+ *   holiday moves by `roll`, as `rollDate` moves it. Every industry answers "what if it lands
+ *   on a non-working day" differently, so the convention is always explicit — there is no
+ *   default: `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled
+ *   day keeps the cut-off's local time of day. `calendar.timeZone` is not read; `timeZone` is
+ *   the local frame. `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention.
+ * - **The order is not checked.** `cutoffAt` does not check that the cut-off comes before the
+ *   anchor: a negative offset, `P0D` with a late `atLocalTime`, `"following"` or `"endOfMonth"`
+ *   can each put it after.
  * - **Local-time resolution.** Every local wall time the cut-off lands on — `atLocalTime`, the
  *   calendar part of an unpinned offset, a rolled day — is resolved as `resolveLocal` describes
  *   it: an **ambiguous** wall time (a fall-back hour the clock ran through twice) takes the
- *   **earlier** instant, and a **nonexistent** one (a skipped hour, a deleted day) returns `""`
- *   rather than being shifted. An exact result that is not re-resolved stays as it is.
- * - A negative offset puts the cut-off after the anchor.
+ *   **earlier** instant — RFC 5545 §3.3.5's "first occurrence of the referenced time" — and a
+ *   **nonexistent** one (a skipped hour, a deleted day) returns `""` rather than being
+ *   shifted. An exact result that is not re-resolved stays as it is.
  * - Returns the cut-off as a zoned string in `timeZone`, or `""` on invalid input.
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadline counts back from
  * @param offset ISO 8601 duration before the anchor
- * @param options timeZone (IANA identifier or fixed offset, required); optional atLocalTime, calendar and roll
+ * @param options timeZone (IANA identifier or fixed offset, required); optional atLocalTime; calendar and roll, together or not at all
  * @returns ISO 8601 zoned datetime string of the cut-off, or "" on invalid input
  *
  * @example cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" }) // "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"
@@ -186,7 +199,8 @@ function rolledDate(
  * @example cutoffAt("2024-06-14T16:00:00Z", "P1D", { timeZone: "Europe/Amsterdam", atLocalTime: "10:00" }) // "2024-06-13T10:00:00+02:00[Europe/Amsterdam]"
  * @example cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" }) // "2024-11-01T13:00:00-04:00[America/New_York]" (96 elapsed hours across the fall-back)
  * @example cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" }) // "2024-03-09T17:00:00-05:00[America/New_York]" (17:00 local, across the spring-forward)
- * @example cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }) // "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" (Sunday rolls back to Friday)
+ * @example cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }) // "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" (Sunday rolls back to Friday)
+ * @example cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }) // "" (a calendar needs a roll convention)
  * @example cutoffAt("2024-11-04T23:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "01:30" }) // "2024-11-03T01:30:00-04:00[America/New_York]" (a repeated hour takes the earlier pass)
  * @example cutoffAt("2024-03-11T22:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "02:30" }) // "" (02:30 on 10 March never happened)
  * @example cutoffAt("2024-06-14T18:00:00", "P2D", { timeZone: "Europe/Amsterdam" }) // "" (a zoneless anchor is not a moment)

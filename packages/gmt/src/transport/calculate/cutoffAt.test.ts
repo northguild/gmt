@@ -139,12 +139,13 @@ describe("cutoffAt", () => {
 
     it.each`
       anchor                    | calendar       | roll                   | expected                                         | why
-      ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${undefined}           | ${"2024-06-14T17:00:00+02:00[Europe/Amsterdam]"} | ${"Sunday rolls back to Friday by default"}
-      ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${"preceding"}         | ${"2024-06-14T17:00:00+02:00[Europe/Amsterdam]"} | ${"the default, stated"}
+      ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${undefined}           | ${""}                                            | ${"a calendar with no roll convention is refused: there is no default"}
+      ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${"preceding"}         | ${"2024-06-14T17:00:00+02:00[Europe/Amsterdam]"} | ${"Sunday rolls back to Friday"}
       ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${"following"}         | ${"2024-06-17T17:00:00+02:00[Europe/Amsterdam]"} | ${"the caller asked for later"}
       ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${"none"}              | ${"2024-06-16T17:00:00+02:00[Europe/Amsterdam]"} | ${"unadjusted"}
-      ${departure}              | ${withHoliday} | ${undefined}           | ${"2024-06-11T17:00:00+02:00[Europe/Amsterdam]"} | ${"a Wednesday holiday rolls back to Tuesday"}
-      ${departure}              | ${withHoliday} | ${"preceding"}         | ${"2024-06-11T17:00:00+02:00[Europe/Amsterdam]"} | ${"backward, never forward"}
+      ${departure}              | ${withHoliday} | ${undefined}           | ${""}                                            | ${"a holiday with no roll convention is refused"}
+      ${departure}              | ${withHoliday} | ${"preceding"}         | ${"2024-06-11T17:00:00+02:00[Europe/Amsterdam]"} | ${"a Wednesday holiday rolls back to Tuesday, never forward"}
+      ${"2024-06-18T16:00:00Z"} | ${weekdays}    | ${"endOfMonth"}        | ${"2024-06-28T17:00:00+02:00[Europe/Amsterdam]"} | ${"endOfMonth is not checked against the anchor: ten days after it"}
       ${departure}              | ${withHoliday} | ${"modifiedFollowing"} | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"} | ${"forward stays in June"}
       ${departure}              | ${weekdays}    | ${"following"}         | ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"} | ${"a working day is left alone"}
     `("$why", ({ anchor, calendar, roll, expected }) => {
@@ -165,6 +166,7 @@ describe("cutoffAt", () => {
         cutoffAt("2024-06-18T16:00:00Z", "P2D", {
           timeZone: amsterdam,
           calendar: weekdays,
+          roll: "preceding",
         }),
       ).toBe("2024-06-14T18:00:00+02:00[Europe/Amsterdam]");
     });
@@ -180,6 +182,7 @@ describe("cutoffAt", () => {
             holidays: ["2024-03-11"],
             timeZone: newYork,
           },
+          roll: "preceding",
         }),
       ).toBe("");
     });
@@ -208,20 +211,24 @@ describe("cutoffAt", () => {
 
   describe("offset arithmetic", () => {
     it.each`
-      anchor                                           | offset       | atLocalTime     | timeZone              | expected                                                   | why
-      ${"2024-03-31T12:00:00Z"}                        | ${"P1M"}     | ${undefined}    | ${"UTC"}              | ${"2024-02-29T12:00:00+00:00[UTC]"}                        | ${"a month back from 31 March clamps to 29 February"}
-      ${departure}                                     | ${"P1W"}     | ${"17:00"}      | ${amsterdam}          | ${"2024-06-07T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a week"}
-      ${departure}                                     | ${"P1DT12H"} | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"12 hours to Friday 06:00, then a day"}
-      ${departure}                                     | ${"P1DT12H"} | ${undefined}    | ${amsterdam}          | ${"2024-06-13T06:00:00+02:00[Europe/Amsterdam]"}           | ${"a day, then 12 exact hours"}
-      ${departure}                                     | ${"-P1D"}    | ${"17:00"}      | ${amsterdam}          | ${"2024-06-15T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a negative offset is after the anchor"}
-      ${departure}                                     | ${"PT0S"}    | ${undefined}    | ${amsterdam}          | ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a zero offset is the anchor"}
-      ${departure}                                     | ${"P0D"}     | ${"12:00"}      | ${amsterdam}          | ${"2024-06-14T12:00:00+02:00[Europe/Amsterdam]"}           | ${"noon on the day of departure"}
-      ${departure}                                     | ${"PT24H"}   | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"an exact offset, pinned"}
-      ${"2024-06-14T16:00:00.123456789Z"}              | ${"PT1H"}    | ${undefined}    | ${amsterdam}          | ${"2024-06-14T17:00:00.123456789+02:00[Europe/Amsterdam]"} | ${"nanoseconds survive"}
-      ${departure}                                     | ${"P2D"}     | ${"17:00:30.5"} | ${amsterdam}          | ${"2024-06-12T17:00:30.5+02:00[Europe/Amsterdam]"}         | ${"a fractional atLocalTime"}
-      ${departure}                                     | ${"P2D"}     | ${"17:00"}      | ${"+02:00"}           | ${"2024-06-12T17:00:00+02:00[+02:00]"}                     | ${"a fixed offset observes no DST"}
-      ${departure}                                     | ${"P2D"}     | ${"17:00"}      | ${"europe/amsterdam"} | ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"}           | ${"the zone is canonicalised"}
-      ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"} | ${"P2D"}     | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"timeZone, not the anchor's bracket, is the local frame"}
+      anchor                                           | offset                | atLocalTime     | timeZone              | expected                                                   | why
+      ${"2024-03-31T12:00:00Z"}                        | ${"P1M"}              | ${undefined}    | ${"UTC"}              | ${"2024-02-29T12:00:00+00:00[UTC]"}                        | ${"a month back from 31 March clamps to 29 February"}
+      ${departure}                                     | ${"P1W"}              | ${"17:00"}      | ${amsterdam}          | ${"2024-06-07T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a week"}
+      ${departure}                                     | ${"P1W"}              | ${undefined}    | ${amsterdam}          | ${"2024-06-07T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a week keeps the wall clock"}
+      ${"2024-03-31T12:00:00Z"}                        | ${"P1M"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-02-29T17:00:00+00:00[UTC]"}                        | ${"a pinned month back from 31 March clamps to 29 February"}
+      ${"2024-06-14T00:00:00Z"}                        | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"two days before midnight, pinned"}
+      ${"2024-06-14T00:00:00Z"}                        | ${"P2DT0.000000001S"} | ${"17:00"}      | ${"UTC"}              | ${"2024-06-11T17:00:00+00:00[UTC]"}                        | ${"one nanosecond of exact offset crosses midnight first, so the day moves"}
+      ${departure}                                     | ${"P1DT12H"}          | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"12 hours to Friday 06:00, then a day"}
+      ${departure}                                     | ${"P1DT12H"}          | ${undefined}    | ${amsterdam}          | ${"2024-06-13T06:00:00+02:00[Europe/Amsterdam]"}           | ${"a day, then 12 exact hours"}
+      ${departure}                                     | ${"-P1D"}             | ${"17:00"}      | ${amsterdam}          | ${"2024-06-15T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a negative offset is after the anchor"}
+      ${departure}                                     | ${"PT0S"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a zero offset is the anchor"}
+      ${departure}                                     | ${"P0D"}              | ${"12:00"}      | ${amsterdam}          | ${"2024-06-14T12:00:00+02:00[Europe/Amsterdam]"}           | ${"noon on the day of departure"}
+      ${departure}                                     | ${"PT24H"}            | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"an exact offset, pinned"}
+      ${"2024-06-14T16:00:00.123456789Z"}              | ${"PT1H"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T17:00:00.123456789+02:00[Europe/Amsterdam]"} | ${"nanoseconds survive"}
+      ${departure}                                     | ${"P2D"}              | ${"17:00:30.5"} | ${amsterdam}          | ${"2024-06-12T17:00:30.5+02:00[Europe/Amsterdam]"}         | ${"a fractional atLocalTime"}
+      ${departure}                                     | ${"P2D"}              | ${"17:00"}      | ${"+02:00"}           | ${"2024-06-12T17:00:00+02:00[+02:00]"}                     | ${"a fixed offset observes no DST"}
+      ${departure}                                     | ${"P2D"}              | ${"17:00"}      | ${"europe/amsterdam"} | ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"}           | ${"the zone is canonicalised"}
+      ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"} | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"timeZone, not the anchor's bracket, is the local frame"}
     `("$why", ({ anchor, offset, atLocalTime, timeZone, expected }) => {
       expect(cutoffAt(anchor, offset, { timeZone, atLocalTime })).toBe(
         expected,
@@ -297,25 +304,28 @@ describe("cutoffAt", () => {
 
   describe("invalid input returns the sentinel", () => {
     it.each`
-      anchor                       | offset        | options                                                                                   | why
-      ${"2024-06-14T18:00:00"}     | ${"P2D"}      | ${{ timeZone: amsterdam }}                                                                | ${"a zoneless anchor is not a moment"}
-      ${"not a date"}              | ${"P2D"}      | ${{ timeZone: amsterdam }}                                                                | ${"a malformed anchor"}
-      ${departure}                 | ${"2 days"}   | ${{ timeZone: amsterdam }}                                                                | ${"a malformed offset"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: "Europe/Amsterdamm" }}                                                      | ${"an unknown zone"}
-      ${departure}                 | ${"P2D"}      | ${{}}                                                                                     | ${"no zone"}
-      ${departure}                 | ${"P2D"}      | ${undefined}                                                                              | ${"no options"}
-      ${departure}                 | ${"P2D"}      | ${null}                                                                                   | ${"null options"}
-      ${departure}                 | ${"P2D"}      | ${"Europe/Amsterdam"}                                                                     | ${"a string for options"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "5pm" }}                                            | ${"a malformed atLocalTime"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "T17:00" }}                                         | ${"a time designator"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "24:00" }}                                          | ${"hour 24"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "2024-06-12T17:00" }}                               | ${"a date-time for atLocalTime"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: { weekend: [8], holidays: [], timeZone: amsterdam } }} | ${"an invalid calendar"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: weekdays, roll: "nearest" }}                           | ${"an unknown roll convention"}
-      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, roll: "preceding" }}                                             | ${"a roll with no calendar to roll against"}
-      ${departure}                 | ${"P300000Y"} | ${{ timeZone: amsterdam }}                                                                | ${"an offset past the instant range"}
-      ${departure}                 | ${"P300000Y"} | ${{ timeZone: amsterdam, atLocalTime: "17:00" }}                                          | ${"a pinned offset past the instant range"}
-      ${"-271821-04-20T00:00:00Z"} | ${"PT1H"}     | ${{ timeZone: "UTC" }}                                                                    | ${"an exact offset before the first instant"}
+      anchor                       | offset        | options                                                                                                                                              | why
+      ${"2024-06-14T18:00:00"}     | ${"P2D"}      | ${{ timeZone: amsterdam }}                                                                                                                           | ${"a zoneless anchor is not a moment"}
+      ${"not a date"}              | ${"P2D"}      | ${{ timeZone: amsterdam }}                                                                                                                           | ${"a malformed anchor"}
+      ${departure}                 | ${"2 days"}   | ${{ timeZone: amsterdam }}                                                                                                                           | ${"a malformed offset"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: "Europe/Amsterdamm" }}                                                                                                                 | ${"an unknown zone"}
+      ${departure}                 | ${"P2D"}      | ${{}}                                                                                                                                                | ${"no zone"}
+      ${departure}                 | ${"P2D"}      | ${undefined}                                                                                                                                         | ${"no options"}
+      ${departure}                 | ${"P2D"}      | ${null}                                                                                                                                              | ${"null options"}
+      ${departure}                 | ${"P2D"}      | ${"Europe/Amsterdam"}                                                                                                                                | ${"a string for options"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "5pm" }}                                                                                                       | ${"a malformed atLocalTime"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "T17:00" }}                                                                                                    | ${"a time designator"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "24:00" }}                                                                                                     | ${"hour 24"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "2024-06-12T17:00" }}                                                                                          | ${"a date-time for atLocalTime"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: { weekend: [8], holidays: [], timeZone: amsterdam } }}                                                            | ${"an invalid calendar"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: weekdays, roll: "nearest" }}                                                                                      | ${"an unknown roll convention"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, roll: "preceding" }}                                                                                                        | ${"a roll with no calendar to roll against"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: weekdays }}                                                                                                       | ${"a calendar with no roll convention"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: amsterdam }, roll: "preceding" }}                       | ${"a calendar with no business day at all"}
+      ${departure}                 | ${"P2D"}      | ${{ timeZone: amsterdam, atLocalTime: "17:00", calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: amsterdam }, roll: "preceding" }} | ${"a pinned cut-off against a calendar with no business day"}
+      ${departure}                 | ${"P300000Y"} | ${{ timeZone: amsterdam }}                                                                                                                           | ${"an offset past the instant range"}
+      ${departure}                 | ${"P300000Y"} | ${{ timeZone: amsterdam, atLocalTime: "17:00" }}                                                                                                     | ${"a pinned offset past the instant range"}
+      ${"-271821-04-20T00:00:00Z"} | ${"PT1H"}     | ${{ timeZone: "UTC" }}                                                                                                                               | ${"an exact offset before the first instant"}
     `("$why", ({ anchor, offset, options }) => {
       expect(cutoffAt(anchor, offset, options)).toBe("");
     });

@@ -2456,11 +2456,12 @@ cutoffSchedule("2024-06-14T16:00:00Z", [
 //   { name: "customs", at: "2024-06-13T12:00:00+02:00[Europe/Amsterdam]" },
 //   { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" } ]
 
-// A cut-off on a weekend or holiday rolls backward by default: a deadline never moves later.
+// A cut-off on a weekend or holiday moves by the roll convention you name. There is no default.
 cutoffAt("2024-06-18T16:00:00Z", "P2D", {
   timeZone: "Europe/Amsterdam",
   atLocalTime: "17:00",
   calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" },
+  roll: "preceding",
 }); // "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" (Sunday rolls back to Friday)
 
 // The anchor is the caller's event. The same 24 hours from loading and from departure:
@@ -2484,19 +2485,27 @@ timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam
 - **`atLocalTime` pins the time of day.** With it, only the day the offset lands on matters: the
   offset's exact part (hours and smaller) comes off the anchor's instant, its calendar part
   (years, months, weeks, days) off that local date, and the cut-off is `atLocalTime` on that day.
-  Without it, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: `P2D`
+  The exact part comes off first, so it can change the day: from midnight, `P2DT0.000000001S`
+  lands a day before `P2D`. Without it, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: `P2D`
   keeps the anchor's wall clock, and `PT96H` is 96 elapsed hours.
 - **The anchor is exact and is the caller's event.** An instant (`Z` or an offset) or a zoned
   string; its bracket is not read, and `timeZone` (an IANA identifier or a fixed offset) is the
   local frame. `cutoffAt` never guesses whether a rule counts from loading, departure or arrival.
   The functions are pure, so a rescheduled departure is a new call, not a stored cut-off to fix.
-- **Non-business days roll backward.** With `calendar` (a `BusinessCalendar`), a cut-off on a
-  weekend or holiday moves by `roll`, `"preceding"` by default, and keeps its local time of day.
-  Any `RollConvention` is accepted; `roll` without `calendar` returns `""`.
+- **Non-business days roll as you say.** With `calendar` (a `BusinessCalendar`), a cut-off on a
+  weekend or holiday moves by `roll`, as `rollDate` moves it, and keeps its local time of day.
+  Every industry answers "what if it lands on a non-working day" differently, so the convention
+  is always explicit and there is no default: `calendar` without `roll`, or `roll` without
+  `calendar`, returns `""`. `calendar.timeZone` is not read. `"endOfMonth"` is `rollDate`'s
+  schedule tool, not a cut-off convention.
+- **The order is not checked.** `cutoffAt` does not check that the cut-off is before the anchor.
+  A negative offset, `P0D` with a late `atLocalTime`, `"following"` or `"endOfMonth"` can each
+  put it after.
 - **Local wall times resolve for a deadline.** `atLocalTime`, the calendar part of an unpinned
   offset and a rolled day are wall times. An ambiguous one (a fall-back hour the clock ran
-  through twice) takes the earlier instant; a nonexistent one (a spring-forward hour, a deleted
-  day) returns `""` rather than shifting the deadline.
+  through twice) takes the earlier instant, the first occurrence, as RFC 5545 §3.3.5 reads a
+  repeated local time. A nonexistent one (a spring-forward hour, a deleted day) returns `""`
+  rather than shifting the deadline.
 - **`cutoffSchedule` is all or nothing.** Each entry is `cutoffAt` with its own `atLocalTime`;
   the result is sorted by instant, and entries on the same instant keep their order. One invalid
   entry returns `[]`, never a stack with a deadline missing.

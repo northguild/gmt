@@ -90,7 +90,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 11 | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                  | —                      | #260  | 1.17.0  | Done        |
 | 12 | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic               | —                      | #257  | —       | Done        |
 | 13 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                              | —                      | #190  | —       | Done        |
-| 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff`                                | —                      | #191  | —       | Done        |
+| 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`               | —                      | #191  | —       | Done        |
 | 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`             | —                      | #259  | Cut     | Not started |
 | 16 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                 | —                      | #195  | —       | Not started |
 | 17 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                      | —                      | #196  | Cut     | Not started |

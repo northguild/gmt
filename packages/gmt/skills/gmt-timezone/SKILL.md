@@ -215,21 +215,23 @@ converting between time zones, or doing arithmetic that must respect DST.
     negative leg `duration` is `null`; the last leg's `dwellAfter` is echoed,
     never added. `mode`, `origin` and `destination` are opaque tags echoed on
     each `LegTime`. An empty array returns `{ eta: "", legTimes: [] }`.
+16. **Cut-offs count back from the caller's event.**
     `cutoffAt(anchor, offset, { timeZone, atLocalTime?, calendar?, roll? })`
-    counts a deadline back from the caller's event (loading, departure or
-    arrival are different instants; it never guesses which). With
-    `atLocalTime` the offset's exact part comes off the anchor's instant, its
-    calendar part off the local date, and the cut-off is that time of day:
-    `P2D` at `"17:00"` is 17:00 two days before, not 48 hours. Without it the
-    offset is `ZonedDateTime#subtract` (`P2D` keeps the wall clock, `PT96H` is
-    96 exact hours). With `calendar`, a closed day rolls by `roll`, default
-    `"preceding"`; `roll` without `calendar` is `""`. Every wall time it lands
-    on takes the earlier pass of a repeated hour and returns `""` for a
-    skipped one. `cutoffSchedule(anchor, [{ name, offset, atLocalTime? }],
-    options)` sorts the stack by instant and returns `[]` if any entry fails.
+    takes an offset off the anchor (loading, departure or arrival are
+    different instants; it never guesses which). With `atLocalTime` the
+    offset's exact part comes off the anchor's instant first, its calendar
+    part off the local date, and the cut-off is that time of day: `P2D` at
+    `"17:00"` is 17:00 two days before, not 48 hours. Without it the offset
+    is `ZonedDateTime#subtract` (`P2D` keeps the wall clock, `PT96H` is 96
+    exact hours). `calendar` and `roll` go together or not at all — there is
+    no default roll, as in `rollDate`; either alone is `""`. A repeated hour
+    takes the first pass (RFC 5545 §3.3.5); a skipped hour is `""`. It does
+    not check that the cut-off is before the anchor.
+    `cutoffSchedule(anchor, [{ name, offset, atLocalTime? }], options)`
+    sorts the stack by instant and returns `[]` if any entry fails.
     `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on;
     `timeToCutoff(now, cutoff)` is exact hours, `PT0S` at it, negative after.
-16. **Free time is counted in the terminal's local days; the start day and the
+17. **Free time is counted in the terminal's local days; the start day and the
     basis are tariff terms, never defaults.**
     `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
     returns `{ freeTimeStart, lastFreeDay, expiresAt }`: local dates in
@@ -249,7 +251,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     demurrage gate-in to loaded, detention empty release to gate-in; `combined`
     runs both as one period. No standard fixes how these days are counted;
     every term is the tariff's.
-17. **Billing deadlines are dates counted from an anchor, and every window is
+18. **Billing deadlines are dates counted from an anchor, and every window is
     the caller's.** `billingTimeline({ anchorOn, invoiceIssuedOn?,
     requestReceivedOn? }, { issueDays, disputeDays, resolutionDays,
     agreedResolutionOn? })` returns `{ invoiceDeadline, issuedByDeadline,
@@ -264,7 +266,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `convertUtcToPlainDate(instant, { timeZone })`. A request before its
     invoice, or an agreed date before the request, returns `null`. GMT
     computes dates, not liability.
-18. **Operating hours are local windows resolved in the schedule's zone.** An
+19. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
     (`{ from: "09:00", to: "17:00" }`); a `to` at or before `from` wraps past
@@ -280,7 +282,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-19. **Read the README.** This skill is a routing pointer. For the full DST
+20. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 

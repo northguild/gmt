@@ -204,7 +204,8 @@ cutoffAt("2024-06-14T16:00:00Z", "PT48H", { timeZone: "Europe/Amsterdam" });
 
 With `atLocalTime`, only the day the offset lands on matters. The offset's exact part (hours
 and smaller) comes off the anchor's instant, its calendar part (years, months, weeks, days)
-comes off that local date, and the cut-off is `atLocalTime` on that day. Across a DST
+comes off that local date, and the cut-off is `atLocalTime` on that day. The exact part comes off first, so it can change
+the day: from midnight, `P2DT0.000000001S` lands a day before `P2D`. Across a DST
 transition the local time of day holds and the elapsed time moves. New York sprang forward on
 Sunday 10 March 2024, so the pinned cut-off before a Monday 18:00 departure is 48 elapsed
 hours earlier, not 49.
@@ -244,29 +245,40 @@ cutoffAt("2024-06-12T20:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
 // "2024-06-12T04:00:00+08:00[Asia/Shanghai]" — 24 hours before departure, 60 hours later
 ```
 
-### Closures roll backward
+### Closures roll the way you say
 
-With `calendar`, a [`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar), a cut-off on a
-weekend or holiday moves by `roll`. The default is `"preceding"`, because a deadline never
-moves later to fit a closure. The rolled day keeps the cut-off's local time of day. Any
-[`RollConvention`](/reference/types/roll-convention/RollConvention) that
-[`rollDate`](/reference/calendar/business/rollDate) takes is accepted, and `roll` without a
-`calendar` returns `""`.
+With `calendar`, a [`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar), a
+cut-off on a weekend or holiday moves by `roll`, as
+[`rollDate`](/reference/calendar/business/rollDate) moves it. Every industry answers "what if
+it lands on a non-working day" differently, and no standard picks one, so the convention is
+always yours: there is no default. `calendar` without `roll`, or `roll` without `calendar`,
+returns `""`. The rolled day keeps the cut-off's local time of day, and `calendar.timeZone` is
+not read. Any [`RollConvention`](/reference/types/roll-convention/RollConvention) is accepted,
+but `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention.
 
 ```typescript
 // Tuesday 18 June 2024, 18:00 in Amsterdam. Two days before is Sunday.
 const calendar = { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" };
-cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar });
+cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar, roll: "preceding" });
 // "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" — back to Friday
+cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar, roll: "following" });
+// "2024-06-17T17:00:00+02:00[Europe/Amsterdam]" — on to Monday
+cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar });
+// "" — a calendar with no roll convention
 ```
+
+`cutoffAt` does not check that the cut-off comes before the anchor. A negative offset, `P0D`
+with a late `atLocalTime`, `"following"` or `"endOfMonth"` can each put it after, and that is
+the rule's answer, not an error.
 
 ### Skipped and repeated hours
 
 A cut-off is a local wall time, so it inherits
 [`resolveLocal`](/reference/instant/convert/resolveLocal)'s vocabulary. `atLocalTime`, the
 calendar part of an unpinned offset and a rolled day all land on wall times. A repeated hour
-takes the earlier pass, so the deadline never moves later. A skipped hour, or a day a zone
-deleted, returns `""` rather than shifting the deadline.
+takes the earlier pass: [RFC 5545 §3.3.5](https://www.rfc-editor.org/rfc/rfc5545#section-3.3.5)
+reads a local time that occurs more than once as "the first occurrence of the referenced
+time". A skipped hour, or a day a zone deleted, returns `""` rather than shifting the deadline.
 
 ```typescript
 cutoffAt("2024-11-04T23:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "01:30" });

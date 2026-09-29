@@ -42,6 +42,18 @@ describe("isPastCutoff", () => {
     ).toBe(true);
   });
 
+  // The instant range limits: 8.64e21 ns either side of the epoch.
+  it.each`
+    now                                    | deadline                     | expected | why
+    ${"+275760-09-13T00:00:00Z"}           | ${"-271821-04-20T00:00:00Z"} | ${true}  | ${"the last instant is past the first"}
+    ${"-271821-04-20T00:00:00Z"}           | ${"+275760-09-13T00:00:00Z"} | ${false} | ${"the first instant is not past the last"}
+    ${"-271821-04-20T00:00:00Z"}           | ${"-271821-04-20T00:00:00Z"} | ${true}  | ${"the first instant against itself"}
+    ${"-271821-04-19T23:59:59.999999999Z"} | ${"-271821-04-20T00:00:00Z"} | ${false} | ${"one nanosecond before the first instant"}
+    ${"+275760-09-13T00:00:00.000000001Z"} | ${"-271821-04-20T00:00:00Z"} | ${false} | ${"one nanosecond after the last instant"}
+  `("$why: $expected", ({ now, deadline, expected }) => {
+    expect(isPastCutoff(now, deadline)).toBe(expected);
+  });
+
   it.each`
     now                       | deadline              | why
     ${"2024-06-12T16:00:00"}  | ${cutoff}             | ${"a zoneless now"}

@@ -90,6 +90,7 @@ describe("cutoffSchedule", () => {
       cutoffSchedule("2024-06-18T16:00:00Z", stack, {
         timeZone: amsterdam,
         calendar: weekdays,
+        roll: "preceding",
       }),
     ).toEqual([
       { name: "document", at: "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" },
@@ -136,19 +137,21 @@ describe("cutoffSchedule", () => {
 
   describe("invalid input returns the sentinel", () => {
     it.each`
-      anchor                    | cutoffs                                                   | options                                       | why
-      ${"2024-06-14T18:00:00"}  | ${stack}                                                  | ${{ timeZone: amsterdam }}                    | ${"a zoneless anchor"}
-      ${departure}              | ${"stack"}                                                | ${{ timeZone: amsterdam }}                    | ${"cut-offs that are not an array"}
-      ${departure}              | ${[...stack, null]}                                       | ${{ timeZone: amsterdam }}                    | ${"an entry that is not an object"}
-      ${departure}              | ${[{ offset: "P1D" }]}                                    | ${{ timeZone: amsterdam }}                    | ${"an entry with no name"}
-      ${departure}              | ${[{ name: 7, offset: "P1D" }]}                           | ${{ timeZone: amsterdam }}                    | ${"a name that is not a string"}
-      ${departure}              | ${[...stack, { name: "bad", offset: "2 days" }]}          | ${{ timeZone: amsterdam }}                    | ${"one malformed offset spoils the stack"}
-      ${departure}              | ${[{ name: "bad", offset: "P1D", atLocalTime: "5pm" }]}   | ${{ timeZone: amsterdam }}                    | ${"a malformed atLocalTime"}
-      ${"2024-03-11T22:00:00Z"} | ${[{ name: "gap", offset: "P1D", atLocalTime: "02:30" }]} | ${{ timeZone: "America/New_York" }}           | ${"one cut-off in a skipped hour"}
-      ${departure}              | ${stack}                                                  | ${{ timeZone: "Not/AZone" }}                  | ${"an unknown zone"}
-      ${departure}              | ${stack}                                                  | ${{ timeZone: amsterdam, roll: "preceding" }} | ${"a roll with no calendar"}
-      ${departure}              | ${stack}                                                  | ${undefined}                                  | ${"no options"}
-      ${departure}              | ${stack}                                                  | ${null}                                       | ${"null options"}
+      anchor                    | cutoffs                                                   | options                                                                                                                        | why
+      ${"2024-06-14T18:00:00"}  | ${stack}                                                  | ${{ timeZone: amsterdam }}                                                                                                     | ${"a zoneless anchor"}
+      ${departure}              | ${"stack"}                                                | ${{ timeZone: amsterdam }}                                                                                                     | ${"cut-offs that are not an array"}
+      ${departure}              | ${[...stack, null]}                                       | ${{ timeZone: amsterdam }}                                                                                                     | ${"an entry that is not an object"}
+      ${departure}              | ${[{ offset: "P1D" }]}                                    | ${{ timeZone: amsterdam }}                                                                                                     | ${"an entry with no name"}
+      ${departure}              | ${[{ name: 7, offset: "P1D" }]}                           | ${{ timeZone: amsterdam }}                                                                                                     | ${"a name that is not a string"}
+      ${departure}              | ${[...stack, { name: "bad", offset: "2 days" }]}          | ${{ timeZone: amsterdam }}                                                                                                     | ${"one malformed offset spoils the stack"}
+      ${departure}              | ${[{ name: "bad", offset: "P1D", atLocalTime: "5pm" }]}   | ${{ timeZone: amsterdam }}                                                                                                     | ${"a malformed atLocalTime"}
+      ${"2024-03-11T22:00:00Z"} | ${[{ name: "gap", offset: "P1D", atLocalTime: "02:30" }]} | ${{ timeZone: "America/New_York" }}                                                                                            | ${"one cut-off in a skipped hour"}
+      ${departure}              | ${stack}                                                  | ${{ timeZone: "Not/AZone" }}                                                                                                   | ${"an unknown zone"}
+      ${departure}              | ${stack}                                                  | ${{ timeZone: amsterdam, roll: "preceding" }}                                                                                  | ${"a roll with no calendar"}
+      ${departure}              | ${stack}                                                  | ${{ timeZone: amsterdam, calendar: { weekend: [6, 7], holidays: [], timeZone: amsterdam } }}                                   | ${"a calendar with no roll convention"}
+      ${departure}              | ${stack}                                                  | ${{ timeZone: amsterdam, calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: amsterdam }, roll: "preceding" }} | ${"a calendar with no business day at all"}
+      ${departure}              | ${stack}                                                  | ${undefined}                                                                                                                   | ${"no options"}
+      ${departure}              | ${stack}                                                  | ${null}                                                                                                                        | ${"null options"}
     `("$why", ({ anchor, cutoffs, options }) => {
       expect(cutoffSchedule(anchor, cutoffs, options)).toEqual([]);
     });

@@ -43,6 +43,20 @@ describe("timeToCutoff", () => {
     },
   );
 
+  // The instant range limits: 8.64e21 ns either side of the epoch. The whole range is
+  // 4,800,000,000 hours, which Temporal.Instant#until({ largestUnit: "hours" }) confirms, and
+  // still fits Temporal.Duration's 2^53-second limit.
+  it.each`
+    now                                    | deadline                               | expected            | why
+    ${"-271821-04-20T00:00:00Z"}           | ${"+275760-09-13T00:00:00Z"}           | ${"PT4800000000H"}  | ${"the whole instant range"}
+    ${"+275760-09-13T00:00:00Z"}           | ${"-271821-04-20T00:00:00Z"}           | ${"-PT4800000000H"} | ${"the whole range, reversed"}
+    ${"-271821-04-20T00:00:00Z"}           | ${"-271821-04-20T00:00:00Z"}           | ${"PT0S"}           | ${"the first instant against itself"}
+    ${"-271821-04-19T23:59:59.999999999Z"} | ${"-271821-04-20T00:00:00Z"}           | ${""}               | ${"one nanosecond before the first instant"}
+    ${"-271821-04-20T00:00:00Z"}           | ${"+275760-09-13T00:00:00.000000001Z"} | ${""}               | ${"one nanosecond after the last instant"}
+  `("$why: $expected", ({ now, deadline, expected }) => {
+    expect(timeToCutoff(now, deadline)).toBe(expected);
+  });
+
   it.each`
     now                       | deadline              | why
     ${"2024-06-12T16:00:00"}  | ${cutoff}             | ${"a zoneless now"}
