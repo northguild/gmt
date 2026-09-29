@@ -70,6 +70,18 @@ const PAGES = [
     path: "tools/crossing-clock",
     widget: "gmt-crossing gmt-widget",
   },
+  {
+    path: "tools/cutoff-stack",
+    widget: "gmt-cutoff-stack gmt-widget",
+  },
+  {
+    path: "tools/cutoff-ruler",
+    widget: "gmt-cutoff-ruler gmt-widget",
+  },
+  {
+    path: "tools/cutoff-countdown",
+    widget: "gmt-cutoff-countdown gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

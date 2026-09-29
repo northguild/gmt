@@ -32,3 +32,8 @@ event is a new call, not a stored deadline to fix. Try a 96-hour offset from an 
 `cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" })`, which is exact
 elapsed time across New York's fall-back and reads 13:00, not the arrival's 12:00. The rules are
 in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/#the-anchor-is-your-event).
+
+Open the [Cut-off
+Countdown](/tools/cutoff-countdown/?w=cutoffcountdown&wa=%7B%22cutoff%22%3A%222024-06-09T16%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22now%22%3A%222024-06-12T04%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22timeZone%22%3A%22Asia%2FShanghai%22%7D)
+with the filing made at the departure-based deadline: against the real cut-off, 24 hours before
+loading, `timeToCutoff` is `-PT60H`. Sixty hours late.

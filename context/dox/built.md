@@ -43,8 +43,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `tsconfig.base.json` (whose `composite`, `emitDeclarationOnly` and `customConditions`
   are wrong for an app), and declares `engines.node >=22.12.0` — Astro 7's floor.
 - **Toolchain traps.**
-  - The shell uses `fnm`: `eval "$(fnm env)" && fnm use`. `fnm use` alone is a silent
-    no-op in a non-interactive shell.
+  - Where `fnm` is installed, run `eval "$(fnm env)" && fnm use`. `fnm use` alone is a
+    silent no-op in a non-interactive shell. Without `fnm`, the Node on `PATH` must match
+    `.nvmrc`.
   - Starlight's `@astrojs/markdown-remark` peer is optional; don't declare it. `satteri` is
     pinned through `packageExtensions` in `pnpm-workspace.yaml`.
   - pnpm 10 does not run `pre`/`post` scripts, so steps are chained with `&&`.
@@ -141,6 +142,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
+  Three more (TRAN-10): the Cut-off Stack, a sailing's cut-offs from `cutoffSchedule` on a
+  day timeline, closed days shaded, each rolled cut-off drawn where it landed with a line
+  back to where `cutoffAt` without a calendar puts it; the Cut-off Ruler, one departure's "N
+  days before" read three ways by `cutoffAt` (calendar days, exact hours, a pinned local
+  time) with the DST change between them marked; the Cut-off Countdown, `isPastCutoff` and
+  `timeToCutoff` against the viewer's clock or a dragged time, with the half-open rule shown.
+  All three import `cutoff-widgets.ts` and load through `cutoff-lib.ts`; closed days come
+  from `rollDate`, hours before a departure from `timeToCutoff`, and a moved cut-off from
+  comparing `cutoffAt` with and without the calendar, never from arithmetic. The Countdown
+  reads the clock only after mount and only in live mode; presets, permalinks with a `now`
+  and the page's default are pinned.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
   left controls that looked live and did nothing. Every `.astro` shell — every teaching
@@ -159,13 +171,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
   `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
   `/tools/billing-deadlines/`, `/tools/delivery-scheduler/`, `/tools/connection-checker/`,
-  `/tools/timetable-reader/`, `/tools/crossing-clock/`, plus the Tier 4 `/tools/zoned-earth/`
+  `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
+  `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, plus the Tier 4 `/tools/zoned-earth/`
   and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package.
 - **`seedFromLocation` keeps only top-level strings of 1–64 characters and years.** A widget
   whose arguments are lists or objects flattens them into numbered string keys (Delivery
-  Scheduler, Timetable Reader) or joined strings (Free Time Ledger), and the
-  content-permalink test checks every key survives.
+  Scheduler, Timetable Reader, the Cut-off Stack's `name1`…`atLocalTime4`) or joined strings
+  (Free Time Ledger, the Cut-off Stack's `weekend` and `holidays`), and the content-permalink
+  test checks every key survives.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
@@ -403,6 +417,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (TRAN-9).
   - `showTimetableReader({ startTimeZone, departures, offsets?, duration, timeZone })`
     (TRAN-9): a zoneless departure is the point, and it is never pre-resolved.
+  - `showCutoffStack({ anchor, timeZone, cutoffs, weekend?, holidays?, roll? })` (TRAN-10):
+    `roll` is never defaulted; a calendar with no roll shows the library's `[]`.
+  - `showCutoffRuler({ anchor, timeZone, days, atLocalTime })` (TRAN-10).
+  - `showCutoffCountdown({ cutoff, now?, timeZone })` (TRAN-10): no `now` means the reader's
+    clock, live.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

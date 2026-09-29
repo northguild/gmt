@@ -111,6 +111,9 @@ const PAGES = [
   { slug: "tool-connection-checker", path: "/tools/connection-checker/" },
   { slug: "tool-timetable-reader", path: "/tools/timetable-reader/" },
   { slug: "tool-crossing-clock", path: "/tools/crossing-clock/" },
+  { slug: "tool-cutoff-stack", path: "/tools/cutoff-stack/" },
+  { slug: "tool-cutoff-ruler", path: "/tools/cutoff-ruler/" },
+  { slug: "tool-cutoff-countdown", path: "/tools/cutoff-countdown/" },
   /* Added last, deliberately. Through DOX-C3b this was the page being changed
      on almost every step, so covering it earlier would have meant a gate that
      failed by design and got ignored. It is stable now, and it is the only page

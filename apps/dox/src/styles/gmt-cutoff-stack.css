@@ -1,0 +1,32 @@
+/*
+ * Cut-off Stack widget (TRAN-10). Everything shared with the other cut-off
+ * widgets lives in gmt-cutoff-widgets.css; this sheet holds only the table.
+ */
+
+.gmt-cutoff-stack-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cutoff-stack-table th,
+.gmt-cutoff-stack-table td {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.gmt-cutoff-stack-table th {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+@container (max-width: 34rem) {
+  .gmt-cutoff-stack-table {
+    font-size: var(--gmt-text-xs);
+  }
+}

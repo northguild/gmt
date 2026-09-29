@@ -35,3 +35,12 @@ to make Wednesday a holiday: the cut-off rolls back to Tuesday. Change `roll` to
 and it moves to Thursday. Leave `roll` out and the result is `""`, because there is no default. The rules are
 in [Transport: Legs and
 Dwell](/guides/industries/transport-legs-and-dwell/#two-days-before-is-not-48-hours-cutoffat).
+
+Or open this sailing in the [Cut-off
+Ruler](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-06-14T16%3A00%3A00Z%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D):
+with no clock change in between, `P2D` and `PT48H` agree at 18:00, and the pinned reading is
+17:00. Across [New York's
+fall-back](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-11-04T18%3A00%3A00-05%3A00%5BAmerica%2FNew_York%5D%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D)
+the three readings land an hour apart. Across [the
+spring-forward](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-03-11T22%3A00%3A00Z%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D),
+`PT48H` and the pinned 17:00 coincide, and `P2D` is 47 hours.

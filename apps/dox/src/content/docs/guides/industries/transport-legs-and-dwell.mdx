@@ -229,6 +229,9 @@ cutoffAt("2024-11-05T17:00:00Z", "P4D", { timeZone: "America/New_York" });
 // "2024-11-01T12:00:00-04:00[America/New_York]" — four calendar days keep 12:00, 97 hours
 ```
 
+The [Cut-off Ruler](/tools/cutoff-ruler/) draws all three readings of "two days before" on
+one axis, across New York's fall-back.
+
 ### The anchor is your event
 
 Loading, departure and arrival are different instants, and the same offset from the wrong
@@ -315,6 +318,9 @@ The sort is by instant, not by the text of the local time: on a fall-back night 
 invalid entry, or one cut-off in a skipped hour, returns `[]`, never a stack with a deadline
 silently missing.
 
+The [Cut-off Stack](/tools/cutoff-stack/) draws a sailing's stack on a day timeline, with
+closed days shaded and each rolled cut-off drawn where it landed and where it would have been.
+
 ## Has it passed: `isPastCutoff`
 
 [`isPastCutoff(now, cutoff)`](/reference/transport/compare/isPastCutoff) is `true` from the
@@ -347,8 +353,14 @@ timeToCutoff("2024-11-02T17:00:00-04:00[America/New_York]", "2024-11-03T17:00:00
 // "PT25H" — across the fall-back
 ```
 
+The [Cut-off Countdown](/tools/cutoff-countdown/) compares a cut-off with your clock, or with
+a time you drag, and shows both calls.
+
 ## See it break, then work
 
+- [Cut-off Stack: a Monday sailing's weekend cut-offs, rolled back to Friday](/tools/cutoff-stack/)
+- [Cut-off Ruler: two days before, three ways, across the fall-back](/tools/cutoff-ruler/)
+- [Cut-off Countdown: twenty minutes late for gate-in](/tools/cutoff-countdown/)
 - [Dwell Ledger: drag a dwell across local midnights](/tools/dwell-ledger/)
 - [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
 - [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
