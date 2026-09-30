@@ -5,7 +5,7 @@
  * wrong in a way the widgets cannot see.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readZoneAt, readZoneNow } from "./zone-clock";
 
 /* `readZoneAt` takes a zoned anchor, the shape `multi-zone-scrubber.ts`'s
@@ -30,10 +30,16 @@ describe("readZoneAt", () => {
     expect(now.inDst).toBe(false);
   });
 
-  it("gives the same answer whichever year is read first", () => {
-    // The reverse order, to catch a cache that is merely order-dependent.
-    const now = readZoneAt("Europe/Istanbul", at("2026-07-01T09:00:00"));
-    const then = readZoneAt("Europe/Istanbul", at("2016-07-01T09:00:00"));
+  it("gives the same answer whichever year is read first", async () => {
+    /* The reverse order, to catch a cache that is merely order-dependent. The
+       cache is module state and every test in this file shares one module, so
+       by now the test above has filled both of these keys and plain reads
+       would be cache hits whatever the cache did. A fresh module starts it
+       empty, so the 2026 answer really is computed first. */
+    vi.resetModules();
+    const { readZoneAt: fresh } = await import("./zone-clock");
+    const now = fresh("Europe/Istanbul", at("2026-07-01T09:00:00"));
+    const then = fresh("Europe/Istanbul", at("2016-07-01T09:00:00"));
     expect(now.inDst).toBe(false);
     expect(then.inDst).toBe(true);
   });
