@@ -47,8 +47,15 @@ export interface ShadingInput {
   dither?: boolean;
 }
 
-/** Sine of 18°: astronomical twilight ends when the sun is this far down. */
-export const TWILIGHT_END = Math.sin((18 * Math.PI) / 180);
+/**
+ * Astronomical twilight ends when the sun is this many degrees down. Exported
+ * in degrees as well as a sine so `zone-sky.ts` reads the same number rather
+ * than restating it.
+ */
+export const TWILIGHT_END_DEG = 18;
+
+/** Sine of `TWILIGHT_END_DEG`, the form the shading formulae compare against. */
+export const TWILIGHT_END = Math.sin((TWILIGHT_END_DEG * Math.PI) / 180);
 
 /**
  * Sine of 6°: through civil twilight the sky still lights the ground, so

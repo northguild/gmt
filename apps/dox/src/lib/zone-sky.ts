@@ -22,6 +22,7 @@
  */
 
 import { ICON_STROKE } from "./widget-ui";
+import { TWILIGHT_END_DEG } from "./globe/shading";
 import { subsolarPoint } from "./globe/sun";
 
 /** Where a zone's sun is, in the three bands the globe already shades. */
@@ -39,11 +40,11 @@ const RAD = Math.PI / 180;
 const HORIZON = -0.833;
 
 /**
- * Astronomical twilight ends 18° down — the same figure `globe/shading.ts`
- * eases its night wash across, so a row and the pixels behind it change at the
- * same instant.
+ * Astronomical twilight ends 18° down — read from `globe/shading.ts`, which
+ * eases its night wash across the same figure, so a row and the pixels behind
+ * it change at the same instant.
  */
-const NIGHT = -18;
+const NIGHT = -TWILIGHT_END_DEG;
 
 /**
  * Solar elevation at a point, in degrees above the horizon.
