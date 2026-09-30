@@ -346,8 +346,18 @@ export function mountZoneClockList(
       for (const [, row] of rows) row.remove();
       rows.clear();
       virtualizer.setOptions({ ...virtualizerOptions, count: ids.length });
-      // A browse position from the old, longer list would be out of range.
-      activeIndex = Math.min(activeIndex, Math.max(ids.length - 1, 0));
+      /* Browsing restarts at the top, because the list does too (below). The
+         old position means nothing here: row ids come from the index, so it
+         could name a row the new list will never mount, and even clamped into
+         range it would name one scrolled out of the DOM — either way
+         `aria-activedescendant` would point at nothing a screen reader can
+         find. Row 0 is the one row certain to be mounted after the reset. With
+         no zones left there is nothing to name at all. */
+      activeIndex = 0;
+      if (ids.length === 0) panel.removeAttribute("aria-activedescendant");
+      else {
+        panel.setAttribute("aria-activedescendant", zoneOptionId(panelId, 0));
+      }
       /* Through the virtualizer rather than `panel.scrollTop = 0`, so the
          library records the intent instead of being silently overtaken. */
       virtualizer.scrollToOffset(0, { behavior: "instant" });

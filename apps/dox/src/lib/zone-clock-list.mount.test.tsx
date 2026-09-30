@@ -21,7 +21,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { installJsdomShims } from "../test/jsdom-shims";
 import { readViewerDate } from "./zone-clock";
-import { mountZoneClockList } from "./zone-clock-list";
+import { mountZoneClockList, zoneOptionId } from "./zone-clock-list";
 import {
   dayDelta,
   dayShift,
@@ -265,6 +265,34 @@ describe("mountZoneClockList", () => {
     expect(() => list.tick()).not.toThrow();
     expect(() => list.setIds(ZONES)).not.toThrow();
     expect(panel.querySelectorAll("[data-tz-id]").length).toBeGreaterThan(0);
+  });
+
+  it("points aria-activedescendant at a mounted row after a filter", () => {
+    /* Row ids come from the row's index, not its zone, so after a filter the
+       id the listbox pointed at can name a row that no longer exists — or,
+       clamped into range, one scrolled out of the DOM. ARIA requires the
+       active descendant to name a real option; a missing one leaves a screen
+       reader with no position, and nothing visible gives it away. A filter
+       scrolls the list to the top, so browsing restarts there too. */
+    const { panel, list } = mount();
+    const active = () => panel.getAttribute("aria-activedescendant");
+    panel.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+    expect(active()).toBe(zoneOptionId(panel.id, ZONES.length - 1));
+
+    list.setIds(ZONES.slice(0, 3));
+    expect(active()).toBe(zoneOptionId(panel.id, 0));
+    expect(document.getElementById(active() as string)).not.toBeNull();
+
+    // And browsing carries on from there, not from the old position.
+    panel.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+    expect(active()).toBe(zoneOptionId(panel.id, 1));
+
+    list.setIds([]);
+    expect(panel.hasAttribute("aria-activedescendant")).toBe(false);
   });
 
   it("leaves row positions alone on a tick", () => {
