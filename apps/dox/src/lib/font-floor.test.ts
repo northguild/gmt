@@ -19,6 +19,11 @@
  * CSS, and that number becomes real SVG text on the rendered page — a
  * violation there is exactly as real as one in a stylesheet).
  *
+ * Text drawn into a `<canvas>` counts too, and used not to be looked at: the
+ * globe set `ctx.font` to a `600 10px …` shorthand and drew every zone label
+ * below the floor, unseen by this scan because none of its patterns matched a
+ * font shorthand. The size is pulled out of the shorthand now.
+ *
  * `--gmt-text-xs` sits exactly at the floor (0.75rem): the scale used to have
  * a step under 12px, raised to sit at it (gmt-tokens.css).
  */
@@ -119,17 +124,44 @@ function violation(raw: string): string | null {
     : null;
 }
 
+/**
+ * The size out of a CSS `font` shorthand, or null when there is not one.
+ *
+ * The shorthand puts optional style, variant, weight and stretch before the
+ * size, then the family after it, so the size is the first token that is a
+ * length. A `size/line-height` pair keeps only the size.
+ */
+function sizeFromFontShorthand(value: string): string | null {
+  for (const token of value.split(/\s+/)) {
+    const size = token.split("/")[0];
+    if (/^[0-9]*\.?[0-9]+(rem|em|px)$/.test(size)) return size;
+  }
+  return null;
+}
+
 /** One `{ file, line, raw }` per font-size-shaped declaration in the source text. */
 function findDeclarations(text: string): Array<{ line: number; raw: string }> {
   const found: Array<{ line: number; raw: string }> = [];
-  const patterns = [
-    /font-size\s*:\s*([^;{}]+);/g, // CSS, and .astro <style> blocks
-    /font-size\s*=\s*["']([^"']+)["']/g, // SVG attribute
-    /\bfontSize\s*:\s*([^,;\n}]+)/g, // React inline style / chart mark option objects
+  const patterns: Array<{
+    pattern: RegExp;
+    extract?: (value: string) => string | null;
+  }> = [
+    { pattern: /font-size\s*:\s*([^;{}]+);/g }, // CSS, and .astro <style> blocks
+    { pattern: /font-size\s*=\s*["']([^"']+)["']/g }, // SVG attribute
+    { pattern: /\bfontSize\s*:\s*([^,;\n}]+)/g }, // React inline style / chart marks
+    {
+      /* A canvas `font` shorthand: `ctx.font = "600 12px …"`, or one built as a
+         template literal and handed to a renderer. Template literals are
+         included because the globe's label font interpolates its family from a
+         token, and the size sits right there in the same string. */
+      pattern: /\bfont\s*[:=]\s*[`"']([^`"'\n]+)[`"']/g,
+      extract: sizeFromFontShorthand,
+    },
   ];
-  for (const pattern of patterns) {
+  for (const { pattern, extract } of patterns) {
     for (const match of text.matchAll(pattern)) {
-      const raw = match[1].replace(/["']/g, "").trim();
+      const value = match[1].replace(/["']/g, "").trim();
+      const raw = extract ? extract(value) : value;
       if (!raw) continue;
       const line = text.slice(0, match.index).split("\n").length;
       found.push({ line, raw });
@@ -144,6 +176,28 @@ describe("Font floor (12px / 0.75rem)", () => {
     expect(FILES).toContain(path.join(DOX, "src/styles/gmt-tokens.css"));
     expect(FILES).toContain(path.join(DOX, "src/styles/gmt-hive.css"));
     expect(FILES).toContain(path.join(DOX, "scripts/render-charts.ts"));
+  });
+
+  it("reads the size out of a canvas font shorthand", () => {
+    /* The pattern that was missing. Guards the extractor itself, since a scan
+       that silently matches nothing passes just as quietly as one that works.
+       The offending sizes are interpolated rather than written out, so this
+       file does not trip its own scan. */
+    const small = "10px";
+    const tiny = "0.6rem";
+    expect(findDeclarations(`ctx.font = "600 ${small} monospace";`)).toEqual([
+      { line: 1, raw: "10px" },
+    ]);
+    expect(
+      findDeclarations(`el.font = "italic small-caps 700 ${tiny}/1.2 serif";`),
+    ).toEqual([{ line: 1, raw: "0.6rem" }]);
+    // A size at the floor is fine, and a family-only value has no size to read.
+    expect(findDeclarations(`ctx.font = "600 12px monospace";`)).toEqual([
+      { line: 1, raw: "12px" },
+    ]);
+    expect(findDeclarations(`ctx.font = "monospace";`)).toEqual([]);
+    expect(violation(small)).toMatch(/under the 12px floor/);
+    expect(violation("12px")).toBeNull();
   });
 
   it("the --gmt-text-* scale itself resolves to >= 12px", () => {

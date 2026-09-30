@@ -142,17 +142,23 @@ const VIEWPORTS = [
  * between any two captures taken minutes apart. Masked rather than waited out —
  * no settle delay can make "now" the same twice.
  *
- * The globe canvas was added 2026-09-10, after a baseline and a comparison taken
- * ~30 minutes apart diverged by up to 1% on every light-theme page carrying a
- * globe. The visible difference was a crescent down the right-hand limb: the
- * day/night terminator, whose position `globe-terminator.ts` computes from the
- * current time. It is not flake and it does not settle — it is the widget
- * working. Its own correctness is covered by `globe.test.ts`; what this harness
- * is for is catching layout and style regressions around it.
+ * The globe canvas is masked because a baseline and a comparison taken half an
+ * hour apart diverge by up to 1% on every light-theme page carrying a globe. The
+ * visible difference is a crescent down the right-hand limb: the day/night
+ * terminator, whose position `globe/sun.ts` computes from the current time. It
+ * is not flake and it does not settle — it is the widget working. What this
+ * harness is for is catching layout and style regressions around it.
+ *
+ * The globe's own correctness is covered elsewhere: the maths in the Vitest
+ * suites under `src/lib/globe/`, and the rendering by `pnpm globe:smoke`, which
+ * pins the clock and drives a real GPU — neither of which this harness can do.
  */
 const LIVE_CLOCK_SELECTORS = [
   ".gmt-clock-time",
+  ".gmt-clock-date",
+  ".gmt-clock-shift",
   ".gmt-globe-tooltip-time",
+  ".gmt-globe-tooltip-date",
   ".gmt-globe-stage canvas",
 ];
 

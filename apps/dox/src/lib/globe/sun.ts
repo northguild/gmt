@@ -1,13 +1,14 @@
 /**
- * Day/night terminator geometry for the globe (DOX-E1a).
+ * Where the sun is over the Earth, for the globe's day/night shading.
  *
- * Pure math, no DOM, no `@northguild/gmt` — unit-tested directly. The globe
- * renders the *night* hemisphere as a translucent overlay: a spherical cap of
- * angular radius 90° centred on the anti-solar point.
+ * Pure math, no DOM, no `@northguild/gmt` — unit-tested directly. Both
+ * renderers shade the night hemisphere as a cap of angular radius 90° centred
+ * on the anti-solar point, easing in across twilight rather than cutting at a
+ * hard line (see `shading.ts`).
  *
  * The subsolar-point formula is the standard low-precision solar position
  * (Astronomical Almanac, "Approximate Solar Coordinates"), accurate to well
- * under a degree — far finer than a terminator drawn a few pixels wide needs.
+ * under a degree — far finer than a terminator a few pixels wide needs.
  */
 
 const RAD = Math.PI / 180;
@@ -53,7 +54,13 @@ export function subsolarPoint(instantMs: number): LatLng {
       Math.cos(eclipticLongitude),
     ) / RAD;
 
-  const gmst = (280.147 + 360.985_623_5 * n) % 360;
+  /* Greenwich mean sidereal time, in degrees. Both terms are the IAU 1982
+     expression the rest of this routine's source uses: GMST at J2000.0 is
+     18h 41m 50.54841s = 280.460_618_37 deg, advancing 360.985_647_366_29 deg
+     per day. The epoch term previously read 280.147, which is 0.3136 deg away
+     and traces to no published expression — a flat eastward bias of about
+     35 km at the equator, or 75 seconds of time. */
+  const gmst = (280.460_618_37 + 360.985_647_366_29 * n) % 360;
 
   return { lat: declination, lng: wrapLongitude(rightAscension - gmst) };
 }

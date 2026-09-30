@@ -48,7 +48,7 @@ citation boundary: a link the model emits that is not a real page renders as pla
 | Hosting          | Cloudflare Workers static assets plus `/api/*`, one Worker                                                                      |
 | AI surface       | `llms.txt`, `llms-full.txt` and per-page raw `.md`, emitted from the corpus                                                     |
 | Widgets          | A playground on every example, running the real library, plus purpose-built teaching widgets                                    |
-| Globe            | `d3-geo` orthographic on canvas — interactive and keyboard-selectable, no WebGL                                                 |
+| Globe            | A reusable WebGPU engine (`src/lib/globe/`), with the canvas-2D renderer as the fallback. Interactive and keyboard-selectable |
 | Chat stack       | AI SDK (`ai`, `@ai-sdk/react`) + 12 vendored AI Elements components; Streamdown rendering                                        |
 | React / Tailwind | Only inside the `/dox` island; Tailwind v4 without Preflight                                                                    |
 | Model            | Nine Gemini brains plus one Workers AI brain, failing over inside a request                                                     |
