@@ -373,7 +373,14 @@ export interface Diagnosis {
  *  `departureInstant` treats as "already exact". */
 const HAS_OFFSET_OR_Z = /(?:Z|[+-]\d{2}:?\d{2})/i;
 
-function isZonelessDeparture(text: string, lib: TransportLib): boolean {
+/** Exported (unchanged behaviour) so `cutoff-widgets.ts`'s `isZoneless` can
+ *  reuse it rather than duplicating the same three checks (TRAN-10). The
+ *  parameter is narrowed to the one method this needs, so a `CutoffLib` —
+ *  which is not a `TransportLib` — satisfies it structurally. */
+export function isZonelessDeparture(
+  text: string,
+  lib: Pick<TransportLib, "isValidDateTime">,
+): boolean {
   return (
     lib.isValidDateTime(text) &&
     !HAS_OFFSET_OR_Z.test(text) &&

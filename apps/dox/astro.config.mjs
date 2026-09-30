@@ -246,6 +246,10 @@ export default defineConfig({
         "./src/styles/gmt-connection-checker.css", // Connection Checker widget (TRAN-9)
         "./src/styles/gmt-timetable-reader.css", // Timetable Reader widget (TRAN-9)
         "./src/styles/gmt-crossing-clock.css", // Crossing Clock widget (TRAN-9)
+        "./src/styles/gmt-cutoff-widgets.css", // Cut-off widgets, shared (TRAN-10)
+        "./src/styles/gmt-cutoff-stack.css", // Cut-off Stack widget (TRAN-10)
+        "./src/styles/gmt-cutoff-ruler.css", // Cut-off Ruler widget (TRAN-10)
+        "./src/styles/gmt-cutoff-countdown.css", // Cut-off Countdown widget (TRAN-10)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

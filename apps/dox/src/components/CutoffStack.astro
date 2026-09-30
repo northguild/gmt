@@ -1,0 +1,31 @@
+---
+/**
+ * Cut-off Stack widget (TRAN-10).
+ *
+ * A sailing's whole stack of cut-offs, computed by `cutoffSchedule` against
+ * one departure, earliest first, with closed days shaded and each rolled
+ * cut-off drawn where it landed and where `cutoffAt` with no calendar would
+ * have put it.
+ *
+ * **The markup and the wiring both live in `lib/cutoff-stack-mount.ts`**, so
+ * the chat rail mounts the same widget this page server-renders.
+ */
+import { renderCutoffStackTemplate } from "../lib/cutoff-stack-mount";
+---
+
+<Fragment set:html={renderCutoffStackTemplate()} />
+
+<script>
+  import { mountCutoffStack } from "../lib/cutoff-stack-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("cutoffstack");
+    document.querySelectorAll<HTMLElement>(".gmt-cutoff-stack").forEach((el) => {
+      mountCutoffStack(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
+    });
+  }
+</script>

@@ -1,0 +1,30 @@
+---
+/**
+ * Cut-off Ruler widget (TRAN-10).
+ *
+ * One departure's "N days before" read three ways by `cutoffAt` — calendar
+ * days, exact hours, a pinned local time — on one axis, with any DST change
+ * between them marked.
+ *
+ * **The markup and the wiring both live in `lib/cutoff-ruler-mount.ts`**, so
+ * the chat rail mounts the same widget this page server-renders.
+ */
+import { renderCutoffRulerTemplate } from "../lib/cutoff-ruler-mount";
+---
+
+<Fragment set:html={renderCutoffRulerTemplate()} />
+
+<script>
+  import { mountCutoffRuler } from "../lib/cutoff-ruler-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("cutoffruler");
+    document.querySelectorAll<HTMLElement>(".gmt-cutoff-ruler").forEach((el) => {
+      mountCutoffRuler(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
+    });
+  }
+</script>

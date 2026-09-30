@@ -1,11 +1,14 @@
 /*
  * Shared rules for the four multi-leg scheduling widgets (TRAN-9): the
  * Delivery Scheduler, the Connection Checker, the Timetable Reader and the
- * Crossing Clock.
+ * Crossing Clock. Reused (TRAN-10) by the three cut-off widgets — the
+ * Cut-off Stack, the Cut-off Ruler and the Cut-off Countdown — wherever a
+ * rule applies to them too, by adding their roots to the selector list
+ * rather than copying the rule.
  *
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
  * labels/inputs/selects in gmt-form-controls.css. This sheet holds what two
- * or more of the four share: the leg fieldset grid, the verdict line, the
+ * or more widgets share: the leg fieldset grid, the verdict line, the
  * naive row and its disagreement badge, and the reason-aside spacing —
  * merged here per the style guide's "when two components share a rule,
  * merge it".
@@ -18,7 +21,10 @@
 .gmt-delivery,
 .gmt-crossing,
 .gmt-connection,
-.gmt-timetable {
+.gmt-timetable,
+.gmt-cutoff-stack,
+.gmt-cutoff-ruler,
+.gmt-cutoff-countdown {
   container-type: inline-size;
 }
 

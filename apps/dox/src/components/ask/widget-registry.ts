@@ -55,11 +55,17 @@ import type { FreeTimeLedgerArgs } from "~/lib/free-time-ledger-mount";
 import type { IntervalArgs } from "~/lib/interval-visualizer-mount";
 import type { CrossingClockArgs } from "~/lib/crossing-clock-mount";
 import type { TimetableReaderArgs } from "~/lib/timetable-reader-mount";
+import type { CutoffStackArgs } from "~/lib/cutoff-stack-mount";
+import type { CutoffRulerArgs } from "~/lib/cutoff-ruler-mount";
+import type { CutoffCountdownArgs } from "~/lib/cutoff-countdown-mount";
 import {
   showBillingDeadlinesInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
+  showCutoffCountdownInput,
+  showCutoffRulerInput,
+  showCutoffStackInput,
   showDeliverySchedulerInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -404,6 +410,70 @@ const crossingEntry = defineWidget<CrossingClockArgs>({
     targetZone ? checkZones([targetZone]) : Promise.resolve(null),
 });
 
+const cutoffStackEntry = defineWidget<CutoffStackArgs>({
+  title: "Cut-off stack",
+  kind: "cutoffstack",
+  parse: (input) => {
+    const result = showCutoffStackInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/cutoff-stack-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderCutoffStackTemplate(args),
+      mount: m.mountCutoffStack,
+    })),
+  validate: ({ timeZone }) =>
+    timeZone ? checkZones([timeZone]) : Promise.resolve(null),
+});
+
+const cutoffRulerEntry = defineWidget<CutoffRulerArgs>({
+  title: "Cut-off ruler",
+  kind: "cutoffruler",
+  parse: (input) => {
+    const result = showCutoffRulerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/cutoff-ruler-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderCutoffRulerTemplate(args),
+      mount: m.mountCutoffRuler,
+    })),
+  validate: ({ timeZone }) =>
+    timeZone ? checkZones([timeZone]) : Promise.resolve(null),
+});
+
+const cutoffCountdownEntry = defineWidget<CutoffCountdownArgs>({
+  title: "Cut-off countdown",
+  kind: "cutoffcountdown",
+  parse: (input) => {
+    const result = showCutoffCountdownInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  load: () =>
+    import("~/lib/cutoff-countdown-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderCutoffCountdownTemplate(args),
+      mount: m.mountCutoffCountdown,
+    })),
+  validate: ({ timeZone }) =>
+    timeZone ? checkZones([timeZone]) : Promise.resolve(null),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
@@ -416,6 +486,9 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showConnectionChecker: connectionEntry,
   showTimetableReader: timetableEntry,
   showCrossingClock: crossingEntry,
+  showCutoffStack: cutoffStackEntry,
+  showCutoffRuler: cutoffRulerEntry,
+  showCutoffCountdown: cutoffCountdownEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

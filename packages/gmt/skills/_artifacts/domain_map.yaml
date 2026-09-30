@@ -203,7 +203,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime
     type: core
     packages:
       - '@northguild/gmt'
@@ -253,6 +253,10 @@ skills:
       - dwellTime
       - crossingTime
       - scheduleDelivery
+      - cutoffAt
+      - cutoffSchedule
+      - isPastCutoff
+      - timeToCutoff
       - freeTimeExpiry
       - chargeableDays
       - demurrageClock
