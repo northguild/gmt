@@ -57,19 +57,24 @@ export async function acquireDevice(
   shared = bundle;
   bundle.holders++;
 
+  let released = false;
+
   if (onLost) {
     /* `device.lost` resolves once and never rejects. A `destroyed` reason is our
        own teardown, which is not a failure; anything else is the driver or the
-       browser taking the GPU away, and the caller needs to know. */
+       browser taking the GPU away, and the caller needs to know — unless it
+       has already released. The handler cannot be detached, so a globe that
+       mounted and unmounted leaves one behind, and it must not call back into
+       a renderer that has torn down. */
     void bundle.device.lost.then((info) => {
       if (info.reason === "destroyed") return;
-      // A lost device is dead for everyone holding it.
+      // A lost device is dead for everyone holding it, released or not.
       if (shared?.device === bundle.device) shared = null;
+      if (released) return;
       onLost(info.message || info.reason || "device lost");
     });
   }
 
-  let released = false;
   return {
     device: bundle.device,
     canvasFormat: bundle.canvasFormat,
