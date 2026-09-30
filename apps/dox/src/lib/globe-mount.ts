@@ -1,20 +1,20 @@
 /**
- * DOX-C3b (#139) — the globe, mountable into the chat rail.
+ * DOX-C3b (#139) — the globe's markup and wiring, for every surface that hosts it.
  *
- * `initGlobe` itself needed no refactor: `globe.ts` already takes a host element
- * and returns a `GlobeHost` with a thorough `destroy()`. But the *glue* around it
- * — the zone search combobox, the zoom buttons, keeping the search box in sync
- * with selection — lives in `Globe.astro`'s inline script and bootstraps off
- * `document.getElementById("globe-stage")`. That is document-scoped and
- * id-based, so it is not multi-instance-safe and cannot be reached from React.
+ * One template and one mount serve all three: the landing hero, `/tools/zoned-earth/`
+ * and the `/dox` chat rail. A rail cannot instantiate an Astro component, which is
+ * why the markup is a string here rather than in `Globe.astro`.
  *
- * This module is that glue, container-scoped. `Globe.astro` is deliberately left
- * alone for now (step 5 consolidates it) — its conditional attribute emission
- * (`class:list`, `data-tools-fullbleed`) is fiddly to reproduce as a string, and
- * it sits on the two pages the visual gate cares most about.
+ * Everything is container-scoped, never `document`-scoped, so two globes can live
+ * in one document — one on the page and one in the rail.
  */
 import { escapeHtml } from "./widget-ui";
-import { onceDestroy, type MountFn, type WidgetHandle } from "./widget-mount";
+import {
+  onceDestroy,
+  WidgetLoadError,
+  type MountFn,
+  type WidgetHandle,
+} from "./widget-mount";
 
 export interface GlobeArgs {
   /** The zone to select and centre on. The clock panel beside the globe lists
@@ -95,7 +95,23 @@ export function renderGlobeTemplate({
     `<div class="gmt-globe-side">` +
     `<div class="gmt-globe-search gmt-combobox">` +
     `<label for="${searchId}">Find a zone</label>` +
+    /* Input and filter gear share one row so the gear is an addon on the
+       field, not a control floating beside it: `align-items: stretch` makes it
+       exactly the input's height without anyone hardcoding what that is.
+       `.gmt-combobox` above stays the positioning context for both the
+       typeahead list and the filter popup. */
+    `<div class="gmt-globe-field-row">` +
     `<input type="search" id="${searchId}" class="gmt-field" placeholder="e.g. Asia/Tokyo" autocomplete="off" data-globe-search>` +
+    /* Empty, and filled by `zone-filter-ui.ts` once the globe has mounted:
+       which toggles are worth showing depends on live readings, and none of
+       them mean anything before there is a clock list to narrow.
+       A plain <div> with a button disclosure inside, not <details>: a <details>
+       in this row brought its own layout with it — a marker box that ate the
+       button's width, and a `::details-content` box that changed the row's
+       height when it opened. The dismissal behaviour a popup needs is
+       hand-written either way. */
+    `<div class="gmt-globe-filters" id="${idPrefix}-filters" data-role="filters"></div>` +
+    `</div>` +
     `</div>` +
     `<div class="gmt-globe-clocks" id="${clocksId}" data-role="clocks" role="listbox" aria-label="Pinned zones — select one to focus the globe" tabindex="0"></div>` +
     `</div>` +
@@ -112,10 +128,19 @@ export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
   const clockPanel = root.querySelector<HTMLElement>('[data-role="clocks"]');
   if (!stage || !clockPanel) return onceDestroy(() => {});
 
-  const { initGlobe } = await import("./globe");
+  let initGlobe: typeof import("./globe").initGlobe;
+  try {
+    ({ initGlobe } = await import("./globe"));
+  } catch (error) {
+    /* The chunk carries `@northguild/gmt`, so a failed import is the library
+       failing to load — the case `WidgetLoadError` exists to distinguish, and
+       the one a reload can fix. */
+    throw new WidgetLoadError(error);
+  }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const host = await initGlobe(stage, clockPanel);
+  const filterPanel = root.querySelector<HTMLElement>('[data-role="filters"]');
+  const host = await initGlobe(stage, clockPanel, filterPanel);
   // The import and the init are both awaited above; StrictMode's second pass
   // can have aborted in between, and the handle we just built is the one thing
   // that would leak (an rAF loop and a 1s clock interval) if we returned it.
@@ -157,14 +182,13 @@ export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
   }
 
   /* Seeded after wiring, so the selection lands on a live globe and the clock
-     panel and search box follow it. `focusZone` already returns early for a zone
-     with no coordinate (`globe.ts`'s `focusZoneImpl`), so an invented zone that
-     somehow reached here degrades to "globe stays where it was" rather than
-     throwing — the registry rejects those first (see `widget-registry.ts`). */
-  if (args.zone) {
-    host.selectZone(args.zone);
-    host.focusZone(args.zone);
-  }
+     panel and search box follow it. `focusZone` selects as well as rotates, so
+     calling `selectZone` first only did the same work twice — and fired the
+     selection callback twice with it. It returns early for a zone with no
+     coordinate, so an invented zone degrades to "the globe stays where it was"
+     rather than throwing; the registry rejects those first (see
+     `widget-registry.ts`). */
+  if (args.zone) host.focusZone(args.zone);
 
   return onceDestroy(
     () => {
