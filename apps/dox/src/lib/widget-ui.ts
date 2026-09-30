@@ -16,7 +16,6 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 // Syntax-highlighted call lines
 // ---------------------------------------------------------------------------
 
-/** Escape text for safe use inside innerHTML. */
 /**
  * The stroke recipe every inline SVG on this site draws with — one weight
  * across transport modes, code-frame glyphs and the globe's filter switches.
@@ -31,6 +30,7 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 export const ICON_STROKE =
   'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
+/** Escape text for safe use inside innerHTML. */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
