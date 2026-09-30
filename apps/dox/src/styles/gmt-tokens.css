@@ -131,6 +131,27 @@
   --gmt-signal-fill: color(from var(--gmt-signal) srgb r g b / 0.08);
   --gmt-signal-border: color(from var(--gmt-signal) srgb r g b / 0.35);
 
+  /* Day-shift washes — the card background for a zone whose local day is not
+     the viewer's (zone-clock-list.ts, the globe's tooltip).
+     Both are purple because purple is the only hue left: in these widgets cyan
+     is the hover/active border, spring the selected border and ring, gold the
+     DST glyph, and amber is reserved site-wide for the "no signal" sentinel.
+     Doubling any of those up would make a row's day say the same thing as its
+     state. Direction is therefore carried by the row's own "+1d" / "-1d" text,
+     not by hue — which is also what keeps it readable once the wash is gone
+     under forced-colors. The two alphas differ 2x so the pair still separates
+     at a glance.
+     The alphas are a measured ceiling, not a taste: these wash *under* the
+     card's own text, so every point of alpha is spent from that text's
+     contrast budget. 0.12 is where `--gmt-ice-dim` (the date, the quietest
+     text on the card) still clears 7:1 over `--gmt-void` in both themes —
+     8.04:1 -> 7.26:1 dark, 8.38:1 -> 7.85:1 light. Raising them re-opens a
+     contrast bug; measure again if you do.
+     No light-theme block: `--gmt-dst-purple` re-tints itself below, so these
+     follow it (design-system.md maintenance rule 1). */
+  --gmt-day-prev-wash: color(from var(--gmt-dst-purple) srgb r g b / 0.12);
+  --gmt-day-next-wash: color(from var(--gmt-dst-purple) srgb r g b / 0.06);
+
   --gmt-severity-critical: var(--gmt-cyan);
   --gmt-severity-high: var(--gmt-teal);
   --gmt-severity-medium: var(--gmt-ice);
@@ -270,7 +291,7 @@
      same bright value works for that in both themes since night is dark in
      both. */
   --gmt-globe-gold: #fde047;
-  /* Day-hemisphere brightening wash (globe-shading.ts, painted right after
+  /* Day-hemisphere brightening wash (globe/shading.ts, painted right after
      the base ocean fill, in the same pass as the night wash). In dark theme,
      the day side's low oceanAlpha above reads as barely distinguishable from the
      near-black page behind the (transparent) stage — the night overlay's own
@@ -282,7 +303,7 @@
      single mechanism in both themes, just tuned.
      The value is the *peak*, reached only where the sun is overhead: the wash
      falls off with Lambert's cosine law towards the terminator (see
-     dayFactor() in globe-shading.ts), so the sphere reads as lit from the
+     dayFactor() in globe/shading.ts), so the sphere reads as lit from the
      real sun's side. */
   --gmt-globe-day-alpha: 0.26;
   /* Atmosphere: a glow ring just outside the sphere, strongest on the limb
@@ -445,13 +466,20 @@
                                               base cyan-bright #0e7490 was ~5:1
                                               and reuses this same value — see
                                               the :root comment)
-       spring-ink #0b5c29  8.15:1 / 7.47:1  (base spring #16a34a was 3.30:1)
+       spring-ink #0a5626  8.85:1 / 8.12:1  (base spring #16a34a was 3.30:1)
        purple-ink #4a1de6  8.05:1 / 7.38:1  (base purple #a78bfa was 2.72:1)
        signal-ink #8a3407  8.16:1 / 7.48:1  (base signal #ea580c was 3.56:1)
      `--gmt-cyan-ink` also measures 7.37:1 against `#ececec`, the darkest
-     light-theme surface it's used against. */
+     light-theme surface it's used against.
+
+     `--gmt-spring-ink` is measured against `#ececec` too, and was retuned from
+     #0b5c29 to reach it: the globe tooltip renders the UTC offset in this token
+     on a `.gmt-popover`, whose background *is* `--gmt-surface-2`, and the
+     original value only made 6.90:1 there — it had been tuned against #ffffff
+     and #f5f5f5 alone, neither of which it now sits on. 7.49:1 against
+     `#ececec` at the new value. */
   --gmt-cyan-ink: #045268;
-  --gmt-spring-ink: #0b5c29;
+  --gmt-spring-ink: #0a5626;
   --gmt-purple-ink: #4a1de6;
   --gmt-signal-ink: #8a3407;
 

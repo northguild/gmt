@@ -17,6 +17,20 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 // ---------------------------------------------------------------------------
 
 /** Escape text for safe use inside innerHTML. */
+/**
+ * The stroke recipe every inline SVG on this site draws with — one weight
+ * across transport modes, code-frame glyphs and the globe's filter switches.
+ *
+ * It lives in this leaf module rather than beside any one icon set because
+ * both `zone-readout.ts` and `zone-filter.ts` need it, and owning it from
+ * either end made those two import each other. `zone-filter` builds its icon
+ * strings at module scope, so that cycle was not the harmless kind: loading
+ * `zone-readout` first threw `Cannot access ICON_STROKE before initialization`
+ * and took the tooltip with it.
+ */
+export const ICON_STROKE =
+  'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

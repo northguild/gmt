@@ -89,8 +89,102 @@
   white-space: nowrap;
 }
 
+.gmt-clock-row2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-1);
+  width: 100%;
+  min-width: 0;
+}
+
+.gmt-clock-date {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
 .gmt-clock-time {
   font-family: var(--gmt-font-mono);
   font-size: 0.8rem;
   color: var(--gmt-cyan-ink);
+}
+
+/* The DST mark: the three letters, in the gold this site already uses for
+   daylight saving (the DST Inspector's Gap badge). It was a sun, and beside a
+   globe that draws a day/night terminator and paints its night markers gold, a
+   sun said "daytime here" rather than "this clock is shifted". Only a zone
+   actually on summer time is marked; `zone-readout.ts` returns "" for the other
+   two states, and `:empty` then takes the box away entirely. */
+.gmt-clock-dst {
+  margin-inline-start: auto;
+  padding: 0 0.3em;
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+  color: var(--gmt-dst-gold-ink);
+  /* --gmt-text-xs, not something smaller: the site holds a 12px floor for
+     rendered text and `font-floor.test.ts` enforces it. */
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.gmt-clock-dst:empty {
+  display: none;
+}
+
+/* The "+1d" / "-1d" chip, in the same purple as the wash behind it — one
+   colour for "not your day", on the text and on the card.
+   `--gmt-dst-purple-ink`, NOT `--gmt-purple-ink`: the latter's dark value is an
+   alias onto the bright base hue and only reaches 6.64:1 as text on the deeper
+   wash, under this site's 7:1 floor. `--gmt-dst-purple-ink` exists for exactly
+   this — purple as text — and clears 8.50:1 dark / 7.87:1 light there.
+   Direction still lives in the text itself, so the wash is never the only
+   channel carrying it: the chip survives forced-colors, the wash does not. */
+.gmt-clock-shift {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  color: var(--gmt-dst-purple-ink);
+  white-space: nowrap;
+}
+
+.gmt-clock-shift:empty {
+  display: none;
+}
+
+/* Day shift paints the background only. Border and ring stay with
+   :hover / [aria-selected] / .selected above, which is why a shifted row can
+   still show its selection state without the two fighting.
+
+   These sit *after* those rules at equal specificity, so the wash deliberately
+   survives hover and selection: which day a zone is on is a property of the
+   zone, not of what the pointer is doing, and it should not blink away as the
+   cursor crosses the list. The interaction states keep their border-colour and
+   ring, which is what they are actually read by. */
+.gmt-clock-entry.gmt-day-prev {
+  background: var(--gmt-day-prev-wash);
+}
+
+.gmt-clock-entry.gmt-day-next {
+  background: var(--gmt-day-next-wash);
+}
+
+/* Same recipe as .gmt-transport-visually-hidden / .gmt-delivery-visually-hidden
+   — the full word ("yesterday" / "tomorrow") for assistive tech, which has no
+   use for "+1d". */
+.gmt-clock-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
