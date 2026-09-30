@@ -157,21 +157,32 @@
   display: none;
 }
 
-/* Day shift paints the background only. Border and ring stay with
-   :hover / [aria-selected] / .selected above, which is why a shifted row can
-   still show its selection state without the two fighting.
+/* Day shift paints a translucent wash as a background *image* — a one-colour
+   gradient — and never touches `background-color`. That keeps the two from
+   colliding: :hover / :focus-visible / [aria-selected] / .selected above set
+   the fill, and the wash composites over whichever one is active.
 
-   These sit *after* those rules at equal specificity, so the wash deliberately
-   survives hover and selection: which day a zone is on is a property of the
-   zone, not of what the pointer is doing, and it should not blink away as the
-   cursor crosses the list. The interaction states keep their border-colour and
-   ring, which is what they are actually read by. */
+   It matters most for :focus-visible. Those rules set `outline: none`, so a
+   focused row is read by its border colour and its fill together; a wash that
+   replaced the fill would leave a day-shifted row with a weaker focus
+   indicator than the row one day over (WCAG 2.4.13). And the wash still never
+   blinks away under the cursor, because which day a zone is on is a property
+   of the zone, not of what the pointer is doing.
+
+   Forced-colors computes a non-`url()` background image to `none`, so the wash
+   drops out there — the "+1d" chip is what carries the direction then. */
 .gmt-clock-entry.gmt-day-prev {
-  background: var(--gmt-day-prev-wash);
+  background-image: linear-gradient(
+    var(--gmt-day-prev-wash),
+    var(--gmt-day-prev-wash)
+  );
 }
 
 .gmt-clock-entry.gmt-day-next {
-  background: var(--gmt-day-next-wash);
+  background-image: linear-gradient(
+    var(--gmt-day-next-wash),
+    var(--gmt-day-next-wash)
+  );
 }
 
 /* Same recipe as .gmt-transport-visually-hidden / .gmt-delivery-visually-hidden
