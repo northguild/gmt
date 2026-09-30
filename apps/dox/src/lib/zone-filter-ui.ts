@@ -1,6 +1,6 @@
 /**
- * The globe's filter panel — six switches over the two axes the clock rows
- * already show, behind a settings gear that is shut until asked for.
+ * The globe's filter panel — nine switches over three axes (day, DST, sky),
+ * behind a settings gear that is shut until asked for.
  *
  * A button disclosure over a plain `<div>`, not a `<details>`. That was the
  * first shape and it fought the layout: as an addon on the search field, the
@@ -11,7 +11,7 @@
  * `aria-controls`, which is the standard disclosure pairing, and nothing else.
  *
  * Shut by default on purpose: the filters answer a question most readers never
- * ask, and the panel beside a globe is not where to spend six controls' worth
+ * ask, and the panel beside a globe is not where to spend nine controls' worth
  * of attention up front. It is also what keeps them free — `globe.ts` only
  * scans all ~420 zones while this is open or a filter is on.
  *
@@ -19,8 +19,9 @@
  * and knob drawn around it, rather than a `div` pretending: the checkbox keeps
  * the label association, the space-to-toggle, the focus ring and the
  * announcement, and only the paint is ours. Each carries the glyph of the thing
- * it filters — the row's own sun and moon for DST, an arrow for the day shift —
- * so the control and the data it hides look like the same idea.
+ * it filters — an arrow for the day shift, a clock for DST, the tooltip's own
+ * sun and moon for the sky — so the control and the data it hides look like
+ * the same idea.
  *
  * Every switch is built once, here, and afterwards only shown, hidden or
  * relabelled. Re-rendering the group on each refresh would have been shorter

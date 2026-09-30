@@ -10,9 +10,10 @@
  * Pure — no DOM and no clock. `zone-filter-ui.ts` renders it, `globe.ts` owns
  * one instance and applies it to both the clock list and the globe's markers.
  *
- * The two axes are deliberately the same two the row already displays. A filter
- * that sorted by something invisible would be a puzzle; every toggle here turns
- * off something you can point at on a card.
+ * Every axis is something the reader can already see. Day and DST are on each
+ * card; the sky is the globe's own day/night terminator, and the tooltip names
+ * it. A filter that sorted by something invisible would be a puzzle; every
+ * toggle here turns off something you can point at.
  */
 
 import type { ZoneReading } from "./zone-clock";
