@@ -142,8 +142,10 @@ export function closeAtPole(points: Float64Array, pole: -1 | 1): Float64Array {
  * midpoint would quietly bend `McMurdo`'s parallel back into the shape the bug
  * came from.
  *
- * Splits are powers of two of the original edge so that two rings sharing a
- * vertex keep sharing it.
+ * How many pieces an edge splits into depends on that edge's two endpoints and
+ * nothing else — not on the ring it belongs to or its neighbours. So two rings
+ * that share an edge split it identically, and keep sharing every vertex the
+ * split creates.
  */
 export function densifyRing(
   points: Float64Array,
