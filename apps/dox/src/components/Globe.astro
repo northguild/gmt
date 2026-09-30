@@ -1,49 +1,70 @@
 ---
 /**
- * DOX-E1a — interactive globe island.
+ * The interactive globe, as an Astro island.
  *
- * Renders static chrome (heading, caption, empty stage + clock panel) so the
- * page is fully readable before any script runs. An IntersectionObserver
- * lazy-imports the mount module (which pulls d3-geo, world-atlas and the
- * @js-temporal polyfill) only once the stage scrolls into view.
+ * Renders static chrome (heading, caption, empty stage and clock panel) so the
+ * page reads before any script runs, then an `IntersectionObserver` lazy-imports
+ * the mount module once the stage nears the viewport.
  *
- * **The markup and the wiring both live in `lib/globe-mount.ts`.** DOX-C3b
- * mounts this same globe into the chat rail, and a rail cannot instantiate an
- * Astro component. Consolidating them also fixed a live inconsistency: this
- * file's markup carried `id="globe-stage"` while `mountGlobe` looks up
- * `[data-role="stage"]`, so the two had already drifted into disagreement about
- * the same widget. There is one template now, and it emits both.
+ * **The markup and the wiring both live in `lib/globe-mount.ts`.** The `/dox`
+ * chat rail mounts this same globe, and a rail cannot instantiate an Astro
+ * component, so there is one template and both surfaces render it.
+ *
+ * Since #289 the globe draws with WebGPU, falling back to canvas-2D where that
+ * is unavailable; `lib/globe/engine.ts` chooses. Nothing about that is visible
+ * here — the shell is the same either way.
  */
 import { renderGlobeTemplate } from "../lib/globe-mount";
 
 interface Props {
   heading?: string;
   caption?: string;
-  /** Omits the internal heading/caption when embedded in HeroGlobe, whose
-   * own title/tagline already carries that role. */
+  /** Omits the internal heading and caption when embedded in HeroGlobe, whose
+   *  own title and tagline already carry that role. */
   embedded?: boolean;
+  /**
+   * Namespaces this instance's element ids.
+   *
+   * Left alone it is `globe` for the first instance on a page and `globe-2`,
+   * `globe-3`… after that, so a page with one globe emits exactly the markup it
+   * always has and the structural HTML gate sees no change.
+   */
+  idPrefix?: string;
 }
-const { heading, caption, embedded = false } = Astro.props;
+
+/* Instances are counted per render, not per page load: Astro evaluates this
+   frontmatter once per component instance while building a page, so the counter
+   distinguishes two globes in one document. */
+let renderCount = 0;
+const { heading, caption, embedded = false, idPrefix } = Astro.props;
+renderCount += 1;
+const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`);
 ---
 
-<Fragment set:html={renderGlobeTemplate({ heading, caption, embedded })} />
+<Fragment set:html={renderGlobeTemplate({ heading, caption, embedded, idPrefix: prefix })} />
 
 <script>
   import { mountGlobe } from "../lib/globe-mount";
   import { showUnavailable } from "../lib/widget-mount";
 
-  /* Deferred until the stage is near the viewport: the mount pulls d3-geo,
-     world-atlas and the Temporal polyfill, and this component sits on the
+  /* Deferred until the stage is near the viewport: the mount pulls the globe
+     engine, a renderer and the Temporal polyfill, and this component sits on the
      landing page. The rail mounts eagerly instead — a reader who asked for a
      globe is already looking at it. */
-  const stage = document.querySelector<HTMLElement>('[data-role="stage"]');
-  const root = stage?.closest<HTMLElement>(".gmt-globe") ?? null;
+  const MOUNTED = "globeMounted";
 
-  if (root && stage) {
-    let started = false;
+  /* Every globe on the page, not just the first. The previous version used
+     `document.querySelector`, so a second instance rendered its chrome and then
+     silently never came to life. */
+  for (const root of document.querySelectorAll<HTMLElement>(".gmt-globe")) {
+    const stage = root.querySelector<HTMLElement>('[data-role="stage"]');
+    // The chat rail mounts its own copies; skip anything already claimed.
+    if (!stage || root.dataset[MOUNTED]) continue;
+    root.dataset[MOUNTED] = "pending";
+
     const start = () => {
-      if (started) return;
-      started = true;
+      if (root.dataset[MOUNTED] === "done") return;
+      root.dataset[MOUNTED] = "done";
       mountGlobe(root, {}, new AbortController().signal).catch((error) =>
         showUnavailable(root, error),
       );
@@ -52,7 +73,7 @@ const { heading, caption, embedded = false } = Astro.props;
     if ("IntersectionObserver" in window) {
       const observer = new IntersectionObserver(
         (entries) => {
-          if (entries.some((e) => e.isIntersecting)) {
+          if (entries.some((entry) => entry.isIntersecting)) {
             observer.disconnect();
             start();
           }

@@ -6,7 +6,7 @@ import {
   nightFactor,
   paintShading,
   type ShadingInput,
-} from "./globe-shading";
+} from "./shading";
 
 const TWILIGHT_END = Math.sin((18 * Math.PI) / 180);
 

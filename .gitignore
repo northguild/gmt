@@ -66,6 +66,8 @@ apps/dox/public/llms-full.txt
 
 # Visual regression snapshots (scripts/visual-snapshot.mjs) — local-only, never committed
 apps/dox/.visual/
+# Globe GPU gate captures (scripts/globe-smoke.mjs) — local-only, never committed
+apps/dox/.globe-smoke/
 
 # Playwright mcp
 .playwright-mcp/

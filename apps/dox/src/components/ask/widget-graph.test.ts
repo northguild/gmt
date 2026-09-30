@@ -149,6 +149,17 @@ describe("the chat island's static import graph", () => {
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });
 
+  it("reaches no globe engine module", () => {
+    /* `lib/globe.ts` alone is no longer the whole globe: since #289 the engine,
+       both renderers, the land mesh and the shaders live under `lib/globe/`, and
+       the WebGPU renderer is the heaviest thing the site can pull. The chat
+       island loads all of it lazily through the widget registry, so none of it
+       may appear in the island's static graph. */
+    expect(relative.filter((file) => file.startsWith("lib/globe/"))).toEqual(
+      [],
+    );
+  });
+
   it("never imports the polyfill or gmt's root barrel, which re-exports it", () => {
     expect(
       [...bare].filter(

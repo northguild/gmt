@@ -27,9 +27,19 @@ const SITE_PORT = process.env.DOX_SITE_PORT ?? "4321";
 // The Worker reads the retrieval corpus from the running `astro dev` server
 // (`DOX_ASSETS_ORIGIN`, see `worker/index.ts`), not from a build — so no
 // `astro build` before starting, and the chat sees content edits as they land.
-// `wrangler.jsonc` still names `dist/` as the assets directory and Wrangler
-// refuses to start when it is missing, so an empty one is enough.
-mkdirSync(path.join(root, "dist"), { recursive: true });
+// Wrangler still refuses to start without an assets directory, so dev gets an
+// empty one of its own.
+//
+// Its own, and NOT the `dist/` that `wrangler.jsonc` names, because Wrangler
+// *watches* whatever it is given: with `dist/` it would be watching the exact
+// directory `astro build` deletes and rewrites. Any build running beside a dev
+// server — another terminal, an agent, a `pnpm validate` — pulled the watched
+// tree out from under it, and Wrangler exits on the ENOENT (`stat
+// '.../dist/.prerender'`). `dev-all` then takes Astro down with it, so a
+// background build killed the dev server. Pointing dev at a directory nothing
+// else writes removes the coupling rather than racing it.
+const devAssets = path.join(root, "node_modules", ".cache", "dev-assets");
+mkdirSync(devAssets, { recursive: true });
 start();
 
 function start() {
@@ -85,6 +95,10 @@ function start() {
     "dev",
     "--port",
     WORKER_PORT,
+    // Overrides `wrangler.jsonc`'s `assets.directory` for dev only — see the
+    // note on `devAssets` above. Deploys keep using `dist/`.
+    "--assets",
+    devAssets,
     "--var",
     `DOX_ASSETS_ORIGIN:http://localhost:${SITE_PORT}`,
   ]);

@@ -94,6 +94,7 @@ describe("resolveWidget", () => {
     for (const role of [
       'data-role="stage"',
       'data-role="clocks"',
+      'data-role="filters"',
       "data-globe-search",
       "data-globe-zoom",
     ]) {

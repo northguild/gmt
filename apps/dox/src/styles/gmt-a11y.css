@@ -104,6 +104,30 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* The filter switches. Their on/off state is carried by a tinted track and a
+     tinted thumb, and forced-colors replaces both with the system palette —
+     which left every switch an identical empty pill, on and off, distinguished
+     only by a Canvas-white thumb on a white track. System colour keywords are
+     honoured here, so the state is re-stated in the one vocabulary this mode
+     does render. */
+  .gmt-globe-filter-track {
+    background: Canvas;
+    border-color: ButtonText;
+  }
+
+  .gmt-globe-filter-track::after {
+    background: ButtonText;
+  }
+
+  .gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track {
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  .gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track::after {
+    background: HighlightText;
+  }
+
   .gmt-glass::before,
   .gmt-glass::after {
     display: none;

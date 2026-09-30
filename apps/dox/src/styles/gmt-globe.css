@@ -1,8 +1,11 @@
 /*
  * DOX-E1a — interactive globe layout + chrome.
  *
- * The globe itself is a <canvas> drawn by src/lib/globe.ts; this sheet owns the
- * stage box, the zoom controls, the zone search, and the on-globe tooltip.
+ * The globe itself is a <canvas> drawn by the engine in src/lib/globe/ — WebGPU,
+ * or the canvas-2D renderer where that is unavailable. Either way the element
+ * carries .gmt-globe-canvas and a data-renderer attribute naming the backend, so
+ * everything below applies to both. This sheet owns the stage box, the zoom
+ * controls, the zone search, and the on-globe tooltip.
  * Reuses .gmt-clock-panel / .gmt-clock-entry from gmt-map.css for the clock list.
  * Colours are --gmt-* tokens only; corners are bevelled to match the HUD.
  */
@@ -114,14 +117,14 @@
      stayed put — stretching a square raster. `not-content` already opts out
      of that rule; this makes the canvas immune wherever it is mounted. */
   max-width: none;
-  /* Fallback size before globe.ts's measure() sets the canvas's own inline
+  /* Fallback size before the engine's measure() sets the canvas's own inline
      width/height (which then takes over, matching the stage's actual pixel
      box + devicePixelRatio) — not dead, just overridden once JS runs. */
   width: 100%;
   height: 100%;
   cursor: grab;
   /* Drawn fully off-screen (the raster itself is already complete — see
-     globe.ts's reveal()) then faded/scaled into place once the first frame
+     globe.ts's revealCanvas()) then faded/scaled into place once the first frame
      is measured, so the globe doesn't just snap into existence. */
   opacity: 0;
   transform: scale(0.92);
@@ -157,8 +160,8 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
-  /* The canvas is appended to the stage *after* this cluster (globe.ts appends it
-      to the host the template already populated), and both are absolutely
+  /* The canvas is appended to the stage *after* this cluster (the renderer appends
+      it to the host the template already populated), and both are absolutely
       positioned with `z-index: auto` — so tree order alone put the full-stage
       canvas on top, swallowing every click meant for these buttons. 3 puts the
       cluster above the canvas and above .gmt-globe-tooltip (z-index 2), so a
@@ -181,8 +184,10 @@
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* `.gmt-globe-zoom-ready` is added by globe.ts's reveal() once the globe's own
-   entrance transition has finished. It is no longer what shows the controls —
+/* `.gmt-globe-zoom-ready` is added by globe.ts's revealCanvas() once the globe's
+   own entrance transition has finished, or on a timer if `transitionend` never
+   arrives — these buttons are the keyboard and touch path to zoom, so they must
+   never end up permanently unreachable. It is no longer what shows the controls —
    it is an arming gate, so they cannot flash in mid-reveal just because the
    pointer happened to be over the stage already.
 
@@ -256,6 +261,16 @@
   z-index: 2;
 }
 
+/* `globe.ts` hides the tooltip by setting `tooltip.hidden`, and an author
+   `display` beats the UA stylesheet's `[hidden] { display: none }` — so
+   without this the tooltip never actually hides, and a deselect leaves the
+   last zone's card floating over the globe. Predates this PR: it went
+   unnoticed because `initGlobe` selects the viewer's own zone at mount, so
+   there is almost always something for it to show. */
+.gmt-globe-tooltip[hidden] {
+  display: none;
+}
+
 .gmt-globe-tooltip.gmt-globe-tooltip-below {
   transform: translate(-50%, 0.6rem);
 }
@@ -265,14 +280,86 @@
   color: var(--gmt-ice);
 }
 
+/* Colour roles are shared with the clock list beside it (gmt-clock-list.css):
+   time is blue, offset green, DST gold. The tooltip used to have the first two
+   the other way round, so the same zone read differently depending on which of
+   the two surfaces you happened to be looking at. All `-ink` tokens: these are
+   text, and the bright base tokens only clear the 3:1 fill bar in light theme.
+   The markup comes from zone-readout.ts, shared with the list. */
 .gmt-globe-tooltip-time {
   font-size: 0.95rem;
-  color: var(--gmt-spring-ink);
+  color: var(--gmt-cyan-ink);
+}
+
+/* nowrap: "Tomorrow · 2026-10-01" is wider than the tooltip's 8rem min-width,
+   and letting it wrap broke the date across two lines. The box grows to fit
+   instead — it is positioned from its own measured width, so a wider tooltip
+   still clamps correctly inside the stage. */
+.gmt-globe-tooltip-date {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* The tooltip has room the dense list does not, so it spells the day shift out
+   ("Yesterday" / "Tomorrow") instead of the list's "+1d" chip — same purple as
+   the list's chip and its card wash, so one colour means "not your day" across
+   both surfaces. The word carries it alone here: this popover sits on
+   `--gmt-surface-2` and a wash under its own text would cost more contrast
+   than it is worth. `--gmt-dst-purple-ink` for the reason given in
+   gmt-clock-list.css — `--gmt-purple-ink` only makes 6.70:1 on this surface. */
+.gmt-globe-tooltip-shift {
+  font-weight: 600;
+  color: var(--gmt-dst-purple-ink);
 }
 
 .gmt-globe-tooltip-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
   font-size: var(--gmt-text-xs);
-  color: var(--gmt-cyan-ink);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-globe-tooltip-offset {
+  color: var(--gmt-spring-ink);
+}
+
+/* Whether the sun is up where the zone is — distinct from daylight saving on
+   the line below it, which is a clock rule and can be on in the middle of the
+   night.
+   Deliberately not colour-coded. Daylight was gold, and gold is spoken for
+   twice over: `--gmt-dst-gold` is the site's DST colour (the DST Inspector's
+   Gap badge, and the badge on the row), and the globe paints its *night*
+   markers `--gmt-globe-gold` as city lights — so a gold "daylight" contradicted
+   both the line under it and the canvas beside it. Every other hue is taken as
+   well: cyan is "on", spring the offset, purple the day shift, amber the
+   no-signal sentinel. The sun, horizon and moon glyphs are distinctive enough
+   to carry this on their own. */
+.gmt-globe-tooltip-sky {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-globe-tooltip-sky svg {
+  flex: none;
+}
+
+/* The wording carries the colour now — there is no glyph. A sun here said
+   "daytime", which is not what daylight saving means, on a widget that draws
+   the actual day/night terminator two inches to the left. */
+.gmt-globe-tooltip-dst {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-globe-tooltip-meta[data-dst="dst"] .gmt-globe-tooltip-dst {
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 600;
 }
 
 /* Zone search ------------------------------------------------------- */
@@ -361,6 +448,313 @@
 .gmt-combobox-option:hover {
   background: var(--gmt-fill-strong);
   color: var(--gmt-cyan-ink);
+}
+
+/* Zone filters ------------------------------------------------------- */
+/* A settings gear that opens six switches over the two axes the clock rows
+   already show — local day and DST state. A button disclosure
+   (`aria-expanded` / `aria-controls`) over <fieldset>/<legend> and
+   <input type="checkbox" role="switch">, restyled rather than rebuilt from
+   divs, so the group naming, space-to-toggle and the focus ring come correct
+   for free. Not <details>: as an addon on the search field it brought a marker
+   box that ate the button's width and a `::details-content` box that changed
+   the row's height on open.
+   Shut by default, which is also what lets zone-filter-ui.ts skip its scan. */
+/* The field and its filter addon. `align-items: stretch` is what makes the
+   gear exactly as tall as the input without anyone naming a height — .gmt-field
+   is sized by its own padding, so a hardcoded one would drift the moment that
+   changed. It is also what stops the button moving when the popup opens: its
+   box is the row's, and opening only repaints it. */
+.gmt-globe-field-row {
+  display: flex;
+  align-items: stretch;
+  /* `margin: 0` is load-bearing. This row sits inside `.sl-markdown-content`,
+     whose prose rules give a `div` a `--sl-content-gap-y` top margin — the same
+     trap the stage's `not-content` comment above records for the canvas. The
+     bare `<input>` this wrapper replaced never matched that rule, so wrapping
+     it silently added 16px to the search block. In the homepage hero that was
+     the entire height budget the zone list had left: the clock panel collapsed
+     from 10px to 0 and rendered no rows at all, which `pnpm globe:smoke`
+     caught on the home target. */
+  margin: 0;
+}
+
+.gmt-globe-field-row .gmt-field {
+  flex: 1;
+  min-width: 0;
+  /* Squared where the addon meets it; the outer corners keep their bevel. */
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/* `display: contents`, so the wrapper carries no box of its own and the button
+   inside becomes a direct flex item of the field row — which is what lets
+   `align-self: stretch` size it to the input. As a real flex item the wrapper
+   sized itself to the button and swallowed the stretch, leaving the addon
+   short whatever either of them asked for.
+   The popup keeps `.gmt-combobox` (position: relative) as its containing
+   block, whose bottom edge is the field row's, so it still hangs directly
+   under the field. */
+.gmt-globe-filters {
+  display: contents;
+}
+
+/* `list-style: none` plus the WebKit pseudo-element: between them they remove
+   the disclosure triangle in every engine, leaving the gear to say it. */
+/* Surface comes from `.gmt-button`; this is placement only. The negative
+   inline-start margin collapses the two 1px borders the field and the addon
+   would otherwise both draw along their shared edge into the single line an
+   attached control reads as. */
+/* Surface comes from `.gmt-button`; this is placement only. `align-self:
+   stretch` is what makes it exactly the field's height, and the negative
+   inline-start margin collapses the two 1px borders the field and the addon
+   would otherwise both draw along their shared edge into the single line an
+   attached control reads as. */
+.gmt-globe-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  align-self: stretch;
+  inline-size: 2.25rem;
+  margin-inline-start: -1px;
+  padding: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  color: var(--gmt-ice-dim);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.gmt-globe-filter-summary:hover,
+.gmt-globe-filter-summary:focus-visible {
+  color: var(--gmt-cyan-ink);
+  background: var(--gmt-fill);
+  outline: none;
+}
+
+.gmt-globe-filter-summary:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* Open is a state worth seeing at a glance — the panel below it can be
+   scrolled out of view while a filter is still on. */
+.gmt-globe-filter-summary[aria-expanded="true"] {
+  color: var(--gmt-cyan-ink);
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-cyan);
+  /* Over the field, so the shared edge shows the addon's active border rather
+     than the field's resting one. */
+  position: relative;
+  z-index: 1;
+}
+
+/* The gear is the only visible label, so its name lives here for the reader
+   who cannot see it. */
+.gmt-globe-filter-summary-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A popup: it floats out of the controls row instead of pushing the clock list
+   down every time it opens. Pinned to the row's right edge so it hangs under
+   the gear, and allowed to be wider than the gear itself.
+   z-index 4 clears the zoom cluster (3) and the on-globe tooltip (2); the
+   combobox's own dropdown is the one thing it must not fight, and that closes
+   before this can open. */
+.gmt-globe-filter-body {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  position: absolute;
+  inset-block-start: calc(100% + var(--gmt-space-2));
+  inset-inline-end: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 14rem;
+  max-inline-size: min(20rem, 100%);
+  padding: var(--gmt-space-3);
+}
+
+/* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
+   so without this the panel above would never close. The same trap the
+   switches' own `[hidden]` rule exists for, and just as invisible to a jsdom
+   test, which applies no stylesheet at all. */
+.gmt-globe-filter-body[hidden] {
+  display: none;
+}
+
+/* A fieldset for the grouping semantics only — its default border and padding
+   would draw a second box inside the panel's own. */
+.gmt-globe-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+/* Left as the fieldset's own rendered legend, with no display of its own: the
+   browser lays it out above the flex content already, which is the wanted
+   "group name, then its switches beneath". Giving it a layout display pulls it
+   into the flex line and the switches end up beside the label. */
+.gmt-globe-filter-group legend {
+  padding: 0;
+  margin-bottom: var(--gmt-space-1);
+  color: var(--gmt-ice-dim);
+}
+
+/* Each switch is tinted by what it filters, so the control and the mark it
+   hides read as one idea: the DST pair takes the row's gold sun and dim moon,
+   the day pair the same purple the "+1d" chip uses. All `-ink` tokens — these
+   sit next to text and are read like it. */
+.gmt-globe-filter-toggle {
+  /* The default has to be an ON colour, not a muted one. It was
+     `--gmt-ice-dim`, which is exactly what the off state paints its knob with,
+     so the five switches that take the default — Standard time, No DST and all
+     three sky bands — looked switched off while they were switched on. Cyan is
+     the site's active colour; the semantic overrides below are the exceptions,
+     not the rule. */
+  --toggle-accent: var(--gmt-cyan-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  color: var(--gmt-ice);
+  cursor: pointer;
+}
+
+/* Load-bearing, not tidiness: an author `display` beats the UA stylesheet's
+   `[hidden] { display: none }`, so without this the `display: inline-flex`
+   above keeps an empty bucket's switch on screen however often
+   zone-filter-ui.ts sets `hidden`. jsdom applies no stylesheet, so the unit
+   tests cannot see this either — it is only ever visible in a browser. */
+.gmt-globe-filter-toggle[hidden] {
+  display: none;
+}
+
+.gmt-globe-filter-toggle[data-filter-key="prev"],
+.gmt-globe-filter-toggle[data-filter-key="next"] {
+  --toggle-accent: var(--gmt-dst-purple-ink);
+}
+
+.gmt-globe-filter-toggle[data-filter-key="same"] {
+  --toggle-accent: var(--gmt-cyan-ink);
+}
+
+.gmt-globe-filter-toggle[data-filter-key="dst"] {
+  --toggle-accent: var(--gmt-dst-gold-ink);
+}
+
+/* The real checkbox stays in the page, focusable and announced; only its paint
+   is ours. Not `display: none`, which would take it out of the tab order. */
+.gmt-globe-filter-toggle input {
+  position: absolute;
+  opacity: 0;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.gmt-globe-filter-track {
+  position: relative;
+  flex: none;
+  inline-size: 1.75rem;
+  block-size: 1rem;
+  border: 1px solid var(--gmt-border-strong);
+  /* Bevelled, not a pill: every other surface on this site is chamfered, and a
+     rounded capsule was the one control arguing with it. */
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-strong);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.gmt-globe-filter-track::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 1px;
+  inset-inline-start: 1px;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-ice-dim);
+  transition:
+    translate 0.15s ease,
+    background 0.15s ease;
+}
+
+.gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track {
+  border-color: var(--toggle-accent);
+  background: color(from var(--toggle-accent) srgb r g b / 0.2);
+}
+
+.gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track::after {
+  translate: 0.75rem 0;
+  background: var(--toggle-accent);
+}
+
+/* The ring rides the track, since the input it belongs to is invisible. */
+.gmt-globe-filter-toggle input:focus-visible + .gmt-globe-filter-track {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* `flex: none` on both glyphs: their `width`/`height` attributes are a default
+   a flex line is free to shrink past, and the gear did exactly that. */
+.gmt-globe-filter-gear {
+  flex: none;
+}
+
+.gmt-globe-filter-icon {
+  flex: none;
+  color: var(--gmt-ice-dim);
+  transition: color 0.15s ease;
+}
+
+.gmt-globe-filter-toggle:has(input:checked) .gmt-globe-filter-icon {
+  color: var(--toggle-accent);
+}
+
+/* An off switch dims its whole row, so "what am I hiding" is legible without
+   reading each track. */
+.gmt-globe-filter-toggle:has(input:not(:checked)) .gmt-globe-filter-name {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-globe-filter-count {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-globe-filter-count::before {
+  content: "(";
+}
+
+.gmt-globe-filter-count::after {
+  content: ")";
+}
+
+.gmt-globe-filter-status {
+  margin: 0;
+  color: var(--gmt-ice-dim);
 }
 
 /* Scrollable pinned-zone list (replaces gmt-map.css's 2-row grid, which was
@@ -610,8 +1004,9 @@
 
 /* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
    easing. The canvas/zoom reveal transitions are skipped here too — globe.ts's
-   reveal() detects the same media query and adds both -ready classes on the
-   same frame instead of chaining off a transitionend that would never fire. */
+   revealCanvas() detects the same media query and adds both -ready classes on
+   the same frame instead of chaining off a transitionend that would never
+   fire. */
 @media (prefers-reduced-motion: reduce) {
   .gmt-globe-tooltip,
   .gmt-globe-canvas,

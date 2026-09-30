@@ -1,5 +1,5 @@
 /**
- * Sun-lit shading for the globe (DOX-E1a).
+ * Sun-lit shading for the globe.
  *
  * Pure math, no DOM — unit-tested directly. Shades every pixel of the sphere
  * from the one number that decides how lit it is: the cosine of the angle
@@ -8,8 +8,12 @@
  * caps, leaves no band edges to see — caps showed as rings on the day side
  * and bunched into stripes near the limb, where they are seen edge-on.
  *
- * The caller renders into a small offscreen buffer and scales it up with
- * smoothing, so the cost stays at a few tens of thousands of pixels a frame.
+ * The canvas-2D renderer paints this into a small offscreen buffer and scales
+ * it up with smoothing, so the cost stays at a few tens of thousands of pixels a
+ * frame. The WebGPU renderer runs the same formulae per pixel in WGSL, and
+ * takes the constants below by interpolating them into the shader source rather
+ * than restating them — one source of truth, checked by
+ * `webgpu/shaders.test.ts`.
  */
 
 export type Rgb = readonly [number, number, number];
@@ -43,26 +47,33 @@ export interface ShadingInput {
   dither?: boolean;
 }
 
-/** Sine of 18°: astronomical twilight ends when the sun is this far down. */
-const TWILIGHT_END = Math.sin((18 * Math.PI) / 180);
+/**
+ * Astronomical twilight ends when the sun is this many degrees down. Exported
+ * in degrees as well as a sine so `zone-sky.ts` reads the same number rather
+ * than restating it.
+ */
+export const TWILIGHT_END_DEG = 18;
+
+/** Sine of `TWILIGHT_END_DEG`, the form the shading formulae compare against. */
+export const TWILIGHT_END = Math.sin((TWILIGHT_END_DEG * Math.PI) / 180);
 
 /**
  * Sine of 6°: through civil twilight the sky still lights the ground, so
  * daylight fades out over this much sun depression instead of at the horizon.
  */
-const CIVIL_TWILIGHT = Math.sin((6 * Math.PI) / 180);
+export const CIVIL_TWILIGHT = Math.sin((6 * Math.PI) / 180);
 
 /**
  * sRGB's display gamma. Lambert's law holds in linear light; blending it
  * straight into sRGB darkens the day side far too early and flattens it.
  */
-const GAMMA = 2.2;
+export const GAMMA = 2.2;
 
 /**
  * The haze starts this fraction of the radius out from the centre. The real
  * atmosphere is only 1–2% of Earth's radius deep, so this is a thin rim.
  */
-const HAZE_START = 0.97;
+export const HAZE_START = 0.97;
 
 /**
  * 4×4 Bayer matrix, as offsets in (-0.5, 0.5): added before rounding, it

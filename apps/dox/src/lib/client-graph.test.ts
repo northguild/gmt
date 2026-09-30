@@ -19,10 +19,9 @@
  * static test with no build step, so it fails on the commit that introduces the
  * problem rather than at some later bundle-size review.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { importsOf, listFiles, resolveLocal, SRC } from "../test/import-graph";
 
-const SRC = path.resolve(import.meta.dirname, "..");
 const APP = path.resolve(SRC, "..");
 
 /** Modules that are never shipped to a browser. */
@@ -33,79 +32,6 @@ const SERVER_ONLY = new Set([
 ]);
 
 const BANNED = ["typescript"];
-
-function listFiles(dir: string, extensions: string[]): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      out.push(...listFiles(full, extensions));
-    } else if (extensions.some((ext) => entry.endsWith(ext))) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-/**
- * Strip comments before scanning.
- *
- * Not optional: several modules *document* the banned import in prose — this
- * very file names `typescript`, and `curated-timezones.ts` explains at length
- * why `build-utils.ts` importing it is a hazard. Without this the guard reports
- * every such docstring as a violation, which it did on its first run.
- */
-function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split("\n")
-    .filter((line) => {
-      const trimmed = line.trimStart();
-      return !trimmed.startsWith("//") && !trimmed.startsWith("*");
-    })
-    .join("\n");
-}
-
-/** Every `from "..."` / `import("...")` specifier in a source file. */
-function importsOf(file: string): string[] {
-  const source = stripComments(readFileSync(file, "utf8"));
-  const specifiers: string[] = [];
-  const patterns = [
-    /\bfrom\s+["']([^"']+)["']/g,
-    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
-  }
-  return specifiers;
-}
-
-/** Resolve a relative specifier to a real file, or null if it is a package. */
-function resolveLocal(fromFile: string, specifier: string): string | null {
-  let base: string;
-  if (specifier.startsWith("~/")) {
-    base = path.join(SRC, specifier.slice(2));
-  } else if (specifier.startsWith(".")) {
-    base = path.resolve(path.dirname(fromFile), specifier);
-  } else {
-    return null; // a bare package specifier
-  }
-
-  for (const candidate of [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.astro`,
-    path.join(base, "index.ts"),
-  ]) {
-    try {
-      if (statSync(candidate).isFile()) return candidate;
-    } catch {
-      // keep trying
-    }
-  }
-  return null;
-}
 
 /** Walk the graph from `entry`, returning every file and bare specifier seen. */
 function reachableFrom(entry: string) {
@@ -118,7 +44,10 @@ function reachableFrom(entry: string) {
     if (seen.has(file) || SERVER_ONLY.has(file)) continue;
     seen.add(file);
 
-    for (const specifier of importsOf(file)) {
+    /* Every kind, type-only included: this guards what a module *reaches*,
+       and a type import from `scripts/` is still a client module leaning on
+       build tooling, even though it erases. */
+    for (const { specifier } of importsOf(file)) {
       const resolved = resolveLocal(file, specifier);
       if (resolved) {
         queue.push(resolved);

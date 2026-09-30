@@ -220,26 +220,159 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 `DOX-E1a`, `E1b`
 
-- **Globe (`src/lib/globe.ts`):** `d3-geo` `geoOrthographic` drawn to a canvas-2D context,
-  not WebGL.
-  - Why: keyboard selection comes free through the zone list, there is no WebGL to
-    degrade from, it is ~1/5 the weight of a three.js scene, and the look is a grid globe,
-    not a photoreal sphere. Revisit only if drag cannot hold 60 fps at 1× zoom after
-    coarsening the land mesh.
-  - Features: drag and inertia, zoom scalar `[1, 5]` (wheel, pinch, buttons),
+- **Globe (`src/lib/globe/`):** a reusable WebGPU engine, with a canvas-2D renderer as the
+  fallback. `src/lib/globe.ts` is the Dox layer on top — zones, clocks, selection and the
+  tooltip — and keeps `initGlobe(host, clockPanel)`, so the hero, `/tools/zoned-earth/` and
+  the `/dox` rail all mount it unchanged.
+  - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
+    regions and arcs, and asks the caller for the instant to light it by. That line is what
+    lets the same engine carry route arcs or a coloured region set without a fork.
+  - **Pure and shared:** `camera.ts` (the orthographic projection, checked against
+    `d3-geo`), `controller.ts` (rotation, inertia, ambient spin, pinch, fly-to — a state
+    machine that takes its timestamps as arguments, so both renderers feel identical and a
+    fake clock drives it in tests), `geometry.ts`, `triangulate.ts`, `sun.ts`, `shading.ts`.
+  - **Choosing a backend.** The engine asks for a device *before* touching a canvas, since
+    `getContext("webgpu")` claims an element for good and the fallback needs a clean one.
+    Each renderer owns its canvas; the shell swaps it and rebinds input. A null adapter, a
+    rejected device, a shader that will not compile or a validation error on the first
+    frame are all just "use canvas-2D". A lost device is retried once, while the tab is
+    visible, then the fallback holds for the session. `?globe=webgpu|canvas2d` pins one.
+  - **Three passes.** Coverage into a 4× MSAA `rgba8unorm` target, one channel per vector
+    layer, blended with operation `max` so overlapping triangles and stroke joints never
+    double-blend a translucent layer — a 2D canvas strokes a path as one coverage, and
+    beaded joints are how a port betrays itself. Then one full-screen quad that ray-casts
+    the sphere and composites atmosphere, ocean, sun shading, limb, an analytic graticule
+    and the coverage channels. Then instanced markers and labels. The coverage pass is
+    skipped when only the sun has moved, which is what the 1 s clock tick changes.
+  - **One source for the shading.** The WGSL is built from TypeScript template strings with
+    the constants interpolated out of `shading.ts`, so the shader cannot drift from the
+    maths Vitest covers. `webgpu/shaders.test.ts` checks each constant arrives.
+  - **Geometry.** Rings are unwrapped so an antimeridian crossing stops reading as a sweep
+    round the planet, densified so a chord does not sag off the limb, and triangulated with
+    `earcut` plus a conforming red–green refinement that leaves no T-junctions. Edges are
+    straight in lng/lat, per RFC 7946 §3.1.1 — which is also how a tap is resolved to a
+    zone, so the answer does not depend on which renderer is drawing. A hole is aligned to
+    its outer ring's 360° window first; Afro-Eurasia crosses the seam while its one hole
+    does not, and without that the mesh loses a band and fills the Mediterranean.
+  - **The fallback** is the previous canvas-2D drawing code, moved behind the renderer
+    interface and otherwise untouched, so the picture it produces is the one the visual
+    baselines already hold. It is the only globe code left that uses `d3-geo`, and
+    `renderer-graph.test.ts` keeps it that way — deleting it later is the directory plus one
+    `import()` in `engine.ts`.
+  - Features: drag with inertia, pinch and wheel zoom over `[1, 5]`, zoom buttons,
     `land-110m`, a day/night terminator from the current instant, and an arrow-key
-    `listbox` for zone selection.
-  - Shading (`src/lib/globe-shading.ts`): day light, twilight and night are shaded per
-    pixel from the sun's elevation into a half-resolution buffer, then scaled up. Stacked
-    translucent caps were tried first and showed as rings and limb stripes. An atmosphere
-    ring outside the limb follows the sun. Both washes are tokens that `gmt-a11y.css`
-    zeroes under reduced transparency and raised contrast.
+    `listbox` for zone selection. The wheel is only swallowed while the zoom can still
+    change, so a reader who scrolls onto the hero is not trapped on it.
+  - Shading (`src/lib/globe/shading.ts`): day light, twilight and night are shaded per
+    pixel from the sun's elevation. Stacked translucent caps were tried first and showed as
+    rings and limb stripes. An atmosphere ring outside the limb follows the sun. Both
+    washes are tokens that `gmt-a11y.css` zeroes under reduced transparency and raised
+    contrast.
   - `rAF` and the 1 s clock tick both stop on `visibilitychange`; reduced motion gives a
     static globe with selection still working.
-  - Lazy-mounted by `IntersectionObserver`. No globe JS reaches reference pages (verified),
-    and homepage Lighthouse matched a reference page.
+  - Lazy-mounted by `IntersectionObserver`, every instance on the page, not just the first.
+    No globe JS reaches reference pages. A browser with WebGPU never downloads `d3-geo`; one
+    without it never downloads the shaders or `earcut`.
   - Hosts: the landing hero, `/tools/zoned-earth/`, and the `/dox` rail via
     `mountGlobe` / `showGlobe`.
+  - **Verifying it needs a GPU.** CI has none and jsdom has no WebGPU, so `pnpm globe:smoke`
+    is the gate: it drives a real browser, pins the clock, asserts the expected backend
+    started with no GPU error, compares the two renderers pixel for pixel, exercises the
+    no-WebGPU fallback, and checks drag, keyboard and zoom. Run it before calling globe work
+    done. A software adapter (`GLOBE_SMOKE_SOFTWARE=1`) drops its GPU instance partway
+    through a frame, so it cannot gate — though watching the globe fall back cleanly when
+    that happens is worth something.
+- **DST answers are cached on `(zone, year, offset)`** (`src/lib/zone-clock.ts`), which is the
+  complete input set of `isInDaylightSaving` — it compares an offset against the smaller of
+  that year's own January and July offsets. The year is load-bearing: the same offset can be
+  DST in one year and standard in another once a zone stops observing it and keeps the summer
+  offset, so `2016-07-01T12:00+03:00[Europe/Istanbul]` is in DST and the 2026 reading at the
+  same offset is not. Keyed on `(zone, offset)` alone the two collided, which the scrubber
+  could reach because it takes an arbitrary anchor date.
+- **The zone readout (`src/lib/zone-readout.ts`)** is the one vocabulary the globe's tooltip
+  and the clock list beside it both render from. They show the same four facts, so they say
+  them the same way: time in `--gmt-cyan-ink`, UTC offset in `--gmt-spring-ink`, DST as a
+  gold `DST` badge. Every one is an `-ink` token because all three are text, and the bright
+  base tokens only clear the 3:1 fill bar in light theme. Amber is not among them — it is
+  the "no signal" sentinel's alone.
+  - **Gold means daylight saving and nothing else.** Every hue in this widget is spoken
+    for — cyan is "on" and the selected/hover state, spring the UTC offset, purple the day
+    shift, amber the no-signal sentinel — so a second meaning for gold has nowhere to go
+    without stealing one. The local-sky bands are therefore not colour-coded at all: their
+    sun, horizon and moon glyphs carry them. Daylight briefly took gold and collided twice,
+    with the DST badge on the line below it and with the globe beside it, which paints its
+    *night* markers `--gmt-globe-gold` as city lights.
+  - **DST is marked in text, not with a sun.** A row on summer time carries a gold `DST`
+    badge, matching the `Gap` / `Overlap` badges the DST Inspector already uses; standard time
+    and no-DST rows carry nothing. It was a sun, and that was wrong twice: daylight saving is
+    a property of the *clock* and says nothing about the sky, and this panel sits beside a
+    globe that draws a real day/night terminator and paints its night markers
+    `--gmt-globe-gold` — so gold meant *night* on the canvas while a gold sun meant *DST*
+    beside it. The filter switches are clocks for the same reason.
+  - **Local sky (`src/lib/zone-sky.ts`)** is where the sun and moon went, meaning the one
+    thing they look like. A zone solar elevation is 90 degrees minus the great-circle angle to
+    `subsolarPoint`, the globe own sun, so the tooltip wording and the terminator behind it
+    cannot disagree. Three bands: daylight above the conventional horizon (-0.833 degrees,
+    which is where refraction and the sun own radius put sunrise), twilight down to -18, night
+    below. Polar day and polar night need no special case. It answers for the zone
+    representative coordinate, not its whole territory - the same point the globe marker uses.
+    Pure trigonometry with no polyfill, so unlike the DST scan it is cheap on every tick.
+  - **DST has three states, and one of them draws nothing.** Sun for an instant in DST, moon
+    for standard time in a zone that observes it, no glyph at all for a zone with no DST
+    rules. The absence is the signal, and it keeps about half the list free of icon noise.
+    Glyphs follow `transport-icons.ts`: inner SVG markup only, shared with `Icon.astro`.
+  - **A zone's day is called out when it is not the viewer's.** The row carries its local
+    date, plus a `+1d` / `−1d` chip and a purple wash on the card; the tooltip has room, so
+    it spells out "Yesterday" / "Tomorrow" instead. Direction lives in the text, never in
+    the wash alone — a background colour is not ours to set under forced-colors.
+  - **The label states the real difference, the filter uses three buckets.** Those are not
+    the same number. Kiritimati (UTC+14) and Midway (UTC−11) are 25 hours apart, so for
+    about an hour a day the gap is *two* calendar days: the chip reads `+2d` and the label
+    "2 days ahead", while the filter still sorts every zone into prev / same / next. Deriving
+    the label from the clamped bucket put "Yesterday" beside a date two days back.
+  - The wash alphas are a measured ceiling, not a taste: they sit under the card's own text
+    and spend its contrast budget. `--gmt-dst-purple-ink`, not `--gmt-purple-ink`, is what
+    the chip and the tooltip's word use; the latter's dark value is an alias onto the bright
+    hue and falls under the 7:1 floor on both surfaces. Re-measure if you change either.
+  - **Day arithmetic is integer, not `Date`.** `dayDelta` converts each wall date with
+    Hinnant's days-from-civil. The offset range spans UTC−12 to UTC+14, 26 hours, so two
+    zones can sit *two* calendar days apart — a ±1 check falls through to "same day" for
+    exactly the pair that differs most.
+- **Zone filters (`src/lib/zone-filter.ts`, `zone-filter-ui.ts`)** — a settings gear to the
+  right of the zone search opens a popup of six switches over the same two axes the rows
+  show: local day
+  (Yesterday / Today / Tomorrow), DST state (In DST / Standard time / No DST) and local
+  sky (Daylight / Twilight / Night). They narrow
+  the clock list *and* the globe's markers, and the region hit test with them, so a zone the
+  list is not showing cannot be selected by tapping its territory either. The selected zone
+  keeps its marker regardless — its tooltip and outlined region would otherwise point at bare
+  ocean.
+  - **It is a popup, not an accordion**: it floats over the clock list instead of pushing it
+    down, and light-dismisses on a press outside or on Escape, which returns focus to the
+    gear. `<details>` supplies the disclosure and the keyboard toggle; the dismissal is ours,
+    because on its own it would sit open over the list until clicked a second time.
+  - **A switch is on screen when its bucket has zones in it, or when it is switched off.**
+    The second clause is what stops a filter becoming unreachable: hide an unchecked toggle
+    once its bucket empties and the only control that could undo it disappears.
+  - **The switches are built once and afterwards only shown, hidden or relabelled.**
+    Availability changes about once a minute as zones cross midnight, so re-rendering the
+    group would routinely pull a control out from under a keyboard user.
+  - **A rescan that changes nothing touches nothing.** `applyFilter` compares the new zone
+    list against the last one applied and only then calls `setIds`, which drops every mounted
+    row and returns the list to the top. That is right after a real filter change and wrong
+    once a minute: without the guard a reader was thrown back to the first zone every minute
+    the panel stayed open. The toggle counts refresh either way, since a zone can cross
+    midnight without changing what is shown.
+  - **Cost is why the panel is shut by default.** Bucketing every zone costs ~11 ms warm,
+    and `globe.ts` skips the scan entirely while the panel is closed and no filter is on —
+    the state the globe mounts in. When it does run it runs at most once a minute: day and
+    DST state change only on whole-minute boundaries, so a per-second scan would recompute
+    an answer that provably has not moved.
+  - **Changing the filter re-seats the list's scroll through the virtualizer, not through
+    `scrollTop`.** TanStack only learns its scroll position from an async observer, so a
+    synchronous render straight after a programmatic scroll can still be using the old
+    offset — past the end of the new, shorter list — and paint nothing. `setIds` scrolls via
+    the virtualizer and renders again on the next frame.
 - **Zone coordinates** are vendored from tzdata by `scripts/prepare-tz-coordinates.mjs`.
   Refresh when tzdata releases.
 - **Scrubber (`src/lib/multi-zone-scrubber.ts`, `/tools/zone-planner/`):** pinned zones move
@@ -623,7 +756,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - a feedback or analytics loop (it would need its own privacy and hosting decisions).
 - **Motion and 3D:**
   - a boot sequence, scroll reveal, scanlines, view transitions, grain;
-  - a WebGL or full-bleed 3D globe behind panels.
+  - a full-bleed 3D globe behind panels. The globe renders on the GPU, but it stays an
+    object on the page: the landing hero, `/tools/zoned-earth/` and the `/dox` rail, never
+    a backdrop;
+  - a photoreal Earth. The look is a grid globe. Textures, clouds and atmospheric
+    scattering would slot into the surface shader without touching the vector layers, and
+    are not built.
 - **Audio and voice:** no browser exposes `speechSynthesis` output to Web Audio
   ([WebAudio#1764](https://github.com/WebAudio/web-audio-api/issues/1764),
   [mediacapture-main#654](https://github.com/w3c/mediacapture-main/issues/654)), so a

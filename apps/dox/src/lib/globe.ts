@@ -1,47 +1,61 @@
 /**
- * DOX-E1a — the interactive globe.
+ * The Dox globe: time zones, live clocks and selection on top of the reusable
+ * globe engine (#289).
  *
- * Rendering approach: `d3-geo` `geoOrthographic` drawn to a `<canvas>`. Not
- * WebGL. The decision and the criteria for revisiting it are in
- * `context/dox/built.md` (Tier 4). In short:
- * SVG/canvas orthographic gives draggable rotation, scroll-wheel zoom,
- * hit-testing and a `prefers-reduced-motion` / no-WebGL story essentially for
- * free, at ~1/5 the JS weight of a three.js scene, and the site's aesthetic is
- * a "futuristic grid globe", not a photoreal sphere.
+ * The engine in `globe/` draws a planet and knows nothing about time. This file
+ * is everything that makes it *this* globe — reading the site's colour tokens,
+ * turning `getTimeZones()` into markers, fetching zone boundaries to highlight
+ * and hit-test, the tooltip, and the clock list beside it. Splitting the two is
+ * what lets the same engine draw transport lanes or a region set without a fork.
  *
- * Canvas (not SVG) because the globe must stay smooth under continuous drag,
- * inertia, ambient spin and zoom — re-projecting the land mesh every frame is
- * cheaper to a canvas context than diffing thousands of SVG path nodes.
+ * Rendering is WebGPU, with the canvas-2D renderer as the fallback where WebGPU
+ * is missing or fails; `globe/engine.ts` chooses and can swap between them.
+ * `?globe=webgpu` or `?globe=canvas2d` forces one, which is how
+ * `scripts/globe-smoke.mjs` compares the two.
  *
- * Entry point: `initGlobe(host, clockPanel)` — positional host element, matching
- * `initTimezoneMap` so DOX-C3b's widget registry (`showGlobe`) mounts it with no
- * adapter.
+ * Entry point: `initGlobe(host, clockPanel)`, unchanged, so `globe-mount.ts`,
+ * the `showGlobe` chat tool and the widget registry need no adjustment.
  *
- * Live times/offsets/DST come from `@northguild/gmt` via `./zone-clock` — never
- * `@js-temporal/polyfill` directly.
+ * Live times, offsets and DST come from `@northguild/gmt` through `./zone-clock`
+ * — never `@js-temporal/polyfill` directly.
  */
 
-import {
-  geoContains,
-  geoDistance,
-  geoGraticule10,
-  geoOrthographic,
-  geoPath,
-  type GeoPermissibleObjects,
-} from "d3-geo";
-import { feature } from "topojson-client";
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned/get";
-import land110m from "world-atlas/land-110m.json";
-import { cityLightsOn, paintShading, type Rgb } from "./globe-shading";
-import { antisolarPoint } from "./globe-terminator";
+import { createGlobeEngine, type GlobeEngineWithHitTest } from "./globe/engine";
+import {
+  pointInPolygon,
+  preparePolygon,
+  type PreparedPolygon,
+} from "./globe/geometry";
+import type {
+  GlobeMarker,
+  GlobeRegion,
+  GlobeTheme,
+  LngLat,
+  PolygonRings,
+  RendererChoice,
+  Rgba,
+} from "./globe/types";
 import {
   COORDINATES_BY_ID,
   resolveGlobeZones,
   rotationForZone,
   type GlobeZone,
 } from "./globe-zones";
-import { readZoneNow, type ZoneReading } from "./zone-clock";
+import { readViewerStamp, readZoneNow, type ZoneReading } from "./zone-clock";
+import {
+  type ZoneBucket,
+  type ZoneFilter,
+  bucketFor,
+  countBuckets,
+  defaultZoneFilter,
+  isFilterEngaged,
+  matchesFilter,
+} from "./zone-filter";
+import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
+import { renderZoneTooltip } from "./zone-readout";
+import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 
 export interface GlobeHost {
@@ -49,7 +63,7 @@ export interface GlobeHost {
   focusZone: (id: string) => void;
   /** Select (or clear) a zone without moving the globe. */
   selectZone: (id: string | null) => void;
-  /** Absolute zoom, clamped to [MIN_ZOOM, MAX_ZOOM]. */
+  /** Absolute zoom, clamped to the configured range. */
   setZoom: (zoom: number) => void;
   /** Multiply the current zoom target. */
   zoomBy: (factor: number) => void;
@@ -60,199 +74,42 @@ export interface GlobeHost {
   getSelected: () => string | null;
   /** Called on every selection change (null when cleared). */
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
+  /** Which backend is drawing — read by the smoke script and useful in the console. */
+  getRenderer: () => "webgpu" | "canvas2d";
   destroy: () => void;
 }
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
-const IDLE_MS = 2500;
-const AMBIENT_DEG_PER_MS = 0.004;
-const FRICTION_PER_16MS = 0.94;
-const MIN_OMEGA = 0.0004; // deg/ms — below this, inertia stops
-const HIT_RADIUS_PX = 14;
 
-type TopologyLike = Parameters<typeof feature>[0];
-const topology = land110m as unknown as TopologyLike;
-const topologyObjects = (topology as { objects: Record<string, unknown> })
-  .objects;
-const landObject = topologyObjects.land as Parameters<typeof feature>[1];
-const land = feature(topology, landObject) as unknown as GeoPermissibleObjects;
-const graticule = geoGraticule10() as unknown as GeoPermissibleObjects;
-const sphere = { type: "Sphere" } as unknown as GeoPermissibleObjects;
+/** Marker radii in CSS pixels. Sized so a non-curated zone is still easy to tap. */
+const RADIUS_SELECTED = 4;
+const RADIUS_PRIMARY = 3;
+const RADIUS_OTHER = 2.2;
 
-/**
- * Unit vector for a lng/lat pair (degrees). Its dot product with another
- * point's unit vector equals `Math.cos(geoDistance(...))` between the two —
- * used in the zone-dot loop to replace a `geoDistance` call (and the
- * `[lng, lat]` tuple it allocates) with a plain multiply-add per zone.
- */
-export function unitVector(
-  lngDeg: number,
-  latDeg: number,
-): [number, number, number] {
-  const lambda = (lngDeg * Math.PI) / 180;
-  const phi = (latDeg * Math.PI) / 180;
-  const cosPhi = Math.cos(phi);
-  return [cosPhi * Math.cos(lambda), cosPhi * Math.sin(lambda), Math.sin(phi)];
-}
+/** The selection ring's radius and stroke width, in CSS pixels. */
+const SELECTION_RING_RADIUS = 8;
+const SELECTION_RING_WIDTH = 1.5;
 
-/** Dot product of two unit vectors from `unitVector` — see there. */
-export function dot3(
-  a: readonly [number, number, number],
-  b: readonly [number, number, number],
-): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
+/** Outline width of the selected zone's boundary, in CSS pixels. */
+const REGION_STROKE_WIDTH = 1.5;
 
-interface Palette {
-  /**
-   * The day/night terminator's night-side tint. Deliberately its own token
-   * (`--gmt-globe-night`, not `--gmt-void`) — `--gmt-void` is a background
-   * *role* that flips to white in the light theme, which made night render
-   * lighter than day and wash out to a flat grey instead of a dark sky.
-   * Night must stay dark regardless of which theme the site is in.
-   */
-  night: string;
-  /**
-   * How opaque the night tint (above) is over the ocean/land wash beneath
-   * it — theme-tunable, not a fixed literal: the same alpha that keeps dark
-   * theme's near-black night dark blends a light-theme night color into a
-   * washed-out mid-tone grey instead, since it's mixing with a pale base.
-   */
-  nightAlpha: number;
-  cyan: string;
-  spring: string;
-  teal: string;
-  ice: string;
-  signal: string;
-  /**
-   * City-light dots — a warm gold, not the cool cyan/ice used for lines and
-   * chrome elsewhere, so the plotted zones read like the amber city lights
-   * in a real Earth-at-night photo rather than generic UI markers.
-   */
-  gold: string;
-  /**
-   * Fill alpha for the ocean (sphere) and land washes. The same low alpha
-   * that reads clearly against the dark theme's near-black surface washes
-   * out to almost nothing against the light theme's pale one, so these are
-   * theme-tuned tokens rather than fixed numbers — see `--gmt-globe-*-alpha`
-   * in gmt-tokens.css.
-   */
-  oceanAlpha: number;
-  landAlpha: number;
-  /**
-   * Peak of the brightening wash painted over the day hemisphere only (see
-   * globe-shading.ts) — in dark theme, the day side's low `oceanAlpha` alone
-   * reads as barely distinguishable from the near-black page behind the
-   * (transparent) stage, so the night/day contrast the terminator exists to
-   * show falls flat. Cheaper to brighten day than to darken night further
-   * (night is already close to the page's own near-black background).
-   */
-  dayAlpha: number;
-  /**
-   * Graticule (lat/long grid line) stroke alpha. Fixed at 0.18 used to be
-   * shared by both themes, but light theme's much more opaque night wash
-   * (`nightAlpha: 0.8`, a dark navy) swallows a line that faint almost
-   * entirely, and the same low alpha barely registers against the day
-   * hemisphere's pale base either — so this is theme-tuned like the other
-   * globe alphas rather than a literal in the draw call.
-   */
-  gridAlpha: number;
-  /** Peak alpha of the glow ring outside the sphere; 0 turns it off. */
-  atmosphereAlpha: number;
-  /** Alpha of the haze just inside the limb; 0 turns it off. */
-  hazeAlpha: number;
-}
-
-function readPalette(el: HTMLElement): Palette {
-  const style = getComputedStyle(el);
-  const pick = (name: string, fallback: string): string =>
-    style.getPropertyValue(name).trim() || fallback;
-  const pickNumber = (name: string, fallback: number): number => {
-    const parsed = Number.parseFloat(pick(name, ""));
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-  return {
-    night: pick("--gmt-globe-night", "#03080c"),
-    nightAlpha: pickNumber("--gmt-globe-night-alpha", 0.5),
-    cyan: pick("--gmt-cyan", "#22d3ee"),
-    spring: pick("--gmt-spring", "#4ade80"),
-    teal: pick("--gmt-teal", "#0e7490"),
-    ice: pick("--gmt-ice", "#cfeaf2"),
-    signal: pick("--gmt-signal", "#f5a524"),
-    gold: pick("--gmt-globe-gold", "#fde047"),
-    oceanAlpha: pickNumber("--gmt-globe-ocean-alpha", 0.07),
-    landAlpha: pickNumber("--gmt-globe-land-alpha", 0.12),
-    dayAlpha: pickNumber("--gmt-globe-day-alpha", 0.26),
-    gridAlpha: pickNumber("--gmt-globe-grid-alpha", 0.18),
-    atmosphereAlpha: pickNumber("--gmt-globe-atmosphere-alpha", 0.42),
-    hazeAlpha: pickNumber("--gmt-globe-haze-alpha", 0.2),
-  };
-}
-
-/** Grid lines dim to this fraction of `gridAlpha` while dragging/inertia is
- * active, matching the pre-existing 0.1/0.18 ≈ 0.56 dark-theme ratio. */
-const GRID_QUIET_FACTOR = 0.56;
-
-/** How far the atmosphere glow reaches past the limb, as a multiple of the
- * sphere's radius. Zoom 1 leaves the sphere ~6% of its radius clear of the
- * stage edge (see `measure()`), so the glow fits without being clipped. */
-const ATMOSPHERE_REACH = 1.06;
-
-/** Share of the atmosphere glow the night limb keeps, so the ring never
- * vanishes outright on the side facing away from the sun. */
-const ATMOSPHERE_NIGHT_FLOOR = 0.15;
-
-/**
- * How much brighter the whole ring gets with the sun straight behind the
- * globe. Air scatters sunlight mostly forwards, so a backlit atmosphere glows
- * all round the limb — the eclipse-rim look of photos taken from orbit.
- */
-const ATMOSPHERE_BACKLIGHT = 0.8;
-
-/** The shading buffer's resolution per CSS pixel. The shading is all smooth
- * gradients, so half resolution scaled up with smoothing looks the same and
- * shades a quarter of the pixels. */
-const SHADE_RESOLUTION = 0.5;
-
-/** `#rrggbb` (or `#rgb`) -> `[r, g, b]`, or null for anything else. */
-function hexToRgb(color: string): Rgb | null {
-  const hex = color.replace("#", "");
-  const full =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : hex;
-  if (!/^[0-9a-f]{6}$/i.test(full)) return null;
-  return [
-    parseInt(full.slice(0, 2), 16),
-    parseInt(full.slice(2, 4), 16),
-    parseInt(full.slice(4, 6), 16),
-  ];
-}
-
-/** `#rrggbb` (or `#rgb`) + alpha -> `rgba(...)`, leaving non-hex values alone. */
-function withAlpha(color: string, alpha: number): string {
-  const rgb = hexToRgb(color);
-  return rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : color;
-}
+/** The boundary dataset, fetched after the globe is already interactive. */
+const BOUNDARIES_URL = "/timezone-boundaries-globe.json";
 
 export async function initGlobe(
   host: HTMLElement,
   clockPanel: HTMLElement | null,
+  filterPanel: HTMLElement | null = null,
 ): Promise<GlobeHost> {
-  const reduceMotion = globalThis.matchMedia?.(
+  const reduceMotionQuery = globalThis.matchMedia?.(
     "(prefers-reduced-motion: reduce)",
   );
+  const reducedMotion = () => reduceMotionQuery?.matches ?? false;
 
   const zones = resolveGlobeZones(getTimeZones());
-  // Parallel to `zones`, computed once: lets the per-frame loop below replace
-  // `geoDistance` (and the `[lng, lat]` tuple it needs) with a dot product.
-  const zoneVecs = zones.map((zone) => unitVector(zone.lng, zone.lat));
 
-  // Default to the viewer's own zone when we can place it.
+  // Default to the viewer's own zone when it can be placed.
   const systemZone = getSystemTimeZone();
   const defaultZone =
     systemZone && zones.some((zone) => zone.id === systemZone)
@@ -262,15 +119,7 @@ export async function initGlobe(
     ? rotationForZone(COORDINATES_BY_ID.get(defaultZone)!)
     : ([-10, -15] as [number, number]);
 
-  const canvas = document.createElement("canvas");
-  canvas.className = "gmt-globe-canvas";
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "img");
-  canvas.setAttribute(
-    "aria-label",
-    "Interactive globe. Drag to rotate, scroll to zoom. Use the zone list to read a zone's live time.",
-  );
-  host.appendChild(canvas);
+  let theme = readTheme(host);
 
   const tooltip = document.createElement("div");
   tooltip.className = "gmt-globe-tooltip gmt-popover";
@@ -279,985 +128,546 @@ export async function initGlobe(
 
   const zoomControls = host.querySelector<HTMLElement>(".gmt-globe-zoom");
 
-  const context = canvas.getContext("2d");
-  if (!context) {
-    // Canvas 2D unavailable: leave the clock panel (populated by the caller)
-    // as the usable fallback and no-op the rest.
-    return inertHost(zones);
+  /* The clock list is mounted before the renderer starts, deliberately. It is the
+     usable fallback if no renderer can start at all, and the previous code
+     mounted it afterwards — so the one case it was meant to cover, a browser with
+     no canvas, left the panel empty. */
+  const zoneClockList = clockPanel
+    ? mountZoneClockList(
+        clockPanel,
+        zones.map((zone) => zone.id),
+        (id) => focusZone(id),
+      )
+    : null;
+
+  let engine: GlobeEngineWithHitTest;
+  try {
+    engine = (await createGlobeEngine(host, {
+      renderer: rendererOverride(),
+      sunInstant: nowMs,
+      theme,
+      labelFont: labelFont(host),
+      ariaLabel:
+        "Interactive globe. Drag to rotate, scroll to zoom. Use the zone list to read a zone's live time.",
+      initialRotation: defaultRotation,
+      zoomRange: [MIN_ZOOM, MAX_ZOOM],
+      reducedMotion,
+    })) as GlobeEngineWithHitTest;
+  } catch (error) {
+    tooltip.remove();
+    zoneClockList?.destroy();
+    throw error;
   }
-  const ctx = context;
 
-  const projection = geoOrthographic().clipAngle(90).precision(0.4);
-
-  // --- mutable state -------------------------------------------------------
-  let palette = readPalette(host);
-  let width = 0;
-  let height = 0;
-  let dpr = 1;
-  let baseScale = 1;
-
-  let rotation: [number, number] = [defaultRotation[0], defaultRotation[1]];
-  let zoom = 1;
-  let targetZoom = 1;
-
-  let dragging = false;
-  let lastPointer: { x: number; y: number; t: number } | null = null;
-  let omega: [number, number] = [0, 0]; // deg/ms, drives inertia
-  let inertiaActive = false;
-
-  let ambientActive = false;
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
-
-  let focusGoal: [number, number] | null = null;
-
+  // --- selection -----------------------------------------------------------
   let selectedId: string | null = null;
   let selectedReading: ZoneReading | null = null;
+  /* The viewer's own local date, against which the tooltip measures its
+     "yesterday / tomorrow" call-out. Refreshed on each tick, not captured
+     once: it changes at the viewer's own midnight. Declared up here with the
+     rest of the selection state, above every function that reads it — this
+     file mounts by running straight down, and a `let` below the first
+     `setSelected` would still be in its temporal dead zone. */
+  let viewerDate = readViewerStamp().date;
   let selectCallback: ((reading: ZoneReading | null) => void) | null = null;
 
-  /** tzid -> boundary geometry, fetched lazily after the globe is interactive. */
-  let boundaries: Map<string, GeoPermissibleObjects> | null = null;
+  // --- filtering -----------------------------------------------------------
+  /* Which day and DST buckets the clock list and the globe's markers are
+     showing. Declared here, above `buildMarkers` and the region hit test that
+     both read it, for the same temporal-dead-zone reason as `viewerDate`. */
+  let filter: ZoneFilter = defaultZoneFilter();
+  let filterUi: ZoneFilterUi | null = null;
+  /* zone id -> its bucket, and the minute that map was built for. Empty while
+     nothing needs it: see `refreshBuckets`. */
+  let buckets = new Map<string, ZoneBucket>();
+  let bucketMinute = "";
+  /* Ticks since the last scan, used only when the viewer's zone cannot be
+     named and `bucketMinute` is therefore always `""` — without it the
+     minute comparison below would match itself forever and the DST buckets
+     would never refresh again for the life of the page. */
+  let ticksSinceScan = 0;
+  /* The ids last handed to the clock list, so a rescan that changes nothing
+     does not tear the list down. */
+  let appliedIds: readonly string[] | null = null;
 
-  let frameHandle = 0;
-  let hovered = false;
-  let destroyed = false;
-  let revealed = false;
-
-  /** First-frame reveal: the canvas is drawn fully off-screen (opacity 0,
-   * slightly scaled down) so the initial fade/scale-in transition (see
-   * gmt-globe.css) is the viewer's first sight of it instead of a raw pop-in.
+  /**
+   * The zones passing the filter, or `null` for "everything".
    *
-   * The `gmt-globe-zoom-ready` class added at the end does not itself show the
-   * zoom controls — they only fade in on hover/focus (see gmt-globe.css). It
-   * arms them, so they cannot flash into view mid-reveal just because the
-   * pointer was already resting over the stage. */
-  function reveal(): void {
-    if (revealed) return;
-    revealed = true;
-    requestAnimationFrame(() => {
-      canvas.classList.add("gmt-globe-canvas-ready");
-      if (reduceMotion?.matches) {
-        zoomControls?.classList.add("gmt-globe-zoom-ready");
-        return;
-      }
-      // Not { once: true }: the canvas transitions both `opacity` and
-      // `transform` at once, firing a separate transitionend for each — often
-      // opacity first. `once` would consume the listener on that first event
-      // and never see the `transform` one it's actually waiting for, leaving
-      // the zoom controls permanently hidden. Detach by hand once the
-      // matching property fires instead.
-      const onCanvasTransitionEnd = (event: TransitionEvent) => {
-        if (event.propertyName !== "transform") return;
-        canvas.removeEventListener("transitionend", onCanvasTransitionEnd);
-        zoomControls?.classList.add("gmt-globe-zoom-ready");
+   * `null` rather than a full set when nothing is filtered, so the common case
+   * allocates nothing and every caller below can skip its membership test.
+   */
+  function visibleZoneIds(): Set<string> | null {
+    if (!isFilterEngaged(filter) || buckets.size === 0) return null;
+    const visible = new Set<string>();
+    for (const zone of zones) {
+      const bucket = buckets.get(zone.id);
+      if (!bucket || matchesFilter(bucket, filter)) visible.add(zone.id);
+    }
+    return visible;
+  }
+
+  /**
+   * Rebuild the bucket map, at most once a minute.
+   *
+   * Reading all ~420 zones costs about 11 ms warm — nothing once a minute,
+   * but a tenth of a frame's budget every second, and this runs beside a
+   * globe that is trying to hold 60 fps. A zone's day and DST state can only
+   * change on a whole-minute boundary, so a per-second scan would be
+   * recomputing an answer that provably has not moved.
+   *
+   * Skipped entirely while the accordion is shut and no filter is on: that is
+   * the state the globe mounts in and the one most readers never leave, and
+   * in it nothing on screen depends on any of this.
+   */
+  function refreshBuckets(
+    stamp: { date: string; minute: string },
+    force = false,
+  ): void {
+    const wanted = (filterUi?.isOpen() ?? false) || isFilterEngaged(filter);
+    if (!wanted) {
+      if (buckets.size === 0) return;
+      buckets = new Map();
+      bucketMinute = "";
+      return;
+    }
+    const stale =
+      stamp.minute === ""
+        ? ++ticksSinceScan >= 60
+        : stamp.minute !== bucketMinute;
+    if (!force && !stale && buckets.size > 0) return;
+    bucketMinute = stamp.minute;
+    ticksSinceScan = 0;
+    /* One instant for the whole scan, so every zone is bucketed against the
+       same sun rather than against a clock that moved mid-loop. */
+    const instantMs = nowMs();
+    const next = new Map<string, ZoneBucket>();
+    for (const zone of zones) {
+      next.set(
+        zone.id,
+        bucketFor(
+          readZoneNow(zone.id),
+          stamp.date,
+          skyAt(zone.lat, zone.lng, instantMs),
+        ),
+      );
+    }
+    buckets = next;
+    applyFilter();
+  }
+
+  /** Push the current filter into the clock list, the markers and the UI. */
+  function applyFilter(): void {
+    const visible = visibleZoneIds();
+    const ids = visible
+      ? zones.filter((zone) => visible.has(zone.id)).map((zone) => zone.id)
+      : zones.map((zone) => zone.id);
+
+    /* Only when the list actually moved. `applyFilter` is on the once-a-minute
+       rescan as well as the filter-change path, and `setIds` drops every
+       mounted row and sends the list back to the top — correct after a real
+       filter change, and a reader thrown back to the first zone once a minute
+       otherwise, for as long as the panel is open. Most minutes change no
+       bucket at all. */
+    const moved =
+      appliedIds === null ||
+      appliedIds.length !== ids.length ||
+      ids.some((id, index) => appliedIds?.[index] !== id);
+    if (moved) {
+      appliedIds = ids;
+      zoneClockList?.setIds(ids);
+      engine.setMarkers(buildMarkers());
+    }
+
+    /* Outside the guard: a zone can cross midnight or a DST transition without
+       changing what is *shown*, and the counts beside each toggle still have
+       to follow it. */
+    if (buckets.size > 0) {
+      filterUi?.update(
+        countBuckets(buckets.values()),
+        ids.length,
+        zones.length,
+      );
+    }
+  }
+
+  /** tzid -> prepared polygons, populated once the boundary set has loaded. */
+  let boundaries: Map<string, PreparedPolygon[]> | null = null;
+
+  function setSelected(id: string | null): void {
+    selectedId = id;
+    selectedReading = id ? readZoneNow(id) : null;
+    renderTooltip();
+    zoneClockList?.select(id);
+    engine.setMarkers(buildMarkers());
+    engine.setRegions(buildRegions());
+    selectCallback?.(selectedReading);
+  }
+
+  function focusZone(id: string): void {
+    const coordinate = COORDINATES_BY_ID.get(id);
+    if (!coordinate) return;
+    engine.flyTo(rotationForZone(coordinate));
+    setSelected(id);
+  }
+
+  // --- markers and regions -------------------------------------------------
+  function buildMarkers(): GlobeMarker[] {
+    const selectedColour = theme.markerSelected;
+    const visible = visibleZoneIds();
+    /* The selected zone keeps its marker whatever the filter says. Its tooltip
+       is open and its region is outlined; dropping the dot from under them
+       would leave both pointing at bare ocean. */
+    const shown = visible
+      ? zones.filter((zone) => visible.has(zone.id) || zone.id === selectedId)
+      : zones;
+    return shown.map((zone) => {
+      const selected = zone.id === selectedId;
+      const marker: GlobeMarker = {
+        id: zone.id,
+        position: [zone.lng, zone.lat] as LngLat,
+        radius: selected
+          ? RADIUS_SELECTED
+          : zone.primary
+            ? RADIUS_PRIMARY
+            : RADIUS_OTHER,
+        color: selected
+          ? selectedColour
+          : zone.primary
+            ? theme.markerPrimary
+            : theme.markerOther,
+        /* Gold once it is dark where the marker is, like the city lights in an
+           Earth-at-night photograph. A selected zone keeps its own colour: that is
+           a "focused" signal, not part of the city-lights palette. */
+        nightColor: selected
+          ? undefined
+          : zone.primary
+            ? theme.markerNightPrimary
+            : theme.markerNightOther,
       };
-      canvas.addEventListener("transitionend", onCanvasTransitionEnd);
+      if (selected) {
+        marker.ring = {
+          radius: SELECTION_RING_RADIUS,
+          width: SELECTION_RING_WIDTH,
+          color: selectedColour,
+        };
+      }
+      if (zone.primary) marker.label = shortLabel(zone.id);
+      return marker;
     });
   }
 
-  // --- sizing ------------------------------------------------------------
-  function measure(): void {
-    // clientWidth/clientHeight (the padding box), not getBoundingClientRect()
-    // (the border box): the stage keeps a 1px transparent border to hold its
-    // bevelled clip shape, so the rect is 2px larger in each axis than the box
-    // the canvas actually fills. Sizing the canvas from the rect made it
-    // overflow the stage's own `overflow: hidden` clip — and since Starlight's
-    // `max-width: 100%` then clamped the width back, a square raster got
-    // stretched into a non-square box. These are the same integers the
-    // `inset: 0` canvas resolves against, so CSS and JS agree on one box.
-    width = Math.max(1, host.clientWidth);
-    height = Math.max(1, host.clientHeight);
-    dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    // Leave a small margin so the whole sphere shows at zoom 1.
-    baseScale = (Math.min(width, height) / 2) * 0.94;
-    render();
-    reveal();
-  }
-
-  const resizeObserver = new ResizeObserver(measure);
-  resizeObserver.observe(host);
-
-  // --- rendering -------------------------------------------------------
-  /** Offscreen buffer the sun-lit shading is painted into, then scaled up. */
-  const shadeCanvas = document.createElement("canvas");
-  const shadeCtx = shadeCanvas.getContext("2d");
-  let shadeImage: ImageData | null = null;
-  /** Inputs the buffer was last painted from; unchanged means reuse it. */
-  let shadeKey = "";
-
   /**
-   * Day wash, limb haze and night wash in one pass (see globe-shading.ts),
-   * clipped to the sphere. `sun` is the unit vector towards the sun in view
-   * space: x right, y down, z towards the viewer.
-   */
-  function drawShading(
-    path: ReturnType<typeof geoPath>,
-    cx: number,
-    cy: number,
-    radius: number,
-    sun: [number, number, number],
-    moving: boolean,
-  ): void {
-    if (!shadeCtx) return;
-    const shadeWidth = Math.max(1, Math.ceil(width * SHADE_RESOLUTION));
-    const shadeHeight = Math.max(1, Math.ceil(height * SHADE_RESOLUTION));
-    if (
-      !shadeImage ||
-      shadeImage.width !== shadeWidth ||
-      shadeImage.height !== shadeHeight
-    ) {
-      shadeCanvas.width = shadeWidth;
-      shadeCanvas.height = shadeHeight;
-      shadeImage = shadeCtx.createImageData(shadeWidth, shadeHeight);
-    }
-    const scaleX = shadeWidth / width;
-    const scaleY = shadeHeight / height;
-    // The sun drifts ~0.004° a second. Rounding its vector to 0.001 of the
-    // radius (a quarter of a pixel at hero size) repaints on about one clock
-    // tick in 14 while the globe is still; a selection change never repaints.
-    // While dragging/inertia/ambient spin move the sun's *screen* vector every
-    // frame regardless, so the rounding widens to 0.01 — reusing the buffer
-    // across most motion frames instead of repainting every pixel on every
-    // one — and tightens back up the instant the globe settles.
-    const precision = moving ? 2 : 3;
-    const key = [
-      shadeWidth,
-      shadeHeight,
-      cx,
-      cy,
-      radius,
-      ...sun.map((n) => n.toFixed(precision)),
-      palette.cyan,
-      palette.night,
-      palette.dayAlpha,
-      palette.nightAlpha,
-      palette.hazeAlpha,
-    ].join("|");
-    if (key !== shadeKey) {
-      shadeKey = key;
-      paintShading(shadeImage.data, {
-        width: shadeWidth,
-        height: shadeHeight,
-        cx: cx * scaleX,
-        cy: cy * scaleY,
-        radius: radius * scaleX,
-        sun,
-        day: hexToRgb(palette.cyan) ?? [34, 211, 238],
-        night: hexToRgb(palette.night) ?? [3, 8, 12],
-        dayAlpha: palette.dayAlpha,
-        nightAlpha: palette.nightAlpha,
-        hazeAlpha: palette.hazeAlpha,
-      });
-      shadeCtx.putImageData(shadeImage, 0, 0);
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    path(sphere);
-    ctx.clip();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(shadeCanvas, 0, 0, width, height);
-    ctx.restore();
-  }
-
-  /** Offscreen buffer for the atmosphere glow ring (radial glow + conic
-   * day/night mask). Its shape depends only on the outer radius, the sun's
-   * screen-space direction, and the palette — never on the globe's screen
-   * position — so it is painted once per changed key and blitted into place
-   * each frame, instead of rebuilding the 16-stop conic gradient and running
-   * a full-canvas `destination-in` composite every frame regardless of
-   * whether anything about the ring actually changed. */
-  const atmosphereCanvas = document.createElement("canvas");
-  const atmosphereCtx = atmosphereCanvas.getContext("2d");
-  let atmosphereKey = "";
-
-  /**
-   * The glow ring outside the limb. Its strength round the ring follows how
-   * lit each limb point is: `sunX`/`sunY` are the sun's direction projected
-   * onto the screen, as a fraction of the radius. Near 0 the sun is straight
-   * ahead or straight behind, the whole limb is on the terminator and the ring
-   * is even; near 1 the sun is off to one side, which lights that limb and
-   * leaves the opposite one at `ATMOSPHERE_NIGHT_FLOOR`. `sunZ` below 0 means
-   * the sun is behind the globe, which brightens the whole ring (see
-   * `ATMOSPHERE_BACKLIGHT`).
+   * Only the selected zone's own area, not every border on the globe.
    *
-   * Drawn first, on the cleared canvas, so the buffer (its own
-   * `destination-in` mask already baked in) composites over an empty canvas.
-   * `moving` widens the cache key's rounding — like `drawShading` — so the
-   * buffer is reused across most frames of a drag/inertia/ambient spin.
+   * The engine is handed the raw rings and prepares them itself, while the
+   * prepared copy below stays here for hit-testing — the two want the same data
+   * in different shapes, and preparing it twice is cheaper than sharing a cache
+   * across that boundary.
    */
-  function drawAtmosphere(
-    cx: number,
-    cy: number,
-    radius: number,
-    sunX: number,
-    sunY: number,
-    sunZ: number,
-    moving: boolean,
-  ): void {
-    if (!atmosphereCtx) {
-      // No offscreen 2D context available: skip the buffer entirely rather
-      // than lose the ring outright. Same even-ring degradation as the
-      // "older engines" conic-gradient fallback below, just painted straight
-      // onto the main canvas every frame instead of cached.
-      drawAtmosphereDirect(cx, cy, radius, sunZ);
-      return;
-    }
-    const outer = radius * ATMOSPHERE_REACH;
-    const size = Math.max(1, Math.ceil(outer * 2 * dpr));
-    const precision = moving ? 2 : 3;
-    const key = [
-      size,
-      sunX.toFixed(precision),
-      sunY.toFixed(precision),
-      sunZ.toFixed(precision),
-      palette.cyan,
-      palette.atmosphereAlpha,
-    ].join("|");
-
-    if (key !== atmosphereKey) {
-      atmosphereKey = key;
-      if (atmosphereCanvas.width !== size || atmosphereCanvas.height !== size) {
-        atmosphereCanvas.width = size;
-        atmosphereCanvas.height = size;
-      }
-      atmosphereCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      atmosphereCtx.clearRect(0, 0, outer * 2, outer * 2);
-
-      const bufferCx = outer;
-      const bufferCy = outer;
-      const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
-      const glow = atmosphereCtx.createRadialGradient(
-        bufferCx,
-        bufferCy,
-        radius,
-        bufferCx,
-        bufferCy,
-        outer,
-      );
-      glow.addColorStop(
-        0,
-        withAlpha(
-          palette.cyan,
-          Math.min(1, palette.atmosphereAlpha * backlight),
-        ),
-      );
-      glow.addColorStop(1, withAlpha(palette.cyan, 0));
-      atmosphereCtx.beginPath();
-      atmosphereCtx.arc(bufferCx, bufferCy, outer, 0, Math.PI * 2);
-      atmosphereCtx.arc(bufferCx, bufferCy, radius, 0, Math.PI * 2, true);
-      atmosphereCtx.fillStyle = glow;
-      atmosphereCtx.fill("evenodd");
-
-      // Older engines without conic gradients keep an even ring.
-      if (typeof atmosphereCtx.createConicGradient === "function") {
-        const tilt = Math.min(Math.hypot(sunX, sunY), 1);
-        const mask = atmosphereCtx.createConicGradient(
-          Math.atan2(sunY, sunX),
-          bufferCx,
-          bufferCy,
-        );
-        const steps = 16;
-        for (let i = 0; i <= steps; i++) {
-          const lit = 0.5 + 0.5 * tilt * Math.cos((i / steps) * Math.PI * 2);
-          const strength =
-            ATMOSPHERE_NIGHT_FLOOR + (1 - ATMOSPHERE_NIGHT_FLOOR) * lit;
-          mask.addColorStop(i / steps, `rgba(0, 0, 0, ${strength})`);
-        }
-        atmosphereCtx.globalCompositeOperation = "destination-in";
-        atmosphereCtx.fillStyle = mask;
-        atmosphereCtx.fillRect(0, 0, outer * 2, outer * 2);
-        atmosphereCtx.globalCompositeOperation = "source-over";
-      }
-    }
-
-    ctx.drawImage(
-      atmosphereCanvas,
-      cx - outer,
-      cy - outer,
-      outer * 2,
-      outer * 2,
-    );
+  function buildRegions(): GlobeRegion[] {
+    if (!selectedId) return [];
+    const polygons = rawBoundaries?.get(boundaryKey(selectedId));
+    if (!polygons) return [];
+    return [
+      {
+        id: selectedId,
+        polygons,
+        fill: theme.regionFill,
+        stroke: theme.regionStroke,
+        strokeWidth: REGION_STROKE_WIDTH,
+      },
+    ];
   }
 
-  /**
-   * Fallback for `drawAtmosphere` when the offscreen 2D context is
-   * unavailable: the plain radial glow, painted straight onto `ctx` every
-   * frame, same as before the buffer existed. No conic day/night mask — that
-   * needs the buffer to composite into in isolation — so this is always the
-   * even ring, like the "older engines" case above.
-   */
-  function drawAtmosphereDirect(
-    cx: number,
-    cy: number,
-    radius: number,
-    sunZ: number,
-  ): void {
-    const outer = radius * ATMOSPHERE_REACH;
-    const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
-    const glow = ctx.createRadialGradient(cx, cy, radius, cx, cy, outer);
-    glow.addColorStop(
-      0,
-      withAlpha(palette.cyan, Math.min(1, palette.atmosphereAlpha * backlight)),
-    );
-    glow.addColorStop(1, withAlpha(palette.cyan, 0));
-    ctx.beginPath();
-    ctx.arc(cx, cy, outer, 0, Math.PI * 2);
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
-    ctx.fillStyle = glow;
-    ctx.fill("evenodd");
-  }
+  /** Raw rings for the engine, prepared ones for hit-testing. */
+  let rawBoundaries: Map<string, PolygonRings[]> | null = null;
 
-  /** Map an IANA id to the boundary dataset's `tzid` value. */
+  /** The boundary dataset names UTC `Etc/UTC`. */
   function boundaryKey(id: string): string {
     return id === "UTC" ? "Etc/UTC" : id;
   }
 
   async function loadBoundaries(): Promise<void> {
     try {
-      const response = await fetch("/timezone-boundaries-globe.json");
+      const response = await fetch(BOUNDARIES_URL);
       if (!response.ok) return;
       const data = (await response.json()) as {
         features: {
           properties: { tzid: string };
-          geometry: GeoPermissibleObjects;
+          geometry:
+            | { type: "Polygon"; coordinates: number[][][] }
+            | { type: "MultiPolygon"; coordinates: number[][][][] };
         }[];
       };
-      const map = new Map<string, GeoPermissibleObjects>();
+      const prepared = new Map<string, PreparedPolygon[]>();
+      const raw = new Map<string, PolygonRings[]>();
       for (const feature of data.features) {
-        if (feature?.properties?.tzid) {
-          map.set(feature.properties.tzid, feature.geometry);
-        }
+        const tzid = feature?.properties?.tzid;
+        if (!tzid) continue;
+        const polygons =
+          feature.geometry.type === "Polygon"
+            ? [feature.geometry.coordinates]
+            : feature.geometry.coordinates;
+        const rings = polygons.map((polygon) =>
+          polygon.map((ring) =>
+            ring.map((point) => [point[0], point[1]] as LngLat),
+          ),
+        );
+        raw.set(tzid, rings);
+        prepared.set(
+          tzid,
+          rings.map((polygon) => preparePolygon(polygon)),
+        );
       }
-      boundaries = map;
-      render();
+      boundaries = prepared;
+      rawBoundaries = raw;
+      engine.setRegions(buildRegions());
     } catch {
-      // The globe is fully usable without the demarcation outlines.
+      // The globe is fully usable without the boundary outlines.
     }
   }
 
-  function render(): void {
-    if (destroyed) return;
-    projection
-      .rotate([rotation[0], rotation[1]])
-      .scale(baseScale * zoom)
-      .translate([width / 2, height / 2]);
-
-    ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-
-    const path = geoPath(projection, ctx);
-    const quiet = dragging || inertiaActive;
-    // Every animating state `needsFrame()` tracks — drag, inertia, ambient
-    // spin, a focus tween or zoom easing — redraws every frame, so all five
-    // benefit from the shading/atmosphere buffers below being reused across
-    // frames instead of repainted on every one. Distinct from `quiet`, which
-    // deliberately excludes ambient spin/focus/zoom so the grid/labels stay
-    // at full strength during those.
-    const inMotion = needsFrame();
-    // Computed once per frame (not once per call site) so the day/night
-    // wash, the terminator line, and each dot's night/day classification
-    // below all agree on the exact same instant — `getUnixNow()` ticking
-    // between calls within one frame could otherwise put a dot on the
-    // "wrong" side of its own terminator line, right at the boundary.
-    const antisolarReading = antisolarPoint(nowMs());
-    const antisolar: [number, number] = [
-      antisolarReading.lng,
-      antisolarReading.lat,
-    ];
-    const subsolar: [number, number] = [antisolar[0] + 180, -antisolar[1]];
-
-    const cx = width / 2;
-    const cy = height / 2;
-    const radius = projection.scale();
-
-    // Projecting a point does not clip it, so a subsolar point on the far
-    // side still lands where the sun's direction meets the screen plane; its
-    // depth comes from the angle to the view centre.
-    const sunOnScreen = projection(subsolar);
-    const sun: [number, number, number] = [
-      sunOnScreen ? (sunOnScreen[0] - cx) / radius : 0,
-      sunOnScreen ? (sunOnScreen[1] - cy) / radius : 0,
-      Math.cos(geoDistance(subsolar, [-rotation[0], -rotation[1]])),
-    ];
-
-    if (palette.atmosphereAlpha > 0) {
-      drawAtmosphere(cx, cy, radius, sun[0], sun[1], sun[2], inMotion);
-    }
-
-    ctx.beginPath();
-    path(sphere);
-    ctx.fillStyle = withAlpha(palette.teal, palette.oceanAlpha);
-    ctx.fill();
-
-    // Day/night terminator: painted right after the sphere base and before
-    // the grid/land/highlight/dots, so the night side is a dark backdrop
-    // those draw *over* — not a wash that gets painted over them and hides
-    // them. `palette.night` is its own dark-navy token (not `--gmt-void`,
-    // which flips to white in the light theme); `palette.nightAlpha` is
-    // theme-tuned too, not fixed at 0.5 for both — that alpha keeps dark
-    // theme's already-near-black night dark, but blending the same navy at
-    // 0.5 into light theme's much paler base landed on a washed-out
-    // grey-blue mid-tone instead of reading as night.
-    //
-    // The day hemisphere gets its own brightening wash — in dark theme, the
-    // base ocean fill above is already tuned low (oceanAlpha) to read
-    // cleanly against the near-black page, which left day and night barely
-    // distinguishable from each other. Brightening day (cheap: it's just a
-    // stronger cyan wash) reads better than trying to darken night any
-    // further against an already near-black backdrop. The wash is brightest
-    // under the sun and fades towards the terminator, and night eases in
-    // across twilight, which is what makes the sphere read as round.
-    drawShading(path, cx, cy, radius, sun, inMotion);
-
-    ctx.beginPath();
-    path(sphere);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = withAlpha(palette.cyan, 0.4);
-    ctx.stroke();
-
-    ctx.beginPath();
-    path(graticule);
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = withAlpha(
-      palette.cyan,
-      quiet ? palette.gridAlpha * GRID_QUIET_FACTOR : palette.gridAlpha,
-    );
-    ctx.stroke();
-
-    ctx.beginPath();
-    path(land);
-    ctx.fillStyle = withAlpha(palette.cyan, palette.landAlpha);
-    ctx.fill();
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = withAlpha(palette.cyan, 0.45);
-    ctx.stroke();
-
-    // Timezone demarcation: the selected zone's own area, outlined in green
-    // and lightly washed. Only the selected zone — not every border on the
-    // globe.
-    if (boundaries && selectedId) {
-      const selectedGeometry = boundaries.get(boundaryKey(selectedId));
-      if (selectedGeometry) {
-        ctx.beginPath();
-        path(selectedGeometry);
-        ctx.fillStyle = withAlpha(palette.spring, 0.12);
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = palette.spring;
-        ctx.stroke();
-      }
-    }
-
-    // Dot products against the precomputed `zoneVecs`, not `geoDistance`
-    // calls against a fresh `[lng, lat]` tuple: with ~570 zones this loop ran
-    // twice that many `geoDistance` calls and allocated twice that many
-    // tuples every single frame. `cos(geoDistance(a, b)) === dot(unit(a),
-    // unit(b))`, so the horizon cull (`geoDistance > π/2`) becomes `dot < 0`,
-    // and the day/night cosine becomes the dot product directly — both
-    // mathematically equivalent, not approximations.
-    const centreVec = unitVector(-rotation[0], -rotation[1]);
-    const subsolarVec = unitVector(subsolar[0], subsolar[1]);
-    const zoneCoord: [number, number] = [0, 0];
-    for (let i = 0; i < zones.length; i++) {
-      const zone = zones[i];
-      if (dot3(zoneVecs[i], centreVec) < 0) continue;
-      zoneCoord[0] = zone.lng;
-      zoneCoord[1] = zone.lat;
-      const point = projection(zoneCoord);
-      if (!point) continue;
-      const isSelected = zone.id === selectedId;
-      // Every dot here is a real, resolvable IANA zone (resolveGlobeZones only
-      // plots the intersection of getTimeZones() with the coordinate table) —
-      // the non-primary majority is just unlabelled, not fake. Sized up from
-      // 1.6px so a zone outside the curated set is still an easy click target.
-      const radius = isSelected ? 4 : zone.primary ? 3 : 2.2;
-      ctx.beginPath();
-      ctx.arc(point[0], point[1], radius, 0, Math.PI * 2);
-      // Gold only once it is dark — real Earth-at-night photos show city
-      // lights because it's dark; the same dot in daylight isn't a "light"
-      // at all, so day-side dots keep the original cyan/ice. The switch is
-      // at civil dusk, where the shading's daylight has faded out, not at
-      // the horizon, where the ground is still lit. `isSelected` stays
-      // spring green regardless — a distinct "currently focused" signal,
-      // not part of the city-lights palette.
-      const inNight = cityLightsOn(dot3(zoneVecs[i], subsolarVec));
-      ctx.fillStyle = isSelected
-        ? palette.spring
-        : inNight
-          ? zone.primary
-            ? palette.gold
-            : withAlpha(palette.gold, 0.55)
-          : zone.primary
-            ? palette.cyan
-            : withAlpha(palette.ice, 0.55);
-      ctx.fill();
-      if (isSelected) {
-        ctx.beginPath();
-        ctx.arc(point[0], point[1], 8, 0, Math.PI * 2);
-        ctx.strokeStyle = palette.spring;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      if (zone.primary && !quiet && zoom < 2.5) {
-        ctx.fillStyle = withAlpha(palette.ice, 0.75);
-        ctx.font =
-          '600 10px ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace';
-        ctx.fillText(shortLabel(zone.id), point[0] + 6, point[1] + 3);
-      }
-    }
-    ctx.restore();
-    positionTooltip();
-  }
-
-  // --- animation loop -------------------------------------------------
-  function needsFrame(): boolean {
-    return (
-      dragging ||
-      inertiaActive ||
-      ambientActive ||
-      focusGoal !== null ||
-      Math.abs(targetZoom - zoom) > 0.001
-    );
-  }
-
-  function scheduleFrame(): void {
-    if (destroyed || frameHandle || document.hidden) return;
-    frameHandle = requestAnimationFrame(step);
-  }
-
-  let lastStep = 0;
-  function step(now: number): void {
-    frameHandle = 0;
-    const dt = lastStep ? Math.min(now - lastStep, 48) : 16;
-    lastStep = now;
-
-    if (Math.abs(targetZoom - zoom) > 0.001) {
-      zoom += (targetZoom - zoom) * (reduceMotion?.matches ? 1 : 0.2);
-    } else {
-      zoom = targetZoom;
-    }
-
-    if (focusGoal) {
-      const ease = reduceMotion?.matches ? 1 : 0.16;
-      rotation = [
-        rotation[0] + shortestAngle(rotation[0], focusGoal[0]) * ease,
-        rotation[1] + (focusGoal[1] - rotation[1]) * ease,
-      ];
-      if (
-        Math.abs(shortestAngle(rotation[0], focusGoal[0])) < 0.1 &&
-        Math.abs(focusGoal[1] - rotation[1]) < 0.1
-      ) {
-        rotation = [normalizeLng(focusGoal[0]), focusGoal[1]];
-        focusGoal = null;
-      }
-    } else if (inertiaActive) {
-      rotation = [
-        normalizeLng(rotation[0] + omega[0] * dt),
-        clampLat(rotation[1] + omega[1] * dt),
-      ];
-      const decay = FRICTION_PER_16MS ** (dt / 16);
-      omega = [omega[0] * decay, omega[1] * decay];
-      if (Math.hypot(omega[0], omega[1]) < MIN_OMEGA) {
-        inertiaActive = false;
-        omega = [0, 0];
-      }
-    } else if (ambientActive) {
-      rotation = [
-        normalizeLng(rotation[0] + AMBIENT_DEG_PER_MS * dt),
-        rotation[1],
-      ];
-    }
-
-    render();
-    if (needsFrame()) scheduleFrame();
-    else lastStep = 0;
-  }
-
-  // --- idle / ambient -------------------------------------------------
-  function markInteraction(): void {
-    ambientActive = false;
-    if (idleTimer) clearTimeout(idleTimer);
-    if (reduceMotion?.matches) return;
-    idleTimer = setTimeout(() => {
-      if (
-        dragging ||
-        hovered ||
-        inertiaActive ||
-        focusGoal ||
-        Math.abs(targetZoom - 1) > 0.01
-      )
-        return;
-      ambientActive = true;
-      lastStep = 0;
-      scheduleFrame();
-    }, IDLE_MS);
-  }
-
-  // --- pointer / drag ------------------------------------------------
-  let pointerDownAt: { x: number; y: number } | null = null;
-
-  function onPointerDown(event: PointerEvent): void {
-    dragging = true;
-    inertiaActive = false;
-    focusGoal = null;
-    omega = [0, 0];
-    lastPointer = { x: event.clientX, y: event.clientY, t: event.timeStamp };
-    pointerDownAt = { x: event.clientX, y: event.clientY };
-    try {
-      canvas.setPointerCapture(event.pointerId);
-    } catch {
-      // Some input stacks (and any programmatically-dispatched pointer
-      // event) have no live pointer to capture — dragging and tap-to-select
-      // both still work without it.
-    }
-    markInteraction();
-    scheduleFrame();
-  }
-
-  function onPointerMove(event: PointerEvent): void {
-    if (!dragging || !lastPointer) return;
-    const k = 90 / (baseScale * zoom);
-    const dx = event.clientX - lastPointer.x;
-    const dy = event.clientY - lastPointer.y;
-    const dtMs = Math.max(event.timeStamp - lastPointer.t, 1);
-    rotation = [
-      normalizeLng(rotation[0] + dx * k),
-      clampLat(rotation[1] - dy * k),
-    ];
-    if (!reduceMotion?.matches) {
-      omega = [(dx * k) / dtMs, (-dy * k) / dtMs];
-    }
-    lastPointer = { x: event.clientX, y: event.clientY, t: event.timeStamp };
-    scheduleFrame();
-  }
-
-  function onPointerUp(event: PointerEvent): void {
-    if (!dragging) return;
-    dragging = false;
-    try {
-      canvas.releasePointerCapture?.(event.pointerId);
-    } catch {
-      // Capture may already be gone (never granted, or released by the
-      // browser already) — releasing it is best-effort, never load-bearing
-      // for the tap-to-select handling below.
-    }
-    const moved = pointerDownAt
-      ? Math.hypot(
-          event.clientX - pointerDownAt.x,
-          event.clientY - pointerDownAt.y,
-        )
-      : 0;
-    if (
-      !reduceMotion?.matches &&
-      Math.hypot(omega[0], omega[1]) > MIN_OMEGA * 3
-    ) {
-      inertiaActive = true;
-    }
-    lastPointer = null;
-    pointerDownAt = null;
-    // A tap (no meaningful drag) is a selection attempt.
-    if (moved < 5) hitTest(event.clientX, event.clientY);
-    markInteraction();
-    scheduleFrame();
-  }
-
-  function onWheel(event: WheelEvent): void {
-    event.preventDefault();
-    const factor = Math.exp(-event.deltaY * 0.0015);
-    targetZoom = clampZoom(targetZoom * factor);
-    markInteraction();
-    scheduleFrame();
-  }
-
-  function hitTest(clientX: number, clientY: number): void {
-    const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const centre: [number, number] = [-rotation[0], -rotation[1]];
-    let best: string | null = null;
-    let bestDist = HIT_RADIUS_PX;
+  /**
+   * Which zone a tap inside no marker landed in.
+   *
+   * Straight-line polygon edges per RFC 7946 §3.1.1, via `globe/geometry.ts`, so
+   * the answer does not depend on which renderer is drawing.
+   */
+  engine.setRegionHitTest((lng, lat) => {
+    if (!boundaries) return null;
+    /* A filtered-out zone has no marker, so tapping its territory must not
+       select it either — otherwise the globe hands back a zone the list is
+       deliberately not showing. */
+    const visible = visibleZoneIds();
     for (const zone of zones) {
-      if (geoDistance([zone.lng, zone.lat], centre) > Math.PI / 2) continue;
-      const point = projection([zone.lng, zone.lat]);
-      if (!point) continue;
-      const dist = Math.hypot(point[0] - x, point[1] - y);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = zone.id;
+      if (visible && !visible.has(zone.id)) continue;
+      const polygons = boundaries.get(boundaryKey(zone.id));
+      if (!polygons) continue;
+      for (const polygon of polygons) {
+        if (pointInPolygon(polygon, lng, lat)) return zone.id;
       }
     }
-    // No dot was close enough — fall back to the zone whose actual drawn
-    // boundary the click landed inside, so a tap anywhere in, say, Brazil
-    // selects America/Sao_Paulo even nowhere near its marker. Only zones with
-    // boundary geometry (the 419-zone demarcation dataset) support this; the
-    // rest are still reachable by their dot or the search box.
-    if (best === null && boundaries) {
-      const geoPoint = projection.invert?.([x, y]);
-      if (geoPoint) {
-        for (const zone of zones) {
-          const geometry = boundaries.get(boundaryKey(zone.id));
-          if (geometry && geoContains(geometry, geoPoint)) {
-            best = zone.id;
-            break;
-          }
-        }
-      }
-    }
-    setSelected(best);
-  }
+    return null;
+  });
 
-  // --- selection / tooltip ------------------------------------------
-  function setSelected(id: string | null): void {
-    selectedId = id;
-    selectedReading = id ? readZoneNow(id) : null;
-    renderTooltip();
-    zoneClockList?.select(id);
-    selectCallback?.(selectedReading);
-    render();
-  }
+  engine.onTap(({ markerId, regionId }) => {
+    setSelected(markerId ?? regionId ?? null);
+  });
 
-  function focusZoneImpl(id: string): void {
-    const coord = COORDINATES_BY_ID.get(id);
-    if (!coord) return;
-    focusGoal = rotationForZone(coord);
-    inertiaActive = false;
-    setSelected(id);
-    markInteraction();
-    scheduleFrame();
-  }
-
+  // --- tooltip -------------------------------------------------------------
+  /* Markup lives in `zone-readout.ts`, shared with the clock list so the two
+     surfaces cannot drift apart again — and so it is testable at all, since
+     the globe cannot mount under jsdom (no canvas, no WebGPU). */
   function renderTooltip(): void {
     if (!selectedId || !selectedReading) {
       tooltip.hidden = true;
       return;
     }
-    const r = selectedReading;
     tooltip.hidden = false;
-    if (!r.ok) {
-      tooltip.innerHTML = `<span class="gmt-globe-tooltip-zone">${escapeHtml(
-        selectedId,
-      )}</span><span class="gmt-signal-lost">⟨ NO SIGNAL — zone unavailable ⟩</span>`;
-      return;
-    }
-    const dst = !r.observesDst
-      ? "no DST"
-      : r.inDst
-        ? "in DST"
-        : "standard time";
-    tooltip.innerHTML =
-      `<span class="gmt-globe-tooltip-zone">${escapeHtml(selectedId)}</span>` +
-      `<span class="gmt-globe-tooltip-time">${r.time}</span>` +
-      `<span class="gmt-globe-tooltip-meta">UTC${r.offset} · ${dst}</span>`;
+    const at = COORDINATES_BY_ID.get(selectedId);
+    const sky = at ? skyAt(at.lat, at.lng, nowMs()) : undefined;
+    tooltip.innerHTML = renderZoneTooltip(selectedReading, viewerDate, sky);
   }
 
   function positionTooltip(): void {
     if (tooltip.hidden || !selectedId) return;
-    const coord = COORDINATES_BY_ID.get(selectedId);
-    if (!coord) return;
-    const centre: [number, number] = [-rotation[0], -rotation[1]];
-    if (geoDistance([coord.lng, coord.lat], centre) > Math.PI / 2) {
+    const coordinate = COORDINATES_BY_ID.get(selectedId);
+    if (!coordinate) return;
+    const at = engine.project([coordinate.lng, coordinate.lat]);
+    if (!at.visible) {
       tooltip.style.opacity = "0.35";
       return;
     }
     tooltip.style.opacity = "1";
-    const point = projection([coord.lng, coord.lat]);
-    if (!point) return;
-    // Clamp inside the (overflow-hidden) stage; flip below the point when it
-    // would otherwise be clipped at the top edge.
+    // Clamp inside the stage, and flip below the point near the top edge.
     const pad = 8;
+    const width = host.clientWidth;
     const x = Math.min(
-      Math.max(point[0], tooltip.offsetWidth / 2 + pad),
+      Math.max(at.x, tooltip.offsetWidth / 2 + pad),
       width - tooltip.offsetWidth / 2 - pad,
     );
-    const flip = point[1] - tooltip.offsetHeight - 16 < 0;
+    const flip = at.y - tooltip.offsetHeight - 16 < 0;
     tooltip.classList.toggle("gmt-globe-tooltip-below", flip);
     tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${point[1] + (flip ? 12 : 0)}px`;
+    tooltip.style.top = `${at.y + (flip ? 12 : 0)}px`;
   }
 
-  // --- keyboard ----------------------------------------------------
-  function onKeyDown(event: KeyboardEvent): void {
-    const stepDeg = 12 / zoom;
-    switch (event.key) {
-      case "ArrowLeft":
-        rotation = [normalizeLng(rotation[0] + stepDeg), rotation[1]];
-        break;
-      case "ArrowRight":
-        rotation = [normalizeLng(rotation[0] - stepDeg), rotation[1]];
-        break;
-      case "ArrowUp":
-        rotation = [rotation[0], clampLat(rotation[1] + stepDeg)];
-        break;
-      case "ArrowDown":
-        rotation = [rotation[0], clampLat(rotation[1] - stepDeg)];
-        break;
-      case "+":
-      case "=":
-        targetZoom = clampZoom(targetZoom * 1.3);
-        break;
-      case "-":
-        targetZoom = clampZoom(targetZoom / 1.3);
-        break;
-      default:
-        return;
-    }
-    event.preventDefault();
-    focusGoal = null;
-    inertiaActive = false;
-    markInteraction();
-    scheduleFrame();
+  engine.onFrame(positionTooltip);
+
+  if (filterPanel) {
+    filterUi = mountZoneFilters(
+      filterPanel,
+      (next) => {
+        filter = next;
+        /* Force the scan: the reader has just changed what they want to see,
+           and the once-a-minute cadence would otherwise leave the list stale
+           for up to a minute on the very interaction that asked for it. */
+        refreshBuckets(readViewerStamp(), true);
+        applyFilter();
+      },
+      () => refreshBuckets(readViewerStamp(), true),
+    );
   }
 
-  // --- clock panel: virtualized zone list, ticking "now" strings -----
-  const zoneClockList = clockPanel
-    ? mountZoneClockList(
-        clockPanel,
-        zones.map((zone) => zone.id),
-        focusZoneImpl,
-      )
-    : null;
-
-  function tickClocks(): void {
-    if (destroyed || document.hidden) return;
+  // --- the ticking clock ---------------------------------------------------
+  /**
+   * One second is the cadence the clocks need, and it is also what moves the
+   * terminator while the globe is at rest.
+   *
+   * `requestRender` rather than a full frame: the sun has moved, nothing else
+   * has, so the GPU renderer skips rebuilding the land coverage and redraws only
+   * the surface.
+   */
+  function tick(): void {
+    if (document.hidden) return;
+    const stamp = readViewerStamp();
+    viewerDate = stamp.date;
+    refreshBuckets(stamp);
     zoneClockList?.tick();
     if (selectedId) {
       selectedReading = readZoneNow(selectedId);
       renderTooltip();
     }
-    // While the rAF loop is animating (drag, inertia, ambient spin, a focus
-    // tween or zoom easing) it already redraws every frame, so this second,
-    // unsynchronised `render()` on top of it was pure extra work — a full
-    // scene redraw landing at an arbitrary point between two rAF frames,
-    // every second, for as long as the globe kept moving. Only force a
-    // render here when the rAF loop is idle, so the terminator still moves
-    // once a second while the globe is at rest.
-    if (!needsFrame()) render();
+    engine.requestRender();
   }
-  let clockTimer = setInterval(tickClocks, 1000);
+  let clockTimer = setInterval(tick, 1000);
 
-  // --- visibility --------------------------------------------------
   function onVisibility(): void {
-    if (document.hidden) {
-      if (frameHandle) cancelAnimationFrame(frameHandle);
-      frameHandle = 0;
-      clearInterval(clockTimer);
-      if (idleTimer) clearTimeout(idleTimer);
-    } else {
-      clockTimer = setInterval(tickClocks, 1000);
-      lastStep = 0;
-      render();
-      markInteraction();
-    }
+    clearInterval(clockTimer);
+    if (!document.hidden) clockTimer = setInterval(tick, 1000);
+  }
+  document.addEventListener("visibilitychange", onVisibility);
+
+  // --- theme and preferences ----------------------------------------------
+  function refreshTheme(): void {
+    theme = readTheme(host);
+    engine.setTheme(theme);
+    engine.setMarkers(buildMarkers());
+    engine.setRegions(buildRegions());
   }
 
-  // --- theme changes ---------------------------------------------
-  const themeObserver = new MutationObserver(() => {
-    palette = readPalette(host);
-    render();
-  });
+  const themeObserver = new MutationObserver(refreshTheme);
   themeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-theme"],
   });
 
-  // gmt-a11y.css zeroes the atmosphere tokens under these preferences, and
-  // the canvas only sees a token when the palette is re-read.
+  /* `gmt-a11y.css` zeroes the atmosphere and haze tokens under these
+     preferences, and the renderer only sees a token when the theme is re-read. */
   const preferenceQueries = [
     "(prefers-reduced-transparency: reduce)",
     "(prefers-contrast: more)",
   ].flatMap((query) => globalThis.matchMedia?.(query) ?? []);
-  function onPreferenceChange(): void {
-    palette = readPalette(host);
-    render();
-  }
   for (const query of preferenceQueries) {
-    query.addEventListener("change", onPreferenceChange);
+    query.addEventListener("change", refreshTheme);
   }
 
-  // --- wire up --------------------------------------------------
-  canvas.addEventListener("pointerdown", onPointerDown);
-  canvas.addEventListener("pointermove", onPointerMove);
-  canvas.addEventListener("pointerup", onPointerUp);
-  canvas.addEventListener("pointercancel", onPointerUp);
-  canvas.addEventListener("wheel", onWheel, { passive: false });
-  canvas.addEventListener("keydown", onKeyDown);
-  canvas.addEventListener("pointerenter", () => {
-    hovered = true;
-    ambientActive = false;
-  });
-  canvas.addEventListener("pointerleave", () => {
-    hovered = false;
-    markInteraction();
-  });
-  document.addEventListener("visibilitychange", onVisibility);
-
-  measure();
-  markInteraction();
+  // --- start ---------------------------------------------------------------
+  engine.setMarkers(buildMarkers());
+  revealCanvas(host, zoomControls, reducedMotion());
   void loadBoundaries();
   if (defaultZone) setSelected(defaultZone);
 
   return {
-    focusZone: focusZoneImpl,
+    focusZone,
     selectZone: setSelected,
-    setZoom(value: number) {
-      targetZoom = clampZoom(value);
-      markInteraction();
-      scheduleFrame();
-    },
-    zoomBy(factor: number) {
-      targetZoom = clampZoom(targetZoom * factor);
-      markInteraction();
-      scheduleFrame();
-    },
-    getZoom: () => zoom,
+    setZoom: (value) => engine.setZoom(value),
+    zoomBy: (factor) => engine.zoomBy(factor),
+    getZoom: () => engine.getZoom(),
     getZones: () => zones.slice(),
     getSelected: () => selectedId,
     onSelect(callback) {
       selectCallback = callback;
     },
+    getRenderer: () => engine.renderer,
     destroy() {
-      destroyed = true;
-      if (frameHandle) cancelAnimationFrame(frameHandle);
-      if (idleTimer) clearTimeout(idleTimer);
       clearInterval(clockTimer);
-      resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       themeObserver.disconnect();
       for (const query of preferenceQueries) {
-        query.removeEventListener("change", onPreferenceChange);
+        query.removeEventListener("change", refreshTheme);
       }
-      document.removeEventListener("visibilitychange", onVisibility);
       zoneClockList?.destroy();
-      canvas.remove();
+      filterUi?.destroy();
+      engine.destroy();
       tooltip.remove();
     },
   };
 }
 
-// --- helpers ---------------------------------------------------------
-function inertHost(zones: GlobeZone[]): GlobeHost {
-  return {
-    focusZone: () => {},
-    selectZone: () => {},
-    setZoom: () => {},
-    zoomBy: () => {},
-    getZoom: () => 1,
-    getZones: () => zones.slice(),
-    getSelected: () => null,
-    onSelect: () => {},
-    destroy: () => {},
-  };
+/**
+ * The first-frame reveal.
+ *
+ * The canvas is drawn while still transparent and slightly scaled down, so the
+ * fade-in (see `gmt-globe.css`) is the viewer's first sight of the globe rather
+ * than a raw pop-in. The `gmt-globe-zoom-ready` class does not itself show the
+ * zoom controls — they fade in on hover or focus — it arms them, so they cannot
+ * flash into view mid-reveal because the pointer happened to be over the stage.
+ */
+function revealCanvas(
+  host: HTMLElement,
+  zoomControls: HTMLElement | null,
+  reduceMotion: boolean,
+): void {
+  const canvas = host.querySelector<HTMLCanvasElement>(
+    "canvas.gmt-globe-canvas",
+  );
+  if (!canvas) return;
+  requestAnimationFrame(() => {
+    canvas.classList.add("gmt-globe-canvas-ready");
+
+    const arm = () => zoomControls?.classList.add("gmt-globe-zoom-ready");
+    if (reduceMotion) {
+      arm();
+      return;
+    }
+
+    /* Not `{ once: true }`: the canvas transitions `opacity` and `transform`
+       together and fires a separate event for each, often opacity first. `once`
+       would consume the listener on that one and never see the transform event
+       it is waiting for. */
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.propertyName !== "transform") return;
+      clearTimeout(fallback);
+      canvas.removeEventListener("transitionend", onTransitionEnd);
+      arm();
+    };
+    canvas.addEventListener("transitionend", onTransitionEnd);
+
+    /* A timer as well, because the zoom controls must never end up permanently
+       unreachable. `transitionend` does not fire if the transition is
+       interrupted, if the element is not rendered when it would have run, or if
+       the document timeline is not advancing — and the controls are the keyboard
+       and touch path to zoom, so losing them is losing the feature. The delay
+       comfortably clears the 0.5s reveal in gmt-globe.css. */
+    const fallback = setTimeout(() => {
+      canvas.removeEventListener("transitionend", onTransitionEnd);
+      arm();
+    }, 1000);
+  });
 }
 
 /**
- * The current epoch-ms. `getUnixNow` returns `null` only for an invalid `epochUnit` or a clock it
- * cannot read, so the `0` fallback never renders in practice.
+ * `?globe=webgpu` or `?globe=canvas2d` pins the backend.
+ *
+ * Only for verification — `scripts/globe-smoke.mjs` uses it to render the same
+ * frame through both and compare. Anything else, including no parameter at all,
+ * leaves the engine to choose.
  */
+function rendererOverride(): RendererChoice {
+  try {
+    const value = new URLSearchParams(globalThis.location?.search ?? "").get(
+      "globe",
+    );
+    if (value === "webgpu" || value === "canvas2d") return value;
+  } catch {
+    // No location (a test environment, a worker): take the default.
+  }
+  return "auto";
+}
+
+/** The current epoch-ms. `getUnixNow` returns null only for a clock it cannot
+ *  read, so the fallback never renders in practice. */
 function nowMs(): number {
   return getUnixNow() ?? 0;
 }
@@ -1267,33 +677,140 @@ function shortLabel(id: string): string {
   return tail.replace(/_/g, " ");
 }
 
-function clampZoom(z: number): number {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+/**
+ * The label font, taken from the site's own mono token.
+ *
+ * 12px, not the 10px the canvas-2D globe hard-coded: that was below the site's
+ * own 12px floor, and `font-floor.test.ts` missed it only because its patterns
+ * never looked at a canvas `font` assignment. Both are fixed.
+ */
+function labelFont(host: HTMLElement): string {
+  const style = getComputedStyle(host);
+  const family =
+    style.getPropertyValue("--gmt-font-mono").trim() ||
+    'ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace';
+  return `600 12px ${family}`;
 }
 
-function clampLat(lat: number): number {
-  return Math.min(90, Math.max(-90, lat));
+/** The Dox globe's colours, read from the site's CSS custom properties. */
+interface DoxTheme extends GlobeTheme {
+  markerPrimary: Rgba;
+  markerOther: Rgba;
+  markerNightPrimary: Rgba;
+  markerNightOther: Rgba;
+  markerSelected: Rgba;
+  regionFill: Rgba;
+  regionStroke: Rgba;
 }
 
-function normalizeLng(lng: number): number {
-  return ((((lng + 180) % 360) + 360) % 360) - 180;
+/**
+ * Build the theme from `--gmt-*` tokens.
+ *
+ * Re-read rather than cached, because `data-theme` flips them, and
+ * `gmt-a11y.css` zeroes the atmosphere and haze alphas under reduced
+ * transparency and raised contrast.
+ */
+function readTheme(host: HTMLElement): DoxTheme {
+  const style = getComputedStyle(host);
+  const token = (name: string, fallback: string): string =>
+    style.getPropertyValue(name).trim() || fallback;
+  const number = (name: string, fallback: number): number => {
+    const parsed = Number.parseFloat(token(name, ""));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const colour = (name: string, fallback: string, alpha: number): Rgba => {
+    const [r, g, b, a] = parseColour(token(name, fallback)) ?? [1, 1, 1, 1];
+    return [r, g, b, a * alpha];
+  };
+
+  const cyan = "--gmt-cyan";
+  return {
+    ocean: colour(
+      "--gmt-teal",
+      "#0e7490",
+      number("--gmt-globe-ocean-alpha", 0.05),
+    ),
+    limb: colour(cyan, "#22d3ee", 0.4),
+    grid: colour(cyan, "#22d3ee", number("--gmt-globe-grid-alpha", 0.18)),
+    land: colour(cyan, "#22d3ee", number("--gmt-globe-land-alpha", 0.12)),
+    landStroke: colour(cyan, "#22d3ee", 0.45),
+    day: colour(cyan, "#22d3ee", number("--gmt-globe-day-alpha", 0.26)),
+    night: colour(
+      "--gmt-globe-night",
+      "#03080c",
+      number("--gmt-globe-night-alpha", 0.5),
+    ),
+    atmosphere: colour(
+      cyan,
+      "#22d3ee",
+      number("--gmt-globe-atmosphere-alpha", 0.42),
+    ),
+    haze: colour(cyan, "#22d3ee", number("--gmt-globe-haze-alpha", 0.2)),
+    label: colour("--gmt-ice", "#cfeaf2", 0.75),
+    markerPrimary: colour(cyan, "#22d3ee", 1),
+    markerOther: colour("--gmt-ice", "#cfeaf2", 0.55),
+    markerNightPrimary: colour("--gmt-globe-gold", "#fde047", 1),
+    markerNightOther: colour("--gmt-globe-gold", "#fde047", 0.55),
+    markerSelected: colour("--gmt-spring", "#4ade80", 1),
+    regionFill: colour("--gmt-spring", "#4ade80", 0.12),
+    regionStroke: colour("--gmt-spring", "#4ade80", 1),
+  };
 }
 
-/** Signed shortest angular delta from `a` to `b`, in degrees. */
-function shortestAngle(a: number, b: number): number {
-  return normalizeLng(b - a);
+/**
+ * Any CSS colour to `[r, g, b, a]` with channels in 0..1.
+ *
+ * Hex is handled directly, since every `--gmt-*` colour token is hex today. A
+ * 2D canvas parses anything else: assigning to `fillStyle` and reading it back
+ * gives a normalised value, which means a token written as `rgb()`, `hsl()` or
+ * `oklch()` keeps working. The canvas-2D globe parsed hex only and silently
+ * passed anything else through to a draw call, so a token in another notation
+ * would have worked there and broken here.
+ */
+export function parseColour(value: string): Rgba | null {
+  const hex = parseHex(value);
+  if (hex) return hex;
+
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe) return null;
+  /* An unparsable value leaves `fillStyle` at its default, so seeding it with a
+     colour nothing resolves to makes "did not parse" detectable. */
+  probe.fillStyle = "#010203";
+  probe.fillStyle = value;
+  const normalised = probe.fillStyle;
+  if (typeof normalised !== "string" || normalised === "#010203") return null;
+  return parseHex(normalised) ?? parseRgbFunction(normalised);
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[c] as string,
-  );
+function parseHex(value: string): Rgba | null {
+  const match = /^#([0-9a-f]{3,8})$/i.exec(value.trim());
+  if (!match) return null;
+  const digits = match[1];
+  const expand = (part: string): number => Number.parseInt(part, 16) / 255;
+  if (digits.length === 3 || digits.length === 4) {
+    const parts = digits.split("").map((c) => expand(c + c));
+    return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+  }
+  if (digits.length === 6 || digits.length === 8) {
+    const parts: number[] = [];
+    for (let i = 0; i < digits.length; i += 2) {
+      parts.push(expand(digits.slice(i, i + 2)));
+    }
+    return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+  }
+  return null;
+}
+
+function parseRgbFunction(value: string): Rgba | null {
+  const match = /^rgba?\(([^)]+)\)$/i.exec(value.trim());
+  if (!match) return null;
+  /* A canvas normalises to `rgba(r, g, b, a)` with 0-255 channels and a 0-1
+     alpha, so there are no percentages to handle here. */
+  const parts = match[1]
+    .split(/[\s,/]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => Number.parseFloat(part));
+  if (parts.length < 3 || parts.some((part) => !Number.isFinite(part)))
+    return null;
+  return [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1];
 }
