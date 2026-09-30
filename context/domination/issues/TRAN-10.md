@@ -19,7 +19,9 @@ Advance filing and pre-arrival notice deadlines are the same shape with a strict
   - `cutoffSchedule(anchor: string, cutoffs: { name: string, offset: string, atLocalTime?: string }[], options): { name: string, at: string }[]` — The whole stack against one anchor, sorted earliest first.
 - `packages/gmt/src/transport/compare/isPastCutoff.ts`:
   - `isPastCutoff(now: string, cutoff: string): boolean`
+- `packages/gmt/src/transport/compare/timeToCutoff.ts` (one public function per file, as everywhere else):
   - `timeToCutoff(now: string, cutoff: string): string` — ISO duration, negative when the cut-off has passed.
+- The `@northguild/gmt/transport/compare` subpath (`package.json` `exports` and `typesVersions`, the dox `gmt-modules.ts` barrel).
 - Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)):
   - `guides/industries/transport-legs-and-dwell.mdx` gains "Deadlines from an anchor", one `##` per function: the cut-off stack, `atLocalTime` versus subtracting a duration, and the anchor — `cutoffAt(loading, 'PT24H', …)` beside `cutoffAt(departure, 'PT24H', …)` for the same shipment, a 96-hour offset from arrival, a 2-day offset pinned to 17:00 local. Examples are labelled by their numbers only.
   - Scenarios: `filing-anchored-to-the-wrong-event` (`cutoffAt`), `two-days-before-is-not-48-hours` (`cutoffAt`).
@@ -30,9 +32,15 @@ Advance filing and pre-arrival notice deadlines are the same shape with a strict
 
 - **`atLocalTime` is what makes this different from subtracting a duration.** A "two days before" cut-off is almost never 48 hours before; it is 17:00 local two days prior. Subtracting `P2D` from an 18:00 departure gives 18:00, which is wrong by an hour whenever a DST transition falls between the two, and wrong by a working day whenever the tariff means close of business.
 - The anchor moves. These functions are pure and take the anchor as an argument, so a schedule change is a recomputation, not a mutation. Callers should not cache cut-offs derived from an ETD.
-- A cut-off that lands on a weekend or holiday rolls with `preceding` by default — a deadline never moves *later* to accommodate a closure.
+- A cut-off that lands on a weekend or holiday rolls by the convention the caller names. There is no default (see "Rolling (decided)").
 - Cut-offs are local wall times, so they inherit CORE-4's ambiguity handling. A cut-off falling in a nonexistent local hour returns the sentinel rather than silently shifting.
 - **The anchor is the caller's event.** Loading, departure and arrival are different instants; `cutoffAt` takes one and never guesses which a rule means. An instant offset with no `atLocalTime` is the advance-filing shape; `atLocalTime` is the ocean cut-off shape. Both are the same function.
+- **Offset arithmetic (decided).** Without `atLocalTime`, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: the calendar part (years, months, weeks, days) moves the local wall clock, then the exact part (hours and smaller) comes off in exact time. The one difference: a wall clock landing in a skipped hour returns `""` instead of moving forward. With `atLocalTime`, only the day matters, so no intermediate wall time is resolved: the exact part comes off the anchor's instant, the calendar part off that local date (`PlainDate#subtract`, clamping), and the cut-off is `atLocalTime` on that day. Resolving the intermediate would give a false sentinel — two days before a 02:30 departure on the Tuesday after a spring-forward is Sunday, whose 02:30 was skipped, but its 17:00 exists — and a `"compatible"` resolution would move a deleted day forward past the anchor (`Pacific/Apia`, 2011-12-30).
+- **Local-time resolution (decided).** Every wall time the cut-off lands on — `atLocalTime`, the calendar part of an unpinned offset, a rolled day — is classified with `classifyLocal` and resolved with `resolveLocal`: ambiguous takes `"earlier"` — [RFC 5545 §3.3.5](https://www.rfc-editor.org/rfc/rfc5545#section-3.3.5): a local time that "occurs more than once … refers to the first occurrence of the referenced time" — and nonexistent returns `""`. An exact result that is not rolled is never re-resolved, so a `PT…` offset landing on the second pass of a repeated hour keeps it.
+- **Rolling (decided, PR #290 review).** There is no default roll. A roll needs both a calendar and a direction: `calendar` without `roll`, or `roll` without `calendar`, returns `""`. No standard supplies a default. ISDA 2021 §2.3.8 (and 2006 §4.12(b)) apply the convention "specified" and stop there; where ISDA does fix one for a kind of date it picks Following, Modified Following, Preceding or No Adjustment. ISO 20022's non-working-day adjustment on a processing time frame is optional, with no default. DCSA ties the cut-offs to the planned departure and says nothing about closures. A shut terminal forcing an earlier cut-off is a fact about one terminal, not a rule. `rollDate` already says it: the convention is always explicit. Any `RollConvention` is accepted; `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention, and like `"following"` it can put the cut-off after the anchor, which `cutoffAt` does not check. The rolled day keeps the cut-off's local time of day. `calendar.timeZone` is not read; `options.timeZone` is the local frame, as in every business-day function. The earlier draft of this note defaulted to `"preceding"`.
+- **Anchor and zone (decided).** The anchor is anything `isValidInstant` accepts; its bracket is not read, as in `crossingTime`. `timeZone` is anything `isValidTimeZone` accepts, a fixed offset included. The result is the cut-off as a zoned string in `timeZone`. A negative offset puts the cut-off after the anchor.
+- **`cutoffSchedule` (decided).** Each entry is `cutoffAt` with the entry's own `atLocalTime`; one in `options` is not read. Sorted by instant with a stable sort, so ties keep input order. Any invalid entry, or any entry in a skipped hour, returns `[]` rather than a stack with a deadline missing.
+- **The window is half-open (decided).** `isPastCutoff` is `true` when `now >= cutoff`, so at the cut-off instant the window has closed, and `timeToCutoff` is `PT0S` there. `timeToCutoff` is `Instant#until` with hours as the largest unit, exact to the nanosecond. Both return their sentinel for `cutoffAt`'s `""`.
 
 ## Corrections
 
@@ -41,9 +49,8 @@ Advance filing and pre-arrival notice deadlines are the same shape with a strict
 ## What gmt provides (do not re-implement)
 
 - `resolveLocal` / `classifyLocal` from CORE-4 — local time resolution
-- `rollDate` and `BusinessCalendar` from CORE-7 — non-business-day rolling
-- `subtractDuration` — offset arithmetic
-- `spanMs` from CORE-2 — `timeToCutoff`
+- `rollDate`, `BusinessCalendar`, `isValidBusinessCalendar` and `isValidRollConvention` from CORE-7 — non-business-day rolling
+- `isValidInstant` / `isValidTimeZone` / `isValidDuration` / `isValidTime` — the anchor, zone, offset and `atLocalTime` gates
 
 ## Verification
 

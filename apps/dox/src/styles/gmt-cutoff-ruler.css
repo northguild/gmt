@@ -1,0 +1,104 @@
+/*
+ * Cut-off Ruler widget (TRAN-10). Shared lane/marker/departure-line rules
+ * live in gmt-cutoff-widgets.css; this sheet holds the overview lanes, the
+ * hour-ruler close-up and the readings list.
+ */
+
+.gmt-cutoff-ruler-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-cutoff-ruler-lane {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cutoff-ruler-lane-label {
+  min-width: 12rem;
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-cutoff-ruler-bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 1.5rem;
+  border-top: 2px solid var(--gmt-ice);
+}
+
+.gmt-cutoff-ruler-bar-label {
+  margin-left: var(--gmt-space-2);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cutoff-ruler-hourline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+}
+
+/* Each reading gets its own row, so its label is never stacked on top of
+   another reading's — the point of R1's "an hour apart" is to see three
+   distinct rows land at three distinct hours. */
+.gmt-cutoff-ruler-closeup-row {
+  position: relative;
+  height: 1.2rem;
+}
+
+/* The dot is centred on its instant; the label starts clear of the dot's
+   right edge (half the 0.6rem dot, plus a gap). */
+.gmt-cutoff-ruler-closeup-row .gmt-cutoff-ruler-marker {
+  position: absolute;
+  top: 0.2rem;
+  transform: translateX(-50%);
+}
+
+.gmt-cutoff-ruler-closeup-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(calc(0.3rem + var(--gmt-space-2)));
+  font-size: var(--gmt-text-xs);
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-cutoff-ruler-ticks {
+  position: relative;
+  height: 1.2rem;
+  margin-top: var(--gmt-space-1);
+}
+
+.gmt-cutoff-ruler-readings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The DST-transition marker: a dashed vertical line across the lanes, with
+   its label. */
+.gmt-cutoff-ruler-transition {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--gmt-ice-dim);
+  padding-left: var(--gmt-space-1);
+}
+
+.gmt-cutoff-ruler-lanes {
+  position: relative;
+}
+
+@container (max-width: 34rem) {
+  .gmt-cutoff-ruler-lane-label {
+    min-width: 8rem;
+  }
+}

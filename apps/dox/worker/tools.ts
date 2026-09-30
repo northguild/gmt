@@ -47,6 +47,9 @@ import {
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
+  showCutoffCountdownInput,
+  showCutoffRulerInput,
+  showCutoffStackInput,
   showDeliverySchedulerInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -232,6 +235,48 @@ export function buildWorkerTools(
               "crossing-clock",
               `"${targetZone}" is not an IANA time zone this runtime knows.`,
             ),
+    }),
+
+    showCutoffStack: tool({
+      description: docFor("showCutoffStack"),
+      inputSchema: showCutoffStackInput,
+      execute: ({ timeZone }) => {
+        const unknown = unknownZones([timeZone]);
+        return unknown.length > 0
+          ? reject(
+              "cutoff-stack",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("cutoff-stack");
+      },
+    }),
+
+    showCutoffRuler: tool({
+      description: docFor("showCutoffRuler"),
+      inputSchema: showCutoffRulerInput,
+      execute: ({ timeZone }) => {
+        const unknown = unknownZones([timeZone]);
+        return unknown.length > 0
+          ? reject(
+              "cutoff-ruler",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("cutoff-ruler");
+      },
+    }),
+
+    showCutoffCountdown: tool({
+      description: docFor("showCutoffCountdown"),
+      inputSchema: showCutoffCountdownInput,
+      execute: ({ timeZone }) => {
+        const unknown = unknownZones([timeZone]);
+        return unknown.length > 0
+          ? reject(
+              "cutoff-countdown",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("cutoff-countdown");
+      },
     }),
   };
 

@@ -207,6 +207,62 @@ export const showCrossingClockInput = z.object({
 });
 
 /**
+ * A sailing's whole stack of cut-offs (TRAN-10): 1 to 4 named deadlines
+ * counted back from one departure by `cutoffSchedule`. `weekend` and
+ * `holidays` are optional, but `roll` is required whenever either is given —
+ * there is no default, so the model must ask rather than guess which way a
+ * cut-off on a closed day moves.
+ */
+export const showCutoffStackInput = z.object({
+  anchor: dateTimeSchema,
+  timeZone: zoneSchema,
+  cutoffs: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(24),
+        offset: durationSchema,
+        atLocalTime: z.string().min(4).max(12).optional(),
+      }),
+    )
+    .min(1)
+    .max(4),
+  weekend: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+  holidays: z.array(plainDateSchema).max(5).optional(),
+  roll: z
+    .enum([
+      "preceding",
+      "following",
+      "modifiedPreceding",
+      "modifiedFollowing",
+      "none",
+    ])
+    .optional(),
+});
+
+/**
+ * One departure's "N days before" read three ways by `cutoffAt` (TRAN-10):
+ * N calendar days, N × 24 exact hours, and N days before at a fixed local
+ * time.
+ */
+export const showCutoffRulerInput = z.object({
+  anchor: dateTimeSchema,
+  timeZone: zoneSchema,
+  days: z.number().int().min(1).max(7),
+  atLocalTime: z.string().min(4).max(12),
+});
+
+/**
+ * A cut-off compared with a moment (TRAN-10) by `isPastCutoff` and
+ * `timeToCutoff`. `now` is optional: omitting it means the reader's own
+ * clock, read live by the widget — never a value this tool invents.
+ */
+export const showCutoffCountdownInput = z.object({
+  cutoff: dateTimeSchema,
+  now: dateTimeSchema.optional(),
+  timeZone: zoneSchema,
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -231,7 +287,10 @@ export type DoxToolName =
   | "showDeliveryScheduler"
   | "showConnectionChecker"
   | "showTimetableReader"
-  | "showCrossingClock";
+  | "showCrossingClock"
+  | "showCutoffStack"
+  | "showCutoffRuler"
+  | "showCutoffCountdown";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -245,6 +304,9 @@ export const DOX_TOOL_INPUTS = {
   showConnectionChecker: showConnectionCheckerInput,
   showTimetableReader: showTimetableReaderInput,
   showCrossingClock: showCrossingClockInput,
+  showCutoffStack: showCutoffStackInput,
+  showCutoffRuler: showCutoffRulerInput,
+  showCutoffCountdown: showCutoffCountdownInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -331,6 +393,27 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks how long a crossing, transit or passage between two logged times really took, or what the entry and exit read on one zone's clock, especially across a DST change",
     args: "entry, exit (ISO date-times; a plain 2024-03-10T00:00 is read as wall time in targetZone), targetZone (IANA id of the clock the crossing is read on)",
   },
+  {
+    name: "showCutoffStack",
+    purpose:
+      "A sailing's whole stack of cut-offs, computed by cutoffSchedule against one departure, earliest first, on a day timeline with closed days shaded and each cut-off a weekend or holiday rolled drawn where it landed and where it would have been.",
+    when: "the reader asks when each of several deadlines or cut-offs before a sailing, flight or loading closes, or how a weekend or holiday moves them",
+    args: "anchor (the event the cut-offs count back from: an ISO date-time with an offset or a bracketed zone), timeZone (IANA id of the terminal's clock), cutoffs (1 to 4, each a name, an offset as an ISO 8601 duration such as P2D or PT48H, and an optional atLocalTime such as 17:00), weekend (optional ISO weekday numbers of closed days, 6 and 7 for Saturday and Sunday), holidays (optional ISO dates, up to 5), roll (preceding, following, modifiedPreceding, modifiedFollowing or none; required whenever weekend or holidays are given: there is no default, so ask which way a cut-off on a closed day moves). Never invent a zone.",
+  },
+  {
+    name: "showCutoffRuler",
+    purpose:
+      'One departure\'s "N days before" read three ways by cutoffAt on one exact-time axis: N calendar days (P2D), N × 24 exact hours (PT48H), and N days before at a fixed local time, with any DST change between them marked.',
+    when: "the reader asks whether N days before an event is the same as N × 24 hours before, or where a days-before cut-off lands across a DST change",
+    args: "anchor (ISO date-time with an offset or a bracketed zone), timeZone (IANA id of the clock the cut-off is read on), days (whole days, 1 to 7), atLocalTime (the local time of day for the pinned reading, e.g. 17:00)",
+  },
+  {
+    name: "showCutoffCountdown",
+    purpose:
+      "A cut-off compared with a moment by isPastCutoff and timeToCutoff: the time left, or how late as a negative duration, with the cut-off counted as passed at the deadline itself.",
+    when: "the reader asks whether a cut-off or deadline has passed at a given time, or how much time is left or how late they are",
+    args: "cutoff (ISO date-time with an offset or a bracketed zone), now (optional ISO date-time with an offset or zone; omit it to use the reader's own clock), timeZone (IANA id of the clock both are shown on)",
+  },
 ];
 
 /**
@@ -383,6 +466,18 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[10].purpose,
     inputSchema: showCrossingClockInput,
   }),
+  showCutoffStack: tool({
+    description: DOX_TOOL_DOCS[11].purpose,
+    inputSchema: showCutoffStackInput,
+  }),
+  showCutoffRuler: tool({
+    description: DOX_TOOL_DOCS[12].purpose,
+    inputSchema: showCutoffRulerInput,
+  }),
+  showCutoffCountdown: tool({
+    description: DOX_TOOL_DOCS[13].purpose,
+    inputSchema: showCutoffCountdownInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -417,6 +512,9 @@ export const ENABLED_TOOL_NAMES = [
   "showConnectionChecker",
   "showTimetableReader",
   "showCrossingClock",
+  "showCutoffStack",
+  "showCutoffRuler",
+  "showCutoffCountdown",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

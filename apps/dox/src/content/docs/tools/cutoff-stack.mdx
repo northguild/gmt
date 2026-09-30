@@ -1,0 +1,36 @@
+---
+title: Cut-off Stack
+description: When does each deadline before a sailing close? cutoffSchedule computes the whole stack against one departure, earliest first, with weekend and holiday cut-offs rolled the way you say, and no default.
+---
+
+import CutoffStack from "../../../components/CutoffStack.astro";
+
+The stack counts back from one event — a sailing, a flight, a loading — and
+every deadline in it moves when that event moves. `cutoffSchedule` computes
+each named cut-off with `cutoffAt` against the one anchor and returns the
+stack sorted earliest first, so a rescheduled departure is one call and every
+deadline follows it.
+
+A closed day moves a cut-off only by the roll convention you give it: a
+weekend or holiday calendar with no roll, or a roll with no calendar, has no
+default, and `cutoffSchedule` returns `[]` rather than guess which way to
+move it.
+
+<CutoffStack />
+
+**Worth trying:** [a calendar with no roll: there is no
+default](/tools/cutoff-stack/?w=cutoffstack&wa=%7B%22anchor%22%3A%222024-06-17T18%3A00%3A00%2B02%3A00%5BEurope%2FAmsterdam%5D%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%2C%22cutoffCount%22%3A%222%22%2C%22name1%22%3A%22gate-in%22%2C%22offset1%22%3A%22P2D%22%2C%22atLocalTime1%22%3A%2217%3A00%22%2C%22name2%22%3A%22documents%22%2C%22offset2%22%3A%22P3D%22%2C%22atLocalTime2%22%3A%2212%3A00%22%2C%22calendar%22%3A%22on%22%2C%22weekend%22%3A%226%2C7%22%7D) —
+gate-in and documents both leave `cutoffSchedule` with nowhere to roll to,
+so the stack is `[]`. Then [a Thursday
+holiday](/tools/cutoff-stack/?w=cutoffstack&wa=%7B%22anchor%22%3A%222024-05-10T18%3A00%3A00%2B02%3A00%5BEurope%2FAmsterdam%5D%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%2C%22cutoffCount%22%3A%222%22%2C%22name1%22%3A%22gate-in%22%2C%22offset1%22%3A%22PT6H%22%2C%22name2%22%3A%22documents%22%2C%22offset2%22%3A%22P1D%22%2C%22atLocalTime2%22%3A%2212%3A00%22%2C%22calendar%22%3A%22on%22%2C%22weekend%22%3A%226%2C7%22%2C%22holidays%22%3A%222024-05-09%22%2C%22roll%22%3A%22preceding%22%7D) —
+documents rolls back a day to Wednesday, while gate-in's exact six hours
+lands on an open day and does not move.
+
+Reference: [`cutoffSchedule`](/reference/transport/calculate/cutoffSchedule/)
+computes the whole stack; each entry is [`cutoffAt`](/reference/transport/calculate/cutoffAt/),
+and a roll moves a closed day the way [`rollDate`](/reference/calendar/business/rollDate/)
+moves it. See the [Cut-off Ruler](/tools/cutoff-ruler/) for one cut-off read
+three ways, and the guide's
+[whole-stack section](/guides/industries/transport-legs-and-dwell/#the-whole-stack-cutoffschedule)
+and
+[closures section](/guides/industries/transport-legs-and-dwell/#closures-roll-the-way-you-say).

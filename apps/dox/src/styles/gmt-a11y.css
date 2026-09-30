@@ -253,4 +253,48 @@
     forced-color-adjust: none;
     fill: CanvasText;
   }
+
+  /* Cut-off widgets (TRAN-10): the closed-day hatch, the solid/hollow
+     markers and the moved connector all carry meaning by border style and
+     text, not fill colour, so they need only a border to stay
+     distinguishable once fills are dropped. */
+  .gmt-cutoff-stack-day--closed {
+    forced-color-adjust: none;
+    background-image: none;
+    border-color: CanvasText;
+    border-style: dashed;
+  }
+
+  .gmt-cutoff-stack-departure-marker,
+  .gmt-cutoff-ruler-departure-line,
+  .gmt-cutoff-countdown-marker--cutoff {
+    forced-color-adjust: none;
+    border-color: Highlight;
+  }
+
+  .gmt-cutoff-stack-marker,
+  .gmt-cutoff-ruler-marker,
+  .gmt-cutoff-countdown-marker {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .gmt-cutoff-stack-marker--solid {
+    background: CanvasText;
+  }
+
+  .gmt-cutoff-stack-marker--hollow {
+    background: Canvas;
+    border-style: dashed;
+  }
+
+  .gmt-cutoff-stack-connector {
+    color: CanvasText;
+  }
+
+  .gmt-cutoff-countdown-closed {
+    forced-color-adjust: none;
+    background: Canvas;
+    border-color: CanvasText;
+  }
 }

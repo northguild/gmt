@@ -43,7 +43,10 @@ export type WidgetKind =
   | "delivery"
   | "connection"
   | "timetable"
-  | "crossing";
+  | "crossing"
+  | "cutoffstack"
+  | "cutoffruler"
+  | "cutoffcountdown";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -71,6 +74,9 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   connection: "/tools/connection-checker/",
   timetable: "/tools/timetable-reader/",
   crossing: "/tools/crossing-clock/",
+  cutoffstack: "/tools/cutoff-stack/",
+  cutoffruler: "/tools/cutoff-ruler/",
+  cutoffcountdown: "/tools/cutoff-countdown/",
 };
 
 export function encodeWidgetPermalink(

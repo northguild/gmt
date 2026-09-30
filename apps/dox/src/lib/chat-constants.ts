@@ -508,6 +508,47 @@ export const CHAT_STARTERS: readonly {
       targetZone: "America/New_York",
     },
   },
+  {
+    text: "Sails Rotterdam 18:00 17 June 2024: gate-in 2 days before 17:00, docs 3 days before 12:00, weekend to Friday?",
+    widget: "showCutoffStack",
+    // Rotterdam is on Europe/Amsterdam's clock. 17 June 2024 is a Monday;
+    // "weekend to Friday" is the preceding roll, which the question names
+    // because there is no default.
+    args: {
+      anchor: "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      timeZone: "Europe/Amsterdam",
+      cutoffs: [
+        { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
+        { name: "documents", offset: "P3D", atLocalTime: "12:00" },
+      ],
+      weekend: [6, 7],
+      roll: "preceding",
+    },
+  },
+  {
+    text: "Ship leaves New York 18:00, 4 Nov 2024. When is 2 days before, 48 hours before, and 2 days before at 17:00?",
+    widget: "showCutoffRuler",
+    // New York fell back on Sunday 3 November 2024, so the three readings
+    // land an hour apart. A spring-forward date would make PT48H and 17:00
+    // coincide.
+    args: {
+      anchor: "2024-11-04T18:00:00-05:00[America/New_York]",
+      timeZone: "America/New_York",
+      days: 2,
+      atLocalTime: "17:00",
+    },
+  },
+  {
+    text: "Gate-in closed at 17:00 on 12 June 2024 in Rotterdam. I arrive at 17:20. Am I late, and by how much?",
+    widget: "showCutoffCountdown",
+    // Rotterdam is on Europe/Amsterdam's clock. The pill pins now, so the
+    // seed is reproducible.
+    args: {
+      cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
+      now: "2024-06-12T17:20:00+02:00",
+      timeZone: "Europe/Amsterdam",
+    },
+  },
 ];
 
 /** The rail call a starter pill makes on click: a stable id per starter, so a

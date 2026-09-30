@@ -11516,6 +11516,138 @@
     ]
   },
   {
+    "url": "/reference/transport/calculate/CutoffOptions",
+    "name": "CutoffOptions",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The CutoffOptions type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffAt.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/cutoffAt",
+    "name": "cutoffAt",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "cutoffAt(anchor: string, offset: string, options: CutoffOptions): string",
+    "description": "Find a deadline stated as an offset before an anchor event, in the local time of the place",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffAt.ts",
+    "examples": [
+      {
+        "call": "cutoffAt(\"2024-06-14T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\" })",
+        "result": "\"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\""
+      },
+      {
+        "call": "cutoffAt(\"2024-06-14T16:00:00Z\", \"PT48H\", { timeZone: \"Europe/Amsterdam\" })",
+        "result": "\"2024-06-12T18:00:00+02:00[Europe/Amsterdam]\" (48 hours keeps the departure's 18:00)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-14T16:00:00Z\", \"P1D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"10:00\" })",
+        "result": "\"2024-06-13T10:00:00+02:00[Europe/Amsterdam]\""
+      },
+      {
+        "call": "cutoffAt(\"2024-11-05T17:00:00Z\", \"PT96H\", { timeZone: \"America/New_York\" })",
+        "result": "\"2024-11-01T13:00:00-04:00[America/New_York]\" (96 elapsed hours across the fall-back)"
+      },
+      {
+        "call": "cutoffAt(\"2024-03-11T22:00:00Z\", \"P2D\", { timeZone: \"America/New_York\", atLocalTime: \"17:00\" })",
+        "result": "\"2024-03-09T17:00:00-05:00[America/New_York]\" (17:00 local, across the spring-forward)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-18T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" }, roll: \"preceding\" })",
+        "result": "\"2024-06-14T17:00:00+02:00[Europe/Amsterdam]\" (Sunday rolls back to Friday)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-18T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", atLocalTime: \"17:00\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" } })",
+        "result": "\"\" (a calendar needs a roll convention)"
+      },
+      {
+        "call": "cutoffAt(\"2024-11-04T23:00:00Z\", \"P1D\", { timeZone: \"America/New_York\", atLocalTime: \"01:30\" })",
+        "result": "\"2024-11-03T01:30:00-04:00[America/New_York]\" (a repeated hour takes the earlier pass)"
+      },
+      {
+        "call": "cutoffAt(\"2024-03-11T22:00:00Z\", \"P1D\", { timeZone: \"America/New_York\", atLocalTime: \"02:30\" })",
+        "result": "\"\" (02:30 on 10 March never happened)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-14T18:00:00\", \"P2D\", { timeZone: \"Europe/Amsterdam\" })",
+        "result": "\"\" (a zoneless anchor is not a moment)"
+      },
+      {
+        "call": "cutoffAt(\"2024-06-14T16:00:00Z\", \"P2D\", { timeZone: \"Europe/Amsterdam\", roll: \"preceding\" })",
+        "result": "\"\" (a roll needs a calendar)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/calculate/Cutoff",
+    "name": "Cutoff",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The Cutoff type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffSchedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/CutoffTime",
+    "name": "CutoffTime",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The CutoffTime type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffSchedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/CutoffScheduleOptions",
+    "name": "CutoffScheduleOptions",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The CutoffScheduleOptions type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffSchedule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/cutoffSchedule",
+    "name": "cutoffSchedule",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "cutoffSchedule(anchor: string, cutoffs: Cutoff[], options: CutoffScheduleOptions): CutoffTime[]",
+    "description": "Compute a whole stack of cut-offs against one anchor event, earliest first.",
+    "sourcePath": "packages/gmt/src/transport/calculate/cutoffSchedule.ts",
+    "examples": [
+      {
+        "call": "cutoffSchedule(\"2024-06-14T16:00:00Z\", [{ name: \"gate-in\", offset: \"P1D\" }, { name: \"document\", offset: \"P2D\", atLocalTime: \"17:00\" }, { name: \"VGM\", offset: \"P1D\", atLocalTime: \"10:00\" }], { timeZone: \"Europe/Amsterdam\" })",
+        "result": "[{ name: \"document\", at: \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\" }, { name: \"VGM\", at: \"2024-06-13T10:00:00+02:00[Europe/Amsterdam]\" }, { name: \"gate-in\", at: \"2024-06-13T18:00:00+02:00[Europe/Amsterdam]\" }]"
+      },
+      {
+        "call": "cutoffSchedule(\"2024-06-18T16:00:00Z\", [{ name: \"document\", offset: \"P2D\", atLocalTime: \"17:00\" }, { name: \"VGM\", offset: \"P1D\", atLocalTime: \"10:00\" }], { timeZone: \"Europe/Amsterdam\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"Europe/Amsterdam\" }, roll: \"preceding\" })",
+        "result": "[{ name: \"document\", at: \"2024-06-14T17:00:00+02:00[Europe/Amsterdam]\" }, { name: \"VGM\", at: \"2024-06-17T10:00:00+02:00[Europe/Amsterdam]\" }] (Sunday's document cut-off rolls back to Friday)"
+      },
+      {
+        "call": "cutoffSchedule(\"2024-06-14T16:00:00Z\", [], { timeZone: \"Europe/Amsterdam\" })",
+        "result": "[]"
+      },
+      {
+        "call": "cutoffSchedule(\"2024-06-14T16:00:00Z\", [{ name: \"document\", offset: \"2 days\" }], { timeZone: \"Europe/Amsterdam\" })",
+        "result": "[]"
+      },
+      {
+        "call": "cutoffSchedule(\"2024-03-11T22:00:00Z\", [{ name: \"gate-in\", offset: \"P1D\" }, { name: \"VGM\", offset: \"P1D\", atLocalTime: \"02:30\" }], { timeZone: \"America/New_York\" })",
+        "result": "[] (02:30 on 10 March never happened)"
+      }
+    ]
+  },
+  {
     "url": "/reference/transport/calculate/Dwell",
     "name": "Dwell",
     "namespace": "transport",
@@ -11746,6 +11878,78 @@
       },
       {
         "call": "transitTime(\"2024-06-15T10:00:00Z\", \"2 hours\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/compare/isPastCutoff",
+    "name": "isPastCutoff",
+    "namespace": "transport",
+    "module": "compare",
+    "kind": "function",
+    "signature": "isPastCutoff(now: string, cutoff: string): boolean",
+    "description": "Report whether a cut-off has passed.",
+    "sourcePath": "packages/gmt/src/transport/compare/isPastCutoff.ts",
+    "examples": [
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "true"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T14:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "false"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T15:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "true (at the cut-off, the window has closed)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-11-03T01:30:00-05:00[America/New_York]\", \"2024-11-03T01:30:00-04:00[America/New_York]\")",
+        "result": "true (the second 01:30 is an hour after the first)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "false (a zoneless now is not a moment)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/compare/timeToCutoff",
+    "name": "timeToCutoff",
+    "namespace": "transport",
+    "module": "compare",
+    "kind": "function",
+    "signature": "timeToCutoff(now: string, cutoff: string): string",
+    "description": "Measure the time left until a cut-off, negative once it has passed.",
+    "sourcePath": "packages/gmt/src/transport/compare/timeToCutoff.ts",
+    "examples": [
+      {
+        "call": "timeToCutoff(\"2024-06-10T15:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "\"PT48H\""
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T13:30:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "\"PT1H30M\""
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "\"-PT1H\" (an hour past the cut-off)"
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T15:00:00Z\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "timeToCutoff(\"2024-11-02T17:00:00-04:00[America/New_York]\", \"2024-11-03T17:00:00-05:00[America/New_York]\")",
+        "result": "\"PT25H\" (across the fall-back)"
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"\")",
         "result": "\"\""
       }
     ]

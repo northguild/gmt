@@ -1,0 +1,73 @@
+/*
+ * Cut-off Countdown widget (TRAN-10). Shared marker/departure-line rules
+ * live in gmt-cutoff-widgets.css; this sheet holds the axis track (the
+ * open/closed regions and the two markers) and the rule box.
+ *
+ * The closed region is a hatch plus the word "closed", never a colour
+ * alone.
+ */
+
+.gmt-cutoff-countdown-track {
+  position: relative;
+  height: 2.5rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-cutoff-countdown-open,
+.gmt-cutoff-countdown-closed {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: var(--gmt-space-1);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cutoff-countdown-open {
+  left: 0;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-cutoff-countdown-closed {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--gmt-border) 0,
+    var(--gmt-border) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  font-style: italic;
+}
+
+.gmt-cutoff-countdown-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gmt-ice);
+}
+
+.gmt-cutoff-countdown-marker--now {
+  border-left: 2px dashed var(--gmt-ice);
+  background: none;
+}
+
+/* The "Drag now" label sits in a flex column, where .gmt-label-wide's 220px
+   flex basis would become its height; it takes its content's height here. */
+.gmt-cutoff-countdown-drag {
+  flex: none;
+}
+
+.gmt-cutoff-countdown-rule {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}

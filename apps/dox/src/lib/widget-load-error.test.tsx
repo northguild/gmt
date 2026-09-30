@@ -35,6 +35,18 @@ import {
   renderCrossingClockTemplate,
 } from "./crossing-clock-mount";
 import {
+  mountCutoffStack,
+  renderCutoffStackTemplate,
+} from "./cutoff-stack-mount";
+import {
+  mountCutoffRuler,
+  renderCutoffRulerTemplate,
+} from "./cutoff-ruler-mount";
+import {
+  mountCutoffCountdown,
+  renderCutoffCountdownTemplate,
+} from "./cutoff-countdown-mount";
+import {
   mountDwellLedger,
   renderDwellLedgerTemplate,
 } from "./dwell-ledger-mount";
@@ -105,6 +117,21 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "crossing clock",
     () => renderCrossingClockTemplate(),
     mountCrossingClock as MountFn<never>,
+  ],
+  [
+    "cutoff stack",
+    () => renderCutoffStackTemplate(),
+    mountCutoffStack as MountFn<never>,
+  ],
+  [
+    "cutoff ruler",
+    () => renderCutoffRulerTemplate(),
+    mountCutoffRuler as MountFn<never>,
+  ],
+  [
+    "cutoff countdown",
+    () => renderCutoffCountdownTemplate(),
+    mountCutoffCountdown as MountFn<never>,
   ],
 ];
 

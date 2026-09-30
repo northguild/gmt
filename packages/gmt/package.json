@@ -178,6 +178,9 @@
       "transport/calculate": [
         "./dist/transport/calculate/index.d.ts"
       ],
+      "transport/compare": [
+        "./dist/transport/compare/index.d.ts"
+      ],
       "transport/convert": [
         "./dist/transport/convert/index.d.ts"
       ],
@@ -456,6 +459,10 @@
     "./transport/calculate": {
       "types": "./dist/transport/calculate/index.d.ts",
       "default": "./dist/transport/calculate/index.js"
+    },
+    "./transport/compare": {
+      "types": "./dist/transport/compare/index.d.ts",
+      "default": "./dist/transport/compare/index.js"
     },
     "./transport/convert": {
       "types": "./dist/transport/convert/index.d.ts",

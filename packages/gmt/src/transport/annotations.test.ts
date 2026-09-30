@@ -1,14 +1,18 @@
 import {
   crossingTime,
+  cutoffAt,
+  cutoffSchedule,
   dwellTime,
   etaAtZone,
+  isPastCutoff,
   scheduleDelivery,
+  timeToCutoff,
   transitTime,
 } from "./index";
 import { hostileProxy, revokedProxy } from "../test/noThrow";
 
 /**
- * RFC 9557 annotations on a transport instant, read by all five functions.
+ * RFC 9557 annotations on a transport instant, read by every transport function.
  *
  * RFC 9557 §3.3: an elective annotation with an unknown key is ignored and a critical one
  * (`!`) is rejected; `u-ca` is a known key, so a calendar is accepted either way. A time-zone
@@ -65,6 +69,24 @@ describe("transport annotations (RFC 9557)", () => {
               exit: "2024-06-15T10:00:00+00:00[UTC]",
             }
           : null,
+      );
+      // The cut-off functions read only the instant, as etaAtZone does: the bracket never
+      // supplies the zone, so one that does not exist is ignored.
+      expect(cutoffAt(value, "PT1H", { timeZone: "UTC" })).toBe(
+        instantAccepted ? "2024-06-15T09:00:00+00:00[UTC]" : "",
+      );
+      expect(
+        cutoffSchedule(value, [{ name: "gate-in", offset: "PT1H" }], {
+          timeZone: "UTC",
+        }),
+      ).toEqual(
+        instantAccepted
+          ? [{ name: "gate-in", at: "2024-06-15T09:00:00+00:00[UTC]" }]
+          : [],
+      );
+      expect(isPastCutoff(value, departure)).toBe(instantAccepted);
+      expect(timeToCutoff(departure, value)).toBe(
+        instantAccepted ? "PT0S" : "",
       );
       // The departure reads its bracket, so scheduleDelivery accepts exactly what transitTime
       // accepts; the arrival instant (10:00Z + 1h) is the same whatever zone rendered the input.
@@ -152,6 +174,35 @@ describe("transport functions never throw", () => {
             [{ departure: ok, duration: "PT1H", timeZone: "UTC" }],
             make() as never,
           ),
+        () => cutoffAt(make() as never, "P1D", { timeZone: "UTC" }),
+        () => cutoffAt(ok, make() as never, { timeZone: "UTC" }),
+        () => cutoffAt(ok, "P1D", make() as never),
+        () => cutoffAt(ok, "P1D", { timeZone: make() as never }),
+        () =>
+          cutoffAt(ok, "P1D", {
+            timeZone: "UTC",
+            atLocalTime: make() as never,
+          }),
+        () =>
+          cutoffAt(ok, "P1D", { timeZone: "UTC", calendar: make() as never }),
+        () =>
+          cutoffAt(ok, "P1D", {
+            timeZone: "UTC",
+            calendar: { weekend: [6, 7], holidays: [], timeZone: "UTC" },
+            roll: make() as never,
+          }),
+        () => cutoffSchedule(ok, make() as never, { timeZone: "UTC" }),
+        () => cutoffSchedule(ok, [make()] as never, { timeZone: "UTC" }),
+        () =>
+          cutoffSchedule(ok, [{ name: make() as never, offset: "P1D" }], {
+            timeZone: "UTC",
+          }),
+        () =>
+          cutoffSchedule(ok, [{ name: "a", offset: "P1D" }], make() as never),
+        () => isPastCutoff(make() as never, ok),
+        () => isPastCutoff(ok, make() as never),
+        () => timeToCutoff(make() as never, ok),
+        () => timeToCutoff(ok, make() as never),
       ]) {
         expect(call).not.toThrow();
       }
@@ -160,6 +211,12 @@ describe("transport functions never throw", () => {
       expect(dwellTime(ok, ok, make() as never)).toBeNull();
       expect(crossingTime(ok, ok, make() as never)).toBeNull();
       expect(scheduleDelivery([make()] as never)).toBeNull();
+      expect(cutoffAt(ok, "P1D", make() as never)).toBe("");
+      expect(
+        cutoffSchedule(ok, [{ name: "a", offset: "P1D" }], make() as never),
+      ).toEqual([]);
+      expect(isPastCutoff(ok, make() as never)).toBe(false);
+      expect(timeToCutoff(make() as never, ok)).toBe("");
     },
   );
 });

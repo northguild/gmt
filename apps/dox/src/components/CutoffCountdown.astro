@@ -1,0 +1,31 @@
+---
+/**
+ * Cut-off Countdown widget (TRAN-10).
+ *
+ * `isPastCutoff` and `timeToCutoff` compared against the viewer's clock or a
+ * dragged time, with the half-open rule shown.
+ *
+ * **The markup and the wiring both live in `lib/cutoff-countdown-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+import { renderCutoffCountdownTemplate } from "../lib/cutoff-countdown-mount";
+---
+
+<Fragment set:html={renderCutoffCountdownTemplate()} />
+
+<script>
+  import { mountCutoffCountdown } from "../lib/cutoff-countdown-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("cutoffcountdown");
+    document
+      .querySelectorAll<HTMLElement>(".gmt-cutoff-countdown")
+      .forEach((el) => {
+        mountCutoffCountdown(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

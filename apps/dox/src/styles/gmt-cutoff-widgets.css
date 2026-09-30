@@ -1,0 +1,226 @@
+/*
+ * Shared rules for the three cut-off widgets (TRAN-10): the Cut-off Stack,
+ * the Cut-off Ruler and the Cut-off Countdown.
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels/inputs/selects in gmt-form-controls.css; the leg fieldset grid, the
+ * verdict line and the reason-aside spacing are reused unscoped from
+ * gmt-transport-widgets.css. This sheet holds what is new here: the lane
+ * grid, day columns, the closed-day pattern (a hatch plus the word
+ * "closed", never colour alone), markers (solid for where a cut-off closes,
+ * hollow for where it would have been), the departure line and the axis
+ * tick labels.
+ *
+ * Tokens only; no colour literal. Amber is reserved for the sentinel state
+ * alone — nothing here uses it.
+ */
+
+.gmt-cutoff-weekday {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  margin-right: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cutoff-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  margin: var(--gmt-space-2) 0;
+}
+
+.gmt-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+/* ---------------------------------------------------------------------------
+ * The timeline / ruler / axis surface — a plain grid of divs, never a
+ * focusable control of its own (§0: nothing inside a drawn timeline, ruler
+ * or axis is focusable).
+ * --------------------------------------------------------------------------- */
+
+.gmt-cutoff-stack-timeline,
+.gmt-cutoff-ruler-overview,
+.gmt-cutoff-ruler-closeup,
+.gmt-cutoff-countdown-axis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  overflow-x: auto;
+}
+
+/* The label column and the exact-time track share one width across every
+   row — the axis row and every lane row — so a percent position in any
+   track lands at the same real instant in every one of them. */
+.gmt-cutoff-stack-axis-row,
+.gmt-cutoff-stack-lane {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cutoff-stack-row-spacer {
+  min-width: 6rem;
+}
+
+.gmt-cutoff-stack-axis {
+  position: relative;
+  height: 2.4rem;
+}
+
+/* Each day column is positioned and sized by its own real bounds
+   (`dayBoundsFor`, from the polyfill's `startOfDay`), so a 23- or 25-hour
+   DST day draws at its real proportional width, never a fixed share. */
+.gmt-cutoff-stack-day {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: var(--gmt-space-1);
+  border-left: 1px solid var(--gmt-border);
+  font-size: var(--gmt-text-xs);
+  text-align: left;
+  color: var(--gmt-ice-dim);
+  overflow: hidden;
+}
+
+/* The closed-day hatch: a repeating diagonal stripe, plus the word "closed"
+   — the pattern and the text both carry the meaning, never a fill colour
+   alone. */
+.gmt-cutoff-stack-day--closed {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--gmt-border) 0,
+    var(--gmt-border) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+}
+
+.gmt-cutoff-stack-day-label,
+.gmt-cutoff-stack-day-closed {
+  display: block;
+  white-space: nowrap;
+}
+
+.gmt-cutoff-stack-day-closed {
+  font-style: italic;
+}
+
+.gmt-cutoff-stack-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-cutoff-stack-lane-label {
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-cutoff-stack-lane-track {
+  position: relative;
+  height: 1.4rem;
+}
+
+.gmt-cutoff-stack-lane-time {
+  position: absolute;
+  top: 1.2rem;
+  transform: translateX(6px);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* Solid marker: where a cut-off closes. Hollow marker: where it would have
+   closed with no calendar. Shape (filled circle vs. ringed circle), not
+   colour, is what tells the two apart. */
+.gmt-cutoff-stack-marker,
+.gmt-cutoff-ruler-marker {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--gmt-ice);
+}
+
+.gmt-cutoff-stack-marker {
+  position: absolute;
+  top: 0.3rem;
+  transform: translateX(-50%);
+}
+
+.gmt-cutoff-stack-marker--solid {
+  background: var(--gmt-ice);
+}
+
+.gmt-cutoff-stack-marker--hollow {
+  background: transparent;
+  border-style: dashed;
+}
+
+.gmt-cutoff-stack-connector {
+  position: absolute;
+  top: 0.1rem;
+  transform: translateX(-50%);
+  color: var(--gmt-ice-dim);
+}
+
+/* The departure instant, drawn as one vertical line repeated at the same
+   percent in the axis track and every lane track — stacked with no gap
+   between rows, the repeated segments read as one continuous line. */
+.gmt-cutoff-stack-departure-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--gmt-ice);
+}
+
+.gmt-cutoff-stack-departure-line,
+.gmt-cutoff-ruler-departure-line,
+.gmt-cutoff-countdown-departure-line {
+  padding-top: var(--gmt-space-1);
+  border-top: 2px solid var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* Axis tick labels, shared by the ruler and the countdown's axis. Each sits
+   in a `position: relative` ticks row of its own, positioned by the `left`
+   percent the mount writes inline, and never overlaps the drawn surface
+   above it (§0: nothing inside a drawn timeline, ruler or axis is
+   focusable — ticks are plain text, not controls). */
+.gmt-cutoff-axis-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-2px);
+  font-size: var(--gmt-text-xs);
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-cutoff-countdown-ticks {
+  position: relative;
+  height: 1.2rem;
+}
+
+/* Nothing in a drawn surface animates or transitions. */
+.gmt-cutoff-stack-timeline,
+.gmt-cutoff-ruler-overview,
+.gmt-cutoff-ruler-closeup,
+.gmt-cutoff-countdown-axis,
+.gmt-cutoff-stack-marker,
+.gmt-cutoff-ruler-marker,
+.gmt-cutoff-countdown-marker {
+  transition: none;
+  animation: none;
+}
