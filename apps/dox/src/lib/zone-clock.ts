@@ -11,8 +11,9 @@
  *
  * Two of those calls are cached, because the globe's clock list reads every
  * visible row once a second and the polyfill is not cheap. See the caches
- * below: both are keyed so that they expire exactly when their answer can
- * change, never on a timer and never on a guess.
+ * below: both are keyed so that an entry goes stale exactly when its answer can
+ * change, never on a timer and never on a guess. That is a claim about
+ * correctness, not memory: no entry is ever removed (see `IN_DST`).
  *
  * A sentinel return (`""` from a gmt function) surfaces as `ok: false`, which
  * the widgets render as the design system's "signal lost" state rather than a
@@ -96,6 +97,12 @@ function observesDstCached(id: string): boolean {
  *
  * A zone still recomputes at most once per transition per year rather than
  * once per second, which is the whole point of the cache.
+ *
+ * It is never cleared. Unlike `OBSERVES_DST`, whose ~420 keys are a hard
+ * ceiling, this key space is open: the scrubber takes any anchor date, so a
+ * reader dragging across a century adds an entry per zone, year and offset
+ * visited. That is tens of thousands of short strings at most, which a docs
+ * page can afford, so there is deliberately no eviction.
  */
 const IN_DST = new Map<string, boolean>();
 
