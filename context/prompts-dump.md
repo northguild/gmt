@@ -1,1 +1,0 @@
-1. Evaluate ALL of the tools pages for english clarity. Many are good, but double-check. For example - on ETA Drift chart - `DSCA` - i have no idea what this is, so dont assume acronyms are just understood.
