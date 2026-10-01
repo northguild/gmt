@@ -1,13 +1,13 @@
 /**
- * The industry a tool belongs to: the tag under a tool page's title and the
- * group it sits under on the tools index.
+ * The industry a page belongs to: the tag under the title of a tool, a scenario
+ * or a guide, and the group a tool sits under on the tools index.
  *
  * The tags are the library's own industry layers, one to one, plus `core` for a
- * tool that runs on core functions alone and so suits any industry. The layer
+ * page about core functions alone, which suit any industry. The layer
  * ids come from `gmt-stats.json`, never a list typed here, so a tag always means
- * "this tool runs on `@northguild/gmt/<id>`". `DETAILS` below holds only what
+ * "this page is about `@northguild/gmt/<id>`". `DETAILS` below holds only what
  * the stats cannot know: the word, the one-line definition and the glyph. A
- * layer that ships with no entry here fails `tool-industries.test.ts`.
+ * layer that ships with no entry here fails `industry-tags.test.ts`.
  *
  * A leaf module apart from the stats: `content.config.ts` and
  * `scripts/build-tool-index.ts` both import it, so it must not reach anything
@@ -16,12 +16,12 @@
 
 import { gmtStats } from "../data/gmt-stats";
 
-export interface ToolIndustry {
+export interface IndustryTag {
   id: string;
-  /** The word on the tag. Lower-cased, it is the id: the index anchors on it. */
+  /** The word on the tag. */
   label: string;
-  /** One line saying what the tag covers. The tag's tooltip and the index's
-   *  group description. */
+  /** One line saying what the tag covers. The tag's tooltip and the tools
+   *  index's group description. */
   definition: string;
   /** A name in `Icon.astro`'s dictionary. */
   icon: string;
@@ -29,14 +29,13 @@ export interface ToolIndustry {
   guide?: string;
 }
 
-/** The tag for a tool that runs on core functions alone. */
+/** The tag for a page about core functions alone. */
 export const CORE_INDUSTRY = "core";
 
-const DETAILS: Readonly<Record<string, Omit<ToolIndustry, "id">>> = {
+const DETAILS: Readonly<Record<string, Omit<IndustryTag, "id">>> = {
   [CORE_INDUSTRY]: {
     label: "Core",
-    definition:
-      "Zones, daylight saving and intervals: the core functions every industry uses.",
+    definition: "The core functions, which every industry uses.",
     icon: "industry-core",
   },
   transport: {
@@ -56,24 +55,31 @@ const DETAILS: Readonly<Record<string, Omit<ToolIndustry, "id">>> = {
 
 /** Every tag id, in display order: core first, then the layers as the stats
  *  list them. */
-export const TOOL_INDUSTRY_IDS: readonly string[] = [
+export const INDUSTRY_TAG_IDS: readonly string[] = [
   CORE_INDUSTRY,
   ...gmtStats.industries,
 ];
 
-export function isToolIndustryId(id: string): boolean {
-  return TOOL_INDUSTRY_IDS.includes(id) && Object.hasOwn(DETAILS, id);
+export function isIndustryTagId(id: string): boolean {
+  return INDUSTRY_TAG_IDS.includes(id) && Object.hasOwn(DETAILS, id);
 }
 
 /** The tag for an id, or `undefined` for one that is not a known industry. */
-export function toolIndustry(id: string): ToolIndustry | undefined {
-  if (!isToolIndustryId(id)) return undefined;
+export function industryTag(id: string): IndustryTag | undefined {
+  if (!isIndustryTagId(id)) return undefined;
   return { id, ...DETAILS[id]! };
 }
 
-/** Where a tag leads: its group on the tools index. */
-export function toolIndustryHref(id: string): string {
-  return `/tools/#${id}`;
+/**
+ * The labels for a page's `industries` as its raw frontmatter states them
+ * (`[transport]`), for the Markdown export, which reads frontmatter as text.
+ * Unknown ids are dropped; a page with none gives an empty list.
+ */
+export function industryLabels(frontmatterValue: string | undefined): string[] {
+  return (frontmatterValue ?? "")
+    .replace(/^\[|\]$/g, "")
+    .split(",")
+    .flatMap((id) => industryTag(id.trim())?.label ?? []);
 }
 
 const STROKE =

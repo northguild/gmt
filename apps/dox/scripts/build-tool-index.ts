@@ -7,10 +7,9 @@
  * writes a generated index.mdx that lists every tool under its industry.
  *
  * The page is plain Markdown on purpose: headings, a line of text and a list of
- * links. That gives each industry a heading the tags on a tool page can link
- * to (`/tools/#transport`), puts the groups in the table of contents, and
- * exports to the `.md` routes as it stands, with no component for the Markdown
- * exporter to learn.
+ * links. That puts the groups in the table of contents, and exports to the
+ * `.md` routes as it stands, with no component for the Markdown exporter to
+ * learn.
  *
  * Run as: tsx apps/dox/scripts/build-tool-index.ts
  */
@@ -19,7 +18,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { TOOL_INDUSTRY_IDS, toolIndustry } from "../src/lib/tool-industries";
+import { INDUSTRY_TAG_IDS, industryTag } from "../src/lib/industry-tags";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const toolsDir = resolve(appRoot, "src", "content", "docs", "tools");
@@ -62,8 +61,8 @@ const tools = readdirSync(toolsDir)
   .map(readTool)
   .sort((a, b) => a.title.localeCompare(b.title, "en"));
 
-const sections = TOOL_INDUSTRY_IDS.flatMap((id) => {
-  const industry = toolIndustry(id);
+const sections = INDUSTRY_TAG_IDS.flatMap((id) => {
+  const industry = industryTag(id);
   const members = tools.filter((tool) => tool.industries.includes(id));
   if (!industry || members.length === 0) return [];
   const guide = industry.guide ? ` [Read the guide](${industry.guide}).` : "";

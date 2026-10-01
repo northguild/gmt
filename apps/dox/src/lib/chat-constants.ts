@@ -355,12 +355,16 @@ import {
 
 export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
 
-/* The areas the example cards in the widget rail are grouped under. Defined in
-   a leaf module so the Markdown exporter can read them without importing this
-   file's generated corpus counts — see example-areas.ts for why that matters. */
-import { EXAMPLE_AREAS, type ExampleArea } from "./example-areas";
+/** The areas the example cards in the widget rail are grouped under, in
+ * display order. */
+export const EXAMPLE_AREAS = [
+  { id: "zones", label: "Zones and DST" },
+  { id: "intervals", label: "Intervals" },
+  { id: "transport", label: "Transport" },
+  { id: "intermodal", label: "Intermodal and billing" },
+] as const;
 
-export { EXAMPLE_AREAS, type ExampleArea };
+export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
 
 /**
  * The example cards in the widget rail.

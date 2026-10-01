@@ -1,21 +1,21 @@
 ---
 /**
- * The industry tags under a tool page's title: an icon and a word each, linking
- * to that industry's group on the tools index.
+ * The industry tags under a page's title: an icon and a word each. They are
+ * labels, not links: there is no page per industry for one to lead to.
  *
  * One style for every industry. The word carries the meaning and the icon backs
  * it up; no industry has a colour of its own, because colour never says anything
  * alone here and there will be more industries than accents. Core is the quiet
  * variant, since it is the absence of an industry rather than one more of them.
  */
-import { CORE_INDUSTRY, toolIndustry, toolIndustryHref } from "../lib/tool-industries";
+import { CORE_INDUSTRY, industryTag } from "../lib/industry-tags";
 import Icon from "./Icon.astro";
 
 interface Props {
   industries: readonly string[];
 }
 
-const tags = Astro.props.industries.flatMap((id) => toolIndustry(id) ?? []);
+const tags = Astro.props.industries.flatMap((id) => industryTag(id) ?? []);
 ---
 
 {
@@ -23,18 +23,16 @@ const tags = Astro.props.industries.flatMap((id) => toolIndustry(id) ?? []);
     <ul class="gmt-industry-tags not-content" aria-label="Industry">
       {tags.map((tag) => (
         <li>
-          <a
+          <span
             class:list={[
               "gmt-industry-tag",
-              "gmt-sonar-focus",
               tag.id === CORE_INDUSTRY && "gmt-industry-tag--core",
             ]}
-            href={toolIndustryHref(tag.id)}
             title={tag.definition}
           >
             <Icon name={tag.icon} size="14px" />
             <span>{tag.label}</span>
-          </a>
+          </span>
         </li>
       ))}
     </ul>

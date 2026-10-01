@@ -38,7 +38,11 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       return {
         title,
         url: `${base}/${rel}.md`,
-        markdown: pageToMarkdown({ title, body: md }),
+        markdown: pageToMarkdown({
+          title,
+          body: md,
+          industries: data.industries,
+        }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
@@ -59,7 +63,11 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       return {
         title,
         url: `${base}/${rel}.md`,
-        markdown: pageToMarkdown({ title, body: md }),
+        markdown: pageToMarkdown({
+          title,
+          body: md,
+          industries: data.industries,
+        }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
@@ -80,7 +88,11 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       return {
         title,
         url: `${base}/${rel}.md`,
-        markdown: pageToMarkdown({ title, body: md }),
+        markdown: pageToMarkdown({
+          title,
+          body: md,
+          industries: data.industries,
+        }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
@@ -94,7 +106,11 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     return {
       title: data.title ?? slug,
       url: `${base}/${slug}.md`,
-      markdown: pageToMarkdown({ title: data.title ?? slug, body: md }),
+      markdown: pageToMarkdown({
+        title: data.title ?? slug,
+        body: md,
+        industries: data.industries,
+      }),
     };
   });
 
@@ -113,7 +129,11 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       return {
         title: data.title ?? rel,
         url: `${base}/${slug}.md`,
-        markdown: pageToMarkdown({ title: data.title ?? rel, body: md }),
+        markdown: pageToMarkdown({
+          title: data.title ?? rel,
+          body: md,
+          industries: data.industries,
+        }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)

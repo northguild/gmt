@@ -23,7 +23,6 @@ import {
   handledInGmt,
   unaffectingGmt,
 } from "../data/upstream-filings";
-import { exampleAreaLabel } from "./example-areas";
 import { contributionClause, coverageClause } from "./upstream-summary";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
@@ -284,15 +283,16 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "Scenario", renderScenario);
 
   // A tool page's layout: the key point, the intro, the widget and the trailing text, each in a
-  // named slot. On the page the key point is a titled aside naming its area and use case; here
-  // that title becomes a line of text so the takeaway survives as prose. Run before the wrapper
-  // pass below, which is what unwraps the `<Fragment slot>` children this leaves in place.
-  out = replaceElements(out, "ToolLayout", (props, children) => {
-    const about = [exampleAreaLabel(props.area ?? ""), props.useCase]
-      .filter(Boolean)
-      .join(", ");
-    return `\n**Key point${about ? ` — ${about}` : ""}**\n${children}`;
-  });
+  // named slot. On the page the key point is a titled aside naming its use case; here that title
+  // becomes a line of text so the takeaway survives as prose. The industry is not named here: it
+  // is the page's, stated under its title (`pageToMarkdown`). Run before the wrapper pass below,
+  // which is what unwraps the `<Fragment slot>` children this leaves in place.
+  out = replaceElements(
+    out,
+    "ToolLayout",
+    (props, children) =>
+      `\n**Key point${props.useCase ? ` — ${props.useCase}` : ""}**\n${children}`,
+  );
 
   for (const wrapper of [
     "GridSection",

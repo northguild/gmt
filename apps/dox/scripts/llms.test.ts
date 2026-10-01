@@ -335,7 +335,7 @@ Note about installation.
     });
 
     it("renders a tool page's layout to prose, its key point named and its widget gone", () => {
-      const input = `<ToolLayout area="transport" useCase="multi-leg freight ETAs">
+      const input = `<ToolLayout useCase="multi-leg freight ETAs">
   <Fragment slot="keypoint">Every handoff is an exact instant.</Fragment>
   <Fragment slot="intro">Each leg is a departure, a duration and a zone.</Fragment>
 
@@ -344,9 +344,7 @@ Note about installation.
   <Fragment slot="after">**Worth trying:** a missed connection.</Fragment>
 </ToolLayout>`;
       const result = stripMdx(input, { gmtVersion: "1.0.0" });
-      expect(result).toContain(
-        "**Key point — Transport, multi-leg freight ETAs**",
-      );
+      expect(result).toContain("**Key point — multi-leg freight ETAs**");
       expect(result).toContain("Every handoff is an exact instant.");
       expect(result).toContain(
         "Each leg is a departure, a duration and a zone.",

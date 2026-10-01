@@ -33,8 +33,8 @@
  *
  * The label inside the key point is the use case alone. The page's industry
  * tags sit under its title, directly above, and naming the area here as well
- * said it twice. `area` (lib/example-areas.ts) is still taken, because the
- * Markdown export has no tags and names the area in the key point's line.
+ * said it twice. The Markdown export names the industry under the page's title
+ * the same way (`pageToMarkdown`, lib/page-markdown.ts), from the frontmatter.
  * Every slot is optional, so a page with no intro simply has no top row.
  *
  * This component must also be known to the Markdown exporter
@@ -42,10 +42,8 @@
  * `.md` routes; the tests in scripts/llms.test.ts fail if it is not.
  */
 import { Aside } from "@astrojs/starlight/components";
-import type { ExampleArea } from "../lib/example-areas";
 
 interface Props {
-  area: ExampleArea;
   /** What the tool is for, as a short noun phrase: "terminal cut-offs". */
   useCase: string;
 }

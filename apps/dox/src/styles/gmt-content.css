@@ -384,7 +384,8 @@ dialog > .dialog-frame {
 }
 
 /* ---------------------------------------------------------------------------
- * Industry tags — the row under a tool page's title (IndustryTags.astro).
+ * Industry tags — the row under the title of a tool, a scenario or a guide
+ * (IndustryTags.astro).
  *
  * `.gmt-transport-badge`'s shape with an icon in it: a bevelled outline, the
  * teal fill and the label in the body colour. Every industry looks the same.
@@ -414,7 +415,6 @@ dialog > .dialog-frame {
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
-  text-decoration: none;
   color: var(--gmt-ice);
   background: var(--gmt-fill);
 }
@@ -423,23 +423,8 @@ dialog > .dialog-frame {
   flex: none;
 }
 
-.gmt-industry-tag:hover {
-  border-color: var(--gmt-cyan);
-}
-
 /* Core is not one more industry but the lack of one, so its tag is the quiet
    one: the same outline with no fill behind it. */
 .gmt-industry-tag--core {
   background: transparent;
-}
-
-@media (forced-colors: active) {
-  .gmt-industry-tag {
-    border-color: LinkText;
-  }
-
-  .gmt-industry-tag:focus {
-    outline: 2px solid Highlight;
-    outline-offset: 2px;
-  }
 }

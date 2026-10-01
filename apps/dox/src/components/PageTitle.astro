@@ -1,7 +1,7 @@
 ---
 // Override of Starlight's PageTitle that puts a page's industry tags under its
-// title. Only a tool page declares `industries` (content.config.ts), so every
-// other page renders the default title and nothing else.
+// title. A tool, a scenario or a guide declares `industries` (content.config.ts);
+// a page that does not renders the default title and nothing else.
 import Default from '@astrojs/starlight/components/PageTitle.astro';
 import IndustryTags from './IndustryTags.astro';
 

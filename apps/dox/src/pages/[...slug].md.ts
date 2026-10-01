@@ -25,7 +25,14 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
   const slug = data.slug ?? rel; // reference pages carry explicit slug:
   const md = stripMdx(body, { gmtVersion, values });
   return [
-    { slug, markdown: pageToMarkdown({ title: data.title ?? slug, body: md }) },
+    {
+      slug,
+      markdown: pageToMarkdown({
+        title: data.title ?? slug,
+        body: md,
+        industries: data.industries,
+      }),
+    },
   ];
 });
 
