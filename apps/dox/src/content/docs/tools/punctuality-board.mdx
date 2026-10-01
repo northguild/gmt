@@ -1,0 +1,33 @@
+---
+title: Punctuality Board
+description: "Was it late, by how much, and what share was on time? scheduleDeviation, classifyPunctuality and punctualityRate judge a set of arrivals against a tolerance you drag: both edges outside, early optional, and no default."
+---
+
+import PunctualityBoard from "../../../components/PunctualityBoard.astro";
+
+The tolerance is yours. GMT holds no default, because "on time" means nothing
+until someone states how late is too late. Both edges belong to the outside: an
+arrival exactly on the late edge is late, and one exactly on the early edge is
+early. Drag the band and watch the rows change their word.
+
+A rate travels with its tolerance. The same six arrivals are 2 of 6 on time
+under one tolerance and 4 of 6 under another. Turn on the second tolerance to
+see both at once.
+
+<PunctualityBoard />
+
+**Worth trying:** [a 10-minute early
+tolerance](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fifteen-minute%22%2C%22early%22%3A%22PT10M%22%7D)
+turns the 12-minute early arrival from on time to early. Then [the fall-back
+night](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fall-back%22%7D),
+where the station clock shows no delay and the train was an hour late. Then
+[60 and 120 minutes side by
+side](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22sixty-and-120%22%7D).
+
+Reference: [`scheduleDeviation`](/reference/transport/compare/scheduleDeviation/),
+[`classifyPunctuality`](/reference/transport/compare/classifyPunctuality/) and
+[`punctualityRate`](/reference/transport/calculate/punctualityRate/) are the
+three calls behind every reading here. See the guide's
+[tolerance section](/guides/industries/transport-punctuality-and-timestamps/#on-time-needs-a-stated-tolerance-classifypunctuality)
+and its
+[rate section](/guides/industries/transport-punctuality-and-timestamps/#a-rate-is-a-count-under-one-tolerance-punctualityrate).

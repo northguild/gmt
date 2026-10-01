@@ -1,0 +1,174 @@
+/*
+ * ETA Drift Chart widget (TRAN-57).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, ranges and chips in gmt-form-controls.css; the drawn frame, class
+ * chip, naive outline and results table in gmt-punctuality-widgets.css. This
+ * sheet draws the plot: x is when each record was recorded, y is the time it
+ * names (later at the top), at a fixed height.
+ *
+ * A mark's shape carries its class: ACT a filled diamond, PLN a filled square,
+ * REQ a triangle, EST a hollow circle. The best pick has a solid ring, the
+ * naive pick a dashed one, and each says so in words. Nothing here is a success
+ * or an error hue; tokens only.
+ */
+
+.gmt-eta-plot {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-rows: 240px auto;
+  column-gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-eta-yaxis {
+  position: relative;
+}
+
+.gmt-eta-ytick {
+  position: absolute;
+  right: 0;
+  translate: 0 -50%;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-eta-area {
+  position: relative;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-eta-xticks {
+  grid-column: 2;
+  height: 1.2rem;
+  margin-top: var(--gmt-space-1);
+}
+
+.gmt-eta-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gmt-eta-grid {
+  stroke: var(--gmt-border);
+  stroke-width: 1;
+}
+
+.gmt-eta-line {
+  fill: none;
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1;
+}
+
+.gmt-eta-chord {
+  stroke: var(--gmt-ice);
+  stroke-width: 2;
+  stroke-dasharray: 6 3;
+}
+
+/* The tolerance band: a tint with solid edges, and its words under the plot. */
+.gmt-eta-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-block: 1px solid var(--gmt-cyan);
+  background: color(from var(--gmt-cyan) srgb r g b / 0.12);
+}
+
+.gmt-eta-mark,
+.gmt-eta-ring {
+  position: absolute;
+  box-sizing: border-box;
+  translate: -50% -50%;
+  color: var(--gmt-ice);
+}
+
+.gmt-eta-mark {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.gmt-eta-mark--act {
+  background: currentColor;
+  rotate: 45deg;
+}
+
+.gmt-eta-mark--pln {
+  background: currentColor;
+}
+
+.gmt-eta-mark--est {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--gmt-void);
+}
+
+.gmt-eta-mark--req svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gmt-eta-ring {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.gmt-eta-ring--dashed {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-width: 1px;
+  border-style: dashed;
+}
+
+/* A label sits beside its mark until the mount measures it and places it. */
+.gmt-eta-label {
+  position: absolute;
+  display: block;
+  width: max-content;
+  max-width: 9rem;
+  translate: var(--gmt-space-2) -50%;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  /* A long label ("best available, naive") wraps to two short lines, which
+     the placer can fit beside a mark where one long line would not. */
+  white-space: normal;
+  /* Opaque, and later in the drawing than the lines, so a line behind a label
+     never crosses its glyphs. */
+  padding-inline: var(--gmt-space-1);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+}
+
+.gmt-eta-label--placed {
+  translate: none;
+}
+
+.gmt-eta-signal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+@container (max-width: 30rem) {
+  .gmt-eta-plot {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    column-gap: var(--gmt-space-1);
+  }
+}

@@ -1,0 +1,128 @@
+/*
+ * Departure Board widget (TRAN-57).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, chips and the `.gmt-handle` grip in gmt-form-controls.css; the drawn
+ * frame, tick row, hatch and naive outline in gmt-punctuality-widgets.css and
+ * gmt-cutoff-widgets.css. This sheet draws the rail: an exact-time axis with a
+ * tick for each departure, the connection bar, and the made and naive
+ * departures.
+ *
+ * The made departure is a tall solid tick; the naive one a dashed outline. The
+ * end of a service window is an open bracket, the start a closed one. Each says
+ * so in words as well. Nothing here is a success or an error hue; tokens only.
+ */
+
+.gmt-dep-stage {
+  /* Half a handle plus its border, so the handle at either end stays inside the
+     frame; the rail, the handle and the tick row share the inset. */
+  --dep-inset: calc(var(--gmt-handle-w) / 2 + 2px);
+  position: relative;
+  height: 9rem;
+  margin-inline: var(--dep-inset);
+}
+
+.gmt-dep-ticks {
+  margin-inline: var(--dep-inset);
+  height: 1.2rem;
+}
+
+.gmt-dep-rail {
+  position: absolute;
+  inset: 0;
+  color: var(--gmt-ice);
+}
+
+.gmt-dep-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--gmt-border-strong);
+}
+
+.gmt-dep-stage > .gmt-handle {
+  color: var(--gmt-ice);
+}
+
+.gmt-dep-stage > .gmt-handle[hidden] {
+  display: none;
+}
+
+/* The connection bar: the time the arrival needs, hatched. */
+.gmt-dep-conn,
+.gmt-dep-run {
+  position: absolute;
+  top: calc(50% - 0.4rem);
+  height: 0.8rem;
+  box-sizing: border-box;
+  border: 1px solid currentColor;
+}
+
+.gmt-dep-run {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-dep-tick {
+  position: absolute;
+  top: calc(50% - 0.45rem);
+  height: 0.9rem;
+  border-left: 2px solid var(--gmt-ice-dim);
+  translate: -1px 0;
+}
+
+/* The departure the library returned. */
+.gmt-dep-tick--made {
+  top: calc(50% - 1.2rem);
+  height: 2.4rem;
+  border-left: 4px solid var(--gmt-ice);
+  translate: -2px 0;
+}
+
+/* The naive departure: a dashed outline around where it falls. */
+.gmt-dep-naive {
+  position: absolute;
+  top: calc(50% - 1.1rem);
+  height: 2.2rem;
+  width: 1rem;
+  box-sizing: border-box;
+  border: 1px dashed var(--gmt-ice);
+  border-radius: var(--gmt-radius-sm);
+  translate: -50% 0;
+}
+
+/* The window's two ends: from is a closed bracket, to an open one. */
+.gmt-dep-bracket {
+  position: absolute;
+  top: calc(50% - 1rem);
+  height: 2rem;
+  width: 0.5rem;
+  box-sizing: border-box;
+  border: 2px solid var(--gmt-ice);
+}
+
+.gmt-dep-bracket--from {
+  border-right: none;
+}
+
+.gmt-dep-bracket--to {
+  border-style: dashed;
+  border-left-style: none;
+  translate: -100% 0;
+}
+
+.gmt-dep-label {
+  position: absolute;
+  translate: var(--gmt-space-2) -50%;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+  padding-inline: var(--gmt-space-1);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+}
+
+.gmt-dep-label--placed {
+  translate: none;
+}

@@ -39,6 +39,12 @@ export default defineConfig({
       },
     },
     plugins: [tailwindcss()],
+    // One dependency cache per dev server. Two `astro dev` processes sharing
+    // node_modules/.vite re-optimise each other's deps, and the first server
+    // then answers 504 "Outdated Optimize Dep" for every pre-bundled import
+    // (the globe's @tanstack/virtual-core first). A second server on the
+    // same checkout sets DOX_VITE_CACHE_DIR to a folder of its own.
+    cacheDir: process.env.DOX_VITE_CACHE_DIR || undefined,
     optimizeDeps: {
       // Astro points Vite's startup dependency scan at .jsx/.tsx/.vue/.svelte/
       // .html only. Every widget, chart and globe is an .astro <script> into a
@@ -250,6 +256,10 @@ export default defineConfig({
         "./src/styles/gmt-cutoff-stack.css", // Cut-off Stack widget (TRAN-10)
         "./src/styles/gmt-cutoff-ruler.css", // Cut-off Ruler widget (TRAN-10)
         "./src/styles/gmt-cutoff-countdown.css", // Cut-off Countdown widget (TRAN-10)
+        "./src/styles/gmt-punctuality-widgets.css", // Punctuality widgets, shared (TRAN-57)
+        "./src/styles/gmt-punctuality-board.css", // Punctuality Board widget (TRAN-57)
+        "./src/styles/gmt-eta-drift.css", // ETA Drift Chart widget (TRAN-57)
+        "./src/styles/gmt-departure-board.css", // Departure Board widget (TRAN-57)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

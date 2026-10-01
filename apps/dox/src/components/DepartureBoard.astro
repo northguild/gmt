@@ -1,0 +1,31 @@
+---
+/**
+ * Departure Board widget (TRAN-57).
+ *
+ * `nextDeparture` reading a timetable after an arrival plus the time it takes to
+ * connect.
+ *
+ * **The markup and the wiring both live in `lib/departure-board-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+import { renderDepartureBoardTemplate } from "../lib/departure-board-mount";
+---
+
+<Fragment set:html={renderDepartureBoardTemplate()} />
+
+<script>
+  import { mountDepartureBoard } from "../lib/departure-board-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("departure");
+    document
+      .querySelectorAll<HTMLElement>(".gmt-departure-board")
+      .forEach((el) => {
+        mountDepartureBoard(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

@@ -355,8 +355,19 @@ import {
 
 export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
 
+/** The areas the example cards in the widget rail are grouped under, in
+ * display order. */
+export const EXAMPLE_AREAS = [
+  { id: "zones", label: "Zones and DST" },
+  { id: "intervals", label: "Intervals" },
+  { id: "transport", label: "Transport" },
+  { id: "intermodal", label: "Intermodal and billing" },
+] as const;
+
+export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
+
 /**
- * The pills on the empty chat screen.
+ * The example cards in the widget rail.
  *
  * Two jobs, and the second one is why this is structured data rather than a
  * list of strings. They have to be **real questions the corpus answers** — a
@@ -372,9 +383,9 @@ export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide section
  * the same reason — a widget nobody can discover may as well not ship.
  *
  * **The widget opens on the click, not on the model.** Tool choice belongs to
- * the model and nothing here can force a call, so a pill used to show its
+ * the model and nothing here can force a call, so a card used to show its
  * widget only if the model happened to call the tool — after the whole round
- * trip, and sometimes not at all. A pill is the reader asking for that widget
+ * trip, and sometimes not at all. A card is the reader asking for that widget
  * by name, so `args` seeds it at once (`DoxChat` → `onWidget`) while the
  * question is still in flight. The model's own call, if one comes, replaces it
  * unless its arguments are the same. `args` must describe exactly what `text`
@@ -385,17 +396,21 @@ export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide section
 export const CHAT_STARTERS: readonly {
   readonly text: string;
   readonly widget: DoxToolName;
+  /** The rail group this card is listed under. */
+  readonly area: ExampleArea;
   /** The tool input this question describes. Plain data, checked by test. */
   readonly args: Readonly<Record<string, unknown>>;
 }[] = [
   {
     text: "Show me what time it is in Tokyo right now.",
     widget: "showGlobe",
+    area: "zones",
     args: { zone: "Asia/Tokyo" },
   },
   {
     text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
     widget: "showConverterBench",
+    area: "zones",
     // New York is on EDT (-04:00) from 10 March 2024.
     args: {
       value: "2024-03-15T14:30:00-04:00[America/New_York]",
@@ -406,6 +421,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
     widget: "showIntervalVisualizer",
+    area: "intervals",
     // London is on GMT (+00:00) until 31 March 2024.
     args: {
       aStart: "2024-03-15T09:00:00+00:00[Europe/London]",
@@ -417,12 +433,14 @@ export const CHAT_STARTERS: readonly {
   {
     text: "What happens to 1:30am on 3 November 2024 in New York?",
     widget: "showDstInspector",
+    area: "zones",
     // 3 November 2024 is New York's fall-back day: 1:30am happens twice.
     args: { zone: "America/New_York", year: 2024, preset: "overlap" },
   },
   {
     text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
     widget: "showDwellLedger",
+    area: "intermodal",
     // Wall times, read in `zone` by the widget.
     args: {
       entry: "2024-06-15T23:00",
@@ -433,6 +451,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Discharged in New York on Friday afternoon, three free days, out Tuesday morning: what is chargeable?",
     widget: "showFreeTimeLedger",
+    area: "intermodal",
     // Friday 14 June 2024, 15:00 to Tuesday 18 June, 09:00, wall times in
     // `zone`. The question names no start-day or basis convention, so the
     // seed takes the widget's first preset's: the event day, calendar days.
@@ -449,6 +468,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Charges last accrued 1 March 2026, every window 30 days: is an invoice dated 1 April by the deadline?",
     widget: "showBillingDeadlines",
+    area: "intermodal",
     // Names all three windows, so the model has no default to guess at.
     args: {
       anchorOn: "2026-03-01",
@@ -461,6 +481,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "A truck leaves Chicago at 08:00 on 8 March 2024: 46 h to Los Angeles, then 11 days by ship to Tokyo. ETA?",
     widget: "showDeliveryScheduler",
+    area: "transport",
     // The question names no handling time, so there is no dwell.
     args: {
       legs: [
@@ -477,6 +498,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Barge leaves Duisburg 22:10, 30 March 2024, 15 h to Amsterdam, 45 min handling: does it make the 14:00 train?",
     widget: "showConnectionChecker",
+    area: "transport",
     // Duisburg is on Europe/Berlin's clock. The night of 30-31 March 2024
     // springs forward, so the printed-clock check says made and
     // scheduleDelivery says missed.
@@ -491,6 +513,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "A timetable prints 02:30 on 27 October 2024 in Berlin, a 1 h run to Amsterdam. Which instant is that?",
     widget: "showTimetableReader",
+    area: "transport",
     args: {
       startTimeZone: "Europe/Berlin",
       departures: ["2024-10-27T02:30:00"],
@@ -501,6 +524,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "A border crossing in New York runs 00:00 to 08:00 on 10 March 2024. How many hours really passed?",
     widget: "showCrossingClock",
+    area: "transport",
     // Wall times, read in targetZone by the widget.
     args: {
       entry: "2024-03-10T00:00",
@@ -511,6 +535,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Sails Rotterdam 18:00 17 June 2024: gate-in 2 days before 17:00, docs 3 days before 12:00, weekend to Friday?",
     widget: "showCutoffStack",
+    area: "transport",
     // Rotterdam is on Europe/Amsterdam's clock. 17 June 2024 is a Monday;
     // "weekend to Friday" is the preceding roll, which the question names
     // because there is no default.
@@ -528,6 +553,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Ship leaves New York 18:00, 4 Nov 2024. When is 2 days before, 48 hours before, and 2 days before at 17:00?",
     widget: "showCutoffRuler",
+    area: "transport",
     // New York fell back on Sunday 3 November 2024, so the three readings
     // land an hour apart. A spring-forward date would make PT48H and 17:00
     // coincide.
@@ -541,6 +567,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Gate-in closed at 17:00 on 12 June 2024 in Rotterdam. I arrive at 17:20. Am I late, and by how much?",
     widget: "showCutoffCountdown",
+    area: "transport",
     // Rotterdam is on Europe/Amsterdam's clock. The pill pins now, so the
     // seed is reproducible.
     args: {
@@ -549,10 +576,70 @@ export const CHAT_STARTERS: readonly {
       timeZone: "Europe/Amsterdam",
     },
   },
+  {
+    text: "Train due 09:00 on 14 June 2024 in London arrived 09:15. Late under a 15-minute tolerance?",
+    widget: "showPunctualityBoard",
+    area: "transport",
+    // London is on British Summer Time in June. Exactly the tolerance is
+    // late: the board shows the edge.
+    args: {
+      pairs: [
+        {
+          planned: "2024-06-14T09:00:00+01:00[Europe/London]",
+          actual: "2024-06-14T09:15:00+01:00[Europe/London]",
+        },
+      ],
+      late: "PT15M",
+    },
+  },
+  {
+    text: "A ship ETA for 20 June 2024 (UTC) went 08:00, 12:00, 17:00 on 1, 5 and 10 June. Has it drifted past 8 hours?",
+    widget: "showEtaDrift",
+    area: "transport",
+    // Each estimate recorded at midnight UTC on its date.
+    args: {
+      events: [
+        {
+          classifier: "EST",
+          at: "2024-06-20T08:00:00Z",
+          recordedAt: "2024-06-01T00:00:00Z",
+        },
+        {
+          classifier: "EST",
+          at: "2024-06-20T12:00:00Z",
+          recordedAt: "2024-06-05T00:00:00Z",
+        },
+        {
+          classifier: "EST",
+          at: "2024-06-20T17:00:00Z",
+          recordedAt: "2024-06-10T00:00:00Z",
+        },
+      ],
+      tolerance: "PT8H",
+    },
+  },
+  {
+    text: "Helsinki ferries 07:30, 10:30, 13:00, 16:30, 19:30 on 15 June 2024. I arrive 10:05, need 45 min. Which one?",
+    widget: "showDepartureBoard",
+    area: "transport",
+    // Helsinki is UTC+3 in June. The card lists the ferries in time order; the
+    // ferry-list preset lists them out of order to show any order works.
+    args: {
+      after: "2024-06-15T10:05:00+03:00[Europe/Helsinki]",
+      departures: [
+        "2024-06-15T07:30:00+03:00[Europe/Helsinki]",
+        "2024-06-15T10:30:00+03:00[Europe/Helsinki]",
+        "2024-06-15T13:00:00+03:00[Europe/Helsinki]",
+        "2024-06-15T16:30:00+03:00[Europe/Helsinki]",
+        "2024-06-15T19:30:00+03:00[Europe/Helsinki]",
+      ],
+      minimumConnection: "PT45M",
+    },
+  },
 ];
 
-/** The rail call a starter pill makes on click: a stable id per starter, so a
- * second click on the same pill does not remount an identical widget. */
+/** The rail call a starter card makes on click: a stable id per starter, so a
+ * second click on the same card does not remount an identical widget. */
 export function starterWidgetCall(starter: (typeof CHAT_STARTERS)[number]): {
   toolCallId: string;
   toolName: DoxToolName;
@@ -563,4 +650,19 @@ export function starterWidgetCall(starter: (typeof CHAT_STARTERS)[number]): {
     toolName: starter.widget,
     input: starter.args,
   };
+}
+
+/** The starters grouped by area, for the examples panel: areas in
+ * `EXAMPLE_AREAS` order, each list in `CHAT_STARTERS` order, empty areas
+ * omitted. */
+export function startersByArea(): {
+  area: ExampleArea;
+  label: string;
+  starters: (typeof CHAT_STARTERS)[number][];
+}[] {
+  return EXAMPLE_AREAS.map(({ id, label }) => ({
+    area: id,
+    label,
+    starters: CHAT_STARTERS.filter((starter) => starter.area === id),
+  })).filter((group) => group.starters.length > 0);
 }

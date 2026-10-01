@@ -1,0 +1,244 @@
+/*
+ * Punctuality Board widget (TRAN-57).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, inputs, chips and the `.gmt-handle` grip in gmt-form-controls.css;
+ * the drawn frame, the tick row, the hatch, the tag and the naive outline in
+ * gmt-punctuality-widgets.css and gmt-cutoff-widgets.css. This sheet only
+ * positions the board: one grid of three columns (label, axis, result) that the
+ * tolerance track, every arrival row and the tick row share, so a position
+ * along any of them is the same moment along all of them.
+ *
+ * Early and late are words, never colours. A bar outside the band carries a
+ * hatch and the word beside it. Tokens only; amber is the sentinel's alone.
+ */
+
+.gmt-punct-grid {
+  /* Half a handle plus its border, so a handle at either end of the axis stays
+     inside the frame. The track, every bar cell and the tick row are inset by
+     it, which keeps them on one axis. */
+  --punct-inset: calc(var(--gmt-handle-w) / 2 + 2px);
+  display: grid;
+  grid-template-columns: minmax(5rem, 11rem) minmax(8rem, 1fr) minmax(
+      6rem,
+      12rem
+    );
+  column-gap: var(--gmt-space-3);
+  row-gap: var(--gmt-space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.gmt-punct-track-row,
+.gmt-punct-axis-row,
+.gmt-punct-rows,
+.gmt-punct-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  min-width: 0;
+}
+
+.gmt-punct-rows {
+  row-gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-punct-axis-row > .gmt-punct-ticks {
+  grid-column: 2;
+  margin-inline: var(--punct-inset);
+}
+
+/* ---------------------------------------------------------------------------
+ * The tolerance track: band and handles
+ * --------------------------------------------------------------------------- */
+
+.gmt-punct-track-label {
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-punct-track {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin-inline: var(--punct-inset);
+  min-width: 0;
+}
+
+.gmt-punct-lane {
+  position: relative;
+  height: 2.25rem;
+}
+
+.gmt-punct-lane[hidden],
+.gmt-punct-band[hidden] {
+  display: none;
+}
+
+/* The plan: a dashed line down the middle of the track and of every bar cell. */
+.gmt-punct-lane::before,
+.gmt-punct-bar-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px dashed var(--gmt-border-strong);
+}
+
+/* The on-time band: a tinted region with solid edges. */
+.gmt-punct-band {
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding-inline: var(--gmt-space-1);
+  overflow: hidden;
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color(from var(--gmt-cyan) srgb r g b / 0.14);
+}
+
+/* The words sit centred between the handles; with early off they sit at the
+   left and the band runs on past the edge. The mount hides them when they do
+   not fit clear of a handle. */
+.gmt-punct-band:not(.gmt-punct-band--open) {
+  justify-content: center;
+}
+
+.gmt-punct-band-text[hidden] {
+  display: none;
+}
+
+/* Early is optional: with it off the band runs on past the left edge. */
+.gmt-punct-band--open {
+  border-left-style: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* The second tolerance: the same band, outlined by dashes instead of a tint. */
+.gmt-punct-band--second {
+  border-style: dashed;
+  background: none;
+}
+
+.gmt-punct-band-text {
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.gmt-punct-lane > .gmt-handle {
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------------
+ * The arrivals
+ * --------------------------------------------------------------------------- */
+
+.gmt-punct-row-label {
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+.gmt-punct-bar-cell {
+  position: relative;
+  height: 1.1rem;
+  margin-inline: var(--punct-inset);
+}
+
+/* A bar runs from the plan to the deviation. The part inside the band is a
+   plain fill; the part outside it is hatched, so the edge reads without
+   colour. A bar that ends exactly on an edge gets a short hatched cap. */
+.gmt-punct-bar-in,
+.gmt-punct-bar-out {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-ice);
+  color: var(--gmt-ice);
+}
+
+.gmt-punct-bar-in {
+  min-width: 2px;
+  background: color(from var(--gmt-ice) srgb r g b / 0.3);
+}
+
+.gmt-punct-bar-out {
+  min-width: 5px;
+}
+
+.gmt-punct-row-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-1) var(--gmt-space-2);
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.gmt-punct-row-text > .gmt-punct-naive {
+  flex: 1 0 100%;
+  font-size: var(--gmt-text-xs);
+}
+
+/* A narrow widget (a phone, the /dox rail): one column. Each arrival's label
+   and result share a line and its bar sits under them; the track takes the
+   whole width. */
+@container (max-width: 30rem) {
+  .gmt-punct-grid,
+  .gmt-punct-track-row,
+  .gmt-punct-axis-row,
+  .gmt-punct-rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmt-punct-track-label {
+    display: none;
+  }
+
+  .gmt-punct-axis-row > .gmt-punct-ticks {
+    grid-column: 1;
+  }
+
+  .gmt-punct-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--gmt-space-2);
+    row-gap: var(--gmt-space-1);
+  }
+
+  .gmt-punct-row-label {
+    flex: 1 1 auto;
+    order: 1;
+  }
+
+  .gmt-punct-row-text {
+    flex: 0 1 auto;
+    order: 2;
+  }
+
+  .gmt-punct-bar-cell {
+    flex: 0 0 calc(100% - 2 * var(--punct-inset));
+    order: 3;
+  }
+}

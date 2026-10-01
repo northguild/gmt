@@ -128,6 +128,14 @@ scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZon
 
 Open the handoff on its own in the [Connection Checker](/tools/connection-checker/).
 
+### Which departure the cargo can make: `nextDeparture`
+
+A scheduled `departure` is often the answer to "which departure can this cargo still make".
+`nextDeparture` reads it off a timetable list or a service every N minutes, after the minimum
+connection time, and returns the entry exactly as written so it goes straight into the leg. See
+[the guide section](/guides/industries/transport-punctuality-and-timestamps/#the-next-departure-you-can-make-nextdeparture)
+and the [Departure Board](/tools/departure-board/).
+
 ### A departure is exact, or a local time read in a known zone
 
 The first leg needs a departure that is an instant or a zoned string.

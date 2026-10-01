@@ -1,0 +1,182 @@
+/*
+ * Shared rules for the three punctuality widgets (TRAN-57): the Punctuality
+ * Board, the ETA Drift Chart and the Departure Board.
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, inputs, selects, ranges, handles and chips in gmt-form-controls.css.
+ * The drawn frame and its tick row are the Cut-off widgets' (their selector
+ * lists in gmt-cutoff-widgets.css name `.gmt-punct-frame` and
+ * `.gmt-punct-ticks`, and a tick label is the shared `.gmt-cutoff-axis-tick`).
+ * This sheet holds what two or more of the three tools share and the Cut-off
+ * sheets do not have: where an axis tick label hangs from its tick, the hatch
+ * for "outside the tolerance" and for a connection bar, the "naive" outline,
+ * the class chip, the outlined tag and the callout line.
+ *
+ * Early and late are words, never colours: nothing here is a success or an
+ * error hue. Amber belongs to the NO SIGNAL state alone. Tokens only.
+ */
+
+/* A tick label hangs from its tick: the first one starts at it, the last one
+   ends at it, the rest centre on it. Set per tick by the mount. */
+.gmt-punct-ticks .gmt-punct-tick--start {
+  transform: none;
+}
+
+.gmt-punct-ticks .gmt-punct-tick--mid {
+  transform: translateX(-50%);
+}
+
+.gmt-punct-ticks .gmt-punct-tick--end {
+  transform: translateX(-100%);
+}
+
+/* The one hatch recipe: "outside the tolerance" on a bar, the connection bar
+   on a rail. It reads the element's own `color`, so a hatch can never carry
+   meaning a reader without colour vision would miss: the pattern is the
+   signal and the words beside it say the rest. */
+.gmt-punct-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    currentColor 0,
+    currentColor 1px,
+    transparent 1px,
+    transparent 5px
+  );
+}
+
+/* The tool's one naive value: a dashed outline plus the word "naive" in its
+   own text. Never amber, never a success or error hue. */
+.gmt-punct-naive {
+  display: block;
+  margin: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px dashed var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+/* A bevelled class chip: PLN, EST, REQ, ACT. */
+.gmt-punct-chip {
+  display: inline-block;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* A small outlined tag: "late", "early". On time carries none. */
+.gmt-punct-tag {
+  display: inline-block;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-punct-naive:empty::before {
+  content: "\200b";
+}
+
+/* A callout line under a result: "Best available: ACT, Sat 15 Jun 12:52". */
+.gmt-punct-callout {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-punct-callout:empty::before {
+  content: "\200b";
+}
+
+/* The rate lines above a board: one result per line. */
+.gmt-punct-rate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-punct-rate:empty::before {
+  content: "\200b";
+}
+
+/* A second code frame and its output, stacked under the first. */
+.gmt-punct-second {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-punct-second[hidden] {
+  display: none;
+}
+
+/* A plain results table: the board's calls, the plot's events. */
+.gmt-punct-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-punct-table th,
+.gmt-punct-table td {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border);
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.gmt-punct-table th,
+.gmt-punct-table td {
+  white-space: nowrap;
+}
+
+.gmt-punct-table th code {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.gmt-punct-table thead th {
+  border-bottom-width: 2px;
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-punct-table td,
+.gmt-punct-table tbody th {
+  font-family: var(--gmt-font-mono);
+  font-weight: 400;
+  color: var(--gmt-ice);
+}
+
+/* Values the reader is reading never animate. */
+.gmt-punct-frame,
+.gmt-punct-naive,
+.gmt-punct-chip,
+.gmt-punct-tag,
+.gmt-punct-callout {
+  transition: none;
+  animation: none;
+}

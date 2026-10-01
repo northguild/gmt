@@ -1,0 +1,31 @@
+---
+/**
+ * ETA Drift Chart widget (TRAN-57).
+ *
+ * `bestAvailable` and `estimateDrift` over the timestamps of one event, plotted by
+ * when each was recorded.
+ *
+ * **The markup and the wiring both live in `lib/eta-drift-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+import { renderEtaDriftTemplate } from "../lib/eta-drift-mount";
+---
+
+<Fragment set:html={renderEtaDriftTemplate()} />
+
+<script>
+  import { mountEtaDrift } from "../lib/eta-drift-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("etadrift");
+    document
+      .querySelectorAll<HTMLElement>(".gmt-eta-drift")
+      .forEach((el) => {
+        mountEtaDrift(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

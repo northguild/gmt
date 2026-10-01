@@ -1,0 +1,30 @@
+---
+title: "A Delay Across the Fall-Back"
+description: A train due at 01:30 on the night New York's clocks go back arrives at 01:30 by the station clock, an hour later. Subtracting the clocks says it was on time.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Delay Across the Fall-Back"
+  description="A train is due in New York at 01:30 EDT on Sunday 3 November 2024. At 02:00 the clocks go back to 01:00, and the train arrives at 01:30 EST. How late was it?"
+  naiveCode={`// The naive approach: subtract the times on the arrivals board
+const minutes = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
+minutes("01:30") - minutes("01:30"); // 0 — "on time", across the fall-back
+minutes("03:30") - minutes("01:30"); // 120 — "two hours late", across the spring-forward`}
+  explanation={`A wall-clock subtraction assumes every hour on the clock happened once. On a fall-back night 01:00 to 02:00 happens twice, so the same printed 01:30 names two instants an hour apart. On a spring-forward night 02:00 to 03:00 never happens. \`scheduleDeviation\` subtracts instants, so the delay is 60 minutes both times, and \`classifyPunctuality\` judges that against your tolerance.`}
+  gmtCode={`import { classifyPunctuality, scheduleDeviation } from "@northguild/gmt/transport";
+
+scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]");
+// "PT1H" — the second 01:30 is an hour after the first
+classifyPunctuality("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]", { late: "PT15M" });
+// "late"
+scheduleDeviation("2024-03-10T01:30:00-05:00[America/New_York]", "2024-03-10T03:30:00-04:00[America/New_York]");
+// "PT1H" — 03:30 EDT is an hour after 01:30 EST`}
+  fixedSpecId="scheduleDeviation"
+/>
+
+Open the [fall-back night in the Punctuality Board](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fall-back%22%7D): read off the wall clocks, 3 of 4
+trains are on time under a 15-minute tolerance; measured, 1 of 4 is. The rules are in [Transport:
+Punctuality and
+Timestamps](/guides/industries/transport-punctuality-and-timestamps/#late-is-exact-elapsed-time-scheduledeviation).
