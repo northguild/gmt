@@ -14,6 +14,7 @@ import {
   SKIPPED_OFFSET_TEXT,
   TIMETABLE_PRESETS,
   classify,
+  offsetChoices,
   leavesAt,
   matchPreset,
   optionsOf,
@@ -91,6 +92,38 @@ describe("classify", () => {
 
   it("twice, for Berlin's fall-back 02:30 (V93)", () => {
     expect(classify("2024-10-27T02:30:00", "Europe/Berlin", lib)).toBe("twice");
+  });
+});
+
+describe("offsetChoices", () => {
+  const NY = "America/New_York";
+
+  it("offers only None for a time that happens once (V91)", () => {
+    expect(offsetChoices("2024-11-03T00:30:00", NY, lib)).toEqual([
+      { value: "", label: "None" },
+    ]);
+  });
+
+  it("offers both passes of New York's fall-back 01:30, named as passes (V89)", () => {
+    const choices = offsetChoices("2024-11-03T01:30:00", NY, lib);
+    expect(choices.map((c) => c.value)).toEqual(["", "-04:00", "-05:00"]);
+    expect(choices[1]!.label).toContain("the earlier pass");
+    expect(choices[2]!.label).toContain("the later pass");
+  });
+
+  it("offers both offsets of a skipped hour, so V83 stays reachable (V90)", () => {
+    const choices = offsetChoices("2024-03-10T02:30:00", NY, lib);
+    expect(choices.map((c) => c.value)).toContain("-05:00");
+    /* Neither offset names an instant here, so neither is dressed as a pass. */
+    for (const c of choices.slice(1))
+      expect(c.label).toContain("never shows");
+  });
+
+  it("offers only None for a blank time, a blank zone or an unparseable time", () => {
+    const only = [{ value: "", label: "None" }];
+    expect(offsetChoices("", NY, lib)).toEqual(only);
+    expect(offsetChoices("2024-11-03T01:30:00", "", lib)).toEqual(only);
+    expect(offsetChoices("not a time", NY, lib)).toEqual(only);
   });
 });
 

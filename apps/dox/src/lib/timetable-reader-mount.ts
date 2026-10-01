@@ -18,12 +18,14 @@ import {
   classify,
   leavesAt,
   matchPreset,
+  offsetChoices,
   optionsOf,
   permalinkOf,
   readArgs,
   rowBadge,
   rowLeg,
   rowResult,
+  type OffsetChoice,
   type TimetableReaderArgs,
   type TimetableRow,
   type TimetableState,
@@ -89,6 +91,32 @@ function timeCell(iso: string): string {
   );
 }
 
+/**
+ * The Offset field's options: what the library says this row can mean, plus
+ * whatever the row already holds.
+ *
+ * The field was free text, which left the reader guessing at a format and at
+ * which values did anything at all — most do nothing, because an offset only
+ * picks a pass of a repeated hour. `choices` is empty before the library
+ * loads, so the server renders the blank option and the row's own value and
+ * the mount fills the rest in; `current` is always present as an option even
+ * when it is not among the choices, because a permalink may carry an offset
+ * for a row whose printed time has since changed, and a `<select>` silently
+ * drops a value it has no option for.
+ */
+function offsetOptionsHtml(choices: OffsetChoice[], current: string): string {
+  const list = choices.length === 0 ? [{ value: "", label: "None" }] : choices;
+  const all = list.some((c) => c.value === current)
+    ? list
+    : [...list, { value: current, label: current }];
+  return all
+    .map(
+      (c) =>
+        `<option value="${escapeAttr(c.value)}"${c.value === current ? " selected" : ""}>${escapeHtml(c.label)}</option>`,
+    )
+    .join("");
+}
+
 function rowGroup(i: number, row: TimetableRow): string {
   const n = i + 1;
   return (
@@ -98,7 +126,7 @@ function rowGroup(i: number, row: TimetableRow): string {
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("Printed departure")}` +
     `<input class="gmt-input" data-role="departure-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(row.departure)}"></label>` +
     `<label class="gmt-label">${labelTextHtml("Offset", { optional: true })}` +
-    `<input class="gmt-input" data-role="offset-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(row.offset)}"></label>` +
+    `<select class="gmt-select" data-role="offset-${n}">${offsetOptionsHtml([], row.offset)}</select></label>` +
     `</div>` +
     `</fieldset>`
   );
@@ -182,7 +210,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
   const rowPickEl = q<HTMLSelectElement>("row-pick");
   const rowInputs = [1, 2, 3, 4].map((n) => ({
     departure: q<HTMLInputElement>(`departure-${n}`),
-    offset: q<HTMLInputElement>(`offset-${n}`),
+    offset: q<HTMLSelectElement>(`offset-${n}`),
   }));
   if (
     !presetEl ||
@@ -219,6 +247,20 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
 
   function render(): void {
     const s = state();
+    /* The choices depend on the printed time and the zone, so they are rebuilt
+       whenever either moves — not once at mount. */
+    for (let i = 0; i < MAX_ROWS; i++) {
+      const el = rowInputs[i]!.offset!;
+      const row = s.rows[i]!;
+      const html = offsetOptionsHtml(
+        offsetChoices(row.departure, s.startTimeZone, lib),
+        row.offset,
+      );
+      if (el.innerHTML !== html) {
+        el.innerHTML = html;
+        el.value = row.offset;
+      }
+    }
     const body = q("rows-body");
     if (body) {
       const rowsHtml: string[] = [];
