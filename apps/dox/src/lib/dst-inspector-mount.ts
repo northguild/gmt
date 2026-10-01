@@ -44,6 +44,7 @@ import {
   minuteToTickerPercent,
   tickerPercentToMinute,
   toPlainLocalDateTime,
+  zoneMidpointMinutes,
   transitionType,
   type DstTransition,
   type ProbeClassification,
@@ -138,6 +139,7 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `</label>` +
     `</div>` +
     `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot"></p>` +
+    `<p class="gmt-widget-hint">Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>` +
     `<!-- Scrubbable local-time ticker (drag or arrow keys) -->` +
     `<div class="gmt-dst-ticker" data-role="ticker" hidden>` +
     `<div class="gmt-dst-ticker-status" data-role="ticker-status"></div>` +
@@ -360,7 +362,6 @@ function renderExplanationAside(
   classification: ProbeClassification,
   transitions: DstTransition[],
   presetType: string,
-  probeMinute: number | null,
   zone: string,
 ) {
   if (transitions.length === 0) {
@@ -380,16 +381,11 @@ function renderExplanationAside(
         ? '<span class="gmt-dst-badge gmt-dst-badge-overlap">Overlap</span>'
         : "Normal";
 
-  const probeLabel =
-    presetType === "normal"
-      ? "The selected normal time"
-      : presetType === "transition"
-        ? "The exact transition instant"
-        : probeMinute !== null
-          ? `Local time <strong>${formatMinuteOfDay(probeMinute)}</strong>`
-          : "The selected value";
-
-  let content = `<p>${probeLabel} is ${typeLabel} — ${classification.explanation}</p>`;
+  // The badge names the kind; the explanation already names the time.
+  let content =
+    classification.type === "normal"
+      ? `<p>${classification.explanation}</p>`
+      : `<p>${typeLabel} ${classification.explanation}</p>`;
   const type: "note" | "caution" = "note";
   const title = "Note";
 
@@ -398,14 +394,14 @@ function renderExplanationAside(
     const win = gapTrans ? getTickerWindow(gapTrans, zone) : null;
     if (gapTrans && win) {
       const span = `${formatMinuteOfDay(win.zoneStartMinutes)}–${formatMinuteOfDay(win.zoneEndMinutes)}`;
-      content += `<p>Local time jumps from <code>${gapTrans.offsetBefore}</code> to <code>${gapTrans.offsetAfter}</code> — local times in <code>${span}</code> never happen on that date. Try <code>"earlier"</code> or <code>"later"</code> to see how each resolves it.</p>`;
+      content += `<p>No local time in <code>${span}</code> happens on that date. Try <code>"earlier"</code> or <code>"later"</code> to see how each resolves it.</p>`;
     }
   } else if (presetType === "overlap") {
     const overlapTrans = transitions.find(isOverlap);
     const win = overlapTrans ? getTickerWindow(overlapTrans, zone) : null;
     if (overlapTrans && win) {
       const span = `${formatMinuteOfDay(win.zoneStartMinutes)}–${formatMinuteOfDay(win.zoneEndMinutes)}`;
-      content += `<p>Local times in <code>${span}</code> happen twice — once with offset <code>${overlapTrans.offsetBefore}</code>, once with <code>${overlapTrans.offsetAfter}</code>. <code>"earlier"</code> picks the first occurrence, <code>"later"</code> picks the second.</p>`;
+      content += `<p>Every local time in <code>${span}</code> happens twice on that date. <code>"earlier"</code> picks the first occurrence, <code>"later"</code> picks the second.</p>`;
     }
   }
 
@@ -506,10 +502,12 @@ function setupWidget(
       `"${plainValue}", "${zone}", { disambiguation: "${dis}" }`,
     );
 
-    const probeHour = handleMinuteOfDay !== null ? handleMinuteOfDay / 60 : 0;
+    // Only a scrubbed probe sits on a transition's date, so only then is there a
+    // transition to classify it against. A fixed preset is a normal time.
+    const probeHour = handleMinuteOfDay !== null ? handleMinuteOfDay / 60 : NaN;
     const classification = classifyProbeResult(
       result,
-      transitions,
+      scrubbable ? [activeTransition!] : [],
       probeHour,
       zone,
       { disambiguation: dis },
@@ -524,7 +522,6 @@ function setupWidget(
         classification,
         transitions,
         presetType,
-        handleMinuteOfDay,
         zone,
       );
     }
@@ -547,9 +544,12 @@ function setupWidget(
     tickerWindow = activeTransition
       ? getTickerWindow(activeTransition, zone)
       : null;
+    // The handle starts in the middle of the skipped or repeated range. The
+    // transition's own local reading is the range's end for a gap, which is
+    // outside it: New York's 03:00 exists, 02:30 does not.
     handleMinuteOfDay =
       activeTransition && tickerWindow
-        ? localMinuteOfDayAtTransition(activeTransition, zone)
+        ? zoneMidpointMinutes(tickerWindow)
         : null;
 
     if (handleMinuteOfDay !== null && Number.isNaN(handleMinuteOfDay)) {

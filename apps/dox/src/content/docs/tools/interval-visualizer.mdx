@@ -11,7 +11,7 @@ import ToolLayout from "../../../components/ToolLayout.astro";
 
 <Fragment slot="keypoint">
 
-Two intervals that touch — one ends the instant the other starts — share no instant. The half-open functions this widget calls treat them that way.
+Two intervals that touch — one ends the instant the other starts — share no instant. GMT's intervals are half-open: each includes its start and excludes its end, so the functions this widget calls treat touching intervals as separate.
 
 </Fragment>
 
@@ -33,7 +33,7 @@ the same timeline scale.
 **Worth trying:** switch the preset to **Disjoint**. The intersection returns an
 empty result, which is the correct answer and not an error — this widget renders
 that case differently from invalid input on purpose, because the library returns
-the same sentinel for both.
+the same empty value for both.
 
 Reference:
 [`intervalIntersectionZoned`](/reference/zoned/interval/intervalIntersectionZoned/),

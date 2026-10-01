@@ -1,6 +1,6 @@
 ---
 title: Punctuality Board
-description: "Was it late, by how much, and what share was on time? scheduleDeviation, classifyPunctuality and punctualityRate judge a set of arrivals against a tolerance you drag: both edges outside, early optional, and no default."
+description: "Was it late, by how much, and what share was on time? scheduleDeviation, classifyPunctuality and punctualityRate judge a set of arrivals against a tolerance you drag. An arrival exactly on the limit counts as late, an early limit is optional, and there is no default tolerance."
 industries: [transport]
 ---
 
@@ -17,9 +17,9 @@ On time means nothing until someone states how late is too late, so GMT holds no
 
 <Fragment slot="intro">
 
-Both edges belong to the outside: an arrival exactly on the late edge is
-late, and one exactly on the early edge is early. Drag the band and watch the
-rows change their word.
+An arrival exactly on the late limit is late, and one exactly on the early
+limit is early: the limits themselves are outside the on-time band. Drag the
+band and watch each row change between early, on time and late.
 
 Turn on the second tolerance to see both rates at once.
 

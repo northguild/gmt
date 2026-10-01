@@ -244,6 +244,7 @@ export function renderDeliverySchedulerTemplate(
     `<select class="gmt-select" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone, "(none)")}</select></label>` +
     `</div>` +
     `<p class="gmt-widget-hint">For a published local first departure with no offset or zone of its own.</p>` +
+    `<p class="gmt-widget-hint">Durations are ISO 8601: PT46H is 46 hours, PT2H30M is two and a half hours, P11D is 11 days.</p>` +
     legFieldsets +
     `</div>` +
     `<div class="gmt-widget-section">` +

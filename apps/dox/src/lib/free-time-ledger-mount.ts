@@ -160,7 +160,7 @@ export function renderFreeTimeLedgerTemplate(
     `</label>` +
     `<label class="gmt-label">${labelTextHtml("Free days")}` +
     `<input class="gmt-input" data-role="free-days" type="number" min="0" step="1" value="${escapeAttr(state.freeDays)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Day one")}` +
+    `<label class="gmt-label">${labelTextHtml("Free day one is")}` +
     `<select class="gmt-select" data-role="first-day">${options(["eventDay", "nextDay"], ["eventDay: the event day", "nextDay: the day after"], state.firstDay)}</select>` +
     `</label>` +
     `<label class="gmt-label">${labelTextHtml("Free days count")}` +
@@ -169,7 +169,7 @@ export function renderFreeTimeLedgerTemplate(
     `<label class="gmt-label">${labelTextHtml("Charged days count")}` +
     `<select class="gmt-select" data-role="charge-basis">${options(["calendar", "working"], ["calendar days", "working days"], state.chargeBasis)}</select>` +
     `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Tiers")}` +
+    `<label class="gmt-label">${labelTextHtml("Tier end days")}` +
     `<input class="gmt-input" data-role="tiers" type="text" spellcheck="false" placeholder="5, 10" value="${escapeAttr(state.tiers)}"></label>` +
     `</div>` +
     `<div class="gmt-field-grid gmt-freetime-working" data-role="working-terms"${state.basis === "working" || state.chargeBasis === "working" ? "" : " hidden"}>` +

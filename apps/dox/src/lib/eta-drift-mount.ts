@@ -73,7 +73,6 @@ import {
 export type { EtaDriftArgs } from "./eta-drift";
 
 const SENTINEL = '<span class="gmt-playground-sentinel">NO SIGNAL</span>';
-const CLASS_CODES = TIMESTAMP_CLASSES.map((c) => c.code);
 
 function presetOptionsHtml(presetId: string): string {
   return (
@@ -92,13 +91,15 @@ function sliderMax(drift: { drift: string } | null): number {
 
 function eventFieldsetHtml(s: DriftState, n: number, uid: number): string {
   const e = s.events[n - 1]!;
-  const chips = CLASS_CODES.map((code) =>
+  // The word beside the code: PLN, EST, REQ and ACT mean nothing to a reader
+  // who has not met them, and the chart's legend names only the classes in use.
+  const chips = TIMESTAMP_CLASSES.map(({ code, label }) =>
     chipToggleHtml({
       type: "radio",
       name: `classifier-${n}-${uid}`,
       role: `classifier-${n}`,
       value: code,
-      label: code,
+      label: `${code} ${label}`,
       checked: e.classifier === code,
     }),
   ).join("");

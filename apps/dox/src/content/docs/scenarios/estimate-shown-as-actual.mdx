@@ -18,7 +18,7 @@ const events = [
 ];
 const latest = events.reduce((a, e) => (Date.parse(e.recordedAt) >= Date.parse(a.recordedAt) ? e : a));
 latest.at; // "2024-06-15T13:05:00Z" — shown as the actual, and it is an estimate`}
-  explanation={`One field holds four kinds of time: DCSA's PLN, EST, REQ and ACT. The newest record is not the best one. An estimate recorded after the arrival is still only an estimate. \`bestAvailable\` returns an \`ACT\` whenever one exists, and it returns the class with the value, so the column can be labelled. \`estimateDrift\` reads the late feed as what it is: a revision of the estimate.`}
+  explanation={`One field holds four kinds of time: planned (PLN), estimated (EST), requested (REQ) and actual (ACT), the classes the Digital Container Shipping Association (DCSA) defines. The newest record is not the best one. An estimate recorded after the arrival is still only an estimate. \`bestAvailable\` returns an \`ACT\` whenever one exists, and it returns the class with the value, so the column can be labelled. \`estimateDrift\` reads the late feed as what it is: a revision of the estimate.`}
   gmtCode={`import { bestAvailable, estimateDrift } from "@northguild/gmt/transport";
 
 const events = [

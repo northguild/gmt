@@ -1,6 +1,6 @@
 ---
 title: Departure Board
-description: "Which departure can you make? nextDeparture reads a timetable list or a service every N minutes, after your arrival plus the minimum connection, with the end of the service window excluded, and hands the answer to the Delivery Scheduler."
+description: "Which departure can you make? nextDeparture reads a list of departures, or a service that runs every N minutes, and finds the first one at or after your arrival plus the minimum connection. The end of the service window is not a departure. You can send the answer on to the Delivery Scheduler."
 industries: [transport]
 ---
 
@@ -20,8 +20,8 @@ The threshold is your arrival plus the minimum connection. A departure exactly a
 Drag the arrival and watch the hatched connection bar push the answer to the
 next departure.
 
-A service every N minutes has the shape of a GTFS `frequencies.txt` row: a
-headway, a start and an end. The end is never a departure. The window is
+A service every N minutes is three values: the gap between departures, a
+start and an end. The end is never a departure. The window is
 half-open, so a shuttle every 20 minutes from 06:00 to 09:00 leaves last at
 08:40.
 
@@ -31,8 +31,8 @@ half-open, so a shuttle every 20 minutes from 06:00 to 09:00 leaves last at
 
 <Fragment slot="after">
 
-**Worth trying:** [arriving exactly at
-`to`](/tools/departure-board/?w=departure&wa=%7B%22preset%22%3A%22arrival-at-to%22%7D)
+**Worth trying:** [arriving exactly at the end of the
+service window](/tools/departure-board/?w=departure&wa=%7B%22preset%22%3A%22arrival-at-to%22%7D)
 leaves no departure, and that is a correct answer, not a failure. Then [the
 ferry list with no connection
 time](/tools/departure-board/?w=departure&wa=%7B%22preset%22%3A%22ferry-list%22%2C%22minimumConnection%22%3A%22none%22%7D):

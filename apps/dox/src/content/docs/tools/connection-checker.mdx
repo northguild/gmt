@@ -1,6 +1,6 @@
 ---
 title: Connection Checker
-description: Will the cargo make its onward departure? scheduleDelivery checks a scheduled connection against the arrival plus the handling time, and equal passes, beside the wall-clock check that says made when it is not.
+description: Will the cargo make its onward departure? scheduleDelivery checks a scheduled connection against the arrival plus the handling time. A departure exactly at that time is made. Beside it is the wall-clock check, which can say made when the connection is missed.
 industries: [transport]
 ---
 
@@ -37,7 +37,7 @@ minute](/tools/connection-checker/?w=connection&wa=%7B%22inboundDeparture%22%3A%
 one minute inside the handling time is still a missed connection. Then [the
 same barge the night the clocks spring
 forward](/tools/connection-checker/?w=connection&wa=%7B%22inboundDeparture%22%3A%222024-03-30T22%3A10%3A00%2B01%3A00%5BEurope%2FBerlin%5D%22%2C%22inboundDuration%22%3A%22PT15H%22%2C%22portZone%22%3A%22Europe%2FAmsterdam%22%2C%22handlingMinutes%22%3A%2245%22%2C%22onwardDeparture%22%3A%222024-03-31T14%3A00%3A00%5BEurope%2FAmsterdam%5D%22%2C%22onwardDuration%22%3A%22PT12H%22%2C%22onwardZone%22%3A%22Europe%2FRome%22%7D) —
-the printed-clock check still says made; scheduleDelivery says missed.
+the printed-clock check still says made; `scheduleDelivery` says missed.
 
 Reference: [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/)
 is the real call behind every verdict here. For the full journey this handoff

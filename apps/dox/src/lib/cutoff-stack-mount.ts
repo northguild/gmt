@@ -125,6 +125,7 @@ function closedDaysFieldset(state: StackState): string {
     `<select class="gmt-select" data-role="roll">${rollOptions}</select></label>` +
     `</div>` +
     `<p class="gmt-widget-hint">ISO dates, separated by commas</p>` +
+    `<p class="gmt-widget-hint">A roll moves a cut-off off a closed day: <code>preceding</code> back to the last open day, <code>following</code> on to the next. The two <code>modified</code> forms turn round when that would leave the month. <code>none</code> leaves it where it is.</p>` +
     `<p class="gmt-widget-hint">There is no default: a calendar without a roll, or a roll without a calendar, returns [].</p>` +
     `</fieldset>`
   );

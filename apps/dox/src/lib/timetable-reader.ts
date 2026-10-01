@@ -369,7 +369,7 @@ export function rowBadge(kind: RowClass, hasOffset: boolean): string | null {
  *  deserves — a reading no offset can name, distinct from every reason
  *  `scheduleNullText` covers. */
 export const SKIPPED_OFFSET_TEXT =
-  "No offset names a time this clock skipped. Leave the offset off and it resolves to the later instant.";
+  "This clock skipped that time, so no offset can make it valid. Leave the offset off and it resolves to the later instant.";
 
 /**
  * The exact instant row `i`'s printed departure names, rendered back in

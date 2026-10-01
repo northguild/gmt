@@ -1,6 +1,6 @@
 ---
 title: Crossing Clock
-description: "Time a canal, strait or border crossing with crossingTime: exact elapsed hours, the entry and exit on the clock that administers it, and the wall-clock subtraction that is an hour off on a DST night."
+description: "Time a canal, strait or border crossing with crossingTime. It gives the exact elapsed hours and shows the entry and exit on the clock of whoever runs the crossing, beside the wall-clock subtraction that is an hour off on a DST night."
 industries: [transport]
 ---
 
@@ -24,7 +24,7 @@ rendered in that one zone.
 
 Each end gets an analog face, and the true elapsed duration sits above the
 naive wall-clock subtraction, flagged when the two disagree. A skipped or
-repeated hour is drawn on both faces as a sector — dashed for an hour that
+repeated hour is drawn on both faces as a wedge — dashed for an hour that
 never showed, doubled for one the clock ran through twice. On the fall-back
 night both faces read identically and are marked repeated, so identical clocks
 do not read as a bug.
@@ -44,7 +44,7 @@ subtracting the wall clocks says zero. Then [the same spring-forward
 night read on a fixed
 −05:00](/tools/crossing-clock/?w=crossing&wa=%7B%22entry%22%3A%222024-03-10T05%3A00%3A00Z%22%2C%22exit%22%3A%222024-03-10T12%3A00%3A00Z%22%2C%22targetZone%22%3A%22-05%3A00%22%7D) —
 a fixed offset observes no DST, so the wall-clock subtraction agrees and no
-sector is drawn at all.
+wedge is drawn at all.
 
 A day count for a stay is [`dwellTime`](/reference/transport/calculate/dwellTime/),
 drawn in the [Dwell Ledger](/tools/dwell-ledger/).

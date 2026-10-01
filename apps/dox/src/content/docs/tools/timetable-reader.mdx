@@ -1,6 +1,6 @@
 ---
 title: Timetable Reader
-description: "Read a timetable's printed local times as exact instants with scheduleDelivery's startTimeZone: a repeated time takes the earlier instant, a skipped one the later, and a written offset picks the other pass."
+description: "Read a timetable's printed local times as exact instants with scheduleDelivery's startTimeZone. A repeated time is read as the earlier of its two instants and a skipped time as the later one. An offset written beside a repeated time says which of the two is meant."
 industries: [transport]
 ---
 
@@ -19,8 +19,8 @@ A timetable prints wall times with no offset. The zone it is printed in is what 
 
 `scheduleDelivery`'s `startTimeZone` reads a printed departure as a
 published local time. It resolves a repeated hour to the earlier instant and a
-skipped hour to the later one, and lets a written offset pick the other pass of
-a repeated hour.
+skipped hour to the later one. A repeated hour happens twice: an earlier pass and a
+later pass. An offset written beside the time says which pass is meant.
 
 This tool is about reading a transport timetable. For the general rule
 behind a repeated or skipped local time in any zone, see the
@@ -37,7 +37,7 @@ rows](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22Americ
 01:30, 02:30 and 03:30 printed on New York's spring-forward night, where
 02:30 never shows. Then [an offset written into the skipped
 hour](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22America%2FNew_York%22%2C%22duration%22%3A%22PT1H%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22departure1%22%3A%222024-03-10T02%3A30%3A00%22%2C%22offset1%22%3A%22-05%3A00%22%7D) —
-no offset names a time the clock skipped.
+a skipped time does not exist, so no offset can make it valid.
 
 Reference: [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/)
 reads every row here, through its `startTimeZone` option, the same way

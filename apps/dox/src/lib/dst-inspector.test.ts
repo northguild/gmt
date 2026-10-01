@@ -480,10 +480,11 @@ describe("buildValuePreset", () => {
     expect(result).toBe("2024-03-24T12:00:00[America/New_York]");
   });
 
-  it("'gap' generates the skipped hour on the spring-forward date", () => {
-    // Spring-forward at 03:00 local (the skipped hour is 03:00)
+  it("'gap' generates a time inside the skipped hour on the spring-forward date", () => {
+    // New York's clocks jump from 02:00 to 03:00, so 02:00 up to 03:00 is
+    // skipped and 03:00 itself exists. The preset is the middle of the gap.
     const result = buildValuePreset("gap", ZONE, [SPRING_FORWARD, FALL_BACK]);
-    expect(result).toBe("2024-03-10T03:00:00[America/New_York]");
+    expect(result).toBe("2024-03-10T02:30:00[America/New_York]");
   });
 
   it("'overlap' generates the ambiguous hour on the fall-back date", () => {
@@ -557,13 +558,46 @@ describe("classifyProbeResult", () => {
     const classification = classifyProbeResult(
       "",
       transitions,
-      2, // within 1 hour of the spring-forward's local hour (3)
+      2.5, // 02:30, inside the skipped 02:00 to 03:00
       ZONE,
       { disambiguation: "reject" },
     );
     expect(classification.type).toBe("gap");
     expect(classification.explanation).toContain('disambiguation="reject"');
     expect(classification.explanation).toContain("skipped");
+  });
+
+  it("classifies a time inside the skipped hour as 'gap' and names it", () => {
+    const classification = classifyProbeResult(
+      "2024-03-10T03:30:00-04:00[America/New_York]",
+      [SPRING_FORWARD],
+      2.5,
+      ZONE,
+    );
+    expect(classification.type).toBe("gap");
+    expect(classification.explanation).toContain("02:30 falls in the");
+  });
+
+  it("classifies the first time after the gap as 'normal': 03:00 exists", () => {
+    const classification = classifyProbeResult(
+      "2024-03-10T03:00:00-04:00[America/New_York]",
+      [SPRING_FORWARD],
+      3,
+      ZONE,
+    );
+    expect(classification.type).toBe("normal");
+  });
+
+  it("classifies both ends of the repeated hour: 01:00 is in it, 02:00 is not", () => {
+    const at = (hour: number) =>
+      classifyProbeResult("x", [FALL_BACK], hour, ZONE).type;
+    expect(at(1)).toBe("overlap");
+    expect(at(1.5)).toBe("overlap");
+    expect(at(2)).toBe("normal");
+  });
+
+  it("classifies a probe with no transition on its date as 'normal'", () => {
+    expect(classifyProbeResult("x", [], NaN, ZONE).type).toBe("normal");
   });
 
   it("classifies a sentinel with no nearby transition as 'normal'", () => {

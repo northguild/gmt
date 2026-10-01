@@ -175,7 +175,7 @@ export function renderTimetableReaderTemplate(
     `<div class="gmt-widget-section">` +
     `<h4>2. What each printed time means</h4>` +
     `<table class="gmt-timetable-rows" data-role="rows" role="table">` +
-    `<thead role="rowgroup"><tr role="row"><th role="columnheader">Printed</th><th role="columnheader">Leaves (exact)</th><th role="columnheader">Badge</th><th role="columnheader">Local arrival</th></tr></thead>` +
+    `<thead role="rowgroup"><tr role="row"><th role="columnheader">Printed</th><th role="columnheader">Leaves (exact)</th><th role="columnheader">Note</th><th role="columnheader">Local arrival</th></tr></thead>` +
     `<tbody data-role="rows-body" role="rowgroup"></tbody>` +
     `</table>` +
     `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
@@ -276,7 +276,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
           `<tr data-role="row-${i + 1}-display" role="row">` +
             `<td data-label="Printed" role="cell">${wbrBeforeOffsetAndBracket(row.departure + row.offset)}</td>` +
             `<td data-label="Leaves (exact)" role="cell">${leaves ? timeCell(leaves) : "—"}</td>` +
-            `<td data-label="Badge" role="cell">${badge ? `<span class="gmt-transport-badge" data-role="badge-${i + 1}">${escapeHtml(badge)}</span>` : ""}</td>` +
+            `<td data-label="Note" role="cell">${badge ? `<span class="gmt-transport-badge" data-role="badge-${i + 1}">${escapeHtml(badge)}</span>` : ""}</td>` +
             `<td data-label="Local arrival" role="cell">${local ? timeCell(local) : "—"}</td>` +
             `</tr>`,
         );

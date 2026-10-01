@@ -196,6 +196,14 @@ export function getTickerWindow(
 }
 
 /**
+ * The middle of the void/doubled zone, as a local minute-of-day: 02:30 for a
+ * 02:00 to 03:00 gap. Where a probe starts, so it starts inside the zone.
+ */
+export function zoneMidpointMinutes(window: TickerWindow): number {
+  return Math.floor((window.zoneStartMinutes + window.zoneEndMinutes) / 2);
+}
+
+/**
  * True if a local minute-of-day falls inside the void/doubled zone.
  * Start-inclusive, end-exclusive.
  */
@@ -346,10 +354,16 @@ export interface ProbeClassification {
  * Classify a `convertPlainDateTimeToZoned` result to explain what the probe
  * wall time experienced.
  *
- * - If result is sentinel (""): checks whether disambiguation="reject" made it fail
- *   because the probe wall time is ambiguous (overlap) or nonexistent (gap).
- * - If result is normal: determines whether the probe hour falls in a gap, overlap, or normal time
- *   by comparing the probe hour against each transition's local hour.
+ * `transitions` are the transitions on the probed date, and `probeHour` is the
+ * probed local time in hours, fractions allowed (2.5 is 02:30). The time is in
+ * a gap or an overlap when it falls inside that transition's skipped or
+ * repeated range, start included and end excluded: New York's spring-forward
+ * skips 02:00 up to 03:00, so 02:59 is in the gap and 03:00 is not.
+ *
+ * - If result is sentinel (""): `disambiguation: "reject"` refused a time that
+ *   is in a gap or an overlap.
+ * - If result is normal: says whether the time was in a gap, an overlap or
+ *   neither.
  */
 export function classifyProbeResult(
   result: string,
@@ -358,24 +372,21 @@ export function classifyProbeResult(
   zone: string,
   options?: { disambiguation?: string },
 ): ProbeClassification {
+  const probeMinute = Math.round(probeHour * 60);
+  const hit = transitions.find((t) => {
+    const window = getTickerWindow(t, zone);
+    return window !== null && isMinuteInZone(probeMinute, window);
+  });
+  const probed = Number.isFinite(probeMinute)
+    ? formatMinuteOfDay(probeMinute)
+    : "";
+
   // Sentinel case: convertPlainDateTimeToZoned returned ""
   if (result === "") {
     const dis = options?.disambiguation ?? "compatible";
 
-    // Find the closest transition within 1 hour of the probe hour
-    let nearbyTransition: DstTransition | undefined;
-    let bestDist = Infinity;
-    for (const t of transitions) {
-      const lh = localHourAtTransition(t, zone);
-      const dist = Math.abs(lh - probeHour);
-      if (dist <= 1 && dist < bestDist) {
-        bestDist = dist;
-        nearbyTransition = t;
-      }
-    }
-
-    if (dis === "reject" && nearbyTransition) {
-      const overlap = isOverlap(nearbyTransition);
+    if (dis === "reject" && hit) {
+      const overlap = isOverlap(hit);
       return {
         type: overlap ? "overlap" : "gap",
         explanation: overlap
@@ -390,35 +401,22 @@ export function classifyProbeResult(
     };
   }
 
-  // Normal case: find the closest transition within 0.5 hour of the probe hour
-  let closestT: DstTransition | undefined;
-  let closestDist = Infinity;
-  for (const t of transitions) {
-    const lh = localHourAtTransition(t, zone);
-    const dist = Math.abs(lh - probeHour);
-    if (dist <= 0.5 && dist < closestDist) {
-      closestDist = dist;
-      closestT = t;
-    }
+  if (hit && isGap(hit)) {
+    return {
+      type: "gap",
+      explanation: `${probed} falls in the spring-forward gap. Local time jumps from ${hit.offsetBefore} to ${hit.offsetAfter}, so that time does not exist.`,
+    };
   }
-  if (closestT) {
-    if (isGap(closestT)) {
-      return {
-        type: "gap",
-        explanation: `The probe hour (${probeHour}:00) falls in the spring-forward gap. Local time jumps from ${closestT.offsetBefore} to ${closestT.offsetAfter} — that hour doesn't exist.`,
-      };
-    }
-    if (isOverlap(closestT)) {
-      return {
-        type: "overlap",
-        explanation: `The probe hour (${probeHour}:00) falls in the fall-back overlap. Local time ${probeHour}:00 happens twice — once with offset ${closestT.offsetBefore}, once with ${closestT.offsetAfter}.`,
-      };
-    }
+  if (hit && isOverlap(hit)) {
+    return {
+      type: "overlap",
+      explanation: `${probed} falls in the fall-back overlap. It happens twice: once with offset ${hit.offsetBefore}, once with ${hit.offsetAfter}.`,
+    };
   }
 
   return {
     type: "normal",
-    explanation: `The probe hour (${probeHour}:00) is normal wall-clock time — no DST transition affects it.`,
+    explanation: `${probed || "This"} is normal wall-clock time — no DST transition affects it.`,
   };
 }
 
@@ -511,7 +509,9 @@ export function buildValuePreset(
     }
 
     case "gap": {
-      // Find the spring-forward transition and use the skipped hour on its date
+      // Find the spring-forward transition and use the middle of the skipped
+      // range on its date. The transition's own local reading (03:00 in New
+      // York) is the first time that exists again, not a skipped one.
       const gapTrans = transitions.find(isGap);
       const refTrans = gapTrans ?? first;
       const dateStr = localDateAtTransition(refTrans, zone) ?? firstDate;
@@ -519,9 +519,13 @@ export function buildValuePreset(
         // Fallback: use hour 3 (common for US zones)
         return `${dateStr}T03:00:00[${zone}]`;
       }
-      const gapMinute = localMinuteOfDayAtTransition(gapTrans, zone);
-      if (Number.isNaN(gapMinute)) return `${dateStr}T03:00:00[${zone}]`;
-      return buildZonedValueFromMinutes(zone, dateStr, gapMinute);
+      const gapWindow = getTickerWindow(gapTrans, zone);
+      if (!gapWindow) return `${dateStr}T03:00:00[${zone}]`;
+      return buildZonedValueFromMinutes(
+        zone,
+        dateStr,
+        zoneMidpointMinutes(gapWindow),
+      );
     }
 
     case "overlap": {

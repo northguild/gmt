@@ -1,6 +1,6 @@
 ---
 title: Billing Deadlines
-description: Set the anchor, the invoice and dispute dates as they exist, and the windows your tariff or contract names, and watch billingTimeline lay out the deadline chain around a demurrage or detention invoice on a day strip.
+description: billingTimeline lays out the deadlines around a demurrage or detention invoice on a strip of days. You set the date the count starts from, the invoice and dispute dates, and the windows your tariff or contract names.
 industries: [intermodal]
 ---
 
@@ -17,13 +17,13 @@ A billing deadline is a date, not an instant. Each one is counted in calendar da
 
 <Fragment slot="intro">
 
-The three windows — issue, dispute, resolve — are yours, and none is
-defaulted. A blank window is left out of the call, and the result names which
+Every deadline counts from the anchor: the date you choose as day zero. The
+three windows — issue, dispute, resolve — are yours, and none is defaulted. A blank window is left out of the call, and the result names which
 one is missing and says why it is `null`.
 
 Lane 1 is the issue window, lane 2 the dispute window and lane 3 the resolution
-window. Each has its own pattern and number, and the anchor, the invoice date
-and the request date are each lettered, so the strip reads without relying on
+window. Each has its own pattern and number. The anchor, the invoice date and the
+request date are marked A, I and R, so the strip reads without relying on
 colour. The strip draws what [`billingTimeline`](/reference/intermodal/calculate/billingTimeline/) returned; nothing here
 computes a deadline.
 
@@ -36,8 +36,8 @@ computes a deadline.
 **Worth trying:** [the same 30-day windows, invoiced one day
 later](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-04-01%22%2C%22issueDays%22%3A%2230%22%2C%22disputeDays%22%3A%2230%22%2C%22resolutionDays%22%3A%2230%22%7D) —
 the invoice deadline does not move, but the verdict turns to after the
-deadline. Then [a 14/14/45 contract with the request moved to 20
-March](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-03-05%22%2C%22requestReceivedOn%22%3A%222026-03-20%22%2C%22issueDays%22%3A%2214%22%2C%22disputeDays%22%3A%2214%22%2C%22resolutionDays%22%3A%2245%22%7D) —
+deadline. Then [a contract with 14 days to issue, 14 to dispute and 45 to resolve, and the
+request moved to 20 March](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-03-05%22%2C%22requestReceivedOn%22%3A%222026-03-20%22%2C%22issueDays%22%3A%2214%22%2C%22disputeDays%22%3A%2214%22%2C%22resolutionDays%22%3A%2245%22%7D) —
 one day past the 14-day dispute deadline, and the request verdict turns to
 after the deadline while the resolution deadline stays `null`.
 

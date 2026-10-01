@@ -17,16 +17,16 @@ Twice a year most timezones skip an hour or repeat one. Inside the skipped hour 
 
 <Fragment slot="intro">
 
-Pick a zone and a year to see its transitions, then drag the ticker into a gap or
-an overlap and watch
+Pick a zone and a year to see its transitions, then drag the ticker into a gap (the
+skipped hour) or an overlap (the repeated hour) and watch
 [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned/)
 resolve the same local wall-clock time four different ways, one per
 `disambiguation` option.
 
-Boundary functions like `startOfZoned` are a different case: they always return
-the real boundary — the earliest instant of the unit — and take no
-disambiguation option at all. Disambiguation only applies to *field-setting*
-functions, which is what resolving a specific probed wall time is.
+The `disambiguation` option belongs to functions that set a local time, because
+a local time can be skipped or repeated. Functions that find a boundary, like
+`startOfZoned`, do not take it: they always return the earliest instant of the
+unit.
 
 </Fragment>
 

@@ -19,15 +19,16 @@ Every handoff is an exact instant, never a wall-clock guess. One leg's arrival, 
 
 Each leg is a departure, a duration and the zone it lands in. The summary
 card leads with the ETA in the last leg's own zone, the door-to-door span, and
-flags for what happened along the way: a DST change, a Date Line crossing, an
-offset-table disagreement. A missed connection turns the same card into a
+flags for what happened along the way: a DST change, a Date Line crossing, or a
+handoff an offset table would get wrong. An offset table is a fixed UTC offset
+looked up for each place, with no DST. A missed connection turns the same card into a
 failure state naming the leg.
 
 A toggle switches between two charts of the same journey. **Route** draws one
 segment per leg, never sized by how long the leg took. **To scale** draws the
-same legs on a real time axis. Where a fixed offset would misread a handoff,
-both flag it against the offset table's naive reading — the only value the
-widget computes itself, and always labelled as naive. Everything else is the
+same legs on a real time axis. Where an offset table would misread a handoff,
+both charts flag it. That offset-table reading is the only value the widget
+computes itself, and it is always labelled naive. Everything else is the
 real [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) call for what is on screen.
 
 </Fragment>
@@ -38,7 +39,7 @@ real [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) call
 
 **Worth trying:** [the ship at 06:30, a missed
 connection](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-03-08T08%3A00%3A00-06%3A00%5BAmerica%2FChicago%5D%22%2C%22duration1%22%3A%22PT46H%22%2C%22timeZone1%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter1%22%3A%22PT2H%22%2C%22mode1%22%3A%22truck%22%2C%22duration2%22%3A%22P11D%22%2C%22timeZone2%22%3A%22Asia%2FTokyo%22%2C%22dwellAfter2%22%3A%22PT24H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT2H30M%22%2C%22timeZone3%22%3A%22Asia%2FTokyo%22%2C%22mode3%22%3A%22rail%22%2C%22departure2%22%3A%222024-03-10T06%3A30%3A00%5BAmerica%2FLos_Angeles%5D%22%7D) —
-scheduleDelivery returns null, and the reason aside names why. Then [leg 2's
+`scheduleDelivery` returns `null`, and a note says why. Then [leg 2's
 departure typed with no
 zone](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-03-08T08%3A00%3A00-06%3A00%5BAmerica%2FChicago%5D%22%2C%22duration1%22%3A%22PT46H%22%2C%22timeZone1%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter1%22%3A%22PT2H%22%2C%22mode1%22%3A%22truck%22%2C%22duration2%22%3A%22P11D%22%2C%22timeZone2%22%3A%22Asia%2FTokyo%22%2C%22dwellAfter2%22%3A%22PT24H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT2H30M%22%2C%22timeZone3%22%3A%22Asia%2FTokyo%22%2C%22mode3%22%3A%22rail%22%2C%22departure2%22%3A%222024-03-10T07%3A30%3A00%22%7D) —
 the timetable's printed 07:30 is read on Los Angeles' clock, where the truck

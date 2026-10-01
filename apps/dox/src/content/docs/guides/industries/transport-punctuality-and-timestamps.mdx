@@ -125,8 +125,9 @@ The same six arrivals are 2 of 6 on time under 60 minutes and 4 of 6 under 120 i
 
 ## One field, four meanings: `bestAvailable`
 
-DCSA's `eventClassifierCode` vocabulary names four classes: `PLN` planned, `EST` estimated, `REQ`
-requested and `ACT` actual. A `TimestampEvent` is `{ classifier, at, recordedAt }`.
+The Digital Container Shipping Association (DCSA) names four classes in its
+`eventClassifierCode` vocabulary: `PLN` planned, `EST` estimated, `REQ` requested and `ACT`
+actual. A `TimestampEvent` is `{ classifier, at, recordedAt }`.
 
 [`bestAvailable(events)`](/reference/transport/calculate/bestAvailable/) returns an `ACT`
 whenever one exists, else a `PLN`, else a `REQ`, else an `EST`. Within the class it takes the
@@ -213,7 +214,8 @@ nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00[Europe/London]"]); /
 
 ### A service every N minutes
 
-`{ headway, from, to }` has the shape of a GTFS `frequencies.txt` row. The window is half-open,
+`{ headway, from, to }` has the shape of a `frequencies.txt` row in GTFS, the General Transit
+Feed Specification: a headway is the gap between departures. The window is half-open,
 `[from, to)`: `to` is never a departure. Departures are `from` plus whole headways in exact
 time, computed and never stepped. The result is written the way `from` was.
 

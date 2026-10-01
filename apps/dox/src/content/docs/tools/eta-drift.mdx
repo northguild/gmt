@@ -17,8 +17,8 @@ One field often holds four kinds of time, and the newest record is not the best 
 
 <Fragment slot="intro">
 
-DCSA's vocabulary names the four kinds: PLN planned, EST estimated, REQ
-requested and ACT actual.
+The four kinds are planned (PLN), estimated (EST), requested (REQ) and actual
+(ACT). The codes are the ones container shipping schedules use.
 
 Drift is the last estimate minus the first. It exceeds a tolerance only when
 it is greater than it, in either direction. Drag the tolerance and watch
@@ -32,7 +32,8 @@ it is greater than it, in either direction. Drag the tolerance and watch
 
 **Worth trying:** [an estimate recorded after the
 actual](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D)
-rings the actual as the best available and the late estimate as the naive pick.
+marks the actual as the best available. The late estimate is the naive pick:
+what you get by taking the newest record.
 Then [a tolerance of exactly 9
 hours](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22vessel-slide%22%2C%22tolerance%22%3A%22PT9H%22%7D):
 the drift is 9 hours, equal does not exceed, and `exceedsTolerance` is false.
