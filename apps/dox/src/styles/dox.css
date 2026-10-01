@@ -82,7 +82,22 @@ html:not([data-has-sidebar]) .sl-container {
   flex-grow: 1;
 }
 
-.sl-container:has([data-tools-fullbleed]) {
+/* Scoped to `main` and keyed off `.main-frame`, not written as
+ * `.sl-container:has([data-tools-fullbleed])`, because a Starlight page has
+ * three `.sl-container`s and the marker only ever sits inside one of them:
+ *
+ *   1. the TOC's, in `.right-sidebar-panel`   — max-width 545px, OUTSIDE main
+ *   2. the page title's, its own .content-panel — max-width --sl-content-width
+ *   3. the content's, holding the widget        — the one with the marker
+ *
+ * A `:has()` on the container itself therefore widened (3) and left (2) at
+ * 50rem, so the `<h1>` stayed in a narrow column while the prose and the widget
+ * beneath it ran the full width of the pane — measured at 2560px: title 800px,
+ * content 1912px, on `/tools/zoned-earth/` and `/tools/zone-planner/` as much as
+ * anywhere. Matching every `.sl-container` inside `main` takes the title with
+ * it; `main` is what keeps the TOC's own container (1), which is a sibling of
+ * `.main-pane` and not a descendant of `main`, at its proper width. */
+.main-frame:has([data-tools-fullbleed]) main .sl-container {
   max-width: none;
 }
 
