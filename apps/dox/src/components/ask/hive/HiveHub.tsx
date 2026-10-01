@@ -7,9 +7,9 @@
  * It does NOT spin in. A logo that arrives spinning reads as a loading
  * indicator, which is exactly the wrong first impression on an idle page; the
  * spin belongs to "Dox is working". Instead it uses the site's existing arrival
- * gesture — the fade-and-scale the globe performs on the dashboard
- * (`gmt-globe.css`'s `.gmt-globe-canvas-ready`), same easing, same duration —
- * so the two landmark visuals on this site enter the same way.
+ * gesture — the fade-and-scale the globe performs on the dashboard, from the
+ * shared `gmt-enter` keyframes and tokens (`gmt-primitives.css`) — so the
+ * landmark visuals on this site enter the same way.
  *
  * `useCrystalSpin(false, false)` still runs, so the hook stays the single owner
  * of this element's transform; passing `enter: false` is what suppresses the

@@ -161,9 +161,8 @@
  * Body — transcript beside the widget rail (DOX-C3b)
  *
  * The shell was a single column; this row sits inside it so the strip stays
- * full width above both. With no widget mounted `WidgetRail` renders nothing at
- * all, so this collapses to exactly the previous layout rather than to a
- * zero-width column that still participates in sizing.
+ * full width above both. With no widget mounted `WidgetRail` holds the examples
+ * panel, so the column is always present.
  * ------------------------------------------------------------------ */
 
 .gmt-hive-body {
@@ -197,6 +196,31 @@
     flex: 0 0 55%;
     border-inline-start: none;
     border-block-start: 1px solid var(--gmt-border);
+  }
+
+  /* Phone, empty conversation, no widget (`DoxPage` sets `data-empty`): the
+     crystal, status line and prompt keep their full height and the examples
+     sheet takes the rest, rather than a fixed 55% squeezing the hub off the
+     top. Once a conversation starts, or a widget opens, the 55% sheet above
+     applies unchanged. */
+  .gmt-hive-body[data-empty] .gmt-hive-chat {
+    flex: 0 1 auto;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-rail {
+    flex: 1 1 0;
+    min-height: 12rem;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-empty {
+    padding-block: var(--gmt-space-3);
+    gap: var(--gmt-space-2);
+  }
+
+  /* Phone, conversation started: the examples sheet folds away until the bar
+     above the composer opens it. */
+  .gmt-hive-rail[data-collapsed] {
+    display: none;
   }
 }
 
@@ -287,6 +311,12 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
+}
+
+/* The title takes programmatic focus when an example card opens a widget. */
+.gmt-hive-artifact-title:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
 }
 
 .gmt-hive-artifact-link {
@@ -716,21 +746,6 @@
   margin-block: auto;
 }
 
-/* Starter prompts wrap rather than scrolling horizontally: the vendored
-   `Suggestions` wrapper is a horizontal ScrollArea, which silently clipped the
-   last pill at the viewport edge. All of them should be readable at once —
-   they're the clearest signal of what this thing is for.
-   `justify-content: center` centered each row independently, so rows of
-   differing length staggered left and right instead of lining up. Left-aligned
-   flow keeps every row starting from the same edge. */
-.gmt-hive-starters {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: var(--gmt-space-2);
-  max-width: 54rem;
-}
-
 /* The hub is the same crystal at logo scale — one component, so the mark a
    reader meets on the empty page is literally the mark beside every answer. */
 .gmt-hive-hub {
@@ -738,24 +753,15 @@
   --gmt-hive-role: var(--gmt-cyan);
 }
 
-/* Arrival. Deliberately the *globe's* gesture, not a spin: the same fade and
-   scale, the same 0.5s, the same easing as `.gmt-globe-canvas-ready`
-   (gmt-globe.css), so the two landmark visuals on this site enter identically.
+/* Arrival. Deliberately the *globe's* gesture, not a spin: the shared
+   entrance keyframes (`gmt-enter`, gmt-primitives.css) and tokens, so the
+   landmark visuals on this site enter identically. The hub is server-rendered
+   React that plays it from CSS alone; `--gmt-enter-transform` keeps its tilt.
    A logo that spins in reads as a loading indicator, which is the wrong thing
    to say on an idle page — spinning is reserved for "Dox is working". */
 .gmt-hive-hub .gmt-hive-node {
-  animation: gmt-hive-hub-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes gmt-hive-hub-in {
-  from {
-    opacity: 0;
-    transform: rotateX(10deg) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: rotateX(10deg) scale(1);
-  }
+  --gmt-enter-transform: rotateX(10deg);
+  animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1551,27 +1557,6 @@
   opacity: 0.4;
 }
 
-/* Starter pills. `Suggestion` hard-codes `rounded-full`, which is foreign to a
-   design system whose every surface is chamfered. */
-.gmt-hive-starter {
-  min-height: 2.75rem;
-  padding-inline: var(--gmt-space-4);
-  color: var(--gmt-ice);
-  background: var(--gmt-fill-subtle);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  box-shadow: none;
-  white-space: normal;
-  text-align: start;
-}
-
-.gmt-hive-starter:hover {
-  color: var(--gmt-cyan-ink);
-  background: var(--gmt-fill-strong);
-  border-color: var(--gmt-border-strong);
-}
-
 /* Jump-to-latest. Dead code until the scroll container was fixed — `isAtBottom`
    could never be false — so it has never been themed. */
 /* Icon colour (a scroll-to-bottom arrow, no visible label) — INT-58 fix loop
@@ -1588,4 +1573,230 @@
   color: var(--gmt-cyan-bright);
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-cyan);
+}
+
+/* ------------------------------------------------------------------ *
+ * Examples rail — the starter questions, grouped by area, in the rail
+ * while no widget is mounted (ExamplesPanel.tsx, ExamplesBar.tsx).
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-examples {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.gmt-hive-examples-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+/* `/dox` renders inside Starlight's `.sl-markdown-content`, whose heading and
+   bullet rules (gmt-content.css) are not scoped away from `not-content`. The
+   doubled selectors below out-rank them: no heading rule or margin, no
+   bullet. */
+.gmt-hive-examples .gmt-hive-examples-header h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-examples .gmt-hive-examples-list > li {
+  margin: 0;
+  padding: 0;
+}
+
+.gmt-hive-examples .gmt-hive-examples-list > li::before {
+  content: none;
+}
+
+.gmt-hive-examples-count {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* The body scrolls inside the rail; the header stays put. */
+.gmt-hive-examples-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--gmt-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-6);
+}
+
+.gmt-hive-examples-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-hive-examples .gmt-hive-examples-area-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A native button, restyled. Bevelled like every other surface here. Text is
+   `--gmt-ice` in every state: `--gmt-cyan-ink` on the tinted hover fill is
+   under 7:1 in light, so hover and focus change border and fill instead. */
+.gmt-hive-example {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  font: inherit;
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+  text-align: start;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-example:hover,
+.gmt-hive-example:focus-visible {
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-hive-example-text {
+  overflow-wrap: anywhere;
+}
+
+/* Names the widget the card opens. Its own bevelled border, so it reads as a
+   tag on the card and not as more of the question. */
+.gmt-hive-example-chip {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.04em;
+  color: var(--gmt-ice-dim);
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow-wrap: anywhere;
+}
+
+/* Phone only (shown inside the 60rem query above): the way back to the
+   examples sheet once a conversation has started. */
+.gmt-hive-examples-bar {
+  appearance: none;
+  display: none;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  margin-block-end: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+@media (max-width: 60rem) {
+  .gmt-hive-examples-bar {
+    display: flex;
+  }
+}
+
+.gmt-hive-examples-bar:hover {
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-hive-examples-bar-chevron {
+  margin-inline-start: auto;
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-examples-bar[aria-expanded="true"] .gmt-hive-examples-bar-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-hive-example,
+  .gmt-hive-examples-bar,
+  .gmt-hive-examples-bar-chevron {
+    transition: none;
+  }
+}
+
+/* Forced colours drop box-shadow (the sonar focus ring) and tinted fills, so
+   restate the cards, chips and bar in the system palette and give focus a real
+   outline. */
+@media (forced-colors: active) {
+  .gmt-hive-example {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonText;
+  }
+
+  .gmt-hive-example-chip {
+    color: ButtonText;
+    border: 1px dashed ButtonText;
+  }
+
+  .gmt-hive-examples-bar {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 2px solid ButtonText;
+  }
+
+  .gmt-hive-examples .gmt-hive-examples-area-title,
+  .gmt-hive-examples .gmt-hive-examples-header h2,
+  .gmt-hive-examples-count {
+    color: CanvasText;
+  }
+
+  .gmt-hive-example.gmt-sonar-focus:focus-visible,
+  .gmt-hive-examples-bar.gmt-sonar-focus:focus-visible,
+  .gmt-hive-artifact-title:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }

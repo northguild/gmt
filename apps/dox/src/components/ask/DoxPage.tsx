@@ -11,17 +11,21 @@
  * one action they affect — so the dock (phase 2) gets them without re-wiring.
  *
  * DOX-C3b adds the widget rail as a sibling of `<DoxChat>` inside
- * `.gmt-hive-body`. The rail collapses to nothing when empty, so a conversation
- * with no widget in it lays out exactly as it did before.
+ * `.gmt-hive-body`. With no widget mounted the rail holds the examples panel;
+ * on a phone, once a conversation has started, that panel folds away behind an
+ * "Examples" bar above the composer.
  */
 import {
   startTransition,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
-import { DoxChat } from "./DoxChat";
+import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
+import { DoxChat, type DoxChatHandle } from "./DoxChat";
+import { ExamplesBar } from "./ExamplesBar";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
@@ -60,17 +64,37 @@ export default function DoxPage() {
   const railWidgetRef = useRef<RailWidget | null>(null);
   railWidgetRef.current = railWidget;
 
+  const railId = useId();
+  const chatRef = useRef<DoxChatHandle>(null);
+  const barRef = useRef<HTMLButtonElement>(null);
+  /* Has the reader sent anything? Drives the phone's "Examples" bar. */
+  const [conversationStarted, setConversationStarted] = useState(false);
+  /* Phone: the examples sheet is open over a started conversation. */
+  const [examplesOpen, setExamplesOpen] = useState(false);
+  /* Focus requests are read by effects after the commit that makes their
+     target exist, so they are refs, not state. */
+  const focusTitleRef = useRef(false);
+  const closedToolRef = useRef<string | null>(null);
+  const handleEmptyChange = useCallback(
+    (empty: boolean) => setConversationStarted(!empty),
+    [],
+  );
+
   const showWidget = useCallback(
     (toolCallId: string, toolName: string, input: unknown) => {
       /* The single dispatch point. An unknown tool name or input that fails the
          schema resolves to a reason, and the rail simply never opens — the
          receipt in the transcript has already said so. */
       const resolved = resolveWidget(toolName, input);
-      if (!resolved.ok) return;
+      if (!resolved.ok) {
+        focusTitleRef.current = false;
+        return;
+      }
       /* A starter pill seeds its widget on click; the model's own call for the
          same widget and the same arguments must not remount it (and reset
          anything the reader has already dragged). */
       if (isSameWidget(railWidgetRef.current, resolved.entry, resolved.args)) {
+        focusTitleRef.current = false;
         return;
       }
       /* In a transition so the rail's <ViewTransition> slides it in (and the
@@ -78,6 +102,7 @@ export default function DoxPage() {
       startTransition(() => {
         setRailWidget({
           toolCallId,
+          toolName,
           entry: resolved.entry,
           args: resolved.args,
         });
@@ -87,8 +112,42 @@ export default function DoxPage() {
   );
 
   const closeWidget = useCallback(() => {
+    closedToolRef.current = railWidgetRef.current?.toolName ?? null;
     startTransition(() => setRailWidget(null));
   }, []);
+
+  /* A card does exactly what a pill did: send the question, and only if it
+     went, open the seeded widget. Focus follows the card to the widget title.
+     On a phone the sheet folds away again, so closing lands on the bar. */
+  const pickExample = useCallback(
+    (starter: (typeof CHAT_STARTERS)[number]) => {
+      if (!chatRef.current?.send(starter.text)) return;
+      focusTitleRef.current = true;
+      setExamplesOpen(false);
+      const call = starterWidgetCall(starter);
+      showWidget(call.toolCallId, call.toolName, call.input);
+    },
+    [showWidget],
+  );
+
+  /* Closing a widget returns focus: to its card when the examples panel is
+     visible, otherwise (phone, conversation started, sheet folded) to the bar.
+     `matchMedia` is read here, in an effect, never during render (#418). */
+  useEffect(() => {
+    if (railWidget) return;
+    const tool = closedToolRef.current;
+    if (!tool) return;
+    closedToolRef.current = null;
+    const phone = window.matchMedia("(max-width: 60rem)").matches;
+    if (phone && conversationStarted && !examplesOpen) {
+      barRef.current?.focus();
+      return;
+    }
+    document
+      .getElementById(railId)
+      ?.querySelector<HTMLElement>(`button[data-widget="${tool}"]`)
+      ?.focus();
+  }, [railWidget, conversationStarted, examplesOpen, railId]);
 
   return (
     <div className="gmt-ask gmt-hive-shell">
@@ -115,13 +174,32 @@ export default function DoxPage() {
           )}
         </div>
       </header>
-      <div className="gmt-hive-body">
+      <div
+        className="gmt-hive-body"
+        data-empty={(!conversationStarted && !railWidget) || undefined}
+      >
         {/* Two boundaries, not one. The transcript is the reader's
             conversation — a widget that fails to mount must not take it away,
             and the rail is by far the likelier of the two to break, since it
             runs third-party rendering code against arguments a model chose. */}
         <ChatErrorBoundary label="transcript">
-          <DoxChat brains={info} onUsed={refresh} onWidget={showWidget} />
+          <DoxChat
+            ref={chatRef}
+            brains={info}
+            onUsed={refresh}
+            onWidget={showWidget}
+            onEmptyChange={handleEmptyChange}
+            aboveComposer={
+              conversationStarted && !railWidget ? (
+                <ExamplesBar
+                  ref={barRef}
+                  expanded={examplesOpen}
+                  railId={railId}
+                  onToggle={() => setExamplesOpen((open) => !open)}
+                />
+              ) : null
+            }
+          />
         </ChatErrorBoundary>
         <ChatErrorBoundary
           label="widget rail"
@@ -129,7 +207,11 @@ export default function DoxPage() {
              reloading would throw it away to fix a panel the reader can simply
              close. */
           fallback={(_error, reset) => (
-            <aside className="gmt-hive-rail" aria-label="Widget panel">
+            <aside
+              className="gmt-hive-rail"
+              id={railId}
+              aria-label="Widget panel"
+            >
               <div className="gmt-hive-boundary" role="alert">
                 <span className="gmt-hive-boundary-marker" aria-hidden="true">
                   ⟨ ! ⟩
@@ -151,7 +233,14 @@ export default function DoxPage() {
             </aside>
           )}
         >
-          <WidgetRail widget={railWidget} onClose={closeWidget} />
+          <WidgetRail
+            widget={railWidget}
+            onClose={closeWidget}
+            onPick={pickExample}
+            collapsed={conversationStarted && !examplesOpen}
+            railId={railId}
+            focusTitleRef={focusTitleRef}
+          />
         </ChatErrorBoundary>
       </div>
     </div>
