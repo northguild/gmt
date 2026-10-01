@@ -34,7 +34,7 @@ import {
   buildZonedValueFromMinutes,
   classifyProbeResult,
   formatMinuteOfDay,
-  getTickerTickStepMinutes,
+  selectTickMinutes,
   getTickerWindow,
   isGap,
   isMinuteInZone,
@@ -56,6 +56,7 @@ import {
   codeSpan,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   wireCopyButtons,
@@ -104,21 +105,21 @@ export function renderDstTemplate(args: DstArgs = {}): string {
   ).join("");
 
   return (
-    `<div class="gmt-dst gmt-widget">` +
+    `<div class="gmt-dst gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<!-- Step 1 — find the transitions -->` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Find transitions</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label"><span>Zone</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Zone")}` +
     `<select class="gmt-select" data-role="zone">${options(zones, zone)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Year</span>` +
+    `<label class="gmt-label">${labelTextHtml("Year")}` +
     `<input class="gmt-input" data-role="year" type="number" value="${escapeAttr(String(year))}" min="1900" max="2100" step="1">` +
     `</label>` +
     `</div>` +
     codeFrameHtml("getdst") +
-    `<table class="gmt-dst-table">` +
+    `<table class="gmt-dst-table" data-grow="slot">` +
     `<thead><tr>` +
     `<th>Type</th><th>Local Date</th><th>Local Hour</th><th>UTC Instant</th><th>Offset Before → After</th>` +
     `</tr></thead>` +
@@ -128,15 +129,15 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<!-- Step 2 — probe a moment -->` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Probe a moment</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Value preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="value-preset">${presetOptions}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Value preset")}` +
+    `<select class="gmt-select" data-role="value-preset">${presetOptions}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Disambiguation</span>` +
+    `<label class="gmt-label">${labelTextHtml("Disambiguation")}` +
     `<select class="gmt-select" data-role="disambiguation">${options(DISOPTIONS, dis)}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description"></p>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot"></p>` +
     `<!-- Scrubbable local-time ticker (drag or arrow keys) -->` +
     `<div class="gmt-dst-ticker" data-role="ticker" hidden>` +
     `<div class="gmt-dst-ticker-status" data-role="ticker-status"></div>` +
@@ -144,7 +145,7 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<div class="gmt-dst-ticker-zone" data-role="ticker-zone"></div>` +
     `<span class="gmt-dst-ticker-zone-label" data-role="zone-label-start"></span>` +
     `<span class="gmt-dst-ticker-zone-label" data-role="zone-label-end"></span>` +
-    `<div class="gmt-dst-ticker-handle" data-role="ticker-handle" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Local probe time"></div>` +
+    `<div class="gmt-handle gmt-dst-ticker-handle" data-role="ticker-handle" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Local probe time"></div>` +
     `</div>` +
     `<div class="gmt-dst-ticker-ticks" data-role="ticker-ticks"></div>` +
     `</div>` +
@@ -291,7 +292,7 @@ function renderTicker(
     '[data-role="ticker-handle"]',
   ) as HTMLElement | null;
   if (handle) {
-    handle.className = `gmt-dst-ticker-handle${inZone ? ` gmt-dst-ticker-handle--${type}` : ""}`;
+    handle.className = `gmt-handle gmt-dst-ticker-handle${inZone ? ` gmt-dst-ticker-handle--${type}` : ""}`;
     handle.style.left = `${minuteToTickerPercent(minuteOfDay, window_)}%`;
     handle.setAttribute("aria-valuemin", String(window_.windowStartMinutes));
     handle.setAttribute("aria-valuemax", String(window_.windowEndMinutes));
@@ -304,9 +305,7 @@ function renderTicker(
   ) as HTMLElement | null;
   if (ticksEl) {
     ticksEl.innerHTML = "";
-    const step = getTickerTickStepMinutes(window_);
-    const firstTick = Math.ceil(window_.windowStartMinutes / step) * step;
-    for (let m = firstTick; m <= window_.windowEndMinutes; m += step) {
+    for (const m of selectTickMinutes(window_, ticksEl.clientWidth)) {
       const tick = document.createElement("span");
       tick.className = "gmt-dst-ticker-tick";
       tick.textContent = formatMinuteOfDay(m);
@@ -635,6 +634,24 @@ function setupWidget(
   wireCopyButtons(container);
 
   resetAndRender();
+
+  /* The tick labels are thinned to the track's measured width, so a width
+     change (rotation, the chat rail opening) re-picks them. The observer is
+     dropped once the widget leaves the document. */
+  if (trackEl && typeof ResizeObserver !== "undefined") {
+    let lastWidth = trackEl.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (!trackEl.isConnected) {
+        observer.disconnect();
+        return;
+      }
+      const width = trackEl.clientWidth;
+      if (width === lastWidth || tickerEl?.hidden) return;
+      lastWidth = width;
+      render();
+    });
+    observer.observe(trackEl);
+  }
 }
 
 /** Write seeded arguments onto the controls. Silently skips anything the

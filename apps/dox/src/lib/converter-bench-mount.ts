@@ -29,6 +29,7 @@ import {
   codeSpan,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderCallLine,
   wireCopyButtons,
 } from "./widget-ui";
@@ -84,32 +85,32 @@ export function renderConverterTemplate(args: ConverterArgs = {}): string {
     : [...CONVERTER_LOCALES, locale];
 
   return (
-    `<div class="gmt-converter gmt-widget">` +
+    `<div class="gmt-converter gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>Zone conversion</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Input</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
     `<input class="gmt-input" data-role="convert-value" type="text" value="${escapeAttr(value)}" spellcheck="false">` +
     `</label>` +
     `</div>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>From</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="convert-source">${options(zonesFrom, from)}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("From")}` +
+    `<select class="gmt-select" data-role="convert-source">${options(zonesFrom, from)}</select>` +
     `</label>` +
-    `<label class="gmt-label gmt-label-wide"><span>To</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="convert-target">${options(zonesTo, to)}</select>` +
+    `<label class="gmt-label">${labelTextHtml("To")}` +
+    `<select class="gmt-select" data-role="convert-target">${options(zonesTo, to)}</select>` +
     `</label>` +
     `</div>` +
     `<output class="gmt-widget-output" data-role="convert-result">&nbsp;</output>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>Format bench</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Input</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
     `<input class="gmt-input" data-role="format-value" type="text" value="${escapeAttr(value)}" spellcheck="false">` +
     `</label>` +
-    `<label class="gmt-label"><span>Locale</span>` +
+    `<label class="gmt-label">${labelTextHtml("Locale")}` +
     `<select class="gmt-select" data-role="format-locale">${options(locales, locale)}</select>` +
     `</label>` +
     `</div>` +
@@ -122,8 +123,8 @@ export function renderConverterTemplate(args: ConverterArgs = {}): string {
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>Regex tester</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Input</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
     `<input class="gmt-input" data-role="regex-input" type="text" value="${DEFAULT_REGEX_INPUT}" spellcheck="false">` +
     `</label>` +
     `</div>` +

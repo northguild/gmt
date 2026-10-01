@@ -8,6 +8,7 @@ import {
   classifyProbeResult,
   formatMinuteOfDay,
   getTickerTickStepMinutes,
+  selectTickMinutes,
   getTickerWindow,
   isGap,
   isMinuteInZone,
@@ -330,6 +331,56 @@ describe("getTickerTickStepMinutes", () => {
         windowEndMinutes: 300,
       }),
     ).toBe(30);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// selectTickMinutes
+// ---------------------------------------------------------------------------
+
+describe("selectTickMinutes", () => {
+  const win = (start: number, end: number) => ({
+    zoneStartMinutes: start + 30,
+    zoneEndMinutes: end - 30,
+    windowStartMinutes: start,
+    windowEndMinutes: end,
+  });
+
+  it("keeps the base step on a wide, or unmeasured, track", () => {
+    expect(selectTickMinutes(win(90, 210), 0)).toEqual([
+      90, 105, 120, 135, 150, 165, 180, 195, 210,
+    ]);
+    expect(selectTickMinutes(win(90, 210), 1000)).toHaveLength(9);
+  });
+
+  it("thins a 250px track so neighbouring labels are at least 48px apart", () => {
+    // 120 min over 250px: 15 min is 31px (too tight), 30 min is 62px.
+    expect(selectTickMinutes(win(90, 210), 250)).toEqual([
+      90, 120, 150, 180, 210,
+    ]);
+  });
+
+  it("coarsens further on a very narrow track and stays on round minutes", () => {
+    const ticks = selectTickMinutes(win(90, 210), 100);
+    expect(ticks).toEqual([120, 180]);
+    for (const m of ticks) expect(m % 60).toBe(0);
+  });
+
+  it("never returns an empty set", () => {
+    expect(selectTickMinutes(win(65, 115), 40)).toEqual([65]);
+  });
+
+  it("guarantees the minimum pitch for any window and width", () => {
+    for (const span of [60, 90, 120, 150, 300]) {
+      for (const px of [120, 200, 250, 340, 700]) {
+        const ticks = selectTickMinutes(win(100, 100 + span), px);
+        for (let i = 1; i < ticks.length; i++) {
+          expect(
+            ((ticks[i]! - ticks[i - 1]!) / span) * px,
+          ).toBeGreaterThanOrEqual(48);
+        }
+      }
+    }
   });
 });
 

@@ -21,7 +21,9 @@ import {
   rulerNullReason,
   rulerNullText,
   transitionBetween,
+  transitionKind,
   transitionLabel,
+  transitionShiftMinutes,
   type CutoffRulerArgs,
   type RulerFacts,
   type RulerReading,
@@ -40,11 +42,19 @@ import {
 } from "./cutoff-widgets";
 import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
+import {
+  onWidthChange,
+  pickLabelLeft,
+  placeLabel,
+  thinTickLabels,
+} from "./label-fit";
 import type { CutoffLib } from "./cutoff-widgets";
+import { transportIcon } from "./transport-icons";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -73,23 +83,23 @@ export function renderCutoffRulerTemplate(args: CutoffRulerArgs = {}): string {
   const days = Number.parseInt(state.days, 10) || 1;
 
   return (
-    `<div class="gmt-cutoff-ruler gmt-widget">` +
+    `<div class="gmt-cutoff-ruler gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. The departure and the rule</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Departs</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Departs")}` +
     `<input class="gmt-input" data-role="anchor" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.anchor)}"></label>` +
-    `<label class="gmt-label"><span>Terminal clock</span>` +
+    `<label class="gmt-label">${labelTextHtml("Terminal clock")}` +
     `<select class="gmt-select" data-role="time-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
-    `<label class="gmt-label"><span>Days before</span>` +
+    `<label class="gmt-label">${labelTextHtml("Days before")}` +
     `<select class="gmt-select" data-role="days">${[1, 2, 3, 4, 5, 6, 7].map((n) => `<option value="${n}"${n === days ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
-    `<label class="gmt-label"><span>At local time</span>` +
+    `<label class="gmt-label">${labelTextHtml("At local time")}` +
     `<input class="gmt-input" data-role="at-local-time" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.atLocalTime)}"></label>` +
     `</div>` +
     `</div>` +
@@ -126,6 +136,27 @@ const READING_ROLE: Record<string, string> = {
   pinned: "ruler-pinned",
 };
 
+/** The series each reading is drawn in, in the lane, the close-up and its
+ *  card: calendar 1, exact 2, pinned 3. Names a reading, computes nothing. */
+const READING_SERIES: Record<string, number> = {
+  calendar: 1,
+  exact: 2,
+  pinned: 3,
+};
+
+const seriesOf = (r: RulerReading): number => READING_SERIES[r.key] ?? 1;
+
+const SWATCH = `<span class="gmt-cutoff-series-swatch" aria-hidden="true"></span>`;
+
+/** A tick that names a day (or midnight), not an hour of one. */
+function isDayBoundary(label: string): boolean {
+  return label === "00:00" || !/^\d{2}:\d{2}$/.test(label);
+}
+
+function tickHtml(t: { ms: number; label: string }, pct: number): string {
+  return `<span class="gmt-cutoff-axis-tick${isDayBoundary(t.label) ? " gmt-cutoff-axis-tick--day" : ""}" style="left:${pct}%">${escapeHtml(t.label)}</span>`;
+}
+
 /** The local midnight at or before `ms`, in `zone` — the polyfill's own
  *  `startOfDay`, for the overview's exact-time axis start. `ms` unchanged
  *  when the zone does not resolve. */
@@ -159,37 +190,56 @@ function renderOverview(
   const span = Math.max(1, departureMs - startMs);
   const pct = (ms: number) => ((ms - startMs) / span) * 100;
 
+  const transition = transitionBetween(state, facts);
+  const kind = transition ? transitionKind(transition) : null;
+  const gate = `<span class="gmt-cutoff-gate"></span>`;
+  // The DST change through a track: a dashed line, and for an overlap the
+  // repeated hour as a faint band `|Δoffset|` wide after the instant.
+  const transitionMarks = transition
+    ? (kind === "overlap"
+        ? `<span class="gmt-cutoff-ruler-dst-band" style="left:${pct(epochMs(transition.instant))}%;width:${(Math.abs(transitionShiftMinutes(transition)) * 60_000 * 100) / span}%"></span>`
+        : "") +
+      `<span class="gmt-cutoff-ruler-transition-line gmt-cutoff-ruler-transition-line--${kind}" style="left:${pct(epochMs(transition.instant))}%"></span>`
+    : "";
   const lanes = facts.readings
     .map((r) => {
+      const label =
+        `<span class="gmt-cutoff-ruler-lane-label">${SWATCH}` +
+        `<span>${escapeHtml(r.label)}</span></span>`;
       if (r.at === "") {
         return (
-          `<div class="gmt-cutoff-ruler-lane">` +
-          `<span class="gmt-cutoff-ruler-lane-label">${escapeHtml(r.label)}</span>` +
-          `<span class="gmt-widget-output gmt-playground-sentinel">NO SIGNAL</span>` +
+          `<div class="gmt-cutoff-ruler-lane" data-series="${seriesOf(r)}">` +
+          label +
+          `<div class="gmt-cutoff-ruler-track"><span class="gmt-widget-output gmt-playground-sentinel">NO SIGNAL</span>${gate}</div>` +
           `</div>`
         );
       }
       const left = pct(epochMs(r.at));
       return (
-        `<div class="gmt-cutoff-ruler-lane">` +
-        `<span class="gmt-cutoff-ruler-lane-label">${escapeHtml(r.label)}</span>` +
-        `<div class="gmt-cutoff-ruler-bar" style="left:${left}%;width:${Math.max(0, 100 - left)}%">` +
-        `<span class="gmt-cutoff-ruler-marker gmt-cutoff-ruler-marker--solid"></span>` +
-        `<span class="gmt-cutoff-ruler-bar-label">${escapeHtml(localLabel(r.at))} · ${escapeHtml(durationText(r.hoursBefore))}</span>` +
+        `<div class="gmt-cutoff-ruler-lane" data-series="${seriesOf(r)}">` +
+        label +
+        `<div class="gmt-cutoff-ruler-track">` +
+        transitionMarks +
+        `<div class="gmt-cutoff-ruler-bar" style="left:${left}%">` +
+        `<span class="gmt-cutoff-mark gmt-cutoff-ruler-marker gmt-cutoff-ruler-marker--solid"></span>` +
+        `<span class="gmt-cutoff-chip gmt-cutoff-ruler-bar-label">${escapeHtml(localLabel(r.at))} · ${escapeHtml(durationText(r.hoursBefore))}</span>` +
+        `</div>` +
+        gate +
         `</div>` +
         `</div>`
       );
     })
     .join("");
 
-  const transition = transitionBetween(state, facts);
-  const transitionMarker = transition
+  /* The label sits in its own row above the lanes, so it can never land on a
+     lane's text; the dashed line itself is drawn inside each lane's track. */
+  const transitionRow = transition
     ? (() => {
         const left = pct(epochMs(transition.instant));
         const label = transitionLabel(transition, state.timeZone.trim());
         return (
-          `<div class="gmt-cutoff-ruler-transition" style="left:${left}%" title="${escapeAttr(label)}">` +
-          `<span class="gmt-widget-hint">${escapeHtml(label)}</span>` +
+          `<div class="gmt-cutoff-ruler-transition-row">` +
+          `<span class="gmt-cutoff-chip gmt-cutoff-dst gmt-cutoff-dst--${kind} gmt-cutoff-ruler-transition" style="--gmt-at: ${left}%" title="${escapeAttr(label)}">${escapeHtml(label)}</span>` +
           `</div>`
         );
       })()
@@ -200,17 +250,14 @@ function renderOverview(
   const ticks = walkTicks(startMs, departureMs, timeZone, "hours", 6, (z) =>
     z.hour === 0 ? dayTickLabel(z) : hourTickLabel(z),
   );
-  const ticksHtml = ticks
-    .map(
-      (t) =>
-        `<span class="gmt-cutoff-axis-tick" style="left:${pct(t.ms)}%">${escapeHtml(t.label)}</span>`,
-    )
-    .join("");
+  const ticksHtml = ticks.map((t) => tickHtml(t, pct(t.ms))).join("");
 
   el.innerHTML =
-    `<div class="gmt-cutoff-ruler-lanes">${lanes}${transitionMarker}</div>` +
-    `<div class="gmt-cutoff-ruler-departure-line">Departs ${escapeHtml(localLabel(facts.departure))}</div>` +
-    `<div class="gmt-cutoff-ruler-ticks" data-role="ruler-overview-ticks">${ticksHtml}</div>`;
+    transitionRow +
+    `<div class="gmt-cutoff-ruler-lanes">${lanes}</div>` +
+    `<div class="gmt-cutoff-ruler-ticks gmt-cutoff-ruler-ticks--track" data-role="ruler-overview-ticks">${ticksHtml}</div>` +
+    `<div class="gmt-cutoff-ruler-departure-line gmt-cutoff-chip">${transportIcon("ship", { className: "gmt-cutoff-icon", size: 14 })}<span>Departs ${escapeHtml(localLabel(facts.departure))}</span></div>`;
+  fitRuler(el);
 }
 
 /**
@@ -238,26 +285,138 @@ function renderCloseup(
   const pct = (v: number) => ((v - startMs) / span) * 100;
 
   const ticks = walkTicks(startMs, endMs, timeZone, "hours", 1, hourTickLabel);
-  const ticksHtml = ticks
+  const ticksHtml = ticks.map((t) => tickHtml(t, pct(t.ms))).join("");
+
+  // One band per pair of adjacent hour ticks, every other one tinted.
+  const bands = ticks
+    .slice(0, -1)
     .map(
-      (t) =>
-        `<span class="gmt-cutoff-axis-tick" style="left:${pct(t.ms)}%">${escapeHtml(t.label)}</span>`,
+      (t, i) =>
+        `<span class="gmt-cutoff-ruler-band${i % 2 === 1 ? " gmt-cutoff-ruler-band--tint" : ""}" style="left:${pct(t.ms)}%;width:${pct(ticks[i + 1]!.ms) - pct(t.ms)}%"></span>`,
     )
     .join("");
 
   const rows = resolved
-    .map(
-      (r) =>
-        `<div class="gmt-cutoff-ruler-closeup-row">` +
-        `<span class="gmt-cutoff-ruler-marker gmt-cutoff-ruler-marker--solid" style="left:${pct(epochMs(r.at))}%"></span>` +
-        `<span class="gmt-cutoff-ruler-closeup-label" style="left:${pct(epochMs(r.at))}%">${escapeHtml(r.label)}</span>` +
-        `</div>`,
-    )
+    .map((r) => {
+      const x = pct(epochMs(r.at));
+      return (
+        `<div class="gmt-cutoff-ruler-closeup-row" data-series="${seriesOf(r)}">` +
+        `<span class="gmt-cutoff-ruler-guide" style="left:${x}%"></span>` +
+        `<span class="gmt-cutoff-mark gmt-cutoff-ruler-marker gmt-cutoff-ruler-marker--solid" style="left:${x}%"></span>` +
+        `<span class="gmt-cutoff-chip gmt-cutoff-ruler-closeup-label" data-x="${x}" style="left:${x}%">${escapeHtml(r.label)}</span>` +
+        `</div>`
+      );
+    })
     .join("");
 
   el.innerHTML =
-    `<div class="gmt-cutoff-ruler-hourline">${rows}</div>` +
+    `<div class="gmt-cutoff-ruler-hourline">` +
+    `<div class="gmt-cutoff-ruler-bands" aria-hidden="true">${bands}</div>${rows}</div>` +
     `<div class="gmt-cutoff-ruler-ticks" data-role="ruler-closeup-ticks">${ticksHtml}</div>`;
+  fitRuler(el);
+}
+
+/** Thin the tick labels, flip a close-up label that would run past the
+ *  track, and move an overview bar label under its bar when it does not fit
+ *  beside the marker. Measured, so it re-runs when the width changes. */
+function fitRuler(el: HTMLElement): void {
+  for (const ticks of el.querySelectorAll<HTMLElement>(
+    ".gmt-cutoff-ruler-ticks",
+  )) {
+    thinTickLabels(ticks);
+  }
+  for (const row of el.querySelectorAll<HTMLElement>(
+    ".gmt-cutoff-ruler-closeup-row",
+  )) {
+    const label = row.querySelector<HTMLElement>(
+      ".gmt-cutoff-ruler-closeup-label",
+    );
+    if (!label || row.clientWidth === 0) continue;
+    label.classList.remove("gmt-cutoff-ruler-closeup-label--end");
+    row.classList.remove("gmt-cutoff-ruler-closeup-row--stack");
+    const x = parseFloat(label.dataset.x ?? "0");
+    label.style.left = `${x}%`;
+    const trackPx = row.clientWidth;
+    const atPx = (x / 100) * trackPx;
+    const labelPx = label.getBoundingClientRect().width;
+    const OFFSET = 14;
+    const side = placeLabel({ atPx, labelPx, trackPx, offsetPx: OFFSET });
+    const room =
+      side === "start"
+        ? atPx + OFFSET + labelPx <= trackPx + 0.5
+        : atPx - OFFSET - labelPx >= -0.5;
+    if (room) {
+      label.classList.toggle(
+        "gmt-cutoff-ruler-closeup-label--end",
+        side === "end",
+      );
+    } else {
+      // Neither side of the marker holds the label: stack it above the marker,
+      // kept inside the track.
+      row.classList.add("gmt-cutoff-ruler-closeup-row--stack");
+      const left = Math.max(0, Math.min(atPx - labelPx / 2, trackPx - labelPx));
+      label.style.left = `${left}px`;
+    }
+  }
+  for (const row of el.querySelectorAll<HTMLElement>(
+    ".gmt-cutoff-ruler-transition-row",
+  )) {
+    const label = row.querySelector<HTMLElement>(
+      ".gmt-cutoff-ruler-transition",
+    );
+    if (!label || row.clientWidth === 0) continue;
+    label.classList.remove(
+      "gmt-cutoff-ruler-transition--end",
+      "gmt-cutoff-ruler-transition--wrap",
+    );
+    const trackPx = row.clientWidth;
+    const atPx =
+      (parseFloat(label.style.getPropertyValue("--gmt-at")) / 100) * trackPx;
+    const width = label.getBoundingClientRect().width;
+    // Right of the line when it fits, else left of it, else wrap on the roomier side.
+    const side = placeLabel({ atPx, labelPx: width, trackPx, offsetPx: 0 });
+    const fits = side === "start" ? atPx + width <= trackPx : atPx >= width;
+    const end = fits ? side === "end" : atPx > trackPx - atPx;
+    label.classList.toggle("gmt-cutoff-ruler-transition--end", end);
+    label.classList.toggle("gmt-cutoff-ruler-transition--wrap", !fits);
+  }
+  for (const track of el.querySelectorAll<HTMLElement>(
+    ".gmt-cutoff-ruler-track",
+  )) {
+    const bar = track.querySelector<HTMLElement>(".gmt-cutoff-ruler-bar");
+    const label = bar?.querySelector<HTMLElement>(
+      ".gmt-cutoff-ruler-bar-label",
+    );
+    if (!bar || !label || track.clientWidth === 0) continue;
+    const barLeft = (parseFloat(bar.style.left) / 100) * track.clientWidth;
+    const line = track.querySelector<HTMLElement>(
+      ".gmt-cutoff-ruler-transition-line",
+    );
+    const lineX = line
+      ? (parseFloat(line.style.left) / 100) * track.clientWidth
+      : null;
+    const width = label.getBoundingClientRect().width;
+    // Beside the marker; else clear of the DST line; else right-aligned.
+    const left = pickLabelLeft(
+      [
+        barLeft + 14,
+        ...(lineX === null ? [] : [lineX + 6]),
+        track.clientWidth - width - 6,
+      ],
+      width,
+      track.clientWidth,
+      lineX === null ? [] : [lineX],
+    );
+    label.style.left = `${left - barLeft}px`;
+  }
+}
+
+/** `localLabel`'s text in two no-wrap spans (date, time), so a narrow card can
+ *  only wrap between them. The text content is unchanged. */
+function readingTimeHtml(label: string): string {
+  const i = label.lastIndexOf(" ");
+  if (i < 0) return escapeHtml(label);
+  return `<span>${escapeHtml(label.slice(0, i))}</span> <span>${escapeHtml(label.slice(i + 1))}</span>`;
 }
 
 function readingsList(facts: RulerFacts): string {
@@ -269,11 +428,19 @@ function readingsList(facts: RulerFacts): string {
           : r.key === "exact"
             ? "elapsed time, whatever the clock does"
             : "keeps the local time you pin, and lets the elapsed time move";
-      const value =
+      const head = `<div class="gmt-cutoff-ruler-reading-head">${SWATCH}<span>${escapeHtml(r.label)}</span></div>`;
+      const body =
         r.at === ""
-          ? `<span class="gmt-widget-output gmt-playground-sentinel">NO SIGNAL</span>`
-          : `${escapeHtml(localLabel(r.at))} — ${escapeHtml(r.at)} — ${escapeHtml(durationText(r.hoursBefore))} (${escapeHtml(r.hoursBefore)})`;
-      return `<li><strong>${escapeHtml(r.label)}</strong>: ${value}<br><span class="gmt-widget-hint">${escapeHtml(gloss)}</span></li>`;
+          ? `<div class="gmt-cutoff-ruler-reading-time"><span class="gmt-widget-output gmt-playground-sentinel">NO SIGNAL</span></div>`
+          : `<div class="gmt-cutoff-ruler-reading-time">${readingTimeHtml(localLabel(r.at))}</div>` +
+            `<div class="gmt-cutoff-ruler-reading-meta">${escapeHtml(r.at)} · ${escapeHtml(durationText(r.hoursBefore))} before departure · (${escapeHtml(r.hoursBefore)})</div>`;
+      return (
+        `<li class="gmt-cutoff-ruler-card" data-series="${seriesOf(r)}">` +
+        head +
+        body +
+        `<div class="gmt-cutoff-ruler-reading-gloss">${escapeHtml(gloss)}</div>` +
+        `</li>`
+      );
     })
     .join("");
 }
@@ -401,6 +568,10 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
 
   wireCopyButtons(root);
   render();
+  for (const role of ["ruler-overview", "ruler-closeup"]) {
+    const surface = q<HTMLElement>(role);
+    if (surface) onWidthChange(surface, () => fitRuler(surface));
+  }
 }
 
 function applyArgs(root: HTMLElement, args: CutoffRulerArgs): void {

@@ -54,6 +54,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -106,23 +107,23 @@ export function renderCrossingClockTemplate(
   const preset = CROSSING_PRESETS.find((p) => p.id === presetId);
 
   const text = (role: string, label: string, value: string) =>
-    `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml(label)}` +
     `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
 
   return (
-    `<div class="gmt-crossing gmt-widget">` +
+    `<div class="gmt-crossing gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Log the crossing</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls gmt-crossing-fields">` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid gmt-crossing-fields">` +
     text("entry", "Entry", state.entry) +
     text("exit", "Exit", state.exit) +
-    `<label class="gmt-label"><span>Read on the clock of</span>` +
+    `<label class="gmt-label">${labelTextHtml("Read on the clock of")}` +
     `<select class="gmt-select" data-role="target-zone">${zoneOptionsHtml(CROSSING_ZONES, state.targetZone)}</select></label>` +
     `</div>` +
     `</div>` +
@@ -147,7 +148,7 @@ export function renderCrossingClockTemplate(
     `<p class="gmt-transport-visually-hidden" id="crossing-ruler-summary" data-role="ruler-summary"></p>` +
     `<p class="gmt-widget-hint" data-role="legend"></p>` +
     `</div>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
+    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What <code>crossingTime</code> returns</h4>` +

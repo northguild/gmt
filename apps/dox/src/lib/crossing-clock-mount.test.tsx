@@ -119,6 +119,11 @@ describe("renderCrossingClockTemplate", () => {
     expect(labels[2]!.querySelector("select")?.dataset.role).toBe(
       "target-zone",
     );
+    expect(labels.map((l) => l.classList.contains("gmt-field-wide"))).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 });
 

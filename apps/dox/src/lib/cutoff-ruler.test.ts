@@ -18,6 +18,7 @@ import {
   RULER_PRESETS,
   rulerNullReason,
   transitionBetween,
+  transitionKind,
   transitionLabel,
   type RulerState,
 } from "./cutoff-ruler";
@@ -205,5 +206,19 @@ describe("matchPreset / permalinkOf", () => {
       days: "3",
     };
     expect(matchPreset(state)).toBe("custom");
+  });
+});
+
+describe("transitionKind", () => {
+  it("R1: a fall-back repeats an hour, an overlap", () => {
+    const state = presetState(presetById("new-york-fall-back"));
+    const t = transitionBetween(state, collectRulerFacts(state, lib));
+    expect(transitionKind(t!)).toBe("overlap");
+  });
+
+  it("R3: a spring-forward skips an hour, a gap", () => {
+    const state = presetState(presetById("new-york-spring-forward"));
+    const t = transitionBetween(state, collectRulerFacts(state, lib));
+    expect(transitionKind(t!)).toBe("gap");
   });
 });

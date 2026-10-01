@@ -9,6 +9,7 @@
  * lost across.
  */
 import { useEffect, useRef, useState } from "react";
+import { smoothHeight, smoothHeights } from "~/lib/smooth-height";
 import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
 import type { AnyWidgetEntry } from "./widget-registry";
 
@@ -31,6 +32,9 @@ export function MountedWidget({
   onHandle?: (handle: WidgetHandle | null) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  /* The `.gmt-grow` box around the host: the Loading → template → mount swaps
+     slide in height instead of popping. */
+  const outerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<{
     message: string;
     retryable: boolean;
@@ -57,6 +61,9 @@ export function MountedWidget({
        placeholder while its chunk loads, then the template, whose controls do
        nothing until the mount has loaded the library. */
     root.setAttribute("aria-busy", "true");
+    /* Attached before the first write, so the seed is the empty host and the
+       placeholder eases in. Without ResizeObserver this changes nothing. */
+    if (outerRef.current) smoothHeight(outerRef.current, controller.signal);
     root.innerHTML = `<p class="gmt-hive-widget-loading" role="status">Loading ${escapeText(entry.title)}\u2026</p>`;
 
     void (async () => {
@@ -74,6 +81,9 @@ export function MountedWidget({
         const { mount, renderTemplate } = await entry.load();
         if (cancelled) return;
         root.innerHTML = renderTemplate(idPrefix, args as never);
+        /* The widget's result sections ease the way they do on a tool page. A
+           nested grow wins over the host's while it animates. */
+        smoothHeights(root, controller.signal);
 
         const mounted = await mount(root, args as never, controller.signal);
         if (cancelled) {
@@ -144,7 +154,13 @@ export function MountedWidget({
   /* `suppressHydrationWarning` because this subtree is written by `mount()`,
      not by React — the server renders it empty and the client fills it. */
   return (
-    <div className="gmt-hive-widget-host" ref={ref} suppressHydrationWarning />
+    <div className="gmt-grow" ref={outerRef}>
+      <div
+        className="gmt-hive-widget-host"
+        ref={ref}
+        suppressHydrationWarning
+      />
+    </div>
   );
 }
 

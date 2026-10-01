@@ -249,6 +249,44 @@ export function getTickerTickStepMinutes(window: TickerWindow): number {
   return span <= 120 ? 15 : 30;
 }
 
+/** Steps a ticker may thin to, in minutes, finest first. */
+const TICK_STEPS = [15, 30, 60, 120, 240, 360, 720, 1440];
+
+/**
+ * The minutes that get a tick label, thinned so that no two labels collide.
+ *
+ * Starts from `getTickerTickStepMinutes` and coarsens through 30, 60, 120 ...
+ * minutes until neighbouring ticks are at least `minPitchPx` apart on a track
+ * `trackPx` wide (the default fits a `HH:MM` label at 12px mono, plus a gap).
+ * Ticks stay on multiples of the step, so the labels read as round times. With
+ * an unmeasured track (`trackPx <= 0`, e.g. before layout) the base step is
+ * used. A window with no multiple of the chosen step still gets one tick, at
+ * its start, so the ticker is never unlabelled.
+ */
+export function selectTickMinutes(
+  window: TickerWindow,
+  trackPx: number,
+  minPitchPx = 48,
+): number[] {
+  const span = window.windowEndMinutes - window.windowStartMinutes;
+  const base = getTickerTickStepMinutes(window);
+  let step = base;
+  if (trackPx > 0 && span > 0) {
+    step =
+      TICK_STEPS.find((s) => s >= base && (s / span) * trackPx >= minPitchPx) ??
+      TICK_STEPS[TICK_STEPS.length - 1]!;
+  }
+  const ticks: number[] = [];
+  for (
+    let m = Math.ceil(window.windowStartMinutes / step) * step;
+    m <= window.windowEndMinutes;
+    m += step
+  ) {
+    ticks.push(m);
+  }
+  return ticks.length > 0 ? ticks : [window.windowStartMinutes];
+}
+
 // ---------------------------------------------------------------------------
 // Probe value builder
 // ---------------------------------------------------------------------------

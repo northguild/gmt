@@ -496,3 +496,70 @@
     transition: none;
   }
 }
+
+/* ---- Smooth growth — height easing for result regions ----
+ * `lib/smooth-height.ts` adds the inline height and `data-growing` while a
+ * change eases; at rest every .gmt-grow is `height: auto`, so without JS the
+ * page is exactly what the server rendered. Height is the only thing that
+ * moves — never opacity or transform on a value.
+ */
+.gmt-grow {
+  display: flex;
+  flex-direction: column;
+  /* a flex item may shrink below its content while easing down */
+  min-height: 0;
+  /* inline height = the inner box's height; a section's padding and border sit
+     outside it (Starlight's reset is border-box) */
+  box-sizing: content-box;
+}
+/* an author display beats the UA [hidden] rule */
+.gmt-grow[hidden] {
+  display: none;
+}
+.gmt-grow-inner {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+/* the clipped box must never squeeze its content while it is shorter than it */
+.gmt-grow > * {
+  flex-shrink: 0;
+}
+.gmt-grow[data-growing] {
+  /* y only: glows and focus rings still spill sideways. Not
+     overflow-clip-margin: Safari ignores it */
+  overflow-y: clip;
+  transition: height var(--gmt-grow-duration, var(--gmt-duration-med))
+    var(--gmt-grow-easing);
+}
+
+/* ---- Entrance — the arrival gesture ----
+ * One fade from 92% scale, shared by the globe, its zone list and the /dox
+ * crystal. `lib/enter.ts` adds `.gmt-enter` (and `data-enter="pending"` for an
+ * element held until its moment), so a page without script is never hidden.
+ * `--gmt-enter-transform` keeps an element's own transform through the
+ * entrance (the crystal's tilt). Entered elements drop the class and carry
+ * `data-entered`, back on their own styles.
+ */
+[data-enter="pending"] {
+  opacity: 0;
+}
+.gmt-enter {
+  animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing)
+    var(--gmt-enter-delay, 0ms) both;
+}
+@keyframes gmt-enter {
+  from {
+    opacity: 0;
+    transform: var(--gmt-enter-transform,) scale(var(--gmt-enter-scale));
+  }
+  to {
+    opacity: 1;
+    transform: var(--gmt-enter-transform,) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gmt-enter {
+    animation: none;
+  }
+}

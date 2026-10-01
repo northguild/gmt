@@ -153,6 +153,60 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   comparing `cutoffAt` with and without the calendar, never from arithmetic. The Countdown
   reads the clock only after mount and only in live mode; presets, permalinks with a `now`
   and the page's default are pinned.
+  Their charts share one recipe sheet, `gmt-cutoff-widgets.css`:
+  - **The surface:** bevelled tint-and-hairline chart panels with no `backdrop-filter`
+    (never glass within glass).
+  - **The marks:** `.gmt-cutoff-mark`, a glowing bevelled marker, with a hollow, dashed
+    variant for an unrolled position; and `.gmt-cutoff-gate`, a bright line for a cut-off
+    or departure.
+  - **The text plates:** `.gmt-cutoff-chip`, an opaque `--gmt-surface` plate that every
+    label inside a chart sits on, so no glyph touches a gradient, hatch or line.
+  - **The `.gmt-cutoff-closed` hatch:** a teal hatch under a void veil, plus a "closed"
+    chip, shared by the Countdown and the Stack.
+
+  Each reading or cut-off carries `data-series="1"…"4"`, which sets `--series` from the
+  site-wide `--gmt-series-*` tokens:
+  - **Ruler:** calendar, exact and pinned are 1, 2 and 3.
+  - **Stack:** `StackRow.series` is the matched entry's place in the `cutoffSchedule` call.
+
+  The tools in turn:
+  - **Countdown:** a display-font hero of the signed time left, formatted from
+    `timeToCutoff`. Above the track sit a cut-off chip and a now chip, placed apart by
+    `placeLabel`. The axis has 15- or 30-minute ticks for short windows (`walkTicks`'s
+    `"minutes"` unit).
+  - **Ruler:**
+    - Gradient stems with glowing heads.
+    - The DST change in the DST Inspector's convention: purple for a fall-back overlap,
+      with a band as wide as the repeated hour, and gold for a spring-forward gap
+      (`transitionKind`). Series 3 is also purple; a stem is solid and horizontal, the DST
+      mark dashed, vertical and labelled.
+    - A close-up with alternating hour bands.
+    - Result cards with a series edge.
+  - **Stack:**
+    - Full-height glass day columns with header strips.
+    - The departure drawn once as a gate with the ship icon.
+    - A moved cut-off drawn as a hollow marker joined to the solid one by a dashed arc. The
+      arc's `stroke-dashoffset` flow is the one animation in a cut-off chart, and it stops
+      under reduced motion.
+    - Under 34rem the table becomes stacked rows: a `data-label` on each cell, a visually
+      hidden `thead`, and explicit ARIA table roles.
+  Three more (TRAN-57): the Punctuality Board, planned/actual pairs as deviation bars on one
+  axis centred on the plan, with the tolerance band's early and late edges as draggable
+  handles that reclassify every row and the on-time rate live, and an optional second late
+  tolerance side by side; the ETA Drift Chart, PLN/EST/REQ/ACT records plotted by when each
+  was recorded against the time it predicts, with the `bestAvailable` pick beside a naive
+  latest-recorded pick and an `estimateDrift` tolerance band on a range; the Departure Board,
+  a timetable list or a service every N minutes on a time rail, with a draggable arrival, a
+  hatched minimum-connection bar, the window's `to` drawn open, and a link that hands the
+  departure made to the Delivery Scheduler. All three import `punctuality-widgets.ts` and load
+  through `punctuality-lib.ts`. Every deviation, class, rate, pick, drift and departure is a
+  library call. The naive values are the same calls on wall times read as UTC, the
+  latest-recorded event, and `nextDeparture` without `minimumConnection`. A `""` from
+  `nextDeparture` is invalid input or a correct "no departure left"; the widget tells them apart
+  by probing the library, and only invalid input renders `NO SIGNAL`.
+  `cutoff-widgets.ts`'s `callSource` prints only cut-off shapes (its key table drops any other
+  key), so these three print calls and results with `formatValue`/`callArgs` from
+  `punctuality-widgets.ts`.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
   left controls that looked live and did nothing. Every `.astro` shell — every teaching
@@ -161,6 +215,36 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   server-rendered markup (`gmt-widget.css`), and one amber notice offers a reload.
   `widget-load-error.test.tsx` runs every library-backed mount against a `GMT_MODULES`
   whose imports all reject.
+- **One control system for every widget.** `gmt-form-controls.css` holds the primitives:
+  - the field grid with subgrid label rows, and the `optional` hint chip;
+  - the faceted-grip `.gmt-range` with its fill, value chip and end labels;
+  - `.gmt-handle` for custom `role="slider"` handles;
+  - bevelled `.gmt-chip-toggle`s in a `.gmt-chip-group`;
+  - the chevron `.gmt-select`, and `.gmt-button--pad`.
+
+  Templates build them with `labelTextHtml`, `rangeFieldHtml`, `syncRange` and
+  `chipToggleHtml` from `widget-ui.ts`. Every teaching widget, the multi-zone scrubber and
+  `PlaygroundForm.astro` use them, so a new tool composes these and adds no control CSS of its
+  own. Rules and traps:
+  [reference/design-system.md § Form controls](reference/design-system.md#form-controls).
+  - **Every widget root carries `not-content`** and `container-type: inline-size`, so
+    Starlight's prose spacing never reaches widget internals.
+  - **The Cut-off Countdown's axis is inset by half a thumb width.** Its "now" marker and the
+    range thumb then share an x. One property, `--gmt-countdown-inset`, sets the inset for
+    both the axis and the drag field. It is defined on `.gmt-cutoff-countdown` because the
+    drag label is a sibling of the axis, not a child. Any padding or border added to the
+    axis or track goes into it.
+  - **Axis and track labels are fitted by measurement**, through `label-fit.ts` and the DST
+    Inspector's `selectTickMinutes`. A label that would collide, cross a rule or overflow is
+    thinned or flipped to the other side of its mark, and the fit re-runs on a width change.
+    This is how the Cut-off Stack, the Cut-off Ruler, the Free Time Ledger's expiry, the
+    DST ticker, the Punctuality Board's band, the ETA Drift Chart's plot and the Departure
+    Board's rail stay legible at 390px. A drawing with lines and rings through it (the ETA
+    Drift plot, the Departure Board rail) places each label with `placeLabels` from
+    `punctuality-widgets.ts`, which treats rings, other labels, handle hit squares and line
+    segments as obstacles; those labels also sit on an opaque surface above the lines, so a
+    line never crosses a glyph.
+  - **`scripts/html-diff.mjs` finds a widget root with or without `not-content`.**
 - **Trap: Starlight's `Icon` is not an override slot.** Importing
   `{ Icon }` from `@astrojs/starlight/components` and expecting `transport-*` names to
   resolve does nothing useful — that component never sees this repo's icon set. Icons
@@ -168,18 +252,44 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   set is added to, not replaces). A widget's plain-DOM template calls `transportIcon()`
   from `src/lib/transport-icons.ts`; an MDX page imports `~/components/Icon.astro`, never
   Starlight's own.
+- **Trap: a class name containing "card" turns into glass.** `[class*="card"]` rules in
+  `gmt-glass.css`, `gmt-a11y.css` and `gmt-light.css` give it a 16px bevel, a fill and a
+  backdrop blur. Name widget parts without the substring, or override all three rules on
+  purpose, as `.gmt-cutoff-ruler-card` does.
+- **Trap: an element with an author `display` ignores `hidden`.** A chip or plate that a
+  fit pass hides needs its own `[hidden] { display: none }`. Without it, `placeLabel` and
+  `thinTickLabels` hide nothing.
+- **Trap: tint a hatched element with `background-color`, never the `background`
+  shorthand.** A higher-specificity shorthand, such as the Stack's alternating day tint,
+  wipes a hatch drawn in `background-image`.
+- **Trap: a table that `.gmt-widget.not-content` makes `display: block` takes
+  `overflow-x: auto`, never `overflow: hidden`.** `hidden` silently cuts its last column off
+  at 390.
+- **Trap: a bevelled corner hides the text under it.** `corner-shape: bevel` clips glyphs
+  that sit in the cut corner, so first and last cells need at least 10px of inline padding.
+- **Trap: `Date.parse` is banned in tests too.** `date-ban.test.ts` and `oxlint` reject it
+  in test files as well as source. Use `Temporal.Instant.from(…).epochMilliseconds`.
+- **Result regions ease through `.gmt-grow`.** Sections after the first, and elements marked
+  `data-grow="slot"`, change height smoothly: one shared observer and one speed budget keep each
+  frame's step small, and the markup is wrapped at runtime so a reader without JS sees the server
+  render. Section 1, the controls, is never wrapped, so popovers and focus rings do not clip.
+  Rules: [reference/design-system.md § Smooth growth](reference/design-system.md#smooth-growth).
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
   `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
   `/tools/billing-deadlines/`, `/tools/delivery-scheduler/`, `/tools/connection-checker/`,
   `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
-  `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, plus the Tier 4 `/tools/zoned-earth/`
+  `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
+  `/tools/eta-drift/`, `/tools/departure-board/`, plus the Tier 4 `/tools/zoned-earth/`
   and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package.
 - **`seedFromLocation` keeps only top-level strings of 1–64 characters and years.** A widget
   whose arguments are lists or objects flattens them into numbered string keys (Delivery
   Scheduler, Timetable Reader, the Cut-off Stack's `name1`…`atLocalTime4`) or joined strings
   (Free Time Ledger, the Cut-off Stack's `weekend` and `holidays`), and the content-permalink
-  test checks every key survives.
+  test checks every key survives. The three TRAN-57 tools use a preset form, `{ preset }` plus
+  each scalar that differs from it (`"none"` clears an optional one), and fall back to numbered
+  list keys only for a list no preset holds, so a chat-seeded list survives the rail's
+  copy-permalink.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
@@ -189,7 +299,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **DST inspector:** `getDstTransitions` returns `…Z` instants.
   `buildZonedValueFromMinutes` deliberately omits an offset — resolving the ambiguity is
   what `startOfZoned` exists to show.
-- **Gates:** `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
+- **Gates:** `scripts/grow-measure.mjs` (`pnpm run grow:measure`) samples every tool page's height
+  on each frame, on load and on input, in Chromium and WebKit at 1440 and 390 px. It asserts a
+  largest jump of 48 px, every `.gmt-grow` at rest, and a final height equal to the
+  reduced-motion run's. `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
 
@@ -208,9 +321,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   plain radius, and the `box-shadow` focus ring is never clipped.
 - **Scrollbars** keep the chunky `::-webkit-scrollbar` styling. `scrollbar-color` would
   override it wholesale in Chromium.
-- **Motion:** none beyond the focus and tab sonar pings. The boot sequence, scroll reveal,
-  scanline sweep and cross-document view transitions were removed because they flashed the
-  deployed site on every navigation.
+- **Motion:** the focus and tab sonar pings, the globe, cross-document view transitions (header
+  and sidebar swap in place, the content cross-fades), the homepage scroll reveal (hidden only
+  under `html.gmt-reveal-ready`) and `.gmt-grow` height easing. There is no boot sequence or
+  scanline sweep. The allow-list is in `reference/visual-design.md` § Motion.
 - **Accessibility:** `gmt-a11y.css` handles `prefers-reduced-transparency`,
   `prefers-contrast: more` and `forced-colors`; the global reset handles reduced motion.
 - **Trap:** the package `build` waits on `typecheck`, so `astro sync` and `astro build` never
@@ -385,7 +499,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 `DOX-A4b`–`A4d`
 
 - **Scenario pages** (`src/content/docs/scenarios/`): the naive approach → a live widget
-  showing it break → why → the gmt approach → the same widget working.
+  showing it break → why → the gmt approach → the same widget working. The scenarios index
+  (`scenarios/index.mdx`) is generated from their frontmatter by
+  `scripts/build-scenario-index.mjs` during `generate`, and is untracked; never edit it.
 - **Mistakes** (`src/content/docs/mistakes/`): the domain `SKILL.md` Common Mistakes, ported
   with severity and live proof.
 - **A task-first "start here" index** driven by `packages/gmt/skills/_artifacts/domain_map.yaml`.
@@ -555,16 +671,52 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showCutoffRuler({ anchor, timeZone, days, atLocalTime })` (TRAN-10).
   - `showCutoffCountdown({ cutoff, now?, timeZone })` (TRAN-10): no `now` means the reader's
     clock, live.
+  - `showPunctualityBoard({ pairs, late, early?, compareLate? })` (TRAN-57): `late` is
+    required; there is no default tolerance.
+  - `showEtaDrift({ events, tolerance? })` (TRAN-57): each event is `{ classifier, at,
+    recordedAt }`, the classifier one of `PLN`, `EST`, `REQ`, `ACT`.
+  - `showDepartureBoard({ after, departures? | headway, from, to, minimumConnection?, onwardDuration?, onwardZone? })`
+    (TRAN-57): every moment carries its offset; the onward leg only feeds the Delivery
+    Scheduler hand-off link.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
-  (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
+  (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
-- **A starter pill opens its widget on the click.** Each `CHAT_STARTERS` entry carries the
-  `args` its question describes; the click sends the question and calls `onWidget` with
-  them (`starterWidgetCall`), so the widget does not wait on a round trip or on the model
-  choosing to call the tool. The model's own call replaces it unless `isSameWidget` says
-  the tool and arguments match (key order ignored), which keeps anything the reader has
-  already dragged. `chat-starters.test.ts` runs every seed through its schema and
-  `validate`, so a seed that drifts from its tool fails the suite.
+- **Example cards open their widget on the click.** The 17 `CHAT_STARTERS` live in the widget
+  rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
+  grouped by area. Each entry carries an `area` from `EXAMPLE_AREAS` (Zones and DST,
+  Intervals, Transport, Intermodal and billing), and `startersByArea()` returns the groups in
+  that order, empty areas omitted. `chat-starters.test.ts` asserts every starter has a known
+  area, every area has a starter, and the grouping covers each starter exactly once.
+  - A card is a native `<button>` whose accessible name is the question and whose description
+    is a chip naming the widget (the registry title). Activating it sends the question and,
+    only if the send went, calls the rail with `starterWidgetCall(starter)`, so the widget does
+    not wait on a round trip or on the model choosing the tool. Each entry carries the `args`
+    its question describes. The model's own call replaces it unless `isSameWidget` says the
+    tool and arguments match (key order ignored), which keeps anything the reader has already
+    dragged. `chat-starters.test.ts` runs every seed through its schema and `validate`, so a
+    seed that drifts from its tool fails the suite.
+  - **The rail has two names.** `aria-label="Examples"` with the list, `Widget panel` with a
+    widget (and in the error-boundary fallback). With no widget the rail shows the panel on
+    every viewport width; the widget replaces it in the same slot through the rail's
+    `<ViewTransition>`, and closing the widget brings it back.
+  - **Phone (below 60rem):** while the conversation is empty the panel is the bottom sheet. `DoxPage`
+    sets `data-empty` on `.gmt-hive-body`, so the chat keeps its content height (crystal, status
+    line, prompt, composer) and the sheet takes the rest, at least 12rem; a started conversation
+    or an open widget gets the usual 55% sheet.
+    Once it starts, the sheet collapses (`data-collapsed`, `display: none`) and an
+    `Examples · N` bar (`ExamplesBar.tsx`, `aria-expanded`, `aria-controls` the rail) sits above
+    the composer and toggles it. N is `CHAT_STARTERS.length`. Picking a card collapses the sheet
+    again. The bar is hidden by CSS above 60rem.
+  - **Focus.** Activating a card moves focus to the open widget's title (`tabIndex={-1}`);
+    a widget the model opens never takes focus, since the reader may be typing. Closing a
+    widget returns focus to that tool's card when the panel is visible, otherwise to the bar
+    (phone, conversation started, sheet folded). `matchMedia` is read in handlers and effects
+    only, never during render (#418).
+  - **Ownership.** `DoxPage` owns `conversationStarted`, `examplesOpen`, the rail widget and
+    the focus requests; `DoxChat` stays host-agnostic and exposes `send` through a ref handle,
+    reports emptiness through `onEmptyChange`, and renders the host's `aboveComposer` node.
+    `rail-keyboard.test.tsx` drives `DoxPage` with real Tab, Enter and Space
+    (`@testing-library/user-event`).
 - **Worker tools carry a trivial `execute`** (no I/O) in `worker/tools.ts`. Without one, a
   replayed turn has a tool call with no tool result, which the provider rejects on the
   reader's next question (`tools.test.ts`). `convertToModelMessages` runs with
@@ -596,8 +748,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - A `WidgetLoadError`, or a failed `import()` of the mount module, shows the error with
     **Try again**, which clears the error and remounts. A bad argument or a mount that throws
     on its input gets no retry: the same input fails the same way.
-- **Rail** (`WidgetRail.tsx`, AI Elements `Artifact`): opens for a tool call, collapses when
-  empty, and has a copy-permalink button. The transcript's `WidgetReceipt` chip is a seeded
+- **Rail** (`WidgetRail.tsx`, AI Elements `Artifact`): shows the examples panel until a tool
+  call opens a widget, and has a copy-permalink button. The transcript's `WidgetReceipt` chip is a seeded
   link to the widget's tool page.
 - **Tool prompt wording matters.** "When the question matches a `Call when` line, call that
   tool" works; "Prefer prose; call a tool only when seeing beats reading" took the converter
@@ -755,7 +907,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - a second discovery page beside the mentor index;
   - a feedback or analytics loop (it would need its own privacy and hosting decisions).
 - **Motion and 3D:**
-  - a boot sequence, scroll reveal, scanlines, view transitions, grain;
+  - a boot sequence, scanlines, grain;
   - a full-bleed 3D globe behind panels. The globe renders on the GPU, but it stays an
     object on the page: the landing hero, `/tools/zoned-earth/` and the `/dox` rail, never
     a backdrop;

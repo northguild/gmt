@@ -138,7 +138,7 @@ describe("renderDeliverySchedulerTemplate", () => {
     root.innerHTML = renderDeliverySchedulerTemplate();
     expect(
       root.firstElementChild!.outerHTML.startsWith(
-        '<div class="gmt-delivery gmt-widget">',
+        '<div class="gmt-delivery gmt-widget not-content">',
       ),
     ).toBe(true);
   });

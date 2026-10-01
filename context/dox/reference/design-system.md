@@ -13,7 +13,7 @@ what lets it beat Starlight's defaults. The core sheets load in this order via
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------- |
 | 1   | `gmt-tokens.css`     | Palette (6 roles), every `--gmt-*` token, `@font-face`, the `[data-theme="light"]` value block. Custom properties only |
 | 2   | `gmt-theme.css`      | Maps `--gmt-*` onto Starlight's `--sl-*`                                                                      |
-| 3   | `gmt-primitives.css` | Reusable recipes: `.gmt-glass*`, `.gmt-brackets`, `.gmt-icon-button`, `.gmt-dox-mark*`, sonar focus          |
+| 3   | `gmt-primitives.css` | Reusable recipes: `.gmt-glass*`, `.gmt-brackets`, `.gmt-icon-button`, `.gmt-dox-mark*`, `.gmt-grow`, `.gmt-enter`, sonar focus |
 | 4   | `gmt-glass.css`      | Glass on Starlight's own elements (header, sidebar, `pre`, tables, asides, search, dialogs)                   |
 | 5   | `gmt-shell.css`      | Global typography and the layout frame                                                                        |
 | 6   | `gmt-content.css`    | The reading surface (`.sl-markdown-content`), Expressive Code chrome, the search modal                        |
@@ -41,11 +41,20 @@ redefine them.
   `--gmt-signal-fill/-border`, `--gmt-scrollbar-*`.
 - `--gmt-glass-tint / -subtle / -scrim` carry extra alpha in light mode. Keep them separate from
   `--gmt-fill-*`.
+- **Series tokens** (`--gmt-series-1` … `-4`, each with an `-ink` partner) colour one series
+  of a chart: a journey leg in the Delivery Scheduler (`[data-leg]`), or a reading or cut-off
+  in the cut-off tools (`[data-series]`). They alias cyan, spring, the DST purple and the teal
+  "severity-high" pair, so they re-tint with the theme and need no light block. Series 3
+  and 4's inks reach only 5.7–6.7:1 on any surface lighter than `--gmt-void`. So a series
+  colour goes on marks, stems, edges and swatches, never on text, and the series' name in
+  `--gmt-ice` carries its meaning.
 - **Theme-role tokens** (`--gmt-code-surface`, `--gmt-sidebar-link`, …) resolve to a different
   token per theme, so the rule that uses one needs no light block.
 - **`-ink` tokens** (`--gmt-cyan-ink`, `--gmt-spring-ink`, `--gmt-purple-ink`, `--gmt-signal-ink`,
   `--gmt-severity-critical-ink`, `--gmt-severity-high-ink`, `--gmt-dst-gold-ink`) are the
-  text-safe variant of an accent. See rule 6.
+  text-safe variant of an accent. See rule 6. A light-theme caution aside's title uses
+  `--gmt-signal-ink` (`gmt-light.css`): Starlight's own orange measured 6.49:1 on the tinted
+  caution fill.
 - **`--gmt-ice-dim`** is the muted/secondary text tier — retuned per theme so every `color:` use
   clears 7:1 while staying visibly quieter than `--gmt-ice`. `--gmt-ice-dim-fill` keeps the old
   (pre-retune) value for the handful of non-text consumers — a low-alpha wash or hatch pattern,
@@ -86,6 +95,156 @@ redefine them.
    `--gmt-ice-dim-fill` keeps the old one for the few non-text consumers a retune would have
    changed the look of.
 
+## Form controls
+
+Every widget control composes the primitives in `gmt-form-controls.css`, and every template
+builds them through the helpers in `src/lib/widget-ui.ts`. A widget sheet only positions them;
+it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
+`gmt-tokens.css` (`--gmt-range-*`, `--gmt-handle-*`).
+
+- **`.gmt-field-grid`** holds every row of labelled fields:
+  `repeat(auto-fit, minmax(min(100%, 11rem), 1fr))`. Each `.gmt-label` spans two rows with
+  `grid-template-rows: subgrid`, so label texts share one row and controls share the next.
+  That is what stops labels "dropping" when one wraps.
+  - A label has exactly two children: `labelTextHtml()`'s single `.gmt-label-text` span, then
+    the control.
+  - An optional field carries the `.gmt-hint-chip` ("optional"), never "(optional)" in its text.
+  - `.gmt-field-wide` spans two columns. The grid is its own named container
+    (`gmt-field-grid`) and the span applies from 23rem: measured on the grid itself, that
+    guarantees two tracks, so the span can never create an implicit column. Keep the column gap
+    at 1rem or less.
+  - Anything that is not a label (a button, a hint) takes a full row.
+  - Under `@supports not (grid-template-rows: subgrid)` a label falls back to a flex column.
+  - `.gmt-field-grid[hidden]` and a hidden `.gmt-label` inside it restate `display: none`,
+    because the grid's own `display` beats the UA `[hidden]` rule. A widget that swaps one
+    set of fields for another (the Departure Board's list and headway forms) relies on it.
+- **`.gmt-range`, the faceted-grip dragger**, is a real `<input type="range">`, built with
+  `rangeFieldHtml()` inside a `.gmt-range-field` that also holds the value chip and the end
+  labels.
+  - The fill and the chip follow `--gmt-range-pct`, a unitless 0–100 number that
+    `syncRange()` sets. Call `syncRange()` on `input` and after every value, `min`, `max` or
+    `disabled` change the code makes itself. It also sets `aria-valuetext`.
+  - Firefox draws the fill with `::-moz-range-progress`.
+  - WebKit/Blink and Firefox pseudo-elements live in separate rule blocks: one unknown
+    selector in a list drops the whole list.
+  - The chip and the ends are `aria-hidden`; the value is announced through
+    `aria-valuetext`.
+  - The chip is clamped to its field: `translate: calc(var(--gmt-range-pct) * -1%) 0`
+    puts its left edge on the thumb at the minimum and its right edge there at the
+    maximum, so it never causes sideways scroll at 390px. Keep chip text short; the long
+    form belongs in `aria-valuetext`.
+  - **Trap: the global reduced-motion reset cannot reach the thumb.** `*, *::before,
+    *::after` does not select `::-webkit-slider-thumb` or `::-moz-range-thumb`. The thumb's
+    sonar animation and transitions are switched off in their own
+    `prefers-reduced-motion` block in `gmt-form-controls.css`.
+- **`.gmt-handle`** gives a custom `role="slider"` handle the same grip.
+  - The edge is `currentColor`, so a widget colours a handle by setting `color`.
+  - `::before` is a fixed, centred 44×44 hit area and nothing else.
+  - Position with the individual `translate` / `scale` properties, never `transform`, so a
+    widget's own `top` or `translate` composes with them. The DST Inspector's `top: 10px`
+    does.
+- **`.gmt-chip-toggle`** paints a real checkbox or radio as a bevelled chip, generalised from
+  the globe's filter switch. The globe keeps its own rules, for its per-filter accents and
+  icons.
+  - The input stays in the page, invisible, focusable and announced. The focus ring rides the
+    face.
+  - `[hidden]` needs its own `display: none`, because an author `display` beats the UA rule.
+  - A checked chip carries a filled mark and an accent border and tint, but its text stays
+    `--gmt-ice`. `--gmt-cyan-ink` on the tinted fill measured 5.9:1 in light, under the 7:1
+    floor. `--switch` adds a track and knob, for a standalone boolean.
+  - `.gmt-chip-group` is the fieldset for a row of chips: weekday sets, radio segments.
+- **`.gmt-select`** is `appearance: none` with a chevron drawn in two gradients. An SVG data
+  URI would need a colour literal. `.gmt-input` and `.gmt-select` set `background-color`,
+  never the `background` shorthand, which would wipe the chevron. A select truncates with an
+  ellipsis (`overflow: hidden; text-overflow: ellipsis`), because iOS WebKit otherwise sizes it
+  to its longest option and widens the page.
+- **`.gmt-button--pad`** adds padding to a free-standing `.gmt-button`. The base padding is
+  unchanged.
+- **Every widget root carries `not-content`** and `container-type: inline-size`.
+  - `not-content` removes Starlight's prose flow from the widget, which also drops Starlight's
+    table scrolling, link styling and inherited line-heights.
+  - The zero-specificity `:where(.gmt-widget.not-content)` block in `gmt-widget.css` restores
+    table scrolling and link styling.
+  - A widget that draws text into a fixed-height cell sets its own `line-height`.
+  - Labels on a drawn axis or track are placed by measurement, never by a fixed step:
+    `src/lib/label-fit.ts` (`thinSpans`, `placeLabel`, `pickLabelLeft`, `thinTickLabels`,
+    `onWidthChange`) drops or flips a label that would collide or overflow, and re-runs on a
+    width change. The DST Inspector's `selectTickMinutes` does the same for its ticks.
+  - Space inside a widget comes from `gap`, never from sibling margins.
+- **Forced colours** (`gmt-a11y.css`): the thumb, handle, chip faces and focus rings are
+  restated in system colours, and `.gmt-select` returns to `appearance: auto`.
+
+## Smooth growth
+
+`.gmt-grow` eases the height of a result region. `lib/smooth-height.ts` does the work and
+`Head.astro` attaches it to every page.
+
+- **`smoothHeight(outer, signal?)`** watches the outer's one child (the inner box) with one shared
+  `ResizeObserver`. On a height change it pins the outer at its current height, forces layout, and
+  sets the new height with `data-growing`; the CSS transition eases it, and cleanup returns the
+  outer to `height: auto`. At rest there is no inline height and no `data-growing`.
+- **`smoothHeights(scope, signal?)`** wraps every widget section after the first in a
+  `.gmt-grow-inner` box, and every `[data-grow="slot"]` element in a `.gmt-grow-slot` wrapper. It
+  attaches static hosts such as the Zone Planner's. It is idempotent, keeps node identity, and does
+  nothing without `ResizeObserver`.
+- **`data-grow="off"`** on a section leaves it unwrapped. **`data-grow="slot"`** wraps that one
+  element, in any section including section 1. Never put it on a control or a popover host.
+- **One speed budget.** Every box moving in a frame shares a duration,
+  `clamp(120 ms, 0.6 ms per px of total distance, --gmt-grow-max)`, and a box already easing is
+  retargeted with the new ones. A tall grow therefore runs for longer, not faster.
+- **Snap, not ease,** under `prefers-reduced-motion`, while a `[aria-expanded="true"]` list is
+  open inside, when a nested `.gmt-grow` is animating, and on a real resize (the window's
+  `innerWidth` changed). A scrollbar appearing is not a resize.
+- **`content-box`.** Starlight's reset is `border-box` and a later section has padding and a
+  border, so a `border-box` outer would sit 17 px short of the inner's height.
+- **Tokens** (`gmt-tokens.css`): `--gmt-grow-easing` and `--gmt-grow-max`.
+- **Gate:** `pnpm run grow:measure`.
+
+## Entrance
+
+The site has one arrival gesture: a fade from 92% scale over 0.5 s on the spring curve, first
+performed by the globe. The globe canvas, the globe's zone list and the `/dox` crystal all use it.
+A landmark visual that appears once its content is ready uses it; nothing else does, and it never
+replays on a value change.
+
+- **CSS** (`gmt-primitives.css`): the `gmt-enter` keyframes, the `.gmt-enter` class that plays
+  them, and `[data-enter="pending"]`, which hides an element held for its moment.
+  `--gmt-enter-transform` keeps an element's own transform through the entrance (the crystal's
+  `rotateX(10deg)`).
+- **JS** (`lib/enter.ts`):
+  - `enter(el, { delayMs, onEntered })` plays it once and leaves the element with
+    `data-entered` and without the class.
+  - `holdEntrance(el)` hides an element whose content is ready early and returns its release.
+    The globe holds its zone list and releases it 80 ms after the canvas.
+  - A timer finishes or releases either one if `animationend` never comes, so a stall never
+    leaves anything hidden.
+- **Pure CSS use:** server-rendered markup that enters on first paint (the crystal) uses
+  `animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing) both` directly.
+- **Nothing hidden before script:** only `lib/enter.ts` sets the class or the pending attribute.
+- **Reduced motion:** `.gmt-enter` is `animation: none`; `enter()` marks the element entered at
+  once and runs `onEntered`, and `holdEntrance()` does not hold.
+- **Tokens** (`gmt-tokens.css`): `--gmt-enter-duration`, `--gmt-enter-easing`,
+  `--gmt-enter-scale`.
+
+## Drawn charts
+
+The cut-off tools' recipes in `gmt-cutoff-widgets.css` are the pattern for a drawn chart:
+
+- **Every label sits on an opaque `--gmt-surface` plate** (`.gmt-cutoff-chip`), in
+  `--gmt-ice` or `--gmt-ice-dim`. Then no glyph ever touches a gradient, hatch, glow or line,
+  and the 7:1 floor holds over any fill under it.
+- **Glow goes on marks** (`box-shadow`, `drop-shadow`), never on text. The one exception is
+  a value that is live (the Countdown hero in live mode).
+- **No `backdrop-filter` inside a chart.** The widget card is already the one layer of
+  glass. A chart surface is tint, hairline and the inset highlight.
+- **"Closed" is a pattern plus a word:** the `.gmt-cutoff-closed` hatch and a "closed"
+  chip, never colour alone.
+- **Forced colours:** only marks, stems, edges and hatches opt out with
+  `forced-color-adjust: none`. A plate that holds text never does, or its text keeps a theme
+  colour on `Canvas`.
+- **Motion:** a chart animates nothing, with one exception, a connector that is not a value.
+  That is the Stack's dashed arc, and it stops in its own `prefers-reduced-motion` block.
+
 ## `/dox` and the header
 
 - `src/pages/dox.astro` wraps `<StarlightPage>` so the chat keeps the site's `customCss`;
@@ -109,6 +268,33 @@ redefine them.
   Picks persist in `localStorage` (`dox:reset-zone`, `dox:reset-format`).
 - **Nothing implies "unlimited".** The dev cookie exempts its holder from the per-visitor cap,
   never from the shared pool.
+
+## The `/dox` examples rail
+
+- The starter questions are cards in the widget rail, not pills in the chat: bevelled
+  `<button>`s grouped under area headings, each with a chip naming the widget it opens
+  (`ExamplesPanel.tsx`, `gmt-hive.css`). The panel body scrolls inside the rail
+  (`overflow-y: auto`, `min-height: 0`); the header stays put.
+- **Card text is `--gmt-ice` in every state.** `--gmt-cyan-ink` on the tinted hover fill is under
+  7:1 in light, so hover and focus change the border and fill only. The chip is
+  `--gmt-ice-dim` with its own bevelled border, distinct from the card's. Long text wraps with
+  `overflow-wrap: anywhere`; nothing scrolls sideways at 390px.
+- **Phone:** below 60rem a collapsed rail is `display: none` (`[data-collapsed]`) and the
+  `Examples · N` bar is shown above the composer. The bar is `display: none` by default and
+  switched on only inside that query, in a block placed after its base rule.
+- **Empty phone layout:** `.gmt-hive-body[data-empty]` (set by `DoxPage` with no conversation and
+  no widget) sizes the chat to its content and gives the rail `flex: 1 1 0` with a 12rem floor,
+  so the crystal, status line and prompt are never clipped. The 55% sheet applies otherwise.
+- **Focus:** the widget title (`tabIndex={-1}`, focused after a card opens it) draws a cyan
+  `:focus-visible` outline. In forced colours the cards, bar and title use a `Highlight` outline;
+  the card and bar rules double `.gmt-sonar-focus` to out-rank `.gmt-sonar-focus:focus { outline: none }`.
+- **Motion:** the chevron's rotation and the card transitions are off under
+  `prefers-reduced-motion`; the rail's view-transition block covers the list-to-widget swap.
+- **Forced colours:** cards are `ButtonFace`/`ButtonText` with a solid border, chips a dashed
+  `ButtonText` border, the bar a 2px `ButtonText` border, area headings `CanvasText`, and focus
+  a real `outline` in `Highlight`, because forced colours drop the `box-shadow` sonar ring.
+- No colour literals, no amber, no light-theme colour block, and bevels from `corner-shape`,
+  never `clip-path`.
 
 ## Tailwind in the chat island
 
@@ -164,8 +350,22 @@ pnpm visual:diff                   # exits non-zero over threshold
   capture. `MAX_DIFF_PIXEL_RATIO` is 0.2%.
 - Masked: live clock text and the globe canvas (the day/night terminator moves with time).
   `prefers-reduced-motion` emulation stops the globe's ambient spin.
+- A page whose height changed reports `ERROR (size mismatch)`: pixelmatch cannot compare
+  images of different sizes. Judge those pairs by eye. Also run an overlap and sideways-scroll
+  sweep at 390 and 1440, because the pixel gate cannot see either on those pages.
+- The `/dox` mobile captures can cross the threshold from the header clock text alone, and
+  which theme does so changes between runs. Before treating it as a regression, confirm with
+  html-diff and a repeat capture.
 - **`scripts/html-diff.mjs`** is the structural gate for widget markup the pixel diff cannot
   see — a dropped `selected`, a missing `data-role`: `capture <dir>`, then `compare <dir>`. It
   separates "the widget changed" (✗) from "only the page around it changed" (~).
 - A diff over threshold is a regression unless it is the deliberate change — then re-baseline
   and say so. Never loosen the threshold.
+- **Measure text contrast against the worst pixel behind the glyph box.** Make the element's
+  text and its descendants' text transparent, screenshot the text's box, and compare the
+  text colour with every pixel. That covers gradients, hatches and glows a flat swatch
+  misses.
+  - Hide fixed and sticky chrome first, because it lands in clip screenshots.
+  - Skip text inside a 1px visually hidden box (an `sr-only` `thead`). A text range reports
+    its full glyph rect even when an ancestor clips it, so it gives false overlaps and false
+    failures.

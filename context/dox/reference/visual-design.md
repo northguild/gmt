@@ -75,6 +75,19 @@ Rebuilding loses IME composition (all CJK input), autofill, mobile keyboards, fo
 and screen reader support — none of which is visible while developing on a US-English
 desktop.
 
+- **A draggable value is a faceted grip; never a flat or round thumb.** The grip is a tall
+  bevelled handle with a glass fill, a coloured edge and three grip ridges. It sits in a
+  bevelled glass channel filled up to it, with a value chip riding above it and labelled ends.
+  It glows on hover and fills solid while held; the cursor is grab and grabbing.
+  - A native range and a custom `role="slider"` handle look the same.
+  - Bevels come from `corner-shape`, never `clip-path`, which would clip the glow and the focus
+    ring.
+- **Labelled fields line up.** Fields sit in a grid whose label row and control row are shared
+  across the row, so a wrapped label never pushes its control out of line with its
+  neighbours. "Optional" is a small chip beside the label, not words in it.
+- **A boolean is a bevelled chip**, lit and marked when on, never a stock checkbox. A row of
+  them (weekdays, a segmented choice) sits in one labelled group.
+- **A select has a chevron**, never the system arrow.
 - Scrollbars keep the chunky `::-webkit-scrollbar` treatment. Do not add `scrollbar-color`: in
   Chromium it overrides the webkit styling wholesale.
 - Blocky caret via `caret-color`.
@@ -93,13 +106,43 @@ desktop.
 
 ## Motion
 
-- Navigation is plain and instant. No boot sequence, no scroll reveal, no scanlines, no view
-  transitions — they flashed the deployed site on every navigation.
-- **No typewriter reveal for chat replies.** Streamdown renders progressive markdown itself.
-- If scroll-reveal is ever added, elements are visible by default (a JS stall must never hide
-  content) and it reveals elements, never characters.
-- Everything is gated behind `prefers-reduced-motion`, `prefers-reduced-transparency` and
+Only these things move. Anything not listed stays still.
+
+- **The sonar focus ping** (`lib/sonar.ts`).
+- **The globe's spin.**
+- **The arrival gesture** (`.gmt-enter`, `lib/enter.ts`): one fade from 92% scale over 0.5 s on
+  the spring curve, used by the globe canvas, the globe's zone list and the `/dox` crystal. It
+  plays once, when a landmark's content is ready, and never on a value change. See
+  design-system.md § Entrance.
+- **Cross-document view transitions** (`gmt-view-transitions.css`). The header and sidebar swap
+  in place; only the content cross-fades.
+- **The homepage scroll reveal** (`gmt-reveal.css`, `lib/scroll-reveal.ts`). Content is visible
+  by default. The hidden state exists only under `html.gmt-reveal-ready`, which the script adds
+  when it is about to observe, so a stalled or missing script never hides anything. It reveals
+  elements, never characters.
+- **Height easing through `.gmt-grow`** in tool result regions. Height only: never opacity or
+  transform on a value, and never a value the reader is reading.
+
+No boot sequence, no scanlines, no typewriter reveal for chat replies (Streamdown renders
+progressive markdown itself).
+
+Everything is gated behind `prefers-reduced-motion`, `prefers-reduced-transparency` and
   `prefers-contrast` (`gmt-a11y.css`).
+
+## Layout stability
+
+A tool's result regions fill after the page loads and change as the reader types. Content below
+them must not jump.
+
+- **Reserve single-line slots.** A slot that is empty at first keeps one line
+  (`:empty::before { content: "\200b" }`), so text arriving later moves nothing.
+- **Ease height changes in result regions** with `.gmt-grow` (design-system.md § Smooth growth).
+- **Keep `.gmt-grow` inert without JS.** At rest it is `height: auto`; the wrapper is added at
+  runtime, so a reader without JS sees the page as the server rendered it.
+- **Keep section 1 unwrapped.** It holds the controls, and their popovers and focus rings must
+  not clip.
+- **Mark a slot above a draggable surface `data-grow="slot"`,** so a bar does not move under the
+  pointer while a result line above it changes height.
 
 ## Performance
 

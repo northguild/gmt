@@ -34,6 +34,7 @@ import {
 import { COORDINATES_BY_ID } from "./globe-zones";
 import { readZoneAt } from "./zone-clock";
 import { createZoneCombobox } from "./zone-combobox";
+import { rangeFieldHtml, syncRange } from "./widget-ui";
 
 export interface ScrubberHost {
   destroy: () => void;
@@ -158,6 +159,16 @@ function formatReadout(effectiveMs: number): string {
   return `${weekday} ${day} ${month} ${year}, ${parseHourFromUtc(utc)}:${parseMinuteFromUtc(utc)} UTC`;
 }
 
+/** The slider's shift as a signed, worded offset: `+1 h 15 min`, `−45 min`, `0 min`. */
+export function formatShift(minutes: number): string {
+  if (minutes === 0) return "0 min";
+  const sign = minutes < 0 ? "\u2212" : "+";
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `${sign}${[h ? `${h} h` : "", m ? `${m} min` : ""].filter(Boolean).join(" ")}`;
+}
+
 function roundToStep(ms: number): number {
   const stepMs = SLIDER_STEP_MIN * 60_000;
   return Math.round(ms / stepMs) * stepMs;
@@ -190,11 +201,16 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
           autocomplete="off" data-role="add" />
       </div>
     </div>
-    <div class="gmt-scrubber-slider">
-      <input type="range" data-role="slider"
-        min="${-SLIDER_RANGE_MIN}" max="${SLIDER_RANGE_MIN}" step="${SLIDER_STEP_MIN}" value="0"
-        aria-label="Shift every pinned clock, in 15-minute steps" />
-    </div>
+    <div class="gmt-scrubber-slider">${rangeFieldHtml({
+      role: "slider",
+      min: -SLIDER_RANGE_MIN,
+      max: SLIDER_RANGE_MIN,
+      step: SLIDER_STEP_MIN,
+      value: 0,
+      valueText: formatShift(0),
+      ends: [formatShift(-SLIDER_RANGE_MIN), formatShift(SLIDER_RANGE_MIN)],
+      label: "Shift every pinned clock, in 15-minute steps",
+    })}</div>
     <p class="gmt-scrubber-readout" data-role="readout" aria-live="polite"></p>
     <div class="gmt-scrubber-rows" data-role="rows"></div>
     <div class="gmt-scrubber-share">
@@ -225,6 +241,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     // `<input type="datetime-local">` wants `YYYY-MM-DDTHH:MM`.
     anchorInput.value = toUtc(state.anchorMs).slice(0, 16);
     slider.value = String(state.offsetMin);
+    syncRange(slider, formatShift(state.offsetMin));
   }
 
   function scheduleUrl(): void {
@@ -324,6 +341,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   // --- events ---------------------------------------------------------
   slider.addEventListener("input", () => {
     state.offsetMin = Number(slider.value);
+    syncRange(slider, formatShift(state.offsetMin));
     render();
   });
 

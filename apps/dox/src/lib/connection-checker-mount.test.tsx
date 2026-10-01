@@ -105,7 +105,7 @@ describe("renderConnectionCheckerTemplate", () => {
     expect(input.step).toBe("1");
   });
 
-  it("puts the departure field first in each three-field row, for the CSS :first-child rule that gives it a double share of the width", () => {
+  it("puts the departure field first in each three-field row, as the double-width (gmt-field-wide) field", () => {
     const root = document.createElement("div");
     root.innerHTML = renderConnectionCheckerTemplate();
     const rows = [
@@ -117,6 +117,11 @@ describe("renderConnectionCheckerTemplate", () => {
         "label:first-child input, label:first-child select",
       );
       expect(firstInput?.getAttribute("data-role")).toMatch(/departure$/);
+      expect(
+        row
+          .querySelector("label:first-child")
+          ?.classList.contains("gmt-field-wide"),
+      ).toBe(true);
     }
   });
 });

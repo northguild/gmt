@@ -71,6 +71,9 @@ const EXPECTED: Record<string, [string, string | null]> = {
   ],
 };
 
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 const q = <T extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   role: string,
@@ -101,7 +104,7 @@ describe("renderCutoffStackTemplate", () => {
     root.innerHTML = renderCutoffStackTemplate();
     expect(
       root.firstElementChild?.outerHTML.startsWith(
-        '<div class="gmt-cutoff-stack gmt-widget">',
+        '<div class="gmt-cutoff-stack gmt-widget not-content">',
       ),
     ).toBe(true);
   });
@@ -310,5 +313,79 @@ describe("mountCutoffStack", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("the stack's series, markers and gate", () => {
+  const laneOf = (root: HTMLElement, name: string) =>
+    [
+      ...q(root, "stack-timeline").querySelectorAll<HTMLElement>(
+        ".gmt-cutoff-stack-lane",
+      ),
+    ].find(
+      (l) =>
+        l.querySelector(".gmt-cutoff-stack-lane-label")?.textContent === name,
+    )!;
+
+  it("shares one series between a lane and its table swatch", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
+    expect(rows).toHaveLength(2);
+    for (const tr of rows) {
+      const swatch = tr.querySelector<HTMLElement>(
+        ".gmt-cutoff-series-swatch",
+      )!;
+      expect(swatch.textContent).toBe("");
+      expect(swatch.getAttribute("aria-hidden")).toBe("true");
+      expect(laneOf(root, tr.children[0]!.textContent!).dataset.series).toBe(
+        swatch.dataset.series,
+      );
+    }
+  });
+
+  it("draws a moved row with one hollow marker and one aria-hidden arc", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const gateIn = laneOf(root, "gate-in");
+    expect(gateIn.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(1);
+    const arcs = gateIn.querySelectorAll(".gmt-cutoff-stack-arc");
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0]!.getAttribute("aria-hidden")).toBe("true");
+    expect(gateIn.textContent).toContain("moved");
+  });
+
+  it("draws a row that did not move with neither", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const documents = laneOf(root, "documents");
+    expect(documents.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(
+      0,
+    );
+    expect(documents.querySelectorAll(".gmt-cutoff-stack-arc")).toHaveLength(0);
+    expect(documents.textContent).not.toContain("moved");
+  });
+
+  it("draws the departure gate once, in the days layer, not once per lane", async () => {
+    const { root } = await mount();
+    choosePreset(root, "no-calendar");
+    const timeline = q(root, "stack-timeline");
+    expect(timeline.querySelectorAll(".gmt-cutoff-gate")).toHaveLength(1);
+    expect(
+      timeline.querySelectorAll(".gmt-cutoff-stack-days > .gmt-cutoff-gate"),
+    ).toHaveLength(1);
+    expect(
+      timeline.querySelector(".gmt-cutoff-stack-gate-chip")?.textContent,
+    ).toContain("departs 18:00");
+  });
+
+  it("holds no focusable descendant", async () => {
+    const { root } = await mount();
+    for (const id of ["rotterdam-weekend", "no-calendar", "skipped-hour"]) {
+      choosePreset(root, id);
+      expect(
+        q(root, "stack-timeline").querySelectorAll(FOCUSABLE),
+      ).toHaveLength(0);
+    }
   });
 });

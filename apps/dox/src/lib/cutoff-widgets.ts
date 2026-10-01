@@ -193,6 +193,11 @@ export function hourTickLabel(z: Temporal.ZonedDateTime): string {
   return `${pad2(z.hour)}:00`;
 }
 
+/** `"14:15"`. */
+export function minuteTickLabel(z: Temporal.ZonedDateTime): string {
+  return `${pad2(z.hour)}:${pad2(z.minute)}`;
+}
+
 /** `"14 Jun"`. */
 export function dayTickLabel(z: Temporal.ZonedDateTime): string {
   return `${z.day} ${MONTH_LABELS[z.month - 1]}`;
@@ -220,7 +225,7 @@ export function walkTicks(
   startMs: number,
   endMs: number,
   zone: string,
-  unit: "hours" | "days" | "months",
+  unit: "minutes" | "hours" | "days" | "months",
   step: number,
   label: (z: Temporal.ZonedDateTime) => string,
 ): AxisTick[] {
@@ -229,7 +234,7 @@ export function walkTicks(
     const startZ =
       Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(zone);
     let cur =
-      unit === "hours"
+      unit === "hours" || unit === "minutes"
         ? startZ.round({ smallestUnit: "hour", roundingMode: "floor" })
         : unit === "days"
           ? startZ.startOfDay()
@@ -246,11 +251,13 @@ export function walkTicks(
         out.push({ ms: cur.epochMilliseconds, label: label(cur) });
       }
       cur =
-        unit === "hours"
-          ? cur.add({ hours: step })
-          : unit === "days"
-            ? cur.add({ days: step }).startOfDay()
-            : cur.add({ months: step }).with({ day: 1 }).startOfDay();
+        unit === "minutes"
+          ? cur.add({ minutes: step })
+          : unit === "hours"
+            ? cur.add({ hours: step })
+            : unit === "days"
+              ? cur.add({ days: step }).startOfDay()
+              : cur.add({ months: step }).with({ day: 1 }).startOfDay();
     }
     return out;
   } catch {

@@ -225,11 +225,31 @@
   --gmt-duration-fast: 120ms;
   --gmt-duration-med: 240ms;
   --gmt-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* The arrival gesture (.gmt-enter, lib/enter.ts): the globe's fade from 92%
+     scale on a spring curve, shared by every landmark visual. */
+  --gmt-enter-duration: 0.5s;
+  --gmt-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
+  --gmt-enter-scale: 0.92;
+  /* Height easing for .gmt-grow (lib/smooth-height.ts): ease-out so a retarget
+     during a drag does not lag; the cap bounds the longest change. */
+  --gmt-grow-easing: cubic-bezier(0, 0, 0.58, 1);
+  --gmt-grow-max: 1250ms;
 
   /* ---- Radii ---- */
   --gmt-radius-sm: 4px;
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
+
+  /* ---- Control dimensions (gmt-form-controls.css) ----
+   * Not colours, so they do not change per theme. The range thumb width is read
+   * by the Cut-off Countdown axis so the thumb and its "now" marker align. */
+  --gmt-range-hit-h: 28px;
+  --gmt-range-track-h: 10px;
+  --gmt-range-thumb-w: 16px;
+  --gmt-range-thumb-h: 26px;
+  --gmt-handle-w: 14px;
+  --gmt-handle-h: 24px;
+  --gmt-handle-hit: 44px;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently
@@ -358,6 +378,17 @@
   --gmt-spring-ink: var(--gmt-spring);
   --gmt-purple-ink: var(--gmt-dst-purple);
   --gmt-signal-ink: var(--gmt-signal);
+
+  /* Series 1-4: the Delivery Scheduler's four leg pairs, named once so a series
+     colour means the same on every chart. Marks, stems, edges, swatches only. */
+  --gmt-series-1: var(--gmt-cyan);
+  --gmt-series-1-ink: var(--gmt-cyan-ink);
+  --gmt-series-2: var(--gmt-spring);
+  --gmt-series-2-ink: var(--gmt-spring-ink);
+  --gmt-series-3: var(--gmt-dst-purple);
+  --gmt-series-3-ink: var(--gmt-purple-ink);
+  --gmt-series-4: var(--gmt-severity-high);
+  --gmt-series-4-ink: var(--gmt-severity-high-ink);
 
   /* `--gmt-cyan` was the biggest of these: it is the site's link/accent
      colour, so every `color:` use of `--gmt-cyan` *and* `--gmt-cyan-bright`

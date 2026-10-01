@@ -19,6 +19,28 @@
   margin: var(--gmt-space-6) 0;
 }
 
+/* A widget root carries Starlight's `not-content` opt-out, which also drops
+   Starlight's own styling for everything inside it. The card's flex `gap`
+   replaces the sibling margins; what `gap` cannot replace is restored here at
+   zero specificity, so a widget's own sheet still wins. Tables scroll inside
+   themselves rather than widening the page, and their cells align to the first
+   baseline; a link inside a widget still reads as a link. */
+:where(.gmt-widget.not-content) table {
+  display: block;
+  overflow: auto;
+  border-spacing: 0;
+}
+
+:where(.gmt-widget.not-content) :is(th, td) {
+  vertical-align: baseline;
+}
+
+:where(.gmt-widget.not-content) a {
+  color: var(--gmt-cyan-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* Single-border card treatment, matching Starlight's cards / asides
    (gmt-glass.css) — one hairline, bevel, one blur. Deliberately NOT the
    `.gmt-glass` primitive: its `::before` gradient ring reads as a second border
@@ -73,18 +95,6 @@
   gap: var(--gmt-space-3);
 }
 
-/* Width modifiers for the shared .gmt-label / .gmt-select (gmt-form-controls.css) */
-
-.gmt-label-wide {
-  flex: 1 1 220px;
-  min-width: 220px;
-}
-
-.gmt-select-wide {
-  width: 100%;
-  min-width: 220px;
-}
-
 .gmt-label-small {
   flex: 0 0 auto;
   min-width: 80px;
@@ -98,6 +108,12 @@
   color: var(--gmt-ice-dim);
 }
 
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-widget .gmt-widget-hint:empty::before {
+  content: "\200b";
+}
+
 /* ---------------------------------------------------------------------------
  * Code frame — a bare <pre> picks up the exact same background, border,
  * radius, and glass blur every other code fence on the site gets from
@@ -109,6 +125,12 @@
 
 .gmt-codeframe {
   position: relative;
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-codeframe-pre code:empty::before {
+  content: "\200b";
 }
 
 .gmt-codeframe-pre {

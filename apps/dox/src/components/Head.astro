@@ -7,4 +7,8 @@ import Default from '@astrojs/starlight/components/Head.astro';
 <script>
 	// Shared sonar focus-ring re-trigger — see src/lib/sonar.ts.
 	import '~/lib/sonar';
+	// Wraps each tool widget's result sections so height changes ease — see
+	// src/lib/smooth-height.ts. Runs before any widget mount renders.
+	import { smoothHeights } from '~/lib/smooth-height';
+	smoothHeights(document);
 </script>

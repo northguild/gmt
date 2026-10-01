@@ -46,6 +46,7 @@ import {
   codeSpan,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -106,7 +107,7 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     ).join("");
 
   const handle = (role: string, label: string) =>
-    `<div class="gmt-dwell-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
+    `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
 
   const row = (id: "dwell" | "compare", withHandles: boolean) =>
     `<div class="gmt-dwell-row" data-role="row-${id}"${id === "compare" && compareZone === NO_ZONE ? " hidden" : ""}>` +
@@ -120,21 +121,21 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `</div></div></div>`;
 
   return (
-    `<div class="gmt-dwell gmt-widget">` +
+    `<div class="gmt-dwell gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Place a dwell on the local-day grid</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label"><span>Count days in</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Count days in")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptions(LEDGER_ZONES, zone, "(the entry's zone)")}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Compare with</span>` +
+    `<label class="gmt-label">${labelTextHtml("Compare with")}` +
     `<select class="gmt-select" data-role="compare-zone">${zoneOptions(LEDGER_ZONES, compareZone, "(no comparison)")}</select>` +
     `</label>` +
     `</div>` +
@@ -144,13 +145,13 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<div class="gmt-dwell-axis" data-role="axis"><span></span><span></span><span></span></div>` +
     `</div>` +
     `<!-- Typed-input equivalent to dragging. -->` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Entry</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Entry")}` +
     `<input class="gmt-input" data-role="entry" type="text" spellcheck="false" value="${escapeAttr(entry)}"></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>Exit</span>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Exit")}` +
     `<input class="gmt-input" data-role="exit" type="text" spellcheck="false" value="${escapeAttr(exit)}"></label>` +
     `</div>` +
-    `<p class="gmt-dwell-summary" data-role="summary" aria-live="polite"></p>` +
+    `<p class="gmt-dwell-summary" data-role="summary" data-grow="slot" aria-live="polite"></p>` +
     `<div data-role="reason-aside"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +

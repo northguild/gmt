@@ -61,6 +61,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -157,10 +158,6 @@ interface LegHeaderFields {
   timeZone: string;
 }
 
-function optionalSuffix(): string {
-  return `<span class="gmt-delivery-optional">optional</span>`;
-}
-
 function legFieldset(n: number, state: DeliveryState, count: number): string {
   const leg = state.legs[n - 1]!;
   const hidden = n > count ? " hidden" : "";
@@ -168,31 +165,31 @@ function legFieldset(n: number, state: DeliveryState, count: number): string {
 
   const textField = (
     role: string,
-    area: string,
+    wide: boolean,
     label: string,
     value: string,
     optional: boolean,
   ) =>
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--${area}"><span>${escapeHtml(label)}${optional ? optionalSuffix() : ""}</span>` +
+    `<label class="gmt-label${wide ? " gmt-field-wide" : ""}">${labelTextHtml(label, { optional })}` +
     `<input class="gmt-input" data-role="${role}-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
 
   const modeField =
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--mode"><span>Mode${optionalSuffix()}</span>` +
+    `<label class="gmt-label">${labelTextHtml("Mode", { optional: true })}` +
     `<select class="gmt-select" data-role="mode-${n}">${modeOptionsHtml(leg.mode)}</select></label>`;
 
   const arrivesField =
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--arrives"><span>Arrives in</span>` +
+    `<label class="gmt-label">${labelTextHtml("Arrives in")}` +
     `<select class="gmt-select" data-role="zone-${n}">${zoneOptionsHtml(TRANSPORT_ZONES, leg.timeZone)}</select></label>`;
 
   return (
     `<fieldset class="gmt-transport-leg gmt-delivery-leg-fieldset" data-role="leg-${n}"${legAccentAttr(n - 1)}${hidden}>` +
     `<legend><span data-role="leg-legend-${n}">${legHeaderHtml(n, leg)}</span></legend>` +
-    `<div class="gmt-delivery-leg-grid">` +
+    `<div class="gmt-field-grid">` +
     modeField +
-    textField("duration", "duration", "Duration", leg.duration, false) +
+    textField("duration", false, "Duration", leg.duration, false) +
     arrivesField +
-    textField("departure", "departs", departureLabel, leg.departure, n !== 1) +
-    textField("dwell", "dwell", "Dwell after", leg.dwellAfter, true) +
+    textField("departure", true, departureLabel, leg.departure, n !== 1) +
+    textField("dwell", false, "Dwell after", leg.dwellAfter, true) +
     `</div>` +
     `</fieldset>`
   );
@@ -228,20 +225,20 @@ export function renderDeliverySchedulerTemplate(
     .join("");
 
   return (
-    `<div class="gmt-delivery gmt-widget">` +
+    `<div class="gmt-delivery gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Build the journey</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label"><span>Legs</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Legs")}` +
     `<select class="gmt-select" data-role="leg-count">${[1, 2, 3, 4].map((n) => `<option value="${n}"${n === count ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>Start zone${optionalSuffix()}</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone, "(none)")}</select></label>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Start zone", { optional: true })}` +
+    `<select class="gmt-select" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone, "(none)")}</select></label>` +
     `</div>` +
     `<p class="gmt-widget-hint">For a published local first departure with no offset or zone of its own.</p>` +
     legFieldsets +

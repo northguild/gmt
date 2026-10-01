@@ -123,19 +123,14 @@
   width: 100%;
   height: 100%;
   cursor: grab;
-  /* Drawn fully off-screen (the raster itself is already complete — see
-     globe.ts's revealCanvas()) then faded/scaled into place once the first frame
-     is measured, so the globe doesn't just snap into existence. */
-  opacity: 0;
-  transform: scale(0.92);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.gmt-globe-canvas.gmt-globe-canvas-ready {
-  opacity: 1;
-  transform: scale(1);
+/* Drawn while hidden (the raster is already complete — see globe.ts's
+   revealCanvas()), then brought in by the shared entrance (.gmt-enter,
+   gmt-primitives.css) once the first frame is measured, so the globe doesn't
+   just snap into existence. The canvas only exists once script has run. */
+.gmt-globe-canvas:not([data-entered]) {
+  opacity: 0;
 }
 
 .gmt-globe-canvas:active {
@@ -918,6 +913,19 @@
   }
 }
 
+@media (max-width: 79.9375rem) {
+  /* A definite height, not just the 30rem cap: below 80rem the hero has no
+     definite height, so `.gmt-globe-side`'s size comes from its content. WebKit
+     counts the scrolling `.gmt-globe-clocks` as 0px there (its min-height: 0
+     wins), so the side came out search-box tall and the zone list collapsed
+     to nothing; Chromium counts the sizer and then applies the cap. A fixed
+     30rem is what Chromium already renders, in every engine. */
+  .gmt-globe-embedded .gmt-globe-side {
+    flex: none;
+    height: 30rem;
+  }
+}
+
 @media (min-width: 80rem) and (max-width: 99.9375rem) {
   /* The 30rem cap above is load-bearing only below .gmt-herostage's own
      80rem breakpoint, where the hero has no definite height yet. From 80rem
@@ -931,6 +939,19 @@
      already does. */
   .gmt-globe-embedded .gmt-globe-side {
     max-height: none;
+  }
+
+  /* The column is one screen tall here, so a stage sized from the width
+     (70vh) left the zone list 0-10px on 1366x768-1536x864 laptops. Capped
+     so the list keeps 11rem: the column is 100dvh less the nav and the
+     hero's 2rem padding top and bottom; the side's search row is 5rem with
+     its gap, and the layout gap 1rem. 4 + 5 + 1 + 11 = 21rem. */
+  .gmt-globe-embedded .gmt-globe-stage {
+    max-width: min(
+      44rem,
+      70vh,
+      calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
+    );
   }
 }
 
@@ -1003,13 +1024,11 @@
 }
 
 /* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
-   easing. The canvas/zoom reveal transitions are skipped here too — globe.ts's
-   revealCanvas() detects the same media query and adds both -ready classes on
-   the same frame instead of chaining off a transitionend that would never
-   fire. */
+   easing. The entrance is skipped too: `.gmt-enter` is `animation: none`
+   here, and lib/enter.ts marks the canvas entered and arms the zoom controls
+   at once instead of waiting for an animationend that would never fire. */
 @media (prefers-reduced-motion: reduce) {
   .gmt-globe-tooltip,
-  .gmt-globe-canvas,
   .gmt-globe-zoom {
     transition: none;
   }

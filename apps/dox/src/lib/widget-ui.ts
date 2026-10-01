@@ -190,3 +190,97 @@ export function renderAside(
     <div class="starlight-aside__content">${contentHtml}</div>
   </aside>`;
 }
+
+// ---------------------------------------------------------------------------
+// Control system — field labels, the range dragger, chip toggles
+// (styled by styles/gmt-form-controls.css)
+// ---------------------------------------------------------------------------
+
+/**
+ * The text of a `.gmt-label` inside a `.gmt-field-grid`: one span, so the
+ * grid's subgrid row holds exactly one box. `optional` adds the hint chip that
+ * replaces every "(optional)" in label text.
+ */
+export function labelTextHtml(
+  text: string,
+  opts?: { optional?: boolean },
+): string {
+  const chip = opts?.optional
+    ? ' <span class="gmt-hint-chip">optional</span>'
+    : "";
+  return `<span class="gmt-label-text">${escapeHtml(text)}${chip}</span>`;
+}
+
+export interface RangeFieldOptions {
+  /** `data-role` of the input. */
+  role: string;
+  /** `data-role` of the chip; defaults to `${role}-value`. */
+  chipRole?: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  /** Initial `aria-valuetext` and chip text. */
+  valueText: string;
+  ends?: readonly [string, string];
+  /** `aria-label`, for a range that is not inside a `<label>`. */
+  label?: string;
+  disabled?: boolean;
+}
+
+/** The fill position of a range as a unitless 0-100 number, clamped. */
+export function rangePct(value: number, min: number, max: number): number {
+  if (!(max > min)) return 0;
+  const pct = ((value - min) / (max - min)) * 100;
+  return Math.min(100, Math.max(0, pct));
+}
+
+/** Markup for the faceted-grip dragger; the fill is correct before hydration. */
+export function rangeFieldHtml(o: RangeFieldOptions): string {
+  const pct = rangePct(o.value, o.min, o.max);
+  const chipRole = o.chipRole ?? `${o.role}-value`;
+  const label = o.label ? ` aria-label="${escapeAttr(o.label)}"` : "";
+  const disabled = o.disabled ? " disabled" : "";
+  const ends = o.ends
+    ? `<span class="gmt-range-ends" aria-hidden="true"><span>${escapeHtml(o.ends[0])}</span><span>${escapeHtml(o.ends[1])}</span></span>`
+    : "";
+  return `<span class="gmt-range-field" style="--gmt-range-pct: ${pct}"><input class="gmt-range" type="range" data-role="${escapeAttr(o.role)}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}" aria-valuetext="${escapeAttr(o.valueText)}" style="--gmt-range-pct: ${pct}"${label}${disabled}><span class="gmt-range-chip" data-role="${escapeAttr(chipRole)}" aria-hidden="true">${escapeHtml(o.valueText)}</span>${ends}</span>`;
+}
+
+/**
+ * Sync a range's fill and chip to its current state: sets `--gmt-range-pct` on
+ * the input and its closest `.gmt-range-field`, and, when `valueText` is given,
+ * `aria-valuetext` and the chip's text. Call on every `input` event AND after
+ * every value/min/max/disabled change the code makes itself.
+ */
+export function syncRange(input: HTMLInputElement, valueText?: string): void {
+  const pct = String(
+    rangePct(Number(input.value), Number(input.min), Number(input.max)),
+  );
+  input.style.setProperty("--gmt-range-pct", pct);
+  const field = input.closest<HTMLElement>(".gmt-range-field");
+  field?.style.setProperty("--gmt-range-pct", pct);
+  if (valueText === undefined) return;
+  input.setAttribute("aria-valuetext", valueText);
+  const chip = field?.querySelector<HTMLElement>(".gmt-range-chip");
+  if (chip) chip.textContent = valueText;
+}
+
+/** A real checkbox / radio painted as a bevelled chip (`.gmt-chip-toggle`). */
+export function chipToggleHtml(o: {
+  type: "checkbox" | "radio";
+  role: string;
+  value: string;
+  label: string;
+  checked?: boolean;
+  name?: string;
+  switch?: boolean;
+}): string {
+  const name = o.name ? ` name="${escapeAttr(o.name)}"` : "";
+  const checked = o.checked ? " checked" : "";
+  const track = o.switch ? '<span class="gmt-chip-toggle-track"></span>' : "";
+  const cls = o.switch
+    ? "gmt-chip-toggle gmt-chip-toggle--switch"
+    : "gmt-chip-toggle";
+  return `<label class="${cls}"><input type="${o.type}"${name} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
+}

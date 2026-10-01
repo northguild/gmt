@@ -24,12 +24,16 @@
 .gmt-timetable,
 .gmt-cutoff-stack,
 .gmt-cutoff-ruler,
-.gmt-cutoff-countdown {
+.gmt-cutoff-countdown,
+.gmt-punctuality-board,
+.gmt-eta-drift,
+.gmt-departure-board {
   container-type: inline-size;
 }
 
 /* ---------------------------------------------------------------------------
- * Leg fieldsets (Delivery Scheduler; reused by the Timetable Reader's rows)
+ * Leg fieldsets (Delivery Scheduler; reused by the Timetable Reader's rows and the
+ * Cut-off Stack's cut-offs and closed days)
  * --------------------------------------------------------------------------- */
 
 .gmt-transport-leg {
@@ -50,18 +54,6 @@
   color: var(--gmt-ice-dim);
 }
 
-.gmt-transport-leg-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(7rem, 1fr));
-  gap: var(--gmt-space-2);
-}
-
-@container (max-width: 34rem) {
-  .gmt-transport-leg-grid {
-    grid-template-columns: repeat(2, minmax(7rem, 1fr));
-  }
-}
-
 /* ---------------------------------------------------------------------------
  * The verdict line: made/missed/no-verdict is worded, never coloured
  * success/error. A date or instant comparison, not a finding.
@@ -78,6 +70,18 @@
   margin: var(--gmt-space-1) 0 0;
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice-dim);
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-transport-verdict:empty::before {
+  content: "\200b";
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-transport-verdict-detail:empty::before {
+  content: "\200b";
 }
 
 /* ---------------------------------------------------------------------------
@@ -132,6 +136,16 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-transport-reason {
+  margin-top: var(--gmt-space-2);
+}
+
+/* In a `.gmt-grow` slot the wrapper owns the space, so the height it eases
+   includes it. */
+.gmt-grow-slot > .gmt-transport-reason {
+  margin-top: 0;
+}
+
+.gmt-grow-slot:has(> .gmt-transport-reason) {
   margin-top: var(--gmt-space-2);
 }
 

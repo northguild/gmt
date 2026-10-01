@@ -55,11 +55,14 @@ import {
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
+import { placeLabel } from "./label-fit";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  chipToggleHtml,
   codeSpan,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -128,45 +131,50 @@ export function renderFreeTimeLedgerTemplate(
     ).join("");
 
   const handle = (role: string, label: string) =>
-    `<div class="gmt-freetime-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
+    `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
 
-  const weekendBoxes = WEEKDAY_NAMES.map(
-    (name, i) =>
-      `<label class="gmt-freetime-weekday"><input type="checkbox" data-role="weekend" value="${i + 1}"${state.weekend.includes(i + 1) ? " checked" : ""}><span>${name}</span></label>`,
+  const weekendBoxes = WEEKDAY_NAMES.map((name, i) =>
+    chipToggleHtml({
+      type: "checkbox",
+      role: "weekend",
+      value: String(i + 1),
+      label: name,
+      checked: state.weekend.includes(i + 1),
+    }),
   ).join("");
 
   return (
-    `<div class="gmt-freetime gmt-widget">` +
+    `<div class="gmt-freetime gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Set the tariff and place the clock</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label"><span>Terminal zone</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Terminal zone")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptions(state.zone)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Free days</span>` +
+    `<label class="gmt-label">${labelTextHtml("Free days")}` +
     `<input class="gmt-input" data-role="free-days" type="number" min="0" step="1" value="${escapeAttr(state.freeDays)}"></label>` +
-    `<label class="gmt-label"><span>Day one</span>` +
+    `<label class="gmt-label">${labelTextHtml("Day one")}` +
     `<select class="gmt-select" data-role="first-day">${options(["eventDay", "nextDay"], ["eventDay: the event day", "nextDay: the day after"], state.firstDay)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Free days count</span>` +
+    `<label class="gmt-label">${labelTextHtml("Free days count")}` +
     `<select class="gmt-select" data-role="basis">${options(["calendar", "working"], ["calendar days", "working days"], state.basis)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Charged days count</span>` +
+    `<label class="gmt-label">${labelTextHtml("Charged days count")}` +
     `<select class="gmt-select" data-role="charge-basis">${options(["calendar", "working"], ["calendar days", "working days"], state.chargeBasis)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Tiers</span>` +
+    `<label class="gmt-label">${labelTextHtml("Tiers")}` +
     `<input class="gmt-input" data-role="tiers" type="text" spellcheck="false" placeholder="5, 10" value="${escapeAttr(state.tiers)}"></label>` +
     `</div>` +
-    `<div class="gmt-widget-controls gmt-freetime-working" data-role="working-terms"${state.basis === "working" || state.chargeBasis === "working" ? "" : " hidden"}>` +
-    `<fieldset class="gmt-freetime-weekend"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
-    `<label class="gmt-label gmt-label-wide"><span>Holidays, one date per line</span>` +
+    `<div class="gmt-field-grid gmt-freetime-working" data-role="working-terms"${state.basis === "working" || state.chargeBasis === "working" ? "" : " hidden"}>` +
+    `<fieldset class="gmt-chip-group"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Holidays, one date per line")}` +
     `<textarea class="gmt-input gmt-freetime-holidays" data-role="holidays" rows="2" spellcheck="false">${escapeHtml(state.holidays)}</textarea></label>` +
     `</div>` +
     `<div class="gmt-freetime-timeline" data-role="timeline">` +
@@ -188,14 +196,14 @@ export function renderFreeTimeLedgerTemplate(
     `</ul>` +
     `</div>` +
     `<!-- Typed-input equivalent to dragging. -->` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Clock start</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock start")}` +
     `<input class="gmt-input" data-role="clock-start" type="text" spellcheck="false" value="${escapeAttr(state.clockStart)}"></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>Clock end</span>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock end")}` +
     `<input class="gmt-input" data-role="clock-end" type="text" spellcheck="false" value="${escapeAttr(state.clockEnd)}"></label>` +
     `</div>` +
-    `<p class="gmt-freetime-summary" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside"></div>` +
+    `<p class="gmt-freetime-summary" data-role="summary" data-grow="slot" aria-live="polite"></p>` +
+    `<div data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. What <code>freeTimeExpiry</code> returns</h4>` +
@@ -329,7 +337,22 @@ function placeExpiry(
     return;
   }
   marker.hidden = false;
-  marker.style.left = `${canvas.toPercent(ms)}%`;
+  const pct = canvas.toPercent(ms);
+  marker.style.left = `${pct}%`;
+  // Its "expires" label sits to the right of the line; near the right edge it
+  // would run past the track (and, on a phone, widen the page), so it flips.
+  const label = marker.querySelector<HTMLElement>("span");
+  const track = marker.parentElement;
+  marker.classList.remove("gmt-freetime-expiry--end");
+  if (label && track && track.clientWidth > 0) {
+    const side = placeLabel({
+      atPx: (pct / 100) * track.clientWidth,
+      labelPx: label.getBoundingClientRect().width,
+      trackPx: track.clientWidth,
+      offsetPx: 3,
+    });
+    marker.classList.toggle("gmt-freetime-expiry--end", side === "end");
+  }
 }
 
 /** The options object as source text: highlighted HTML and plain text to copy. */

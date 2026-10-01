@@ -57,6 +57,9 @@ const EXPECTED: Record<string, [string, string, string][]> = {
   ],
 };
 
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 const q = <T extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   role: string,
@@ -231,5 +234,76 @@ describe("mountCutoffRuler", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("the ruler's series and DST chips", () => {
+  it("gives each reading's lane, close-up row and card one shared series", async () => {
+    const { root } = await mount();
+    choosePreset(root, "new-york-fall-back");
+    const seriesOf = (sel: string, scope: HTMLElement) =>
+      [...scope.querySelectorAll<HTMLElement>(sel)].map(
+        (e) => e.dataset.series,
+      );
+    const lanes = seriesOf(".gmt-cutoff-ruler-lane", q(root, "ruler-overview"));
+    const rows = seriesOf(
+      ".gmt-cutoff-ruler-closeup-row",
+      q(root, "ruler-closeup"),
+    );
+    const cards = seriesOf(".gmt-cutoff-ruler-card", q(root, "readings"));
+    expect(lanes).toEqual(["1", "2", "3"]);
+    expect(rows).toEqual(lanes);
+    expect(cards).toEqual(lanes);
+  });
+
+  it("R1 draws an overlap chip and R3 a gap chip, and R2 neither", async () => {
+    const { root } = await mount();
+    const overview = () => q(root, "ruler-overview");
+    choosePreset(root, "new-york-fall-back");
+    expect(
+      overview().querySelectorAll(".gmt-cutoff-dst--overlap"),
+    ).toHaveLength(1);
+    expect(overview().querySelectorAll(".gmt-cutoff-dst--gap")).toHaveLength(0);
+    expect(
+      overview().querySelectorAll(".gmt-cutoff-ruler-dst-band"),
+    ).toHaveLength(3);
+
+    choosePreset(root, "new-york-spring-forward");
+    expect(overview().querySelectorAll(".gmt-cutoff-dst--gap")).toHaveLength(1);
+    expect(
+      overview().querySelectorAll(".gmt-cutoff-dst--overlap"),
+    ).toHaveLength(0);
+    expect(
+      overview().querySelectorAll(".gmt-cutoff-ruler-dst-band"),
+    ).toHaveLength(0);
+
+    choosePreset(root, "amsterdam-june");
+    expect(
+      overview().querySelectorAll(
+        ".gmt-cutoff-dst--overlap, .gmt-cutoff-dst--gap",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("a card keeps the sentinel in place of the time on skipped-hour", async () => {
+    const { root } = await mount();
+    choosePreset(root, "skipped-hour");
+    const cards = [...q(root, "readings").querySelectorAll("li")];
+    expect(cards).toHaveLength(3);
+    expect(cards[2]!.textContent).toContain("NO SIGNAL");
+    expect(cards[0]!.textContent).not.toContain("NO SIGNAL");
+  });
+
+  it("holds no focusable descendant in either chart", async () => {
+    const { root } = await mount();
+    for (const id of ["new-york-fall-back", "skipped-hour"]) {
+      choosePreset(root, id);
+      expect(
+        q(root, "ruler-overview").querySelectorAll(FOCUSABLE),
+      ).toHaveLength(0);
+      expect(q(root, "ruler-closeup").querySelectorAll(FOCUSABLE)).toHaveLength(
+        0,
+      );
+    }
   });
 });

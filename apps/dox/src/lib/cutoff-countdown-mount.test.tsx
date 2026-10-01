@@ -47,6 +47,9 @@ const EXPECTED: Record<string, [boolean | null, string]> = {
   "zoneless-now": [null, ""],
 };
 
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 const q = <T extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   role: string,
@@ -249,5 +252,50 @@ describe("mountCutoffCountdown", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("the countdown's hero and axis", () => {
+  const hero = (root: HTMLElement) =>
+    q(root, "countdown-axis").querySelector(".gmt-cutoff-countdown-hero-value")
+      ?.textContent;
+
+  it.each([
+    ["late", "\u221220 min"],
+    ["on-time", "+50 min"],
+    ["at-cutoff", "0 min"],
+  ])("shows the signed time to the cut-off on %s", async (id, text) => {
+    const { root } = await mount();
+    choosePreset(root, id);
+    expect(hero(root)).toBe(text);
+  });
+
+  it("draws no hero when the now has no offset (zoneless-now)", async () => {
+    const { root } = await mount();
+    choosePreset(root, "zoneless-now");
+    expect(
+      q(root, "countdown-axis").querySelector("[data-role=countdown-hero]"),
+    ).toBeNull();
+    expect(hero(root)).toBeUndefined();
+  });
+
+  it("names the gate and now chips with their local times", async () => {
+    const { root } = await mount();
+    choosePreset(root, "late");
+    const chips = [
+      ...q(root, "countdown-axis").querySelectorAll(".gmt-cutoff-chip"),
+    ].map((c) => c.textContent);
+    expect(chips).toContain("cut-off 17:00");
+    expect(chips).toContain("now 17:20");
+  });
+
+  it("holds no focusable descendant", async () => {
+    const { root } = await mount();
+    for (const id of ["late", "on-time", "zoneless-now"]) {
+      choosePreset(root, id);
+      expect(
+        q(root, "countdown-axis").querySelectorAll(FOCUSABLE),
+      ).toHaveLength(0);
+    }
   });
 });

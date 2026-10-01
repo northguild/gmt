@@ -41,6 +41,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -93,11 +94,11 @@ function rowGroup(i: number, row: TimetableRow): string {
   return (
     `<fieldset class="gmt-transport-leg" data-role="row-${n}">` +
     `<legend>Row ${n}</legend>` +
-    `<div class="gmt-widget-controls gmt-timetable-fields">` +
-    `<label class="gmt-label"><span>Printed departure</span>` +
+    `<div class="gmt-field-grid gmt-timetable-fields">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Printed departure")}` +
     `<input class="gmt-input" data-role="departure-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(row.departure)}"></label>` +
-    `<label class="gmt-label"><span>Offset</span>` +
-    `<input class="gmt-input" data-role="offset-${n}" type="text" spellcheck="false" autocomplete="off" placeholder="optional" value="${escapeAttr(row.offset)}"></label>` +
+    `<label class="gmt-label">${labelTextHtml("Offset", { optional: true })}` +
+    `<input class="gmt-input" data-role="offset-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(row.offset)}"></label>` +
     `</div>` +
     `</fieldset>`
   );
@@ -124,21 +125,21 @@ export function renderTimetableReaderTemplate(
   const preset = TIMETABLE_PRESETS.find((p) => p.id === presetId);
 
   return (
-    `<div class="gmt-timetable gmt-widget">` +
+    `<div class="gmt-timetable gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. The timetable</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls gmt-timetable-fields">` +
-    `<label class="gmt-label"><span>Printed in</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid gmt-timetable-fields">` +
+    `<label class="gmt-label">${labelTextHtml("Printed in")}` +
     `<select class="gmt-select" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone)}</select></label>` +
-    `<label class="gmt-label"><span>Run time</span>` +
+    `<label class="gmt-label">${labelTextHtml("Run time")}` +
     `<input class="gmt-input" data-role="duration" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.duration)}"></label>` +
-    `<label class="gmt-label"><span>Arrives in</span>` +
+    `<label class="gmt-label">${labelTextHtml("Arrives in")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
     `</div>` +
     state.rows.map((row, i) => rowGroup(i, row)).join("") +
@@ -154,9 +155,9 @@ export function renderTimetableReaderTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What <code>scheduleDelivery</code> returns</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Show the call for</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="row-pick"></select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Show the call for")}` +
+    `<select class="gmt-select" data-role="row-pick"></select></label>` +
     `</div>` +
     codeFrameHtml("timetable") +
     `<output class="gmt-widget-output" data-role="timetable-output">&nbsp;</output>` +

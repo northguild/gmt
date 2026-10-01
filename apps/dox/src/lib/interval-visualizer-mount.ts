@@ -36,6 +36,7 @@ import {
 import { GMT_MODULES } from "./gmt-modules";
 import {
   codeSpan,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -64,7 +65,7 @@ export function renderIntervalTemplate(): string {
   ).join("");
 
   const handle = (role: string, label: string) =>
-    `<div class="gmt-interval-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
+    `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
 
   const intervalRow = (id: "a" | "b", label: string) =>
     `<div class="gmt-interval-row">` +
@@ -84,10 +85,10 @@ export function renderIntervalTemplate(): string {
   ).join("");
 
   const typedPair = (id: "a" | "b", label: string) =>
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>${label} start</span>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml(`${label} start`)}` +
     `<input class="gmt-input" data-role="${id}-start" type="text" spellcheck="false"></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>${label} end</span>` +
+    `<label class="gmt-label">${labelTextHtml(`${label} end`)}` +
     `<input class="gmt-input" data-role="${id}-end" type="text" spellcheck="false"></label>` +
     `</div>`;
 
@@ -101,16 +102,16 @@ export function renderIntervalTemplate(): string {
   ).join("");
 
   return (
-    `<div class="gmt-interval gmt-widget">` +
+    `<div class="gmt-interval gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<!-- Step 1 — place two intervals -->` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Place two intervals</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Relationship preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="relationship-preset">${presetOptions}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Relationship preset")}` +
+    `<select class="gmt-select" data-role="relationship-preset">${presetOptions}</select>` +
     `</label></div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description"></p>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot"></p>` +
     `<!-- Six aligned rows on one timeline: A, B, then a mini result bar per operation. -->` +
     `<div class="gmt-interval-timeline" data-role="timeline">` +
     `<div class="gmt-interval-rows">` +
@@ -123,7 +124,7 @@ export function renderIntervalTemplate(): string {
     `<!-- Typed-input equivalent to dragging (context/dox/overview.md §3). -->` +
     typedPair("a", "A") +
     typedPair("b", "B") +
-    `<div data-role="relationship-aside"></div>` +
+    `<div data-role="relationship-aside" data-grow="slot"></div>` +
     `</div>` +
     `<!-- Step 2 — compare the four operations -->` +
     `<div class="gmt-widget-section">` +
