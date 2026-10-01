@@ -22,8 +22,10 @@ import {
   CUSTOM_PRESET_ID,
   MAX_DEPARTURES,
   collectDepartureFacts,
+  departureIconMode,
   departureNullReason,
   departureReasonText,
+  departureWait,
   handoffArgs,
   initialState,
   isEmptyReason,
@@ -42,6 +44,7 @@ import {
   type RailWindow,
 } from "./departure-board";
 import { onWidthChange, thinTickLabels } from "./label-fit";
+import { transportIcon } from "./transport-icons";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
   TRANSPORT_ZONES,
@@ -49,6 +52,8 @@ import {
   epochMs,
   minuteTicks,
   nextInstanceId,
+  heroLinesHtml,
+  setPresetDescription,
   placeLabels,
   type Rect,
   toleranceText,
@@ -78,9 +83,9 @@ const MINUTE_MS = 60_000;
 
 /** Where each kind of rail label is centred, as a percent of the rail's height:
  *  the window ends above the line, the departures and the connection below. */
-const ROW_TOP = 12;
-const ROW_MADE = 76;
-const ROW_CONN = 91;
+const ROW_TOP = 11;
+const ROW_MADE = 80;
+const ROW_CONN = 92;
 
 function presetOptionsHtml(presetId: string): string {
   return (
@@ -171,6 +176,7 @@ export function renderDepartureBoardTemplate(
     `<p class="gmt-transport-verdict" data-role="verdict" aria-live="polite"></p>` +
     `<p class="gmt-punct-naive" data-role="naive-line"></p>` +
     `<div class="gmt-punct-frame">` +
+    `<div class="gmt-punct-heroes" data-role="rail-heroes" aria-hidden="true"></div>` +
     `<div class="gmt-dep-stage" data-role="rail-stage">` +
     `<div class="gmt-dep-rail" data-role="departure-rail" role="img" aria-labelledby="rail-summary-${uid}"></div>` +
     `<div class="gmt-handle" data-role="handle-after" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Arrival"></div>` +
@@ -296,9 +302,11 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     presetEl!.value = matchPreset(state());
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
+      setPresetDescription(
+        desc,
         DEPARTURE_PRESETS.find((p) => p.id === presetEl!.value)?.description ??
-        "";
+          "",
+      );
     }
   }
 
@@ -316,8 +324,9 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
         h: el.offsetHeight,
       };
     });
-    // Nothing but a label may sit on the rule, the connection bar, a tick, a
-    // bracket, the naive outline or the handle's 44px hit square.
+    // Nothing but a label may sit on the rule, the connection bar, a tick, the
+    // made gate, a window edge, the closed stretch, the naive marker or the
+    // handle's 44px hit square.
     const origin = rail!.getBoundingClientRect();
     const rectOf = (el: Element, minSize = 0): Rect => {
       const r = el.getBoundingClientRect();
@@ -329,14 +338,29 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     };
     const blocked: Rect[] = [
       ...rail!.querySelectorAll(
-        ".gmt-dep-line, .gmt-dep-conn, .gmt-dep-run, .gmt-dep-tick, .gmt-dep-naive, .gmt-dep-bracket",
+        ".gmt-dep-line, .gmt-dep-conn, .gmt-dep-run, .gmt-dep-tick, .gmt-dep-naive, .gmt-dep-bracket, .gmt-dep-beyond",
       ),
     ].map((el) => rectOf(el, 3));
+    // The service window is lit glass a chip may sit on, but never across its
+    // top or bottom edge.
+    for (const el of rail!.querySelectorAll(".gmt-dep-window")) {
+      const r = el.getBoundingClientRect();
+      const left = r.left - origin.left;
+      const top = r.top - origin.top;
+      blocked.push(
+        { left, top: top - 1, w: r.width, h: 3 },
+        { left, top: top + r.height - 2, w: r.width, h: 3 },
+      );
+    }
     if (!handle!.hidden) blocked.push(rectOf(handle!, 44));
     placeLabels(boxes, w, h, { markPx: 0, blocked }).forEach((p, i) => {
       const el = labels[i]!;
-      el.style.left = `${p.left}px`;
-      el.style.top = `${p.top}px`;
+      // When nothing is clear the placer falls back to its first choice, which
+      // may hang past the rail; a label always stays inside it.
+      const left = Math.max(0, Math.min(p.left, w - boxes[i]!.w));
+      const top = Math.max(0, Math.min(p.top, h - boxes[i]!.h));
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
       el.classList.add("gmt-dep-label--placed");
     });
   }
@@ -370,7 +394,10 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     }
     const { ticks, dense } = railDepartures(s, win);
 
-    let html = `<span class="gmt-dep-line"></span>`;
+    const lineHtml = `<span class="gmt-dep-line"></span>`;
+    // The window and the closed stretch past it paint under everything else.
+    let under = "";
+    let html = "";
     const labels: { role: string; ms: number; y: number; text: string }[] = [];
 
     if (thresholdMs !== null && thresholdMs > afterMs) {
@@ -412,6 +439,16 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       try {
         const from = epochMs(s.from.trim());
         const to = epochMs(s.to.trim());
+        if (to > from) {
+          const a = Math.max(from, win.startMs);
+          const b = Math.min(to, win.endMs);
+          if (b > a) {
+            under += `<span class="gmt-dep-window" style="left:${r2(pct(a))}%;width:${r2(pct(b) - pct(a))}%"></span>`;
+          }
+        }
+        if (to >= win.startMs && to < win.endMs) {
+          under += `<span class="gmt-dep-beyond gmt-cutoff-closed" style="left:${r2(pct(to))}%;width:${r2(100 - pct(to))}%"></span>`;
+        }
         if (from >= win.startMs && from <= win.endMs) {
           html += `<span class="gmt-dep-bracket gmt-dep-bracket--from" style="left:${r2(pct(from))}%"></span>`;
           labels.push({ role: "from", ms: from, y: ROW_TOP, text: "from" });
@@ -461,9 +498,10 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     }
     for (const l of labels) {
       const y = l.y;
-      html += `<span class="gmt-dep-label" data-role="rail-label-${l.role}" data-x="${r2(pct(l.ms))}" data-y="${y}" style="left:${r2(pct(l.ms))}%;top:${y}%">${escapeHtml(l.text)}</span>`;
+      const dim = l.role === "naive" ? " gmt-cutoff-chip--dim" : "";
+      html += `<span class="gmt-dep-label gmt-cutoff-chip${dim}" data-role="rail-label-${l.role}" data-x="${r2(pct(l.ms))}" data-y="${y}" style="left:${r2(pct(l.ms))}%;top:${y}%">${escapeHtml(l.text)}</span>`;
     }
-    rail!.innerHTML = html;
+    rail!.innerHTML = lineHtml + under + html;
 
     if (ticksEl) {
       const step = railTickStep(span);
@@ -495,6 +533,57 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       `Arrival ${writtenLabel(after) || after}`,
     );
     placeAll();
+  }
+
+  /** The departure made, large, on a plate. Every value is the library's: the
+   *  wait is `scheduleDeviation` from the arrival to the departure. On a correct
+   *  empty answer it reads "none"; on invalid input it is hidden and the
+   *  outputs carry NO SIGNAL. */
+  function drawHeroes(
+    s: DepartureState,
+    facts: DepartureFacts,
+    empty: boolean,
+    invalid: boolean,
+  ): void {
+    const heroes = q("rail-heroes");
+    if (!heroes) return;
+    const showHero = !invalid && (facts.made !== "" || empty);
+    heroes.hidden = !showHero;
+    let hero = heroes.querySelector<HTMLElement>('[data-role="rail-hero"]');
+    if (!hero) {
+      hero = document.createElement("div");
+      hero.className = "gmt-punct-hero";
+      hero.dataset.series = "1";
+      hero.dataset.role = "rail-hero";
+      heroes.append(hero);
+    }
+    hero.hidden = !showHero;
+    if (!showHero) {
+      hero.innerHTML = "";
+      return;
+    }
+    if (facts.made === "") {
+      hero.innerHTML =
+        `<span class="gmt-punct-hero-cap">departure made</span>` +
+        `<span class="gmt-punct-hero-value">none</span>` +
+        heroLinesHtml([{ text: "no departure left" }, { text: "" }]);
+      return;
+    }
+    const wait = departureWait(s.after, facts.made, lib);
+    const mode = departureIconMode(s.onwardMode);
+    const icon =
+      mode === null
+        ? ""
+        : transportIcon(mode, { className: "gmt-cutoff-icon", size: 24 });
+    hero.innerHTML =
+      `<span class="gmt-punct-hero-cap">departure made</span>` +
+      `<span class="gmt-punct-hero-value">${icon}${escapeHtml(writtenTime(facts.made))}</span>` +
+      (wait === ""
+        ? ""
+        : heroLinesHtml([
+            { text: `wait ${toleranceText(wait)} after arrival` },
+            { text: wait, sep: " · " },
+          ]));
   }
 
   function render(): void {
@@ -552,6 +641,7 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     }
 
     drawRail(s, facts);
+    drawHeroes(s, facts, empty, invalid);
 
     const summary = q("rail-summary");
     if (summary) {
@@ -777,12 +867,19 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
   wireCopyButtons(root);
   syncPreset();
   refit();
-  onWidthChange(rail, () => {
+  const refitText = (): void => {
     if (destroyed) return;
     placeAll();
     const ticks = q("rail-ticks");
     if (ticks) thinTickLabels(ticks);
-  });
+  };
+  onWidthChange(rail, refitText);
+  // Text measured before the web fonts swap in is the wrong width: fit again
+  // once they have loaded.
+  if (typeof document !== "undefined" && document.fonts) {
+    void document.fonts.ready.then(refitText);
+    document.fonts.addEventListener?.("loadingdone", refitText);
+  }
 
   return {
     state,

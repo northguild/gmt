@@ -9,8 +9,11 @@
  * tolerance track, every arrival row and the tick row share, so a position
  * along any of them is the same moment along all of them.
  *
- * Early and late are words, never colours. A bar outside the band carries a
- * hatch and the word beside it. Tokens only; amber is the sentinel's alone.
+ * Early and late are words, never colours. The band is lit glass in its
+ * lane's series colour and runs down every row; a bar is a stem from the plan
+ * to the deviation, solid inside the band and hatched outside it, with a filled
+ * cap in and a hollow dashed cap out. Tokens only; amber is the sentinel's
+ * alone.
  */
 
 .gmt-punct-grid {
@@ -20,7 +23,7 @@
   --punct-inset: calc(var(--gmt-handle-w) / 2 + 2px);
   display: grid;
   grid-template-columns: minmax(5rem, 11rem) minmax(8rem, 1fr) minmax(
-      6rem,
+      8rem,
       12rem
     );
   column-gap: var(--gmt-space-3);
@@ -60,7 +63,7 @@
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
 }
 
 .gmt-punct-track {
@@ -81,7 +84,8 @@
   display: none;
 }
 
-/* The plan: a dashed line down the middle of the track and of every bar cell. */
+/* The plan: one hairline down the middle of the track and of every bar cell,
+   with a highlight beside it. */
 .gmt-punct-lane::before,
 .gmt-punct-bar-cell::before {
   content: "";
@@ -89,10 +93,13 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  border-left: 1px dashed var(--gmt-border-strong);
+  border-left: 1px solid var(--gmt-border-strong);
+  box-shadow: 1px 0 0 var(--gmt-highlight);
 }
 
-/* The on-time band: a tinted region with solid edges. */
+/* The on-time band: lit glass in the lane's series colour (a vertical gradient
+   on the `::before` layer, so the open end can fade without fading the words),
+   solid edges and a soft glow. */
 .gmt-punct-band {
   position: absolute;
   top: 0.4rem;
@@ -102,10 +109,27 @@
   align-items: center;
   padding-inline: var(--gmt-space-1);
   overflow: hidden;
-  border: 1px solid var(--gmt-cyan);
+  border-style: solid;
+  border-width: 0 2px;
+  border-color: var(--series, var(--gmt-cyan));
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  background: color(from var(--gmt-cyan) srgb r g b / 0.14);
+  box-shadow: 0 0 12px
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.35);
+}
+
+.gmt-punct-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.32),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.1)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  pointer-events: none;
 }
 
 /* The words sit centred between the handles; with early off they sit at the
@@ -115,32 +139,34 @@
   justify-content: center;
 }
 
+.gmt-punct-band-text {
+  position: relative;
+}
+
 .gmt-punct-band-text[hidden] {
   display: none;
 }
 
-/* Early is optional: with it off the band runs on past the left edge. */
+/* Early is optional: with it off the band has no left edge, and its fill fades
+   to clear over the left 30%, so the open end reads as open. */
 .gmt-punct-band--open {
-  border-left-style: none;
+  border-left-width: 0;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
 
-/* The second tolerance: the same band, outlined by dashes instead of a tint. */
+.gmt-punct-band--open::before {
+  mask-image: linear-gradient(90deg, transparent, var(--gmt-void) 30%);
+}
+
+/* The second tolerance keeps dashed edges. */
 .gmt-punct-band--second {
   border-style: dashed;
-  background: none;
 }
 
-.gmt-punct-band-text {
-  font-size: var(--gmt-text-xs);
-  line-height: 1.2;
-  color: var(--gmt-ice);
-  white-space: nowrap;
-}
-
+/* The grips are the bright handles, in the lane's series colour. */
 .gmt-punct-lane > .gmt-handle {
-  color: var(--gmt-ice);
+  color: var(--series, var(--gmt-ice));
 }
 
 /* ---------------------------------------------------------------------------
@@ -152,51 +178,148 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   line-height: 1.3;
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
   overflow-wrap: anywhere;
 }
 
+/* A bar cell paints the tolerance band behind its bar: a faint lit stripe
+   between the band's two edges, with a 1px edge line at each (the left one only
+   when early is on). The mount sets `--band-l`, `--band-r` and, with the second
+   tolerance on, `--band-b` in percent on the board. */
 .gmt-punct-bar-cell {
+  --edge-l-w: 1px;
   position: relative;
-  height: 1.1rem;
+  height: 1.4rem;
   margin-inline: var(--punct-inset);
+  background:
+    linear-gradient(var(--gmt-series-1), var(--gmt-series-1)) var(--band-r, 0%)
+      0 / 1px 100% no-repeat,
+    linear-gradient(var(--gmt-series-1), var(--gmt-series-1)) var(--band-l, 0%)
+      0 / var(--edge-l-w) 100% no-repeat,
+    linear-gradient(
+      90deg,
+      transparent var(--band-l, 0%),
+      color(from var(--gmt-series-1) srgb r g b / 0.12) var(--band-l, 0%),
+      color(from var(--gmt-series-1) srgb r g b / 0.12) var(--band-r, 0%),
+      transparent var(--band-r, 0%)
+    );
 }
 
-/* A bar runs from the plan to the deviation. The part inside the band is a
-   plain fill; the part outside it is hatched, so the edge reads without
-   colour. A bar that ends exactly on an edge gets a short hatched cap. */
-.gmt-punct-bar-in,
-.gmt-punct-bar-out {
+.gmt-punct-grid--open .gmt-punct-bar-cell {
+  --edge-l-w: 0px;
+}
+
+/* A tolerance that does not read draws no band down the rows. */
+.gmt-punct-grid--noband .gmt-punct-bar-cell {
+  background: none;
+}
+
+/* The second tolerance's right edge: a 2px dashed line in its own series. */
+.gmt-punct-grid--compare .gmt-punct-bar-cell::after {
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
+  left: var(--band-b, 0%);
+  border-left: 2px dashed var(--gmt-series-3);
+}
+
+/* A bar is a stem from the plan to the deviation. Inside the band it is solid,
+   a gradient from faint at the plan to full at the far end; outside it is the
+   family hatch inside a dashed outline. The far end carries a cap: filled
+   inside the band, hollow and dashed outside it. */
+.gmt-punct-bar-in,
+.gmt-punct-bar-out {
+  position: absolute;
+  top: 50%;
+  height: 0.45rem;
   box-sizing: border-box;
-  border: 1px solid var(--gmt-ice);
-  color: var(--gmt-ice);
+  translate: 0 -50%;
 }
 
 .gmt-punct-bar-in {
   min-width: 2px;
-  background: color(from var(--gmt-ice) srgb r g b / 0.3);
+  background: linear-gradient(
+    90deg,
+    color(from var(--gmt-cyan-bright) srgb r g b / 0.3),
+    var(--gmt-cyan-bright)
+  );
+}
+
+.gmt-punct-bar-in.gmt-punct-bar--neg {
+  background: linear-gradient(
+    270deg,
+    color(from var(--gmt-cyan-bright) srgb r g b / 0.3),
+    var(--gmt-cyan-bright)
+  );
 }
 
 .gmt-punct-bar-out {
+  --hatch: color(from var(--gmt-ice) srgb r g b / 0.6);
   min-width: 5px;
+  border: 1px dashed var(--gmt-border-strong);
 }
 
+.gmt-punct-bar--end::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  translate: 50% -50%;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-cyan-bright);
+  box-shadow:
+    0 0 0 3px color(from var(--gmt-cyan-bright) srgb r g b / 0.25),
+    0 0 12px color(from var(--gmt-cyan-bright) srgb r g b / 0.45);
+}
+
+.gmt-punct-bar--neg.gmt-punct-bar--end::after {
+  right: auto;
+  left: 0;
+  translate: -50% -50%;
+}
+
+.gmt-punct-bar-out.gmt-punct-bar--end::after {
+  border: 2px dashed var(--gmt-ice);
+  background: var(--gmt-surface);
+  box-shadow: none;
+}
+
+/* A row's text is a fixed set of lines, one block each: the delta, the word
+   (the second tolerance's word on its own line when the comparison is on) and,
+   with a wall-clock reading, its two lines. A line never wraps, so dragging a
+   tolerance changes the words and never the row's height. */
 .gmt-punct-row-text {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--gmt-space-1) var(--gmt-space-2);
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-punct-row-text > span[data-role^="row-delta-"],
+.gmt-punct-row-text > span[data-role^="row-class-"],
+.gmt-punct-row-b,
+.gmt-punct-naive-line {
+  display: block;
+  min-block-size: 1lh;
+}
+
+.gmt-punct-sep {
+  display: none;
 }
 
 .gmt-punct-row-text > .gmt-punct-naive {
-  flex: 1 0 100%;
+  align-self: stretch;
+  margin-top: var(--gmt-space-1);
   font-size: var(--gmt-text-xs);
 }
 
@@ -232,13 +355,23 @@
     order: 1;
   }
 
+  /* The text keeps one reserved width, so the label beside it never rewraps
+     as the words change. */
   .gmt-punct-row-text {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     order: 2;
+    min-inline-size: 20ch;
   }
 
   .gmt-punct-bar-cell {
     flex: 0 0 calc(100% - 2 * var(--punct-inset));
     order: 3;
+  }
+}
+
+/* The narrowest rail: the text takes the line under the label. */
+@container (max-width: 21rem) {
+  .gmt-punct-row-text {
+    flex: 1 0 100%;
   }
 }

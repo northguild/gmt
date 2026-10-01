@@ -18,8 +18,10 @@ import {
   collectDepartureFacts,
   CUSTOM_PRESET_ID,
   DEPARTURE_PRESETS,
+  departureIconMode,
   departureNullReason,
   departureReasonText,
+  departureWait,
   handoffArgs,
   initialState,
   isEmptyReason,
@@ -619,5 +621,62 @@ describe("railTickStep", () => {
   it("steps up as the span grows", () => {
     expect(railTickStep(3 * 3_600_000)).toBe(30);
     expect(railTickStep(12 * 3_600_000)).toBe(120);
+  });
+});
+
+describe("departureWait", () => {
+  it("is the exact time from the arrival to the departure made", () => {
+    const s = stateOf("shuttle-headway");
+    expect(departureWait(s.after, facts(s).made, lib)).toBe("PT28M");
+    const f = stateOf("ferry-list");
+    expect(departureWait(f.after, facts(f).made, lib)).toBe("PT2H55M");
+  });
+
+  it("counts exact time across the repeated hour", () => {
+    const s = stateOf("fall-back-hourly");
+    expect(facts(s).made).toBe(EST("01:00:00"));
+    expect(departureWait(s.after, facts(s).made, lib)).toBe("PT30M");
+  });
+
+  it("is empty when there is no departure made", () => {
+    const s = stateOf("arrival-at-to");
+    expect(departureWait(s.after, facts(s).made, lib)).toBe("");
+  });
+
+  it("trims the arrival", () => {
+    const s = stateOf("shuttle-headway");
+    expect(departureWait(`  ${s.after} `, facts(s).made, lib)).toBe("PT28M");
+  });
+});
+
+describe("departureIconMode", () => {
+  it("maps ship words to the ship icon", () => {
+    for (const m of ["ship", "ferry", "vessel", "boat"]) {
+      expect(departureIconMode(m), m).toBe("ship");
+    }
+  });
+
+  it("maps rail words to the rail icon", () => {
+    for (const m of ["rail", "train", "shuttle", "tram", "metro"]) {
+      expect(departureIconMode(m), m).toBe("rail");
+    }
+  });
+
+  it("keeps truck, barge and air as themselves", () => {
+    expect(departureIconMode("truck")).toBe("truck");
+    expect(departureIconMode("barge")).toBe("barge");
+    expect(departureIconMode("air")).toBe("air");
+  });
+
+  it("is trimmed and case-insensitive", () => {
+    expect(departureIconMode("  Ferry ")).toBe("ship");
+    expect(departureIconMode("TRAIN")).toBe("rail");
+  });
+
+  it("is null for blank or unknown tags", () => {
+    expect(departureIconMode("")).toBeNull();
+    expect(departureIconMode("  ")).toBeNull();
+    expect(departureIconMode("hovercraft")).toBeNull();
+    expect(departureIconMode("toString")).toBeNull();
   });
 });

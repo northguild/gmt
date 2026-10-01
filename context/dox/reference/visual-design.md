@@ -66,6 +66,10 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
 - Focus is **more visible than default, never less**: a 2px cyan ring plus the sonar ping — one
   outward emit on focus (`gmt-focus-sonar`). Only the focused element animates; idle panels keep
   a static border.
+- **No left-border-only accent on any card, callout, row or result block.** A coloured left
+  stripe as the only accent (`border-left`, `border-inline-start`, a left `inset` shadow, a left
+  `::before` bar) is the tell-tale of AI design, and the site does not use it. An accent edge is
+  a bottom border; otherwise the card has a full bevelled border with a tinted fill.
 
 ## Controls — the one hard engineering rule
 
@@ -143,6 +147,10 @@ them must not jump.
   not clip.
 - **Mark a slot above a draggable surface `data-grow="slot"`,** so a bar does not move under the
   pointer while a result line above it changes height.
+- **Readouts hold still while the reader drags.** A card whose value updates under a handle never
+  moves or resizes itself or a neighbour. Pin paired cards to opposite edges
+  (`justify-content: space-between`), reserve the width of the longest value with tabular figures
+  and no wrap, and test that the bounding boxes do not change across the handle's range.
 
 ## Performance
 

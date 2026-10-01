@@ -76,6 +76,33 @@ mobile-starlight-toc nav {
   -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
+/* No callout draws a left-only accent. Starlight's note, tip, caution and danger
+   asides (its `border-inline-start: 0.25rem`) take the full border above, which
+   wins over Starlight's layered rule; its blockquotes and details (a 1px and a
+   2px left border) get the same treatment here: a full bevelled hairline and a
+   faint tint. Their colour roles are unchanged (the title, the icon and the
+   amber caution identity); nothing here is amber. */
+.sl-markdown-content blockquote:not(:where(.not-content *)),
+.sl-markdown-content details:not(:where(.not-content *)) {
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.sl-markdown-content details:not([open]):hover:not(:where(.not-content *)),
+.sl-markdown-content details:has(> summary:hover):not(:where(.not-content *)) {
+  border-color: var(--gmt-border-strong);
+}
+
+/* Starlight pulls the summary out over the old left border; with a full border
+   it sits flush. */
+.sl-markdown-content summary:not(:where(.not-content *)) {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+}
+
 /* Caution / Warning aside — signal yellow translucent bg */
 .starlight-aside--caution {
   background: var(--gmt-signal-fill);

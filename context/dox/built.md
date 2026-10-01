@@ -302,7 +302,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Gates:** `scripts/grow-measure.mjs` (`pnpm run grow:measure`) samples every tool page's height
   on each frame, on load and on input, in Chromium and WebKit at 1440 and 390 px. It asserts a
   largest jump of 48 px, every `.gmt-grow` at rest, and a final height equal to the
-  reduced-motion run's. `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
+  reduced-motion run's. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
+  in the Departure Board, Punctuality Board and ETA Drift Chart by keyboard and pointer, in Chromium
+  and WebKit at 1440, 390, 360 and 300 px, and fails if a hero plate, the chart frame, the dragged
+  control or anything above it moves or resizes (design-system.md § Drawn charts).
+  `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
 

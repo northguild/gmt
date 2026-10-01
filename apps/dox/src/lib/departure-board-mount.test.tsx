@@ -624,3 +624,109 @@ describe("mountDepartureBoard: chat seeds, permalinks and teardown", () => {
     expect(() => handle.destroy()).not.toThrow();
   });
 });
+
+describe("the restyled rail: result plate, window and focus", () => {
+  const FOCUSABLE = "[tabindex], a, button, input, select, textarea";
+
+  it("shows the departure made, large, with the wait from the library", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const hero = q(root, "rail-hero");
+    expect(hero.hidden).toBe(false);
+    expect(hero.querySelector(".gmt-punct-hero-value")!.textContent).toBe(
+      "06:40",
+    );
+    expect(hero.querySelector(".gmt-punct-hero-sub")!.textContent).toBe(
+      "wait 28 min after arrival · PT28M",
+    );
+    // The shuttle's mode is a rail word, so the plate carries the rail icon.
+    expect(hero.querySelector("svg.gmt-cutoff-icon")).not.toBeNull();
+    expect(hero.getAttribute("data-series")).toBe("1");
+  });
+
+  it("counts the wait in exact time across the repeated hour", async () => {
+    const { root } = await mount({ preset: "fall-back-hourly" });
+    expect(
+      q(root, "rail-hero").querySelector(".gmt-punct-hero-sub")!.textContent,
+    ).toBe("wait 30 min after arrival · PT30M");
+    // No mode on this preset: no icon.
+    expect(q(root, "rail-hero").querySelector("svg")).toBeNull();
+  });
+
+  it("reads none, with no wait, when no departure is left", async () => {
+    const { root } = await mount({ preset: "arrival-at-to" });
+    const hero = q(root, "rail-hero");
+    expect(hero.hidden).toBe(false);
+    expect(hero.querySelector(".gmt-punct-hero-value")!.textContent).toBe(
+      "none",
+    );
+    expect(hero.querySelector(".gmt-punct-hero-sub")!.textContent).toBe(
+      "no departure left",
+    );
+  });
+
+  it("hides the plate on an invalid arrival: the outputs carry NO SIGNAL", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    setText(root, "after", "not a time");
+    expect(q(root, "rail-hero").hidden).toBe(true);
+    expect(q(root, "rail-heroes").hidden).toBe(true);
+    expect(text(root, "made-output")).toContain("NO SIGNAL");
+  });
+
+  it("draws the service window and the closed stretch past it only for a headway", async () => {
+    const shuttle = await mount({ preset: "shuttle-headway" });
+    expect(shuttle.root.querySelectorAll(".gmt-dep-window")).toHaveLength(1);
+    expect(shuttle.root.querySelectorAll(".gmt-dep-beyond")).toHaveLength(1);
+    expect(
+      shuttle.root
+        .querySelector(".gmt-dep-beyond")!
+        .classList.contains("gmt-cutoff-closed"),
+    ).toBe(true);
+    const ferry = await mount({ preset: "ferry-list" });
+    expect(ferry.root.querySelectorAll(".gmt-dep-window")).toHaveLength(0);
+    expect(ferry.root.querySelectorAll(".gmt-dep-beyond")).toHaveLength(0);
+  });
+
+  it("puts every rail label on a chip", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const labels = [...root.querySelectorAll(".gmt-dep-label")];
+    expect(labels.length).toBeGreaterThan(0);
+    for (const l of labels) {
+      expect(l.classList.contains("gmt-cutoff-chip"), l.textContent!).toBe(
+        true,
+      );
+    }
+    expect(
+      q(root, "rail-label-naive").classList.contains("gmt-cutoff-chip--dim"),
+    ).toBe(true);
+  });
+
+  it("keeps the plates out of the accessibility tree", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const heroes = root.querySelectorAll(".gmt-punct-heroes");
+    expect(heroes).toHaveLength(1);
+    for (const h of heroes) expect(h.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("has no focusable element in the rail but the arrival handle", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    expect(q(root, "departure-rail").querySelectorAll(FOCUSABLE)).toHaveLength(
+      0,
+    );
+    expect(
+      [...q(root, "rail-stage").querySelectorAll(FOCUSABLE)].map(
+        (e) => (e as HTMLElement).dataset.role,
+      ),
+    ).toEqual(["handle-after"]);
+  });
+});
+
+describe("readouts that hold still", () => {
+  it("draws the plate's sub line as two fixed lines, with or without a wait", async () => {
+    for (const preset of ["shuttle-headway", "arrival-at-to"]) {
+      const { root } = await mount({ preset });
+      expect(
+        q(root, "rail-hero").querySelectorAll(".gmt-punct-hero-line"),
+      ).toHaveLength(2);
+    }
+  });
+});

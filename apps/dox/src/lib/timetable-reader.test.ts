@@ -115,8 +115,7 @@ describe("offsetChoices", () => {
     const choices = offsetChoices("2024-03-10T02:30:00", NY, lib);
     expect(choices.map((c) => c.value)).toContain("-05:00");
     /* Neither offset names an instant here, so neither is dressed as a pass. */
-    for (const c of choices.slice(1))
-      expect(c.label).toContain("never shows");
+    for (const c of choices.slice(1)) expect(c.label).toContain("never shows");
   });
 
   it("offers only None for a blank time, a blank zone or an unparseable time", () => {

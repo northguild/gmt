@@ -661,3 +661,147 @@ describe("mountPunctualityBoard: presets, permalinks and teardown", () => {
     expect(() => handle.destroy()).not.toThrow();
   });
 });
+
+describe("the restyled board: result plates, bars and focus", () => {
+  const FOCUSABLE = "[tabindex], a, button, input, select, textarea";
+  const value = (root: HTMLElement, role: string) =>
+    q(root, role).querySelector(".gmt-punct-hero-value")!.textContent;
+
+  it.each([
+    ["fifteen-minute", "4 of 6"],
+    ["sixty-and-120", "2 of 6"],
+    ["day-based", "2 of 6"],
+    ["fall-back", "1 of 4"],
+  ])("reads the on-time count on %s as %s", async (id, want) => {
+    const { root } = await mountPreset(id!);
+    expect(value(root, "rate-hero-a")).toBe(want);
+    expect(q(root, "rate-hero-a").getAttribute("data-series")).toBe("1");
+    expect(
+      q(root, "rate-hero-a").querySelector(".gmt-punct-hero-cap")!.textContent,
+    ).toBe("on time");
+  });
+
+  it("words the tolerance under the count, early included when it is on", async () => {
+    const quarter = await mountPreset("fifteen-minute");
+    expect(
+      q(quarter.root, "rate-hero-a").querySelector(".gmt-punct-hero-sub")!
+        .textContent,
+    ).toBe("late tolerance 15 min");
+    const days = await mountPreset("day-based");
+    expect(
+      q(days.root, "rate-hero-a").querySelector(".gmt-punct-hero-sub")!
+        .textContent,
+    ).toBe("late tolerance 24 h, early 24 h");
+  });
+
+  it("draws the second plate, in series 3, only while the comparison is on", async () => {
+    const off = await mountPreset("fifteen-minute");
+    expect(off.root.querySelector('[data-role="rate-hero-b"]')).toBeNull();
+    const { root } = await mountPreset("sixty-and-120");
+    expect(value(root, "rate-hero-b")).toBe("4 of 6");
+    expect(q(root, "rate-hero-b").getAttribute("data-series")).toBe("3");
+    expect(
+      q(root, "rate-hero-b").querySelector(".gmt-punct-hero-sub")!.textContent,
+    ).toBe("second late tolerance 2 h");
+    flip(root, "compare-on", false);
+    expect(root.querySelector('[data-role="rate-hero-b"]')).toBeNull();
+  });
+
+  it("marks the two lanes with their series and gives lane B its own chip", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    expect(q(root, "lane-a").getAttribute("data-series")).toBe("1");
+    expect(q(root, "lane-b").getAttribute("data-series")).toBe("3");
+    expect(text(root, "band-a-text")).toBe("← early is on time");
+    expect(text(root, "band-b-text")).toBe("2 h late");
+    expect(q(root, "band-a-text").classList.contains("gmt-cutoff-chip")).toBe(
+      true,
+    );
+  });
+
+  it("runs the band down every row, in percent, on the board", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    const board = q(root, "board");
+    expect(board.style.getPropertyValue("--band-l")).toBe("0%");
+    expect(board.style.getPropertyValue("--band-r")).not.toBe("");
+    expect(board.style.getPropertyValue("--band-b")).not.toBe("");
+    expect(board.classList.contains("gmt-punct-grid--compare")).toBe(true);
+    flip(root, "compare-on", false);
+    expect(board.classList.contains("gmt-punct-grid--compare")).toBe(false);
+    expect(board.style.getPropertyValue("--band-b")).toBe("");
+  });
+
+  it.each(PUNCTUALITY_PRESETS.map((p) => [p.id]))(
+    "draws exactly one end cap per row on %s",
+    async (id) => {
+      const { root } = await mountPreset(id!);
+      const rows = [...q(root, "rows").children];
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.querySelectorAll(".gmt-punct-bar--end")).toHaveLength(1);
+      }
+    },
+  );
+
+  it("flips the stems of a negative deviation and caps a late bar outside the band", async () => {
+    const { root } = await mountPreset("fifteen-minute");
+    // Row 5 is -3 min: one stem, inside the band, flipped.
+    const early = q(root, "row-5");
+    expect(early.querySelector(".gmt-punct-bar-in")!.className).toContain(
+      "gmt-punct-bar--neg",
+    );
+    expect(early.querySelector(".gmt-punct-bar-in")!.className).toContain(
+      "gmt-punct-bar--end",
+    );
+    // Row 4 is +17 min: a solid stem, then the hatched one carries the cap.
+    const late = q(root, "row-4");
+    expect(late.querySelector(".gmt-punct-bar-in")!.className).not.toContain(
+      "gmt-punct-bar--end",
+    );
+    expect(late.querySelector(".gmt-punct-bar-out")!.className).toContain(
+      "gmt-punct-bar--end",
+    );
+    expect(late.querySelector(".gmt-punct-bar-out")!.className).not.toContain(
+      "gmt-punct-bar--neg",
+    );
+  });
+
+  it("keeps the plates out of the accessibility tree", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    const heroes = root.querySelectorAll(".gmt-punct-heroes");
+    expect(heroes).toHaveLength(1);
+    for (const h of heroes) expect(h.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("has no focusable element in the board but the named handles", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    const roles = [...q(root, "board").querySelectorAll(FOCUSABLE)].map(
+      (e) => (e as HTMLElement).dataset.role,
+    );
+    expect(roles.sort()).toEqual([
+      "handle-compare",
+      "handle-early",
+      "handle-late",
+    ]);
+  });
+});
+
+describe("readouts that hold still", () => {
+  it("gives each row a fixed set of lines: delta, word, and the second word on its own line", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    const row = q(root, "row-3");
+    expect(row.querySelectorAll(".gmt-punct-row-b")).toHaveLength(1);
+    expect(q(root, "row-class-3").textContent).toBe("late · on time under 2 h");
+    const plain = await mountPreset("fifteen-minute");
+    expect(plain.root.querySelectorAll(".gmt-punct-row-b")).toHaveLength(0);
+  });
+
+  it("draws each plate's sub line as fixed lines", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    expect(
+      q(root, "rate-hero-a").querySelectorAll(".gmt-punct-hero-line"),
+    ).toHaveLength(2);
+    expect(
+      q(root, "rate-hero-b").querySelectorAll(".gmt-punct-hero-line"),
+    ).toHaveLength(3);
+  });
+});

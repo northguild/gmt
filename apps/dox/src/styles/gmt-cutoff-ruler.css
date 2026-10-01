@@ -272,18 +272,17 @@
   gap: var(--gmt-space-1);
   min-width: 0;
   margin: 0;
-  padding: var(--gmt-space-3) var(--gmt-space-3) var(--gmt-space-3)
-    calc(var(--gmt-space-3) + 3px);
+  padding: var(--gmt-space-3) var(--gmt-space-3) calc(var(--gmt-space-3) + 3px);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
-  /* One full-height 3px series bar on the left, inside the bevel. */
+  /* One 3px series bar along the bottom edge, inside the bevel. */
   background:
     linear-gradient(
         var(--series, var(--gmt-border-strong)),
         var(--series, var(--gmt-border-strong))
       )
-      left top / 3px 100% no-repeat,
+      left bottom / 100% 3px no-repeat,
     var(--gmt-surface);
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
   /* The site's `[class*="card"]` glass would blur it; this plate is opaque. */

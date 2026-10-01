@@ -30,6 +30,16 @@ import {
 } from "./punctuality-widgets";
 
 export const MAX_EVENTS = 6;
+
+/** Which of the site's four series colours repeats each class. A shape plus a
+ *  word always names a class, so the colour only echoes it. ACT is teal, not
+ *  green: the most authoritative class must not read as a success colour. */
+export const CLASS_SERIES: Readonly<Record<TimestampClass, 1 | 2 | 3 | 4>> = {
+  EST: 1,
+  PLN: 2,
+  REQ: 3,
+  ACT: 4,
+};
 export const CUSTOM_PRESET_ID = "custom";
 
 export interface DriftState {

@@ -9,6 +9,7 @@
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { ETA_PRESETS } from "./eta-drift";
+import { CLASS_SERIES } from "./eta-drift";
 import { mountEtaDrift, renderEtaDriftTemplate } from "./eta-drift-mount";
 import { CHAT_STARTERS } from "./chat-constants";
 
@@ -488,5 +489,134 @@ describe("mountEtaDrift: chat seeds, permalinks and teardown", () => {
     const { handle } = await mount();
     handle.destroy();
     expect(() => handle.destroy()).not.toThrow();
+  });
+});
+
+describe("the restyled plot: marks, legend, plates and focus", () => {
+  const FOCUSABLE = "[tabindex], a, button, input, select, textarea";
+
+  it("gives a mark, its table cell and its legend entry one series", async () => {
+    const { root } = await mount({ preset: "est-after-act" });
+    const classes = ["PLN", "EST", "ACT", "EST"] as const;
+    classes.forEach((code, i) => {
+      const n = i + 1;
+      const series = String(CLASS_SERIES[code]);
+      expect(
+        q(root, `mark-${n}`).getAttribute("data-series"),
+        `mark-${n}`,
+      ).toBe(series);
+      expect(
+        q(root, `event-row-${n}`)
+          .querySelector("td")!
+          .getAttribute("data-series"),
+        `cell ${n}`,
+      ).toBe(series);
+      expect(
+        q(root, "legend").querySelector(`li[data-series="${series}"]`)!
+          .textContent,
+        `legend ${code}`,
+      ).toContain(code);
+    });
+  });
+
+  it("lists only the classes present, in the dashboard's class order", async () => {
+    const some = await mount({ preset: "est-after-act" });
+    expect(
+      [...q(some.root, "legend").querySelectorAll("li")].map(
+        (li) => li.querySelector(".gmt-punct-chip")!.textContent,
+      ),
+    ).toEqual(["PLN", "EST", "ACT"]);
+    const one = await mount({ preset: "vessel-slide" });
+    expect(
+      [...q(one.root, "legend").querySelectorAll("li")].map(
+        (li) => li.querySelector(".gmt-punct-chip")!.textContent,
+      ),
+    ).toEqual(["EST"]);
+    expect(q(one.root, "legend").textContent).toContain("estimated");
+  });
+
+  it("draws the legend and the table with glyphs, never marks or rings", async () => {
+    const { root } = await mount({ preset: "req-beats-est" });
+    expect(
+      q(root, "legend").querySelector(".gmt-eta-glyph--req svg"),
+    ).not.toBeNull();
+    expect(
+      q(root, "event-row-2").querySelector(".gmt-eta-glyph--req svg"),
+    ).not.toBeNull();
+    for (const region of [q(root, "legend"), q(root, "event-table")]) {
+      expect(region.querySelector(".gmt-eta-mark, .gmt-eta-ring")).toBeNull();
+    }
+    // Only the plot holds marks: one per event, so the table adds none.
+    expect(root.querySelectorAll(".gmt-eta-mark")).toHaveLength(3);
+  });
+
+  it("keeps the class chip's code as its text, with the series on it", async () => {
+    const { root } = await mount({ preset: "est-after-act" });
+    const chip = q(root, "label-3").querySelector(".gmt-punct-chip")!;
+    expect(chip.textContent).toBe("ACT");
+    expect(chip.getAttribute("data-series")).toBe("4");
+    expect(q(root, "label-3").classList.contains("gmt-cutoff-chip")).toBe(true);
+  });
+
+  it("draws the chord's glow line apart from the one join line", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    expect(root.querySelectorAll(".gmt-eta-line")).toHaveLength(1);
+    expect(root.querySelectorAll(".gmt-eta-line-glow")).toHaveLength(1);
+    const est = await mount({ preset: "one-estimate" });
+    expect(est.root.querySelectorAll(".gmt-eta-line-glow")).toHaveLength(0);
+  });
+
+  it("reads the drift on a plate: +9 h on the vessel slide", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    const hero = q(root, "drift-hero");
+    expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
+      "estimate drift",
+    );
+    expect(hero.querySelector(".gmt-punct-hero-value")!.textContent).toBe(
+      "+9 h",
+    );
+    expect(hero.querySelector(".gmt-punct-hero-sub")!.textContent).toBe(
+      "PT9H · over 3 estimates · exceeds ±8 h: yes",
+    );
+  });
+
+  it("leaves the exceeds clause out with no tolerance, and the plate out with no drift", async () => {
+    const act = await mount({ preset: "est-after-act" });
+    expect(
+      q(act.root, "drift-hero").querySelector(".gmt-punct-hero-sub")!
+        .textContent,
+    ).toBe("PT25M · over 2 estimates");
+    const one = await mount({ preset: "one-estimate" });
+    expect(one.root.querySelector('[data-role="drift-hero"]')).toBeNull();
+  });
+
+  it.each(ETA_PRESETS.map((p) => [p.id]))(
+    "draws the best pick's plate on %s, in its class's series",
+    async (id) => {
+      const { root } = await mount({ preset: id });
+      const hero = q(root, "best-hero");
+      expect(hero.classList.contains("gmt-punct-hero--quiet")).toBe(true);
+      const code = /^(PLN|EST|REQ|ACT) · /.exec(
+        hero.querySelector(".gmt-punct-hero-value")!.textContent!,
+      )![1]! as keyof typeof CLASS_SERIES;
+      expect(hero.getAttribute("data-series")).toBe(String(CLASS_SERIES[code]));
+      expect(hero.querySelector(".gmt-eta-glyph")).not.toBeNull();
+      expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
+        "best available",
+      );
+    },
+  );
+
+  it("keeps the plates and the legend out of the accessibility tree", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    const heroes = root.querySelectorAll(".gmt-punct-heroes");
+    expect(heroes).toHaveLength(1);
+    for (const h of heroes) expect(h.getAttribute("aria-hidden")).toBe("true");
+    expect(q(root, "legend").getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("has nothing focusable in the plot", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    expect(q(root, "drift-plot").querySelectorAll(FOCUSABLE)).toHaveLength(0);
   });
 });

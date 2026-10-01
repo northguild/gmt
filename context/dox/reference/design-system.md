@@ -9,16 +9,16 @@ The theme is plain, **unlayered** CSS custom properties — no Tailwind, no `@la
 what lets it beat Starlight's defaults. The core sheets load in this order via
 `starlight({ customCss })` in `apps/dox/astro.config.mjs`:
 
-| #   | File                 | Owns                                                                                                          |
-| --- | -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1   | `gmt-tokens.css`     | Palette (6 roles), every `--gmt-*` token, `@font-face`, the `[data-theme="light"]` value block. Custom properties only |
-| 2   | `gmt-theme.css`      | Maps `--gmt-*` onto Starlight's `--sl-*`                                                                      |
+| #   | File                 | Owns                                                                                                                           |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `gmt-tokens.css`     | Palette (6 roles), every `--gmt-*` token, `@font-face`, the `[data-theme="light"]` value block. Custom properties only         |
+| 2   | `gmt-theme.css`      | Maps `--gmt-*` onto Starlight's `--sl-*`                                                                                       |
 | 3   | `gmt-primitives.css` | Reusable recipes: `.gmt-glass*`, `.gmt-brackets`, `.gmt-icon-button`, `.gmt-dox-mark*`, `.gmt-grow`, `.gmt-enter`, sonar focus |
-| 4   | `gmt-glass.css`      | Glass on Starlight's own elements (header, sidebar, `pre`, tables, asides, search, dialogs)                   |
-| 5   | `gmt-shell.css`      | Global typography and the layout frame                                                                        |
-| 6   | `gmt-content.css`    | The reading surface (`.sl-markdown-content`), Expressive Code chrome, the search modal                        |
-| 7   | `gmt-controls.css`   | CTA buttons, pagination, `:focus-visible`, `::selection`, scrollbars                                          |
-| 8   | `gmt-light.css`      | Light overrides that are neither a palette re-tint nor adjacent to a base rule                                |
+| 4   | `gmt-glass.css`      | Glass on Starlight's own elements (header, sidebar, `pre`, tables, asides, search, dialogs)                                    |
+| 5   | `gmt-shell.css`      | Global typography and the layout frame                                                                                         |
+| 6   | `gmt-content.css`    | The reading surface (`.sl-markdown-content`), Expressive Code chrome, the search modal                                         |
+| 7   | `gmt-controls.css`   | CTA buttons, pagination, `:focus-visible`, `::selection`, scrollbars                                                           |
+| 8   | `gmt-light.css`      | Light overrides that are neither a palette re-tint nor adjacent to a base rule                                                 |
 
 Per-widget sheets (`gmt-widget.css`, `gmt-clock-list.css` — before `gmt-map.css`,
 `gmt-globe.css` and `gmt-scrubber.css`, which build on its row recipe — `gmt-dst-inspector.css`,
@@ -230,7 +230,9 @@ replays on a value change.
 
 ## Drawn charts
 
-The cut-off tools' recipes in `gmt-cutoff-widgets.css` are the pattern for a drawn chart:
+The recipes in `gmt-cutoff-widgets.css` are the pattern for every drawn transport chart: the
+three cut-off tools and the Departure Board, Punctuality Board and ETA Drift Chart, whose
+`.gmt-punct-frame` surface joins the same `:is()` lists so the six read as one family:
 
 - **Every label sits on an opaque `--gmt-surface` plate** (`.gmt-cutoff-chip`), in
   `--gmt-ice` or `--gmt-ice-dim`. Then no glyph ever touches a gradient, hatch, glow or line,
@@ -245,7 +247,24 @@ The cut-off tools' recipes in `gmt-cutoff-widgets.css` are the pattern for a dra
   `forced-color-adjust: none`. A plate that holds text never does, or its text keeps a theme
   colour on `Canvas`.
 - **Motion:** a chart animates nothing, with one exception, a connector that is not a value.
-  That is the Stack's dashed arc, and it stops in its own `prefers-reduced-motion` block.
+  That is the Stack's dashed arc, and it stops in its own `prefers-reduced-motion` block. A
+  drag handle inside a chart keeps the site's focus sonar.
+- **An accent edge is a bottom edge.** Hero plates (`.gmt-punct-hero[data-series]`) and the
+  Ruler's result cards paint their series colour as a 3px bar at `left bottom / 100% 3px`. No
+  card carries a left-only accent (visual-design.md § Corners, borders, focus).
+- **Hero plates hold still while a handle moves.** `.gmt-punct-heroes` is
+  `justify-content: space-between`; each plate is `flex: 0 0 auto` with a reserved value and
+  sub-line width (measured across each handle's whole range on every preset), `tabular-nums`
+  and `nowrap`. Sub-lines are fixed `.gmt-punct-hero-line` spans, and a line above a dragged
+  control reserves its measured line count with `min-block-size` in `lh`.
+  `setPresetDescription` keeps the preset description's height once a drag makes the state
+  custom. Gate: `pnpm --filter @gmt/dox run readout:still` (`scripts/readout-still.mjs`), which
+  drags every handle by keyboard and pointer in Chromium and WebKit at 1440, 390, 360 and 300
+  and fails if a plate, the frame, the dragged control or anything above it moves or resizes.
+- **Class and series colours never say "good".** The ETA Drift Chart's classes are EST cyan,
+  PLN spring, REQ purple and ACT teal. The Punctuality Board's two tolerances are series 1 and
+  series 3, so the on-time band never reads as success. Late, early, made and missed are
+  words and patterns.
 
 ## `/dox` and the header
 

@@ -39,6 +39,14 @@ work is scoped against what is already built.
 - **React stays inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Maximal chrome, disciplined content surface.** Judge UI by reading a long page, never by a
   screenshot.
+- **No left-border-only cards.** A card, callout, row or result block never carries a coloured
+  left edge as its only accent; the owner rejects it as the tell-tale of AI design. An accent
+  edge is a bottom border, or the card has a full bevelled border. Every spec that styles a card
+  says so.
+- **Readouts hold still while the reader drags.** A value that changes under a handle never moves
+  or resizes its card or its neighbours: pin paired cards to opposite edges
+  (`justify-content: space-between`), give values a reserved width with tabular figures and no
+  wrap, and put a bounding-box test in the definition of done.
 
 ## Process — per task
 

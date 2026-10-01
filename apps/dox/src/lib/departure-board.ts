@@ -24,6 +24,7 @@ import {
   type Headway,
   type PunctualityLib,
 } from "./punctuality-widgets";
+import type { TransportMode } from "./transport-icons";
 
 export const MAX_DEPARTURES = 6;
 export const CUSTOM_PRESET_ID = "custom";
@@ -391,6 +392,41 @@ export function collectDepartureFacts(
     made: lib.nextDeparture(after, timetable, optionsOf(state)),
     naive: lib.nextDeparture(after, timetable),
   };
+}
+
+/**
+ * The exact time from the arrival to the departure made, from the library's
+ * `scheduleDeviation`; `""` when there is no departure made. The widget never
+ * subtracts the two itself.
+ */
+export function departureWait(
+  after: string,
+  made: string,
+  lib: PunctualityLib,
+): string {
+  return made === "" ? "" : lib.scheduleDeviation(after.trim(), made);
+}
+
+const ICON_ALIASES: Readonly<Record<string, TransportMode>> = {
+  ship: "ship",
+  ferry: "ship",
+  vessel: "ship",
+  boat: "ship",
+  rail: "rail",
+  train: "rail",
+  shuttle: "rail",
+  tram: "rail",
+  metro: "rail",
+  truck: "truck",
+  barge: "barge",
+  air: "air",
+};
+
+/** A display alias only: which transport icon a free-text mode tag borrows, or
+ *  `null` when it names none. It never changes a result. */
+export function departureIconMode(mode: string): TransportMode | null {
+  const key = mode.trim().toLowerCase();
+  return Object.hasOwn(ICON_ALIASES, key) ? ICON_ALIASES[key]! : null;
 }
 
 // ---------------------------------------------------------------------------

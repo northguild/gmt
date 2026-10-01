@@ -46,6 +46,8 @@ import {
   isoToMinutes,
   minutesToIso,
   nextInstanceId,
+  heroLinesHtml,
+  setPresetDescription,
   signedText,
   spokenMinutes,
   stepMinutesFor,
@@ -141,17 +143,18 @@ export function renderPunctualityBoardTemplate(
     `<h4>2. Late, early or on time</h4>` +
     `<div class="gmt-punct-rate" data-role="rate" aria-live="polite"></div>` +
     `<div class="gmt-punct-frame">` +
+    `<div class="gmt-punct-heroes" data-role="rate-heroes" aria-hidden="true"></div>` +
     `<div class="gmt-punct-grid" data-role="board" role="group" aria-label="Arrivals against the tolerance" aria-describedby="punct-summary-${id}">` +
     `<div class="gmt-punct-track-row">` +
     `<span class="gmt-punct-track-label" aria-hidden="true">Tolerance</span>` +
     `<div class="gmt-punct-track" data-role="tolerance-track">` +
-    `<div class="gmt-punct-lane" data-role="lane-a">` +
-    `<span class="gmt-punct-band" data-role="band-a" aria-hidden="true"><span class="gmt-punct-band-text" data-role="band-a-text"></span></span>` +
+    `<div class="gmt-punct-lane" data-role="lane-a" data-series="1">` +
+    `<span class="gmt-punct-band" data-role="band-a" aria-hidden="true"><span class="gmt-punct-band-text gmt-cutoff-chip" data-role="band-a-text"></span></span>` +
     handleHtml("handle-early", "Early tolerance", !state.earlyOn) +
     handleHtml("handle-late", "Late tolerance", false) +
     `</div>` +
-    `<div class="gmt-punct-lane" data-role="lane-b"${state.compareOn ? "" : " hidden"}>` +
-    `<span class="gmt-punct-band gmt-punct-band--second" data-role="band-b" aria-hidden="true"></span>` +
+    `<div class="gmt-punct-lane" data-role="lane-b" data-series="3"${state.compareOn ? "" : " hidden"}>` +
+    `<span class="gmt-punct-band gmt-punct-band--second" data-role="band-b" aria-hidden="true"><span class="gmt-punct-band-text gmt-cutoff-chip" data-role="band-b-text"></span></span>` +
     handleHtml("handle-compare", "Second late tolerance", false) +
     `</div>` +
     `</div>` +
@@ -272,9 +275,11 @@ function setupWidget(
     presetEl!.value = matchPreset(state());
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
+      setPresetDescription(
+        desc,
         PUNCTUALITY_PRESETS.find((p) => p.id === presetEl!.value)
-          ?.description ?? "";
+          ?.description ?? "",
+      );
     }
   }
 
@@ -353,27 +358,31 @@ function setupWidget(
         `left:${pct(Math.min(a, b))}%;width:${Math.abs(pct(b) - pct(a))}%`;
       const inside =
         layout.inside ?? (layout.outside === null ? { from: 0, to: 0 } : null);
+      // A negative deviation flips the gradient; the segment whose far end is
+      // the deviation carries the cap (the outside one when there is one).
+      const neg = dev < 0 ? " gmt-punct-bar--neg" : "";
+      const endIn = layout.outside === null ? " gmt-punct-bar--end" : "";
       bar =
         (inside
-          ? `<span class="gmt-punct-bar-in" style="${span(inside.from, inside.to)}"></span>`
+          ? `<span class="gmt-punct-bar-in${neg}${endIn}" style="${span(inside.from, inside.to)}"></span>`
           : "") +
         (layout.outside
-          ? `<span class="gmt-punct-bar-out gmt-punct-hatch" style="${span(layout.outside.from, layout.outside.to)}"></span>`
+          ? `<span class="gmt-punct-bar-out gmt-punct-hatch${neg} gmt-punct-bar--end" style="${span(layout.outside.from, layout.outside.to)}"></span>`
           : "");
       delta = escapeHtml(signedText(f.deviation));
       words =
         f.classA === null
           ? SENTINEL
           : s.compareOn
-            ? `${tagOf(f.classA)} · ${escapeHtml(f.classB === null ? "no signal" : `${wordOf(f.classB)} under ${toleranceText(s.compareLate)}`)}`
+            ? `${tagOf(f.classA)}<span class="gmt-punct-sep"> · </span><span class="gmt-punct-row-b">${escapeHtml(f.classB === null ? "no signal" : `${wordOf(f.classB)} under ${toleranceText(s.compareLate)}`)}</span>`
             : tagOf(f.classA);
     }
     const naive = facts.showNaive
-      ? `<span class="gmt-punct-naive" data-role="row-naive-${n}">wall clock: ${
-          f.naiveDeviation === ""
-            ? "NO SIGNAL"
-            : `${escapeHtml(signedText(f.naiveDeviation))}, ${escapeHtml(wordOf(f.naiveClass) || "no signal")}`
-        } (naive)</span>`
+      ? `<span class="gmt-punct-naive" data-role="row-naive-${n}">` +
+        (f.naiveDeviation === ""
+          ? `<span class="gmt-punct-naive-line">wall clock: NO SIGNAL</span><span class="gmt-punct-sep"> </span><span class="gmt-punct-naive-line">(naive)</span>`
+          : `<span class="gmt-punct-naive-line">wall clock: ${escapeHtml(signedText(f.naiveDeviation))}</span><span class="gmt-punct-sep">, </span><span class="gmt-punct-naive-line">${escapeHtml(wordOf(f.naiveClass) || "no signal")} (naive)</span>`) +
+        `</span>`
       : "";
     return (
       `<li class="gmt-punct-row" data-role="row-${n}">` +
@@ -398,12 +407,12 @@ function setupWidget(
       .join(" ");
   }
 
-  /** Show the band's words only when they fit clear of a handle: centred
+  /** Show a band's words only when they fit clear of a handle: centred
    *  between the two handles, or after the open left edge and clear of the late
    *  handle. The rows already carry the words, so hiding them loses nothing. */
-  function fitBandText(): void {
-    const band = q("band-a");
-    const label = q("band-a-text");
+  function fitBandText(bandRole = "band-a", textRole = "band-a-text"): void {
+    const band = q(bandRole);
+    const label = q(textRole);
     if (!band || !label) return;
     label.hidden = false;
     const width = band.clientWidth;
@@ -413,6 +422,11 @@ function setupWidget(
       label.scrollWidth +
       (band.classList.contains("gmt-punct-band--open") ? clear + 4 : 2 * clear);
     label.hidden = width < need;
+  }
+
+  function fitBands(): void {
+    fitBandText("band-a", "band-a-text");
+    fitBandText("band-b", "band-b-text");
   }
 
   function render(): void {
@@ -456,6 +470,40 @@ function setupWidget(
       rateEl.innerHTML = html;
     }
 
+    // The result plates above the board: the library's own rates, large.
+    const heroesEl = q("rate-heroes");
+    if (heroesEl) {
+      const earlyText =
+        s.earlyOn && s.early.trim() !== ""
+          ? `early ${toleranceText(s.early.trim())}`
+          : "";
+      const plate = (
+        role: string,
+        series: number,
+        rate: { onTime: number; total: number },
+        lines: readonly { text: string; sep?: string }[],
+      ) =>
+        `<div class="gmt-punct-hero" data-series="${series}" data-role="${role}">` +
+        `<span class="gmt-punct-hero-cap">on time</span>` +
+        `<span class="gmt-punct-hero-value">${rate.onTime} of ${rate.total}</span>` +
+        heroLinesHtml(lines) +
+        `</div>`;
+      heroesEl.innerHTML =
+        (facts.rateA === null
+          ? ""
+          : plate("rate-hero-a", 1, facts.rateA, [
+              { text: `late tolerance ${toleranceText(s.late.trim())}` },
+              { text: earlyText, sep: ", " },
+            ])) +
+        (s.compareOn && facts.rateB !== null
+          ? plate("rate-hero-b", 3, facts.rateB, [
+              { text: "second late tolerance" },
+              { text: toleranceText(s.compareLate.trim()), sep: " " },
+              { text: earlyText, sep: ", " },
+            ])
+          : "");
+    }
+
     // The tolerance track: band A, band B and the handles.
     const bandA = q("band-a");
     const bandAText = q("band-a-text");
@@ -474,6 +522,7 @@ function setupWidget(
       bandAText.textContent = s.earlyOn ? "on time" : "← early is on time";
     }
     const bandB = q("band-b");
+    const bandBText = q("band-b-text");
     if (bandB) {
       if (compareMin === null) {
         bandB.hidden = true;
@@ -482,7 +531,30 @@ function setupWidget(
         const left = earlyMin === null ? 0 : pct(-earlyMin);
         bandB.style.left = `${left}%`;
         bandB.style.width = `${Math.max(0, pct(compareMin) - left)}%`;
+        bandB.classList.toggle("gmt-punct-band--open", !s.earlyOn);
       }
+    }
+    if (bandBText) {
+      bandBText.textContent = `${toleranceText(s.compareLate.trim())} late`;
+    }
+
+    // The band runs down every row: its edges, in percent, on the board.
+    const board = q("board");
+    if (board) {
+      const edgeL = earlyMin === null ? 0 : pct(-earlyMin);
+      board.classList.toggle("gmt-punct-grid--noband", lateMin === null);
+      board.classList.toggle("gmt-punct-grid--open", !s.earlyOn);
+      board.classList.toggle(
+        "gmt-punct-grid--compare",
+        s.compareOn && compareMin !== null,
+      );
+      board.style.setProperty("--band-l", `${edgeL}%`);
+      board.style.setProperty(
+        "--band-r",
+        `${lateMin === null ? 0 : pct(lateMin)}%`,
+      );
+      if (compareMin === null) board.style.removeProperty("--band-b");
+      else board.style.setProperty("--band-b", `${pct(compareMin)}%`);
     }
     drawHandle("handle-late", "Late tolerance", s.late, [0, half], 1);
     drawHandle("handle-early", "Early tolerance", s.early, [-half, 0], -1);
@@ -502,7 +574,7 @@ function setupWidget(
         .join("");
     }
     drawTicks();
-    fitBandText();
+    fitBands();
 
     const summary = q("board-summary");
     if (summary) summary.textContent = summaryText(s, facts);
@@ -742,12 +814,18 @@ function setupWidget(
   refit();
 
   const board = q("board");
-  if (board) {
-    onWidthChange(board, () => {
-      const row = q("axis-ticks");
-      if (row && !destroyed) thinTickLabels(row);
-      if (!destroyed) fitBandText();
-    });
+  const refitText = (): void => {
+    if (destroyed) return;
+    const row = q("axis-ticks");
+    if (row) thinTickLabels(row);
+    fitBands();
+  };
+  if (board) onWidthChange(board, refitText);
+  // Text measured before the web fonts swap in is the wrong width: fit again
+  // once they have loaded.
+  if (typeof document !== "undefined" && document.fonts) {
+    void document.fonts.ready.then(refitText);
+    document.fonts.addEventListener?.("loadingdone", refitText);
   }
 
   return {

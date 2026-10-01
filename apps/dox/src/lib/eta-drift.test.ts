@@ -14,6 +14,7 @@ import {
   punctualityRate,
 } from "@northguild/gmt/transport/calculate";
 import {
+  CLASS_SERIES,
   collectDriftFacts,
   CUSTOM_PRESET_ID,
   driftNullReason,
@@ -478,5 +479,12 @@ describe("axis ticks", () => {
     expect(
       xTicks({ ...win, xMax: win.xMin + 3_600_000 * 5 }, "UTC")[0]!.label,
     ).toMatch(/^\d{2}:00$/);
+  });
+});
+
+describe("CLASS_SERIES", () => {
+  it("gives every class its own series, EST cyan, PLN spring, REQ purple, ACT teal", () => {
+    expect(CLASS_SERIES).toEqual({ EST: 1, PLN: 2, REQ: 3, ACT: 4 });
+    expect(new Set(Object.values(CLASS_SERIES)).size).toBe(4);
   });
 });

@@ -620,3 +620,49 @@ export function placeLabels(
     return hit;
   });
 }
+
+/**
+ * Writes a preset's description into its slot. Dragging a handle makes the
+ * state "custom", which has no description; the slot then keeps the height it
+ * had, so nothing below it (the frame under the pointer) moves. Choosing a
+ * preset again lets the slot size itself.
+ */
+export function setPresetDescription(slot: HTMLElement, text: string): void {
+  if (text === "") {
+    const height = slot.getBoundingClientRect().height;
+    if (slot.style.minBlockSize === "" && height > 0) {
+      slot.style.minBlockSize = `${height}px`;
+    }
+  } else {
+    slot.style.minBlockSize = "";
+  }
+  slot.textContent = text;
+}
+
+/**
+ * A plate's sub line as fixed lines, one `<span>` per line, so it never wraps
+ * and an empty line still holds its height. `sep` is the text that joins a
+ * line to the one before it when the lines are read as one (the plate's
+ * `textContent` stays one sentence); it is hidden by CSS.
+ */
+export function heroLinesHtml(
+  lines: readonly { text: string; sep?: string }[],
+): string {
+  const esc = (t: string) =>
+    t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return (
+    `<span class="gmt-punct-hero-sub">` +
+    lines
+      .map(
+        (l) =>
+          `<span class="gmt-punct-hero-line">` +
+          (l.sep && l.text !== ""
+            ? `<span class="gmt-punct-hero-sep">${esc(l.sep)}</span>`
+            : "") +
+          esc(l.text) +
+          `</span>`,
+      )
+      .join("") +
+    `</span>`
+  );
+}
