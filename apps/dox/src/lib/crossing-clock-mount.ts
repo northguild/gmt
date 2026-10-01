@@ -43,6 +43,7 @@ import {
   type CrystalClockHighlight,
   type CrystalClockState,
 } from "./crystal-clock";
+import { enter } from "./enter";
 import { loadTransportLib } from "./transport-lib";
 import {
   formatCrossing,
@@ -267,6 +268,10 @@ function renderClockPanel(
 ): void {
   const faceEl = q(`${prefix}-clock`);
   if (faceEl) {
+    /* The face arrives with the site's entrance (lib/enter.ts) when it first
+       appears, the exit clock a beat after the entry clock. A re-render with
+       new values replaces the dial in place and does not replay it. */
+    const appearing = !faceEl.firstElementChild;
     faceEl.innerHTML = renderCrystalClock({
       id: prefix,
       hour: face.hour,
@@ -276,6 +281,7 @@ function renderClockPanel(
       state: clockState,
       highlight,
     });
+    if (appearing) enter(faceEl, { delayMs: prefix === "exit" ? 80 : 0 });
   }
   const timeEl = q(`${prefix}-time`);
   if (timeEl) timeEl.textContent = face.timeLabel;
@@ -290,7 +296,11 @@ function clearClockPanel(
   prefix: "entry" | "exit",
 ): void {
   const faceEl = q(`${prefix}-clock`);
-  if (faceEl) faceEl.innerHTML = "";
+  if (faceEl) {
+    faceEl.innerHTML = "";
+    // Emptied, so the next face to appear enters again.
+    faceEl.removeAttribute("data-entered");
+  }
   for (const suffix of ["time", "meta", "date"] as const) {
     const el = q(`${prefix}-${suffix}`);
     if (el) el.textContent = "";

@@ -203,7 +203,8 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 ## Entrance
 
 The site has one arrival gesture: a fade from 92% scale over 0.5 s on the spring curve, first
-performed by the globe. The globe canvas, the globe's zone list and the `/dox` crystal all use it.
+performed by the globe. The globe canvas, the globe's zone list, the Crossing Clock's two faces and the `/dox`
+crystal all use it.
 A landmark visual that appears once its content is ready uses it; nothing else does, and it never
 replays on a value change.
 
@@ -215,7 +216,8 @@ replays on a value change.
   - `enter(el, { delayMs, onEntered })` plays it once and leaves the element with
     `data-entered` and without the class.
   - `holdEntrance(el)` hides an element whose content is ready early and returns its release.
-    The globe holds its zone list and releases it 80 ms after the canvas.
+    The globe holds its zone list and releases it 80 ms after the canvas. The Crossing Clock
+    enters each face when it first appears, the exit face 80 ms after the entry face.
   - A timer finishes or releases either one if `animationend` never comes, so a stall never
     leaves anything hidden.
 - **Pure CSS use:** server-rendered markup that enters on first paint (the crystal) uses
