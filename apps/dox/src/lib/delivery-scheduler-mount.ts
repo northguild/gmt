@@ -36,6 +36,7 @@ import {
   type EtaSummary,
   type Itinerary,
   type ItineraryEvent,
+  legCalls,
 } from "./delivery-scheduler";
 import { codeFrameHtml } from "./code-frame";
 import {
@@ -55,10 +56,12 @@ import {
   TRANSPORT_ZONES,
   zoneOptionsHtml,
   type JourneyFacts,
+  type ScheduleLeg,
   type TransportLib,
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  codeSpan,
   escapeAttr,
   escapeHtml,
   labelTextHtml,
@@ -273,6 +276,18 @@ export function renderDeliverySchedulerTemplate(
     `<h4>3. What <code>scheduleDelivery</code> returns</h4>` +
     codeFrameHtml("delivery") +
     `<output class="gmt-widget-output" data-role="delivery-output">&nbsp;</output>` +
+    `</div>` +
+    `<div class="gmt-widget-section">` +
+    `<h4>4. What <code>transitTime</code> and <code>etaAtZone</code> return</h4>` +
+    `<p class="gmt-widget-hint">Every arrival is <code>transitTime</code> of a departure and a duration, and every local time is <code>etaAtZone</code> of an instant and a zone. These are the two calls for one leg. Their results are that leg's <code>arrival</code> and <code>localArrival</code> in step 3.</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Leg")}` +
+    `<select class="gmt-select" data-role="leg-pick"></select></label>` +
+    `</div>` +
+    codeFrameHtml("leg-transit") +
+    `<output class="gmt-widget-output" data-role="leg-transit-output">&nbsp;</output>` +
+    codeFrameHtml("leg-eta") +
+    `<output class="gmt-widget-output" data-role="leg-eta-output">&nbsp;</output>` +
     `</div>` +
     `</div>` +
     `</div>`
@@ -603,6 +618,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     }
 
     const facts: JourneyFacts = collectJourneyFacts(legs, options, lib);
+    renderLegCalls(facts, legs);
     const originZone = originZoneOf(state);
     const itinerary = buildItinerary(facts, legs, originZone, lib);
     const chartData = buildChartData(facts, legs, originZone, lib);
@@ -677,6 +693,46 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     render();
   }
 
+  /* Step 4: the two calls behind one leg, picked by the reader. The options are
+     rebuilt only when the number of legs changes, so the list is not replaced
+     under an open menu. */
+  function renderLegCalls(facts: JourneyFacts, legs: ScheduleLeg[]): void {
+    const pick = q<HTMLSelectElement>("leg-pick");
+    if (!pick) return;
+    if (pick.options.length !== legs.length) {
+      const current = pick.value;
+      pick.innerHTML = legs
+        .map((_, i) => `<option value="${i}">Leg ${i + 1}</option>`)
+        .join("");
+      pick.value = Number(current) < legs.length ? current : "0";
+      if (pick.value === "") pick.value = "0";
+    }
+    const calls = legCalls(facts, legs, Number(pick.value) || 0, lib);
+    const str = (value: string) => codeSpan("str", JSON.stringify(value));
+    const show = (role: string, value: string) => {
+      const out = q(role);
+      if (!out) return;
+      if (value === "") renderWidgetOutput(out, "NO SIGNAL", "sentinel");
+      else renderWidgetOutput(out, JSON.stringify(value), "live");
+    };
+    const { departure = "", duration = "", arrival = "", zone = "", local = "" } =
+      calls ?? {};
+    renderCallLine(
+      q("call-leg-transit"),
+      "transitTime",
+      `${str(departure)}, ${str(duration)}`,
+      `${JSON.stringify(departure)}, ${JSON.stringify(duration)}`,
+    );
+    show("leg-transit-output", arrival);
+    renderCallLine(
+      q("call-leg-eta"),
+      "etaAtZone",
+      `${str(arrival)}, ${str(zone)}`,
+      `${JSON.stringify(arrival)}, ${JSON.stringify(zone)}`,
+    );
+    show("leg-eta-output", local);
+  }
+
   root.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
     if (
@@ -694,6 +750,10 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     const target = e.target as HTMLElement;
     if (target === presetEl) {
       applyPreset();
+      return;
+    }
+    if (target.matches('[data-role="leg-pick"]')) {
+      render();
       return;
     }
     if (target === legCountEl) {

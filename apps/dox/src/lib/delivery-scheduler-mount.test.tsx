@@ -17,6 +17,11 @@ import {
 installJsdomShims();
 
 const REQUIRED_ROLES = [
+  "leg-pick",
+  "call-leg-transit",
+  "leg-transit-output",
+  "call-leg-eta",
+  "leg-eta-output",
   "preset",
   "preset-description",
   "leg-count",
@@ -225,6 +230,35 @@ describe("mountDeliveryScheduler", () => {
     expect(text).toContain("06:30");
     expect(text).toContain("05:00");
     expect(text).toContain("07:00");
+  });
+
+  it("shows the two calls behind the picked leg, and follows the leg picker", async () => {
+    const { root } = await mount();
+    const pick = q<HTMLSelectElement>(root, "leg-pick");
+    expect([...pick.options].map((o) => o.textContent)).toEqual([
+      "Leg 1",
+      "Leg 2",
+      "Leg 3",
+    ]);
+    expect(q(root, "call-leg-transit").textContent).toContain("transitTime(");
+    expect(q(root, "call-leg-transit").textContent).toContain('"PT46H"');
+    expect(q(root, "call-leg-eta").textContent).toContain(
+      '"America/Los_Angeles"',
+    );
+    /* The arrival the first call returns is the instant the second is given. */
+    const arrival = q(root, "leg-transit-output").textContent!;
+    expect(arrival).not.toBe("NO SIGNAL");
+    expect(q(root, "call-leg-eta").textContent).toContain(arrival);
+    expect(q(root, "leg-eta-output").textContent).toContain(
+      "[America/Los_Angeles]",
+    );
+
+    pick.value = "1";
+    pick.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(q(root, "call-leg-eta").textContent).not.toContain(
+      '"America/Los_Angeles"',
+    );
+    expect(q(root, "leg-transit-output").textContent).not.toBe(arrival);
   });
 
   it("shows the ETA line from the real result", async () => {
