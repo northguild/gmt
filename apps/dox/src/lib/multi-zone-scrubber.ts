@@ -20,7 +20,6 @@ import {
   convertUnixToUtc,
   convertUtcToUnix,
   getDstTransitions,
-  getSystemTimeZone,
   getTimeZoneOffset,
   getUnixNow,
   parseDayFromUtc,
@@ -32,6 +31,9 @@ import {
 } from "@northguild/gmt";
 
 import { COORDINATES_BY_ID } from "./globe-zones";
+import { bindClockGlow, renderCrystalClock } from "./crystal-clock";
+import { formatDayLabel } from "./dwell-ledger";
+import { enter } from "./enter";
 import { readZoneAt } from "./zone-clock";
 import { createZoneCombobox } from "./zone-combobox";
 import { rangeFieldHtml, syncRange } from "./widget-ui";
@@ -40,23 +42,51 @@ export interface ScrubberHost {
   destroy: () => void;
 }
 
-const FALLBACK_PINS = ["America/New_York", "Europe/London", "Asia/Tokyo"];
+/**
+ * The zones the planner opens on.
+ *
+ * A deliberate tour of the awkward offsets rather than the largest cities, so
+ * the first thing the reader sees is the set of facts a fixed-offset mental
+ * model gets wrong:
+ *
+ *   Atlantic/Reykjavik    far west of Greenwich and still `+00:00`, all year,
+ *                         with no daylight saving at all
+ *   Europe/Helsinki       `+02:00` / `+03:00` — a plain, well-behaved DST zone
+ *                         to read the others against
+ *   America/Los_Angeles   `-08:00` / `-07:00`, and it changes on a different
+ *                         date from Europe's
+ *   Asia/Shanghai         one zone for the whole of China, five geographic
+ *                         hours wide
+ *   Asia/Calcutta         `+05:30` — not a whole hour
+ *   Asia/Katmandu         `+05:45` — not even a half hour
+ *
+ * The viewer's own zone is deliberately no longer pinned first: it made the
+ * opening set different for every reader, which is the one thing a teaching
+ * example cannot be. Anyone can still add it in a keystroke.
+ *
+ * Filtered against the coordinate table for the same reason everything else
+ * here is — a zone with no coordinate cannot be placed, and the globe and this
+ * widget share that list.
+ */
+const DEFAULT_PINS = [
+  "Atlantic/Reykjavik",
+  "Europe/Helsinki",
+  "America/Los_Angeles",
+  "Asia/Shanghai",
+  "Asia/Calcutta",
+  "Asia/Katmandu",
+];
 
-/** The viewer's own zone first, then a spread of others — deduped, coord-backed. */
 function defaultPins(): string[] {
-  const system = getSystemTimeZone();
-  const seen = new Set<string>();
-  const pins: string[] = [];
-  for (const id of [system, ...FALLBACK_PINS]) {
-    if (id && !seen.has(id) && COORDINATES_BY_ID.has(id)) {
-      seen.add(id);
-      pins.push(id);
-    }
-  }
-  return pins.slice(0, 3);
+  return DEFAULT_PINS.filter((id) => COORDINATES_BY_ID.has(id));
 }
 const SLIDER_RANGE_MIN = 36 * 60; // ±36 h
-const SLIDER_STEP_MIN = 15;
+/** The granularity of everything the reader can move: the slider's step, the
+ *  reference-time field's own step, and what a seeded or restored anchor is
+ *  rounded to. Named once and derived everywhere — the field used to carry its
+ *  own hardcoded `step="900"`, which is the same number said twice and the
+ *  usual way two steppers end up disagreeing. */
+const SLIDER_STEP_MIN = 5;
 const BITE_CLEAR_MS = 4000;
 /** ISO weekday order: `parseDayOfWeekFromUtc` returns 1 (Mon) … 7 (Sun). */
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -183,23 +213,40 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   };
 
   const lastOffset = new Map<string, string>();
+  /** The `HH:MM` each zone's dial is currently drawn at, so it is only redrawn
+      when that reading moves. */
+  const lastFace = new Map<string, string>();
+  const clockGlow = new AbortController();
   const biteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
 
-  host.classList.add("gmt-scrubber");
+  host.classList.add("gmt-scrubber", "gmt-widget", "not-content");
+  /* The two numbered cards of the shared widget grid (styles/gmt-widget.css):
+     card 1 takes the input, card 2 draws the answer. Card 2 is the chart card,
+     so it takes the rest of the row on a wide pane — which is what gives the
+     clock faces room to sit several across instead of in a list. */
   host.innerHTML = `
+    <div class="gmt-widget-card">
+    <div class="gmt-widget-section">
+    <h4>1. Pin the zones and pick a time</h4>
     <div class="gmt-scrubber-controls">
       <label>Reference time (UTC)
-        <input type="datetime-local" class="gmt-field" data-role="anchor" step="900" />
+        <input type="datetime-local" class="gmt-field" data-role="anchor" step="${SLIDER_STEP_MIN * 60}" />
       </label>
+      <div class="gmt-combobox">
+        <label for="scrubber-add">Add a zone</label>
+        <div class="gmt-scrubber-field-row">
+          <input type="search" id="scrubber-add" class="gmt-field" placeholder="e.g. Australia/Sydney"
+            autocomplete="off" data-role="add" />
+          <button type="button" class="gmt-button gmt-scrubber-add-addon" data-role="add-open"
+            aria-expanded="false" aria-label="Browse every zone">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="gmt-scrubber-actions">
       <button type="button" class="gmt-button" data-role="dst-preset">
         Jump to a DST transition
       </button>
-      <div class="gmt-combobox">
-        <label for="scrubber-add">Add a zone</label>
-        <input type="search" id="scrubber-add" class="gmt-field" placeholder="e.g. Australia/Sydney"
-          autocomplete="off" data-role="add" />
-      </div>
     </div>
     <div class="gmt-scrubber-slider">${rangeFieldHtml({
       role: "slider",
@@ -209,13 +256,18 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
       value: 0,
       valueText: formatShift(0),
       ends: [formatShift(-SLIDER_RANGE_MIN), formatShift(SLIDER_RANGE_MIN)],
-      label: "Shift every pinned clock, in 15-minute steps",
+      label: `Shift every pinned clock, in ${SLIDER_STEP_MIN}-minute steps`,
     })}</div>
     <p class="gmt-scrubber-readout" data-role="readout" aria-live="polite"></p>
-    <div class="gmt-scrubber-rows" data-role="rows"></div>
     <div class="gmt-scrubber-share">
       <button type="button" class="gmt-button" data-role="share">Copy shareable link</button>
       <span data-role="share-status" aria-live="polite"></span>
+    </div>
+    </div>
+    <div class="gmt-widget-section">
+    <h4>2. Every pinned clock</h4>
+    <div class="gmt-scrubber-rows" data-role="rows"></div>
+    </div>
     </div>`;
 
   const anchorInput = host.querySelector<HTMLInputElement>(
@@ -268,18 +320,21 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     );
   }
 
-  /** Rebuild row structure — only when the pinned set changes. */
+  /** Rebuild card structure — only when the pinned set changes. */
   function buildRows(): void {
     rows.innerHTML = "";
+    lastFace.clear();
     for (const id of state.pinned) {
       const row = document.createElement("div");
-      row.className = "gmt-scrubber-row";
+      row.className = "gmt-scrubber-clock";
       row.dataset.bite = "false";
       row.dataset.zoneRow = id;
       row.innerHTML =
-        `<span class="gmt-scrubber-zone">${escapeHtml(id)}</span>` +
-        `<span class="gmt-scrubber-time" data-field="time"></span>` +
-        `<span class="gmt-scrubber-offset" data-field="offset"></span>` +
+        `<div class="gmt-scrubber-clock-face" data-field="face"></div>` +
+        `<p class="gmt-scrubber-clock-time" data-field="time">&nbsp;</p>` +
+        `<p class="gmt-scrubber-clock-date" data-field="date">&nbsp;</p>` +
+        `<p class="gmt-scrubber-clock-zone" title="${escapeHtml(id)}">${escapeHtml(shortZone(id))}</p>` +
+        `<p class="gmt-scrubber-clock-offset" data-field="offset">&nbsp;</p>` +
         `<span class="gmt-scrubber-bite" aria-live="polite"></span>` +
         `<button type="button" class="gmt-scrubber-remove" data-role="remove" ` +
         `aria-label="Remove ${escapeHtml(id)}">✕</button>`;
@@ -288,6 +343,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
         ?.addEventListener("click", () => {
           state.pinned = state.pinned.filter((z) => z !== id);
           lastOffset.delete(id);
+          lastFace.delete(id);
           buildRows();
           render();
         });
@@ -309,11 +365,40 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
         ? reading.offset
         : getTimeZoneOffset(id, instant);
 
+      const dateEl = row.querySelector<HTMLElement>("[data-field='date']");
+      const faceEl = row.querySelector<HTMLElement>("[data-field='face']");
+
       if (timeEl) {
-        timeEl.textContent = reading.ok
-          ? `${reading.date} ${reading.time}`
-          : "⟨ NO SIGNAL ⟩";
+        timeEl.textContent = reading.ok ? hhmm(reading.time) : "⟨ NO SIGNAL ⟩";
         timeEl.classList.toggle("gmt-signal-lost", !reading.ok);
+      }
+      if (dateEl) {
+        dateEl.textContent = reading.ok ? formatDayLabel(reading.date) : "";
+      }
+      /* The dial is an SVG string, so it is rebuilt rather than mutated — but
+         only when the minute it shows actually changes. A drag steps in whole
+         whole-minute increments, so this is at most one rebuild per step per
+         clock, and none at all for the many input events that land inside the
+         same step. */
+      if (faceEl) {
+        const stamp = reading.ok ? hhmm(reading.time) : "";
+        if (lastFace.get(id) !== stamp) {
+          lastFace.set(id, stamp);
+          const appearing = !faceEl.firstElementChild;
+          if (stamp === "") {
+            faceEl.innerHTML = "";
+          } else {
+            const [hh, mm] = stamp.split(":");
+            faceEl.innerHTML = renderCrystalClock({
+              id: `scrubber-${id.replace(/[^a-zA-Z0-9]/g, "-")}`,
+              hour: Number(hh),
+              minute: Number(mm),
+              label: `${shortZone(id)} clock`,
+              sublabel: `${stamp}, ${formatDayLabel(reading.date)}`,
+            });
+            if (appearing) enter(faceEl);
+          }
+        }
       }
       if (offsetEl) {
         offsetEl.textContent = currentOffset ? `UTC${currentOffset}` : "";
@@ -369,6 +454,19 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     },
   );
 
+  /* The attached "+" opens the same list the typeahead shows, so the whole set
+     is browsable without knowing an id to type. It mirrors the input's
+     `aria-expanded` for its own open styling; the input keeps the one that
+     names the listbox. */
+  const addOpen = host.querySelector<HTMLElement>("[data-role='add-open']");
+  addOpen?.addEventListener("click", () => {
+    combobox.toggle();
+    addOpen.setAttribute(
+      "aria-expanded",
+      addInput.getAttribute("aria-expanded") ?? "false",
+    );
+  });
+
   presetButton.addEventListener("click", () => {
     const transition = nextTransition(state.pinned, effectiveMs());
     if (!transition) {
@@ -400,16 +498,32 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   syncControls();
   buildRows();
   render();
+  /* The night-light easter egg every crystal face on the site shares. Bound on
+     the host, so faces built later by `buildRows` are covered too. */
+  bindClockGlow(host, clockGlow.signal);
 
   return {
     destroy() {
       if (urlTimer) clearTimeout(urlTimer);
       for (const timer of biteTimers.values()) clearTimeout(timer);
       combobox.destroy();
+      clockGlow.abort();
       host.innerHTML = "";
-      host.classList.remove("gmt-scrubber");
+      host.classList.remove("gmt-scrubber", "gmt-widget", "not-content");
     },
   };
+}
+
+/** `"Asia/Tokyo"` -> `"Tokyo"`; a fixed offset keeps its own name. */
+function shortZone(id: string): string {
+  if (/^[+-]\d{2}:\d{2}$/.test(id)) return id;
+  return (id.split("/").pop() ?? id).replace(/_/g, " ");
+}
+
+/** The `HH:MM` of an `HH:MM:SS` reading. The dial has no second hand and the
+ *  caption names a minute, so the seconds are noise in both. */
+function hhmm(time: string): string {
+  return time.slice(0, 5);
 }
 
 function escapeHtml(value: string): string {

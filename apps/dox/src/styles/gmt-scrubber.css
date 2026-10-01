@@ -30,10 +30,86 @@
    had no narrow breakpoint at all), so it collapses to one column. */
 .gmt-scrubber-controls {
   display: grid;
-  grid-template-columns: minmax(12rem, 1.2fr) auto minmax(10rem, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: end;
   gap: var(--gmt-space-2);
+  margin-bottom: var(--gmt-space-2);
+}
+
+/* `minmax(0, 1fr)` above, not `minmax(10rem, 1fr)`: a grid item's automatic
+   minimum is its content's, and a bare `<input>` carries an intrinsic width
+   from its `size` attribute that no percentage overrides. Both tracks were
+   therefore floored at that width, and once this row moved into the widget's
+   one-track controls card the zone field pushed straight through the card's
+   right edge. A zero floor lets the tracks shrink; `min-width: 0` on the field
+   itself (below) is the other half of the same fix. */
+
+/* "Jump to a DST transition" on its own line, where it reads as the action it
+   is, rather than as a third thing wedged between two fields. */
+.gmt-scrubber-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
   margin-bottom: var(--gmt-space-4);
+}
+
+/* The zone field and its attached "+", built the way the globe's search field
+   and its filter addon are (gmt-globe.css): `align-items: stretch` makes the
+   button exactly the field's height without either naming one, the field
+   squares off the edge they share while the outer corners keep their bevel,
+   and the button's negative inline-start margin collapses their two 1px
+   borders into the single line an attached control reads as — so the pair
+   draws as one bevelled polygon. */
+.gmt-scrubber-field-row {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+}
+
+.gmt-scrubber-field-row .gmt-field {
+  flex: 1;
+  min-width: 0;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.gmt-scrubber-add-addon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  align-self: stretch;
+  inline-size: 2.25rem;
+  margin-inline-start: -1px;
+  padding: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--gmt-ice-dim);
+  cursor: pointer;
+}
+
+.gmt-scrubber-add-addon:hover,
+.gmt-scrubber-add-addon:focus-visible {
+  color: var(--gmt-cyan-ink);
+  background: var(--gmt-fill);
+  outline: none;
+}
+
+.gmt-scrubber-add-addon:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* Open is worth seeing at a glance; drawn over the field so the shared edge
+   shows the addon's active border, not the field's resting one. */
+.gmt-scrubber-add-addon[aria-expanded="true"] {
+  color: var(--gmt-cyan-ink);
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-cyan);
+  position: relative;
+  z-index: 1;
 }
 
 @container (max-width: 30rem) {
@@ -100,39 +176,77 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   margin-bottom: var(--gmt-space-4);
 }
 
+/* One tile per pinned zone, as many across as the card is wide. The floor is
+   the dial's own legible size plus its captions; `auto-fit` then fits three
+   across in a wide pane and one on a phone, without a breakpoint per count —
+   the reader chooses how many zones there are, so a fixed column count would
+   be wrong for most of them. The track is capped at 14rem rather than `1fr`:
+   left to stretch, three pinned zones in a wide card became three 465px tiles
+   with a small dial adrift in the middle of each. */
 .gmt-scrubber-rows {
   display: grid;
-  gap: var(--gmt-space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 14rem));
+  justify-content: start;
+  gap: var(--gmt-space-3);
 }
 
-.gmt-scrubber-row {
+/* The tile is a plain panel, not a second glass card: it already sits inside
+   the widget's own card, and visual-design.md allows only one layer of glass.
+   A hairline and the subtle fill are enough to group a dial with its labels. */
+.gmt-scrubber-clock {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-  align-items: baseline;
-  gap: var(--gmt-space-3);
-  padding: var(--gmt-space-2) var(--gmt-space-3);
+  grid-template-rows: auto auto auto auto auto;
+  justify-items: center;
+  gap: var(--gmt-space-1);
+  position: relative;
+  padding: var(--gmt-space-3) var(--gmt-space-2) var(--gmt-space-2);
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
 }
 
-.gmt-scrubber-zone {
-  color: var(--gmt-ice);
+/* The dial sizes itself from the tile — `.gmt-crystal-clock` is `width: 100%`
+   — so it shrinks with the column rather than needing a pixel size per
+   breakpoint. Capped so a lone pinned zone in a wide card does not render one
+   enormous clock. */
+.gmt-scrubber-clock-face {
+  width: 100%;
+  max-width: 7rem;
+  line-height: 0;
+}
+
+.gmt-scrubber-clock-time {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 1.35rem;
+  line-height: 1.1;
+  color: var(--gmt-spring-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-scrubber-clock-date {
+  margin: 0;
   font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+/* The city reads as the tile's name; the full IANA id stays in `title` for
+   anyone who needs to know which `Europe/...` this is. */
+.gmt-scrubber-clock-zone {
+  margin: 0;
+  max-width: 100%;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.gmt-scrubber-time {
-  color: var(--gmt-spring-ink);
-  font-size: 0.9rem;
-}
-
-.gmt-scrubber-offset {
-  color: var(--gmt-cyan-ink);
+.gmt-scrubber-clock-offset {
+  margin: 0;
   font-size: var(--gmt-text-xs);
+  color: var(--gmt-cyan-ink);
 }
 
 .gmt-scrubber-bite {
@@ -148,17 +262,22 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   transition: opacity 0.2s ease;
 }
 
-.gmt-scrubber-row[data-bite="true"] .gmt-scrubber-bite {
+.gmt-scrubber-clock[data-bite="true"] .gmt-scrubber-bite {
   opacity: 1;
 }
 
+/* Tucked into the tile's corner so it never competes with the reading. */
 .gmt-scrubber-remove {
   appearance: none;
+  position: absolute;
+  top: var(--gmt-space-1);
+  right: var(--gmt-space-1);
   border: 0;
   background: none;
   color: var(--gmt-ice-dim);
   cursor: pointer;
   font: inherit;
+  line-height: 1;
   padding: 0 var(--gmt-space-1);
 }
 

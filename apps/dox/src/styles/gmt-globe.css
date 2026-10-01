@@ -397,12 +397,22 @@
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
+  /* Not `right: 0`. Pinned to both edges the list is exactly as wide as its
+     input, and an IANA id is longer than most inputs it sits under — in the
+     Zone Planner's controls card, which is one grid track wide, every
+     `America/Argentina/...` was cut off and the list grew a horizontal
+     scrollbar. Sized to its content instead, with the input's width as the
+     floor so it never looks detached, and a cap so the longest id cannot run
+     it off a phone. Nothing scrolls sideways at any width. */
+  width: max-content;
+  min-width: 100%;
+  max-width: min(26rem, calc(100vw - 2rem));
   z-index: 5;
   margin: var(--gmt-space-1) 0 0;
   padding: 0;
   list-style: none;
   max-height: 16rem;
+  overflow-x: hidden;
   overflow-y: auto;
   scroll-behavior: smooth;
 }

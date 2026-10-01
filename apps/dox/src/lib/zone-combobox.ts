@@ -13,6 +13,9 @@
 
 export interface ZoneComboboxHandle {
   destroy: () => void;
+  /** Open the list if it is shut, shut it if it is open, and leave focus on
+   *  the input either way — what an attached "browse" button needs. */
+  toggle: () => void;
 }
 
 const MAX_RESULTS = 60;
@@ -157,6 +160,14 @@ export function createZoneCombobox(
   input.addEventListener("blur", onBlur);
 
   return {
+    toggle() {
+      if (list.hidden) {
+        open();
+        input.focus();
+      } else {
+        close();
+      }
+    },
     destroy() {
       if (blurTimer) clearTimeout(blurTimer);
       input.removeEventListener("input", onInput);
