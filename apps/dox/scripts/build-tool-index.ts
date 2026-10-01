@@ -19,10 +19,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  TOOL_INDUSTRY_IDS,
-  toolIndustry,
-} from "../src/lib/tool-industries";
+import { TOOL_INDUSTRY_IDS, toolIndustry } from "../src/lib/tool-industries";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const toolsDir = resolve(appRoot, "src", "content", "docs", "tools");
@@ -71,9 +68,13 @@ const sections = TOOL_INDUSTRY_IDS.flatMap((id) => {
   if (!industry || members.length === 0) return [];
   const guide = industry.guide ? ` [Read the guide](${industry.guide}).` : "";
   const list = members
-    .map((tool) => `- [${tool.title}](/tools/${tool.slug}/): ${tool.description}`)
+    .map(
+      (tool) => `- [${tool.title}](/tools/${tool.slug}/): ${tool.description}`,
+    )
     .join("\n");
-  return [`## ${industry.label}\n\n${industry.definition}${guide}\n\n${list}\n`];
+  return [
+    `## ${industry.label}\n\n${industry.definition}${guide}\n\n${list}\n`,
+  ];
 });
 
 const source = `---

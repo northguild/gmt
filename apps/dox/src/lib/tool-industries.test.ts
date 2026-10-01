@@ -87,11 +87,14 @@ describe("tool industries", () => {
    * the day count it shares) without taking that layer's tag, so the declared tags are a subset
    * of the linked layers and not the whole set.
    */
-  it.each(pages)("$file is tagged with a layer it links to", ({ declared, linked }) => {
-    if (linked.length === 0) {
-      expect(declared).toEqual([CORE_INDUSTRY]);
-    } else {
-      expect(declared.filter((id) => !linked.includes(id))).toEqual([]);
-    }
-  });
+  it.each(pages)(
+    "$file is tagged with a layer it links to",
+    ({ declared, linked }) => {
+      if (linked.length === 0) {
+        expect(declared).toEqual([CORE_INDUSTRY]);
+      } else {
+        expect(declared.filter((id) => !linked.includes(id))).toEqual([]);
+      }
+    },
+  );
 });

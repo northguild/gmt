@@ -363,7 +363,13 @@ Note about installation.
      * is this same `stripMdx` over this same file, so a tag left here is a tag that ships.
      */
     it("leaves no raw component tag in any page's source once stripped", () => {
-      const docsDir = resolve(import.meta.dirname, "..", "src", "content", "docs");
+      const docsDir = resolve(
+        import.meta.dirname,
+        "..",
+        "src",
+        "content",
+        "docs",
+      );
       const pages = (
         readdirSync(docsDir, { recursive: true }) as string[]
       ).filter((f) => /\.mdx?$/.test(f));
