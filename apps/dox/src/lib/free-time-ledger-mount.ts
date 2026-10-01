@@ -147,7 +147,7 @@ export function renderFreeTimeLedgerTemplate(
     `<div class="gmt-freetime gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
-    `<h4>1. Set the tariff and place the clock</h4>` +
+    `<h4>1. Set the tariff and the clock</h4>` +
     `<div class="gmt-field-grid">` +
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
     `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
@@ -177,6 +177,16 @@ export function renderFreeTimeLedgerTemplate(
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("Holidays, one date per line")}` +
     `<textarea class="gmt-input gmt-freetime-holidays" data-role="holidays" rows="2" spellcheck="false">${escapeHtml(state.holidays)}</textarea></label>` +
     `</div>` +
+    `<!-- Typed-input equivalent to dragging. -->` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock start")}` +
+    `<input class="gmt-input" data-role="clock-start" type="text" spellcheck="false" value="${escapeAttr(state.clockStart)}"></label>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock end")}` +
+    `<input class="gmt-input" data-role="clock-end" type="text" spellcheck="false" value="${escapeAttr(state.clockEnd)}"></label>` +
+    `</div>` +
+    `</div>` +
+    `<div class="gmt-widget-section">` +
+    `<h4>2. Free days and charged days</h4>` +
     `<div class="gmt-freetime-timeline" data-role="timeline">` +
     `<div class="gmt-freetime-row" data-role="row">` +
     `<span class="gmt-freetime-row-label" data-role="label"></span>` +
@@ -195,23 +205,16 @@ export function renderFreeTimeLedgerTemplate(
     `<li><i class="gmt-freetime-swatch gmt-freetime-cell--event"></i>event day, not counted</li>` +
     `</ul>` +
     `</div>` +
-    `<!-- Typed-input equivalent to dragging. -->` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock start")}` +
-    `<input class="gmt-input" data-role="clock-start" type="text" spellcheck="false" value="${escapeAttr(state.clockStart)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock end")}` +
-    `<input class="gmt-input" data-role="clock-end" type="text" spellcheck="false" value="${escapeAttr(state.clockEnd)}"></label>` +
-    `</div>` +
     `<p class="gmt-freetime-summary" data-role="summary" data-grow="slot" aria-live="polite"></p>` +
     `<div data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
-    `<h4>2. What <code>freeTimeExpiry</code> returns</h4>` +
+    `<h4>3. What <code>freeTimeExpiry</code> returns</h4>` +
     codeFrameHtml("expiry") +
     `<output class="gmt-widget-output" data-role="expiry-output">&nbsp;</output>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
-    `<h4>3. What <code>chargeableDays</code> returns</h4>` +
+    `<h4>4. What <code>chargeableDays</code> returns</h4>` +
     codeFrameHtml("charges") +
     `<output class="gmt-widget-output" data-role="charges-output">&nbsp;</output>` +
     `</div>` +
