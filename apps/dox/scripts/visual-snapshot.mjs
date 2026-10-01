@@ -101,6 +101,7 @@ const PAGES = [
      from the reference pages above because they are a different rendering: no
      surrounding API documentation, their own prose, and — for the permalink
      targets — the page a reader actually lands on from the chat. */
+  { slug: "tools-index", path: "/tools/" },
   { slug: "tool-dst-inspector", path: "/tools/dst-inspector/" },
   { slug: "tool-interval-visualizer", path: "/tools/interval-visualizer/" },
   { slug: "tool-converter-bench", path: "/tools/converter-bench/" },

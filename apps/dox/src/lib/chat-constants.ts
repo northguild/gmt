@@ -440,7 +440,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
     widget: "showDwellLedger",
-    area: "intermodal",
+    area: "transport",
     // Wall times, read in `zone` by the widget.
     args: {
       entry: "2024-06-15T23:00",

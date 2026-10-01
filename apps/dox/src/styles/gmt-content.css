@@ -382,3 +382,64 @@ dialog > .dialog-frame {
   background: transparent;
   border: none;
 }
+
+/* ---------------------------------------------------------------------------
+ * Industry tags — the row under a tool page's title (IndustryTags.astro).
+ *
+ * `.gmt-transport-badge`'s shape with an icon in it: a bevelled outline, the
+ * teal fill and the label in the body colour. Every industry looks the same.
+ * The word says which one it is, so no industry needs an accent of its own.
+ * The inline padding is 10px because a bevel cuts the corners and would clip a
+ * glyph set any closer to the edge.
+ * --------------------------------------------------------------------------- */
+
+.gmt-industry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: var(--gmt-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-industry-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill);
+}
+
+.gmt-industry-tag svg {
+  flex: none;
+}
+
+.gmt-industry-tag:hover {
+  border-color: var(--gmt-cyan);
+}
+
+/* Core is not one more industry but the lack of one, so its tag is the quiet
+   one: the same outline with no fill behind it. */
+.gmt-industry-tag--core {
+  background: transparent;
+}
+
+@media (forced-colors: active) {
+  .gmt-industry-tag {
+    border-color: LinkText;
+  }
+
+  .gmt-industry-tag:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

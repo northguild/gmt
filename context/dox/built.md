@@ -207,6 +207,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `cutoff-widgets.ts`'s `callSource` prints only cut-off shapes (its key table drops any other
   key), so these three print calls and results with `formatValue`/`callArgs` from
   `punctuality-widgets.ts`.
+- **Every tool page carries an industry tag.** A tool page's frontmatter lists its `industries`
+  (`src/content.config.ts`), and the `PageTitle` override renders them under the title as
+  `IndustryTags.astro`: an icon and a word, one style for every industry, no colour per
+  industry. The tags are the library's industry layers one to one (`gmt-stats.json`
+  `industries`) plus `core` for a tool on core functions only; `src/lib/tool-industries.ts`
+  holds each tag's label, one-line definition and icon. A tag is the layer the tool's functions
+  come from, so the Dwell Ledger is Transport (`dwellTime`), and its chat-rail area matches.
+  A tag links to its group on `/tools/`, which `scripts/build-tool-index.ts` generates from
+  the same frontmatter as plain Markdown (gitignored, like the scenarios index).
+  `tool-industries.test.ts` fails when a shipped layer has no tag, when a tool page has none,
+  or when a tag names a layer the page does not link to. A new industry is one entry in
+  `tool-industries.ts` and one icon; it gets a tag when its first tool ships, not before.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
   left controls that looked live and did nothing. Every `.astro` shell — every teaching

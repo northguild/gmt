@@ -228,6 +228,7 @@ export default defineConfig({
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
+        PageTitle: "./src/components/PageTitle.astro",
         SocialIcons: "./src/components/SocialIcons.astro",
       },
       customCss: [

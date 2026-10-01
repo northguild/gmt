@@ -41,8 +41,9 @@ in the chat island); `reference/visual-design.md` (corners, focus, controls, mot
 - Add `readonly area: ExampleArea` to the `CHAT_STARTERS` element type and to every entry:
   - `zones`: showGlobe, showConverterBench, showDstInspector
   - `intervals`: showIntervalVisualizer
-  - `intermodal`: showDwellLedger, showFreeTimeLedger, showBillingDeadlines
-  - `transport`: the other ten.
+  - `intermodal`: showFreeTimeLedger, showBillingDeadlines
+  - `transport`: the other eleven. `showDwellLedger` is one of them: `dwellTime` is a transport
+    function, and an area follows the namespace a tool runs on.
 - Add `startersByArea()`: `{ area, label, starters }[]` in `EXAMPLE_AREAS` order, each list in
   `CHAT_STARTERS` order, empty areas omitted.
 - Rename "pill" to "card" or "example" in the comments; keep everything else in this file as

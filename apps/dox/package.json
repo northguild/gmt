@@ -5,7 +5,7 @@
   "description": "Documentation site for @northguild/gmt",
   "type": "module",
   "scripts": {
-    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
+    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && tsx ./scripts/build-tool-index.ts && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
     "predev": "pnpm --filter @northguild/gmt build:dev",
     "dev": "pnpm run generate && node ./scripts/dev-all.mjs",
     "predev:site": "pnpm --filter @northguild/gmt build:dev",
