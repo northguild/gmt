@@ -560,8 +560,10 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
   margin-left: var(--gmt-space-1);
 }
 
-/* A column too narrow for its date drops the text (its `title` still names
-   it); measured by `fitStackTimeline` in cutoff-stack-mount.ts. */
+/* A column too narrow for "13 Jun · Thu" drops the weekday first, then the
+   date (its `title` still names both); measured by `fitStackTimeline` in
+   cutoff-stack-mount.ts. */
+.gmt-cutoff-stack-day--short .gmt-cutoff-stack-day-weekday,
 .gmt-cutoff-stack-day--narrow > * {
   display: none;
 }

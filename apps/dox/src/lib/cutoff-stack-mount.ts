@@ -43,6 +43,7 @@ import {
   formatStack,
   localLabel,
   localParts,
+  weekdayTickLabel,
 } from "./cutoff-widgets";
 import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
@@ -268,18 +269,19 @@ function renderTimeline(
     .map((b) => {
       const closed = facts.closedDays[b.date] ?? false;
       const widthPct = ((b.endMs - b.startMs) / span) * 100;
-      const dateLabel = dayTickLabel(
-        Temporal.Instant.fromEpochMilliseconds(b.startMs).toZonedDateTimeISO(
-          timeZone,
-        ),
-      );
+      const dayStart = Temporal.Instant.fromEpochMilliseconds(
+        b.startMs,
+      ).toZonedDateTimeISO(timeZone);
+      const dateLabel = dayTickLabel(dayStart);
+      const weekday = weekdayTickLabel(dayStart);
       const showLabel = widthPct >= MIN_LABEL_PERCENT;
       if (closed && showLabel) anyClosedLabel = true;
       return (
         `<div class="gmt-cutoff-stack-day${closed ? " gmt-cutoff-stack-day--closed gmt-cutoff-closed" : ""}" ` +
-        `style="left:${pct(b.startMs)}%;width:${widthPct}%" title="${escapeAttr(dateLabel)}${closed ? " (closed)" : ""}">` +
+        `style="left:${pct(b.startMs)}%;width:${widthPct}%" title="${escapeAttr(`${weekday} ${dateLabel}`)}${closed ? " (closed)" : ""}">` +
         (showLabel
-          ? `<span class="gmt-cutoff-stack-day-label">${escapeHtml(dateLabel)}</span>`
+          ? `<span class="gmt-cutoff-stack-day-label">${escapeHtml(dateLabel)}` +
+            `<span class="gmt-cutoff-stack-day-weekday"> · ${escapeHtml(weekday)}</span></span>`
           : "") +
         (closed && showLabel
           ? `<span class="gmt-cutoff-chip gmt-cutoff-stack-day-closed">closed</span>`
@@ -356,14 +358,20 @@ function renderTimeline(
  *  departure gate. Measured, so it re-runs when the width changes. */
 function fitStackTimeline(el: HTMLElement): void {
   for (const day of el.querySelectorAll<HTMLElement>(".gmt-cutoff-stack-day")) {
-    day.classList.remove("gmt-cutoff-stack-day--narrow");
+    day.classList.remove(
+      "gmt-cutoff-stack-day--narrow",
+      "gmt-cutoff-stack-day--short",
+    );
     const label = day.querySelector<HTMLElement>(".gmt-cutoff-stack-day-label");
     const closed = day.querySelector<HTMLElement>(
       ".gmt-cutoff-stack-day-closed",
     );
     if (closed) closed.hidden = false;
     if (!label || day.clientWidth === 0) continue;
-    if (label.scrollWidth > label.clientWidth + 0.5) {
+    const overflows = () => label.scrollWidth > label.clientWidth + 0.5;
+    // Too narrow for "13 Jun · Thu": drop the weekday, then the label.
+    if (overflows()) day.classList.add("gmt-cutoff-stack-day--short");
+    if (overflows()) {
       day.classList.add("gmt-cutoff-stack-day--narrow");
     } else if (closed && closed.offsetWidth + 6 > day.clientWidth) {
       closed.hidden = true;

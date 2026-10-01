@@ -203,6 +203,11 @@ export function dayTickLabel(z: Temporal.ZonedDateTime): string {
   return `${z.day} ${MONTH_LABELS[z.month - 1]}`;
 }
 
+/** `"Thu"`. */
+export function weekdayTickLabel(z: Temporal.ZonedDateTime): string {
+  return WEEKDAY_LABELS[z.dayOfWeek - 1] ?? "";
+}
+
 /** `"Jun 2024"`. */
 export function monthTickLabel(z: Temporal.ZonedDateTime): string {
   return `${MONTH_LABELS[z.month - 1]} ${z.year}`;

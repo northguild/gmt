@@ -162,6 +162,18 @@ describe("mountCutoffStack", () => {
     expect(closed).toHaveLength(2);
   });
 
+  it("labels each day column with its date and weekday", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const labels = [
+      ...q(root, "stack-timeline").querySelectorAll(
+        ".gmt-cutoff-stack-day-label",
+      ),
+    ].map((l) => l.textContent);
+    expect(labels).toContain("14 Jun · Fri");
+    expect(labels).toContain("15 Jun · Sat");
+  });
+
   it("the timeline is not a tab stop", async () => {
     const { root } = await mount();
     expect(q(root, "stack-timeline").getAttribute("tabindex")).toBe("-1");
