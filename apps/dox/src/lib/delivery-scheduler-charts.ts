@@ -19,7 +19,7 @@
  * rail use, never amber, which stays the sentinel's alone.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import type { ChartDefinition } from "@tanstack/charts";
+import type { ChartDefinition, ChartMark, SceneNode } from "@tanstack/charts";
 import { defineChart, dot, link, ruleX, text } from "@tanstack/charts";
 import { barX } from "@tanstack/charts/bar";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -69,22 +69,82 @@ function legNumeral(index: number): string {
   return LEG_NUMERALS[index % LEG_NUMERALS.length]!;
 }
 
+type AnyMark = ChartMark<any, any, any, any, any, any, any>;
+
+/**
+ * A mark that paints but is never a focus target. A built-in `text` mark
+ * always emits an interaction point at its offset label origin, and the
+ * chart's focus draws a ring on every point sharing the hovered x — so each
+ * label under a station (time, city, date, badges) grew a ring of its own.
+ * Labels describe a station or leg; the dot, link or bar beside them is the
+ * target and carries the tooltip. Per the library's custom-marks guide,
+ * decorative geometry emits no points, so this drops them along with each
+ * node's hit-test link.
+ */
+export function decorative<TMark extends AnyMark>(mark: TMark): TMark {
+  return {
+    ...mark,
+    initialize: (context) => {
+      const init = mark.initialize(context);
+      const render = init.render;
+      if (!render) return init;
+      return {
+        ...init,
+        render: (renderContext) => {
+          const scene = render(renderContext);
+          return {
+            ...scene,
+            points: [],
+            nodes: scene.nodes.map((node) =>
+              "interaction" in node && node.interaction
+                ? ({ ...node, interaction: undefined } as SceneNode)
+                : node,
+            ),
+          };
+        },
+      };
+    },
+  };
+}
+
 const MUTED = "var(--gmt-ice-dim)";
 const PRIMARY = "var(--gmt-ice)";
 const CONFLICT = "var(--gmt-dst-purple-ink)";
 
 type Tooltip = ChartTooltipExtension | undefined;
+type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
-function withTooltip<TDatum>(
-  tooltip: Tooltip,
-  content: (datum: TDatum | undefined) => ChartTooltipContent,
-) {
-  if (!tooltip) return {};
+/**
+ * Tooltips per mark. TanStack Charts takes one `tooltip` on the chart
+ * definition, never on a mark (a mark silently ignores the option), so each
+ * interactive mark gets an explicit `id` and its content builder is
+ * recorded under it; the one chart-level `content` looks up the focused
+ * point's `markId`.
+ */
+export function tooltipRegistry(tooltip: Tooltip) {
+  const byMark = new Map<string, (datum: unknown) => ChartTooltipContent>();
   return {
-    tooltip: {
-      use: tooltip,
-      content: (points: readonly { datum: unknown }[]) =>
-        content(points[0]?.datum as TDatum | undefined),
+    /** Mark options that give the mark `id` and show `content` on focus. */
+    tip<TDatum>(
+      id: string,
+      content: (datum: TDatum | undefined) => ChartTooltipContent,
+    ): { id: string } {
+      byMark.set(id, content as (datum: unknown) => ChartTooltipContent);
+      return { id };
+    },
+    /** The chart definition's `tooltip`, or nothing without an extension. */
+    chartOption(): { tooltip?: TooltipOption } {
+      if (!tooltip) return {};
+      return {
+        tooltip: {
+          use: tooltip,
+          content: (points: readonly { markId: string; datum: unknown }[]) => {
+            const point = points[0];
+            const content = point ? byMark.get(point.markId) : undefined;
+            return content ? content(point!.datum) : { rows: [] };
+          },
+        } as TooltipOption,
+      };
     },
   };
 }
@@ -151,6 +211,7 @@ export function buildRouteChartDefinition(
   options: RouteChartOptions = {},
 ): ChartDefinition {
   const { tooltip, compact = false } = options;
+  const tips = tooltipRegistry(tooltip);
   const marks: import("@tanstack/charts").ChartMark<
     any,
     any,
@@ -174,23 +235,25 @@ export function buildRouteChartDefinition(
         strokeWidth: 6,
         strokeDasharray: leg.missed ? "2 6" : undefined,
         lineCap: "round",
-        ...withTooltip<ChartLeg>(tooltip, legTooltip),
+        ...tips.tip<ChartLeg>(`route-leg-${leg.legIndex}`, legTooltip),
       }),
     );
     const midpoint = (leg.fromStation + leg.toStation) / 2;
     marks.push(
-      text([leg], {
-        x: () => midpoint,
-        y: () => 0,
-        xScale: "x",
-        yScale: "y",
-        text: () => `${legNumeral(leg.legIndex)} ${leg.durationText}`,
-        dy: -16,
-        anchor: "middle",
-        fontSize: CHART_FONT_SIZE,
-        fontWeight: 700,
-        fill: legInk(leg.legIndex),
-      }),
+      decorative(
+        text([leg], {
+          x: () => midpoint,
+          y: () => 0,
+          xScale: "x",
+          yScale: "y",
+          text: () => `${legNumeral(leg.legIndex)} ${leg.durationText}`,
+          dy: -16,
+          anchor: "middle",
+          fontSize: CHART_FONT_SIZE,
+          fontWeight: 700,
+          fill: legInk(leg.legIndex),
+        }),
+      ),
     );
   }
 
@@ -222,7 +285,10 @@ export function buildRouteChartDefinition(
         fontSize: CHART_FONT_SIZE,
         fontWeight: 700,
         fill: CONFLICT,
-        ...withTooltip<ChartTransition>(tooltip, transitionTooltip),
+        ...tips.tip<ChartTransition>(
+          `route-transition-${legIndex}`,
+          transitionTooltip,
+        ),
       }),
     );
   }
@@ -238,81 +304,95 @@ export function buildRouteChartDefinition(
         fill: legColor(station.legColorIndex),
         stroke: "var(--gmt-void)",
         strokeWidth: 2,
-        ...withTooltip<ChartStation>(tooltip, stationTooltip),
+        ...tips.tip<ChartStation>(
+          `route-station-${station.index}`,
+          stationTooltip,
+        ),
       }),
     );
+    // The labels under a station are decorative: the dot above is the one
+    // target and carries the station tooltip.
     marks.push(
-      text([station], {
-        x: "index",
-        y: () => 0,
-        xScale: "x",
-        yScale: "y",
-        text: () => station.time,
-        dy: 22,
-        anchor: "middle",
-        fontSize: CHART_FONT_SIZE,
-        fontWeight: 700,
-        fill: PRIMARY,
-        ...withTooltip<ChartStation>(tooltip, stationTooltip),
-      }),
-    );
-    if (station.isEta) {
-      marks.push(
+      decorative(
         text([station], {
           x: "index",
           y: () => 0,
           xScale: "x",
           yScale: "y",
-          text: () => "ETA",
-          dy: 36,
+          text: () => station.time,
+          dy: 22,
           anchor: "middle",
           fontSize: CHART_FONT_SIZE,
           fontWeight: 700,
-          fill: "var(--gmt-cyan-ink)",
+          fill: PRIMARY,
         }),
-      );
-    }
-    if (!compact) {
-      const cityRow = station.isEta ? 50 : 36;
+      ),
+    );
+    if (station.isEta) {
       marks.push(
-        text([station], {
-          x: "index",
-          y: () => 0,
-          xScale: "x",
-          yScale: "y",
-          text: () => station.city,
-          dy: cityRow,
-          anchor: "middle",
-          fontSize: CHART_FONT_SIZE,
-          fill: MUTED,
-        }),
-        text([station], {
-          x: "index",
-          y: () => 0,
-          xScale: "x",
-          yScale: "y",
-          text: () => station.date,
-          dy: cityRow + 14,
-          anchor: "middle",
-          fontSize: CHART_FONT_SIZE,
-          fill: MUTED,
-        }),
-      );
-      let dy = cityRow + 30;
-      for (const badge of station.badges) {
-        const isMissed = badge.kind === "missed";
-        marks.push(
+        decorative(
           text([station], {
             x: "index",
             y: () => 0,
             xScale: "x",
             yScale: "y",
-            text: () => badge.text,
-            dy,
+            text: () => "ETA",
+            dy: 36,
             anchor: "middle",
             fontSize: CHART_FONT_SIZE,
-            fill: isMissed ? CONFLICT : MUTED,
+            fontWeight: 700,
+            fill: "var(--gmt-cyan-ink)",
           }),
+        ),
+      );
+    }
+    if (!compact) {
+      const cityRow = station.isEta ? 50 : 36;
+      marks.push(
+        decorative(
+          text([station], {
+            x: "index",
+            y: () => 0,
+            xScale: "x",
+            yScale: "y",
+            text: () => station.city,
+            dy: cityRow,
+            anchor: "middle",
+            fontSize: CHART_FONT_SIZE,
+            fill: MUTED,
+          }),
+        ),
+        decorative(
+          text([station], {
+            x: "index",
+            y: () => 0,
+            xScale: "x",
+            yScale: "y",
+            text: () => station.date,
+            dy: cityRow + 14,
+            anchor: "middle",
+            fontSize: CHART_FONT_SIZE,
+            fill: MUTED,
+          }),
+        ),
+      );
+      let dy = cityRow + 30;
+      for (const badge of station.badges) {
+        const isMissed = badge.kind === "missed";
+        marks.push(
+          decorative(
+            text([station], {
+              x: "index",
+              y: () => 0,
+              xScale: "x",
+              yScale: "y",
+              text: () => badge.text,
+              dy,
+              anchor: "middle",
+              fontSize: CHART_FONT_SIZE,
+              fill: isMissed ? CONFLICT : MUTED,
+            }),
+          ),
         );
         dy += 15;
       }
@@ -321,6 +401,7 @@ export function buildRouteChartDefinition(
 
   return defineChart({
     marks,
+    ...tips.chartOption(),
     // `x` is a continuous linear scale, deliberately — NOT `scalePoint`. A
     // point scale treats every distinct channel value as its own category,
     // so a segment label's fractional midpoint (0.5, 1.5, …) was landing as
@@ -525,6 +606,7 @@ export function buildScaleChartDefinition(
   options: ScaleChartOptions,
 ): ChartDefinition {
   const { tooltip, axisZone } = options;
+  const tips = tooltipRegistry(tooltip);
   const marks: import("@tanstack/charts").ChartMark<
     any,
     any,
@@ -625,23 +707,25 @@ export function buildScaleChartDefinition(
         strokeWidth: 1,
         radius: 2,
         maxThickness: BAR_THICKNESS,
-        ...withTooltip<ChartLeg>(tooltip, legTooltip),
+        ...tips.tip<ChartLeg>(`scale-leg-${leg.legIndex}`, legTooltip),
       }),
     );
     if (placement !== "axis") {
       marks.push(
-        text([{ ...leg, visibleEnd }], {
-          x: placement === "right" ? () => visibleEnd : "departureMs",
-          y: () => lane,
-          xScale: "x",
-          yScale: "y",
-          text: () => leg.durationText,
-          anchor: placement === "right" ? "start" : "end",
-          dx: placement === "right" ? LABEL_GAP_PX : -LABEL_GAP_PX,
-          fontSize: CHART_FONT_SIZE,
-          fontWeight: 600,
-          fill: PRIMARY,
-        }),
+        decorative(
+          text([{ ...leg, visibleEnd }], {
+            x: placement === "right" ? () => visibleEnd : "departureMs",
+            y: () => lane,
+            xScale: "x",
+            yScale: "y",
+            text: () => leg.durationText,
+            anchor: placement === "right" ? "start" : "end",
+            dx: placement === "right" ? LABEL_GAP_PX : -LABEL_GAP_PX,
+            fontSize: CHART_FONT_SIZE,
+            fontWeight: 600,
+            fill: PRIMARY,
+          }),
+        ),
       );
     }
   }
@@ -679,7 +763,7 @@ export function buildScaleChartDefinition(
           radius: 2,
           maxThickness: BAR_THICKNESS,
           ...(handoffStation
-            ? withTooltip<ChartStation>(tooltip, () =>
+            ? tips.tip<ChartStation>(`scale-handoff-${i}`, () =>
                 stationTooltip(handoffStation),
               )
             : {}),
@@ -698,7 +782,10 @@ export function buildScaleChartDefinition(
         stroke: CONFLICT,
         strokeDasharray: "2 3",
         strokeWidth: 1,
-        ...withTooltip<ChartTransition>(tooltip, transitionTooltip),
+        ...tips.tip<ChartTransition>(
+          `scale-transition-${data.transitions.indexOf(t)}`,
+          transitionTooltip,
+        ),
       }),
     );
   }
@@ -709,19 +796,22 @@ export function buildScaleChartDefinition(
     data.transitions,
     domainSpan,
   )) {
+    // The rule above carries the transition tooltip; its label only names it.
     marks.push(
-      text([group], {
-        x: "labelMs",
-        y: () => lanes[0] ?? "",
-        xScale: "x",
-        yScale: "y",
-        text: () => group.label,
-        dy: -18,
-        anchor: "middle",
-        fontSize: CHART_FONT_SIZE,
-        fontWeight: 700,
-        fill: CONFLICT,
-      }),
+      decorative(
+        text([group], {
+          x: "labelMs",
+          y: () => lanes[0] ?? "",
+          xScale: "x",
+          yScale: "y",
+          text: () => group.label,
+          dy: -18,
+          anchor: "middle",
+          fontSize: CHART_FONT_SIZE,
+          fontWeight: 700,
+          fill: CONFLICT,
+        }),
+      ),
     );
   }
 
@@ -736,7 +826,10 @@ export function buildScaleChartDefinition(
         fill: legColor(station.legColorIndex),
         stroke: "var(--gmt-void)",
         strokeWidth: 2,
-        ...withTooltip<ChartStation>(tooltip, stationTooltip),
+        ...tips.tip<ChartStation>(
+          `scale-station-${station.index}`,
+          stationTooltip,
+        ),
       }),
     );
   }
@@ -756,7 +849,7 @@ export function buildScaleChartDefinition(
         strokeWidth: 3,
         strokeDasharray: "2 4",
         lineCap: "round",
-        ...withTooltip<ChartConflict>(tooltip, (conflict) =>
+        ...tips.tip<ChartConflict>("scale-conflict", (conflict) =>
           conflict
             ? {
                 title: "Missed connection",
@@ -799,23 +892,26 @@ export function buildScaleChartDefinition(
         stroke: CONFLICT,
         strokeWidth: 2,
       }),
-      text([c], {
-        x: "scheduledMs",
-        y: () => lane,
-        xScale: "x",
-        yScale: "y",
-        text: () => "missed",
-        dy: -12,
-        anchor: "middle",
-        fontSize: CHART_FONT_SIZE,
-        fontWeight: 700,
-        fill: CONFLICT,
-      }),
+      decorative(
+        text([c], {
+          x: "scheduledMs",
+          y: () => lane,
+          xScale: "x",
+          yScale: "y",
+          text: () => "missed",
+          dy: -12,
+          anchor: "middle",
+          fontSize: CHART_FONT_SIZE,
+          fontWeight: 700,
+          fill: CONFLICT,
+        }),
+      ),
     );
   }
 
   return defineChart({
     marks,
+    ...tips.chartOption(),
     scales: {
       x: {
         scale: scaleLinear,
