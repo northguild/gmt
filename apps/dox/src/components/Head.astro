@@ -11,4 +11,9 @@ import Default from '@astrojs/starlight/components/Head.astro';
 	// src/lib/smooth-height.ts. Runs before any widget mount renders.
 	import { smoothHeights } from '~/lib/smooth-height';
 	smoothHeights(document);
+	// Each numbered card arrives with the site's shared gesture — see
+	// src/lib/widget-enter.ts. After smoothHeights, so a card that is about to
+	// become a .gmt-grow host is already wrapped when it enters.
+	import { enterWidgetSections } from '~/lib/widget-enter';
+	enterWidgetSections(document);
 </script>

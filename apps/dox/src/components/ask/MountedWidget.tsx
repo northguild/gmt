@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { smoothHeight, smoothHeights } from "~/lib/smooth-height";
+import { enterWidgetSections } from "~/lib/widget-enter";
 import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
 import type { AnyWidgetEntry } from "./widget-registry";
 
@@ -84,6 +85,8 @@ export function MountedWidget({
         /* The widget's result sections ease the way they do on a tool page. A
            nested grow wins over the host's while it animates. */
         smoothHeights(root, controller.signal);
+        /* …and each numbered card arrives the way it does on a tool page. */
+        enterWidgetSections(root);
 
         const mounted = await mount(root, args as never, controller.signal);
         if (cancelled) {
