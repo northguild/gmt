@@ -41,14 +41,94 @@
   text-underline-offset: 0.15em;
 }
 
-/* Single-border card treatment, matching Starlight's cards / asides
-   (gmt-glass.css) — one hairline, bevel, one blur. Deliberately NOT the
-   `.gmt-glass` primitive: its `::before` gradient ring reads as a second border
-   against this one on a panel this size. */
+/* The card is a bare grid, not a panel: each numbered section is its own card
+   (below), and visual-design.md's "one layer of glass, never glass within
+   glass" rules out a panel holding panels. So this element keeps its name and
+   its place in the tree — `lib/smooth-height.ts` selects
+   `.gmt-widget-card > :scope > .gmt-widget-section`, and the two structural
+   tests in connection-checker/crossing-clock walk the same path — and gives up
+   only its box.
+
+   `auto-fit` columns rather than fixed breakpoints, for the reason already
+   written out on `.gmt-home-grid` (dox.css): the browser fits as many columns
+   as the width allows, so a widget needs no per-page-width tuning as its
+   section count changes, and the same markup serves a 50rem reference page, a
+   full-bleed tools page and the narrow /dox rail. The minimum is
+   `min(100%, 24rem)` and not a bare 24rem for the reason given there too — a
+   fixed 384px minimum cannot shrink, so on a phone every section overflowed
+   and the page scrolled sideways.
+
+   `align-items: start` is load-bearing, not taste. Grid's default is
+   `stretch`, which would size a short section to its row's height. Sections
+   from the second onward are `.gmt-grow` hosts (lib/smooth-height.ts): to
+   begin a transition it pins the section to its own *content* height, so a
+   stretched section would collapse to that height in a single frame — a
+   visible jump, and a breach of grow-measure.mjs's "largest frame-to-frame
+   jump at most 48 px". Sized to its own content, a section's eased height
+   instead propagates cleanly to the row and the page. */
 .gmt-widget-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+
+  /* Explicitly nothing, because dropping the declarations is not enough:
+     gmt-glass.css glasses `[class*="card"]` — any class whose name merely
+     contains "card", which `.gmt-widget-card` does — at the same specificity
+     this rule has, so it kept re-applying a border, a tinted fill, a 16px
+     radius and a 24px backdrop blur to the wrapper. That put a bevelled card
+     around the cards, and nested one blur inside another, against
+     visual-design.md's "one layer of glass, never glass within glass". It also
+     made the entrance expensive: scaling a blurred card inside a blurred
+     ancestor re-blurs both every frame. */
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* The section already blurs — inner code frames and output boxes must not stack
+   another backdrop-filter on top (§3 performance: no glass-in-glass). The tinted
+   fill still carries their contrast floor. Still matched through the card, which
+   is every section's parent. */
+.gmt-widget-card .gmt-codeframe-pre,
+.gmt-widget-card pre,
+.gmt-widget-card .gmt-widget-output {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Each numbered section is the card now — one hairline, bevel, one blur,
+   matching Starlight's cards / asides (gmt-glass.css). Deliberately NOT the
+   `.gmt-glass` primitive: its `::before` gradient ring reads as a second border
+   against this one on a panel this size.
+
+   `display: flex; flex-direction: column` is required to stay, not inherited
+   habit: specs/dox-smooth-growth.md pins it ("The section keeps its own
+   `display: flex; flex-direction: column` from `gmt-widget.css`") because
+   `.gmt-grow-inner` takes over the column and inherits this `gap`. The padding
+   and border added here sit outside the eased height by design —
+   `.gmt-grow` is `box-sizing: content-box` for exactly that reason
+   (gmt-primitives.css).
+
+   `container-type: inline-size` is what makes the grid safe. Sixteen of this
+   site's `@container` rules are unnamed `max-width` rules that fold a widget
+   down for the narrow /dox rail, and an unnamed query resolves against the
+   nearest ancestor with containment. Without this line that ancestor is the
+   widget root, so a section squeezed into a 24rem grid column would still
+   render in its wide form and overflow it — the failure style-guide.md warns
+   about ("A viewport query fires at the wrong time once the section is squeezed
+   into a narrow grid column"). With it, every one of those rules re-resolves to
+   the section that actually has the width, and no per-widget sheet needs an
+   edit. Named containers (gmt-field-grid, gmt-globe, gmt-grid-section,
+   gmt-hive) resolve by name and are untouched. */
+.gmt-widget-section {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: var(--gmt-space-4);
+  gap: var(--gmt-space-3);
   padding: var(--gmt-space-4);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
@@ -58,25 +138,88 @@
   -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
-/* The card already blurs — inner code frames and output boxes must not stack
-   another backdrop-filter on top (§3 performance: no glass-in-glass). The tinted
-   fill still carries their contrast floor. */
-.gmt-widget-card .gmt-codeframe-pre,
-.gmt-widget-card pre,
-.gmt-widget-card .gmt-widget-output {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+/* The numbered cards' shape, by role rather than by measurement.
+ *
+ * A teaching widget reads the same way every time: card 1 takes the input,
+ * card 2 draws what the library answered, and the cards after it print the
+ * call and its result. So the grid gives each role the width its content
+ * actually needs, instead of cutting every card to the same size:
+ *
+ *   card 1      one track      a column of fields, which gains nothing from
+ *                              being wider — the field grid just spreads
+ *   card 2      the rest of    a rail, a day strip, a route, a set of clock
+ *               the row        faces: the one thing here that is drawn, and
+ *                              the only one that reads better the wider it is
+ *   cards 3+    half each      a call and its result. Full width is far more
+ *                              than a line of source needs, and two code cards
+ *                              then sit side by side instead of stacking
+ *
+ * Four tracks is what makes those three widths land on sensible numbers: in a
+ * 1912px pane, 466 / 1430 / 948.
+ *
+ * Queried on the widget root (the nearest ancestor with containment), so these
+ * are the pane's widths and not the viewport's — the same widget in the narrow
+ * /dox rail takes the single-column default above.
+ *
+ * Below 60rem every card takes the full width and they stack, which is where a
+ * phone, a tablet and a laptop all land: a 1440px screen minus the sidebar and
+ * the table of contents leaves the pane under 50rem, and two columns of that
+ * are narrower than a field row wants. Between 60 and 80rem there are two
+ * tracks and every card takes one — card 1 beside card 2, then the code cards
+ * in pairs. Nothing spans there, because a span only strands a card in a
+ * half-empty row once there are too few tracks to share. */
+@container (min-width: 60rem) {
+  .gmt-widget-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.gmt-widget-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gmt-space-3);
+@container (min-width: 80rem) {
+  .gmt-widget-card {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .gmt-widget-card > .gmt-widget-section {
+    grid-column: span 2;
+  }
+
+  .gmt-widget-card > .gmt-widget-section:first-child {
+    grid-column: span 1;
+  }
+
+  .gmt-widget-card > .gmt-widget-section:nth-child(2) {
+    grid-column: span 3;
+  }
 }
 
-.gmt-widget-section + .gmt-widget-section {
-  border-top: 1px solid var(--gmt-border);
-  padding-top: var(--gmt-space-4);
+/* A card holding an open popover has to paint over the card beside it.
+ *
+ * `container-type: inline-size` above makes every card a stacking context, so
+ * the combobox list's own `z-index: 5` (gmt-globe.css) only orders it *within*
+ * its card — against the next card it loses, because the cards paint in DOM
+ * order. The Zone Planner's zone picker sits in card 1 and its list opened
+ * underneath card 2. Raising the card itself for as long as the list is open is
+ * what puts the whole stacking context in front; a card is a grid item here, so
+ * `z-index` applies without needing `position`. Keyed on the list being open so
+ * no card sits permanently above its neighbours. */
+.gmt-widget-card > .gmt-widget-section:has(.gmt-combobox-list:not([hidden])) {
+  z-index: 2;
+}
+
+/* Widgets whose cards are peers rather than a pipeline opt out by giving their
+   card this class: every card then takes the same width at every size. */
+.gmt-widget-card--even > .gmt-widget-section,
+.gmt-widget-card--even > .gmt-widget-section:first-child,
+.gmt-widget-card--even > .gmt-widget-section:nth-child(2) {
+  grid-column: auto;
+}
+
+/* A section that wants the whole row rather than a column: a rail, timeline,
+   chart or ledger that a third of the width would crush, and the
+   "What <fn> returns" code frame, whose call signatures wrap to mush in a
+   20rem column. */
+.gmt-widget-section--wide {
+  grid-column: 1 / -1;
 }
 
 .gmt-widget-card h4 {

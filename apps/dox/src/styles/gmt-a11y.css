@@ -18,7 +18,7 @@
   .gmt-glass-subtle,
   .gmt-glass-clear,
   .gmt-glass-heavy,
-  .gmt-widget-card,
+  .gmt-widget-section,
   .gmt-widget-output,
   .gmt-converter-results,
   .gmt-mistake,
@@ -134,7 +134,7 @@
   }
 
   .gmt-glass,
-  .gmt-widget-card,
+  .gmt-widget-section,
   .gmt-mistake {
     background: Canvas;
     border: 1px solid CanvasText;

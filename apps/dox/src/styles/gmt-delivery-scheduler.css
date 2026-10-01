@@ -110,10 +110,14 @@
    trim their own padding; the card and leg-card chrome around them trims its
    horizontal padding too, so the fix is shared between "smaller text" and
    "more room", rather than pushing font-size below 12px on its own. Queried
-   on `.gmt-delivery` (the root container), because `.gmt-widget-card` is an
-   ancestor of the per-leg container queried above, not a descendant of it. */
+   on `.gmt-widget-section`, which is both where that padding now lives and the
+   nearest container once the sections became the cards (gmt-widget.css). It was
+   previously queried on `.gmt-delivery`, the root, because the card was an
+   ancestor of the per-leg container queried above rather than a descendant of
+   it; the section is a container in its own right, so the query and its subject
+   are now the same box. */
 @container (max-width: 24rem) {
-  .gmt-delivery .gmt-widget-card {
+  .gmt-delivery .gmt-widget-section {
     padding-left: var(--gmt-space-2);
     padding-right: var(--gmt-space-2);
   }
