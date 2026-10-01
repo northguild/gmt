@@ -1,29 +1,8 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
-  EXTENDED_UTC_OFFSET,
-  TIME_ZONE_ANNOTATION,
-  utcOffsetStringNanoseconds,
-  wallClockAtOffset,
-  zonedDateTimeFrom,
+  exactDurationNanoseconds,
+  readExactMoment,
+  writeExactMoment,
 } from "../../internal";
-import { isValidDuration } from "../../duration/validate/isValidDuration";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
-
-/**
- * Trailing `Z` or extended offset of an instant string, before any annotation. The offset grammar
- * is `isValidInstant`'s own (`EXTENDED_UTC_OFFSET`), so every offset it accepts, `,` fractions
- * included, is captured as written.
- */
-const trailingOffset = new RegExp(
-  `(Z|${EXTENDED_UTC_OFFSET})(?:\\[[^\\]]*\\])*$`,
-);
-
-/**
- * A time-zone annotation anywhere in the string (`TIME_ZONE_ANNOTATION`). Every `key=value`
- * bracket is a tagged annotation, which `isValidInstant` already decides.
- */
-const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
 
 /**
  * Add a transit duration to a departure and return the arrival, in the departure's own zone.
@@ -41,8 +20,8 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  *   suggest, because that is when the vessel, train or aircraft actually gets there.
  * - **Calendar units are refused.** A `duration` with years, months or weeks returns `""`: no
  *   leg takes "a month" in a sense that time arithmetic can fix without a reference point, and
- *   Temporal will not add them to an instant either. Scheduled connections that are dated rather
- *   than timed belong to `scheduleDelivery`.
+ *   Temporal's `round` and `total` require a `relativeTo` for them. Scheduled connections that
+ *   are dated rather than timed belong to `scheduleDelivery`.
  * - **The departure's zone is preserved.** A bracketed IANA zone (`…-05:00[America/New_York]`)
  *   stays that zone, so the arrival's offset is whatever is in force there at arrival. A `Z`
  *   instant returns a `Z` instant; an offset-only instant keeps its offset, written exactly as
@@ -95,41 +74,18 @@ export function transitTime(departure: string, duration: string): string {
 
 /** `transitTime` for two strings, without the guard. */
 function addLeg(departure: string, duration: string): string {
-  if (!isValidDuration(duration)) {
+  // Days are 24 exact hours; years, months and weeks are refused.
+  const amount = exactDurationNanoseconds(duration);
+  if (amount === null) {
     return "";
   }
 
-  const zoned = isValidZonedDateTime(departure);
   // A string that names a zone must name a real one that agrees with its offset; only a string
-  // that names none may fall back to the instant path.
-  if (
-    !zoned &&
-    (zoneAnnotation.test(departure) || !isValidInstant(departure))
-  ) {
+  // that names none is read as an instant, keeping its offset text.
+  const moment = readExactMoment(departure);
+  if (moment === null) {
     return "";
   }
 
-  try {
-    const parsed = Temporal.Duration.from(duration);
-    if (parsed.years !== 0 || parsed.months !== 0 || parsed.weeks !== 0) {
-      return "";
-    }
-    // Days become 24 exact hours; every remaining unit is already exact time.
-    const exact = parsed.round({ largestUnit: "hours" });
-
-    if (zoned) {
-      return zonedDateTimeFrom(departure).add(exact).toString();
-    }
-
-    const arrival = Temporal.Instant.from(departure).add(exact);
-    const offset = trailingOffset.exec(departure)?.[1] ?? "Z";
-    if (offset === "Z") {
-      return arrival.toString();
-    }
-    // The arrival's wall clock in the departure's own offset, written with that offset's text.
-    const wall = wallClockAtOffset(arrival, utcOffsetStringNanoseconds(offset));
-    return `${wall.toString()}${offset}`;
-  } catch {
-    return "";
-  }
+  return writeExactMoment(moment.nanoseconds + amount, moment.notation);
 }

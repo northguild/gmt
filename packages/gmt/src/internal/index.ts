@@ -54,6 +54,15 @@ export {
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
+export {
+  exactDurationNanoseconds,
+  nonNegativeExactDurationNanoseconds,
+} from "./exactDuration";
+export {
+  type ExactMoment,
+  readExactMoment,
+  writeExactMoment,
+} from "./exactMoment";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export {
   bandsByTier,
@@ -73,11 +82,7 @@ export {
   halfOpenUnion,
   halfOpenXor,
 } from "./halfOpenIntervals";
-export {
-  EXTENDED_UTC_OFFSET,
-  isoStringBody,
-  TIME_ZONE_ANNOTATION,
-} from "./isoStringBody";
+export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
 export { parseInstantNanoseconds } from "./instantNanoseconds";
@@ -111,6 +116,7 @@ export {
   TIME_PATTERN_FIELDS,
 } from "./patternToken";
 export { plainDateAdd } from "./plainDateAdd";
+export { parsePunctualityTolerance, punctualityOf } from "./punctuality";
 export { plainDateUntil } from "./plainDateUntil";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
@@ -123,6 +129,7 @@ export {
   parseUnixEpochValue,
 } from "./unixEpochValue";
 export { tileByUnit } from "./splitStep";
+export { parseTimestampEvents } from "./timestampEvents";
 export {
   countZonedBuckets,
   nextZonedBucketStart,
@@ -131,10 +138,7 @@ export {
   zonedUnitStart,
 } from "./zonedBucket";
 export { countZonedLocalDates } from "./zonedLocalDates";
-export {
-  utcOffsetStringNanoseconds,
-  zonedDateTimeFrom,
-} from "./zonedWallClock";
+export { zonedDateTimeFrom } from "./zonedWallClock";
 export { wallClockAtOffset } from "./wallClockAtOffset";
 export {
   durationCompare,

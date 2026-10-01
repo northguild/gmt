@@ -1,11 +1,17 @@
 import {
+  bestAvailable,
+  classifyPunctuality,
   crossingTime,
   cutoffAt,
   cutoffSchedule,
   dwellTime,
+  estimateDrift,
   etaAtZone,
   isPastCutoff,
+  nextDeparture,
+  punctualityRate,
   scheduleDelivery,
+  scheduleDeviation,
   timeToCutoff,
   transitTime,
 } from "./index";
@@ -24,8 +30,69 @@ import { hostileProxy, revokedProxy } from "../test/noThrow";
  * real, while those three never read it. A `scheduleDelivery` departure reads its bracket the
  * way `transitTime` does — the bracket makes the departure exact, so it must be real — and its
  * sentinel is `null`.
+ *
+ * The planned-versus-actual functions split the same way. `scheduleDeviation`,
+ * `classifyPunctuality`, `punctualityRate`, `bestAvailable` and `estimateDrift` compare instants
+ * and echo what they were given, so they never read the zone, as `timeToCutoff` does not.
+ * `nextDeparture` reads every moment as `transitTime` reads a departure — a headway result is
+ * written in `from`'s zone, so the zone must be real — in both the list and the headway form.
  */
 const departure = "2024-06-15T10:00:00Z";
+
+/**
+ * The instant-only planned-versus-actual functions: the bracket is never read, so they accept
+ * exactly what `etaAtZone` accepts, and echo the value as written.
+ */
+function expectPlannedVersusActualReads(
+  value: string,
+  instantAccepted: boolean,
+): void {
+  expect(scheduleDeviation(value, departure)).toBe(
+    instantAccepted ? "PT0S" : "",
+  );
+  expect(classifyPunctuality(departure, value, { late: "PT15M" })).toBe(
+    instantAccepted ? "onTime" : null,
+  );
+  expect(
+    punctualityRate([{ planned: value, actual: departure }], { late: "PT15M" }),
+  ).toEqual(instantAccepted ? { onTime: 1, total: 1, rate: 1 } : null);
+  expect(
+    bestAvailable([{ classifier: "ACT", at: value, recordedAt: value }]),
+  ).toEqual(instantAccepted ? { at: value, classifier: "ACT" } : null);
+  const drift = estimateDrift([
+    { classifier: "EST", at: value, recordedAt: value },
+    { classifier: "EST", at: departure, recordedAt: "2024-06-15T11:00:00Z" },
+  ]);
+  expect(drift).toEqual(
+    instantAccepted
+      ? {
+          first: value,
+          last: departure,
+          drift: "PT0S",
+          revisions: 2,
+          exceedsTolerance: null,
+        }
+      : null,
+  );
+}
+
+/**
+ * `nextDeparture` reads every moment as `transitTime` reads a departure, in both forms: a list
+ * entry is echoed, and an hourly service from `value` departs at 11:00 written the way `value`
+ * was written — exactly `transitTime(value, "PT1H")`.
+ */
+function expectNextDepartureReads(value: string, transit: string): void {
+  const accepted = transit !== "";
+  expect(nextDeparture(value, [departure])).toBe(accepted ? departure : "");
+  expect(nextDeparture(departure, [value])).toBe(accepted ? value : "");
+  expect(
+    nextDeparture("2024-06-15T10:30:00Z", {
+      headway: "PT1H",
+      from: value,
+      to: "2024-06-15T12:00:00Z",
+    }),
+  ).toBe(transit);
+}
 
 describe("transport annotations (RFC 9557)", () => {
   it.each`
@@ -41,6 +108,7 @@ describe("transport annotations (RFC 9557)", () => {
     ${"[UTC][foo=bar]"}      | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"zone then elective unknown key"}
     ${"[UTC][!foo=bar]"}     | ${""}                                         | ${false}        | ${"zone then critical unknown key"}
     ${"[UTC][u-ca=iso8601]"} | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"zone then ISO calendar"}
+    ${"[UTC][u-ca=gregory]"} | ${""}                                         | ${true}         | ${"zone then non-ISO calendar: a zoned departure's calendar must be ISO"}
     ${"[Not/AZone]"}         | ${""}                                         | ${true}         | ${"zone that does not exist: only transitTime reads it"}
   `(
     "reads $annotation on an instant consistently ($kind)",
@@ -90,6 +158,8 @@ describe("transport annotations (RFC 9557)", () => {
       );
       // The departure reads its bracket, so scheduleDelivery accepts exactly what transitTime
       // accepts; the arrival instant (10:00Z + 1h) is the same whatever zone rendered the input.
+      expectPlannedVersusActualReads(value, instantAccepted);
+      expectNextDepartureReads(value, transit);
       expect(
         scheduleDelivery([
           { departure: value, duration: "PT1H", timeZone: "UTC" },
@@ -121,6 +191,13 @@ describe("transport annotations (RFC 9557)", () => {
     ({ annotation, transit }) => {
       expect(
         transitTime(`2024-06-15T10:00:00+09:00${annotation}`, "PT1H"),
+      ).toBe(transit);
+      expect(
+        nextDeparture("2024-06-15T01:30:00Z", {
+          headway: "PT1H",
+          from: `2024-06-15T10:00:00+09:00${annotation}`,
+          to: "2024-06-15T12:00:00+09:00",
+        }),
       ).toBe(transit);
     },
   );
@@ -203,6 +280,32 @@ describe("transport functions never throw", () => {
         () => isPastCutoff(ok, make() as never),
         () => timeToCutoff(make() as never, ok),
         () => timeToCutoff(ok, make() as never),
+        () => scheduleDeviation(make() as never, ok),
+        () => scheduleDeviation(ok, make() as never),
+        () => classifyPunctuality(make() as never, ok, { late: "PT15M" }),
+        () => classifyPunctuality(ok, make() as never, { late: "PT15M" }),
+        () => classifyPunctuality(ok, ok, make() as never),
+        () => classifyPunctuality(ok, ok, { late: make() as never }),
+        () => punctualityRate(make() as never, { late: "PT15M" }),
+        () => punctualityRate([make()] as never, { late: "PT15M" }),
+        () => punctualityRate([{ planned: ok, actual: ok }], make() as never),
+        () => bestAvailable(make() as never),
+        () => bestAvailable([make()] as never),
+        () =>
+          bestAvailable([
+            { classifier: "ACT", at: make() as never, recordedAt: ok },
+          ]),
+        () => estimateDrift(make() as never),
+        () => estimateDrift([make()] as never),
+        () => estimateDrift([], make() as never),
+        () => estimateDrift([], { tolerance: make() as never }),
+        () => nextDeparture(make() as never, [ok]),
+        () => nextDeparture(ok, make() as never),
+        () => nextDeparture(ok, [make()] as never),
+        () => nextDeparture(ok, [ok], make() as never),
+        () => nextDeparture(ok, { headway: make() as never, from: ok, to: ok }),
+        () =>
+          nextDeparture(ok, { headway: "PT1H", from: make() as never, to: ok }),
       ]) {
         expect(call).not.toThrow();
       }
@@ -217,6 +320,13 @@ describe("transport functions never throw", () => {
       ).toEqual([]);
       expect(isPastCutoff(ok, make() as never)).toBe(false);
       expect(timeToCutoff(make() as never, ok)).toBe("");
+      expect(scheduleDeviation(ok, make() as never)).toBe("");
+      expect(classifyPunctuality(ok, ok, make() as never)).toBeNull();
+      expect(punctualityRate([make()] as never, { late: "PT15M" })).toBeNull();
+      expect(bestAvailable([make()] as never)).toBeNull();
+      expect(estimateDrift([make()] as never)).toBeNull();
+      expect(nextDeparture(ok, make() as never)).toBe("");
+      expect(nextDeparture(ok, [make()] as never)).toBe("");
     },
   );
 });

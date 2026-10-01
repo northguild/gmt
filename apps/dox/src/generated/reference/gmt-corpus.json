@@ -11457,6 +11457,49 @@
     ]
   },
   {
+    "url": "/reference/transport/calculate/ClassifiedTimestamp",
+    "name": "ClassifiedTimestamp",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The ClassifiedTimestamp type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/bestAvailable.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/bestAvailable",
+    "name": "bestAvailable",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "bestAvailable(events: TimestampEvent[]): ClassifiedTimestamp | null",
+    "description": "Pick the best available timestamp for an event from its planned, estimated, requested and",
+    "sourcePath": "packages/gmt/src/transport/calculate/bestAvailable.ts",
+    "examples": [
+      {
+        "call": "bestAvailable([{ classifier: \"ACT\", at: \"2024-06-15T12:52:00Z\", recordedAt: \"2024-06-15T12:53:00Z\" }, { classifier: \"EST\", at: \"2024-06-15T13:05:00Z\", recordedAt: \"2024-06-15T14:00:00Z\" }])",
+        "result": "{ at: \"2024-06-15T12:52:00Z\", classifier: \"ACT\" } (an estimate recorded after the actual never replaces it)"
+      },
+      {
+        "call": "bestAvailable([{ classifier: \"PLN\", at: \"2024-06-15T12:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }, { classifier: \"PLN\", at: \"2024-06-15T13:00:00Z\", recordedAt: \"2024-06-10T00:00:00Z\" }])",
+        "result": "{ at: \"2024-06-15T13:00:00Z\", classifier: \"PLN\" } (the newest plan)"
+      },
+      {
+        "call": "bestAvailable([{ classifier: \"EST\", at: \"2024-06-15T12:40:00Z\", recordedAt: \"2024-06-14T00:00:00Z\" }, { classifier: \"REQ\", at: \"2024-06-15T12:30:00Z\", recordedAt: \"2024-06-12T00:00:00Z\" }])",
+        "result": "{ at: \"2024-06-15T12:30:00Z\", classifier: \"REQ\" } (never an EST when a REQ exists)"
+      },
+      {
+        "call": "bestAvailable([])",
+        "result": "null"
+      },
+      {
+        "call": "bestAvailable([{ classifier: \"ETA\", at: \"2024-06-15T12:40:00Z\", recordedAt: \"2024-06-14T00:00:00Z\" }])",
+        "result": "null (not a timestamp class)"
+      }
+    ]
+  },
+  {
     "url": "/reference/transport/calculate/Crossing",
     "name": "Crossing",
     "namespace": "transport",
@@ -11715,6 +11758,180 @@
     ]
   },
   {
+    "url": "/reference/transport/calculate/EstimateDriftOptions",
+    "name": "EstimateDriftOptions",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The EstimateDriftOptions type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/estimateDrift.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/DriftReport",
+    "name": "DriftReport",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The DriftReport type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/estimateDrift.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/estimateDrift",
+    "name": "estimateDrift",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "estimateDrift(events: TimestampEvent[], options?: EstimateDriftOptions): DriftReport | null",
+    "description": "Measure how far an estimate moved between its first and last revision.",
+    "sourcePath": "packages/gmt/src/transport/calculate/estimateDrift.ts",
+    "examples": [
+      {
+        "call": "estimateDrift([{ classifier: \"EST\", at: \"2024-06-20T08:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }, { classifier: \"EST\", at: \"2024-06-20T12:00:00Z\", recordedAt: \"2024-06-05T00:00:00Z\" }, { classifier: \"EST\", at: \"2024-06-20T17:00:00Z\", recordedAt: \"2024-06-10T00:00:00Z\" }])",
+        "result": "{ first: \"2024-06-20T08:00:00Z\", last: \"2024-06-20T17:00:00Z\", drift: \"PT9H\", revisions: 3, exceedsTolerance: null }"
+      },
+      {
+        "call": "estimateDrift([{ classifier: \"EST\", at: \"2024-06-20T17:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }, { classifier: \"EST\", at: \"2024-06-20T08:00:00Z\", recordedAt: \"2024-06-10T00:00:00Z\" }], { tolerance: \"PT8H\" })",
+        "result": "{ first: \"2024-06-20T17:00:00Z\", last: \"2024-06-20T08:00:00Z\", drift: \"-PT9H\", revisions: 2, exceedsTolerance: true } (nine hours earlier exceeds eight)"
+      },
+      {
+        "call": "estimateDrift([{ classifier: \"EST\", at: \"2024-06-20T08:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }, { classifier: \"EST\", at: \"2024-06-20T15:00:00Z\", recordedAt: \"2024-06-10T00:00:00Z\" }], { tolerance: \"PT8H\" })",
+        "result": "{ first: \"2024-06-20T08:00:00Z\", last: \"2024-06-20T15:00:00Z\", drift: \"PT7H\", revisions: 2, exceedsTolerance: false }"
+      },
+      {
+        "call": "estimateDrift([{ classifier: \"EST\", at: \"2024-06-20T08:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }])",
+        "result": "null (no drift from one sample)"
+      },
+      {
+        "call": "estimateDrift([{ classifier: \"EST\", at: \"2024-06-20T08:00:00Z\", recordedAt: \"2024-06-01T00:00:00Z\" }, { classifier: \"EST\", at: \"2024-06-20T15:00:00Z\", recordedAt: \"2024-06-10T00:00:00Z\" }], { tolerance: \"P1W\" })",
+        "result": "null (weeks need a reference point)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/calculate/Headway",
+    "name": "Headway",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The Headway type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/nextDeparture.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/NextDepartureOptions",
+    "name": "NextDepartureOptions",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The NextDepartureOptions type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/nextDeparture.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/nextDeparture",
+    "name": "nextDeparture",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "nextDeparture(after: string, timetable: readonly string[] | Headway, options?: NextDepartureOptions): string",
+    "description": "Find the next departure a connection can make: the first scheduled departure at or after",
+    "sourcePath": "packages/gmt/src/transport/calculate/nextDeparture.ts",
+    "examples": [
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T08:00:00Z\", \"2024-06-15T09:30:00Z\", \"2024-06-15T11:00:00Z\"])",
+        "result": "\"2024-06-15T09:30:00Z\""
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T08:00:00Z\", \"2024-06-15T09:30:00Z\", \"2024-06-15T11:00:00Z\"], { minimumConnection: \"PT45M\" })",
+        "result": "\"2024-06-15T11:00:00Z\" (a 45-minute connection misses the 09:30)"
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T05:30:00-04:00[America/New_York]\"])",
+        "result": "\"2024-06-15T05:30:00-04:00[America/New_York]\" (echoed as written)"
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T06:05:00+02:00\", { headway: \"PT20M\", from: \"2024-06-15T06:00:00+02:00\", to: \"2024-06-15T09:00:00+02:00\" })",
+        "result": "\"2024-06-15T06:20:00+02:00\""
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00+02:00\", { headway: \"PT20M\", from: \"2024-06-15T06:00:00+02:00\", to: \"2024-06-15T09:00:00+02:00\" })",
+        "result": "\"\" (to is excluded)"
+      },
+      {
+        "call": "nextDeparture(\"2024-11-03T01:30:00-04:00[America/New_York]\", { headway: \"PT1H\", from: \"2024-11-03T00:00:00-04:00[America/New_York]\", to: \"2024-11-03T04:00:00-05:00[America/New_York]\" })",
+        "result": "\"2024-11-03T01:00:00-05:00[America/New_York]\" (hourly in exact time: the repeated hour's second pass)"
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T09:30:00\"])",
+        "result": "\"\" (a timetable entry needs an offset)"
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T09:30:00[Europe/London]\"])",
+        "result": "\"\" (a zoned entry needs its offset too)"
+      },
+      {
+        "call": "nextDeparture(\"2024-06-15T09:00:00Z\", [\"2024-06-15T09:30:00Z\"], { minimumConnection: \"-PT5M\" })",
+        "result": "\"\" (a negative connection)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/calculate/PlannedActual",
+    "name": "PlannedActual",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The PlannedActual type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/punctualityRate.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/OnTimeRate",
+    "name": "OnTimeRate",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The OnTimeRate type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/punctualityRate.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/punctualityRate",
+    "name": "punctualityRate",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "punctualityRate(pairs: PlannedActual[], tolerance: PunctualityTolerance): OnTimeRate | null",
+    "description": "The share of planned/actual pairs that were on time under one tolerance.",
+    "sourcePath": "packages/gmt/src/transport/calculate/punctualityRate.ts",
+    "examples": [
+      {
+        "call": "punctualityRate([{ planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T10:05:00Z\" }, { planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T10:14:00Z\" }, { planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T10:16:00Z\" }, { planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T09:57:00Z\" }], { late: \"PT15M\" })",
+        "result": "{ onTime: 3, total: 4, rate: 0.75 }"
+      },
+      {
+        "call": "punctualityRate([{ planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T09:48:00Z\" }, { planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T10:01:00Z\" }], { late: \"PT15M\", early: \"PT10M\" })",
+        "result": "{ onTime: 1, total: 2, rate: 0.5 } (12 minutes early is not on time under a 10-minute early tolerance)"
+      },
+      {
+        "call": "punctualityRate([], { late: \"PT15M\" })",
+        "result": "null"
+      },
+      {
+        "call": "punctualityRate([{ planned: \"2024-06-15T10:00:00Z\", actual: \"2024-06-15T10:05:00\" }], { late: \"PT15M\" })",
+        "result": "null (a zoneless actual is not a moment)"
+      }
+    ]
+  },
+  {
     "url": "/reference/transport/calculate/Leg",
     "name": "Leg",
     "namespace": "transport",
@@ -11883,6 +12100,54 @@
     ]
   },
   {
+    "url": "/reference/transport/compare/classifyPunctuality",
+    "name": "classifyPunctuality",
+    "namespace": "transport",
+    "module": "compare",
+    "kind": "function",
+    "signature": "classifyPunctuality(planned: string, actual: string, tolerance: PunctualityTolerance): Punctuality | null",
+    "description": "Classify an arrival as early, on time or late against the caller's tolerance.",
+    "sourcePath": "packages/gmt/src/transport/compare/classifyPunctuality.ts",
+    "examples": [
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:14:59Z\", { late: \"PT15M\" })",
+        "result": "\"onTime\""
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:15:00Z\", { late: \"PT15M\" })",
+        "result": "\"late\" (exactly the tolerance is late)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T08:00:00Z\", { late: \"PT15M\" })",
+        "result": "\"onTime\" (without early, an early arrival is on time)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T09:49:00Z\", { late: \"PT15M\", early: \"PT10M\" })",
+        "result": "\"early\""
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T11:30:00Z\", { late: \"PT120M\" })",
+        "result": "\"onTime\" (a 90-minute delay under a 120-minute tolerance)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:00:00Z\", { late: \"PT15M\", early: \"PT0S\" })",
+        "result": "\"early\" (exactly on the plan is on the early boundary, which is outside)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-11-03T01:30:00-04:00[America/New_York]\", \"2024-11-03T01:30:00-05:00[America/New_York]\", { late: \"PT15M\" })",
+        "result": "\"late\" (the same wall time an hour later, across the fall-back)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:14:00Z\", { late: \"-PT15M\" })",
+        "result": "null (a negative tolerance)"
+      },
+      {
+        "call": "classifyPunctuality(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:14:00Z\", { late: \"P1W\" })",
+        "result": "null (weeks need a reference point)"
+      }
+    ]
+  },
+  {
     "url": "/reference/transport/compare/isPastCutoff",
     "name": "isPastCutoff",
     "namespace": "transport",
@@ -11915,6 +12180,46 @@
       {
         "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"\")",
         "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/compare/scheduleDeviation",
+    "name": "scheduleDeviation",
+    "namespace": "transport",
+    "module": "compare",
+    "kind": "function",
+    "signature": "scheduleDeviation(planned: string, actual: string): string",
+    "description": "Measure how far an actual time is from its plan: positive when late, negative when early.",
+    "sourcePath": "packages/gmt/src/transport/compare/scheduleDeviation.ts",
+    "examples": [
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:14:00Z\")",
+        "result": "\"PT14M\""
+      },
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T09:55:00Z\")",
+        "result": "\"-PT5M\" (five minutes early)"
+      },
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T10:00:00Z\")",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-17T11:30:00Z\")",
+        "result": "\"PT49H30M\" (hours, never days)"
+      },
+      {
+        "call": "scheduleDeviation(\"2024-11-03T01:30:00-04:00[America/New_York]\", \"2024-11-03T01:30:00-05:00[America/New_York]\")",
+        "result": "\"PT1H\" (the same wall time, one hour later across the fall-back)"
+      },
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00[Europe/Amsterdam]\")",
+        "result": "\"PT14M\" (the zone it is written in does not matter)"
+      },
+      {
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00\", \"2024-06-15T10:14:00Z\")",
+        "result": "\"\" (a zoneless plan is not a moment)"
       }
     ]
   },
@@ -12421,6 +12726,50 @@
     "signature": "",
     "description": "The TimeUnit type.",
     "sourcePath": "packages/gmt/src/types/time-unit.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/transport-timestamps/TimestampClass",
+    "name": "TimestampClass",
+    "namespace": "types",
+    "module": "transport-timestamps",
+    "kind": "type",
+    "signature": "",
+    "description": "The TimestampClass type.",
+    "sourcePath": "packages/gmt/src/types/transport-timestamps.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/transport-timestamps/TimestampEvent",
+    "name": "TimestampEvent",
+    "namespace": "types",
+    "module": "transport-timestamps",
+    "kind": "type",
+    "signature": "",
+    "description": "The TimestampEvent type.",
+    "sourcePath": "packages/gmt/src/types/transport-timestamps.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/transport-timestamps/PunctualityTolerance",
+    "name": "PunctualityTolerance",
+    "namespace": "types",
+    "module": "transport-timestamps",
+    "kind": "type",
+    "signature": "",
+    "description": "The PunctualityTolerance type.",
+    "sourcePath": "packages/gmt/src/types/transport-timestamps.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/transport-timestamps/Punctuality",
+    "name": "Punctuality",
+    "namespace": "types",
+    "module": "transport-timestamps",
+    "kind": "type",
+    "signature": "",
+    "description": "The Punctuality type.",
+    "sourcePath": "packages/gmt/src/types/transport-timestamps.ts",
     "examples": []
   },
   {

@@ -3,19 +3,18 @@ name: gmt-timezone
 description: >
   Timezone-aware operations — zoned now, formatting zoned datetimes/ranges,
   plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
-  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal for
-  zoneless wall times, real zone unit boundaries (startOfZoned/endOfZoned/
-  startOfUnix/endOfUnix), hours in a local day, floorToZone/bucketRange,
-  calendar-annotated zoned strings, range limits, transport legs
-  (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery for
-  multi-leg ETAs and missed connections), cut-offs (cutoffAt, cutoffSchedule,
-  isPastCutoff, timeToCutoff), intermodal free time (freeTimeExpiry,
-  chargeableDays, demurrageClock), billingTimeline deadlines, and operating
-  hours — OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
-  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime (open
-  time elapsed, SLA deadlines, midnight-wrapping curfews).
-  Reads the installed README.md and source JSDoc for API details; a routing
-  pointer, not an API dump.
+  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal,
+  real zone unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix),
+  hours in a local day, floorToZone/bucketRange, calendar-annotated zoned
+  strings, range limits, transport legs (transitTime, etaAtZone, dwellTime,
+  crossingTime, scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), planned
+  versus actual (scheduleDeviation, classifyPunctuality, punctualityRate,
+  bestAvailable and estimateDrift over PLN/EST/REQ/ACT, nextDeparture),
+  intermodal free time (freeTimeExpiry, chargeableDays, demurrageClock),
+  billingTimeline, and operating hours (OperatingSchedule,
+  recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
+  operatingTimeBetween, addOperatingTime). A routing pointer to the
+  installed README.md and source JSDoc, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -36,6 +35,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
+  - 'northguild/gmt:packages/gmt/src/types/transport-timestamps.ts'
   - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/compare/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
@@ -231,7 +231,31 @@ converting between time zones, or doing arithmetic that must respect DST.
     sorts the stack by instant and returns `[]` if any entry fails.
     `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on;
     `timeToCutoff(now, cutoff)` is exact hours, `PT0S` at it, negative after.
-17. **Free time is counted in the terminal's local days; the start day and the
+17. **Planned versus actual is exact time under the caller's tolerance.**
+    `scheduleDeviation(planned, actual)` is `actual − planned` in exact hours
+    (`"PT14M"` late, `"-PT5M"` early; a fall-back delay is `PT1H`, never
+    `PT0S`). `classifyPunctuality(planned, actual, { late, early? })` returns
+    `"early" | "onTime" | "late"`, or `null` on invalid input: both edges are
+    outside (exactly `late` is late), and without `early` every early arrival
+    is on time. There is no default tolerance; tolerances are exact durations
+    (a day is 24 hours; years, months, weeks or negative return `null`).
+    `punctualityRate(pairs, tolerance)` returns `{ onTime, total, rate }`,
+    judging every pair under a tolerance read once; an empty list or any
+    invalid pair is `null`. A `TimestampEvent` is `{ classifier: "PLN" |
+    "EST" | "REQ" | "ACT", at, recordedAt }` (DCSA vocabulary).
+    `bestAvailable(events)` returns `{ at, classifier }`: `ACT` whenever one
+    exists, else `PLN`, else `REQ`, else `EST`, newest `recordedAt` within the
+    class — never an `EST` shown as an actual. `estimateDrift(events, {
+    tolerance? })` reports first-to-last `EST` drift, `revisions` and
+    `exceedsTolerance` (strictly greater, either direction; `null` without a
+    tolerance), and is `null` with fewer than two `EST`s.
+    `nextDeparture(after, timetable, { minimumConnection? })` returns the
+    first departure at or after `after + minimumConnection`: a list entry
+    echoed as written (ready for `scheduleDelivery`'s `departure`), or for
+    `{ headway, from, to }` (a GTFS `frequencies.txt` row) `from + k × headway`
+    in the half-open `[from, to)`, written the way `from` was. Every moment
+    must carry its offset; a wall time without one is `""`.
+18. **Free time is counted in the terminal's local days; the start day and the
     basis are tariff terms, never defaults.**
     `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
     returns `{ freeTimeStart, lastFreeDay, expiresAt }`: local dates in
@@ -251,7 +275,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     demurrage gate-in to loaded, detention empty release to gate-in; `combined`
     runs both as one period. No standard fixes how these days are counted;
     every term is the tariff's.
-18. **Billing deadlines are dates counted from an anchor, and every window is
+19. **Billing deadlines are dates counted from an anchor, and every window is
     the caller's.** `billingTimeline({ anchorOn, invoiceIssuedOn?,
     requestReceivedOn? }, { issueDays, disputeDays, resolutionDays,
     agreedResolutionOn? })` returns `{ invoiceDeadline, issuedByDeadline,
@@ -266,7 +290,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `convertUtcToPlainDate(instant, { timeZone })`. A request before its
     invoice, or an agreed date before the request, returns `null`. GMT
     computes dates, not liability.
-19. **Operating hours are local windows resolved in the schedule's zone.** An
+20. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
     (`{ from: "09:00", to: "17:00" }`); a `to` at or before `from` wraps past
@@ -282,7 +306,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-20. **Read the README.** This skill is a routing pointer. For the full DST
+21. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -312,6 +336,9 @@ converting between time zones, or doing arithmetic that must respect DST.
   `crossingTime`, `scheduleDelivery`
 - **Cut-offs and deadlines**: `cutoffAt`, `cutoffSchedule`, `isPastCutoff`,
   `timeToCutoff`
+- **Punctuality and timestamp classes**: `scheduleDeviation`,
+  `classifyPunctuality`, `punctualityRate`, `bestAvailable`, `estimateDrift`,
+  `nextDeparture`
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`

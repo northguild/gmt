@@ -1,5 +1,5 @@
-import { zonedDateTimeFrom } from "../../internal";
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
+import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 
 /**
