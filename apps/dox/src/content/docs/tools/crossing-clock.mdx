@@ -5,26 +5,35 @@ industries: [transport]
 ---
 
 import CrossingClock from "../../../components/CrossingClock.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout area="transport" useCase="canal, strait and border crossings">
+
+<Fragment slot="keypoint">
+
+Elapsed time is the difference between two instants, not between two clock readings. Subtracting the printed wall clocks gives the wrong answer whenever a DST transition falls between them.
+
+</Fragment>
+
+<Fragment slot="intro">
 
 A crossing — a canal transit, a strait passage, a border queue — is logged
 as two instants and read on the clock of whoever administers it.
 `crossingTime` gives the exact elapsed hours, with the entry and exit
-rendered in that one zone. Subtracting the two ends' printed wall clocks
-instead gives the wrong answer whenever a DST transition falls between
-them.
+rendered in that one zone.
 
-Entry and exit each get their own analog face, reading the local time,
-offset, zone and date `crossingTime` returned — never a second computation.
-Between them, the true elapsed duration sits above the naive wall-clock
-subtraction, flagged when the two disagree. A skipped or repeated hour is
-drawn right on both faces, as a sector between the tick ring and the
-centre — dashed for an hour that never showed, doubled for one the clock
-ran through twice — and the same hour is marked on the strip below the
-clocks, so the dial and the bar always agree. On the fall-back night, both
-faces read identically and are marked repeated, so identical clocks don't
-read as a bug.
+Each end gets an analog face, and the true elapsed duration sits above the
+naive wall-clock subtraction, flagged when the two disagree. A skipped or
+repeated hour is drawn on both faces as a sector — dashed for an hour that
+never showed, doubled for one the clock ran through twice. On the fall-back
+night both faces read identically and are marked repeated, so identical clocks
+do not read as a bug.
+
+</Fragment>
 
 <CrossingClock fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** the default preset already shows a skipped hour — New
 York's clocks jump from 02:00 to 03:00, seven hours actually pass, and
@@ -39,3 +48,7 @@ sector is drawn at all.
 
 A day count for a stay is [`dwellTime`](/reference/transport/calculate/dwellTime/),
 drawn in the [Dwell Ledger](/tools/dwell-ledger/).
+
+</Fragment>
+
+</ToolLayout>

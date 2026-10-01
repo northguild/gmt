@@ -5,17 +5,30 @@ industries: [transport]
 ---
 
 import EtaDrift from "../../../components/EtaDrift.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-One field often holds four kinds of time. DCSA's vocabulary names them: PLN
-planned, EST estimated, REQ requested and ACT actual. `bestAvailable` picks
-one and returns its class with it, so a column can say what it shows. The
-newest record is not the best one.
+<ToolLayout area="transport" useCase="planned, estimated, requested and actual times">
+
+<Fragment slot="keypoint">
+
+One field often holds four kinds of time, and the newest record is not the best one. `bestAvailable` picks one and returns its class with it, so a column can say what it shows.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+DCSA's vocabulary names the four kinds: PLN planned, EST estimated, REQ
+requested and ACT actual.
 
 Drift is the last estimate minus the first. It exceeds a tolerance only when
 it is greater than it, in either direction. Drag the tolerance and watch
 `exceedsTolerance` change.
 
+</Fragment>
+
 <EtaDrift fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [an estimate recorded after the
 actual](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D)
@@ -32,3 +45,7 @@ and its
 [drift section](/guides/industries/transport-punctuality-and-timestamps/#how-far-the-estimate-moved-estimatedrift),
 and the scenario
 [An Estimate Shown as the Actual](/scenarios/estimate-shown-as-actual/).
+
+</Fragment>
+
+</ToolLayout>

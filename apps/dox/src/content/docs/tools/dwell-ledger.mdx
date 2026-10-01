@@ -5,13 +5,19 @@ industries: [transport]
 ---
 
 import DwellLedger from "../../../components/DwellLedger.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-Terminals, yards, gates and berths charge dwell by the local calendar days
-something was present, not by elapsed hours. A container that gates in at 23:00
-and out at 01:00 has been there two hours and two days, and dividing hours by 24
-can never see the midnight in between.
+<ToolLayout area="transport" useCase="terminal dwell charges">
 
-The track below is one zone's local days, each cell as wide as that day really
+<Fragment slot="keypoint">
+
+Terminals, yards, gates and berths charge dwell by the local calendar days something was present, not by elapsed hours. A container that gates in at 23:00 and out at 01:00 has been there two hours and two days.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+The track is one zone's local days, each cell as wide as that day really
 is: New York's 10 March 2024 had 23 hours, so its cell is narrower. The bar is
 the elapsed time. Shaded cells are the dates the dwell touched, counted
 half-open: an exit exactly at local midnight does not touch the new day. The
@@ -19,7 +25,11 @@ output is the real
 [`dwellTime`](/reference/transport/calculate/dwellTime/) call for what is on
 screen.
 
+</Fragment>
+
 <DwellLedger fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [the same two instants in London and
 Amsterdam](/tools/dwell-ledger/?w=dwell&wa=%7B%22entry%22%3A%222024-06-15T22%3A30%3A00Z%22%2C%22exit%22%3A%222024-06-16T01%3A00%3A00Z%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22compareZone%22%3A%22Europe%2FAmsterdam%22%7D).
@@ -34,3 +44,7 @@ days across the zone's real transitions;
 [`floorToZone`](/reference/calendar/calculate/floorToZone/) finds the start of
 any local day. The rules are in [Transport: Legs and
 Dwell](/guides/industries/transport-legs-and-dwell/).
+
+</Fragment>
+
+</ToolLayout>

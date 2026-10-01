@@ -5,11 +5,17 @@ industries: [core]
 ---
 
 import DstInspector from "../../../components/DstInspector.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-Twice a year most timezones skip an hour or repeat one. Inside the skipped hour a
-local time simply does not exist; inside the repeated one it happens twice. Both
-cases are real, both are common, and a date library has to answer for them
-somehow.
+<ToolLayout area="zones" useCase="skipped and repeated local times">
+
+<Fragment slot="keypoint">
+
+Twice a year most timezones skip an hour or repeat one. Inside the skipped hour a local time does not exist; inside the repeated one it happens twice.
+
+</Fragment>
+
+<Fragment slot="intro">
 
 Pick a zone and a year to see its transitions, then drag the ticker into a gap or
 an overlap and watch
@@ -22,7 +28,11 @@ the real boundary — the earliest instant of the unit — and take no
 disambiguation option at all. Disambiguation only applies to *field-setting*
 functions, which is what resolving a specific probed wall time is.
 
+</Fragment>
+
 <DstInspector fullbleed />
+
+<Fragment slot="after">
 
 **See it in action:** [1:30am on 3 November 2024 in New
 York](/tools/dst-inspector/?w=dst&wa=%7B%22zone%22%3A%22America%2FNew_York%22%2C%22year%22%3A2024%2C%22preset%22%3A%22overlap%22%7D)
@@ -32,3 +42,7 @@ happens twice — scrub across the transition and switch `disambiguation` betwee
 Reference: [`getDstTransitions`](/reference/zoned/get/getDstTransitions/) finds
 the transitions; [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned/)
 resolves the probe.
+
+</Fragment>
+
+</ToolLayout>

@@ -13,9 +13,9 @@ import { renderPunctualityBoardTemplate } from "../lib/punctuality-board-mount";
 /**
  * `fullbleed` lets the page say the widget may use the whole main pane. It adds
  * `data-tools-fullbleed`, the self-declaring marker that dox.css's two `:has()`
- * rules read to widen `.main-pane` and drop `.sl-container`'s max-width, and
- * that the same sheet's prose rule reads to leave the widget out of the reading
- * measure it keeps everything else at.
+ * rules read to widen `.main-pane` and drop the max-width of every
+ * `.sl-container` inside `main`. That is all the marker does: how the prose
+ * around the widget is laid out is ToolLayout.astro's job, not this one's.
  *
  * Default `false`, which is the safe direction: this widget is embedded on
  * `reference/**` prose pages as well as its own `/tools/` page, and those pages

@@ -5,25 +5,33 @@ industries: [intermodal]
 ---
 
 import BillingDeadlines from "../../../components/BillingDeadlines.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-Each deadline below is a date, counted in calendar days from day zero, with
-the deadline day itself inside the window. There is no clock time to it and
-no instant to compare against — only whole dates, on the ISO calendar.
+<ToolLayout area="intermodal" useCase="demurrage and detention invoices">
+
+<Fragment slot="keypoint">
+
+A billing deadline is a date, not an instant. Each one is counted in calendar days from day zero, and the deadline day itself is inside the window.
+
+</Fragment>
+
+<Fragment slot="intro">
 
 The three windows — issue, dispute, resolve — are yours, and none is
-defaulted: a blank window is left out of the call rather than filled in, and
-the result names which one is missing and says why it is `null`. Lane 1 is the
-issue window, lane 2 the dispute window and lane 3 the resolution window, each
-drawn with its own pattern and number so the strip reads without relying on
-colour alone; the anchor, the invoice date and the request date are each
-lettered.
+defaulted. A blank window is left out of the call, and the result names which
+one is missing and says why it is `null`.
 
-The strip and the verdicts below are the real
-[`billingTimeline`](/reference/intermodal/calculate/billingTimeline/) call for
-what is on screen. Nothing here computes a deadline — it only draws what the
-function returned.
+Lane 1 is the issue window, lane 2 the dispute window and lane 3 the resolution
+window. Each has its own pattern and number, and the anchor, the invoice date
+and the request date are each lettered, so the strip reads without relying on
+colour. The strip draws what [`billingTimeline`](/reference/intermodal/calculate/billingTimeline/) returned; nothing here
+computes a deadline.
+
+</Fragment>
 
 <BillingDeadlines fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [the same 30-day windows, invoiced one day
 later](/tools/billing-deadlines/?w=billing&wa=%7B%22anchorOn%22%3A%222026-03-01%22%2C%22invoiceIssuedOn%22%3A%222026-04-01%22%2C%22issueDays%22%3A%2230%22%2C%22disputeDays%22%3A%2230%22%2C%22resolutionDays%22%3A%2230%22%7D) —
@@ -38,3 +46,7 @@ lays out the chain; [`convertUtcToPlainDate`](/reference/utc/convert/convertUtcT
 reduces an instant to the billing party's local date before it is passed in.
 The rules for reading the strip are in
 [Intermodal: Billing Deadlines](/guides/industries/intermodal-billing-deadlines/).
+
+</Fragment>
+
+</ToolLayout>

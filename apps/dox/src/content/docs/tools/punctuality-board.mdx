@@ -5,17 +5,29 @@ industries: [transport]
 ---
 
 import PunctualityBoard from "../../../components/PunctualityBoard.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-The tolerance is yours. GMT holds no default, because "on time" means nothing
-until someone states how late is too late. Both edges belong to the outside: an
-arrival exactly on the late edge is late, and one exactly on the early edge is
-early. Drag the band and watch the rows change their word.
+<ToolLayout area="transport" useCase="on-time performance">
 
-A rate travels with its tolerance. The same six arrivals are 2 of 6 on time
-under one tolerance and 4 of 6 under another. Turn on the second tolerance to
-see both at once.
+<Fragment slot="keypoint">
+
+On time means nothing until someone states how late is too late, so GMT holds no default tolerance. A rate travels with its tolerance: the same six arrivals are 2 of 6 on time under one and 4 of 6 under another.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Both edges belong to the outside: an arrival exactly on the late edge is
+late, and one exactly on the early edge is early. Drag the band and watch the
+rows change their word.
+
+Turn on the second tolerance to see both rates at once.
+
+</Fragment>
 
 <PunctualityBoard fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [a 10-minute early
 tolerance](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fifteen-minute%22%2C%22early%22%3A%22PT10M%22%7D)
@@ -32,3 +44,7 @@ three calls behind every reading here. See the guide's
 [tolerance section](/guides/industries/transport-punctuality-and-timestamps/#on-time-needs-a-stated-tolerance-classifypunctuality)
 and its
 [rate section](/guides/industries/transport-punctuality-and-timestamps/#a-rate-is-a-count-under-one-tolerance-punctualityrate).
+
+</Fragment>
+
+</ToolLayout>

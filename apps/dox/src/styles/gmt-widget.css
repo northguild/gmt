@@ -168,6 +168,10 @@
  * tracks and every card takes one — card 1 beside card 2, then the code cards
  * in pairs. Nothing spans there, because a span only strands a card in a
  * half-empty row once there are too few tracks to share. */
+/* These two steps are also `.gmt-tool-grid`'s (dox.css), which lays the page's
+   key point, intro and trailing text out on the same tracks so they line up
+   with the cards. A `@container` condition cannot read a custom property, so
+   the numbers cannot be shared as a variable: change them here and there. */
 @container (min-width: 60rem) {
   .gmt-widget-card {
     grid-template-columns: repeat(2, minmax(0, 1fr));

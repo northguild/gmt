@@ -5,14 +5,27 @@ industries: [transport]
 ---
 
 import CutoffRuler from "../../../components/CutoffRuler.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-"Two days before" reads three ways, and they only agree by accident.
-Calendar days keep the departure's time of day; exact hours are elapsed
-time, whatever the clock does; a pinned local time keeps the wall clock you
-name and lets the elapsed time move. Between them, a DST change can make the
-three land an hour apart, or make two of them coincide.
+<ToolLayout area="transport" useCase="a cut-off counted back from a departure">
+
+<Fragment slot="keypoint">
+
+A cut-off two days before a departure reads three ways, and they only agree by accident. A DST change can make the three land an hour apart, or make two of them coincide.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Calendar days keep the departure's time of day. Exact hours are elapsed
+time, whatever the clock does. A pinned local time keeps the wall clock you
+name and lets the elapsed time move.
+
+</Fragment>
 
 <CutoffRuler fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [no clock change in
 between](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-06-14T16%3A00%3A00Z%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D) —
@@ -29,3 +42,7 @@ the scenario
 [Two Days Before Is Not 48 Hours](/scenarios/two-days-before-is-not-48-hours/),
 and the [DST Inspector](/tools/dst-inspector/) for the general rule behind
 every gap and overlap a clock change makes.
+
+</Fragment>
+
+</ToolLayout>

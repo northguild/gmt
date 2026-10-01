@@ -5,18 +5,31 @@ industries: [transport]
 ---
 
 import DepartureBoard from "../../../components/DepartureBoard.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-The threshold is your arrival plus the minimum connection. A departure exactly
-at the threshold is made. One a minute earlier is gone, even though it is on the
-timetable. Drag the arrival and watch the hatched connection bar push the
-answer to the next departure.
+<ToolLayout area="transport" useCase="the next departure you can make">
+
+<Fragment slot="keypoint">
+
+The threshold is your arrival plus the minimum connection. A departure exactly at the threshold is made. One a minute earlier is gone, even though it is on the timetable.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Drag the arrival and watch the hatched connection bar push the answer to the
+next departure.
 
 A service every N minutes has the shape of a GTFS `frequencies.txt` row: a
 headway, a start and an end. The end is never a departure. The window is
 half-open, so a shuttle every 20 minutes from 06:00 to 09:00 leaves last at
 08:40.
 
+</Fragment>
+
 <DepartureBoard fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [arriving exactly at
 `to`](/tools/departure-board/?w=departure&wa=%7B%22preset%22%3A%22arrival-at-to%22%7D)
@@ -32,3 +45,7 @@ on. See the guide's
 [next departure section](/guides/industries/transport-punctuality-and-timestamps/#the-next-departure-you-can-make-nextdeparture),
 and the [Connection Checker](/tools/connection-checker/) for one handoff's
 handling time.
+
+</Fragment>
+
+</ToolLayout>

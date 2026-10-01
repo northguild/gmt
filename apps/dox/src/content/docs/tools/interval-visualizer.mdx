@@ -5,19 +5,30 @@ industries: [core]
 ---
 
 import IntervalVisualizer from "../../../components/IntervalVisualizer.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-Two ranges of time can relate to each other in more ways than they first appear:
-overlapping, disjoint, one containing the other, identical, or touching, where one ends
-the instant the other starts. The half-open functions this widget calls treat touching
-intervals as sharing no instant. The four
-interval operations answer different questions about that relationship, and the
-answers are easier to see than to read.
+<ToolLayout area="intervals" useCase="comparing two ranges of time">
+
+<Fragment slot="keypoint">
+
+Two intervals that touch — one ends the instant the other starts — share no instant. The half-open functions this widget calls treat them that way.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Two ranges of time can be overlapping, disjoint, one containing the other,
+identical, or touching. The four interval operations answer different questions
+about that relationship, and the answers are easier to see than to read.
 
 Drag either interval's endpoints, or type them, and every operation recomputes on
-the same timeline scale — so the shape of each answer is visible, not just its
-JSON.
+the same timeline scale.
+
+</Fragment>
 
 <IntervalVisualizer fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** switch the preset to **Disjoint**. The intersection returns an
 empty result, which is the correct answer and not an error — this widget renders
@@ -29,3 +40,7 @@ Reference:
 [`intervalUnionZoned`](/reference/zoned/interval/intervalUnionZoned/),
 [`intervalDifferenceZoned`](/reference/zoned/interval/intervalDifferenceZoned/)
 and [`intervalXorZoned`](/reference/zoned/interval/intervalXorZoned/).
+
+</Fragment>
+
+</ToolLayout>

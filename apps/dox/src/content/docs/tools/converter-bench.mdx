@@ -5,12 +5,27 @@ industries: [core]
 ---
 
 import ConverterBench from "../../../components/ConverterBench.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout area="zones" useCase="one instant, converted and formatted">
+
+<Fragment slot="keypoint">
+
+Converting an instant to another zone, or formatting it for another locale, changes how it is written. It is the same instant throughout.
+
+</Fragment>
+
+<Fragment slot="intro">
 
 Three benches over one instant: convert it between zones, format it in any locale
 `@northguild/gmt` is tested against, and check which of the library's exported
 regular expressions match a given string.
 
+</Fragment>
+
 <ConverterBench fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** change the locale to `ar-SA` or `ja-JP` and watch the formatted
 parts change shape, not just language — the same instant, ordered the way that
@@ -21,3 +36,7 @@ Reference:
 conversion; [`formatZonedToParts`](/reference/zoned/format/formatZonedToParts/)
 and [`formatRelativeZoned`](/reference/zoned/format/formatRelativeZoned/) do the
 formatting.
+
+</Fragment>
+
+</ToolLayout>
