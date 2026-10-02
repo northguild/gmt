@@ -60,58 +60,47 @@ unclipped.
    and closes a race. If the mount renders before the observer's first callback, the first
    callback would otherwise cache the full size and the pop would stay. The first callback
    compares against the seed like any other.
-3. **On each observation** (read `entry.borderBoxSize[0]`, falling back to
-   `entry.contentRect`):
-   - **Width changed** (a resize, the Delivery Scheduler's compact switch): **snap**, then
-     update the cache.
-   - **Height unchanged:** do nothing.
+3. **On each observation** (the entry says *which* boxes changed and their width; the height is
+   read live, `offsetHeight`, because it must be read after the boxes inside have been pinned):
+   - **Width changed with a different `innerWidth`** (a real resize, the Delivery Scheduler's
+     compact switch): **snap**, then update the cache. A width change at the same viewport is a
+     scrollbar or a font arriving and eases like any other change.
+   - **Height unchanged** (within 1 px): do nothing.
    - **Snap instead of animating when any of these hold:**
      - `matchMedia("(prefers-reduced-motion: reduce)").matches`, read at each change;
-     - `outer.querySelector('[aria-expanded="true"]')` (an open zone combobox list);
-     - a **descendant** `.gmt-grow` has `data-growing`, so the inner one wins and the outer
-       follows it.
-   - **Otherwise animate:**
-     1. if `outer` is not growing, set `outer.style.height = <cached height>px`;
-     2. read `outer.offsetHeight` to force layout;
-     3. set `data-growing` and `--gmt-grow-duration` (see § Timing);
-     4. set `outer.style.height = <new height>px`;
-     5. update the cache.
-   - **A change mid-flight** (a pointermove re-render during a drag) only sets a new target
-     height and a new duration. CSS retargets from the current value. Do not reset to the old
-     height.
-   - **Snap** means: clear the inline `height`, remove `data-growing`, clear the timeout and
-     update the cache.
-4. **Cleanup** clears the inline `height`, `data-growing` and `--gmt-grow-duration`. It runs
-   on `transitionend` or `transitioncancel` where `event.target === outer` and
-   `event.propertyName === "height"`, because a nested grow's events bubble up. A timeout
-   fallback (duration + 100 ms) also runs it, because no event fires when the computed height
-   does not actually change.
-5. **Abort.** On `signal` abort: disconnect the observer, remove the listeners, clear the
-   timeout and clean up. The element is then removed from the `WeakSet`, so it can be
-   re-attached.
+     - `document.hidden`, where no frame would run;
+     - `outer.querySelector('[aria-expanded="true"]')` (an open zone combobox list).
+   - **Already moving:** only set a new target (the inner's height). The box heads for it from
+     where it is. Never reset to the old height, and never snap because a slot inside has started
+     to ease.
+   - **Not moving, and the change is only a box inside easing on its own** (the change equals the
+     summed last step of the outermost moving boxes inside, within 2 px): the outer is already the
+     right height. Update the cache and follow.
+   - **Otherwise start:** pin the outer at the height the reader last saw, plus what the boxes
+     inside have already shown; set `data-growing`; set the target to the inner's height.
+4. **The frame loop** (`requestAnimationFrame`, `setTimeout` where there is none) runs while any
+   box is moving. Each frame, for every moving box:
+   - released when within 1 px of its target, or still pinned 4 s after its last retarget;
+   - otherwise wants to cover `1 - exp(-dt / 50 ms)` of the distance left (`dt` is the frame time,
+     capped at 100 ms, so a stall counts for no more than that);
+   - the wants of the **outermost** moving boxes (those with no moving box around them) are summed;
+     above `STEP_BUDGET_PX` (40) every box is scaled by the same factor, so the page never moves
+     more than the budget in a frame however late the frame is. A box inside a moving box moves the
+     page not at all, takes the same scale, and is excluded from the sum.
+5. **Release** clears the inline height and `data-growing`. Safe at rest.
+6. **Abort.** On `signal` abort: unobserve, release, and drop the element from the `WeakSet`, so it
+   can be re-attached. The shared observer disconnects when the last element detaches.
 
-**One shared observer.** Every `.gmt-grow` is observed by one module-level `ResizeObserver`,
-so every box that changes in a frame arrives in the same callback. Each callback:
+**One shared observer.** Every `.gmt-grow` is observed by one module-level `ResizeObserver`, so
+every box that changes in a frame arrives in the same callback, and processing deepest-first
+means a slot is pinned before the section around it reads its height. The section then sees only
+what the slot does not account for.
 
-- processes entries deepest-first, so a slot is handled before its section, and the section
-  takes the "a descendant is growing → snap" path;
-- sums |Δ| over every entry that will animate, where Δ is the distance from the current
-  rendered height to the target;
-- gives each of those entries the same duration, `growDuration(sum, MAX)`.
-
-Sections that grow at the same time therefore share one speed budget. Without that, two
-sections each peaking at 48 px would make a 96 px frame. Per-element state (the `WeakSet`,
-the seed, the cache, the timeout, abort) stays per element.
-
-**Timing.** `growDuration(totalDeltaPx, maxMs)` = clamp(120, `0.6 × totalDeltaPx`, `maxMs`)
-ms. It is an exported pure function.
-
-- 120 ms is the value of `--gmt-duration-fast`.
-- `maxMs` is read from `--gmt-grow-max` with `getComputedStyle` (default 1250), so the
-  measurement script can try another cap by injecting a style.
-- 0.6 ms/px is chosen so that no change moves more than 48 px in a 60 Hz frame. The steepest
-  frame of `cubic-bezier(0, 0, 0.58, 1)` needs 0.550–0.580 ms per px across 120–1250 ms. At
-  0.6 the bound holds for every change up to 2083 px, where the 1250 ms cap starts to bind.
+**Why a frame loop and not a CSS transition.** A transition is a function of time. When a frame
+arrives late (a busy mount, a slow paint at 1440 px) the box moves by everything it missed, and one
+dropped frame doubles the step. Frames of 20 ms at 1440 px, with the occasional 33 ms one,
+turned a curve that holds 46 px on 16.7 ms frames into 73-88 px steps. Slowing the ease would trade
+away the animation to cover a case the loop covers exactly.
 
 ### `smoothHeights(scope: ParentNode, signal?: AbortSignal): void`
 
@@ -160,7 +149,6 @@ before it renders. Confirm this in the built output; the measurement gate also p
 .gmt-grow-inner { display: flex; flex-direction: column; gap: inherit; }
 .gmt-grow[data-growing] {
   overflow-y: clip;         /* y only: glows and focus rings still spill sideways. Not overflow-clip-margin: Safari ignores it */
-  transition: height var(--gmt-grow-duration, var(--gmt-duration-med)) var(--gmt-grow-easing);
 }
 ```
 
@@ -171,14 +159,10 @@ to the inner's height would be 17 px short.
 The section keeps its own `display: flex; flex-direction: column` from `gmt-widget.css`. The
 inner box takes over the column and inherits the section's `gap`.
 
-**Tokens — `gmt-tokens.css`, in the Timing block:**
+**No tokens.** The constants live in `smooth-height.ts` (`STEP_BUDGET_PX`, `FOLLOW_TAU_MS`,
+`SETTLE_PX`, `MAX_GROW_MS`).
 
-- `--gmt-grow-easing: cubic-bezier(0, 0, 0.58, 1)`, CSS `ease-out`, so a retarget during a
-  drag does not lag, while the steepest frame stays within the 48 px gate (§ 7);
-- `--gmt-grow-max: 1250ms`.
-
-Under reduced motion the global reset in `gmt-controls.css` already shortens transitions to
-0.01 ms. The JS snap means none starts at all.
+Under reduced motion the JS snap means no motion starts at all.
 
 ## 2. Hosts that grow as a whole
 
@@ -317,10 +301,11 @@ Write it **first**, before any Step 1 change, and record the "before" numbers wi
 
   Write `results.json` and a Markdown table to `--out`. Exit non-zero on any failure.
 - `--reduce` additionally asserts that `[data-growing]` never appeared.
+- `--frames` writes every run's per-frame samples to `--out/frames/`, to find the frame that jumped.
 - `--video` records the load pass for every page (Playwright `recordVideo`) into
   `--out/video/`.
 - `--css` injects a style tag (for trying a token value), for example
-  `--css ":root{--gmt-grow-max:500ms}"`.
+  `--css ".gmt-enter{animation:none !important}"`.
 - Chromium and WebKit only. Firefox is blocked by the sandbox on this machine. Record that;
   never bypass the sandbox.
 
@@ -334,18 +319,21 @@ Write it **first**, before any Step 1 change, and record the "before" numbers wi
    - a seed smaller than the first observation animates;
    - a width change snaps;
    - a mid-flight retarget keeps the inline height and sets a new target;
-   - cleanup on `transitionend` and on `transitioncancel`;
-   - a bubbled event from a nested grow is ignored;
-   - the timeout fallback;
-   - abort;
-   - the reduced-motion snap;
+   - a step never exceeds the budget, however late the frame (16.7 to 1000 ms);
+   - a box walks to its target and is released (no inline height, no `data-growing`);
+   - a shrink eases the same way;
+   - abort (and the already-queued frame finding nothing to move);
+   - the reduced-motion snap, and the hidden-page snap;
    - the `aria-expanded` snap;
-   - the nested-growing snap;
-   - the no-`ResizeObserver` guard;
-   - `growDuration`'s bounds (120 and the cap) and its 0.6 ms/px slope;
-   - two sections changed in one callback both get the duration of their summed delta;
-   - a slot and its section changed in one callback: the slot animates and the section
-     snaps;
+   - the no-`ResizeObserver` guard, and the `setTimeout` fallback with no `requestAnimationFrame`;
+   - `followFraction` and `budgetScale`;
+   - boxes moving together share one budget and keep their proportions, including a box that
+     starts later;
+   - the safety release after `MAX_GROW_MS`;
+   - a section with a slot: the change the slot does not account for is eased, not popped; a
+     change that is only the slot easing is followed without the section moving; a moving section
+     is not snapped when a slot inside it starts; a slot inside a moving section spends no budget
+     of its own;
    - `smoothHeights`:
      - wraps sections 2+ and never section 1;
      - honours `data-grow="off"`;
@@ -374,19 +362,11 @@ Write it **first**, before any Step 1 change, and record the "before" numbers wi
 
 ## 7. Timing and the 48 px gate
 
-The 48 px per-frame gate is fixed. The timing is built to meet it:
+The 48 px per-frame gate is fixed. The loop is built to meet it whatever the frame time:
 
-- **Easing:** `cubic-bezier(0, 0, 0.58, 1)`, CSS `ease-out`.
-- **Duration:** linear in distance, 0.6 ms per px, clamped to 120–1250 ms (the owner's cap, so a phone-width Ruler, Delivery, Stack or Punctuality
-  grow of 1200–2000 px runs for 0.7–1.2 s instead of speeding up).
-- **Budget:** sections that change in the same frame share one duration, computed from their
-  summed distance (§ 1, One shared observer).
-
-The steepest 60 Hz frame of this curve covers about 2.3% of a change at 1250 ms. At 120 ms it
-covers about 21.9%. Over that whole range a change needs 0.550–0.580 ms per px to stay at
-48 px or less per frame, so 0.6 ms/px keeps every change within the gate up to 2083 px, where
-the 1250 ms cap binds. The largest first-load growth measured, Delivery at 390 px wide (+2034 px),
-takes 1220 ms.
-
-The ease-out start keeps a retarget during a drag from lagging. A square-root duration
-cannot meet the gate: with a fixed 420 ms cap, this curve tops out at 731 px.
+- **Easing:** each frame covers `1 - exp(-dt / 50 ms)` of the distance left, an ease-out with
+  no duration. A retarget during a drag does not lag and never restarts a curve.
+- **Budget:** the boxes that move the page move at most 40 px a frame in total, scaled together.
+  The 8 px under the gate is room for a reflow that is not eased.
+- **Slow frames** make the ease last longer, never step further: `dt` is capped at 100 ms and the
+  step at the budget. A 2000 px change takes at least 50 frames.

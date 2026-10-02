@@ -1,60 +1,96 @@
 /**
- * Eases height changes in a tool's result regions, through one CSS-backed
- * primitive: `.gmt-grow` (styles/gmt-primitives.css).
+ * Eases height changes in a tool's result regions, through one primitive:
+ * `.gmt-grow` (styles/gmt-primitives.css).
  *
  * A `.gmt-grow` element (the *outer*) has exactly one element child (the
  * *inner*). At rest the outer is `height: auto`, with no inline height and no
  * `data-growing`. When the inner's height changes, `smoothHeight` pins the outer
- * at its old height, forces layout, then sets the new height with `data-growing`
- * on; the CSS transition does the rest and cleanup puts the outer back to
- * `auto`. Only height moves: never opacity or transform, never a value the
- * reader is reading.
+ * at its old height with `data-growing` on (which clips it), and a frame loop
+ * walks the pinned height to the inner's height. Cleanup then puts the outer
+ * back to `auto`. Only height moves: never opacity or transform, never a value
+ * the reader is reading.
+ *
+ * Why a frame loop and not a CSS transition: a transition is a function of
+ * time, so a frame that arrives late (a busy mount, a slow paint) moves the box
+ * by the whole time it missed, and one dropped frame doubles the step. The loop
+ * instead moves each box a fraction of what is left (an ease-out that needs no
+ * duration, so a retarget never restarts it) and holds the *total* of all boxes
+ * in motion to `STEP_BUDGET_PX` a frame, however late the frame is. The page
+ * therefore never jumps by more than the budget, and a late frame only makes the
+ * ease last longer.
  *
  * One `ResizeObserver` serves every attached element. Its callback runs after
- * layout and before paint, so a new height is never painted unclipped, and every
- * box that changes in a frame arrives together. That is what lets sections that
- * grow at the same time share one speed budget: they get one duration, computed
- * from the sum of their distances, so the page's per-frame step stays bounded.
+ * layout and before paint, so a new height is never painted unclipped. Heights
+ * are read live, deepest box first, after the boxes inside have been pinned: a
+ * section whose slot is growing sees only the change the slot does not account
+ * for, so the slot's own easing is never mistaken for a pop, and a pop beside it
+ * is never hidden by it.
  *
  * No gmt import, no `dox-tools`, no `zod`, no `ai`.
  */
 
-/** The shortest a height change takes: the value of `--gmt-duration-fast`. */
-export const MIN_GROW_MS = 120;
-/** ms per px of distance. The steepest frame of the easing then stays near 48 px. */
-export const GROW_MS_PER_PX = 0.6;
-/** Used when `--gmt-grow-max` is missing or unreadable. */
-export const DEFAULT_GROW_MAX_MS = 1250;
+/** The most the boxes in motion move, in total, in one frame. The page-level
+ *  gate is 48 px; the rest is room for a reflow that is not eased. */
+export const STEP_BUDGET_PX = 40;
+/** Time constant of the ease: each frame covers `1 - exp(-dt / tau)` of what is left. */
+export const FOLLOW_TAU_MS = 50;
+/** A box within this many px of its target is released. */
+export const SETTLE_PX = 1;
+/** Heights are whole px (`offsetHeight`), so a box's own easing can differ from
+ *  the change it causes by about this much. */
+export const EXPLAIN_TOLERANCE_PX = 2;
+/** A box still pinned this long after its last retarget is released. */
+export const MAX_GROW_MS = 4000;
+/** The longest frame time the ease believes; a longer one is a stall, not a lag. */
+const MAX_FRAME_MS = 100;
+/** Assumed for the first frame of a run, which has no previous frame. */
+const FIRST_FRAME_MS = 1000 / 60;
+
+/** The fraction of the remaining distance a frame of `dtMs` covers. */
+export function followFraction(dtMs: number): number {
+  const dt = Number.isFinite(dtMs)
+    ? Math.min(MAX_FRAME_MS, Math.max(0, dtMs))
+    : FIRST_FRAME_MS;
+  return 1 - Math.exp(-dt / FOLLOW_TAU_MS);
+}
 
 /**
- * How long a change of `deltaPx` takes: linear in distance, clamped to
- * [`MIN_GROW_MS`, `maxMs`]. A cap below the floor wins.
+ * The factor that brings boxes moving by `totalPx` in one frame down to at most
+ * `budget`: 1 when they are already within it. Every box takes the same factor,
+ * so a pair that were easing in step stay in step.
  */
-export function growDuration(deltaPx: number, maxMs: number): number {
-  const raw = Number.isFinite(deltaPx)
-    ? GROW_MS_PER_PX * Math.abs(deltaPx)
-    : MIN_GROW_MS;
-  return Math.min(maxMs, Math.max(MIN_GROW_MS, raw));
+export function budgetScale(totalPx: number, budget: number): number {
+  const total = Math.abs(totalPx);
+  return total > budget && total > 0 ? budget / total : 1;
 }
 
 interface GrowState {
   outer: HTMLElement;
   inner: HTMLElement;
-  /** The inner's last observed border-box size. */
+  /** The inner's last measured width, and its last measured height: the
+   *  height the outer is heading for while it moves. */
   width: number;
   height: number;
   /** `innerWidth` at the last observation: a scrollbar does not change it. */
   viewport: number;
-  growing: boolean;
-  timer: ReturnType<typeof setTimeout> | undefined;
-  onEnd: (event: Event) => void;
+  /** The inline height while the outer moves. */
+  shown: number;
+  /** What the last frame moved the outer by. */
+  lastStep: number;
+  /** When the outer was last pinned or retargeted. */
+  since: number;
+  moving: boolean;
   detach: () => void;
 }
 
 const attached = new WeakSet<HTMLElement>();
 /** Observed inner → its state. Empty exactly when `observer` is unset. */
 const states = new Map<Element, GrowState>();
+/** The boxes in motion. */
+const moving = new Set<GrowState>();
 let observer: ResizeObserver | undefined;
+let frameId: number | ReturnType<typeof setTimeout> | undefined;
+let lastFrameAt: number | undefined;
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
@@ -62,20 +98,30 @@ function reducedMotion(): boolean {
   return typeof matchMedia === "function" && matchMedia(REDUCED_MOTION).matches;
 }
 
-/** `--gmt-grow-max` in ms ("700ms" or "0.7s"), or the default. */
-function readMaxMs(el: HTMLElement): number {
-  const raw = getComputedStyle(el).getPropertyValue("--gmt-grow-max").trim();
-  const m = /^(-?\d*\.?\d+)(ms|s)$/.exec(raw);
-  if (!m) return DEFAULT_GROW_MAX_MS;
-  const n = Number(m[1]);
-  return m[2] === "s" ? n * 1000 : n;
+/** The clock `requestAnimationFrame` timestamps are on. */
+function now(): number {
+  return typeof performance !== "undefined" ? performance.now() : 0;
 }
 
-function sizeOf(entry: ResizeObserverEntry): { w: number; h: number } {
-  const box = entry.borderBoxSize?.[0];
-  return box
-    ? { w: box.inlineSize, h: box.blockSize }
-    : { w: entry.contentRect.width, h: entry.contentRect.height };
+/**
+ * The height the outer needs for its child: the child's layout height
+ * (`offsetHeight` ignores the entrance's scale transform) plus its vertical
+ * margins, which a flex container does not collapse and which `offsetHeight`
+ * leaves out. Without them an outer released to `auto` would jump by the margins
+ * (the Zone Planner's host has 24 px above and below it).
+ */
+function layoutHeight(el: HTMLElement): number {
+  const box = el.offsetHeight || el.getBoundingClientRect().height;
+  const style =
+    typeof getComputedStyle === "function" ? getComputedStyle(el) : null;
+  const margins = style
+    ? (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0)
+    : 0;
+  return box + margins;
+}
+
+function layoutWidth(el: HTMLElement): number {
+  return el.offsetWidth || el.getBoundingClientRect().width;
 }
 
 function viewportWidth(): number {
@@ -88,114 +134,143 @@ function depthOf(el: Element): number {
   return d;
 }
 
-/** The height the outer is showing right now. */
-function renderedHeight(s: GrowState): number {
-  if (!s.growing) return s.height;
-  const px = parseFloat(getComputedStyle(s.outer).height);
-  return Number.isFinite(px) ? px : s.height;
-}
-
-/** Clears everything an animation leaves behind. Safe to call at rest. */
-function cleanup(s: GrowState): void {
-  if (s.timer !== undefined) clearTimeout(s.timer);
-  s.timer = undefined;
-  s.growing = false;
+/** Puts the outer back to `height: auto` and forgets any motion. Safe at rest. */
+function release(s: GrowState): void {
+  moving.delete(s);
+  s.moving = false;
+  s.lastStep = 0;
   s.outer.style.removeProperty("height");
-  s.outer.style.removeProperty("--gmt-grow-duration");
   s.outer.removeAttribute("data-growing");
 }
 
-/** True while a height transition on the outer is still in flight. */
-function heightTransitionRunning(outer: HTMLElement): boolean {
-  if (typeof outer.getAnimations !== "function") return false;
-  return outer.getAnimations().some((a) => {
-    const t = a as CSSTransition;
-    return (
-      t.transitionProperty === "height" &&
-      (a.playState === "running" || a.pending)
-    );
+/** The motion of boxes inside `s.outer` that is visible from outside it: the
+ *  step of each moving descendant with no moving box between it and `s.outer`. */
+function explainedByInside(s: GrowState): number {
+  let total = 0;
+  for (const other of moving) {
+    if (other === s || !s.outer.contains(other.outer)) continue;
+    const owner = other.outer.parentElement?.closest(".gmt-grow[data-growing]");
+    if (owner === s.outer || !s.outer.contains(owner ?? null)) {
+      total += other.lastStep;
+    }
+  }
+  return total;
+}
+
+/** True when no moving box contains `s`: only then does its step move the page. */
+function isOutermost(s: GrowState): boolean {
+  return !s.outer.parentElement?.closest(".gmt-grow[data-growing]");
+}
+
+function schedule(): void {
+  if (frameId !== undefined || moving.size === 0) return;
+  if (typeof requestAnimationFrame === "function") {
+    frameId = requestAnimationFrame(frame);
+  } else {
+    frameId = setTimeout(() => frame(now()), 16);
+  }
+}
+
+function frame(at: number): void {
+  frameId = undefined;
+  const dt = lastFrameAt === undefined ? FIRST_FRAME_MS : at - lastFrameAt;
+  lastFrameAt = at;
+  const k = followFraction(dt);
+
+  const running: GrowState[] = [];
+  for (const s of moving) {
+    const remaining = s.height - s.shown;
+    if (Math.abs(remaining) <= SETTLE_PX || at - s.since > MAX_GROW_MS) {
+      release(s);
+    } else running.push(s);
+  }
+
+  /* Only the outermost boxes move the page, so only they spend the budget; a
+     box inside one is scaled with it so the pair stay in step. */
+  const wanted = running.map((s) => (s.height - s.shown) * k);
+  let pageStep = 0;
+  running.forEach((s, i) => {
+    if (isOutermost(s)) pageStep += Math.abs(wanted[i]!);
   });
+  const scale = budgetScale(pageStep, STEP_BUDGET_PX);
+
+  running.forEach((s, i) => {
+    const step = wanted[i]! * scale;
+    s.shown += step;
+    s.lastStep = step;
+    s.outer.style.height = `${s.shown}px`;
+  });
+
+  if (moving.size === 0) lastFrameAt = undefined;
+  else schedule();
 }
 
 function onResize(entries: ResizeObserverEntry[]): void {
-  const changed: { s: GrowState; w: number; h: number }[] = [];
+  const changed: { s: GrowState; w: number }[] = [];
+  const seen = new Set<GrowState>();
   for (const entry of entries) {
     const s = states.get(entry.target);
-    if (!s) continue;
-    const { w, h } = sizeOf(entry);
-    changed.push({ s, w, h });
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    const box = entry.borderBoxSize?.[0];
+    changed.push({ s, w: box ? box.inlineSize : entry.contentRect.width });
   }
-  /* Deepest first: a slot is decided before the section around it, so the
-     section meets "a descendant is growing" and follows it. */
+  /* Deepest first: a box inside is pinned before the box around it reads its
+     height, so the outer sees only what the inner box does not account for. */
   changed.sort((a, b) => depthOf(b.s.outer) - depthOf(a.s.outer));
 
-  const reduced = reducedMotion();
-  const animating: { s: GrowState; target: number }[] = [];
+  const snap =
+    reducedMotion() || (typeof document !== "undefined" && document.hidden);
 
-  for (const { s, w, h } of changed) {
+  for (const { s, w } of changed) {
     const widthChanged = Math.abs(w - s.width) > 0.01;
-    const heightChanged = Math.abs(h - s.height) > 0.01;
     /* A resize snaps. A width change with the same viewport is a scrollbar
        appearing as the page fills, or a font arriving: the content below really
        did grow, so it eases like any other change. */
     const resized = widthChanged && viewportWidth() !== s.viewport;
     s.viewport = viewportWidth();
     s.width = w;
-    if (resized) {
-      cleanup(s);
-      s.height = h;
-      continue;
-    }
-    if (!heightChanged) continue;
 
-    const nestedGrowing =
-      s.outer.querySelector(".gmt-grow[data-growing]") !== null ||
-      animating.some((a) => a.s !== s && s.outer.contains(a.s.outer));
+    const h = layoutHeight(s.inner);
     if (
-      reduced ||
-      s.outer.querySelector('[aria-expanded="true"]') !== null ||
-      nestedGrowing
+      resized ||
+      snap ||
+      s.outer.querySelector('[aria-expanded="true"]') !== null
     ) {
-      cleanup(s);
+      release(s);
       s.height = h;
       continue;
     }
-    animating.push({ s, target: h });
-  }
-  if (animating.length === 0) return;
+    if (Math.abs(h - s.height) < SETTLE_PX) {
+      if (s.moving) s.height = h;
+      continue;
+    }
 
-  /* Every box in motion shares one speed budget, across callbacks too: boxes
-     already easing are retargeted with the new ones, and the duration comes from
-     the total distance still to travel. */
-  const movers: { s: GrowState; target: number; from: number }[] = [];
-  for (const { s, target } of animating) {
-    movers.push({ s, target, from: renderedHeight(s) });
-  }
-  for (const s of states.values()) {
-    if (!s.growing || animating.some((a) => a.s === s)) continue;
-    movers.push({ s, target: s.height, from: renderedHeight(s) });
-  }
-  let total = 0;
-  for (const m of movers) total += Math.abs(m.target - m.from);
-  const duration = growDuration(total, readMaxMs(movers[0]!.s.outer));
-
-  /* Pin every box where it is now, with the transition already switched on,
-     force layout once, then release them all toward their targets so each
-     transition starts from the pinned value. */
-  for (const { s, from } of movers) {
+    if (s.moving) {
+      /* Already on its way: head for the new height from where it is. */
+      s.height = h;
+      s.since = now();
+      continue;
+    }
+    const explained = explainedByInside(s);
+    if (Math.abs(h - s.height - explained) < EXPLAIN_TOLERANCE_PX) {
+      /* Everything that changed is a box inside easing on its own: this outer
+         is already the right height, and follows it. */
+      s.height = h;
+      continue;
+    }
+    /* Pin at the height the reader last saw, plus what the boxes inside have
+       already shown, and head for the new one. */
+    s.shown = s.height + explained;
+    s.height = h;
+    s.since = now();
+    s.moving = true;
+    s.lastStep = 0;
     s.outer.setAttribute("data-growing", "");
-    s.outer.style.setProperty("--gmt-grow-duration", `${duration}ms`);
-    s.outer.style.height = `${from}px`;
+    s.outer.style.height = `${s.shown}px`;
+    moving.add(s);
   }
-  void movers[0]!.s.outer.offsetHeight;
-  for (const { s, target } of movers) {
-    s.growing = true;
-    s.outer.style.height = `${target}px`;
-    s.height = target;
-    if (s.timer !== undefined) clearTimeout(s.timer);
-    /* No transitionend fires when the computed height does not change. */
-    s.timer = setTimeout(() => cleanup(s), duration + 100);
-  }
+  schedule();
 }
 
 /**
@@ -213,37 +288,24 @@ export function smoothHeight(outer: HTMLElement, signal?: AbortSignal): void {
   /* Seeded now, not at the first callback: "never animate from nothing at
      attach" must hold even when the mount renders before the observer's first
      delivery. The first callback compares against this like any other. */
-  const rect = inner.getBoundingClientRect();
   const state: GrowState = {
     outer,
     inner,
-    width: rect.width,
-    height: rect.height,
+    width: layoutWidth(inner),
+    height: layoutHeight(inner),
     viewport: viewportWidth(),
-    growing: false,
-    timer: undefined,
-    onEnd: () => {},
+    shown: 0,
+    lastStep: 0,
+    since: 0,
+    moving: false,
     detach: () => {},
   };
 
-  /* A nested grow's events bubble up, and a retarget cancels the old
-     transition just as it starts the new one; neither is this element's end. */
-  state.onEnd = (event: Event) => {
-    if (event.target !== outer) return;
-    if ((event as TransitionEvent).propertyName !== "height") return;
-    if (heightTransitionRunning(outer)) return;
-    cleanup(state);
-  };
-  outer.addEventListener("transitionend", state.onEnd);
-  outer.addEventListener("transitioncancel", state.onEnd);
-
   state.detach = () => {
     signal?.removeEventListener("abort", state.detach);
-    outer.removeEventListener("transitionend", state.onEnd);
-    outer.removeEventListener("transitioncancel", state.onEnd);
     observer?.unobserve(inner);
     states.delete(inner);
-    cleanup(state);
+    release(state);
     attached.delete(outer);
     if (states.size === 0) {
       observer?.disconnect();

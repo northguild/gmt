@@ -1,7 +1,15 @@
 /// <reference types="vitest/globals" />
 
 import { describe, expect, it } from "vitest";
-import { pickLabelLeft, placeLabel, thinSpans } from "./label-fit";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  layoutWidth,
+  onWidthChange,
+  pickLabelLeft,
+  placeLabel,
+  thinSpans,
+  thinTickLabels,
+} from "./label-fit";
 
 describe("thinSpans", () => {
   it("keeps spans that clear the last kept one by the gap", () => {
@@ -102,5 +110,114 @@ describe("pickLabelLeft", () => {
 
   it("returns 0 for no candidates", () => {
     expect(pickLabelLeft([], 100, 400)).toBe(0);
+  });
+});
+
+describe("onWidthChange", () => {
+  it("calls back on a width change and returns a disposer that disconnects", () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const el = { clientWidth: 100, isConnected: true } as HTMLElement;
+      const fn = vi.fn();
+      const dispose = onWidthChange(el, fn);
+      expect(spy.live.size).toBe(1);
+      spy.fire();
+      expect(fn).not.toHaveBeenCalled(); // same width
+      (el as { clientWidth: number }).clientWidth = 200;
+      spy.fire();
+      expect(fn).toHaveBeenCalledTimes(1);
+      dispose();
+      expect(spy.live.size).toBe(0);
+      expect(() => dispose()).not.toThrow();
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it("returns a callable no-op where ResizeObserver does not exist", () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+    try {
+      const dispose = onWidthChange({} as HTMLElement, () => {});
+      expect(() => dispose()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("layoutWidth", () => {
+  it("is the layout width, not the width after an ancestor's transform", () => {
+    const el = {
+      offsetWidth: 100,
+      getBoundingClientRect: () => ({ width: 92 }),
+    } as unknown as HTMLElement;
+    expect(layoutWidth(el)).toBe(100);
+  });
+
+  it("falls back to the rect for an element with no layout box", () => {
+    const el = {
+      offsetWidth: 0,
+      getBoundingClientRect: () => ({ width: 40 }),
+    } as unknown as HTMLElement;
+    expect(layoutWidth(el)).toBe(40);
+  });
+});
+
+describe("thinTickLabels while an entrance scales the row", () => {
+  /** A row `width` layout px wide and ticks `tickPx` wide at the given layout
+   *  lefts, all drawn at `scale` (an entrance in progress). */
+  function row(scale: number, width: number, lefts: number[], tickPx: number) {
+    const ticks = lefts.map((left) => ({
+      hidden: false,
+      getBoundingClientRect: () => ({
+        left: left * scale,
+        right: (left + tickPx) * scale,
+      }),
+    }));
+    return {
+      ticks,
+      el: {
+        clientWidth: width,
+        querySelectorAll: () => ticks,
+        getBoundingClientRect: () => ({ left: 0, width: width * scale }),
+      } as unknown as HTMLElement,
+    };
+  }
+
+  it("hides the same ticks at 92% as at full size", () => {
+    // Ticks 40px wide, 48.5px apart: 8.5px of room, over the 8px gap. Measured
+    // at 92% the room is 7.8px, so an uncorrected fit hides ticks that fit.
+    const lefts = [0, 48.5, 97, 145.5];
+    const full = row(1, 200, lefts, 40);
+    thinTickLabels(full.el);
+    expect(full.ticks.map((t) => t.hidden)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+    const scaled = row(0.92, 200, lefts, 40);
+    thinTickLabels(scaled.el);
+    expect(scaled.ticks.map((t) => t.hidden)).toEqual(
+      full.ticks.map((t) => t.hidden),
+    );
+  });
+
+  it("hides the same ticks at 92% when they do collide", () => {
+    const lefts = [0, 45, 90, 135];
+    const full = row(1, 200, lefts, 40);
+    thinTickLabels(full.el);
+    const scaled = row(0.92, 200, lefts, 40);
+    thinTickLabels(scaled.el);
+    expect(full.ticks.some((t) => t.hidden)).toBe(true);
+    expect(scaled.ticks.map((t) => t.hidden)).toEqual(
+      full.ticks.map((t) => t.hidden),
+    );
+  });
+
+  it("keeps a tick that fits and drops one past the row's edge at 92%", () => {
+    const scaled = row(0.92, 200, [0, 170], 40);
+    thinTickLabels(scaled.el);
+    expect(scaled.ticks.map((t) => t.hidden)).toEqual([false, true]);
   });
 });

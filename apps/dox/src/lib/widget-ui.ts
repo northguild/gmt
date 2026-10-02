@@ -165,6 +165,39 @@ export function renderWidgetOutput(
 }
 
 // ---------------------------------------------------------------------------
+// The edge of the supported time range
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether `error` is a `RangeError`, however it was thrown. The polyfill throws
+ * one for an instant outside the supported range, and the library's own output
+ * can sit exactly on that edge: a zoned string near the minimum instant carries
+ * a minute-rounded offset, so parsing it back lands outside the range.
+ */
+export function isRangeError(error: unknown): boolean {
+  return error instanceof Error && error.name === "RangeError";
+}
+
+/** What a chart shows when its values are too near the limit of the time range
+ *  to be placed on an axis. The library's own results above it stay. */
+export const RANGE_EDGE_TEXT =
+  "⟨ NO SIGNAL — too near the limit of the supported time range to draw ⟩";
+
+/**
+ * Run a chart's drawing step. A `RangeError` from placing a value at the edge
+ * of the time range becomes the signal-lost notice in `el`, never an exception
+ * out of an input handler; anything else is a real bug and is rethrown.
+ */
+export function drawOrRangeEdge(el: HTMLElement, draw: () => void): void {
+  try {
+    draw();
+  } catch (error) {
+    if (!isRangeError(error)) throw error;
+    el.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Starlight-matching asides
 // ---------------------------------------------------------------------------
 
@@ -264,6 +297,33 @@ export function syncRange(input: HTMLInputElement, valueText?: string): void {
   input.setAttribute("aria-valuetext", valueText);
   const chip = field?.querySelector<HTMLElement>(".gmt-range-chip");
   if (chip) chip.textContent = valueText;
+}
+
+/**
+ * Set a control's value from a seed (a permalink, a chat call, a preset).
+ *
+ * A `<select>` silently drops a value it has no option for, leaving the first
+ * option showing and every later read of `.value` wrong. So when `value` is not
+ * offered, an option for it is appended first, labelled with the value itself
+ * (or `label`). An empty value is never appended: it means "none", and a select
+ * with no blank option shows its first one. Inputs just take the value.
+ */
+export function setControlValue(
+  el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null,
+  value: string,
+  label?: string,
+): void {
+  if (!el) return;
+  if (el.tagName === "SELECT") {
+    const select = el as HTMLSelectElement;
+    if (value !== "" && ![...select.options].some((o) => o.value === value)) {
+      const opt = select.ownerDocument.createElement("option");
+      opt.value = value;
+      opt.textContent = label ?? value;
+      select.append(opt);
+    }
+  }
+  el.value = value;
 }
 
 /** A real checkbox / radio painted as a bevelled chip (`.gmt-chip-toggle`). */

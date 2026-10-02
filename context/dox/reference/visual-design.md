@@ -115,9 +115,9 @@ Only these things move. Anything not listed stays still.
 - **The sonar focus ping** (`lib/sonar.ts`).
 - **The globe's spin.**
 - **The arrival gesture** (`.gmt-enter`, `lib/enter.ts`): one fade from 92% scale over 0.5 s on
-  the spring curve, used by the globe canvas, the globe's zone list, the Crossing Clock's faces and the
-  `/dox` crystal. It plays once, when a landmark's content is ready, and never on a value change. See
-  design-system.md § Entrance.
+  the spring curve, used by the globe canvas, the globe's zone list, the Crossing Clock's faces, the
+  `/dox` crystal and the numbered cards of every tool widget. It plays once, when the content is
+  ready, and never on a value change. See design-system.md § Entrance.
 - **Cross-document view transitions** (`gmt-view-transitions.css`). The header and sidebar swap
   in place; only the content cross-fades.
 - **The homepage scroll reveal** (`gmt-reveal.css`, `lib/scroll-reveal.ts`). Content is visible

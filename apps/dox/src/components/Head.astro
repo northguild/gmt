@@ -4,6 +4,22 @@ import Default from '@astrojs/starlight/components/Head.astro';
 
 <Default />
 
+<script is:inline>
+	// Hold the numbered tool cards invisible from the first paint, so a server-rendered card is
+	// never painted and then hidden for its entrance (a blink). Inline, because a module script
+	// runs after the first paint is possible. Only with script and motion allowed, so a reader
+	// without JS, or who asked for less motion, sees the page as served; src/lib/widget-enter.ts
+	// releases the hold in the task that starts the entrances, and a timer releases it anyway.
+	(function () {
+		var root = document.documentElement;
+		if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		root.classList.add('gmt-enter-hold');
+		setTimeout(function () {
+			root.classList.remove('gmt-enter-hold');
+		}, 2000);
+	})();
+</script>
+
 <script>
 	// Shared sonar focus-ring re-trigger — see src/lib/sonar.ts.
 	import '~/lib/sonar';
@@ -14,6 +30,7 @@ import Default from '@astrojs/starlight/components/Head.astro';
 	// Each numbered card arrives with the site's shared gesture — see
 	// src/lib/widget-enter.ts. After smoothHeights, so a card that is about to
 	// become a .gmt-grow host is already wrapped when it enters.
-	import { enterWidgetSections } from '~/lib/widget-enter';
+	import { enterWidgetSections, releaseEntranceHold } from '~/lib/widget-enter';
 	enterWidgetSections(document);
+	releaseEntranceHold();
 </script>

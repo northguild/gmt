@@ -35,6 +35,15 @@
  */
 import { enter } from "./enter";
 
+/**
+ * The class `Head.astro`'s inline script puts on `<html>` before the first
+ * paint, and the one rule in `gmt-primitives.css` that reads it: while it is
+ * set, a numbered card that has not yet entered is transparent. That is what
+ * stops a server-rendered card painting visible and then dropping out for its
+ * entrance. It is never set without script, or under reduced motion.
+ */
+export const ENTER_HOLD_CLASS = "gmt-enter-hold";
+
 /** Gap between one card's entrance and the next. */
 export const CARD_STAGGER_MS = 70;
 
@@ -51,4 +60,16 @@ export function enterWidgetSections(scope: ParentNode): void {
       enter(section, { delayMs: index * CARD_STAGGER_MS });
     });
   }
+}
+
+/**
+ * Lift the first-paint hold. Call it in the same task as `enterWidgetSections`:
+ * every held card has by then taken `.gmt-enter` (transparent through its
+ * stagger delay) or `data-entered`, so no frame can paint one visible in
+ * between. A timer in the inline script lifts it too if this never runs.
+ */
+export function releaseEntranceHold(
+  root: HTMLElement = document.documentElement,
+): void {
+  root.classList.remove(ENTER_HOLD_CLASS);
 }

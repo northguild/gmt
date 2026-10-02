@@ -18,7 +18,14 @@
  * (no inline height, no `data-growing`) and the median frame interval.
  *
  * Assertions (the exit code is non-zero when any fails):
- *   - the largest jump is at most 48 px (not under `--reduce`, whose heights snap by design);
+ *   - the page answers HTTP 200, its root selector matches an element, and at
+ *     least a handful of frames were recorded: a run that measured nothing fails
+ *     rather than reporting zeros;
+ *   - every interaction the page's row asks for happened (a select that was not
+ *     visible, a handle that could not be dragged, a drag that left the value
+ *     where it was, a page that never reached rest all fail);
+ *   - the largest jump of the root and of `<main>` is at most 48 px (not under
+ *     `--reduce`, whose heights snap by design);
  *   - every `.gmt-grow` is at rest at the end;
  *   - the final height equals the `prefers-reduced-motion: reduce` run's, within 1 px;
  *   - Zoned Earth does not grow;
@@ -33,12 +40,16 @@
  *   node scripts/grow-measure.mjs --base http://127.0.0.1:4351 --out <dir>
  *     [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video]
  *     [--css "<extra css>"] [--only <slug,...>] [--reduce-ref <results.json>]
+ *     [--frames]
  *
  * Without `--reduce` the script first runs each combination under reduced
  * motion to get the reference final height (or reads `--reduce-ref`, a
  * `results.json` from an earlier `--reduce` run). `--css` injects a style tag at
- * the end of <head> (try a token: `--css ":root{--gmt-grow-easing:linear}"`).
- * `--video` records the load pass into `<out>/video/`.
+ * the end of <head> (try a rule: `--css ".gmt-enter{animation:none !important}"`).
+ * `--video` records the load pass into `<out>/video/`. `--frames` writes every
+ * run's per-frame samples (`t`, root height `h`, main height `m`, growing `g`)
+ * to `<out>/frames/<browser>-<width>-<slug>-<pass>.json`, to find which frame
+ * made a jump.
  *
  * Chromium and WebKit only: Firefox is blocked by the sandbox on this machine.
  */
@@ -46,6 +57,15 @@
 import { chromium, webkit } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  crashProblem,
+  dragProblem,
+  emptyRunProblem,
+  jumpProblems,
+  maxFrameJump,
+  pageProblems,
+  skippedProblem,
+} from "./gate-checks.mjs";
 
 const JUMP_LIMIT_PX = 48;
 const HEIGHT_MATCH_PX = 1;
@@ -159,7 +179,7 @@ const PAGES = [
     root: ".gmt-scrubber-block",
     preset: null,
     click: '[data-role="dst-preset"]',
-    presetNote: "no preset; clicks Jump to a DST transition",
+    presetNote: "no preset; clicks Jump to the next DST transition",
     drag: '[data-role="slider"]',
   },
   {
@@ -183,6 +203,7 @@ function parseArgs(argv) {
     css: "",
     only: null,
     reduceRef: null,
+    frames: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -196,6 +217,7 @@ function parseArgs(argv) {
     else if (a === "--css") o.css = next();
     else if (a === "--only") o.only = next().split(",");
     else if (a === "--reduce-ref") o.reduceRef = next();
+    else if (a === "--frames") o.frames = true;
     else {
       console.error(`Unknown argument: ${a}`);
       process.exit(2);
@@ -203,8 +225,12 @@ function parseArgs(argv) {
   }
   if (!o.base || !o.out) {
     console.error(
-      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>]",
+      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames]",
     );
+    process.exit(2);
+  }
+  if (!o.widths.length || o.widths.some((w) => !Number.isFinite(w) || w <= 0)) {
+    console.error("--widths needs positive numbers, e.g. 1440,390");
     process.exit(2);
   }
   for (const b of o.browsers) {
@@ -219,19 +245,83 @@ function parseArgs(argv) {
 }
 
 /* Runs before any page script. Samples on every animation frame once started;
-   `auto` starts it at DOMContentLoaded for the load pass. */
+   `auto` starts it at DOMContentLoaded for the load pass.
+
+   Each frame has two heights. `h` is read in a task after the frame, as the
+   first version of this gate did. `p` is the height that was PAINTED: read at the
+   end of the frame's last ResizeObserver callback, which is after layout, after
+   every box has been pinned, and before paint. The two differ when a mount task
+   runs between a frame's rendering and the sampling task: it fills a section,
+   `h` forces layout and sees the new height, and the next frame's ResizeObserver
+   pass pins the box before anything is drawn, so that height was never on screen.
+   The gate asserts on `p`; `h` is kept (as `rawMaxJump`) so the two can be
+   compared. To get a ResizeObserver callback in every frame, a 1 px sentinel
+   changes width each frame, and the page's own ResizeObserver is wrapped so its
+   callbacks are followed by a read. A frame in which no callback ran falls back
+   to the later reading (the old measurement) and is counted as `unpainted`,
+   which is reported and not asserted. */
 function samplerInit({ rootSelector, auto }) {
-  const S = (window.__grow = { frames: [], t0: 0, running: false });
-  const record = () => {
+  const S = (window.__grow = {
+    frames: [],
+    t0: 0,
+    running: false,
+    n: 0,
+    unpainted: 0,
+  });
+  /* The latest read of the frame in progress: set at the end of a
+     ResizeObserver callback, used by the sampling task after the frame. */
+  let painted = null;
+  const read = () => {
     const root = document.querySelector(rootSelector);
     const main = document.querySelector("main");
-    // Nothing to measure until the root is in the document.
-    if (!root) return;
-    S.frames.push({
-      t: performance.now() - S.t0,
+    if (!root) return null;
+    return {
+      n: S.n,
       h: root.getBoundingClientRect().height,
       m: main ? main.getBoundingClientRect().height : 0,
       g: document.querySelector("[data-growing]") ? 1 : 0,
+    };
+  };
+  const NativeResizeObserver = window.ResizeObserver;
+  if (NativeResizeObserver) {
+    window.ResizeObserver = class extends NativeResizeObserver {
+      constructor(callback) {
+        super((entries, observer) => {
+          try {
+            callback.call(observer, entries, observer);
+          } finally {
+            if (S.running) painted = read() ?? painted;
+          }
+        });
+      }
+    };
+  }
+  let sentinel = null;
+  const ensureSentinel = () => {
+    if (sentinel || !NativeResizeObserver || !document.documentElement) return;
+    sentinel = document.createElement("div");
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText =
+      "position:fixed;left:-9999px;top:0;height:1px;width:1px;pointer-events:none";
+    document.documentElement.append(sentinel);
+    new window.ResizeObserver(() => {}).observe(sentinel);
+  };
+  const record = () => {
+    const raw = read();
+    // Nothing to measure until the root is in the document. A root that never
+    // appears leaves zero frames, which the run reports as a failure.
+    if (!raw) return;
+    const exact = painted && painted.n === S.n ? painted : null;
+    if (!exact) S.unpainted += 1;
+    const use = exact ?? raw;
+    S.frames.push({
+      n: S.n,
+      t: performance.now() - S.t0,
+      h: use.h,
+      m: use.m,
+      g: use.g,
+      raw: raw.h,
+      rawMain: raw.m,
     });
   };
   /* Sampled in a task after the frame, not inside the rAF callback: a read
@@ -245,10 +335,16 @@ function samplerInit({ rootSelector, auto }) {
   };
   const loop = () => {
     if (!S.running) return;
+    S.n += 1;
+    ensureSentinel();
+    if (sentinel) sentinel.style.width = S.n % 2 ? "2px" : "1px";
     channel.port2.postMessage(0);
   };
   S.start = () => {
     S.frames = [];
+    S.unpainted = 0;
+    S.n = 0;
+    painted = null;
     S.t0 = performance.now();
     S.running = true;
     requestAnimationFrame(loop);
@@ -265,7 +361,6 @@ function stats(frames) {
   const hs = frames.map((f) => f.h);
   const ms = frames.map((f) => f.m);
   const jumps = hs.slice(1).map((h, i) => Math.abs(h - hs[i]));
-  const mJumps = ms.slice(1).map((h, i) => Math.abs(h - ms[i]));
   const dts = frames
     .slice(1)
     .map((f, i) => f.t - frames[i].t)
@@ -275,7 +370,7 @@ function stats(frames) {
     firstH: hs[0] ?? 0,
     finalH: hs[hs.length - 1] ?? 0,
     growth: (hs[hs.length - 1] ?? 0) - (hs[0] ?? 0),
-    maxJump: Math.max(0, ...jumps),
+    maxJump: maxFrameJump(hs),
     // Speed, not step: the largest jump scaled to a 60 Hz frame, so a stalled
     // frame (a long mount task) is not mistaken for a fast ease.
     maxPer60: Math.max(
@@ -284,8 +379,11 @@ function stats(frames) {
         (j, i) => (j * 1000) / 60 / Math.max(1, frames[i + 1].t - frames[i].t),
       ),
     ),
+    // The same jump read in a task after the frame, as before painted heights
+    // were read: kept for comparison, never asserted.
+    rawMaxJump: maxFrameJump(frames.map((f) => f.raw)),
     over48: jumps.filter((j) => j > JUMP_LIMIT_PX).length,
-    mainMaxJump: Math.max(0, ...mJumps),
+    mainMaxJump: maxFrameJump(ms),
     medianDt: dts.length ? dts[Math.floor(dts.length / 2)] : 0,
     growingSeen: frames.some((f) => f.g === 1),
   };
@@ -339,6 +437,14 @@ async function drag(page, selector) {
   const el = page.locator(selector).first();
   if (!(await el.isVisible().catch(() => false))) return "handle not visible";
   await el.scrollIntoViewIfNeeded();
+  /* The value the control exposes, null when it exposes none. */
+  const readValue = () =>
+    el
+      .evaluate(
+        (node) => node.getAttribute("aria-valuenow") ?? node.value ?? null,
+      )
+      .catch(() => null);
+  const before = await readValue();
   const info = await el.evaluate((node) => {
     const rect = node.getBoundingClientRect();
     if (node instanceof HTMLInputElement && node.type === "range") {
@@ -370,7 +476,9 @@ async function drag(page, selector) {
     await sleep(16);
   }
   await page.mouse.up();
-  return null;
+  const after = await readValue();
+  const moved = dragProblem(before, after);
+  return moved.length ? moved[0] : null;
 }
 
 async function changeInput(page, def) {
@@ -393,7 +501,15 @@ async function changeInput(page, def) {
   return null;
 }
 
-async function runOne(browser, o, def, width, pass, reduce, withVideo) {
+async function runOneUnguarded(
+  browser,
+  o,
+  def,
+  width,
+  pass,
+  reduce,
+  withVideo,
+) {
   const height = width === 390 ? 844 : 900;
   const ctxOpts = {
     viewport: { width, height },
@@ -424,12 +540,16 @@ async function runOne(browser, o, def, width, pass, reduce, withVideo) {
     auto: pass === "load",
   });
   const notes = [];
+  /* Anything here fails the run: the page was not the page, or the pass did not
+     do what it claims to. Notes are for what is merely worth knowing. */
+  const problems = [];
   let stat;
   let frames = [];
   try {
-    await page.goto(new URL(def.path, o.base).href, {
+    const response = await page.goto(new URL(def.path, o.base).href, {
       waitUntil: "domcontentloaded",
     });
+    const status = response ? response.status() : null;
     if (pass === "load") {
       /* At least 4 s, then until the root has held its height for 1 s, so a
          slow mount (a cold polyfill chunk on a busy machine) is measured as the
@@ -454,7 +574,7 @@ async function runOne(browser, o, def, width, pass, reduce, withVideo) {
     } else {
       await page.waitForLoadState("networkidle").catch(() => {});
       if (!(await waitForRest(page, def.root)))
-        notes.push("page never reached rest before the interaction");
+        problems.push("page never reached rest before the interaction");
       if (def.noGrowth || (!def.preset && !def.click && !def.drag)) {
         notes.push(def.presetNote ?? "no interaction");
         frames = [];
@@ -464,18 +584,31 @@ async function runOne(browser, o, def, width, pass, reduce, withVideo) {
       } else {
         await page.evaluate(() => window.__grow.start());
         const skip1 = await changeInput(page, def);
-        if (skip1) notes.push(`input change skipped: ${skip1}`);
-        else if (def.presetNote) notes.push(def.presetNote);
+        problems.push(...skippedProblem("the input change", skip1));
+        if (!skip1 && def.presetNote) notes.push(def.presetNote);
         await sleep(INTERACT_MS);
         if (def.drag) {
           const skip2 = await drag(page, def.drag);
-          if (skip2) notes.push(`drag skipped: ${skip2}`);
+          problems.push(...skippedProblem("the drag", skip2));
           await sleep(INTERACT_MS);
         } else notes.push("no drag handle");
         frames = await page.evaluate(() => window.__grow.stop());
       }
     }
     stat = stats(frames);
+    stat.unpainted = await page.evaluate(() => window.__grow.unpainted);
+    const rootFound = await page.evaluate(
+      (sel) => !!document.querySelector(sel),
+      def.root,
+    );
+    problems.push(
+      ...pageProblems({
+        status,
+        rootSelector: def.root,
+        rootFound,
+        frames: frames.length,
+      }),
+    );
     const rest = await growsAtRest(page);
     stat.growCount = rest.count;
     stat.atRest = rest.bad === 0;
@@ -496,19 +629,46 @@ async function runOne(browser, o, def, width, pass, reduce, withVideo) {
     }
     await context.close().catch(() => {});
   }
-  return { ...stat, notes };
+  return { ...stat, notes, problems, rawFrames: frames };
+}
+
+/* A run that throws (a page or browser closed under it) is a failed run with a
+   row of its own, not a crash that leaves no results at all. */
+async function runOne(...args) {
+  try {
+    return await runOneUnguarded(...args);
+  } catch (error) {
+    return {
+      frames: 0,
+      firstH: 0,
+      finalH: 0,
+      growth: 0,
+      maxJump: 0,
+      maxPer60: 0,
+      rawMaxJump: 0,
+      over48: 0,
+      mainMaxJump: 0,
+      medianDt: 0,
+      growingSeen: false,
+      growCount: 0,
+      atRest: false,
+      unpainted: 0,
+      notes: [],
+      problems: crashProblem(error),
+    };
+  }
 }
 
 function mdTable(results, reduceMode) {
   const head = reduceMode
     ? "| page | browser | width | pass | growth | max jump | >48 px | final H | at rest | data-growing seen | verdict |"
-    : "| page | browser | width | pass | growth | max jump | px at 60 Hz | >48 px | final H | ref H | match | at rest | median dt | verdict |";
+    : "| page | browser | width | pass | growth | max jump | px at 60 Hz | >48 px | final H | ref H | match | at rest | median dt | raw max jump | verdict |";
   const sep = head.replace(/[^|]+/g, (m) => "-".repeat(Math.max(3, m.length)));
   const f = (n) => (Math.round(n * 10) / 10).toString();
   const rows = results.map((r) =>
     reduceMode
       ? `| ${r.slug} | ${r.browser} | ${r.width} | ${r.pass} | ${f(r.growth)} | ${f(r.maxJump)} | ${r.over48} | ${f(r.finalH)} | ${r.atRest ? "yes" : "NO"} | ${r.growingSeen ? "YES" : "no"} | ${r.ok ? "ok" : "FAIL: " + r.failures.join("; ")} |`
-      : `| ${r.slug} | ${r.browser} | ${r.width} | ${r.pass} | ${f(r.growth)} | ${f(r.maxJump)} | ${f(r.maxPer60)} | ${r.over48} | ${f(r.finalH)} | ${r.refH == null ? "n/a" : f(r.refH)} | ${r.finalMatch == null ? "n/a" : r.finalMatch ? "yes" : "NO"} | ${r.atRest ? "yes" : "NO"} | ${f(r.medianDt)} ms | ${r.ok ? "ok" : "FAIL: " + r.failures.join("; ")} |`,
+      : `| ${r.slug} | ${r.browser} | ${r.width} | ${r.pass} | ${f(r.growth)} | ${f(r.maxJump)} | ${f(r.maxPer60)} | ${r.over48} | ${f(r.finalH)} | ${r.refH == null ? "n/a" : f(r.refH)} | ${r.finalMatch == null ? "n/a" : r.finalMatch ? "yes" : "NO"} | ${r.atRest ? "yes" : "NO"} | ${f(r.medianDt)} ms | ${f(r.rawMaxJump ?? 0)} | ${r.ok ? "ok" : "FAIL: " + r.failures.join("; ")} |`,
   );
   return [head, sep, ...rows].join("\n");
 }
@@ -536,9 +696,7 @@ async function main() {
       for (const width of o.widths) {
         for (const def of pages) {
           for (const pass of ["load", "interaction"]) {
-            if (def.slug === "zoned-earth" && pass === "interaction") {
-              /* Nothing to interact with; the load pass carries the zero-growth check. */
-            }
+            let refProblems = [];
             let refH = refs.get(key(name, width, def.slug, pass)) ?? null;
             if (!o.reduce && refH == null) {
               const ref = await runOne(
@@ -551,6 +709,7 @@ async function main() {
                 false,
               );
               refH = ref.finalH;
+              refProblems = ref.problems;
               refs.set(key(name, width, def.slug, pass), refH);
             }
             let r = await runOne(
@@ -580,15 +739,20 @@ async function main() {
                 false,
               );
               refH = again.finalH;
+              refProblems = again.problems;
               r = await runOne(browser, o, def, width, pass, false, false);
               r.notes.push("final height re-measured after a mismatch");
             }
-            const failures = [];
-            // Reduced motion is the reference: its heights snap by design.
-            if (!o.reduce && r.maxJump > JUMP_LIMIT_PX)
-              failures.push(
-                `max jump ${Math.round(r.maxJump)} px > ${JUMP_LIMIT_PX}`,
-              );
+            const failures = [
+              ...r.problems,
+              ...refProblems.map((p) => `reduced-motion reference: ${p}`),
+              ...jumpProblems({
+                maxJump: r.maxJump,
+                mainMaxJump: r.mainMaxJump,
+                limit: JUMP_LIMIT_PX,
+                reduce: o.reduce,
+              }),
+            ];
             if (!r.atRest) failures.push("a .gmt-grow is not at rest");
             const finalMatch =
               refH == null || o.reduce
@@ -600,6 +764,18 @@ async function main() {
               failures.push(`grew ${Math.round(r.growth)} px`);
             if (o.reduce && r.growingSeen)
               failures.push("[data-growing] appeared under reduced motion");
+            if (o.frames) {
+              await mkdir(path.join(o.out, "frames"), { recursive: true });
+              await writeFile(
+                path.join(
+                  o.out,
+                  "frames",
+                  `${name}-${width}-${def.slug}-${pass}.json`,
+                ),
+                JSON.stringify(r.rawFrames),
+              );
+            }
+            delete r.rawFrames;
             const row = {
               slug: def.slug,
               browser: name,
@@ -619,7 +795,7 @@ async function main() {
         }
       }
     } finally {
-      await browser.close();
+      await browser.close().catch(() => {});
     }
   }
 
@@ -640,6 +816,9 @@ async function main() {
     JSON.stringify({ meta, results }, null, 2),
   );
   const failed = results.filter((r) => !r.ok);
+  // Zero runs would otherwise print "all 0 runs passed".
+  const empty = emptyRunProblem(results.length, "runs");
+  if (empty) failed.push({ slug: "(none)" });
   const md = [
     `# Growth measurement`,
     ``,
@@ -647,12 +826,15 @@ async function main() {
     ``,
     mdTable(results, o.reduce),
     ``,
-    failed.length
-      ? `${failed.length} of ${results.length} runs failed.`
-      : `All ${results.length} runs passed.`,
+    empty
+      ? `FAIL: ${empty}`
+      : failed.length
+        ? `${failed.length} of ${results.length} runs failed.`
+        : `All ${results.length} runs passed.`,
     ``,
   ].join("\n");
   await writeFile(path.join(o.out, `results${suffix}.md`), md);
+  if (empty) console.error(empty);
   console.log(
     `\n${failed.length ? failed.length + " of " + results.length + " runs failed" : "all " + results.length + " runs passed"}`,
   );

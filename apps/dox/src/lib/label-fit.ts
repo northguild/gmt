@@ -87,6 +87,21 @@ export function pickLabelLeft(
 // jsdom and a hidden widget keep every label.
 // ---------------------------------------------------------------------------
 
+/**
+ * An element's width in layout pixels, which is what a track's `clientWidth` is
+ * measured in.
+ *
+ * `getBoundingClientRect().width` is the width after any transform on the
+ * element or an ancestor, and a widget's numbered cards enter by scaling from
+ * 92% (`widget-enter.ts`) just as the first render is fitting its labels. A
+ * label measured at 92% fits where it will not once the card is full size, and
+ * nothing refits when the entrance ends. `offsetWidth` ignores transforms; the
+ * rect is the fallback for an element with no layout box of its own.
+ */
+export function layoutWidth(el: HTMLElement): number {
+  return el.offsetWidth || el.getBoundingClientRect().width;
+}
+
 /** Hide the tick labels in `row` that would collide with an earlier one or
  *  run past the row's edge. Re-measures from scratch each call. */
 export function thinTickLabels(
@@ -98,18 +113,30 @@ export function thinTickLabels(
   for (const t of ticks) t.hidden = false;
   if (row.clientWidth === 0) return;
   const rowRect = row.getBoundingClientRect();
+  /* Rects are in screen pixels; the row's `clientWidth` and the gap are layout
+     pixels. Any transform on the row's ancestors (an entrance in progress)
+     scales both rects equally, so the row's own ratio undoes it. */
+  const scale = rowRect.width > 0 ? rowRect.width / row.clientWidth : 1;
   const spans = ticks.map((t) => {
     const r = t.getBoundingClientRect();
-    return { left: r.left - rowRect.left, right: r.right - rowRect.left };
+    return {
+      left: (r.left - rowRect.left) / scale,
+      right: (r.right - rowRect.left) / scale,
+    };
   });
   thinSpans(spans, gap, row.clientWidth).forEach((keep, i) => {
     ticks[i]!.hidden = !keep;
   });
 }
 
-/** Call `fn` when `el`'s width changes; stops once `el` leaves the document. */
-export function onWidthChange(el: HTMLElement, fn: () => void): void {
-  if (typeof ResizeObserver === "undefined") return;
+/**
+ * Call `fn` when `el`'s width changes; stops once `el` leaves the document.
+ * Returns a disposer, which a mount calls from its `destroy` so the observer
+ * does not outlive the widget while the element is still attached (a rail that
+ * keeps the host between widgets, a StrictMode remount). Safe to call twice.
+ */
+export function onWidthChange(el: HTMLElement, fn: () => void): () => void {
+  if (typeof ResizeObserver === "undefined") return () => {};
   let last = el.clientWidth;
   const observer = new ResizeObserver(() => {
     if (!el.isConnected) {
@@ -122,4 +149,5 @@ export function onWidthChange(el: HTMLElement, fn: () => void): void {
     fn();
   });
   observer.observe(el);
+  return () => observer.disconnect();
 }

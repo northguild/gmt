@@ -32,14 +32,24 @@
  * Rects are measured from the widget root's corner, so the page scrolling to
  * keep a focused handle in view is not a move. Every rect is rounded to the
  * whole pixel and compared with the first recording (the control at its minimum). The script exits non-zero if any
- * differs, and prints the element, the step and the two rects. A custom
+ * differs, and prints the element, the step and the two rects.
+ *
+ * A pass must also have checked something. The script fails when:
+ *   - the page does not answer HTTP 200 or the widget root is missing;
+ *   - a required control is missing or hidden (`handle-early` and
+ *     `handle-compare` are optional: a preset may not show them);
+ *   - a keyboard sweep or a pointer drag leaves the control's value where it
+ *     started, since identical snapshots prove nothing about a handle that did
+ *     not move;
+ *   - no drag was checked at all (an `--only` typo exits 2). A custom
  * `role="slider"` handle slides along its track by design, so for a handle only
  * the top, width and height are compared, and not at all while the pointer
  * holds it (it grows 8% when pressed); a native range is compared whole.
  *
  * Widths: each `--widths` entry is a viewport width (default 1440,390). Each
  * widget root is also forced to 360 and 300 px wide at a 1440 viewport, the
- * widths of the /dox rail.
+ * widths of the /dox rail. With the default browsers (Chromium and WebKit) that
+ * is the documented gate in context/dox/built.md: 1440, 390, 360 and 300 px.
  *
  * Serve a build statically first (never `astro dev` on 4321, never the owner's
  * dev server), for example:
@@ -57,6 +67,12 @@
  */
 
 import { chromium, webkit } from "@playwright/test";
+import {
+  controlPresence,
+  emptyRunProblem,
+  keyboardMoveProblems,
+  pointerMoveProblems,
+} from "./gate-checks.mjs";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -64,10 +80,20 @@ const opt = (name, fallback) => {
   return i === -1 ? fallback : (args[i + 1] ?? fallback);
 };
 const BASE = opt("base", "http://127.0.0.1:48291").replace(/\/$/, "");
-const BROWSERS = opt("browsers", "chromium").split(",");
+const BROWSERS = opt("browsers", "chromium,webkit").split(",");
 const WIDTHS = opt("widths", "1440,390").split(",").map(Number);
 const ONLY = opt("only", "").split(",").filter(Boolean);
 const KEYBOARD_ONLY = args.includes("--keyboard-only");
+if (!BROWSERS.every((b) => b === "chromium" || b === "webkit")) {
+  console.error(
+    `Unsupported --browsers "${BROWSERS.join(",")}": only chromium and webkit run here.`,
+  );
+  process.exit(2);
+}
+if (!WIDTHS.length || WIDTHS.some((w) => !Number.isFinite(w) || w <= 0)) {
+  console.error("--widths needs positive numbers, e.g. 1440,390");
+  process.exit(2);
+}
 const FORCED_ROOTS = [360, 300];
 const POINTER_STEPS = 20;
 const MAX_KEYS = 400;
@@ -82,17 +108,18 @@ const TOOLS = [
       "arrival-at-to",
       "fall-back-hourly",
     ],
-    controls: ['[data-role="handle-after"]'],
+    controls: [{ sel: '[data-role="handle-after"]' }],
     track: '[data-role="rail-stage"]',
   },
   {
     slug: "punctuality-board",
     root: ".gmt-punctuality-board",
     presets: ["fifteen-minute", "sixty-and-120", "day-based", "fall-back"],
+    // The early and second-late handles appear only in presets that use them.
     controls: [
-      '[data-role="handle-late"]',
-      '[data-role="handle-early"]',
-      '[data-role="handle-compare"]',
+      { sel: '[data-role="handle-late"]' },
+      { sel: '[data-role="handle-early"]', optional: true },
+      { sel: '[data-role="handle-compare"]', optional: true },
     ],
     track: '[data-role="tolerance-track"]',
   },
@@ -100,7 +127,7 @@ const TOOLS = [
     slug: "eta-drift",
     root: ".gmt-eta-drift",
     presets: ["vessel-slide", "est-after-act", "req-beats-est", "one-estimate"],
-    controls: ['[data-role="tolerance-slider"]'],
+    controls: [{ sel: '[data-role="tolerance-slider"]' }],
     track: null,
   },
 ];
@@ -199,13 +226,34 @@ function diffSnapshots(base, now, isHandle, pressed = false) {
 async function valueOf(page, sel) {
   return page.evaluate((s) => {
     const el = document.querySelector(s);
+    /* The Departure Board's handle reports its position on a rail that is
+       refitted after each key, so the same aria-valuenow can mean different
+       arrivals; the value it edits is the arrival field. */
+    if (el.getAttribute("data-role") === "handle-after") {
+      const field = document.querySelector('[data-role="after"]');
+      if (field) return field.value;
+    }
     return el.getAttribute("aria-valuenow") ?? el.value;
   }, sel);
 }
 
 async function run() {
+  const unknown = ONLY.filter((slug) => !TOOLS.some((t) => t.slug === slug));
+  const tools = TOOLS.filter((t) => !ONLY.length || ONLY.includes(t.slug));
+  if (unknown.length || !tools.length) {
+    console.error(
+      `--only ${unknown.length ? `"${unknown.join(",")}" matches no tool` : "matched no tool"}; known: ${TOOLS.map((t) => t.slug).join(", ")}`,
+    );
+    process.exit(2);
+  }
   let failures = 0;
   const summary = [];
+  /** A failure that is not a measured move: the page or a control was not there. */
+  const fail = (id, message) => {
+    failures++;
+    summary.push({ id, ok: false, problems: [message] });
+    console.log(`FAIL ${id}: ${message}`);
+  };
   for (const name of BROWSERS) {
     const browser = await (name === "webkit" ? webkit : chromium).launch();
     const variants = [
@@ -217,11 +265,25 @@ async function run() {
         viewport: { width: v.viewport, height: 900 },
       });
       const page = await context.newPage();
-      for (const tool of TOOLS) {
-        if (ONLY.length && !ONLY.includes(tool.slug)) continue;
-        await page.goto(`${BASE}/tools/${tool.slug}/`, {
+      for (const tool of tools) {
+        const where = `${name} ${v.root ? `root${v.root}` : v.viewport} ${tool.slug}`;
+        const response = await page.goto(`${BASE}/tools/${tool.slug}/`, {
           waitUntil: "networkidle",
         });
+        const status = response ? response.status() : null;
+        if (status !== 200) {
+          fail(
+            where,
+            status == null
+              ? "no HTTP response for the page"
+              : `the page answered HTTP ${status}, not 200 (wrong --base?)`,
+          );
+          continue;
+        }
+        if (!(await page.locator(tool.root).count())) {
+          fail(where, `widget root ${tool.root} matched nothing on the page`);
+          continue;
+        }
         await page.addStyleTag({
           content:
             "header, .header, starlight-menu-button, .sl-banner, mobile-starlight-toc { display: none !important; }" +
@@ -232,16 +294,18 @@ async function run() {
         for (const preset of tool.presets) {
           await page.selectOption('[data-role="preset"]', preset);
           await page.waitForTimeout(1500);
-          for (const sel of tool.controls) {
+          for (const { sel, optional } of tool.controls) {
             const visible = await page.evaluate((s) => {
               const el = document.querySelector(s);
               return (
                 !!el && !el.closest("[hidden]") && el.offsetParent !== null
               );
             }, sel);
-            if (!visible) continue;
             const isHandle = !sel.includes("slider");
-            const id = `${name} ${v.root ? `root${v.root}` : v.viewport} ${tool.slug} ${preset} ${sel.match(/"(.+)"/)[1]}`;
+            const id = `${where} ${preset} ${sel.match(/"(.+)"/)[1]}`;
+            const presence = controlPresence({ visible, optional, id });
+            for (const message of presence.problems) fail(id, message);
+            if (!presence.proceed) continue;
             const result = { keyboard: 0, pointer: 0, problems: [] };
             const check = async (step, base, pressed = false) => {
               const now = await snapshot(page, sel);
@@ -254,6 +318,8 @@ async function run() {
             await page.locator(sel).focus();
             await page.keyboard.press("Home");
             const base = await snapshot(page, sel);
+            const homeValue = await valueOf(page, sel);
+            const seen = { up: [], down: [] };
             for (const key of ["PageUp", "PageDown"]) {
               let last = await valueOf(page, sel);
               for (let i = 0; i < MAX_KEYS; i++) {
@@ -261,9 +327,17 @@ async function run() {
                 const value = await valueOf(page, sel);
                 await check(`${key} #${i + 1} (value ${value})`, base);
                 result.keyboard++;
+                seen[key === "PageUp" ? "up" : "down"].push(value);
                 if (value === last) break;
                 last = value;
               }
+            }
+            // Identical snapshots prove nothing if the handle never moved.
+            for (const p of keyboardMoveProblems({
+              home: homeValue,
+              ...seen,
+            })) {
+              result.problems.push(`keyboard: ${p}`);
             }
             await page.keyboard.press("Home");
 
@@ -285,6 +359,7 @@ async function run() {
                 { s: sel, t: tool.track },
               );
               const startX = isHandle ? box.x : box.left + 8;
+              const pointerStart = await valueOf(page, sel);
               await page.mouse.move(startX, box.y);
               await page.mouse.down();
               const far = box.right - 2;
@@ -296,6 +371,12 @@ async function run() {
                 );
                 await check(`drag out ${i}/${POINTER_STEPS}`, base, true);
                 result.pointer++;
+              }
+              for (const p of pointerMoveProblems({
+                start: pointerStart,
+                far: await valueOf(page, sel),
+              })) {
+                result.problems.push(`pointer: ${p}`);
               }
               for (let i = 1; i <= POINTER_STEPS; i++) {
                 await page.mouse.move(
@@ -313,7 +394,7 @@ async function run() {
             summary.push({ id, ...result, ok });
             console.log(
               `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
-                (ok ? "" : `, ${result.problems.length} moved`),
+                (ok ? "" : `, ${result.problems.length} problem(s)`),
             );
             for (const p of result.problems.slice(0, 6))
               console.log(`       ${p}`);
@@ -329,9 +410,11 @@ async function run() {
   }
   const bad = summary.filter((s) => !s.ok).length;
   console.log(
-    `\nreadout-still: ${summary.length} drags checked, ${bad} moved something.`,
+    `\nreadout-still: ${summary.length} drags checked, ${bad} failed.`,
   );
-  process.exit(failures === 0 ? 0 : 1);
+  const empty = emptyRunProblem(summary.length, "drags");
+  if (empty) console.error(empty);
+  process.exit(failures === 0 && !empty ? 0 : 1);
 }
 
 run().catch((error) => {

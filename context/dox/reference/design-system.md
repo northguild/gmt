@@ -180,33 +180,58 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 `Head.astro` attaches it to every page.
 
 - **`smoothHeight(outer, signal?)`** watches the outer's one child (the inner box) with one shared
-  `ResizeObserver`. On a height change it pins the outer at its current height, forces layout, and
-  sets the new height with `data-growing`; the CSS transition eases it, and cleanup returns the
-  outer to `height: auto`. At rest there is no inline height and no `data-growing`.
+  `ResizeObserver`. On a height change it pins the outer at the height the reader last saw and sets
+  `data-growing` (which clips it); a frame loop then walks the pinned height to the inner's height,
+  and cleanup returns the outer to `height: auto`. At rest there is no inline height and no
+  `data-growing`. There is no CSS transition: a transition is a function of time, so one late frame
+  moves the box by everything it missed, and one dropped frame doubles the step.
 - **`smoothHeights(scope, signal?)`** wraps every widget section after the first in a
   `.gmt-grow-inner` box, and every `[data-grow="slot"]` element in a `.gmt-grow-slot` wrapper. It
   attaches static hosts such as the Zone Planner's. It is idempotent, keeps node identity, and does
   nothing without `ResizeObserver`.
 - **`data-grow="off"`** on a section leaves it unwrapped. **`data-grow="slot"`** wraps that one
   element, in any section including section 1. Never put it on a control or a popover host.
-- **One speed budget.** Every box moving in a frame shares a duration,
-  `clamp(120 ms, 0.6 ms per px of total distance, --gmt-grow-max)`, and a box already easing is
-  retargeted with the new ones. A tall grow therefore runs for longer, not faster.
-- **Snap, not ease,** under `prefers-reduced-motion`, while a `[aria-expanded="true"]` list is
-  open inside, when a nested `.gmt-grow` is animating, and on a real resize (the window's
-  `innerWidth` changed). A scrollbar appearing is not a resize.
+- **One step budget.** Each frame a box covers `1 - exp(-dt / 50 ms)` of what is left (an ease-out
+  with no duration, so a retarget never restarts it), and the boxes that move the page, together,
+  never move more than `STEP_BUDGET_PX` (40 px, under the 48 px gate) in a frame, however late the
+  frame is. A tall grow, or a slow frame, therefore lasts longer instead of jumping. A box inside a
+  moving box does not move the page and takes the same scale as the box around it.
+- **Heights are read live, deepest box first.** A slot is pinned before the section around it reads
+  its height, so a section whose slot is easing sees only the change the slot does not account for:
+  it follows the slot, and eases anything else. A section already moving keeps heading for the
+  inner's height when a slot inside it starts to ease; it is never snapped.
+- **Snap, not ease,** under `prefers-reduced-motion`, while the page is hidden, while a
+  `[aria-expanded="true"]` list is open inside, and on a real resize (the window's `innerWidth`
+  changed). A scrollbar appearing is not a resize.
 - **`content-box`.** Starlight's reset is `border-box` and a later section has padding and a
   border, so a `border-box` outer would sit 17 px short of the inner's height.
-- **Tokens** (`gmt-tokens.css`): `--gmt-grow-easing` and `--gmt-grow-max`.
+- **No tokens.** The constants (`STEP_BUDGET_PX`, `FOLLOW_TAU_MS`, `SETTLE_PX`, `MAX_GROW_MS`) are in
+  `smooth-height.ts` and are pinned by its tests.
 - **Gate:** `pnpm run grow:measure`.
 
 ## Entrance
 
 The site has one arrival gesture: a fade from 92% scale over 0.5 s on the spring curve, first
-performed by the globe. The globe canvas, the globe's zone list, the Crossing Clock's two faces and the `/dox`
-crystal all use it.
-A landmark visual that appears once its content is ready uses it; nothing else does, and it never
-replays on a value change.
+performed by the globe. Five things use it: the globe canvas, the globe's zone list, the Crossing
+Clock's two faces, the `/dox` crystal, and every numbered card of a tool widget.
+A landmark visual that appears once its content is ready uses it, and so does each card of a
+teaching widget; nothing else does, and it never replays on a value change.
+
+- **Numbered cards** (`lib/widget-enter.ts`): `enterWidgetSections(scope)` calls `enter()` on each
+  `.gmt-widget-section` that is a direct child of a `.gmt-widget-card`, staggered 70 ms apart in
+  document order. The stagger restarts per card, so two widgets on one page do not compound. Head.astro
+  runs it over the document after `smoothHeights`, and `MountedWidget.tsx` runs it over the chat
+  rail's widget root, so a tool page and the rail behave alike. A section nested deeper (inside a
+  `.gmt-grow` wrapper) or outside any card does not enter. Only `transform` and `opacity` move, so
+  the entrance never changes a page's height and stays clear of `smoothHeight`'s height easing and
+  the height budget `grow:measure` asserts.
+- **First-paint hold.** A server-rendered card would paint visible and then drop out for its entrance
+  if `.gmt-enter` only arrived with the module script. `Head.astro` therefore runs a tiny inline
+  script that puts `gmt-enter-hold` on `<html>` before the first paint (not under reduced motion,
+  and not without JS), and `gmt-primitives.css` makes a direct-child numbered card that has not
+  entered transparent while the class is set. `releaseEntranceHold()` lifts it in the same task that
+  starts the entrances, so no frame can paint a card visible in between, and a 2 s timer lifts it if
+  the module script never runs.
 
 - **CSS** (`gmt-primitives.css`): the `gmt-enter` keyframes, the `.gmt-enter` class that plays
   them, and `[data-enter="pending"]`, which hides an element held for its moment.
