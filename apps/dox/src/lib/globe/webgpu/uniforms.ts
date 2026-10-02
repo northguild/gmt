@@ -46,6 +46,12 @@ export const UNIFORM_SLOTS = [
   "atmosphere",
   "haze",
   "label",
+  /** `(imageryWeight, casingWidthDev, vectorOverlay, imageryDuotone)`. The
+   *  weight is the theme's imagery opacity times the load reveal; the shader
+   *  applies the zoom fade. The overlay is the theme's share of the vector
+   *  land kept on top; the duotone how far the photo is recoloured. */
+  "imagery",
+  "casing",
   /* The region colours for the pass being drawn. Regions are composited a
      colour-group at a time (see `renderer-webgpu.ts`), so these change between
      passes within one frame rather than once per frame like the rest. */
@@ -91,6 +97,14 @@ export interface UniformInput {
   limbWidthCss: number;
   /** How far the atmosphere glow reaches past the limb, as a multiple of R. */
   atmosphereReach: number;
+  /**
+   * How much of the Earth imagery to show before the zoom fade, 0..1: the
+   * theme's opacity times how far the reveal has run, and 0 until the image
+   * has loaded.
+   */
+  imagery: number;
+  /** Width of the casing round markers and region outlines, in CSS pixels. */
+  casingWidthCss: number;
   /** Colours for the region group in this pass; omitted means draw no region. */
   regionFill?: Rgba;
   regionStroke?: Rgba;
@@ -153,6 +167,14 @@ export function writeUniforms(
   colour("atmosphere", theme.atmosphere);
   colour("haze", theme.haze);
   colour("label", theme.label);
+  put(
+    "imagery",
+    input.imagery,
+    input.casingWidthCss * input.dpr,
+    input.theme.vectorOverlay,
+    input.theme.imageryDuotone,
+  );
+  colour("casing", theme.casing);
   colour("regionFill", input.regionFill ?? TRANSPARENT);
   colour("regionStroke", input.regionStroke ?? TRANSPARENT);
 }

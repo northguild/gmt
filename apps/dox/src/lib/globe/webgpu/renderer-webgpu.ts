@@ -13,6 +13,8 @@
  *    changes: the once-a-second clock tick moves the sun, not the land.
  * 2. **Surface**, one full-screen quad, compositing everything the sphere is made
  *    of in the canvas-2D renderer's order and reading the coverage channels.
+ *    Where the theme asks for it, the Earth imagery (#293) replaces the flat
+ *    ocean and land, fading back to them as the reader zooms in.
  * 3. **Markers and labels**, instanced screen-space quads.
  *
  * Regions are drawn a colour group at a time, because the coverage target holds
@@ -41,11 +43,16 @@ import type {
   Rgba,
 } from "../types";
 import { greatCirclePoints } from "../geometry";
+import { CASING_CSS, LABEL_OFFSET_X, labelRingShift } from "../casing";
+import { LABEL_MAX_ZOOM } from "../shading";
+import { acquireDevice, createCheckedShaderModule } from "./device";
 import {
-  acquireDevice,
-  createCheckedShaderModule,
-  withValidation,
-} from "./device";
+  acquireImagery,
+  IMAGERY_FORMAT,
+  IMAGERY_SAMPLER,
+  imageryReveal,
+  type ImageryHandle,
+} from "./imagery";
 import { buildLabelAtlas, type LabelAtlas } from "./label-atlas";
 import {
   fillShader,
@@ -71,18 +78,15 @@ const LIMB_STROKE_CSS = 1;
 /** How far the atmosphere glow reaches past the limb, as a multiple of R. */
 const ATMOSPHERE_REACH = 1.06;
 
-/** Above this zoom, labels become clutter and are dropped. */
-const LABEL_MAX_ZOOM = 2.5;
-
-/** Where a label sits relative to its marker, in CSS pixels. */
-const LABEL_OFFSET_X = 6;
+/** Where a label's box sits above its marker, in CSS pixels; `LABEL_OFFSET_X`
+ *  (../casing.ts) places it to the right. */
 const LABEL_OFFSET_Y = -7;
 
 /** Floats per marker instance — see `markerShader`'s vertex inputs. */
 const MARKER_FLOATS = 14;
 
 /** Floats per label instance — see `labelShader`'s vertex inputs. */
-const LABEL_FLOATS = 10;
+const LABEL_FLOATS = 11;
 
 /** One-hot channel masks, in the order the shaders document. */
 const CHANNEL_LAND_FILL = [1, 0, 0, 0];
@@ -146,38 +150,37 @@ export async function createWebgpuRenderer(
   init.host.appendChild(canvas);
 
   // --- shaders and pipelines ----------------------------------------------
-  const modules = await withValidation(
-    device,
-    "globe shader modules",
-    async () => ({
-      surface: await createCheckedShaderModule(
-        device,
-        "globe-surface",
-        surfaceShader(),
-      ),
-      overlay: await createCheckedShaderModule(
-        device,
-        "globe-region-overlay",
-        regionOverlayShader(),
-      ),
-      fill: await createCheckedShaderModule(device, "globe-fill", fillShader()),
-      stroke: await createCheckedShaderModule(
-        device,
-        "globe-stroke",
-        strokeShader(),
-      ),
-      marker: await createCheckedShaderModule(
-        device,
-        "globe-marker",
-        markerShader(),
-      ),
-      label: await createCheckedShaderModule(
-        device,
-        "globe-label",
-        labelShader(),
-      ),
-    }),
-  );
+  /* Each module checks itself, with a scope it pops before awaiting the
+     compiler, so no scope is ever held open across these awaits — see
+     `withValidation` in ./device.ts for why that matters on a shared device. */
+  const modules = {
+    surface: await createCheckedShaderModule(
+      device,
+      "globe-surface",
+      surfaceShader(),
+    ),
+    overlay: await createCheckedShaderModule(
+      device,
+      "globe-region-overlay",
+      regionOverlayShader(),
+    ),
+    fill: await createCheckedShaderModule(device, "globe-fill", fillShader()),
+    stroke: await createCheckedShaderModule(
+      device,
+      "globe-stroke",
+      strokeShader(),
+    ),
+    marker: await createCheckedShaderModule(
+      device,
+      "globe-marker",
+      markerShader(),
+    ),
+    label: await createCheckedShaderModule(
+      device,
+      "globe-label",
+      labelShader(),
+    ),
+  };
 
   /** Straight source-over on a premultiplied target. */
   const premultipliedBlend: GPUBlendState = {
@@ -199,130 +202,128 @@ export async function createWebgpuRenderer(
     alpha: { operation: "max", srcFactor: "one", dstFactor: "one" },
   };
 
-  const pipelines = await withValidation(
-    device,
-    "globe pipelines",
-    async () => ({
-      fill: await device.createRenderPipelineAsync({
-        label: "globe-fill",
-        layout: "auto",
-        vertex: {
-          module: modules.fill,
-          entryPoint: "vs",
-          buffers: [
-            {
-              arrayStride: 8,
-              attributes: [
-                { shaderLocation: 0, offset: 0, format: "float32x2" },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: modules.fill,
-          entryPoint: "fs",
-          targets: [{ format: COVERAGE_FORMAT, blend: maxBlend }],
-        },
-        multisample: { count: COVERAGE_SAMPLES },
-      }),
-      stroke: await device.createRenderPipelineAsync({
-        label: "globe-stroke",
-        layout: "auto",
-        vertex: {
-          module: modules.stroke,
-          entryPoint: "vs",
-          buffers: [
-            {
-              arrayStride: 16,
-              stepMode: "instance",
-              attributes: [
-                { shaderLocation: 0, offset: 0, format: "float32x2" },
-                { shaderLocation: 1, offset: 8, format: "float32x2" },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: modules.stroke,
-          entryPoint: "fs",
-          targets: [{ format: COVERAGE_FORMAT, blend: maxBlend }],
-        },
-        multisample: { count: COVERAGE_SAMPLES },
-      }),
-      surface: await device.createRenderPipelineAsync({
-        label: "globe-surface",
-        layout: "auto",
-        vertex: { module: modules.surface, entryPoint: "vs" },
-        fragment: {
-          module: modules.surface,
-          entryPoint: "fs",
-          // No blending: this is the first thing written to a cleared canvas.
-          targets: [{ format: canvasFormat }],
-        },
-      }),
-      overlay: await device.createRenderPipelineAsync({
-        label: "globe-region-overlay",
-        layout: "auto",
-        vertex: { module: modules.overlay, entryPoint: "vs" },
-        fragment: {
-          module: modules.overlay,
-          entryPoint: "fs",
-          targets: [{ format: canvasFormat, blend: premultipliedBlend }],
-        },
-      }),
-      marker: await device.createRenderPipelineAsync({
-        label: "globe-marker",
-        layout: "auto",
-        vertex: {
-          module: modules.marker,
-          entryPoint: "vs",
-          buffers: [
-            {
-              arrayStride: MARKER_FLOATS * 4,
-              stepMode: "instance",
-              attributes: [
-                { shaderLocation: 0, offset: 0, format: "float32x2" },
-                { shaderLocation: 1, offset: 8, format: "float32x2" },
-                { shaderLocation: 2, offset: 16, format: "float32x4" },
-                { shaderLocation: 3, offset: 32, format: "float32x4" },
-                { shaderLocation: 4, offset: 48, format: "float32x2" },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: modules.marker,
-          entryPoint: "fs",
-          targets: [{ format: canvasFormat, blend: premultipliedBlend }],
-        },
-      }),
-      label: await device.createRenderPipelineAsync({
-        label: "globe-label",
-        layout: "auto",
-        vertex: {
-          module: modules.label,
-          entryPoint: "vs",
-          buffers: [
-            {
-              arrayStride: LABEL_FLOATS * 4,
-              stepMode: "instance",
-              attributes: [
-                { shaderLocation: 0, offset: 0, format: "float32x2" },
-                { shaderLocation: 1, offset: 8, format: "float32x2" },
-                { shaderLocation: 2, offset: 16, format: "float32x2" },
-                { shaderLocation: 3, offset: 24, format: "float32x4" },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: modules.label,
-          entryPoint: "fs",
-          targets: [{ format: canvasFormat, blend: premultipliedBlend }],
-        },
-      }),
+  /* No error scope here: `createRenderPipelineAsync` reports a failure by
+     rejecting with a `GPUPipelineError`, which the shell already treats as
+     "use canvas-2D". */
+  const pipelines = {
+    fill: await device.createRenderPipelineAsync({
+      label: "globe-fill",
+      layout: "auto",
+      vertex: {
+        module: modules.fill,
+        entryPoint: "vs",
+        buffers: [
+          {
+            arrayStride: 8,
+            attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }],
+          },
+        ],
+      },
+      fragment: {
+        module: modules.fill,
+        entryPoint: "fs",
+        targets: [{ format: COVERAGE_FORMAT, blend: maxBlend }],
+      },
+      multisample: { count: COVERAGE_SAMPLES },
     }),
-  );
+    stroke: await device.createRenderPipelineAsync({
+      label: "globe-stroke",
+      layout: "auto",
+      vertex: {
+        module: modules.stroke,
+        entryPoint: "vs",
+        buffers: [
+          {
+            arrayStride: 16,
+            stepMode: "instance",
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: "float32x2" },
+              { shaderLocation: 1, offset: 8, format: "float32x2" },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: modules.stroke,
+        entryPoint: "fs",
+        targets: [{ format: COVERAGE_FORMAT, blend: maxBlend }],
+      },
+      multisample: { count: COVERAGE_SAMPLES },
+    }),
+    surface: await device.createRenderPipelineAsync({
+      label: "globe-surface",
+      layout: "auto",
+      vertex: { module: modules.surface, entryPoint: "vs" },
+      fragment: {
+        module: modules.surface,
+        entryPoint: "fs",
+        // No blending: this is the first thing written to a cleared canvas.
+        targets: [{ format: canvasFormat }],
+      },
+    }),
+    overlay: await device.createRenderPipelineAsync({
+      label: "globe-region-overlay",
+      layout: "auto",
+      vertex: { module: modules.overlay, entryPoint: "vs" },
+      fragment: {
+        module: modules.overlay,
+        entryPoint: "fs",
+        targets: [{ format: canvasFormat, blend: premultipliedBlend }],
+      },
+    }),
+    marker: await device.createRenderPipelineAsync({
+      label: "globe-marker",
+      layout: "auto",
+      vertex: {
+        module: modules.marker,
+        entryPoint: "vs",
+        buffers: [
+          {
+            arrayStride: MARKER_FLOATS * 4,
+            stepMode: "instance",
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: "float32x2" },
+              { shaderLocation: 1, offset: 8, format: "float32x2" },
+              { shaderLocation: 2, offset: 16, format: "float32x4" },
+              { shaderLocation: 3, offset: 32, format: "float32x4" },
+              { shaderLocation: 4, offset: 48, format: "float32x2" },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: modules.marker,
+        entryPoint: "fs",
+        targets: [{ format: canvasFormat, blend: premultipliedBlend }],
+      },
+    }),
+    label: await device.createRenderPipelineAsync({
+      label: "globe-label",
+      layout: "auto",
+      vertex: {
+        module: modules.label,
+        entryPoint: "vs",
+        buffers: [
+          {
+            arrayStride: LABEL_FLOATS * 4,
+            stepMode: "instance",
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: "float32x2" },
+              { shaderLocation: 1, offset: 8, format: "float32x2" },
+              { shaderLocation: 2, offset: 16, format: "float32x2" },
+              { shaderLocation: 3, offset: 24, format: "float32x4" },
+              { shaderLocation: 4, offset: 40, format: "float32" },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: modules.label,
+        entryPoint: "fs",
+        targets: [{ format: canvasFormat, blend: premultipliedBlend }],
+      },
+    }),
+  };
 
   // --- uniforms ------------------------------------------------------------
   const uniformData = new Float32Array(UNIFORM_BYTES / 4);
@@ -331,6 +332,19 @@ export async function createWebgpuRenderer(
     size: UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+
+  // --- imagery -------------------------------------------------------------
+  /* The surface pass always binds an imagery texture. Until the real one has
+     loaded — or for good, if it never does — that is a 1×1 placeholder, and
+     the uniform weight of 0 keeps the shader from showing it. */
+  const imageryPlaceholder = device.createTexture({
+    label: "globe-imagery-placeholder",
+    size: [1, 1],
+    format: IMAGERY_FORMAT,
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const imageryPlaceholderView = imageryPlaceholder.createView();
+  const imagerySampler = device.createSampler(IMAGERY_SAMPLER);
 
   /** One small buffer per coverage layer: the channel mask and a stroke width. */
   function makeLayerBuffer(label: string, mask: readonly number[]): GPUBuffer {
@@ -472,6 +486,12 @@ export async function createWebgpuRenderer(
   let labelGroup: GPUBindGroup | null = null;
   let atlasLabels = "";
 
+  /** The loaded imagery, once it has arrived. */
+  let imagery: ImageryHandle | null = null;
+  let imageryRequested = false;
+  /** When the first frame with the imagery was drawn, for the fade-in. */
+  let imageryShownAt: number | null = null;
+
   /** What the coverage target was last drawn for; unchanged means reuse it. */
   let coverageKey = "";
   let destroyed = false;
@@ -543,13 +563,7 @@ export async function createWebgpuRenderer(
     resolveView = coverageTexture.createView();
     coverageView = coverageTexture.createView();
 
-    surfaceGroup = device.createBindGroup({
-      layout: pipelines.surface.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: coverageView },
-      ],
-    });
+    rebuildSurfaceGroup();
     overlayGroup = device.createBindGroup({
       layout: pipelines.overlay.getBindGroupLayout(0),
       entries: [
@@ -565,6 +579,58 @@ export async function createWebgpuRenderer(
     geometryDirty = true;
     coverageKey = "";
     rebuildLabels();
+  }
+
+  /** The surface pass's bindings: uniforms, coverage, and the imagery. */
+  function rebuildSurfaceGroup(): void {
+    if (!coverageView) return;
+    surfaceGroup = device.createBindGroup({
+      layout: pipelines.surface.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: coverageView },
+        { binding: 2, resource: imagery?.view ?? imageryPlaceholderView },
+        { binding: 3, resource: imagerySampler },
+      ],
+    });
+  }
+
+  /**
+   * Start fetching the imagery the first time a theme asks for it.
+   *
+   * Never before: a theme with `imagery: 0` — raised contrast, forced colours —
+   * should not cost the reader a download it will never see. Not awaited
+   * either: the globe is interactive and drawing flat while the image is on
+   * its way, and fades it in when it lands.
+   */
+  function maybeLoadImagery(): void {
+    if (imageryRequested || !init.imageryUrl || theme.imagery <= 0) return;
+    imageryRequested = true;
+    acquireImagery(device, init.imageryUrl).then(
+      (handle) => {
+        if (destroyed || failed) {
+          handle.release();
+          return;
+        }
+        imagery = handle;
+        rebuildSurfaceGroup();
+        init.invalidate();
+      },
+      (error: unknown) => {
+        // The flat globe is the whole of the fallback; nothing else changes.
+        console.info(`globe: imagery unavailable (${String(error)})`);
+      },
+    );
+  }
+
+  /** The imagery weight before the zoom fade: theme opacity times the reveal. */
+  function imageryWeight(): number {
+    if (!imagery || theme.imagery <= 0) return 0;
+    const now = performance.now();
+    imageryShownAt ??= now;
+    return (
+      theme.imagery * imageryReveal(now - imageryShownAt, init.reducedMotion())
+    );
   }
 
   // --- regions -------------------------------------------------------------
@@ -713,17 +779,23 @@ export async function createWebgpuRenderer(
       if (!marker.label) continue;
       const rect = atlas.rects.get(marker.label);
       if (!rect) continue;
+      /* The atlas rectangle includes the halo margin, so the quad starts that
+         far up and left of the text, which stays where it always was. A
+         ringed marker's label slides right until its halo clears the ring,
+         by whole device pixels so the glyphs still land one texel per pixel. */
+      const ringShift = Math.ceil(labelRingShift(marker.ring) * dpr) / dpr;
       rows.push(
         marker.position[0],
         marker.position[1],
-        LABEL_OFFSET_X,
-        LABEL_OFFSET_Y,
+        LABEL_OFFSET_X - rect.marginCss,
+        LABEL_OFFSET_Y - rect.marginCss,
         rect.widthCss,
         rect.heightCss,
         rect.u0,
         rect.v0,
         rect.u1,
         rect.v1,
+        ringShift,
       );
     }
     upload(
@@ -765,6 +837,7 @@ export async function createWebgpuRenderer(
   function writeUniformBlock(
     frame: FrameState,
     group: RegionGroup | null,
+    imageryShown: number,
   ): void {
     writeUniforms(uniformData, {
       widthDev,
@@ -788,6 +861,8 @@ export async function createWebgpuRenderer(
       gridWidthCss: GRID_STROKE_CSS,
       limbWidthCss: LIMB_STROKE_CSS,
       atmosphereReach: ATMOSPHERE_REACH,
+      imagery: imageryShown,
+      casingWidthCss: CASING_CSS,
       regionFill: group?.fill ?? TRANSPARENT,
       regionStroke: group?.stroke ?? TRANSPARENT,
     });
@@ -915,7 +990,8 @@ export async function createWebgpuRenderer(
       writeLayerWidth(layerBuffers.regionStroke, 1 * dpr);
     }
 
-    writeUniformBlock(frame, first);
+    const imageryShown = imageryWeight();
+    writeUniformBlock(frame, first, imageryShown);
 
     const encoder = device.createCommandEncoder({ label: "globe-frame" });
 
@@ -963,7 +1039,7 @@ export async function createWebgpuRenderer(
        pass of its own. Never reached by the Dox globe, which highlights one zone. */
     for (const group of extraGroups) {
       bindGroupGeometry(group);
-      writeUniformBlock(frame, group);
+      writeUniformBlock(frame, group, imageryShown);
       encodeCoverage(encoder, group, false);
       const overlayPass = encoder.beginRenderPass({
         label: "globe-region-overlay",
@@ -988,17 +1064,29 @@ export async function createWebgpuRenderer(
       spritePass.end();
     }
 
+    /* Still fading in — including the first frame with the imagery, which
+       draws at weight 0 — so ask for the next frame. A globe at rest draws
+       once a second otherwise, which would jump the fade instead of running
+       it. */
+    if (imagery && theme.imagery > 0 && imageryShown < theme.imagery) {
+      init.invalidate();
+    }
+
     if (!firstFrameChecked) {
       firstFrameChecked = true;
       /* One validation sweep around the first frame. Every later frame runs
          without it: awaiting an error scope per frame would stall the loop, and by
          then a mistake would already have been caught here. */
       device.pushErrorScope("validation");
-      device.queue.submit([encoder.finish()]);
-      void device.popErrorScope().then((error) => {
-        if (error)
-          reportFailure(`first frame failed validation: ${error.message}`);
-      });
+      try {
+        device.queue.submit([encoder.finish()]);
+      } finally {
+        // Popped even if the submit throws, so the scope cannot leak.
+        void device.popErrorScope().then((error) => {
+          if (error)
+            reportFailure(`first frame failed validation: ${error.message}`);
+        });
+      }
       return;
     }
 
@@ -1029,12 +1117,15 @@ export async function createWebgpuRenderer(
     }
   }
 
+  maybeLoadImagery();
+
   return {
     kind: "webgpu",
     canvas,
     resize,
     setTheme(next: GlobeTheme) {
       theme = next;
+      maybeLoadImagery();
     },
     setRegions,
     setMarkers,
@@ -1046,6 +1137,9 @@ export async function createWebgpuRenderer(
     },
     destroy() {
       destroyed = true;
+      imagery?.release();
+      imagery = null;
+      imageryPlaceholder.destroy();
       atlas?.destroy();
       msaaTexture?.destroy();
       coverageTexture?.destroy();

@@ -3,6 +3,11 @@ import {
   cityLightsOn,
   dayFactor,
   hazeFactor,
+  IMAGERY_AMBIENT,
+  IMAGERY_FADE_END_ZOOM,
+  IMAGERY_FADE_START_ZOOM,
+  imageryLight,
+  imageryZoomFade,
   nightFactor,
   paintShading,
   type ShadingInput,
@@ -94,6 +99,54 @@ describe("hazeFactor", () => {
     expect(hazeFactor(0)).toBe(0);
     expect(hazeFactor(0.96)).toBe(0);
     expect(hazeFactor(1)).toBe(1);
+  });
+});
+
+describe("imageryZoomFade", () => {
+  it("shows the imagery in full on the resting globe", () => {
+    expect(imageryZoomFade(1)).toBe(1);
+    expect(imageryZoomFade(IMAGERY_FADE_START_ZOOM)).toBe(1);
+  });
+
+  it("has faded to the vector look by the top of the zoom range", () => {
+    /* The Dox globe zooms over [1, 5], and one 4096-wide image is soft well
+       before 5×. The fade has to be complete by then, not merely under way. */
+    expect(IMAGERY_FADE_END_ZOOM).toBeLessThanOrEqual(5);
+    expect(imageryZoomFade(IMAGERY_FADE_END_ZOOM)).toBe(0);
+    expect(imageryZoomFade(5)).toBe(0);
+  });
+
+  it("eases between the two, through a half-way point", () => {
+    const middle = (IMAGERY_FADE_START_ZOOM + IMAGERY_FADE_END_ZOOM) / 2;
+    expect(imageryZoomFade(middle)).toBeCloseTo(0.5, 10);
+    let previous = 1;
+    for (let zoom = 1; zoom <= 5; zoom += 0.125) {
+      const fade = imageryZoomFade(zoom);
+      expect(fade).toBeLessThanOrEqual(previous);
+      previous = fade;
+    }
+  });
+});
+
+describe("imageryLight", () => {
+  it("leaves the imagery at full brightness with the sun overhead", () => {
+    expect(imageryLight(1)).toBeCloseTo(1, 10);
+  });
+
+  it("follows the day curve, so the imagery and the wash agree on the terminator", () => {
+    for (const elevation of [0.8, 0.4, 0, -0.05]) {
+      expect(imageryLight(elevation)).toBeCloseTo(
+        IMAGERY_AMBIENT + (1 - IMAGERY_AMBIENT) * dayFactor(elevation),
+        10,
+      );
+    }
+  });
+
+  it("keeps an ambient floor on the night side for the night wash to darken", () => {
+    expect(IMAGERY_AMBIENT).toBeGreaterThan(0);
+    expect(IMAGERY_AMBIENT).toBeLessThan(1);
+    expect(imageryLight(-CIVIL_TWILIGHT)).toBe(IMAGERY_AMBIENT);
+    expect(imageryLight(-1)).toBe(IMAGERY_AMBIENT);
   });
 });
 

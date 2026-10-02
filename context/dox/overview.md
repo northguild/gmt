@@ -48,7 +48,7 @@ citation boundary: a link the model emits that is not a real page renders as pla
 | Hosting          | Cloudflare Workers static assets plus `/api/*`, one Worker                                                                      |
 | AI surface       | `llms.txt`, `llms-full.txt` and per-page raw `.md`, emitted from the corpus                                                     |
 | Widgets          | A playground on every example, running the real library, plus purpose-built teaching widgets                                    |
-| Globe            | A reusable WebGPU engine (`src/lib/globe/`), with the canvas-2D renderer as the fallback. Interactive and keyboard-selectable |
+| Globe            | A reusable WebGPU engine (`src/lib/globe/`) with NASA Blue Marble imagery in the dark theme, and the flat canvas-2D renderer as the fallback. Interactive and keyboard-selectable |
 | Chat stack       | AI SDK (`ai`, `@ai-sdk/react`) + 12 vendored AI Elements components; Streamdown rendering                                        |
 | React / Tailwind | Only inside the `/dox` island; Tailwind v4 without Preflight                                                                    |
 | Model            | Nine Gemini brains plus one Workers AI brain, failing over inside a request                                                     |
@@ -71,7 +71,7 @@ code, tables and plotted widget values stay high-contrast and plain. Spec:
 | 1    | `DOX-A5`, `A4a`, `A3b` | Tokens and typography, guides, `llms.txt`                                        |
 | 2    | `DOX-B1a`, `B2a`–`d`   | A playground on every example, DST inspector, interval visualizer, converter bench |
 | 3    | `DOX-D1`, `D2`         | Glass chrome, focus motion                                                       |
-| 4    | `DOX-E1a`, `E1b`       | Interactive globe, multi-zone scrubber                                           |
+| 4    | `DOX-E1a`–`E1d`        | Interactive globe on the GPU with Earth imagery, multi-zone scrubber             |
 | 5    | `DOX-A4b`–`d`          | Scenarios, ported pitfalls, mentor index                                         |
 | 6    | `DOX-C0`–`C4`          | Dox, the chat that mounts widgets                                                |
 

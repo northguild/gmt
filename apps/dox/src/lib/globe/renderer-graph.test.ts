@@ -149,6 +149,21 @@ describe("the canvas-2D renderer's static graph", () => {
       files.filter((file) => file.startsWith("lib/globe/webgpu/")),
     ).toEqual([]);
   });
+
+  it("requests nothing over the network, so the Earth imagery never downloads", () => {
+    /* The imagery loader lives in `webgpu/`, which the assertion above keeps
+       out of reach. This closes the other door: the fallback fetching the
+       image itself. A reader without WebGPU never sees the imagery, so they
+       must not pay for it either (#293). */
+    const fetching = files
+      .filter((file) => file.endsWith(".ts"))
+      .filter((file) =>
+        /\bfetch\s*\(|createImageBitmap|new\s+Image\b|imageryUrl/.test(
+          stripComments(readFileSync(path.join(SRC, file), "utf8")),
+        ),
+      );
+    expect(fetching).toEqual([]);
+  });
 });
 
 describe("the engine", () => {

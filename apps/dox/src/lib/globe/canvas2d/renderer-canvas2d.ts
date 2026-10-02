@@ -32,7 +32,18 @@ import {
 } from "d3-geo";
 import { feature } from "topojson-client";
 import land110m from "world-atlas/land-110m.json";
-import { cityLightsOn, paintShading, type Rgb } from "../shading";
+import {
+  CASING_CSS,
+  LABEL_HALO_CSS,
+  LABEL_OFFSET_X,
+  labelRingShift,
+} from "../casing";
+import {
+  cityLightsOn,
+  LABEL_MAX_ZOOM,
+  paintShading,
+  type Rgb,
+} from "../shading";
 import type { FrameState, GlobeRenderer, RendererInit } from "../renderer";
 import type { GlobeArc, GlobeMarker, GlobeRegion, Rgba } from "../types";
 import { greatCirclePoints } from "../geometry";
@@ -60,9 +71,6 @@ const ATMOSPHERE_BACKLIGHT = 0.8;
 
 /** The shading buffer's resolution per CSS pixel. */
 const SHADE_RESOLUTION = 0.5;
-
-/** Above this zoom, marker labels are dropped as clutter. */
-const LABEL_MAX_ZOOM = 2.5;
 
 /** `Rgba` (0..1 channels) to a canvas colour string. */
 function css(color: Rgba, alphaScale = 1): string {
@@ -362,9 +370,7 @@ export async function createCanvas2dRenderer(
       path(geometry);
       ctx.fillStyle = css(region.fill);
       ctx.fill();
-      ctx.lineWidth = region.strokeWidth;
-      ctx.strokeStyle = css(region.stroke);
-      ctx.stroke();
+      strokeCased(region.stroke, region.strokeWidth);
     }
 
     for (const arc of arcs) {
@@ -377,14 +383,27 @@ export async function createCanvas2dRenderer(
           points[i * 2 + 1],
         ]),
       } as unknown as GeoPermissibleObjects);
-      ctx.lineWidth = arc.width;
-      ctx.strokeStyle = css(arc.color);
-      ctx.stroke();
+      strokeCased(arc.color, arc.width);
     }
 
     drawMarkers(frame, subsolar, quiet);
 
     ctx.restore();
+  }
+
+  /**
+   * Stroke the current path over its casing (../casing.ts): the same path
+   * wider in the casing colour first, so the line reads over any backdrop.
+   */
+  function strokeCased(colour: Rgba, width: number): void {
+    ctx.lineJoin = "round";
+    ctx.lineWidth = width + CASING_CSS * 2;
+    ctx.strokeStyle = css(theme.casing);
+    ctx.stroke();
+    ctx.lineJoin = "miter";
+    ctx.lineWidth = width;
+    ctx.strokeStyle = css(colour);
+    ctx.stroke();
   }
 
   function drawMarkers(
@@ -415,6 +434,11 @@ export async function createCanvas2dRenderer(
         marker.nightColor && cityLightsOn(dot(markerVec, subsolarVec))
           ? marker.nightColor
           : marker.color;
+      // The dot over its casing (../casing.ts).
+      ctx.beginPath();
+      ctx.arc(at[0], at[1], marker.radius + CASING_CSS, 0, Math.PI * 2);
+      ctx.fillStyle = css(theme.casing);
+      ctx.fill();
       ctx.beginPath();
       ctx.arc(at[0], at[1], marker.radius, 0, Math.PI * 2);
       ctx.fillStyle = css(fill);
@@ -423,15 +447,25 @@ export async function createCanvas2dRenderer(
       if (marker.ring) {
         ctx.beginPath();
         ctx.arc(at[0], at[1], marker.ring.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = css(theme.casing);
+        ctx.lineWidth = marker.ring.width + CASING_CSS * 2;
+        ctx.stroke();
         ctx.strokeStyle = css(marker.ring.color);
         ctx.lineWidth = marker.ring.width;
         ctx.stroke();
       }
 
       if (marker.label && !quiet && frame.zoom < LABEL_MAX_ZOOM) {
-        ctx.fillStyle = css(theme.label);
+        /* Over its halo, and clear of a selection ring the halo would hide. */
+        const x = at[0] + LABEL_OFFSET_X + labelRingShift(marker.ring);
         ctx.font = labelFont;
-        ctx.fillText(marker.label, at[0] + 6, at[1] + 3);
+        ctx.lineJoin = "round";
+        ctx.lineWidth = LABEL_HALO_CSS * 2;
+        ctx.strokeStyle = css(theme.casing);
+        ctx.strokeText(marker.label, x, at[1] + 3);
+        ctx.lineJoin = "miter";
+        ctx.fillStyle = css(theme.label);
+        ctx.fillText(marker.label, x, at[1] + 3);
       }
     }
   }

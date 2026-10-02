@@ -121,6 +121,8 @@ async function requestShared(): Promise<Shared> {
  * `createShaderModule` never throws, even for source that cannot compile — the
  * messages arrive through `getCompilationInfo()`. Without this check a bad
  * shader shows up much later as a pipeline failure or, worse, a blank globe.
+ *
+ * The scope is popped before anything is awaited; see `withValidation`.
  */
 export async function createCheckedShaderModule(
   device: GPUDevice,
@@ -128,10 +130,20 @@ export async function createCheckedShaderModule(
   code: string,
 ): Promise<GPUShaderModule> {
   device.pushErrorScope("validation");
-  const module = device.createShaderModule({ label, code });
-  const info = await module.getCompilationInfo();
+  let module: GPUShaderModule;
+  try {
+    module = device.createShaderModule({ label, code });
+  } catch (error) {
+    // Popped either way, so a throw cannot leave the scope open.
+    void device.popErrorScope().catch(() => null);
+    throw error;
+  }
+  const scope = device.popErrorScope();
+  const [info, scopeError] = await Promise.all([
+    module.getCompilationInfo(),
+    scope,
+  ]);
   const errors = info.messages.filter((message) => message.type === "error");
-  const scopeError = await device.popErrorScope();
 
   if (errors.length > 0) {
     throw new Error(
@@ -152,31 +164,45 @@ export async function createCheckedShaderModule(
 }
 
 /**
- * Run `work` with a validation scope around it, rejecting on the first error.
+ * Run `work` with a validation and an out-of-memory scope round it, rejecting
+ * on the first error either caught.
  *
- * Used for renderer setup and the first frame. Those are the two places where a
- * mistake should fall back to canvas-2D rather than leave a reader looking at an
- * empty stage, and the only places where waiting for the GPU to answer is
- * acceptable — after that, awaiting a scope every frame would stall the loop.
+ * `work` must be synchronous, and is refused otherwise. A device's error
+ * scopes are one stack, and the device is shared by every globe on the page:
+ * a scope held open across an `await` catches whatever another globe does
+ * meanwhile, and the pops cross over — one globe reports the other's error and
+ * falls back for nothing, while the one that failed carries on with an invalid
+ * object. So both scopes are popped in the same run that pushed them, and only
+ * the popped promises are awaited. Async work that reports its own failures,
+ * such as `createRenderPipelineAsync`, needs no scope at all.
  */
 export async function withValidation<T>(
   device: GPUDevice,
   what: string,
-  work: () => T | Promise<T>,
+  work: () => T,
 ): Promise<T> {
   device.pushErrorScope("validation");
   device.pushErrorScope("out-of-memory");
-  let result: T;
+  let result: T | undefined;
+  let failure: unknown = null;
   try {
-    result = await work();
+    result = work();
+    if (result instanceof Promise) {
+      // Not awaited: its errors would land outside the scopes regardless.
+      result.catch(() => {});
+      failure = new Error(`${what}: withValidation needs synchronous work`);
+    }
   } catch (error) {
-    await device.popErrorScope();
-    await device.popErrorScope();
-    throw error;
+    failure = error;
   }
-  const memoryError = await device.popErrorScope();
-  const validationError = await device.popErrorScope();
+  const memoryScope = device.popErrorScope();
+  const validationScope = device.popErrorScope();
+  const [memoryError, validationError] = await Promise.all([
+    memoryScope,
+    validationScope,
+  ]);
+  if (failure) throw failure;
   if (memoryError) throw new Error(`${what}: ${memoryError.message}`);
   if (validationError) throw new Error(`${what}: ${validationError.message}`);
-  return result;
+  return result as T;
 }

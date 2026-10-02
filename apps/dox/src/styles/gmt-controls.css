@@ -17,7 +17,10 @@
   background: transparent;
 }
 
-[data-theme="dark"] .sl-link-button.secondary {
+/* Dark islands (`.gmt-theme-dark`, see gmt-tokens.css) keep the dark theme's
+   button ink on a light page. */
+[data-theme="dark"] .sl-link-button.secondary,
+.gmt-theme-dark .sl-link-button.secondary {
   color: var(--gmt-cyan-ink);
 }
 
@@ -241,11 +244,12 @@ textarea::selection {
 }
 
 /* Light mode: --gmt-void is white, so flip selected text to the dark ice value
-   for contrast against the (mid-tone) cyan. */
-[data-theme="light"] .gmt-input::selection,
-[data-theme="light"] .gmt-select::selection,
-[data-theme="light"] input::selection,
-[data-theme="light"] textarea::selection {
+   for contrast against the (mid-tone) cyan. Not inside a dark island, which
+   keeps the dark theme; the exclusion adds no specificity. */
+[data-theme="light"] .gmt-input:not(:where(.gmt-theme-dark *))::selection,
+[data-theme="light"] .gmt-select:not(:where(.gmt-theme-dark *))::selection,
+[data-theme="light"] input:not(:where(.gmt-theme-dark *))::selection,
+[data-theme="light"] textarea:not(:where(.gmt-theme-dark *))::selection {
   color: var(--gmt-ice);
 }
 
@@ -271,18 +275,19 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
 }
 
 /* Light mode — swap the hard-coded dark-teal wash for the light-mode cyan so
-   the track/thumb read as the same restrained cool tint, not flat grey. */
-[data-theme="light"] ::-webkit-scrollbar-track {
+   the track/thumb read as the same restrained cool tint, not flat grey. A dark
+   island keeps the dark scrollbar above; the exclusion adds no specificity. */
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-track {
   background: var(--gmt-hairline-faint);
 }
 
-[data-theme="light"] ::-webkit-scrollbar-thumb {
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb {
   background: color(from var(--gmt-cyan) srgb r g b / 0.22);
   border-color: var(--gmt-hairline-faint);
 }
 
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover,
-[data-theme="light"] html.is-scrolling ::-webkit-scrollbar-thumb {
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] html.is-scrolling :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb {
   background: var(--gmt-border-strong);
   border-color: var(--gmt-border-strong);
 }

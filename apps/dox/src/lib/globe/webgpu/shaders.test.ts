@@ -14,7 +14,15 @@
 
 import { geoGraticule10 } from "d3-geo";
 import { describe, expect, it } from "vitest";
-import { CIVIL_TWILIGHT, GAMMA, HAZE_START, TWILIGHT_END } from "../shading";
+import {
+  CIVIL_TWILIGHT,
+  GAMMA,
+  HAZE_START,
+  IMAGERY_AMBIENT,
+  IMAGERY_FADE_END_ZOOM,
+  IMAGERY_FADE_START_ZOOM,
+  TWILIGHT_END,
+} from "../shading";
 import {
   fillShader,
   GRATICULE_MAJOR_STEP_DEG,
@@ -130,6 +138,140 @@ describe("shading constants", () => {
   });
 });
 
+describe("imagery", () => {
+  /**
+   * The Earth imagery (#293) is drawn by the surface pass alone, and every rule
+   * about it that can be read off the source is checked here. Whether it looks
+   * right is `scripts/globe-smoke.mjs`'s question.
+   */
+  const source = surfaceShader();
+  const code = stripComments(source);
+
+  it("carries the zoom fade and the ambient floor from shading.ts", () => {
+    for (const [name, value] of [
+      ["IMAGERY_FADE_START_ZOOM", IMAGERY_FADE_START_ZOOM],
+      ["IMAGERY_FADE_END_ZOOM", IMAGERY_FADE_END_ZOOM],
+      ["IMAGERY_AMBIENT", IMAGERY_AMBIENT],
+    ] as const) {
+      const match = new RegExp(`const ${name}: f32 = ([^;]+);`).exec(source);
+      expect(match, `${name} is declared`).not.toBeNull();
+      expect(Number.parseFloat(match![1])).toBeCloseTo(value, 15);
+    }
+  });
+
+  it("binds the imagery texture and its sampler beside the coverage target", () => {
+    expect(source).toContain(
+      "@group(0) @binding(2) var imagery: texture_2d<f32>;",
+    );
+    expect(source).toContain(
+      "@group(0) @binding(3) var imagerySampler: sampler;",
+    );
+  });
+
+  it("samples with explicit gradients, never with implicit derivatives", () => {
+    /* The sample sits inside the "is this pixel on the sphere" branch, and
+       `textureSample` must be called in uniform control flow. The analytic
+       gradients from `geoAt` are also exact across the antimeridian, where
+       screen-space derivatives of a wrapping longitude would read a 360° jump
+       and pick the smallest mip — a one-pixel seam of the whole planet's
+       average colour. */
+    expect(code).toContain("textureSampleGrad(imagery, imagerySampler,");
+    expect(code).not.toMatch(/\btextureSample\s*\(/);
+  });
+
+  it("maps the image with 180°W at u = 0 and the north pole at v = 0", () => {
+    expect(code).toContain(
+      "return vec2<f32>((lngDeg + 180.0) / 360.0, (90.0 - latDeg) / 180.0);",
+    );
+  });
+
+  it("re-encodes the sampled colour, since the texture is stored as sRGB", () => {
+    /* An `-srgb` texture filters and builds its mips in linear light and
+       returns linear values; the rest of the shader composites encoded sRGB,
+       as a 2D canvas does. */
+    expect(code).toContain("srgbEncode(");
+  });
+
+  it("leaves the flat globe untouched wherever the imagery weight is zero", () => {
+    /* That is the whole canvas-2D parity story once zoomed in: with no
+       imagery, every layer below has to come out exactly as before. */
+    expect(code).toContain("if (imageryW > 0.0) {");
+    expect(code).toContain(
+      "let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z * imageryLight(elevation));",
+    );
+    expect(code).toContain(
+      "let dayA = g.day.a * dayFactor(elevation) * (1.0 - imageryW);",
+    );
+    expect(code).toContain("g.land.a * texel.r * vectorW");
+    expect(code).toContain("g.landStroke.a * texel.g * vectorW");
+  });
+
+  it("keeps the theme's share of the vector land over the imagery", () => {
+    /* The vector overlay: land fill and coastline fade with the imagery down
+       to `g.imagery.z` of their strength, not to nothing. The day wash does
+       not stay — over a photograph that carries its own light it reads as
+       haze — so it fades out fully, as before. */
+    expect(code).toContain("g.land.a * texel.r * vectorW");
+    expect(code).toContain("g.landStroke.a * texel.g * vectorW");
+    expect(code).not.toMatch(/dayFactor\(elevation\) \* vectorW/);
+  });
+
+  it("lights the vector overlay like the photograph under it", () => {
+    /* Drawn after the night wash, an unlit overlay keeps the night side's land
+       as bright as the day side's and blurs the terminator. Scaled by
+       `imageryLight`, it dims to the photograph's own night-side level. */
+    expect(code).toContain("g.imagery.z * imageryLight(elevation)");
+  });
+
+  it("can recolour the photograph onto the theme's own ramp", () => {
+    /* The duotone: the photo's brightness mapped from the night colour
+       through the ocean teal and the day cyan to the label ice, mixed in by
+       `g.imagery.w`. At 0 the photograph keeps its own colours. The dark end
+       is not the casing's colour: that one is tuned for contrast, and
+       retuning it must not recolour the Earth. */
+    expect(code).toContain("fn duotone(");
+    expect(code).toContain("mix(photo, duotone(photo), g.imagery.w)");
+    expect(code).toContain("mix(g.night.rgb, g.ocean.rgb,");
+    expect(code).not.toMatch(/mix\(g\.casing\.rgb/);
+  });
+
+  it("draws every casing at full strength, on every globe", () => {
+    /* The casing is what holds every ink to its contrast floor whatever lies
+       behind it — the photo, the flat globe's lit limb, or a mix of both
+       partway through the zoom fade — so it never fades and never waits for
+       the imagery. `globe-contrast.test.ts` measures the inks against it. */
+    for (const build of [
+      surfaceShader,
+      regionOverlayShader,
+      markerShader,
+      labelShader,
+    ]) {
+      const shader = stripComments(build());
+      expect(shader).toContain("g.casing.a *");
+      expect(shader).not.toMatch(/g\.casing\.a \* [^;]*imageryW/);
+      expect(shader).not.toContain("casingWeight");
+    }
+    // The outline's casing is the region stroke dilated, in both passes.
+    expect(stripComments(surfaceShader())).toContain("regionCasing(");
+    expect(stripComments(regionOverlayShader())).toContain("regionCasing(");
+    /* Neither sprite shader depends on the imagery any more: the one mention
+       left is the shared helpers' definition of it, never a call. */
+    for (const build of [markerShader, labelShader]) {
+      expect(stripComments(build()).match(/imageryWeight\(\)/g)).toHaveLength(
+        1,
+      );
+    }
+  });
+
+  it("moves a ringed marker's label clear of its ring", () => {
+    /* The label's halo would otherwise cover the right half of the selection
+       ring — the one signal of which zone is selected. */
+    const label = stripComments(labelShader());
+    expect(label).toContain("@location(4) ringShift: f32,");
+    expect(label).toContain("offset + vec2<f32>(ringShift, 0.0)");
+  });
+});
+
 describe("graticule constants", () => {
   /**
    * The shader draws the grid from each pixel's own latitude and longitude, so it
@@ -242,6 +384,10 @@ describe("the uniform block", () => {
       atmosphere: [0.17, 0.27, 0.37, 0.47],
       haze: [0.18, 0.28, 0.38, 0.48],
       label: [0.19, 0.29, 0.39, 0.49],
+      casing: [0.2, 0.3, 0.4, 0.5],
+      imagery: 1,
+      vectorOverlay: 0.4,
+      imageryDuotone: 0.6,
     };
     const target = new Float32Array(UNIFORM_BYTES / 4);
     writeUniforms(target, {
@@ -261,6 +407,8 @@ describe("the uniform block", () => {
       gridWidthCss: 0.5,
       limbWidthCss: 1,
       atmosphereReach: 1.06,
+      imagery: 0.75,
+      casingWidthCss: 1,
       regionFill: [0.5, 0.6, 0.7, 0.8],
       regionStroke: [0.51, 0.61, 0.71, 0.81],
     });
@@ -288,6 +436,13 @@ describe("the uniform block", () => {
     ]);
     expect(at("subsolar").map((v) => +v.toFixed(4))).toEqual([
       0.3, 0.4, 0.5, 0,
+    ]);
+    // The weight as given, the casing in device pixels, the vector overlay.
+    expect(at("imagery").map((v) => +v.toFixed(4))).toEqual([
+      0.75, 2, 0.4, 0.6,
+    ]);
+    expect(at("casing").map((v) => +v.toFixed(4))).toEqual([
+      0.2, 0.3, 0.4, 0.5,
     ]);
   });
 
@@ -317,10 +472,16 @@ describe("the uniform block", () => {
         atmosphere: [0, 0, 0, 0],
         haze: [0, 0, 0, 0],
         label: [0, 0, 0, 0],
+        casing: [0, 0, 0, 0],
+        imagery: 0,
+        vectorOverlay: 0,
+        imageryDuotone: 0,
       },
       gridWidthCss: 0.5,
       limbWidthCss: 1,
       atmosphereReach: 1.06,
+      imagery: 0,
+      casingWidthCss: 1,
     });
     const start = slotOffset("regionFill") / 4;
     expect(Array.from(target.slice(start, start + 8))).toEqual([

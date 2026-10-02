@@ -39,7 +39,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = REPO_ROOT / "apps/dox/public/timezone-boundaries-globe.json"
 
 RELEASE_URL = (

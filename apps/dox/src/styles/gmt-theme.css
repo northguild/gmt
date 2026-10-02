@@ -12,7 +12,11 @@
  * palette roles.
  */
 
-:root {
+/* Named for the dark island as well (`.gmt-theme-dark`, see gmt-tokens.css):
+   these map Starlight's colours from the `--gmt-*` tokens, and a mapping is
+   resolved where it is declared, so the island needs its own copy. */
+:root,
+.gmt-theme-dark {
   --sl-color-white: var(--gmt-ice);
   --sl-color-gray-1: var(--gmt-ice);
   --sl-color-gray-2: var(--gmt-ice-dim);

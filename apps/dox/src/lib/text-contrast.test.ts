@@ -17,7 +17,11 @@ const STYLES = path.resolve(import.meta.dirname, "..", "styles");
 const css = readFileSync(path.join(STYLES, "gmt-tokens.css"), "utf8");
 
 const lightStart = css.indexOf('[data-theme="light"] {');
-const darkBlock = css.slice(css.indexOf(":root {"), lightStart);
+/* The dark block's selector list is `:root` plus the dark island
+   (`:root, .gmt-theme-dark`), so it is found by its first selector rather than
+   by an exact header. */
+const darkStart = css.search(/^:root\b[^{]*\{/m);
+const darkBlock = css.slice(darkStart, lightStart);
 const lightBlock = css.slice(lightStart);
 
 function declared(block: string, token: string): string | undefined {

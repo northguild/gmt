@@ -122,6 +122,59 @@ export function hazeFactor(distance: number): number {
 }
 
 /**
+ * The Earth imagery (#293) shows in full up to this zoom.
+ *
+ * Only the WebGPU renderer draws imagery. One 4096-wide image puts roughly a
+ * texel on every device pixel of a resting globe at a device pixel ratio of 2,
+ * and turns soft as the reader zooms in, so from here it fades out and the
+ * vector land takes over.
+ */
+export const IMAGERY_FADE_START_ZOOM = 2;
+
+/**
+ * From this zoom on the imagery is gone and the globe is the vector look.
+ *
+ * A short dissolve rather than a long one: half-way, the photograph is mixed
+ * with the flat globe's translucent washes and reads as murky, so the less of
+ * the zoom range that sits in between, the better. Three presses of the zoom
+ * button (×1.4 each, 2.74×) already land on the vector look.
+ */
+export const IMAGERY_FADE_END_ZOOM = 2.7;
+
+/**
+ * Above this zoom, marker labels become clutter and both renderers drop them.
+ * One definition, so the two renderers cannot disagree on when it happens.
+ */
+export const LABEL_MAX_ZOOM = 2.5;
+
+/** How much of the imagery shows at a zoom: 1 at rest, easing to 0. */
+export function imageryZoomFade(zoom: number): number {
+  return 1 - smoothstep(IMAGERY_FADE_START_ZOOM, IMAGERY_FADE_END_ZOOM, zoom);
+}
+
+/**
+ * Share of its daylight brightness the imagery keeps once the sun has set.
+ *
+ * The night wash darkens it further on top, as it does the flat globe. The
+ * floor is what keeps the continents readable on the night side, where the
+ * gold markers sit.
+ */
+export const IMAGERY_AMBIENT = 0.18;
+
+/**
+ * Brightness of the imagery for a given sine of the sun's elevation.
+ *
+ * The imagery is a photograph of a lit planet, so it stands in for the day
+ * wash rather than taking the wash on top: full brightness under the sun,
+ * falling off along `dayFactor` towards the terminator, down to
+ * `IMAGERY_AMBIENT`. Sharing `dayFactor` keeps the terminator in the same
+ * place on both looks.
+ */
+export function imageryLight(sunElevationSine: number): number {
+  return IMAGERY_AMBIENT + (1 - IMAGERY_AMBIENT) * dayFactor(sunElevationSine);
+}
+
+/**
  * Write RGBA (not premultiplied, as `ImageData` expects) into `pixels`.
  * Layers, bottom to top: the day wash, the limb haze, then the night wash —
  * so the night side darkens the haze too and it only glows where it is lit.

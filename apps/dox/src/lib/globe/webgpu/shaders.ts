@@ -33,7 +33,15 @@
  * premultiplied, as `alphaMode: "premultiplied"` requires.
  */
 
-import { CIVIL_TWILIGHT, GAMMA, HAZE_START, TWILIGHT_END } from "../shading";
+import {
+  CIVIL_TWILIGHT,
+  GAMMA,
+  HAZE_START,
+  IMAGERY_AMBIENT,
+  IMAGERY_FADE_END_ZOOM,
+  IMAGERY_FADE_START_ZOOM,
+  TWILIGHT_END,
+} from "../shading";
 import { uniformStructWgsl } from "./uniforms";
 
 /** Grid spacing, matching `d3.geoGraticule10()`. */
@@ -74,6 +82,11 @@ const CIVIL_TWILIGHT: f32 = ${f32(CIVIL_TWILIGHT)};
 const GAMMA: f32 = ${f32(GAMMA)};
 /* The limb haze starts this fraction of the radius out from the centre. */
 const HAZE_START: f32 = ${f32(HAZE_START)};
+/* The Earth imagery shows in full up to this zoom, then fades to vector. */
+const IMAGERY_FADE_START_ZOOM: f32 = ${f32(IMAGERY_FADE_START_ZOOM)};
+const IMAGERY_FADE_END_ZOOM: f32 = ${f32(IMAGERY_FADE_END_ZOOM)};
+/* Share of its daylight brightness the imagery keeps on the night side. */
+const IMAGERY_AMBIENT: f32 = ${f32(IMAGERY_AMBIENT)};
 
 const DEG_PER_RAD: f32 = 57.29577951308232;
 const RAD_PER_DEG: f32 = 0.017453292519943295;
@@ -112,6 +125,25 @@ fn hazeFactor(distance: f32) -> f32 {
 /** Whether street lights are on, from civil dusk. */
 fn cityLightsOn(elevation: f32) -> bool {
   return elevation <= -CIVIL_TWILIGHT;
+}
+
+/** How much of the imagery a zoom shows: 1 at rest, easing to 0. */
+fn imageryZoomFade(zoom: f32) -> f32 {
+  return 1.0 - ramp(IMAGERY_FADE_START_ZOOM, IMAGERY_FADE_END_ZOOM, zoom);
+}
+
+/** Imagery brightness: \`dayFactor\`'s falloff above an ambient floor. */
+fn imageryLight(elevation: f32) -> f32 {
+  return IMAGERY_AMBIENT + (1.0 - IMAGERY_AMBIENT) * dayFactor(elevation);
+}
+
+/**
+ * How much imagery this frame shows: the theme's opacity and the load reveal,
+ * which the renderer multiplies on the CPU, times the zoom fade. Zero means
+ * the flat vector globe, exactly as the canvas-2D renderer draws it.
+ */
+fn imageryWeight() -> f32 {
+  return g.imagery.x * imageryZoomFade(g.view.z);
 }
 
 /** Straight-alpha source-over, the operation a 2D canvas performs. */
@@ -221,6 +253,16 @@ fn premultiply(colour: vec4<f32>) -> vec4<f32> {
 }
 
 /**
+ * Mix two straight-alpha colours. Premultiplied first, because a straight
+ * colour with low alpha would otherwise pull the mix as hard as an opaque one.
+ */
+fn mixStraight(a: vec4<f32>, b: vec4<f32>, t: f32) -> vec4<f32> {
+  let mixed = mix(premultiply(a), premultiply(b), t);
+  if (mixed.a <= 0.0) { return vec4<f32>(0.0); }
+  return vec4<f32>(mixed.rgb / mixed.a, mixed.a);
+}
+
+/**
  * Dither and clamp an already-premultiplied colour for output.
  *
  * Clamping the channels to the alpha rather than to 1 is what \`premultiplied\`
@@ -237,17 +279,24 @@ fn finish(premult: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
 }
 
 /**
- * The surface pass: sphere, shading, graticule and the coverage layers.
+ * The surface pass: sphere, imagery, shading, graticule and the coverage layers.
  *
  * One quad, all of it in the fragment shader. The graticule in particular has to
  * be analytic rather than geometry: drawing 53 clipped great-circle polylines
  * would mean re-tessellating them every frame, and a shader can get the same
- * lines from each pixel's own latitude and longitude.
+ * lines from each pixel's own latitude and longitude. The Earth imagery (#293)
+ * is sampled from the same latitude and longitude, in place of the flat ocean
+ * and land.
  */
 export function surfaceShader(): string {
   return /* wgsl */ `${common()}
 
 @group(0) @binding(1) var coverage: texture_2d<f32>;
+${regionCasingWgsl()}
+/* Equirectangular Earth imagery, stored \`rgba8unorm-srgb\` with a full mip
+   chain. A 1x1 placeholder until the image has loaded. */
+@group(0) @binding(2) var imagery: texture_2d<f32>;
+@group(0) @binding(3) var imagerySampler: sampler;
 
 @vertex
 fn vs(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -261,6 +310,10 @@ struct Geo {
   /** Degrees per device pixel, used to measure distance to a grid line. */
   lngGradient: f32,
   latGradient: f32,
+  /** The same rates split by screen axis, \`(d/dx, d/dy)\`, for the imagery
+   *  sampler's explicit gradients. */
+  lngPerPx: vec2<f32>,
+  latPerPx: vec2<f32>,
 }
 
 /**
@@ -313,8 +366,59 @@ fn geoAt(u: f32, v: f32, radius: f32) -> Geo {
     latRad * DEG_PER_RAD,
     length(vec2<f32>(dLngdu, dLngdv)) * perPixel,
     length(vec2<f32>(dLatdu, dLatdv)) * perPixel,
+    vec2<f32>(dLngdu, dLngdv) * perPixel,
+    vec2<f32>(dLatdu, dLatdv) * perPixel,
   );
 }
+
+/** Equirectangular texture coordinate: 180°W at u = 0, the north pole at v = 0. */
+fn imageryUv(lngDeg: f32, latDeg: f32) -> vec2<f32> {
+  return vec2<f32>((lngDeg + 180.0) / 360.0, (90.0 - latDeg) / 180.0);
+}
+
+/** sRGB's transfer curve, linear light to encoded. */
+fn srgbEncode(linear: vec3<f32>) -> vec3<f32> {
+  let c = clamp(linear, vec3<f32>(0.0), vec3<f32>(1.0));
+  let low = c * 12.92;
+  let high = 1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055;
+  return select(high, low, c <= vec3<f32>(0.0031308));
+}
+
+/**
+ * The photograph recoloured onto the theme's own ramp, by brightness: the
+ * night colour for deep ocean, the ocean teal, the day cyan, and the label ice
+ * for the ice caps. Relief and coastlines survive, because they are changes of
+ * brightness; only the hues are replaced. The dark end is the night colour,
+ * not the casing's, so retuning the casing for contrast leaves the Earth alone.
+ */
+fn duotone(photo: vec3<f32>) -> vec3<f32> {
+  let t = clamp(dot(photo, vec3<f32>(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+  if (t < 0.3) { return mix(g.night.rgb, g.ocean.rgb, t / 0.3); }
+  if (t < 0.6) { return mix(g.ocean.rgb, g.day.rgb, (t - 0.3) / 0.3); }
+  return mix(g.day.rgb, g.label.rgb, (t - 0.6) / 0.4);
+}
+
+/**
+ * The imagery under a pixel, sRGB-encoded like every other colour here.
+ *
+ * Gradients are explicit, taken from \`geoAt\`'s analytic Jacobian. That keeps
+ * the sample legal inside the on-sphere branch, and it keeps the antimeridian
+ * clean: the longitude wraps from +180 to −180 there, but its rate of change
+ * does not, so the mip level stays put and the repeating sampler filters across
+ * the seam like any other column. At the poles the longitude rate grows without
+ * bound; the sampler's anisotropy holds the level down to within a few degrees
+ * of the pole, where the image is uniform ice.
+ */
+fn imageryAt(geo: Geo) -> vec3<f32> {
+  // Wrapped into ±180 first, so u stays in [0, 1].
+  let lng = geo.lngDeg - 360.0 * round(geo.lngDeg / 360.0);
+  let uv = imageryUv(lng, geo.latDeg);
+  let dUvdx = vec2<f32>(geo.lngPerPx.x / 360.0, -geo.latPerPx.x / 180.0);
+  let dUvdy = vec2<f32>(geo.lngPerPx.y / 360.0, -geo.latPerPx.y / 180.0);
+  let linear = textureSampleGrad(imagery, imagerySampler, uv, dUvdx, dUvdy).rgb;
+  return srgbEncode(linear);
+}
+
 
 /**
  * The graticule, matching \`geoGraticule10()\`.
@@ -394,13 +498,35 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     d = 1.0;
   }
   let z = sqrt(max(0.0, 1.0 - u * u - v * v));
+  let elevation = u * g.sun.x + v * g.sun.y + z * g.sun.z;
+  let geo = geoAt(u, v, radius);
+  let imageryW = imageryWeight();
+  /* How much of the vector land — fill and coastline — stays on top: all of
+     it with no imagery, falling to the theme's vector overlay share
+     (\`g.imagery.z\`) as the imagery comes in. A share above 0 lays the cyan
+     land over the photograph. The share is lit like the photograph under it:
+     the land layers are drawn after the night wash, so an unlit overlay kept
+     the night side's land as bright as the day side's and blurred the
+     terminator. The day wash is not part of it: over a photo that carries
+     its own light it reads as haze. */
+  let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z * imageryLight(elevation));
 
   var colour = vec4<f32>(0.0);
   colour = over(colour, g.ocean);
 
+  /* --- Earth imagery, in place of the flat ocean and land ---
+     The imagery is a photograph of a lit planet, so it takes the sun as a
+     brightness rather than under the day wash, and the wash fades out as it
+     fades in. */
+  if (imageryW > 0.0) {
+    var photo = imageryAt(geo);
+    photo = mix(photo, duotone(photo), g.imagery.w);
+    let lit = vec4<f32>(photo * imageryLight(elevation), 1.0);
+    colour = mixStraight(colour, lit, imageryW);
+  }
+
   // --- sun shading: day wash, limb haze, night wash, as one layer ---
-  let elevation = u * g.sun.x + v * g.sun.y + z * g.sun.z;
-  let dayA = g.day.a * dayFactor(elevation);
+  let dayA = g.day.a * dayFactor(elevation) * (1.0 - imageryW);
   // The haze is sunlight scattered by air, so it fades out with the day.
   let hazeA = g.haze.a * hazeFactor(d) * (1.0 - nightFactor(elevation));
   // Both lit layers are the day colour, so their alphas stack.
@@ -422,7 +548,6 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   );
 
   // --- graticule ---
-  let geo = geoAt(u, v, radius);
   let quietFactor = select(1.0, ${f32(0.56)}, g.view.w > 0.5);
   let gridCoverage = graticule(geo, g.lines.y);
   colour = over(
@@ -430,11 +555,24 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     vec4<f32>(g.grid.rgb, g.grid.a * gridCoverage * quietFactor),
   );
 
-  // --- land and region, from the coverage target ---
+  /* --- land and region, from the coverage target ---
+     The vector land gives way to the imagery, down to the vector overlay's
+     share of it (\`vectorW\`, lit like the photo); the region stays, cased
+     where the imagery shows. */
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
-  colour = over(colour, vec4<f32>(g.land.rgb, g.land.a * texel.r));
-  colour = over(colour, vec4<f32>(g.landStroke.rgb, g.landStroke.a * texel.g));
+  colour = over(
+    colour,
+    vec4<f32>(g.land.rgb, g.land.a * texel.r * vectorW),
+  );
+  colour = over(
+    colour,
+    vec4<f32>(g.landStroke.rgb, g.landStroke.a * texel.g * vectorW),
+  );
   colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
+  if (g.regionStroke.a > 0.0) {
+    let casing = regionCasing(position.xy, g.imagery.y);
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
+  }
   colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
 
   /* The sphere and the glow do not overlap: the canvas-2D renderer fills the
@@ -452,6 +590,40 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 }
 
 /**
+ * The region-outline casing, for the two passes that read the coverage target.
+ * Expects `coverage` to be bound already.
+ */
+function regionCasingWgsl(): string {
+  return /* wgsl */ `
+/**
+ * How much of the region outline's casing covers a pixel.
+ *
+ * The coverage target holds the outline, not a wider copy of it, so the casing
+ * is the outline dilated by \`reach\` device pixels: the strongest outline
+ * coverage among eight taps round the pixel. Cheaper than another coverage
+ * target, and only run while the imagery shows and a region is set.
+ */
+fn regionCasing(pixel: vec2<f32>, reach: f32) -> f32 {
+  var taps = array<vec2<f32>, 8>(
+    vec2<f32>(1.0, 0.0), vec2<f32>(0.7071068, 0.7071068),
+    vec2<f32>(0.0, 1.0), vec2<f32>(-0.7071068, 0.7071068),
+    vec2<f32>(-1.0, 0.0), vec2<f32>(-0.7071068, -0.7071068),
+    vec2<f32>(0.0, -1.0), vec2<f32>(0.7071068, -0.7071068),
+  );
+  let limit = vec2<i32>(textureDimensions(coverage)) - vec2<i32>(1);
+  let centre = vec2<i32>(floor(pixel));
+  var strongest = textureLoad(coverage, centre, 0).a;
+  for (var i = 0u; i < 8u; i++) {
+    let offset = vec2<i32>(round(taps[i] * reach));
+    let at = clamp(centre + offset, vec2<i32>(0), limit);
+    strongest = max(strongest, textureLoad(coverage, at, 0).a);
+  }
+  return strongest;
+}
+`;
+}
+
+/**
  * Compositing a further region group over the canvas.
  *
  * Only runs when a caller has set regions with different colours: the coverage
@@ -462,6 +634,7 @@ export function regionOverlayShader(): string {
   return /* wgsl */ `${common()}
 
 @group(0) @binding(1) var coverage: texture_2d<f32>;
+${regionCasingWgsl()}
 
 @vertex
 fn vs(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -478,6 +651,10 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
   var colour = vec4<f32>(0.0);
   colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
+  if (g.regionStroke.a > 0.0) {
+    let casing = regionCasing(position.xy, g.imagery.y);
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
+  }
   colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
   return vec4<f32>(colour.rgb * colour.a, colour.a);
 }
@@ -648,7 +825,8 @@ fn vs(
   let dpr = g.viewport.w;
   let outer = radii.x * dpr;
   let inner = radii.y * dpr;
-  let half = outer + 1.0;
+  // Room for the casing as well; see the fragment shader.
+  let half = outer + g.imagery.y + 1.0;
 
   var corners = array<vec2<f32>, 6>(
     vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(-1.0, 1.0),
@@ -676,9 +854,21 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
     // A ring: subtract the hole, so the stroke is the difference of two discs.
     coverage = coverage * clamp(distance - in.radii.y + 0.5, 0.0, 1.0);
   }
-  if (coverage <= 0.0) { discard; }
-  let alpha = in.colour.a * coverage;
-  return vec4<f32>(in.colour.rgb * alpha, alpha);
+  var colour = vec4<f32>(in.colour.rgb, in.colour.a * coverage);
+
+  /* A casing in the theme's \`casing\` colour, on every globe: the same disc
+     or ring grown by \`g.imagery.y\` device pixels each way, drawn under it. A
+     cyan dot that reads on a dark ocean disappears over the Sahara, or by the
+     flat globe's lit limb; over its casing it reads everywhere. */
+  let reach = g.imagery.y;
+  var casing = clamp(in.radii.x + reach + 0.5 - distance, 0.0, 1.0);
+  if (in.radii.y > 0.0) {
+    casing = casing * clamp(distance - (in.radii.y - reach) + 0.5, 0.0, 1.0);
+  }
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * casing), colour);
+
+  if (colour.a <= 0.0) { discard; }
+  return premultiply(colour);
 }
 `;
 }
@@ -687,8 +877,9 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
  * Marker labels, from a texture atlas built once on a 2D canvas.
  *
  * Text is the one thing a 2D context does better than a shader, so the atlas is
- * rasterised there with the site's own mono font and sampled here. Its alpha
- * channel is the glyph coverage; the colour comes from the theme.
+ * rasterised there with the site's own mono font and sampled here. Its red
+ * channel is the glyph coverage and its green channel a halo round the glyphs;
+ * the colours come from the theme. The halo shows only over the imagery.
  */
 export function labelShader(): string {
   return /* wgsl */ `${common()}
@@ -711,6 +902,9 @@ fn vs(
   @location(2) size: vec2<f32>,
   /** Atlas rectangle: \`(u0, v0, u1, v1)\`. */
   @location(3) rect: vec4<f32>,
+  /** How far right the label moves, in CSS pixels: clear of a selection ring
+   *  that its halo would otherwise cover. */
+  @location(4) ringShift: f32,
 ) -> Out {
   let projected = projectGeo(lngLat.x, lngLat.y);
   var out: Out;
@@ -725,7 +919,7 @@ fn vs(
   );
   let corner = corners[index];
   let dpr = g.viewport.w;
-  let origin = projected.xy + offset * dpr;
+  let origin = projected.xy + (offset + vec2<f32>(ringShift, 0.0)) * dpr;
   out.position = toClip(origin + corner * size * dpr);
   out.uv = mix(rect.xy, rect.zw, corner);
   return out;
@@ -734,9 +928,11 @@ fn vs(
 @fragment
 fn fs(in: Out) -> @location(0) vec4<f32> {
   let sampled = textureSample(atlas, atlasSampler, in.uv);
-  let alpha = g.label.a * sampled.a;
-  if (alpha <= 0.0) { discard; }
-  return vec4<f32>(g.label.rgb * alpha, alpha);
+  // The glyphs over their halo, on every globe.
+  var colour = vec4<f32>(g.label.rgb, g.label.a * sampled.r);
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * sampled.g), colour);
+  if (colour.a <= 0.0) { discard; }
+  return premultiply(colour);
 }
 `;
 }

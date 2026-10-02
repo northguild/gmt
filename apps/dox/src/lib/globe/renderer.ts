@@ -67,6 +67,16 @@ export interface RendererInit {
   /** CSS `font` shorthand for marker labels. */
   labelFont: string;
   ariaLabel: string;
+  /** Earth imagery for a backend that draws it; see `GlobeOptions.imageryUrl`. */
+  imageryUrl?: string;
+  /**
+   * Ask the shell for another frame. For changes the shell cannot see — an
+   * image that has finished loading, a fade still running. Coalesced with any
+   * frame already pending, so calling it from inside `render` is safe.
+   */
+  invalidate(): void;
+  /** Whether to skip eased transitions. Read when needed, not cached. */
+  reducedMotion(): boolean;
 }
 
 export interface GlobeRenderer {
