@@ -67,3 +67,21 @@ describe("intervalSplitAtTime", () => {
     );
   });
 });
+
+// A point on `start` or `end` is dropped, and no point lies strictly inside a zero-length
+// interval, so the whole interval comes back unsplit: one piece whose `end` equals its `start`.
+// This is the only way a piece can be empty.
+describe("intervalSplitAtTime on a zero-length interval", () => {
+  it.each`
+    points          | why
+    ${[]}           | ${"no points"}
+    ${["12:00:00"]} | ${"a point on the interval's only value"}
+  `(
+    "returns the one empty piece for start = end = 12:00:00 with points $points ($why)",
+    ({ points }) => {
+      expect(intervalSplitAtTime("12:00:00", "12:00:00", points)).toEqual([
+        { start: "12:00:00", end: "12:00:00" },
+      ]);
+    },
+  );
+});

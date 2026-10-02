@@ -184,6 +184,31 @@ describe("tileByUnit", () => {
   );
 });
 
+describe("tileByUnit when the last step lands exactly on end", () => {
+  // 2024-01-01 + 2 days is 2024-01-03, and + 4 days is 2024-01-05, the end. The last slice closes
+  // with the `end` argument itself, not with the equal value the step computed: the two compare
+  // equal but may be written differently (a zoned end in another zone than the start).
+  it("closes [2024-01-01, 2024-01-05) by 2 days with the end argument itself", () => {
+    const start = Temporal.PlainDate.from("2024-01-01");
+    const end = Temporal.PlainDate.from("2024-01-05");
+
+    const slices = tileByUnit(
+      start,
+      end,
+      Temporal.PlainDate.compare,
+      "days",
+      2,
+      100,
+    );
+
+    expect(slices && toStrings(slices)).toEqual([
+      ["2024-01-01", "2024-01-03"],
+      ["2024-01-03", "2024-01-05"],
+    ]);
+    expect(slices?.at(-1)?.[1]).toBe(end);
+  });
+});
+
 describe("minSlicesForSpan", () => {
   const HOUR = 3_600_000_000_000;
   const DAY = 86_400_000_000_000;

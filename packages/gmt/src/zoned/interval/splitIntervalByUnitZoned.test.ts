@@ -738,3 +738,28 @@ describe("splitIntervalByUnitZoned with start and end in different zones", () =>
     },
   );
 });
+
+// The same zone can be spelled two ways: `[UTC]` and `[+00:00]` are both UTC+0. Steps are taken
+// from `start`, so the inner boundary is written `[UTC]`; the second 3-hour step lands exactly on
+// `end`, and the last piece ends at the `end` argument as written, `[+00:00]`.
+describe("splitIntervalByUnitZoned with end in another spelling of start's zone", () => {
+  it("ends the last piece at 2024-01-01T06:00:00+00:00[+00:00] as written, for 3-hour steps from [UTC]", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T06:00:00+00:00[+00:00]",
+        "hour",
+        3,
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-01T03:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-01T03:00:00+00:00[UTC]",
+        end: "2024-01-01T06:00:00+00:00[+00:00]",
+      },
+    ]);
+  });
+});

@@ -138,7 +138,7 @@ describe("parseTimeWithPattern", () => {
       ${"''14:30"}       | ${"''''HH:mm"}       | ${"14:30:00"} | ${"'''' is two '' pairs, two literal quotes"}
       ${"'14:30"}        | ${"''''HH:mm"}       | ${""}         | ${"'''' needs two literal quotes, not one"}
       ${"'14:30"}        | ${"'''HH:mm"}        | ${""}         | ${"''' leaves the third quote unterminated"}
-      ${"12 o'clock PM"} | ${"hh 'o''clock' a"} | ${"12:00:00"} | ${"the UTS #35 pattern example table row"}
+      ${"12 o'clock PM"} | ${"hh 'o''clock' a"} | ${"12:00:00"} | ${"the quoting of the UTS #35 example pattern hh 'o''clock' a, zzzz, without its zone field"}
     `(
       'returns "$expected" for "$value" against "$pattern" ($why)',
       ({ value, pattern, expected }) => {

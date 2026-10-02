@@ -529,3 +529,37 @@ describe("splitIntervalByUnitUnix with a step finer than the epoch unit", () => 
     },
   );
 });
+
+// The limits of the epoch range are ±8_640_000_000_000_000 ms (ECMAScript time value range, the
+// same limits Temporal.Instant has). A step finer than the epoch unit steps by one epoch unit, so
+// 1 µs across the last two milliseconds of the range is two one-millisecond pieces, at either end.
+describe("splitIntervalByUnitUnix with a fine step at the range limits", () => {
+  it.each`
+    start                | end                  | expected
+    ${8639999999999998}  | ${8640000000000000}  | ${[{ start: 8639999999999998, end: 8639999999999999 }, { start: 8639999999999999, end: 8640000000000000 }]}
+    ${-8640000000000000} | ${-8639999999999998} | ${[{ start: -8640000000000000, end: -8639999999999999 }, { start: -8639999999999999, end: -8639999999999998 }]}
+  `(
+    "returns two one-millisecond pieces for [$start, $end) by 1 microsecond",
+    ({ start, end, expected }) => {
+      expect(splitIntervalByUnitUnix(start, end, "microsecond", 1)).toEqual(
+        expected,
+      );
+    },
+  );
+});
+
+// A step that is not finer than the epoch unit is taken as given, and each boundary is floored
+// to a whole epoch unit, toward negative infinity. 1_500 µs is 1.5 ms: from -5 ms the exact
+// boundaries are -5, -3.5, -2, -0.5, 1, 2.5 and 4 ms, which floor to -5, -4, -2, -1, 1, 2 and 4.
+describe("splitIntervalByUnitUnix with negative epochs and a step of 1.5 epoch units", () => {
+  it("returns boundaries -5, -4, -2, -1, 1, 2, 4 for [-5, 4) by 1500 microseconds", () => {
+    expect(splitIntervalByUnitUnix(-5, 4, "microsecond", 1500)).toEqual([
+      { start: -5, end: -4 },
+      { start: -4, end: -2 },
+      { start: -2, end: -1 },
+      { start: -1, end: 1 },
+      { start: 1, end: 2 },
+      { start: 2, end: 4 },
+    ]);
+  });
+});

@@ -37,3 +37,16 @@ splitIntervalByUnitZoned(
 // was "2024-01-01T06:00:00-05:00[America/New_York]" — the same instant
 // now "2024-01-01T11:00:00+00:00[Europe/London]"
 ```
+
+The same holds when `end` is another spelling of `start`'s zone, such as `[+00:00]` against `[UTC]`: the last `end` is the argument as you wrote it.
+
+```typescript
+splitIntervalByUnitZoned(
+  "2024-01-01T00:00:00+00:00[UTC]",
+  "2024-01-01T06:00:00+00:00[+00:00]",
+  "hour",
+  3,
+).at(-1)?.end;
+// was "2024-01-01T06:00:00+00:00[UTC]"
+// now "2024-01-01T06:00:00+00:00[+00:00]"
+```
