@@ -54,6 +54,7 @@ import {
   matchesFilter,
 } from "./zone-filter";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
+import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
 import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
@@ -97,6 +98,13 @@ const REGION_STROKE_WIDTH = 1.5;
 
 /** The boundary dataset, fetched after the globe is already interactive. */
 const BOUNDARIES_URL = "/timezone-boundaries-globe.json";
+
+/**
+ * NASA's Blue Marble, prepared by `scripts/prepare-globe-imagery.py`. Only the
+ * WebGPU renderer fetches it, and only while `--gmt-globe-imagery-alpha` is
+ * above 0.
+ */
+const IMAGERY_URL = "/earth-blue-marble.webp";
 
 export async function initGlobe(
   host: HTMLElement,
@@ -156,6 +164,7 @@ export async function initGlobe(
       initialRotation: defaultRotation,
       zoomRange: [MIN_ZOOM, MAX_ZOOM],
       reducedMotion,
+      imageryUrl: IMAGERY_URL,
     })) as GlobeEngineWithHitTest;
   } catch (error) {
     tooltip.remove();
@@ -556,11 +565,12 @@ export async function initGlobe(
     attributeFilter: ["data-theme"],
   });
 
-  /* `gmt-a11y.css` zeroes the atmosphere and haze tokens under these
+  /* `gmt-a11y.css` zeroes the atmosphere, haze and imagery tokens under these
      preferences, and the renderer only sees a token when the theme is re-read. */
   const preferenceQueries = [
     "(prefers-reduced-transparency: reduce)",
     "(prefers-contrast: more)",
+    "(forced-colors: active)",
   ].flatMap((query) => globalThis.matchMedia?.(query) ?? []);
   for (const query of preferenceQueries) {
     query.addEventListener("change", refreshTheme);
@@ -688,7 +698,8 @@ interface DoxTheme extends GlobeTheme {
  *
  * Re-read rather than cached, because `data-theme` flips them, and
  * `gmt-a11y.css` zeroes the atmosphere and haze alphas under reduced
- * transparency and raised contrast.
+ * transparency and raised contrast, and the imagery under raised contrast and
+ * forced colours.
  */
 function readTheme(host: HTMLElement): DoxTheme {
   const style = getComputedStyle(host);
@@ -704,6 +715,11 @@ function readTheme(host: HTMLElement): DoxTheme {
   };
 
   const cyan = "--gmt-cyan";
+  /* The overlay inks are the same in both themes: every marker, ring, label
+     and outline sits on the dark casing (globe/casing.ts), so it is the casing
+     they contrast with, not the page. */
+  const ink = "--gmt-globe-ink";
+  const selected = "--gmt-globe-selected";
   return {
     ocean: colour(
       "--gmt-teal",
@@ -726,14 +742,28 @@ function readTheme(host: HTMLElement): DoxTheme {
       number("--gmt-globe-atmosphere-alpha", 0.42),
     ),
     haze: colour(cyan, "#22d3ee", number("--gmt-globe-haze-alpha", 0.2)),
-    label: colour("--gmt-ice", "#cfeaf2", 0.75),
-    markerPrimary: colour(cyan, "#22d3ee", 1),
-    markerOther: colour("--gmt-ice", "#cfeaf2", 0.55),
+    label: colour(ink, "#cfeaf2", LABEL_ALPHA),
+    casing: colour(
+      "--gmt-globe-casing",
+      "#03080c",
+      number("--gmt-globe-casing-alpha", 0.9),
+    ),
+    imagery: Math.min(Math.max(number("--gmt-globe-imagery-alpha", 1), 0), 1),
+    vectorOverlay: Math.min(
+      Math.max(number("--gmt-globe-vector-overlay", 0), 0),
+      1,
+    ),
+    imageryDuotone: Math.min(
+      Math.max(number("--gmt-globe-imagery-duotone", 0), 0),
+      1,
+    ),
+    markerPrimary: colour("--gmt-globe-marker", "#22d3ee", 1),
+    markerOther: colour(ink, "#cfeaf2", MINOR_MARKER_ALPHA),
     markerNightPrimary: colour("--gmt-globe-gold", "#fde047", 1),
-    markerNightOther: colour("--gmt-globe-gold", "#fde047", 0.55),
-    markerSelected: colour("--gmt-spring", "#4ade80", 1),
-    regionFill: colour("--gmt-spring", "#4ade80", 0.12),
-    regionStroke: colour("--gmt-spring", "#4ade80", 1),
+    markerNightOther: colour("--gmt-globe-gold", "#fde047", MINOR_MARKER_ALPHA),
+    markerSelected: colour(selected, "#4ade80", 1),
+    regionFill: colour(selected, "#4ade80", 0.12),
+    regionStroke: colour(selected, "#4ade80", 1),
   };
 }
 

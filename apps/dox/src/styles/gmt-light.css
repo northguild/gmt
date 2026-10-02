@@ -5,6 +5,11 @@
  * are token-value swaps in gmt-tokens.css) and don't sit next to a base rule
  * elsewhere (scrollbar → gmt-controls.css, Pagefind → gmt-content.css,
  * --ec-codeBg → gmt-glass.css). Loaded last so it always wins its ties.
+ *
+ * A rule here that can reach inside a dark island (`.gmt-theme-dark`, see
+ * gmt-tokens.css — the landing hero) excludes it, since the island keeps the
+ * dark theme. The exclusion is `:not(:where(…))`, which adds no specificity,
+ * so each rule goes on losing to everything it lost to before.
  */
 
 /* ---- Light mode UI components ---- */
@@ -71,7 +76,7 @@ site-search button[data-open-modal] > kbd {
 }
 
 /* Search popup/dialog - comprehensive targeting */
-[data-theme="light"] [role="dialog"],
+[data-theme="light"] [role="dialog"]:not(:where(.gmt-theme-dark *)),
 [data-theme="light"] site-search dialog {
   /* background-color: var(--gmt-surface); */
   color: var(--gmt-ice);
@@ -84,22 +89,24 @@ site-search button[data-open-modal] > kbd {
 }
 
 /* Search unavailable message */
-[data-theme="light"] [role="status"] {
+[data-theme="light"] [role="status"]:not(:where(.gmt-theme-dark *)) {
   color: var(--gmt-ice);
 }
 
 /* Search results and items */
-[data-theme="light"] [role="option"] {
+[data-theme="light"] [role="option"]:not(:where(.gmt-theme-dark *)) {
   color: var(--gmt-ice);
 }
 
-[data-theme="light"] [role="option"][aria-selected="true"] {
+[data-theme="light"] [role="option"][aria-selected="true"]:not(:where(.gmt-theme-dark *)) {
   background-color: var(--gmt-fill-deep);
   color: var(--gmt-cyan-ink);
 }
 
 /* Main CTA buttons (Install, etc.) — glass effect in light mode */
-[data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
+[data-theme="light"]
+  :is(#starlight__main, main)
+  a.sl-link-button.primary:not(:where(.gmt-theme-dark *)) {
   background: var(--gmt-fill-strong);
   border: 1px solid var(--gmt-border);
   color: var(--gmt-cyan-ink);
@@ -118,10 +125,10 @@ site-search button[data-open-modal] > kbd {
     .page-header,
     [data-component="page-header"]
   )
-  a,
+  a:not(:where(.gmt-theme-dark *)),
 [data-theme="light"]
   main
-  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]) {
+  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]):not(:where(.gmt-theme-dark *)) {
   color: var(--gmt-cyan-ink);
 }
 

@@ -34,7 +34,8 @@ export type Ring = readonly LngLat[];
 export type PolygonRings = readonly Ring[];
 
 /**
- * Every colour the globe surface itself draws with.
+ * Every colour the globe surface itself draws with, and how strongly to show
+ * the Earth imagery.
  *
  * One flat record rather than nested groups: it is uploaded as a uniform block,
  * and a flat shape keeps the packing in `webgpu/uniforms.ts` trivial to verify.
@@ -59,6 +60,30 @@ export interface GlobeTheme {
   haze: Rgba;
   /** Marker label text. */
   label: Rgba;
+  /**
+   * The dark casing drawn under every marker, ring, label and region outline,
+   * on every globe and in both renderers, so the overlay reads over whatever is
+   * behind it: the lit limb, desert, ice. `casing.ts` sets its sizes.
+   */
+  casing: Rgba;
+  /**
+   * Opacity of the Earth imagery, 0..1. 0 keeps the flat vector globe, and
+   * also means the image is never downloaded. Only the WebGPU renderer draws
+   * imagery; see `GlobeOptions.imageryUrl`.
+   */
+  imagery: number;
+  /**
+   * How much of the vector land — fill and coastline — stays on top of the
+   * imagery, 0..1. 0 shows the plain photograph; 1 keeps the land as strong as
+   * on the flat globe. Has no effect where no imagery is drawn.
+   */
+  vectorOverlay: number;
+  /**
+   * How far the imagery is recoloured onto the theme's own ramp — near-black,
+   * ocean teal, day cyan, label ice — by brightness, 0..1. 0 keeps the
+   * photograph's own colours.
+   */
+  imageryDuotone: number;
 }
 
 /**
@@ -137,6 +162,13 @@ export interface GlobeOptions {
   labelFont: string;
   /** Applied to the canvas, which is focusable and drag-rotatable. */
   ariaLabel: string;
+  /**
+   * An equirectangular image of the Earth to wrap round the sphere: 2:1, with
+   * 180°W at its left edge and the north pole at its top. Fetched only by the
+   * WebGPU renderer, and only once `theme.imagery` is above 0. Omitted means a
+   * flat globe everywhere.
+   */
+  imageryUrl?: string;
   /** Initial `[λ, φ]`. Negated lng/lat, as d3's `.rotate()` takes it. */
   initialRotation: readonly [number, number];
   /** Defaults to `[1, 5]`. */

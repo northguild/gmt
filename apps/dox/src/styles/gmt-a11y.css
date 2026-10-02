@@ -58,7 +58,8 @@
 
   /* The globe's atmosphere glow and limb haze are translucent washes. */
   :root,
-  [data-theme="light"] {
+  [data-theme="light"],
+  .gmt-theme-dark {
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
   }
@@ -71,7 +72,8 @@
  * ======================================================================= */
 @media (prefers-contrast: more) {
   :root,
-  [data-theme="light"] {
+  [data-theme="light"],
+  .gmt-theme-dark {
     --gmt-border: var(--gmt-border-strong);
     --gmt-hairline: var(--gmt-border-strong);
     --gmt-fill: var(--gmt-fill-deep);
@@ -79,6 +81,10 @@
     --gmt-glass-tint-subtle: var(--gmt-glass-tint);
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
+    /* The Earth imagery is a busy photograph behind every marker and label.
+       Raised contrast gets the flat globe, which is also the one that never
+       downloads the image. */
+    --gmt-globe-imagery-alpha: 0;
   }
 
   *,
@@ -104,6 +110,15 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* A canvas is not repainted in the system palette, so the globe's colours
+     stay its own. Drop the photograph from behind them at least: the flat
+     globe is the plainer of the two, and it never downloads the image. */
+  :root,
+  [data-theme="light"],
+  .gmt-theme-dark {
+    --gmt-globe-imagery-alpha: 0;
+  }
+
   /* The filter switches. Their on/off state is carried by a tinted track and a
      tinted thumb, and forced-colors replaces both with the system palette —
      which left every switch an identical empty pill, on and off, distinguished
