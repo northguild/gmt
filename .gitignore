@@ -64,6 +64,7 @@ apps/dox/.wrangler/
 
 apps/dox/public/llms.txt
 apps/dox/public/llms-full.txt
+apps/dox/public/_redirects
 
 # Visual regression snapshots (scripts/visual-snapshot.mjs) — local-only, never committed
 apps/dox/.visual/
