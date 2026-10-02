@@ -15,9 +15,10 @@ import { isValidUtc } from "../validate";
  */
 export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
   /**
-   * The unit the distance is written in, whatever its size, from `"second"` to `"year"`, singular
-   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
-   * an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"`, `"hour"`,
+   * `"day"`, `"week"`, `"month"` or `"year"`, singular or plural. Any other value returns `""`.
+   * Omitted, the unit is picked from the distance: second under a minute, minute under an hour,
+   * hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
    *
    * @defaultValue None. The unit is picked from the distance.
    */
@@ -45,6 +46,8 @@ export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
  *   day, so a 3-year distance reads "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
+ * - `largestUnit` is one of the seven units from `"second"` to `"year"`, singular or plural. Any
+ *   other value returns `""`.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
  *
@@ -72,13 +75,15 @@ export function formatRelativeUtc(
     if (!isValidUtc(value)) return "";
     const tz = normalizeTimeZone(options.timeZone);
     if (!tz) return "";
-    if (options.reference !== undefined && !isValidUtc(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidUtc(referenceOption))
       return "";
 
     const target = toInstantFromUtc(value);
     if (target === null) return "";
 
-    const reference = toReferenceInstantFromUtc(options.reference);
+    const reference = toReferenceInstantFromUtc(referenceOption);
     if (reference === null) return "";
 
     try {

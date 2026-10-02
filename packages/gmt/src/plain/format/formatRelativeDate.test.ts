@@ -712,7 +712,8 @@ describe("formatRelativeDate", () => {
       },
     );
 
-    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    // ECMA-402 GetOption (the Temporal specification defines the same operation): an option whose
+    // value is undefined is absent, so the default applies.
     it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
       const omitted = formatRelativeDate("2024-03-05", MustTestLocales.enUS, {
         reference: REF,
@@ -807,23 +808,43 @@ describe("formatRelativeDate with non-object options", () => {
   });
 });
 
-// ECMA-402 SingularRelativeTimeUnit and Temporal GetTemporalUnitValuedOption read a plural unit name
-// as its singular, so "hours" is the unit "hour". The rows are typed with the option's own type,
-// not a template table, so `tsc` fails this file if a plural leaves the `largestUnit` type.
-describe("formatRelativeDate with a plural largestUnit", () => {
-  // 17 March 2023 to 17 March 2024 spans 29 February 2024: 1 year, 12 months, 366 days (52.29 weeks, rounded to 52).
-  const pluralRows: Array<{
-    largestUnit: NonNullable<FormatRelativeDateOptions["largestUnit"]>;
-    expected: string;
-  }> = [
-    { largestUnit: "years", expected: "last year" },
-    { largestUnit: "months", expected: "12 months ago" },
-    { largestUnit: "weeks", expected: "52 weeks ago" },
-    { largestUnit: "days", expected: "366 days ago" },
-  ];
+// The allowed units of `largestUnit` are the ones the option's type lists: "year", "month", "week", "day", each
+// singular or plural. Temporal reads a unit option with GetTemporalUnitValuedOption (a plural name
+// is its singular) and then ValidateTemporalUnitValue against the unit group of the type — here
+// date — which throws RangeError for a unit outside it (test262 largestunit-invalid-string.js
+// for PlainDate, PlainTime, PlainDateTime, Instant and ZonedDateTime `until`). A RangeError is "".
+describe("formatRelativeDate largestUnit", () => {
+  // Every value is checked against the option's own type, so `tsc` fails this file if a singular
+  // or a plural name leaves the `largestUnit` type. The table below takes its units from here.
+  const UNIT = {
+    year: "year",
+    years: "years",
+    month: "month",
+    months: "months",
+    week: "week",
+    weeks: "weeks",
+    day: "day",
+    days: "days",
+  } satisfies Record<
+    string,
+    NonNullable<FormatRelativeDateOptions["largestUnit"]>
+  >;
 
-  it.each(pluralRows)(
-    "returns $expected for largestUnit $largestUnit",
+  // 17 March 2023 to 17 March 2024 spans 29 February 2024: 1 year, 12 months, 366 days (52.29 weeks,
+  // rounded to 52).
+  // A plural names the same unit as its singular, so both rows of a unit expect the same text.
+  it.each`
+    largestUnit    | expected
+    ${UNIT.year}   | ${"last year"}
+    ${UNIT.years}  | ${"last year"}
+    ${UNIT.month}  | ${"12 months ago"}
+    ${UNIT.months} | ${"12 months ago"}
+    ${UNIT.week}   | ${"52 weeks ago"}
+    ${UNIT.weeks}  | ${"52 weeks ago"}
+    ${UNIT.day}    | ${"366 days ago"}
+    ${UNIT.days}   | ${"366 days ago"}
+  `(
+    "returns $expected for the listed unit largestUnit: $largestUnit",
     ({ largestUnit, expected }) => {
       const options: FormatRelativeDateOptions = {
         reference: "2024-03-17",
@@ -835,4 +856,54 @@ describe("formatRelativeDate with a plural largestUnit", () => {
       ).toBe(expected);
     },
   );
+
+  it.each`
+    label                          | largestUnit                  | why
+    ${"hour"}                      | ${"hour"}                    | ${"a time unit; a date has none"}
+    ${"hours"}                     | ${"hours"}                   | ${"a time unit; a date has none"}
+    ${"minute"}                    | ${"minute"}                  | ${"a time unit; a date has none"}
+    ${"minutes"}                   | ${"minutes"}                 | ${"a time unit; a date has none"}
+    ${"second"}                    | ${"second"}                  | ${"a time unit; a date has none"}
+    ${"seconds"}                   | ${"seconds"}                 | ${"a time unit; a date has none"}
+    ${"quarter"}                   | ${"quarter"}                 | ${"not a unit of the function"}
+    ${"quarters"}                  | ${"quarters"}                | ${"not a unit of the function"}
+    ${"millisecond"}               | ${"millisecond"}             | ${"not a unit of the function"}
+    ${"nanoseconds"}               | ${"nanoseconds"}             | ${"not a unit of the function"}
+    ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
+    ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
+    ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
+    ${""}                          | ${""}                        | ${"an empty string"}
+    ${"x"}                         | ${"x"}                       | ${"not a unit"}
+    ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
+    ${"1"}                         | ${1}                         | ${"a number"}
+    ${"true"}                      | ${true}                      | ${"a boolean"}
+    ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
+    ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
+  `(
+    'returns "" for largestUnit $label outside the listed units ($why)',
+    ({ largestUnit }) => {
+      expect(
+        formatRelativeDate("2023-03-17", MustTestLocales.enUS, {
+          reference: "2024-03-17",
+          largestUnit: largestUnit as never,
+        }),
+      ).toBe("");
+    },
+  );
+
+  // An explicit undefined is the omitted option (GetOption), so the unit is picked from the
+  // distance exactly as it is with no largestUnit at all.
+  it("picks the unit from the distance for largestUnit: undefined, as when it is omitted", () => {
+    const picked = formatRelativeDate("2023-03-17", MustTestLocales.enUS, {
+      reference: "2024-03-17",
+    });
+
+    expect(picked).toBe("last year");
+    expect(
+      formatRelativeDate("2023-03-17", MustTestLocales.enUS, {
+        reference: "2024-03-17",
+        largestUnit: undefined,
+      }),
+    ).toBe(picked);
+  });
 });

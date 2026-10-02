@@ -14,9 +14,10 @@ import { isValidDateTime } from "../validate";
  */
 export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions {
   /**
-   * The unit the distance is written in, whatever its size, from `"second"` to `"year"`, singular
-   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
-   * an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"`, `"hour"`,
+   * `"day"`, `"week"`, `"month"` or `"year"`, singular or plural. Any other value returns `""`.
+   * Omitted, the unit is picked from the distance: second under a minute, minute under an hour,
+   * hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
    *
    * @defaultValue None. The unit is picked from the distance.
    */
@@ -32,6 +33,8 @@ export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions
  *   "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
+ * - `largestUnit` is one of the seven units from `"second"` to `"year"`, singular or plural. Any
+ *   other value returns `""`.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
@@ -57,13 +60,15 @@ export function formatRelativeDateTime(
     // invalid input.
     if (options === null || typeof options !== "object") return "";
     if (!isValidDateTime(value)) return "";
-    if (options.reference !== undefined && !isValidDateTime(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
       return "";
 
     try {
       const target = Temporal.PlainDateTime.from(value);
-      const reference = options.reference
-        ? Temporal.PlainDateTime.from(options.reference)
+      const reference = referenceOption
+        ? Temporal.PlainDateTime.from(referenceOption)
         : Temporal.Now.plainDateTimeISO();
 
       const diff = target.since(reference);

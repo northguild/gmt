@@ -4,7 +4,7 @@
 
 Accept plural unit names in the type of the `largestUnit` option of the `formatRelative*` functions, not only at run time.
 
-`formatRelativeUnix` already typed `largestUnit` as singular or plural. The other five functions accepted `"hours"` when called from JavaScript but rejected it in TypeScript. Their types now match what the functions accept:
+`formatRelativeUnix` already typed `largestUnit` as singular or plural. The other five functions accepted `"hours"` when called from JavaScript but rejected it in TypeScript. Their types now accept the plural of every unit they already listed:
 
 | Function | `largestUnit` now also accepts |
 | --- | --- |

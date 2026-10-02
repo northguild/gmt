@@ -27,9 +27,10 @@ export interface FormatRelativeZonedOptions {
    */
   numeric?: "always" | "auto";
   /**
-   * The unit the distance is written in, whatever its size, from `"second"` to `"year"`, singular
-   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
-   * an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"`, `"hour"`,
+   * `"day"`, `"week"`, `"month"` or `"year"`, singular or plural. Any other value returns `""`.
+   * Omitted, the unit is picked from the distance: second under a minute, minute under an hour,
+   * hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
    *
    * @defaultValue None. The unit is picked from the distance.
    */
@@ -62,6 +63,8 @@ export interface FormatRelativeZonedOptions {
  *   "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
+ * - `largestUnit` is one of the seven units from `"second"` to `"year"`, singular or plural. Any
+ *   other value returns `""`.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
@@ -88,14 +91,16 @@ export function formatRelativeZoned(
     if (options === null || typeof options !== "object") return "";
     if (!isValidZonedDateTime(value)) return "";
 
-    if (!isValidZonedFormatReference(options.reference)) return "";
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
       const valueZDT = zonedDateTimeFrom(value);
       const valueInstant = valueZDT.toInstant();
 
       const refZDT = resolveZonedReference(
-        options.reference,
+        referenceOption,
         valueZDT.timeZoneId,
       );
 

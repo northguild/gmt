@@ -636,7 +636,8 @@ describe("formatRelativeTime", () => {
       },
     );
 
-    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    // ECMA-402 GetOption (the Temporal specification defines the same operation): an option whose
+    // value is undefined is absent, so the default applies.
     it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
       const omitted = formatRelativeTime("09:42:00", MustTestLocales.enUS, {
         reference: REF,
@@ -739,22 +740,38 @@ describe("formatRelativeTime with non-object options", () => {
   });
 });
 
-// ECMA-402 SingularRelativeTimeUnit and Temporal GetTemporalUnitValuedOption read a plural unit name
-// as its singular, so "hours" is the unit "hour". The rows are typed with the option's own type,
-// not a template table, so `tsc` fails this file if a plural leaves the `largestUnit` type.
-describe("formatRelativeTime with a plural largestUnit", () => {
-  // 10:00 is 2 hours, 120 minutes or 7,200 seconds before 12:00.
-  const pluralRows: Array<{
-    largestUnit: NonNullable<FormatRelativeTimeOptions["largestUnit"]>;
-    expected: string;
-  }> = [
-    { largestUnit: "hours", expected: "2 hours ago" },
-    { largestUnit: "minutes", expected: "120 minutes ago" },
-    { largestUnit: "seconds", expected: "7,200 seconds ago" },
-  ];
+// The allowed units of `largestUnit` are the ones the option's type lists: "hour", "minute", "second", each
+// singular or plural. Temporal reads a unit option with GetTemporalUnitValuedOption (a plural name
+// is its singular) and then ValidateTemporalUnitValue against the unit group of the type — here
+// time — which throws RangeError for a unit outside it (test262 largestunit-invalid-string.js
+// for PlainDate, PlainTime, PlainDateTime, Instant and ZonedDateTime `until`). A RangeError is "".
+describe("formatRelativeTime largestUnit", () => {
+  // Every value is checked against the option's own type, so `tsc` fails this file if a singular
+  // or a plural name leaves the `largestUnit` type. The table below takes its units from here.
+  const UNIT = {
+    hour: "hour",
+    hours: "hours",
+    minute: "minute",
+    minutes: "minutes",
+    second: "second",
+    seconds: "seconds",
+  } satisfies Record<
+    string,
+    NonNullable<FormatRelativeTimeOptions["largestUnit"]>
+  >;
 
-  it.each(pluralRows)(
-    "returns $expected for largestUnit $largestUnit",
+  // 10:00 is 2 hours, 120 minutes or 7,200 seconds before 12:00.
+  // A plural names the same unit as its singular, so both rows of a unit expect the same text.
+  it.each`
+    largestUnit     | expected
+    ${UNIT.hour}    | ${"2 hours ago"}
+    ${UNIT.hours}   | ${"2 hours ago"}
+    ${UNIT.minute}  | ${"120 minutes ago"}
+    ${UNIT.minutes} | ${"120 minutes ago"}
+    ${UNIT.second}  | ${"7,200 seconds ago"}
+    ${UNIT.seconds} | ${"7,200 seconds ago"}
+  `(
+    "returns $expected for the listed unit largestUnit: $largestUnit",
     ({ largestUnit, expected }) => {
       const options: FormatRelativeTimeOptions = {
         reference: "12:00:00",
@@ -766,4 +783,56 @@ describe("formatRelativeTime with a plural largestUnit", () => {
       ).toBe(expected);
     },
   );
+
+  it.each`
+    label                           | largestUnit                   | why
+    ${"day"}                        | ${"day"}                      | ${"a date unit; a time has none"}
+    ${"days"}                       | ${"days"}                     | ${"a date unit; a time has none"}
+    ${"week"}                       | ${"week"}                     | ${"a date unit; a time has none"}
+    ${"weeks"}                      | ${"weeks"}                    | ${"a date unit; a time has none"}
+    ${"month"}                      | ${"month"}                    | ${"a date unit; a time has none"}
+    ${"months"}                     | ${"months"}                   | ${"a date unit; a time has none"}
+    ${"year"}                       | ${"year"}                     | ${"a date unit; a time has none"}
+    ${"years"}                      | ${"years"}                    | ${"a date unit; a time has none"}
+    ${"quarter"}                    | ${"quarter"}                  | ${"not a unit of the function"}
+    ${"quarters"}                   | ${"quarters"}                 | ${"not a unit of the function"}
+    ${"millisecond"}                | ${"millisecond"}              | ${"not a unit of the function"}
+    ${"nanoseconds"}                | ${"nanoseconds"}              | ${"not a unit of the function"}
+    ${"auto"}                       | ${"auto"}                     | ${"not a unit of the function"}
+    ${"HOUR"}                       | ${"HOUR"}                     | ${"unit names are lower case"}
+    ${"Hours"}                      | ${"Hours"}                    | ${"unit names are lower case"}
+    ${""}                           | ${""}                         | ${"an empty string"}
+    ${"x"}                          | ${"x"}                        | ${"not a unit"}
+    ${"null"}                       | ${null}                       | ${"null is a value, not an omission"}
+    ${"1"}                          | ${1}                          | ${"a number"}
+    ${"true"}                       | ${true}                       | ${"a boolean"}
+    ${'["hour"]'}                   | ${["hour"]}                   | ${"an array, not a string"}
+    ${'{ toString: () => "hour" }'} | ${{ toString: () => "hour" }} | ${"an object, not a string"}
+  `(
+    'returns "" for largestUnit $label outside the listed units ($why)',
+    ({ largestUnit }) => {
+      expect(
+        formatRelativeTime("10:00:00", MustTestLocales.enUS, {
+          reference: "12:00:00",
+          largestUnit: largestUnit as never,
+        }),
+      ).toBe("");
+    },
+  );
+
+  // An explicit undefined is the omitted option (GetOption), so the unit is picked from the
+  // distance exactly as it is with no largestUnit at all.
+  it("picks the unit from the distance for largestUnit: undefined, as when it is omitted", () => {
+    const picked = formatRelativeTime("10:00:00", MustTestLocales.enUS, {
+      reference: "12:00:00",
+    });
+
+    expect(picked).toBe("2 hours ago");
+    expect(
+      formatRelativeTime("10:00:00", MustTestLocales.enUS, {
+        reference: "12:00:00",
+        largestUnit: undefined,
+      }),
+    ).toBe(picked);
+  });
 });

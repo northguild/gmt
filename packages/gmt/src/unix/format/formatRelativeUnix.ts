@@ -31,9 +31,10 @@ export interface FormatRelativeUnixOptions {
    */
   numeric?: "always" | "auto";
   /**
-   * The unit the distance is written in, whatever its size, from `"second"` to `"year"`, singular
-   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
-   * an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"`, `"hour"`,
+   * `"day"`, `"week"`, `"month"` or `"year"`, singular or plural. Any other value returns `""`.
+   * Omitted, the unit is picked from the distance: second under a minute, minute under an hour,
+   * hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
    *
    * @defaultValue None. The unit is picked from the distance.
    */
@@ -79,6 +80,8 @@ export interface FormatRelativeUnixOptions {
  *   "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
+ * - `largestUnit` is one of the seven units from `"second"` to `"year"`, singular or plural. Any
+ *   other value returns `""`.
  * - `value` and a numeric `reference` are safe integers or strings of optionally negative ASCII
  *   digits; `largestUnit` and `epochUnit` accept singular or plural names.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
