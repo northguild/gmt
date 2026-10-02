@@ -9,8 +9,9 @@ import type { TimestampEvent } from "../../types";
 /** Options for `estimateDrift`. */
 export interface EstimateDriftOptions {
   /**
-   * ISO 8601 duration of exact time (a day is 24 hours; years, months and weeks are refused; not
-   * negative). With it, `exceedsTolerance` says whether the drift is greater than it.
+   * The drift allowed, as an ISO 8601 duration of exact time (a day is 24 hours; years, months and
+   * weeks are refused; not negative). With it, `exceedsTolerance` says whether the drift is greater
+   * than it.
    *
    * @defaultValue None. `exceedsTolerance` is `null`.
    */
@@ -23,7 +24,10 @@ export interface DriftReport {
   first: string;
   /** The latest-recorded EST's `at`, exactly as written. */
   last: string;
-  /** `last` minus `first` in exact time, hours as the largest unit; negative when it moved earlier. */
+  /**
+   * The drift: `last` minus `first` in exact time, hours as the largest unit; negative when it
+   * moved earlier.
+   */
   drift: string;
   /** The number of EST records, the first included. */
   revisions: number;

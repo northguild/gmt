@@ -12,19 +12,19 @@ import type { FreeTimeBasis, FreeTimeOptions } from "../../types";
 
 /** A band of chargeable-day ordinals and how many of the charged days fell in it. */
 export interface TierBand {
-  /** First chargeable-day ordinal of the band, from 1. */
+  /** The first chargeable-day ordinal of the band, from 1. */
   from: number;
-  /** Last ordinal of the band, or `null` for the open final band. */
+  /** The last ordinal of the band, or `null` for the open final band. */
   to: number | null;
-  /** Charged days that fell in the band. */
+  /** The number of charged days that fell in the band. */
   days: number;
 }
 
 /** What `chargeableDays` returns: the day count an invoice bills, and the dates that back it. */
 export interface FreeTimeCharges {
-  /** Free days the dwell touched, at most the tariff's `freeDays`. */
+  /** The number of free days the dwell touched, at most the tariff's `freeDays`. */
   freeDaysUsed: number;
-  /** Counted days on or after `expiresAt` the dwell touched. */
+  /** The number of counted days on or after `expiresAt` the dwell touched. */
   chargeableDays: number;
   /** The instant free time ended, as a UTC instant, as `freeTimeExpiry` reports it. */
   expiresAt: string;

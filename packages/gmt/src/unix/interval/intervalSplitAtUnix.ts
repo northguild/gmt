@@ -13,6 +13,8 @@ import { parseUnixEpochInterval, parseUnixEpochValue } from "../../internal";
  *   each record's `end` is the next record's `start` and belongs only to that next record, so the
  *   pieces share no value and together cover `[start, end)` exactly once.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
+ * - A piece's `end` equals its `start` only when the interval itself is zero-length (`start`
+ *   equal to `end`): the result is then that one empty piece, whatever the points.
  * - Returns `[]` when `points` is not an array, or when `start`, `end` or any point is not a safe
  *   integer (or numeric string of one) — fractions, empty strings and values beyond ±(2^53 − 1)
  *   are invalid even when they would fall outside the interval — or when `start > end`.

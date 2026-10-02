@@ -18,6 +18,8 @@ import { isValidTime } from "../validate";
  *   there, so the pieces share no value and together cover the interval exactly once (the rule
  *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
+ * - A piece's `end` equals its `start` only when the interval itself is zero-length (`start`
+ *   equal to `end`): the result is then that one empty piece, whatever the points.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainTime
  *   string, or on invalid input (unparseable start/end, `start > end`).
  *

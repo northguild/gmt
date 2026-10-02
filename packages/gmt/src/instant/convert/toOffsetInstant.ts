@@ -28,11 +28,13 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  * };
  */
 export interface OffsetInstant {
-  /** UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally. */
+  /**
+   * The UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally.
+   */
   instant: string;
   /**
-   * UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone
-   * that did not run on a whole minute). Renders the event as the human on the ground saw it.
+   * The UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972
+   * zone that did not run on a whole minute). Renders the event as the human on the ground saw it.
    */
   offset: string;
   /**

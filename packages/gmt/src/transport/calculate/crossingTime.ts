@@ -5,7 +5,10 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
 /** What `crossingTime` returns: exact elapsed time plus the local view at either end. */
 export interface Crossing {
-  /** Exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit. */
+  /**
+   * The exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest
+   * unit.
+   */
   duration: string;
   /** The entry, rendered in the target zone. */
   enter: string;

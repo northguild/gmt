@@ -30,7 +30,7 @@ export function isValidTimeRange(props: {
   value2: string;
   /**
    * The settings for the comparison. It must be an object or omitted; any other value, `null`
-   * included, returns false.
+   * included, returns `false`.
    *
    * @defaultValue None. Equal values are not a valid range.
    */

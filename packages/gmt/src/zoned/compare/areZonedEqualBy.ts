@@ -32,7 +32,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isSameDay(a, b)` → `areZonedEqualBy(a, b, "day")`
  * - `isSameMonth(a, b)` → `areZonedEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areZonedEqualBy(a, b, "year")`

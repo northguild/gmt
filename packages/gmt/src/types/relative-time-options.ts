@@ -23,7 +23,8 @@ export interface RelativeTimeFormatOptions {
   numeric?: "always" | "auto";
   /**
    * The one unit the distance is written in, whatever its size, so `"hour"` renders a day and a
-   * half as "in 36 hours". Each domain restricts the allowed values to the units its values have.
+   * half as "in 36 hours". Each domain restricts the allowed values to the units its values have,
+   * singular or plural; any other value returns `""`.
    *
    * @defaultValue None. The unit is picked from the distance.
    */

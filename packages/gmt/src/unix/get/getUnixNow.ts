@@ -23,7 +23,8 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
 export function getUnixNow(options?: {
   /**
    * The unit of the returned epoch: `"seconds"` or `"milliseconds"`, singular or plural. Seconds
-   * floor toward −∞, as POSIX `time_t` counts whole elapsed seconds. Any other value returns null.
+   * floor toward −∞, as POSIX `time_t` counts whole elapsed seconds. Any other value returns
+   * `null`.
    *
    * @defaultValue `"milliseconds"`
    */

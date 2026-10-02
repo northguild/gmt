@@ -17,15 +17,15 @@ export interface CutoffOptions {
   /** The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset. */
   timeZone: string;
   /**
-   * Local time of day the cut-off is pinned to (`"17:00"`), as `isValidTime` accepts.
+   * The local time of day the cut-off is pinned to (`"17:00"`), as `isValidTime` accepts.
    *
    * @defaultValue None. The cut-off is the offset taken off the anchor, with no time of day
    * pinned.
    */
   atLocalTime?: string;
   /**
-   * Working week and holidays the cut-off's local date is rolled against. Its `timeZone` is not
-   * read: `timeZone` above is the local frame. Requires `roll`.
+   * The working week and holidays the cut-off's local date is rolled against. Its `timeZone` is
+   * not read: `timeZone` above is the local frame. Requires `roll`.
    *
    * @defaultValue None. The cut-off's date is not rolled; a `roll` without it returns `""`.
    */

@@ -26,11 +26,11 @@ export interface BillingDates {
 
 /** The three windows the caller supplies, in calendar days, none defaulted, and an optional agreed resolution date. */
 export interface BillingWindows {
-  /** Days from `anchorOn` within which the invoice must be issued. */
+  /** The days from `anchorOn` within which the invoice must be issued. */
   issueDays: number;
-  /** Days from `invoiceIssuedOn` within which a dispute may be raised. */
+  /** The days from `invoiceIssuedOn` within which a dispute may be raised. */
   disputeDays: number;
-  /** Days from `requestReceivedOn` within which the dispute must be resolved. */
+  /** The days from `requestReceivedOn` within which the dispute must be resolved. */
   resolutionDays: number;
   /**
    * A resolution date the parties agreed instead, as an ISO date on or after `requestReceivedOn`;
@@ -43,15 +43,21 @@ export interface BillingWindows {
 
 /** What `billingTimeline` returns: each deadline as an ISO date, and each comparison once its date exists. */
 export interface BillingDeadlines {
-  /** `anchorOn + issueDays`. */
+  /** The last date the invoice may be issued: `anchorOn + issueDays`. */
   invoiceDeadline: string;
   /** Whether `invoiceIssuedOn` is on or before `invoiceDeadline`; `null` until an invoice date exists. */
   issuedByDeadline: boolean | null;
-  /** `invoiceIssuedOn + disputeDays`; `null` until an invoice date exists. */
+  /**
+   * The last date a dispute may be raised: `invoiceIssuedOn + disputeDays`; `null` until an invoice
+   * date exists.
+   */
   disputeDeadline: string | null;
   /** Whether `requestReceivedOn` is on or before `disputeDeadline`; `null` until a request date exists. */
   requestedByDeadline: boolean | null;
-  /** `requestReceivedOn + resolutionDays`, or `agreedResolutionOn`; `null` until a request date exists. */
+  /**
+   * The last date the dispute must be resolved: `requestReceivedOn + resolutionDays`, or
+   * `agreedResolutionOn`; `null` until a request date exists.
+   */
   resolutionDeadline: string | null;
 }
 

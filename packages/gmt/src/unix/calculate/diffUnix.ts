@@ -70,14 +70,14 @@ export function diffUnix(
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
-     * plural. Any other value returns null.
+     * plural. Any other value returns `null`.
      *
      * @defaultValue `"milliseconds"`
      */
     epochUnit?: UnixUnit;
     /**
      * The time zone calendar units are measured in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns null.
+     * the system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */

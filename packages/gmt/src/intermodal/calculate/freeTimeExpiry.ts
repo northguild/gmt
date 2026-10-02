@@ -9,7 +9,7 @@ import type { FreeTimeOptions } from "../../types";
 
 /** What `freeTimeExpiry` returns: the free-time window as local dates, and the instant it ends. */
 export interface FreeTime {
-  /** Free day one, as a local date in the counting zone. */
+  /** The first free day, as a local date in the counting zone. */
   freeTimeStart: string;
   /** The last free day, as a local date in the counting zone. */
   lastFreeDay: string;

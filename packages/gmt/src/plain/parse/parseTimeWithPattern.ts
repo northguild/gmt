@@ -9,9 +9,8 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *   producer format — a CSV column, a legacy API field, a partially-typed
  *   form value — not for generating locale-correct output. For display,
  *   use `formatTime`/`formatDateToParts`, which order fields per locale
- *   instead of hard-coding a field order (see roadmap Decision 1 — a
- *   token *formatter*, the inverse of this function, is deliberately out
- *   of scope for GMT).
+ *   instead of hard-coding a field order (a token *formatter*, the
+ *   inverse of this function, is deliberately out of scope for GMT).
  * - `pattern` accepts only time-shaped tokens. A pattern containing a
  *   date-only token (`y M d E G`) is malformed for this function and
  *   returns `""` — use `parseDateTimeWithPattern` for combined input.

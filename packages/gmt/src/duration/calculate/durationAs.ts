@@ -70,7 +70,7 @@ export function durationAs(
      * spring-forward transition totals 23 hours.
      *
      * @defaultValue None. Days are 24 hours, and a duration or `unit` that involves a year, month
-     * or week returns null.
+     * or week returns `null`.
      */
     relativeTo?: DurationRelativeTo;
   },

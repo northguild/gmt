@@ -42,21 +42,21 @@ export function subtractUnix(
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
-     * plural. Any other value returns null. The result is in the same unit.
+     * plural. Any other value returns `null`. The result is in the same unit.
      *
      * @defaultValue `"milliseconds"`
      */
     epochUnit?: UnixUnit;
     /**
      * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns null.
+     * the system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */
     timeZone?: string;
     /**
      * How a result day that does not exist in its month is handled, such as March 31 minus one
-     * month. `"constrain"` clamps to the last valid day, and `"reject"` returns null.
+     * month. `"constrain"` clamps to the last valid day, and `"reject"` returns `null`.
      *
      * @defaultValue `"constrain"`, Temporal's default.
      */

@@ -49,7 +49,7 @@ export function intervalFromDurationDate(
   options?: {
     /**
      * What to do when the computed endpoint is not a real date. `"constrain"` clamps it to the
-     * last valid day, so Jan 31 + 1 month is Feb 29 or 28; `"reject"` returns null.
+     * last valid day, so Jan 31 + 1 month is Feb 29 or 28; `"reject"` returns `null`.
      *
      * @defaultValue `"constrain"`, Temporal's default.
      */

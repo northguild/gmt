@@ -48,7 +48,7 @@ export function getWeeksInLocaleWeekYear(
     /**
      * How many days of January the first week must hold to be week 1 (UTS #35 Part 4, Week
      * Data). `4` is the ISO 8601 rule; `1` puts January 1 in week 1 every year, as CLDR's world
-     * default does. A value that is not an integer from 1 to 7 returns null.
+     * default does. A value that is not an integer from 1 to 7 returns `null`.
      *
      * @defaultValue `4`
      */

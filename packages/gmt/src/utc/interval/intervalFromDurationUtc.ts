@@ -39,7 +39,7 @@ export function intervalFromDurationUtc(
   options?: {
     /**
      * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
-     * so Jan 31 + 1 month is Feb 29/28 (TC39 Temporal); `"reject"` returns null.
+     * so Jan 31 + 1 month is Feb 29/28 (TC39 Temporal); `"reject"` returns `null`.
      *
      * @defaultValue `"constrain"`, Temporal's default.
      */

@@ -83,8 +83,8 @@ export function parseUnitFromUtc(
      */
     weekStartsOn?: "monday" | "sunday";
     /**
-     * The time zone whose wall clock the value is read on: an IANA name, a UTC offset, or
-     * `"local"` for the system time zone. An invalid zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
      *
      * @defaultValue `"UTC"`
      */

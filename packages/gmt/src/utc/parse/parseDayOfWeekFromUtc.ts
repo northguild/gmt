@@ -22,8 +22,8 @@ export function parseDayOfWeekFromUtc(
   value: string,
   options?: {
     /**
-     * The time zone whose wall clock the value is read on: an IANA name, a UTC offset, or
-     * `"local"` for the system time zone. An invalid zone returns null.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */

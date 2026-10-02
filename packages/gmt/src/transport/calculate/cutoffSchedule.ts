@@ -7,10 +7,10 @@ import { type CutoffOptions, cutoffAt } from "./cutoffAt";
 export interface Cutoff {
   /** The caller's label, echoed back (`"document"`, `"VGM"`); GMT does not interpret it. */
   name: string;
-  /** ISO 8601 duration before the anchor, as `cutoffAt` takes it. */
+  /** The ISO 8601 duration before the anchor, as `cutoffAt` takes it. */
   offset: string;
   /**
-   * Local time of day the cut-off is pinned to, as `cutoffAt` takes it.
+   * The local time of day the cut-off is pinned to, as `cutoffAt` takes it.
    *
    * @defaultValue None. The cut-off is the offset taken off the anchor, with no time of day
    * pinned.
@@ -31,7 +31,7 @@ export interface CutoffScheduleOptions {
   /** The time zone every cut-off is read in: an IANA name or a UTC offset. */
   timeZone: string;
   /**
-   * Working week and holidays every cut-off's local date is rolled against. Requires `roll`.
+   * The working week and holidays every cut-off's local date is rolled against. Requires `roll`.
    *
    * @defaultValue None. No cut-off's date is rolled; a `roll` without it returns `[]`.
    */

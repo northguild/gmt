@@ -6,7 +6,7 @@ import { readRfc5322DateTime } from "../../internal/rfc5322DateTime";
  * `Date:` headers use — into a zoned ISO 8601 datetime string.
  *
  * - **Decoding, not display.** Weekday and month names are English, per the
- *   fixed grammar (see `formatRfc2822`'s JSDoc and roadmap Decision 1); like
+ *   fixed grammar (see `formatRfc2822`'s JSDoc); like
  *   every ABNF literal they match in any case (RFC 5234 §2.3).
  * - **Reads what a conformant receiver must.** RFC 5322 §3.3 syntax: folding
  *   white space (spaces, tabs, folded lines), nested comments such as a

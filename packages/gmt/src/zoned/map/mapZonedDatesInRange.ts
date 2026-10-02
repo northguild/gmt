@@ -37,9 +37,9 @@ export function mapZonedDatesInRange(
   stepDays?: number,
   options?: {
     /**
-     * The most dates the result may hold. A result that would be larger, or longer than the longest
-     * possible array (2^32 - 1), returns `[]` instead. A value that is not a positive safe integer
-     * also returns `[]`.
+     * The most dates the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
      *
      * @defaultValue `1_000_000`
      */

@@ -8,8 +8,8 @@ import { getLocaleWeekdayNames } from "../plain/locale/getLocaleWeekdayNames";
  * Shared token-pattern engine for J11's `parse*WithPattern` family.
  *
  * This is GMT's one named exception to `context/coding-standards.md`'s
- * "manual string parsing" prohibition (Decision 4 in
- * `context/roadmap/issues/J.md`). The exception is scoped to this module
+ * "manual string parsing" prohibition (its section "Scoped exception:
+ * manual string parsing"). The exception is scoped to this module
  * and the three `parse*WithPattern` public functions, and is bound by
  * three rules, enforced throughout this file:
  *   1. The regex is always built *from the pattern string itself* at call

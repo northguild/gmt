@@ -67,7 +67,7 @@ export function compareDurations(
      * compares shorter than `"PT24H"`.
      *
      * @defaultValue None. Days are 24 hours, and two different durations of which one has a
-     * year, month or week return null.
+     * year, month or week return `null`.
      */
     relativeTo?: DurationRelativeTo;
   },

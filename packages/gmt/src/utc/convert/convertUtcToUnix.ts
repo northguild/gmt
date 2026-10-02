@@ -30,7 +30,7 @@ export function convertUtcToUnix(
   options?: {
     /**
      * The unit the epoch value is returned in: `"seconds"` or `"milliseconds"`, singular or plural.
-     * An explicit `undefined` is the same as omitted; any other value returns null.
+     * An explicit `undefined` is the same as omitted; any other value returns `null`.
      *
      * @defaultValue `"milliseconds"`
      */

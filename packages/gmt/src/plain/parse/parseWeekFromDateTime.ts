@@ -27,7 +27,7 @@ export function parseWeekFromDateTime(
      * The first day of the week, which sets how the week is numbered. `"monday"` gives the ISO 8601
      * week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS #35 week
      * number with a Sunday first day and one minimal day, where week 1 holds 1 January. Any other
-     * value returns null.
+     * value returns `null`.
      *
      * @defaultValue `"monday"`
      */

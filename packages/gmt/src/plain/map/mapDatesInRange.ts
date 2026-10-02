@@ -40,8 +40,9 @@ export function mapDatesInRange(
   stepDays?: number,
   options?: {
     /**
-     * The most dates the result may hold. A range that holds more returns `[]` without
-     * generating any. A value that is not a positive safe integer also returns `[]`.
+     * The most dates the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
      *
      * @defaultValue `1_000_000`
      */

@@ -11,14 +11,14 @@
  */
 export type BusinessCalendar = {
   /**
-   * ISO weekday numbers closed every week, 1 (Monday) through 7 (Sunday). It is explicit because
-   * Saturday–Sunday is not universal: much of the Middle East is Friday–Saturday (`[5, 6]`), and
-   * some markets keep a one-day weekend (`[7]`). `[]` means no weekly closure, duplicates are
-   * ignored, and all seven days leave no business day and are invalid.
+   * The ISO weekday numbers closed every week, 1 (Monday) through 7 (Sunday). It is explicit
+   * because Saturday–Sunday is not universal: much of the Middle East is Friday–Saturday
+   * (`[5, 6]`), and some markets keep a one-day weekend (`[7]`). `[]` means no weekly closure,
+   * duplicates are ignored, and all seven days leave no business day and are invalid.
    */
   weekend: number[];
   /**
-   * Dates closed in addition to the weekend, as ISO PlainDate strings (`"2024-07-04"`), never
+   * The dates closed in addition to the weekend, as ISO PlainDate strings (`"2024-07-04"`), never
    * datetimes. Order does not matter and duplicates are ignored.
    */
   holidays: string[];

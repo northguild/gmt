@@ -13,9 +13,8 @@ import {
  *   producer format — a CSV column, a legacy API field, a partially-typed
  *   form value — not for generating locale-correct output. For display,
  *   use `formatDateTime`/`formatDateToParts`, which order fields per
- *   locale instead of hard-coding a field order (see roadmap Decision 1
- *   — a token *formatter*, the inverse of this function, is deliberately
- *   out of scope for GMT).
+ *   locale instead of hard-coding a field order (a token *formatter*,
+ *   the inverse of this function, is deliberately out of scope for GMT).
  * - Accepts the full combined date + time token set (unlike
  *   `parseDateWithPattern`/`parseTimeWithPattern`, which each reject the
  *   other's tokens).

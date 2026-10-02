@@ -20,7 +20,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   digits cannot change which bucket a value is in. That ignored option was removed in 1.16.0; to
  *   compare more coarsely, pass a coarser unit (0 digits is `"second"`, 3 is `"millisecond"`).
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isSameDay(a, b)` → `areUtcEqualBy(a, b, "day")`
  * - `isSameMonth(a, b)` → `areUtcEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areUtcEqualBy(a, b, "year")`

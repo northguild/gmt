@@ -44,8 +44,9 @@ export function intervalDivideEquallyUtc(
   n: number,
   options?: {
     /**
-     * The most pieces the result may hold. When `n` exceeds it the function returns `[]` before
-     * building any piece. A value that is not a positive safe integer also returns `[]`.
+     * The most records the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
      *
      * @defaultValue `1_000_000`
      */

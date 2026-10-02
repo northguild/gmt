@@ -28,7 +28,7 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   unit, so an invalid locale returns false for `"day"`, `"month"` and `"year"` too.
  * - **Compatibility:** before 1.16.0 an invalid locale was ignored for every unit but `"week"`.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isThisWeek(value, options)` → `isThisUnit(value, "week", locale)`
  * - `isThisMonth(value)` → `isThisUnit(value, "month")`
  * - `isThisYear(value)` → `isThisUnit(value, "year")`

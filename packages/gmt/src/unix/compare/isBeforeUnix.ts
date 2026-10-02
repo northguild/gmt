@@ -28,7 +28,7 @@ export function isBeforeUnix(
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
-     * plural. Any other value returns false.
+     * plural. Any other value returns `false`.
      *
      * @defaultValue `"milliseconds"`
      */

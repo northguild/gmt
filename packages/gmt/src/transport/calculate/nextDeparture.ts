@@ -19,7 +19,9 @@ import { hasInstantShape } from "../../internal/isoStringBody";
  * with no published times) the result is a nominal slot, not a timetabled departure.
  */
 export interface Headway {
-  /** ISO 8601 duration between departures: exact time (a day is 24 hours), greater than zero. */
+  /**
+   * The ISO 8601 duration between departures: exact time (a day is 24 hours), greater than zero.
+   */
   headway: string;
   /** The first departure, an exact moment: an instant (`Z`/offset) or a zoned string. */
   from: string;
@@ -30,8 +32,8 @@ export interface Headway {
 /** Options for `nextDeparture`. */
 export interface NextDepartureOptions {
   /**
-   * ISO 8601 duration the connection needs after `after` before a departure can be made: exact
-   * time (a day is 24 hours), not negative.
+   * The ISO 8601 duration the connection needs after `after` before a departure can be made:
+   * exact time (a day is 24 hours), not negative.
    *
    * @defaultValue `"PT0S"`
    */

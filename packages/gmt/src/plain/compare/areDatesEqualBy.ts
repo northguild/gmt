@@ -28,7 +28,7 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isSameDay(a, b)` → `areDatesEqualBy(a, b, "day")`
  * - `isSameWeek(a, b, options)` → `areDatesEqualBy(a, b, "week", { weekStartsOn })`
  * - `isSameMonth(a, b)` → `areDatesEqualBy(a, b, "month")`

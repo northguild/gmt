@@ -31,7 +31,8 @@ export interface DstTransition {
 }
 
 /**
- * List every DST transition instant for an IANA timezone within a given year.
+ * List every DST transition instant for a time zone (an IANA name or a UTC offset) within a
+ * given year.
  *
  * - A "transition" is any UTC offset change: a spring-forward gap (nonexistent
  *   local time) or a fall-back overlap (ambiguous local time) — see

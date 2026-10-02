@@ -18,7 +18,7 @@ import type { RelativeRoundingMethod } from "../types";
  * The method is matched against the three names `RelativeRoundingMethod` lists, never looked up on
  * `Math`: `Math.abs`, `Math.trunc`, `Math.random` and the keys `Math` inherits from
  * `Object.prototype` are not rounding methods. An `undefined` method is the omitted option
- * (ECMA-262 `GetOption`) and takes the default.
+ * (ECMA-402 `GetOption`, which the Temporal specification also defines) and takes the default.
  *
  * @param value the fractional distance in the target display unit
  * @param method optional: "floor" | "ceil" | "round" (default "round")

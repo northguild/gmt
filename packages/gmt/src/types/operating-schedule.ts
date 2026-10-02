@@ -66,7 +66,7 @@ export type OperatingSchedule = {
    */
   holidays?: string[] | BusinessCalendar;
   /**
-   * Single dates whose windows replace the weekly ones. An override wins over a holiday on the
+   * The single dates whose windows replace the weekly ones. An override wins over a holiday on the
    * same date, and two overrides for one date make the schedule invalid.
    *
    * @defaultValue None. Every date follows the weekly pattern and the holidays.

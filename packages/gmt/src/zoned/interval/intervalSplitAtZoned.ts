@@ -22,6 +22,8 @@ import { isValidCalendarZonedInterval } from "./validate";
  *   each record's `end` is the next record's `start` and belongs only to that next record, so the
  *   pieces share no instant and together cover `[start, end)` exactly once.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
+ * - A piece's `end` equals its `start` only when the interval itself is zero-length (`start`
+ *   equal to `end`): the result is then that one empty piece, whatever the points.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   ZonedDateTime string, or on invalid input (unparseable start/end, `start > end`,
  *   leap-second strings).
