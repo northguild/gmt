@@ -49,7 +49,11 @@ import {
   syncTree,
   writeIfChanged,
 } from "./build-utils/generated-files.mjs";
-import { findGaps, type GateInput } from "./build-utils/doc-gate";
+import {
+  findGaps,
+  formatGapReport,
+  type GateInput,
+} from "./build-utils/doc-gate";
 import {
   renderIndexPages,
   type IndexedInlineType,
@@ -58,12 +62,14 @@ import {
   type IndexInput,
 } from "./build-utils/index-pages";
 import {
-  mdCellText,
   mdCodeSpan,
+  flattenRows,
   mdListItem,
   mdText,
+  refTable,
   renderMembersTable,
   renderOptionsTable,
+  renderParametersTable,
   type PropertyDoc,
   type TableContext,
 } from "./build-utils/render-table";
@@ -314,6 +320,14 @@ export interface FnDoc {
   /** One block per parameter expanded under `## Options`, in signature order. */
   options: OptionsBlock[];
   returns: string;
+  /**
+   * The members of an inline object literal in the return type (`{ year: number; quarter:
+   * number } | null`), one row each. Empty when the function returns no literal. A named return
+   * type documents its members on its own type entry instead.
+   */
+  returnMembers: PropertyDoc[];
+  /** True when `returnMembers` are the members of each element of a returned array. */
+  returnsItems: boolean;
   examples: Example[];
   /** Every public type the function reaches, from the usage graph. */
   relatedTypes: string[];
@@ -731,6 +745,78 @@ function declaringTypeName(
 }
 
 /**
+ * An inline object literal in a declared type, found through parentheses, unions and arrays.
+ * `short` is the type as a Type cell prints it when the literal's members get rows of their
+ * own: each literal reads `object`, the rest of the type stays as written.
+ */
+interface LiteralShape {
+  literals: ts.TypeLiteralNode[];
+  /** True when the literals are the elements of an array (`{ type: string }[]`). */
+  items: boolean;
+  short: string;
+}
+
+function literalShape(node: ts.TypeNode | undefined): LiteralShape | undefined {
+  const n = unparenthesized(node);
+  if (!n) return undefined;
+  if (ts.isTypeLiteralNode(n)) {
+    return { literals: [n], items: false, short: "object" };
+  }
+  const element = ts.isArrayTypeNode(n)
+    ? n.elementType
+    : ts.isTypeOperatorNode(n) && n.operator === ts.SyntaxKind.ReadonlyKeyword
+      ? n.type
+      : ts.isTypeReferenceNode(n) &&
+          ts.isIdentifier(n.typeName) &&
+          /^(?:Readonly)?Array$/.test(n.typeName.text) &&
+          n.typeArguments?.length === 1
+        ? n.typeArguments[0]
+        : undefined;
+  if (element) {
+    const inner = literalShape(element);
+    if (!inner || inner.items) return undefined;
+    const wrapped = inner.short.includes(" | ")
+      ? `(${inner.short})`
+      : inner.short;
+    return {
+      literals: inner.literals,
+      items: true,
+      short: ts.isArrayTypeNode(n) ? `${wrapped}[]` : `Array<${inner.short}>`,
+    };
+  }
+  if (ts.isUnionTypeNode(n)) {
+    const shapes = n.types.map((t) => literalShape(t));
+    if (shapes.every((x) => !x)) return undefined;
+    return {
+      literals: shapes.flatMap((x) => x?.literals ?? []),
+      items: shapes.some((x) => x?.items),
+      short: n.types.map((t, i) => shapes[i]?.short ?? t.getText()).join(" | "),
+    };
+  }
+  return undefined;
+}
+
+/** The rows of the members of a literal shape's literals, once each by name. */
+function literalMembers(
+  checker: ts.TypeChecker,
+  shape: LiteralShape,
+  ctx: ExtractContext,
+): PropertyDoc[] {
+  const rows: PropertyDoc[] = [];
+  for (const literal of shape.literals) {
+    for (const row of extractProperties(
+      checker,
+      checker.getTypeFromTypeNode(literal),
+      literal,
+      ctx,
+    )) {
+      if (!rows.some((r) => r.name === row.name)) rows.push(row);
+    }
+  }
+  return rows;
+}
+
+/**
  * The properties of an object type, one row each. Reading them from the checker rather than
  * from syntax is what makes an interface, an object-literal alias, an intersection and an
  * inline literal produce the same rows, inherited properties included.
@@ -793,6 +879,12 @@ export function extractProperties(
       fromLib,
     };
     if (defaultValue) row.defaultValue = defaultValue;
+    const shape = fromLib ? undefined : literalShape(typeNode);
+    if (shape) {
+      row.type = shape.short;
+      row.children = literalMembers(checker, shape, ctx);
+      if (shape.items) row.childrenAreItems = true;
+    }
     if (fromLib && decl) {
       const libType = declaringTypeName(checker, decl);
       if (libType) row.libType = libType;
@@ -1740,6 +1832,8 @@ export function extractFnBody(
     ? splitParams(checker, sig, documented, ctx)
     : { params: documented, options: [], declared: [] };
 
+  const returned = literalShape(sig?.getDeclaration().type);
+
   const doc: FnDoc = {
     name,
     namespace: ns,
@@ -1751,6 +1845,8 @@ export function extractFnBody(
     params: split.params,
     options: split.options,
     returns,
+    returnMembers: returned ? literalMembers(checker, returned, ctx) : [],
+    returnsItems: !!returned?.items,
     examples,
     // Filled from the usage graph once every function is extracted (`extractReference`).
     relatedTypes: [],
@@ -1984,7 +2080,7 @@ export function fnHeadings(doc: FnDoc, usage: TypeUsage): PageHeadings {
   const headings = ["Signature"];
   if (doc.params.length) headings.push("Parameters");
   if (doc.options.length) headings.push("Options");
-  if (doc.returns) headings.push("Returns");
+  if (doc.returns || doc.returnMembers.length) headings.push("Returns");
   if (inline.length) headings.push("Types");
   const at = headings.length;
   headings.push(...inline);
@@ -2076,7 +2172,7 @@ function renderInlineType(doc: TypeDoc, table: TableContext): string[] {
   }
   lines.push(...importLine(doc));
   if (doc.members.length) {
-    lines.push(renderMembersTable(doc.members, table));
+    lines.push(refTable("members", renderMembersTable(doc.members, table)));
   } else {
     lines.push("```ts");
     lines.push(doc.literals ?? doc.definition);
@@ -2142,14 +2238,7 @@ export function renderFn(doc: FnDoc, page: PageContext): string {
   if (doc.params.length) {
     lines.push(`## Parameters`);
     lines.push("");
-    lines.push(`| Parameter | Type | Description |`);
-    lines.push(`| --- | --- | --- |`);
-    for (const p of doc.params) {
-      const type = p.type ? mdCodeSpan(p.type) : "—";
-      lines.push(
-        `| ${mdCodeSpan(p.name)} | ${type} | ${mdCellText(p.description)} |`,
-      );
-    }
+    lines.push(refTable("parameters", renderParametersTable(doc.params)));
     lines.push("");
   }
 
@@ -2189,16 +2278,28 @@ export function renderFn(doc: FnDoc, page: PageContext): string {
           lines.push("");
         }
       }
-      lines.push(renderOptionsTable(block.rows, table));
+      lines.push(refTable("options", renderOptionsTable(block.rows, table)));
       lines.push("");
     }
   }
 
-  if (doc.returns) {
+  if (doc.returns || doc.returnMembers.length) {
     lines.push(`## Returns`);
     lines.push("");
-    lines.push(mdText(doc.returns));
-    lines.push("");
+    if (doc.returns) {
+      lines.push(mdText(doc.returns));
+      lines.push("");
+    }
+    if (doc.returnMembers.length) {
+      // The members of the inline literal the function returns, as a named return type's
+      // Members table shows its own. A bold label, not a heading: nothing links to it.
+      lines.push(doc.returnsItems ? "**Members of each item**" : "**Members**");
+      lines.push("");
+      lines.push(
+        refTable("members", renderMembersTable(doc.returnMembers, table)),
+      );
+      lines.push("");
+    }
   }
 
   if (inline.length) {
@@ -2303,7 +2404,7 @@ export function renderType(doc: TypeDoc, page: PageContext): string {
   if (doc.members.length) {
     lines.push(`## Members`);
     lines.push("");
-    lines.push(renderMembersTable(doc.members, table));
+    lines.push(refTable("members", renderMembersTable(doc.members, table)));
     lines.push("");
   }
 
@@ -2719,6 +2820,8 @@ export function gateInput(extraction: ReferenceExtraction): GateInput {
         declaredParams: d.declaredParams,
         documentedParams: d.documentedParams,
         options: d.options,
+        returnMembers: d.returnMembers,
+        returnsItems: d.returnsItems,
       });
     } else if (d.kind === "type") {
       input.types.push({
@@ -2794,10 +2897,14 @@ function runGeneration(baseline: ReleasedBaseline) {
     );
   }
 
-  // Report-only: the count is logged and nothing fails. The full list is
-  // `pnpm dox:docs-check`.
+  // The gate owns missing docs: a gap fails the build before anything is written, so no page
+  // ships with an empty description or default. `pnpm dox:docs-check` prints the same list.
   const gaps = findGaps(gateInput(extraction));
-  console.log(`[reference] doc gate (report-only): ${gaps.length} gaps`);
+  if (gaps.length > 0) {
+    throw new Error(
+      `[reference] ${gaps.length} documentation gap${gaps.length === 1 ? "" : "s"} (context/jsdoc-standards.md § Options and members):\n${formatGapReport(gaps)}`,
+    );
+  }
 
   // Every page this run emits, keyed by its path under `outMdx`. `syncTree` writes only the
   // ones that changed and deletes the rest (barrel pages, renamed/removed exports), so an
@@ -2969,7 +3076,7 @@ function runGeneration(baseline: ReleasedBaseline) {
       // page, so they are left out here too.
       ...(d.kind === "type" && d.members.some((m) => !m.fromLib)
         ? {
-            members: d.members
+            members: flattenRows(d.members)
               .filter((m) => !m.fromLib)
               .map((m) => ({ name: m.name, description: m.description })),
           }

@@ -7,6 +7,7 @@ import {
   type GateFunction,
   type GateInput,
   type GateType,
+  optionNamesIn,
 } from "./doc-gate";
 import type { PropertyDoc } from "./render-table";
 
@@ -325,5 +326,140 @@ describe("formatGapReport", () => {
 
   it("reports an empty list as zero gaps", () => {
     expect(formatGapReport([])).toBe("0 gaps");
+  });
+});
+
+describe("nested option members", () => {
+  const child = (over: Partial<PropertyDoc> = {}): PropertyDoc =>
+    prop({
+      name: "allowEqual",
+      source: { file: FILE, line: 32 },
+      ...over,
+    });
+  const parent = (children: PropertyDoc[]): PropertyDoc =>
+    prop({
+      name: "options",
+      type: "object",
+      source: { file: FILE, line: 28 },
+      children,
+    });
+
+  it("checks a nested member by the option rules, under a dotted subject", () => {
+    const gaps = gapsOf(
+      withOption(parent([child({ description: "", defaultValue: undefined })])),
+    );
+    expect(gaps.map((g) => `${g.rule} ${g.subject} :${g.line}`)).toEqual([
+      "default-value addDate.options.options.allowEqual :32",
+      "option-description addDate.options.options.allowEqual :32",
+    ]);
+  });
+
+  it("reports nothing for a documented nested member", () => {
+    expect(gapsOf(withOption(parent([child()])))).toEqual([]);
+  });
+
+  it("counts a nested member as an option declaration", () => {
+    expect(
+      countOptionDeclarations({
+        functions: [
+          fn({
+            options: [{ param: "props", rows: [parent([child()])] }],
+          }),
+        ],
+        types: [],
+      }),
+    ).toBe(2);
+  });
+});
+
+describe("members of an inline return literal", () => {
+  const member = (over: Partial<PropertyDoc> = {}): PropertyDoc =>
+    prop({
+      name: "quarter",
+      optional: false,
+      defaultValue: undefined,
+      source: { file: FILE, line: 49 },
+      ...over,
+    });
+
+  it("requires a description and no @defaultValue", () => {
+    const gaps = gapsOf({
+      functions: [
+        fn({
+          returnMembers: [
+            member(),
+            member({ name: "year", description: "" }),
+            member({ name: "opt", optional: true, description: "Some." }),
+          ],
+        }),
+      ],
+    });
+    expect(gaps.map((g) => `${g.rule} ${g.subject} :${g.line}`)).toEqual([
+      "return-description addDate.returns.year :49",
+    ]);
+  });
+
+  it("names an array's members returns[]", () => {
+    const gaps = gapsOf({
+      functions: [
+        fn({
+          returnsItems: true,
+          returnMembers: [member({ name: "type", description: "" })],
+        }),
+      ],
+    });
+    expect(gaps.map((g) => g.subject)).toEqual(["addDate.returns[].type"]);
+  });
+});
+
+describe("optionNamesIn", () => {
+  const names = ["round", "unit", "increment", "allowEqual"];
+
+  it("matches a name in a code span, whole word only", () => {
+    expect(optionNamesIn("Pass `round` to change it", names)).toEqual([
+      "round",
+    ]);
+    expect(optionNamesIn("Pass `{ allowEqual }` to change it", names)).toEqual([
+      "allowEqual",
+    ]);
+    expect(optionNamesIn("Pass `rounded` to change it", names)).toEqual([]);
+  });
+
+  it("matches two or more names in a list", () => {
+    expect(optionNamesIn("Sets unit, increment and round.", names)).toEqual([
+      "round",
+      "unit",
+      "increment",
+    ]);
+    expect(optionNamesIn("unit / increment", names)).toEqual([
+      "unit",
+      "increment",
+    ]);
+  });
+
+  it("leaves ordinary prose alone, one name included", () => {
+    expect(optionNamesIn("How the result is rounded", names)).toEqual([]);
+    expect(optionNamesIn("Round the result to a unit", names)).toEqual([]);
+    expect(optionNamesIn("The unit and a precision", names)).toEqual([]);
+    expect(optionNamesIn("", names)).toEqual([]);
+  });
+
+  it("is reported by findGaps against the @param tag's line", () => {
+    const gaps = gapsOf({
+      functions: [
+        fn({
+          options: [
+            {
+              param: "options",
+              lead: "The `overflow` setting",
+              rows: [prop()],
+            },
+          ],
+        }),
+      ],
+    });
+    expect(gaps.map((g) => `${g.rule} ${g.subject} :${g.line}`)).toEqual([
+      "param-lists-options addDate(@param options) :21",
+    ]);
   });
 });

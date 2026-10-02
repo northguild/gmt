@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { stripMdx } from "../../src/lib/page-markdown";
 import {
   mdCellText,
   mdCode,
   mdCodeSpan,
   mdListItem,
   mdText,
+  flattenRows,
+  topLevelUnion,
+  refTable,
   renderMembersTable,
   renderOptionsTable,
+  renderParametersTable,
   type PropertyDoc,
   type TableContext,
 } from "./render-table";
@@ -152,6 +157,7 @@ describe("renderOptionsTable", () => {
       expect(line).toHaveLength(4);
       expect(line[1]).not.toMatch(ENTITY);
     }
+    // A union inside a generic is part of that type: one span, the pipe escaped for the cell.
     expect(cells(table)[0][1]).toBe(
       '`Partial<Record<"days" \\| "weeks", number>>`',
     );
@@ -180,7 +186,7 @@ describe("renderOptionsTable", () => {
       ctx,
     );
     expect(cells(table).map((c) => c[1])).toEqual([
-      '`"constrain" \\| "reject"` ([`Overflow`](/reference/types/overflow/Overflow))',
+      '`"constrain"` \\| `"reject"` ([`Overflow`](/reference/types/overflow/Overflow))',
       "[`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar)",
       "`BusinessCalendar[]` ([`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar))",
       "`Unknown`",
@@ -329,18 +335,221 @@ describe("mdListItem", () => {
     expect(mdListItem(item).split("\n")).toEqual([
       "- One call replaces several:",
       "",
+      '  <div class="gmt-ref-table" data-kind="notes">',
+      "",
       "  | Before | After |",
       "  | --- | --- |",
       // The separators stay; only what MDX would read as JSX changes, outside code.
       "  | `a <= b` | &#123;x&#125; |",
       "",
+      "  </div>",
+      "",
       "  and nothing else changes.",
     ]);
+  });
+
+  it("loses its wrapper on the text surfaces, leaving the table under its bullet", () => {
+    const md = stripMdx(
+      mdListItem("Before:\n| A | B |\n| --- | --- |\n| 1 | 2 |"),
+      {},
+    );
+    expect(md).not.toContain("<div");
+    expect(md).not.toContain("</div>");
+    expect(md).toContain("  | A | B |");
+    expect(md).toContain("  | 1 | 2 |");
   });
 
   it("gives an item that opens with a table no bullet", () => {
     expect(
       mdListItem("| A | B |\n| --- | --- |\n| 1 | 2 |").split("\n"),
-    ).toEqual(["| A | B |", "| --- | --- |", "| 1 | 2 |"]);
+    ).toEqual([
+      '<div class="gmt-ref-table" data-kind="notes">',
+      "",
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
+      "",
+      "</div>",
+    ]);
+  });
+});
+
+describe("refTable", () => {
+  it("wraps a table in the element the stylesheet hooks on, with blank lines for MDX", () => {
+    const table = renderMembersTable([row({ name: "a" })], ctx);
+    expect(refTable("members", table).split("\n")).toEqual([
+      '<div class="gmt-ref-table" data-kind="members">',
+      "",
+      ...table.split("\n"),
+      "",
+      "</div>",
+    ]);
+  });
+
+  it("names the kind of table, which decides how the stylesheet lays it out", () => {
+    expect(refTable("options", "| a |")).toContain('data-kind="options"');
+  });
+
+  it("is removed again for the text surfaces, leaving the table", () => {
+    const table = renderOptionsTable([row({ name: "a" })], ctx);
+    const md = stripMdx(
+      `## Options\n\n${refTable("options", table)}\n\nAfter.`,
+      {},
+    );
+    expect(md).toContain(table);
+    expect(md).not.toContain("<div");
+    expect(md).not.toContain("</div>");
+  });
+});
+
+describe("renderParametersTable", () => {
+  it("prints name, type and description, with — for a missing type", () => {
+    const table = renderParametersTable([
+      { name: "value", type: "string", description: "The input. A | B." },
+      { name: "rest", description: "No type." },
+    ]);
+    expect(table.split("\n")).toEqual([
+      "| Parameter | Type | Description |",
+      "| --- | --- | --- |",
+      "| `value` | `string` | The input. A \\| B. |",
+      "| `rest` | — | No type. |",
+    ]);
+  });
+});
+
+describe("a union in a Type cell", () => {
+  it("is one code span per member, so a hyphenated literal is never split by a wrap", () => {
+    const options = renderOptionsTable(
+      [row({ name: "pattern", type: '"4-5-4" | "4-4-5" | "5-4-4"' })],
+      ctx,
+    );
+    expect(cells(options)[0][1]).toBe('`"4-5-4"` \\| `"4-4-5"` \\| `"5-4-4"`');
+    const params = renderParametersTable([
+      { name: "unit", type: '"day" | "week"', description: "" },
+    ]);
+    expect(params).toContain('| `"day"` \\| `"week"` |');
+  });
+
+  it("leaves a type without a union as one span", () => {
+    const table = renderMembersTable(
+      [row({ name: "map", type: "Map<K, V>" })],
+      ctx,
+    );
+    expect(cells(table)[0][1]).toBe("`Map<K, V>`");
+  });
+});
+
+describe("topLevelUnion", () => {
+  it("splits only at a | outside every bracket and string", () => {
+    expect(topLevelUnion('"a" | "b" | null')).toEqual(['"a"', '"b"', "null"]);
+    expect(
+      topLevelUnion('Partial<Record<"days" | "weeks", number>> | undefined'),
+    ).toEqual(['Partial<Record<"days" | "weeks", number>>', "undefined"]);
+    expect(topLevelUnion("(a: 1 | 2) => void | string")).toEqual([
+      "(a: 1 | 2) => void",
+      "string",
+    ]);
+    expect(topLevelUnion("{ a: 1 | 2 }[] | [1 | 2]")).toEqual([
+      "{ a: 1 | 2 }[]",
+      "[1 | 2]",
+    ]);
+  });
+
+  it("does not read the > of an arrow as a closing bracket, nor a | in a string as a union", () => {
+    expect(
+      topLevelUnion("(() => void) | Map<string, () => void> | 'a|b'"),
+    ).toEqual(["(() => void)", "Map<string, () => void>", "'a|b'"]);
+  });
+});
+
+describe("a union inside a bracket in a Type cell", () => {
+  it("stays one span; only the top-level members are chips", () => {
+    const table = renderMembersTable(
+      [
+        row({
+          name: "limits",
+          type: 'Partial<Record<"days" | "weeks", number>> | null',
+        }),
+        row({
+          name: "unit",
+          type: 'PluralUnit<"hour" | "minute"> | "day"',
+        }),
+      ],
+      ctx,
+    );
+    expect(cells(table)[0][1]).toBe(
+      '`Partial<Record<"days" \\| "weeks", number>>` \\| `null`',
+    );
+    expect(cells(table)[1][1]).toBe(
+      '`PluralUnit<"hour" \\| "minute">` \\| `"day"`',
+    );
+  });
+});
+
+describe("nested rows", () => {
+  const nested = row({
+    name: "options",
+    type: "object",
+    description: "The settings.",
+    children: [
+      row({ name: "allowEqual", type: "boolean", description: "Allow equal." }),
+      row({
+        name: "deep",
+        type: "object[]",
+        childrenAreItems: true,
+        children: [row({ name: "x", type: "number", description: "An x." })],
+      }),
+    ],
+  });
+
+  it("flattens into dotted paths, array elements as []", () => {
+    expect(flattenRows([nested]).map((r) => r.name)).toEqual([
+      "options",
+      "options.allowEqual",
+      "options.deep",
+      "options.deep[].x",
+    ]);
+    expect(flattenRows([nested]).every((r) => r.children === undefined)).toBe(
+      true,
+    );
+  });
+
+  it("renders one row per member in an Options and a Members table", () => {
+    const options = renderOptionsTable([nested], ctx);
+    expect(cells(options).map((c) => c[0])).toEqual([
+      "`options?`",
+      "`options.allowEqual?`",
+      "`options.deep?`",
+      "`options.deep[].x?`",
+    ]);
+    expect(cells(renderMembersTable([nested], ctx))[1]).toEqual([
+      "`options.allowEqual?`",
+      "`boolean`",
+      "Allow equal.",
+    ]);
+  });
+});
+
+describe("a quoted, hyphenated literal in prose", () => {
+  it("is wrapped so it cannot wrap after its hyphen", () => {
+    expect(mdCellText('The pattern, "4-5-4" or "5-4-4", sets it.')).toBe(
+      'The pattern, <span class="gmt-nobreak">"4-5-4"</span> or <span class="gmt-nobreak">"5-4-4"</span>, sets it.',
+    );
+    expect(mdText('Pass "2024-03-10" here')).toContain(
+      '<span class="gmt-nobreak">"2024-03-10"</span>',
+    );
+  });
+
+  it("leaves a quote with no hyphen, a quote holding a space, and a code span alone", () => {
+    expect(mdCellText('"day" and "a b-c" and `"4-5-4"`')).toBe(
+      '"day" and "a b-c" and `"4-5-4"`',
+    );
+    expect(mdText('5" - 6" wide')).toBe('5" - 6" wide');
+  });
+
+  it("is removed again for the text surfaces", () => {
+    expect(stripMdx(mdText('uses "4-5-4" weeks'), {}).trim()).toBe(
+      'uses "4-5-4" weeks',
+    );
   });
 });

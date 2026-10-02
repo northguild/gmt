@@ -215,6 +215,287 @@ dialog > .dialog-frame {
   width: 1%;
 }
 
+/* ---- Generated reference tables (Options, Members, Parameters) ----
+   The generator wraps each one in `<div class="gmt-ref-table" data-kind="options|members|parameters">`.
+   Every rule below hangs on that wrapper, so a table an author wrote in a guide is untouched.
+
+   The wrapper is the box: it draws the border and the glass, scrolls sideways when a cell is
+   wider than the column, and is the container the layout asks its width of. The table inside
+   is bare. `src/lib/ref-table.ts` makes the wrapper focusable and named when it scrolls.
+
+   Two layouts. The wrapper's own width chooses, not the viewport's: the article column is 530px
+   wide at a 1200px viewport and 770px at 1440px:
+   - Table. Name and Type take what they need; Description keeps a floor, so a sentence is never
+     set a word to a line.
+   - Entries. Each row is a small entry: name, then Type (and Default) with their labels on the
+     same line when they fit, then the Description under them at the full width. No row is wider
+     than the screen and nothing scrolls. The header row stays for assistive technology and is
+     hidden from sight.
+   An Options table has four columns, so it is always entries. Members and Parameters have three
+   columns of short cells and read better as a table down to 34rem. */
+.sl-markdown-content .gmt-ref-table {
+  container: gmt-ref / inline-size;
+  position: relative;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  overflow-x: auto;
+  backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+}
+
+.sl-markdown-content .gmt-ref-table > table {
+  display: table;
+  table-layout: auto;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* A code span in a cell is one token and is never broken: not mid-word (Starlight's
+   `overflow-wrap: anywhere` printed `strin` / `g` in a narrow Type column), and not after a
+   hyphen either (`"4-4-5"`, `2024-03-10`), which the browser allows where `normal` wrapping
+   applies. A long union is therefore one span per member (render-table.ts `typeSpans`), so the
+   Type cell still wraps, between members. */
+.sl-markdown-content .gmt-ref-table :is(th, td) code {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* A quoted, hyphenated literal in prose (`"4-5-4"`; render-table.ts `keepQuotedLiterals`) is one
+   word: a browser would otherwise wrap after its hyphen. An inline block is wrapped to the next
+   line whole when it fits there, and only when it is wider than the whole column does it shrink
+   to the column and break inside, so a long ISO string (`"2024-10-03T14:30:45-04:00[…]"`) never
+   widens the page the way `white-space: nowrap` did. */
+.sl-markdown-content .gmt-nobreak {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  vertical-align: baseline;
+}
+
+/* The Description, the last column, keeps a floor in table form. A table the author wrote in a
+   behaviour note (`data-kind="notes"`) has no Description column and keeps its natural widths. */
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-kind="members"], [data-kind="parameters"])
+  tr
+  > :last-child {
+  min-width: 14rem;
+}
+
+/* The sideways-scroll cue. `data-overflow` and `data-scroll` come from src/lib/ref-table.ts:
+   the edge that has more fades out. */
+.sl-markdown-content .gmt-ref-table[data-overflow] {
+  --gmt-ref-fade-start: 0px;
+  --gmt-ref-fade-end: 0px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    var(--gmt-void) var(--gmt-ref-fade-start),
+    var(--gmt-void) calc(100% - var(--gmt-ref-fade-end)),
+    transparent
+  );
+}
+
+.sl-markdown-content .gmt-ref-table[data-scroll="start"] {
+  --gmt-ref-fade-end: var(--gmt-space-8);
+}
+
+.sl-markdown-content .gmt-ref-table[data-scroll="middle"] {
+  --gmt-ref-fade-start: var(--gmt-space-8);
+  --gmt-ref-fade-end: var(--gmt-space-8);
+}
+
+.sl-markdown-content .gmt-ref-table[data-scroll="end"] {
+  --gmt-ref-fade-start: var(--gmt-space-8);
+}
+
+.sl-markdown-content .gmt-ref-table-hint {
+  margin: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-align: right;
+  color: var(--gmt-ice-dim);
+}
+
+.sl-markdown-content .gmt-ref-table-hint + .gmt-ref-table {
+  margin-top: 0;
+}
+
+/* Entries. An Options table has four columns, and its Description needs about 450px to read well:
+   about 900px for the table, wider than the article column ever is (it tops out near 800px).
+   So an Options table is always a list of entries. Members and Parameters have three columns of
+   short cells and read better as a table; they become entries when the wrapper is 34rem or
+   narrower, which is the 390px phone and the 1200px viewport's 530px column. The declarations
+   are the same in both places because CSS cannot take a width from a variable. */
+.sl-markdown-content .gmt-ref-table[data-kind="options"] table,
+.sl-markdown-content .gmt-ref-table[data-kind="options"] tbody {
+  display: block;
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] tr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-1) var(--gmt-space-6);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-bottom: 1px solid var(--gmt-hairline);
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] tbody tr:last-child {
+  border-bottom: 0;
+}
+
+/* The wash goes on the entry, not on each cell, so the gap between cells is washed too. */
+.sl-markdown-content .gmt-ref-table[data-kind="options"] tr:hover {
+  background: var(--gmt-accent-wash);
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] tr:hover td {
+  background: transparent;
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] td {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+.sl-markdown-content .gmt-ref-table[data-kind="options"] td:last-child {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* A cell that is a label and a value: the label is the column's name. */
+.sl-markdown-content
+  .gmt-ref-table[data-kind="options"]
+  td:is(:nth-child(2), :nth-child(3))::before {
+  margin-inline-end: var(--gmt-space-2);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.sl-markdown-content
+  .gmt-ref-table[data-kind="options"]
+  td:nth-child(2)::before {
+  content: "Type";
+}
+
+.sl-markdown-content
+  .gmt-ref-table[data-kind="options"]
+  td:nth-child(3)::before {
+  content: "Default";
+}
+
+@container gmt-ref (max-width: 34rem) {
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    :is(table, tbody) {
+    display: block;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--gmt-space-1) var(--gmt-space-6);
+    padding: var(--gmt-space-3) var(--gmt-space-4);
+    border-bottom: 1px solid var(--gmt-hairline);
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tbody
+    tr:last-child {
+    border-bottom: 0;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr:hover {
+    background: var(--gmt-accent-wash);
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr:hover
+    td {
+    background: transparent;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    td {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    td:last-child {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .sl-markdown-content
+    .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    td:nth-child(2)::before {
+    content: "Type";
+    margin-inline-end: var(--gmt-space-2);
+    font-family: var(--gmt-font-display);
+    font-size: var(--gmt-text-xs);
+    font-weight: 600;
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+    color: var(--gmt-ice-dim);
+  }
+}
+
 /* thead background handled by gmt-glass.css (translucent + backdrop-filter) */
 .sl-markdown-content th {
   color: var(--gmt-cyan-ink);

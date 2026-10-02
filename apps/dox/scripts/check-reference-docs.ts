@@ -7,8 +7,9 @@
  * It runs the same extraction the reference generator runs (`extractReference`), ignores
  * the generator's input hash, and writes nothing.
  *
+ * Exits 1 when there is at least one gap.
+ *
  * Run as: pnpm dox:docs-check
- *   --strict  exit 1 when there is at least one gap (the default exit is 0)
  *   --json    print the gaps as JSON instead of the text report
  */
 
@@ -34,4 +35,4 @@ if (args.has("--json")) {
   );
 }
 
-if (args.has("--strict") && gaps.length > 0) process.exit(1);
+if (gaps.length > 0) process.exit(1);

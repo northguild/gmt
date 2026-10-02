@@ -32,6 +32,32 @@ export interface PropertyDoc {
   hasList?: boolean;
   /** Source position of the declaration, for the gate: file (repo-relative) and 1-based line. */
   source?: { file: string; line: number };
+  /**
+   * The members of an inline object literal the property is declared as (`options?: { allowEqual?: boolean }`),
+   * each a row of its own, nested to any depth. Absent when the type holds no literal.
+   */
+  children?: PropertyDoc[];
+  /** True when `children` are the members of each element of an array (`{ type; value }[]`). */
+  childrenAreItems?: boolean;
+}
+
+/**
+ * The rows of a table with every nested row following its parent, named by its dotted path
+ * (`options.allowEqual`; `parts[].type` for the members of an array's elements), which is
+ * MDN's convention for a nested parameter. The result holds no `children`.
+ */
+export function flattenRows(
+  rows: readonly PropertyDoc[],
+  prefix = "",
+): PropertyDoc[] {
+  return rows.flatMap((row) => {
+    const { children, childrenAreItems, ...own } = row;
+    const path = `${prefix}${row.name}`;
+    return [
+      { ...own, name: path },
+      ...flattenRows(children ?? [], `${path}${childrenAreItems ? "[]" : ""}.`),
+    ];
+  });
 }
 
 /** What a table needs from the page it sits on. */
@@ -49,6 +75,21 @@ export interface TableContext {
  * length. Text inside is literal, so nothing in it may be entity-escaped.
  */
 const CODE_SPAN = /(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)/g;
+
+/**
+ * A double-quoted token with a hyphen in it and no space (`"4-5-4"`, `"2024-03-10"`). A browser
+ * may wrap after the hyphen; the token is wrapped in a span the stylesheet keeps whole. Only a
+ * quote that opens and closes a word is matched, so `5" - 6"` and a quote inside a word stay as
+ * they are, and a token already in a code span is never reached (code spans are handled apart).
+ */
+const QUOTED_HYPHENATED = /(?<![\w"])("[^"\s]*-[^"\s]*")(?![\w"])/g;
+
+function keepQuotedLiterals(prose: string): string {
+  return prose.replace(
+    QUOTED_HYPHENATED,
+    '<span class="gmt-nobreak">$1</span>',
+  );
+}
 
 function escapeEntities(s: string): string {
   return s
@@ -85,7 +126,7 @@ export function mdText(s: string): string {
   const flat = s.replace(/\n/g, " ");
   return mapCodeSpans(
     flat,
-    (prose) => escapeEntities(prose).replace(/\|/g, "\\|"),
+    (prose) => keepQuotedLiterals(escapeEntities(prose)).replace(/\|/g, "\\|"),
     (code) => code,
   );
 }
@@ -98,7 +139,7 @@ export function mdCellText(s: string): string {
   const flat = s.replace(/\n/g, " ");
   return mapCodeSpans(
     flat,
-    (prose) => escapeEntities(prose).replace(/\|/g, "\\|"),
+    (prose) => keepQuotedLiterals(escapeEntities(prose)).replace(/\|/g, "\\|"),
     (code) => code.replace(/\|/g, "\\|"),
   );
 }
@@ -153,11 +194,18 @@ export function mdListItem(item: string): string {
   let afterRow = false;
   for (const [i, line] of lines.entries()) {
     const row = isRow(line);
+    // The author's table sits in the wrapper the generated tables use, so a cell too wide for
+    // a phone scrolls instead of being squeezed into a column a letter wide.
+    if (afterRow && !row) out.push("", `${indent}</div>`);
     if (i > 0 && row !== afterRow) out.push("");
+    if (row && !afterRow) {
+      out.push(`${indent}<div class="gmt-ref-table" data-kind="notes">`, "");
+    }
     if (row) out.push(`${indent}${mdTableRow(line)}`);
     else out.push(i === 0 ? `- ${mdText(line)}` : `${indent}${mdText(line)}`);
     afterRow = row;
   }
+  if (afterRow) out.push("", `${indent}</div>`);
   return out.join("\n");
 }
 
@@ -180,6 +228,47 @@ const LIB_LINKS: Record<string, { type: string; spec: string; label: string }> =
     },
   };
 
+/**
+ * The members of a union at its top level: split at each `|` that sits outside every `<>`,
+ * `()`, `[]` and `{}` and outside a string or template literal. A union inside a generic
+ * (`Partial<Record<"a" | "b", T>>`) stays in its span. An arrow's `>` closes nothing.
+ */
+export function topLevelUnion(type: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quote: string | undefined;
+  let start = 0;
+  for (let i = 0; i < type.length; i++) {
+    const c = type[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = undefined;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if ("<([{".includes(c)) depth++;
+    else if (")]}".includes(c) || (c === ">" && type[i - 1] !== "=")) {
+      depth = Math.max(0, depth - 1);
+    } else if (c === "|" && depth === 0) {
+      parts.push(type.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(type.slice(start));
+  return parts.map((p) => p.trim()).filter((p) => p !== "");
+}
+
+/**
+ * A printed type as code spans, one per top-level member of a union, joined by a plain `|`.
+ * The stylesheet keeps each span whole, so a long union can wrap only between members and a
+ * member such as `"4-4-5"` never breaks after its hyphen. A bracketed type is one span however
+ * many `|` it holds, and a type is not rewritten.
+ */
+function typeSpans(type: string): string {
+  const parts = topLevelUnion(type);
+  return (parts.length > 0 ? parts : [type]).map(mdCodeSpan).join(" \\| ");
+}
+
 /** The Type cell: the printed type, then a link for each public type it names. */
 function typeCell(row: PropertyDoc, ctx: TableContext): string {
   if (!row.type) return EMPTY;
@@ -191,7 +280,7 @@ function typeCell(row: PropertyDoc, ctx: TableContext): string {
   if (links.length === 1 && links[0].name === row.type) {
     return `[${mdCodeSpan(row.type)}](${links[0].url})`;
   }
-  const span = mdCodeSpan(row.type);
+  const span = typeSpans(row.type);
   if (links.length === 0) return span;
   const list = links.map((l) => `[${mdCodeSpan(l.name)}](${l.url})`).join(", ");
   return `${span} (${list})`;
@@ -259,11 +348,30 @@ function tableRows(
   return out;
 }
 
+/** Which generated table a wrapper holds; the stylesheet lays each out in its own way. */
+export type RefTableKind = "options" | "members" | "parameters" | "notes";
+
+/**
+ * A generated table inside the wrapper the stylesheet and `src/lib/ref-table.ts` hook on.
+ * Hand-written tables carry no wrapper, so a rule for the reference tables cannot reach them.
+ * The blank lines let MDX read the table as Markdown inside the element.
+ */
+export function refTable(kind: RefTableKind, table: string): string {
+  return [
+    `<div class="gmt-ref-table" data-kind="${kind}">`,
+    "",
+    table,
+    "",
+    "</div>",
+  ].join("\n");
+}
+
 /** `| Option | Type | Default | Description |`, one row per property. */
 export function renderOptionsTable(
-  rows: readonly PropertyDoc[],
+  allRows: readonly PropertyDoc[],
   ctx: TableContext,
 ): string {
+  const rows = flattenRows(allRows);
   return [
     `| Option | Type | Default | Description |`,
     `| --- | --- | --- | --- |`,
@@ -281,11 +389,26 @@ export function renderOptionsTable(
   ].join("\n");
 }
 
+/** `| Parameter | Type | Description |`, one row per positional parameter of a function. */
+export function renderParametersTable(
+  params: readonly { name: string; type?: string; description: string }[],
+): string {
+  return [
+    `| Parameter | Type | Description |`,
+    `| --- | --- | --- |`,
+    ...params.map(
+      (p) =>
+        `| ${mdCodeSpan(p.name)} | ${p.type ? typeSpans(p.type) : EMPTY} | ${mdCellText(p.description)} |`,
+    ),
+  ].join("\n");
+}
+
 /** `| Member | Type | Description |`, one row per property. */
 export function renderMembersTable(
-  rows: readonly PropertyDoc[],
+  allRows: readonly PropertyDoc[],
   ctx: TableContext,
 ): string {
+  const rows = flattenRows(allRows);
   return [
     `| Member | Type | Description |`,
     `| --- | --- | --- |`,

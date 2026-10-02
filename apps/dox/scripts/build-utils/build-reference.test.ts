@@ -678,6 +678,99 @@ function f(a: string, ${declared}): string { return a; }`,
 // What extraction hands the documentation gate
 // ---------------------------------------------------------------------------
 
+describe("inline object literals", () => {
+  const SRC = `
+    /**
+     * @param value the date
+     * @param props what to compare
+     * @returns the parts
+     */
+    function f(
+      value: string,
+      props: {
+        /** The settings. @defaultValue None. */
+        options?: {
+          /** Whether equal counts. @defaultValue \`false\` */
+          allowEqual?: boolean;
+        };
+      },
+    ): { type: string; value: string }[] | null { return null; }
+
+    /** One quarter. */
+    function g(): { year: number; quarter: number } { return { year: 1, quarter: 1 }; }`;
+
+  it("extracts the members of a nested literal, and prints the parent as object", () => {
+    const [options] = extractFn(SRC, "f").options[0].rows;
+    expect(options.type).toBe("object");
+    expect(shown(options.children!)).toEqual([
+      {
+        name: "allowEqual",
+        optional: true,
+        type: "boolean",
+        description: "Whether equal counts.",
+        defaultValue: "`false`",
+      },
+    ]);
+    expect(options.children![0].source?.line).toBeGreaterThan(0);
+  });
+
+  it("extracts the members of a returned literal, through an array and null", () => {
+    const f = extractFn(SRC, "f");
+    expect(f.returnMembers.map((r) => r.name)).toEqual(["type", "value"]);
+    expect(f.returnsItems).toBe(true);
+    const g = extractFn(SRC, "g");
+    expect(g.returnMembers.map((r) => r.name)).toEqual(["year", "quarter"]);
+    expect(g.returnsItems).toBe(false);
+  });
+
+  it("renders the nested rows in the Options table, with dotted names", () => {
+    const page = placed(SRC).fnPage("f");
+    expect(section(page, "Options").join("\n")).toContain(
+      "| `options.allowEqual?` | `boolean` | `false` | Whether equal counts. |",
+    );
+  });
+
+  it("renders a Members table under Returns for a returned literal", () => {
+    const page = placed(SRC).fnPage("g");
+    const returns = section(page, "Returns");
+    expect(returns[0]).toBe("**Members**");
+    expect(returns.join("\n")).toContain("| `year` | `number` | — |");
+    expect(placed(SRC).fnPage("f")).toContain("**Members of each item**");
+  });
+
+  it("gates a nested option, and requires a description on each returned member", () => {
+    expect(gapsFor(SRC, "g")).toEqual([
+      "return-description g.returns.quarter",
+      "return-description g.returns.year",
+    ]);
+    expect(gapsFor(SRC, "f")).toEqual([
+      "return-description f.returns[].type",
+      "return-description f.returns[].value",
+    ]);
+  });
+
+  /** As the describe below, for any source. */
+  function gapsFor(src: string, name: string): string[] {
+    const doc = extractFn(src, name);
+    return findGaps({
+      functions: [
+        {
+          name: doc.name,
+          namespace: doc.namespace,
+          file: `packages/gmt/src/${doc.sourcePath}`,
+          line: doc.line,
+          declaredParams: doc.declaredParams,
+          documentedParams: doc.documentedParams,
+          options: doc.options,
+          returnMembers: doc.returnMembers,
+          returnsItems: doc.returnsItems,
+        },
+      ],
+      types: [],
+    }).map((g) => `${g.rule} ${g.subject}`);
+  }
+});
+
 describe("extraction for the documentation gate", () => {
   /** The gate's findings for one in-memory function, as `rule subject` strings. */
   function gapsFor(src: string, name: string): string[] {
@@ -692,6 +785,8 @@ describe("extraction for the documentation gate", () => {
           declaredParams: doc.declaredParams,
           documentedParams: doc.documentedParams,
           options: doc.options,
+          returnMembers: doc.returnMembers,
+          returnsItems: doc.returnsItems,
         },
       ],
       types: [],
@@ -1819,7 +1914,7 @@ describe("placement", () => {
     expect(types).toContain("| `days` | `number` | Days in the band. |");
     // A member typed as another inline type links to its heading on this page.
     expect(types).toContain(
-      '| `rounding` | `"up" \\| "down"` ([`Rounding`](#rounding)) | How the count was rounded. |',
+      '| `rounding` | `"up"` \\| `"down"` ([`Rounding`](#rounding)) | How the count was rounded. |',
     );
   });
 
@@ -1865,9 +1960,11 @@ describe("placement", () => {
       "```ts",
       'import type { Own } from "@northguild/gmt";',
       "```",
+      '<div class="gmt-ref-table" data-kind="options">',
       "| Option | Type | Default | Description |",
       "| --- | --- | --- | --- |",
       "| `strict?` | `boolean` | — | Whether to be strict. |",
+      "</div>",
     ]);
     expect(usage.types.get("Own")!.placement).toEqual({
       kind: "inline",
