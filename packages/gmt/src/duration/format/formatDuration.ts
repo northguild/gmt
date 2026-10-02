@@ -1,6 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { DurationUnit } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+
+/**
+ * Plural unit keys rendered by `formatDuration`. Maps to singular `Intl.NumberFormat` unit
+ * labels through `UNIT_TO_INTL` (e.g. `"years"` → `"year"`).
+ */
+type DurationUnit =
+  | "years"
+  | "months"
+  | "weeks"
+  | "days"
+  | "hours"
+  | "minutes"
+  | "seconds";
 
 const UNIT_TO_INTL: Record<DurationUnit, string> = {
   years: "year",
