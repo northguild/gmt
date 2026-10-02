@@ -10,7 +10,7 @@ import { isValidUtc } from "../validate";
  * - Returns "" for invalid input.
  *
  * @param value UTC Instant string
- * @param timeZone IANA timeZone identifier
+ * @param timeZone IANA name or UTC offset
  * @returns zoned ISO 8601 string or "" on invalid
  *
  * @example convertUtcToZoned("2024-02-29T00:00:00Z", "America/New_York") // "2024-02-28T19:00:00-05:00[America/New_York]"

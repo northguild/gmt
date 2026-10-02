@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { resolveReadingTimeZone } from "../../internal/resolveReadingTimeZone";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidUtc } from "../validate";
@@ -53,15 +53,13 @@ export type UtcUnit =
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
- * - Reads the value on the wall clock of `options.timeZone` (an IANA zone, default UTC), as
- *   `parseTimeFromUtc` does; an invalid zone returns "".
- * - `weekStartsOn: "sunday"` numbers weeks by UTS #35 (week 1 holds 1 January, so late-December
- *   days can be week 1); any value other than `"monday"` or `"sunday"` returns "".
+ * - A `"week"` in late December can be week 1 of the next year, under either week numbering.
+ * - `optionsArg` must be an object or omitted: a non-object value (such as `null`) returns "".
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45Z")
  * @param unit unit to extract from the datetime
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday") for week calculations, timeZone (IANA, default "UTC"); a non-object value (such as `null`) is invalid
+ * @param optionsArg How weeks are numbered, and the time zone the value is read in
  * @returns string representation of the requested unit or "" on invalid input
  *
  * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "month") // "03"
@@ -74,7 +72,24 @@ export type UtcUnit =
 export function parseUnitFromUtc(
   value: string,
   unit: UtcUnit,
-  optionsArg?: { weekStartsOn?: "monday" | "sunday"; timeZone?: string },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets how the `"week"` unit is numbered. `"monday"` gives the
+     * ISO 8601 week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS
+     * #35 week number with a Sunday first day and one minimal day, where week 1 holds 1 January.
+     * Any other value returns `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+    /**
+     * The time zone whose wall clock the value is read on: an IANA name, a UTC offset, or
+     * `"local"` for the system time zone. An invalid zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
@@ -82,9 +97,9 @@ export function parseUnitFromUtc(
       return "";
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const timeZone = resolveReadingTimeZone(optionsArg?.timeZone);
+    const timeZone = normalizeTimeZone(optionsArg?.timeZone);
 
-    if (!isValidUtc(value) || weekStartsOn === null || timeZone === null) {
+    if (!isValidUtc(value) || weekStartsOn === null || timeZone === "") {
       return "";
     }
 

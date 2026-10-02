@@ -2,7 +2,7 @@ import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
 import { isValidTimeZone } from "../zoned/validate";
 
 /**
- * Resolve the `timeZone` option of every `unix/` function and the `utc/` formatters.
+ * Resolve the `timeZone` option of every `unix/` and `utc/` function that takes one.
  *
  * - Omitted (`undefined`) → `"UTC"`. A Unix epoch and a UTC string name an instant, so no host
  *   zone is read unless asked for.

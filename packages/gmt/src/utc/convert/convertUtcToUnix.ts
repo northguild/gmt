@@ -11,13 +11,12 @@ import { isValidUtc } from "../validate";
  *
  * - Uses Temporal.Instant.from to parse.
  * - Seconds floor toward −∞, so `"1969-12-31T23:59:59.5Z"` is second `-1` (POSIX `time_t`).
- * - `options.epochUnit` is `"seconds"` or `"milliseconds"` (singular accepted), default
- *   `"milliseconds"`. An explicit `undefined` is the same as omitted; a non-object `options` (such
- *   as a bare `"seconds"` string) returns null.
+ * - `options` must be an object or omitted: a non-object value (such as a bare `"seconds"` string)
+ *   returns null.
  * - Returns null for invalid input.
  *
  * @param value UTC Instant string
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
+ * @param options The unit of the returned epoch value
  * @returns epoch number or null on invalid
  *
  * @example convertUtcToUnix("2024-02-29T00:00:00Z") // 1709164800000
@@ -28,7 +27,15 @@ import { isValidUtc } from "../validate";
  */
 export function convertUtcToUnix(
   value: string,
-  options?: { epochUnit?: UnixUnit },
+  options?: {
+    /**
+     * The unit the epoch value is returned in: `"seconds"` or `"milliseconds"`, singular or plural.
+     * An explicit `undefined` is the same as omitted; any other value returns null.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+  },
 ): number | null {
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
