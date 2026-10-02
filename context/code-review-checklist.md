@@ -34,6 +34,8 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 ## Documentation
 
 - [ ] JSDoc on all new public functions with `@example` for valid, invalid, and edge-case inputs
+- [ ] Every public type, member of a public object type and option property has its own JSDoc description, and every optional input property has `@defaultValue` ([jsdoc standards § Options and members](./jsdoc-standards.md#options-and-members)); `pnpm dox:docs-check` reports no gaps
+- [ ] Every new public type is reached by a public function; a type used only by private code is not exported
 - [ ] Relevant namespace README updated (`packages/gmt/src/<namespace>/README.md`)
 - [ ] `packages/gmt/README.md` quick-start updated if new concept-level functions were added
 - [ ] TanStack Intent skills in `packages/gmt/skills/` updated if a public function was added, renamed, removed, or gained/changed an option (see `/tanstack-intent` skill, `CONTRIBUTING.md` § Keeping agent skills current) — check the relevant `SKILL.md`'s code examples and `_artifacts/domain_map.yaml`'s `covers:` list actually name the new/changed function

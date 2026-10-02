@@ -244,6 +244,12 @@ on several cases; and memory.
 7. **Check the documented convention matches the code.** JSDoc that states a convention —
    which endpoint is exclusive, which direction a roll goes, what the sentinel means — is part
    of the contract. Inferring it from the implementation is how a caller gets it backwards.
+   The same holds for defaults: for each `@defaultValue` the diff adds or touches, find the
+   branch in the implementation that applies it (`=== undefined`, `??`, or the value handed to
+   Temporal or Intl) and confirm the two agree. For a pass-through, confirm the default against
+   the Temporal or ECMA-402 text. A documented default the code does not apply is a blocking
+   finding; so is an option or member with no description
+   ([jsdoc standards § Options and members](../context/jsdoc-standards.md#options-and-members)).
 8. **Check the epic's own rules.** From
    [tracker.md § Definition of Done](../context/domination/tracker.md): zones and calendars are
    parameters, never bundled registries; reference data sits behind a `…/data` subpath and

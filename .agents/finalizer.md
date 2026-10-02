@@ -52,6 +52,11 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       "outputs up-to-date, skipping" over a corpus it would never have produced, so
       confirm the new functions actually appear in
       `apps/dox/src/generated/reference/gmt-corpus.json` rather than trusting the skip.
+      Then run `pnpm dox:docs-check`. It lists every public type, member and option with no
+      description, and every optional input property with no `@defaultValue`
+      ([jsdoc standards § Options and members](../context/jsdoc-standards.md#options-and-members)).
+      A gap is not yours to fill with site copy: report it to `driver`, so `tdd-dev` writes it
+      from the implementation.
    4. `pnpm stats:sync` — rewrites the published test counts, CI execution totals and
       per-namespace function counts in both READMEs, and regenerates
       `apps/dox/src/data/gmt-stats.json`, which every dox page, chart and comparison
