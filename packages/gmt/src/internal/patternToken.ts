@@ -96,9 +96,10 @@ interface TokenSpec {
   regexSource?: string;
 }
 
-// Recognized vocabulary letters (Decision 1's Luxon-derived token set,
-// restricted to what's unambiguous to parse — no offset/zone-name tokens
-// since this story is plain-only). Any other unquoted letter in a pattern
+// Recognized vocabulary letters: a subset of the UTS #35 Date Field Symbol
+// Table, with its field lengths (`MMM` abbreviated, `MMMM` wide), restricted
+// to what's unambiguous to parse — no offset/zone-name tokens since this
+// story is plain-only (Decision 1). Any other unquoted letter in a pattern
 // is malformed. Numeric ranges are baked into each regex so a shape
 // mismatch (e.g. "13" for a 12-hour token) fails at the regex stage,
 // before ever reaching Temporal.
@@ -159,13 +160,21 @@ interface PatternPart {
 /**
  * Split a pattern string into literal and letter-run parts.
  *
- * Quoted segments (`'...'`) are literals matched verbatim; a doubled `''`
- * *inside* an open quote is the escape for one literal `'` character
- * (mirrors Luxon's own escaping exactly — Decision 1 already establishes
- * Luxon's vocabulary as this story's starting point). Any character that
- * isn't part of a letter run and isn't inside a quote (separators,
- * literal digits, punctuation) is automatically a one-character literal —
- * no explicit quoting required for those.
+ * Literal text follows UTS #35 Part 4, Date Format Patterns
+ * (https://unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns):
+ *   - "Any characters other than A..Z and a..z, including spaces and
+ *     punctuation" are literals with no quoting.
+ *   - "Any text between single vertical quotes ('xxxx'), which may include
+ *     A..Z and a..z as literal text."
+ *   - "Two adjacent single vertical quotes (''), which represent a literal
+ *     single quote, either inside or outside quoted text."
+ *
+ * The pattern is read left to right, so a `''` pair is taken before a
+ * lone `'` is read as opening or closing quoted text: `''''` is two
+ * literal quotes, and `'''T'` is a literal quote followed by the quoted
+ * text `T`. UTS #35 defines quoted text only as text *between* two
+ * quotes, so a quote that never closes has no defined meaning and the
+ * pattern is malformed (`null`).
  */
 function tokenizePattern(pattern: string): PatternPart[] | null {
   const parts: PatternPart[] = [];
@@ -175,6 +184,13 @@ function tokenizePattern(pattern: string): PatternPart[] | null {
     const ch = pattern[i];
 
     if (ch === "'") {
+      // `''` outside quoted text: one literal quote, no quoted text opened.
+      if (pattern[i + 1] === "'") {
+        parts.push({ type: "literal", text: "'" });
+        i += 2;
+        continue;
+      }
+
       let j = i + 1;
       let text = "";
       let closed = false;
@@ -192,9 +208,9 @@ function tokenizePattern(pattern: string): PatternPart[] | null {
         text += pattern[j];
         j += 1;
       }
-      // An unterminated quote has no unambiguous literal meaning — treat
-      // it as a malformed pattern rather than guessing where it "should"
-      // have closed.
+      // UTS #35 gives quoted text a meaning only between two quotes, so
+      // an unterminated quote is a malformed pattern, not a guess at
+      // where it should have closed.
       if (!closed) return null;
       parts.push({ type: "literal", text });
       i = j;

@@ -30,10 +30,13 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  * | `SSS` | millisecond | 3 digits | 000–999 | |
  * | `a` | meridiem | locale | — | `getLocaleMeridiems(locale)` → `[AM-label, PM-label]` |
  *
- * - Text in `'single quotes'` is a literal; a doubled `''` inside a
- *   quoted segment is a literal `'`. Any other character (`: , space`,
- *   literal digits, etc.) outside a quote/letter-run is automatically a
- *   literal — no explicit quoting required.
+ * - Literal text follows the Unicode UTS #35 date format pattern rules.
+ *   Text in `'single quotes'` is a literal, letters included. Two
+ *   adjacent quotes `''` are one literal `'`, inside or outside quoted
+ *   text: `"HH''mm"` reads `"14'30"`, and `"'o''clock'"` reads
+ *   `"o'clock"`. A quote that never closes makes the pattern malformed
+ *   (`""`). Any other character that is not a letter (`: , space`,
+ *   digits and so on) is a literal with no quoting.
  * - `a` is locale-aware. If `locale` is omitted and the pattern uses
  *   `a`, GMT defaults to `"en-US"` rather than returning `""` for every
  *   caller who didn't have another locale in mind.
@@ -54,6 +57,7 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *
  * @example parseTimeWithPattern("14:30:45", "HH:mm:ss") // "14:30:45"
  * @example parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a") // "14:30:45"
+ * @example parseTimeWithPattern("2 o'clock PM", "h 'o''clock' a") // "14:00:00" ('' is one literal quote)
  * @example parseTimeWithPattern("25:00", "HH:mm") // "" (shape-valid, not a real time)
  * @example parseTimeWithPattern("2024-03-15", "yyyy-MM-dd") // "" (date token in a time-only pattern)
  * @example parseTimeWithPattern("午後 10:20", "a h:mm", ["ja-JP", "en-US"]) // "22:20:00"

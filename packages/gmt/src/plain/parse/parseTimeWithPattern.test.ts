@@ -127,6 +127,25 @@ describe("parseTimeWithPattern", () => {
       ).toBe("14:30:45");
     });
 
+    // UTS #35 Part 4, Date Format Patterns: "Two adjacent single vertical
+    // quotes (''), which represent a literal single quote, either inside or
+    // outside quoted text."
+    it.each`
+      value              | pattern              | expected      | why
+      ${"14'30"}         | ${"HH''mm"}          | ${"14:30:00"} | ${"'' between fields is one literal quote"}
+      ${"1430"}          | ${"HH''mm"}          | ${""}         | ${"the literal quote is missing from the value"}
+      ${"'14:30'"}       | ${"''HH:mm''"}       | ${"14:30:00"} | ${"'' at the start and end of the pattern"}
+      ${"''14:30"}       | ${"''''HH:mm"}       | ${"14:30:00"} | ${"'''' is two '' pairs, two literal quotes"}
+      ${"'14:30"}        | ${"''''HH:mm"}       | ${""}         | ${"'''' needs two literal quotes, not one"}
+      ${"'14:30"}        | ${"'''HH:mm"}        | ${""}         | ${"''' leaves the third quote unterminated"}
+      ${"12 o'clock PM"} | ${"hh 'o''clock' a"} | ${"12:00:00"} | ${"the UTS #35 pattern example table row"}
+    `(
+      'returns "$expected" for "$value" against "$pattern" ($why)',
+      ({ value, pattern, expected }) => {
+        expect(parseTimeWithPattern(value, pattern)).toBe(expected);
+      },
+    );
+
     it('returns "" for an unterminated quote (malformed pattern)', () => {
       expect(parseTimeWithPattern("14:30:45", "HH:mm:ss'")).toBe("");
     });
