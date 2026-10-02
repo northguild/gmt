@@ -139,8 +139,11 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * were *removed* (an example now runs instead of being skipped) or *legitimately added* (a new
  * `get/` reader, a new prose aside) — never to silence a regression without reading `show`'s list
  * first to confirm every new skip is one of those two things.
+ *
+ * `examples` counts 165: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
+ * example, which reads the clock like every other `get/` reader example in the `clock` bucket.
  */
-const SKIP_BUDGET = { examples: 164, docResults: 64 };
+const SKIP_BUDGET = { examples: 165, docResults: 64 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
