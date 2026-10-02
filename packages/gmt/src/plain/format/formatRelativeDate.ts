@@ -7,8 +7,19 @@ import {
 import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 
+/**
+ * Options for `formatRelativeDate`: the reference date, the display unit, the rounding and the
+ * wording.
+ */
 export interface FormatRelativeDateOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeDateUnit;
+  /**
+   * The unit the distance is written in, whatever its size, from `"day"` to `"year"`, singular or
+   * plural. Omitted, the unit is picked from the distance: day under 7 days, week under 28, month
+   * under 365 and year beyond.
+   *
+   * @defaultValue None. The unit is picked from the distance.
+   */
+  largestUnit?: RelativeDateUnit | `${RelativeDateUnit}s`;
 }
 
 const AUTO_UNITS: Array<{ unit: RelativeDateUnit; maxDays: number }> = [
@@ -23,13 +34,12 @@ const AUTO_UNITS: Array<{ unit: RelativeDateUnit; maxDays: number }> = [
  *
  * - Auto-picks the display unit (day/week/month/year) based on the distance, unless
  *   `largestUnit` forces one.
- * - `roundingMethod` controls how the distance rounds to the display unit.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO date string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeDate("2026-01-15", "en-US", { reference: "2026-04-15" }) // "3 months ago"
@@ -65,19 +75,15 @@ export function formatRelativeDate(
           ? (AUTO_UNITS.find((t) => absDays < t.maxDays)?.unit ?? "year")
           : options.largestUnit;
 
-      let amount: number;
+      let total: number;
       try {
-        amount = resolveRelativeRounding(
-          diff.total(unit),
-          options.roundingMethod,
-        );
+        total = diff.total(unit);
       } catch {
         // month/year are calendrical and need a relativeTo anchor
-        amount = resolveRelativeRounding(
-          durationTotal(diff, unit, reference),
-          options.roundingMethod,
-        );
+        total = durationTotal(diff, unit, reference);
       }
+      // Outside the retry: an invalid roundingMethod throws once, straight to the sentinel.
+      const amount = resolveRelativeRounding(total, options.roundingMethod);
 
       return normalizeDateTime(
         new Intl.RelativeTimeFormat(locale, {

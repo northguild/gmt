@@ -3,8 +3,19 @@ import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";
 
+/**
+ * Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the
+ * wording.
+ */
 export interface FormatRelativeTimeOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeTimeUnit;
+  /**
+   * The unit the distance is written in, whatever its size, from `"second"` to `"hour"`, singular
+   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
+   * an hour and hour beyond.
+   *
+   * @defaultValue None. The unit is picked from the distance.
+   */
+  largestUnit?: RelativeTimeUnit | `${RelativeTimeUnit}s`;
 }
 
 const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
@@ -18,13 +29,12 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  *
  * - Auto-picks the display unit (second/minute/hour) based on the distance, unless
  *   `largestUnit` forces one.
- * - `roundingMethod` controls how the distance rounds to the display unit.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO time string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeTime("14:30:00", "en-US", { style: "short", reference: "16:30:00" }) // "2 hr. ago"

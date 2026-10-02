@@ -57,16 +57,15 @@ export function formatRelativeDuration(
       ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "year")
       : options.largestUnit;
 
-  let amount: number;
+  let total: number;
   try {
-    amount = resolveRelativeRounding(diff.total(unit), options.roundingMethod);
+    total = diff.total(unit);
   } catch {
     // month/year are calendrical and need a relativeTo anchor.
-    amount = resolveRelativeRounding(
-      calendarTotal(unit),
-      options.roundingMethod,
-    );
+    total = calendarTotal(unit);
   }
+  // Outside the retry: an invalid roundingMethod throws once, straight to the caller's sentinel.
+  const amount = resolveRelativeRounding(total, options.roundingMethod);
 
   return normalizeDateTime(
     new Intl.RelativeTimeFormat(locale, {

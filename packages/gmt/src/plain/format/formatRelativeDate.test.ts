@@ -1,7 +1,10 @@
 import { vi } from "vitest";
 import { expectOneOfIcu, MustTestLocales, oneOfIcu } from "../../test";
 import { mockTemporalNowPlainDateISOThrow } from "../../test/mocks";
-import { formatRelativeDate } from "./formatRelativeDate";
+import {
+  formatRelativeDate,
+  type FormatRelativeDateOptions,
+} from "./formatRelativeDate";
 
 const REF = "2024-03-15";
 
@@ -681,13 +684,50 @@ describe("formatRelativeDate", () => {
       },
     );
 
-    it("returns '' for an invalid roundingMethod", () => {
-      expect(
-        formatRelativeDate("2024-03-05", MustTestLocales.enUS, {
+    // RelativeRoundingMethod is "floor" | "ceil" | "round". Any other value is invalid input and
+    // returns the sentinel (Core Rule 3), including the name of another Math function, an
+    // inherited Object.prototype key, another letter case and null.
+    it.each`
+      roundingMethod
+      ${"nonsense"}
+      ${"abs"}
+      ${"trunc"}
+      ${"sign"}
+      ${"random"}
+      ${"constructor"}
+      ${"hasOwnProperty"}
+      ${"toString"}
+      ${"ROUND"}
+      ${""}
+      ${null}
+    `(
+      "returns '' for the invalid roundingMethod $roundingMethod",
+      ({ roundingMethod }) => {
+        expect(
+          formatRelativeDate("2024-03-05", MustTestLocales.enUS, {
+            reference: REF,
+            roundingMethod,
+          }),
+        ).toBe("");
+      },
+    );
+
+    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
+      const omitted = formatRelativeDate("2024-03-05", MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicitUndefined = formatRelativeDate(
+        "2024-03-05",
+        MustTestLocales.enUS,
+        {
           reference: REF,
-          roundingMethod: "nonsense" as never,
-        }),
-      ).toBe("");
+          roundingMethod: undefined,
+        },
+      );
+      // -10 days is -1.43 weeks, which rounds to -1.
+      expect(omitted).toBe("last week");
+      expect(explicitUndefined).toBe(omitted);
     });
   });
 
@@ -765,4 +805,34 @@ describe("formatRelativeDate with non-object options", () => {
       formatRelativeDate("2024-03-12", MustTestLocales.enUS, options as never),
     ).toBe("");
   });
+});
+
+// ECMA-402 SingularRelativeTimeUnit and Temporal GetTemporalUnitValuedOption read a plural unit name
+// as its singular, so "hours" is the unit "hour". The rows are typed with the option's own type,
+// not a template table, so `tsc` fails this file if a plural leaves the `largestUnit` type.
+describe("formatRelativeDate with a plural largestUnit", () => {
+  // 17 March 2023 to 17 March 2024 spans 29 February 2024: 1 year, 12 months, 366 days (52.29 weeks, rounded to 52).
+  const pluralRows: Array<{
+    largestUnit: NonNullable<FormatRelativeDateOptions["largestUnit"]>;
+    expected: string;
+  }> = [
+    { largestUnit: "years", expected: "last year" },
+    { largestUnit: "months", expected: "12 months ago" },
+    { largestUnit: "weeks", expected: "52 weeks ago" },
+    { largestUnit: "days", expected: "366 days ago" },
+  ];
+
+  it.each(pluralRows)(
+    "returns $expected for largestUnit $largestUnit",
+    ({ largestUnit, expected }) => {
+      const options: FormatRelativeDateOptions = {
+        reference: "2024-03-17",
+        largestUnit,
+      };
+
+      expect(
+        formatRelativeDate("2023-03-17", MustTestLocales.enUS, options),
+      ).toBe(expected);
+    },
+  );
 });

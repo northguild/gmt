@@ -6,22 +6,49 @@ import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
 
+/**
+ * Options for `formatRelativeZoned`: how the phrase is worded, the unit it counts in, how the
+ * count rounds and the moment the distance is measured from.
+ */
 export interface FormatRelativeZonedOptions {
+  /**
+   * The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `"long"` ("in 3
+   * months"), `"short"` ("in 3 mo.") or `"narrow"` (the locale's most compact form).
+   *
+   * @defaultValue `"long"`
+   */
   style?: "long" | "short" | "narrow";
+  /**
+   * Whether a distance may be written as a word instead of a number, as the `numeric` option of
+   * `Intl.RelativeTimeFormat`. `"auto"` uses the locale's word where it has one ("yesterday", "next
+   * year"); `"always"` writes the number every time ("1 day ago").
+   *
+   * @defaultValue `"auto"`
+   */
   numeric?: "always" | "auto";
-  largestUnit?: RelativeUnit;
+  /**
+   * The unit the distance is written in, whatever its size, from `"second"` to `"year"`, singular
+   * or plural. Omitted, the unit is picked from the distance: second under a minute, minute under
+   * an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   *
+   * @defaultValue None. The unit is picked from the distance.
+   */
+  largestUnit?: RelativeUnit | `${RelativeUnit}s`;
+  /**
+   * The way a fractional distance becomes the whole number displayed: `"round"` goes to the nearest
+   * whole number, `"floor"` down and `"ceil"` up. It applies to the signed value, where a past
+   * distance is negative, so `"floor"` turns −1.5 hours into "2 hours ago".
+   *
+   * @defaultValue `"round"`
+   */
   roundingMethod?: RelativeRoundingMethod;
   /**
-   * Anchor point for the relative diff.
+   * The instant the distance is measured from, as a zoned ISO string, a UTC ISO string or a numeric
+   * epoch in milliseconds. The distance is the exact time between the two instants; the reference's
+   * time zone only anchors how months and years are counted, which is its own zone for a zoned
+   * string and `value`'s zone for a UTC string or an epoch. Any other value returns `""`.
    *
-   * - ZonedDateTime ISO string: kept in its own zone; Temporal handles
-   *   cross-zone diffs correctly. The label is therefore zone-aware — a value
-   *   and reference in different zones can produce a non-zero diff even when
-   *   they describe the same absolute instant.
-   * - UTC ISO string: placed into `value`'s timezone before diffing so the
-   *   calendar anchor matches the value's wall clock.
-   * - Numeric epoch (ms): same — placed into `value`'s timezone.
-   * - Omitted: "now" in `value`'s own timezone.
+   * @defaultValue The current instant, read in `value`'s time zone.
    */
   reference?: string | number;
 }
@@ -35,13 +62,12 @@ export interface FormatRelativeZonedOptions {
  *   "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
- * - `roundingMethod` controls how the distance rounds to the display unit.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ZonedDateTime ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @param options optional settings for the wording, the display unit, rounding and the reference moment
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeZoned("2023-12-29T00:00:00+00:00[UTC]", "en-US", { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "2 months ago"

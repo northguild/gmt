@@ -33,4 +33,23 @@ describe("resolveRelativeRounding", () => {
   it("defaults to round when method is omitted", () => {
     expect(resolveRelativeRounding(1.5)).toBe(2);
   });
+
+  // RelativeRoundingMethod is "floor" | "ceil" | "round": the name of another Math function, an
+  // inherited Object.prototype key, another letter case and null are not rounding methods.
+  it.each`
+    method
+    ${"nonsense"}
+    ${"abs"}
+    ${"trunc"}
+    ${"sign"}
+    ${"random"}
+    ${"constructor"}
+    ${"hasOwnProperty"}
+    ${"toString"}
+    ${"ROUND"}
+    ${""}
+    ${null}
+  `("throws RangeError for the unknown method $method", ({ method }) => {
+    expect(() => resolveRelativeRounding(-1.5, method)).toThrow(RangeError);
+  });
 });

@@ -1,7 +1,10 @@
 import { vi } from "vitest";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
-import { formatRelativeZoned } from "./formatRelativeZoned";
+import {
+  formatRelativeZoned,
+  type FormatRelativeZonedOptions,
+} from "./formatRelativeZoned";
 
 // All tests use a fixed reference so output is deterministic regardless of
 // when the suite runs. 2024-02-29T00:00:00+00:00[UTC] = leap day midnight UTC.
@@ -310,17 +313,58 @@ describe("formatRelativeZoned", () => {
       },
     );
 
-    it("returns '' for an invalid roundingMethod", () => {
-      expect(
-        formatRelativeZoned(
-          "2024-02-28T21:42:00+00:00[UTC]",
-          MustTestLocales.enUS,
-          {
-            reference: REF,
-            roundingMethod: "nonsense" as never,
-          },
-        ),
-      ).toBe("");
+    // RelativeRoundingMethod is "floor" | "ceil" | "round". Any other value is invalid input and
+    // returns the sentinel (Core Rule 3), including the name of another Math function, an
+    // inherited Object.prototype key, another letter case and null.
+    it.each`
+      roundingMethod
+      ${"nonsense"}
+      ${"abs"}
+      ${"trunc"}
+      ${"sign"}
+      ${"random"}
+      ${"constructor"}
+      ${"hasOwnProperty"}
+      ${"toString"}
+      ${"ROUND"}
+      ${""}
+      ${null}
+    `(
+      "returns '' for the invalid roundingMethod $roundingMethod",
+      ({ roundingMethod }) => {
+        expect(
+          formatRelativeZoned(
+            "2024-02-28T21:42:00+00:00[UTC]",
+            MustTestLocales.enUS,
+            {
+              reference: REF,
+              roundingMethod,
+            },
+          ),
+        ).toBe("");
+      },
+    );
+
+    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
+      const omitted = formatRelativeZoned(
+        "2024-02-28T21:42:00+00:00[UTC]",
+        MustTestLocales.enUS,
+        {
+          reference: REF,
+        },
+      );
+      const explicitUndefined = formatRelativeZoned(
+        "2024-02-28T21:42:00+00:00[UTC]",
+        MustTestLocales.enUS,
+        {
+          reference: REF,
+          roundingMethod: undefined,
+        },
+      );
+      // -2 h 18 min is -2.3 hours, which rounds to -2.
+      expect(omitted).toBe("2 hours ago");
+      expect(explicitUndefined).toBe(omitted);
     });
   });
 
@@ -588,4 +632,41 @@ describe("formatRelativeZoned with non-object options", () => {
       ),
     ).toBe("");
   });
+});
+
+// ECMA-402 SingularRelativeTimeUnit and Temporal GetTemporalUnitValuedOption read a plural unit name
+// as its singular, so "hours" is the unit "hour". The rows are typed with the option's own type,
+// not a template table, so `tsc` fails this file if a plural leaves the `largestUnit` type.
+describe("formatRelativeZoned with a plural largestUnit", () => {
+  // 17 March 2023 to 17 March 2024 spans 29 February 2024: 1 year, 12 months, 366 days (52.29 weeks, rounded to 52), 8,784 hours.
+  const pluralRows: Array<{
+    largestUnit: NonNullable<FormatRelativeZonedOptions["largestUnit"]>;
+    expected: string;
+  }> = [
+    { largestUnit: "years", expected: "last year" },
+    { largestUnit: "months", expected: "12 months ago" },
+    { largestUnit: "weeks", expected: "52 weeks ago" },
+    { largestUnit: "days", expected: "366 days ago" },
+    { largestUnit: "hours", expected: "8,784 hours ago" },
+    { largestUnit: "minutes", expected: "527,040 minutes ago" },
+    { largestUnit: "seconds", expected: "31,622,400 seconds ago" },
+  ];
+
+  it.each(pluralRows)(
+    "returns $expected for largestUnit $largestUnit",
+    ({ largestUnit, expected }) => {
+      const options: FormatRelativeZonedOptions = {
+        reference: "2024-03-17T12:00:00+00:00[UTC]",
+        largestUnit,
+      };
+
+      expect(
+        formatRelativeZoned(
+          "2023-03-17T12:00:00+00:00[UTC]",
+          MustTestLocales.enUS,
+          options,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

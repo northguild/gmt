@@ -396,13 +396,54 @@ describe("formatRelativeUnix", () => {
       },
     );
 
-    it("returns '' for an invalid roundingMethod", () => {
-      expect(
-        formatRelativeUnix(REF_MS - 8280000, MustTestLocales.enUS, {
+    // RelativeRoundingMethod is "floor" | "ceil" | "round". Any other value is invalid input and
+    // returns the sentinel (Core Rule 3), including the name of another Math function, an
+    // inherited Object.prototype key, another letter case and null.
+    it.each`
+      roundingMethod
+      ${"nonsense"}
+      ${"abs"}
+      ${"trunc"}
+      ${"sign"}
+      ${"random"}
+      ${"constructor"}
+      ${"hasOwnProperty"}
+      ${"toString"}
+      ${"ROUND"}
+      ${""}
+      ${null}
+    `(
+      "returns '' for the invalid roundingMethod $roundingMethod",
+      ({ roundingMethod }) => {
+        expect(
+          formatRelativeUnix(REF_MS - 8280000, MustTestLocales.enUS, {
+            reference: REF_MS,
+            roundingMethod,
+          }),
+        ).toBe("");
+      },
+    );
+
+    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
+      const omitted = formatRelativeUnix(
+        REF_MS - 8280000,
+        MustTestLocales.enUS,
+        {
           reference: REF_MS,
-          roundingMethod: "nonsense" as never,
-        }),
-      ).toBe("");
+        },
+      );
+      const explicitUndefined = formatRelativeUnix(
+        REF_MS - 8280000,
+        MustTestLocales.enUS,
+        {
+          reference: REF_MS,
+          roundingMethod: undefined,
+        },
+      );
+      // -2 h 18 min is -2.3 hours, which rounds to -2.
+      expect(omitted).toBe("2 hours ago");
+      expect(explicitUndefined).toBe(omitted);
     });
   });
 

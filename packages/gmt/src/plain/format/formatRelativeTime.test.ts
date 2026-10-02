@@ -4,7 +4,10 @@ import {
   mockTemporalNowPlainTimeISOThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { formatRelativeTime } from "./formatRelativeTime";
+import {
+  formatRelativeTime,
+  type FormatRelativeTimeOptions,
+} from "./formatRelativeTime";
 
 const REF = "12:00:00";
 
@@ -605,13 +608,50 @@ describe("formatRelativeTime", () => {
       expect(explicit).toBe(omitted);
     });
 
-    it("returns '' for an invalid roundingMethod", () => {
-      expect(
-        formatRelativeTime("09:42:00", MustTestLocales.enUS, {
+    // RelativeRoundingMethod is "floor" | "ceil" | "round". Any other value is invalid input and
+    // returns the sentinel (Core Rule 3), including the name of another Math function, an
+    // inherited Object.prototype key, another letter case and null.
+    it.each`
+      roundingMethod
+      ${"nonsense"}
+      ${"abs"}
+      ${"trunc"}
+      ${"sign"}
+      ${"random"}
+      ${"constructor"}
+      ${"hasOwnProperty"}
+      ${"toString"}
+      ${"ROUND"}
+      ${""}
+      ${null}
+    `(
+      "returns '' for the invalid roundingMethod $roundingMethod",
+      ({ roundingMethod }) => {
+        expect(
+          formatRelativeTime("09:42:00", MustTestLocales.enUS, {
+            reference: REF,
+            roundingMethod,
+          }),
+        ).toBe("");
+      },
+    );
+
+    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
+      const omitted = formatRelativeTime("09:42:00", MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicitUndefined = formatRelativeTime(
+        "09:42:00",
+        MustTestLocales.enUS,
+        {
           reference: REF,
-          roundingMethod: "nonsense" as never,
-        }),
-      ).toBe("");
+          roundingMethod: undefined,
+        },
+      );
+      // -2 h 18 min is -2.3 hours, which rounds to -2.
+      expect(omitted).toBe("2 hours ago");
+      expect(explicitUndefined).toBe(omitted);
     });
   });
 
@@ -697,4 +737,33 @@ describe("formatRelativeTime with non-object options", () => {
       formatRelativeTime("10:00:00", MustTestLocales.enUS, options as never),
     ).toBe("");
   });
+});
+
+// ECMA-402 SingularRelativeTimeUnit and Temporal GetTemporalUnitValuedOption read a plural unit name
+// as its singular, so "hours" is the unit "hour". The rows are typed with the option's own type,
+// not a template table, so `tsc` fails this file if a plural leaves the `largestUnit` type.
+describe("formatRelativeTime with a plural largestUnit", () => {
+  // 10:00 is 2 hours, 120 minutes or 7,200 seconds before 12:00.
+  const pluralRows: Array<{
+    largestUnit: NonNullable<FormatRelativeTimeOptions["largestUnit"]>;
+    expected: string;
+  }> = [
+    { largestUnit: "hours", expected: "2 hours ago" },
+    { largestUnit: "minutes", expected: "120 minutes ago" },
+    { largestUnit: "seconds", expected: "7,200 seconds ago" },
+  ];
+
+  it.each(pluralRows)(
+    "returns $expected for largestUnit $largestUnit",
+    ({ largestUnit, expected }) => {
+      const options: FormatRelativeTimeOptions = {
+        reference: "12:00:00",
+        largestUnit,
+      };
+
+      expect(
+        formatRelativeTime("10:00:00", MustTestLocales.enUS, options),
+      ).toBe(expected);
+    },
+  );
 });
