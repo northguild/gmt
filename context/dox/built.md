@@ -58,9 +58,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   matching a static asset is served before the Worker script runs, so only `/api/*`
   reaches it.
 - **Generator (`A3a`).** `scripts/build-reference.ts` uses the TypeScript compiler API
-  (not TypeDoc) and emits one MDX page per exported function plus module index pages,
-  `gmt-corpus.json`, a typed route manifest (`ReadonlySet<string>`) and
-  `LIVE_PLAYGROUND_TEMPLATES`. Outputs live under `src/generated/` and are rebuilt by
+  (not TypeDoc) and emits one MDX page per exported function and regex, one per shared
+  type, index pages, `gmt-corpus.json`, a typed route manifest (`ReadonlySet<string>`),
+  `LIVE_PLAYGROUND_TEMPLATES` and `public/_redirects`. Outputs live under `src/generated/` and are rebuilt by
   `pnpm run generate`, which runs before `test`, `check` and `build`. The directory is in
   `.gitignore`, but `reference/corpus.ts`, `reference/gmt-corpus.json` and
   `reference/route-manifest.ts` predate that rule and stay tracked, so regenerating them
@@ -70,6 +70,58 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     pages and deletes only stale ones (`scripts/build-utils/generated-files.mjs`). Never go
     back to `rm -rf` + rewrite: every file event reaches `astro dev`, VS Code's watcher and
     its TypeScript server.
+  - **Where a type is documented is decided by use, not by source directory.**
+    `scripts/build-utils/type-usage.ts` walks the type nodes of every public function's
+    parameters and return type, and of every public type, and takes the closure. A type two
+    or more functions reach gets a page at `/reference/types/<Name>` (flat, no module
+    level). A type one function reaches is documented on that function's page: as the
+    `## Options` block when it types an expanded parameter, otherwise as a `### Name`
+    section under `## Types`. A type no function reaches stops the generator; the fix is in
+    `packages/gmt/src`. The graph reads nodes, never printed signatures: the printer inlines
+    union aliases, so a string match cannot see `Overflow`.
+    - Duplicate type names (also by case), an unannotated return, and a generic or
+      overloaded public function stop the generator too.
+    - Anchors come from `github-slugger`, one slugger per page fed every heading in order,
+      so they match what Starlight emits. The generator stops if a rendered page's headings
+      differ from the list the anchors were computed from.
+    - Every type link goes through `typeUrl` in `build-utils/reference-urls.ts`.
+  - **`## Options` expands a parameter's properties** when its declared type is an inline
+    literal or an intersection, or a named public object type on a parameter whose declared
+    name contains `options` or is `props`. A data parameter such as
+    `calendar: BusinessCalendar` stays a Parameters row linking to its type. Columns are
+    `Option | Type | Default | Description`; a required option reads "Required".
+  - **Descriptions and defaults come from the property's own JSDoc**: the comment, and the
+    `@defaultValue` tag. The renderer never invents text; a missing value prints `—`.
+    TypeScript does not attach a `/** */` that sits on the same line as the `{` before it,
+    and `//` comments are not JSDoc.
+  - **`Intl.DateTimeFormatOptions` members collapse to one row** linking to the
+    `DateTimeFormatOptions` page and ECMA-402. They are declared in TypeScript's lib and
+    cannot carry GMT's JSDoc. A property GMT redeclares in its own interface keeps its row.
+  - **One table renderer**, `build-utils/render-table.ts`. `mdText` escapes prose outside
+    code spans; `mdCode` escapes only what breaks a span or a cell. Entity-escaping inside
+    backticks prints the entity. `\|` inside a code span in a table cell renders `|`.
+  - **The doc gate** (`build-utils/doc-gate.ts`, `pnpm dox:docs-check`) lists every public
+    type, member and option without a description, every optional input property without
+    `@defaultValue`, `@default` used in its place, a list inside a property description,
+    and a `@param` that names no parameter. Each declaration is checked once. Return-only
+    members need no default. It owns missing docs; the renderer does not.
+  - **Index pages** exist at `/reference/`, `/reference/types/`, `/reference/<ns>/` and
+    `/reference/<ns>/<mod>/`, each listing its children with a one-line summary. Their
+    frontmatter uses the block form `sidebar:` / `order: 0`: `ensure-sidebar-order.mjs`
+    matches only that form and rewrites any other on every run, which defeats `syncTree`.
+  - **The corpus keeps one entry per public type.** `url` is the link to cite (owner page
+    plus `#anchor` for an inline type), `page` is the route that serves it, `inlineOn`
+    names the owner function, `members` feeds retrieval. The route manifest is the unique
+    `page` values plus the index routes. `scripts/api-surface.mjs` accepts a
+    `/reference/…#fragment` link only when it is a corpus `url`.
+  - **`public/_redirects` is generated and ignored by git.** A type's old URL is a pure
+    function of its source path, so each gets three `301` rules: bare, trailing slash and
+    the `.md` twin. An inline type redirects to its owner page and anchor. Astro's
+    `redirects` is not used: it emits meta-refresh pages. Under `wrangler dev` the source
+    match is case-sensitive and the fragment survives in `Location`; `astro dev` does not
+    apply the file.
+  - Every `build-utils` module the generator imports is listed in `referenceInputs()`, or
+    editing it does not regenerate.
   - `@example` is one inline line, `fn(args) // result (note)`, split on `/\s+\/\/\s/`. The
     one multi-line example is `getDstTransitions`.
   - `plain/calculate/weekOfYear.ts` is the only file exporting two functions.

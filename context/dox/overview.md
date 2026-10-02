@@ -43,7 +43,7 @@ citation boundary: a link the model emits that is not a real page renders as pla
 | Framework        | Astro 7 + Starlight — routes, MDX, islands, static output                                                                       |
 | Search           | Pagefind, built into the Starlight build                                                                                        |
 | Reference        | Generated from JSDoc with the TypeScript compiler API. Not TypeDoc: `@example` is an inline `fn() // result` line, and the source has no tag graph |
-| Pages            | One per function — exact-match search titles and a stable URL to cite                                                           |
+| Pages            | One per function — exact-match search titles and a stable URL to cite. A type gets a page at `/reference/types/<Name>` only when two or more functions reach it; otherwise it is documented on its one function's page |
 | Imports          | Module barrels only (`@northguild/gmt/plain/calculate`). The exports map forbids per-function paths; namespace barrels re-export the 2.98 MB polyfill |
 | Hosting          | Cloudflare Workers static assets plus `/api/*`, one Worker                                                                      |
 | AI surface       | `llms.txt`, `llms-full.txt` and per-page raw `.md`, emitted from the corpus                                                     |
