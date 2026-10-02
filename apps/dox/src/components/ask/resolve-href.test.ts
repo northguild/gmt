@@ -58,6 +58,28 @@ describe("resolveHref", () => {
     ).toEqual({ kind: "text" });
   });
 
+  it("keeps the fragment of a link to a type documented on a function's page", () => {
+    // The manifest holds the page; the type is a heading on it.
+    const options = {
+      ...OPTIONS,
+      knownRoutes: new Set(["/reference/transport/calculate/dwellTime"]),
+    };
+    for (const href of [
+      "/reference/transport/calculate/dwellTime#dwell",
+      "/reference/transport/calculate/dwellTime/#dwell",
+      `${SITE}/reference/transport/calculate/dwellTime#dwell`,
+    ]) {
+      expect(resolveHref(href, options), href).toEqual({
+        kind: "link",
+        href: href.replace(SITE, ""),
+      });
+    }
+    // The fragment does not rescue a page that is not known.
+    expect(
+      resolveHref("/reference/transport/calculate/Dwell#dwell", options),
+    ).toEqual({ kind: "text" });
+  });
+
   it("keeps a guide link whose page was retrieved, fragment included", () => {
     const result = resolveHref(
       "/guides/conversion/converting-types/#zoned-to-utc-and-back",

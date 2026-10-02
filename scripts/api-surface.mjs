@@ -47,8 +47,12 @@
  *                what a consumer's type-check sees. A binding without `type` may still name a
  *                type, as TypeScript allows, so every binding is accepted from either set
  *
- * A reference link, site-relative or on the docs site's own origin, must be a corpus entry's
- * `url` — the same list `apps/dox/src/generated/reference/route-manifest.ts` is built from.
+ * A reference link, site-relative or on the docs site's own origin, must name a route of the
+ * reference: a corpus entry's `page`, or an index page above one (every proper prefix of a
+ * `page`, from `/reference` down) — the same list
+ * `apps/dox/src/generated/reference/route-manifest.ts` is built from. A link with a `#fragment`
+ * must be a corpus entry's `url` exactly: the only anchors the corpus vouches for are those of
+ * the types documented on a function's page (`/reference/transport/calculate/dwellTime#dwell`).
  *
  * Needs `pnpm build` first (exit 2 without `dist` or the corpus). Runs under `TZ=UTC`, re-executing
  * itself if needed, so an example never depends on the machine's time zone.
@@ -428,10 +432,22 @@ async function typeNames(dts) {
 
 const IMPORT =
   /\bimport\s+(type\s+)?([\w$*\s{},]*?)\s*from\s*\\?["'`](@northguild\/gmt(?:\/[^"'`\\\s]*)?)\\?["'`]/g;
-/** A site-relative or absolute link into the docs site's API reference. */
+/**
+ * A site-relative or absolute link into the docs site's API reference, with its `#fragment`
+ * when it has one.
+ */
 const REFERENCE_LINK =
-  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/gmt-dox\.northguild\.workers\.dev))\/reference\/[\w/-]*/g;
-const routes = new Set(entries.map((e) => e.url));
+  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/gmt-dox\.northguild\.workers\.dev))\/reference\/[\w/-]*(#[\w-]*)?/g;
+/** Every route of the reference: each entry's page, and the index pages above it. */
+const routes = new Set();
+for (const { page } of entries) {
+  const parts = page.split("/").filter(Boolean);
+  for (let depth = 1; depth <= parts.length; depth++) {
+    routes.add(`/${parts.slice(0, depth).join("/")}`);
+  }
+}
+/** Every link the corpus gives an entry; the ones with a fragment are the valid anchors. */
+const entryUrls = new Set(entries.map((e) => e.url));
 
 const documentedImports = [];
 const docImports = [];
@@ -453,8 +469,13 @@ for (const file of documentationFiles()) {
   }
   for (const m of text.matchAll(REFERENCE_LINK)) {
     linksChecked++;
-    const url = m[0].replace(/\/+$/, "");
-    if (!routes.has(url))
+    const fragment = m[1] && m[1].length > 1 ? m[1] : "";
+    const route = m[0].slice(0, m[0].length - (m[1]?.length ?? 0));
+    const page = route.replace(/\/+$/, "");
+    const known = fragment
+      ? entryUrls.has(`${page}${fragment}`)
+      : routes.has(page);
+    if (!known)
       docLinks.push({ where: `${file}:${lineOf(m.index)}`, url: m[0] });
   }
 }
@@ -946,7 +967,7 @@ for (const d of siteLinks) {
 }
 for (const d of docLinks) {
   console.log(
-    `  doc link: ${d.where} ${d.url} names no reference page (gmt-corpus.json)`,
+    `  doc link: ${d.where} ${d.url} names no reference page or anchor (gmt-corpus.json)`,
   );
 }
 
