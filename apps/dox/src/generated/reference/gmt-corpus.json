@@ -1273,18 +1273,18 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "How `formatDuration` writes unit names, and whether it writes zero components.",
     "sourcePath": "packages/gmt/src/duration/format/formatDuration.ts",
     "examples": [],
     "inlineOn": "formatDuration",
     "members": [
       {
         "name": "style",
-        "description": ""
+        "description": "The length of each unit name, as the `unitDisplay` of `Intl.NumberFormat`: `\"long\"` (\"90 minutes\"), `\"short\"` (\"90 min\") or `\"narrow\"` (\"90m\"). The components are joined as a long list (\"1 day, 2 hours, and 30 minutes\") for `\"long\"` and as a short list otherwise."
       },
       {
         "name": "zero",
-        "description": ""
+        "description": "Whether components that are zero are written. `false` leaves them out, so `\"P1DT0H30M\"` reads \"1 day and 30 minutes\"; `true` writes every unit from years to seconds."
       }
     ]
   },
@@ -1662,15 +1662,15 @@
     "members": [
       {
         "name": "instant",
-        "description": ""
+        "description": "UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally."
       },
       {
         "name": "offset",
-        "description": ""
+        "description": "UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone that did not run on a whole minute). Renders the event as the human on the ground saw it."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The IANA name of the zone, when one is known. Most feeds send none, so `toOffsetInstant` leaves it out unless the string or its `timeZone` argument names a zone."
       }
     ]
   },
@@ -1786,11 +1786,11 @@
       },
       {
         "name": "invoiceIssuedOn",
-        "description": "The date the invoice was issued, once it has been."
+        "description": "The date the invoice was issued, once it has been, as an ISO date."
       },
       {
         "name": "requestReceivedOn",
-        "description": "The date the dispute request was received, once it has been."
+        "description": "The date the dispute request was received, once it has been, as an ISO date. It needs `invoiceIssuedOn` and may not precede it."
       }
     ]
   },
@@ -1821,7 +1821,7 @@
       },
       {
         "name": "agreedResolutionOn",
-        "description": "A resolution date the parties agreed instead; it replaces the computed one."
+        "description": "A resolution date the parties agreed instead, as an ISO date on or after `requestReceivedOn`; it replaces the computed one."
       }
     ]
   },
@@ -1990,19 +1990,19 @@
     "members": [
       {
         "name": "basis",
-        "description": ""
+        "description": "Which days use up free time. `\"calendar\"` counts every local day, so a weekend burns two free days while the terminal is shut; `\"working\"` counts only the days `calendar` marks as working, and the clock does not run on weekends or holidays."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day: an IANA name or a UTC offset. GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "firstDay",
-        "description": ""
+        "description": "Where free time starts. `\"eventDay\"` makes the day of the event that starts the clock free day one; `\"nextDay\"` starts free time on the following counted day."
       },
       {
         "name": "calendar",
-        "description": ""
+        "description": "The terminal's working week and holidays. It is required when a counting basis is `\"working\"` and not read otherwise. Its own `timeZone` is not used: `timeZone` above is the counting zone."
       },
       {
         "name": "chargeBasis",
@@ -2010,7 +2010,7 @@
       },
       {
         "name": "tiers",
-        "description": ""
+        "description": "The last chargeable-day ordinal of each band, as strictly ascending positive whole numbers: `[5, 10]` is days 1–5, 6–10 and 11 onward. They are day bands, not rates. Every band is returned, an empty one with `days: 0`, and the last is always open."
       }
     ]
   },
@@ -2103,7 +2103,7 @@
     "members": [
       {
         "name": "type",
-        "description": ""
+        "description": "What happened to the container, as one of the events a charging clock can start or end at."
       },
       {
         "name": "at",
@@ -2169,7 +2169,7 @@
       },
       {
         "name": "startEvent",
-        "description": "Import only: `\"discharged\"` (the default) or `\"available\"`. Not read for export or detention."
+        "description": "Where an import demurrage, storage or combined clock starts: `\"discharged\"`, the classic definition, or `\"available\"` for tariffs that start at the availability date. Not read for export or detention."
       }
     ]
   },
@@ -5663,18 +5663,18 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatCalendar`: the date-time the value is compared with, and the style of the time-of-day half.",
     "sourcePath": "packages/gmt/src/plain/format/formatCalendar.ts",
     "examples": [],
     "inlineOn": "formatCalendar",
     "members": [
       {
         "name": "timeStyle",
-        "description": "`Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half. \"long\" and \"full\" are not offered: they differ from \"medium\" only by a `timeZoneName`, and a plain value has no zone. Passed anyway (from untyped code), they format as \"medium\" — Temporal's PlainDateTime format drops `timeZoneName` (AdjustDateTimeStyleFormat)."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. \"long\" and \"full\" are not offered: they differ from \"medium\" only by a `timeZoneName`, and a plain value has no zone. Passed anyway (from untyped code), they format as \"medium\" — Temporal's PlainDateTime format drops `timeZoneName` (AdjustDateTimeStyleFormat)."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative day comparison."
+        "description": "The moment the day label is measured from, as an ISO string in the same form as the value being formatted. A value on the same calendar day reads \"today\", one on the next day \"tomorrow\"."
       }
     ]
   },
@@ -5686,7 +5686,7 @@
     "module": "format",
     "kind": "function",
     "signature": "formatCalendar(value: string, locale?: string | string[], options?: FormatCalendarOptions): string",
-    "description": "Format a plain date-time as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\" — Moment's `.calendar()`, which the existing `formatRelativeDateTime` family does not cover (that family renders \"in 1 day\", an elapsed-time phrase, not a day label + clock time).",
+    "description": "Format a plain date-time as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\". The `formatRelativeDateTime` family does not cover this: it renders \"in 1 day\", an elapsed-time phrase, not a day label + clock time.",
     "sourcePath": "packages/gmt/src/plain/format/formatCalendar.ts",
     "examples": [
       {
@@ -5973,30 +5973,30 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeDate`: the reference date, the display unit, the rounding and the wording.",
     "sourcePath": "packages/gmt/src/plain/format/formatRelativeDate.ts",
     "examples": [],
     "inlineOn": "formatRelativeDate",
     "members": [
       {
         "name": "largestUnit",
-        "description": "The largest unit to display. Each domain restricts the allowed values."
+        "description": "The unit the distance is written in, whatever its size, from `\"day\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "style",
-        "description": "Name style: \"long\" (default), \"short\", or \"narrow\"."
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": "Whether to use relative time words (\"in 2 days\") or numeric (\"2 days\")."
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "roundingMethod",
-        "description": "How the computed distance rounds to the display unit."
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff."
+        "description": "The moment the distance is measured from, as an ISO string in the same form as the value being formatted."
       }
     ]
   },
@@ -6041,30 +6041,30 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding and the wording.",
     "sourcePath": "packages/gmt/src/plain/format/formatRelativeDateTime.ts",
     "examples": [],
     "inlineOn": "formatRelativeDateTime",
     "members": [
       {
         "name": "largestUnit",
-        "description": "The largest unit to display. Each domain restricts the allowed values."
+        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "style",
-        "description": "Name style: \"long\" (default), \"short\", or \"narrow\"."
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": "Whether to use relative time words (\"in 2 days\") or numeric (\"2 days\")."
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "roundingMethod",
-        "description": "How the computed distance rounds to the display unit."
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff."
+        "description": "The moment the distance is measured from, as an ISO string in the same form as the value being formatted."
       }
     ]
   },
@@ -6113,30 +6113,30 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the wording.",
     "sourcePath": "packages/gmt/src/plain/format/formatRelativeTime.ts",
     "examples": [],
     "inlineOn": "formatRelativeTime",
     "members": [
       {
         "name": "largestUnit",
-        "description": "The largest unit to display. Each domain restricts the allowed values."
+        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"hour\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour and hour beyond."
       },
       {
         "name": "style",
-        "description": "Name style: \"long\" (default), \"short\", or \"narrow\"."
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": "Whether to use relative time words (\"in 2 days\") or numeric (\"2 days\")."
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "roundingMethod",
-        "description": "How the computed distance rounds to the display unit."
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff."
+        "description": "The moment the distance is measured from, as an ISO string in the same form as the value being formatted."
       }
     ]
   },
@@ -8628,6 +8628,10 @@
         "result": "\"2024-03-15T14:30:00\""
       },
       {
+        "call": "parseDateTimeWithPattern(\"Mar 15, '24 at 14:30\", \"MMM d, ''yy 'at' HH:mm\")",
+        "result": "\"2024-03-15T14:30:00\" ('' is one literal quote)"
+      },
+      {
         "call": "parseDateTimeWithPattern(\"02/31/2024 14:30:00\", \"MM/dd/yyyy HH:mm:ss\")",
         "result": "\"\" (shape-valid, not a real date)"
       },
@@ -8659,6 +8663,10 @@
       {
         "call": "parseDateWithPattern(\"15-Mar-2024\", \"dd-MMM-yyyy\")",
         "result": "\"2024-03-15\""
+      },
+      {
+        "call": "parseDateWithPattern(\"Mar 15, '24\", \"MMM d, ''yy\")",
+        "result": "\"2024-03-15\" ('' is one literal quote)"
       },
       {
         "call": "parseDateWithPattern(\"02/31/2024\", \"MM/dd/yyyy\")",
@@ -9183,6 +9191,10 @@
       {
         "call": "parseTimeWithPattern(\"02:30:45 PM\", \"hh:mm:ss a\")",
         "result": "\"14:30:45\""
+      },
+      {
+        "call": "parseTimeWithPattern(\"2 o'clock PM\", \"h 'o''clock' a\")",
+        "result": "\"14:00:00\" ('' is one literal quote)"
       },
       {
         "call": "parseTimeWithPattern(\"25:00\", \"HH:mm\")",
@@ -9730,15 +9742,19 @@
     "members": [
       {
         "name": "value1",
-        "description": ""
+        "description": "The start of the range, an ISO PlainDate string."
       },
       {
         "name": "value2",
-        "description": ""
+        "description": "The end of the range, an ISO PlainDate string."
       },
       {
         "name": "options",
-        "description": ""
+        "description": "The settings for the comparison. It must be an object or omitted; any other value, `null` included, returns false."
+      },
+      {
+        "name": "options.allowEqual",
+        "description": "Whether `value1` equal to `value2` is a valid range. `false` requires `value1` to be before `value2`."
       }
     ]
   },
@@ -9886,7 +9902,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidDateTimeRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
-    "description": "Return true if `value1` and `value2` form a valid datetime range — both parseable as ISO PlainDateTime strings and `value1 <= value2`.",
+    "description": "Return true if `value1` and `value2` form a valid datetime range — both parseable as ISO PlainDateTime strings and `value1` before `value2`.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeRange.ts",
     "examples": [
       {
@@ -10137,7 +10153,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidTimeRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
-    "description": "Return true if `value1` and `value2` form a valid time range — both parseable as ISO PlainTime strings and `value1 <= value2`.",
+    "description": "Return true if `value1` and `value2` form a valid time range — both parseable as ISO PlainTime strings and `value1` before `value2`.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeRange.ts",
     "examples": [
       {
@@ -12258,11 +12274,11 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "IANA timeZone identifier or fixed offset the cut-off is read in — the terminal's clock."
+        "description": "The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset."
       },
       {
         "name": "atLocalTime",
-        "description": "Local time of day the cut-off is pinned to (`\"17:00\"`), as `isValidTime` accepts. Omit it for a cut-off that is an exact offset from the anchor."
+        "description": "Local time of day the cut-off is pinned to (`\"17:00\"`), as `isValidTime` accepts."
       },
       {
         "name": "calendar",
@@ -12270,7 +12286,7 @@
       },
       {
         "name": "roll",
-        "description": "How a cut-off on a non-business day moves. No default; requires `calendar`."
+        "description": "How a cut-off on a non-business day moves, as `rollDate` moves it. Requires `calendar`."
       }
     ]
   },
@@ -12396,7 +12412,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "IANA timeZone identifier or fixed offset every cut-off is read in."
+        "description": "The time zone every cut-off is read in: an IANA name or a UTC offset."
       },
       {
         "name": "calendar",
@@ -12404,7 +12420,7 @@
       },
       {
         "name": "roll",
-        "description": "How a cut-off on a non-business day moves. No default; requires `calendar`."
+        "description": "How a cut-off on a non-business day moves, as `rollDate` moves it. Requires `calendar`."
       }
     ]
   },
@@ -12658,7 +12674,7 @@
     "members": [
       {
         "name": "minimumConnection",
-        "description": "ISO 8601 duration the connection needs after `after` before a departure can be made: exact time (a day is 24 hours), not negative. Default `\"PT0S\"`."
+        "description": "ISO 8601 duration the connection needs after `after` before a departure can be made: exact time (a day is 24 hours), not negative."
       }
     ]
   },
@@ -12805,7 +12821,7 @@
     "members": [
       {
         "name": "departure",
-        "description": "Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone` (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the first leg; on later legs it is the scheduled connection the cargo waits for, and omitting it means the leg leaves as soon as the previous leg's arrival plus its `dwellAfter` allows."
+        "description": "Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone` (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the first leg; on later legs it is the scheduled connection the cargo waits for."
       },
       {
         "name": "duration",
@@ -12813,11 +12829,11 @@
       },
       {
         "name": "timeZone",
-        "description": "IANA timeZone identifier or a fixed offset of the destination — the caller's fact."
+        "description": "The time zone of the destination, the caller's fact: an IANA name or a UTC offset."
       },
       {
         "name": "dwellAfter",
-        "description": "Handling time at the handoff after this leg; the minimum connect time. Default `\"PT0S\"`."
+        "description": "Handling time at the handoff after this leg; the minimum connect time."
       },
       {
         "name": "mode",
@@ -12887,7 +12903,7 @@
     "members": [
       {
         "name": "startTimeZone",
-        "description": "IANA timeZone identifier or a fixed offset a zoneless first-leg departure is read in, for schedules published as local wall times. An ambiguous wall time resolves to the earlier instant and a nonexistent one to the later instant (`\"compatible\"`). Ignored when the first departure is already exact; never applied to later legs."
+        "description": "The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset, for schedules published as local wall times. An ambiguous wall time resolves to the earlier instant and a nonexistent one to the later instant (`\"compatible\"`). Ignored when the first departure is already exact; never applied to later legs."
       }
     ]
   },
@@ -13271,15 +13287,15 @@
     "members": [
       {
         "name": "weekend",
-        "description": ""
+        "description": "ISO weekday numbers closed every week, 1 (Monday) through 7 (Sunday). It is explicit because Saturday–Sunday is not universal: much of the Middle East is Friday–Saturday (`[5, 6]`), and some markets keep a one-day weekend (`[7]`). `[]` means no weekly closure, duplicates are ignored, and all seven days leave no business day and are invalid."
       },
       {
         "name": "holidays",
-        "description": ""
+        "description": "Dates closed in addition to the weekend, as ISO PlainDate strings (`\"2024-07-04\"`), never datetimes. Order does not matter and duplicates are ignored."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone recording which locality the calendar describes, an IANA name or a UTC offset. It must be a valid zone, but the business-day functions never use it: they take and return local dates, so the answer is the same whatever it says. A caller holding an instant uses it to reduce that instant to a local date first, with `floorToZone` or `getZonedDateTimeFields`."
       }
     ]
   },
@@ -13297,11 +13313,11 @@
     "members": [
       {
         "name": "reference",
-        "description": "Anchor point for the relative day comparison."
+        "description": "The moment the day label is measured from, as an ISO string in the same form as the value being formatted. A value on the same calendar day reads \"today\", one on the next day \"tomorrow\"."
       },
       {
         "name": "timeStyle",
-        "description": "`Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
       }
     ]
   },
@@ -13325,7 +13341,7 @@
     "module": "date-cycle-field",
     "kind": "type",
     "signature": "",
-    "description": "the subset of Temporal.PlainDateLike fields that cycleDate/cycleDateTime/cycleZoned can wrap; deliberately narrower than DateUnit, which includes \"week\" (not a .with()-settable field)",
+    "description": "A date field `cycleDate`, `cycleDateTime` and `cycleZoned` can step and wrap: `\"year\"`, `\"month\"` or `\"day\"`. Narrower than `DateUnit` on purpose: `\"week\"` is a unit, not a field a date can be set to with Temporal's `with()`.",
     "sourcePath": "packages/gmt/src/types/date-cycle-field.ts",
     "examples": []
   },
@@ -13337,7 +13353,7 @@
     "module": "date-duration-unit",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "A date field of an ISO 8601 duration, in the plural: `\"years\"`, `\"months\"`, `\"weeks\"` or `\"days\"`. It names the unit an amount of dates is given in or a date difference is measured in.",
     "sourcePath": "packages/gmt/src/types/date-duration-unit.ts",
     "examples": []
   },
@@ -13349,7 +13365,7 @@
     "module": "date-time-cycle-field",
     "kind": "type",
     "signature": "",
-    "description": "used by cycleDateTime and cycleZoned, which can cycle either a date or a time field",
+    "description": "A date or time field `cycleDateTime` and `cycleZoned` can step and wrap: any `DateCycleField` or `TimeCycleField`.",
     "sourcePath": "packages/gmt/src/types/date-time-cycle-field.ts",
     "examples": []
   },
@@ -13361,7 +13377,7 @@
     "module": "date-time-duration-units",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Any field of an ISO 8601 duration, in the plural, from `\"years\"` down to `\"nanoseconds\"`. It names the unit an amount of time is given in or a difference is measured in.",
     "sourcePath": "packages/gmt/src/types/date-time-duration-units.ts",
     "examples": []
   },
@@ -13373,7 +13389,7 @@
     "module": "date-time-unit",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "A date or time unit in the singular, from `\"year\"` down to `\"nanosecond\"`, as Temporal's rounding and difference options name units.",
     "sourcePath": "packages/gmt/src/types/date-time-unit.ts",
     "examples": []
   },
@@ -13385,7 +13401,7 @@
     "module": "date-unit",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "A date unit in the singular: `\"year\"`, `\"month\"`, `\"week\"` or `\"day\"`, as Temporal's rounding and difference options name units.",
     "sourcePath": "packages/gmt/src/types/date-unit.ts",
     "examples": []
   },
@@ -13409,7 +13425,7 @@
     "module": "disambiguation",
     "kind": "type",
     "signature": "",
-    "description": "used in Temporal with methods like Temporal.ZonedDateTime.from(item, { disambiguation })",
+    "description": "How a local wall time that a time zone's clock shows twice or never is resolved to an instant, as Temporal's `disambiguation` option (`Temporal.ZonedDateTime.from(item, { disambiguation })`).",
     "sourcePath": "packages/gmt/src/types/disambiguation.ts",
     "examples": []
   },
@@ -13421,7 +13437,7 @@
     "module": "duration-relative-to",
     "kind": "type",
     "signature": "",
-    "description": "The anchor date a calendar-unit duration operation resolves against, as accepted by Temporal's `relativeTo` option (Duration.prototype.round/.total, Duration.compare). Years/months/weeks have no fixed length, so any operation touching them needs a starting point; day/time-only operations do not.",
+    "description": "The anchor a calendar-unit duration operation is measured from, as Temporal's `relativeTo` option takes it (`Duration.prototype.round`, `Duration.prototype.total`, `Duration.compare`).",
     "sourcePath": "packages/gmt/src/types/duration-relative-to.ts",
     "examples": []
   },
@@ -13433,21 +13449,21 @@
     "module": "duration-string-options",
     "kind": "type",
     "signature": "",
-    "description": "Precision options for Temporal.Duration.prototype.toString(), kept separate from RoundingOptions because both option sets have colliding smallestUnit/roundingMode keys with different Temporal types (DifferenceOptions vs ToStringPrecisionOptions).",
+    "description": "Precision options for the ISO 8601 duration string a `diff*AsDuration` function writes, passed to `Temporal.Duration.prototype.toString()`.",
     "sourcePath": "packages/gmt/src/types/duration-string-options.ts",
     "examples": [],
     "members": [
       {
         "name": "toStringSmallestUnit",
-        "description": ""
+        "description": "The smallest unit written in the string: `\"second\"`, `\"millisecond\"`, `\"microsecond\"` or `\"nanosecond\"`. It sets how many fractional-second digits appear and takes precedence over `fractionalSecondDigits`. `\"minute\"` is refused, as `Temporal.Duration` refuses it."
       },
       {
         "name": "fractionalSecondDigits",
-        "description": ""
+        "description": "The number of fractional-second digits written: `0` to `9` writes exactly that many, and `\"auto\"` writes as many as the duration needs, with no trailing zeros. It has no effect when `toStringSmallestUnit` is given."
       },
       {
         "name": "toStringRoundingMode",
-        "description": ""
+        "description": "How the duration is rounded when the precision asked for drops digits. `\"trunc\"` cuts them off; `\"halfExpand\"` rounds to the nearest value, a half going away from zero."
       }
     ]
   },
@@ -13494,7 +13510,7 @@
     "module": "fractional-digit",
     "kind": "type",
     "signature": "",
-    "description": "used in Temporal with methods like toString({ fractionalSecondDigits: fractionalDigits[unit] })",
+    "description": "How many fractional-second digits an ISO string is written with, as Temporal's `fractionalSecondDigits` option of `toString()`. `0` to `9` writes exactly that many digits, and `\"auto\"` writes as many as the value needs, with no trailing zeros.",
     "sourcePath": "packages/gmt/src/types/fractional-digit.ts",
     "examples": []
   },
@@ -13536,19 +13552,19 @@
     "members": [
       {
         "name": "basis",
-        "description": ""
+        "description": "Which days use up free time. `\"calendar\"` counts every local day, so a weekend burns two free days while the terminal is shut; `\"working\"` counts only the days `calendar` marks as working, and the clock does not run on weekends or holidays."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day: an IANA name or a UTC offset. GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "firstDay",
-        "description": ""
+        "description": "Where free time starts. `\"eventDay\"` makes the day of the event that starts the clock free day one; `\"nextDay\"` starts free time on the following counted day."
       },
       {
         "name": "calendar",
-        "description": ""
+        "description": "The terminal's working week and holidays. It is required when a counting basis is `\"working\"` and not read otherwise. Its own `timeZone` is not used: `timeZone` above is the counting zone."
       }
     ]
   },
@@ -13566,11 +13582,11 @@
     "members": [
       {
         "name": "start",
-        "description": ""
+        "description": "The first instant inside the interval, as an ISO 8601 instant string with an offset."
       },
       {
         "name": "end",
-        "description": ""
+        "description": "The first instant after the interval, as an ISO 8601 instant string with an offset; it is not itself inside. It may equal `start`, which makes the interval empty, but not precede it."
       }
     ]
   },
@@ -13595,7 +13611,7 @@
     "module": "offset",
     "kind": "type",
     "signature": "",
-    "description": "used alongside disambiguation in Temporal with()/from() methods like Temporal.ZonedDateTime.prototype.with(item, { disambiguation, offset })",
+    "description": "What to do when the UTC offset written in a zoned value disagrees with its time zone, as Temporal's `offset` option (`Temporal.ZonedDateTime.prototype.with(item, { offset })`). It is used alongside `Disambiguation`.",
     "sourcePath": "packages/gmt/src/types/offset.ts",
     "examples": []
   },
@@ -13625,11 +13641,11 @@
     "members": [
       {
         "name": "from",
-        "description": ""
+        "description": "The wall time the window opens, as an ISO PlainTime string (`\"09:00\"`, `\"17:30:00\"`) that `isValidTime` accepts."
       },
       {
         "name": "to",
-        "description": ""
+        "description": "The wall time the window closes, as an ISO PlainTime string; the window does not include it. A value after `from` keeps the window inside one local date. A value at or before `from` wraps past midnight into the next local date: `{ from: \"23:00\", to: \"06:00\" }` is a night, and `{ from: \"00:00\", to: \"00:00\" }` is a whole day."
       }
     ]
   },
@@ -13647,11 +13663,11 @@
     "members": [
       {
         "name": "date",
-        "description": ""
+        "description": "The local date the override applies to, as an ISO PlainDate string in the schedule's zone."
       },
       {
         "name": "windows",
-        "description": ""
+        "description": "The windows that date has instead of its weekly ones, holiday or not. `[]` closes the date for the whole day."
       }
     ]
   },
@@ -13669,19 +13685,19 @@
     "members": [
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone the windows are read in: an IANA name or a UTC offset. A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "weekly",
-        "description": ""
+        "description": "The windows of each ISO weekday. A missing weekday, or `[]`, is closed all day. Windows of one weekday may overlap or touch; they are merged."
       },
       {
         "name": "holidays",
-        "description": ""
+        "description": "The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed directly: its `holidays` are read, and its `weekend` and `timeZone` are not, because `weekly` already says which weekdays open and `timeZone` above is the zone."
       },
       {
         "name": "overrides",
-        "description": ""
+        "description": "Single dates whose windows replace the weekly ones. An override wins over a holiday on the same date, and two overrides for one date make the schedule invalid."
       }
     ]
   },
@@ -13693,7 +13709,7 @@
     "module": "overflow",
     "kind": "type",
     "signature": "",
-    "description": "used in Temporal add()/subtract() methods like Temporal.PlainDate.prototype.add(item, { overflow })",
+    "description": "What to do when a date or time field is out of range, as Temporal's `overflow` option (`Temporal.PlainDate.prototype.add(item, { overflow })`). `\"constrain\"` clamps the field to the nearest valid value, so January 31 plus one month is the last day of February; `\"reject\"` refuses the value.",
     "sourcePath": "packages/gmt/src/types/overflow.ts",
     "examples": []
   },
@@ -13731,7 +13747,7 @@
     "module": "relative-rounding-method",
     "kind": "type",
     "signature": "",
-    "description": "Used by the formatRelative* family — how the computed distance rounds to the display unit, applied to the signed fractional value (see internal/resolveRelativeRounding.ts).",
+    "description": "How the `formatRelative*` functions round a fractional distance to a whole number of the unit displayed. It is applied to the signed value, where a past distance is negative: `\"floor\"` rounds toward negative infinity, `\"ceil\"` toward positive infinity, and `\"round\"` to the nearest whole number, a half going toward positive infinity.",
     "sourcePath": "packages/gmt/src/types/relative-rounding-method.ts",
     "examples": []
   },
@@ -13749,23 +13765,23 @@
     "members": [
       {
         "name": "style",
-        "description": "Name style: \"long\" (default), \"short\", or \"narrow\"."
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": "Whether to use relative time words (\"in 2 days\") or numeric (\"2 days\")."
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "largestUnit",
-        "description": "The largest unit to display. Each domain restricts the allowed values."
+        "description": "The one unit the distance is written in, whatever its size, so `\"hour\"` renders a day and a half as \"in 36 hours\". Each domain restricts the allowed values to the units its values have."
       },
       {
         "name": "roundingMethod",
-        "description": "How the computed distance rounds to the display unit."
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff."
+        "description": "The moment the distance is measured from, as an ISO string in the same form as the value being formatted."
       }
     ]
   },
@@ -13814,21 +13830,21 @@
     "module": "rounding-options",
     "kind": "type",
     "signature": "",
-    "description": "used in Temporal until()/since() methods like Temporal.PlainDate.prototype.until(other, options)",
+    "description": "How a difference is rounded, as the rounding options of Temporal's `until()` and `since()` (`Temporal.PlainDate.prototype.until(other, options)`). `Unit` is the set of units the values being compared have: date units for dates, time units for times.",
     "sourcePath": "packages/gmt/src/types/rounding-options.ts",
     "examples": [],
     "members": [
       {
         "name": "smallestUnit",
-        "description": ""
+        "description": "The smallest unit kept in the difference; anything smaller is rounded into it. It may not be larger than the largest unit asked for."
       },
       {
         "name": "roundingIncrement",
-        "description": ""
+        "description": "The step the smallest unit is rounded to, so `15` with `\"minute\"` rounds to a quarter of an hour. For a time unit it must divide the next larger unit evenly and be smaller than it (`15` or `30` minutes, not `7` or `60`); a date unit takes any whole number from 1 up. A non-integer is truncated first, as Temporal does, and any other value is invalid input."
       },
       {
         "name": "roundingMode",
-        "description": ""
+        "description": "Which way a value between two steps goes. `\"trunc\"` rounds toward zero and `\"halfExpand\"` to the nearest step, a half going away from zero; the other modes are those of Temporal's `roundingMode` option."
       }
     ]
   },
@@ -13840,7 +13856,7 @@
     "module": "time-cycle-field",
     "kind": "type",
     "signature": "",
-    "description": "the subset of Temporal.PlainTimeLike fields that cycleTime/cycleDateTime/cycleZoned can wrap; goes to nanosecond precision, wider than @internationalized/date's Time (millisecond ceiling), since GMT's PlainTime and setTime already support the full range",
+    "description": "A time field `cycleTime`, `cycleDateTime` and `cycleZoned` can step and wrap, from `\"hour\"` down to `\"nanosecond\"`: the fields of Temporal's `PlainTime`.",
     "sourcePath": "packages/gmt/src/types/time-cycle-field.ts",
     "examples": []
   },
@@ -13852,7 +13868,7 @@
     "module": "time-duration-unit",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "A time field of an ISO 8601 duration, in the plural, from `\"hours\"` down to `\"nanoseconds\"`. It names the unit an amount of time is given in or a time difference is measured in.",
     "sourcePath": "packages/gmt/src/types/time-duration-unit.ts",
     "examples": []
   },
@@ -13864,7 +13880,7 @@
     "module": "time-unit",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "A time unit in the singular, from `\"hour\"` down to `\"nanosecond\"`, as Temporal's rounding and difference options name units.",
     "sourcePath": "packages/gmt/src/types/time-unit.ts",
     "examples": [],
     "inlineOn": "isValidTimeUnit"
@@ -13895,15 +13911,15 @@
     "members": [
       {
         "name": "classifier",
-        "description": ""
+        "description": "What the timestamp claims to be: planned, estimated, requested or actual."
       },
       {
         "name": "at",
-        "description": ""
+        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) or zoned string. Functions that return it echo it exactly as written."
       },
       {
         "name": "recordedAt",
-        "description": ""
+        "description": "When the timestamp was recorded or received, as an ISO 8601 instant or zoned string. It orders revisions of the same class: the latest recorded is the current one."
       }
     ]
   },
@@ -13921,11 +13937,11 @@
     "members": [
       {
         "name": "late",
-        "description": ""
+        "description": "How far after the plan an arrival may be before it is late: a deviation of this much or more is late. `\"PT0S\"` makes every arrival at or after the plan late."
       },
       {
         "name": "early",
-        "description": ""
+        "description": "How far before the plan an arrival may be before it is early: a deviation of this much or more ahead of the plan is early."
       }
     ]
   },
@@ -14818,19 +14834,19 @@
     "members": [
       {
         "name": "reference",
-        "description": "Anchor point for the relative day comparison. Accepts UTC ISO strings or epochs (a safe integer or a digit string)."
+        "description": "The instant the day label is measured from, as a UTC ISO string, or an epoch in `epochUnit` given as a safe integer or a digit string. Any other value returns `\"\"`."
       },
       {
         "name": "epochUnit",
-        "description": ""
+        "description": "The unit `value` and a numeric `reference` are counted in: `\"seconds\"` or `\"milliseconds\"`, singular or plural. Any other value returns `\"\"`."
       },
       {
         "name": "timeZone",
-        "description": "IANA timezone used for both the calendar-day comparison and the rendered clock time. Omitted is `\"UTC\"`, `\"local\"` is the system zone, and an unknown zone makes the result `\"\"` (ECMA-402 throws RangeError)."
+        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "timeStyle",
-        "description": "`Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
       }
     ]
   },
@@ -14842,7 +14858,7 @@
     "module": "format",
     "kind": "function",
     "signature": "formatCalendarUnix(value: string | number, locale?: string | string[], options?: FormatCalendarUnixOptions): string",
-    "description": "Format a unix epoch value as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\" — the unix counterpart of `formatCalendar`. See that function's JSDoc for the day-label/threshold/connector design; this variant compares calendar days and renders the clock time in `timeZone` (default `\"UTC\"`).",
+    "description": "Format a unix epoch value as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\" — the unix counterpart of `formatCalendar`. See that function's JSDoc for the day-label/threshold/connector design; this variant compares calendar days and renders the clock time in `timeZone`.",
     "sourcePath": "packages/gmt/src/unix/format/formatCalendarUnix.ts",
     "examples": [
       {
@@ -14883,38 +14899,38 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeUnix`: the wording of the phrase, the unit and rounding of the distance, and the reference instant, epoch unit and time zone the distance is measured with.",
     "sourcePath": "packages/gmt/src/unix/format/formatRelativeUnix.ts",
     "examples": [],
     "inlineOn": "formatRelativeUnix",
     "members": [
       {
         "name": "style",
-        "description": ""
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": ""
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "largestUnit",
-        "description": ""
+        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "roundingMethod",
-        "description": ""
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "epochUnit",
-        "description": ""
+        "description": "The unit `value` and a numeric `reference` are counted in: `\"seconds\"` or `\"milliseconds\"`, singular or plural. Any other value returns `\"\"`."
       },
       {
         "name": "reference",
-        "description": ""
+        "description": "The instant the distance is measured from, as a UTC ISO string, or an epoch in `epochUnit` given as a safe integer or a digit string. Any other value returns `\"\"`."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit, as ECMA-402 throws RangeError for it."
       }
     ]
   },
@@ -14971,22 +14987,22 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatUnix`: every `Intl.DateTimeFormatOptions` field, plus the epoch unit, the time zone the value is rendered in and whether the zone name is shown.",
     "sourcePath": "packages/gmt/src/unix/format/formatUnix.ts",
     "examples": [],
     "inlineOn": "formatUnix",
     "members": [
       {
         "name": "epochUnit",
-        "description": ""
+        "description": "The unit `value` is counted in: `\"seconds\"` or `\"milliseconds\"`, singular or plural. Any other value returns `\"\"`."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone the value is rendered in: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "includeTimeZoneName",
-        "description": ""
+        "description": "Whether the value is formatted as a zoned date-time, which adds the localized time zone name. When `false` the wall clock is formatted on its own and `timeZoneName` is ignored."
       }
     ]
   },
@@ -15944,6 +15960,10 @@
       {
         "call": "splitIntervalByUnitUnix(\"0\", \"86400\", \"hours\", 12, { epochUnit: \"second\" })",
         "result": "[{ start: 0, end: 43200 }, { start: 43200, end: 86400 }]"
+      },
+      {
+        "call": "splitIntervalByUnitUnix(0, 2, \"millisecond\", 500, { epochUnit: \"seconds\" })",
+        "result": "[{ start: 0, end: 1 }, { start: 1, end: 2 }] (a step finer than the epoch unit gives one-second pieces)"
       }
     ]
   },
@@ -17251,22 +17271,22 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the days and the clock time are read in, and the width of the time-of-day half.",
     "sourcePath": "packages/gmt/src/utc/format/formatCalendarUtc.ts",
     "examples": [],
     "inlineOn": "formatCalendarUtc",
     "members": [
       {
         "name": "timeZone",
-        "description": "IANA timezone used for both the calendar-day comparison and the rendered clock time. Omitted is `\"UTC\"`, `\"local\"` is the system zone, and an unknown zone makes the result `\"\"` (ECMA-402 throws RangeError)."
+        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "timeStyle",
-        "description": "`Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative day comparison."
+        "description": "The moment the day label is measured from, as an ISO string in the same form as the value being formatted. A value on the same calendar day reads \"today\", one on the next day \"tomorrow\"."
       }
     ]
   },
@@ -17278,7 +17298,7 @@
     "module": "format",
     "kind": "function",
     "signature": "formatCalendarUtc(value: string, locale?: string | string[], options?: FormatCalendarUtcOptions): string",
-    "description": "Format a UTC ISO string as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\" — the UTC counterpart of `formatCalendar`. See that function's JSDoc for the day-label/threshold/connector design; this variant compares calendar days and renders the clock time in `timeZone` (default `\"UTC\"`).",
+    "description": "Format a UTC ISO string as a relative day label plus time-of-day, e.g. \"Tomorrow at 2:30 PM\" — the UTC counterpart of `formatCalendar`. See that function's JSDoc for the day-label/threshold/connector design; this variant compares calendar days and renders the clock time in `timeZone`.",
     "sourcePath": "packages/gmt/src/utc/format/formatCalendarUtc.ts",
     "examples": [
       {
@@ -17344,34 +17364,34 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeUtc`: the instant the distance is measured from, the unit it is shown in, how it rounds, and the wording `Intl.RelativeTimeFormat` uses.",
     "sourcePath": "packages/gmt/src/utc/format/formatRelativeUtc.ts",
     "examples": [],
     "inlineOn": "formatRelativeUtc",
     "members": [
       {
         "name": "largestUnit",
-        "description": "The largest unit to display. Each domain restricts the allowed values."
+        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff."
+        "description": "The instant the distance is measured from, as a UTC ISO string. Any other value returns `\"\"`."
       },
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "style",
-        "description": "Name style: \"long\" (default), \"short\", or \"narrow\"."
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": "Whether to use relative time words (\"in 2 days\") or numeric (\"2 days\")."
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "roundingMethod",
-        "description": "How the computed distance rounds to the display unit."
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       }
     ]
   },
@@ -17420,18 +17440,18 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the added/overridden members are listed below. All `Intl.DateTimeFormatOptions` (`dateStyle`, `timeStyle`, etc.) apply to the time-of-day portion.",
+    "description": "Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the added/overridden members are declared here. All `Intl.DateTimeFormatOptions` (`dateStyle`, `timeStyle`, etc.) apply to the time-of-day portion.",
     "sourcePath": "packages/gmt/src/utc/format/formatUtc.ts",
     "examples": [],
     "inlineOn": "formatUtc",
     "members": [
       {
         "name": "timeZone",
-        "description": ""
+        "description": "The time zone the value is rendered in: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "includeTimeZoneName",
-        "description": ""
+        "description": "Whether the localized time zone name is appended. When true the value is formatted as Temporal's ECMA-402 ZonedDateTime format does, which adds a short zone name to the defaults; when false, as the PlainDateTime format does, and `timeZoneName` is ignored."
       }
     ]
   },
@@ -18806,7 +18826,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidUtcRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
-    "description": "Return true if `value1` and `value2` form a valid UTC range — both parseable as ISO UTC datetime strings and the instant at `value1` is <= the instant at `value2`.",
+    "description": "Return true if `value1` and `value2` form a valid UTC range — both parseable as ISO UTC datetime strings and the instant at `value1` is before the instant at `value2`.",
     "sourcePath": "packages/gmt/src/utc/validate/isValidUtcRange.ts",
     "examples": [
       {
@@ -20382,18 +20402,18 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatCalendarZoned`: the moment the day label is measured from and the length of the time-of-day half.",
     "sourcePath": "packages/gmt/src/zoned/format/formatCalendarZoned.ts",
     "examples": [],
     "inlineOn": "formatCalendarZoned",
     "members": [
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff. - ZonedDateTime ISO string: converted into `value`'s own zone before comparing calendar days. Unlike `formatRelativeZoned`'s `reference` (which keeps a ZonedDateTime reference in its own zone for elapsed-time diffing), a calendar *label* is meaningless without picking one zone's wall clock — `value`'s zone is the natural choice, since that is whose \"today\" is being described. - UTC ISO string or numeric epoch (ms): placed into `value`'s timezone. - Omitted: \"now\" in `value`'s own timezone."
+        "description": "The instant the day label is measured from, as a zoned ISO string, a UTC ISO string or a numeric epoch in milliseconds. Whatever its form, it is converted into `value`'s own time zone before calendar days are compared, because a day label needs one zone's wall clock and `value`'s zone is whose \"today\" is being described. Any other value returns `\"\"`."
       },
       {
         "name": "timeStyle",
-        "description": "`Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
       }
     ]
   },
@@ -20438,30 +20458,30 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatRelativeZoned`: how the phrase is worded, the unit it counts in, how the count rounds and the moment the distance is measured from.",
     "sourcePath": "packages/gmt/src/zoned/format/formatRelativeZoned.ts",
     "examples": [],
     "inlineOn": "formatRelativeZoned",
     "members": [
       {
         "name": "style",
-        "description": ""
+        "description": "The length of the unit name, as the `style` of `Intl.RelativeTimeFormat`: `\"long\"` (\"in 3 months\"), `\"short\"` (\"in 3 mo.\") or `\"narrow\"` (the locale's most compact form)."
       },
       {
         "name": "numeric",
-        "description": ""
+        "description": "Whether a distance may be written as a word instead of a number, as the `numeric` option of `Intl.RelativeTimeFormat`. `\"auto\"` uses the locale's word where it has one (\"yesterday\", \"next year\"); `\"always\"` writes the number every time (\"1 day ago\")."
       },
       {
         "name": "largestUnit",
-        "description": ""
+        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "roundingMethod",
-        "description": ""
+        "description": "The way a fractional distance becomes the whole number displayed: `\"round\"` goes to the nearest whole number, `\"floor\"` down and `\"ceil\"` up. It applies to the signed value, where a past distance is negative, so `\"floor\"` turns −1.5 hours into \"2 hours ago\"."
       },
       {
         "name": "reference",
-        "description": "Anchor point for the relative diff. - ZonedDateTime ISO string: kept in its own zone; Temporal handles cross-zone diffs correctly. The label is therefore zone-aware — a value and reference in different zones can produce a non-zero diff even when they describe the same absolute instant. - UTC ISO string: placed into `value`'s timezone before diffing so the calendar anchor matches the value's wall clock. - Numeric epoch (ms): same — placed into `value`'s timezone. - Omitted: \"now\" in `value`'s own timezone."
+        "description": "The instant the distance is measured from, as a zoned ISO string, a UTC ISO string or a numeric epoch in milliseconds. The distance is the exact time between the two instants; the reference's time zone only anchors how months and years are counted, which is its own zone for a zoned string and `value`'s zone for a UTC string or an epoch. Any other value returns `\"\"`."
       }
     ]
   },
@@ -20601,14 +20621,14 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "",
+    "description": "Options for `formatTimeZoneName`: the form the zone name is written in.",
     "sourcePath": "packages/gmt/src/zoned/format/formatTimeZoneName.ts",
     "examples": [],
     "inlineOn": "formatTimeZoneName",
     "members": [
       {
         "name": "style",
-        "description": ""
+        "description": "The form of the name, one of `Intl.DateTimeFormat`'s `timeZoneName` values. `\"short\"` and `\"long\"` give the abbreviated or full name and `\"shortOffset\"` and `\"longOffset\"` the UTC offset, all four for the offset in effect now. `\"shortGeneric\"` and `\"longGeneric\"` give a name that does not change with daylight saving."
       }
     ]
   },
@@ -20815,15 +20835,15 @@
     "members": [
       {
         "name": "instant",
-        "description": ""
+        "description": "The UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-03-10T07:00:00Z`)."
       },
       {
         "name": "offsetBefore",
-        "description": ""
+        "description": "The UTC offset in effect immediately before the transition (e.g. `-05:00`)."
       },
       {
         "name": "offsetAfter",
-        "description": ""
+        "description": "The UTC offset in effect immediately after the transition (e.g. `-04:00`)."
       }
     ]
   },
@@ -20849,6 +20869,10 @@
       {
         "call": "getDstTransitions(\"Asia/Tokyo\", 2024)",
         "result": "[]"
+      },
+      {
+        "call": "getDstTransitions(\"+05:30\", 2024)",
+        "result": "[] (a fixed offset has no transitions)"
       },
       {
         "call": "getDstTransitions(\"Invalid/Zone\", 2024)",
@@ -21123,8 +21147,16 @@
         "result": "\"2024-02-29T09:30:45.123-05:00[America/New_York]\""
       },
       {
+        "call": "getZonedNow(\"America/New_York\", { smallestUnit: \"second\" })",
+        "result": "\"2024-02-29T09:30:45-05:00[America/New_York]\""
+      },
+      {
         "call": "getZonedNow(\"Invalid/Zone\")",
         "result": "\"\""
+      },
+      {
+        "call": "getZonedNow(\"America/New_York\", { smallestUnit: \"fortnight\" as never })",
+        "result": "\"\" (not a unit from minute to nanosecond)"
       }
     ]
   },

@@ -48,8 +48,11 @@ which lint package to install for Date-ban enforcement.
    `convertUtcToUnix(value, { epochUnit: "seconds" })` rather than
    dividing/multiplying by hand. An `epochUnit` option must be `"seconds"` or
    `"milliseconds"` (singular accepted): any other value returns the sentinel
-   instead of being read as milliseconds. `unix/` reads zone-dependent fields in
-   UTC unless you pass `timeZone` (`"local"` for the system zone). A
+   instead of being read as milliseconds. `unix/` and `utc/` read zone-dependent
+   fields in UTC unless you pass `timeZone` (`"local"` for the system zone); that
+   holds for the `utc/` readers and converters too, such as `parseHourFromUtc` and
+   `convertUtcToPlainDate`. `convertUtcToZoned` and `convertUnixToZoned` take a
+   required zone and do not accept `"local"`. A
    blank epoch string is invalid, not `1970`, and `sortUnix`/`minUnix`/`maxUnix`
    skip values that are not integer epochs in Temporal's range.
 4. **Nanoseconds are `bigint`, never `number`.** A `number` is exact only to

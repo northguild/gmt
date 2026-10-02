@@ -77,6 +77,13 @@ input before you act on it.
 
 - `formatRelative*` measure from now when `reference` is omitted, so the output
   changes from day to day. Pass `reference` whenever the result must be deterministic.
+  `largestUnit` takes a singular or plural unit name (`"hour"` or `"hours"`).
+  `roundingMethod` is `"floor"`, `"ceil"` or `"round"`: any other value returns `""`.
+- In a `parse*WithPattern` pattern, `''` is one literal quote, inside or outside
+  quoted text (UTS #35): `"MMM d, ''yy"` reads `"Mar 15, '24"`. It is not an empty
+  separator. Write adjacent fields with nothing between them, as in `"yyyyMMdd"`.
+- `getZonedNow` reads `smallestUnit` only, and writes milliseconds when it is
+  omitted or `undefined`. The string always carries the offset and the zone.
 - `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
   shape-valid-but-unreal dates such as 31 February (regex only proves shape;
   Temporal validates the real value). Parsers reject; only arithmetic clamps.
