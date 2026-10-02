@@ -1662,11 +1662,11 @@
     "members": [
       {
         "name": "instant",
-        "description": "UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally."
+        "description": "The UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally."
       },
       {
         "name": "offset",
-        "description": "UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone that did not run on a whole minute). Renders the event as the human on the ground saw it."
+        "description": "The UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone that did not run on a whole minute). Renders the event as the human on the ground saw it."
       },
       {
         "name": "timeZone",
@@ -1809,15 +1809,15 @@
     "members": [
       {
         "name": "issueDays",
-        "description": "Days from `anchorOn` within which the invoice must be issued."
+        "description": "The days from `anchorOn` within which the invoice must be issued."
       },
       {
         "name": "disputeDays",
-        "description": "Days from `invoiceIssuedOn` within which a dispute may be raised."
+        "description": "The days from `invoiceIssuedOn` within which a dispute may be raised."
       },
       {
         "name": "resolutionDays",
-        "description": "Days from `requestReceivedOn` within which the dispute must be resolved."
+        "description": "The days from `requestReceivedOn` within which the dispute must be resolved."
       },
       {
         "name": "agreedResolutionOn",
@@ -1840,7 +1840,7 @@
     "members": [
       {
         "name": "invoiceDeadline",
-        "description": "`anchorOn + issueDays`."
+        "description": "The last date the invoice may be issued: `anchorOn + issueDays`."
       },
       {
         "name": "issuedByDeadline",
@@ -1848,7 +1848,7 @@
       },
       {
         "name": "disputeDeadline",
-        "description": "`invoiceIssuedOn + disputeDays`; `null` until an invoice date exists."
+        "description": "The last date a dispute may be raised: `invoiceIssuedOn + disputeDays`; `null` until an invoice date exists."
       },
       {
         "name": "requestedByDeadline",
@@ -1856,7 +1856,7 @@
       },
       {
         "name": "resolutionDeadline",
-        "description": "`requestReceivedOn + resolutionDays`, or `agreedResolutionOn`; `null` until a request date exists."
+        "description": "The last date the dispute must be resolved: `requestReceivedOn + resolutionDays`, or `agreedResolutionOn`; `null` until a request date exists."
       }
     ]
   },
@@ -1928,15 +1928,15 @@
     "members": [
       {
         "name": "from",
-        "description": "First chargeable-day ordinal of the band, from 1."
+        "description": "The first chargeable-day ordinal of the band, from 1."
       },
       {
         "name": "to",
-        "description": "Last ordinal of the band, or `null` for the open final band."
+        "description": "The last ordinal of the band, or `null` for the open final band."
       },
       {
         "name": "days",
-        "description": "Charged days that fell in the band."
+        "description": "The number of charged days that fell in the band."
       }
     ]
   },
@@ -1955,11 +1955,11 @@
     "members": [
       {
         "name": "freeDaysUsed",
-        "description": "Free days the dwell touched, at most the tariff's `freeDays`."
+        "description": "The number of free days the dwell touched, at most the tariff's `freeDays`."
       },
       {
         "name": "chargeableDays",
-        "description": "Counted days on or after `expiresAt` the dwell touched."
+        "description": "The number of counted days on or after `expiresAt` the dwell touched."
       },
       {
         "name": "expiresAt",
@@ -2107,7 +2107,7 @@
       },
       {
         "name": "at",
-        "description": "ISO 8601 instant string: `Z`, an offset, or a bracketed zone."
+        "description": "The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone."
       }
     ]
   },
@@ -2165,7 +2165,7 @@
     "members": [
       {
         "name": "direction",
-        "description": "`\"import\"` or `\"export\"`; required, because the same scope runs between different events in each."
+        "description": "The leg of the container's cycle, `\"import\"` or `\"export\"`; required, because the same scope runs between different events in each."
       },
       {
         "name": "startEvent",
@@ -2261,7 +2261,7 @@
     "members": [
       {
         "name": "freeTimeStart",
-        "description": "Free day one, as a local date in the counting zone."
+        "description": "The first free day, as a local date in the counting zone."
       },
       {
         "name": "lastFreeDay",
@@ -5980,7 +5980,7 @@
     "members": [
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"day\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: day under 7 days, week under 28, month under 365 and year beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"day\"`, `\"week\"`, `\"month\"` or `\"year\"`, singular or plural. Any other value returns `\"\"`, a time unit such as `\"hour\"` included: a date has no time, and Temporal throws RangeError for a unit outside the units of the type. Omitted, the unit is picked from the distance: day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "style",
@@ -6048,7 +6048,7 @@
     "members": [
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"second\"`, `\"minute\"`, `\"hour\"`, `\"day\"`, `\"week\"`, `\"month\"` or `\"year\"`, singular or plural. Any other value returns `\"\"`. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "style",
@@ -6120,7 +6120,7 @@
     "members": [
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"hour\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour and hour beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"second\"`, `\"minute\"` or `\"hour\"`, singular or plural. Any other value returns `\"\"`, a date unit such as `\"day\"` included: a time has no date, and Temporal throws RangeError for a unit outside the units of the type. Omitted, the unit is picked from the distance: second under a minute, minute under an hour and hour beyond."
       },
       {
         "name": "style",
@@ -9750,7 +9750,7 @@
       },
       {
         "name": "options",
-        "description": "The settings for the comparison. It must be an object or omitted; any other value, `null` included, returns false."
+        "description": "The settings for the comparison. It must be an object or omitted; any other value, `null` included, returns `false`."
       },
       {
         "name": "options.allowEqual",
@@ -12147,7 +12147,7 @@
       },
       {
         "name": "classifier",
-        "description": "Its class, so the value is never shown as something it is not."
+        "description": "The class of the chosen event, so the value is never shown as something it is not."
       }
     ]
   },
@@ -12199,7 +12199,7 @@
     "members": [
       {
         "name": "duration",
-        "description": "Exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit."
+        "description": "The exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit."
       },
       {
         "name": "enter",
@@ -12278,11 +12278,11 @@
       },
       {
         "name": "atLocalTime",
-        "description": "Local time of day the cut-off is pinned to (`\"17:00\"`), as `isValidTime` accepts."
+        "description": "The local time of day the cut-off is pinned to (`\"17:00\"`), as `isValidTime` accepts."
       },
       {
         "name": "calendar",
-        "description": "Working week and holidays the cut-off's local date is rolled against. Its `timeZone` is not read: `timeZone` above is the local frame. Requires `roll`."
+        "description": "The working week and holidays the cut-off's local date is rolled against. Its `timeZone` is not read: `timeZone` above is the local frame. Requires `roll`."
       },
       {
         "name": "roll",
@@ -12366,11 +12366,11 @@
       },
       {
         "name": "offset",
-        "description": "ISO 8601 duration before the anchor, as `cutoffAt` takes it."
+        "description": "The ISO 8601 duration before the anchor, as `cutoffAt` takes it."
       },
       {
         "name": "atLocalTime",
-        "description": "Local time of day the cut-off is pinned to, as `cutoffAt` takes it."
+        "description": "The local time of day the cut-off is pinned to, as `cutoffAt` takes it."
       }
     ]
   },
@@ -12416,7 +12416,7 @@
       },
       {
         "name": "calendar",
-        "description": "Working week and holidays every cut-off's local date is rolled against. Requires `roll`."
+        "description": "The working week and holidays every cut-off's local date is rolled against. Requires `roll`."
       },
       {
         "name": "roll",
@@ -12472,7 +12472,7 @@
     "members": [
       {
         "name": "duration",
-        "description": "Exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit."
+        "description": "The exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit."
       },
       {
         "name": "enter",
@@ -12484,7 +12484,7 @@
       },
       {
         "name": "calendarDays",
-        "description": "Distinct local calendar dates the dwell touched, counted half-open at the exit."
+        "description": "The number of distinct local calendar dates the dwell touched, counted half-open at the exit."
       }
     ]
   },
@@ -12560,7 +12560,7 @@
     "members": [
       {
         "name": "tolerance",
-        "description": "ISO 8601 duration of exact time (a day is 24 hours; years, months and weeks are refused; not negative). With it, `exceedsTolerance` says whether the drift is greater than it."
+        "description": "The drift allowed, as an ISO 8601 duration of exact time (a day is 24 hours; years, months and weeks are refused; not negative). With it, `exceedsTolerance` says whether the drift is greater than it."
       }
     ]
   },
@@ -12587,7 +12587,7 @@
       },
       {
         "name": "drift",
-        "description": "`last` minus `first` in exact time, hours as the largest unit; negative when it moved earlier."
+        "description": "The drift: `last` minus `first` in exact time, hours as the largest unit; negative when it moved earlier."
       },
       {
         "name": "revisions",
@@ -12647,7 +12647,7 @@
     "members": [
       {
         "name": "headway",
-        "description": "ISO 8601 duration between departures: exact time (a day is 24 hours), greater than zero."
+        "description": "The ISO 8601 duration between departures: exact time (a day is 24 hours), greater than zero."
       },
       {
         "name": "from",
@@ -12674,7 +12674,7 @@
     "members": [
       {
         "name": "minimumConnection",
-        "description": "ISO 8601 duration the connection needs after `after` before a departure can be made: exact time (a day is 24 hours), not negative."
+        "description": "The ISO 8601 duration the connection needs after `after` before a departure can be made: exact time (a day is 24 hours), not negative."
       }
     ]
   },
@@ -12742,11 +12742,11 @@
     "members": [
       {
         "name": "planned",
-        "description": "ISO 8601 instant or zoned datetime string of the planned time."
+        "description": "The planned time, as an ISO 8601 instant or zoned datetime string."
       },
       {
         "name": "actual",
-        "description": "ISO 8601 instant or zoned datetime string of the actual time."
+        "description": "The actual time, as an ISO 8601 instant or zoned datetime string."
       }
     ]
   },
@@ -12765,7 +12765,7 @@
     "members": [
       {
         "name": "onTime",
-        "description": "Pairs `classifyPunctuality` calls `\"onTime\"`."
+        "description": "The number of pairs `classifyPunctuality` calls `\"onTime\"`."
       },
       {
         "name": "total",
@@ -12773,7 +12773,7 @@
       },
       {
         "name": "rate",
-        "description": "`onTime / total`, from 0 to 1."
+        "description": "The on-time share, `onTime / total`, from 0 to 1."
       }
     ]
   },
@@ -12821,11 +12821,11 @@
     "members": [
       {
         "name": "departure",
-        "description": "Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone` (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the first leg; on later legs it is the scheduled connection the cargo waits for."
+        "description": "The departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone` (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the first leg; on later legs it is the scheduled connection the cargo waits for."
       },
       {
         "name": "duration",
-        "description": "ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule)."
+        "description": "The ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule)."
       },
       {
         "name": "timeZone",
@@ -12833,19 +12833,19 @@
       },
       {
         "name": "dwellAfter",
-        "description": "Handling time at the handoff after this leg; the minimum connect time."
+        "description": "The handling time at the handoff after this leg; the minimum connect time."
       },
       {
         "name": "mode",
-        "description": "Opaque tag echoed back on the LegTime; GMT does not interpret transport modes."
+        "description": "An opaque tag echoed back on the LegTime; GMT does not interpret transport modes."
       },
       {
         "name": "origin",
-        "description": "Opaque tag echoed back on the LegTime; never resolved to a zone."
+        "description": "An opaque tag echoed back on the LegTime; never resolved to a zone."
       },
       {
         "name": "destination",
-        "description": "Opaque tag echoed back on the LegTime; never resolved to a zone."
+        "description": "An opaque tag echoed back on the LegTime; never resolved to a zone."
       }
     ]
   },
@@ -12876,15 +12876,15 @@
       },
       {
         "name": "mode",
-        "description": "Echoed from the leg; absent when the leg did not supply it."
+        "description": "The leg's `mode`, echoed back; absent when the leg did not supply it."
       },
       {
         "name": "origin",
-        "description": "Echoed from the leg; absent when the leg did not supply it."
+        "description": "The leg's `origin`, echoed back; absent when the leg did not supply it."
       },
       {
         "name": "destination",
-        "description": "Echoed from the leg; absent when the leg did not supply it."
+        "description": "The leg's `destination`, echoed back; absent when the leg did not supply it."
       }
     ]
   },
@@ -13287,11 +13287,11 @@
     "members": [
       {
         "name": "weekend",
-        "description": "ISO weekday numbers closed every week, 1 (Monday) through 7 (Sunday). It is explicit because Saturday–Sunday is not universal: much of the Middle East is Friday–Saturday (`[5, 6]`), and some markets keep a one-day weekend (`[7]`). `[]` means no weekly closure, duplicates are ignored, and all seven days leave no business day and are invalid."
+        "description": "The ISO weekday numbers closed every week, 1 (Monday) through 7 (Sunday). It is explicit because Saturday–Sunday is not universal: much of the Middle East is Friday–Saturday (`[5, 6]`), and some markets keep a one-day weekend (`[7]`). `[]` means no weekly closure, duplicates are ignored, and all seven days leave no business day and are invalid."
       },
       {
         "name": "holidays",
-        "description": "Dates closed in addition to the weekend, as ISO PlainDate strings (`\"2024-07-04\"`), never datetimes. Order does not matter and duplicates are ignored."
+        "description": "The dates closed in addition to the weekend, as ISO PlainDate strings (`\"2024-07-04\"`), never datetimes. Order does not matter and duplicates are ignored."
       },
       {
         "name": "timeZone",
@@ -13317,7 +13317,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"EDT\") and `\"full\"` the long one (\"Eastern Daylight Time\"). Any other value returns `\"\"`."
       }
     ]
   },
@@ -13494,7 +13494,7 @@
     "members": [
       {
         "name": "pattern",
-        "description": "Weeks per period within each quarter."
+        "description": "The weeks per period within each quarter."
       },
       {
         "name": "yearEndsOn",
@@ -13697,7 +13697,7 @@
       },
       {
         "name": "overrides",
-        "description": "Single dates whose windows replace the weekly ones. An override wins over a holiday on the same date, and two overrides for one date make the schedule invalid."
+        "description": "The single dates whose windows replace the weekly ones. An override wins over a holiday on the same date, and two overrides for one date make the schedule invalid."
       }
     ]
   },
@@ -13773,7 +13773,7 @@
       },
       {
         "name": "largestUnit",
-        "description": "The one unit the distance is written in, whatever its size, so `\"hour\"` renders a day and a half as \"in 36 hours\". Each domain restricts the allowed values to the units its values have."
+        "description": "The one unit the distance is written in, whatever its size, so `\"hour\"` renders a day and a half as \"in 36 hours\". Each domain restricts the allowed values to the units its values have, singular or plural; any other value returns `\"\"`."
       },
       {
         "name": "roundingMethod",
@@ -14846,7 +14846,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"EDT\") and `\"full\"` the long one (\"Eastern Daylight Time\"). Any other value returns `\"\"`."
       }
     ]
   },
@@ -14914,7 +14914,7 @@
       },
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"second\"`, `\"minute\"`, `\"hour\"`, `\"day\"`, `\"week\"`, `\"month\"` or `\"year\"`, singular or plural. Any other value returns `\"\"`. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "roundingMethod",
@@ -17282,7 +17282,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"EDT\") and `\"full\"` the long one (\"Eastern Daylight Time\"). Any other value returns `\"\"`."
       },
       {
         "name": "reference",
@@ -17371,7 +17371,7 @@
     "members": [
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"second\"`, `\"minute\"`, `\"hour\"`, `\"day\"`, `\"week\"`, `\"month\"` or `\"year\"`, singular or plural. Any other value returns `\"\"`. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "reference",
@@ -20413,7 +20413,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds and `\"full\"` adds the time zone name."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"EDT\") and `\"full\"` the long one (\"Eastern Daylight Time\"). Any other value returns `\"\"`."
       }
     ]
   },
@@ -20473,7 +20473,7 @@
       },
       {
         "name": "largestUnit",
-        "description": "The unit the distance is written in, whatever its size, from `\"second\"` to `\"year\"`, singular or plural. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
+        "description": "The unit the distance is written in, whatever its size: `\"second\"`, `\"minute\"`, `\"hour\"`, `\"day\"`, `\"week\"`, `\"month\"` or `\"year\"`, singular or plural. Any other value returns `\"\"`. Omitted, the unit is picked from the distance: second under a minute, minute under an hour, hour under a day, day under 7 days, week under 28, month under 365 and year beyond."
       },
       {
         "name": "roundingMethod",
@@ -20855,7 +20855,7 @@
     "module": "get",
     "kind": "function",
     "signature": "getDstTransitions(timeZone: string, year: number): DstTransition[]",
-    "description": "List every DST transition instant for an IANA timezone within a given year.",
+    "description": "List every DST transition instant for a time zone (an IANA name or a UTC offset) within a given year.",
     "sourcePath": "packages/gmt/src/zoned/get/getDstTransitions.ts",
     "examples": [
       {

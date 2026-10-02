@@ -222,6 +222,34 @@ function evaluate(src, scope = {}) {
 }
 const inspectValue = (v) =>
   inspect(v, { depth: 8, sorted: true, breakLength: Infinity });
+/**
+ * The calls whose result may hold U+202F NARROW NO-BREAK SPACE on one runtime and U+0020 on
+ * another: the two `*ToParts` functions that return a time. They pass `formatToParts` output
+ * through unchanged, and CLDR 42 (ICU 72) put U+202F before the day period of `en-US` times.
+ *
+ * - V8 reverts that character to U+0020 in `deps/v8/src/objects/js-date-time-format.cc`. In Node
+ *   22.22.2 and 24.21.0 (V8 12.4 and 13.6) the replacement is in `FormatDateTime` only, the text
+ *   path, so `formatToParts` returns U+202F. In Node 26.10.0 (V8 14.6) it is the helper
+ *   `Replace202F`, which `CallICUFormat` also applies to the text `formatToParts` is cut from, so
+ *   the parts hold U+0020.
+ * - Found by running every example with an exact comparison on those three versions: six examples
+ *   differ, on Node 26 only, and each one calls `formatDateTimeToParts` or `formatZonedToParts`.
+ * - No other function is listed. `formatDateToParts` returns no time, so no day period. The text
+ *   formatters replace U+202F themselves (`normalizeDateTime`), so their result is the same on
+ *   every runtime; treating the two characters as equal there would hide a formatter that
+ *   stopped replacing it.
+ */
+const NARROW_SPACE_VARIES =
+  /\b(?:formatDateTimeToParts|formatZonedToParts)\s*\(/;
+/**
+ * The form two results are compared in: exact, except that a call matching
+ * {@link NARROW_SPACE_VARIES} has U+202F read as U+0020, as `expectDateTimeEqual` reads it in the
+ * tests (`packages/gmt/src/test/icuVariants.ts`). Any other difference still fails.
+ */
+const comparable = (v, call) =>
+  NARROW_SPACE_VARIES.test(call)
+    ? inspectValue(v).replaceAll("\u202F", " ")
+    : inspectValue(v);
 
 /**
  * A call that pins the moment a relative formatter or predicate compares against: `reference:`, or
@@ -331,7 +359,7 @@ function judgeExample(tally, { where, call, result, clock, scope }) {
     return;
   }
   tally.checked++;
-  if (inspectValue(actual) !== inspectValue(expected)) {
+  if (comparable(actual, call) !== comparable(expected, call)) {
     tally.failures.push({
       where,
       call,
