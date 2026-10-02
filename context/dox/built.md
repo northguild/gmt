@@ -100,11 +100,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **One table renderer**, `build-utils/render-table.ts`. `mdText` escapes prose outside
     code spans; `mdCode` escapes only what breaks a span or a cell. Entity-escaping inside
     backticks prints the entity. `\|` inside a code span in a table cell renders `|`.
+    A union splits into chips only at its top level (`topLevelUnion`), never inside `<>`,
+    `()`, `[]`, `{}` or a string. A double-quoted, hyphenated token with no space in prose
+    (`"4-5-4"`) is wrapped in `<span class="gmt-nobreak">` so it cannot wrap at the hyphen;
+    `stripMdx` removes the span for the text surfaces.
   - **The doc gate** (`build-utils/doc-gate.ts`, `pnpm dox:docs-check`) lists every public
     type, member and option without a description, every optional input property without
     `@defaultValue`, `@default` used in its place, a list inside a property description,
     and a `@param` that names no parameter. Each declaration is checked once. Return-only
-    members need no default. It owns missing docs; the renderer does not.
+    members need no default. It owns missing docs; the renderer does not. A gap fails
+    generation before any page is written, and `pnpm run validate` runs the check first, so
+    the fix is always JSDoc in `packages/gmt/src`, never a fallback string.
+    - **Nested literals are rows.** A property typed as an inline object literal (also inside
+      an array or a union with `null`) carries `children`; the Options and Members tables
+      print each as its own row named by a dotted path (`options.allowEqual`, `parts[].type`
+      for an array's elements), as MDN names nested parameters, and the parent's Type reads
+      `object`. The gate checks the children by the same rules, under the dotted subject.
+    - **An inline return literal gets a Members table under `## Returns`** (`**Members**`, or
+      `**Members of each item**` for an array); the gate rule `return-description` requires a
+      description on each member and no `@defaultValue`.
+    - **`param-lists-options`**: an expanded options `@param` must not name the object's own
+      options. It matches a whole, case-sensitive name inside a code span, or two or more of
+      the names in a row joined by `,` `;` `/` `|` `and` `or`. One name in plain prose does
+      not match.
   - **Index pages** exist at `/reference/`, `/reference/types/`, `/reference/<ns>/` and
     `/reference/<ns>/<mod>/`, each listing its children with a one-line summary. Their
     frontmatter uses the block form `sidebar:` / `order: 0`: `ensure-sidebar-order.mjs`

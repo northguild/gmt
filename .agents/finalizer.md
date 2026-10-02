@@ -83,7 +83,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    - Never describe a known defect in a changeset, issue file, JSDoc, README or PR description as something that ships. It gets fixed instead.
 
 9. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's
-   Definition of Done, and it runs `deps check`, `test-markers check`, the full build, `stats check`, lint,
+   Definition of Done, and it runs `deps check`, `test-markers check`, `dox:docs-check`, the full build, `stats check`, lint,
    typecheck and every test in that order. Do not report a story closed on a partial run.
    If `deps check` or `stats check` fails, fix it here; both print the command that
    resolves them, and both exist because a checklist item asking someone to verify a
