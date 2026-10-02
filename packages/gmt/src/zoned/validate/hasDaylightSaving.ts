@@ -1,44 +1,76 @@
-import { zonedDateTimeFrom } from "../../internal";
+import { Temporal } from "@js-temporal/polyfill";
+import {
+  isOptionsArgument,
+  observesDaylightTime,
+  parseInstantNanoseconds,
+} from "../../internal";
+import { isValidTimeZone } from "./isValidTimeZone";
 
 /**
- * Check whether an IANA timeZone identifier observes daylight saving time.
+ * Check whether a timeZone observes daylight saving time at a reference instant.
  *
- * - Compares UTC offsets at two dates six months apart (January and July).
- * - A zone is considered to have DST if its offset differs between the two dates.
- * - Returns false for invalid or unresolvable timeZone identifiers.
+ * - True when the zone is in daylight time at the reference instant, or a daylight period begins
+ *   less than 365 days after it. So a zone in its winter is true, and a zone that has stopped
+ *   changing its clocks is false.
+ * - `options.at` is the reference instant, an ISO 8601 instant string (`Z`, an offset, or a zoned
+ *   string). With `at` the answer does not depend on the day the code runs. Without it the
+ *   reference is the current instant (Temporal.Now.zonedDateTimeISO).
+ * - A bracketed zone on `at` is not validated and does not choose the zone: `at` only names an
+ *   instant (as `isValidInstant` reads it), and `timeZone` is the zone that is judged.
+ * - The rule is GMT's own definition, not the tz database's daylight flag, which no JavaScript
+ *   API exposes: daylight time runs from a forward change of the zone's clocks to the backward
+ *   change of the same size that undoes it, less than 365 days later.
+ * - Read as standard time, because the offsets do not show otherwise: the last summer before a
+ *   zone kept its daylight offset for good; a daylight period held 365 days or longer; one that
+ *   began, ended or was interrupted by a move of standard time, so the offset changes part-way
+ *   through and the rest, or all, of it is not paired (`Asia/Tomsk` 2002); and one whose end is
+ *   past the last instant Temporal can represent.
+ * - A forward change never undone is a change of standard time: `Europe/Istanbul` is false from
+ *   2016 on, although its clocks went forward in March 2016.
+ * - Read from the runtime's time zone data, so the answer can change when that data does.
+ * - Returns false for an invalid timeZone, an invalid `at`, an options argument that is not an
+ *   object, and a fixed offset.
  *
  * @param timeZone timeZone identifier to check
- * @returns boolean indicating whether the timeZone observes DST
+ * @param options optional: at (ISO 8601 instant string; default the current instant)
+ * @returns boolean indicating whether the timeZone observes DST, or false on invalid input
  *
- * @example hasDaylightSaving("America/New_York") // true
- * @example hasDaylightSaving("Europe/Berlin")     // true
- * @example hasDaylightSaving("Asia/Tokyo")        // false
- * @example hasDaylightSaving("UTC")               // false
- * @example hasDaylightSaving("Invalid/Zone")      // false
+ * @example hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }) // true
+ * @example hasDaylightSaving("Australia/Sydney", { at: "2024-06-15T12:00:00Z" }) // true (winter; the next period begins in October)
+ * @example hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }) // false
+ * @example hasDaylightSaving("Europe/Istanbul", { at: "2015-06-15T12:00:00Z" }) // true
+ * @example hasDaylightSaving("Europe/Istanbul", { at: "2016-06-15T12:00:00Z" }) // false (the March 2016 advance was never undone)
+ * @example hasDaylightSaving("America/Sao_Paulo", { at: "2018-06-15T12:00:00Z" }) // true
+ * @example hasDaylightSaving("America/Sao_Paulo", { at: "2019-06-15T12:00:00Z" }) // false (last daylight period ended 2019-02-17)
+ * @example hasDaylightSaving("UTC", { at: "2024-01-15T12:00:00Z" }) // false
+ * @example hasDaylightSaving("+05:00", { at: "2024-01-15T12:00:00Z" }) // false
+ * @example hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }) // false
+ * @example hasDaylightSaving("America/New_York", { at: "2024-01-15" }) // false (not an instant)
  */
-export function hasDaylightSaving(timeZone: string): boolean {
+export function hasDaylightSaving(
+  timeZone: string,
+  options?: { at?: string },
+): boolean {
+  if (!isValidTimeZone(timeZone) || !isOptionsArgument(options)) {
+    return false;
+  }
+
   try {
-    const zdtJanuary = zonedDateTimeFrom({
-      year: 2024,
-      month: 1,
-      day: 15,
-      hour: 12,
-      minute: 0,
-      second: 0,
-      timeZone,
-    });
+    const at = options?.at;
+    if (at === undefined) {
+      return observesDaylightTime(Temporal.Now.zonedDateTimeISO(timeZone));
+    }
 
-    const zdtJuly = zonedDateTimeFrom({
-      year: 2024,
-      month: 7,
-      day: 15,
-      hour: 12,
-      minute: 0,
-      second: 0,
-      timeZone,
-    });
+    const epochNanoseconds = parseInstantNanoseconds(at);
+    if (epochNanoseconds === null) {
+      return false;
+    }
 
-    return zdtJanuary.offsetNanoseconds !== zdtJuly.offsetNanoseconds;
+    return observesDaylightTime(
+      Temporal.Instant.fromEpochNanoseconds(
+        epochNanoseconds,
+      ).toZonedDateTimeISO(timeZone),
+    );
   } catch {
     return false;
   }

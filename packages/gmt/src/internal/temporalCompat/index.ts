@@ -9,5 +9,6 @@ export {
   isCalendarArithmeticCompatNeeded,
   isNudgeWindowCompatNeeded,
   isSecondsOffsetMatchCompatNeeded,
+  isTransitionSearchCompatNeeded,
 } from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";

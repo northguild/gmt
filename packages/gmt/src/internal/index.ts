@@ -16,6 +16,7 @@ export {
   parseCalendarZonedValue,
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
+export { isInDaylightTime, observesDaylightTime } from "./daylightTime";
 export { fiscalPeriodOfWeek, fiscalYearOf } from "./fiscalCalendar";
 export { floorDivide } from "./floorDivide";
 export {
@@ -157,6 +158,7 @@ export {
   withZonedFields,
   zonedHoursInDay,
   zonedNextTransition,
+  zonedPreviousTransition,
   zonedStartOfDay,
 } from "./zonedWallClockOperations";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

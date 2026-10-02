@@ -430,13 +430,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     done. A software adapter (`GLOBE_SMOKE_SOFTWARE=1`) drops its GPU instance partway
     through a frame, so it cannot gate — though watching the globe fall back cleanly when
     that happens is worth something.
-- **DST answers are cached on `(zone, year, offset)`** (`src/lib/zone-clock.ts`), which is the
-  complete input set of `isInDaylightSaving` — it compares an offset against the smaller of
-  that year's own January and July offsets. The year is load-bearing: the same offset can be
-  DST in one year and standard in another once a zone stops observing it and keeps the summer
-  offset, so `2016-07-01T12:00+03:00[Europe/Istanbul]` is in DST and the 2026 reading at the
-  same offset is not. Keyed on `(zone, offset)` alone the two collided, which the scrubber
-  could reach because it takes an arbitrary anchor date.
+- **DST answers are not cached** (`src/lib/zone-clock.ts`). The library's rule (daylight time runs
+  from a forward clock change to the backward change of the same size that undoes it, within 365
+  days) reads the zone's transitions around the instant, so no key of zone, year and offset is
+  complete: `America/Asuncion` at the same -03:00 is daylight time in January 2024 and not in
+  December 2024, and Istanbul's 2016 summer reads as standard time because its advance was never
+  undone. `hasDaylightSaving` is asked with `{ at }` for the instant read, so "No DST" is for the
+  scrubbed date. A scrub step with eight zones costs about 5 ms for both calls.
 - **The zone readout (`src/lib/zone-readout.ts`)** is the one vocabulary the globe's tooltip
   and the clock list beside it both render from. They show the same four facts, so they say
   them the same way: time in `--gmt-cyan-ink`, UTC offset in `--gmt-spring-ink`, DST as a
@@ -546,7 +546,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     permalink's or a call's `time` is kept, to the slider's step. `initScrubber` takes `now` so a
     test injects the clock.
   - **DST at the scrubbed instant** (`src/lib/scrubber-dst.ts`). Every tile recomputes, on each
-    step, from the library: `isInDaylightSaving` (through `zone-clock`) for the state and
+    step, from the library: `isInDaylightSaving` (through `zone-clock`, uncached) for the state and
     `getDstTransitions` (cached per zone and year) for the switches, so nothing is a typed date or
     hand-rolled offset arithmetic. A tile always says its state in words: a gold, bevelled
     outline pill `DST` (the home page's `--gmt-dst-gold` and `--gmt-dst-gold-ink`; a rounded pill
@@ -555,9 +555,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     crossed switch (between the reference time and the scrubbed instant) shows as `Spring forward
     +1 h` / `Fall back −1 h` (`+30 min` for Lord Howe) while the scrub stays past it; the offset
     line beside it is the new offset. A transition is any offset change the library lists, so
-    Casablanca's Ramadan changes show as switches while its pill stays `Standard time`, because
-    the library's rule (the larger of the year's January and July offsets is DST) never calls
-    Casablanca's offset DST. Marks on the slider's track show each shown zone's switch inside the
+    Casablanca's Ramadan changes show as switches, and its pill follows the library's rule for
+    daylight time (a forward change undone by a backward one within 365 days). Marks on the slider's track show each shown zone's switch inside the
     ±36 h range (decorative, `aria-hidden`; filled for a fall back). The state and switch have
     one reserved line each in every tile, so nothing resizes while dragging; they are not live
     regions, and one settled `role="status"` message (500 ms) names the crossed switches.

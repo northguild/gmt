@@ -176,7 +176,7 @@ isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]"); // true
 isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]"); // false
 ```
 
-This is a per-instant query — distinct from `hasDaylightSaving(zone)` (zone-level)
+This is a per-instant query — distinct from `hasDaylightSaving(zone, { at })` (whether the zone observes DST around a reference instant)
 and `getDstTransitions(zone, year)` (enumerates transitions).
 
 ## See also

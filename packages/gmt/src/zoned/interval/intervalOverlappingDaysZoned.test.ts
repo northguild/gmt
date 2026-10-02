@@ -240,3 +240,21 @@ describe("intervalOverlappingDaysZoned across the 1844 date-line crossings (zone
     },
   );
 });
+
+// 4,000 Gregorian years are 1,460,970 days. A zone with no clock change over a span far longer
+// than the transition search's "no further change" horizon; the fixed offset never searches.
+describe("intervalOverlappingDaysZoned over thousands of years with no clock change", () => {
+  it.each`
+    start                                      | end
+    ${"2000-01-01T00:00:00+09:00[Asia/Tokyo]"} | ${"6000-01-01T00:00:00+09:00[Asia/Tokyo]"}
+    ${"2000-01-01T00:00:00+09:00[+09:00]"}     | ${"6000-01-01T00:00:00+09:00[+09:00]"}
+  `(
+    "counts 1460970 days from $start to $end",
+    ({ start, end }) => {
+      expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(
+        1460970,
+      );
+    },
+    10_000,
+  );
+});

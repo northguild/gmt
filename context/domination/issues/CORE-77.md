@@ -35,12 +35,13 @@ An exact answer is not available to this library. The IANA time zone database is
 - **What the rule cannot know, and reads as standard time:**
   - the last summer before a zone kept its daylight offset for good, where no clock change marks the switch (`Europe/Istanbul`, March to September 2016);
   - a daylight period held for a year or more (`America/Santiago`, 2014 to 2016);
-  - a daylight period that ended with a move of standard time and no clock change;
+  - a daylight period that began, ended or was interrupted by a move of standard time: the clocks went back by another amount or not at all, or the offset changed part-way through, so the rest (or all) of the period is not paired (`Asia/Tomsk` 2002, `Asia/Jerusalem` 1948);
   - a daylight period cut off by Temporal's last instant.
 - **The answer for a past instant can change** when the runtime's zone data learns that a zone stopped changing its clocks.
 - **Measured against the database's rearguard form**, 417,026 samples from 2000 on across 419 zones: the January and July comparison is wrong in 0.56% of samples across 104 zones, this rule in 0.33% across 64 zones, with a tenth of the false daylight answers.
 - **`hasDaylightSaving` is deterministic when `at` is given.** A fixed sample year is the same defect as the two sample dates, and reading the clock with no way to state the instant makes the result untestable for a caller.
-- **Cost.** Each transition lookup is a search in the polyfill, so a call is several times slower than the two-sample comparison. The rule returns after two lookups in the ordinary summer case. There is no cache.
+- **Cost.** Each transition lookup is a search, so a call is several times slower than the two-sample comparison. The rule returns after two lookups in the ordinary summer case, and every lookup is limited to 365 days, so the cost does not grow for old or far-future instants. There is no cache.
+- **The transition search is GMT's own while the polyfill's can skip or stall** (temporalCompat D13): two offset changes inside one of its 14-day steps are skipped (`America/Boa_Vista`, October 2000) or never return (`Europe/Riga`, October 1944). GMT samples every 5 days, under the tz database's closest pair (601,200 s), pinned by an all-zones guard test.
 - **Rows that depend on recent zone data name the release they assume**, so a runtime with older data fails with a clear reason and not a wrong value.
 
 ## What gmt provides (do not re-implement)
@@ -59,6 +60,8 @@ An exact answer is not available to this library. The IANA time zone database is
 - New York, Sydney and Lord Howe change answer one nanosecond either side of each transition; Lord Howe's shift is 30 minutes
 - `Europe/Dublin` is `true` in summer and `false` in winter; `Africa/Casablanca` is `true` at `+01:00`
 - `Pacific/Apia` across the 2011 date-line change and `Europe/London` in 1947 keep their answers
+- The nine daylight periods shorter than 14 days (`America/Boa_Vista` 2000 and the like) are found from any reference instant, and `Europe/Riga` 1944 and `Europe/Simferopol` 1943 return, with the right value
+- `getDstTransitions("America/Boa_Vista", 2000)` lists all three changes
 - A zone with no clock changes, a fixed offset and `UTC` read `false`
 - `hasDaylightSaving` with `at` returns the same result on any day it runs, and `true` for a zone whose next daylight period begins within 365 days of `at`
 - The touched suites pass under `TZ=UTC`, `Pacific/Apia` and `Pacific/Niue`

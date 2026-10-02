@@ -5,7 +5,10 @@ import {
   MAX_ISO_EPOCH_DAYS,
   MIN_EPOCH_NANOSECONDS,
 } from "./epochNanoseconds";
-import { isSecondsOffsetMatchCompatNeeded } from "./temporalCompat";
+import {
+  isSecondsOffsetMatchCompatNeeded,
+  isTransitionSearchCompatNeeded,
+} from "./temporalCompat";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -61,6 +64,21 @@ import { isSecondsOffsetMatchCompatNeeded } from "./temporalCompat";
  *    Fixed on the polyfill's main branch by 23d1275 ("Normative: Require strict matching with a
  *    precise ZonedDateTime offset"), in no published release yet.
  *
+ * 5. **Two offset changes inside one 14-day search step** (`GetNamedTimeZoneNextTransition` /
+ *    `…PreviousTransition`; temporalCompat D13). Both searches sample the offset every 14 days and
+ *    bisect a step whose ends differ. A pair of changes that returns to the same offset inside one
+ *    step is skipped: `next` from 2000-10-01 in America/Boa_Vista misses 2000-10-08 and
+ *    2000-10-15, and `GetStartOfDay` for 2000-10-08, whose midnight that change skips, throws a
+ *    TypeError there and returns 2001-10-14 in America/Noronha. Three different offsets inside one
+ *    step make the bisection loop forever, its assertion being compiled out: `next` from
+ *    1944-04-15 in Europe/Riga never returns. A call cannot be tried and then recovered, so
+ *    while the D13 probe fails every transition search in a named zone is GMT's own
+ *    (`zonedTransitionSearch.ts`, a 5-day step under the tz database's closest pair), and a
+ *    start of day whose midnight is skipped is GMT's own `GetStartOfDay`. A midnight that exists
+ *    never reaches the search. The polyfill's main branch (a79c6a1, per-zone search windows,
+ *    in no release) fixes the zones it lists and stalls instead in Africa/El_Aaiun, April 1976,
+ *    whose 17-day window holds three offsets.
+ *
  * Every GMT wall clock → instant conversion goes through this file. Each helper calls the
  * polyfill first and returns its answer whenever it has one; only when the polyfill throws (or
  * returns a transition-less `null`) for a named, non-UTC zone near the range limits does it
@@ -74,7 +92,9 @@ import { isSecondsOffsetMatchCompatNeeded } from "./temporalCompat";
  * `min.*` probes still fail with it); for defect 2, an upstream fix that does not exist yet (see
  * `context/domination/js-temporal-polyfill-bugs.md` § B); for defect 3, a release containing
  * js-temporal/temporal-polyfill#372 (the `zoned.E` canary group; bugs document § E); for
- * defect 4, a release containing 23d1275 (the `D12` probe; bugs document § I).
+ * defect 4, a release containing 23d1275 (the `D12` probe; bugs document § I); for defect 5, a
+ * release on which every `D13` probe passes, Africa/El_Aaiun included (a79c6a1 alone is not; bugs
+ * document § K).
  * `pnpm compat` reports when every probe of a group passes.
  * ---------------------------------------------------------------------------------------------
  */
@@ -317,7 +337,7 @@ export function epochNanosecondsFor(
  * The first instant at or after `low` whose offset is `offset`, given that `low` has a different
  * offset and `high` has `offset`: the transition between them, to the nanosecond.
  */
-function transitionBetween(
+export function transitionBetween(
   timeZone: string,
   low: bigint,
   high: bigint,
@@ -399,6 +419,61 @@ export function isBeforePolyfillTransitionSearch(
   return (
     Temporal.PlainDate.compare(value, LAST_DATE_BEFORE_TRANSITION_SEARCH) <= 0
   );
+}
+
+/** True when no instant in `timeZone` has `date`'s midnight as its wall time (it is skipped). */
+function isMidnightSkipped(
+  timeZone: string,
+  date: Temporal.PlainDate,
+): boolean {
+  try {
+    return (
+      possibleEpochNanoseconds(
+        timeZone,
+        date.withCalendar("iso8601").toPlainDateTime(),
+      ).length === 0
+    );
+  } catch {
+    // Outside the representable range: the range-limit fallbacks decide.
+    return false;
+  }
+}
+
+/**
+ * True when the polyfill's `GetStartOfDay` cannot be trusted for this date in a named zone: it
+ * lies before the transition search floor (defect 3), or its midnight is skipped while the
+ * runtime's transition search can miss the change that skips it (defect 5). A midnight that exists
+ * never reaches that search, so the polyfill's answer stands for it.
+ */
+export function needsOwnStartOfDaySearch(
+  timeZone: string,
+  value: Temporal.PlainDate | Temporal.ZonedDateTime,
+): boolean {
+  if (isBeforePolyfillTransitionSearch(value)) return true;
+  if (!isTransitionSearchCompatNeeded()) return false;
+
+  return isMidnightSkipped(
+    timeZone,
+    value instanceof Temporal.ZonedDateTime ? value.toPlainDate() : value,
+  );
+}
+
+/**
+ * `needsOwnStartOfDaySearch` for a measure that also reads the next day's start (`hoursInDay`,
+ * rounding to the day).
+ */
+export function needsOwnDayBoundsSearch(
+  timeZone: string,
+  zoned: Temporal.ZonedDateTime,
+): boolean {
+  if (needsOwnStartOfDaySearch(timeZone, zoned)) return true;
+  if (!isTransitionSearchCompatNeeded()) return false;
+
+  try {
+    return isMidnightSkipped(timeZone, zoned.toPlainDate().add({ days: 1 }));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -683,7 +758,7 @@ function dateOnlyBeforeTransitionSearch(
     return null;
   }
 
-  if (!isNamedTimeZone(timeZone) || !isBeforePolyfillTransitionSearch(date)) {
+  if (!isNamedTimeZone(timeZone) || !needsOwnStartOfDaySearch(timeZone, date)) {
     return null;
   }
   return new Temporal.ZonedDateTime(

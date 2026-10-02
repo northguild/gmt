@@ -18523,6 +18523,30 @@
         "result": "false (Asia/Tokyo has no DST)"
       },
       {
+        "call": "isInDaylightSaving(\"2015-07-01T12:00:00+03:00[Europe/Istanbul]\")",
+        "result": "true (undone 2015-11-08)"
+      },
+      {
+        "call": "isInDaylightSaving(\"2016-07-01T12:00:00+03:00[Europe/Istanbul]\")",
+        "result": "false (the March 2016 advance was never undone)"
+      },
+      {
+        "call": "isInDaylightSaving(\"2016-12-01T12:00:00+03:00[Europe/Istanbul]\")",
+        "result": "false (permanent +03:00)"
+      },
+      {
+        "call": "isInDaylightSaving(\"2019-07-15T12:00:00+01:00[Europe/Dublin]\")",
+        "result": "true"
+      },
+      {
+        "call": "isInDaylightSaving(\"2019-12-01T12:00:00+01:00[Africa/Casablanca]\")",
+        "result": "true (put back 2020-04-19)"
+      },
+      {
+        "call": "isInDaylightSaving(\"2019-07-15T12:00:00+00:00[UTC]\")",
+        "result": "false"
+      },
+      {
         "call": "isInDaylightSaving(\"invalid\")",
         "result": "false"
       }
@@ -20906,29 +20930,53 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "hasDaylightSaving(timeZone: string): boolean",
-    "description": "Check whether an IANA timeZone identifier observes daylight saving time.",
+    "signature": "hasDaylightSaving(timeZone: string, options?: { at?: string; }): boolean",
+    "description": "Check whether a timeZone observes daylight saving time at a reference instant.",
     "sourcePath": "packages/gmt/src/zoned/validate/hasDaylightSaving.ts",
     "examples": [
       {
-        "call": "hasDaylightSaving(\"America/New_York\")",
+        "call": "hasDaylightSaving(\"America/New_York\", { at: \"2024-01-15T12:00:00Z\" })",
         "result": "true"
       },
       {
-        "call": "hasDaylightSaving(\"Europe/Berlin\")",
+        "call": "hasDaylightSaving(\"Australia/Sydney\", { at: \"2024-06-15T12:00:00Z\" })",
+        "result": "true (winter; the next period begins in October)"
+      },
+      {
+        "call": "hasDaylightSaving(\"Asia/Tokyo\", { at: \"2024-01-15T12:00:00Z\" })",
+        "result": "false"
+      },
+      {
+        "call": "hasDaylightSaving(\"Europe/Istanbul\", { at: \"2015-06-15T12:00:00Z\" })",
         "result": "true"
       },
       {
-        "call": "hasDaylightSaving(\"Asia/Tokyo\")",
+        "call": "hasDaylightSaving(\"Europe/Istanbul\", { at: \"2016-06-15T12:00:00Z\" })",
+        "result": "false (the March 2016 advance was never undone)"
+      },
+      {
+        "call": "hasDaylightSaving(\"America/Sao_Paulo\", { at: \"2018-06-15T12:00:00Z\" })",
+        "result": "true"
+      },
+      {
+        "call": "hasDaylightSaving(\"America/Sao_Paulo\", { at: \"2019-06-15T12:00:00Z\" })",
+        "result": "false (last daylight period ended 2019-02-17)"
+      },
+      {
+        "call": "hasDaylightSaving(\"UTC\", { at: \"2024-01-15T12:00:00Z\" })",
         "result": "false"
       },
       {
-        "call": "hasDaylightSaving(\"UTC\")",
+        "call": "hasDaylightSaving(\"+05:00\", { at: \"2024-01-15T12:00:00Z\" })",
         "result": "false"
       },
       {
-        "call": "hasDaylightSaving(\"Invalid/Zone\")",
+        "call": "hasDaylightSaving(\"Invalid/Zone\", { at: \"2024-01-15T12:00:00Z\" })",
         "result": "false"
+      },
+      {
+        "call": "hasDaylightSaving(\"America/New_York\", { at: \"2024-01-15\" })",
+        "result": "false (not an instant)"
       }
     ]
   },

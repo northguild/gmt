@@ -1,10 +1,10 @@
 ---
 name: gmt-timezone
 description: >
-  Timezone-aware operations — zoned now, formatting zoned datetimes/ranges,
+  Timezone-aware operations — zoned now, formatting zoned values/ranges,
   plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
   arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal,
-  real zone unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix),
+  real unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix),
   hours in a local day, floorToZone/bucketRange, calendar-annotated zoned
   strings, range limits, transport legs (transitTime, etaAtZone, dwellTime,
   crossingTime, scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), planned
@@ -13,8 +13,8 @@ description: >
   intermodal free time (freeTimeExpiry, chargeableDays, demurrageClock),
   billingTimeline, and operating hours (OperatingSchedule,
   recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
-  operatingTimeBetween, addOperatingTime). A routing pointer to the
-  installed README.md and source JSDoc, not an API dump.
+  operatingTimeBetween, addOperatingTime), and daylight time
+  (isInDaylightSaving, hasDaylightSaving). Points to the README and JSDoc.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -329,7 +329,26 @@ converting between time zones, or doing arithmetic that must respect DST.
     (`1952-10-15T23:59:59-11:20[Pacific/Niue]`); write the offset with seconds
     to name the second. A zoned read refuses a local date of −271821-04-19,
     which an instant reader accepts; pass that instant in `Z` form.
-22. **Read the README.** This skill is a routing pointer. For the full DST
+22. **Daylight time is read from the zone's clock changes.**
+    `isInDaylightSaving(zoned)` and `hasDaylightSaving(timeZone, { at })`
+    apply one rule, GMT's own definition and not the tz database's daylight
+    flag (no JavaScript API exposes it): daylight time runs from a forward
+    change of the zone's clocks to the backward change of the same size that
+    undoes it, less than 365 days later. A forward change never undone is a
+    change of standard time, so
+    `isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]")` is
+    `false`. The higher of two alternating offsets is the daylight one:
+    `Europe/Dublin` in summer, `Africa/Casablanca` at `+01:00`.
+    `hasDaylightSaving` is `true` when the zone is in daylight time at `at`
+    or a daylight period begins less than 365 days after it. Pass `at` (an
+    ISO 8601 instant string) for an answer that does not depend on the day
+    the code runs: `hasDaylightSaving("Europe/Istanbul", { at:
+    "2015-06-15T12:00:00Z" })` is `true`, and with `"2016-06-15T12:00:00Z"`
+    it is `false`. Without `at` the reference is the current instant. Both
+    read the runtime's time zone data, so an answer can change when that data
+    does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
+    standard time.
+23. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -339,7 +358,7 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Formatting**: `formatZonedDateTime`, `formatZonedRange`,
   `formatRelativeZoned`, `formatTimeZoneName`
 - **Validation**: `isValidTimeZone`, `isValidZonedDateTime`,
-  `hasDaylightSaving`, `getDstTransitions`, `isInDaylightSaving`
+  `hasDaylightSaving` (`{ at }`), `getDstTransitions`, `isInDaylightSaving`
 - **Conversion**: `convertPlainDateTimeToZoned`, `convertZonedToPlainDateTime`,
   `convertUtcToZoned`, `convertZonedToUtc`, `convertZonedToCalendar`,
   `convertUtcToUnix`, `convertUnixToUtc`

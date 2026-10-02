@@ -13,7 +13,8 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 
 1. **Import surface.** `index.ts` is the only import surface. Call sites use `calendarDateFromFields`,
    `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
-   `isNudgeWindowCompatNeeded` and `isSecondsOffsetMatchCompatNeeded`, never the files behind them.
+   `isNudgeWindowCompatNeeded`, `isSecondsOffsetMatchCompatNeeded` and
+   `isTransitionSearchCompatNeeded`, never the files behind them.
 2. **Dormant unless needed.** Each defect has a repro in `repros.ts`, probed lazily in
    `capabilities.ts`: once per process, per calendar, memoized. If the installed runtime passes, that
    workaround never runs. When a probe fails, a per-call guard (a range check, a polyfill throw, a
@@ -45,6 +46,7 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 | **D9** | Non-ISO months are added (`addMonthsCalendar`) and counted (`until` by months) one month at a time, caching each step, so a few million in-range months is a fatal heap OOM (persian `1402-10-25` + 3,000,000 months aborts at 256 MB in about 3 s). Years and reads are O(1). Every non-ISO calendar. | `largeMonthSpan.ts`, called from `readArithmeticModel.ts` (`addMonths`, `monthsBetween`); `calendarDateArithmetic.ts` sends such adds and month differences to the spec algorithms | Amounts of at least `LARGE_MONTH_SPAN` (1,200) months, or years that far apart. Canary-only: no capability probe |
 | **D11** | The calendar nudge window is never retried. TC39 bounds a duration between `relativeTo + r1 units` and `relativeTo + r2 units` and, when the target falls outside that window, recomputes it one unit further along (`ComputeNudgeWindow` with `additionalShift`, tc39/proposal-temporal#3172). The polyfill computes it once — its `assert(start <= dest <= end)` is compiled out of production builds — so the answer is taken over bounds that exclude the target. Hits `Duration#total` (wrong fraction), `Duration#round` and `until`/`since` with a calendar `smallestUnit` (a whole unit lost: `2024-01-31` to `2024-02-29T12:00` truncates to `PT0S` instead of `P1M`). Any calendar; only a `relativeTo` past the 28th reaches it, because only there does adding a month constrain the day. | `internal/zonedWallClockDifference.ts`: `monthTotalBySpec` and `monthRoundBySpec` in `durationTotal`/`durationRound`, the defect-4 gate in `zonedUntil`, `plainUntilWithRounding`, and the D11 term in `internal/plainDateUntil.ts` | Unit `month` or `year` with a `relativeTo` past the 28th, while the probe fails |
 | **D12** | `ToTemporalZonedDateTime` matches a string's offset against the zone by minutes even when the offset is written with seconds, where TC39 requires an exact match. `1970-01-01T12:00-00:45:00[Africa/Monrovia]` is accepted (the zone stood at −00:44:30; the spec throws), and `1952-10-15T23:59:59-11:20:00[Pacific/Niue]` reads as the first pass of that repeated second (−11:19:40) instead of the second. Not a calendar defect: ISO strings, named zones with a sub-minute offset. | `internal/zonedWallClock.ts` `matchSecondsOffsetExactly`, called by `zonedDateTimeFrom`, which every GMT zoned-string parse goes through (a zoned `relativeTo` string included, via `internal/resolveDurationRelativeTo.ts`); it recomputes TC39 `InterpretISODateTimeOffset` with match-exactly | A string whose offset has a seconds part, read with `offset: "reject"` or `"prefer"`, whose polyfill result has a sub-minute offset, while the probe fails |
+| **D13** | The time zone transition search samples the offset every 14 days and bisects a step whose ends differ. Two changes inside one step break it. A pair that returns to the same offset is skipped: `getTimeZoneTransition("next")` from 2000-10-01 in `America/Boa_Vista` misses 2000-10-08 and 2000-10-15 (601,200 s apart), and the start of 2000-10-08, whose midnight that change skips, throws a TypeError there and is 2001-10-14 in `America/Noronha`. Three different offsets in one step make the bisection loop for ever: `next` from 1944-04-15 in `Europe/Riga` never returns. Not a calendar defect: named zones. | `internal/zonedTransitionSearch.ts` (`nextTransitionAfter`, `previousTransitionBefore`), called by `zonedNextTransition` and `zonedPreviousTransition` in `internal/zonedWallClockOperations.ts`, which every GMT transition walk goes through; `needsOwnStartOfDaySearch` and `needsOwnDayBoundsSearch` in `internal/zonedWallClock.ts` send a skipped midnight to GMT's own `GetStartOfDay` | While the probe fails: every transition search in a named zone (the polyfill's search cannot be tried first, because it may not return), and a start of day, `hoursInDay` or day rounding whose midnight is skipped. Offset zones and `UTC` pass straight through |
 
 Fields → ISO (`calendarDateFromFields`): asks the polyfill first. It keeps the result when the fields
 read back unchanged through `calendarFieldsOf`. Otherwise, inside a D1 window or a corrected read
@@ -92,6 +94,27 @@ Calculations*, ch. 8) and the Indian national calendar rule (Calendar Reform Com
 arithmetic as ISO arithmetic follows from the proposal's statement that buddhist months and days are
 identical to ISO 8601.
 
+Transition search (D13). GMT's search computes TC39 `GetNamedTimeZoneNextTransition` and
+`GetNamedTimeZonePreviousTransition` from offsets alone, with no zone data:
+
+- **Sampling assumption.** No zone changes its offset twice within the 5-day step (432,000 s). The
+  closest pair in tz 2026c is 601,200 s apart (`zdump -v`: `America/Boa_Vista`, `Noronha` and
+  `Recife` in 2000, `Asia/Gaza` and `Asia/Hebron` in 2040), so a step holds at most one change:
+  equal ends mean none, different ends mean exactly one, and bisecting it always narrows. The
+  all-zones guard in `internal/zonedTransitionSearch.test.ts` reads the runtime's data through
+  `Intl.DateTimeFormat` and fails if any pair is closer than the step plus a day.
+- **"No further change"** follows the polyfill's own rule, so removal changes no answer: three
+  366-day years past the later of the instant and now going forward, 1847-01-01 going back (then
+  the `zoned.E` offset comparison).
+- **Bounded.** With a limit instant, one offset read per 5 days of the limit plus at most 51 to
+  pin the change. Without one, at most 200,000 steps, then a `RangeError` (the caller's sentinel).
+  The daylight rule, `getDstTransitions` and the bucket walkers pass a limit.
+- **Probe order.** The `skip.*` repros cannot stall and come first, so a runtime that fails them
+  never runs `stall.*` in process. The canary runs `stall.*` with `Intl.DateTimeFormat#format`
+  bounded to 20,000 reads. `stall.nextElAaiun` passes on 0.5.1 (14-day step) and fails on
+  js-temporal main; the workaround goes dormant only when every repro passes
+  (`anyReproFails`, tested with each one failing alone).
+
 ## Canary and native oracle
 
 `repros.ts` also carries the canary-only `D9` repros, which count `Intl.DateTimeFormat#formatToParts`
@@ -135,6 +158,7 @@ limits) is the `D1` group.
 | D9 | A js-temporal release adds and differences non-ISO months in bounded work: each `D9` probe reads at most 100 `Intl.DateTimeFormat` dates for 1,200 months |
 | D11 | A js-temporal release contains js-temporal/temporal-polyfill#361's `50d66d2`, which ports proposal-temporal #3172 (`5dd0b0d97ee1`, merged 2025-11-19 — the fix for tc39/proposal-temporal#3168), so the nudge window is retried. The port is **already written**, in ptomato's open PR #361 ("April 2026 rebase, part 3", opened 2026-04-22, no reviews as of 2026-09-20) — not on `main`, so a release alone will not do it, and no new filing is needed. Verified locally: `50d66d2` applies cleanly on `main` alone, touches only `lib/ecmascript.ts`, and flips all three probes (`total` 1.0172413793103448 → 1.0161290322580645; `until`/`round` `PT0S` → `P1M`) with test262 clean |
 | D12 | A js-temporal release contains `23d1275` ("Normative: Require strict matching with a precise ZonedDateTime offset"), on main since 2026-04 and in no release. Expected values are test262 `intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js` (bug doc § I) |
+| D13 | A js-temporal release on which **every** `D13` probe returns the spec value, the `stall.*` ones within 20,000 offset reads. `a79c6a1` (per-zone transition search windows, on main, in no release) is **not** enough: it fixes the zones it lists, leaves `bisect` unchanged, and gives `Africa/El_Aaiun` a 17-day window that holds three offsets in April 1976, so `stall.nextElAaiun` fails there and GMT would hang without the workaround (bug doc § K; not filed). Expected values are Node 26.10.0's native Temporal and `zdump -v` |
 | zoned.A | A js-temporal release contains `05ce7a3` (maximum) **and** `95237e0` (minimum), both on main. `05ce7a3` alone fixes only the `max.*` probes: a 0.5.1 build with just that commit still throws for every `min.*` probe |
 | zoned.B | A js-temporal release fixes `GetNamedTimeZoneNextTransition` near the maximum. Not fixed on main; the verified patch is in bug doc § B |
 | zoned.D | A js-temporal release ports proposal-temporal #3205 (`d90d432`), which validates the `"UTC"` fast path of `GetPossibleEpochNanoseconds` (bug doc § D) |
@@ -204,6 +228,17 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    `resolveDurationRelativeTo` reading a zoned string through `zonedDateTimeFrom` (the range-limit
    fallbacks need it too) and
    `test/secondsOffsetMatch.test.ts`: its values are test262's and hold either way.
+14. **D13:** delete `internal/zonedTransitionSearch.ts` and the
+   `isTransitionSearchCompatNeeded` branches of `zonedNextTransition` and
+   `zonedPreviousTransition` (`internal/zonedWallClockOperations.ts`), which then return the
+   polyfill path filtered by the caller's limit; `isMidnightSkipped` and the D13 terms of
+   `needsOwnStartOfDaySearch` and `needsOwnDayBoundsSearch` (`internal/zonedWallClock.ts`, with
+   defect 5 in that file's header note); `isTransitionSearchCompatNeeded` in `capabilities.ts` and
+   its export in `index.ts`; and the `D13` repros with `withBoundedOffsetReads`. Keep the limit
+   arguments at the call sites: they cost nothing. In `internal/zonedTransitionSearch.test.ts`
+   delete only the step guard; keep its rows and every `America/Boa_Vista`, `Europe/Riga` and
+   `Europe/Simferopol` row in the public test files: their values are native Temporal's and hold
+   either way.
 13. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
    `plain/validate/isValidCalendarDate`, `plain/calculate/{addDate,subtractDate,diffDate,diffDateAsDuration}`,
    `plain/interval/{intervalLengthDate,intervalCountDate,intervalFromDurationDate,splitIntervalByUnitDate}`,

@@ -1,4 +1,5 @@
 import {
+  anyReproFails,
   isCalendarArithmeticCompatNeeded,
   isDefectPresent,
   reproPasses,
@@ -155,6 +156,73 @@ describe("repros", () => {
     },
   );
 
+  // D13: TC39 `GetNamedTimeZoneNextTransition` / `…PreviousTransition` and `GetStartOfDay`, as
+  // Node 26.10.0's native Temporal and `zdump -v` (tz 2026c) give them. America/Boa_Vista changes
+  // at 2000-10-08T04:00Z and 2000-10-15T03:00Z; Europe/Riga at 1944-10-02T01:00Z; Europe/Simferopol
+  // at 1944-04-03T01:00Z.
+  it.each`
+    name                         | expected
+    ${"skip.nextBoaVista"}       | ${"2000-10-08T01:00:00-03:00[America/Boa_Vista]"}
+    ${"skip.previousBoaVista"}   | ${"2000-10-14T23:00:00-04:00[America/Boa_Vista]"}
+    ${"skip.startOfDayBoaVista"} | ${"2000-10-08T01:00:00-03:00[America/Boa_Vista]"}
+    ${"skip.hoursInDayNoronha"}  | ${"23"}
+    ${"stall.nextRiga"}          | ${"1944-10-02T02:00:00+01:00[Europe/Riga]"}
+    ${"stall.nextSimferopol"}    | ${"1944-04-03T03:00:00+02:00[Europe/Simferopol]"}
+  `("D13 $name expects native Temporal's $expected", ({ name, expected }) => {
+    expect(findRepro("D13", "iso8601", name)?.expected).toBe(expected);
+  });
+
+  // Both alignments of Africa/El_Aaiun 1976: −01:00 → +00:00 at 1976-04-14T01:00:00Z, then
+  // +00:00 → +01:00 at 1976-05-01T00:00:00Z (zdump and Node 26.10.0's native Temporal).
+  it.each`
+    name
+    ${"stall.nextElAaiun 1976-04-14T00:30:00Z"}
+    ${"stall.nextElAaiun 1976-03-28T00:30:00Z"}
+  `("D13 $name expects native Temporal's first 1976 change", ({ name }) => {
+    expect(findRepro("D13", "iso8601", name)?.expected).toBe(
+      "1976-04-14T01:00:00+00:00[Africa/El_Aaiun]",
+    );
+  });
+
+  // A runtime that fixes every other D13 case and still stalls in Africa/El_Aaiun (js-temporal
+  // main with a79c6a1 alone). The other repros are made to return their expected value, and the
+  // El_Aaiun ones the bounded-read error a stalled search gives.
+  it.each`
+    failing                                       | expected
+    ${[]}                                         | ${false}
+    ${["stall.nextElAaiun 1976-04-14T00:30:00Z"]} | ${true}
+    ${["stall.nextElAaiun 1976-03-28T00:30:00Z"]} | ${true}
+    ${["skip.nextBoaVista"]}                      | ${true}
+  `(
+    "reports D13 present: $expected when only $failing fail",
+    ({ failing, expected }) => {
+      const candidates = repros
+        .filter((repro) => repro.defect === "D13")
+        .map((repro) => ({
+          ...repro,
+          run: () =>
+            (failing as string[]).includes(repro.name)
+              ? "ERR RangeError: more than 20000 offset reads"
+              : repro.expected,
+        }));
+
+      expect(candidates).toHaveLength(8);
+      expect(anyReproFails(candidates, "D13", "iso8601")).toBe(expected);
+    },
+  );
+
+  it("puts every D13 repro that cannot stall before the ones that can", () => {
+    const names = repros
+      .filter((repro) => repro.defect === "D13")
+      .map((repro) => repro.name);
+    const firstStall = names.findIndex((name) => name.startsWith("stall."));
+
+    expect(firstStall).toBeGreaterThan(0);
+    expect(
+      names.slice(firstStall).every((name) => name.startsWith("stall.")),
+    ).toBe(true);
+  });
+
   // D12: test262 intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js. "rounded
   // HH:MM:SS not accepted in string offset (offset=reject)" for -00:45:00[Africa/Monrovia], and
   // "-11:20:00 is accepted as -11:20:00 in the Pacific/Niue edge case": reference
@@ -233,6 +301,10 @@ describe("reproPasses", () => {
     ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.startOfDayManila"} | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}
     ${"D12"}     | ${"iso8601"}       | ${"roundedSecondsRejected"}   | ${"45870000000000"}
     ${"D12"}     | ${"iso8601"}       | ${"exactSecondsSecondPass"}   | ${"-543069621000000000"}
+    ${"D13"}     | ${"iso8601"}       | ${"skip.nextBoaVista"}        | ${"null"}
+    ${"D13"}     | ${"iso8601"}       | ${"skip.startOfDayBoaVista"}  | ${"ERR TypeError: Cannot read properties of null (reading 'sign')"}
+    ${"D13"}     | ${"iso8601"}       | ${"skip.hoursInDayNoronha"}   | ${"-8881"}
+    ${"D13"}     | ${"iso8601"}       | ${"stall.nextRiga"}           | ${"ERR RangeError: more than 20000 offset reads"}
     ${"D9"}      | ${"persian"}       | ${"addMonths"}                | ${"1328 Intl reads for 1200 months"}
     ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}              | ${"1518 Intl reads for 1200 months"}
   `(

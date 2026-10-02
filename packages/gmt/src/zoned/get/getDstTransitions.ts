@@ -6,6 +6,8 @@ import {
 } from "../../internal";
 
 const MAX_TRANSITIONS_PER_YEAR = 20;
+/** 368 days: a 366-day year plus a day at each end for the zone's offset. */
+const SEARCH_SPAN_NANOSECONDS = 368n * 86_400_000_000_000n;
 
 /**
  * A single DST transition instant: the UTC instant of an offset change plus the
@@ -79,12 +81,16 @@ export function getDstTransitions(
       zonedDateTimeFrom({ year, month: 1, day: 1, timeZone }),
     ).subtract({ nanoseconds: 1 });
 
+    // A calendar year is at most 366 days and an offset is under a day, so no search needs to
+    // read past this.
+    const searchEnd = cur.epochNanoseconds + SEARCH_SPAN_NANOSECONDS;
+
     const transitions: DstTransition[] = [];
 
     // `<=`: up to MAX in-year transitions are pushed, plus one more lookup to observe the scan
     // leaving the year.
     for (let i = 0; i <= MAX_TRANSITIONS_PER_YEAR; i++) {
-      const next = zonedNextTransition(cur);
+      const next = zonedNextTransition(cur, searchEnd);
       if (!next || next.year > year) {
         return transitions;
       }

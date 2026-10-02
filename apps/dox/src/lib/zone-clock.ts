@@ -9,11 +9,14 @@
  * `@js-temporal/polyfill` those functions depend on rides along in this
  * (lazy-loaded) chunk; it is never on a page's critical path.
  *
- * Two of those calls are cached, because the globe's clock list reads every
- * visible row once a second and the polyfill is not cheap. See the caches
- * below: both are keyed so that an entry goes stale exactly when its answer can
- * change, never on a timer and never on a guess. That is a claim about
- * correctness, not memory: no entry is ever removed (see `IN_DST`).
+ * Nothing is cached. The library's rule for daylight time (a forward change of
+ * the clocks up to the backward change of the same size that undoes it) reads
+ * the zone's transitions around the instant, so no key short of the instant's
+ * own offset period is complete, and an answer for "this zone, this year, this
+ * offset" is wrong for a zone like America/Asuncion, which is in daylight time
+ * in January 2024 and not in December 2024 at the same offset. A scrub step
+ * with eight zones costs about 5 ms (both calls, measured), and a reading is
+ * only taken when something moves, so the calls are made as asked.
  *
  * A sentinel return (`""` from a gmt function) surfaces as `ok: false`, which
  * the widgets render as the design system's "signal lost" state rather than a
@@ -56,77 +59,12 @@ const SENTINEL: Omit<ZoneReading, "id" | "observesDst"> = {
   inDst: false,
 };
 
-/**
- * Whether a zone observes DST at all, cached.
- *
- * This is a property of the zone's rules, not of any instant, so it cannot
- * change while the page is open — and the globe's clock list was paying for it
- * again on every visible row, every second. Under the Temporal polyfill that is
- * the single most expensive call in a tick.
- */
-const OBSERVES_DST = new Map<string, boolean>();
-
-function observesDstCached(id: string): boolean {
-  const known = OBSERVES_DST.get(id);
-  if (known !== undefined) return known;
-  const value = hasDaylightSaving(id);
-  OBSERVES_DST.set(id, value);
-  return value;
-}
-
-/**
- * Whether an instant is in DST, cached against the zone, **the year** and the
- * offset.
- *
- * The key is the complete input set of `isInDaylightSaving`, which is what
- * makes this exact rather than a guess: that function reads the zone, the
- * offset, and the year — it compares the offset against the smaller of that
- * year's own January and July offsets.
- *
- * The year is load-bearing, not belt-and-braces. Keying on `(zone, offset)`
- * alone looks sound — daylight saving *is* a change of offset — but the same
- * offset can be DST in one year and standard in another, whenever a zone stops
- * observing it and keeps the summer offset all year:
- *
- *     2016-07-01T12:00:00+03:00[Europe/Istanbul] -> true   (DST)
- *     2026-07-01T12:00:00+03:00[Europe/Istanbul] -> false  (permanent +03:00)
- *
- * Turkey went permanently +03:00 in 2016. Without the year both of those hash
- * to one entry, and whichever is read first answers for the other — which the
- * scrubber can reach, since it takes an arbitrary anchor date from the user.
- *
- * A zone still recomputes at most once per transition per year rather than
- * once per second, which is the whole point of the cache.
- *
- * It is never cleared. Unlike `OBSERVES_DST`, whose ~420 keys are a hard
- * ceiling, this key space is open: the scrubber takes any anchor date, so a
- * reader dragging across a century adds an entry per zone, year and offset
- * visited. That is tens of thousands of short strings at most, which a docs
- * page can afford, so there is deliberately no eviction.
- */
-const IN_DST = new Map<string, boolean>();
-
-function inDstCached(
-  id: string,
-  year: string,
-  offset: string,
-  zoned: string,
-): boolean {
-  const key = `${id}\u0000${year}\u0000${offset}`;
-  const known = IN_DST.get(key);
-  if (known !== undefined) return known;
-  const value = isInDaylightSaving(zoned);
-  IN_DST.set(key, value);
-  return value;
-}
-
-function parseZoned(
-  id: string,
-  zoned: string,
-  observesDst: boolean,
-): ZoneReading {
+function parseZoned(id: string, zoned: string): ZoneReading {
   const match = ZONED_PATTERN.exec(zoned);
-  if (!match) return { id, observesDst, ...SENTINEL };
+  // Whether the zone observes DST is asked for the instant read, not for today:
+  // the scrubber reads other dates, and a zone can stop (or start) observing it.
+  const observesDst = hasDaylightSaving(id, { at: zoned });
+  if (!match) return { id, observesDst: false, ...SENTINEL };
   const [, date, time, rawOffset] = match;
   const offset = rawOffset === "Z" ? "+00:00" : rawOffset;
   return {
@@ -135,17 +73,16 @@ function parseZoned(
     date,
     time,
     offset,
-    inDst: inDstCached(id, date.slice(0, 4), offset, zoned),
+    inDst: isInDaylightSaving(zoned),
     observesDst,
   };
 }
 
 /** Current local reading for a zone. */
 export function readZoneNow(id: string): ZoneReading {
-  const observesDst = observesDstCached(id);
   const zoned = getZonedNow(id);
-  if (!zoned) return { id, observesDst, ...SENTINEL };
-  return parseZoned(id, zoned, observesDst);
+  if (!zoned) return { id, observesDst: false, ...SENTINEL };
+  return parseZoned(id, zoned);
 }
 
 /**
@@ -154,10 +91,9 @@ export function readZoneNow(id: string): ZoneReading {
  * exactly as DOX-E1b's Definition of Done requires.
  */
 export function readZoneAt(id: string, anchorZoned: string): ZoneReading {
-  const observesDst = observesDstCached(id);
   const zoned = convertZonedToZoned(anchorZoned, id);
-  if (!zoned) return { id, observesDst, ...SENTINEL };
-  return parseZoned(id, zoned, observesDst);
+  if (!zoned) return { id, observesDst: false, ...SENTINEL };
+  return parseZoned(id, zoned);
 }
 
 /**

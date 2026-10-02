@@ -28,6 +28,23 @@ export function reproPasses(
   return output === repro.expected;
 }
 
+/**
+ * True when any of `candidates` for this defect and Temporal calendar id fails. Stops at the first
+ * failure, so the order of a defect's repros is the order they are tried in.
+ */
+export function anyReproFails(
+  candidates: readonly Repro[],
+  defect: DefectId,
+  calendar: string,
+): boolean {
+  return candidates.some(
+    (repro) =>
+      repro.defect === defect &&
+      repro.calendar === calendar &&
+      !reproPasses(repro, runRepro(repro)),
+  );
+}
+
 const cache = new Map<string, boolean>();
 
 /**
@@ -40,12 +57,7 @@ export function isDefectPresent(defect: DefectId, calendar: string): boolean {
   if (cached !== undefined) {
     return cached;
   }
-  const present = repros.some(
-    (repro) =>
-      repro.defect === defect &&
-      repro.calendar === calendar &&
-      !reproPasses(repro, runRepro(repro)),
-  );
+  const present = anyReproFails(repros, defect, calendar);
   cache.set(key, present);
   return present;
 }
@@ -75,6 +87,20 @@ export function isNudgeWindowCompatNeeded(): boolean {
  */
 export function isSecondsOffsetMatchCompatNeeded(): boolean {
   return isDefectPresent("D12", "iso8601");
+}
+
+/**
+ * True when this runtime's time zone transition search cannot be trusted (defect D13).
+ *
+ * TC39 `GetNamedTimeZoneNextTransition` returns the first offset change after an instant. A runtime
+ * that samples the offset in steps longer than the gap between two changes skips a pair that
+ * returns to the same offset, and can loop for ever on three different offsets in one step. The
+ * skipped-pair repros come first and none of them can stall, so on such a runtime the probe
+ * answers before a stalling repro is reached. Every repro has to pass for the workaround to go
+ * dormant: a runtime that fixes the skipped pairs and still stalls on one zone keeps it.
+ */
+export function isTransitionSearchCompatNeeded(): boolean {
+  return isDefectPresent("D13", "iso8601");
 }
 
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
