@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   bandsByTier,
+  instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   parseTiers,
@@ -129,12 +130,8 @@ export function chargeableDays(
       return null;
     }
 
-    const start = Temporal.Instant.from(clockStart).toZonedDateTimeISO(
-      terms.timeZone,
-    );
-    const end = Temporal.Instant.from(clockEnd).toZonedDateTimeISO(
-      terms.timeZone,
-    );
+    const start = instantFrom(clockStart).toZonedDateTimeISO(terms.timeZone);
+    const end = instantFrom(clockEnd).toZonedDateTimeISO(terms.timeZone);
     if (Temporal.ZonedDateTime.compare(start, end) > 0) {
       return null;
     }

@@ -1,0 +1,50 @@
+---
+title: Punctuality Board
+description: "Was it late, by how much, and what share was on time? scheduleDeviation, classifyPunctuality and punctualityRate judge a set of arrivals against a tolerance you drag. An arrival exactly on the limit counts as late, an early limit is optional, and there is no default tolerance."
+industries: [transport]
+---
+
+import PunctualityBoard from "../../../components/PunctualityBoard.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="on-time performance">
+
+<Fragment slot="keypoint">
+
+On time means nothing until someone states how late is too late, so GMT holds no default tolerance. A rate travels with its tolerance: the same six arrivals are 2 of 6 on time under one and 4 of 6 under another.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+An arrival exactly on the late limit is late, and one exactly on the early
+limit is early: the limits themselves are outside the on-time band. Drag the
+band and watch each row change between early, on time and late.
+
+Turn on the second tolerance to see both rates at once.
+
+</Fragment>
+
+<PunctualityBoard fullbleed />
+
+<Fragment slot="after">
+
+**Worth trying:** [a 10-minute early
+tolerance](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fifteen-minute%22%2C%22early%22%3A%22PT10M%22%7D)
+turns the 12-minute early arrival from on time to early. Then [the fall-back
+night](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22fall-back%22%7D),
+where the station clock shows no delay and the train was an hour late. Then
+[60 and 120 minutes side by
+side](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22sixty-and-120%22%7D).
+
+Reference: [`scheduleDeviation`](/reference/transport/compare/scheduleDeviation/),
+[`classifyPunctuality`](/reference/transport/compare/classifyPunctuality/) and
+[`punctualityRate`](/reference/transport/calculate/punctualityRate/) are the
+three calls behind every reading here. See the guide's
+[tolerance section](/guides/industries/transport-punctuality-and-timestamps/#on-time-needs-a-stated-tolerance-classifypunctuality)
+and its
+[rate section](/guides/industries/transport-punctuality-and-timestamps/#a-rate-is-a-count-under-one-tolerance-punctualityrate).
+
+</Fragment>
+
+</ToolLayout>

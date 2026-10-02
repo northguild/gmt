@@ -16,6 +16,7 @@
  *     events at a node that is no longer in the document.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { mountDstInspector, renderDstTemplate } from "./dst-inspector-mount";
 
@@ -128,6 +129,80 @@ describe("renderDstTemplate", () => {
     expect((q(root, "zone") as HTMLSelectElement).value).toBe(
       "Pacific/Chatham",
     );
+  });
+
+  it("keeps a seeded zone the curated list lacks when the mount applies it to the default template", async () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderDstTemplate();
+    document.body.append(root);
+    stubTrackGeometry(root);
+    await mountDstInspector(
+      root,
+      { zone: "Europe/Helsinki", year: 2024 },
+      new AbortController().signal,
+    );
+    expect((q(root, "zone") as HTMLSelectElement).value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "zone-label-start")?.textContent ?? "").not.toBe("");
+    document.body.innerHTML = "";
+  });
+
+  describe("the Exact transition instant preset in a southern zone", () => {
+    it.each(["Australia/Sydney", "Australia/Adelaide", "Pacific/Auckland"])(
+      "%s: the fall-back's own wall time is in the overlap, whatever the disambiguation",
+      async (zone) => {
+        for (const disambiguation of ["compatible", "reject"]) {
+          const { root } = await mount({
+            zone,
+            year: 2024,
+            preset: "transition",
+            disambiguation,
+          });
+          const aside = q(root, "explanation")!.textContent!;
+          expect(aside, `${zone} ${disambiguation}`).toContain("overlap");
+          expect(aside, `${zone} ${disambiguation}`).not.toContain(
+            "normal wall-clock time",
+          );
+          if (disambiguation === "reject") {
+            expect(aside).toContain("rejected this wall time");
+            expect(aside).not.toContain("returned an empty result");
+          }
+          document.body.innerHTML = "";
+        }
+      },
+    );
+  });
+
+  it("says plainly that a zone with no transitions has nothing to probe, instead of calling with an empty string", async () => {
+    const { root } = await mount({
+      zone: "Asia/Tokyo",
+      year: 2024,
+      preset: "gap",
+    });
+    const call = q(root, "call-convert")!.textContent!;
+    expect(call).not.toContain("convertPlainDateTimeToZoned");
+    expect(call).toContain("no DST transitions");
+    expect(q(root, "preset-description")!.textContent).not.toContain(
+      "A local hour that was skipped",
+    );
+    expect(q(root, "preset-description")!.textContent).toContain(
+      "no DST transitions",
+    );
+    expect(
+      (q(root, "copy-convert") as HTMLElement).dataset.copyText ?? "",
+    ).toBe("");
+  });
+
+  it("server-renders the preset description, so the mount does not grow a slot beside a section that pops", () => {
+    // An empty slot filled at mount grows while the section around it grows by
+    // far more; smooth-height snaps the section when a nested slot is easing, so
+    // the whole section popped in one frame.
+    const root = document.createElement("div");
+    root.innerHTML = renderDstTemplate();
+    expect(q(root, "preset-description")!.textContent).not.toBe("");
+    root.innerHTML = renderDstTemplate({ preset: "overlap" });
+    expect(q(root, "preset-description")!.textContent).toContain("twice");
   });
 
   it("gives the ticker handle a slider role and a label", () => {
@@ -357,5 +432,19 @@ describe("template escaping", () => {
       year: `2024"><script>alert(1)</script>` as unknown as number,
     });
     expect(root.querySelector("script")).toBeNull();
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });

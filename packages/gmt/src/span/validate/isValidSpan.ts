@@ -10,9 +10,14 @@ import { parseInstantNanoseconds } from "../../internal";
  *   optionally followed by a bracketed IANA zone; no leap seconds. Calendar and elective
  *   annotations are ignored, as `Temporal.Instant.from` ignores them. The two endpoints need not
  *   share a zone.
- * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
- *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
- *   with the offset is not checked.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so a zoned string Temporal wrote is read back as
+ *   the instant it was written for, except a wall time repeated inside a sub-minute offset
+ *   change, which reads as its first pass (see `isValidInstant`). Otherwise the bracket is not
+ *   checked: a zone that does not exist, or that disagrees with the offset, changes nothing. Validity never depends
+ *   on the bracket.
  * - Order does not matter. A span is signed, not invalid, when `start` is after `end`, so
  *   this is symmetric.
  * - **`spanMs` can still return `null` on a pair this accepts** — a span wider than

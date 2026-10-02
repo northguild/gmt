@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isObject } from "../../internal/isObject";
 import { type CutoffOptions, cutoffAt } from "./cutoffAt";
 
@@ -90,7 +91,7 @@ export function cutoffSchedule(
       if (at === "") {
         return [];
       }
-      schedule.push({ name, at, instant: Temporal.Instant.from(at) });
+      schedule.push({ name, at, instant: instantFrom(at) });
     }
 
     // Array.prototype.sort is stable, so entries on the same instant keep their input order.

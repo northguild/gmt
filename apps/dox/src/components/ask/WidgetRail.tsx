@@ -1,5 +1,6 @@
 /**
- * DOX-C3b (#139) — the panel beside the transcript that holds a live widget.
+ * DOX-C3b (#139) — the panel beside the transcript. It holds a live widget, or,
+ * with none mounted, the examples panel.
  *
  * One widget at a time. Mounting several of these concurrently — each with its
  * own rAF loop and per-second clock tick — is not a feature.
@@ -9,7 +10,14 @@
  * `/dox` via Starlight's `customCss` (see `astro.config.mjs`), so a mounted
  * widget arrives fully styled with no CSS of its own.
  */
-import { useCallback, useState, ViewTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  ViewTransition,
+  type RefObject,
+} from "react";
 import {
   Artifact,
   ArtifactActions,
@@ -19,12 +27,16 @@ import {
 } from "../ai-elements/artifact";
 import { encodeWidgetPermalink } from "~/lib/widget-permalink";
 import type { WidgetHandle } from "~/lib/widget-mount";
+import type { CHAT_STARTERS } from "~/lib/chat-constants";
+import { ExamplesPanel } from "./ExamplesPanel";
 import { MountedWidget } from "./MountedWidget";
 import type { AnyWidgetEntry } from "./widget-registry";
 
 export interface RailWidget {
   /** The tool call this came from — also the mount's identity. */
   toolCallId: string;
+  /** The tool's name, so closing the widget can return focus to its card. */
+  toolName: string;
   entry: AnyWidgetEntry;
   args: unknown;
 }
@@ -32,10 +44,32 @@ export interface RailWidget {
 export function WidgetRail({
   widget,
   onClose,
+  onPick,
+  collapsed = false,
+  railId,
+  focusTitleRef,
 }: {
   widget: RailWidget | null;
   onClose: () => void;
+  /** An example card was activated. */
+  onPick: (starter: (typeof CHAT_STARTERS)[number]) => void;
+  /** Phone only: the examples sheet is folded away until the bar opens it. */
+  collapsed?: boolean;
+  /** The id the examples bar points `aria-controls` at. */
+  railId: string;
+  /** Set by the host for a card activation only: the next widget to commit
+   *  takes focus on its title. A widget the model opens never does — the
+   *  reader may be typing. Cleared once consumed. */
+  focusTitleRef: RefObject<boolean>;
 }) {
+  const titleRef = useRef<HTMLParagraphElement>(null);
+  const toolCallId = widget?.toolCallId;
+  useEffect(() => {
+    if (!toolCallId || !focusTitleRef.current) return;
+    focusTitleRef.current = false;
+    titleRef.current?.focus();
+  }, [toolCallId, focusTitleRef]);
+
   const [handle, setHandle] = useState<WidgetHandle | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -66,9 +100,27 @@ export function WidgetRail({
     );
   }, [handle, widget]);
 
-  // Collapsed to nothing when empty, so `/dox` is pixel-unchanged with no
-  // widget mounted.
-  if (!widget) return null;
+  /* With no widget the rail holds the examples panel, so it is never empty.
+     Phone, conversation started: `collapsed` hides it until the bar opens it. */
+  if (!widget) {
+    return (
+      <ViewTransition
+        key="examples"
+        enter="gmt-rail-in"
+        exit="gmt-rail-out"
+        default="none"
+      >
+        <aside
+          className="gmt-hive-rail"
+          id={railId}
+          aria-label="Examples"
+          data-collapsed={collapsed || undefined}
+        >
+          <ExamplesPanel onPick={onPick} />
+        </aside>
+      </ViewTransition>
+    );
+  }
 
   /* Slides in and out (gmt-hive.css, "Rail and transcript view transitions").
      Only animates for updates inside `startTransition` — the host's
@@ -82,10 +134,14 @@ export function WidgetRail({
       exit="gmt-rail-out"
       default="none"
     >
-      <aside className="gmt-hive-rail" aria-label="Widget panel">
+      <aside className="gmt-hive-rail" id={railId} aria-label="Widget panel">
         <Artifact className="gmt-hive-artifact">
           <ArtifactHeader className="gmt-hive-artifact-header">
-            <ArtifactTitle className="gmt-hive-artifact-title">
+            <ArtifactTitle
+              ref={titleRef}
+              tabIndex={-1}
+              className="gmt-hive-artifact-title"
+            >
               {widget.entry.title}
             </ArtifactTitle>
             <ArtifactActions>

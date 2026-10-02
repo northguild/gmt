@@ -1,0 +1,227 @@
+/*
+ * Departure Board widget (TRAN-57).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, chips and the `.gmt-handle` grip in gmt-form-controls.css; the chart
+ * surface, tick row, chip, gate recipe and closed hatch in
+ * gmt-cutoff-widgets.css; the family hatch, the result plates and the naive
+ * outline in gmt-punctuality-widgets.css. This sheet draws the rail: a lit
+ * glass line with a glowing tick for each departure, the service window, the
+ * connection bar, and the made and naive departures.
+ *
+ * The made departure is the family's gate; the naive one a hollow dashed
+ * marker. The start of a service window is a closed edge, the end a dashed open
+ * one, and the time past it carries the closed hatch. Each says so in words as
+ * well, on an opaque chip. Nothing here is a success or an error hue; amber is
+ * the sentinel's alone; tokens only.
+ */
+
+.gmt-dep-stage {
+  /* Half a handle plus its border, so the handle at either end stays inside the
+     frame; the rail, the handle and the tick row share the inset. */
+  --dep-inset: calc(var(--gmt-handle-w) / 2 + 2px);
+  --dep-window-h: 2.6rem;
+  position: relative;
+  height: 10rem;
+  margin-inline: var(--dep-inset);
+}
+
+.gmt-dep-ticks {
+  margin-inline: var(--dep-inset);
+}
+
+.gmt-dep-rail {
+  position: absolute;
+  inset: 0;
+  color: var(--gmt-ice);
+}
+
+/* The rail: a lit glass track, a cyan wash over the glass tint, a brighter top
+   hairline and the inset highlight. */
+.gmt-dep-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  box-sizing: border-box;
+  translate: 0 -50%;
+  border-top: 1px solid var(--gmt-border-strong);
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      color(from var(--gmt-cyan) srgb r g b / 0.18),
+      color(from var(--gmt-cyan) srgb r g b / 0.18)
+    ),
+    var(--gmt-glass-tint);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.gmt-dep-stage > .gmt-handle {
+  color: var(--gmt-ice);
+}
+
+.gmt-dep-stage > .gmt-handle[hidden] {
+  display: none;
+}
+
+/* The service window: lit glass from `from` to `to`, and, past `to`, the
+   family's closed hatch (the word "to, excluded" rides on a chip). */
+.gmt-dep-window,
+.gmt-dep-beyond,
+.gmt-dep-run {
+  position: absolute;
+  top: 50%;
+  height: var(--dep-window-h);
+  box-sizing: border-box;
+  translate: 0 -50%;
+}
+
+.gmt-dep-window {
+  border-top: 1px solid var(--gmt-border-strong);
+  background: linear-gradient(
+    180deg,
+    color(from var(--gmt-cyan) srgb r g b / 0.32),
+    color(from var(--gmt-cyan) srgb r g b / 0.1)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+/* The window's two ends: from is a closed edge with a bevelled cap, to an open
+   dashed one with none. */
+.gmt-dep-bracket {
+  position: absolute;
+  top: 50%;
+  height: var(--dep-window-h);
+  box-sizing: border-box;
+  translate: -1px -50%;
+}
+
+.gmt-dep-bracket--from {
+  width: 2px;
+  background: var(--gmt-cyan-bright);
+  box-shadow: 0 0 6px var(--gmt-glow);
+}
+
+.gmt-dep-bracket--from::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  translate: -50% 0;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-cyan-bright);
+}
+
+.gmt-dep-bracket--to {
+  width: 0;
+  border-left: 2px dashed var(--gmt-cyan-bright);
+}
+
+/* A headway too short to tick: a fine vertical comb across the window. */
+.gmt-departure-board .gmt-dep-run.gmt-punct-hatch {
+  background-image: repeating-linear-gradient(
+    90deg,
+    color(from var(--gmt-cyan-bright) srgb r g b / 0.5) 0,
+    color(from var(--gmt-cyan-bright) srgb r g b / 0.5) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+}
+
+/* The connection bar: the time the arrival needs, hatched, with a solid right
+   edge at the earliest feasible departure. */
+.gmt-dep-conn {
+  --hatch: color(from var(--gmt-ice) srgb r g b / 0.5);
+  position: absolute;
+  top: 50%;
+  height: 1.1rem;
+  box-sizing: border-box;
+  translate: 0 -50%;
+  border: 1px solid var(--gmt-border-strong);
+  border-right: 2px solid var(--gmt-ice);
+}
+
+/* A departure: a glowing tick with a small bevelled head. */
+.gmt-dep-tick {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 1.5rem;
+  translate: -1px -50%;
+  background: var(--gmt-cyan-bright);
+  box-shadow: 0 0 6px var(--gmt-glow);
+}
+
+.gmt-dep-tick::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  translate: -50% 0;
+  border-radius: 2px;
+  corner-shape: bevel;
+  background: var(--gmt-cyan-bright);
+}
+
+/* The departure the library returned: the family's gate (`.gmt-cutoff-gate`),
+   restated here on the tick, taller, with its bevelled cap. */
+.gmt-dep-tick--made {
+  width: 3px;
+  height: 3.4rem;
+  translate: -1.5px -50%;
+  box-shadow:
+    0 0 6px var(--gmt-glow),
+    0 0 14px var(--gmt-glow);
+}
+
+.gmt-dep-tick--made::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+/* The naive departure: the family's hollow marker, a dashed ring on a surface
+   fill, no glow. */
+.gmt-dep-naive {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  translate: -50% -50%;
+  border: 2px dashed var(--gmt-ice-dim);
+  border-radius: 4px;
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+/* A label is a chip (`.gmt-cutoff-chip`), placed by the mount's measurement. */
+.gmt-dep-label {
+  position: absolute;
+  translate: var(--gmt-space-2) -50%;
+}
+
+.gmt-dep-label--placed {
+  translate: none;
+}
+
+/* A narrow widget (a phone, the /dox rail) has less room along the rail, so the
+   chips stack in more rows: the stage grows to hold them. */
+@container (max-width: 30rem) {
+  .gmt-dep-stage {
+    height: 13rem;
+  }
+}
+
+/* The narrowest rail has the fewest columns for chips: one more row of room. */
+@container (max-width: 21rem) {
+  .gmt-dep-stage {
+    height: 15rem;
+  }
+}

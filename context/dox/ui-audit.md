@@ -20,7 +20,7 @@ the phases below has started** (checked 2026-09-11). Read before restructuring c
 
 | #   | Phase                                                                                                                                            | Risk   | Δ lines        |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | -------------- |
-| P1  | Delete the six vendored AI Elements files nothing imports: `code-block`, `inline-citation`, `reasoning`, `sources`, `shimmer`, `tool`             | Low    | −1,412         |
+| P1  | Delete the seven vendored AI Elements files nothing imports: `code-block`, `inline-citation`, `reasoning`, `sources`, `shimmer`, `suggestion`, `tool`             | Low    | −1,412         |
 | P2  | Prune `ai-elements/prompt-input.tsx` (1,483 lines) to its five used exports, **keeping the deferred `form.reset()`** that preserves a refused send | Medium | −~1,000        |
 | P3  | Delete the `ui/` primitives that fall out: `badge`, `carousel`, `command`, `dialog`, `hover-card`, `scroll-area`, `select`, `tooltip` — re-trace importers first; `popover` is now used by the reset clock | Low    | −~800          |
 | P4  | Move the duplicated `options()` from `dst-inspector-mount.ts` and `converter-bench-mount.ts` into `widget-ui.ts`; drop the three unrendered widget imports from the generator's reference-page template | Low    | −20            |

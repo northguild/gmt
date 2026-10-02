@@ -296,6 +296,50 @@ export function matchPreset(state: DeliveryState): string {
   return hit ? hit.id : CUSTOM_PRESET_ID;
 }
 
+/** The two calls behind one leg, with what each was given and what it returned. */
+export interface LegCalls {
+  /** `transitTime`'s arguments: the instant the leg departs, and its duration. */
+  departure: string;
+  duration: string;
+  /** What `transitTime` returned: the arrival instant, or `""` for a sentinel. */
+  arrival: string;
+  /** `etaAtZone`'s second argument: the zone the leg lands in. */
+  zone: string;
+  /** What `etaAtZone` returned for that arrival, or `""` when there was none. */
+  local: string;
+}
+
+/**
+ * The two calls `scheduleDelivery` stands for, made for leg `k` on their own.
+ *
+ * A leg's arrival is `transitTime` of the instant it departs and its duration;
+ * the local time that arrival is shown at is `etaAtZone` of the instant and the
+ * leg's zone. `scheduleDelivery` chains those per leg, and its `legTimes[k]`
+ * `arrival` and `localArrival` are these two results — the tests hold the two
+ * to each other across every preset. This widget also calls `etaAtZone` for
+ * every other local time it draws.
+ *
+ * The departure is the instant `collectJourneyFacts` already found for the leg.
+ * A leg with none — the journey failed before it — passes its written text on
+ * as it stands, so the call shown is still a real call and its result a real
+ * sentinel. Nothing here is computed.
+ */
+export function legCalls(
+  facts: JourneyFacts,
+  legs: readonly ScheduleLeg[],
+  k: number,
+  lib: TransportLib,
+): LegCalls | null {
+  const leg = legs[k];
+  if (!leg) return null;
+  const departure = facts.departures[k] ?? leg.departure ?? "";
+  const duration = leg.duration;
+  const zone = leg.timeZone;
+  const arrival = lib.transitTime(departure, duration);
+  const local = lib.etaAtZone(arrival, zone);
+  return { departure, duration, arrival, zone, local };
+}
+
 /** `legObject` for legs `0..legCount-1`. */
 export function legsOf(state: DeliveryState): ScheduleLeg[] {
   const n = Number.parseInt(state.legCount, 10) || 0;

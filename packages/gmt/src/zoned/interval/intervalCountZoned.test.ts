@@ -498,3 +498,27 @@ describe("intervalCountZoned across the 1844 date-line crossings (zoned.E)", () 
     },
   );
 });
+
+// A zone with no clock change over a span far longer than the "no further change" horizon
+// (three 366-day years past the later of the start and now). 4,000 Gregorian years are ten
+// 400-year cycles of 146,097 days: 1,460,970. 1970 to 5000 is 3,030 years with 735 leap days:
+// 1,106,685. The fixed-offset rows never search for a transition and give the same counts.
+describe("intervalCountZoned over thousands of years with no clock change", () => {
+  it.each`
+    start                                           | end                                             | unit      | expected
+    ${"2000-01-01T00:00:00+09:00[Asia/Tokyo]"}      | ${"6000-01-01T00:00:00+09:00[Asia/Tokyo]"}      | ${"day"}  | ${1460970}
+    ${"2000-01-01T00:00:00+09:00[+09:00]"}          | ${"6000-01-01T00:00:00+09:00[+09:00]"}          | ${"day"}  | ${1460970}
+    ${"2000-01-01T00:00:00+09:00[Asia/Tokyo]"}      | ${"6000-01-01T00:00:00+09:00[Asia/Tokyo]"}      | ${"year"} | ${4000}
+    ${"2000-01-01T00:00:00+05:30[Asia/Kolkata]"}    | ${"6000-01-01T00:00:00+05:30[Asia/Kolkata]"}    | ${"day"}  | ${1460970}
+    ${"2000-01-01T00:00:00+09:00[Etc/GMT-9]"}       | ${"6000-01-01T00:00:00+09:00[Etc/GMT-9]"}       | ${"day"}  | ${1460970}
+    ${"1970-01-01T00:00:00-07:00[America/Phoenix]"} | ${"5000-01-01T00:00:00-07:00[America/Phoenix]"} | ${"day"}  | ${1106685}
+    ${"1970-01-01T00:00:00-07:00[-07:00]"}          | ${"5000-01-01T00:00:00-07:00[-07:00]"}          | ${"day"}  | ${1106685}
+    ${"2000-01-01T00:00:00+00:00[UTC]"}             | ${"6000-01-01T00:00:00+00:00[UTC]"}             | ${"day"}  | ${1460970}
+  `(
+    "counts $expected $unit units from $start to $end",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+    10_000,
+  );
+});

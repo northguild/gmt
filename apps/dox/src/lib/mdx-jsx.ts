@@ -282,6 +282,18 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "Mistake", renderMistake);
   out = replaceElements(out, "Scenario", renderScenario);
 
+  // A tool page's layout: the key point, the intro, the widget and the trailing text, each in a
+  // named slot. On the page the key point is a titled aside naming its use case; here that title
+  // becomes a line of text so the takeaway survives as prose. The industry is not named here: it
+  // is the page's, stated under its title (`pageToMarkdown`). Run before the wrapper pass below,
+  // which is what unwraps the `<Fragment slot>` children this leaves in place.
+  out = replaceElements(
+    out,
+    "ToolLayout",
+    (props, children) =>
+      `\n**Key point${props.useCase ? ` — ${props.useCase}` : ""}**\n${children}`,
+  );
+
   for (const wrapper of [
     "GridSection",
     "ChartContainer",
@@ -311,7 +323,14 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
 
   // Decorative or interactive, with no prose of their own: a globe, a scroll animation, and the
-  // three live widgets whose surrounding text already states what they demonstrate.
+  // live widgets, whose surrounding text already states what they demonstrate.
+  //
+  // Every widget, not the three this list used to hold. The other thirteen, and the two the Zone
+  // Planner and Zoned Earth pages mount, were never listed, so each `/tools/*.md` shipped its
+  // widget as a raw tag — `<BillingDeadlines fullbleed />` and fourteen like it. Nothing caught
+  // it because the gate that should have (`scripts/llms.test.ts`, "no built text surface carries a
+  // raw component tag") read only the top level of `dist`. That gate is recursive now, so a
+  // widget added to a page and not to this list fails the build's tests instead of shipping.
   for (const dropped of [
     "TimezoneMap",
     "PlaygroundForm",
@@ -320,6 +339,21 @@ export function renderMdxComponents(body: string): string {
     "IntervalVisualizer",
     "DstInspector",
     "ConverterBench",
+    "BillingDeadlines",
+    "ConnectionChecker",
+    "CrossingClock",
+    "CutoffCountdown",
+    "CutoffRuler",
+    "CutoffStack",
+    "DeliveryScheduler",
+    "DepartureBoard",
+    "DwellLedger",
+    "EtaDrift",
+    "FreeTimeLedger",
+    "PunctualityBoard",
+    "TimetableReader",
+    "Globe",
+    "MultiZoneScrubber",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

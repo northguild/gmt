@@ -11,9 +11,18 @@ import { parseInstantNanoseconds } from "../../internal";
  *
  * - Requires an offset designator (`Z`, `±HH:MM`); a bracketed IANA zone may follow, but a
  *   bracket alone is not enough.
- * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
- *   ignored: the offset alone fixes the instant, and a zone that does not exist or disagrees
- *   with the offset is not checked.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so a zoned string Temporal wrote is read back as
+ *   the instant it was written for, at the first and last instants of the range too, where the
+ *   written offset's own reading can fall just outside it
+ *   (`-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant). One exception, which
+ *   is Temporal's own: a wall time repeated inside a sub-minute offset change, written with a
+ *   minute-rounded offset, reads as its first pass (for example `1952-10-15T23:59:59-11:20[Pacific/Niue]`,
+ *   where the zone moved from −11:19:40 to −11:20:00, is the pass at −11:19:40). Otherwise the bracket is not checked: a
+ *   zone that does not exist, or that disagrees with the offset, changes nothing. Validity never depends
+ *   on the bracket.
  * - ISO 8601 extended format before any annotation: `<date>T<time>`, then
  *   `Z` or `±HH:MM[:SS[.fraction]]`. Basic format, a space or lower-case `t` separator, a
  *   lower-case `z` and an hour-only time or offset return `false`, although

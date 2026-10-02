@@ -33,7 +33,7 @@ Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _c
 
 | Your question                                                                   | Function                               | Scope                                                |
 | ------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------- |
-| Does this zone observe DST at all?                                              | `hasDaylightSaving(timeZone)`          | Zone-level, no instant                               |
+| Does this zone observe DST at this instant, or now?                             | `hasDaylightSaving(timeZone, { at })`  | Zone-level, judged from a reference instant          |
 | Where do this zone's transitions fall?                                          | `getDstTransitions(timeZone, year)`    | Enumerates instants                                  |
 | Is _this particular instant_ currently in DST?                                  | `isInDaylightSaving(value)`            | A single zoned value                                 |
 | Is _this particular wall time_ ambiguous or nonexistent?                        | `classifyLocal(local, timeZone)`       | A single plain datetime, asked _before_ construction |
@@ -41,7 +41,16 @@ Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _c
 
 `classifyLocal` is the one to reach for when the right answer is "don't resolve this at all". Every other row on this list either describes a zone or describes a value that has already been built; `classifyLocal` answers the question while you still have the option of refusing. It returns `"unique"`, `"ambiguous"` or `"nonexistent"` — the vocabulary the rest of this doc uses — so a demurrage clock, a medication window or a duty limit can route the case to a human instead of silently accepting one of two instants an hour apart.
 
-`isInDaylightSaving` compares a zoned value's own offset against its timeZone's standard (non-DST) offset for that same year — the smaller of the offsets a Jan 15 and a Jul 15 reference point attain, since DST always shifts a zone's clocks forward relative to its own standard time, in every hemisphere:
+`isInDaylightSaving` and `hasDaylightSaving` apply one rule, read from the zone's own clock changes in the runtime's time zone data. It is GMT's own definition, not the tz database's daylight flag: no JavaScript API exposes that flag, and it cannot be worked out from offsets.
+
+- **The rule.** Daylight time runs from a forward change of the clocks to the backward change that undoes it: the next backward change of the same size not already undoing a later advance, less than 365 days on.
+- **A forward change never undone, or undone 365 days or more later, is a change of standard time.** `Europe/Istanbul` has been on standard time since its last advance in March 2016.
+- **The higher of two alternating offsets is the daylight one.** `Europe/Dublin` is in daylight time in summer and `Africa/Casablanca` at `+01:00`. That is the tz database's rearguard form; its main form names Dublin's winter and Casablanca's Ramadan weeks as daylight time, with a negative save.
+- **Read as standard time, because the offsets do not show otherwise:** the last summer before a zone kept its daylight offset for good (Istanbul, March to September 2016); a daylight period held 365 days or longer (`America/Santiago`, 2014 to 2016); a daylight period that began, ended or was interrupted by a move of standard time, so that the offset changes part-way through and the rest, or all, of it is not paired (`Asia/Tomsk` 2002, `Asia/Jerusalem` 1948); and one whose end is past the last instant Temporal can represent.
+- **Read as daylight time:** a move of standard time reversed by the same amount less than 365 days later.
+- **The answer for a past instant can change** when the runtime's time zone data learns that a zone stopped changing its clocks.
+
+`hasDaylightSaving(timeZone, { at })` is true when the zone is in daylight time at `at`, or a daylight period begins less than 365 days after it. Without `at` it reads the current instant.
 
 ```typescript
 import { isInDaylightSaving } from "@northguild/gmt/zoned";
@@ -52,13 +61,28 @@ isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
 isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]");
 // false
 
-// Southern-hemisphere DST spans the new year — one of the two reference
-// points still falls in standard time and the other in DST either way.
+// Southern-hemisphere DST spans the new year.
 isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]");
 // true
 
 isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
-// false — Asia/Tokyo has no DST, so this is always false
+// false — Asia/Tokyo has had no DST since 1951
+
+isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]");
+// false — the advance of March 2016 was never undone
+```
+
+```typescript
+import { hasDaylightSaving } from "@northguild/gmt/zoned";
+
+hasDaylightSaving("Australia/Sydney", { at: "2024-06-15T12:00:00Z" });
+// true — winter, and the next daylight period begins in October
+
+hasDaylightSaving("Europe/Istanbul", { at: "2015-06-15T12:00:00Z" });
+// true
+
+hasDaylightSaving("Europe/Istanbul", { at: "2016-06-15T12:00:00Z" });
+// false
 ```
 
 ## Which function do I actually need?

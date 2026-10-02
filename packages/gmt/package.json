@@ -35,10 +35,9 @@
     "dist",
     "LICENSE",
     "README.md",
-    "skills/gmt-basics",
-    "skills/gmt-arithmetic",
-    "skills/gmt-timezone",
-    "skills/gmt-integration"
+    "skills",
+    "!skills/_artifacts",
+    "!skills/contributor"
   ],
   "type": "module",
   "sideEffects": false,

@@ -11,6 +11,10 @@
  * Timeline — six aligned rows sharing one 0-100% scale
  * --------------------------------------------------------------------------- */
 
+.gmt-interval {
+  container-type: inline-size;
+}
+
 .gmt-interval-timeline {
   padding: var(--gmt-space-2) 0;
 }
@@ -82,53 +86,26 @@
   border-color: var(--gmt-signal-border);
 }
 
-.gmt-interval-handle {
-  position: absolute;
-  top: 50%;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--gmt-void);
-  border: 2px solid currentColor;
-  cursor: grab;
-  touch-action: none;
-  transition:
-    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
-    transform var(--gmt-duration-fast) var(--gmt-easing);
-}
-
-.gmt-interval-handle:first-child {
+/* The grip itself is the shared `.gmt-handle` (gmt-form-controls.css); its edge
+   reads currentColor, so each bar's colour carries through. */
+.gmt-interval-bar > .gmt-handle:first-child {
   left: 0;
 }
 
-.gmt-interval-handle:last-child {
+.gmt-interval-bar > .gmt-handle:last-child {
   left: 100%;
 }
 
-.gmt-interval-bar--a .gmt-interval-handle {
+.gmt-interval-bar--a > .gmt-handle {
   color: var(--gmt-cyan-ink);
 }
 
-.gmt-interval-bar--b .gmt-interval-handle {
+.gmt-interval-bar--b > .gmt-handle {
   color: var(--gmt-teal);
 }
 
-.gmt-interval-handle:active {
-  cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.15);
-}
-
-.gmt-interval-handle:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--gmt-void),
-    0 0 0 4px currentColor;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .gmt-interval-bar,
-  .gmt-interval-handle {
+  .gmt-interval-bar {
     transition: none;
   }
 }

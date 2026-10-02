@@ -83,6 +83,11 @@ export interface OffsetInstant {
  *   rounding it would put the pair 30 seconds from the event it describes. Such a zone's
  *   *string* still carries the rounded `-00:45`, because RFC 9557 caps a written offset at
  *   minutes; the bracketed zone is what resolves it, so the instant stays exact.
+ * - A bracketed zone is checked as `Temporal.ZonedDateTime.from` checks it, which also rejects
+ *   a local date of −271821-04-19. A zone west of Greenwich shows that date for the first hours
+ *   of the instant range, so a zoned string written there
+ *   (`-271821-04-19T23:59:00-00:01[Europe/London]`) returns null, although `isValidInstant`
+ *   accepts it. Pass the instant in `Z` form with `timeZone` instead.
  * - Returns null on invalid input, not a zero-offset pair — `+00:00` is a real offset.
  *
  * @param value ISO 8601 instant string, with an offset designator and optionally a bracketed zone
@@ -98,6 +103,8 @@ export interface OffsetInstant {
  * @example toOffsetInstant("1969-12-31T23:15:30-00:45[Africa/Monrovia]") // { instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" } — the zone, not the rounded offset, fixes the instant
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[-04:00]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — a bracketed offset is not a zone, so no timeZone field
  * @example toOffsetInstant("2024-07-15T12:00:00-05:00[America/New_York]") // null (offset contradicts the bracketed zone)
+ * @example toOffsetInstant("-271821-04-19T23:59:00-00:01[Europe/London]") // null (a bracketed zone on a local date before Temporal's date range)
+ * @example toOffsetInstant("-271821-04-20T00:00:15Z", "Europe/London") // { instant: "-271821-04-20T00:00:15Z", offset: "-00:01:15", timeZone: "Europe/London" }
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — an elective annotation is ignored
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[!foo=bar]") // null (an unknown critical annotation)
  * @example toOffsetInstant("2024-07-15T12:00:00") // null (no offset designator)
@@ -123,8 +130,8 @@ export function toOffsetInstant(
   }
 
   try {
-    // `parseInstantNanoseconds` reads the offset and ignores the bracket, so a self-
-    // contradictory string parses fine as an instant. `ZonedDateTime.from` is what checks
+    // `parseInstantNanoseconds` does not validate the bracket, so a self-contradictory string
+    // parses fine as an instant. `ZonedDateTime.from` is what checks
     // the two agree, and it runs even when `timeZone` overrides the bracketed zone.
     // Only a time zone annotation makes the string zoned: it is the first annotation, and the
     // only kind with no `=` (RFC 9557 §4.1). A calendar or elective annotation alone leaves an

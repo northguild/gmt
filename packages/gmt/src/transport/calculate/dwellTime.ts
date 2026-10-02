@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { countZonedLocalDates, zonedDateTimeFrom } from "../../internal";
+import {
+  countZonedLocalDates,
+  instantFrom,
+  zonedDateTimeFrom,
+} from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
@@ -64,12 +68,16 @@ function dwellZone(
  *   touched (`Pacific/Apia` skipped 2011-12-30); and a date the clock falls back into is still
  *   one date (`America/Goose_Bay` fell back from 00:01 on 7 November 2010 into the 6th).
  * - **The zone decides the count, so it has to be stated.** `targetZone` is used when given.
- *   Without it, the entry's bracketed IANA zone is used. As in `Temporal.Instant.from`, a
- *   bracketed zone is otherwise not read, so it is not validated either: the entry's is read
- *   (and must exist and agree with its offset) only when it supplies the dwell zone, because
- *   `targetZone` is omitted, and the exit's is never read. If the entry and exit are bare
- *   instants — `Z` or an offset — and no `targetZone` is given, the result is `null`: an
+ *   Without it, the entry's bracketed IANA zone is used. A bracketed zone is otherwise not
+ *   validated: the entry's must exist and agree with its offset only when it supplies the dwell
+ *   zone, because `targetZone` is omitted, and the exit's never supplies it. If the entry and
+ *   exit are bare instants — `Z` or an offset — and no `targetZone` is given, the result is `null`: an
  *   offset is not a zone (CORE-4), and a day count in an unstated locality would be a guess.
+ * - **The offset fixes each instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, on the entry and the exit alike. A zone that does
+ *   not exist, or that disagrees with the offset, changes nothing.
  * - `enter` and `exit` are the two instants rendered in the dwell zone, so a charging record
  *   shows the local times the terminal's own clock showed.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
@@ -114,8 +122,8 @@ export function dwellTime(
       return null;
     }
 
-    const entryInstant = Temporal.Instant.from(entry);
-    const exitInstant = Temporal.Instant.from(exit);
+    const entryInstant = instantFrom(entry);
+    const exitInstant = instantFrom(exit);
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
       return null;
     }

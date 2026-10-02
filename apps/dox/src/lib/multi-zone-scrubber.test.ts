@@ -5,6 +5,7 @@ import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
 import {
   decodeState,
   encodeState,
+  formatShift,
   nextTransition,
 } from "./multi-zone-scrubber";
 import { offsetAt, readZoneAt, readZoneNow } from "./zone-clock";
@@ -158,5 +159,19 @@ describe("nextTransition", () => {
   it("returns null when no pinned zone observes DST", () => {
     const from = ms("2026-01-01T00:00:00Z");
     expect(nextTransition(["Asia/Tokyo", "UTC"], from)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The shift slider: a `.gmt-range` whose chip reads the signed offset
+// ---------------------------------------------------------------------------
+
+describe("formatShift", () => {
+  it("words the slider's offset with its sign", () => {
+    expect(formatShift(0)).toBe("0 min");
+    expect(formatShift(75)).toBe("+1 h 15 min");
+    expect(formatShift(120)).toBe("+2 h");
+    expect(formatShift(-45)).toBe("\u221245 min");
+    expect(formatShift(-36 * 60)).toBe("\u221236 h");
   });
 });

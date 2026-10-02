@@ -165,6 +165,39 @@ export function renderWidgetOutput(
 }
 
 // ---------------------------------------------------------------------------
+// The edge of the supported time range
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether `error` is a `RangeError`, however it was thrown. The polyfill throws
+ * one for an instant outside the supported range, and the library's own output
+ * can sit exactly on that edge: a zoned string near the minimum instant carries
+ * a minute-rounded offset, so parsing it back lands outside the range.
+ */
+export function isRangeError(error: unknown): boolean {
+  return error instanceof Error && error.name === "RangeError";
+}
+
+/** What a chart shows when its values are too near the limit of the time range
+ *  to be placed on an axis. The library's own results above it stay. */
+export const RANGE_EDGE_TEXT =
+  "⟨ NO SIGNAL — too near the limit of the supported time range to draw ⟩";
+
+/**
+ * Run a chart's drawing step. A `RangeError` from placing a value at the edge
+ * of the time range becomes the signal-lost notice in `el`, never an exception
+ * out of an input handler; anything else is a real bug and is rethrown.
+ */
+export function drawOrRangeEdge(el: HTMLElement, draw: () => void): void {
+  try {
+    draw();
+  } catch (error) {
+    if (!isRangeError(error)) throw error;
+    el.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Starlight-matching asides
 // ---------------------------------------------------------------------------
 
@@ -189,4 +222,142 @@ export function renderAside(
     <p class="starlight-aside__title" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="starlight-aside__icon">${icon}</svg>${title}</p>
     <div class="starlight-aside__content">${contentHtml}</div>
   </aside>`;
+}
+
+// ---------------------------------------------------------------------------
+// Control system — field labels, the range dragger, chip toggles
+// (styled by styles/gmt-form-controls.css)
+// ---------------------------------------------------------------------------
+
+/**
+ * The text of a `.gmt-label` inside a `.gmt-field-grid`: one span, so the
+ * grid's subgrid row holds exactly one box. `optional` adds the hint chip that
+ * replaces every "(optional)" in label text.
+ */
+export function labelTextHtml(
+  text: string,
+  opts?: { optional?: boolean },
+): string {
+  const chip = opts?.optional
+    ? ' <span class="gmt-hint-chip">optional</span>'
+    : "";
+  return `<span class="gmt-label-text">${escapeHtml(text)}${chip}</span>`;
+}
+
+export interface RangeFieldOptions {
+  /** `data-role` of the input. */
+  role: string;
+  /** `data-role` of the chip; defaults to `${role}-value`. */
+  chipRole?: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  /** Initial `aria-valuetext` and chip text. */
+  valueText: string;
+  ends?: readonly [string, string];
+  /** `aria-label`, for a range that is not inside a `<label>`. */
+  label?: string;
+  disabled?: boolean;
+}
+
+/** The fill position of a range as a unitless 0-100 number, clamped. */
+export function rangePct(value: number, min: number, max: number): number {
+  if (!(max > min)) return 0;
+  const pct = ((value - min) / (max - min)) * 100;
+  return Math.min(100, Math.max(0, pct));
+}
+
+/** Markup for the faceted-grip dragger; the fill is correct before hydration. */
+export function rangeFieldHtml(o: RangeFieldOptions): string {
+  const pct = rangePct(o.value, o.min, o.max);
+  const chipRole = o.chipRole ?? `${o.role}-value`;
+  const label = o.label ? ` aria-label="${escapeAttr(o.label)}"` : "";
+  const disabled = o.disabled ? " disabled" : "";
+  const ends = o.ends
+    ? `<span class="gmt-range-ends" aria-hidden="true"><span>${escapeHtml(o.ends[0])}</span><span>${escapeHtml(o.ends[1])}</span></span>`
+    : "";
+  return `<span class="gmt-range-field" style="--gmt-range-pct: ${pct}"><input class="gmt-range" type="range" data-role="${escapeAttr(o.role)}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}" aria-valuetext="${escapeAttr(o.valueText)}" style="--gmt-range-pct: ${pct}"${label}${disabled}><span class="gmt-range-chip" data-role="${escapeAttr(chipRole)}" aria-hidden="true">${escapeHtml(o.valueText)}</span>${ends}</span>`;
+}
+
+/**
+ * Sync a range's fill and chip to its current state: sets `--gmt-range-pct` on
+ * the input and its closest `.gmt-range-field`, and, when `valueText` is given,
+ * `aria-valuetext` and the chip's text. Call on every `input` event AND after
+ * every value/min/max/disabled change the code makes itself.
+ */
+export function syncRange(input: HTMLInputElement, valueText?: string): void {
+  const pct = String(
+    rangePct(Number(input.value), Number(input.min), Number(input.max)),
+  );
+  input.style.setProperty("--gmt-range-pct", pct);
+  const field = input.closest<HTMLElement>(".gmt-range-field");
+  field?.style.setProperty("--gmt-range-pct", pct);
+  if (valueText === undefined) return;
+  input.setAttribute("aria-valuetext", valueText);
+  const chip = field?.querySelector<HTMLElement>(".gmt-range-chip");
+  if (chip) chip.textContent = valueText;
+}
+
+/**
+ * The selects whose options are an open-ended list: a zone, a UTC offset, a day
+ * count. A seed can name a value the list was never built with (a zone the
+ * browser knows and the template's list lacks), and that value is real. Every
+ * other select is an enum (a preset, a roll rule, a mode, a basis) and only
+ * ever holds one of its own options.
+ */
+const OPEN_LIST_ROLE =
+  /^(?:zone|(?:[a-z]+-)+zone|zone-\d+|offset-\d+|days|convert-(?:source|target))$/;
+
+export function isOpenList(select: HTMLSelectElement): boolean {
+  return OPEN_LIST_ROLE.test(select.dataset["role"] ?? "");
+}
+
+/**
+ * Set a control's value from a seed (a permalink, a chat call, a preset).
+ *
+ * A `<select>` silently drops a value it has no option for, leaving the first
+ * option showing and every later read of `.value` wrong. For an open-ended list
+ * (`isOpenList`) an option for the value is appended first, labelled with the
+ * value itself (or `label`). For an enum select a value it does not offer is
+ * refused and the select keeps what it had, so a seed cannot invent a choice.
+ * An empty value is never appended; on a select with no blank option it leaves
+ * nothing selected (`selectedIndex` -1). Inputs just take the value.
+ */
+export function setControlValue(
+  el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null,
+  value: string,
+  label?: string,
+): void {
+  if (!el) return;
+  if (el.tagName === "SELECT") {
+    const select = el as HTMLSelectElement;
+    if (value !== "" && ![...select.options].some((o) => o.value === value)) {
+      if (!isOpenList(select)) return;
+      const opt = select.ownerDocument.createElement("option");
+      opt.value = value;
+      opt.textContent = label ?? value;
+      select.append(opt);
+    }
+  }
+  el.value = value;
+}
+
+/** A real checkbox / radio painted as a bevelled chip (`.gmt-chip-toggle`). */
+export function chipToggleHtml(o: {
+  type: "checkbox" | "radio";
+  role: string;
+  value: string;
+  label: string;
+  checked?: boolean;
+  name?: string;
+  switch?: boolean;
+}): string {
+  const name = o.name ? ` name="${escapeAttr(o.name)}"` : "";
+  const checked = o.checked ? " checked" : "";
+  const track = o.switch ? '<span class="gmt-chip-toggle-track"></span>' : "";
+  const cls = o.switch
+    ? "gmt-chip-toggle gmt-chip-toggle--switch"
+    : "gmt-chip-toggle";
+  return `<label class="${cls}"><input type="${o.type}"${name} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
 }

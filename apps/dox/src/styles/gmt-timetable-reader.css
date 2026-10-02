@@ -4,41 +4,15 @@
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
  * labels/inputs/selects in gmt-form-controls.css; the leg fieldset, verdict
  * line and reason-aside spacing in gmt-transport-widgets.css. This sheet
- * restyles the row fields and draws the rows table.
+ * draws the rows table.
  *
  * Badges are text with an outline, never colour alone, and never amber —
  * "twice" and "skipped" are readings of a real instant, not invalid input.
  */
 
-/* The row fields: the printed departure first, at a double share, so a
-   written offset such as -05:00 never crowds it. Same shape as the top
-   Printed in / Run time / Arrives in row. */
-.gmt-timetable-fields > .gmt-label {
-  flex: 1 1 10rem;
-  min-width: 0;
-}
-
-.gmt-timetable-fields > .gmt-label:first-child {
-  flex: 2 1 20rem;
-}
-
-.gmt-timetable-fields .gmt-input,
-.gmt-timetable-fields .gmt-select {
-  width: 100%;
-}
-
-@container (max-width: 30rem) {
-  .gmt-timetable-fields {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .gmt-timetable-fields > .gmt-label,
-  .gmt-timetable-fields > .gmt-label:first-child {
-    flex: 1 1 auto;
-    width: 100%;
-  }
-}
+/* The row fields are field grids (gmt-form-controls.css): the printed
+   departure is `gmt-field-wide`, so a written offset such as -05:00 never
+   crowds it. */
 
 /* The rows table — same recipe as the DST Inspector's transition table. */
 .gmt-timetable-rows {
@@ -67,7 +41,9 @@
   text-align: left;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border-bottom: 2px solid var(--gmt-border);
-  color: var(--gmt-ice-dim);
+  /* --gmt-ice-dim measured 6.95:1 here in dark mode, under the 7:1 body-text
+     target; the header is quiet enough from its size, case and weight. */
+  color: var(--gmt-ice);
   font-weight: 600;
   font-size: var(--gmt-text-xs);
   text-transform: uppercase;

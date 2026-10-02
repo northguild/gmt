@@ -181,9 +181,16 @@ function snapMinutesFor(spanMs: number): number {
    clock time within a day. The year case must render "Jan 2024" / "Jul" /
    "Dec" — those were hard-coded in the template and are pinned by tests. */
 function formatTick(ms: number, spanMs: number, withYear: boolean): string {
-  const zdt = Temporal.Instant.fromEpochMilliseconds(
-    Math.round(ms),
-  ).toZonedDateTimeISO(ZONE);
+  let zdt: Temporal.ZonedDateTime;
+  try {
+    zdt = Temporal.Instant.fromEpochMilliseconds(
+      Math.round(ms),
+    ).toZonedDateTimeISO(ZONE);
+  } catch {
+    // Past the supported range there is no date to print; an empty tick is
+    // honest, a thrown error out of an input handler is not.
+    return "";
+  }
   if (spanMs >= 60 * DAY_MS) {
     const month = MONTH_NAMES[zdt.month - 1]!;
     return withYear ? `${month} ${zdt.year}` : month;
@@ -253,6 +260,9 @@ export function createTimelineScale(
 /** The presets' canvas, and the widget's default. */
 export const FIXED_YEAR_SCALE = createTimelineScale(START_MS, END_MS);
 
+/** The latest and earliest instants Temporal represents, in epoch milliseconds. */
+const MAX_INSTANT_MS = 8.64e15;
+
 /** Breathing room each side of fitted data, so handles are draggable. */
 const FIT_PADDING = 0.1;
 
@@ -279,7 +289,13 @@ export function fitTimelineScale(
   const rawSpan = max - min;
   // Four identical instants still need a canvas with width.
   const pad = rawSpan === 0 ? 30 * MINUTE_MS : rawSpan * FIT_PADDING;
-  return createTimelineScale(min - pad, max + pad);
+  /* Values near the ends of the supported range would be padded past them, and
+     a canvas with an unrepresentable end throws on every tick label until the
+     next fit. Clamp the padding to the range. */
+  return createTimelineScale(
+    Math.max(-MAX_INSTANT_MS, min - pad),
+    Math.min(MAX_INSTANT_MS, max + pad),
+  );
 }
 
 // ---------------------------------------------------------------------------

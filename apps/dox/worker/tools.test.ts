@@ -76,6 +76,21 @@ describe("worker tool execute", () => {
     ).toBe(false);
   });
 
+  it("validates the planner's zones", async () => {
+    expect(
+      (
+        await run("showZonePlanner", {
+          zones: ["America/New_York", "Asia/Tokyo"],
+        })
+      ).ok,
+    ).toBe(true);
+    const rejected = await run("showZonePlanner", {
+      zones: ["America/New_York", "Fake/Zone"],
+    });
+    expect(rejected.ok).toBe(false);
+    expect(rejected.note).toContain("Fake/Zone");
+  });
+
   it("does no I/O and no model call — execute is synchronous work only", () => {
     // The premise of "costs no extra latency and no extra quota". If a tool
     // ever needs to await something, that claim has to be re-argued.

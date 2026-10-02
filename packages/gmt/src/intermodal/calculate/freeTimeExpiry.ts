@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
+  instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   walkFreeTime,
@@ -28,8 +28,9 @@ export interface FreeTime {
  * the free time allowed and the dates it starts and ends.
  *
  * - **Days are the terminal's local days.** `clockStart` is an instant (`Z`, an offset, or a
- *   bracketed zone, of which only the instant is read); its local date in `options.timeZone` is
- *   the event day. A container discharged at 23:00 has used a free day by 00:01 under
+ *   bracketed zone, of which only the instant is read, a minute-rounded offset as the zone's
+ *   real one, as `isValidInstant` describes); its local date in `options.timeZone` is the
+ *   event day. A container discharged at 23:00 has used a free day by 00:01 under
  *   `firstDay: "eventDay"`. Day boundaries are the zone's real ones, as `floorToZone` and
  *   `dwellTime` find them: a 23- or 25-hour day is one day, a date the zone deleted is never a
  *   free day, and a fall-back that re-enters an earlier date never moves the count backwards.
@@ -84,9 +85,7 @@ export function freeTimeExpiry(
       return null;
     }
 
-    const start = Temporal.Instant.from(clockStart).toZonedDateTimeISO(
-      terms.timeZone,
-    );
+    const start = instantFrom(clockStart).toZonedDateTimeISO(terms.timeZone);
     const ledger = walkFreeTime(start, allowed, terms);
     if (ledger === null) {
       return null;

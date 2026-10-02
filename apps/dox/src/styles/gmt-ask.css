@@ -166,7 +166,10 @@
 .gmt-ask-response blockquote {
   margin: var(--gmt-space-4) 0;
   padding: var(--gmt-space-2) var(--gmt-space-4);
-  border-left: 2px solid var(--gmt-border-strong);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
   color: var(--gmt-ice-dim);
 }
 

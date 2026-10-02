@@ -377,3 +377,106 @@ describe("MountedWidget", () => {
     );
   });
 });
+
+describe("MountedWidget height easing", () => {
+  /** Records what the shared observer is told to watch. */
+  class FakeObserver {
+    static observed = new Set<Element>();
+    static disconnects = 0;
+    observe(el: Element): void {
+      FakeObserver.observed.add(el);
+    }
+    unobserve(el: Element): void {
+      FakeObserver.observed.delete(el);
+    }
+    disconnect(): void {
+      FakeObserver.observed.clear();
+      FakeObserver.disconnects += 1;
+    }
+  }
+
+  beforeEach(() => {
+    FakeObserver.observed = new Set();
+    FakeObserver.disconnects = 0;
+    vi.stubGlobal("ResizeObserver", FakeObserver);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("wraps the host in a .gmt-grow box", async () => {
+    const { entry, log } = spyEntry();
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    await waitFor(() => expect(log).toContain("wired"));
+
+    const host = document.querySelector(".gmt-hive-widget-host");
+    const outer = host?.parentElement;
+    expect(outer?.classList.contains("gmt-grow")).toBe(true);
+    expect(outer?.children).toHaveLength(1);
+    expect(FakeObserver.observed.has(host as Element)).toBe(true);
+  });
+
+  it("wraps the widget's result sections the way a tool page does", async () => {
+    const { entry, log } = spyEntry({
+      load: async () => ({
+        renderTemplate: () =>
+          `<div class="gmt-widget"><div class="gmt-widget-card">` +
+          `<div class="gmt-widget-section"><h4>1</h4></div>` +
+          `<div class="gmt-widget-section"><h4>2</h4></div>` +
+          `</div></div>`,
+        mount: async () => {
+          log.push("wired");
+          return { destroy: () => {} };
+        },
+      }),
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    await waitFor(() => expect(log).toContain("wired"));
+
+    const sections = document.querySelectorAll(".gmt-widget-section");
+    expect(sections[0]?.classList.contains("gmt-grow")).toBe(false);
+    expect(sections[1]?.classList.contains("gmt-grow")).toBe(true);
+  });
+
+  it("stops observing on unmount and leaves no inline height", async () => {
+    const { entry, log } = spyEntry();
+    const { unmount } = render(
+      <MountedWidget entry={entry} args={{}} idPrefix="t" />,
+    );
+    await waitFor(() => expect(log).toContain("wired"));
+    const outer = document.querySelector(".gmt-hive-widget-host")!
+      .parentElement as HTMLElement;
+    outer.style.height = "120px";
+    outer.setAttribute("data-growing", "");
+
+    unmount();
+
+    expect(FakeObserver.observed.size).toBe(0);
+    expect(FakeObserver.disconnects).toBeGreaterThan(0);
+    expect(outer.style.height).toBe("");
+    expect(outer.hasAttribute("data-growing")).toBe(false);
+  });
+
+  it("wraps and observes nothing without ResizeObserver", async () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+    const { entry, log } = spyEntry({
+      load: async () => ({
+        renderTemplate: () =>
+          `<div class="gmt-widget"><div class="gmt-widget-card">` +
+          `<div class="gmt-widget-section"><h4>1</h4></div>` +
+          `<div class="gmt-widget-section"><h4>2</h4></div>` +
+          `</div></div>`,
+        mount: async () => {
+          log.push("wired");
+          return { destroy: () => {} };
+        },
+      }),
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    await waitFor(() => expect(log).toContain("wired"));
+
+    expect(FakeObserver.observed.size).toBe(0);
+    expect(document.querySelector(".gmt-widget-section.gmt-grow")).toBeNull();
+    expect(document.querySelector(".gmt-grow-inner")).toBeNull();
+  });
+});

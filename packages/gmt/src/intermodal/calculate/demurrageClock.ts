@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isObject } from "../../internal";
+import { instantFrom, isObject } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { Interval } from "../../types";
 
@@ -208,10 +208,7 @@ function selectClock(
     return null;
   }
 
-  return Temporal.Instant.compare(
-    Temporal.Instant.from(start),
-    Temporal.Instant.from(end),
-  ) > 0
+  return Temporal.Instant.compare(instantFrom(start), instantFrom(end)) > 0
     ? null
     : { start, end };
 }

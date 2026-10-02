@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { localNoonBattleCases } from "../../test";
 import {
   mockTemporalDurationFromThrow,
+  mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../../test/mocks";
@@ -15,6 +16,7 @@ describe("transitTime", () => {
     ${"2024-06-15T10:00:00-04:00[America/New_York]"} | ${"PT0S"}                 | ${"2024-06-15T10:00:00-04:00[America/New_York]"}
     ${"2024-06-15T10:00:00Z"}                        | ${"PT36H"}                | ${"2024-06-16T22:00:00Z"}
     ${"2024-06-15T10:00:00Z[UTC]"}                   | ${"PT36H"}                | ${"2024-06-16T22:00:00+00:00[UTC]"}
+    ${"2024-06-15T10:00:00[America/New_York]"}       | ${"PT1H"}                 | ${"2024-06-15T11:00:00-04:00[America/New_York]"}
     ${"2024-06-15T10:00:00+09:00"}                   | ${"PT1H"}                 | ${"2024-06-15T11:00:00+09:00"}
     ${"2024-06-15T10:00:00.5Z"}                      | ${"PT0.25S"}              | ${"2024-06-15T10:00:00.75Z"}
     ${"2024-06-15T10:00:00Z"}                        | ${"PT1H30M15.123456789S"} | ${"2024-06-15T11:30:15.123456789Z"}
@@ -36,6 +38,9 @@ describe("transitTime", () => {
     ${"2024-04-06T12:00:00+11:00[Australia/Lord_Howe]"} | ${"PT24H"}  | ${"2024-04-07T11:30:00+10:30[Australia/Lord_Howe]"} | ${"half-hour fall-back"}
     ${"2024-04-06T12:00:00+13:45[Pacific/Chatham]"}     | ${"PT24H"}  | ${"2024-04-07T11:00:00+12:45[Pacific/Chatham]"}     | ${"quarter-hour zone, one-hour fall-back"}
     ${"2024-06-15T10:00:00-04:00[America/New_York]"}    | ${"P1DT2H"} | ${"2024-06-16T12:00:00-04:00[America/New_York]"}    | ${"mixed day and hour components"}
+    ${"2024-11-03T01:30:00[America/New_York]"}          | ${"PT1H"}   | ${"2024-11-03T01:30:00-05:00[America/New_York]"}    | ${"a repeated wall time without an offset reads as the earlier pass (TC39 compatible): 01:30 EDT plus an hour is 01:30 EST"}
+    ${"1883-11-18T12:00:00-04:56:02[America/New_York]"} | ${"PT1H"}   | ${"1883-11-18T12:56:02-05:00[America/New_York]"}    | ${"end of local mean time (-04:56:02) at 17:00Z: 16:56:02Z plus an hour is 12:56:02 EST"}
+    ${"1883-11-18T10:00:00-04:56:02[America/New_York]"} | ${"PT1H"}   | ${"1883-11-18T11:00:00-04:56[America/New_York]"}    | ${"a sub-minute zone offset is written rounded to the minute, as ZonedDateTime#toString writes it"}
   `(
     "adds exact elapsed time across $transition",
     ({ departure, duration, expected }) => {
@@ -82,6 +87,7 @@ describe("transitTime", () => {
     ${"2024-06-15T10:00:00Z"}                        | ${""}        | ${"empty duration"}
     ${""}                                            | ${"PT2H"}    | ${"empty departure"}
     ${"invalid"}                                     | ${"PT2H"}    | ${"garbage departure"}
+    ${"2024-06-15T10:00:00Z[UTC][u-ca=gregory]"}     | ${"PT2H"}    | ${"a zoned departure's calendar must be ISO"}
   `(
     "returns the sentinel for $departure + $duration ($reason)",
     ({ departure, duration }) => {
@@ -141,6 +147,14 @@ describe("transitTime", () => {
   it("returns the sentinel when the instant parse throws", () => {
     mockTemporalInstantFromThrow();
     expect(transitTime("2024-06-15T10:00:00Z", "PT1H")).toBe("");
+  });
+
+  it("returns the sentinel when the epoch-nanosecond constructor throws", () => {
+    mockTemporalInstantFromEpochNanosecondsThrow();
+    expect(transitTime("2024-06-15T10:00:00Z", "PT1H")).toBe("");
+    expect(
+      transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "PT1H"),
+    ).toBe("");
   });
 
   it("returns the sentinel when the duration parse throws", () => {

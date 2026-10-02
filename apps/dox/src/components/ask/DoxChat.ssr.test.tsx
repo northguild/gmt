@@ -18,6 +18,7 @@
 /// <reference types="vitest/globals" />
 import { renderToString } from "react-dom/server";
 import { DoxChat } from "./DoxChat";
+import DoxPage from "./DoxPage";
 import type { BrainsInfo } from "./use-brains";
 
 const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
@@ -58,6 +59,17 @@ describe("DoxChat server-side render", () => {
     // The pre-hydration markup a reader sees first must be the real empty
     // state, not a blank shell.
     expect(html).toContain("chunks indexed");
+  });
+
+  it("server-renders the examples rail without touching a browser global", () => {
+    expect(typeof window).toBe("undefined");
+    let html = "";
+    expect(() => {
+      html = renderToString(<DoxPage />);
+    }).not.toThrow();
+    expect(html).toContain('aria-label="Examples"');
+    expect(html).toContain("gmt-hive-example");
+    expect(html).not.toContain("gmt-hive-starter");
   });
 
   it("survives a server render with budget props supplied", () => {

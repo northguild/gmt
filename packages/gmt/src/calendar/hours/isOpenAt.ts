@@ -18,8 +18,9 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
  *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns
  *   `false` when only a window with an ambiguous or nonexistent edge could be open at `isoString`.
- * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required, and a bracketed zone is
- *   ignored — the schedule's own zone reads the windows.
+ * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required, and a bracketed zone
+ *   never supplies the zone — the schedule's own zone reads the windows. Only its instant is
+ *   read, a minute-rounded offset as the bracketed zone's real one (see `isValidInstant`).
  * - Returns `false` on invalid input: an invalid instant or `OperatingSchedule`, or a
  *   `disambiguation` that is not one of the four values. Check the schedule with
  *   `operatingIntervals` when "closed" and "invalid" must be told apart.

@@ -10,15 +10,9 @@
  * empty answer turn left behind.
  */
 /// <reference types="vitest/globals" />
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { CHAT_STARTERS } from "~/lib/chat-constants";
+import userEvent from "@testing-library/user-event";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { DoxChat } from "./DoxChat";
 
@@ -71,17 +65,11 @@ describe("DoxChat while the Worker chooses a brain", () => {
       ),
     );
 
-    const onWidget = vi.fn();
-    render(<DoxChat onWidget={onWidget} />);
-    fireEvent.click(
-      screen.getByRole("button", { name: CHAT_STARTERS[0].text }),
-    );
-
-    // The seeded widget opens on the click, before any reply.
-    expect(onWidget).toHaveBeenCalledWith(
-      "starter-showGlobe",
-      "showGlobe",
-      CHAT_STARTERS[0].args,
+    render(<DoxChat />);
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByRole("textbox"),
+      "Show me what time it is in Tokyo right now.{Enter}",
     );
 
     await waitFor(() =>

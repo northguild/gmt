@@ -52,6 +52,12 @@ Full list: `context/dox/reference/verification-and-risks.md`.
   rendered pages, widgets included; `visual:diff` and `scripts/html-diff.mjs` after CSS or
   widget-markup changes; reduced-motion, reduced-transparency and high-contrast preferences gate
   what they claim.
+- **Card accents:** no card, callout, row or result block has a left-border-only accent. Grep the
+  changed styles for `border-left`, `border-inline-start`, left `inset` box-shadows and left
+  `::before` stripes, and confirm on screenshots. An accent edge must be a bottom border or part
+  of a full border.
+- **Readouts during a drag:** drag each handle across its full range and record the bounding
+  boxes of every readout card beside it. They must not move or resize, to the pixel.
 - **Chat:**
   - An out-of-corpus question is refused, not improvised.
   - A stubbed hallucinated route renders as plain text.

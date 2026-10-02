@@ -1,3 +1,4 @@
+import { industryLabels } from "./industry-tags";
 import { renderMdxComponents } from "./mdx-jsx";
 
 /**
@@ -186,14 +187,19 @@ export function stripMdx(
 
 /**
  * Wrap a page's title and body into a single Markdown string with an H1
- * heading.
+ * heading. `industries` is the page's raw frontmatter value: a page that has
+ * one gets the line its tags under the title say on the site.
  */
 export function pageToMarkdown({
   title,
   body,
+  industries,
 }: {
   title: string;
   body: string;
+  industries?: string;
 }): string {
-  return `# ${title}\n\n${body.trim()}\n`;
+  const labels = industryLabels(industries);
+  const tags = labels.length > 0 ? `Industry: ${labels.join(", ")}\n\n` : "";
+  return `# ${title}\n\n${tags}${body.trim()}\n`;
 }

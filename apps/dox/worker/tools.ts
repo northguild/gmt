@@ -51,12 +51,16 @@ import {
   showCutoffRulerInput,
   showCutoffStackInput,
   showDeliverySchedulerInput,
+  showDepartureBoardInput,
   showDstInspectorInput,
   showDwellLedgerInput,
+  showEtaDriftInput,
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showPunctualityBoardInput,
   showTimetableReaderInput,
+  showZonePlannerInput,
 } from "../src/lib/dox-tools";
 
 const docFor = (name: string) =>
@@ -276,6 +280,51 @@ export function buildWorkerTools(
               `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
             )
           : accept("cutoff-countdown");
+      },
+    }),
+
+    // Every argument is a time or a duration. An invalid one is the widget's
+    // sentinel to show, not something this runtime can reject in advance.
+    showPunctualityBoard: tool({
+      description: docFor("showPunctualityBoard"),
+      inputSchema: showPunctualityBoardInput,
+      execute: () => accept("punctuality-board"),
+    }),
+
+    showEtaDrift: tool({
+      description: docFor("showEtaDrift"),
+      inputSchema: showEtaDriftInput,
+      execute: () => accept("eta-drift"),
+    }),
+
+    // Every zone is a pinned clock. `time` is a UTC instant; the client checks it
+    // and the zones against the planner's own coordinate table.
+    showZonePlanner: tool({
+      description: docFor("showZonePlanner"),
+      inputSchema: showZonePlannerInput,
+      execute: ({ zones }) => {
+        const unknown = unknownZones(Array.isArray(zones) ? zones : []);
+        return unknown.length > 0
+          ? reject(
+              "zone-planner",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("zone-planner");
+      },
+    }),
+
+    // The one zone is the onward leg's destination, and it is optional.
+    showDepartureBoard: tool({
+      description: docFor("showDepartureBoard"),
+      inputSchema: showDepartureBoardInput,
+      execute: ({ onwardZone }) => {
+        const unknown = unknownZones(onwardZone ? [onwardZone] : []);
+        return unknown.length > 0
+          ? reject(
+              "departure-board",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("departure-board");
       },
     }),
   };

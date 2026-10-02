@@ -39,11 +39,16 @@ import {
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  drawOrRangeEdge,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
+  rangeFieldHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  syncRange,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -59,6 +64,11 @@ function presetOptions(presetId: string): string {
   );
 }
 
+/** The handling slider's chip and `aria-valuetext`: "1 minute", "45 minutes". */
+function minutesText(n: number): string {
+  return `${n} ${n === 1 ? "minute" : "minutes"}`;
+}
+
 export function renderConnectionCheckerTemplate(
   args: ConnectionCheckerArgs = {},
 ): string {
@@ -70,40 +80,53 @@ export function renderConnectionCheckerTemplate(
   const preset = CONNECTION_PRESETS.find((p) => p.id === presetId);
   const handling = Number.parseInt(state.handlingMinutes, 10) || 0;
 
-  const text = (role: string, label: string, value: string) =>
-    `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
+  const text = (
+    role: string,
+    label: string,
+    value: string,
+    opts: { optional?: boolean; wide?: boolean } = {},
+  ) =>
+    `<label class="gmt-label${opts.wide ? " gmt-field-wide" : ""}">${labelTextHtml(label, opts)}` +
     `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
 
   return (
-    `<div class="gmt-connection gmt-widget">` +
+    `<div class="gmt-connection gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. The handoff</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls gmt-connection-fields">` +
-    text("inbound-departure", "Inbound departs", state.inboundDeparture) +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid gmt-connection-fields">` +
+    text("inbound-departure", "Inbound departs", state.inboundDeparture, {
+      wide: true,
+    }) +
     text("inbound-duration", "Inbound duration", state.inboundDuration) +
-    `<label class="gmt-label"><span>Arrives at the port in</span>` +
+    `<label class="gmt-label">${labelTextHtml("Arrives at the port in")}` +
     `<select class="gmt-select" data-role="port-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.portZone)}</select></label>` +
     `</div>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Handling time (minimum connect time)</span>` +
-    `<input class="gmt-range" data-role="handling" type="range" min="0" max="240" step="1" value="${handling}">` +
-    `<output data-role="handling-value"></output></label>` +
-    `</div>` +
+    `<label class="gmt-label">${labelTextHtml("Handling time (minimum connect time)")}` +
+    rangeFieldHtml({
+      role: "handling",
+      min: 0,
+      max: 240,
+      step: 1,
+      value: handling,
+      valueText: minutesText(handling),
+      ends: ["0 min", "240 min"],
+    }) +
+    `</label>` +
     `<p class="gmt-widget-hint">The onward leg's run time does not change whether the connection is made.</p>` +
-    `<div class="gmt-widget-controls gmt-connection-fields">` +
-    text("onward-departure", "Onward departs", state.onwardDeparture) +
-    text(
-      "onward-duration",
-      "Onward duration (optional)",
-      state.onwardDuration,
-    ) +
-    `<label class="gmt-label"><span>Onward arrives in (optional)</span>` +
+    `<div class="gmt-field-grid gmt-connection-fields">` +
+    text("onward-departure", "Onward departs", state.onwardDeparture, {
+      wide: true,
+    }) +
+    text("onward-duration", "Onward duration", state.onwardDuration, {
+      optional: true,
+    }) +
+    `<label class="gmt-label">${labelTextHtml("Onward arrives in", { optional: true })}` +
     `<select class="gmt-select" data-role="onward-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.onwardZone, "(the port's zone)")}</select></label>` +
     `</div>` +
     `</div>` +
@@ -186,10 +209,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
     const result = lib.scheduleDelivery(legs);
     const handlingMinutes = Number.parseInt(s.handlingMinutes, 10) || 0;
 
-    const handlingValue = q("handling-value");
-    if (handlingValue) {
-      handlingValue.textContent = `PT${handlingMinutes}M (${handlingMinutes} min)`;
-    }
+    syncRange(handlingEl!, minutesText(handlingMinutes));
 
     const [callHtml, callPlain] = scheduleCallSource(legs);
     renderCallLine(
@@ -242,7 +262,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
 
     const strip = q("handoff-strip");
     const summary = q("handoff-summary");
-    if (strip) renderStrip(strip, legs, v, lib);
+    if (strip) drawOrRangeEdge(strip, () => renderStrip(strip, legs, v, lib));
     if (summary) {
       summary.textContent = naive
         ? `Arrival, then handling to ready ${v.readyLocal ?? ""}, then the onward departure ${v.departureLocal ?? ""}.`
@@ -352,7 +372,7 @@ function applyArgs(root: HTMLElement, args: ConnectionCheckerArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("inbound-departure", s.inboundDeparture);
   set("inbound-duration", s.inboundDuration);

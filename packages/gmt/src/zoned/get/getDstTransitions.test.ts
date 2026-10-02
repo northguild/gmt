@@ -151,15 +151,19 @@ describe("getDstTransitions", () => {
   });
 
   it("returns [] when the transition scan exhausts its bound without leaving the year", () => {
+    // A fixed offset has no transitions and GMT asks Temporal directly for one, so a stub that
+    // always answers with a mid-year instant stands for a zone with more changes than the bound.
+    // The spy stays: `getDstTransitions` takes a zone id, not a zoned value, so a made-up zone
+    // cannot be handed to it, and no real zone has more than 20 changes in a year.
     const midYear = Temporal.ZonedDateTime.from(
-      "2024-06-15T12:00:00-04:00[America/New_York]",
+      "2024-06-15T12:00:00+05:00[+05:00]",
     );
     vi.spyOn(
       Temporal.ZonedDateTime.prototype,
       "getTimeZoneTransition",
     ).mockReturnValue(midYear);
 
-    expect(getDstTransitions("America/New_York", 2024)).toEqual([]);
+    expect(getDstTransitions("+05:00", 2024)).toEqual([]);
   });
 
   it("returns transitions with correctly chained offsets for all battle-test timeZones", () => {
@@ -222,5 +226,36 @@ describe("getDstTransitions across the 1844 date-line crossings (zoned.E)", () =
     ({ timeZone, year, expected }) => {
       expect(getDstTransitions(timeZone, year)).toEqual(expected);
     },
+  );
+
+  // Changes less than 14 days apart, and three offsets inside 14 days. Expected values from
+  // Node 26's native Temporal and `zdump -v` (tz 2026c).
+  it.each`
+    timeZone                       | year    | expected
+    ${"America/Boa_Vista"}         | ${2000} | ${[["2000-02-27T03:00:00Z", "-03:00", "-04:00"], ["2000-10-08T04:00:00Z", "-04:00", "-03:00"], ["2000-10-15T03:00:00Z", "-03:00", "-04:00"]]}
+    ${"America/Noronha"}           | ${2000} | ${[["2000-02-27T01:00:00Z", "-01:00", "-02:00"], ["2000-10-08T02:00:00Z", "-02:00", "-01:00"], ["2000-10-15T01:00:00Z", "-01:00", "-02:00"]]}
+    ${"America/Recife"}            | ${2000} | ${[["2000-02-27T02:00:00Z", "-02:00", "-03:00"], ["2000-10-08T03:00:00Z", "-03:00", "-02:00"], ["2000-10-15T02:00:00Z", "-02:00", "-03:00"]]}
+    ${"America/Fortaleza"}         | ${2000} | ${[["2000-02-27T02:00:00Z", "-02:00", "-03:00"], ["2000-10-08T03:00:00Z", "-03:00", "-02:00"], ["2000-10-22T02:00:00Z", "-02:00", "-03:00"]]}
+    ${"America/Maceio"}            | ${2000} | ${[["2000-02-27T02:00:00Z", "-02:00", "-03:00"], ["2000-10-08T03:00:00Z", "-03:00", "-02:00"], ["2000-10-22T02:00:00Z", "-02:00", "-03:00"]]}
+    ${"Africa/Tunis"}              | ${1943} | ${[["1943-03-29T01:00:00Z", "+01:00", "+02:00"], ["1943-04-17T00:00:00Z", "+02:00", "+01:00"], ["1943-04-25T01:00:00Z", "+01:00", "+02:00"], ["1943-10-04T00:00:00Z", "+02:00", "+01:00"]]}
+    ${"Europe/Tirane"}             | ${1943} | ${[["1943-03-29T01:00:00Z", "+01:00", "+02:00"], ["1943-04-10T01:00:00Z", "+02:00", "+01:00"]]}
+    ${"Europe/Vienna"}             | ${1945} | ${[["1945-04-02T01:00:00Z", "+01:00", "+02:00"], ["1945-04-12T01:00:00Z", "+02:00", "+01:00"]]}
+    ${"America/Argentina/Tucuman"} | ${2004} | ${[["2004-06-01T03:00:00Z", "-03:00", "-04:00"], ["2004-06-13T04:00:00Z", "-04:00", "-03:00"]]}
+    ${"Europe/Riga"}               | ${1944} | ${[["1944-04-03T01:00:00Z", "+01:00", "+02:00"], ["1944-10-02T01:00:00Z", "+02:00", "+01:00"], ["1944-10-12T23:00:00Z", "+01:00", "+03:00"]]}
+    ${"Europe/Simferopol"}         | ${1944} | ${[["1944-04-03T01:00:00Z", "+01:00", "+02:00"], ["1944-04-12T22:00:00Z", "+02:00", "+03:00"]]}
+  `(
+    "returns every change for $timeZone in $year, close pairs included",
+    ({ timeZone, year, expected }) => {
+      expect(getDstTransitions(timeZone, year)).toEqual(
+        (expected as string[][]).map(
+          ([instant, offsetBefore, offsetAfter]) => ({
+            instant,
+            offsetBefore,
+            offsetAfter,
+          }),
+        ),
+      );
+    },
+    10_000,
   );
 });

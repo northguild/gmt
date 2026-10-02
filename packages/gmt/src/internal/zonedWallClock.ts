@@ -2,8 +2,13 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { Disambiguation, Offset, Overflow } from "../types";
 import {
   MAX_EPOCH_NANOSECONDS,
+  MAX_ISO_EPOCH_DAYS,
   MIN_EPOCH_NANOSECONDS,
 } from "./epochNanoseconds";
+import {
+  isSecondsOffsetMatchCompatNeeded,
+  isTransitionSearchCompatNeeded,
+} from "./temporalCompat";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -46,6 +51,34 @@ import {
  *    `missedPreviousTransition`, GMT's own `startOfDayEpochNanoseconds`). Every later instant pays
  *    one bigint comparison and no `Intl` read.
  *
+ * 4. **A string offset written with seconds is matched by minutes** (`ToTemporalZonedDateTime`;
+ *    temporalCompat D12). TC39 matches a string's offset against the zone by minutes only when the
+ *    offset has no seconds part, and exactly otherwise. Polyfill 0.5.1 always matches by minutes,
+ *    so it accepts `1970-01-01T12:00-00:45:00[Africa/Monrovia]` (the zone stood at −00:44:30)
+ *    where the spec throws, and reads `1952-10-15T23:59:59-11:20:00[Pacific/Niue]` as the first
+ *    pass of that repeated second (−11:19:40) instead of the second (−11:20:00). Like defect 3
+ *    the polyfill returns a valid-looking value, so the recovery cannot wait for a throw:
+ *    `matchSecondsOffsetExactly` runs after the polyfill, only while the D12 probe fails, only
+ *    for a string whose offset has a seconds part, and only when the result's own offset is not
+ *    a whole number of minutes, and recomputes `InterpretISODateTimeOffset` with match-exactly.
+ *    Fixed on the polyfill's main branch by 23d1275 ("Normative: Require strict matching with a
+ *    precise ZonedDateTime offset"), in no published release yet.
+ *
+ * 5. **Two offset changes inside one 14-day search step** (`GetNamedTimeZoneNextTransition` /
+ *    `…PreviousTransition`; temporalCompat D13). Both searches sample the offset every 14 days and
+ *    bisect a step whose ends differ. A pair of changes that returns to the same offset inside one
+ *    step is skipped: `next` from 2000-10-01 in America/Boa_Vista misses 2000-10-08 and
+ *    2000-10-15, and `GetStartOfDay` for 2000-10-08, whose midnight that change skips, throws a
+ *    TypeError there and returns 2001-10-14 in America/Noronha. Three different offsets inside one
+ *    step make the bisection loop forever, its assertion being compiled out: `next` from
+ *    1944-04-15 in Europe/Riga never returns. A call cannot be tried and then recovered, so
+ *    while the D13 probe fails every transition search in a named zone is GMT's own
+ *    (`zonedTransitionSearch.ts`, a 5-day step under the tz database's closest pair), and a
+ *    start of day whose midnight is skipped is GMT's own `GetStartOfDay`. A midnight that exists
+ *    never reaches the search. The polyfill's main branch (a79c6a1, per-zone search windows,
+ *    in no release) fixes the zones it lists and stalls instead in Africa/El_Aaiun, April 1976,
+ *    whose 17-day window holds three offsets.
+ *
  * Every GMT wall clock → instant conversion goes through this file. Each helper calls the
  * polyfill first and returns its answer whenever it has one; only when the polyfill throws (or
  * returns a transition-less `null`) for a named, non-UTC zone near the range limits does it
@@ -58,7 +91,10 @@ import {
  * for defect 1, both 05ce7a3 and 95237e0 (05ce7a3 alone retires nothing, since the `zoned.A`
  * `min.*` probes still fail with it); for defect 2, an upstream fix that does not exist yet (see
  * `context/domination/js-temporal-polyfill-bugs.md` § B); for defect 3, a release containing
- * js-temporal/temporal-polyfill#372 (the `zoned.E` canary group; bugs document § E).
+ * js-temporal/temporal-polyfill#372 (the `zoned.E` canary group; bugs document § E); for
+ * defect 4, a release containing 23d1275 (the `D12` probe; bugs document § I); for defect 5, a
+ * release on which every `D13` probe passes, Africa/El_Aaiun included (a79c6a1 alone is not; bugs
+ * document § K).
  * `pnpm compat` reports when every probe of a group passes.
  * ---------------------------------------------------------------------------------------------
  */
@@ -81,8 +117,6 @@ export type CarriedOffset = "absent" | "out-of-range" | { nanoseconds: bigint };
 
 const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
 const NANOSECONDS_PER_MINUTE = 60_000_000_000n;
-/** TC39 `CheckISODaysRange`: a date may sit at most 10^8 days from the Unix epoch. */
-export const MAX_ISO_EPOCH_DAYS = 100_000_000;
 /**
  * Dates this many days from a range limit are the only ones either defect reaches: defect 1 needs
  * a wall clock within a day of the limit, defect 2 a transition within the scan's two-week step.
@@ -167,7 +201,7 @@ function clampEpoch(epochNanoseconds: bigint): bigint {
 }
 
 /** UTC offset in force at an instant, reading the nearest limit for an instant outside the range. */
-function offsetAt(timeZone: string, epochNanoseconds: bigint): bigint {
+export function offsetAt(timeZone: string, epochNanoseconds: bigint): bigint {
   return BigInt(
     new Temporal.ZonedDateTime(clampEpoch(epochNanoseconds), timeZone)
       .offsetNanoseconds,
@@ -303,7 +337,7 @@ export function epochNanosecondsFor(
  * The first instant at or after `low` whose offset is `offset`, given that `low` has a different
  * offset and `high` has `offset`: the transition between them, to the nanosecond.
  */
-function transitionBetween(
+export function transitionBetween(
   timeZone: string,
   low: bigint,
   high: bigint,
@@ -387,6 +421,61 @@ export function isBeforePolyfillTransitionSearch(
   );
 }
 
+/** True when no instant in `timeZone` has `date`'s midnight as its wall time (it is skipped). */
+function isMidnightSkipped(
+  timeZone: string,
+  date: Temporal.PlainDate,
+): boolean {
+  try {
+    return (
+      possibleEpochNanoseconds(
+        timeZone,
+        date.withCalendar("iso8601").toPlainDateTime(),
+      ).length === 0
+    );
+  } catch {
+    // Outside the representable range: the range-limit fallbacks decide.
+    return false;
+  }
+}
+
+/**
+ * True when the polyfill's `GetStartOfDay` cannot be trusted for this date in a named zone: it
+ * lies before the transition search floor (defect 3), or its midnight is skipped while the
+ * runtime's transition search can miss the change that skips it (defect 5). A midnight that exists
+ * never reaches that search, so the polyfill's answer stands for it.
+ */
+export function needsOwnStartOfDaySearch(
+  timeZone: string,
+  value: Temporal.PlainDate | Temporal.ZonedDateTime,
+): boolean {
+  if (isBeforePolyfillTransitionSearch(value)) return true;
+  if (!isTransitionSearchCompatNeeded()) return false;
+
+  return isMidnightSkipped(
+    timeZone,
+    value instanceof Temporal.ZonedDateTime ? value.toPlainDate() : value,
+  );
+}
+
+/**
+ * `needsOwnStartOfDaySearch` for a measure that also reads the next day's start (`hoursInDay`,
+ * rounding to the day).
+ */
+export function needsOwnDayBoundsSearch(
+  timeZone: string,
+  zoned: Temporal.ZonedDateTime,
+): boolean {
+  if (needsOwnStartOfDaySearch(timeZone, zoned)) return true;
+  if (!isTransitionSearchCompatNeeded()) return false;
+
+  try {
+    return isMidnightSkipped(timeZone, zoned.toPlainDate().add({ days: 1 }));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The first transition after `epochNanoseconds` in a named zone when it lies before the polyfill's
  * search floor, which `getTimeZoneTransition("next")` skips; null for any instant at or after the
@@ -432,7 +521,7 @@ export function missedPreviousTransition(
 }
 
 /** TC39 `RoundNumberToIncrement(value, 1 minute, "half-expand")`. */
-function roundToMinute(nanoseconds: bigint): bigint {
+export function roundToMinute(nanoseconds: bigint): bigint {
   const sign = nanoseconds < 0n ? -1n : 1n;
   const magnitude = nanoseconds * sign;
   const quotient = magnitude / NANOSECONDS_PER_MINUTE;
@@ -535,7 +624,12 @@ export function utcOffsetStringNanoseconds(offset: string): bigint {
   return -utcMidnight.epochNanoseconds;
 }
 
-/** The epoch nanoseconds of a zoned string near the range limits, or null when out of scope. */
+/**
+ * TC39 `ToTemporalZonedDateTime` for a zoned string in a named zone, from the wall clock and
+ * zone Temporal has already parsed: the epoch nanoseconds the string names. Used where the
+ * polyfill's own answer is unusable: near the range limits (defect 1) and for an offset written
+ * with seconds (defect 4).
+ */
 function stringEpochAtEdge(
   item: string,
   timeZone: string,
@@ -664,7 +758,7 @@ function dateOnlyBeforeTransitionSearch(
     return null;
   }
 
-  if (!isNamedTimeZone(timeZone) || !isBeforePolyfillTransitionSearch(date)) {
+  if (!isNamedTimeZone(timeZone) || !needsOwnStartOfDaySearch(timeZone, date)) {
     return null;
   }
   return new Temporal.ZonedDateTime(
@@ -675,11 +769,45 @@ function dateOnlyBeforeTransitionSearch(
 }
 
 /**
+ * The polyfill's result for a zoned string, or the TC39 result when the polyfill matched an
+ * offset written with seconds by minutes (defect 4, temporalCompat D12).
+ *
+ * Dormant unless the D12 probe fails. Then it acts only on a string whose offset has a seconds
+ * part, read with `offset: "reject"` or `"prefer"` (the two options that match the offset
+ * against the zone), whose result has a sub-minute offset: any other result was matched exactly,
+ * because an earlier candidate would have matched by rounding first. For those it recomputes
+ * `InterpretISODateTimeOffset` with match-exactly, which throws a `RangeError` under `"reject"`
+ * when no candidate has the written offset.
+ */
+function matchSecondsOffsetExactly(
+  item: string,
+  zoned: Temporal.ZonedDateTime,
+  options: ZonedFromOptions | undefined,
+): Temporal.ZonedDateTime {
+  if (
+    !UTC_OFFSET_WITH_SECONDS.test(item) ||
+    BigInt(zoned.offsetNanoseconds) % NANOSECONDS_PER_MINUTE === 0n ||
+    options?.offset === "use" ||
+    options?.offset === "ignore" ||
+    !isSecondsOffsetMatchCompatNeeded()
+  ) {
+    return zoned;
+  }
+
+  const wall = Temporal.PlainDateTime.from(item).withCalendar("iso8601");
+  const epoch = stringEpochAtEdge(item, zoned.timeZoneId, wall, options);
+  return epoch === zoned.epochNanoseconds
+    ? zoned
+    : new Temporal.ZonedDateTime(epoch, zoned.timeZoneId, zoned.calendarId);
+}
+
+/**
  * `Temporal.ZonedDateTime.from`, correct across the whole representable range.
  *
  * Returns the polyfill's result whenever it has one. When the polyfill throws for a named zone
  * within a month of either range limit, the TC39 result is recomputed (see the note at the top
- * of this file); every other failure re-throws the polyfill's own error.
+ * of this file); every other failure re-throws the polyfill's own error. A string whose offset
+ * is written with seconds is matched exactly, as TC39 requires (`matchSecondsOffsetExactly`).
  *
  * @param item RFC 9557 zoned string or ZonedDateTime-like property bag
  * @param options Temporal `disambiguation` / `offset` / `overflow`
@@ -698,7 +826,10 @@ export function zonedDateTimeFrom(
   }
 
   try {
-    return Temporal.ZonedDateTime.from(item, options);
+    const zoned = Temporal.ZonedDateTime.from(item, options);
+    return typeof item === "string"
+      ? matchSecondsOffsetExactly(item, zoned, options)
+      : zoned;
   } catch (error) {
     const recovered =
       typeof item === "string"

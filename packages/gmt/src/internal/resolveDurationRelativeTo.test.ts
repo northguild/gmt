@@ -128,11 +128,39 @@ describe("resolveDurationRelativeTo requires GMT's strict extended shape for eve
     ${"2024-10-03"}
     ${"2024-10-03T00:00"}
     ${"+002024-10-03T00:00:00.5"}
+  `("passes the strict extended $value through unchanged", ({ value }) => {
+    expect(resolveDurationRelativeTo(value)).toBe(value);
+  });
+
+  // A zoned string is read here (`zonedDateTimeFrom`), so its offset is matched as TC39
+  // `ToRelativeTemporalObject` matches it. Each spelling names midnight on 3 October 2024 in New
+  // York, which is at -04:00 in October: 04:00:00Z.
+  it.each`
+    value
     ${"2024-10-03T00:00:00-04:00[America/New_York]"}
     ${"2024-10-03T00:00[America/New_York]"}
     ${"2024-10-03T04:00:00Z[America/New_York]"}
     ${"2024-10-03T00:00:00-04:00[America/New_York][foo=bar]"}
-  `("passes the strict extended $value through unchanged", ({ value }) => {
-    expect(resolveDurationRelativeTo(value)).toBe(value);
+  `(
+    "reads the strict extended zoned $value as the ZonedDateTime it names",
+    ({ value }) => {
+      const resolved = resolveDurationRelativeTo(value);
+      expect(resolved).toBeInstanceOf(Temporal.ZonedDateTime);
+      expect((resolved as Temporal.ZonedDateTime).toString()).toBe(
+        "2024-10-03T00:00:00-04:00[America/New_York]",
+      );
+    },
+  );
+
+  // TC39 ToRelativeTemporalObject: an offset written with seconds matches exactly. Monrovia
+  // stood at -00:44:30 in 1970 (test262 intl402 ZonedDateTime/from/
+  // zoneddatetime-sub-minute-offset.js for the same rule in ZonedDateTime.from).
+  it.each`
+    value                                              | reason
+    ${"1970-01-01T00:00:00-00:45:00[Africa/Monrovia]"} | ${"rounded HH:MM:SS is not the zone's offset"}
+    ${"1970-01-01T00:00:00-00:44:40[Africa/Monrovia]"} | ${"wrong seconds"}
+    ${"2024-10-03T00:00:00-05:00[America/New_York]"}   | ${"an offset the zone contradicts"}
+  `("throws for the zoned $value ($reason)", ({ value }) => {
+    expect(() => resolveDurationRelativeTo(value)).toThrow(RangeError);
   });
 });

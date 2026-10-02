@@ -55,7 +55,7 @@ export const CURATED_TIMEZONES = [
 ] as const;
 
 /**
- * The 17 locales `@northguild/gmt` is tested against — mirrors
+ * The locales `@northguild/gmt` is tested against — mirrors
  * `packages/gmt/src/test/localeMatrix.ts`'s `MustTestLocales`.
  *
  * Previously a bare array in `ConverterBench.astro`'s frontmatter with no module

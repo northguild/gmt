@@ -123,19 +123,14 @@
   width: 100%;
   height: 100%;
   cursor: grab;
-  /* Drawn fully off-screen (the raster itself is already complete — see
-     globe.ts's revealCanvas()) then faded/scaled into place once the first frame
-     is measured, so the globe doesn't just snap into existence. */
-  opacity: 0;
-  transform: scale(0.92);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.gmt-globe-canvas.gmt-globe-canvas-ready {
-  opacity: 1;
-  transform: scale(1);
+/* Drawn while hidden (the raster is already complete — see globe.ts's
+   revealCanvas()), then brought in by the shared entrance (.gmt-enter,
+   gmt-primitives.css) once the first frame is measured, so the globe doesn't
+   just snap into existence. The canvas only exists once script has run. */
+.gmt-globe-canvas:not([data-entered]) {
+  opacity: 0;
 }
 
 .gmt-globe-canvas:active {
@@ -402,12 +397,22 @@
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
+  /* Not `right: 0`. Pinned to both edges the list is exactly as wide as its
+     input, and an IANA id is longer than most inputs it sits under — in the
+     Zone Planner's controls card, which is one grid track wide, every
+     `America/Argentina/...` was cut off and the list grew a horizontal
+     scrollbar. Sized to its content instead, with the input's width as the
+     floor so it never looks detached, and a cap so the longest id cannot run
+     it off a phone. Nothing scrolls sideways at any width. */
+  width: max-content;
+  min-width: 100%;
+  max-width: min(26rem, calc(100vw - 2rem));
   z-index: 5;
   margin: var(--gmt-space-1) 0 0;
   padding: 0;
   list-style: none;
   max-height: 16rem;
+  overflow-x: hidden;
   overflow-y: auto;
   scroll-behavior: smooth;
 }
@@ -835,6 +840,84 @@
   }
 }
 
+/* Standalone, on a desktop pane (/tools/zoned-earth/) -------------------
+   The tool page gives the globe the whole pane, but the stage was capped at
+   `min(44rem, 70vh)` and the zone list at a fixed 30rem, so on a large screen a
+   704px globe sat in a 1900px pane with the list stopping well short of it.
+
+   The layout takes a definite height here instead: the viewport less the page
+   chrome above the globe (the nav, the title and its tags, the widget's own
+   heading) and the caption beneath it, so the globe, the list and the caption
+   all sit above the fold and the tool is used without scrolling. With a height
+   to resolve against, the stage is squared the way the homepage's is below —
+   `min(100cqw, 100cqh)` against the frame, because `aspect-ratio` has no auto
+   dimension left once both are definite — and the list flexes to the same
+   height in place of its fixed one.
+
+   This is deliberately not the homepage's size. There the hero is the whole
+   window; here a title sits above and a caption below, and the aim is that
+   nothing of the tool is cut off, not that the globe is as large as it can be.
+   Only the footer's previous and next links fall below the fold: fitting those
+   too would cost 162px and leave the globe smaller than the fixed cap it
+   replaces.
+
+   `--gmt-globe-chrome` is that offset: 340px above the layout, and a caption of
+   up to two lines with its gap below. It is a sum of other boxes' heights, not
+   something this sheet can measure, so it errs large: too large costs a
+   slightly smaller globe, too small pushes the caption under the fold. The
+   floor keeps a short window from squeezing the globe under a usable size;
+   past it the page simply scrolls.
+
+   From 56rem of the globe's own width, not the 40rem at which the list first
+   moves beside the stage: between the two the pane is a laptop's, the fixed
+   sizes above already fit it, and a height taken from the viewport would
+   only stretch a narrow list. Never in embedded mode, which has its own
+   rules below and its own fixed-height hero to resolve against. */
+@container gmt-globe (min-width: 56rem) {
+  .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-layout {
+    --gmt-globe-chrome: 25.5rem;
+    height: max(32rem, calc(100dvh - var(--gmt-globe-chrome)));
+    align-items: stretch;
+  }
+
+  .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    container-type: size;
+    container-name: gmt-globe-frame;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-stage {
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
+    max-width: none;
+    flex: none;
+  }
+
+  /* `min-height: 0` down the chain, as in embedded mode: without it each box
+     grows to fit the ~300-row list and the list never scrolls. */
+  /* `margin-top: 0`: this column is a block after another inside
+     `.sl-markdown-content`, so the flow rule gives it a top margin the stage
+     beside it does not have. At a fixed list height that went unnoticed; at
+     `height: 100%` it pushed the list's end 16px past the globe's. */
+  .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-side {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-clocks {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+}
+
 /* Embedded mode (inside HeroGlobe.astro, homepage only) ---------------
    The stage and clock list stretch to fill the hero's own height, in place
    of the standalone widget's fixed rem caps above, but only once the
@@ -918,6 +1001,19 @@
   }
 }
 
+@media (max-width: 79.9375rem) {
+  /* A definite height, not just the 30rem cap: below 80rem the hero has no
+     definite height, so `.gmt-globe-side`'s size comes from its content. WebKit
+     counts the scrolling `.gmt-globe-clocks` as 0px there (its min-height: 0
+     wins), so the side came out search-box tall and the zone list collapsed
+     to nothing; Chromium counts the sizer and then applies the cap. A fixed
+     30rem is what Chromium already renders, in every engine. */
+  .gmt-globe-embedded .gmt-globe-side {
+    flex: none;
+    height: 30rem;
+  }
+}
+
 @media (min-width: 80rem) and (max-width: 99.9375rem) {
   /* The 30rem cap above is load-bearing only below .gmt-herostage's own
      80rem breakpoint, where the hero has no definite height yet. From 80rem
@@ -931,6 +1027,19 @@
      already does. */
   .gmt-globe-embedded .gmt-globe-side {
     max-height: none;
+  }
+
+  /* The column is one screen tall here, so a stage sized from the width
+     (70vh) left the zone list 0-10px on 1366x768-1536x864 laptops. Capped
+     so the list keeps 11rem: the column is 100dvh less the nav and the
+     hero's 2rem padding top and bottom; the side's search row is 5rem with
+     its gap, and the layout gap 1rem. 4 + 5 + 1 + 11 = 21rem. */
+  .gmt-globe-embedded .gmt-globe-stage {
+    max-width: min(
+      44rem,
+      70vh,
+      calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
+    );
   }
 }
 
@@ -1003,13 +1112,11 @@
 }
 
 /* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
-   easing. The canvas/zoom reveal transitions are skipped here too — globe.ts's
-   revealCanvas() detects the same media query and adds both -ready classes on
-   the same frame instead of chaining off a transitionend that would never
-   fire. */
+   easing. The entrance is skipped too: `.gmt-enter` is `animation: none`
+   here, and lib/enter.ts marks the canvas entered and arms the zoom controls
+   at once instead of waiting for an animationend that would never fire. */
 @media (prefers-reduced-motion: reduce) {
   .gmt-globe-tooltip,
-  .gmt-globe-canvas,
   .gmt-globe-zoom {
     transition: none;
   }

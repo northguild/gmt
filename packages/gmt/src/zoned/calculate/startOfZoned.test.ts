@@ -376,3 +376,23 @@ describe("startOfZoned across the 1844 date-line crossings (zoned.E)", () => {
     },
   );
 });
+
+// temporalCompat D13: the midnight of 2000-10-08 is skipped (00:00 → 01:00) and the clocks went
+// back a week later, inside one of the polyfill's 14-day search steps, so its start of day
+// throws or lands a year on. Native Temporal (Node 26.10.0): the day starts at 01:00.
+describe("startOfZoned beside a daylight period 7 days long", () => {
+  it.each`
+    value                                             | unit       | expected
+    ${"2000-10-08T12:00:00-03:00[America/Boa_Vista]"} | ${"day"}   | ${"2000-10-08T01:00:00-03:00[America/Boa_Vista]"}
+    ${"2000-10-08T12:00:00-01:00[America/Noronha]"}   | ${"day"}   | ${"2000-10-08T01:00:00-01:00[America/Noronha]"}
+    ${"2000-10-08T12:00:00-02:00[America/Recife]"}    | ${"day"}   | ${"2000-10-08T01:00:00-02:00[America/Recife]"}
+    ${"2000-10-12T12:00:00-03:00[America/Boa_Vista]"} | ${"week"}  | ${"2000-10-09T00:00:00-03:00[America/Boa_Vista]"}
+    ${"2000-10-20T12:00:00-04:00[America/Boa_Vista]"} | ${"month"} | ${"2000-10-01T00:00:00-04:00[America/Boa_Vista]"}
+  `(
+    "starts the $unit of $value at $expected",
+    ({ value, unit, expected }) => {
+      expect(startOfZoned(value, unit)).toBe(expected);
+    },
+    10_000,
+  );
+});

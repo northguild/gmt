@@ -47,6 +47,15 @@ import {
   renderCutoffCountdownTemplate,
 } from "./cutoff-countdown-mount";
 import {
+  mountPunctualityBoard,
+  renderPunctualityBoardTemplate,
+} from "./punctuality-board-mount";
+import { mountEtaDrift, renderEtaDriftTemplate } from "./eta-drift-mount";
+import {
+  mountDepartureBoard,
+  renderDepartureBoardTemplate,
+} from "./departure-board-mount";
+import {
   mountDwellLedger,
   renderDwellLedgerTemplate,
 } from "./dwell-ledger-mount";
@@ -132,6 +141,21 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "cutoff countdown",
     () => renderCutoffCountdownTemplate(),
     mountCutoffCountdown as MountFn<never>,
+  ],
+  [
+    "punctuality board",
+    () => renderPunctualityBoardTemplate(),
+    mountPunctualityBoard as MountFn<never>,
+  ],
+  [
+    "eta drift chart",
+    () => renderEtaDriftTemplate(),
+    mountEtaDrift as MountFn<never>,
+  ],
+  [
+    "departure board",
+    () => renderDepartureBoardTemplate(),
+    mountDepartureBoard as MountFn<never>,
   ],
 ];
 

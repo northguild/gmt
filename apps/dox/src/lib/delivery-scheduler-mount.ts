@@ -36,6 +36,7 @@ import {
   type EtaSummary,
   type Itinerary,
   type ItineraryEvent,
+  legCalls,
 } from "./delivery-scheduler";
 import { codeFrameHtml } from "./code-frame";
 import {
@@ -55,15 +56,19 @@ import {
   TRANSPORT_ZONES,
   zoneOptionsHtml,
   type JourneyFacts,
+  type ScheduleLeg,
   type TransportLib,
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  codeSpan,
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -157,10 +162,6 @@ interface LegHeaderFields {
   timeZone: string;
 }
 
-function optionalSuffix(): string {
-  return `<span class="gmt-delivery-optional">optional</span>`;
-}
-
 function legFieldset(n: number, state: DeliveryState, count: number): string {
   const leg = state.legs[n - 1]!;
   const hidden = n > count ? " hidden" : "";
@@ -168,31 +169,31 @@ function legFieldset(n: number, state: DeliveryState, count: number): string {
 
   const textField = (
     role: string,
-    area: string,
+    wide: boolean,
     label: string,
     value: string,
     optional: boolean,
   ) =>
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--${area}"><span>${escapeHtml(label)}${optional ? optionalSuffix() : ""}</span>` +
+    `<label class="gmt-label${wide ? " gmt-field-wide" : ""}">${labelTextHtml(label, { optional })}` +
     `<input class="gmt-input" data-role="${role}-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
 
   const modeField =
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--mode"><span>Mode${optionalSuffix()}</span>` +
+    `<label class="gmt-label">${labelTextHtml("Mode", { optional: true })}` +
     `<select class="gmt-select" data-role="mode-${n}">${modeOptionsHtml(leg.mode)}</select></label>`;
 
   const arrivesField =
-    `<label class="gmt-label gmt-delivery-field gmt-delivery-field--arrives"><span>Arrives in</span>` +
+    `<label class="gmt-label">${labelTextHtml("Arrives in")}` +
     `<select class="gmt-select" data-role="zone-${n}">${zoneOptionsHtml(TRANSPORT_ZONES, leg.timeZone)}</select></label>`;
 
   return (
     `<fieldset class="gmt-transport-leg gmt-delivery-leg-fieldset" data-role="leg-${n}"${legAccentAttr(n - 1)}${hidden}>` +
     `<legend><span data-role="leg-legend-${n}">${legHeaderHtml(n, leg)}</span></legend>` +
-    `<div class="gmt-delivery-leg-grid">` +
+    `<div class="gmt-field-grid">` +
     modeField +
-    textField("duration", "duration", "Duration", leg.duration, false) +
+    textField("duration", false, "Duration", leg.duration, false) +
     arrivesField +
-    textField("departure", "departs", departureLabel, leg.departure, n !== 1) +
-    textField("dwell", "dwell", "Dwell after", leg.dwellAfter, true) +
+    textField("departure", true, departureLabel, leg.departure, n !== 1) +
+    textField("dwell", false, "Dwell after", leg.dwellAfter, true) +
     `</div>` +
     `</fieldset>`
   );
@@ -228,22 +229,23 @@ export function renderDeliverySchedulerTemplate(
     .join("");
 
   return (
-    `<div class="gmt-delivery gmt-widget">` +
+    `<div class="gmt-delivery gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Build the journey</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label"><span>Legs</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Legs")}` +
     `<select class="gmt-select" data-role="leg-count">${[1, 2, 3, 4].map((n) => `<option value="${n}"${n === count ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>Start zone${optionalSuffix()}</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone, "(none)")}</select></label>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Start zone", { optional: true })}` +
+    `<select class="gmt-select" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone, "(none)")}</select></label>` +
     `</div>` +
     `<p class="gmt-widget-hint">For a published local first departure with no offset or zone of its own.</p>` +
+    `<p class="gmt-widget-hint">Durations are ISO 8601: PT46H is 46 hours, PT2H30M is two and a half hours, P11D is 11 days.</p>` +
     legFieldsets +
     `</div>` +
     `<div class="gmt-widget-section">` +
@@ -276,6 +278,18 @@ export function renderDeliverySchedulerTemplate(
     `<h4>3. What <code>scheduleDelivery</code> returns</h4>` +
     codeFrameHtml("delivery") +
     `<output class="gmt-widget-output" data-role="delivery-output">&nbsp;</output>` +
+    `</div>` +
+    `<div class="gmt-widget-section">` +
+    `<h4>4. What <code>transitTime</code> and <code>etaAtZone</code> return</h4>` +
+    `<p class="gmt-widget-hint">Every arrival is <code>transitTime</code> of a departure and a duration, and every local time is <code>etaAtZone</code> of an instant and a zone. These are the two calls for one leg. Their results are that leg's <code>arrival</code> and <code>localArrival</code> in step 3.</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label">${labelTextHtml("Leg")}` +
+    `<select class="gmt-select" data-role="leg-pick"></select></label>` +
+    `</div>` +
+    codeFrameHtml("leg-transit") +
+    `<output class="gmt-widget-output" data-role="leg-transit-output">&nbsp;</output>` +
+    codeFrameHtml("leg-eta") +
+    `<output class="gmt-widget-output" data-role="leg-eta-output">&nbsp;</output>` +
     `</div>` +
     `</div>` +
     `</div>`
@@ -606,6 +620,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     }
 
     const facts: JourneyFacts = collectJourneyFacts(legs, options, lib);
+    renderLegCalls(facts, legs);
     const originZone = originZoneOf(state);
     const itinerary = buildItinerary(facts, legs, originZone, lib);
     const chartData = buildChartData(facts, legs, originZone, lib);
@@ -680,6 +695,51 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     render();
   }
 
+  /* Step 4: the two calls behind one leg, picked by the reader. The options are
+     rebuilt only when the number of legs changes, so the list is not replaced
+     under an open menu. */
+  function renderLegCalls(facts: JourneyFacts, legs: ScheduleLeg[]): void {
+    const pick = q<HTMLSelectElement>("leg-pick");
+    if (!pick) return;
+    if (pick.options.length !== legs.length) {
+      const current = pick.value;
+      pick.innerHTML = legs
+        .map((_, i) => `<option value="${i}">Leg ${i + 1}</option>`)
+        .join("");
+      pick.value = Number(current) < legs.length ? current : "0";
+      if (pick.value === "") pick.value = "0";
+    }
+    const calls = legCalls(facts, legs, Number(pick.value) || 0, lib);
+    const str = (value: string) => codeSpan("str", JSON.stringify(value));
+    const show = (role: string, value: string) => {
+      const out = q(role);
+      if (!out) return;
+      if (value === "") renderWidgetOutput(out, "NO SIGNAL", "sentinel");
+      else renderWidgetOutput(out, JSON.stringify(value), "live");
+    };
+    const {
+      departure = "",
+      duration = "",
+      arrival = "",
+      zone = "",
+      local = "",
+    } = calls ?? {};
+    renderCallLine(
+      q("call-leg-transit"),
+      "transitTime",
+      `${str(departure)}, ${str(duration)}`,
+      `${JSON.stringify(departure)}, ${JSON.stringify(duration)}`,
+    );
+    show("leg-transit-output", arrival);
+    renderCallLine(
+      q("call-leg-eta"),
+      "etaAtZone",
+      `${str(arrival)}, ${str(zone)}`,
+      `${JSON.stringify(arrival)}, ${JSON.stringify(zone)}`,
+    );
+    show("leg-eta-output", local);
+  }
+
   root.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
     if (
@@ -697,6 +757,10 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     const target = e.target as HTMLElement;
     if (target === presetEl) {
       applyPreset();
+      return;
+    }
+    if (target.matches('[data-role="leg-pick"]')) {
+      render();
       return;
     }
     if (target === legCountEl) {
@@ -789,12 +853,12 @@ function applyArgs(root: HTMLElement, args: DeliverySchedulerArgs): void {
   const legCountEl = q<HTMLSelectElement>("leg-count");
   if (legCountEl) legCountEl.value = String(count);
   const startZoneEl = q<HTMLSelectElement>("start-zone");
-  if (startZoneEl) startZoneEl.value = state.startTimeZone;
+  setControlValue(startZoneEl, state.startTimeZone);
   for (let n = 1; n <= MAX_LEGS; n++) {
     const leg = state.legs[n - 1]!;
     const set = (field: string, value: string) => {
       const el = q<HTMLInputElement | HTMLSelectElement>(`${field}-${n}`);
-      if (el) el.value = value;
+      setControlValue(el, value);
     };
     set("departure", leg.departure);
     set("duration", leg.duration);

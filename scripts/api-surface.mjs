@@ -57,7 +57,7 @@
  *
  *   clock        a `get/` accessor taking no argument or only a zone (coding-standards: `get/`
  *                holds current-moment and runtime accessors), and any other function whose source
- *                reads `Temporal.Now` (outside `parse/`) — unless the call pins `reference:`, or
+ *                reads `Temporal.Now` (outside `parse/`) — unless the call pins `reference:` or `at:`, or
  *                documents the `""` or `null` of an invalid input, neither of which reaches the
  *                clock: otherwise the output is the clock or the runtime, so no literal can match
  *   elided       a result that documents a shape, not a value: `["January", ... "December"]`
@@ -216,8 +216,11 @@ function evaluate(src, scope = {}) {
 const inspectValue = (v) =>
   inspect(v, { depth: 8, sorted: true, breakLength: Infinity });
 
-/** A call that pins the moment a relative formatter or predicate compares against. */
-const PINS_REFERENCE = /\breference\s*:/;
+/**
+ * A call that pins the moment a relative formatter or predicate compares against: `reference:`, or
+ * `at:` (`hasDaylightSaving`'s reference instant). Such a call never reaches the clock.
+ */
+const PINS_REFERENCE = /\b(?:reference|at)\s*:/;
 const readsClockCache = new Map();
 /**
  * A public function reads the clock when its source calls `Temporal.Now` — a `get/` accessor, a
@@ -273,7 +276,7 @@ function arity(call) {
 /**
  * Whether one call to a public function reads the clock or the runtime: a `get/` accessor taking
  * no argument or only a zone, or a function whose source reads `Temporal.Now` — unless the call
- * pins `reference:` or the documented result is the `""`/`null` of an invalid input.
+ * pins `reference:` or `at:`, or the documented result is the `""`/`null` of an invalid input.
  */
 function callReadsClock(entry, call, result) {
   // An invalid input returns its sentinel before any clock read, so check that first. A call with

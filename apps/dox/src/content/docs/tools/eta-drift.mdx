@@ -1,0 +1,52 @@
+---
+title: ETA Drift Chart
+description: "Which timestamp do you show, and how far did the estimate move? bestAvailable picks from planned, estimated, requested and actual records and says which class it is; estimateDrift measures the slide against a tolerance you drag."
+industries: [transport]
+---
+
+import EtaDrift from "../../../components/EtaDrift.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="planned, estimated, requested and actual times">
+
+<Fragment slot="keypoint">
+
+One field often holds four kinds of time, and the newest record is not the best one. `bestAvailable` picks one and returns its class with it, so a column can say what it shows.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+The four kinds are planned (PLN), estimated (EST), requested (REQ) and actual
+(ACT). The codes are the ones container shipping schedules use.
+
+Drift is the last estimate minus the first. It exceeds a tolerance only when
+it is greater than it, in either direction. Drag the tolerance and watch
+`exceedsTolerance` change.
+
+</Fragment>
+
+<EtaDrift fullbleed />
+
+<Fragment slot="after">
+
+**Worth trying:** [an estimate recorded after the
+actual](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D)
+marks the actual as the best available. The late estimate is the naive pick:
+what you get by taking the newest record.
+Then [a tolerance of exactly 9
+hours](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22vessel-slide%22%2C%22tolerance%22%3A%22PT9H%22%7D):
+the drift is 9 hours, equal does not exceed, and `exceedsTolerance` is false.
+
+Reference: [`bestAvailable`](/reference/transport/calculate/bestAvailable/) and
+[`estimateDrift`](/reference/transport/calculate/estimateDrift/) are the two
+calls behind every reading here. See the guide's
+[timestamp class section](/guides/industries/transport-punctuality-and-timestamps/#one-field-four-meanings-bestavailable)
+and its
+[drift section](/guides/industries/transport-punctuality-and-timestamps/#how-far-the-estimate-moved-estimatedrift),
+and the scenario
+[An Estimate Shown as the Actual](/scenarios/estimate-shown-as-actual/).
+
+</Fragment>
+
+</ToolLayout>

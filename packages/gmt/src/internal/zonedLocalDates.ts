@@ -54,7 +54,7 @@ export function countZonedLocalDates(
   let runStart = start;
 
   for (let i = 0; i <= MAX_WALKED_TRANSITIONS; i++) {
-    const transition = zonedNextTransition(runStart);
+    const transition = zonedNextTransition(runStart, end.epochNanoseconds);
     const isLastRun =
       transition === null ||
       Temporal.ZonedDateTime.compare(transition, end) > 0;

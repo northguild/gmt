@@ -1,11 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   TIME_ZONE_ANNOTATION,
+  exactDurationNanoseconds,
   isOptionsArgument,
   isoStringBody,
   zonedDateTimeFrom,
 } from "../../internal";
-import { isValidDuration } from "../../duration/validate/isValidDuration";
 import { isValidDateTime } from "../../plain/validate/isValidDateTime";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
@@ -217,16 +217,8 @@ type LegBoundaries = {
  * the last dwell moves nothing, so no instant is computed and the range cannot reject it.
  */
 function isValidFinalDwell(dwellAfter: string): boolean {
-  if (!isValidDuration(dwellAfter)) {
-    return false;
-  }
-  const parsed = Temporal.Duration.from(dwellAfter);
-  return (
-    parsed.years === 0 &&
-    parsed.months === 0 &&
-    parsed.weeks === 0 &&
-    parsed.sign >= 0
-  );
+  const nanoseconds = exactDurationNanoseconds(dwellAfter);
+  return nanoseconds !== null && nanoseconds >= 0n;
 }
 
 /**

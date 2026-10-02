@@ -7,8 +7,9 @@
 - `pnpm run validate` (root) is green, **including the CI timezone matrix (10 zones × Node 22/24/26 — see README)** — Dox must
   not perturb `packages/gmt`. From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
 - **Generator:** the generated `startOfZoned` page matches
-  `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line (options table, all five
-  examples). `getDstTransitions`'s multi-line example renders; `weekOfYear.ts`'s two exports get
+  `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line (options table, and its first
+  `@example`: a function page shows the first example only, and the corpus that feeds chat
+  retrieval holds them all). `getDstTransitions`'s multi-line example renders; `weekOfYear.ts`'s two exports get
   two pages. The route manifest equals the generated page set. The count test fails when a
   function is added without re-extraction.
 - **Search:** `addBusinessDays` in the deployed Pagefind index lands on its page (Pagefind does

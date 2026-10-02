@@ -1,23 +1,49 @@
 /*
  * Cut-off Stack widget (TRAN-10). Everything shared with the other cut-off
- * widgets lives in gmt-cutoff-widgets.css; this sheet holds only the table.
+ * widgets, and the day-timeline plot itself, lives in gmt-cutoff-widgets.css;
+ * this sheet holds only the table, restyled to read with the chart: a bevelled
+ * frame, a header row on an opaque surface, hairline rows and the same series
+ * swatch the lane carries. "Moved" is a word in a cell, never a colour.
  */
 
 .gmt-cutoff-stack-table {
   width: 100%;
-  border-collapse: collapse;
+  border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
   font-size: var(--gmt-text-sm);
+  overflow-x: auto;
 }
 
 .gmt-cutoff-stack-table th,
 .gmt-cutoff-stack-table td {
-  padding: var(--gmt-space-1) var(--gmt-space-2);
+  padding: var(--gmt-space-2);
   border-bottom: 1px solid var(--gmt-border);
   text-align: left;
   vertical-align: top;
 }
 
+/* Clear of the frame's bevelled corners. */
+.gmt-cutoff-stack-table :is(th, td):first-child {
+  padding-left: var(--gmt-space-3);
+}
+
+.gmt-cutoff-stack-table :is(th, td):last-child {
+  padding-right: var(--gmt-space-3);
+}
+
+.gmt-cutoff-stack-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .gmt-cutoff-stack-table th {
+  background: var(--gmt-surface);
+  border-bottom-color: var(--gmt-border-strong);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -25,8 +51,68 @@
   color: var(--gmt-ice-dim);
 }
 
+.gmt-cutoff-stack-table td {
+  color: var(--gmt-ice);
+}
+
+.gmt-cutoff-stack-table td .gmt-widget-hint {
+  overflow-wrap: anywhere;
+}
+
+/* A narrow widget stacks each row as a block: the swatch and name as its
+   heading, every other cell as "label: value" (the label from `data-label`).
+   The header row stays for assistive technology, and the template's explicit
+   roles keep the table semantics that `display: block` would drop. */
 @container (max-width: 34rem) {
-  .gmt-cutoff-stack-table {
+  .gmt-cutoff-stack-table,
+  .gmt-cutoff-stack-table tbody,
+  .gmt-cutoff-stack-table tr,
+  .gmt-cutoff-stack-table td {
+    display: block;
+  }
+
+  .gmt-cutoff-stack-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .gmt-cutoff-stack-table tbody tr {
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border-bottom: 1px solid var(--gmt-border);
+  }
+
+  .gmt-cutoff-stack-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .gmt-cutoff-stack-table td,
+  .gmt-cutoff-stack-table :is(th, td):first-child,
+  .gmt-cutoff-stack-table :is(th, td):last-child {
+    padding: 2px 0;
+    border-bottom: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .gmt-cutoff-stack-table td:first-child {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+  }
+
+  .gmt-cutoff-stack-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    font-family: var(--gmt-font-mono);
     font-size: var(--gmt-text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--gmt-tracking-wide);
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-cutoff-stack-table td .gmt-widget-hint {
+    display: block;
   }
 }

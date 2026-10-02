@@ -43,6 +43,7 @@ import {
   type CrystalClockHighlight,
   type CrystalClockState,
 } from "./crystal-clock";
+import { enter } from "./enter";
 import { loadTransportLib } from "./transport-lib";
 import {
   formatCrossing,
@@ -54,9 +55,13 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  isRangeError,
+  RANGE_EDGE_TEXT,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -106,23 +111,23 @@ export function renderCrossingClockTemplate(
   const preset = CROSSING_PRESETS.find((p) => p.id === presetId);
 
   const text = (role: string, label: string, value: string) =>
-    `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml(label)}` +
     `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
 
   return (
-    `<div class="gmt-crossing gmt-widget">` +
+    `<div class="gmt-crossing gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Log the crossing</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls gmt-crossing-fields">` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid gmt-crossing-fields">` +
     text("entry", "Entry", state.entry) +
     text("exit", "Exit", state.exit) +
-    `<label class="gmt-label"><span>Read on the clock of</span>` +
+    `<label class="gmt-label">${labelTextHtml("Read on the clock of")}` +
     `<select class="gmt-select" data-role="target-zone">${zoneOptionsHtml(CROSSING_ZONES, state.targetZone)}</select></label>` +
     `</div>` +
     `</div>` +
@@ -147,7 +152,7 @@ export function renderCrossingClockTemplate(
     `<p class="gmt-transport-visually-hidden" id="crossing-ruler-summary" data-role="ruler-summary"></p>` +
     `<p class="gmt-widget-hint" data-role="legend"></p>` +
     `</div>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
+    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What <code>crossingTime</code> returns</h4>` +
@@ -266,6 +271,10 @@ function renderClockPanel(
 ): void {
   const faceEl = q(`${prefix}-clock`);
   if (faceEl) {
+    /* The face arrives with the site's entrance (lib/enter.ts) when it first
+       appears, the exit clock a beat after the entry clock. A re-render with
+       new values replaces the dial in place and does not replay it. */
+    const appearing = !faceEl.firstElementChild;
     faceEl.innerHTML = renderCrystalClock({
       id: prefix,
       hour: face.hour,
@@ -275,6 +284,7 @@ function renderClockPanel(
       state: clockState,
       highlight,
     });
+    if (appearing) enter(faceEl, { delayMs: prefix === "exit" ? 80 : 0 });
   }
   const timeEl = q(`${prefix}-time`);
   if (timeEl) timeEl.textContent = face.timeLabel;
@@ -289,7 +299,11 @@ function clearClockPanel(
   prefix: "entry" | "exit",
 ): void {
   const faceEl = q(`${prefix}-clock`);
-  if (faceEl) faceEl.innerHTML = "";
+  if (faceEl) {
+    faceEl.innerHTML = "";
+    // Emptied, so the next face to appear enters again.
+    faceEl.removeAttribute("data-entered");
+  }
   for (const suffix of ["time", "meta", "date"] as const) {
     const el = q(`${prefix}-${suffix}`);
     if (el) el.textContent = "";
@@ -381,12 +395,19 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
     const exitFace = crossingClockFace(result.exit);
     const repeated = isRepeatedReading(entryFace, exitFace);
 
-    const strip = crossingStrip(result, s.targetZone);
+    /* A crossing at the very edge of the supported range has zoned strings
+       that cannot be placed on a bar: say so, and keep the clocks. */
+    let strip: ReturnType<typeof crossingStrip> | null = null;
+    try {
+      strip = crossingStrip(result, s.targetZone);
+    } catch (error) {
+      if (!isRangeError(error)) throw error;
+    }
     // Both clocks read the same targetZone, so a change found anywhere in
     // the crossing shows on both — see renderClockPanel's own comment.
     // Only the first change draws (a highlight is one hour, not a list);
     // realistic crossings have at most one in practice.
-    const firstChange = strip.changes[0];
+    const firstChange = strip?.changes[0];
     const highlight: CrystalClockHighlight | undefined = firstChange
       ? {
           fromHour: firstChange.fromHour,
@@ -414,7 +435,15 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
       highlight,
     );
 
-    renderStrip(q, strip);
+    if (strip) {
+      renderStrip(q, strip);
+    } else {
+      clearStrip(q);
+      const changesEl = q("strip-changes");
+      if (changesEl) {
+        changesEl.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
+      }
+    }
   }
 
   function applyPreset(): void {
@@ -459,7 +488,7 @@ function applyArgs(root: HTMLElement, args: CrossingClockArgs): void {
   const zone = s.targetZone.trim();
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("entry", zone === "" ? s.entry : resolveWallTime(s.entry, zone));
   set("exit", zone === "" ? s.exit : resolveWallTime(s.exit, zone));

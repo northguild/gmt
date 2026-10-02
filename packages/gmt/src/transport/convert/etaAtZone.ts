@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
@@ -12,6 +12,13 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z`, an offset, or an offset with a
  *   bracketed zone. Only the instant is read; a bracketed zone in the input is not the zone the
  *   result is rendered in, `targetZone` is.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so rendering this function's own result again gives
+ *   the same moment, except a wall time repeated inside a sub-minute offset change, which
+ *   reads as its first pass (see `isValidInstant`). A zone that does not exist, or that disagrees with the offset, is not
+ *   checked and changes nothing.
  * - **No disambiguation arises.** The input is a moment, and a moment has exactly one wall
  *   time in any zone, so the `disambiguation` vocabulary of `resolveLocal` does not apply here.
  *   On a fall-back night two moments an hour apart print the same wall time with different
@@ -43,9 +50,7 @@ export function etaAtZone(arrivalUtc: string, targetZone: string): string {
       return "";
     }
 
-    return Temporal.Instant.from(arrivalUtc)
-      .toZonedDateTimeISO(targetZone)
-      .toString();
+    return instantFrom(arrivalUtc).toZonedDateTimeISO(targetZone).toString();
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

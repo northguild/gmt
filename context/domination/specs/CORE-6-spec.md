@@ -1075,7 +1075,9 @@ These 65 files are closed by reading their code:
    - Recommendation: a separate `patch` fixing `hasCalendarAnnotation` (or `parseInstantNanoseconds`)
      to reject a critical-flagged annotation. **Do not special-case it inside `interval/`.**
    - Not blocking for CORE-6; the CORE-6 tests should not pin either behaviour for `[!u-ca=]`.
-3. **`Temporal.Instant.from` ignores the bracketed zone when an offset is present.**
-   `"…T10:00:00+01:00[America/New_York]"` is accepted and means 09:00Z (verified). This is TC39
-   behaviour for `Instant`, and the grammar is shared by `span/` and `precision/`. §6.2 pins it.
-   Not a contradiction; recorded so nobody "fixes" it inside `interval/`.
+3. **An instant reader does not validate the bracketed zone when an offset is present.**
+   `"…T10:00:00+01:00[America/New_York]"` is accepted and means 09:00Z (verified), as in
+   `Temporal.Instant.from`, and the grammar is shared by `span/` and `precision/`. §6.2 pins it.
+   The one thing read from the bracket is the real offset behind a minute-rounded one
+   ([coding-standards § Calendar & zone semantics, rule 9](../../coding-standards.md#9-an-instant-string-is-read-as-the-zoned-string-it-may-be)),
+   in `parseInstantNanoseconds`, never inside `interval/`.

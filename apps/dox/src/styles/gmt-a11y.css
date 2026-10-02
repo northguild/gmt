@@ -18,7 +18,7 @@
   .gmt-glass-subtle,
   .gmt-glass-clear,
   .gmt-glass-heavy,
-  .gmt-widget-card,
+  .gmt-widget-section,
   .gmt-widget-output,
   .gmt-converter-results,
   .gmt-mistake,
@@ -128,13 +128,32 @@
     background: HighlightText;
   }
 
+  /* The Zone Planner's DST pill and switch badge: the outline and the words
+     carry the state, so they are restated in system colours. The marks on the
+     slider's track keep a visible edge and lose their fill. */
+  .gmt-scrubber-dst[data-state="dst"],
+  .gmt-scrubber-switch {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-scrubber-mark {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-scrubber-mark[data-kind="back"] {
+    background: CanvasText;
+  }
+
   .gmt-glass::before,
   .gmt-glass::after {
     display: none;
   }
 
   .gmt-glass,
-  .gmt-widget-card,
+  .gmt-widget-section,
   .gmt-mistake {
     background: Canvas;
     border: 1px solid CanvasText;
@@ -156,9 +175,105 @@
   .gmt-select:focus,
   .gmt-field:focus-visible,
   .gmt-button:focus-visible,
-  .gmt-dwell-handle:focus-visible,
-  .gmt-freetime-handle:focus-visible {
+  .gmt-range:focus-visible,
+  .gmt-handle:focus-visible,
+  .gmt-chip-toggle input:focus-visible + .gmt-chip-toggle-face {
     outline: 2px solid Highlight;
+  }
+
+  /* Control system (gmt-form-controls.css): fills drop under forced colours,
+     so each part is restated in the system palette. */
+  .gmt-range::-webkit-slider-thumb {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background-color: Canvas;
+    --gmt-ridge: ButtonText;
+  }
+
+  .gmt-range::-moz-range-thumb {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background-color: Canvas;
+    --gmt-ridge: ButtonText;
+  }
+
+  .gmt-range::-webkit-slider-runnable-track {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: linear-gradient(
+      90deg,
+      Highlight var(--gmt-range-center),
+      Canvas var(--gmt-range-center)
+    );
+  }
+
+  .gmt-range::-moz-range-track {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Canvas;
+  }
+
+  .gmt-range::-moz-range-progress {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .gmt-handle {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background-color: Canvas;
+    --gmt-ridge: ButtonText;
+  }
+
+  .gmt-handle:active {
+    border-color: Highlight;
+    background-color: Highlight;
+  }
+
+  .gmt-chip-toggle-face {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Canvas;
+    color: ButtonText;
+  }
+
+  .gmt-chip-toggle input:checked + .gmt-chip-toggle-face {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .gmt-chip-toggle-track {
+    background: Canvas;
+    border-color: ButtonText;
+  }
+
+  .gmt-chip-toggle-track::after {
+    background: ButtonText;
+  }
+
+  .gmt-chip-toggle
+    input:checked
+    + .gmt-chip-toggle-face
+    .gmt-chip-toggle-track {
+    background: Highlight;
+    border-color: HighlightText;
+  }
+
+  .gmt-chip-toggle
+    input:checked
+    + .gmt-chip-toggle-face
+    .gmt-chip-toggle-track::after {
+    background: HighlightText;
+  }
+
+  .gmt-select {
+    appearance: auto;
+    background-image: none;
+  }
+
+  .gmt-hint-chip {
+    border-color: CanvasText;
   }
 
   /* Forced colours drop fills, and the shaded days are the Dwell Ledger's
@@ -278,47 +393,437 @@
     fill: CanvasText;
   }
 
-  /* Cut-off widgets (TRAN-10): the closed-day hatch, the solid/hollow
-     markers and the moved connector all carry meaning by border style and
-     text, not fill colour, so they need only a border to stay
-     distinguishable once fills are dropped. */
-  .gmt-cutoff-stack-day--closed {
-    forced-color-adjust: none;
-    background-image: none;
+  /* Cut-off widgets (TRAN-10) and, through the same six roots, the punctuality
+     widgets (TRAN-57). A series is named in text everywhere, and
+     closed, moved and late are words and patterns, so once fills are dropped
+     each mark needs only a border or a CanvasText fill to stay visible: chips
+     are bordered plates, a solid mark is filled and a hollow one dashed, the
+     gate is Highlight, the closed hatch becomes a dashed box (its "closed" chip
+     stays), and arcs, stems and DST lines are CanvasText (the DST line dashed). */
+  /* Text is always the system's CanvasText: the plates (chips, header strips,
+     the hero, the reading cards) are left to forced-colour defaults, and only
+     marks, edges and swatches opt out below. */
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    :is(
+      .gmt-cutoff-chip,
+      .gmt-cutoff-stack-day-label,
+      .gmt-cutoff-countdown-hero,
+      .gmt-cutoff-ruler-card
+    ) {
     border-color: CanvasText;
-    border-style: dashed;
   }
 
-  .gmt-cutoff-stack-departure-marker,
-  .gmt-cutoff-ruler-departure-line,
-  .gmt-cutoff-countdown-marker--cutoff {
+  /* A mark or hatch that opts out must not pass that on to the text inside it. */
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
+    forced-color-adjust: auto;
+  }
+
+  .gmt-cutoff-ruler-card {
+    background:
+      linear-gradient(CanvasText, CanvasText) left bottom / 100% 3px no-repeat,
+      Canvas;
+  }
+
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-stack-day,
+  div.gmt-cutoff-stack-day:nth-of-type(even) {
+    background-color: Canvas;
+  }
+
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-mark {
     forced-color-adjust: none;
-    border-color: Highlight;
+    background: CanvasText;
+    border-color: Canvas;
+    box-shadow: 0 0 0 1px CanvasText;
   }
 
-  .gmt-cutoff-stack-marker,
-  .gmt-cutoff-ruler-marker,
-  .gmt-cutoff-countdown-marker {
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-mark--hollow {
+    background: Canvas;
+    border: 2px dashed CanvasText;
+    box-shadow: none;
+  }
+
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-gate {
     forced-color-adjust: none;
-    border-color: CanvasText;
+    background: Highlight;
+    box-shadow: none;
   }
 
-  .gmt-cutoff-stack-marker--solid {
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-gate::before {
+    background: Highlight;
+  }
+
+  .gmt-cutoff-countdown-marker--now::before {
     background: CanvasText;
   }
 
-  .gmt-cutoff-stack-marker--hollow {
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-closed {
+    forced-color-adjust: none;
     background: Canvas;
-    border-style: dashed;
+    border: 1px dashed CanvasText;
   }
 
-  .gmt-cutoff-stack-connector {
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-series-swatch {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  .gmt-cutoff-stack-arc path {
+    stroke: CanvasText;
+  }
+
+  .gmt-cutoff-ruler-bar,
+  .gmt-cutoff-countdown-marker--now {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-cutoff-ruler-guide {
+    border-left-color: CanvasText;
+  }
+
+  .gmt-cutoff-ruler-transition-line {
+    forced-color-adjust: none;
+    border-left: 2px dashed CanvasText;
+  }
+
+  :is(
+      .gmt-cutoff-stack,
+      .gmt-cutoff-ruler,
+      .gmt-cutoff-countdown,
+      .gmt-punctuality-board,
+      .gmt-eta-drift,
+      .gmt-departure-board
+    )
+    .gmt-cutoff-axis-tick::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}
+
+/* =======================================================================
+ * Punctuality widgets (TRAN-57), forced-colors
+ *
+ * The chips, marks, gates, the closed hatch and the swatches are restated by
+ * the cut-off block above (it lists all six roots). This block restates the
+ * rest: the result plates and the legend keep their text on Canvas with a
+ * CanvasText border, and only marks, stems, caps, edges and hatches opt out of
+ * forced colours; a plate that holds text never does. Bands, the service
+ * window, bars, ticks, rings and shapes carry meaning by border style, pattern
+ * and text, so each is restated as a border or a CanvasText pattern.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-punct-hatch {
+    forced-color-adjust: none;
     color: CanvasText;
+    --hatch: CanvasText;
   }
 
-  .gmt-cutoff-countdown-closed {
+  .gmt-punct-hero {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-punct-hero[data-series] {
+    background:
+      linear-gradient(CanvasText, CanvasText) left bottom / 100% 3px no-repeat,
+      Canvas;
+  }
+
+  ul.gmt-eta-legend > li {
+    padding: 0 var(--gmt-space-1);
+    border: 1px solid CanvasText;
+  }
+
+  /* The tolerance track: Canvas with CanvasText edges, dashed for the second
+     tolerance; the open end has no left edge. */
+  .gmt-punct-band {
     forced-color-adjust: none;
     background: Canvas;
     border-color: CanvasText;
+    border-block-width: 1px;
+    box-shadow: none;
+  }
+
+  .gmt-punct-band::before {
+    background: none;
+    box-shadow: none;
+  }
+
+  .gmt-punct-band--second {
+    border-style: dashed;
+  }
+
+  .gmt-punct-lane::before,
+  .gmt-punct-bar-cell::before {
+    border-left-color: CanvasText;
+    box-shadow: none;
+  }
+
+  /* The band down every row: CanvasText edge lines, and the second
+     tolerance's dashed line. */
+  .gmt-punct-bar-cell {
+    forced-color-adjust: none;
+    background:
+      linear-gradient(CanvasText, CanvasText) var(--band-r, 0%) 0 / 1px 100%
+        no-repeat,
+      linear-gradient(CanvasText, CanvasText) var(--band-l, 0%) 0 /
+        var(--edge-l-w) 100% no-repeat;
+  }
+
+  .gmt-punct-grid--noband .gmt-punct-bar-cell {
+    background: none;
+  }
+
+  .gmt-punct-grid--compare .gmt-punct-bar-cell::after {
+    border-left-color: CanvasText;
+  }
+
+  /* A stem: solid CanvasText inside the band with a filled cap; the hatch
+     outside it with a hollow dashed cap. */
+  .gmt-punct-bar-in,
+  .gmt-punct-bar-in.gmt-punct-bar--neg {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-punct-bar-out {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+
+  .gmt-punct-bar--end::after {
+    background: CanvasText;
+    box-shadow: none;
+  }
+
+  .gmt-punct-bar-out.gmt-punct-bar--end::after {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .gmt-punct-naive {
+    border-color: CanvasText;
+    border-style: dashed;
+  }
+
+  .gmt-punct-chip,
+  .gmt-punct-tag {
+    border-color: CanvasText;
+  }
+}
+
+@media (forced-colors: active) {
+  /* ETA Drift Chart: shapes carry the class, rings and dashes carry the picks.
+     Every glyph keeps its shape in CanvasText, the estimate hollow on Canvas. */
+  .gmt-eta-mark,
+  .gmt-eta-glyph,
+  .gmt-eta-ring,
+  .gmt-eta-band {
+    forced-color-adjust: none;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .gmt-eta-mark,
+  .gmt-eta-glyph {
+    box-shadow: none;
+  }
+
+  .gmt-eta-mark {
+    box-shadow: 0 0 0 2px Canvas;
+  }
+
+  :is(.gmt-eta-mark--act, .gmt-eta-glyph--act),
+  :is(.gmt-eta-mark--pln, .gmt-eta-glyph--pln) {
+    background: CanvasText;
+  }
+
+  :is(.gmt-eta-mark--est, .gmt-eta-glyph--est) {
+    background: Canvas;
+  }
+
+  :is(.gmt-eta-mark--req, .gmt-eta-glyph--req) svg {
+    filter: none;
+  }
+
+  :is(.gmt-eta-mark--req, .gmt-eta-glyph--req) path {
+    fill: CanvasText;
+    stroke: Canvas;
+  }
+
+  /* The best pick is a Highlight ring, the naive pick a dashed CanvasText one. */
+  .gmt-eta-ring {
+    border-color: Highlight;
+    box-shadow: none;
+  }
+
+  .gmt-eta-ring--dashed {
+    border-color: CanvasText;
+  }
+
+  /* Transparent, not Canvas: the band sits above the SVG, and an opaque fill
+     would hide the join line and the chord inside it. Its dashed edges mark it. */
+  .gmt-eta-band {
+    background: transparent;
+    box-shadow: none;
+    border-block: 2px dashed CanvasText;
+  }
+
+  /* Painted as strokes, which forced colours would otherwise recolour or
+     drop; the join line and the chord stay CanvasText. */
+  .gmt-eta-lines,
+  .gmt-eta-grid,
+  .gmt-eta-line,
+  .gmt-eta-chord {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+    color: CanvasText;
+  }
+
+  .gmt-eta-grid {
+    stroke-width: 1;
+  }
+
+  .gmt-eta-line,
+  .gmt-eta-chord {
+    stroke-width: 2;
+  }
+
+  /* The glow is decoration, and a wide stroke would hide the line it sits under. */
+  .gmt-eta-line-glow {
+    display: none;
+  }
+
+  .gmt-eta-label,
+  .gmt-dep-label {
+    border: 1px solid CanvasText;
+  }
+
+  /* Departure Board: the rail is a bordered Canvas track, the service window a
+     Canvas box with CanvasText edges, the closed stretch past it a dashed box
+     (the cut-off block above), a departure a CanvasText tick, the made
+     departure the Highlight gate, the naive one a dashed hollow marker, and the
+     connection bar the CanvasText hatch. */
+  .gmt-dep-line,
+  .gmt-dep-window {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .gmt-dep-bracket,
+  .gmt-dep-bracket--from::before,
+  .gmt-dep-tick,
+  .gmt-dep-tick::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+    box-shadow: none;
+  }
+
+  .gmt-dep-bracket--to {
+    background: none;
+    border-left-color: CanvasText;
+  }
+
+  .gmt-dep-tick--made,
+  .gmt-dep-tick--made::before {
+    background: Highlight;
+  }
+
+  .gmt-dep-naive {
+    forced-color-adjust: none;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .gmt-dep-conn,
+  .gmt-dep-run {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+
+  .gmt-departure-board .gmt-dep-run.gmt-punct-hatch {
+    background-image: repeating-linear-gradient(
+      90deg,
+      CanvasText 0,
+      CanvasText 1px,
+      transparent 1px,
+      transparent 5px
+    );
   }
 }

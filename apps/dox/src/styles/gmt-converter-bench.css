@@ -6,6 +6,10 @@
  * block and the regex-match chip layout.
  */
 
+.gmt-converter {
+  container-type: inline-size;
+}
+
 /* ---------------------------------------------------------------------------
  * Format bench — grouped results block
  * --------------------------------------------------------------------------- */

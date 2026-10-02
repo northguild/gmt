@@ -48,12 +48,15 @@ const optionsSuffix = template.optionsSuffix ?? "";
 const objectArg = template.objectArg ?? false;
 
 const isList = (kind: string) => kind === "list" || kind === "intervals";
-/** Controls that need the full row width rather than a label-sized column. */
-const isWide = (kind: string) => isList(kind) || kind === "expr";
+/** Controls that need room (or the full row) rather than a label-sized column:
+ *  free text and source text keep the ~260px the old flex basis gave them, and
+ *  an amount + unit pair needs two columns (amount, then a unit select). */
+const isWide = (kind: string) =>
+  isList(kind) || kind === "expr" || kind === "string" || kind === "units";
 ---
 
 <div
-  class="gmt-playground-form gmt-widget"
+  class="gmt-playground-form gmt-widget not-content"
   data-module={mod}
   data-fn={fnName}
   data-return-type={returnType}
@@ -66,7 +69,7 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
     <div class="gmt-widget-section">
       {
         fields.length > 0 && (
-          <div class="gmt-pf-fields">
+          <div class="gmt-pf-fields gmt-field-grid">
             {fields.map((field) =>
               isList(field.kind) ? (
                 <div
@@ -77,7 +80,7 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
                   data-choices={(field.choices ?? []).join("\n")}
                 >
                   <span class="gmt-label">
-                    <span>
+                    <span class="gmt-label-text">
                       {field.name}
                       {field.optional && <span class="gmt-pf-opt"> ?</span>}
                     </span>
@@ -124,11 +127,11 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
                 </div>
               ) : (
                 <label
-                  class:list={["gmt-label", isWide(field.kind) && "gmt-pf-wide"]}
+                  class:list={["gmt-label", isWide(field.kind) && "gmt-field-wide"]}
                   data-field={field.name}
                   data-kind={field.kind}
                 >
-                  <span>
+                  <span class="gmt-label-text">
                     {field.name}
                     {field.optional && <span class="gmt-pf-opt"> ?</span>}
                   </span>

@@ -82,6 +82,18 @@ const PAGES = [
     path: "tools/cutoff-countdown",
     widget: "gmt-cutoff-countdown gmt-widget",
   },
+  {
+    path: "tools/punctuality-board",
+    widget: "gmt-punctuality-board gmt-widget",
+  },
+  {
+    path: "tools/eta-drift",
+    widget: "gmt-eta-drift gmt-widget",
+  },
+  {
+    path: "tools/departure-board",
+    widget: "gmt-departure-board gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";
@@ -115,7 +127,11 @@ function normalise(html) {
 
 /** The widget's own subtree, found by matching `<div>` depth from its root. */
 function widgetSubtree(html, cls) {
-  const start = html.indexOf(`<div class="${cls}">`);
+  /* A root may carry Starlight's `not-content` opt-out after the baseline
+     class pair (the control-system retrofit adds it), so match with or
+     without it. */
+  const rootRe = new RegExp(`<div class="${cls}(?: not-content)?">`);
+  const start = html.search(rootRe);
   if (start < 0) return null;
   let depth = 0;
   let end = start;

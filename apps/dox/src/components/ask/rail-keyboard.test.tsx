@@ -16,9 +16,17 @@
  * so the test enters by the same door a streamed tool call does.
  */
 /// <reference types="vitest/globals" />
-import { act, render, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import {
+  CHAT_STARTERS,
+  EXAMPLE_AREAS,
+  startersByArea,
+} from "~/lib/chat-constants";
 import type { WidgetHandle } from "~/lib/widget-mount";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import DoxPage from "./DoxPage";
 import { MountedWidget } from "./MountedWidget";
 import { type AnyWidgetEntry, resolveWidget } from "./widget-registry";
 
@@ -220,5 +228,222 @@ describe("a widget mounted in the panel", () => {
     });
 
     expect(out.textContent).toContain("Asia/Tokyo");
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * The examples rail, driven through the whole page with real keys.
+ * ------------------------------------------------------------------ */
+
+const PHONE_QUERY = "(max-width: 60rem)";
+
+function stubMatchMedia(phone: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches: phone && query === PHONE_QUERY,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
+/** `/api/chat` answers with plain text, or with a tool call; `/api/brains` is 404. */
+function stubFetch(reply: "text" | { tool: string; input: unknown }) {
+  const chat = vi.fn(async () =>
+    createUIMessageStreamResponse({
+      stream: createUIMessageStream({
+        execute: ({ writer }) => {
+          if (reply === "text") {
+            writer.write({ type: "text-start", id: "t1" });
+            writer.write({
+              type: "text-delta",
+              id: "t1",
+              delta: "Here you go.",
+            });
+            writer.write({ type: "text-end", id: "t1" });
+          } else {
+            writer.write({
+              type: "tool-input-available",
+              toolCallId: "call-model-1",
+              toolName: reply.tool,
+              input: reply.input,
+            });
+          }
+        },
+      }),
+    }),
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) =>
+      String(input).includes("/api/chat")
+        ? chat()
+        : new Response("{}", { status: 404 }),
+    ),
+  );
+  return chat;
+}
+
+const card = (widget: string) =>
+  document.querySelector<HTMLButtonElement>(`button[data-widget="${widget}"]`)!;
+
+const starterFor = (widget: string) =>
+  CHAT_STARTERS.find((s) => s.widget === widget)!;
+
+describe("the examples rail on /dox", () => {
+  const original = window.matchMedia;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.matchMedia = original;
+  });
+
+  it("lists one card per starter under every area, and no starter pills in the chat", () => {
+    stubMatchMedia(false);
+    stubFetch("text");
+    render(<DoxPage />);
+
+    expect(document.querySelector(".gmt-hive-starters")).toBeNull();
+    const rail = screen.getByRole("complementary", { name: "Examples" });
+    expect(within(rail).getAllByRole("button")).toHaveLength(
+      CHAT_STARTERS.length,
+    );
+    for (const { label } of EXAMPLE_AREAS) {
+      expect(within(rail).getByRole("region", { name: label })).toBeTruthy();
+    }
+    // The accessible name is exactly the question; the chip is the description.
+    const globe = starterFor("showGlobe");
+    expect(
+      within(rail).getByRole("button", {
+        name: globe.text,
+        description: "Zoned Earth",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("is reached by Tab, card by card, in order", async () => {
+    stubMatchMedia(false);
+    stubFetch("text");
+    render(<DoxPage />);
+    const user = userEvent.setup();
+    const expected = startersByArea().flatMap((g) =>
+      g.starters.map((s) => s.widget),
+    );
+
+    const rail = screen.getByRole("complementary", { name: "Examples" });
+    const seen: string[] = [];
+    for (let i = 0; i < 80 && seen.length < expected.length; i++) {
+      await user.tab();
+      const active = document.activeElement as HTMLElement | null;
+      if (active && rail.contains(active) && active.dataset.widget) {
+        seen.push(active.dataset.widget);
+      }
+    }
+    expect(seen).toEqual(expected);
+  });
+
+  it("opens a widget on Enter or Space, sends once, focuses the title, and returns focus on close", async () => {
+    stubMatchMedia(false);
+    const chat = stubFetch("text");
+    render(<DoxPage />);
+    const user = userEvent.setup();
+
+    // Enter on the converter card.
+    card("showConverterBench").focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("complementary", { name: "Widget panel" }),
+      ).toBeTruthy(),
+    );
+    expect(chat).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(
+        "Converter + format bench",
+      ),
+    );
+
+    // Closing brings the list back, focus on the card that opened it.
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("complementary", { name: "Examples" }),
+      ).toBeTruthy(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(card("showConverterBench")),
+    );
+
+    // Space on the interval card.
+    await waitFor(() => expect(chat).toHaveBeenCalledTimes(1));
+    card("showIntervalVisualizer").focus();
+    await user.keyboard(" ");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("complementary", { name: "Widget panel" }),
+      ).toBeTruthy(),
+    );
+    expect(chat).toHaveBeenCalledTimes(2);
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(
+        "Interval algebra visualizer",
+      ),
+    );
+  });
+
+  it("on a phone, folds the examples behind a bar once a conversation has started", async () => {
+    stubMatchMedia(true);
+    stubFetch("text");
+    render(<DoxPage />);
+    const user = userEvent.setup();
+    const name = `Examples ${CHAT_STARTERS.length}`;
+    expect(screen.queryByRole("button", { name })).toBeNull();
+
+    card("showConverterBench").focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("complementary", { name: "Widget panel" }),
+      ).toBeTruthy(),
+    );
+    // No bar while a widget is open.
+    expect(screen.queryByRole("button", { name })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    const bar = await screen.findByRole("button", { name });
+    expect(bar.getAttribute("aria-expanded")).toBe("false");
+    await waitFor(() => expect(document.activeElement).toBe(bar));
+
+    const rail = screen.getByRole("complementary", { name: "Examples" });
+    expect(rail.hasAttribute("data-collapsed")).toBe(true);
+    expect(bar.getAttribute("aria-controls")).toBe(rail.id);
+
+    await user.click(bar);
+    expect(bar.getAttribute("aria-expanded")).toBe("true");
+    expect(rail.hasAttribute("data-collapsed")).toBe(false);
+  });
+
+  it("never moves focus for a widget the model opens", async () => {
+    stubMatchMedia(false);
+    const converter = starterFor("showConverterBench");
+    stubFetch({ tool: "showConverterBench", input: converter.args });
+    render(<DoxPage />);
+    const user = userEvent.setup();
+
+    const box = screen.getByRole("textbox");
+    await user.type(box, "Convert 2:30pm New York to Tokyo please{Enter}");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("complementary", { name: "Widget panel" }),
+      ).toBeTruthy(),
+    );
+    expect(document.activeElement).not.toBe(
+      screen.getByText("Converter + format bench", {
+        selector: ".gmt-hive-artifact-title",
+      }),
+    );
+    expect(document.activeElement).toBe(box);
   });
 });

@@ -157,8 +157,10 @@ which records the native Temporal evidence for each rule below.
   `zoned/` function, and `isValidZonedDateTime`, reads annotations as `Temporal.ZonedDateTime.from`
   does (an elective one is ignored, an unknown critical one is rejected) and accepts `[u-ca=iso8601]`,
   but rejects any other calendar, so a validator never certifies a string its own namespace refuses.
-  `utc/` and the `Interval` endpoints are instants and read every annotation as
-  `Temporal.Instant.from` does: a calendar annotation (`[u-ca=hebrew]`) is ignored.
+  `utc/` and the `Interval` endpoints are instants: a calendar annotation (`[u-ca=hebrew]`) is
+  ignored, as `Temporal.Instant.from` ignores it, and a time-zone annotation is read as
+  [§ Calendar & zone semantics, rule 9](#9-an-instant-string-is-read-as-the-zoned-string-it-may-be)
+  says.
 - **Different calendars follow Temporal's `CalendarEquals`.** A difference between two values that
   name different calendars returns the sentinel (`diff*`, `intervalCount*`, `intervalLength*`,
   `splitIntervalByUnit*`, `intervalOverlappingDays*`; `internal/calendarDatePairPolicy.ts`,
@@ -283,6 +285,72 @@ spec has no function for.
   instant. JSDoc never describes a shared endpoint as belonging to both pieces.
 - **A `Date` interval excludes its `end` day.** "The last day of the period" is passed as the next
   day: `addDate(end, { days: 1 })`.
+
+### 9. An instant string is read as the zoned string it may be
+
+`Temporal.ZonedDateTime.prototype.toString` writes the offset rounded to the minute
+(`FormatDateTimeUTCOffsetRounded`), so a zoned string for a zone with a sub-minute offset carries
+an offset up to 30 seconds from the real one: `Africa/Monrovia` stood at −00:44:30 until 1972 and
+is written `-00:45`. `Temporal.ZonedDateTime.from` reads that string back to the same instant
+(TC39 `ToTemporalZonedDateTime`, match-minutes in `InterpretISODateTimeOffset`);
+`Temporal.Instant.from` takes the written offset literally. GMT writes zoned strings and reads
+them back as instants, so every instant reader follows the zoned reading.
+
+- **The rule.** When a string has a bracketed zone and an offset written to the minute, and that
+  offset is the zone's real offset at that wall time rounded to the minute, the instant is the one
+  the zone gives: `1960-01-01T00:20:00-00:45[Africa/Monrovia]` is `01:04:30Z`, not `01:05:00Z`.
+  The match depends on the zone and the offset only; a calendar or elective annotation never
+  changes it.
+- **The instant range is the only range.** An instant reader has no `CheckISODaysRange` on the
+  local date and does not need the written offset's own reading to be in range. Every string
+  Temporal writes for an instant in range is valid and reads back, the first and last instants
+  included: `-271821-04-19T23:58:45-00:01[Europe/London]` (local mean time, −00:01:15) is the
+  first instant, although its local date is outside Temporal's date range and its reading at
+  −00:01 is 15 seconds before the range.
+- **Two cases where a zoned string GMT wrote does not read back as its instant.** Both are
+  Temporal's own, GMT keeps Temporal's written format, and there are no others.
+  1. *Every reader: a repeated wall time inside a sub-minute offset change reads as its first
+     pass.* The match runs over the candidate instants in order, so when a wall time happened
+     twice and the rounded offset fits the first pass, that pass is the answer, even for a string
+     written from the second. This is a class of strings, not one zone: it arises wherever a zone's
+     history has a fall-back of under a minute at a sub-minute offset (18 zones in the current tz
+     database, Africa/Ndjamena in 1911 and America/Anchorage in 1900 among them). The example
+     test262 uses: Pacific/Niue moved from −11:19:40 to −11:20:00 at the end of
+     15 October 1952: the instant `-543069601000000000n` is written
+     `1952-10-15T23:59:59-11:20[Pacific/Niue]` and reads back as `-543069621000000000n` (test262
+     `intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js`). The exact offset
+     (`-11:20:00`) names the second pass.
+  2. *Zoned reads only: a local date of −271821-04-19 is refused.* A function that keeps the zone
+     reads through `Temporal.ZonedDateTime.from`, whose `InterpretISODateTimeOffset` runs
+     `CheckISODaysRange` on the local date before it matches the offset. A zone west of Greenwich
+     shows that date for the first hours of the instant range (the first 4 h 56 min 2 s in
+     `America/New_York`), so the string Temporal writes there
+     (`-271821-04-19T23:59:00-00:01[Europe/London]`) returns the sentinel from `transitTime`,
+     `toOffsetInstant`, `isValidZonedDateTime` and every `zoned/` function, while the instant
+     readers read it. GMT does not widen the zoned read: a validator must not certify a zoned
+     string Temporal refuses. The spec step is recorded as a tc39 item to file in
+     [js-temporal-polyfill-bugs.md § J](./domination/js-temporal-polyfill-bugs.md).
+- **Everything else keeps the written offset.** The complete list: a string without a bracket; a
+  `Z` instant; an offset written with seconds (TC39 matches it exactly, so
+  `-00:45:00[Africa/Monrovia]` is −00:45:00 to an instant reader and invalid as a zoned string;
+  polyfill 0.5.1 matches it by minutes, which `zonedDateTimeFrom` corrects as temporalCompat
+  D12); a bracket whose zone does not exist; and a bracket whose zone has no instant in range
+  with that wall time at the written offset or at one that rounds to it. An instant reader does
+  not validate such a bracket; a function that keeps the zone (`transitTime`, `toOffsetInstant`,
+  every `zoned/` function) rejects it. A string whose written reading is outside the instant
+  range, and which its zone does not bring inside, is invalid.
+- **One implementation.** `internal/instantNanoseconds.ts`: `parseInstantNanoseconds` (and
+  `isValidInstant` on top of it) for epoch nanoseconds, `instantFrom` for a `Temporal.Instant`.
+  A caller's instant string never goes to `Temporal.Instant.from` directly. The exceptions are
+  strings that cannot carry a rounded offset to resolve: one gated on `isValidUtc` (a `Z` has no
+  offset to round), one GMT has just written in `Z` form, and one already known to have no
+  time-zone bracket (the offset branch of `scheduleDelivery`'s departure, reached only after a
+  bracketed string has been refused).
+- **No zone data.** The zone's offset comes from Temporal; GMT holds no offset table.
+- **Test zones:** `Africa/Monrovia` in 1960 (30 seconds late when read literally) and
+  `America/New_York` on 1883-11-18 before noon (−04:56:02, 2 seconds early); the range limits in
+  `Europe/London`, `Africa/Monrovia`, `America/New_York`, `Asia/Kolkata` and `Asia/Tokyo`; and
+  `Pacific/Niue` on 1952-10-15, all in `src/test/minuteRoundedOffsets.test.ts`.
 
 ## Changesets
 

@@ -2,8 +2,8 @@
 
 These files are **vendored**, not a dependency. AI Elements is a shadcn registry:
 its source is copied into the repo (`components.json`, style `new-york`), so we
-own and re-theme every component here. `DOX-C0` installed 12 of them rather than
-`all`.
+own and re-theme every component here. Only the ones the chat uses (or a row below
+explains) are kept, rather than `all`.
 
 Five years of "why is this file here?" is avoidable with a table, so:
 
@@ -12,7 +12,6 @@ Five years of "why is this file here?" is avoidable with a table, so:
 | `conversation.tsx` | **wired** | `DoxChat` — the scroll container (`use-stick-to-bottom`) |
 | `message.tsx` | **wired** | `DoxChat` — Streamdown rendering. **Locally modified:** the `streamdownPlugins` / `streamdownControls` block turns the download control off and leaves copy on |
 | `prompt-input.tsx` | **wired** | `DoxChat` — the composer. **Locally modified:** `form.reset()` is deferred to the success paths so a refused send keeps the reader's text (see the comment in `handleSubmit`) |
-| `suggestion.tsx` | **wired** | `DoxChat` — the empty-state pills |
 | `task.tsx` | **wired** | `RetrievalTrace` — the collapsible retrieval trace |
 | `artifact.tsx` | **wired** | `WidgetRail` — the panel a mounted widget sits in on `/dox` |
 | `tool.tsx` | not wired | The transcript's tool-call receipt is the purpose-built `WidgetReceipt` chip instead. Candidate for deletion — `context/dox/ui-audit.md` P1 |

@@ -1,0 +1,285 @@
+/*
+ * ETA Drift Chart widget (TRAN-57).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, ranges and chips in gmt-form-controls.css; the chart surface, chip,
+ * series mapping and glow recipe in gmt-cutoff-widgets.css; the result plates,
+ * class chip, naive outline and results table in gmt-punctuality-widgets.css.
+ * This sheet draws the plot: x is when each record was recorded, y is the time
+ * it names (later at the top), at a fixed height, in an inner panel.
+ *
+ * A mark's shape carries its class: ACT a filled diamond, PLN a filled square,
+ * REQ a triangle, EST a hollow circle. Its series colour only repeats the
+ * class; the code on a chip and the word name it. The best pick has a bright
+ * ring, the naive pick a dashed one, and each says so in words. The tolerance
+ * band is lit glass with no text in it. Series colour is never text. Nothing
+ * here is a success or an error hue; tokens only.
+ */
+
+.gmt-eta-plot {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-rows: 240px auto;
+  column-gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-eta-yaxis {
+  position: relative;
+}
+
+.gmt-eta-ytick {
+  position: absolute;
+  right: 0;
+  translate: 0 -50%;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* The inner panel: a bevelled frame with a brighter top edge and the inset
+   highlight over a faint fill. */
+.gmt-eta-area {
+  position: relative;
+  border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.gmt-eta-xticks {
+  grid-column: 2;
+  margin-top: var(--gmt-space-1);
+}
+
+.gmt-eta-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gmt-eta-grid {
+  stroke: var(--gmt-hairline-faint);
+  stroke-width: 1;
+}
+
+/* The estimates' join line, in the first series at about 70%. */
+.gmt-eta-line {
+  fill: none;
+  stroke: color(from var(--gmt-series-1) srgb r g b / 0.7);
+  stroke-width: 1.5;
+}
+
+/* The chord stays a dashed ice line, with a soft glow line drawn under it. */
+.gmt-eta-chord {
+  stroke: var(--gmt-ice);
+  stroke-width: 2;
+  stroke-dasharray: 6 3;
+}
+
+.gmt-eta-line-glow {
+  fill: none;
+  stroke: var(--gmt-glow);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+/* The tolerance band: lit glass, brighter in the middle, with bright block
+   edges and a soft glow. Its words are under the plot. */
+.gmt-eta-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-block: 1px solid var(--gmt-cyan-bright);
+  background: linear-gradient(
+    180deg,
+    color(from var(--gmt-cyan) srgb r g b / 0.1),
+    color(from var(--gmt-cyan) srgb r g b / 0.22),
+    color(from var(--gmt-cyan) srgb r g b / 0.1)
+  );
+  box-shadow: 0 0 8px var(--gmt-glow);
+}
+
+.gmt-eta-mark,
+.gmt-eta-ring {
+  position: absolute;
+  box-sizing: border-box;
+  translate: -50% -50%;
+}
+
+/* The shape, shared by a plot mark and the static glyph the legend, the table
+   and the plates use. The colour is the class's series, on marks and glyphs
+   only, never on text. */
+:is(.gmt-eta-mark, .gmt-eta-glyph) {
+  width: 0.7rem;
+  height: 0.7rem;
+  color: var(--series, var(--gmt-ice));
+}
+
+:is(.gmt-eta-mark--act, .gmt-eta-glyph--act) {
+  background: currentColor;
+  rotate: 45deg;
+}
+
+:is(.gmt-eta-mark--pln, .gmt-eta-glyph--pln) {
+  background: currentColor;
+}
+
+:is(.gmt-eta-mark--est, .gmt-eta-glyph--est) {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--gmt-surface);
+}
+
+:is(.gmt-eta-mark--req, .gmt-eta-glyph--req) svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+:is(.gmt-eta-mark--req, .gmt-eta-glyph--req) path {
+  fill: currentColor;
+}
+
+/* A plot mark: a 2px surface ring around it and the family's glow. */
+.gmt-eta-mark {
+  box-shadow:
+    0 0 0 2px var(--gmt-surface),
+    0 0 10px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.45);
+}
+
+.gmt-eta-mark--req {
+  box-shadow: none;
+}
+
+.gmt-eta-mark--req svg {
+  filter: drop-shadow(
+    0 0 4px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5)
+  );
+}
+
+.gmt-eta-mark--req path {
+  stroke: var(--gmt-surface);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+/* The glyph: the same shape, inline and static. */
+.gmt-eta-glyph {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  margin-inline: 0.15rem;
+}
+
+/* The best pick: a bright ring, a surface gap inside it, and the family glow. */
+.gmt-eta-ring {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--gmt-cyan-bright);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px var(--gmt-surface),
+    0 0 0 3px color(from var(--gmt-cyan-bright) srgb r g b / 0.25),
+    0 0 12px color(from var(--gmt-cyan-bright) srgb r g b / 0.45);
+}
+
+/* The naive pick: a wider dashed ring, no glow. */
+.gmt-eta-ring--dashed {
+  width: 2rem;
+  height: 2rem;
+  border: 1.5px dashed var(--gmt-ice-dim);
+  box-shadow: none;
+}
+
+/* The class chip inside a label keeps a hair of clear space from the words, so
+   nothing measures its border as part of the text. */
+.gmt-eta-label .gmt-punct-chip {
+  margin-right: 2px;
+}
+
+/* A label is a chip (`.gmt-cutoff-chip`, opaque and bevelled) that sits beside
+   its mark until the mount measures it and places it. A long label ("best
+   available, naive") wraps to two short lines, which the placer can fit beside
+   a mark where one long line would not. */
+.gmt-eta-drift .gmt-eta-label.gmt-cutoff-chip {
+  position: absolute;
+  display: block;
+  width: max-content;
+  max-width: 9rem;
+  translate: var(--gmt-space-2) -50%;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.gmt-eta-drift .gmt-eta-label.gmt-cutoff-chip.gmt-eta-label--placed {
+  translate: none;
+}
+
+.gmt-eta-signal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* The legend: one entry per class present, a glyph, the code chip and the word.
+   Decorative (`aria-hidden`): the table and the summary say it all. The
+   `ul.` prefix matches the depth of the site's markdown bullet rule
+   (`.sl-markdown-content ul li`, gmt-content.css), which would otherwise draw
+   a cyan dash and pad every entry. */
+.gmt-eta-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-eta-legend:empty {
+  display: none;
+}
+
+ul.gmt-eta-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+ul.gmt-eta-legend > li::before {
+  content: none;
+}
+
+/* A narrow widget (a phone, the /dox rail) has a narrow plot: it grows taller
+   and its labels wrap narrower, so the measuring placer finds room for every
+   chip clear of the marks, the lines and the band's edges. */
+@container (max-width: 30rem) {
+  .gmt-eta-plot {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    grid-template-rows: 300px auto;
+    column-gap: var(--gmt-space-1);
+  }
+
+  .gmt-eta-drift .gmt-eta-label.gmt-cutoff-chip {
+    max-width: 6.5rem;
+  }
+}

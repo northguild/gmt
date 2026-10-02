@@ -239,4 +239,23 @@ describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () 
   `("gives $value $expected hours (control)", ({ value, expected }) => {
     expect(getHoursInZonedDay(value)).toBe(expected);
   });
+
+  // temporalCompat D13: the midnight of 2000-10-08 is skipped (clocks went 00:00 → 01:00) and the
+  // clocks went back a week later, inside one of the polyfill's 14-day search steps. Native
+  // Temporal (Node 26.10.0) and zdump: a 23-hour day, and 24 hours the day before.
+  it.each`
+    value                                             | expected
+    ${"2000-10-08T12:00:00-03:00[America/Boa_Vista]"} | ${23}
+    ${"2000-10-07T12:00:00-04:00[America/Boa_Vista]"} | ${24}
+    ${"2000-10-08T12:00:00-01:00[America/Noronha]"}   | ${23}
+    ${"2000-10-07T12:00:00-02:00[America/Noronha]"}   | ${24}
+    ${"2000-10-08T12:00:00-02:00[America/Recife]"}    | ${23}
+    ${"2000-10-14T12:00:00-03:00[America/Boa_Vista]"} | ${25}
+  `(
+    "gives $value $expected hours beside a daylight period 7 days long",
+    ({ value, expected }) => {
+      expect(getHoursInZonedDay(value)).toBe(expected);
+    },
+    10_000,
+  );
 });

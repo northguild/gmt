@@ -3,6 +3,7 @@ title: "Transport: Multi-leg Scheduling"
 description: scheduleDelivery and crossingTime — chain truck, ship and rail legs into one ETA with every handoff an exact instant, check a scheduled connection against the minimum connect time, and time a crossing on the clock that administers it.
 sidebar:
   order: 4
+industries: [transport]
 ---
 
 A multi-modal move, truck to ship to rail, is published as one departure plus a duration per
@@ -26,7 +27,7 @@ one to four legs. Each leg's arrival plus its `dwellAfter` is the next leg's dep
 `localArrival`. A single leg is exactly `transitTime` composed with `etaAtZone`.
 
 ```typescript
-import { etaAtZone, transitTime } from "@northguild/gmt/transport";
+import { etaAtZone, scheduleDelivery, transitTime } from "@northguild/gmt/transport";
 
 scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT36H", timeZone: "Asia/Tokyo" }]);
 // { eta: "2024-06-17T07:00:00+09:00[Asia/Tokyo]",
@@ -127,6 +128,14 @@ scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZon
 ```
 
 Open the handoff on its own in the [Connection Checker](/tools/connection-checker/).
+
+### Which departure the cargo can make: `nextDeparture`
+
+A scheduled `departure` is often the answer to "which departure can this cargo still make".
+`nextDeparture` reads it off a timetable list or a service every N minutes, after the minimum
+connection time, and returns the entry exactly as written so it goes straight into the leg. See
+[the guide section](/guides/industries/transport-punctuality-and-timestamps/#the-next-departure-you-can-make-nextdeparture)
+and the [Departure Board](/tools/departure-board/).
 
 ### A departure is exact, or a local time read in a known zone
 
@@ -269,13 +278,13 @@ crossingTime("2024-11-03T05:30:00Z", "2024-11-03T06:30:00Z", "America/New_York")
 // { duration: "PT1H", enter: "2024-11-03T01:30:00-04:00[America/New_York]", exit: "2024-11-03T01:30:00-05:00[America/New_York]" }
 ```
 
-`targetZone` is always the rendering zone, and a bracket in the input is never read. A fixed
+`targetZone` is always the rendering zone, and a bracket in the input never supplies it. A fixed
 offset renders with no DST: the spring-forward night on a fixed −05:00 reads 07:00, not New
 York's 08:00.
 
 ```typescript
 crossingTime("2024-06-15T08:00:00+02:00[Europe/Berlin]", "2024-06-15T17:30:00+02:00[Europe/Berlin]", "America/Panama");
-// { duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" } — the Berlin bracket is never read
+// { duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" } — the offset fixes each instant, and the Berlin bracket is not checked
 
 crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "-05:00");
 // { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[-05:00]", exit: "2024-03-10T07:00:00-05:00[-05:00]" } — 07:00, not New York's 08:00

@@ -84,6 +84,59 @@ describe("resolveWidget", () => {
     expect(await result.entry.validate?.(result.args)).toBeNull();
   });
 
+  describe("showZonePlanner", () => {
+    const validate = async (input: unknown) => {
+      const result = resolveWidget("showZonePlanner", input);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.reason);
+      return result.entry.validate?.(result.args);
+    };
+
+    it("passes real zones and a UTC time", async () => {
+      expect(
+        await validate({
+          zones: ["America/New_York", "Asia/Tokyo"],
+          time: "2026-03-08T06:45:00Z",
+        }),
+      ).toBeNull();
+    });
+
+    it("rejects an invented zone", async () => {
+      expect(
+        await validate({ zones: ["America/New_York", "Mars/Olympus_Mons"] }),
+      ).toContain("Mars/Olympus_Mons");
+    });
+
+    it("rejects a real zone the planner has no coordinate for", async () => {
+      expect(await validate({ zones: ["Etc/GMT+5"] })).toContain("Etc/GMT+5");
+    });
+
+    it("rejects a time that is not a UTC instant, instead of starting at now", async () => {
+      expect(
+        await validate({
+          zones: ["Asia/Tokyo"],
+          time: "2026-03-08T01:45:00-05:00",
+        }),
+      ).toContain("isn't a UTC instant");
+    });
+
+    it("refuses an empty zone list and more than eight", () => {
+      expect(resolveWidget("showZonePlanner", { zones: [] }).ok).toBe(false);
+      expect(
+        resolveWidget("showZonePlanner", {
+          zones: Array.from({ length: 9 }, () => "Asia/Tokyo"),
+        }).ok,
+      ).toBe(false);
+    });
+
+    it("renders a host the mount looks up", async () => {
+      const loaded = await WIDGET_REGISTRY.showZonePlanner!.load();
+      expect(loaded.renderTemplate("probe", {} as never)).toContain(
+        'data-role="planner-host"',
+      );
+    });
+  });
+
   it("produces markup carrying every role its mount looks up", async () => {
     // `mountGlobe` uses null-tolerant lookups, so a missing data-role would not
     // throw — it would silently make a control inert.

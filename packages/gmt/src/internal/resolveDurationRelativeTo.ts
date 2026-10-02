@@ -7,6 +7,7 @@ import {
 } from "./calendarDateString";
 import { parseCalendarZonedValue } from "./calendarZonedString";
 import { hasZonedDateTimeShape, isoStringBody } from "./isoStringBody";
+import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
  * A calendar annotation in any spelling: critical flag or not, any letter case. An upper-case key
@@ -53,6 +54,10 @@ function hasRelativeToShape(value: string): boolean {
  *   calendar must be a `CalendarSystem`, and `"ethiopic"`/`"coptic"` compute in `"ethioaa"`,
  *   which polyfill 0.5.1 can read. The digits are ISO, so this is the date Temporal itself would
  *   read.
+ * - A zoned string without a calendar annotation is read with `zonedDateTimeFrom`, so its offset
+ *   is matched against the zone as TC39 `ToRelativeTemporalObject` matches it: an offset written
+ *   to the minute may be the zone's sub-minute offset rounded, and one written with seconds must
+ *   be the zone's offset exactly (`"1970-01-01T00:00:00-00:45:00[Africa/Monrovia]"` throws).
  * - A leap second (second `60`) throws, in every spelling Temporal's grammar accepts — `T`, `t`
  *   or space separator, extended or basic digits, with or without a designator. Temporal's
  *   ParseISODateTime would otherwise clamp it to `:59`.
@@ -82,7 +87,12 @@ export function resolveDurationRelativeTo(
     );
   }
   if (!anyCalendarAnnotation.test(relativeTo)) {
-    return relativeTo;
+    // A zoned string is read here, not handed on as text: `zonedDateTimeFrom` matches an offset
+    // written with seconds exactly, as TC39 `ToRelativeTemporalObject` requires and polyfill
+    // 0.5.1 does not (temporalCompat D12).
+    return timeZoneAnnotation.test(relativeTo)
+      ? zonedDateTimeFrom(relativeTo)
+      : relativeTo;
   }
   if (timeZoneAnnotation.test(relativeTo)) {
     return parseCalendarZonedValue(relativeTo);

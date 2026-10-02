@@ -40,6 +40,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
@@ -117,41 +118,48 @@ export function renderBillingDeadlinesTemplate(
   const presetId = matchPreset(state);
   const preset = BILLING_PRESETS.find((p) => p.id === presetId);
 
-  const dateField = (role: string, label: string, value: string): string =>
-    `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
+  const dateField = (
+    role: string,
+    label: string,
+    value: string,
+    optional = false,
+  ): string =>
+    `<label class="gmt-label">${labelTextHtml(label, { optional })}` +
     `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" placeholder="YYYY-MM-DD" value="${escapeAttr(value)}"></label>`;
 
   const windowField = (role: string, label: string, value: string): string =>
-    `<label class="gmt-label"><span>${escapeHtml(label)}</span>` +
+    `<label class="gmt-label">${labelTextHtml(label)}` +
     `<input class="gmt-input" data-role="${role}" type="number" min="0" step="1" inputmode="numeric" value="${escapeAttr(value)}"></label>`;
 
   return (
-    `<div class="gmt-billing gmt-widget">` +
+    `<div class="gmt-billing gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. Set the dates and the windows</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
     `<fieldset class="gmt-billing-group"><legend>Dates</legend>` +
-    `<div class="gmt-widget-controls">` +
+    `<div class="gmt-field-grid">` +
     dateField("anchor-on", "Anchor date (day zero)", state.anchorOn) +
     dateField(
       "invoice-issued-on",
-      "Invoice issued on (optional)",
+      "Invoice issued on",
       state.invoiceIssuedOn,
+      true,
     ) +
     dateField(
       "request-received-on",
-      "Request received on (optional)",
+      "Request received on",
       state.requestReceivedOn,
+      true,
     ) +
     `</div></fieldset>` +
     `<fieldset class="gmt-billing-group"><legend>Windows, in calendar days</legend>` +
-    `<div class="gmt-widget-controls">` +
+    `<div class="gmt-field-grid">` +
     windowField("issue-days", "Issue window (days)", state.issueDays) +
     windowField("dispute-days", "Dispute window (days)", state.disputeDays) +
     windowField(
@@ -161,8 +169,9 @@ export function renderBillingDeadlinesTemplate(
     ) +
     dateField(
       "agreed-resolution-on",
-      "Agreed resolution date (optional)",
+      "Agreed resolution date",
       state.agreedResolutionOn,
+      true,
     ) +
     `</div></fieldset>` +
     `</div>` +
@@ -177,7 +186,7 @@ export function renderBillingDeadlinesTemplate(
     `<div class="gmt-billing-strip" data-role="strip" role="list"></div>` +
     `<p class="gmt-billing-strip-summary" data-role="strip-summary" aria-live="polite"></p>` +
     renderLegend() +
-    `<div data-role="reason-aside"></div>` +
+    `<div data-role="reason-aside" data-grow="slot"></div>` +
     `<p class="gmt-billing-liability-note" data-role="liability-note">These are date comparisons. What follows from a date after a deadline is for you and the terms you bill under: GMT computes dates, not liability.</p>` +
     `</div>` +
     `<div class="gmt-widget-section">` +

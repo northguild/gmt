@@ -30,21 +30,20 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   ViewTransition,
+  type ReactNode,
+  type Ref,
 } from "react";
 import type { StickToBottomContext } from "use-stick-to-bottom";
 
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
-import {
-  CHAT_STARTERS,
-  CORPUS_SUMMARY,
-  starterWidgetCall,
-} from "~/lib/chat-constants";
+import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import { pageContextFromReferrer } from "~/lib/page-context";
 import { nextReset } from "~/lib/quota-resets";
@@ -77,7 +76,6 @@ import {
 } from "../ai-elements/prompt-input";
 import githubDark from "shiki/dist/themes/github-dark.mjs";
 import githubLight from "shiki/dist/themes/github-light.mjs";
-import { Suggestion } from "../ai-elements/suggestion";
 import {
   ChatWarning,
   type ChatWarningState,
@@ -154,12 +152,28 @@ export interface DoxChatProps {
    *  it, either automatically when one streams in or when the reader reopens a
    *  receipt. */
   onWidget?: (toolCallId: string, toolName: string, input: unknown) => void;
+  /** Lets the host send a question on the reader's behalf (the examples
+   *  rail's cards), through the same guarded `send` the composer uses. */
+  ref?: Ref<DoxChatHandle>;
+  /** Fired with `true` while the conversation has no messages. Raw, not
+   *  deferred, so a host's chrome follows the first send at once. */
+  onEmptyChange?: (empty: boolean) => void;
+  /** Rendered first inside the composer, above the input. */
+  aboveComposer?: ReactNode;
+}
+
+export interface DoxChatHandle {
+  /** Returns whether the question was actually sent. */
+  send: (text: string) => boolean;
 }
 
 export function DoxChat({
   brains = null,
   onUsed,
   onWidget,
+  ref,
+  onEmptyChange,
+  aboveComposer,
 }: DoxChatProps = {}) {
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
   /** The Worker's latest progress line while it chooses a brain; null shows
@@ -402,6 +416,13 @@ export function DoxChat({
      message as a plain synchronous update, which never triggers one. */
   const isEmpty = useDeferredValue(messages.length === 0);
 
+  useImperativeHandle(ref, () => ({ send }), [send]);
+
+  const rawEmpty = messages.length === 0;
+  useEffect(() => {
+    onEmptyChange?.(rawEmpty);
+  }, [rawEmpty, onEmptyChange]);
+
   /** Between `sendMessage` and the first streamed token, `status` is
    * "submitted" and no assistant message exists yet — so without a placeholder
    * the page shows nothing at all for the whole round trip and reads as frozen.
@@ -446,23 +467,6 @@ export function DoxChat({
                   Ask <code className="gmt-hive-name">Dox</code> about dates,
                   times, and zones in <code>@northguild/gmt</code>.
                 </p>
-                <div className="gmt-hive-starters">
-                  {CHAT_STARTERS.map((starter) => (
-                    <Suggestion
-                      key={starter.widget}
-                      className="gmt-hive-starter gmt-sonar-focus"
-                      suggestion={starter.text}
-                      onClick={(text) => {
-                        /* Open the pill's widget now, seeded, rather than wait
-                           a whole round trip for a tool call that may not
-                           come. Only if the question was actually sent. */
-                        if (!send(text)) return;
-                        const call = starterWidgetCall(starter);
-                        onWidget?.(call.toolCallId, call.toolName, call.input);
-                      }}
-                    />
-                  ))}
-                </div>
               </div>
             </ViewTransition>
           ) : (
@@ -583,6 +587,7 @@ export function DoxChat({
           sat 16px below its neighbour. */}
       <div className="gmt-hive-composer not-content">
         <div className="gmt-hive-composer-inner">
+          {aboveComposer}
           {outOfBudget && (
             <p className="gmt-hive-exhausted" role="status">
               <span className="gmt-hive-exhausted-marker" aria-hidden="true">

@@ -319,6 +319,17 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+/** The clock's change at the transition, in minutes: negative when the clocks go
+ *  back. Drawing only (the width of the repeated-hour band). */
+export function transitionShiftMinutes(t: RulerTransition): number {
+  return parseOffsetMinutes(t.after) - parseOffsetMinutes(t.before);
+}
+
+/** A fall-back repeats an hour (`overlap`); a spring-forward skips one (`gap`). */
+export function transitionKind(t: RulerTransition): "overlap" | "gap" {
+  return transitionShiftMinutes(t) < 0 ? "overlap" : "gap";
+}
+
 /**
  * The next DST transition between the earliest resolved reading and the
  * departure, from the polyfill's own `getTimeZoneTransition("next")` —
@@ -368,7 +379,7 @@ export function transitionBetween(
  *  weekday and date are read from the transition instant with the
  *  polyfill — drawing, not a library call. */
 export function transitionLabel(t: RulerTransition, timeZone: string): string {
-  const gapMinutes = parseOffsetMinutes(t.after) - parseOffsetMinutes(t.before);
+  const gapMinutes = transitionShiftMinutes(t);
   const direction = gapMinutes < 0 ? "back" : "forward";
   const hours = Math.abs(gapMinutes) / 60;
   const hoursText = hours === 1 ? "1 h" : `${hours} h`;

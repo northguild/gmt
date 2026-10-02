@@ -242,4 +242,22 @@ describe("dwellTime", () => {
     mockTemporalInstantFromThrow();
     expect(dwellTime(entry, exit, "Europe/London")).toBeNull();
   });
+
+  // 4,000 Gregorian years are 1,460,970 days, and an exit exactly at local midnight does not
+  // touch the new day. A zone with no clock change over a span far longer than the transition
+  // search's "no further change" horizon; the fixed offset never searches.
+  it.each`
+    zone
+    ${"Asia/Tokyo"}
+    ${"+09:00"}
+  `(
+    "counts 1460970 calendar days from 2000 to 6000 in $zone",
+    ({ zone }) => {
+      expect(
+        dwellTime("1999-12-31T15:00:00Z", "5999-12-31T15:00:00Z", zone)
+          ?.calendarDays,
+      ).toBe(1460970);
+    },
+    10_000,
+  );
 });

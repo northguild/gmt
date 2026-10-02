@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { MAX_ISO_EPOCH_DAYS } from "../zonedWallClock";
+import { MAX_ISO_EPOCH_DAYS } from "../epochNanoseconds";
 import { calendarFieldsOf } from "./calendarFields";
 
 /*

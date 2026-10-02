@@ -1,0 +1,59 @@
+---
+/**
+ * Departure Board widget (TRAN-57).
+ *
+ * `nextDeparture` reading a timetable after an arrival plus the time it takes to
+ * connect.
+ *
+ * **The markup and the wiring both live in `lib/departure-board-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+import { renderDepartureBoardTemplate } from "../lib/departure-board-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane. It adds
+ * `data-tools-fullbleed`, the self-declaring marker that dox.css's two `:has()`
+ * rules read to widen `.main-pane` and drop the max-width of every
+ * `.sl-container` inside `main`. That is all the marker does: how the prose
+ * around the widget is laid out is ToolLayout.astro's job, not this one's.
+ *
+ * Default `false`, which is the safe direction: this widget is embedded on
+ * `reference/**` prose pages as well as its own `/tools/` page, and those pages
+ * must keep their 50rem column. Only the tools page opts in. On a reference
+ * page the section grid simply fits fewer columns, which is what `auto-fit` is
+ * for. The marker goes on a wrapper here rather than inside `renderTemplate()`
+ * so the mount's markup stays byte-identical and `scripts/html-diff.mjs` sees
+ * the widget itself as unchanged.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderDepartureBoardTemplate();
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountDepartureBoard } from "../lib/departure-board-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("departure");
+    document
+      .querySelectorAll<HTMLElement>(".gmt-departure-board")
+      .forEach((el) => {
+        mountDepartureBoard(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

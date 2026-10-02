@@ -1,0 +1,262 @@
+---
+title: "Transport: Punctuality and Timestamps"
+description: scheduleDeviation, classifyPunctuality, punctualityRate, bestAvailable, estimateDrift and nextDeparture — late as exact elapsed time, on time against a tolerance you state, which of four timestamp classes to show, how far an estimate moved, and the next departure a connection can make.
+sidebar:
+  order: 5
+industries: [transport]
+---
+
+Every mode publishes a plan and records what happened, and measures the gap the same way.
+Only the tolerance differs, and it is yours. GMT measures the gap, judges it against a
+tolerance you state, and counts a rate under it.
+
+One field often holds four kinds of time: planned, estimated, requested and actual. A value
+means little until you know which kind it is. This layer returns the class with the value, and
+measures how far an estimate moved.
+
+```typescript
+import {
+  bestAvailable,
+  classifyPunctuality,
+  estimateDrift,
+  nextDeparture,
+  punctualityRate,
+  scheduleDeviation,
+} from "@northguild/gmt/transport";
+```
+
+All six live in `@northguild/gmt/transport/compare` (`scheduleDeviation`,
+`classifyPunctuality`) and `@northguild/gmt/transport/calculate` (the other four).
+`nextDeparture` finds the departure that
+[`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) then takes as a leg.
+
+## Late is exact elapsed time: `scheduleDeviation`
+
+[`scheduleDeviation(planned, actual)`](/reference/transport/compare/scheduleDeviation/) is
+`actual` minus `planned` in exact elapsed time. The answer is signed: positive when late,
+negative when early, and `"PT0S"` on the plan. Hours are the largest unit, so two days late is
+`PT48H`, never `P2D`.
+
+Both times are exact moments. The zone each one is written in does not matter. A zoneless wall
+time is not a moment, so the answer is `""`. To show a schedule's local time, use
+[`etaAtZone`](/reference/transport/convert/etaAtZone/).
+
+```typescript
+import { scheduleDeviation } from "@northguild/gmt/transport";
+
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z"); // "PT14M"
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z"); // "-PT5M" (five minutes early)
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z"); // "PT49H30M" (hours, never days)
+scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]"); // "PT1H"
+scheduleDeviation("2024-03-10T01:30:00-05:00[America/New_York]", "2024-03-10T03:30:00-04:00[America/New_York]"); // "PT1H"
+scheduleDeviation("2024-06-15T10:00:00", "2024-06-15T10:14:00Z"); // ""
+```
+
+Across the fall-back the wall clocks read 0 minutes apart. Across the spring-forward they read
+120. The deviation is 60 both times. See the scenario
+[A Delay Across the Fall-Back](/scenarios/delay-across-fall-back/).
+
+## On time needs a stated tolerance: `classifyPunctuality`
+
+[`classifyPunctuality(planned, actual, tolerance)`](/reference/transport/compare/classifyPunctuality/)
+judges a deviation against a tolerance you pass. GMT holds no default, because "on time" means
+nothing until someone states how late is too late.
+
+A `PunctualityTolerance` is `{ late, early? }`. Both are exact durations: a day is 24 hours.
+Weeks, months and years return `null`, and so does a negative value. The tolerance differs by
+mode. The examples below use a 15-minute tolerance, a 60/120-minute pair and a day-based one,
+each named by its numbers.
+
+### Both edges are outside
+
+A deviation of `late` or more is late. With `early`, one of `-early` or less is early. On time
+is strictly inside. This is GMT's own stated convention.
+
+Without `early`, every early arrival is on time. `late: "PT0S"` makes an arrival exactly on the
+plan late.
+
+```typescript
+import { classifyPunctuality } from "@northguild/gmt/transport";
+
+// A 15-minute tolerance: exactly 15 minutes is late.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:59Z", { late: "PT15M" }); // "onTime"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:15:00Z", { late: "PT15M" }); // "late"
+// Early is optional. Without it, an early arrival is on time.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T08:00:00Z", { late: "PT15M" }); // "onTime"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M", early: "PT10M" }); // "early"
+// A 60/120-minute pair: the same 90-minute delay, two answers.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT60M" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT120M" }); // "onTime"
+// Day-based, one day either side: both edges belong to the outside.
+classifyPunctuality("2024-06-12T06:00:00+08:00", "2024-06-11T06:00:00+08:00", { late: "P1D", early: "P1D" }); // "early"
+classifyPunctuality("2024-06-12T06:00:00+08:00", "2024-06-13T05:00:00+08:00", { late: "P1D", early: "P1D" }); // "onTime"
+classifyPunctuality("2024-06-12T06:00:00+08:00", "2024-06-13T06:00:00+08:00", { late: "P1D", early: "P1D" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z", { late: "PT0S" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "P1W" }); // null (weeks need a reference point)
+```
+
+The [Punctuality Board](/tools/punctuality-board/) puts six arrivals on one axis and lets you
+drag both edges of the tolerance.
+
+## A rate is a count under one tolerance: `punctualityRate`
+
+[`punctualityRate(pairs, tolerance)`](/reference/transport/calculate/punctualityRate/) reads the
+tolerance once, so the whole list is judged under it. Only `"onTime"` counts. With `early`, an
+early arrival is not on time.
+
+The `rate` is not rounded. An empty list returns `null`, and so does one invalid pair: you never
+get a rate over the rest. Percentiles and causes are yours to compute.
+
+```typescript
+import { punctualityRate } from "@northguild/gmt/transport";
+
+punctualityRate([
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:05:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:14:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:16:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T09:57:00Z" },
+], { late: "PT15M" }); // { onTime: 3, total: 4, rate: 0.75 }
+punctualityRate([{ planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T09:48:00Z" }, { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:01:00Z" }], { late: "PT15M", early: "PT10M" }); // { onTime: 1, total: 2, rate: 0.5 }
+punctualityRate([], { late: "PT15M" }); // null
+```
+
+The same six arrivals are 2 of 6 on time under 60 minutes and 4 of 6 under 120 in the
+[Punctuality Board's 60/120-minute preset](/tools/punctuality-board/?w=punctuality&wa=%7B%22preset%22%3A%22sixty-and-120%22%7D).
+
+## One field, four meanings: `bestAvailable`
+
+The Digital Container Shipping Association (DCSA) names four classes in its
+`eventClassifierCode` vocabulary: `PLN` planned, `EST` estimated, `REQ` requested and `ACT`
+actual. A `TimestampEvent` is `{ classifier, at, recordedAt }`.
+
+[`bestAvailable(events)`](/reference/transport/calculate/bestAvailable/) returns an `ACT`
+whenever one exists, else a `PLN`, else a `REQ`, else an `EST`. Within the class it takes the
+newest `recordedAt`. A tie goes to the later one in the array. It returns the class with the
+value.
+
+The order is GMT's own. DCSA's Port Call standard says that some port call services, such as a
+berth, pilotage or towage, "are expected to be negotiated through an (Estimated, Requested,
+Planned) ERP-pattern, including an (Actual) A"
+([DCSA Port Call 2.0.0, Use Cases](https://reference.dcsa.org/content/standards/releases/port-call/v2-0-0/port-call-v2-0-0-use-cases)).
+Other services have only an actual. GMT's order reads that pattern from its most settled end.
+DCSA defines the classes and the pattern, not a selection rule. The order is not configurable.
+
+### Never put an EST in the ACT column
+
+A dashboard that shows the latest-recorded value puts an estimate in the actual column the
+moment a late feed arrives.
+
+```typescript
+import { bestAvailable } from "@northguild/gmt/transport";
+
+bestAvailable([{ classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" }, { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" }]); // { at: "2024-06-15T12:52:00Z", classifier: "ACT" }
+bestAvailable([{ classifier: "PLN", at: "2024-06-15T12:00:00Z", recordedAt: "2024-06-01T00:00:00Z" }, { classifier: "PLN", at: "2024-06-15T13:00:00Z", recordedAt: "2024-06-10T00:00:00Z" }]); // { at: "2024-06-15T13:00:00Z", classifier: "PLN" }
+bestAvailable([{ classifier: "EST", at: "2024-06-15T12:40:00Z", recordedAt: "2024-06-14T00:00:00Z" }, { classifier: "REQ", at: "2024-06-15T12:30:00Z", recordedAt: "2024-06-12T00:00:00Z" }]); // { at: "2024-06-15T12:30:00Z", classifier: "REQ" }
+bestAvailable([]); // null
+```
+
+Open [an estimate recorded after the actual](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D) in the ETA Drift Chart.
+
+## How far the estimate moved: `estimateDrift`
+
+[`estimateDrift(events, options?)`](/reference/transport/calculate/estimateDrift/) reads only
+`EST` records, in the order they were recorded. `revisions` counts them, the first included.
+`drift` is the last estimate minus the first, signed.
+
+With `tolerance`, `exceedsTolerance` is true only when the drift is **greater** than it, in
+either direction. Exactly the tolerance is `false`. Without a tolerance it is `null`. Fewer than
+two `EST` records returns `null`: there is no drift from one sample.
+
+```typescript
+import { estimateDrift } from "@northguild/gmt/transport";
+
+const estimates = [
+  { classifier: "EST", at: "2024-06-20T08:00:00Z", recordedAt: "2024-06-01T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-20T12:00:00Z", recordedAt: "2024-06-05T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-20T17:00:00Z", recordedAt: "2024-06-10T00:00:00Z" },
+];
+estimateDrift(estimates, { tolerance: "PT8H" });
+// { first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: true }
+estimateDrift(estimates, { tolerance: "PT9H" });
+// { first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: false }
+estimateDrift(estimates.slice(0, 1)); // null (no drift from one estimate)
+```
+
+An estimate that moved earlier has a negative drift, and it exceeds a tolerance the same way:
+
+```typescript
+import { estimateDrift } from "@northguild/gmt/transport";
+
+estimateDrift([{ classifier: "EST", at: "2024-06-20T17:00:00Z", recordedAt: "2024-06-01T00:00:00Z" }, { classifier: "EST", at: "2024-06-20T08:00:00Z", recordedAt: "2024-06-10T00:00:00Z" }], { tolerance: "PT8H" }); // { first: "2024-06-20T17:00:00Z", last: "2024-06-20T08:00:00Z", drift: "-PT9H", revisions: 2, exceedsTolerance: true }
+```
+
+Drag the tolerance to exactly 9 hours in the [ETA Drift Chart](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22vessel-slide%22%2C%22tolerance%22%3A%22PT9H%22%7D).
+
+## The next departure you can make: `nextDeparture`
+
+[`nextDeparture(after, timetable, options?)`](/reference/transport/calculate/nextDeparture/) is a
+timetable lookup, not routing. The threshold is `after` plus `minimumConnection`: an exact time,
+not negative, `"PT0S"` by default. A departure exactly at the threshold is made.
+
+Every moment must carry its offset. A wall time without one returns `""`, because in a repeated
+fall-back hour it names two departures. One invalid entry returns `""`.
+
+### A list of departures
+
+The list can be in any order. A tie goes to the first. The entry is echoed exactly as written.
+
+```typescript
+import { nextDeparture } from "@northguild/gmt/transport";
+
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"]); // "2024-06-15T09:30:00Z"
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"], { minimumConnection: "PT45M" }); // "2024-06-15T11:00:00Z"
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T05:30:00-04:00[America/New_York]"]); // "2024-06-15T05:30:00-04:00[America/New_York]"
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00"]); // ""
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00[Europe/London]"]); // ""
+```
+
+### A service every N minutes
+
+`{ headway, from, to }` has the shape of a
+[`frequencies.txt`](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt) row in GTFS, the General Transit
+Feed Specification: a headway is the gap between departures. The window is half-open,
+`[from, to)`: `to` is never a departure. Departures are `from` plus whole headways in exact
+time, computed and never stepped. The result is written the way `from` was.
+
+```typescript
+import { nextDeparture } from "@northguild/gmt/transport";
+
+const shuttle = { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" };
+nextDeparture("2024-06-15T06:05:00+02:00", shuttle); // "2024-06-15T06:20:00+02:00"
+nextDeparture("2024-06-15T08:40:00+02:00", shuttle); // "2024-06-15T08:40:00+02:00"
+nextDeparture("2024-06-15T08:55:00+02:00", shuttle); // ""
+nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
+nextDeparture("2024-11-03T01:30:00-04:00[America/New_York]", { headway: "PT1H", from: "2024-11-03T00:00:00-04:00[America/New_York]", to: "2024-11-03T04:00:00-05:00[America/New_York]" }); // "2024-11-03T01:00:00-05:00[America/New_York]"
+```
+
+### It feeds `scheduleDelivery`
+
+The returned entry goes straight into a leg's `departure`.
+
+```typescript
+import { scheduleDelivery } from "@northguild/gmt/transport";
+
+scheduleDelivery([{ departure: "2024-06-15T11:00:00Z", duration: "PT2H", timeZone: "Europe/London" }]);
+// { eta: "2024-06-15T14:00:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-06-15T13:00:00Z", localArrival: "2024-06-15T14:00:00+01:00[Europe/London]", dwellAfter: "PT0S" }] }
+```
+
+`2024-06-15T11:00:00Z` is the departure the 45-minute connection makes in the list example
+above. See the [Multi-leg Scheduling guide](/guides/industries/transport-multi-leg-scheduling/).
+
+The [Departure Board](/tools/departure-board/) draws the timetable on a rail. Drag the arrival
+and watch the connection bar push it to the next departure, then send the result to the
+[Delivery Scheduler](/tools/delivery-scheduler/).
+
+## See it break, then work
+
+- [Punctuality Board: six arrivals against a 15-minute tolerance](/tools/punctuality-board/)
+- [ETA Drift Chart: an estimate that slid nine hours](/tools/eta-drift/)
+- [Departure Board: a shuttle every 20 minutes, a 10-minute connection](/tools/departure-board/)
+- [An Estimate Shown as the Actual](/scenarios/estimate-shown-as-actual/)
+- [A Delay Across the Fall-Back](/scenarios/delay-across-fall-back/)
+- [Transport mistakes: punctuality and timestamps](/mistakes/transport/#punctuality-and-timestamps)

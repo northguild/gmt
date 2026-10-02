@@ -1,0 +1,89 @@
+---
+/**
+ * The page around a tool: its key point, its intro, the widget, and the text
+ * that follows it, laid out on the widget's own grid.
+ *
+ * A tool page used to be prose, then the widget, then more prose, each the full
+ * width of the pane. This puts all of it on one grid instead:
+ *
+ *   key point   intro                    <- one track, three tracks
+ *   ------------------------------------
+ *   the widget's numbered cards          <- their own grid, the same tracks
+ *   ------------------------------------
+ *   trailing text                        <- a card in padding only
+ *
+ * It is a wrapper *around* the widget and not part of it, and that is forced
+ * rather than chosen. A widget's markup is the string `renderTemplate()`
+ * returns (lib/*-mount.ts), shared with the /dox rail, which has no page prose
+ * to put there; nothing authored in MDX can be slotted inside it. Staying
+ * outside also leaves that markup byte-identical, so `scripts/html-diff.mjs`
+ * reads the page as changed and the widget as untouched.
+ *
+ * The two grids line up because the widget takes the whole row: `.gmt-widget`
+ * is exactly as wide as this grid, and both use the same gap and the same
+ * tiers (styles/dox.css and styles/gmt-widget.css), so they resolve to the same
+ * four tracks at every width. The key point sits over the controls card and the
+ * intro over the chart card.
+ *
+ * The key point is Starlight's own `note` aside, the site's informational
+ * callout (styles/gmt-glass.css), and so the same markup `renderAside()`
+ * (lib/widget-ui.ts) writes from script. `data-role="tool-keypoint"` marks the
+ * text inside it: nothing reads that yet, and it is where a per-preset key
+ * point would be written without touching the box around it.
+ *
+ * The label inside the key point is the use case alone. The page's industry
+ * tags sit under its title, directly above, and naming the area here as well
+ * said it twice. The Markdown export names the industry under the page's title
+ * the same way (`pageToMarkdown`, lib/page-markdown.ts), from the frontmatter.
+ * Every slot is optional, so a page with no intro simply has no top row.
+ *
+ * This component must also be known to the Markdown exporter
+ * (`renderMdxComponents`, lib/mdx-jsx.ts), which renders it to prose for the
+ * `.md` routes; the tests in scripts/llms.test.ts fail if it is not.
+ */
+import { Aside } from "@astrojs/starlight/components";
+
+interface Props {
+  /** What the tool is for, as a short noun phrase: "terminal cut-offs". */
+  useCase: string;
+}
+
+const { useCase } = Astro.props;
+const hasKeypoint = Astro.slots.has("keypoint");
+const hasIntro = Astro.slots.has("intro");
+const hasAfter = Astro.slots.has("after");
+---
+
+<div class="gmt-tool-layout">
+  <div class="gmt-tool-grid">
+    {
+      hasKeypoint && (
+        <div class="gmt-tool-keypoint">
+          <Aside type="note" title="Key point">
+            <p class="gmt-tool-keypoint-area">{useCase}</p>
+            <div data-role="tool-keypoint">
+              <slot name="keypoint" />
+            </div>
+          </Aside>
+        </div>
+      )
+    }
+    {
+      hasIntro && (
+        <div class="gmt-tool-intro">
+          <slot name="intro" />
+        </div>
+      )
+    }
+    <div class="gmt-tool-widget">
+      <slot />
+    </div>
+    {
+      hasAfter && (
+        <div class="gmt-tool-after">
+          <slot name="after" />
+        </div>
+      )
+    }
+  </div>
+</div>

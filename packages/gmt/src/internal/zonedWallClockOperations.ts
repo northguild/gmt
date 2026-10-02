@@ -4,18 +4,24 @@ import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import {
   calendarDateAdd,
   isCalendarArithmeticCompatNeeded,
+  isTransitionSearchCompatNeeded,
 } from "./temporalCompat";
+import {
+  nextTransitionAfter,
+  previousTransitionBefore,
+} from "./zonedTransitionSearch";
 import {
   type CarriedOffset,
   epochNanosecondsFor,
   interpretISODateTimeOffset,
-  isBeforePolyfillTransitionSearch,
   isNamedTimeZone,
   isNearRangeEdge,
   isValidEpoch,
   MAX_TRANSITIONS_BEFORE_MAXIMUM,
   missedNextTransition,
   missedPreviousTransition,
+  needsOwnDayBoundsSearch,
+  needsOwnStartOfDaySearch,
   NEXT_TRANSITION_HORIZON_NANOSECONDS,
   startOfDayEpochNanoseconds,
   timeZoneIdOf,
@@ -39,6 +45,11 @@ import {
  * so the transition and start-of-day wrappers check for it first, and only for a named zone and an
  * instant or local date before that floor (`needsOwnStartOfDay`); everything later goes straight to
  * the polyfill. Retired with the `zoned.E` canary group.
+ *
+ * Defect 5 (two changes inside one 14-day search step are skipped, or stall the search for ever;
+ * temporalCompat D13) cannot be tried and recovered either. While its probe fails, the transition
+ * wrappers run GMT's own search (`zonedTransitionSearch.ts`) and the start-of-day wrappers GMT's
+ * own `GetStartOfDay`, for every named zone.
  */
 
 const NANOSECONDS_PER_HOUR = 3_600_000_000_000;
@@ -77,14 +88,23 @@ function isAtRangeEdge(timeZone: string, date: Temporal.PlainDate): boolean {
 
 /**
  * True when the polyfill's `GetStartOfDay` may return a valid-looking wrong value for this date (or
- * this zoned value's date) because a transition skipping its midnight lies before the polyfill's
- * 1847-01-01 transition search floor (defect 3).
+ * this zoned value's date): a transition skipping its midnight lies before the polyfill's
+ * 1847-01-01 transition search floor (defect 3), or the polyfill's search can skip or stall on two
+ * changes in one step (defect 5, while the D13 probe fails).
  */
 function needsOwnStartOfDay(
   timeZone: string,
   value: Temporal.PlainDate | Temporal.ZonedDateTime,
 ): boolean {
-  return isNamedTimeZone(timeZone) && isBeforePolyfillTransitionSearch(value);
+  return isNamedTimeZone(timeZone) && needsOwnStartOfDaySearch(timeZone, value);
+}
+
+/** `needsOwnStartOfDay` for a measure that also reads the next day's start. */
+function needsOwnDayBounds(zoned: Temporal.ZonedDateTime): boolean {
+  return (
+    isNamedTimeZone(zoned.timeZoneId) &&
+    needsOwnDayBoundsSearch(zoned.timeZoneId, zoned)
+  );
 }
 
 function inZoneOf(
@@ -147,8 +167,6 @@ function plainDateBeforeTransitionSearch(
   date: Temporal.PlainDate,
   timeZoneLike: string,
 ): Temporal.ZonedDateTime | null {
-  if (!isBeforePolyfillTransitionSearch(date)) return null;
-
   let timeZone: string;
   try {
     timeZone = timeZoneIdOf(timeZoneLike);
@@ -156,7 +174,7 @@ function plainDateBeforeTransitionSearch(
     return null;
   }
 
-  return isNamedTimeZone(timeZone)
+  return needsOwnStartOfDay(timeZone, date)
     ? plainDateFromOwnStartOfDay(date, timeZone)
     : null;
 }
@@ -306,7 +324,7 @@ function hoursInDayFromOwnStartOfDay(zoned: Temporal.ZonedDateTime): number {
  * @returns hours from this day's start to the next day's start; throws where TC39 Temporal throws
  */
 export function zonedHoursInDay(zoned: Temporal.ZonedDateTime): number {
-  if (needsOwnStartOfDay(zoned.timeZoneId, zoned)) {
+  if (needsOwnDayBounds(zoned)) {
     return hoursInDayFromOwnStartOfDay(zoned);
   }
 
@@ -355,19 +373,17 @@ function earliestTransitionBeforeMaximum(
   return earliest;
 }
 
-/**
- * `ZonedDateTime#getTimeZoneTransition("next")`, correct at the range limits and before 1847.
- *
- * - Before 1847-01-01 the polyfill never searches (defect 3), so a named zone whose offset there
- *   differs from its offset at 1847-01-01 has its transition found by bisection first.
- * - The polyfill's forward scan gives up once a two-week step would pass the maximum instant, so a
- *   `null` within its three-year horizon of the maximum is re-checked by walking back from the
- *   maximum with `getTimeZoneTransition("previous")`, which scans correctly there.
- *
- * @param zoned the instant to search after (exclusive)
- * @returns the next transition, or null when there is none before the maximum instant
- */
-export function zonedNextTransition(
+/** `transition` unless it is null or lies outside the caller's limit. */
+function withinLimit(
+  transition: Temporal.ZonedDateTime | null,
+  isInside: (epochNanoseconds: bigint) => boolean,
+): Temporal.ZonedDateTime | null {
+  return transition !== null && isInside(transition.epochNanoseconds)
+    ? transition
+    : null;
+}
+
+function polyfillNextTransition(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
   if (isNamedTimeZone(zoned.timeZoneId)) {
@@ -395,15 +411,43 @@ export function zonedNextTransition(
 }
 
 /**
- * `ZonedDateTime#getTimeZoneTransition("previous")`, correct before 1847.
+ * `ZonedDateTime#getTimeZoneTransition("next")`: TC39 `GetNamedTimeZoneNextTransition`, the first
+ * offset change strictly after `zoned`.
  *
- * The polyfill stops looking at 1847-01-01 (defect 3), so when it finds nothing in a named zone the
- * span from the minimum instant to the floor is checked by comparing offsets and bisecting.
+ * - While the D13 probe fails (two changes inside one of the polyfill's 14-day search steps are
+ *   skipped, or stall it for ever), a named zone is searched by GMT's own bounded search
+ *   (`zonedTransitionSearch.ts`) and the polyfill's search is never called.
+ * - Otherwise the polyfill answers, corrected before 1847 (defect 3: it never searches there, so
+ *   the change is found by bisection first) and within its three-year horizon of the maximum
+ *   instant (defect 2: its forward scan gives up once a step would pass the maximum, so a `null`
+ *   is re-checked by walking back from the maximum).
  *
- * @param zoned the instant to search before (exclusive)
- * @returns the previous transition, or null when there is none
+ * @param zoned the instant to search after (exclusive)
+ * @param until optional: the last instant to search, in epoch nanoseconds (inclusive). A caller
+ *   that needs only changes up to there passes it so the search reads no further
+ * @returns the next transition, or null when there is none up to `until` or, without it, none
+ *   that Temporal reports
  */
-export function zonedPreviousTransition(
+export function zonedNextTransition(
+  zoned: Temporal.ZonedDateTime,
+  until?: bigint,
+): Temporal.ZonedDateTime | null {
+  if (isNamedTimeZone(zoned.timeZoneId) && isTransitionSearchCompatNeeded()) {
+    const found = nextTransitionAfter(
+      zoned.timeZoneId,
+      zoned.epochNanoseconds,
+      until,
+    );
+    return found === null ? null : inZoneOf(found, zoned);
+  }
+
+  const next = polyfillNextTransition(zoned);
+  return until === undefined
+    ? next
+    : withinLimit(next, (epochNanoseconds) => epochNanoseconds <= until);
+}
+
+function polyfillPreviousTransition(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
   const previous = zoned.getTimeZoneTransition("previous");
@@ -416,6 +460,40 @@ export function zonedPreviousTransition(
     zoned.epochNanoseconds,
   );
   return missed === null ? null : inZoneOf(missed, zoned);
+}
+
+/**
+ * `ZonedDateTime#getTimeZoneTransition("previous")`: TC39 `GetNamedTimeZonePreviousTransition`,
+ * the last offset change strictly before `zoned`.
+ *
+ * - While the D13 probe fails, a named zone is searched by GMT's own bounded search and the
+ *   polyfill's search is never called (see `zonedNextTransition`).
+ * - Otherwise the polyfill answers, corrected before 1847 (defect 3): when it finds nothing in a
+ *   named zone, the span from the minimum instant to its floor is checked by comparing offsets
+ *   and bisecting.
+ *
+ * @param zoned the instant to search before (exclusive)
+ * @param since optional: where the search stops, in epoch nanoseconds (exclusive). A caller that
+ *   needs only changes after there passes it so the search reads no further back
+ * @returns the previous transition, or null when there is none after `since` or, without it, none
+ */
+export function zonedPreviousTransition(
+  zoned: Temporal.ZonedDateTime,
+  since?: bigint,
+): Temporal.ZonedDateTime | null {
+  if (isNamedTimeZone(zoned.timeZoneId) && isTransitionSearchCompatNeeded()) {
+    const found = previousTransitionBefore(
+      zoned.timeZoneId,
+      zoned.epochNanoseconds,
+      since,
+    );
+    return found === null ? null : inZoneOf(found, zoned);
+  }
+
+  const previous = polyfillPreviousTransition(zoned);
+  return since === undefined
+    ? previous
+    : withinLimit(previous, (epochNanoseconds) => epochNanoseconds > since);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -834,10 +912,7 @@ export function roundZonedDateTime(
   zoned: Temporal.ZonedDateTime,
   roundTo: ZonedRoundTo,
 ): Temporal.ZonedDateTime {
-  if (
-    isDayUnit(roundTo.smallestUnit) &&
-    needsOwnStartOfDay(zoned.timeZoneId, zoned)
-  ) {
+  if (isDayUnit(roundTo.smallestUnit) && needsOwnDayBounds(zoned)) {
     // Validates the options exactly as ZonedDateTime#round does, throwing where it throws.
     zoned.toPlainDateTime().round(roundTo);
     return roundToDayFromOwnStartOfDay(

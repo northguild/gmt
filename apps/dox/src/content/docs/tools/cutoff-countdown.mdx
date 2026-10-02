@@ -1,18 +1,31 @@
 ---
 title: Cut-off Countdown
-description: "Am I late, and by how much? isPastCutoff and timeToCutoff compare a cut-off with your clock or a time you drag: the time left, or a negative duration once it has passed, and passed at the deadline itself."
+description: "Am I late, and by how much? isPastCutoff and timeToCutoff compare a cut-off with your clock or a time you drag. They give the time left, or a negative duration once the cut-off has passed. At the cut-off itself, it has already passed."
+industries: [transport]
 ---
 
 import CutoffCountdown from "../../../components/CutoffCountdown.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
 
-The window to meet a cut-off is half-open: open right up to the cut-off
-instant, and closed from that instant on. `isPastCutoff` is `true` and
-`timeToCutoff` is `PT0S` at the cut-off itself, not a moment before it.
-Drag "now" past the cut-off and watch on time turn to late; drag it back and
-watch late turn to on time, with no in-between "at the deadline" state — it
-is either open or closed.
+<ToolLayout useCase="meeting a cut-off">
 
-<CutoffCountdown />
+<Fragment slot="keypoint">
+
+The window to meet a cut-off is half-open: open right up to the cut-off instant, and closed from that instant on. There is no in-between state at the deadline.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+`isPastCutoff` is `true` and `timeToCutoff` is `PT0S` at the cut-off itself,
+not a moment before it. Drag "now" past the cut-off and watch on time turn to
+late; drag it back and watch late turn to on time.
+
+</Fragment>
+
+<CutoffCountdown fullbleed />
+
+<Fragment slot="after">
 
 **Worth trying:** [at the cut-off
 exactly](/tools/cutoff-countdown/?w=cutoffcountdown&wa=%7B%22cutoff%22%3A%222024-06-12T17%3A00%3A00%2B02%3A00%5BEurope%2FAmsterdam%5D%22%2C%22now%22%3A%222024-06-12T17%3A00%3A00%2B02%3A00%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%7D) —
@@ -30,3 +43,7 @@ and
 [how-long-is-left section](/guides/industries/transport-legs-and-dwell/#how-long-is-left-timetocutoff),
 and the [Cut-off Stack](/tools/cutoff-stack/) for a whole sailing's deadlines
 at once.
+
+</Fragment>
+
+</ToolLayout>

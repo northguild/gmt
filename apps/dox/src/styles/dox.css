@@ -82,8 +82,131 @@ html:not([data-has-sidebar]) .sl-container {
   flex-grow: 1;
 }
 
-.sl-container:has([data-tools-fullbleed]) {
+/* Scoped to `main` and keyed off `.main-frame`, not written as
+ * `.sl-container:has([data-tools-fullbleed])`, because a Starlight page has
+ * three `.sl-container`s and the marker only ever sits inside one of them:
+ *
+ *   1. the TOC's, in `.right-sidebar-panel`   — max-width 545px, OUTSIDE main
+ *   2. the page title's, its own .content-panel — max-width --sl-content-width
+ *   3. the content's, holding the widget        — the one with the marker
+ *
+ * A `:has()` on the container itself therefore widened (3) and left (2) at
+ * 50rem, so the `<h1>` stayed in a narrow column while the prose and the widget
+ * beneath it ran the full width of the pane — measured at 2560px: title 800px,
+ * content 1912px, on `/tools/zoned-earth/` and `/tools/zone-planner/` as much as
+ * anywhere. Matching every `.sl-container` inside `main` takes the title with
+ * it; `main` is what keeps the TOC's own container (1), which is a sibling of
+ * `.main-pane` and not a descendant of `main`, at its proper width. */
+.main-frame:has([data-tools-fullbleed]) main .sl-container {
   max-width: none;
+}
+
+/* The page around a tool — see ToolLayout.astro. The key point, the intro, the
+ * widget and the trailing text on one grid, where they used to be three blocks
+ * of full-width prose with a widget between them.
+ *
+ * The container is the wrapper and the grid is its child, the same split as
+ * `.gmt-widget` and `.gmt-widget-card`: an element cannot query its own size,
+ * so the thing being measured and the thing being laid out have to be two boxes.
+ *
+ * THE TIERS BELOW ARE THE WIDGET'S, AND MUST STAY THEM. The widget takes the
+ * whole row, so `.gmt-widget` is exactly as wide as this grid; with the same
+ * gap and the same 60rem and 80rem steps as `.gmt-widget-card`
+ * (gmt-widget.css), the two resolve to the same four tracks at every width.
+ * That is what puts the key point over the controls card and the intro over the
+ * chart card. A `@container` condition cannot read a custom property, so the two
+ * sheets cannot share the numbers as a variable — change one and change the
+ * other, or the columns stop lining up. */
+.gmt-tool-layout {
+  container-type: inline-size;
+}
+
+.gmt-tool-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+}
+
+/* A grid item here is still a block inside `.sl-markdown-content`, whose flow
+   rule gives every block after the first a `--sl-content-gap-y` top margin. On
+   a grid that pushes each cell down out of line with the one beside it; the gap
+   above already owns the spacing. */
+.gmt-tool-grid > * {
+  margin-top: 0;
+}
+
+@container (min-width: 60rem) {
+  .gmt-tool-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 80rem) {
+  .gmt-tool-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .gmt-tool-keypoint {
+    grid-column: span 1;
+  }
+
+  .gmt-tool-intro {
+    grid-column: span 3;
+  }
+}
+
+.gmt-tool-widget,
+.gmt-tool-after {
+  grid-column: 1 / -1;
+}
+
+/* Inside this grid the gap owns the rhythm. The widget's own vertical margin
+   (gmt-widget.css) would open a second, larger space above and below its cards
+   and break the even spacing between the rows. */
+.gmt-tool-grid .gmt-widget {
+  margin: 0;
+}
+
+/* The key point fills its cell, so its box lines up with the controls card
+   beneath it instead of shrinking to its text. */
+.gmt-tool-keypoint > .starlight-aside {
+  margin: 0;
+}
+
+/* The area and the use case: the line that says who this is for, set as the
+   small uppercase label the widgets use for a field name. */
+.gmt-tool-keypoint-area {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* The intro and the trailing text are cards in position and padding only: no
+   border and no fill, so they sit on the grid with the bordered cards without
+   competing with them, and their text starts where the text inside those cards
+   starts. The padding is `.gmt-widget-section`'s. */
+.gmt-tool-intro,
+.gmt-tool-after {
+  padding: var(--gmt-space-4);
+}
+
+.gmt-tool-intro > :first-child,
+.gmt-tool-after > :first-child {
+  margin-top: 0;
+}
+
+/* A reading measure, on the text and not on the cell. The cell still takes its
+   tracks, so the grid still fills the pane; only a line of prose is capped. It
+   bites in the four-track tier alone — below 80rem these cells are already
+   narrower than this — where the intro cell is some 1430px in a 2560px window,
+   about 166 characters of this monospace body to a line. */
+.gmt-tool-intro > *,
+.gmt-tool-after > * {
+  max-inline-size: 90ch;
 }
 
 /* Section grid — see GridSection.astro. Shared by the homepage's below-hero

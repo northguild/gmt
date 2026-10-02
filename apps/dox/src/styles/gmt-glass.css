@@ -76,6 +76,46 @@ mobile-starlight-toc nav {
   -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
+/* No callout draws a left-only accent. Starlight's note, tip, caution and danger
+   asides (its `border-inline-start: 0.25rem`) take the full border above, which
+   wins over Starlight's layered rule; its blockquotes and details (a 1px and a
+   2px left border) get the same treatment here: a full bevelled hairline and a
+   faint tint. Their colour roles are unchanged (the title, the icon and the
+   amber caution identity); nothing here is amber. */
+.sl-markdown-content blockquote:not(:where(.not-content *)),
+.sl-markdown-content details:not(:where(.not-content *)) {
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.sl-markdown-content details:not([open]):hover:not(:where(.not-content *)),
+.sl-markdown-content details:has(> summary:hover):not(:where(.not-content *)) {
+  border-color: var(--gmt-border-strong);
+}
+
+/* Starlight pulls the summary out over the old left border; with a full border
+   it sits flush. */
+.sl-markdown-content summary:not(:where(.not-content *)) {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+}
+
+/* A note aside speaks in the site's own accent. Starlight colours a note's
+   title, its icon and the links inside it from `--sl-color-blue-high`, an indigo
+   nothing here redefines — the one piece of an aside that was still off the
+   palette. It went unseen because no page used a note: it showed only in three
+   widgets' asides until a key point put one on every tool page
+   (ToolLayout.astro). Cyan is the accent the reserved meanings leave for
+   "informational": amber is the sentinel, spring a live value, purple and gold
+   belong to DST. The `-ink` token because this is text, and it re-tints per
+   theme on its own. */
+.starlight-aside--note {
+  --sl-color-asides-text-accent: var(--gmt-cyan-ink);
+}
+
 /* Caution / Warning aside — signal yellow translucent bg */
 .starlight-aside--caution {
   background: var(--gmt-signal-fill);

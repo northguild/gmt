@@ -13,14 +13,8 @@
  * on colour alone.
  */
 
-.gmt-freetime-timeline > *,
-.gmt-freetime-track > *,
-.gmt-freetime-cell,
-.gmt-freetime-cell > *,
-.gmt-freetime-handle,
-.gmt-freetime-legend > *,
-.gmt-freetime-working > * {
-  margin: 0;
+.gmt-freetime {
+  container-type: inline-size;
 }
 
 .gmt-freetime-timeline {
@@ -181,51 +175,25 @@
   left: 3px;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
+  line-height: 1.2;
   color: var(--gmt-signal-ink);
   white-space: nowrap;
 }
 
-.gmt-freetime-handle {
-  position: absolute;
-  top: 50%;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--gmt-void);
-  border: 2px solid currentColor;
-  cursor: grab;
-  touch-action: none;
-  transition:
-    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
-    transform var(--gmt-duration-fast) var(--gmt-easing);
+.gmt-freetime-expiry--end > span {
+  left: auto;
+  right: 3px;
 }
 
-/* A 44px target around a 14px dot. */
-.gmt-freetime-handle::before {
-  content: "";
-  position: absolute;
-  inset: -15px;
-}
-
-.gmt-freetime-handle:first-child {
+/* The grip itself is the shared `.gmt-handle` (gmt-form-controls.css); only its
+   position on the bar is this widget's. Its edge reads currentColor, so the
+   bar's colour (cyan, or signal when invalid) carries through. */
+.gmt-freetime-bar > .gmt-handle:first-child {
   left: 0;
 }
 
-.gmt-freetime-handle:last-child {
+.gmt-freetime-bar > .gmt-handle:last-child {
   left: 100%;
-}
-
-.gmt-freetime-handle:active {
-  cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.15);
-}
-
-.gmt-freetime-handle:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--gmt-void),
-    0 0 0 4px currentColor;
 }
 
 .gmt-freetime-axis {
@@ -272,31 +240,6 @@
   display: none;
 }
 
-.gmt-freetime-weekend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gmt-space-1) var(--gmt-space-2);
-  padding: var(--gmt-space-1) var(--gmt-space-2);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-}
-
-.gmt-freetime-weekend > legend {
-  padding: 0 var(--gmt-space-1);
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-freetime-weekday {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
-  color: var(--gmt-ice);
-}
-
 .gmt-freetime-holidays {
   min-height: 2.6rem;
   resize: vertical;
@@ -311,8 +254,8 @@
   color: var(--gmt-ice);
 }
 
-.gmt-freetime-summary:empty {
-  display: none;
+.gmt-freetime-summary:empty::before {
+  content: "\200b";
 }
 
 /* Narrow: labels above their track, axis and legend full width. */
@@ -328,8 +271,11 @@
     text-align: left;
   }
 
+  /* The "expires" label stands above the track; stacked, that is the row
+     label's line, so the track leaves it a line of its own. */
   .gmt-freetime-track {
     flex: 0 0 auto;
+    margin-top: 1.25rem;
   }
 
   .gmt-freetime-axis,
@@ -339,8 +285,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gmt-freetime-cell,
-  .gmt-freetime-handle {
+  .gmt-freetime-cell {
     transition: none;
   }
 }

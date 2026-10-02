@@ -459,3 +459,45 @@ describe("stackNullReason", () => {
     expect(gateIn.moved).toBe(false);
   });
 });
+
+describe("StackRow.series", () => {
+  it("is the matched entry's 1-based place in the entries, not the sorted row's", () => {
+    const state = presetState(presetById("rotterdam-weekend"));
+    const facts = collectStackFacts(state, lib);
+    const entries = entriesOf(state);
+    for (const row of facts.rows) {
+      const idx = entries.findIndex((e) => e.name === row.name);
+      expect(row.series).toBe(idx + 1);
+    }
+  });
+
+  it("numbers four entries 1 to 4, each once", () => {
+    const state: StackState = {
+      ...presetState(presetById("no-calendar")),
+      cutoffCount: "4",
+      cutoffs: [
+        { name: "a", offset: "P1D", atLocalTime: "" },
+        { name: "b", offset: "P2D", atLocalTime: "" },
+        { name: "c", offset: "P3D", atLocalTime: "" },
+        { name: "d", offset: "P4D", atLocalTime: "" },
+      ],
+    };
+    const facts = collectStackFacts(state, lib);
+    expect(facts.rows.map((r) => r.series).sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("gives two identical entries their own series, in entry order", () => {
+    const state: StackState = {
+      ...presetState(presetById("no-calendar")),
+      cutoffCount: "2",
+      cutoffs: [
+        { name: "same", offset: "P1D", atLocalTime: "" },
+        { name: "same", offset: "P1D", atLocalTime: "" },
+        { name: "", offset: "", atLocalTime: "" },
+        { name: "", offset: "", atLocalTime: "" },
+      ],
+    };
+    const facts = collectStackFacts(state, lib);
+    expect(facts.rows.map((r) => r.series)).toEqual([1, 2]);
+  });
+});

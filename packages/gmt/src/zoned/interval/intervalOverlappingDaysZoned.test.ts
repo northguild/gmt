@@ -221,7 +221,9 @@ describe("intervalOverlappingDaysZoned", () => {
     const start = "1970-01-01T00:00:00-05:00[America/New_York]";
     const end = "7000-01-01T00:00:00-05:00[America/New_York]";
     expect(intervalOverlappingDaysZoned(start, end, start, end)).toBeNull();
-  });
+    // 10,000 transition lookups, each sampling the zone every 5 days (temporalCompat D13): about
+    // 2.5 s locally and more on a CI runner, so the default 5 s is too tight.
+  }, 30_000);
 });
 
 // The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
@@ -238,5 +240,23 @@ describe("intervalOverlappingDaysZoned across the 1844 date-line crossings (zone
       const end = dateLineCrossingAt(crossing, 12).toString();
       expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(3);
     },
+  );
+});
+
+// 4,000 Gregorian years are 1,460,970 days. A zone with no clock change over a span far longer
+// than the transition search's "no further change" horizon; the fixed offset never searches.
+describe("intervalOverlappingDaysZoned over thousands of years with no clock change", () => {
+  it.each`
+    start                                      | end
+    ${"2000-01-01T00:00:00+09:00[Asia/Tokyo]"} | ${"6000-01-01T00:00:00+09:00[Asia/Tokyo]"}
+    ${"2000-01-01T00:00:00+09:00[+09:00]"}     | ${"6000-01-01T00:00:00+09:00[+09:00]"}
+  `(
+    "counts 1460970 days from $start to $end",
+    ({ start, end }) => {
+      expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(
+        1460970,
+      );
+    },
+    10_000,
   );
 });

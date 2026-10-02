@@ -1,15 +1,18 @@
 ---
 title: Transport
-description: Common mistakes with transit legs, arrivals, dwell, connections and cut-offs in GMT's transport layer.
+description: Common mistakes with transit legs, arrivals, dwell, connections, cut-offs, punctuality, timestamp classes and next departures in GMT's transport layer.
+industries: [transport]
 ---
 
 The transport layer is `transitTime`, `etaAtZone`, `dwellTime`, `scheduleDelivery`,
-`crossingTime` and the cut-off functions, and the mistakes around them are the ones every
+`crossingTime`, the cut-off functions, and `scheduleDeviation`, `classifyPunctuality`,
+`punctualityRate`, `bestAvailable`, `estimateDrift` and `nextDeparture`, and the mistakes around them are the ones every
 transport mode makes on its own: treating a running time as a wall-clock interval, treating an
 offset as a place, turning elapsed hours into chargeable days by division, reading a handoff
 through a fixed offset, checking a connection against the arrival instead of the arrival plus
-its handling time, and counting a deadline from the wrong event or as the wrong kind of
-offset. Every output shown here is what the function returns.
+its handling time, counting a deadline from the wrong event or as the wrong kind of
+offset, calling an arrival on time with no stated tolerance, showing an estimate as an actual,
+and picking a departure the connection cannot make. Every output shown here is what the function returns.
 
 ## Legs and dwell
 
@@ -228,4 +231,72 @@ cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam" });
 cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
 // "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"`}
   rightSpecId="cutoffAt"
+/>
+
+## Punctuality and timestamps
+
+Each of these has a live tool: the [Punctuality Board](/tools/punctuality-board/), the [ETA
+Drift Chart](/tools/eta-drift/) and the [Departure Board](/tools/departure-board/).
+
+<Mistake
+  severity="high"
+  title="Calling an arrival on time with no stated tolerance"
+  description="On time is a measurement only against a tolerance someone stated. A threshold buried in a comparison hides its number and its edge: here exactly 15 minutes counts as on time, and the next person who reads it cannot tell whether that was meant. classifyPunctuality takes the tolerance as an argument, holds no default, and puts both edges outside the on-time window."
+  wrongCode={`// "On time" with the tolerance buried in a comparison
+const late = (plannedMs, actualMs) => actualMs - plannedMs > 15 * 60 * 1000;
+late(Date.parse("2024-06-15T10:00:00Z"), Date.parse("2024-06-15T10:15:00Z")); // false — exactly 15 minutes counted as on time`}
+  rightCode={`import { classifyPunctuality } from "@northguild/gmt/transport";
+
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:15:00Z", { late: "PT15M" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT60M" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT120M" }); // "onTime"`}
+  rightSpecId="classifyPunctuality"
+/>
+
+<Mistake
+  severity="high"
+  title="Showing an estimate in the actual column"
+  description="When one field carries planned, estimated, requested and actual times, the newest record is not the best one. An estimate a late feed delivers after the arrival replaces the actual on a latest-wins dashboard. bestAvailable returns an ACT whenever one exists, and returns its class with it."
+  wrongCode={`const events = [
+  { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+  { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+];
+events.reduce((a, e) => (Date.parse(e.recordedAt) >= Date.parse(a.recordedAt) ? e : a)).at;
+// "2024-06-15T13:05:00Z" — an estimate, shown as the actual`}
+  rightCode={`import { bestAvailable } from "@northguild/gmt/transport";
+
+bestAvailable([{ classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" }, { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" }]); // { at: "2024-06-15T12:52:00Z", classifier: "ACT" }`}
+  rightSpecId="bestAvailable"
+/>
+
+<Mistake
+  severity="high"
+  title="Picking the next departure without the minimum connection"
+  description="A departure ten minutes after you arrive is on the timetable, not within reach. The threshold is the arrival plus the time it takes to connect. nextDeparture takes minimumConnection and counts a departure exactly at the threshold as made."
+  wrongCode={`import { nextDeparture } from "@northguild/gmt/transport";
+
+// The train arrives at 09:20; boarding the ferry takes 45 minutes.
+nextDeparture("2024-06-15T09:20:00Z", ["2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"]);
+// "2024-06-15T09:30:00Z" — ten minutes to make a 45-minute connection`}
+  rightCode={`import { nextDeparture } from "@northguild/gmt/transport";
+
+nextDeparture("2024-06-15T09:20:00Z", ["2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"], { minimumConnection: "PT45M" });
+// "2024-06-15T11:00:00Z"`}
+  rightSpecId="nextDeparture"
+/>
+
+<Mistake
+  severity="medium"
+  title="Treating a headway window's end as a departure"
+  description="A service every 20 minutes from 06:00 to 09:00 stops at 09:00; 09:00 is the end of service, not a departure. A loop that steps up to and including the end time sells one departure too many. nextDeparture reads the window as half-open, [from, to), as a GTFS frequencies.txt end_time is read."
+  wrongCode={`// The naive approach: step every 20 minutes up to and including the end time
+const departures = [];
+for (let t = Date.parse("2024-06-15T06:00:00+02:00"); t <= Date.parse("2024-06-15T09:00:00+02:00"); t += 20 * 60 * 1000) departures.push(new Date(t).toISOString());
+departures.at(-1); // "2024-06-15T07:00:00.000Z" — 09:00 local, the end of service, sold as a departure`}
+  rightCode={`import { nextDeparture } from "@northguild/gmt/transport";
+
+const shuttle = { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" };
+nextDeparture("2024-06-15T08:40:00+02:00", shuttle); // "2024-06-15T08:40:00+02:00"
+nextDeparture("2024-06-15T08:55:00+02:00", shuttle); // "" — the last departure is 08:40`}
+  rightSpecId="nextDeparture"
 />

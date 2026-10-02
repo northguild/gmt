@@ -16,10 +16,11 @@ describe("isValidSpan", () => {
     expect(isValidSpan(start, end)).toBe(true);
   });
 
-  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
-  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // A bracketed zone annotation is not validated: the written offset fixes the instant, as in
+  // Temporal.Instant.from (test262 Temporal/Instant/from/
   // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
-  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  // contradicts the string's, is not checked. (A minute-rounded offset of a sub-minute zone is
+  // the one thing read from a bracket: test/minuteRoundedOffsets.test.ts.) 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
   it.each`
     start                                            | end                                  | reason
     ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z[Not/AZone]"} | ${"contradicting offset, then a zone that does not exist"}

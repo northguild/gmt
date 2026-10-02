@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
@@ -26,9 +27,14 @@ export interface Crossing {
  *   Hours is the largest unit, so the value never depends on a calendar.
  * - **`targetZone` is always the rendering zone.** `entry` and `exit` are anything
  *   `isValidInstant` accepts — `Z`, an offset, or an offset with a bracketed zone — and only the
- *   instant is read: a bracketed zone in the input is never the zone the result is rendered in,
- *   as `Temporal.Instant.from` also ignores it. That is the one contract difference from
- *   `dwellTime`, whose zone may come from its entry's bracket.
+ *   instant is read: a bracketed zone in the input is never the zone the result is rendered
+ *   in. That is the one contract difference from `dwellTime`, whose zone may come from its
+ *   entry's bracket.
+ * - **The offset fixes each instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it. A zone that does not exist, or that disagrees with
+ *   the offset, is not checked and changes nothing.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
  *   identifier, or a fixed offset such as `"+02:00"`, which observes no DST.
  * - GMT does not resolve a canal, lock or checkpoint code to a zone; the caller supplies the
@@ -67,8 +73,8 @@ export function crossingTime(
       return null;
     }
 
-    const entryInstant = Temporal.Instant.from(entry);
-    const exitInstant = Temporal.Instant.from(exit);
+    const entryInstant = instantFrom(entry);
+    const exitInstant = instantFrom(exit);
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
       return null;
     }

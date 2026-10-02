@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 
 /**
@@ -10,8 +11,14 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  *
  * - Both arguments are exact: an instant (`Z`/offset) or a zoned string, as `cutoffAt`
  *   returns one. They are compared as instants, so the zone each is written in does not
- *   matter, and the two passes of a repeated hour are told apart by their offsets. A bracketed
- *   zone is not read.
+ *   matter, and the two passes of a repeated hour are told apart by their offsets.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so a cut-off `cutoffAt` wrote is the instant it
+ *   computed, except a wall time repeated inside a sub-minute offset change, which reads as
+ *   its first pass (see `isValidInstant`). Otherwise the bracket is not checked: a zone that does not exist, or that
+ *   disagrees with the offset, changes nothing.
  * - `now` is the caller's: GMT does not read the clock here, so the answer is reproducible.
  * - Returns `false` on invalid input, including `cutoffAt`'s `""` sentinel — which reads as
  *   "not past". Check the cut-off is not `""` before trusting a `false`.
@@ -33,12 +40,7 @@ export function isPastCutoff(now: string, cutoff: string): boolean {
       return false;
     }
 
-    return (
-      Temporal.Instant.compare(
-        Temporal.Instant.from(now),
-        Temporal.Instant.from(cutoff),
-      ) >= 0
-    );
+    return Temporal.Instant.compare(instantFrom(now), instantFrom(cutoff)) >= 0;
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

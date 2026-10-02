@@ -6,6 +6,7 @@
  * and result is an appendix Z row.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { STACK_PRESETS } from "./cutoff-stack";
@@ -71,6 +72,9 @@ const EXPECTED: Record<string, [string, string | null]> = {
   ],
 };
 
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 const q = <T extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   role: string,
@@ -101,7 +105,7 @@ describe("renderCutoffStackTemplate", () => {
     root.innerHTML = renderCutoffStackTemplate();
     expect(
       root.firstElementChild?.outerHTML.startsWith(
-        '<div class="gmt-cutoff-stack gmt-widget">',
+        '<div class="gmt-cutoff-stack gmt-widget not-content">',
       ),
     ).toBe(true);
   });
@@ -157,6 +161,18 @@ describe("mountCutoffStack", () => {
       ".gmt-cutoff-stack-day--closed",
     );
     expect(closed).toHaveLength(2);
+  });
+
+  it("labels each day column with its date and weekday", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const labels = [
+      ...q(root, "stack-timeline").querySelectorAll(
+        ".gmt-cutoff-stack-day-label",
+      ),
+    ].map((l) => l.textContent);
+    expect(labels).toContain("14 Jun · Fri");
+    expect(labels).toContain("15 Jun · Sat");
   });
 
   it("the timeline is not a tab stop", async () => {
@@ -310,5 +326,120 @@ describe("mountCutoffStack", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("the stack's series, markers and gate", () => {
+  const laneOf = (root: HTMLElement, name: string) =>
+    [
+      ...q(root, "stack-timeline").querySelectorAll<HTMLElement>(
+        ".gmt-cutoff-stack-lane",
+      ),
+    ].find(
+      (l) =>
+        l.querySelector(".gmt-cutoff-stack-lane-label")?.textContent === name,
+    )!;
+
+  it("colours a lane and its table swatch by the entry's place in the schedule", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const preset = STACK_PRESETS.find((p) => p.id === "rotterdam-weekend")!;
+    const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
+    expect(rows).toHaveLength(2);
+    const seen = new Set<string>();
+    for (const tr of rows) {
+      const name = tr.children[0]!.textContent!;
+      const swatch = tr.querySelector<HTMLElement>(
+        ".gmt-cutoff-series-swatch",
+      )!;
+      expect(swatch.textContent).toBe("");
+      expect(swatch.getAttribute("aria-hidden")).toBe("true");
+      // The rows are sorted earliest first, so a row's place in the table is not
+      // its series: the expected value comes from the preset's own entry order.
+      const expected = String(
+        preset.cutoffs.findIndex((c) => c.name === name) + 1,
+      );
+      expect(expected).not.toBe("0");
+      expect(laneOf(root, name).dataset.series).toBe(expected);
+      expect(swatch.dataset.series).toBe(expected);
+      seen.add(expected);
+    }
+    expect(seen.size).toBe(2);
+  });
+
+  it("draws a moved row with one hollow marker and one aria-hidden arc", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const gateIn = laneOf(root, "gate-in");
+    expect(gateIn.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(1);
+    const arcs = gateIn.querySelectorAll(".gmt-cutoff-stack-arc");
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0]!.getAttribute("aria-hidden")).toBe("true");
+    expect(gateIn.textContent).toContain("moved");
+  });
+
+  it("draws a row that did not move with neither", async () => {
+    const { root } = await mount();
+    choosePreset(root, "rotterdam-weekend");
+    const documents = laneOf(root, "documents");
+    expect(documents.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(
+      0,
+    );
+    expect(documents.querySelectorAll(".gmt-cutoff-stack-arc")).toHaveLength(0);
+    expect(documents.textContent).not.toContain("moved");
+  });
+
+  it("draws the departure gate once, in the days layer, not once per lane", async () => {
+    const { root } = await mount();
+    choosePreset(root, "no-calendar");
+    const timeline = q(root, "stack-timeline");
+    expect(timeline.querySelectorAll(".gmt-cutoff-gate")).toHaveLength(1);
+    expect(
+      timeline.querySelectorAll(".gmt-cutoff-stack-days > .gmt-cutoff-gate"),
+    ).toHaveLength(1);
+    expect(
+      timeline.querySelector(".gmt-cutoff-stack-gate-chip")?.textContent,
+    ).toContain("departs 18:00");
+  });
+
+  it("holds no focusable descendant", async () => {
+    const { root } = await mount();
+    for (const id of ["rotterdam-weekend", "no-calendar", "skipped-hour"]) {
+      choosePreset(root, id);
+      expect(
+        q(root, "stack-timeline").querySelectorAll(FOCUSABLE),
+      ).toHaveLength(0);
+    }
+  });
+});
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        anchor: "2024-06-12T18:00:00+03:00[Europe/Helsinki]",
+        timeZone: "Europe/Helsinki",
+        cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "stack-output").textContent).not.toBe("NO SIGNAL");
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });

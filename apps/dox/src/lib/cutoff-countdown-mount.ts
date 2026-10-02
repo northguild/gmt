@@ -40,29 +40,47 @@ import {
   zoneOptionsHtml,
   callSource,
   dayTickLabel,
+  durationText,
   epochMs,
   hourTickLabel,
+  isDayBoundary,
+  isNegative,
   localLabel,
   localParts,
+  minuteTickLabel,
   monthTickLabel,
   walkTicks,
 } from "./cutoff-widgets";
 import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
 import type { CutoffLib } from "./cutoff-widgets";
+import {
+  layoutWidth,
+  onWidthChange,
+  pickLabelLeft,
+  placeLabel,
+  thinTickLabels,
+} from "./label-fit";
 import { onceDestroy, WidgetLoadError } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
+  rangeFieldHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  syncRange,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
 export type { CutoffCountdownArgs } from "./cutoff-countdown";
 
 const READING_YOUR_CLOCK = "Reading your clock…";
+
+/** How long the reader must stop before the verdict is announced. */
+const SETTLE_MS = 600;
 
 function presetOptionsHtml(presetId: string): string {
   return (
@@ -91,37 +109,49 @@ export function renderCutoffCountdownTemplate(
   const isLive = state.mode === "live";
 
   return (
-    `<div class="gmt-cutoff-countdown gmt-widget">` +
+    `<div class="gmt-cutoff-countdown gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. The cut-off and now</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Cut-off</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Cut-off")}` +
     `<input class="gmt-input" data-role="cutoff" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.cutoff)}"></label>` +
-    `<label class="gmt-label"><span>Clock</span>` +
+    `<label class="gmt-label">${labelTextHtml("Clock")}` +
     `<select class="gmt-select" data-role="time-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
-    `<label class="gmt-label gmt-label-wide"><span>Now</span>` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Now")}` +
     `<input class="gmt-input" data-role="now" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(isLive ? "" : state.now)}" placeholder="${isLive ? escapeAttr(READING_YOUR_CLOCK) : ""}"></label>` +
     `</div>` +
     `<div class="gmt-widget-controls">` +
-    `<button class="gmt-button" type="button" data-role="use-clock">Use my clock</button>` +
-    `<button class="gmt-button" type="button" data-role="snap">Now = the cut-off</button>` +
+    `<button class="gmt-button gmt-button--pad" type="button" data-role="use-clock">Use my clock</button>` +
+    `<button class="gmt-button gmt-button--pad" type="button" data-role="snap">Now = the cut-off</button>` +
     `</div>` +
     `<p class="gmt-widget-hint" data-role="now-mode">${isLive ? "Now is your clock, live." : "Now is pinned."}</p>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Late or on time</h4>` +
-    `<p class="gmt-transport-verdict" data-role="verdict" aria-live="polite">${isLive ? escapeHtml(READING_YOUR_CLOCK) : ""}</p>` +
+    `<p class="gmt-transport-verdict" data-role="verdict">${isLive ? escapeHtml(READING_YOUR_CLOCK) : ""}</p>` +
+    /* The verdict repaints every second in live mode and on every slider step,
+       so it is not itself a live region. This one is written to only when the
+       reader settles or the verdict changes kind. */
+    `<p class="gmt-transport-visually-hidden" role="status" aria-live="polite" data-role="verdict-status"></p>` +
     `<div class="gmt-cutoff-countdown-axis" data-role="countdown-axis" role="img" aria-labelledby="countdown-summary" tabindex="-1"></div>` +
-    `<label class="gmt-label gmt-label-wide gmt-cutoff-countdown-drag"><span>Drag now</span>` +
-    `<input class="gmt-range" data-role="now-slider" type="range" step="1" min="-60" max="60" value="0">` +
+    `<label class="gmt-label gmt-cutoff-countdown-drag">${labelTextHtml("Drag now")}` +
+    rangeFieldHtml({
+      role: "now-slider",
+      chipRole: "now-value",
+      min: -60,
+      max: 60,
+      step: 1,
+      value: 0,
+      valueText: "",
+      ends: ["", ""],
+    }) +
     `</label>` +
-    `<output data-role="now-value"></output>` +
     `<div class="gmt-cutoff-countdown-rule" data-role="rule"></div>` +
     `<p class="gmt-widget-hint" id="countdown-summary" data-role="countdown-summary"></p>` +
     `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
@@ -169,6 +199,22 @@ function setupWidget(
   let window_: AxisWindow | null = null;
   let interval: ReturnType<typeof setInterval> | undefined;
   let destroyed = false;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let announcedKind: string | undefined;
+  let latestVerdict = "";
+
+  /** Write the verdict to the status region once the reader stops moving, so
+   *  a drag or typing is announced once, not per step. */
+  function announceOnSettle(): void {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      settleTimer = undefined;
+      const status = q("verdict-status");
+      if (status && status.textContent !== latestVerdict) {
+        status.textContent = latestVerdict;
+      }
+    }, SETTLE_MS);
+  }
 
   function state(): CountdownState {
     return {
@@ -209,6 +255,13 @@ function setupWidget(
 
     const verdictEl = q("verdict");
     if (verdictEl) verdictEl.textContent = v.text;
+    latestVerdict = v.text;
+    /* A live tick that crosses the cut-off changes the verdict's kind and is
+       worth announcing; one that only counts down is not. */
+    if (announcedKind !== undefined && v.kind !== announcedKind) {
+      announceOnSettle();
+    }
+    announcedKind = v.kind;
 
     const [callPastHtml, callPastPlain] = callSource("isPastCutoff", [
       s.now,
@@ -273,11 +326,39 @@ function setupWidget(
     } else if (sliderEl) {
       sliderEl.disabled = true;
     }
-    const nowValue = q("now-value");
-    if (nowValue) {
-      nowValue.textContent = facts.nowLocal
-        ? localParts(facts.nowLocal).time
-        : "";
+    const nowTime = facts.nowLocal ? localParts(facts.nowLocal).time : "";
+    /* Both read what `timeToCutoff` returned, so the chip, the spoken value
+       and the hero cannot disagree: one sign (positive is time left), one
+       precision. With no signal there is no value, and the control says so
+       rather than keeping the last reading. */
+    const hasValue = nowTime !== "" && facts.left !== "";
+    const signed = isNegative(facts.left)
+      ? "−"
+      : facts.left === "PT0S"
+        ? ""
+        : "+";
+    const leftText = durationText(facts.left);
+    syncRange(
+      sliderEl!,
+      !hasValue
+        ? ""
+        : facts.left === "PT0S"
+          ? `${nowTime}, at the cut-off`
+          : `${nowTime}, ${leftText} ${isNegative(facts.left) ? "after" : "before"} the cut-off`,
+    );
+    // The chip is short ("16:45 · +1 h 15 min") so it fits a phone-width
+    // field; aria-valuetext keeps the whole sentence.
+    const chip = q("now-value");
+    if (chip) {
+      chip.textContent = !hasValue ? "" : `${nowTime} · ${signed}${leftText}`;
+    }
+    const ends = sliderEl!
+      .closest(".gmt-range-field")
+      ?.querySelectorAll<HTMLElement>(".gmt-range-ends span");
+    if (ends && ends.length === 2) {
+      const [startEl, endEl] = [ends[0]!, ends[1]!];
+      startEl.textContent = win ? windowEndLabel(win, win.startMs, s) : "";
+      endEl.textContent = win ? windowEndLabel(win, win.endMs, s) : "";
     }
 
     const axis = q<HTMLElement>("countdown-axis");
@@ -394,6 +475,7 @@ function setupWidget(
       );
       syncPreset();
       render();
+      announceOnSettle();
       return;
     }
     if (target === cutoffEl || target === nowEl) {
@@ -401,6 +483,7 @@ function setupWidget(
       recomputeWindow();
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -408,11 +491,13 @@ function setupWidget(
     const target = e.target as HTMLElement;
     if (target === presetEl) {
       applyPreset();
+      announceOnSettle();
       return;
     }
     if (target === timeZoneEl) {
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -434,6 +519,7 @@ function setupWidget(
       recomputeWindow();
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -446,12 +532,19 @@ function setupWidget(
     render();
   }
   syncPreset();
+  const axisEl = q<HTMLElement>("countdown-axis");
+  const disposeWidth = axisEl
+    ? onWidthChange(axisEl, () => fitCountdownAxis(axisEl))
+    : () => {};
 
   return {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      disposeWidth();
       stopLive();
+      clearTimeout(settleTimer);
+      settleTimer = undefined;
     },
   };
 }
@@ -462,13 +555,17 @@ const DAY_MS = 86_400_000;
 /** Hours, then days, then months, as the window grows — the tick unit and
  *  step chosen only from the span, never from the values themselves. */
 function countdownTickPlan(spanMs: number): {
-  unit: "hours" | "days" | "months";
+  unit: "minutes" | "hours" | "days" | "months";
   step: number;
 } {
+  // Short windows tick every quarter or half hour, so a window inside one
+  // hour still carries labelled times.
+  if (spanMs <= 2 * HOUR_MS) return { unit: "minutes", step: 15 };
+  if (spanMs <= 6 * HOUR_MS) return { unit: "minutes", step: 30 };
   if (spanMs <= 3 * DAY_MS) {
     return {
       unit: "hours",
-      step: spanMs <= 6 * HOUR_MS ? 1 : spanMs <= 24 * HOUR_MS ? 3 : 6,
+      step: spanMs <= 24 * HOUR_MS ? 3 : 6,
     };
   }
   if (spanMs <= 60 * DAY_MS) {
@@ -478,6 +575,26 @@ function countdownTickPlan(spanMs: number): {
     };
   }
   return { unit: "months", step: 1 };
+}
+
+/** An end label of the slider's window, in the clock's zone: the time alone
+ *  inside a day, with the date when the window is longer. */
+function windowEndLabel(
+  win: AxisWindow,
+  ms: number,
+  state: CountdownState,
+): string {
+  try {
+    const z = Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(
+      state.timeZone.trim(),
+    );
+    const time = `${String(z.hour).padStart(2, "0")}:${String(z.minute).padStart(2, "0")}`;
+    return win.endMs - win.startMs > DAY_MS
+      ? `${dayTickLabel(z)} ${time}`
+      : time;
+  } catch {
+    return "";
+  }
 }
 
 function renderAxis(
@@ -504,27 +621,185 @@ function renderAxis(
 
   const { unit, step } = countdownTickPlan(span);
   const label =
-    unit === "hours"
-      ? hourTickLabel
-      : unit === "days"
-        ? dayTickLabel
-        : monthTickLabel;
+    unit === "minutes"
+      ? minuteTickLabel
+      : unit === "hours"
+        ? hourTickLabel
+        : unit === "days"
+          ? dayTickLabel
+          : monthTickLabel;
   const ticks = walkTicks(win.startMs, win.endMs, timeZone, unit, step, label);
   const ticksHtml = ticks
     .map(
       (t) =>
-        `<span class="gmt-cutoff-axis-tick" style="left:${pct(t.ms)}%">${escapeHtml(t.label)}</span>`,
+        `<span class="gmt-cutoff-axis-tick${isDayBoundary(t.label) ? " gmt-cutoff-axis-tick--day" : ""}" style="left:${pct(t.ms)}%">${escapeHtml(t.label)}</span>`,
     )
     .join("");
 
+  // The signed duration `timeToCutoff` returned, as words: the sign is the
+  // returned ISO's own, never computed here.
+  const sign = isNegative(facts.left) ? "−" : facts.left === "PT0S" ? "" : "+";
+  const heroText = `${sign}${durationText(facts.left)}`;
+  const live = state.mode === "live";
+
   el.innerHTML =
+    `<div class="gmt-cutoff-countdown-hero" data-role="countdown-hero"${live ? " data-live" : ""}>` +
+    `<span class="gmt-cutoff-countdown-hero-cap">time to cut-off</span>` +
+    `<span class="gmt-cutoff-countdown-hero-value">${escapeHtml(heroText)}</span>` +
+    `<span class="gmt-cutoff-countdown-hero-iso">${escapeHtml(facts.left)}</span>` +
+    `</div>` +
+    `<div class="gmt-cutoff-countdown-plot" data-role="countdown-plot">` +
+    `<div class="gmt-cutoff-countdown-chiprow">` +
+    `<span class="gmt-cutoff-chip gmt-cutoff-countdown-chip--gate" style="left:calc(${cutoffPct}% + 12px)">cut-off ${escapeHtml(cutoffTime)}</span>` +
+    `<span class="gmt-cutoff-chip gmt-cutoff-countdown-chip--now" style="left:calc(${nowPct}% + 12px)">now ${escapeHtml(nowTime)}</span>` +
+    `</div>` +
     `<div class="gmt-cutoff-countdown-track">` +
-    `<div class="gmt-cutoff-countdown-open" style="width:${cutoffPct}%"><span>open</span></div>` +
-    `<div class="gmt-cutoff-countdown-closed" style="left:${cutoffPct}%;width:${Math.max(0, 100 - cutoffPct)}%"><span>closed</span></div>` +
-    `<span class="gmt-cutoff-countdown-marker gmt-cutoff-countdown-marker--cutoff" style="left:${cutoffPct}%" title="${escapeAttr(`Cut-off ${cutoffTime}`)}"></span>` +
+    `<div class="gmt-cutoff-countdown-open" style="width:${cutoffPct}%"></div>` +
+    `<div class="gmt-cutoff-countdown-closed gmt-cutoff-closed" style="left:${cutoffPct}%;width:${Math.max(0, 100 - cutoffPct)}%"></div>` +
+    `<span class="gmt-cutoff-chip gmt-cutoff-chip--dim gmt-cutoff-countdown-region-chip gmt-cutoff-countdown-region-chip--open" style="left:8px">open</span>` +
+    `<span class="gmt-cutoff-chip gmt-cutoff-chip--dim gmt-cutoff-countdown-region-chip gmt-cutoff-countdown-region-chip--closed" style="left:calc(${cutoffPct}% + 8px)">closed</span>` +
+    `</div>` +
+    `<span class="gmt-cutoff-gate gmt-cutoff-countdown-marker gmt-cutoff-countdown-marker--cutoff" style="left:${cutoffPct}%" title="${escapeAttr(`Cut-off ${cutoffTime}`)}"></span>` +
     `<span class="gmt-cutoff-countdown-marker gmt-cutoff-countdown-marker--now" style="left:${nowPct}%" title="${escapeAttr(`Now ${nowTime}`)}"></span>` +
     `</div>` +
     `<div class="gmt-cutoff-countdown-ticks" data-role="countdown-ticks">${ticksHtml}</div>`;
+  fitCountdownAxis(el);
+}
+
+/**
+ * Place the chip row, the open/closed chips and the tick labels by measure, so
+ * nothing overlaps at any width: the gate chip goes on the side away from now,
+ * the now chip beside its pin and clear of the gate, and an open/closed chip a
+ * region cannot hold is hidden. Re-runs when the axis width changes.
+ */
+function fitCountdownAxis(el: HTMLElement): void {
+  const ticks = el.querySelector<HTMLElement>('[data-role="countdown-ticks"]');
+  if (ticks) thinTickLabels(ticks);
+  const plot = el.querySelector<HTMLElement>(".gmt-cutoff-countdown-plot");
+  if (!plot || plot.clientWidth === 0) return;
+  const W = plot.clientWidth;
+  const px = (node: HTMLElement | null) =>
+    node ? (parseFloat(node.style.left) / 100) * W : Number.NaN;
+  const gatePx = px(
+    plot.querySelector<HTMLElement>(".gmt-cutoff-countdown-marker--cutoff"),
+  );
+  const nowPx = px(
+    plot.querySelector<HTMLElement>(".gmt-cutoff-countdown-marker--now"),
+  );
+  const gateChip = plot.querySelector<HTMLElement>(
+    ".gmt-cutoff-countdown-chip--gate",
+  );
+  const nowChip = plot.querySelector<HTMLElement>(
+    ".gmt-cutoff-countdown-chip--now",
+  );
+  if (Number.isNaN(gatePx) || Number.isNaN(nowPx) || !gateChip || !nowChip) {
+    return;
+  }
+
+  const OFFSET = 12;
+  const GAP = 4;
+  const width = (chip: HTMLElement) => layoutWidth(chip);
+  const gw = width(gateChip);
+  const nw = width(nowChip);
+  type Span = [number, number];
+  /** The chip's three places on its pin: to its right, to its left, or (when
+   *  neither side is free) centred on the pin and kept inside the track. */
+  const places = (at: number, w: number): Record<string, Span> => {
+    const mid = Math.max(0, Math.min(at - w / 2, W - w));
+    return {
+      start: [at + OFFSET, at + OFFSET + w],
+      end: [at - OFFSET - w, at - OFFSET],
+      mid: [mid, mid + w],
+    };
+  };
+  const inside = ([l, r]: Span) => l >= -0.5 && r <= W + 0.5;
+  const crosses = ([l, r]: Span, x: number) => x > l - GAP && x < r + GAP;
+  const apart = (a: Span, b: Span) => a[1] + GAP <= b[0] || b[1] + GAP <= a[0];
+
+  // Away from now; on a tie the gate chip goes left and the now chip right.
+  const gatePref = nowPx < gatePx ? "start" : "end";
+  const gateOrder = [gatePref, gatePref === "start" ? "end" : "start", "mid"];
+  // The now chip's default side is the one `placeLabel` picks with the gate as
+  // a blocker; the other side is the fallback.
+  const nowPref = placeLabel({
+    atPx: nowPx,
+    labelPx: nw,
+    trackPx: W,
+    offsetPx: OFFSET,
+    blockers: [gatePx],
+  });
+  const nowOrder = [nowPref, nowPref === "start" ? "end" : "start", "mid"];
+
+  // A chip row has room for both chips only when the track is wide enough;
+  // otherwise one chip drops to a second row (its pin still reaches it). A
+  // chip only covers the other pin when nothing cleaner fits.
+  const rows: [0 | 1, 0 | 1][] = [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+  ];
+  let chosen: { gate: Span; now: Span; gateRow: 0 | 1; nowRow: 0 | 1 } | null =
+    null;
+  search: for (const strict of [true, false]) {
+    for (const [gateRow, nowRow] of rows) {
+      for (const g of gateOrder) {
+        const gs = places(gatePx, gw)[g]!;
+        if (!inside(gs) || (strict && crosses(gs, nowPx))) continue;
+        for (const n of nowOrder) {
+          const ns = places(nowPx, nw)[n]!;
+          if (!inside(ns) || (strict && crosses(ns, gatePx))) continue;
+          if (gateRow === nowRow && !apart(gs, ns)) continue;
+          chosen = { gate: gs, now: ns, gateRow, nowRow };
+          break search;
+        }
+      }
+    }
+  }
+  const fallbackGate = places(gatePx, gw).mid!;
+  gateChip.style.left = `${(chosen?.gate ?? fallbackGate)[0]}px`;
+  gateChip.classList.toggle("gmt-cutoff-chip--row2", chosen?.gateRow === 1);
+  nowChip.hidden = chosen === null;
+  if (chosen) nowChip.style.left = `${chosen.now[0]}px`;
+  nowChip.classList.toggle("gmt-cutoff-chip--row2", chosen?.nowRow === 1);
+  plot.classList.toggle(
+    "gmt-cutoff-countdown-plot--tiers",
+    chosen !== null && (chosen.gateRow === 1 || chosen.nowRow === 1),
+  );
+
+  // "open" / "closed" inside their own regions, clear of both pins.
+  const regionChip = (
+    node: HTMLElement | null,
+    from: number,
+    to: number,
+  ): void => {
+    if (!node) return;
+    const w = width(node);
+    const left = pickLabelLeft(
+      [from + 8, to - 8 - w],
+      w,
+      to,
+      [nowPx, gatePx].filter((x) => x > from + 1 && x < to - 1),
+      6,
+    );
+    const fits =
+      left >= from + 4 &&
+      left + w <= to - 4 &&
+      !(nowPx > left - 6 && nowPx < left + w + 6);
+    node.hidden = !fits;
+    if (fits) node.style.left = `${left}px`;
+  };
+  regionChip(
+    plot.querySelector<HTMLElement>(".gmt-cutoff-countdown-region-chip--open"),
+    0,
+    gatePx,
+  );
+  regionChip(
+    plot.querySelector<HTMLElement>(
+      ".gmt-cutoff-countdown-region-chip--closed",
+    ),
+    gatePx,
+    W,
+  );
 }
 
 function applyArgs(root: HTMLElement, args: CutoffCountdownArgs): void {
@@ -534,7 +809,7 @@ function applyArgs(root: HTMLElement, args: CutoffCountdownArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("cutoff", s.cutoff);
   set("time-zone", s.timeZone);

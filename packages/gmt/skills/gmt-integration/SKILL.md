@@ -75,8 +75,10 @@ which lint package to install for Date-ban enforcement.
      unsynchronized" marker. Check for `0n` yourself before trusting it as 1900.
    - .NET ticks name an instant only when `DateTimeKind` is `Utc`. `Local` and
      `Unspecified` ticks count wall-clock time.
-   - `toNanoseconds` and `isValidInstant` read the offset and ignore a bracketed
-     zone annotation, which is not checked.
+   - `toNanoseconds` and `isValidInstant` read the offset and do not validate a
+     bracketed zone annotation. One thing is read from it: an offset written to the
+     minute that is the zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`)
+     names the instant the zone gives.
 6. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
 7. **Read the READMEs.** This skill is a routing pointer. For full integration

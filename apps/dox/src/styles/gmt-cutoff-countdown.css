@@ -1,66 +1,179 @@
 /*
- * Cut-off Countdown widget (TRAN-10). Shared marker/departure-line rules
- * live in gmt-cutoff-widgets.css; this sheet holds the axis track (the
- * open/closed regions and the two markers) and the rule box.
+ * Cut-off Countdown widget (TRAN-10). The chart recipes it shares (the glass
+ * surface, the chip, the gate, the closed hatch, the axis ticks) live in
+ * gmt-cutoff-widgets.css; this sheet holds the hero plate, the chip row, the
+ * track and the rule box.
  *
- * The closed region is a hatch plus the word "closed", never a colour
- * alone.
+ * The closed region is a hatch plus the word "closed" on a chip, never a
+ * colour alone. Every word in the chart sits on an opaque `--gmt-surface`
+ * plate.
  */
 
-.gmt-cutoff-countdown-track {
-  position: relative;
-  height: 2.5rem;
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  overflow: hidden;
+/* The axis padding, its border and the drag field's margin all read this one
+   inset, so the now pin and the range thumb share an x. Anything added to the
+   axis's or the plot's own padding or border goes into it. */
+.gmt-cutoff-countdown {
+  --gmt-countdown-inset: calc(var(--gmt-space-3) + 1px);
 }
 
-.gmt-cutoff-countdown-open,
-.gmt-cutoff-countdown-closed {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+.gmt-cutoff-countdown-axis {
+  padding-inline: calc(var(--gmt-countdown-inset) - 1px);
+}
+
+/* The hero: the signed time to the cut-off, large, on a plate. */
+.gmt-cutoff-countdown-hero {
+  align-self: flex-start;
   display: flex;
-  align-items: center;
-  padding-left: var(--gmt-space-1);
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.gmt-cutoff-countdown-hero-cap {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--gmt-tracking-wider);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cutoff-countdown-hero-value {
+  font-family: var(--gmt-font-display);
+  font-size: clamp(1.6rem, 7cqi, 2.4rem);
+  line-height: 1.15;
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+.gmt-cutoff-countdown-hero-iso {
+  font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
-.gmt-cutoff-countdown-open {
+/* Live mode only: a soft cyan glow, decoration on a plate whose text already
+   clears the contrast floor without it. */
+.gmt-cutoff-countdown-hero[data-live] {
+  box-shadow:
+    inset 0 1px 0 var(--gmt-highlight),
+    0 0 18px var(--gmt-glow);
+}
+
+.gmt-cutoff-countdown-hero[data-live] .gmt-cutoff-countdown-hero-value {
+  text-shadow: 0 0 14px var(--gmt-glow);
+}
+
+/* The plot: the chip row, the track and the two pins share one box, so a
+   percent is the same x in all three. */
+.gmt-cutoff-countdown-plot {
+  position: relative;
+  padding-top: 2.2rem;
+}
+
+.gmt-cutoff-countdown-chiprow {
+  position: absolute;
+  top: 0;
   left: 0;
-  background: var(--gmt-fill-subtle);
+  right: 0;
+  height: 1.6rem;
+  z-index: 2;
+}
+
+.gmt-cutoff-countdown-chiprow > .gmt-cutoff-chip {
+  position: absolute;
+  top: 0;
+}
+
+.gmt-cutoff-countdown-chiprow > .gmt-cutoff-chip--row2 {
+  top: 1.8rem;
+}
+
+/* A narrow track drops one chip to a second row. */
+.gmt-cutoff-countdown-plot--tiers {
+  padding-top: 4rem;
+}
+
+.gmt-cutoff-countdown-plot--tiers > .gmt-cutoff-countdown-chiprow {
+  height: 3.4rem;
+}
+
+.gmt-cutoff-countdown-track {
+  position: relative;
+  height: 3.5rem;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: inset 0 0 0 1px var(--gmt-border);
+  overflow: hidden;
+}
+
+/* Open: lit glass, clear at the window's start and brightening to the gate. */
+.gmt-cutoff-countdown-open {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color(from var(--gmt-cyan) srgb r g b / 0.35)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
 }
 
 .gmt-cutoff-countdown-closed {
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--gmt-border) 0,
-    var(--gmt-border) 1px,
-    transparent 1px,
-    transparent 6px
-  );
-  font-style: italic;
+  position: absolute;
+  top: 0;
+  bottom: 0;
 }
 
-.gmt-cutoff-countdown-marker {
+.gmt-cutoff-countdown-track .gmt-cutoff-chip {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+/* The gate and the now pin run from the chip row to the foot of the track. */
+.gmt-cutoff-countdown-plot > .gmt-cutoff-gate {
+  top: 0;
+  bottom: 0;
+}
+
+.gmt-cutoff-countdown-marker--now {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 2px;
+  margin-left: -1px;
   background: var(--gmt-ice);
 }
 
-.gmt-cutoff-countdown-marker--now {
-  border-left: 2px dashed var(--gmt-ice);
-  background: none;
+.gmt-cutoff-countdown-marker--now::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  translate: -50% 0;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-ice);
 }
 
-/* The "Drag now" label sits in a flex column, where .gmt-label-wide's 220px
-   flex basis would become its height; it takes its content's height here. */
+/* The "Drag now" range sits directly under the axis. The thumb centre travels
+   from half a thumb in to half a thumb in from the range's edges, so the range
+   is inset from the axis by the same inset the axis pads itself with, less
+   half a thumb, until the thumb centre and the now pin share an x. */
 .gmt-cutoff-countdown-drag {
-  flex: none;
+  margin-inline: calc(
+    var(--gmt-countdown-inset) - var(--gmt-range-thumb-w) / 2
+  );
 }
 
 .gmt-cutoff-countdown-rule {
