@@ -28,7 +28,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 66 stories in build order.
+realm. [tracker.md](tracker.md) has the 67 stories in build order.
 
 ---
 
@@ -219,7 +219,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (66 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (67 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | Bundle Bulletin C and A at build. `isTableStale` / `isUt1Stale` surface expiry.       |
@@ -236,7 +236,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 66 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 67 stories, `Blocked by` column, Definition of Done
 - [research/spike-2026-09/](research/spike-2026-09/) — verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/](issues/) — story specs, one file per story, named by story ID
 - [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
