@@ -5,16 +5,13 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid datetime range — both parseable as
- * ISO PlainDateTime strings and `value1 <= value2`.
+ * ISO PlainDateTime strings and `value1` before `value2`.
  *
  * - Both inputs must be ISO 8601 datetime strings (e.g. `"2024-01-01T10:00:00"`), as
  *   `isValidDateTime` accepts, annotations included.
- * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  *
- * @param value1 first ISO PlainDateTime string
- * @param value2 second ISO PlainDateTime string
- * @param options optional allowEqual flag
+ * @param props The two values to compare and how equal values are treated
  * @returns boolean indicating whether the datetime range is valid
  *
  * @example isValidDateTimeRange({ value1: "2024-01-01T10:00:00", value2: "2024-12-31T23:59:59" }) // true
@@ -22,9 +19,29 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
  * @example isValidDateTimeRange({ value1: "2024-01-01T10:00:00", value2: "2024-01-01T10:00:00", options: { allowEqual: true } }) // true
  */
 export function isValidDateTimeRange(props: {
+  /**
+   * The start of the range, an ISO PlainDateTime string.
+   */
   value1: string;
+  /**
+   * The end of the range, an ISO PlainDateTime string.
+   */
   value2: string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns false.
+   *
+   * @defaultValue None. Equal values are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` equal to `value2` is a valid range. `false` requires `value1` to be
+     * before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }): boolean {
   try {
     if (!isObject(props)) return false;

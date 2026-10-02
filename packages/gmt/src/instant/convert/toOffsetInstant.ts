@@ -15,14 +15,6 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
 /**
  * An absolute instant paired with the local UTC offset in force where the event happened.
  *
- * @remarks Members:
- *
- * | Member | Type | Description |
- * | --- | --- | --- |
- * | `instant` | `string` | UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally. |
- * | `offset` | `string` | UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone that did not run on a whole minute). Renders the event as the human on the ground saw it. |
- * | `timeZone` | `string \| undefined` | IANA zone identifier, when one is known. Absent from most feeds, so absent from most pairs. |
- *
  * Neither `instant` nor `offset` derives from the other, which is why both are stored. It is
  * the shape GS1 EPCIS 2.0 (`eventTime` + a required `eventTimeZoneOffset`), UN/EDIFACT DTM
  * (qualifier `303`/`304`) and DICOM (`DT` + `&ZZXX`) all exchange.
@@ -36,8 +28,20 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  * };
  */
 export interface OffsetInstant {
+  /** UTC instant, ISO 8601 ending in `Z` (e.g. `2024-07-15T16:00:00Z`). Orders events globally. */
   instant: string;
+  /**
+   * UTC offset in force where the event happened, `±HH:MM` (or `±HH:MM:SS` for a pre-1972 zone
+   * that did not run on a whole minute). Renders the event as the human on the ground saw it.
+   */
   offset: string;
+  /**
+   * The IANA name of the zone, when one is known. Most feeds send none, so `toOffsetInstant` leaves
+   * it out unless the string or its `timeZone` argument names a zone.
+   *
+   * @defaultValue None. The pair names no zone, and `offset` alone places the instant on a local
+   * clock.
+   */
   timeZone?: string;
 }
 
@@ -91,7 +95,7 @@ export interface OffsetInstant {
  * - Returns null on invalid input, not a zero-offset pair — `+00:00` is a real offset.
  *
  * @param value ISO 8601 instant string, with an offset designator and optionally a bracketed zone
- * @param timeZone optional IANA zone identifier to read the offset in
+ * @param timeZone optional IANA name or UTC offset to read the offset in
  * @returns `{ instant, offset, timeZone? }`, or null on invalid input
  *
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }

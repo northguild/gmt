@@ -21,8 +21,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   unlike `addDuration`. Time units count as whole 24-hour days, as Temporal's do.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionDate`'s `start > end` rejection.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
- *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
  * - Accepts a RFC 9557 calendar-annotated PlainDate string — E5 (issue #78). The computed endpoint
  *   is resolved in `value`'s own calendar (no `relativeTo`/pair-matching question, since there
  *   is only one calendar-tagged input) and both endpoints are re-formatted in that calendar,
@@ -34,7 +32,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value ISO PlainDate string, optionally calendar-annotated
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range endpoint is handled
  * @returns `{ start, end }` with the constructed span, or null on invalid input
  *
  * @example intervalFromDurationDate("2024-01-01", "P1M", "start") // { start: "2024-01-01", end: "2024-02-01" }
@@ -48,8 +46,28 @@ export function intervalFromDurationDate(
   value: string,
   duration: string,
   anchor: "start" | "end",
-  options?: { overflow?: Overflow },
-): { start: string; end: string } | null {
+  options?: {
+    /**
+     * What to do when the computed endpoint is not a real date. `"constrain"` clamps it to the
+     * last valid day, so Jan 31 + 1 month is Feb 29 or 28; `"reject"` returns null.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
+): {
+  /**
+   * The date the interval begins on, as an ISO 8601 date (`YYYY-MM-DD`). It keeps a calendar
+   * annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first date after the interval, in the same format as `start`. It is exclusive: the interval
+   * holds everything from `start` up to but not including this value. It can equal `start`, which
+   * makes the interval empty.
+   */
+  end: string;
+} | null {
   if (!isOptionsArgument(options)) {
     return null;
   }

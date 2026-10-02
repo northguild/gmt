@@ -58,7 +58,7 @@ export interface FreeTime {
  *
  * @param clockStart ISO 8601 instant string of the event that starts the clock (discharge, availability or gate-out)
  * @param freeDays whole number of free days the tariff allows, at least 1
- * @param options { basis: "calendar" | "working", timeZone: string, firstDay: "eventDay" | "nextDay", calendar?: BusinessCalendar }
+ * @param options The tariff's counting terms: which days count, in which zone, and where day one starts
  * @returns the free-time start and last free day as local dates, and the expiry instant, or null on invalid input
  *
  * @example freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" } (a Friday discharge: the weekend is consumed)

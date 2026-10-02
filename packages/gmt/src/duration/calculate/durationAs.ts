@@ -13,16 +13,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   durationAs("P1DT2H30M", "hours") is 26.5, not the 2 that `getDurationUnit` reads.
  * - The result is fractional, not rounded: durationAs("P1DT2H30M", "days") is
  *   1.1041666666666667. Round it yourself, or reach for `normalizeDuration` instead.
- * - `relativeTo` is required whenever a calendar unit (year/month/week) is involved, in
- *   *either* direction — as the requested `unit`, or because the input duration already has
- *   a nonzero year/month/week component. Without it, returns null. This is the same
- *   documented gap `normalizeDuration` (A3) carries; `addDuration`/`subtractDuration` (A2)
- *   have it worse still, since Temporal gives them no `relativeTo` option at all.
+ * - The calendar-unit rule of `relativeTo` is the same one `normalizeDuration` (A3) carries;
+ *   `addDuration`/`subtractDuration` (A2) have it worse still, since Temporal gives them no
+ *   `relativeTo` option at all.
  * - The requested-unit half of that rule bites even on day/time-only input: "P1DT2H30M" has
  *   no calendar component, yet durationAs("P1DT2H30M", "weeks") is still null — a week is a
  *   calendar quantity to Temporal regardless of what it is being measured from.
- * - `relativeTo` changes the answer for non-calendar units too when it names a zoned instant:
- *   a day spanning a DST spring-forward transition totals 23 hours, not 24.
  * - A zoned `relativeTo` string resolves its wall time with disambiguation "compatible" and
  *   offset "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a
  *   nonexistent one the later instant, and an offset that does not match the zone returns null.
@@ -45,7 +41,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value ISO 8601 duration string
  * @param unit DateTimeDurationUnit to total into ("years" | "months" | "weeks" | "days" | "hours" | "minutes" | "seconds" | "milliseconds" | "microseconds" | "nanoseconds", or the singular name)
- * @param options optional: { relativeTo } — anchor date/instant, required for any calendar unit
+ * @param options The anchor calendar units are measured from
  * @returns the fractional total in `unit`, or null on invalid input
  *
  * @example durationAs("P1DT2H30M", "hours") // 26.5
@@ -66,7 +62,18 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function durationAs(
   value: string,
   unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
-  options?: { relativeTo?: DurationRelativeTo },
+  options?: {
+    /**
+     * The date or zoned date-time the duration is measured from. It is required whenever a year,
+     * month or week is involved, as the `unit` asked for or as a nonzero field of the duration.
+     * With a zoned value, days follow that zone's clock changes, so a day spanning a
+     * spring-forward transition totals 23 hours.
+     *
+     * @defaultValue None. Days are 24 hours, and a duration or `unit` that involves a year, month
+     * or week returns null.
+     */
+    relativeTo?: DurationRelativeTo;
+  },
 ): number | null {
   if (!isOptionsArgument(options)) {
     return null;

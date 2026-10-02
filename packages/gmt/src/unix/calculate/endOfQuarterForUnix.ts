@@ -12,11 +12,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   takes neither. Those ignored options were removed in 1.16.0.
  * - Returns null for invalid input.
  * - `value` is a safe integer or a digit string (`"1706659200000"`); anything else returns null.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone returns
- *   null.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options optional: how `value` is read and the zone the quarter is found in
  * @returns Unix epoch number representing the end of the quarter, or null on invalid input
  *
  * @example endOfQuarterForUnix(1706659200000, { timeZone: "UTC" }) // 1711929599999
@@ -27,7 +25,19 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function endOfQuarterForUnix(
   value: number | string,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns null. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns null.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
   },
 ): number | null {

@@ -8,12 +8,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - Uses Temporal.Instant.compare for comparison.
  * - Returns false if start > end or inputs are invalid.
- * - Use options.inclusiveStart/inclusiveEnd to control boundaries.
  *
  * @param value ISO UTC datetime string to check
  * @param start ISO UTC datetime string for range start
  * @param end ISO UTC datetime string for range end
- * @param options optional: inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @param options Whether each boundary counts as inside the range
  * @returns boolean indicating whether value is between start and end
  *
  * @example isBetweenUtc("2024-03-15T12:00:00Z", "2024-03-10T12:00:00Z", "2024-03-20T12:00:00Z") // true
@@ -24,7 +23,22 @@ export function isBetweenUtc(
   value: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `value` equal to `start` counts as inside the range. `false` requires it to be after
+     * `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `value` equal to `end` counts as inside the range. `false` requires it to be before
+     * `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {

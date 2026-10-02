@@ -30,13 +30,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  * - Follows Temporal's AddZonedDateTime: the date portion of the duration (years, months, weeks,
  *   days) moves the wall-clock date, then the time portion (hours and smaller) is subtracted in exact
- *   time. `disambiguation` ("compatible" (default), "earlier", "later", or "reject" (returns
- *   "")) applies ONLY to the intermediate wall-clock date-time after the date portion, exactly as
- *   Temporal's GetEpochNanosecondsFor resolves it: in a fall-back (DST-end) overlap "compatible"
- *   and "earlier" take the earlier instant and "later" the later one; in a spring-forward
- *   (DST-start) gap "compatible" and "later" move the wall clock forward by the gap length and
- *   "earlier" back by it; "reject" returns "" for both. It never re-resolves the exact-time
- *   result, so a time-only duration ignores it.
+ *   time. `disambiguation` applies ONLY to the intermediate wall-clock date-time after the date
+ *   portion, exactly as Temporal's GetEpochNanosecondsFor resolves it. It never re-resolves the
+ *   exact-time result.
  * - Compatibility: before 1.16.0 a date portion landing in a spring-forward gap was always moved
  *   forward, whatever `disambiguation` said, so "earlier" matched "compatible" and "reject" did not
  *   fail. Pass "compatible" (or omit it) to keep the forward result.
@@ -48,13 +44,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - There is no `offset` option (removed in 1.16.0): the intermediate wall clock is resolved from
  *   a plain date-time, which has no UTC offset for it to act on (Temporal
  *   `PlainDateTime#toZonedDateTime` reads only `disambiguation`).
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
- *   1 month from Mar 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in "").
  * - Returns "" for invalid input.
  *
  * @param value ISO 8601 zoned datetime string, optionally calendar-annotated
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), overflow ("constrain" | "reject")
+ * @param optionsArg optional settings for resolving a DST gap or overlap and an out-of-range date
  * @returns zoned ISO 8601 string on success, or "" on invalid input
  *
  * @example subtractZoned("2024-03-10T12:00:00-04:00[America/New_York]", { days: 5 }) // "2024-03-05T12:00:00-05:00[America/New_York]"
@@ -74,7 +68,23 @@ export function subtractZoned(
   value: string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
   optionsArg?: {
+    /**
+     * How the intermediate wall-clock date-time, reached after the date portion of the duration is
+     * applied, resolves when it falls in a DST gap or overlap. In a fall-back overlap
+     * `"compatible"` and `"earlier"` take the earlier instant and `"later"` the later one; in a
+     * spring-forward gap `"compatible"` and `"later"` move the wall clock forward by the gap length
+     * and `"earlier"` back by it. `"reject"` returns `""` for both, and a time-only duration
+     * ignores the option.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
     disambiguation?: Disambiguation;
+    /**
+     * What happens when the result names a day its month does not have, such as subtracting 1 month
+     * from 31 March. `"constrain"` clamps to the last valid day; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
   },
 ): string {

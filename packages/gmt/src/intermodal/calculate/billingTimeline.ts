@@ -9,9 +9,18 @@ export interface BillingDates {
    * last incurred or, for a re-bill, the issuance date of the invoice received.
    */
   anchorOn: string;
-  /** The date the invoice was issued, once it has been. */
+  /**
+   * The date the invoice was issued, once it has been, as an ISO date.
+   *
+   * @defaultValue None. `issuedByDeadline` and `disputeDeadline` are `null`.
+   */
   invoiceIssuedOn?: string;
-  /** The date the dispute request was received, once it has been. */
+  /**
+   * The date the dispute request was received, once it has been, as an ISO date. It needs
+   * `invoiceIssuedOn` and may not precede it.
+   *
+   * @defaultValue None. `requestedByDeadline` and `resolutionDeadline` are `null`.
+   */
   requestReceivedOn?: string;
 }
 
@@ -23,7 +32,12 @@ export interface BillingWindows {
   disputeDays: number;
   /** Days from `requestReceivedOn` within which the dispute must be resolved. */
   resolutionDays: number;
-  /** A resolution date the parties agreed instead; it replaces the computed one. */
+  /**
+   * A resolution date the parties agreed instead, as an ISO date on or after `requestReceivedOn`;
+   * it replaces the computed one.
+   *
+   * @defaultValue None. `resolutionDeadline` is `requestReceivedOn + resolutionDays`.
+   */
   agreedResolutionOn?: string;
 }
 
@@ -83,8 +97,8 @@ export interface BillingDeadlines {
  *   request exists without an invoice or before it, `agreedResolutionOn` is before the request,
  *   or a deadline would leave Temporal's range.
  *
- * @param dates { anchorOn: string, invoiceIssuedOn?: string, requestReceivedOn?: string } ISO dates
- * @param windows { issueDays: number, disputeDays: number, resolutionDays: number, agreedResolutionOn?: string } calendar-day windows, none defaulted
+ * @param dates The anchor date, and the invoice and request dates once they exist
+ * @param windows The three calendar-day windows, none defaulted, and an agreed resolution date
  * @returns { invoiceDeadline, issuedByDeadline, disputeDeadline, requestedByDeadline, resolutionDeadline }, or null on invalid input
  *
  * @example billingTimeline({ anchorOn: "2026-03-01" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 }) // { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null, requestedByDeadline: null, resolutionDeadline: null } (no invoice yet: a forecast)

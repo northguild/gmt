@@ -20,13 +20,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   resolve against `value` itself — no separate `relativeTo` is needed.
  * - Follows Temporal's AddZonedDateTime: the date portion of the duration (years, months, weeks,
  *   days) moves the wall-clock date, then the time portion (hours and smaller) is added (subtracted
- *   for `anchor: "end"`) in exact time. `disambiguation` ("compatible" (default), "earlier",
- *   "later", or "reject" (returns null)) applies ONLY to the intermediate wall-clock date-time after
- *   the date portion, exactly as Temporal's GetEpochNanosecondsFor resolves it: in a fall-back
- *   (DST-end) overlap "compatible" and "earlier" take the earlier instant and "later" the later
- *   one; in a spring-forward (DST-start) gap "compatible" and "later" move the wall clock forward by
- *   the gap length and "earlier" back by it; "reject" returns null for both. It never re-resolves
- *   the exact-time result, so a time-only duration ignores it.
+ *   for `anchor: "end"`) in exact time. `disambiguation` applies ONLY to the intermediate
+ *   wall-clock date-time after the date portion, exactly as Temporal's GetEpochNanosecondsFor
+ *   resolves it. It never re-resolves the exact-time result.
  * - Compatibility: before 1.16.0 a date portion landing in a spring-forward gap was always moved
  *   forward, whatever `disambiguation` said. Pass "compatible" (or omit it) to keep that result.
  * - Compatibility: before 1.16.0 a non-"compatible" `disambiguation` re-resolved the final wall
@@ -37,8 +33,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   from a plain date-time, which has no UTC offset for it to act on.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionZoned`'s `start > end` rejection.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
- *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
  * - Accepts a RFC 9557 calendar-annotated zoned string (as produced by `convertZonedToCalendar`) as
  *   well as a bare ISO one — E7 (issue #152). Calendar units in `duration` resolve against that
  *   calendar, and both returned endpoints are re-derived in it via `formatZonedInCalendar`. There
@@ -49,7 +43,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value ISO 8601 zoned datetime string, optionally calendar-annotated
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
- * @param options optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), overflow ("constrain" | "reject")
+ * @param options optional settings for resolving a DST gap or overlap and an out-of-range date
  * @returns `{ start, end }` with the constructed span, or null on invalid input
  *
  * @example intervalFromDurationZoned("2024-01-01T00:00:00+00:00[UTC]", "P1D", "start") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }
@@ -67,10 +61,38 @@ export function intervalFromDurationZoned(
   duration: string,
   anchor: "start" | "end",
   options?: {
+    /**
+     * How the intermediate wall-clock date-time, reached after the date portion of the duration is
+     * applied, resolves when it falls in a DST gap or overlap. In a fall-back overlap
+     * `"compatible"` and `"earlier"` take the earlier instant and `"later"` the later one; in a
+     * spring-forward gap `"compatible"` and `"later"` move the wall clock forward by the gap length
+     * and `"earlier"` back by it. `"reject"` returns null for both, and a time-only duration
+     * ignores the option.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
     disambiguation?: Disambiguation;
+    /**
+     * What happens when the result names a day its month does not have, such as adding 1 month to
+     * 31 January. `"constrain"` clamps to the last valid day; `"reject"` returns null.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
   },
-): { start: string; end: string } | null {
+): {
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+} | null {
   try {
     if (!isOptionsArgument(options)) {
       return null;

@@ -11,16 +11,13 @@ import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
  * - Both inputs must be valid ISO 8601 zoned datetime strings in extended format, as
  *   `isValidZonedDateTime` requires: basic format, a space or lower-case `t` separator, a
  *   lower-case `z` and a date without a time return `false`.
- * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Comparison is done by instant, so intervals spanning DST transitions are compared
  *   by absolute time.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  * - Annotations are read as `isValidZonedDateTime` reads them: elective ones are ignored,
  *   `[u-ca=iso8601]` is accepted, and a non-ISO calendar on either endpoint returns `false`.
  *
- * @param value1 first ISO ZonedDateTime string
- * @param value2 second ISO ZonedDateTime string
- * @param options optional allowEqual flag
+ * @param props the two endpoints of the range and its optional settings
  * @returns boolean indicating whether the zoned range is valid
  *
  * @example isValidZonedRange({ value1: "2024-01-01T10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // true
@@ -31,9 +28,25 @@ import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
  * @example isValidZonedRange({ value1: "2024-01-01 10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // false (space separator)
  */
 export function isValidZonedRange(props: {
+  /** The start of the range, as an ISO 8601 zoned datetime string. */
   value1: string;
+  /** The end of the range, as an ISO 8601 zoned datetime string. */
   value2: string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns false.
+   *
+   * @defaultValue None. Two values at the same instant are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` at the same instant as `value2` is a valid range. `false` requires `value1`
+     * to be before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }): boolean {
   try {
     if (!isObject(props)) return false;

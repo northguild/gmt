@@ -20,6 +20,8 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   the nearest whole day (`round(totalDays · i / n)`, computed exactly in `bigint`, an exact half
  *   rounding up) — when `totalDays` isn't evenly divisible by `n`, the resulting sub-intervals
  *   differ by at most one day rather than being mathematically exact.
+ * - When `n` is larger than the number of whole days in the interval, some pieces are empty (their
+ *   `start` equals their `end`): the result always has exactly `n` pieces.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -28,14 +30,11 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   carry the *same* calendar tag (or both be bare ISO); a mismatch returns `[]` (E5 decision
  *   of record D4). Internal boundaries are computed in whole days (calendar-independent), then
  *   re-formatted in the shared calendar.
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
- *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
- *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param n number of equal sub-intervals to produce (positive integer)
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options The limit on the size of the result
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input / mismatched calendars
  *
  * @example intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4) // [{ start: "2024-01-01", end: "2024-01-02" }, { start: "2024-01-02", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-04" }, { start: "2024-01-04", end: "2024-01-05" }]
@@ -51,8 +50,29 @@ export function intervalDivideEquallyDate(
   start: string,
   end: string,
   n: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most sub-intervals the result may hold. When `n` exceeds it, or exceeds the longest
+     * possible array (2^32 - 1), the result is `[]` and no piece is built. A value that is not
+     * a positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /**
+   * The date the interval begins on, as an ISO 8601 date (`YYYY-MM-DD`). It keeps a calendar
+   * annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first date after the interval, in the same format as `start`. It is exclusive: the interval
+   * holds everything from `start` up to but not including this value. It can equal `start`, which
+   * makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
       return [];

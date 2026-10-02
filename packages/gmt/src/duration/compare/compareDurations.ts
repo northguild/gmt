@@ -9,16 +9,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Uses Temporal.Duration.compare: -1 when `a` is shorter, 0 when equal, 1 when `a` is longer.
  * - Equality is by length, not by spelling — "PT60M" and "PT1H" compare 0, as do "P1D" and
  *   "PT24H" absent a `relativeTo`.
- * - `relativeTo` is required whenever a calendar unit (year/month/week) appears on either
- *   side and the two durations differ; without it, returns null. Field-identical durations
- *   compare 0 without it ("P1Y" vs "P1Y"), since Temporal checks identity first. Note the asymmetry with `addDuration`/`subtractDuration`
+ * - Field-identical durations compare 0 without a `relativeTo` ("P1Y" vs "P1Y"), since
+ *   Temporal checks identity first. Note the asymmetry with `addDuration`/`subtractDuration`
  *   (A2): Temporal.Duration.compare *does* accept `relativeTo`, while .add/.subtract do not,
  *   so calendar-unit durations are comparable here even though they cannot be combined there.
  *   `durationAs` and `normalizeDuration` (A3) carry the same relativeTo rule as this function.
  * - The anchor genuinely decides the answer rather than merely unblocking it: "P1M" is longer
  *   than "P30D" relative to January (31 days) and shorter relative to February 2024 (29).
- * - It matters for non-calendar units too when it names a zoned instant — across a DST
- *   spring-forward, "P1D" is 23 real hours and so compares shorter than "PT24H".
  * - A zoned `relativeTo` string resolves its wall time with disambiguation "compatible" and
  *   offset "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a
  *   nonexistent one the later instant, and an offset that does not match the zone returns null.
@@ -41,7 +38,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param a ISO 8601 duration string
  * @param b ISO 8601 duration string
- * @param options optional: { relativeTo } — anchor date/instant, required when either side has a calendar unit
+ * @param options The anchor calendar units are measured from
  * @returns -1, 0, or 1, or null on invalid input
  *
  * @example compareDurations("PT1H", "PT30M") // 1
@@ -62,7 +59,18 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function compareDurations(
   a: string,
   b: string,
-  options?: { relativeTo?: DurationRelativeTo },
+  options?: {
+    /**
+     * The date or zoned date-time both durations are measured from. It is required when either
+     * side has a year, month or week and the two differ. With a zoned value, days follow that
+     * zone's clock changes, so across a spring-forward transition `"P1D"` is 23 hours and
+     * compares shorter than `"PT24H"`.
+     *
+     * @defaultValue None. Days are 24 hours, and two different durations of which one has a
+     * year, month or week return null.
+     */
+    relativeTo?: DurationRelativeTo;
+  },
 ): number | null {
   if (!isOptionsArgument(options)) {
     return null;

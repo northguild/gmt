@@ -8,14 +8,25 @@ import {
 import type { CalendarOptions } from "../../types";
 import { isValidUtc } from "../validate";
 
+/**
+ * Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the
+ * days and the clock time are read in, and the width of the time-of-day half.
+ */
 export interface FormatCalendarUtcOptions extends CalendarOptions {
   /**
-   * IANA timezone used for both the calendar-day comparison and the
-   * rendered clock time. Omitted is `"UTC"`, `"local"` is the system zone,
-   * and an unknown zone makes the result `""` (ECMA-402 throws RangeError).
+   * The time zone used for both the calendar-day comparison and the rendered clock time: an IANA
+   * name, a UTC offset, or `"local"` for the system time zone. An unknown zone returns `""`, as
+   * ECMA-402 throws RangeError for it.
+   *
+   * @defaultValue `"UTC"`
    */
   timeZone?: string;
-  /** `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half. */
+  /**
+   * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
+   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   *
+   * @defaultValue `"short"`
+   */
   timeStyle?: "short" | "medium" | "full";
 }
 
@@ -23,15 +34,14 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
  * Format a UTC ISO string as a relative day label plus time-of-day, e.g.
  * "Tomorrow at 2:30 PM" — the UTC counterpart of `formatCalendar`. See that
  * function's JSDoc for the day-label/threshold/connector design; this
- * variant compares calendar days and renders the clock time in `timeZone`
- * (default `"UTC"`).
+ * variant compares calendar days and renders the clock time in `timeZone`.
  *
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { reference, timeZone (default "UTC"; "local" is the system zone; an unknown zone returns ""), timeStyle }
+ * @param options The reference instant, the time zone and the time style
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York", reference: "2026-03-15T13:00:00Z" }) // "tomorrow at 2:30 PM"

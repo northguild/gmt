@@ -11,13 +11,12 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * - Converts to ZonedDateTime using the specified timezone (required; an unknown zone returns "").
  * - `value` is a safe integer or a string of optionally negative ASCII digits; anything else, or an
  *   instant outside the Temporal range, returns "".
- * - `options.epochUnit` is `"seconds"` or `"milliseconds"` (singular accepted), default
- *   `"milliseconds"`. An explicit `undefined` is the same as omitted; a non-object `options` (such
- *   as a bare `"seconds"` string) returns "".
+ * - An explicit `undefined` `options` is the same as omitted; a non-object `options` (such as a
+ *   bare `"seconds"` string) returns "".
  *
  * @param value epoch value: a safe integer or a digit string
- * @param timeZone IANA timeZone identifier
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
+ * @param timeZone IANA name or UTC offset
+ * @param options optional: how `value` is read
  * @returns zoned ISO 8601 string or "" on invalid
  *
  * @example convertUnixToZoned(1709164800000, "America/New_York") // "2024-02-28T19:00:00-05:00[America/New_York]"
@@ -29,7 +28,15 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
 export function convertUnixToZoned(
   value: number | string,
   timeZone: string,
-  options?: { epochUnit?: UnixUnit },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+  },
 ): string {
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);

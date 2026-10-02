@@ -8,7 +8,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
- * @param timeZone target IANA timeZone identifier
+ * @param timeZone target IANA name or UTC offset
  * @returns zoned ISO 8601 string in target timeZone or "" when invalid
  *
  * @example convertZonedToZoned("2024-02-29T12:34:56.789+00:00[UTC]", "America/New_York") // "2024-02-29T07:34:56.789-05:00[America/New_York]"

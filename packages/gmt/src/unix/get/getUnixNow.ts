@@ -9,12 +9,10 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * Return the current Unix timestamp in either seconds or milliseconds.
  *
  * - Uses Temporal.Now.instant() to get current time.
- * - `options.epochUnit` is `"seconds"` or `"milliseconds"` (singular accepted), default
- *   `"milliseconds"`. Seconds floor toward −∞, as POSIX `time_t` counts whole elapsed seconds.
  * - An explicit `undefined` is the same as omitted. An unknown `epochUnit`, or a non-object
  *   `options` (such as a bare `"seconds"` string), returns null.
  *
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
+ * @param options optional: the unit of the result
  * @returns the current unix timestamp, or null on invalid options
  *
  * @example getUnixNow() // 1700000000000
@@ -22,7 +20,15 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * @example getUnixNow({ epochUnit: "minutes" as never }) // null
  * @example getUnixNow("seconds" as never) // null (options must be an object)
  */
-export function getUnixNow(options?: { epochUnit?: UnixUnit }): number | null {
+export function getUnixNow(options?: {
+  /**
+   * The unit of the returned epoch: `"seconds"` or `"milliseconds"`, singular or plural. Seconds
+   * floor toward −∞, as POSIX `time_t` counts whole elapsed seconds. Any other value returns null.
+   *
+   * @defaultValue `"milliseconds"`
+   */
+  epochUnit?: UnixUnit;
+}): number | null {
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
 

@@ -11,6 +11,8 @@ export interface EstimateDriftOptions {
   /**
    * ISO 8601 duration of exact time (a day is 24 hours; years, months and weeks are refused; not
    * negative). With it, `exceedsTolerance` says whether the drift is greater than it.
+   *
+   * @defaultValue None. `exceedsTolerance` is `null`.
    */
   tolerance?: string;
 }
@@ -56,7 +58,7 @@ export interface DriftReport {
  *   `tolerance`.
  *
  * @param events the event's timestamp records, in any order
- * @param options optional: tolerance (ISO 8601 duration of exact time the absolute drift is compared with)
+ * @param options The threshold the absolute drift is compared with
  * @returns the first and last estimates, the drift, the revision count and the tolerance check (null with fewer than two EST records), or null on invalid input
  *
  * @example estimateDrift([{ classifier: "EST", at: "2024-06-20T08:00:00Z", recordedAt: "2024-06-01T00:00:00Z" }, { classifier: "EST", at: "2024-06-20T12:00:00Z", recordedAt: "2024-06-05T00:00:00Z" }, { classifier: "EST", at: "2024-06-20T17:00:00Z", recordedAt: "2024-06-10T00:00:00Z" }]) // { first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: null }

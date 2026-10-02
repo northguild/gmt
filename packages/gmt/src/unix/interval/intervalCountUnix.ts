@@ -12,10 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - The end boundary is excluded: midnight to midnight two days later counts 2 days.
  * - A zero-length interval (`start === end`) returns `0`: the empty `[start, start)` holds no instant,
  *   so it touches no unit (before 1.16.0 it counted 1 when mid-unit).
- * - Reads `start` and `end` in `options.epochUnit` (`"milliseconds"` by default, `"seconds"`; singular
- *   accepted). Each is a safe integer or a string of optionally negative ASCII digits.
- * - Uses `options.timeZone` for calendar-unit boundaries: omitted is `"UTC"`, `"local"` is the
- *   system zone, and an unknown zone returns `null`.
+ * - `start` and `end` are each a safe integer or a string of optionally negative ASCII digits.
  * - Counts the real local buckets `floorToZone`/`bucketRange` walk in that zone: a bucket
  *   shorter than its unit still counts once (a 15-minute `Pacific/Chatham` hour on its
  *   spring-forward), and a local day the zone deleted counts not at all
@@ -33,7 +30,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param start Unix epoch in `epochUnit` — interval start
  * @param end Unix epoch in `epochUnit` — interval end
  * @param unit unit string — any `DateTimeUnit`, singular or plural
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options optional: how the epochs are read and the zone the boundaries are found in
  * @returns number of unit boundaries touched, or null on invalid input
  *
  * @example intervalCountUnix(0, 86400000, "hour") // 24
@@ -48,7 +45,22 @@ export function intervalCountUnix(
   start: number | string,
   end: number | string,
   unit: string,
-  options?: { epochUnit?: UnixUnit; timeZone?: string },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns null.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+    /**
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns null.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {

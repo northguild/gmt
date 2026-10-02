@@ -44,6 +44,13 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
    * working days of `calendar`. No default; see `chargeableDays`.
    */
   chargeBasis: FreeTimeBasis;
+  /**
+   * The last chargeable-day ordinal of each band, as strictly ascending positive whole numbers:
+   * `[5, 10]` is days 1–5, 6–10 and 11 onward. They are day bands, not rates. Every band is
+   * returned, an empty one with `days: 0`, and the last is always open.
+   *
+   * @defaultValue None. `byTier` is the single open band `{ from: 1, to: null }`.
+   */
   tiers?: number[];
 };
 
@@ -80,11 +87,6 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  * - **`freeDays` may be `0`** for a tariff with no free time: `expiresAt` is the start of day one,
  *   the first day counted on `basis` (under `"nextDay"`, the first after the event day), and days
  *   before it are neither free nor charged.
- * - **`tiers` are day bands, not rates.** `[5, 10]` names the last chargeable-day ordinal of
- *   each band: days 1–5, 6–10 and 11 onward. Every band is returned, an empty one with
- *   `days: 0`, and the last is always open. Omitted, `byTier` is the single open band
- *   `{ from: 1, to: null }`. A list that is not strictly ascending positive whole numbers
- *   returns `null`.
  * - Returns `null` when either instant is invalid, `clockEnd` is before `clockStart` (an
  *   inverted dwell is a data error), `freeDays` is not a whole number of at least `0`, the
  *   options fail as they do for `freeTimeExpiry`, `tiers` has a hole, an unsafe integer or does not ascend, or the walk would pass
@@ -93,7 +95,7 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  * @param clockStart ISO 8601 instant string of the event that starts the clock
  * @param clockEnd ISO 8601 instant string of the event that stops it (gate-out or empty return)
  * @param freeDays whole number of free days the tariff allows, 0 or more
- * @param options { basis, chargeBasis, timeZone, firstDay, calendar?, tiers?: number[] }
+ * @param options The tariff's counting terms for free time and for charged days, and the tier bands
  * @returns the free days used, the chargeable days, the expiry, the charged dates and the days per tier band, or null on invalid input
  *
  * @example chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (gate-out exactly at expiry is free)

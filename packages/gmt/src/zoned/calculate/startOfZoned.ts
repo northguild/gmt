@@ -7,18 +7,16 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the start of the specified date-time `unit` for a given zoned ISO 8601 datetime string.
  *
  * - Supports: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond", each also in its plural form (`"days"`), as Temporal accepts.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns the real start of the local `unit` containing `value` in its own zone — the same bucket `floorToZone` uses — so the result is never after `value`. A local hour `Pacific/Chatham`'s spring-forward leaves only 15 minutes long starts at 03:45, the second pass of New York's repeated fall-back hour starts at its own 01:00 (−05:00), and a day whose midnight was skipped starts at its first real instant.
  * - A transition that reopens the previous local date makes that stretch its own bucket. `America/Goose_Bay` fell back at 00:01 on 7 November 2010, re-entering 6 November for 59 minutes, so `2010-11-06T23:30:00-04:00` has a day that starts at 23:01 — consistent with `floorToZone`, `bucketRange` and `intervalCountZoned`.
  * - A midnight repeated on the same date stays one day: `America/Havana`'s 2024-11-03 starts at its first 00:00 (−04:00) and runs 25 hours, matching Temporal's `startOfDay()`.
  * - Takes no `disambiguation` or `offset`: a boundary is always a real instant, as TC39's `startOfDay()`
  *   takes neither. Those ignored options were removed in 1.16.0.
- * - `fractionalSecondDigits` defaults to 3, 6 or 9 for "millisecond", "microsecond" or "nanosecond", and 0 otherwise.
  * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
  * @param unit date or time unit, singular or plural, to specify the unit for the start
- * @param options optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @param optionsArg optional settings for the week's first day and the precision of the output string
  * @returns zoned ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfZoned("2024-02-29T12:34:56+00:00[UTC]", "month") // "2024-02-01T00:00:00+00:00[UTC]"
@@ -32,7 +30,21 @@ export function startOfZoned(
   value: string,
   unit: Temporal.SmallestUnit<DateTimeUnit>,
   optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer digits than `unit` names truncate, as Temporal's `toString` does.
+     *
+     * @defaultValue The digits `unit` names: `3` for `"millisecond"`, `6` for `"microsecond"`, `9`
+     * for `"nanosecond"` and `0` for any coarser unit.
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {

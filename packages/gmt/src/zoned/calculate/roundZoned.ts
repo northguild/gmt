@@ -27,9 +27,6 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  * Round an ISO 8601 zoned datetime string to the specified unit.
  *
  * - Returns "" for invalid inputs.
- * - Accepts "day" and time units: "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
- * - Each unit is accepted in its singular or plural form ("day" or "days"), as Temporal's
- *   GetTemporalUnitValuedOption accepts both.
  * - Date units ("year", "month", "week") return "". This is the Temporal spec, not a polyfill
  *   limitation: `ZonedDateTime.prototype.round` accepts time units and "day" only
  *   (ValidateTemporalUnitValue with ~time~ and « day »).
@@ -44,7 +41,7 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   minutes later. Use `floorToZone` for a boundary that never exceeds the instant.
  *
  * @param value ISO 8601 zoned datetime string
- * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode
+ * @param options the unit to round to, with an optional increment and rounding mode
  * @returns Rounded ISO 8601 zoned datetime string, or "" on invalid input
  *
  * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "hour" }) // "2024-06-15T13:00:00-04:00[America/New_York]"
@@ -57,6 +54,11 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
 export function roundZoned(
   value: string,
   options: {
+    /**
+     * The unit to round to: `"day"` or a time unit from `"hour"` to `"nanosecond"`, in its singular
+     * or plural form, as Temporal's GetTemporalUnitValuedOption accepts both. It also sets how many
+     * fractional-second digits the result is written with.
+     */
     smallestUnit: Temporal.SmallestUnit<
       | "day"
       | "hour"
@@ -66,7 +68,22 @@ export function roundZoned(
       | "microsecond"
       | "nanosecond"
     >;
+    /**
+     * The size of the step, in `smallestUnit`s, that the value is rounded to a multiple of, such as
+     * `15` for quarter hours. It must divide evenly into the next larger unit and be smaller than it,
+     * and must be `1` for `"day"`; any other value returns `""`. A non-integer is truncated first,
+     * as Temporal does.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * Which way a value between two multiples goes. `"halfExpand"` picks the nearest multiple and
+     * sends a tie up; `"floor"` and `"trunc"` always go down, `"ceil"` and `"expand"` always up. The
+     * other `half` modes differ from `"halfExpand"` only in how a tie breaks.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {

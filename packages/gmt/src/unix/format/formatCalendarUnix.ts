@@ -11,30 +11,39 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * Options for `formatCalendarUnix`. Like `formatCalendar`, it takes a `reference` and a `timeStyle`
  * (here also `"full"`); it adds `epochUnit` and `timeZone` for the unix domain.
  *
- * @remarks Members:
- *
- * | Member | Type | Default | Description |
- * | --- | --- | --- | --- |
- * | `reference` | `string\|number` | now (UTC) | Anchor epoch/ISO for the "today/tomorrow" comparison. |
- * | `epochUnit` | `"milliseconds"\|"seconds"` | `"milliseconds"` | Interpretation of epoch `value`/`reference`; singular names are accepted. |
- * | `timeZone` | `string` | `"UTC"` | IANA zone for both day-comparison and clock-time rendering; `"local"` is the system zone; an unknown zone returns `""`. |
- * | `timeStyle` | `"short"\|"medium"\|"full"` | `"short"` | `Intl` `timeStyle` for the time-of-day portion. |
- *
  * @example
  * import { FormatCalendarUnixOptions } from "@northguild/gmt/unix";
  * const opts: FormatCalendarUnixOptions = { timeZone: "America/New_York" };
  */
 export interface FormatCalendarUnixOptions {
-  /** Anchor point for the relative day comparison. Accepts UTC ISO strings or epochs (a safe integer or a digit string). */
+  /**
+   * The instant the day label is measured from, as a UTC ISO string, or an epoch in `epochUnit`
+   * given as a safe integer or a digit string. Any other value returns `""`.
+   *
+   * @defaultValue The current instant.
+   */
   reference?: string | number;
+  /**
+   * The unit `value` and a numeric `reference` are counted in: `"seconds"` or `"milliseconds"`,
+   * singular or plural. Any other value returns `""`.
+   *
+   * @defaultValue `"milliseconds"`
+   */
   epochUnit?: UnixUnit;
   /**
-   * IANA timezone used for both the calendar-day comparison and the
-   * rendered clock time. Omitted is `"UTC"`, `"local"` is the system zone,
-   * and an unknown zone makes the result `""` (ECMA-402 throws RangeError).
+   * The time zone used for both the calendar-day comparison and the rendered clock time: an IANA
+   * name, a UTC offset, or `"local"` for the system time zone. An unknown zone returns `""`, as
+   * ECMA-402 throws RangeError for it.
+   *
+   * @defaultValue `"UTC"`
    */
   timeZone?: string;
-  /** `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half. */
+  /**
+   * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
+   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   *
+   * @defaultValue `"short"`
+   */
   timeStyle?: "short" | "medium" | "full";
 }
 
@@ -42,18 +51,16 @@ export interface FormatCalendarUnixOptions {
  * Format a unix epoch value as a relative day label plus time-of-day, e.g.
  * "Tomorrow at 2:30 PM" — the unix counterpart of `formatCalendar`. See
  * that function's JSDoc for the day-label/threshold/connector design; this
- * variant compares calendar days and renders the clock time in `timeZone`
- * (default `"UTC"`).
+ * variant compares calendar days and renders the clock time in `timeZone`.
  *
  * - `value` and a numeric `reference` are safe integers or strings of optionally negative ASCII
  *   digits; anything else returns `""`.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
- * - An unknown `timeZone` returns `""`; `"local"` is the system zone.
  *
  * @param value unix epoch (string or number, per `epochUnit`) to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { epochUnit, reference, timeZone, timeStyle }
+ * @param options optional: the reference instant, how epochs are read, the zone and the width of the time
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarUnix(1710685845000, "en-US", { epochUnit: "milliseconds", timeZone: "America/New_York" }) // day label + time relative to "now", or the absolute fallback beyond the ±6-day threshold

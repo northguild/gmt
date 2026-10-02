@@ -8,11 +8,7 @@ import { zonelessCalendarDate } from "../../internal";
  * end of a year, so all three fields come back together rather than as three calls a caller
  * could combine inconsistently.
  *
- * - `year` is the ISO week-numbering year (`Temporal.PlainDate.yearOfWeek`), which differs
- *   from the calendar year for late-December and early-January dates.
- * - `week` is 1–53. ISO week 1 is the week containing the year's first Thursday, so a
- *   week-numbering year has 53 weeks roughly every five to six years.
- * - `weekday` is 1 (Monday) through 7 (Sunday).
+ * - A week-numbering year has 53 weeks roughly every five to six years, and 52 otherwise.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. An
  *   offset, a `Z` or a bracketed zone makes it a moment rather than a calendar date; convert
  *   it in the zone you mean first (`convertUtcToZoned` then `convertZonedToPlainDateTime`),
@@ -30,9 +26,20 @@ import { zonelessCalendarDate } from "../../internal";
  * @example getIsoWeekDate("2024-06-15T12:00:00Z") // null (a moment, not a calendar date)
  * @example getIsoWeekDate("invalid") // null
  */
-export function getIsoWeekDate(
-  value: string,
-): { year: number; week: number; weekday: number } | null {
+export function getIsoWeekDate(value: string): {
+  /**
+   * The ISO 8601 week-numbering year: the calendar year that holds the Thursday of the date's week.
+   * It differs from the date's own calendar year for some dates in late December and early January.
+   */
+  year: number;
+  /**
+   * The ISO 8601 week number, 1 through 53. Week 1 is the week that holds the year's first
+   * Thursday, and weeks start on Monday.
+   */
+  week: number;
+  /** The ISO 8601 day of the week, 1 (Monday) through 7 (Sunday). */
+  weekday: number;
+} | null {
   const date = zonelessCalendarDate(value);
   if (!date) return null;
 

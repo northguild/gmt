@@ -15,7 +15,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   unambiguous).
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns false.
  * - Returns false for an unsupported unit or invalid input.
  * - Takes no `fractionalSecondDigits`: equality compares full-precision `unit` boundaries, and output
  *   digits cannot change which bucket a value is in. That ignored option was removed in 1.16.0; to
@@ -29,7 +28,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 first UTC ISO datetime string
  * @param value2 second UTC ISO datetime string
  * @param unit date or time unit, singular or plural, to compare by
- * @param options optional: weekStartsOn ("monday" | "sunday")
+ * @param options Where a week starts
  * @returns true if both values share the same start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areUtcEqualBy("2024-03-15T02:00:00Z", "2024-03-15T22:00:00Z", "day") // true
@@ -43,6 +42,13 @@ export function areUtcEqualBy(
   value2: string,
   unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   options?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * false, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
   },
 ): boolean {

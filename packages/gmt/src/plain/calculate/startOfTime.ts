@@ -37,7 +37,7 @@ const supported: readonly string[] = [
  *
  * @param value ISO 8601 time string
  * @param unit StartOfTimeUnit to specify the unit for the start
- * @param optionsArg optional: fractionalSecondDigits (number)
+ * @param optionsArg How the result is written
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfTime("12:34:56", "hour") // "12:00:00"
@@ -48,7 +48,16 @@ const supported: readonly string[] = [
 export function startOfTime(
   value: string,
   unit: StartOfTimeUnit,
-  optionsArg?: { fractionalSecondDigits?: FractionalDigit },
+  optionsArg?: {
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer digits than `unit` names truncate, as Temporal's `toString` does.
+     *
+     * @defaultValue The digits `unit` names: `3` for `"millisecond"`, `6` for `"microsecond"`, `9`
+     * for `"nanosecond"` and `0` for any coarser unit.
+     */
+    fractionalSecondDigits?: FractionalDigit;
+  },
 ): string {
   try {
     if (!isOptionsArgument(optionsArg)) {

@@ -13,11 +13,8 @@ import {
  * - Fractional values, `NaN`, `±Infinity` and anything beyond ±(2^53 − 1) return `false`.
  * - Strings with whitespace, `+`, a decimal point, an exponent or hex digits return `false`, and an
  *   empty string is not epoch 0.
- * - Equal `value1 === value2` is valid only when `options.allowEqual` is true.
  *
- * @param value1 first Unix epoch value (seconds or milliseconds)
- * @param value2 second Unix epoch value (seconds or milliseconds)
- * @param options optional allowEqual flag
+ * @param props the two epoch values and the settings for the check
  * @returns boolean indicating whether the Unix range is valid
  *
  * @example isValidUnixRange({ value1: 0, value2: 1700000000 }) // true
@@ -28,9 +25,30 @@ import {
  * @example isValidUnixRange({ value1: "0", value2: "1e3" }) // false (exponent notation is not an epoch)
  */
 export function isValidUnixRange(props: {
+  /**
+   * The start of the range: a Unix epoch in seconds or milliseconds, as a safe integer or a digit
+   * string.
+   */
   value1: number | string;
+  /**
+   * The end of the range, in the same form and unit as `value1`.
+   */
   value2: number | string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns false.
+   *
+   * @defaultValue None. Equal values are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` equal to `value2` is a valid range. `false` requires `value1` to be
+     * before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }): boolean {
   try {
     if (!isObject(props)) return false;

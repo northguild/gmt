@@ -23,15 +23,12 @@ import {
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   or a unit that has no effect on `PlainTime`, e.g. `"days"`).
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
- *   into more slices returns `[]`, decided from the span before stepping. An invalid
- *   `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainTime string for the interval start
  * @param end ISO PlainTime string for the interval end
  * @param unit duration unit string — `"hours" | "minutes" | "seconds" | "milliseconds" | "microseconds" | "nanoseconds"` (calendar units are ignored by PlainTime and return [])
  * @param amount positive number of units per step
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options The limit on the size of the result
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitTime("12:00:00", "14:00:00", "hour", 1) // [{ start: "12:00:00", end: "13:00:00" }, { start: "13:00:00", end: "14:00:00" }]
@@ -48,8 +45,28 @@ export function splitIntervalByUnitTime(
   end: string,
   unit: string,
   amount: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most slices the result may hold. A split into more returns `[]`, decided from the
+     * span before stepping. A value that is not a positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /**
+   * The clock time the interval begins at, as an ISO 8601 time string with no date, offset or time
+   * zone.
+   */
+  start: string;
+  /**
+   * The first clock time after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof start !== "string" || typeof end !== "string") {
       return [];

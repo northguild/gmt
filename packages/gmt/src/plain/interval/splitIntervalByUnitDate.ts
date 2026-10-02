@@ -21,9 +21,12 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  *   there, so the pieces share no value and together cover the interval exactly once (the rule
  *   CORE-6's `splitIntervalAt` uses).
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
- * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
- *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
- *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - Each boundary is computed from `start` (`start + k × amount`), not by stepping from the
+ *   previous boundary, so month-end starts don't drift: a monthly split from January 31 lands
+ *   on February 29, March 31, April 30. Temporal's `add` constrains a day the month lacks to
+ *   the month's last day, and stepping from that boundary would keep the shortened day
+ *   (February 29, then March 29).
+ * - Comparison: Luxon's `Interval.splitBy` computes each boundary from the start the same way.
  * - A step that resolves to the same date as the previous boundary is skipped, so no empty
  *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
@@ -36,9 +39,6 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  *   when `CalendarEquals` is false (before 1.16.0 it stepped in ISO). Each boundary's tag is
  *   re-derived from the actual stepped date, never copied — a month-by-month step can cross a
  *   leap-month or era boundary mid-split.
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
- *   into more slices returns `[]`, decided from the span before stepping where it can be, and
- *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
  *   calendar ids); see `isValidCalendarDate`.
  *
@@ -46,7 +46,7 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param unit duration unit string — `"years" | "months" | "weeks" | "days"` (time units are ignored by PlainDate and return [])
  * @param amount positive number of units per step
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options The limit on the size of the result
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2) // [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-05" }, { start: "2024-01-05", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-09" }, { start: "2024-01-09", end: "2024-01-10" }]
@@ -63,8 +63,29 @@ export function splitIntervalByUnitDate(
   end: string,
   unit: string,
   amount: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most slices the result may hold. A split into more returns `[]`, decided from the
+     * span before stepping where it can be, and otherwise as soon as one slice too many is due.
+     * A value that is not a positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /**
+   * The date the interval begins on, as an ISO 8601 date (`YYYY-MM-DD`). It keeps a calendar
+   * annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first date after the interval, in the same format as `start`. It is exclusive: the interval
+   * holds everything from `start` up to but not including this value. It can equal `start`, which
+   * makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof start !== "string" || typeof end !== "string") {
       return [];

@@ -13,7 +13,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param zoned ISO ZonedDateTime string to check
  * @param start ISO ZonedDateTime string for the start of the range
  * @param end ISO ZonedDateTime string for the end of the range
- * @param options optional: inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @param options optional settings for whether each end of the range is included
  * @returns boolean indicating whether zoned is between start and end
  *
  * @example isBetweenZoned("2024-02-29T12:00:00+00:00[UTC]", "2024-02-29T11:00:00+00:00[UTC]", "2024-02-29T13:00:00+00:00[UTC]") // true
@@ -23,7 +23,22 @@ export function isBetweenZoned(
   zoned: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `zoned` at the same instant as `start` counts as inside the range. `false` requires
+     * it to be after `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `zoned` at the same instant as `end` counts as inside the range. `false` requires it
+     * to be before `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {

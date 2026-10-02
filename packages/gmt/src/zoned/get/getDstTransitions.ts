@@ -13,14 +13,6 @@ const SEARCH_SPAN_NANOSECONDS = 368n * 86_400_000_000_000n;
  * A single DST transition instant: the UTC instant of an offset change plus the
  * offset in effect immediately before and after it.
  *
- * @remarks Members:
- *
- * | Member | Type | Description |
- * | --- | --- | --- |
- * | `instant` | `string` | UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-03-10T07:00:00Z`). |
- * | `offsetBefore` | `string` | UTC offset in effect immediately before the transition (e.g. `-05:00`). |
- * | `offsetAfter` | `string` | UTC offset in effect immediately after the transition (e.g. `-04:00`). |
- *
  * @example
  * import { DstTransition } from "@northguild/gmt/zoned";
  * const t: DstTransition = {
@@ -30,8 +22,11 @@ const SEARCH_SPAN_NANOSECONDS = 368n * 86_400_000_000_000n;
  * };
  */
 export interface DstTransition {
+  /** The UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-03-10T07:00:00Z`). */
   instant: string;
+  /** The UTC offset in effect immediately before the transition (e.g. `-05:00`). */
   offsetBefore: string;
+  /** The UTC offset in effect immediately after the transition (e.g. `-04:00`). */
   offsetAfter: string;
 }
 
@@ -51,8 +46,10 @@ export interface DstTransition {
  * - Returns `[]` for an invalid timeZone, a non-integer year, or a valid zone
  *   with zero transitions in that year (not an error case), and when the scan
  *   exhausts its internal bound — never a partial list.
+ * - A UTC offset such as `"+05:30"` is a valid zone whose offset never changes,
+ *   so it has no transitions and returns `[]` for every year.
  *
- * @param timeZone IANA timeZone identifier
+ * @param timeZone IANA name or UTC offset
  * @param year calendar year to scan (must be an integer)
  * @returns array of `{ instant, offsetBefore, offsetAfter }`, in chronological order
  *
@@ -64,6 +61,7 @@ export interface DstTransition {
  * @example getDstTransitions("Asia/Singapore", 1982)
  * // [{ instant: "1981-12-31T16:00:00Z", offsetBefore: "+07:30", offsetAfter: "+08:00" }]
  * @example getDstTransitions("Asia/Tokyo", 2024) // []
+ * @example getDstTransitions("+05:30", 2024) // [] (a fixed offset has no transitions)
  * @example getDstTransitions("Invalid/Zone", 2024) // []
  */
 export function getDstTransitions(

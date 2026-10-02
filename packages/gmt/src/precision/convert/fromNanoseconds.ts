@@ -19,7 +19,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Returns "" on invalid input.
  *
  * @param nanoseconds nanoseconds since the Unix epoch (bigint)
- * @param timeZone optional IANA timeZone identifier; omitted or `undefined` is UTC
+ * @param timeZone optional IANA name or UTC offset; omitted or `undefined` is UTC
  * @returns ISO 8601 instant string (UTC), zoned ISO 8601 string when a timeZone is given, or "" on invalid input
  *
  * @example fromNanoseconds(0n) // "1970-01-01T00:00:00Z"

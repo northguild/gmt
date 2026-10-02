@@ -11,12 +11,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the start of the specified date-time `unit` for a given ISO 8601 datetime string.
  *
  * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  *
  * @param value ISO 8601 datetime string
  * @param unit date or time unit, singular or plural, to specify the unit for the start
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @param optionsArg How the week is defined and how the result is written
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfDateTime("2024-02-29T12:34:56", "month") // "2024-02-01T00:00:00"
@@ -27,7 +26,21 @@ export function startOfDateTime(
   value: string,
   unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer digits than `unit` names truncate, as Temporal's `toString` does.
+     *
+     * @defaultValue The digits `unit` names: `3` for `"millisecond"`, `6` for `"microsecond"`, `9`
+     * for `"nanosecond"` and `0` for any coarser unit.
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {

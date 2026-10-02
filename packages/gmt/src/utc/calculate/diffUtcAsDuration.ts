@@ -31,7 +31,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUtcAsDuration("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hours") // "PT24H"

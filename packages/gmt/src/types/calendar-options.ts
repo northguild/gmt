@@ -4,8 +4,19 @@
  * add domain-specific fields like `timeZone` or `epochUnit`.
  */
 export interface CalendarOptions {
-  /** Anchor point for the relative day comparison. */
+  /**
+   * The moment the day label is measured from, as an ISO string in the same form as the value
+   * being formatted. A value on the same calendar day reads "today", one on the next day
+   * "tomorrow".
+   *
+   * @defaultValue The current date and time.
+   */
   reference?: string;
-  /** `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half. */
+  /**
+   * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
+   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   *
+   * @defaultValue `"short"`
+   */
   timeStyle?: "short" | "medium" | "full";
 }

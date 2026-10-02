@@ -9,8 +9,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - `dayOfWeek` uses Temporal's ISO numbering: 1 (Monday) through 7 (Sunday), consistent with
  *   `getDayOfWeek`/`parseDayOfWeekFromDate`.
- * - `options.inclusive` (default `false`) controls what happens when `value` already falls on
- *   `dayOfWeek`: `false` advances a full week (matching date-fns), `true` returns `value` as-is.
  * - Returns "" on invalid input.
  *
  * Replaces date-fns's sixteen `next*` functions with one parameterized call:
@@ -28,7 +26,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value ISO PlainDate string
  * @param dayOfWeek target ISO day of week (1-7, Monday-Sunday)
- * @param options optional: inclusive (boolean, default false)
+ * @param options Whether `value` itself can be the result
  * @returns ISO PlainDate string for the next occurrence of `dayOfWeek`, or "" on invalid input
  *
  * @example nextWeekday("2024-03-15", 5) // "2024-03-22" (2024-03-15 is already a Friday, so it advances a full week)
@@ -40,7 +38,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function nextWeekday(
   value: string,
   dayOfWeek: number,
-  options?: { inclusive?: boolean },
+  options?: {
+    /**
+     * Whether `value` counts when it already falls on `dayOfWeek`. `true` returns `value`
+     * unchanged; `false` advances a full week.
+     *
+     * @defaultValue `false`
+     */
+    inclusive?: boolean;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

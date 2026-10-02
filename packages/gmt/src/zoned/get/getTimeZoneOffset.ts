@@ -23,7 +23,7 @@ import { isValidTimeZone } from "../validate";
  *   in it is not validated, and an offset written to the minute that is that zone's sub-minute
  *   offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
  *
- * @param timeZone IANA timeZone identifier
+ * @param timeZone IANA name or UTC offset
  * @param instant ISO 8601 instant string (e.g. "2024-07-15T12:00:00Z")
  * @returns offset string (e.g. "-04:00"), or "" on invalid input
  *

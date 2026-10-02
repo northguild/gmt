@@ -23,12 +23,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   calendar ids); see `isValidCalendarDate`.
  * - Returns "" for invalid inputs.
  *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
- * 1 month from Mar 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in "").
- *
  * @param value ISO PlainDate string, optionally calendar-annotated
  * @param units Partial<Record<DateDurationUnit, number>> object specifying units to subtract
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range result is handled
  * @returns ISO PlainDate string after subtraction, or "" on invalid input
  *
  * @example subtractDate("2024-03-15", { days: 5 }) // "2024-03-10"
@@ -39,7 +36,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function subtractDate(
   value: string,
   units: Partial<Record<DateDurationUnit, number>>,
-  options?: { overflow?: Overflow },
+  options?: {
+    /**
+     * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
+     * so Mar 31 - 1 month is Feb 29 or 28; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

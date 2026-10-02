@@ -8,7 +8,8 @@ import type { Temporal } from "@js-temporal/polyfill";
  * Shared by `getWeekOfMonth` (row for the date itself) and
  * `getWeeksInMonth` (row for the month's last day, i.e. the row count).
  * Week 1 is the row containing the 1st of the month, even when that row
- * is a partial week (date-fns's `getWeekOfMonth` convention).
+ * is a partial week: a month grid draws every day of the month, so its
+ * first row always holds the 1st. GMT's own rule; CLDR's `minDays` plays no part.
  *
  * Only the weekday of the 1st is read, so callers may pass `{ dayOfWeek }` without building a
  * date that could lie before the representable range (April 1 of -271821).

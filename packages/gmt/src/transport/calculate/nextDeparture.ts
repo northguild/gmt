@@ -31,7 +31,9 @@ export interface Headway {
 export interface NextDepartureOptions {
   /**
    * ISO 8601 duration the connection needs after `after` before a departure can be made: exact
-   * time (a day is 24 hours), not negative. Default `"PT0S"`.
+   * time (a day is 24 hours), not negative.
+   *
+   * @defaultValue `"PT0S"`
    */
   minimumConnection?: string;
 }
@@ -130,7 +132,7 @@ function headwayDeparture(threshold: bigint, service: Headway): string {
  *
  * @param after ISO 8601 instant or zoned datetime string of the arrival that must connect
  * @param timetable the departures as exact moments, or a headway service `{ headway, from, to }`
- * @param options optional: minimumConnection (ISO 8601 duration of exact time needed before a departure can be made)
+ * @param options The connection time needed before a departure can be made
  * @returns the departure (a list entry as written, or a headway departure in from's notation; "" when none qualifies), or "" on invalid input
  *
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"]) // "2024-06-15T09:30:00Z"

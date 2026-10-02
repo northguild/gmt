@@ -27,7 +27,19 @@ import { isValidDateTimeInterval } from "./validate";
  */
 export function mergeIntervalsDateTime(
   intervals: Array<{ start: string; end: string }>,
-): Array<{ start: string; end: string }> {
+): Array<{
+  /**
+   * The date-time the interval begins at, as an ISO 8601 date-time string with no offset or time
+   * zone.
+   */
+  start: string;
+  /**
+   * The first date-time after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It is always later
+   * than `start`.
+   */
+  end: string;
+}> {
   try {
     if (!Array.isArray(intervals) || intervals.length === 0) {
       return [];

@@ -72,13 +72,11 @@ function isValidZonedUnit(unit: string): boolean {
  * - Uses Temporal.ZonedDateTime.from to parse.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
- * - `weekStartsOn: "sunday"` numbers weeks by UTS #35 (week 1 holds 1 January, so late-December
- *   days can be week 1); any value other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
  * @param unit unit to extract
- * @param optionsArg optional settings (e.g. weekStartsOn for week calculations); a non-object value (such as `null`) is invalid
+ * @param optionsArg optional setting for the week's first day; a non-object value (such as `null`) is invalid
  * @returns string representation of the requested unit or "" when invalid
  *
  * @example parseUnitFromZoned("2024-02-29T12:34:56.789+00:00[UTC]", "year") // "2024"
@@ -89,7 +87,17 @@ function isValidZonedUnit(unit: string): boolean {
 export function parseUnitFromZoned(
   value: string,
   unit: ZonedParseUnit,
-  optionsArg?: { weekStartsOn?: "monday" | "sunday" },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets how the `"week"` unit is numbered. `"monday"` gives the
+     * ISO 8601 week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS
+     * #35 week number with a Sunday first day and one minimal day, where week 1 holds 1 January.
+     * Any other value returns `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+  },
 ): string {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.

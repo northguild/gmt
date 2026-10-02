@@ -7,16 +7,12 @@ import { isOptionsArgument } from "../../internal/isObject";
 /**
  * Return the week number from a unix epoch value.
  *
- * - `"monday"` (default) is the ISO 8601 week of the week-year: week 1 is the week containing the
- *   first Thursday, so late-December days can be week 1 of the next year. The result is 1–53.
- * - `"sunday"` is the UTS #35 week of the week-year with a Sunday first day and minimal days 1:
- *   week 1 is the Sunday-first week holding 1 January, so late-December days can be week 1 of the
- *   next year. The result is 1–53 — see `getWeekNumber`.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns null.
+ * - Returns the week of the week-year, 1–53, so late-December days can be week 1 of the next
+ *   year — see `getWeekNumber`.
  * - Returns null for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds: a safe integer, or a string of optionally negative ASCII digits
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone is invalid), weekStartsOn ("monday" | "sunday"); a non-object value (such as `null`) is invalid
+ * @param options optional: how `value` is read, the zone its date is read in and the first day of the week; a non-object value (such as `null`) is invalid
  * @returns Week number (1-53 for "monday" and for "sunday") or null on invalid input
  *
  * @example parseWeekFromUnix(1704067200000, { timeZone: "UTC" }) // 1
@@ -29,8 +25,28 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function parseWeekFromUnix(
   value: number | string,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns null.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the date is read in: an IANA name, a UTC offset, or `"local"` for the system
+     * time zone. An unknown zone returns null.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * The first day of the week, which sets how the week is numbered. `"monday"` gives the ISO 8601
+     * week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS #35 week
+     * number with a Sunday first day and one minimal day, where week 1 holds 1 January. Any other
+     * value returns null.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
   },
 ): number | null {

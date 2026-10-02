@@ -22,15 +22,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Converts to ZonedDateTime, subtracts the duration, then converts back to epoch.
  * - Validates duration units and values.
  * - `value` is a safe integer or a digit string (`"1706659200000"`); anything else returns null.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone.
  * - Returns null for invalid input.
- *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
- * 1 month from Mar 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in null).
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone returns null), overflow ("constrain" | "reject")
+ * @param options optional: how `value` is read and how an out-of-range result day is handled
  * @returns Unix epoch number after subtraction, or null on invalid input
  *
  * @example subtractUnix(1706745600000, { days: 1 }) // 1706659200000
@@ -44,8 +40,26 @@ export function subtractUnix(
   value: number | string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns null. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns null.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * How a result day that does not exist in its month is handled, such as March 31 minus one
+     * month. `"constrain"` clamps to the last valid day, and `"reject"` returns null.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
   },
 ): number | null {

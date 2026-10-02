@@ -9,7 +9,12 @@ export interface Cutoff {
   name: string;
   /** ISO 8601 duration before the anchor, as `cutoffAt` takes it. */
   offset: string;
-  /** Local time of day the cut-off is pinned to, as `cutoffAt` takes it. */
+  /**
+   * Local time of day the cut-off is pinned to, as `cutoffAt` takes it.
+   *
+   * @defaultValue None. The cut-off is the offset taken off the anchor, with no time of day
+   * pinned.
+   */
   atLocalTime?: string;
 }
 
@@ -23,11 +28,19 @@ export interface CutoffTime {
 
 /** Options for `cutoffSchedule`: `cutoffAt`'s, with `atLocalTime` read from each entry instead. */
 export interface CutoffScheduleOptions {
-  /** IANA timeZone identifier or fixed offset every cut-off is read in. */
+  /** The time zone every cut-off is read in: an IANA name or a UTC offset. */
   timeZone: string;
-  /** Working week and holidays every cut-off's local date is rolled against. Requires `roll`. */
+  /**
+   * Working week and holidays every cut-off's local date is rolled against. Requires `roll`.
+   *
+   * @defaultValue None. No cut-off's date is rolled; a `roll` without it returns `[]`.
+   */
   calendar?: CutoffOptions["calendar"];
-  /** How a cut-off on a non-business day moves. No default; requires `calendar`. */
+  /**
+   * How a cut-off on a non-business day moves, as `rollDate` moves it. Requires `calendar`.
+   *
+   * @defaultValue None. No cut-off's date is rolled; a `calendar` without it returns `[]`.
+   */
   roll?: CutoffOptions["roll"];
 }
 
@@ -52,7 +65,7 @@ export interface CutoffScheduleOptions {
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadlines count back from
  * @param cutoffs the named deadlines, each with an offset and an optional local time of day
- * @param options timeZone (IANA identifier or fixed offset, required); optional calendar and roll, together or not at all, as cutoffAt takes them
+ * @param options The zone every cut-off is read in, and how one rolls off a non-business day, as cutoffAt takes them
  * @returns the named cut-offs, earliest first, or [] on invalid input
  *
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "document", offset: "P2D", atLocalTime: "17:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam" }) // [{ name: "document", at: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-13T10:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" }]

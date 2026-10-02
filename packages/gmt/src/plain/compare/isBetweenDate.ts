@@ -10,12 +10,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Uses Temporal.PlainDate.compare to compare dates.
  * - Returns false if start > end (invalid range).
  * - Returns false if any input is invalid.
- * - Use options.inclusiveStart and options.inclusiveEnd to control boundary inclusivity.
  *
  * @param date ISO PlainDate string to check
  * @param start ISO PlainDate string for the start of the range
  * @param end ISO PlainDate string for the end of the range
- * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
+ * @param options Whether each end of the range counts as inside it
  * @returns boolean indicating whether date is between start and end
  *
  * @example isBetweenDate("2024-02-29", "2024-02-01", "2024-02-28") // false
@@ -30,7 +29,22 @@ export function isBetweenDate(
   date: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `date` equal to `start` counts as inside the range. `false` requires it to
+     * be after `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `date` equal to `end` counts as inside the range. `false` requires it to be
+     * before `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {

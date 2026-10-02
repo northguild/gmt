@@ -16,18 +16,19 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   split is exact whenever the span divides evenly by `n` and within half a nanosecond of the
  *   exact cut otherwise, at any span length (no double arithmetic) — no DST is involved, since
  *   UTC has no time zone offset.
+ * - When `n` is larger than the number of nanoseconds in the interval, some pieces are empty (their
+ *   `start` equals their `end`): the result always has exactly `n` pieces.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`, leap-second strings).
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
- *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
- *   before building any piece. An invalid `maxPieces` also returns `[]`.
+ * - Returns `[]` before building any piece when `n` exceeds the longest possible array
+ *   (2^32 - 1).
  *
  * @param start ISO UTC datetime string for the interval start
  * @param end ISO UTC datetime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options A limit on the size of the result
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyUtc("2024-01-01T00:00:00Z", "2024-01-04T00:00:00Z", 3) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" }, { start: "2024-01-02T00:00:00Z", end: "2024-01-03T00:00:00Z" }, { start: "2024-01-03T00:00:00Z", end: "2024-01-04T00:00:00Z" }]
@@ -41,8 +42,25 @@ export function intervalDivideEquallyUtc(
   start: string,
   end: string,
   n: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most pieces the result may hold. When `n` exceeds it the function returns `[]` before
+     * building any piece. A value that is not a positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /** The instant the interval begins at, as an ISO 8601 UTC string ending in `Z`. */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
       return [];

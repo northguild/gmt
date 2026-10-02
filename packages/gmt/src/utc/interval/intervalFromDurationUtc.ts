@@ -17,15 +17,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   reference point (mirrors `addUtc`).
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionUtc`'s `start > end` rejection.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
- *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
  * - Returns null on invalid input (unparseable `value`, invalid `duration`, or an `anchor` other
  *   than `"start"`/`"end"`).
  *
  * @param value ISO UTC datetime string (e.g. "2024-03-10T12:00:00Z")
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range result is handled
  * @returns `{ start, end }` with the constructed span (UTC Instant strings), or null on invalid input
  *
  * @example intervalFromDurationUtc("2024-01-01T00:00:00Z", "P1D", "start") // { start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" }
@@ -38,8 +36,25 @@ export function intervalFromDurationUtc(
   value: string,
   duration: string,
   anchor: "start" | "end",
-  options?: { overflow?: Overflow },
-): { start: string; end: string } | null {
+  options?: {
+    /**
+     * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
+     * so Jan 31 + 1 month is Feb 29/28 (TC39 Temporal); `"reject"` returns null.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
+): {
+  /** The instant the interval begins at, as an ISO 8601 UTC string ending in `Z`. */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+} | null {
   if (!isOptionsArgument(options)) {
     return null;
   }

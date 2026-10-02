@@ -18,9 +18,13 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * - Each boundary is `start + round((end - start) · i / n)` in integer epoch nanoseconds (real
  *   elapsed time, exact at any span length), so a spring-forward day split in half lands exactly
  *   on the DST transition's real midpoint rather than the local-clock midpoint.
+ * - When `n` is larger than the number of nanoseconds in the interval, some pieces are empty (their
+ *   `start` equals their `end`): the result always has exactly `n` pieces.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals, each
  *   an empty `[start, start)` that holds no instant.
+ * - `start` and `end` may name different time zones. The first `start` and every inner boundary
+ *   are written in `start`'s zone; the last `end` is the `end` argument, in its own zone.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`, leap-second strings).
  * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
@@ -30,14 +34,12 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   unreadable as a set. A mismatch returns `[]`.
  * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
  *   copied from an input string (E7's D7-zoned).
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
- *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
- *   before building any piece. An invalid `maxPieces` also returns `[]`.
+ * - An `n` over `options.maxPieces` returns `[]` before any piece is built.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options optional limit on the size of the output
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", 2) // [{ start: "2024-03-09T12:00:00-05:00[America/New_York]", end: "2024-03-10T12:30:00-04:00[America/New_York]" }, { start: "2024-03-10T12:30:00-04:00[America/New_York]", end: "2024-03-11T12:00:00-04:00[America/New_York]" }] (47 real hours split in half)
@@ -51,8 +53,29 @@ export function intervalDivideEquallyZoned(
   start: string,
   end: string,
   n: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most sub-intervals the result may hold. A result that would be larger, or longer than the
+     * longest possible array (2^32 - 1), returns `[]` instead. A value that is not a positive safe
+     * integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
       return [];

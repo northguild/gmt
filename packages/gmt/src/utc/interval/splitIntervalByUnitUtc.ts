@@ -16,8 +16,11 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  *   CORE-6's `splitIntervalAt` uses).
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
- *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
- *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ *   (`start + k × amount`), so month-end starts don't drift: a monthly split from January 31
+ *   lands on February 29, March 31, April 30. Temporal's `add` constrains a day the month lacks
+ *   to the month's last day, and stepping from that boundary would keep the shortened day
+ *   (February 29, then March 29).
+ * - Comparison: Luxon's `Interval.splitBy` computes each boundary from the start the same way.
  * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
  *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
  *   `Number.MAX_SAFE_INTEGER`.
@@ -26,15 +29,12 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   leap-second strings).
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
- *   into more slices returns `[]`, decided from the span before stepping where it can be, and
- *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO UTC datetime string for the interval start
  * @param end ISO UTC datetime string for the interval end
  * @param unit duration unit string — any `DateTimeDurationUnit`
  * @param amount positive number of units per step
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options A limit on the size of the result
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 6) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" }, { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, { start: "2024-01-01T18:00:00Z", end: "2024-01-02T00:00:00Z" }]
@@ -51,8 +51,26 @@ export function splitIntervalByUnitUtc(
   end: string,
   unit: string,
   amount: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most pieces the result may hold. A split into more returns `[]`, decided from the span
+     * before stepping where it can be, and otherwise as soon as one piece too many is due. A value
+     * that is not a positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /** The instant the interval begins at, as an ISO 8601 UTC string ending in `Z`. */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof start !== "string" || typeof end !== "string") {
       return [];

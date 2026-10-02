@@ -8,12 +8,31 @@ import {
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate";
 
+/**
+ * Options for `formatUnix`: every `Intl.DateTimeFormatOptions` field, plus the epoch unit, the
+ * time zone the value is rendered in and whether the zone name is shown.
+ */
 export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
+  /**
+   * The unit `value` is counted in: `"seconds"` or `"milliseconds"`, singular or plural. Any other
+   * value returns `""`.
+   *
+   * @defaultValue `"milliseconds"`
+   */
   epochUnit?: UnixUnit;
+  /**
+   * The time zone the value is rendered in: an IANA name, a UTC offset, or `"local"` for the system
+   * time zone. An unknown zone returns `""`, as ECMA-402 throws RangeError for it.
+   *
+   * @defaultValue `"UTC"`
+   */
   timeZone?: string;
-  // When true, format via ZonedDateTime so the localized timezone name is
-  // included for full/long styles. Defaults to false (matches the original
-  // behavior of formatting a wall-clock PlainDateTime).
+  /**
+   * Whether the value is formatted as a zoned date-time, which adds the localized time zone name.
+   * When `false` the wall clock is formatted on its own and `timeZoneName` is ignored.
+   *
+   * @defaultValue `false`
+   */
   includeTimeZoneName?: boolean;
 }
 
@@ -21,12 +40,8 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  * Format a unix epoch value (string or number) as a localized date/time string.
  *
  * - Returns `""` if the input is not a valid unix epoch value for the given `epochUnit`.
- * - `epochUnit` controls whether the input is interpreted as `"milliseconds"` or `"seconds"`; defaults to `"milliseconds"`.
  * - `value` is a safe integer or a string of optionally negative ASCII digits (no whitespace, `+`,
- *   decimal point or exponent); `epochUnit` also accepts `"second"` / `"millisecond"`.
- * - `timeZone` controls the IANA zone used for rendering; defaults to `"UTC"`, `"local"` is the
- *   system zone, and an unknown zone returns `""` (ECMA-402 throws RangeError for it).
- * - `includeTimeZoneName` appends the localized timezone name when true.
+ *   decimal point or exponent).
  * - Without `includeTimeZoneName` the wall clock is formatted as Temporal's ECMA-402 PlainDateTime
  *   format does (`timeZoneName` is ignored); with it, as the ZonedDateTime format does (a short
  *   zone name is added to the defaults). Either way the requested fields and style widths are kept,
@@ -39,7 +54,7 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  *
  * @param value unix epoch value to format (string or number, per `epochUnit`)
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { epochUnit, timeZone, includeTimeZoneName }
+ * @param options optional: `Intl.DateTimeFormatOptions` fields, plus how `value` is read, the zone and whether its name is shown
  * @returns the formatted date/time string, or "" on invalid input
  *
  * @example formatUnix("1710685845000", "en-US", { epochUnit: "milliseconds" }) // "3/17/2024, 2:30:45 PM"

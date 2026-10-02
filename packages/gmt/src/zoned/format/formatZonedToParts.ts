@@ -55,7 +55,19 @@ export function formatZonedToParts(
   value: string,
   locale?: string | string[],
   options?: DateTimeFormatOptions,
-): Array<{ type: string; value: string }> {
+): Array<{
+  /**
+   * The kind of part, named as ECMA-402 `Intl.DateTimeFormat.prototype.formatToParts` names it: a
+   * field such as `"year"`, `"month"` or `"day"`, or `"literal"` for the separator text between
+   * fields.
+   */
+  type: string;
+  /**
+   * The text of the part in the requested locale, exactly as the formatter wrote it. Joining every
+   * `value` in array order gives the whole formatted text.
+   */
+  value: string;
+}> {
   // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
   if (options === null) {
     return [];

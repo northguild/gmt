@@ -19,21 +19,39 @@ export interface Leg {
    * Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the
    * first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone`
    * (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the
-   * first leg; on later legs it is the scheduled connection the cargo waits for, and omitting
-   * it means the leg leaves as soon as the previous leg's arrival plus its `dwellAfter` allows.
+   * first leg; on later legs it is the scheduled connection the cargo waits for.
+   *
+   * @defaultValue None. The leg leaves as soon as the previous leg's arrival plus its
+   * `dwellAfter` allows; a first leg without it is invalid input.
    */
   departure?: string;
   /** ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule). */
   duration: string;
-  /** IANA timeZone identifier or a fixed offset of the destination — the caller's fact. */
+  /** The time zone of the destination, the caller's fact: an IANA name or a UTC offset. */
   timeZone: string;
-  /** Handling time at the handoff after this leg; the minimum connect time. Default `"PT0S"`. */
+  /**
+   * Handling time at the handoff after this leg; the minimum connect time.
+   *
+   * @defaultValue `"PT0S"`
+   */
   dwellAfter?: string;
-  /** Opaque tag echoed back on the LegTime; GMT does not interpret transport modes. */
+  /**
+   * Opaque tag echoed back on the LegTime; GMT does not interpret transport modes.
+   *
+   * @defaultValue None. The LegTime carries no `mode`.
+   */
   mode?: string;
-  /** Opaque tag echoed back on the LegTime; never resolved to a zone. */
+  /**
+   * Opaque tag echoed back on the LegTime; never resolved to a zone.
+   *
+   * @defaultValue None. The LegTime carries no `origin`.
+   */
   origin?: string;
-  /** Opaque tag echoed back on the LegTime; never resolved to a zone. */
+  /**
+   * Opaque tag echoed back on the LegTime; never resolved to a zone.
+   *
+   * @defaultValue None. The LegTime carries no `destination`.
+   */
   destination?: string;
 }
 
@@ -56,10 +74,12 @@ export interface LegTime {
 /** Options for `scheduleDelivery`. */
 export interface ScheduleDeliveryOptions {
   /**
-   * IANA timeZone identifier or a fixed offset a zoneless first-leg departure is read in, for
-   * schedules published as local wall times. An ambiguous wall time resolves to the earlier
-   * instant and a nonexistent one to the later instant (`"compatible"`). Ignored when the first
-   * departure is already exact; never applied to later legs.
+   * The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset, for
+   * schedules published as local wall times. An ambiguous wall time resolves to the earlier instant
+   * and a nonexistent one to the later instant (`"compatible"`). Ignored when the first departure
+   * is already exact; never applied to later legs.
+   *
+   * @defaultValue None. A zoneless first-leg departure is invalid input.
    */
   startTimeZone?: string;
 }
@@ -368,7 +388,7 @@ function chainLegs(
  * - Returns `null` on invalid input.
  *
  * @param legs the journey's legs, in travel order
- * @param options optional: startTimeZone (IANA timeZone identifier or a fixed offset a zoneless first-leg departure is read in)
+ * @param options The zone a zoneless first-leg departure is read in
  * @returns the final local ETA and each leg's arrival, local arrival and dwell, or null on invalid input
  *
  * @example scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT36H", timeZone: "Asia/Tokyo" }]) // { eta: "2024-06-17T07:00:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-06-16T22:00:00Z", localArrival: "2024-06-17T07:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S" }] }

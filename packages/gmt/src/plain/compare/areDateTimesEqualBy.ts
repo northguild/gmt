@@ -11,12 +11,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - Equality means both values share the same start-of-`unit` boundary, so
  *   `"month"` requires the same month AND year — March 2023 and March 2024 are
- *   NOT equal by month, matching date-fns's `isSameMonth` and Luxon's
- *   `dt.hasSame(other, "month")`.
+ *   NOT equal by month. A calendar month is a year and a month together, as in
+ *   Temporal's `PlainYearMonth`, not a bare month-of-year number.
+ * - Comparison: date-fns's `isSameMonth` and Luxon's `dt.hasSame(other, "month")`
+ *   give the same answer.
  * - Supports the full `Temporal.DateUnit | Temporal.TimeUnit` range, down to
  *   `"nanosecond"`.
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns false.
  * - Returns false for an unsupported unit or invalid input.
  * - Takes no `fractionalSecondDigits`: equality compares full-precision `unit` boundaries, and output
  *   digits cannot change which bucket a value is in. That ignored option was removed in 1.16.0; to
@@ -33,7 +34,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 first ISO datetime string
  * @param value2 second ISO datetime string
  * @param unit date or time unit, singular or plural, to compare by
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
+ * @param optionsArg How the week is defined
  * @returns true if both datetimes share the same start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areDateTimesEqualBy("2024-03-15T10:00:00", "2024-03-15T18:00:00", "day") // true
@@ -49,6 +50,13 @@ export function areDateTimesEqualBy(
   value2: string,
   unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * false, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
   },
 ): boolean {

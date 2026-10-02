@@ -40,9 +40,10 @@ const NEAREST_WEEKDAY_RADIUS = 3;
  * off the result.
  *
  * - The month-day is moved into `year` with Temporal's `overflow: "constrain"`, so a
- *   February 29 anchor targets February 28 in a common year before the weekday shift. A
- *   "month-end" rule (the 26 CFR 1.441-2 style, "the last Saturday of February") would
- *   instead put a February 28 anchor on February 29 in a leap year; this does not.
+ *   February 29 anchor targets February 28 in a common year before the weekday shift. A rule
+ *   tied to the end of a month ("the last Saturday of February", or the Saturday nearest the
+ *   month's last day) would instead put a February 28 anchor on February 29 in a leap year;
+ *   this does not.
  */
 export function fiscalYearEndIn(
   anchor: Temporal.PlainDate,

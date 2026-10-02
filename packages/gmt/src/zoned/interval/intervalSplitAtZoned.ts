@@ -46,7 +46,19 @@ export function intervalSplitAtZoned(
   start: string,
   end: string,
   points: string[],
-): Array<{ start: string; end: string }> {
+): Array<{
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (!Array.isArray(points)) {
       return [];

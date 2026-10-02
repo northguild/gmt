@@ -36,14 +36,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * above because both option sets have colliding `smallestUnit`/`roundingMode` keys with
  * different Temporal types.
  * - Each value is a safe integer or a digit string (`"1706659200000"`); anything else is invalid.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone is
- *   invalid.
  * - Unit names may be singular or plural (`"day"` or `"days"`), as in Temporal.
  *
  * @param value1 first Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param value2 second Unix epoch, in the same form and unit
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
+ * @param options optional: how the epochs are read, how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUnixAsDuration(1706659200000, 1706745600000, "days") // "P1D"
@@ -57,7 +55,19 @@ export function diffUnixAsDuration(
   value2: number | string,
   unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone calendar units are measured in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
   } & RoundingOptions<Temporal.DateTimeUnit> &
     DurationStringOptions,

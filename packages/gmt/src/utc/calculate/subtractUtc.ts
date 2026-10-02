@@ -13,12 +13,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Validates duration units and values.
  * - Returns "" for invalid input.
  *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
- * 1 month from Mar 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in "").
- *
  * @param value ISO UTC datetime string (e.g. "2024-03-10T12:00:00Z")
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range result is handled
  * @returns UTC Instant string after subtraction, or "" on invalid input
  *
  * @example subtractUtc("2024-03-15T12:00:00Z", { days: 5 }) // "2024-03-10T12:00:00Z"
@@ -28,7 +25,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function subtractUtc(
   value: string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
-  options?: { overflow?: Overflow },
+  options?: {
+    /**
+     * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
+     * so Mar 31 − 1 month is Feb 29/28 (TC39 Temporal); `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

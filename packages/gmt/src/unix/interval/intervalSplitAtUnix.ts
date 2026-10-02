@@ -31,7 +31,16 @@ export function intervalSplitAtUnix(
   start: number | string,
   end: number | string,
   points: Array<number | string>,
-): Array<{ start: number; end: number }> {
+): Array<{
+  /** The instant the interval begins at, as a Unix epoch number in the unit the arguments share. */
+  start: number;
+  /**
+   * The first instant after the interval, in the same unit as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: number;
+}> {
   try {
     if (!Array.isArray(points)) {
       return [];

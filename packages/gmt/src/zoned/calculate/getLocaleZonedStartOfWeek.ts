@@ -30,7 +30,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value zoned ISO 8601 datetime string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
- * @param options optional: fractionalSecondDigits (number)
+ * @param optionsArg optional setting for the precision of the output string
  * @returns zoned ISO 8601 string for the start of `value`'s locale-relative week, or "" on invalid input
  *
  * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US") // "2024-02-25T00:00:00+00:00[UTC]" (Sunday)
@@ -44,6 +44,12 @@ export function getLocaleZonedStartOfWeek(
   value: string,
   locale: string | string[],
   optionsArg?: {
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. A start has no sub-second part, so any digits written are zeros.
+     *
+     * @defaultValue `0`
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
