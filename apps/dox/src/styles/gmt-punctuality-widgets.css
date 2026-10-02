@@ -1,0 +1,463 @@
+/*
+ * Shared rules for the three punctuality widgets (TRAN-57): the Punctuality
+ * Board, the ETA Drift Chart and the Departure Board.
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
+ * labels, inputs, selects, ranges, handles and chips in gmt-form-controls.css.
+ * The drawn frame, the tick row, the chip, the series mapping, the mark and the
+ * gate are the transport charts' shared recipes: gmt-cutoff-widgets.css lists
+ * all six roots. This sheet holds what the three tools share beyond those:
+ * where an axis tick label hangs from its tick, the family hatch for "outside
+ * the tolerance" and for a connection bar, the result plates
+ * (`.gmt-punct-heroes`), the "naive" outline, the class chip, the outlined tag,
+ * the callout line and the results table.
+ *
+ * Early and late are words and patterns, never colours: nothing here is a
+ * success or an error hue. Amber belongs to the NO SIGNAL state alone. Text
+ * sits on an opaque `--gmt-surface` plate. Tokens only; one-off gradient stops
+ * are written as `color(from var(--token) srgb r g b / a)`.
+ */
+
+/* The frame's wash is brightest toward its middle, so text drawn straight on
+   the frame (the tick labels) takes the primary ink to stay at 7:1. */
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-ticks
+  .gmt-cutoff-axis-tick {
+  color: var(--gmt-ice);
+}
+
+/* A tick label hangs from its tick: the first one starts at it, the last one
+   ends at it, the rest centre on it. Set per tick by the mount. */
+.gmt-punct-ticks .gmt-punct-tick--start {
+  transform: none;
+}
+
+.gmt-punct-ticks .gmt-punct-tick--mid {
+  transform: translateX(-50%);
+}
+
+.gmt-punct-ticks .gmt-punct-tick--end {
+  transform: translateX(-100%);
+}
+
+/* The family hatch: "outside the tolerance" on a bar, the connection bar on a
+   rail. It reads no text and carries no meaning a reader without colour vision
+   would miss: the pattern is the signal and the words beside it say the rest. */
+/* 45 degrees, 2px on and 6px off, in `--hatch` (a cyan wash by default; a rail
+   or a bar sets its own). It tints through `background-color`, never the
+   shorthand. */
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 0,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+/* The tool's one naive value: a dashed outline plus the word "naive" in its
+   own text. Never amber, never a success or error hue. */
+.gmt-punct-naive {
+  display: block;
+  margin: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px dashed var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* A bevelled class chip: PLN, EST, REQ, ACT. It reads as a `.gmt-cutoff-chip`:
+   an opaque surface plate with the inset highlight. Inside a `[data-series]`
+   its border is the series colour; the text stays the code. */
+.gmt-punct-chip {
+  display: inline-block;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* A small outlined tag: "late", "early". On time carries none. A verdict is a
+   word plus a pattern, so the bottom edge is dashed. */
+.gmt-punct-tag {
+  display: inline-block;
+  margin-right: 2px;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-bottom-style: dashed;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-punct-naive:empty::before {
+  content: "\200b";
+}
+
+/* A naive line with nothing to say keeps its reserved height but draws nothing:
+   its `display: block` above beats the UA `[hidden]` rule, and removing it
+   from the flow would move the readout and everything below it each time a
+   dragged arrival or an edited event makes the naive pick equal the real one.
+   `visibility: hidden` also drops it from the accessibility tree. */
+.gmt-punct-naive[hidden] {
+  visibility: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+ * Result plates: the row at the top of a frame, the Countdown hero's family.
+ * `aria-hidden`, because each value is already announced elsewhere (the
+ * verdict, the rate lines or the callouts). A plate takes `data-series` for a
+ * 3px bottom edge in that series' colour.
+ * --------------------------------------------------------------------------- */
+
+/* The plates hold still while a handle is dragged: each is pinned to its own
+   edge (`space-between`) at its own reserved width (`flex: 0 0 auto`), so one
+   plate's width never moves another, and a lone plate sits at the start. */
+.gmt-punct-heroes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  align-items: stretch;
+}
+
+.gmt-punct-heroes:empty,
+.gmt-punct-heroes[hidden] {
+  display: none;
+}
+
+.gmt-punct-hero {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  max-inline-size: 100%;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  /* The site's `[class*="card"]` glass must never reach a plate. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.gmt-punct-hero[hidden] {
+  display: none;
+}
+
+/* A 3px series bar along the bottom edge, inside the bevel. Never a left-only
+   accent. */
+.gmt-punct-hero[data-series] {
+  padding-bottom: calc(var(--gmt-space-2) + 3px);
+  background:
+    linear-gradient(
+        var(--series, var(--gmt-border-strong)),
+        var(--series, var(--gmt-border-strong))
+      )
+      left bottom / 100% 3px no-repeat,
+    var(--gmt-surface);
+}
+
+.gmt-punct-hero-cap {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--gmt-tracking-wider);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-punct-hero-value {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--gmt-font-display);
+  font-size: clamp(1.6rem, 7cqi, 2.4rem);
+  line-height: 1.15;
+  color: var(--gmt-ice);
+  /* A value never wraps and never changes its figures' width. */
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-punct-hero-value .gmt-cutoff-icon {
+  width: 1em;
+  height: 1em;
+}
+
+/* The sub line is a fixed number of lines, one `.gmt-punct-hero-line` each; a
+   line never wraps and an empty one still holds its height. The separator text
+   that joins the lines when they are read as one sentence is not drawn. */
+.gmt-punct-hero-sub {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-punct-hero-line {
+  display: block;
+  min-block-size: 1lh;
+}
+
+.gmt-punct-hero-sep {
+  display: none;
+}
+
+/* A secondary result beside a hero: the same plate, a smaller value. Its value
+   is the best pick, which a drag never changes, so it may wrap on a narrow
+   plate. */
+.gmt-punct-hero--quiet .gmt-punct-hero-value {
+  font-size: var(--gmt-text-lg);
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+ * Readouts hold still while a handle is dragged. Each plate reserves the width
+ * of the longest value its tool can produce, measured across the handle's whole
+ * range on every preset: the value in `em` (the display font has no tabular
+ * figures), the sub line in `ch` (it is mono). Every line above a dragged
+ * control reserves its tallest wrapped height, in `lh`, at the container widths
+ * the widget meets: wide, under 30rem (a phone, the /dox rail) and under 21rem
+ * (the narrowest rail).
+ * --------------------------------------------------------------------------- */
+
+[data-role="rail-hero"] .gmt-punct-hero-value {
+  min-inline-size: 5.5em;
+}
+
+[data-role="rail-hero"] .gmt-punct-hero-sub {
+  min-inline-size: 29ch;
+}
+
+[data-role="rate-hero-a"] .gmt-punct-hero-value,
+[data-role="rate-hero-b"] .gmt-punct-hero-value {
+  min-inline-size: 3.9em;
+}
+
+/* Wide enough for "late tolerance 10 h 30 min", the longest line a keyboard
+   can reach (the handle runs past the old axis). */
+[data-role="rate-hero-a"] .gmt-punct-hero-sub {
+  min-inline-size: 28ch;
+}
+
+[data-role="rate-hero-b"] .gmt-punct-hero-sub {
+  min-inline-size: 24ch;
+}
+
+[data-role="drift-hero"] .gmt-punct-hero-value {
+  min-inline-size: 5.1em;
+}
+
+[data-role="drift-hero"] .gmt-punct-hero-sub {
+  min-inline-size: 27ch;
+}
+
+/* One line, plus the padding and border of the naive outline. */
+[data-role="naive-line"],
+[data-role="callout-naive"],
+[data-role="rate-naive"] {
+  --lines: 1;
+  min-block-size: calc(var(--lines) * 1lh + 2 * var(--gmt-space-1) + 2px);
+}
+
+[data-role="verdict"],
+[data-role="rate-a"],
+[data-role="rate-b"],
+[data-role="callout-best"],
+[data-role="band-label"] {
+  --lines: 1;
+  min-block-size: calc(var(--lines) * 1lh);
+}
+
+@container (max-width: 30rem) {
+  [data-role="naive-line"],
+  [data-role="callout-naive"],
+  [data-role="rate-naive"],
+  [data-role="rate-a"],
+  [data-role="rate-b"],
+  [data-role="band-label"] {
+    --lines: 2;
+  }
+
+  [data-role="callout-best"] {
+    --lines: 3;
+  }
+}
+
+@container (max-width: 21rem) {
+  [data-role="rate-a"],
+  [data-role="rate-b"],
+  [data-role="band-label"] {
+    --lines: 3;
+  }
+}
+
+/* A callout line under a result: "Best available: ACT, Sat 15 Jun 12:52". */
+.gmt-punct-callout {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-punct-callout:empty::before {
+  content: "\200b";
+}
+
+/* The rate lines above a board: one result per line. */
+.gmt-punct-rate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-punct-rate:empty::before {
+  content: "\200b";
+}
+
+/* A second code frame and its output, stacked under the first. */
+.gmt-punct-second {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-punct-second[hidden] {
+  display: none;
+}
+
+/* A plain results table: the board's calls, the plot's events. Inside the
+   three roots it reads with the chart, as the Stack's table does: a bevelled
+   frame, a header row on an opaque surface and hairline rows. It stays
+   `display: block` with `overflow-x: auto`, so a wide table scrolls at 390
+   instead of being cut. */
+.gmt-punct-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-punct-table th,
+.gmt-punct-table td {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border);
+  text-align: left;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.gmt-punct-table th code {
+  font-size: inherit;
+  color: inherit;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.gmt-punct-table thead th {
+  border-bottom-width: 2px;
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-punct-table td,
+.gmt-punct-table tbody th {
+  font-family: var(--gmt-font-mono);
+  font-weight: 400;
+  color: var(--gmt-ice);
+}
+
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table {
+  border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table
+  :is(th, td) {
+  padding: var(--gmt-space-2);
+}
+
+/* Clear of the frame's bevelled corners. */
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table
+  :is(th, td):first-child {
+  padding-left: var(--gmt-space-3);
+}
+
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table
+  :is(th, td):last-child {
+  padding-right: var(--gmt-space-3);
+}
+
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table
+  thead
+  th {
+  background: var(--gmt-surface);
+  border-bottom-color: var(--gmt-border-strong);
+}
+
+:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+  .gmt-punct-table
+  tbody
+  tr:last-child
+  :is(th, td) {
+  border-bottom: 0;
+}
+
+/* Values the reader is reading never animate. */
+.gmt-punct-frame,
+.gmt-punct-hero,
+.gmt-punct-naive,
+.gmt-punct-chip,
+.gmt-punct-tag,
+.gmt-punct-callout {
+  transition: none;
+  animation: none;
+}

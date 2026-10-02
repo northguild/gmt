@@ -10,6 +10,7 @@
 
 .gmt-playground-form {
   font-family: var(--gmt-font-mono);
+  container-type: inline-size;
 }
 
 .gmt-pf-output-label {
@@ -21,27 +22,9 @@
 
 /* ---- Field layout ---- */
 
-.gmt-pf-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--gmt-space-3);
-}
-
-/* Free-text scalar params get room; a list/interval editor takes a full row. */
-.gmt-pf-fields
-  > .gmt-label:has(> input[data-role="value"]:not([type="number"])) {
-  flex: 1 1 260px;
-}
-
-.gmt-pf-fields > .gmt-label > input[data-role="value"]:not([type="number"]) {
-  width: 100%;
-  min-width: 0;
-}
-
-.gmt-pf-list,
-.gmt-pf-fields > .gmt-label.gmt-pf-wide {
-  flex: 1 1 100%;
+/* The rows of controls are the shared `.gmt-field-grid` (gmt-form-controls.css).
+   A list / interval editor is not a label, so the grid gives it a full row. */
+.gmt-pf-list {
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
@@ -68,8 +51,18 @@
   gap: var(--gmt-space-2);
 }
 
-.gmt-playground-form-units .gmt-input[type="number"] {
+/* Beat `.gmt-field-grid .gmt-input { width: 100% }`: the two controls share
+   one row, each taking its part of it. */
+.gmt-field-grid .gmt-playground-form-units > .gmt-input {
+  flex: 1 1 4rem;
+  width: auto;
   min-width: 64px;
+}
+
+.gmt-field-grid .gmt-playground-form-units > .gmt-select {
+  flex: 1 1 6rem;
+  width: auto;
+  min-width: 0;
 }
 
 /* ---- Repeatable rows (list / intervals) ---- */

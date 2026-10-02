@@ -1,5 +1,5 @@
 /**
- * The empty-screen pills.
+ * The example cards in the widget rail.
  *
  * These assert the *contract*, not the model's behaviour. Whether a given
  * question actually produces a tool call is the model's decision and cannot be
@@ -8,7 +8,12 @@
  * that is not enabled.
  */
 import { describe, expect, it } from "vitest";
-import { CHAT_STARTERS, starterWidgetCall } from "./chat-constants";
+import {
+  CHAT_STARTERS,
+  EXAMPLE_AREAS,
+  starterWidgetCall,
+  startersByArea,
+} from "./chat-constants";
 import { resolveWidget } from "~/components/ask/widget-registry";
 import { DOX_TOOL_DOCS, ENABLED_TOOL_NAMES } from "./dox-tools";
 
@@ -31,7 +36,7 @@ describe("CHAT_STARTERS", () => {
   });
 
   it("asks a real question rather than naming a tool", () => {
-    /* A pill that reads "showDstInspector" would trigger reliably and teach
+    /* A card that reads "showDstInspector" would trigger reliably and teach
        nothing. These have to survive being read aloud by someone who has never
        heard of the widget. */
     for (const starter of CHAT_STARTERS) {
@@ -54,7 +59,7 @@ describe("CHAT_STARTERS", () => {
     }
   });
 
-  it("keeps each pill short enough to read as a button", () => {
+  it("keeps each card short enough to read as a button", () => {
     for (const starter of CHAT_STARTERS) {
       expect(starter.text.length, starter.widget).toBeLessThan(110);
     }
@@ -73,11 +78,42 @@ describe("CHAT_STARTERS", () => {
     },
   );
 
-  it("gives each pill a stable call id, so a second click does not remount", () => {
+  it("gives each card a stable call id, so a second click does not remount", () => {
     const ids = CHAT_STARTERS.map((s) => starterWidgetCall(s).toolCallId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(starterWidgetCall(CHAT_STARTERS[0]).toolCallId).toBe(
       starterWidgetCall(CHAT_STARTERS[0]).toolCallId,
     );
+  });
+});
+
+describe("example areas", () => {
+  const areaIds = EXAMPLE_AREAS.map((a) => a.id) as readonly string[];
+
+  it("files every starter under a known area", () => {
+    for (const starter of CHAT_STARTERS) {
+      expect(areaIds, starter.widget).toContain(starter.area);
+    }
+  });
+
+  it("gives every area at least one starter", () => {
+    for (const { id } of EXAMPLE_AREAS) {
+      expect(
+        CHAT_STARTERS.some((s) => s.area === id),
+        id,
+      ).toBe(true);
+    }
+  });
+
+  it("lists every starter exactly once, areas in order, starters in source order", () => {
+    const groups = startersByArea();
+    expect(groups.map((g) => g.area)).toEqual(areaIds);
+    const flat = groups.flatMap((g) => g.starters.map((s) => s.widget));
+    expect([...flat].sort()).toEqual(CHAT_STARTERS.map((s) => s.widget).sort());
+    expect(new Set(flat).size).toBe(flat.length);
+    for (const group of groups) {
+      const expected = CHAT_STARTERS.filter((s) => s.area === group.area);
+      expect(group.starters).toEqual(expected);
+    }
   });
 });

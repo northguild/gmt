@@ -231,3 +231,27 @@ describe("template escaping", () => {
     ).toBe("Asia/Tokyo");
   });
 });
+
+describe("mountConverterBench: a seeded zone the list lacks", () => {
+  it("shows the zones a link or a call names, not the first of the list", async () => {
+    const { root, controller } = mountInto({});
+    await mountConverterBench(
+      root,
+      { from: "America/Nuuk", to: "Australia/Lord_Howe" },
+      controller.signal,
+    );
+    expect((q(root, "convert-source") as HTMLSelectElement).value).toBe(
+      "America/Nuuk",
+    );
+    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
+      "Australia/Lord_Howe",
+    );
+  });
+
+  it("still ignores a locale it does not offer", async () => {
+    const { root, controller } = mountInto({});
+    const before = (q(root, "format-locale") as HTMLSelectElement).value;
+    await mountConverterBench(root, { locale: "xx-XX" }, controller.signal);
+    expect((q(root, "format-locale") as HTMLSelectElement).value).toBe(before);
+  });
+});

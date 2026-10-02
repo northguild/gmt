@@ -63,7 +63,7 @@ export const ArtifactClose = ({
   </Button>
 );
 
-export type ArtifactTitleProps = HTMLAttributes<HTMLParagraphElement>;
+export type ArtifactTitleProps = ComponentProps<"p">;
 
 export const ArtifactTitle = ({ className, ...props }: ArtifactTitleProps) => (
   <p

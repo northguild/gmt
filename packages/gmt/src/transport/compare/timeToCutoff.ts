@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 
 /**
@@ -9,8 +9,14 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  *   `PT25H`. It is `PT0S` at the cut-off itself, where `isPastCutoff` turns `true`.
  * - Negative (`"-PT1H"`) once `now` is after the cut-off: how late it is.
  * - Both arguments are exact: an instant (`Z`/offset) or a zoned string, as `cutoffAt`
- *   returns one. The zone each is written in does not matter, and a bracketed zone is not
- *   read.
+ *   returns one. The zone each is written in does not matter.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so a cut-off `cutoffAt` wrote is the instant it
+ *   computed, except a wall time repeated inside a sub-minute offset change, which reads as
+ *   its first pass (see `isValidInstant`). Otherwise the bracket is not checked: a zone that does not exist, or that
+ *   disagrees with the offset, changes nothing.
  * - `now` is the caller's: GMT does not read the clock here.
  * - Returns `""` on invalid input, including `cutoffAt`'s `""` sentinel.
  *
@@ -31,8 +37,8 @@ export function timeToCutoff(now: string, cutoff: string): string {
       return "";
     }
 
-    return Temporal.Instant.from(now)
-      .until(Temporal.Instant.from(cutoff), { largestUnit: "hours" })
+    return instantFrom(now)
+      .until(instantFrom(cutoff), { largestUnit: "hours" })
       .toString();
   } catch {
     // Never throws (Core Rule 3): a hostile

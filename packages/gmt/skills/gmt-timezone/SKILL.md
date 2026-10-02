@@ -1,21 +1,20 @@
 ---
 name: gmt-timezone
 description: >
-  Timezone-aware operations — zoned now, formatting zoned datetimes/ranges,
+  Timezone-aware operations — zoned now, formatting zoned values/ranges,
   plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
-  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal for
-  zoneless wall times, real zone unit boundaries (startOfZoned/endOfZoned/
-  startOfUnix/endOfUnix), hours in a local day, floorToZone/bucketRange,
-  calendar-annotated zoned strings, range limits, transport legs
-  (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery for
-  multi-leg ETAs and missed connections), cut-offs (cutoffAt, cutoffSchedule,
-  isPastCutoff, timeToCutoff), intermodal free time (freeTimeExpiry,
-  chargeableDays, demurrageClock), billingTimeline deadlines, and operating
-  hours — OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
-  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime (open
-  time elapsed, SLA deadlines, midnight-wrapping curfews).
-  Reads the installed README.md and source JSDoc for API details; a routing
-  pointer, not an API dump.
+  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal,
+  real unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix),
+  hours in a local day, floorToZone/bucketRange, calendar-annotated zoned
+  strings, range limits, transport legs (transitTime, etaAtZone, dwellTime,
+  crossingTime, scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), planned
+  versus actual (scheduleDeviation, classifyPunctuality, punctualityRate,
+  bestAvailable and estimateDrift over PLN/EST/REQ/ACT, nextDeparture),
+  intermodal free time (freeTimeExpiry, chargeableDays, demurrageClock),
+  billingTimeline, and operating hours (OperatingSchedule,
+  recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
+  operatingTimeBetween, addOperatingTime), and daylight time
+  (isInDaylightSaving, hasDaylightSaving). Points to the README and JSDoc.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -36,6 +35,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
+  - 'northguild/gmt:packages/gmt/src/types/transport-timestamps.ts'
   - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/compare/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
@@ -201,7 +201,8 @@ converting between time zones, or doing arithmetic that must respect DST.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
     `crossingTime(entry, exit, targetZone)` returns `{ duration, enter, exit }`
     with no day count (a crossing that needs one is a dwell); `targetZone` is
-    required and always the rendering zone — a bracket on the input is ignored.
+    required and always the rendering zone — a bracket on the input never
+    supplies it.
     `scheduleDelivery(legs, { startTimeZone? })` chains legs into `{ eta,
     legTimes }`: each leg leaves at its explicit `departure` or at the previous
     arrival plus that leg's `dwellAfter`, the minimum connect time. A scheduled
@@ -231,7 +232,31 @@ converting between time zones, or doing arithmetic that must respect DST.
     sorts the stack by instant and returns `[]` if any entry fails.
     `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on;
     `timeToCutoff(now, cutoff)` is exact hours, `PT0S` at it, negative after.
-17. **Free time is counted in the terminal's local days; the start day and the
+17. **Planned versus actual is exact time under the caller's tolerance.**
+    `scheduleDeviation(planned, actual)` is `actual − planned` in exact hours
+    (`"PT14M"` late, `"-PT5M"` early; a fall-back delay is `PT1H`, never
+    `PT0S`). `classifyPunctuality(planned, actual, { late, early? })` returns
+    `"early" | "onTime" | "late"`, or `null` on invalid input: both edges are
+    outside (exactly `late` is late), and without `early` every early arrival
+    is on time. There is no default tolerance; tolerances are exact durations
+    (a day is 24 hours; years, months, weeks or negative return `null`).
+    `punctualityRate(pairs, tolerance)` returns `{ onTime, total, rate }`,
+    judging every pair under a tolerance read once; an empty list or any
+    invalid pair is `null`. A `TimestampEvent` is `{ classifier: "PLN" |
+    "EST" | "REQ" | "ACT", at, recordedAt }` (DCSA vocabulary).
+    `bestAvailable(events)` returns `{ at, classifier }`: `ACT` whenever one
+    exists, else `PLN`, else `REQ`, else `EST`, newest `recordedAt` within the
+    class — never an `EST` shown as an actual. `estimateDrift(events, {
+    tolerance? })` reports first-to-last `EST` drift, `revisions` and
+    `exceedsTolerance` (strictly greater, either direction; `null` without a
+    tolerance), and is `null` with fewer than two `EST`s.
+    `nextDeparture(after, timetable, { minimumConnection? })` returns the
+    first departure at or after `after + minimumConnection`: a list entry
+    echoed as written (ready for `scheduleDelivery`'s `departure`), or for
+    `{ headway, from, to }` (a GTFS `frequencies.txt` row) `from + k × headway`
+    in the half-open `[from, to)`, written the way `from` was. Every moment
+    must carry its offset; a wall time without one is `""`.
+18. **Free time is counted in the terminal's local days; the start day and the
     basis are tariff terms, never defaults.**
     `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
     returns `{ freeTimeStart, lastFreeDay, expiresAt }`: local dates in
@@ -251,7 +276,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     demurrage gate-in to loaded, detention empty release to gate-in; `combined`
     runs both as one period. No standard fixes how these days are counted;
     every term is the tariff's.
-18. **Billing deadlines are dates counted from an anchor, and every window is
+19. **Billing deadlines are dates counted from an anchor, and every window is
     the caller's.** `billingTimeline({ anchorOn, invoiceIssuedOn?,
     requestReceivedOn? }, { issueDays, disputeDays, resolutionDays,
     agreedResolutionOn? })` returns `{ invoiceDeadline, issuedByDeadline,
@@ -266,7 +291,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `convertUtcToPlainDate(instant, { timeZone })`. A request before its
     invoice, or an agreed date before the request, returns `null`. GMT
     computes dates, not liability.
-19. **Operating hours are local windows resolved in the schedule's zone.** An
+20. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
     (`{ from: "09:00", to: "17:00" }`); a `to` at or before `from` wraps past
@@ -282,7 +307,48 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-20. **Read the README.** This skill is a routing pointer. For the full DST
+21. **A zoned string names one instant in every reader.** Temporal writes a
+    zone's offset rounded to the minute, so a zone with a sub-minute offset
+    (`Africa/Monrovia` stood at −00:44:30 until 1972) is written `-00:45`.
+    Every function that reads a moment (`toNanoseconds`, `spanNs`, `Interval`
+    endpoints, `floorToZone`, `getTimeZoneOffset`, `scheduleDeviation`,
+    `timeToCutoff`, `dwellTime`) reads an offset written to the minute as the
+    bracketed zone's real offset when it is that offset rounded (TC39
+    `ToTemporalZonedDateTime`, match-minutes):
+    `1960-01-01T00:20:00-00:45[Africa/Monrovia]` is `01:04:30Z`. So a zoned
+    string GMT wrote reads back as the instant it was written for. Otherwise
+    the written offset fixes the instant. A function that reads only the
+    instant does not validate the bracket, and the bracket never supplies its
+    rendering zone. A function that keeps the zone (`isValidZonedDateTime`,
+    `transitTime`, `toOffsetInstant`, every `zoned/` function, a zoned
+    `relativeTo`) rejects a bracket that contradicts the offset, and an offset
+    written with seconds must be the zone's offset exactly:
+    `-00:45:00[Africa/Monrovia]` is invalid, `-00:44:30[Africa/Monrovia]` is
+    valid. Two limits are Temporal's own. A wall time repeated inside a
+    sub-minute offset change, written to the minute, reads as its first pass
+    (`1952-10-15T23:59:59-11:20[Pacific/Niue]`); write the offset with seconds
+    to name the second. A zoned read refuses a local date of −271821-04-19,
+    which an instant reader accepts; pass that instant in `Z` form.
+22. **Daylight time is read from the zone's clock changes.**
+    `isInDaylightSaving(zoned)` and `hasDaylightSaving(timeZone, { at })`
+    apply one rule, GMT's own definition and not the tz database's daylight
+    flag (no JavaScript API exposes it): daylight time runs from a forward
+    change of the zone's clocks to the backward change of the same size that
+    undoes it, less than 365 days later. A forward change never undone is a
+    change of standard time, so
+    `isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]")` is
+    `false`. The higher of two alternating offsets is the daylight one:
+    `Europe/Dublin` in summer, `Africa/Casablanca` at `+01:00`.
+    `hasDaylightSaving` is `true` when the zone is in daylight time at `at`
+    or a daylight period begins less than 365 days after it. Pass `at` (an
+    ISO 8601 instant string) for an answer that does not depend on the day
+    the code runs: `hasDaylightSaving("Europe/Istanbul", { at:
+    "2015-06-15T12:00:00Z" })` is `true`, and with `"2016-06-15T12:00:00Z"`
+    it is `false`. Without `at` the reference is the current instant. Both
+    read the runtime's time zone data, so an answer can change when that data
+    does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
+    standard time.
+23. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -292,7 +358,7 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Formatting**: `formatZonedDateTime`, `formatZonedRange`,
   `formatRelativeZoned`, `formatTimeZoneName`
 - **Validation**: `isValidTimeZone`, `isValidZonedDateTime`,
-  `hasDaylightSaving`, `getDstTransitions`, `isInDaylightSaving`
+  `hasDaylightSaving` (`{ at }`), `getDstTransitions`, `isInDaylightSaving`
 - **Conversion**: `convertPlainDateTimeToZoned`, `convertZonedToPlainDateTime`,
   `convertUtcToZoned`, `convertZonedToUtc`, `convertZonedToCalendar`,
   `convertUtcToUnix`, `convertUnixToUtc`
@@ -312,6 +378,9 @@ converting between time zones, or doing arithmetic that must respect DST.
   `crossingTime`, `scheduleDelivery`
 - **Cut-offs and deadlines**: `cutoffAt`, `cutoffSchedule`, `isPastCutoff`,
   `timeToCutoff`
+- **Punctuality and timestamp classes**: `scheduleDeviation`,
+  `classifyPunctuality`, `punctualityRate`, `bestAvailable`, `estimateDrift`,
+  `nextDeparture`
 - **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`

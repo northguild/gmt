@@ -10,6 +10,9 @@ export const MIN_EPOCH_NANOSECONDS = -8_640_000_000_000_000_000_000n;
  */
 export const MAX_EPOCH_NANOSECONDS = 8_640_000_000_000_000_000_000n;
 
+/** TC39 `CheckISODaysRange`: a date may sit at most 10^8 days from the Unix epoch. */
+export const MAX_ISO_EPOCH_DAYS = 100_000_000;
+
 /**
  * Digits in `MAX_EPOCH_NANOSECONDS` (22) — the longest a decimal form of an in-range
  * epoch-nanosecond value can be, sign excluded.

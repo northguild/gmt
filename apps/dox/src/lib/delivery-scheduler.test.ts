@@ -17,6 +17,7 @@ import {
 import {
   CUSTOM_PRESET_ID,
   DELIVERY_PRESETS,
+  legCalls,
   legsOf,
   matchPreset,
   optionsOf,
@@ -158,6 +159,67 @@ describe("matchPreset", () => {
       ],
     };
     expect(matchPreset(state)).toBe(CUSTOM_PRESET_ID);
+  });
+});
+
+describe("legCalls", () => {
+  const journey = (preset: (typeof DELIVERY_PRESETS)[number]) => {
+    const legs = preset.legs.map(legObject);
+    const options =
+      preset.startTimeZone === ""
+        ? undefined
+        : { startTimeZone: preset.startTimeZone };
+    return { legs, facts: collectJourneyFacts(legs, options, lib) };
+  };
+
+  it("gives, for every leg of every made journey, the arrival and local arrival scheduleDelivery reports", () => {
+    let checked = 0;
+    for (const preset of DELIVERY_PRESETS) {
+      const { legs, facts } = journey(preset);
+      if (facts.result === null) continue;
+      facts.result.legTimes.forEach((legTime, k) => {
+        const calls = legCalls(facts, legs, k, lib)!;
+        expect({ preset: preset.id, k, arrival: calls.arrival }).toEqual({
+          preset: preset.id,
+          k,
+          arrival: legTime.arrival,
+        });
+        expect({ preset: preset.id, k, local: calls.local }).toEqual({
+          preset: preset.id,
+          k,
+          local: legTime.localArrival,
+        });
+        checked += 1;
+      });
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it("passes on exactly what each call was given", () => {
+    const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
+    const { legs, facts } = journey(preset);
+    const calls = legCalls(facts, legs, 0, lib)!;
+    expect(calls.departure).toBe(facts.departures[0]);
+    expect(calls.duration).toBe("PT46H");
+    expect(calls.zone).toBe("America/Los_Angeles");
+    expect(calls.arrival).toBe(transitTime(calls.departure, "PT46H"));
+    expect(calls.local).toBe(etaAtZone(calls.arrival, "America/Los_Angeles"));
+  });
+
+  it("returns a sentinel, not a guess, for a duration that is not one", () => {
+    const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
+    const legs = preset.legs.map(legObject);
+    legs[0] = { ...legs[0]!, duration: "soon" };
+    const facts = collectJourneyFacts(legs, undefined, lib);
+    const calls = legCalls(facts, legs, 0, lib)!;
+    expect(calls.arrival).toBe("");
+    expect(calls.local).toBe("");
+  });
+
+  it("is null for a leg the journey does not have", () => {
+    const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
+    const { legs, facts } = journey(preset);
+    expect(legCalls(facts, legs, 9, lib)).toBeNull();
   });
 });
 

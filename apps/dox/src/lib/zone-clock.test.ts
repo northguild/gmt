@@ -1,11 +1,11 @@
 /// <reference types="vitest/globals" />
 
 /**
- * The caches in `zone-clock.ts`, which are the only place this module can be
- * wrong in a way the widgets cannot see.
+ * `zone-clock.ts`: the readings every clock widget shows, where a wrong answer
+ * is one the widgets cannot see.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readZoneAt, readZoneNow } from "./zone-clock";
 
 /* `readZoneAt` takes a zoned anchor, the shape `multi-zone-scrubber.ts`'s
@@ -13,35 +13,65 @@ import { readZoneAt, readZoneNow } from "./zone-clock";
 const at = (utc: string) => `${utc}+00:00[UTC]`;
 
 describe("readZoneAt", () => {
-  it("does not let one year's DST answer stand in for another's", () => {
-    /* The cache is keyed on the zone, the year and the offset, and the year is
-       what this pins. Turkey observed DST at +03:00 until 2016 and has been
-       permanently +03:00 since, so the same zone and the same offset give
-       opposite answers in the two years. Keyed on (zone, offset) alone, the
-       first of these answered for both. */
-    const then = readZoneAt("Europe/Istanbul", at("2016-07-01T09:00:00"));
+  it("answers for the instant read, not for another year at the same offset", () => {
+    /* Turkey's clocks went forward in March 2016 and were never put back: until
+       then +03:00 was summer time, after it +03:00 is the standard offset. The
+       same zone and offset give different answers by date. */
+    const in2015 = readZoneAt("Europe/Istanbul", at("2015-07-01T09:00:00"));
+    const lastSummer = readZoneAt("Europe/Istanbul", at("2016-07-01T09:00:00"));
+    const winter2016 = readZoneAt("Europe/Istanbul", at("2016-12-01T09:00:00"));
     const now = readZoneAt("Europe/Istanbul", at("2026-07-01T09:00:00"));
 
-    expect(then.ok).toBe(true);
-    expect(now.ok).toBe(true);
-    expect(then.offset).toBe("+03:00");
-    expect(now.offset).toBe("+03:00");
-    expect(then.inDst).toBe(true);
+    for (const r of [in2015, lastSummer, winter2016, now]) {
+      expect(r.ok).toBe(true);
+    }
+    expect(in2015.inDst).toBe(true);
+    // The advance was never undone, so the library reads 2016 as standard time.
+    expect(lastSummer.inDst).toBe(false);
+    expect(winter2016.inDst).toBe(false);
     expect(now.inDst).toBe(false);
+    expect(now.observesDst).toBe(false);
   });
 
-  it("gives the same answer whichever year is read first", async () => {
-    /* The reverse order, to catch a cache that is merely order-dependent. The
-       cache is module state and every test in this file shares one module, so
-       by now the test above has filled both of these keys and plain reads
-       would be cache hits whatever the cache did. A fresh module starts it
-       empty, so the 2026 answer really is computed first. */
-    vi.resetModules();
-    const { readZoneAt: fresh } = await import("./zone-clock");
-    const now = fresh("Europe/Istanbul", at("2026-07-01T09:00:00"));
-    const then = fresh("Europe/Istanbul", at("2016-07-01T09:00:00"));
-    expect(now.inDst).toBe(false);
-    expect(then.inDst).toBe(true);
+  it("gives the same answer whichever date is read first", () => {
+    const first = readZoneAt("Europe/Istanbul", at("2026-07-01T09:00:00"));
+    const second = readZoneAt("Europe/Istanbul", at("2015-07-01T09:00:00"));
+    const again = readZoneAt("Europe/Istanbul", at("2026-07-01T09:00:00"));
+    expect(first.inDst).toBe(again.inDst);
+    expect(second.inDst).toBe(true);
+  });
+
+  it("is not keyed on zone, year and offset: Asuncion in January and in December 2024", () => {
+    /* Same zone, same year, same -03:00 offset; in daylight time in January and
+       not in December (it kept -03:00 and left daylight time for good). */
+    const january = readZoneAt("America/Asuncion", at("2024-01-15T15:00:00"));
+    const december = readZoneAt("America/Asuncion", at("2024-12-01T15:00:00"));
+    expect(january.offset).toBe("-03:00");
+    expect(december.offset).toBe("-03:00");
+    expect(january.inDst).toBe(true);
+    expect(december.inDst).toBe(false);
+    // And in the other order.
+    expect(
+      readZoneAt("America/Asuncion", at("2024-12-01T15:00:00")).inDst,
+    ).toBe(false);
+    expect(
+      readZoneAt("America/Asuncion", at("2024-01-15T15:00:00")).inDst,
+    ).toBe(true);
+  });
+
+  it("says whether a zone observes DST at the instant read", () => {
+    expect(
+      readZoneAt("America/New_York", at("2024-01-15T12:00:00")).observesDst,
+    ).toBe(true);
+    expect(
+      readZoneAt("Asia/Tokyo", at("2024-01-15T12:00:00")).observesDst,
+    ).toBe(false);
+    expect(
+      readZoneAt("Europe/Istanbul", at("2015-01-15T12:00:00")).observesDst,
+    ).toBe(true);
+    expect(
+      readZoneAt("Europe/Istanbul", at("2026-01-15T12:00:00")).observesDst,
+    ).toBe(false);
   });
 
   it("still separates the two sides of a transition within one year", () => {

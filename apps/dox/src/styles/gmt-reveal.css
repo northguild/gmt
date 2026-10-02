@@ -4,9 +4,10 @@
  * into view. This sheet only owns the *visual* side (hidden state, transition,
  * per-child stagger); it is inert without that script.
  *
- * Scoped entirely behind the data-reveal-group attribute so it can never
- * leave an unrelated CardGrid (or anything else) permanently invisible on a
- * page that doesn't also load the observer script.
+ * Scoped entirely behind the data-reveal-group attribute, and the hidden state
+ * behind `html.gmt-reveal-ready`, which the script adds only when it is about to
+ * observe (motion allowed, IntersectionObserver present). Without the script, or
+ * with reduced motion, nothing is ever hidden.
  *
  * Every rule below is doubled: once for a group whose real children are the
  * staggered items directly (WhyDateBug's <ul>, WhyDateAlternatives' <ol>),
@@ -16,8 +17,8 @@
  * extra, un-staggered block.
  */
 
-[data-reveal-group] > *:not(.card-grid),
-[data-reveal-group] > .card-grid > * {
+html.gmt-reveal-ready [data-reveal-group] > *:not(.card-grid),
+html.gmt-reveal-ready [data-reveal-group] > .card-grid > * {
   opacity: 0;
   transform: translateY(0.9rem);
   transition:
@@ -25,8 +26,8 @@
     transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-[data-reveal-group].gmt-reveal-in > *:not(.card-grid),
-[data-reveal-group].gmt-reveal-in > .card-grid > * {
+html.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > *:not(.card-grid),
+html.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > .card-grid > * {
   opacity: 1;
   transform: translateY(0);
 }

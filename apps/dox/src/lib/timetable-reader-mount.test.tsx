@@ -195,6 +195,65 @@ describe("mountTimetableReader", () => {
     }
   });
 
+  /* The page path: the server renders the default template and the mount is
+     then handed the seed from the URL. The rail path renders the template with
+     the seed, which hid these. */
+  describe("a seed applied to the default template (the tool page)", () => {
+    it("keeps a seeded offset the Offset select had no option for", async () => {
+      const { root } = await mount(
+        {
+          startTimeZone: "America/New_York",
+          departures: ["2024-11-03T01:30:00", "2024-11-03T01:30:00"],
+          offsets: ["", "-05:00"],
+          duration: "PT1H",
+          timeZone: "America/New_York",
+        },
+        {},
+      );
+      expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("-05:00");
+      expect(q(root, "row-2-display").textContent).toContain(
+        "2024-11-03T01:30:00-05:00",
+      );
+    });
+
+    it("reads the page's own Worth trying link (an offset in a skipped hour) as NO SIGNAL", async () => {
+      const { root } = await mount(
+        {
+          startTimeZone: "America/New_York",
+          duration: "PT1H",
+          timeZone: "America/New_York",
+          departure1: "2024-03-10T02:30:00",
+          offset1: "-05:00",
+        },
+        {},
+      );
+      expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("-05:00");
+      expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
+    });
+
+    it("keeps a zone outside the curated list and reads it", async () => {
+      const { root } = await mount(
+        {
+          startTimeZone: "America/New_York",
+          duration: "PT1H",
+          timeZone: "Europe/Helsinki",
+          departure1: "2024-06-15T10:00:00",
+        },
+        {},
+      );
+      expect(q<HTMLSelectElement>(root, "zone").value).toBe("Europe/Helsinki");
+      expect(q(root, "timetable-output").textContent).not.toBe("NO SIGNAL");
+    });
+  });
+
+  it("keeps row 2's -05:00 when the offset-picks preset is chosen after another", async () => {
+    const { root } = await mount();
+    choosePreset(root, "published-local");
+    choosePreset(root, "offset-picks");
+    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("-05:00");
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe("offset-picks");
+  });
+
   it("is inert when aborted before the library loads", async () => {
     const root = document.createElement("div");
     root.innerHTML = renderTimetableReaderTemplate();

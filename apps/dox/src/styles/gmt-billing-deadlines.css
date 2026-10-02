@@ -42,6 +42,12 @@
   color: var(--gmt-ice);
 }
 
+/* One line stays reserved while empty, so the text arriving later does not move
+   what is below it. */
+.gmt-billing-verdicts > li:empty::before {
+  content: "\200b";
+}
+
 .gmt-billing-deadlines {
   margin: 0;
   font-family: var(--gmt-font-mono);

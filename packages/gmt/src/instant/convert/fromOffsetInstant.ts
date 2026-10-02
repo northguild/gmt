@@ -33,7 +33,9 @@ import type { OffsetInstant } from "./toOffsetInstant";
  * - With a `timeZone`, a sub-minute offset is *written* rounded to the minute, because RFC
  *   9557 has no field for the seconds — `Africa/Monrovia`'s `-00:44:30` renders as `-00:45`.
  *   The bracketed zone is what resolves it, so the instant stays exact and the round trip
- *   returns `-00:44:30`. Without a `timeZone` there is no zone to resolve against, so the
+ *   returns `-00:44:30`. Two exceptions, both Temporal's own: a wall time repeated inside
+ *   a sub-minute offset change reads back as its first pass (see `isValidInstant`), and a
+ *   string whose local date is −271821-04-19 is refused by `toOffsetInstant`. Without a `timeZone` there is no zone to resolve against, so the
  *   full `±HH:MM:SS` is written instead; that is ISO 8601, not RFC 9557.
  * - Returns `""` on invalid input.
  *

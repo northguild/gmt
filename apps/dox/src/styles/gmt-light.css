@@ -180,6 +180,13 @@ a[rel="next"] .link-title {
   color: var(--gmt-ice);
 }
 
+/* The caution title read 6.49:1 on its tinted fill with Starlight's orange. The
+   amber family's own ink is 8.16:1 (gmt-tokens.css), so the title and its icon
+   (currentColor) take it. */
+[data-theme="light"] .starlight-aside--caution .starlight-aside__title {
+  color: var(--gmt-signal-ink);
+}
+
 [data-theme="light"] .starlight-aside__content,
 [data-theme="light"] .starlight-aside__content p {
   color: var(--gmt-ice);

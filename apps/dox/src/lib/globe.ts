@@ -58,6 +58,7 @@ import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
 import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
+import { enter, holdEntrance } from "./enter";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -147,6 +148,9 @@ export async function initGlobe(
         (id) => focusZone(id),
       )
     : null;
+  /* The list is ready now but arrives with the globe, a beat behind it. The
+     hold releases itself if the renderer never gets that far. */
+  const releaseClocks = clockPanel ? holdEntrance(clockPanel) : () => {};
 
   let engine: GlobeEngineWithHitTest;
   try {
@@ -574,7 +578,8 @@ export async function initGlobe(
 
   // --- start ---------------------------------------------------------------
   engine.setMarkers(buildMarkers());
-  revealCanvas(host, zoomControls, reducedMotion());
+  revealCanvas(host, zoomControls);
+  releaseClocks({ delayMs: 80 });
   void loadBoundaries();
   if (defaultZone) setSelected(defaultZone);
 
@@ -608,52 +613,27 @@ export async function initGlobe(
 /**
  * The first-frame reveal.
  *
- * The canvas is drawn while still transparent and slightly scaled down, so the
- * fade-in (see `gmt-globe.css`) is the viewer's first sight of the globe rather
- * than a raw pop-in. The `gmt-globe-zoom-ready` class does not itself show the
- * zoom controls — they fade in on hover or focus — it arms them, so they cannot
- * flash into view mid-reveal because the pointer happened to be over the stage.
+ * The canvas is drawn while still hidden, so the shared entrance (`enter()`,
+ * `.gmt-enter`) is the viewer's first sight of the globe rather than a raw
+ * pop-in. The `gmt-globe-zoom-ready` class does not itself show the zoom
+ * controls — they fade in on hover or focus — it arms them, so they cannot
+ * flash into view mid-reveal because the pointer happened to be over the
+ * stage. `enter()` arms them at once under reduced motion, and its timer arms
+ * them even if animationend never comes: the controls are the keyboard and
+ * touch path to zoom, so losing them is losing the feature.
  */
 function revealCanvas(
   host: HTMLElement,
   zoomControls: HTMLElement | null,
-  reduceMotion: boolean,
 ): void {
   const canvas = host.querySelector<HTMLCanvasElement>(
     "canvas.gmt-globe-canvas",
   );
   if (!canvas) return;
   requestAnimationFrame(() => {
-    canvas.classList.add("gmt-globe-canvas-ready");
-
-    const arm = () => zoomControls?.classList.add("gmt-globe-zoom-ready");
-    if (reduceMotion) {
-      arm();
-      return;
-    }
-
-    /* Not `{ once: true }`: the canvas transitions `opacity` and `transform`
-       together and fires a separate event for each, often opacity first. `once`
-       would consume the listener on that one and never see the transform event
-       it is waiting for. */
-    const onTransitionEnd = (event: TransitionEvent) => {
-      if (event.propertyName !== "transform") return;
-      clearTimeout(fallback);
-      canvas.removeEventListener("transitionend", onTransitionEnd);
-      arm();
-    };
-    canvas.addEventListener("transitionend", onTransitionEnd);
-
-    /* A timer as well, because the zoom controls must never end up permanently
-       unreachable. `transitionend` does not fire if the transition is
-       interrupted, if the element is not rendered when it would have run, or if
-       the document timeline is not advancing — and the controls are the keyboard
-       and touch path to zoom, so losing them is losing the feature. The delay
-       comfortably clears the 0.5s reveal in gmt-globe.css. */
-    const fallback = setTimeout(() => {
-      canvas.removeEventListener("transitionend", onTransitionEnd);
-      arm();
-    }, 1000);
+    enter(canvas, {
+      onEntered: () => zoomControls?.classList.add("gmt-globe-zoom-ready"),
+    });
   });
 }
 

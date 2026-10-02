@@ -20,6 +20,9 @@ export function initScrollReveal(root: ParentNode = document): void {
     return;
   }
 
+  /* The hidden state exists only from here: no script, no hiding. */
+  document.documentElement.classList.add("gmt-reveal-ready");
+
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {

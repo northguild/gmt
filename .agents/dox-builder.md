@@ -93,6 +93,17 @@ These bind every change.
     an exact-ish Astro major. Keep the generator emitting plain MDX so only the site shell
     is coupled to the framework.
 
+13. **No left-border-only cards.** Never give a card, callout, row or result block a coloured
+    left edge as its only accent: no `border-left` / `border-inline-start` stripe, no left
+    `inset` box-shadow, no left `::before` bar. The owner rejects it as the tell-tale of AI
+    design. If a card needs an accent edge, use a bottom border; otherwise give it a full
+    bevelled border with a tinted fill.
+
+14. **Readouts hold still while the reader drags.** A value that updates under a handle must
+    not move or resize its card or any neighbour. Pin paired readouts to opposite edges
+    (`justify-content: space-between`), reserve the width of the longest value with tabular
+    figures and `white-space: nowrap`, and never let a readout's text wrap mid-drag.
+
 ## Process
 
 1. Read the execution spec and the `context/dox/built.md` sections it names.

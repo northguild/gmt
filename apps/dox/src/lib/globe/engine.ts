@@ -136,8 +136,17 @@ export async function createGlobeEngine(
     return create(init);
   }
 
+  let adoptedBefore = false;
+
   /** Attach a renderer, wire its failure hook, size it and draw once. */
   function adoptRenderer(next: GlobeRenderer): void {
+    /* The first canvas is brought in by the host's entrance (`revealCanvas` in
+       `../globe.ts`), which runs once. A renderer adopted after a device loss
+       has a fresh canvas that nothing will ever reveal, and the stylesheet keeps
+       a canvas without `data-entered` at opacity 0 — so it is marked entered
+       here, and the globe comes back instead of staying blank. */
+    if (adoptedBefore) next.canvas.setAttribute("data-entered", "");
+    adoptedBefore = true;
     renderer = next;
     host.setAttribute(RENDERER_ATTRIBUTE, next.kind);
     next.setTheme(theme);

@@ -263,6 +263,70 @@ export const showCutoffCountdownInput = z.object({
 });
 
 /**
+ * Planned and actual times judged by `scheduleDeviation`,
+ * `classifyPunctuality` and `punctualityRate` (TRAN-57). `late` is required:
+ * GMT holds no default tolerance, so a model must ask rather than guess what
+ * on time means. `early` and `compareLate` are optional.
+ */
+export const showPunctualityBoardInput = z.object({
+  pairs: z
+    .array(z.object({ planned: dateTimeSchema, actual: dateTimeSchema }))
+    .min(1)
+    .max(6),
+  late: durationSchema,
+  early: durationSchema.optional(),
+  compareLate: durationSchema.optional(),
+});
+
+/**
+ * The timestamps of one event (TRAN-57): each a class (PLN, EST, REQ, ACT), the
+ * time it names and when it was recorded. `bestAvailable` picks one and
+ * `estimateDrift` measures how far the estimate moved. `tolerance` is optional.
+ */
+export const showEtaDriftInput = z.object({
+  events: z
+    .array(
+      z.object({
+        classifier: z.enum(["PLN", "EST", "REQ", "ACT"]),
+        at: dateTimeSchema,
+        recordedAt: dateTimeSchema,
+      }),
+    )
+    .min(1)
+    .max(6),
+  tolerance: durationSchema.optional(),
+});
+
+/**
+ * An arrival against a timetable (TRAN-57): `nextDeparture` finds the first
+ * departure at or after the arrival plus the minimum connection. Give either
+ * `departures` (a list) or `headway` with `from` and `to` (a service every N
+ * minutes). `onwardDuration` and `onwardZone` let the widget hand the result to
+ * the Delivery Scheduler.
+ */
+export const showDepartureBoardInput = z.object({
+  after: dateTimeSchema,
+  departures: z.array(dateTimeSchema).min(1).max(6).optional(),
+  headway: durationSchema.optional(),
+  from: dateTimeSchema.optional(),
+  to: dateTimeSchema.optional(),
+  minimumConnection: durationSchema.optional(),
+  onwardDuration: durationSchema.optional(),
+  onwardZone: zoneSchema.optional(),
+});
+
+/**
+ * The Zone Planner: zones pinned side by side on one slider, so a meeting time
+ * can be proposed across them. `time` is the reference instant the slider shifts
+ * from, a UTC instant ending in `Z`; without it the planner starts at now,
+ * rounded forward to the next 5 minutes.
+ */
+export const showZonePlannerInput = z.object({
+  zones: z.array(zoneSchema).min(1).max(8),
+  time: z.string().min(10).max(64).optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -290,7 +354,11 @@ export type DoxToolName =
   | "showCrossingClock"
   | "showCutoffStack"
   | "showCutoffRuler"
-  | "showCutoffCountdown";
+  | "showCutoffCountdown"
+  | "showPunctualityBoard"
+  | "showEtaDrift"
+  | "showDepartureBoard"
+  | "showZonePlanner";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -307,6 +375,10 @@ export const DOX_TOOL_INPUTS = {
   showCutoffStack: showCutoffStackInput,
   showCutoffRuler: showCutoffRulerInput,
   showCutoffCountdown: showCutoffCountdownInput,
+  showPunctualityBoard: showPunctualityBoardInput,
+  showEtaDrift: showEtaDriftInput,
+  showDepartureBoard: showDepartureBoardInput,
+  showZonePlanner: showZonePlannerInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -414,6 +486,34 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks whether a cut-off or deadline has passed at a given time, or how much time is left or how late they are",
     args: "cutoff (ISO date-time with an offset or a bracketed zone), now (optional ISO date-time with an offset or zone; omit it to use the reader's own clock), timeZone (IANA id of the clock both are shown on)",
   },
+  {
+    name: "showPunctualityBoard",
+    purpose:
+      "Planned and actual times judged by scheduleDeviation, classifyPunctuality and punctualityRate on one axis, with the tolerance band drawn and draggable: each deviation in exact time, early, on time or late with both edges outside, and the on-time rate.",
+    when: "the reader asks whether an arrival or departure was late, early or on time, by how much, or what share of several was on time under a tolerance",
+    args: "pairs (1 to 6, each a planned and an actual ISO date-time with an offset or a bracketed zone), late (the late tolerance as an ISO 8601 duration such as PT15M or P1D; required: there is no default, so ask for it), early (optional early tolerance; without it an early arrival is on time), compareLate (optional second late tolerance to compare side by side, such as PT120M against PT60M)",
+  },
+  {
+    name: "showEtaDrift",
+    purpose:
+      "Planned, estimated, requested and actual timestamps of one event plotted by when each was recorded: the best available pick from bestAvailable with its class beside the naive latest-recorded pick, and how far the estimate moved from estimateDrift, against an optional tolerance.",
+    when: "the reader asks which of several planned, estimated, requested or actual times to show for an arrival or event, or how far an ETA or estimate moved between revisions",
+    args: "events (1 to 6, each a classifier PLN, EST, REQ or ACT, an at time and a recordedAt time, both ISO date-times with an offset or a bracketed zone), tolerance (optional ISO 8601 duration such as PT8H; exceedsTolerance is true only when the drift is greater than it)",
+  },
+  {
+    name: "showDepartureBoard",
+    purpose:
+      "A timetable on a time rail with the arrival as a draggable marker and the minimum connection as a hatched bar: the departure nextDeparture says the arrival can make, beside the naive pick with no connection time, with a service window's end excluded and a link to hand the result to the Delivery Scheduler.",
+    when: "the reader asks which departure from a timetable, or from a service every N minutes, an arrival can still make after a connection or boarding time",
+    args: "after (the arrival: ISO date-time with an offset or a bracketed zone written with its offset), departures (1 to 6 departures, each with an offset) or headway with from and to (a service every headway, an ISO 8601 duration such as PT20M, from the first departure up to but never at to), minimumConnection (optional ISO 8601 duration such as PT45M), onwardDuration and onwardZone (optional: the next leg's duration and the IANA id of its destination, to hand the result to the Delivery Scheduler). Give either departures or headway, from and to.",
+  },
+  {
+    name: "showZonePlanner",
+    purpose:
+      "Several zones pinned side by side on one slider: every pinned clock moves together, each says whether it is in daylight saving at that instant, and a clock change that falls inside the shift is named on the zone it affects. A button jumps to the next change among the zones shown.",
+    when: "the reader asks what time it is in several places at once, or wants to find or propose a meeting time across zones, or asks which of their zones changes clocks first",
+    args: "zones (1 to 8 IANA ids, in the order to show them), time (optional UTC instant ending in Z, such as 2026-03-08T06:45:00Z, that the slider shifts from; omit it to start at now, rounded forward to the next 5 minutes). Never invent a zone.",
+  },
 ];
 
 /**
@@ -478,6 +578,22 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[13].purpose,
     inputSchema: showCutoffCountdownInput,
   }),
+  showPunctualityBoard: tool({
+    description: DOX_TOOL_DOCS[14].purpose,
+    inputSchema: showPunctualityBoardInput,
+  }),
+  showEtaDrift: tool({
+    description: DOX_TOOL_DOCS[15].purpose,
+    inputSchema: showEtaDriftInput,
+  }),
+  showDepartureBoard: tool({
+    description: DOX_TOOL_DOCS[16].purpose,
+    inputSchema: showDepartureBoardInput,
+  }),
+  showZonePlanner: tool({
+    description: DOX_TOOL_DOCS[17].purpose,
+    inputSchema: showZonePlannerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -515,6 +631,10 @@ export const ENABLED_TOOL_NAMES = [
   "showCutoffStack",
   "showCutoffRuler",
   "showCutoffCountdown",
+  "showPunctualityBoard",
+  "showEtaDrift",
+  "showDepartureBoard",
+  "showZonePlanner",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

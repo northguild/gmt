@@ -235,11 +235,27 @@
   --gmt-duration-fast: 120ms;
   --gmt-duration-med: 240ms;
   --gmt-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* The arrival gesture (.gmt-enter, lib/enter.ts): the globe's fade from 92%
+     scale on a spring curve, shared by every landmark visual. */
+  --gmt-enter-duration: 0.5s;
+  --gmt-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
+  --gmt-enter-scale: 0.92;
 
   /* ---- Radii ---- */
   --gmt-radius-sm: 4px;
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
+
+  /* ---- Control dimensions (gmt-form-controls.css) ----
+   * Not colours, so they do not change per theme. The range thumb width is read
+   * by the Cut-off Countdown axis so the thumb and its "now" marker align. */
+  --gmt-range-hit-h: 28px;
+  --gmt-range-track-h: 10px;
+  --gmt-range-thumb-w: 16px;
+  --gmt-range-thumb-h: 26px;
+  --gmt-handle-w: 14px;
+  --gmt-handle-h: 24px;
+  --gmt-handle-hit: 44px;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently
@@ -392,6 +408,17 @@
   --gmt-purple-ink: var(--gmt-dst-purple);
   --gmt-signal-ink: var(--gmt-signal);
 
+  /* Series 1-4: the Delivery Scheduler's four leg pairs, named once so a series
+     colour means the same on every chart. Marks, stems, edges, swatches only. */
+  --gmt-series-1: var(--gmt-cyan);
+  --gmt-series-1-ink: var(--gmt-cyan-ink);
+  --gmt-series-2: var(--gmt-spring);
+  --gmt-series-2-ink: var(--gmt-spring-ink);
+  --gmt-series-3: var(--gmt-dst-purple);
+  --gmt-series-3-ink: var(--gmt-purple-ink);
+  --gmt-series-4: var(--gmt-severity-high);
+  --gmt-series-4-ink: var(--gmt-severity-high-ink);
+
   /* `--gmt-cyan` was the biggest of these: it is the site's link/accent
      colour, so every `color:` use of `--gmt-cyan` *and* `--gmt-cyan-bright`
      (the same problem — light-theme #0e7490 only reaches ~5:1) now reads
@@ -489,11 +516,12 @@
   /* --gmt-syntax-fn and --gmt-syntax-str measured 5.96:1 and
      5.95:1 against white — below the 7:1 code-frame floor. Darkened, same
      hue, to 7.71:1 and 7.84:1 (WCAG relative-luminance formula). Dark theme
-     already clears 7:1 and is untouched. --gmt-syntax-num was not measured
-     and is left as-is. */
+     already clears 7:1 and is untouched. --gmt-syntax-num was #aa0982, 6.56:1
+     against white; it now takes the same hue family as its dark value
+     (orange) through --gmt-signal-ink, 8.16:1 against white. */
   --gmt-syntax-fn: #315192;
   --gmt-syntax-str: #7d403f;
-  --gmt-syntax-num: #aa0982;
+  --gmt-syntax-num: var(--gmt-signal-ink);
 
   --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
 

@@ -21,7 +21,9 @@ export type DefectId =
   | "D7"
   | "D8"
   | "D10"
-  | "D11";
+  | "D11"
+  | "D12"
+  | "D13";
 
 /**
  * Zoned defects worked around in `internal/zonedWallClock*`: the range-limit defects (upstream
@@ -766,6 +768,195 @@ const d9Repros: readonly Repro[] = (
   ];
 });
 
+/** The epoch nanoseconds `Temporal.ZonedDateTime.from(item)` reads, or the error's name. */
+function zonedStringEpoch(item: string): string {
+  try {
+    return String(Temporal.ZonedDateTime.from(item).epochNanoseconds);
+  } catch (error) {
+    return error instanceof Error ? error.name : "Error";
+  }
+}
+
+/**
+ * D12 (`internal/zonedWallClock.ts` defect 4): `ToTemporalZonedDateTime` matches a string's
+ * offset against the zone by minutes even when the offset is written with seconds, where TC39
+ * requires match-exactly ("If offsetParseResult contains more than one MinuteSecond Parse Node,
+ * set matchBehaviour to match-exactly"). Expected values: test262
+ * `test/intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js` ("rounded
+ * HH:MM:SS not accepted in string offset (offset=reject)", and the Pacific/Niue edge case,
+ * "-11:20:00 is accepted as -11:20:00": `reference + 20_000_000_000n`). The test writes the
+ * Monrovia time as `T12`; `T12:00` is the same wall time.
+ */
+const d12Repros: Repro[] = [
+  {
+    defect: "D12",
+    calendar: "iso8601",
+    name: "roundedSecondsRejected",
+    expected: "RangeError",
+    run: () => zonedStringEpoch("1970-01-01T12:00-00:45:00[Africa/Monrovia]"),
+  },
+  {
+    defect: "D12",
+    calendar: "iso8601",
+    name: "exactSecondsSecondPass",
+    expected: "-543069601000000000",
+    run: () => zonedStringEpoch("1952-10-15T23:59:59-11:20:00[Pacific/Niue]"),
+  },
+];
+
+/** More `Intl.DateTimeFormat#format` reads than this for one transition lookup is a stalled search. */
+const D13_INTL_READ_LIMIT = 20_000;
+
+/**
+ * `run()`'s output, or a note when it made more than `D13_INTL_READ_LIMIT` reads through
+ * `Intl.DateTimeFormat.prototype.format`, where the read then throws so a search that would never
+ * return stops. Polyfill 0.5.1 reads every offset through that getter.
+ */
+function withBoundedOffsetReads(run: () => string): string {
+  const prototype = Intl.DateTimeFormat.prototype;
+  const original = Object.getOwnPropertyDescriptor(prototype, "format");
+  const originalGet = original?.get;
+  if (original === undefined || originalGet === undefined) {
+    return "cannot bound Intl.DateTimeFormat#format";
+  }
+
+  let reads = 0;
+  Object.defineProperty(prototype, "format", {
+    configurable: true,
+    get(this: Intl.DateTimeFormat) {
+      const format = originalGet.call(this) as (date?: Date | number) => string;
+      return (date?: Date | number) => {
+        reads++;
+        if (reads > D13_INTL_READ_LIMIT) {
+          throw new RangeError(`more than ${D13_INTL_READ_LIMIT} offset reads`);
+        }
+        return format(date);
+      };
+    },
+  });
+  try {
+    return run();
+  } finally {
+    Object.defineProperty(prototype, "format", original);
+  }
+}
+
+/** America/Boa_Vista's 2000-10-08T04:00:00Z advance (−04:00 → −03:00, local midnight skipped). */
+const BOA_VISTA_ADVANCE = "2000-10-08T01:00:00-03:00[America/Boa_Vista]";
+
+/**
+ * D13 (`internal/zonedWallClock.ts` defect 5): `GetNamedTimeZoneNextTransition` and
+ * `…PreviousTransition` sample the offset every 14 days. Two changes inside one step that return
+ * to the same offset are skipped (America/Boa_Vista 2000-10-08 and 2000-10-15, 601,200 s apart),
+ * so `GetStartOfDay` for the skipped midnight of 2000-10-08 fails too; three different offsets in
+ * one step (Europe/Riga 1944-10-02 and 1944-10-12) make `bisect` loop for ever, its assertion
+ * compiled out. Spec: TC39 Temporal `GetNamedTimeZoneNextTransition`, "the smallest integer
+ * greater than epochNanoseconds" at which the offset changes. Expected values: Node 26.10.0's
+ * native Temporal and `zdump -v` (tz 2026c). The polyfill's main branch (a79c6a1, per-zone search
+ * windows, in no release) fixes the zones it lists but leaves `bisect` unchanged, and its 17-day
+ * window for Africa/El_Aaiun holds three offsets in 1976: `stall.nextElAaiun` covers that, so the
+ * workaround stays until every repro here passes.
+ *
+ * Order matters: the capability probe stops at the first failing repro, so the `skip.*` repros,
+ * which cannot stall, come before `stall.*`, which a runtime that fails them never runs in
+ * process. The canary runs `stall.*` under `withBoundedOffsetReads`.
+ */
+const d13Repros: readonly Repro[] = [
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "skip.nextBoaVista",
+    expected: BOA_VISTA_ADVANCE,
+    run: () =>
+      String(
+        Temporal.Instant.from("2000-10-01T12:00:00Z")
+          .toZonedDateTimeISO("America/Boa_Vista")
+          .getTimeZoneTransition("next"),
+      ),
+  },
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "skip.previousBoaVista",
+    expected: "2000-10-14T23:00:00-04:00[America/Boa_Vista]",
+    run: () =>
+      String(
+        Temporal.Instant.from("2000-10-20T12:00:00Z")
+          .toZonedDateTimeISO("America/Boa_Vista")
+          .getTimeZoneTransition("previous"),
+      ),
+  },
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "skip.startOfDayBoaVista",
+    expected: BOA_VISTA_ADVANCE,
+    run: () =>
+      String(
+        Temporal.PlainDate.from("2000-10-08").toZonedDateTime(
+          "America/Boa_Vista",
+        ),
+      ),
+  },
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "skip.hoursInDayNoronha",
+    expected: "23",
+    run: () =>
+      String(
+        Temporal.ZonedDateTime.from("2000-10-08T12:00[America/Noronha]")
+          .hoursInDay,
+      ),
+  },
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "stall.nextRiga",
+    expected: "1944-10-02T02:00:00+01:00[Europe/Riga]",
+    run: () =>
+      withBoundedOffsetReads(() =>
+        String(
+          Temporal.Instant.from("1944-04-15T12:00:00Z")
+            .toZonedDateTimeISO("Europe/Riga")
+            .getTimeZoneTransition("next"),
+        ),
+      ),
+  },
+  {
+    defect: "D13",
+    calendar: "iso8601",
+    name: "stall.nextSimferopol",
+    expected: "1944-04-03T03:00:00+02:00[Europe/Simferopol]",
+    run: () =>
+      withBoundedOffsetReads(() =>
+        String(
+          Temporal.Instant.from("1943-10-15T12:00:00Z")
+            .toZonedDateTimeISO("Europe/Simferopol")
+            .getTimeZoneTransition("next"),
+        ),
+      ),
+  },
+  // js-temporal main (a79c6a1) gives Africa/El_Aaiun a 17-day search window. Its changes of
+  // 1976-04-14T01:00:00Z (−01:00 → +00:00) and 1976-05-01T00:00:00Z (+00:00 → +01:00) are 16.958
+  // days apart, so one window holds three offsets and `bisect`, unchanged there, cannot narrow.
+  // 0.5.1's 14-day step passes these two; a release with a79c6a1 alone would not.
+  ...["1976-04-14T00:30:00Z", "1976-03-28T00:30:00Z"].map((from): Repro => ({
+    defect: "D13",
+    calendar: "iso8601",
+    name: `stall.nextElAaiun ${from}`,
+    expected: "1976-04-14T01:00:00+00:00[Africa/El_Aaiun]",
+    run: () =>
+      withBoundedOffsetReads(() =>
+        String(
+          Temporal.Instant.from(from)
+            .toZonedDateTimeISO("Africa/El_Aaiun")
+            .getTimeZoneTransition("next"),
+        ),
+      ),
+  })),
+];
+
 export const repros: readonly Repro[] = [
   ...d9Repros,
   ...zonedARepros,
@@ -776,6 +967,8 @@ export const repros: readonly Repro[] = [
   ...d1ArithmeticRepros,
   d1RelativeToRepro,
   ...d10Repros,
+  ...d12Repros,
+  ...d13Repros,
   ...d6Repros,
   d7Repro,
   d7LeapMonthEndRepro,

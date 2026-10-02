@@ -1,6 +1,7 @@
 ---
 title: Zoned Date Operations
 description: Common mistakes when working with zoned dates and timezones in GMT.
+industries: [core]
 ---
 
 Zoned operations in GMT expose DST disambiguation, calendar annotations, and
@@ -119,8 +120,8 @@ if (r === "") {
 <Mistake
   severity="medium"
   title="Confusing hasDaylightSaving, getDstTransitions, and isInDaylightSaving"
-  description="hasDaylightSaving tells you whether a zone *ever* has DST. getDstTransitions returns the transitions in one year. isInDaylightSaving tells you whether a specific instant is in DST. They answer three different questions."
-  wrongCode={`hasDaylightSaving("America/New_York"); // true — the zone has DST
+  description="hasDaylightSaving tells you whether a zone observes DST around a reference instant. getDstTransitions returns the transitions in one year. isInDaylightSaving tells you whether a specific instant is in DST. They answer three different questions."
+  wrongCode={`hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }); // true — the zone observes DST
 // used to check whether a specific date is in DST — wrong function`}
   rightCode={`import { isInDaylightSaving, getDstTransitions } from "@northguild/gmt/zoned";
 

@@ -258,13 +258,15 @@ function truncatedWallClockUntil(
  */
 function transitionAtOrBefore(
   zoned: Temporal.ZonedDateTime,
+  notBefore: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
   try {
     if (transitionSitsOn(zoned)) {
       return zoned;
     }
 
-    return zonedPreviousTransition(zoned);
+    // The caller ignores a transition before `notBefore`, so the search stops there.
+    return zonedPreviousTransition(zoned, notBefore.epochNanoseconds - 1n);
   } catch {
     return null;
   }
@@ -279,7 +281,7 @@ function transitionSitsOn(zoned: Temporal.ZonedDateTime): boolean {
     return false;
   }
 
-  const next = zonedNextTransition(justBefore);
+  const next = zonedNextTransition(justBefore, zoned.epochNanoseconds);
 
   return next !== null && next.toInstant().equals(zoned.toInstant());
 }
@@ -370,7 +372,7 @@ export function zonedUnitStart(
   let cursor = zoned;
 
   for (let i = 0; i < MAX_TRANSITION_WALKBACK; i++) {
-    const transition = transitionAtOrBefore(cursor);
+    const transition = transitionAtOrBefore(cursor, start);
 
     // A transition exactly on `start` is still checked: Havana's second 00:00 is a unit-aligned
     // own-offset start that the day runs straight through.
@@ -475,7 +477,8 @@ export function nextZonedBucketStart(
 
   for (let i = 0; i < MAX_TRANSITION_WALKBACK; i++) {
     const boundary = nextBoundaryWithinRange(cursor, unit, weekStartsOn);
-    const transition = zonedNextTransition(cursor);
+    // A transition after the boundary changes nothing, so the search stops there.
+    const transition = zonedNextTransition(cursor, boundary?.epochNanoseconds);
 
     if (
       !transition ||
@@ -605,7 +608,9 @@ export function countZonedBuckets(
 
   for (let i = 0; i < MAX_COUNTED_TRANSITIONS; i++) {
     const transition =
-      zonedNextTransition(cursor)?.withCalendar(start.calendarId) ?? null;
+      zonedNextTransition(cursor, startOfEnd.epochNanoseconds)?.withCalendar(
+        start.calendarId,
+      ) ?? null;
 
     if (
       !transition ||

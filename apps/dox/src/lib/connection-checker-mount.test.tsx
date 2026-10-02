@@ -105,7 +105,7 @@ describe("renderConnectionCheckerTemplate", () => {
     expect(input.step).toBe("1");
   });
 
-  it("puts the departure field first in each three-field row, for the CSS :first-child rule that gives it a double share of the width", () => {
+  it("puts the departure field first in each three-field row, as the double-width (gmt-field-wide) field", () => {
     const root = document.createElement("div");
     root.innerHTML = renderConnectionCheckerTemplate();
     const rows = [
@@ -117,6 +117,11 @@ describe("renderConnectionCheckerTemplate", () => {
         "label:first-child input, label:first-child select",
       );
       expect(firstInput?.getAttribute("data-role")).toMatch(/departure$/);
+      expect(
+        row
+          .querySelector("label:first-child")
+          ?.classList.contains("gmt-field-wide"),
+      ).toBe(true);
     }
   });
 });
@@ -236,5 +241,49 @@ describe("mountConnectionChecker", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        inboundDeparture: "2024-06-10T10:00:00+03:00[Europe/Helsinki]",
+        inboundDuration: "PT2H",
+        portZone: "Europe/Helsinki",
+        handlingMinutes: 45,
+        onwardDeparture: "2024-06-10T14:00:00+03:00[Europe/Helsinki]",
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "port-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "connection-output").textContent).not.toBe("NO SIGNAL");
+  });
+});
+
+describe("a handoff at the minimum instant", () => {
+  it("shows the range-edge notice instead of throwing out of the input handler", async () => {
+    const errors: unknown[] = [];
+    const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
+    window.addEventListener("error", onError);
+    try {
+      const { root } = await mount();
+      const set = (role: string, value: string) => {
+        const el = q<HTMLInputElement>(root, role);
+        el.value = value;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      set("inbound-duration", "PT0S");
+      set("handling", "0");
+      set("port-zone", "America/New_York");
+      set("inbound-departure", "-271821-04-20T00:00:00Z");
+      expect(errors.map(String)).toEqual([]);
+      expect(q(root, "handoff-strip").textContent).toContain("NO SIGNAL");
+    } finally {
+      window.removeEventListener("error", onError);
+    }
   });
 });

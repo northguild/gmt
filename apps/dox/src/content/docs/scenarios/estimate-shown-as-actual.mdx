@@ -1,0 +1,41 @@
+---
+title: "An Estimate Shown as the Actual"
+description: A vessel berthed at 12:52. An hour later a late feed delivered an estimate of 13:05, and the dashboard's Actual column now says 13:05.
+industries: [transport]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="An Estimate Shown as the Actual"
+  description="A vessel's berth time is tracked as four records: the plan, an estimate, the actual, and an estimate a late feed delivered after the vessel had berthed. Which time goes in the Actual column?"
+  naiveCode={`// The naive approach: the newest record wins, whatever it claims to be
+const events = [
+  { classifier: "PLN", at: "2024-06-15T12:00:00Z", recordedAt: "2024-06-01T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-15T12:40:00Z", recordedAt: "2024-06-14T00:00:00Z" },
+  { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+  { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+];
+const latest = events.reduce((a, e) => (Date.parse(e.recordedAt) >= Date.parse(a.recordedAt) ? e : a));
+latest.at; // "2024-06-15T13:05:00Z" — shown as the actual, and it is an estimate`}
+  explanation={`One field holds four kinds of time: planned (PLN), estimated (EST), requested (REQ) and actual (ACT), the classes the Digital Container Shipping Association (DCSA) defines. The newest record is not the best one. An estimate recorded after the arrival is still only an estimate. \`bestAvailable\` returns an \`ACT\` whenever one exists, and it returns the class with the value, so the column can be labelled. \`estimateDrift\` reads the late feed as what it is: a revision of the estimate.`}
+  gmtCode={`import { bestAvailable, estimateDrift } from "@northguild/gmt/transport";
+
+const events = [
+  { classifier: "PLN", at: "2024-06-15T12:00:00Z", recordedAt: "2024-06-01T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-15T12:40:00Z", recordedAt: "2024-06-14T00:00:00Z" },
+  { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+  { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+];
+
+bestAvailable(events);
+// { at: "2024-06-15T12:52:00Z", classifier: "ACT" } — the class travels with the value
+estimateDrift(events);
+// { first: "2024-06-15T12:40:00Z", last: "2024-06-15T13:05:00Z", drift: "PT25M", revisions: 2, exceedsTolerance: null } — the late feed is an estimate revision`}
+  fixedSpecId="bestAvailable"
+/>
+
+Open these four records in the [ETA Drift Chart](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D): the best-available pick rings the
+actual, and the naive pick rings the estimate recorded after it. Change the actual's class to EST
+and the plan becomes the best available. The rules are in [Transport: Punctuality and
+Timestamps](/guides/industries/transport-punctuality-and-timestamps/#one-field-four-meanings-bestavailable).

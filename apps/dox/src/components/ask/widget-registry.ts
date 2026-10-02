@@ -58,6 +58,10 @@ import type { TimetableReaderArgs } from "~/lib/timetable-reader-mount";
 import type { CutoffStackArgs } from "~/lib/cutoff-stack-mount";
 import type { CutoffRulerArgs } from "~/lib/cutoff-ruler-mount";
 import type { CutoffCountdownArgs } from "~/lib/cutoff-countdown-mount";
+import type { PunctualityBoardArgs } from "~/lib/punctuality-board-mount";
+import type { EtaDriftArgs } from "~/lib/eta-drift-mount";
+import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
+import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import {
   showBillingDeadlinesInput,
   showConnectionCheckerInput,
@@ -67,12 +71,16 @@ import {
   showCutoffRulerInput,
   showCutoffStackInput,
   showDeliverySchedulerInput,
+  showDepartureBoardInput,
   showDstInspectorInput,
   showDwellLedgerInput,
+  showEtaDriftInput,
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showPunctualityBoardInput,
   showTimetableReaderInput,
+  showZonePlannerInput,
 } from "~/lib/dox-tools";
 import type { MountFn } from "~/lib/widget-mount";
 import type { WidgetKind } from "~/lib/widget-permalink";
@@ -474,6 +482,120 @@ const cutoffCountdownEntry = defineWidget<CutoffCountdownArgs>({
     timeZone ? checkZones([timeZone]) : Promise.resolve(null),
 });
 
+const punctualityEntry = defineWidget<PunctualityBoardArgs>({
+  title: "Punctuality board",
+  kind: "punctuality",
+  parse: (input) => {
+    const result = showPunctualityBoardInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template: every argument is a control value or a row the
+     mount reads again. No zones to check, so no `validate`: the widget shows
+     an invalid time as NO SIGNAL with its reason. */
+  load: () =>
+    import("~/lib/punctuality-board-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderPunctualityBoardTemplate(args),
+      mount: m.mountPunctualityBoard,
+    })),
+});
+
+const etaDriftEntry = defineWidget<EtaDriftArgs>({
+  title: "ETA drift chart",
+  kind: "etadrift",
+  parse: (input) => {
+    const result = showEtaDriftInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. No zones to check, so no `validate`: an invalid time is NO SIGNAL
+     with its reason, while fewer than two estimates is a neutral "nothing to
+     measure yet" note, not NO SIGNAL. */
+  load: () =>
+    import("~/lib/eta-drift-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderEtaDriftTemplate(args),
+      mount: m.mountEtaDrift,
+    })),
+});
+
+const departureEntry = defineWidget<DepartureBoardArgs>({
+  title: "Departure board",
+  kind: "departure",
+  parse: (input) => {
+    const result = showDepartureBoardInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the onward destination is a zone. */
+  load: () =>
+    import("~/lib/departure-board-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderDepartureBoardTemplate(args),
+      mount: m.mountDepartureBoard,
+    })),
+  validate: ({ onwardZone }) =>
+    onwardZone ? checkZones([onwardZone]) : Promise.resolve(null),
+});
+
+const plannerEntry = defineWidget<ZonePlannerArgs>({
+  title: "Zone planner",
+  kind: "planner",
+  parse: (input) => {
+    const result = showZonePlannerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded after mount, like the globe: the planner builds its own chrome from
+     the pinned zones and the time, so there is nothing to paint in the
+     template. */
+  load: () =>
+    import("~/lib/zone-planner-mount").then((m) => ({
+      renderTemplate: (idPrefix) => m.renderZonePlannerTemplate({ idPrefix }),
+      mount: m.mountZonePlanner,
+    })),
+  /* Zones the browser knows, and ones the planner can place: it pins only zones
+     with a coordinate, so a valid id without one would be dropped silently. The
+     time is a UTC instant, the only form the planner reads. */
+  validate: async ({ zones: pinned, time }) => {
+    const zones = pinned ?? [];
+    const unknown = await checkZones(zones);
+    if (unknown) return unknown;
+    const [{ COORDINATES_BY_ID }, { convertUtcToUnix }] = await Promise.all([
+      import("~/lib/globe-zones"),
+      import("@northguild/gmt/utc/convert"),
+    ]);
+    const unplaceable = zones.filter((zone) => !COORDINATES_BY_ID.has(zone));
+    if (unplaceable.length > 0) {
+      return `The planner can't place these zones: ${unplaceable.join(", ")}.`;
+    }
+    if (
+      time !== undefined &&
+      convertUtcToUnix(time, { epochUnit: "milliseconds" }) === null
+    ) {
+      return `${time} isn't a UTC instant ending in Z, the form the planner reads.`;
+    }
+    return null;
+  },
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
@@ -489,6 +611,10 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showCutoffStack: cutoffStackEntry,
   showCutoffRuler: cutoffRulerEntry,
   showCutoffCountdown: cutoffCountdownEntry,
+  showPunctualityBoard: punctualityEntry,
+  showEtaDrift: etaDriftEntry,
+  showDepartureBoard: departureEntry,
+  showZonePlanner: plannerEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */
