@@ -266,6 +266,9 @@ export function writtenParts(s: string): LocalParts {
   let weekday = "";
   try {
     weekday = WEEKDAYS[Temporal.PlainDate.from(date!).dayOfWeek - 1] ?? "";
+    // The time is the reader's too: `25:61` is no more a time than the 31st of
+    // June is a date, and must not print as a label.
+    Temporal.PlainTime.from(time!);
   } catch {
     return { date: "", weekday: "", time: "", offset: "", zone: "" };
   }

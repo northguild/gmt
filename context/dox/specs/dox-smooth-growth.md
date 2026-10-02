@@ -271,8 +271,11 @@ Write it **first**, before any Step 1 change, and record the "before" numbers wi
   unless `--reduce` is set. An init script starts a `requestAnimationFrame` loop at
   `DOMContentLoaded`. For 4 s it records, every frame:
   - `t`;
-  - the root's `getBoundingClientRect().height`;
-  - `main`'s height;
+  - the root's height and `main`'s height as PAINTED: read at the end of the frame's last
+    `ResizeObserver` callback, which is after layout, after every box has been pinned and before
+    paint. A 1 px sentinel changes width each frame so a callback runs in every frame, and the
+    page's own `ResizeObserver` is wrapped so its callbacks are followed by a read;
+  - the same heights read in a task after the frame (`raw`);
   - whether any `[data-growing]` exists.
 - **Interaction pass.** Wait for rest (no `[data-growing]` and an unchanged height for 500 ms).
   Start the sampler, then:
@@ -287,17 +290,30 @@ Write it **first**, before any Step 1 change, and record the "before" numbers wi
   table.
 - **Per run, report:**
   - total growth (first to last height);
-  - the largest frame-to-frame jump;
+  - the largest frame-to-frame jump of the painted height (`maxJump`), and of `main`;
+  - the largest jump of the raw reading (`rawMaxJump`), reported and never asserted;
   - the number of frames over 48 px;
   - the final height;
   - whether every `.gmt-grow` is at rest (no inline height, no `data-growing`);
   - the median frame interval.
 - **Assertions:**
-  - largest jump ≤ 48 px;
+  - the largest painted jump, of the root and of `<main>`, ≤ 48 px;
   - every `.gmt-grow` at rest at the end;
   - the final height equals the `--reduce` run's final height for the same page, browser and
     width, within 1 px. Run `--reduce` first; the script can do both in one invocation.
   - Zoned Earth: zero growth.
+
+  **Why painted, and why `rawMaxJump` is not asserted.** A mount task can run between a frame's
+  rendering and the task that samples after it. It fills a section, the reading forces layout and
+  sees the new height, and the next frame's `ResizeObserver` pass pins the box before anything is
+  drawn: that height was never on screen. Such a single reading shows as a jump of the section's
+  whole height in `rawMaxJump` and not at all in the painted series. A pop that is painted is in
+  the painted series and fails. A frame with no painted reading falls back to the raw one and is
+  counted as `unpainted`, reported only. A run that throws is a failed run with a row of its own.
+
+  The gates are diagnostics, not exact-pixel tests: small differences between browsers (a few px
+  over the limit, a final height a few px off the reduced-motion run) are tolerated and read, not
+  chased. A pop a reader would see in one paint is what the gate is for.
 
   Write `results.json` and a Markdown table to `--out`. Exit non-zero on any failure.
 - `--reduce` additionally asserts that `[data-growing]` never appeared.

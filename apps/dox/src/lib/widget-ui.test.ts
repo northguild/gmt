@@ -5,6 +5,7 @@ import {
   labelTextHtml,
   rangeFieldHtml,
   rangePct,
+  setControlValue,
   syncRange,
 } from "./widget-ui";
 
@@ -205,5 +206,70 @@ describe("the field grid and a hidden label", () => {
     expect(css).toMatch(
       /\.gmt-field-grid\[hidden\],\s*\.gmt-field-grid > \.gmt-label\[hidden\]\s*\{\s*display: none;/,
     );
+  });
+});
+
+describe("setControlValue", () => {
+  const select = (role: string, options: string[]) => {
+    const el = document.createElement("select");
+    el.dataset["role"] = role;
+    for (const o of options) {
+      const opt = document.createElement("option");
+      opt.value = o;
+      opt.textContent = o;
+      el.append(opt);
+    }
+    return el;
+  };
+
+  it("adds an option for an open-ended list: a zone, an offset, a day count", () => {
+    for (const role of [
+      "zone",
+      "time-zone",
+      "start-zone",
+      "zone-2",
+      "offset-1",
+      "days",
+    ]) {
+      const el = select(role, ["a", "b"]);
+      setControlValue(el, "America/Nuuk");
+      expect(el.value, role).toBe("America/Nuuk");
+      expect(el.options.length, role).toBe(3);
+    }
+  });
+
+  it("keeps an enum select strict: a value it does not offer changes nothing", () => {
+    for (const role of [
+      "roll",
+      "preset",
+      "mode-1",
+      "basis",
+      "disambiguation",
+    ]) {
+      const el = select(role, ["following", "preceding"]);
+      el.value = "preceding";
+      setControlValue(el, "banana");
+      expect(el.value, role).toBe("preceding");
+      expect(el.options.length, role).toBe(2);
+    }
+  });
+
+  it("takes a value an enum select does offer", () => {
+    const el = select("roll", ["following", "preceding"]);
+    setControlValue(el, "preceding");
+    expect(el.value).toBe("preceding");
+  });
+
+  it("an empty value on a select with no blank option selects nothing", () => {
+    const el = select("zone", ["a", "b"]);
+    setControlValue(el, "");
+    expect(el.selectedIndex).toBe(-1);
+    expect(el.options.length).toBe(2);
+  });
+
+  it("sets an input's value as given", () => {
+    const input = document.createElement("input");
+    setControlValue(input, "2024-06-15");
+    expect(input.value).toBe("2024-06-15");
   });
 });

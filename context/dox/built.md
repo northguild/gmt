@@ -321,9 +321,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   what `startOfZoned` exists to show.
 - **Gates:** `scripts/grow-measure.mjs` (`pnpm run grow:measure`) samples every tool page's height
   on each frame, on load and on input, in Chromium and WebKit at 1440 and 390 px. It asserts an HTTP 200 page, a root that
-  matches, a largest jump of 48 px for the root and for `<main>`, every `.gmt-grow` at rest, a final height
+  matches, a largest painted jump of 48 px for the root and for `<main>` (the height read at the end
+  of each frame's last `ResizeObserver` callback, before paint; the post-frame reading is kept as
+  `rawMaxJump`, reported and never asserted, because a mount task between a frame and its sample can
+  show a height that was pinned back before anything was drawn), every `.gmt-grow` at rest, a final height
   equal to the reduced-motion run's, and that each interaction it asks for (the select, the drag) actually
-  happened. A run that measured nothing, or skipped an interaction, fails. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
+  happened. A run that measured nothing, skipped an interaction, or crashed fails. Both gates are
+  diagnostics: a few px of browser difference is read, not chased. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
   in the Departure Board, Punctuality Board and ETA Drift Chart by keyboard and pointer, in Chromium
   and WebKit at 1440 and 390 px viewports, plus the widget root forced to 360 and 300 px (the rail widths); these
   are the script's defaults, so `pnpm run readout:still` with no arguments is the gate. It fails if a hero

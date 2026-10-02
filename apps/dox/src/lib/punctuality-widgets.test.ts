@@ -108,6 +108,23 @@ describe("toleranceText and spokenMinutes", () => {
 });
 
 describe("writtenParts, writtenLabel, writtenTime", () => {
+  it("reads an impossible time as unparseable, like an impossible date", () => {
+    for (const s of [
+      "2024-06-15T25:61:00+02:00",
+      "2024-06-15T24:00:00+02:00",
+      "2024-06-15T12:60:00+02:00",
+    ]) {
+      expect(writtenParts(s)).toEqual({
+        date: "",
+        weekday: "",
+        time: "",
+        offset: "",
+        zone: "",
+      });
+      expect(writtenLabel(s)).not.toMatch(/25:61|24:00|12:60/);
+    }
+  });
+
   it("reads a zoned string through localParts", () => {
     const s = "2024-06-14T09:15:00+01:00[Europe/London]";
     expect(writtenParts(s)).toEqual({

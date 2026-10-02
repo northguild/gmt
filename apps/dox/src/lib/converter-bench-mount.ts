@@ -31,6 +31,7 @@ import {
   escapeHtml,
   labelTextHtml,
   renderCallLine,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 import { normaliseZonedInput } from "./zoned-input";
@@ -282,13 +283,7 @@ export const mountConverterBench: MountFn<ConverterArgs> = async (
       | HTMLInputElement
       | null;
     if (!el) return;
-    if (
-      el instanceof HTMLSelectElement &&
-      ![...el.options].some((o) => o.value === value)
-    ) {
-      return;
-    }
-    el.value = value;
+    setControlValue(el, value);
   };
   /* Same normalisation as the interval visualizer, for the same reason: these
      inputs are zoned, and a model asked to convert "2:30pm" has no zone for it.

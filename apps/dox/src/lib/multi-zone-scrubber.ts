@@ -651,8 +651,17 @@ export async function initScrubber(
 
   /** The button is only for a switch there is to go to. */
   let reasonShown = false;
+  /* The switch the button last landed on, and the instant it landed the scrub
+     at. While the scrub is still where it landed, the next press searches after
+     that switch, not after the landing: the landing is an hour past the switch,
+     and another zone's switch inside that hour would otherwise be stepped over. */
+  let lastJump: { switchMs: number; landedMs: number } | null = null;
+  const jumpAfterMs = (): number =>
+    lastJump !== null && effectiveMs() === lastJump.landedMs
+      ? lastJump.switchMs
+      : effectiveMs();
   function updateJumpState(): void {
-    const next = nextSwitch(state.pinned, effectiveMs());
+    const next = nextSwitch(state.pinned, jumpAfterMs());
     presetButton.disabled = next === null;
     if (next === null) {
       jumpStatus.textContent =
@@ -724,16 +733,18 @@ export async function initScrubber(
   addOpen?.addEventListener("click", () => combobox.toggle());
 
   /* The earliest switch after the scrubbed instant among the shown zones,
-     whichever way it goes. Pressing again goes on to the next one: the scrubbed
-     instant lands an hour past the switch, so the next search starts after it. */
+     whichever way it goes. Pressing again goes on to the next one, searching after
+     the switch it landed on (see `lastJump`), so a switch of another zone that
+     falls inside the landing hour is still named. */
   presetButton.addEventListener("click", () => {
-    const next = nextSwitch(state.pinned, effectiveMs());
+    const next = nextSwitch(state.pinned, jumpAfterMs());
     if (!next) {
       updateJumpState();
       return;
     }
     state.anchorMs = roundToStep(next.instantMs - JUMP_LEAD_MIN * 60_000);
     state.offsetMin = JUMP_SHIFT_MIN;
+    lastJump = { switchMs: next.instantMs, landedMs: effectiveMs() };
     reasonShown = false;
     syncControls();
     render();

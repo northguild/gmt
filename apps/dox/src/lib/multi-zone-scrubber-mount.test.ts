@@ -669,6 +669,53 @@ describe("the Zone Planner's DST state, jump and reset", () => {
       both.scrubber.destroy();
     });
 
+    it.each([
+      ["America/Denver", "America/Los_Angeles"],
+      ["America/New_York", "America/Chicago"],
+      ["Australia/Lord_Howe", "Australia/Sydney"],
+    ])(
+      "names %s's switch and then %s's, though the second is inside the landing hour",
+      async (first, second) => {
+        // Find, from the library's lists, a switch of `first` followed within the
+        // hour by a switch of `second`.
+        let pair: [number, number] | null = null;
+        for (const year of [2026, 2027]) {
+          for (const a of switchesOf(first, year)) {
+            for (const b of switchesOf(second, year)) {
+              if (
+                b.instantMs > a.instantMs &&
+                b.instantMs - a.instantMs <= 60 * MIN
+              ) {
+                pair ??= [a.instantMs, b.instantMs];
+              }
+            }
+          }
+        }
+        expect(pair).not.toBeNull();
+        const [a, b] = pair!;
+        const w = await open([first, second], a - 3 * MIN);
+        w.jump().click();
+        expect(w.scrubber.getState().time).toBe(utc(a + 60 * MIN));
+        w.jump().click();
+        // The second press goes on to the second zone's switch, not past it.
+        expect(w.scrubber.getState().time).toBe(utc(b + 60 * MIN));
+        expect(w.status()).toContain(
+          second.split("/").pop()!.replace("_", " "),
+        );
+        w.scrubber.destroy();
+      },
+    );
+
+    it("searches from the scrubbed time again once the reader has moved it", async () => {
+      const [spring, fall] = switchesOf("America/New_York");
+      const w = await open(["America/New_York"], spring!.instantMs - 10 * MIN);
+      w.jump().click();
+      w.shift(2160); // the reader drags to the far end
+      w.jump().click();
+      expect(w.scrubber.getState().time).toBe(utc(fall!.instantMs + 60 * MIN));
+      w.scrubber.destroy();
+    });
+
     it("is disabled, with its reason in words, when no shown zone changes its clocks", async () => {
       const w = await open(
         ["Asia/Tokyo", "Atlantic/Reykjavik"],

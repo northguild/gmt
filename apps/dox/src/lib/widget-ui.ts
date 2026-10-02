@@ -300,13 +300,29 @@ export function syncRange(input: HTMLInputElement, valueText?: string): void {
 }
 
 /**
+ * The selects whose options are an open-ended list: a zone, a UTC offset, a day
+ * count. A seed can name a value the list was never built with (a zone the
+ * browser knows and the template's list lacks), and that value is real. Every
+ * other select is an enum (a preset, a roll rule, a mode, a basis) and only
+ * ever holds one of its own options.
+ */
+const OPEN_LIST_ROLE =
+  /^(?:zone|(?:[a-z]+-)+zone|zone-\d+|offset-\d+|days|convert-(?:source|target))$/;
+
+export function isOpenList(select: HTMLSelectElement): boolean {
+  return OPEN_LIST_ROLE.test(select.dataset["role"] ?? "");
+}
+
+/**
  * Set a control's value from a seed (a permalink, a chat call, a preset).
  *
  * A `<select>` silently drops a value it has no option for, leaving the first
- * option showing and every later read of `.value` wrong. So when `value` is not
- * offered, an option for it is appended first, labelled with the value itself
- * (or `label`). An empty value is never appended: it means "none", and a select
- * with no blank option shows its first one. Inputs just take the value.
+ * option showing and every later read of `.value` wrong. For an open-ended list
+ * (`isOpenList`) an option for the value is appended first, labelled with the
+ * value itself (or `label`). For an enum select a value it does not offer is
+ * refused and the select keeps what it had, so a seed cannot invent a choice.
+ * An empty value is never appended; on a select with no blank option it leaves
+ * nothing selected (`selectedIndex` -1). Inputs just take the value.
  */
 export function setControlValue(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null,
@@ -317,6 +333,7 @@ export function setControlValue(
   if (el.tagName === "SELECT") {
     const select = el as HTMLSelectElement;
     if (value !== "" && ![...select.options].some((o) => o.value === value)) {
+      if (!isOpenList(select)) return;
       const opt = select.ownerDocument.createElement("option");
       opt.value = value;
       opt.textContent = label ?? value;

@@ -115,11 +115,20 @@ const TOOLS = [
     slug: "punctuality-board",
     root: ".gmt-punctuality-board",
     presets: ["fifteen-minute", "sixty-and-120", "day-based", "fall-back"],
-    // The early and second-late handles appear only in presets that use them.
+    // The early and second-late handles appear only in presets that use them;
+    // where a preset is known to show one (`requiredIn`) it is required.
     controls: [
       { sel: '[data-role="handle-late"]' },
-      { sel: '[data-role="handle-early"]', optional: true },
-      { sel: '[data-role="handle-compare"]', optional: true },
+      {
+        sel: '[data-role="handle-early"]',
+        optional: true,
+        requiredIn: ["day-based"],
+      },
+      {
+        sel: '[data-role="handle-compare"]',
+        optional: true,
+        requiredIn: ["sixty-and-120"],
+      },
     ],
     track: '[data-role="tolerance-track"]',
   },
@@ -294,7 +303,7 @@ async function run() {
         for (const preset of tool.presets) {
           await page.selectOption('[data-role="preset"]', preset);
           await page.waitForTimeout(1500);
-          for (const { sel, optional } of tool.controls) {
+          for (const { sel, optional, requiredIn } of tool.controls) {
             const visible = await page.evaluate((s) => {
               const el = document.querySelector(s);
               return (
@@ -303,7 +312,11 @@ async function run() {
             }, sel);
             const isHandle = !sel.includes("slider");
             const id = `${where} ${preset} ${sel.match(/"(.+)"/)[1]}`;
-            const presence = controlPresence({ visible, optional, id });
+            const presence = controlPresence({
+              visible,
+              optional: optional && !requiredIn?.includes(preset),
+              id,
+            });
             for (const message of presence.problems) fail(id, message);
             if (!presence.proceed) continue;
             const result = { keyboard: 0, pointer: 0, problems: [] };
