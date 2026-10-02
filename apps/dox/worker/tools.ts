@@ -60,6 +60,7 @@ import {
   showIntervalVisualizerInput,
   showPunctualityBoardInput,
   showTimetableReaderInput,
+  showZonePlannerInput,
 } from "../src/lib/dox-tools";
 
 const docFor = (name: string) =>
@@ -294,6 +295,22 @@ export function buildWorkerTools(
       description: docFor("showEtaDrift"),
       inputSchema: showEtaDriftInput,
       execute: () => accept("eta-drift"),
+    }),
+
+    // Every zone is a pinned clock. `time` is a UTC instant; the client checks it
+    // and the zones against the planner's own coordinate table.
+    showZonePlanner: tool({
+      description: docFor("showZonePlanner"),
+      inputSchema: showZonePlannerInput,
+      execute: ({ zones }) => {
+        const unknown = unknownZones(Array.isArray(zones) ? zones : []);
+        return unknown.length > 0
+          ? reject(
+              "zone-planner",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("zone-planner");
+      },
     }),
 
     // The one zone is the onward leg's destination, and it is optional.

@@ -128,6 +128,25 @@
     background: HighlightText;
   }
 
+  /* The Zone Planner's DST pill and switch badge: the outline and the words
+     carry the state, so they are restated in system colours. The marks on the
+     slider's track keep a visible edge and lose their fill. */
+  .gmt-scrubber-dst[data-state="dst"],
+  .gmt-scrubber-switch {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-scrubber-mark {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-scrubber-mark[data-kind="back"] {
+    background: CanvasText;
+  }
+
   .gmt-glass::before,
   .gmt-glass::after {
     display: none;

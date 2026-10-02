@@ -478,6 +478,15 @@
   outline-offset: 2px;
 }
 
+/* Not available: the reason is said in words beside the button, never only by
+   this dimming. */
+.gmt-button:disabled {
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-fill-subtle);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* ---- Popover ----
  * Tooltip / listbox / calendar-popup surface — was independently hand-rolled
  * per widget (the globe's on-canvas tooltip, the zone combobox's result
@@ -499,9 +508,10 @@
 
 /* ---- Smooth growth — height easing for result regions ----
  * `lib/smooth-height.ts` adds the inline height and `data-growing` while a
- * change eases; at rest every .gmt-grow is `height: auto`, so without JS the
- * page is exactly what the server rendered. Height is the only thing that
- * moves — never opacity or transform on a value.
+ * change eases (a frame loop walks the height; there is no CSS transition, so
+ * a late frame cannot move it further). At rest every .gmt-grow is
+ * `height: auto`, so without JS the page is exactly what the server rendered.
+ * Height is the only thing that moves — never opacity or transform on a value.
  */
 .gmt-grow {
   display: flex;
@@ -529,8 +539,6 @@
   /* y only: glows and focus rings still spill sideways. Not
      overflow-clip-margin: Safari ignores it */
   overflow-y: clip;
-  transition: height var(--gmt-grow-duration, var(--gmt-duration-med))
-    var(--gmt-grow-easing);
 }
 
 /* ---- Entrance — the arrival gesture ----
@@ -547,6 +555,15 @@
 .gmt-enter {
   animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing)
     var(--gmt-enter-delay, 0ms) both;
+}
+/* First-paint hold for a tool's numbered cards (lib/widget-enter.ts). The class
+ * comes from Head.astro's inline script, so it exists only with script and
+ * motion allowed, and a timer there lifts it; without it every card is visible
+ * as served. A card that has begun or finished entering drops out of the rule. */
+html.gmt-enter-hold
+  .gmt-widget-card
+  > .gmt-widget-section:not(.gmt-enter):not([data-entered]) {
+  opacity: 0;
 }
 @keyframes gmt-enter {
   from {

@@ -408,6 +408,17 @@ export const CHAT_STARTERS: readonly {
     args: { zone: "Asia/Tokyo" },
   },
   {
+    text: "Show New York, London and Tokyo from 15 minutes before New York springs forward on 8 March 2026.",
+    widget: "showZonePlanner",
+    area: "zones",
+    // New York springs forward at 07:00 UTC on 8 March 2026, so 06:45 UTC is 01:45
+    // EST there; dragging the slider forward crosses the change.
+    args: {
+      zones: ["America/New_York", "Europe/London", "Asia/Tokyo"],
+      time: "2026-03-08T06:45:00Z",
+    },
+  },
+  {
     text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
     widget: "showConverterBench",
     area: "zones",

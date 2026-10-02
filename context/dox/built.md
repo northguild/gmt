@@ -285,8 +285,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Trap: `Date.parse` is banned in tests too.** `date-ban.test.ts` and `oxlint` reject it
   in test files as well as source. Use `Temporal.Instant.from(…).epochMilliseconds`.
 - **Result regions ease through `.gmt-grow`.** Sections after the first, and elements marked
-  `data-grow="slot"`, change height smoothly: one shared observer and one speed budget keep each
-  frame's step small, and the markup is wrapped at runtime so a reader without JS sees the server
+  `data-grow="slot"`, change height smoothly: one shared observer and a frame loop with one step
+  budget (40 px a frame in total, however late the frame) keep every step under the 48 px gate,
+  where a CSS transition would double its step on a dropped frame, and the markup is wrapped at runtime so a reader without JS sees the server
   render. Section 1, the controls, is never wrapped, so popovers and focus rings do not clip.
   Rules: [reference/design-system.md § Smooth growth](reference/design-system.md#smooth-growth).
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
@@ -296,7 +297,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, plus the Tier 4 `/tools/zoned-earth/`
   and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
-  with structural checks rather than zod so a docs page never pulls in the `ai` package.
+  with structural checks rather than zod so a docs page never pulls in the `ai` package. The
+  Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
+  instant ending in `Z` and up to eight numbered zone ids, strings only (`permalinkOf` in
+  `src/lib/zone-planner.ts`). `seededZones` also reads a `zones` array, which is what a chat
+  call carries.
 - **`seedFromLocation` keeps only top-level strings of 1–64 characters and years.** A widget
   whose arguments are lists or objects flattens them into numbered string keys (Delivery
   Scheduler, Timetable Reader, the Cut-off Stack's `name1`…`atLocalTime4`) or joined strings
@@ -315,12 +320,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `buildZonedValueFromMinutes` deliberately omits an offset — resolving the ambiguity is
   what `startOfZoned` exists to show.
 - **Gates:** `scripts/grow-measure.mjs` (`pnpm run grow:measure`) samples every tool page's height
-  on each frame, on load and on input, in Chromium and WebKit at 1440 and 390 px. It asserts a
-  largest jump of 48 px, every `.gmt-grow` at rest, and a final height equal to the
-  reduced-motion run's. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
+  on each frame, on load and on input, in Chromium and WebKit at 1440 and 390 px. It asserts an HTTP 200 page, a root that
+  matches, a largest jump of 48 px for the root and for `<main>`, every `.gmt-grow` at rest, a final height
+  equal to the reduced-motion run's, and that each interaction it asks for (the select, the drag) actually
+  happened. A run that measured nothing, or skipped an interaction, fails. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
   in the Departure Board, Punctuality Board and ETA Drift Chart by keyboard and pointer, in Chromium
-  and WebKit at 1440, 390, 360 and 300 px, and fails if a hero plate, the chart frame, the dragged
-  control or anything above it moves or resizes (design-system.md § Drawn charts).
+  and WebKit at 1440 and 390 px viewports, plus the widget root forced to 360 and 300 px (the rail widths); these
+  are the script's defaults, so `pnpm run readout:still` with no arguments is the gate. It fails if a hero
+  plate, the chart frame, the dragged control or anything above it moves or resizes
+  (design-system.md § Drawn charts), if a required control is missing, if a handle's value does not
+  change under the keyboard or the pointer, or if it checked nothing. `handle-early` and
+  `handle-compare` are optional: a preset may not show them. The pass/fail decisions live in
+  `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`.
   `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
@@ -511,7 +522,51 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Scrubber (`src/lib/multi-zone-scrubber.ts`, `/tools/zone-planner/`):** pinned zones move
   together along one slider, DST offset changes visibly bite, the configuration round-trips
   through a permalink, and a `datetime-local` input is the typed equivalent to dragging. It
-  is not a chat tool.
+  is a chat tool too (`showZonePlanner`, below), mounted in the rail by
+  `src/lib/zone-planner-mount.ts`.
+  - **Opening set.** With no link or call naming zones, the planner pins the reader's own zone
+    first (`getSystemTimeZone`, via `openingPins`), then the tour: Reykjavik, Helsinki, Los
+    Angeles, Shanghai, Calcutta, Katmandu. The reader's tile says "Your time zone" and takes a
+    full border. A zone already in the tour moves to first place (compared by the engine's
+    canonical id), and the list never exceeds eight. A zone with no coordinate, or the
+    `getSystemTimeZone` sentinel, leaves the tour unchanged: the clock face needs no
+    coordinate, but `decodeState` drops ids without one, so the share link would not
+    reproduce the screen. A link (`?tz=`, `?w=planner`) or a chat call that names zones is
+    shown as given, with nothing prepended; `getState()` and the permalink include the
+    reader's zone. The zone arrives at mount with the rest of the tiles, which are all built
+    there inside the `.gmt-grow` host, so it adds no jump of its own.
+  - **Reference time.** With no seed the planner opens on now rounded forward (ceiling) to the
+    next 5 minutes (`roundUnix`, in UTC, so a transition in the reader's zone cannot move it; an
+    instant already on a boundary stays). The server renders no time at all (the whole planner is
+    built at mount inside the `.gmt-grow` host), so there is no stale baked value to flash. A
+    permalink's or a call's `time` is kept, to the slider's step. `initScrubber` takes `now` so a
+    test injects the clock.
+  - **DST at the scrubbed instant** (`src/lib/scrubber-dst.ts`). Every tile recomputes, on each
+    step, from the library: `isInDaylightSaving` (through `zone-clock`) for the state and
+    `getDstTransitions` (cached per zone and year) for the switches, so nothing is a typed date or
+    hand-rolled offset arithmetic. A tile always says its state in words: a gold, bevelled
+    outline pill `DST` (the home page's `--gmt-dst-gold` and `--gmt-dst-gold-ink`; a rounded pill
+    where `corner-shape` is unsupported), muted `Standard time`, or muted `No DST` for a zone with
+    no offset change in that year (so Istanbul is `DST` in 2010 and `No DST` in 2026). A
+    crossed switch (between the reference time and the scrubbed instant) shows as `Spring forward
+    +1 h` / `Fall back −1 h` (`+30 min` for Lord Howe) while the scrub stays past it; the offset
+    line beside it is the new offset. A transition is any offset change the library lists, so
+    Casablanca's Ramadan changes show as switches while its pill stays `Standard time`, because
+    the library's rule (the larger of the year's January and July offsets is DST) never calls
+    Casablanca's offset DST. Marks on the slider's track show each shown zone's switch inside the
+    ±36 h range (decorative, `aria-hidden`; filled for a fall back). The state and switch have
+    one reserved line each in every tile, so nothing resizes while dragging; they are not live
+    regions, and one settled `role="status"` message (500 ms) names the crossed switches.
+  - **Jump to the next DST transition** goes to the earliest switch strictly after the scrubbed
+    instant among the shown zones, spring forward or fall back, up to two years ahead. It lands
+    the reference time an hour before the switch and the slider two hours along, so the scrubbed
+    instant is an hour after it: the tiles show the new state and the crossed switch, and
+    dragging back shows the state before. Landing past the switch is what makes a second press go
+    on to the next one. With no switch ahead the button is disabled and a line says so. The
+    status line holds two lines, so a message arriving moves nothing.
+  - **Reset to today** sets the reference time to now rounded forward again, read at the press, and
+    the slider to 0. The link then carries that concrete time (so a link reproduces what the reader
+    sees), as it does after a jump.
 
 ## Tier 5 · Scenarios and pitfalls
 
@@ -697,10 +752,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showDepartureBoard({ after, departures? | headway, from, to, minimumConnection?, onwardDuration?, onwardZone? })`
     (TRAN-57): every moment carries its offset; the onward leg only feeds the Delivery
     Scheduler hand-off link.
+  - `showZonePlanner({ zones, time? })`: one to eight zones the planner can place (each has a
+    coordinate in `globe-zones`), and an optional UTC instant ending in `Z` to start from;
+    without it the planner starts at now. Its permalink is `?w=planner`, on
+    `/tools/zone-planner/`.
+- **Count:** 18 tools — the globe, the 16 teaching tools and the Zone Planner — and 18
+  `CHAT_STARTERS`, one card each.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
-- **Example cards open their widget on the click.** The 17 `CHAT_STARTERS` live in the widget
+- **Example cards open their widget on the click.** The 18 `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. Each entry carries an `area` from `EXAMPLE_AREAS` (Zones and DST,
   Intervals, Transport, Intermodal and billing), and `startersByArea()` returns the groups in

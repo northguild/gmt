@@ -1,12 +1,25 @@
 ---
 title: Zone Planner
-description: Pin the zones you care about and drag a single slider to see every clock move together, with DST boundaries flagged.
+description: Pin the zones you care about and drag a single slider to see every clock move together, with each zone's daylight-saving state and clock changes shown.
 industries: [core]
 ---
 
 import MultiZoneScrubber from "../../../components/MultiZoneScrubber.astro";
 
 <MultiZoneScrubber />
+
+The first clock is your own time zone, read from your browser and marked "Your time zone".
+Next to it sits a short tour of awkward offsets: Reykjavik, Helsinki, Los Angeles, Shanghai,
+Calcutta and Katmandu. A link that names zones shows exactly those, with nothing added.
+
+The reference time opens on now, rounded forward to the next five minutes. Every tile says whether
+its zone is in daylight saving at the time you have scrubbed to, and when your scrub crosses a clock
+change in that zone the tile names it ("Spring forward +1 h") and shows the new offset; a mark on the
+slider's track shows where each shown zone changes its clocks. "Jump to the next DST transition"
+goes to the earliest change after the time you are looking at, in any shown zone, spring forward or
+fall back, and pressing it again goes on to the one after. It lands the slider an hour past the
+change, with the reference time an hour before it, so you can drag back across it. "Reset to today"
+puts the reference time back to now.
 
 **See it in action:** [start 15 minutes before New York springs forward in
 2026](/tools/zone-planner/?tz=America/New_York,Europe/London,Asia/Tokyo&t=2026-03-08T06:45:00Z) —

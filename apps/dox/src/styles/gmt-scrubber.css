@@ -1,11 +1,12 @@
 /*
  * DOX-E1b — multi-zone time scrubber.
  *
- * A pinned-zone list + one time slider that moves every clock together, plus a
- * DST "bite" badge when a zone's offset changes as the slider crosses a
- * transition. Restyles the native <input type="range"> (design-system rule:
- * restyle native controls, never rebuild from <div>s). Colours are --gmt-*
- * tokens; the DST badge uses cyan/spring, never the sentinel amber.
+ * A pinned-zone list + one time slider that moves every clock together, with
+ * each tile saying whether its zone is in DST at the scrubbed instant and which
+ * clock change the scrub has crossed. Restyles the native <input type="range">
+ * (design-system rule: restyle native controls, never rebuild from <div>s).
+ * Colours are --gmt-* tokens; DST is the gold the home page's clock list uses
+ * (--gmt-dst-gold), never the sentinel amber.
  */
 
 .gmt-scrubber {
@@ -17,7 +18,7 @@
   container-type: inline-size;
 }
 
-/* A compact toolbar row — [datetime input] [Jump to a DST transition]
+/* A compact toolbar row — [datetime input] [Jump to the next DST transition]
    [Add a zone] — rather than the previous flex-wrap sprawl (three
    differently-sized controls wrapping onto their own lines at most widths).
    `auto` for the two button-ish columns keeps them their natural width;
@@ -44,7 +45,7 @@
    right edge. A zero floor lets the tracks shrink; `min-width: 0` on the field
    itself (below) is the other half of the same fix. */
 
-/* "Jump to a DST transition" on its own line, where it reads as the action it
+/* "Jump to the next DST transition" and "Reset to today" on their own line, where it reads as the action it
    is, rather than as a third thing wedged between two fields. */
 .gmt-scrubber-actions {
   display: flex;
@@ -157,6 +158,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
    .gmt-clock-entry's :hover/:focus-visible and `.selected` states are
    meaningless on a plain action button. */
 .gmt-scrubber-controls .gmt-button,
+.gmt-scrubber-actions .gmt-button,
 .gmt-scrubber-share .gmt-button {
   padding: var(--gmt-space-2) var(--gmt-space-3);
   font-size: var(--gmt-text-xs);
@@ -249,21 +251,132 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   color: var(--gmt-cyan-ink);
 }
 
-.gmt-scrubber-bite {
-  /* void text on a solid fill (INT-58 fix loop): the base cyan only cleared
-     3.68:1 in light theme; cyan-ink clears 8.71:1. */
+/* The reader's own zone: said in words under the clock, and a full border on
+   the tile. Never a one-sided accent, and never amber (that is the sentinel). */
+.gmt-scrubber-clock[data-yours="true"] {
+  border-color: var(--gmt-cyan-ink);
+}
+.gmt-scrubber-clock-yours {
+  margin: 0;
   font-size: var(--gmt-text-xs);
-  color: var(--gmt-void);
-  background: var(--gmt-cyan-ink);
-  padding: 1px var(--gmt-space-1);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  color: var(--gmt-cyan-ink);
 }
 
-.gmt-scrubber-clock[data-bite="true"] .gmt-scrubber-bite {
-  opacity: 1;
+/* DST at the scrubbed instant. The slot is one line tall in every state, so a
+   zone entering or leaving DST while the reader drags never changes a tile's
+   height. Only a zone actually in DST draws the pill, in the gold the home
+   page's clock list already uses for it (`.gmt-clock-dst`): a gold outline and
+   gold ink on a clear fill, bevelled where `corner-shape` is supported and a
+   plain rounded pill where it is not. The text is always said (`DST`,
+   `Standard time`, `No DST`), so colour is never the only channel. */
+.gmt-scrubber-dst-slot,
+.gmt-scrubber-switch-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  /* One text line plus the pill's border, whichever state is showing. */
+  min-height: calc(var(--gmt-text-xs) * 1.35 + 4px);
+}
+
+.gmt-scrubber-dst,
+.gmt-scrubber-switch {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-scrubber-dst:empty,
+.gmt-scrubber-switch:empty {
+  display: none;
+}
+
+.gmt-scrubber-dst[data-state="standard"],
+.gmt-scrubber-dst[data-state="none"] {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-scrubber-dst[data-state="dst"],
+.gmt-scrubber-switch {
+  padding: 0 0.45em;
+  border: 1px solid var(--gmt-dst-gold);
+  border-radius: 999px;
+  corner-shape: bevel;
+  background: transparent;
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 600;
+}
+
+/* The switch itself: the same gold, tinted, so a crossing reads as an event and
+   the state beside it as a state. */
+.gmt-scrubber-switch {
+  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+}
+
+/* Marks on the slider's track at each shown zone's switch. Decorative: the tiles
+   say the same in words. The thumb sits above them. */
+.gmt-scrubber .gmt-range {
+  position: relative;
+  z-index: 1;
+}
+
+.gmt-scrubber-marks {
+  position: absolute;
+  inset-inline: 0;
+  top: 1.5rem;
+  height: var(--gmt-range-hit-h);
+  pointer-events: none;
+}
+
+.gmt-scrubber-mark {
+  position: absolute;
+  top: 50%;
+  left: calc(
+    var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
+      var(--gmt-mark-pct, 0) / 100
+  );
+  width: 0.55rem;
+  height: 0.55rem;
+  box-sizing: border-box;
+  translate: -50% -50%;
+  rotate: 45deg;
+  border: 1px solid var(--gmt-dst-gold);
+  corner-shape: bevel;
+  background: transparent;
+}
+
+.gmt-scrubber-mark[data-kind="back"] {
+  background: var(--gmt-dst-gold);
+}
+
+/* The status line under the two buttons: two lines are held for it, so a
+   message arriving (or going) never moves the controls below. */
+.gmt-scrubber-jump-status {
+  margin: calc(var(--gmt-space-2) * -1) 0 var(--gmt-space-3);
+  min-height: calc(2 * 1.4em);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-scrubber-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Tucked into the tile's corner so it never competes with the reading. */

@@ -18,12 +18,19 @@ export interface ZoneComboboxHandle {
   toggle: () => void;
 }
 
-const MAX_RESULTS = 60;
-
+/**
+ * `onOpenChange` fires whenever the list opens or shuts, by any route (typing,
+ * a pick, Escape, Tab, blur, `toggle`), so an attached button can mirror the
+ * state instead of guessing it at click time.
+ *
+ * The list shows every match. It scrolls (`max-height` in gmt-globe.css), and
+ * a cap would make "browse every zone" quietly list a fraction of them.
+ */
 export function createZoneCombobox(
   input: HTMLInputElement,
   zones: readonly string[],
   onSelect: (zone: string) => void,
+  onOpenChange?: (open: boolean) => void,
 ): ZoneComboboxHandle {
   input.removeAttribute("list");
   input.setAttribute("role", "combobox");
@@ -46,6 +53,9 @@ export function createZoneCombobox(
   let options: string[] = [];
   let activeIndex = -1;
   let blurTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Focusing the input opens the list; `toggle` shutting it must not undo itself. */
+  let focusOpens = true;
+  let isOpen = false;
 
   const zoneSet = new Set(zones);
 
@@ -54,20 +64,26 @@ export function createZoneCombobox(
     const matches = q
       ? zones.filter((z) => z.toLowerCase().includes(q))
       : zones.slice();
-    return matches.slice(0, MAX_RESULTS);
+    return matches;
+  }
+
+  function setOpen(show: boolean): void {
+    list.hidden = !show;
+    input.setAttribute("aria-expanded", String(show));
+    if (show !== isOpen) {
+      isOpen = show;
+      onOpenChange?.(show);
+    }
   }
 
   function open(): void {
     options = filtered(input.value);
     renderOptions();
-    const show = options.length > 0;
-    list.hidden = !show;
-    input.setAttribute("aria-expanded", String(show));
+    setOpen(options.length > 0);
   }
 
   function close(): void {
-    list.hidden = true;
-    input.setAttribute("aria-expanded", "false");
+    setOpen(false);
     input.removeAttribute("aria-activedescendant");
     activeIndex = -1;
   }
@@ -147,7 +163,7 @@ export function createZoneCombobox(
 
   function onFocus(): void {
     if (blurTimer) clearTimeout(blurTimer);
-    open();
+    if (focusOpens) open();
   }
 
   function onBlur(): void {
@@ -161,11 +177,15 @@ export function createZoneCombobox(
 
   return {
     toggle() {
+      if (blurTimer) clearTimeout(blurTimer);
       if (list.hidden) {
         open();
         input.focus();
       } else {
         close();
+        focusOpens = false;
+        input.focus();
+        focusOpens = true;
       }
     },
     destroy() {

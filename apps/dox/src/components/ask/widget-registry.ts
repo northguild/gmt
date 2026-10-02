@@ -61,6 +61,7 @@ import type { CutoffCountdownArgs } from "~/lib/cutoff-countdown-mount";
 import type { PunctualityBoardArgs } from "~/lib/punctuality-board-mount";
 import type { EtaDriftArgs } from "~/lib/eta-drift-mount";
 import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
+import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import {
   showBillingDeadlinesInput,
   showConnectionCheckerInput,
@@ -79,6 +80,7 @@ import {
   showIntervalVisualizerInput,
   showPunctualityBoardInput,
   showTimetableReaderInput,
+  showZonePlannerInput,
 } from "~/lib/dox-tools";
 import type { MountFn } from "~/lib/widget-mount";
 import type { WidgetKind } from "~/lib/widget-permalink";
@@ -517,7 +519,8 @@ const etaDriftEntry = defineWidget<EtaDriftArgs>({
   },
   /* Seeded in the template and again by the mount: every argument is a control
      value. No zones to check, so no `validate`: an invalid time is NO SIGNAL
-     with its reason. */
+     with its reason, while fewer than two estimates is a neutral "nothing to
+     measure yet" note, not NO SIGNAL. */
   load: () =>
     import("~/lib/eta-drift-mount").then((m) => ({
       renderTemplate: (_idPrefix, args) => m.renderEtaDriftTemplate(args),
@@ -548,6 +551,51 @@ const departureEntry = defineWidget<DepartureBoardArgs>({
     onwardZone ? checkZones([onwardZone]) : Promise.resolve(null),
 });
 
+const plannerEntry = defineWidget<ZonePlannerArgs>({
+  title: "Zone planner",
+  kind: "planner",
+  parse: (input) => {
+    const result = showZonePlannerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded after mount, like the globe: the planner builds its own chrome from
+     the pinned zones and the time, so there is nothing to paint in the
+     template. */
+  load: () =>
+    import("~/lib/zone-planner-mount").then((m) => ({
+      renderTemplate: (idPrefix) => m.renderZonePlannerTemplate({ idPrefix }),
+      mount: m.mountZonePlanner,
+    })),
+  /* Zones the browser knows, and ones the planner can place: it pins only zones
+     with a coordinate, so a valid id without one would be dropped silently. The
+     time is a UTC instant, the only form the planner reads. */
+  validate: async ({ zones: pinned, time }) => {
+    const zones = pinned ?? [];
+    const unknown = await checkZones(zones);
+    if (unknown) return unknown;
+    const [{ COORDINATES_BY_ID }, { convertUtcToUnix }] = await Promise.all([
+      import("~/lib/globe-zones"),
+      import("@northguild/gmt/utc/convert"),
+    ]);
+    const unplaceable = zones.filter((zone) => !COORDINATES_BY_ID.has(zone));
+    if (unplaceable.length > 0) {
+      return `The planner can't place these zones: ${unplaceable.join(", ")}.`;
+    }
+    if (
+      time !== undefined &&
+      convertUtcToUnix(time, { epochUnit: "milliseconds" }) === null
+    ) {
+      return `${time} isn't a UTC instant ending in Z, the form the planner reads.`;
+    }
+    return null;
+  },
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
@@ -566,6 +614,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showPunctualityBoard: punctualityEntry,
   showEtaDrift: etaDriftEntry,
   showDepartureBoard: departureEntry,
+  showZonePlanner: plannerEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

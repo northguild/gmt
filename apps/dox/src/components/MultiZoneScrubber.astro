@@ -25,6 +25,8 @@ const {
 
 <script>
   import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+  import { seededZones, type ZonePlannerArgs } from "../lib/zone-planner";
 
   const host = document.getElementById("scrubber-host");
   if (host) {
@@ -34,7 +36,14 @@ const {
       started = true;
       try {
         const { initScrubber } = await import("../lib/multi-zone-scrubber");
-        await initScrubber(host);
+        /* A link copied out of the chat names the planner as `?w=planner&wa=…`;
+           the planner's own `?tz=&t=` links still work: with no seed,
+           `initScrubber` reads them itself. */
+        const seed = seedFromLocation("planner") as ZonePlannerArgs;
+        await initScrubber(host, {
+          pinned: seededZones(seed),
+          ...(typeof seed.time === "string" ? { time: seed.time } : {}),
+        });
       } catch (error) {
         showUnavailable(host, error);
       }

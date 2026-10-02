@@ -19,7 +19,6 @@
 import {
   convertUnixToUtc,
   convertUtcToUnix,
-  getDstTransitions,
   getTimeZoneOffset,
   getUnixNow,
   parseDayFromUtc,
@@ -29,6 +28,8 @@ import {
   parseMonthFromUtc,
   parseYearFromUtc,
 } from "@northguild/gmt";
+import { roundUnix } from "@northguild/gmt/unix/calculate";
+import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
 
 import { COORDINATES_BY_ID } from "./globe-zones";
 import { bindClockGlow, renderCrystalClock } from "./crystal-clock";
@@ -36,14 +37,46 @@ import { formatDayLabel } from "./dwell-ledger";
 import { enter } from "./enter";
 import { readZoneAt } from "./zone-clock";
 import { createZoneCombobox } from "./zone-combobox";
+import { settledAnnouncer } from "./punctuality-widgets";
+import {
+  crossedSwitch,
+  dstStatus,
+  nextSwitch,
+  switchesInWindow,
+  type DstSwitch,
+} from "./scrubber-dst";
+import { MAX_SEEDED_ZONES } from "./zone-planner";
 import { rangeFieldHtml, syncRange } from "./widget-ui";
 
 export interface ScrubberHost {
   destroy: () => void;
+  /** The pinned zones and the reference time (UTC, `Z`) as the reader has them
+   *  now, for a permalink. */
+  getState: () => { pinned: string[]; time: string };
+}
+
+export interface ScrubberOptions {
+  /** Zones to pin, instead of the URL's `tz` or the defaults. Ids with no
+   *  coordinate are dropped, as they are from the URL. */
+  pinned?: readonly string[];
+  /** The reference time, a UTC instant ending in `Z`, instead of the URL's `t`
+   *  or now. */
+  time?: string;
+  /** Whether to keep the page's query string in step with the state. On by
+   *  default; off where the host is not the planner's own page, as in the chat
+   *  rail, where `?tz=` would rewrite `/dox`. */
+  syncUrl?: boolean;
+  /** The clock, as epoch milliseconds, or `null` when it cannot be read. Defaults
+   *  to gmt's `getUnixNow`; a test passes its own so nothing depends on the
+   *  real time. */
+  now?: () => number | null;
+  /** The path "Copy shareable link" points at. Defaults to the current page,
+   *  which is right on the planner's own page and wrong anywhere else. */
+  sharePath?: string;
 }
 
 /**
- * The zones the planner opens on.
+ * The zones the planner opens on, after the reader's own.
  *
  * A deliberate tour of the awkward offsets rather than the largest cities, so
  * the first thing the reader sees is the set of facts a fixed-offset mental
@@ -60,9 +93,9 @@ export interface ScrubberHost {
  *   Asia/Calcutta         `+05:30` — not a whole hour
  *   Asia/Katmandu         `+05:45` — not even a half hour
  *
- * The viewer's own zone is deliberately no longer pinned first: it made the
- * opening set different for every reader, which is the one thing a teaching
- * example cannot be. Anyone can still add it in a keystroke.
+ * The reader's own zone is pinned ahead of these (`openingPins`), labelled as
+ * theirs, so the first clock they read is the one they already know and the tour
+ * is read against it.
  *
  * Filtered against the coordinate table for the same reason everything else
  * here is — a zone with no coordinate cannot be placed, and the globe and this
@@ -80,6 +113,70 @@ const DEFAULT_PINS = [
 function defaultPins(): string[] {
   return DEFAULT_PINS.filter((id) => COORDINATES_BY_ID.has(id));
 }
+
+/** Instants at which two ids for one place must show the same offset, in both
+ *  halves of two years, to count as one zone. */
+const ALIAS_PROBES = [
+  "2000-01-15T12:00:00Z",
+  "2000-07-15T12:00:00Z",
+  "2024-01-15T12:00:00Z",
+  "2024-07-15T12:00:00Z",
+];
+
+/**
+ * Whether two ids are one zone under two names, so "Asia/Kolkata" and
+ * "Asia/Calcutta" are not pinned twice. Decided here, from the coordinate table
+ * (a link name shares its zone's place) and the library's offsets, rather than by
+ * asking the engine to canonicalise: engines disagree about whether they do
+ * (Chromium reports "Asia/Calcutta", WebKit keeps "Asia/Kolkata"). An id with no
+ * coordinate is only itself.
+ */
+export function sameZone(a: string, b: string): boolean {
+  if (a === b) return true;
+  const pa = COORDINATES_BY_ID.get(a);
+  const pb = COORDINATES_BY_ID.get(b);
+  if (!pa || !pb || pa.lat !== pb.lat || pa.lng !== pb.lng) return false;
+  return ALIAS_PROBES.every((t) => {
+    const offset = getTimeZoneOffset(a, t);
+    return offset !== "" && offset === getTimeZoneOffset(b, t);
+  });
+}
+
+/**
+ * The zones the planner opens on when nothing seeds it: the reader's own zone
+ * first, then the tour.
+ *
+ * - A zone already in the tour moves to first place instead of appearing twice
+ *   (`sameZone`: one zone under two names counts as one).
+ * - A zone with no coordinate, or the sentinel (`""`), leaves the tour as it
+ *   was. The clock face would not need a coordinate, but a share link carries
+ *   `tz=` through `decodeState`, which drops any id without one, so pinning it
+ *   would give a link that does not reproduce what the reader sees.
+ * - Never more than `MAX_SEEDED_ZONES`.
+ *
+ * `yours` is the pinned id that is the reader's own, or `null`.
+ */
+export function openingPins(systemZone: string): {
+  pinned: string[];
+  yours: string | null;
+} {
+  const tour = defaultPins();
+  const mine = !systemZone
+    ? null
+    : COORDINATES_BY_ID.has(systemZone)
+      ? systemZone
+      : null;
+  if (mine === null) return { pinned: tour, yours: null };
+  const existing = tour.find((id) => sameZone(id, mine));
+  const first = existing ?? mine;
+  return {
+    pinned: [first, ...tour.filter((id) => id !== first)].slice(
+      0,
+      MAX_SEEDED_ZONES,
+    ),
+    yours: first,
+  };
+}
 const SLIDER_RANGE_MIN = 36 * 60; // ±36 h
 /** The granularity of everything the reader can move: the slider's step, the
  *  reference-time field's own step, and what a seeded or restored anchor is
@@ -87,7 +184,6 @@ const SLIDER_RANGE_MIN = 36 * 60; // ±36 h
  *  own hardcoded `step="900"`, which is the same number said twice and the
  *  usual way two steppers end up disagreeing. */
 const SLIDER_STEP_MIN = 5;
-const BITE_CLEAR_MS = 4000;
 /** ISO weekday order: `parseDayOfWeekFromUtc` returns 1 (Mon) … 7 (Sun). */
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -105,8 +201,19 @@ const MONTHS = [
   "Dec",
 ];
 
+/** How long before a transition the "next DST transition" button puts the
+ *  reference time, and how far past the transition the slider then sits: the
+ *  scrubbed instant lands an hour after it, so the tiles already show the new
+ *  offset, while the reference time stays an hour before it, so the switch
+ *  reads as crossed and dragging back shows the state before. */
+const JUMP_LEAD_MIN = 60;
+const JUMP_SHIFT_MIN = 2 * JUMP_LEAD_MIN;
+
 interface ScrubberState {
   pinned: string[];
+  /** The pinned id that is the reader's own zone, when the planner opened on its
+   *  default set; `null` when a link or a call named the zones. */
+  yours: string | null;
   anchorMs: number;
   offsetMin: number;
 }
@@ -159,25 +266,14 @@ function anchorZoned(effectiveMs: number): string {
   return toUtc(effectiveMs).replace("Z", "+00:00[UTC]");
 }
 
-/** Earliest DST transition strictly after `fromMs` among the given zones. */
+/** Earliest offset change strictly after `fromMs` among the given zones, from
+ *  the library's transition list (`scrubber-dst.ts`). */
 export function nextTransition(
   zones: readonly string[],
   fromMs: number,
 ): { zone: string; instantMs: number } | null {
-  const year = Number(parseYearFromUtc(toUtc(fromMs)));
-  if (!Number.isInteger(year)) return null;
-  let best: { zone: string; instantMs: number } | null = null;
-  for (const zone of zones) {
-    for (const y of [year, year + 1]) {
-      for (const transition of getDstTransitions(zone, y)) {
-        const ms = fromUtc(transition.instant);
-        if (ms !== null && ms > fromMs && (!best || ms < best.instantMs)) {
-          best = { zone, instantMs: ms };
-        }
-      }
-    }
-  }
-  return best;
+  const next = nextSwitch(zones, fromMs);
+  return next ? { zone: next.zone, instantMs: next.instantMs } : null;
 }
 
 function formatReadout(effectiveMs: number): string {
@@ -204,20 +300,65 @@ function roundToStep(ms: number): number {
   return Math.round(ms / stepMs) * stepMs;
 }
 
-export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
+/**
+ * `ms` rounded forward to the next 5-minute boundary, which is itself when it is
+ * already on one: the planner's default reference time is now, so a meeting
+ * proposed from it starts on a boundary that has not passed. Rounded in UTC,
+ * where a boundary is the same instant whatever zone the reader is in and no
+ * transition can move it.
+ */
+export function roundUpToStep(ms: number): number | null {
+  return roundUnix(ms, {
+    smallestUnit: "minute",
+    roundingIncrement: SLIDER_STEP_MIN,
+    roundingMode: "ceil",
+    timeZone: "UTC",
+    epochUnit: "milliseconds",
+  });
+}
+
+/** "Sun 8 Mar, 07:00 UTC" for the status line. */
+function formatInstantShort(utc: string): string {
+  const weekday = WEEKDAYS[(parseDayOfWeekFromUtc(utc) ?? 1) - 1];
+  const month = MONTHS[Number(parseMonthFromUtc(utc)) - 1];
+  return `${weekday} ${Number(parseDayFromUtc(utc))} ${month}, ${parseHourFromUtc(utc)}:${parseMinuteFromUtc(utc)} UTC`;
+}
+
+export async function initScrubber(
+  host: HTMLElement,
+  options: ScrubberOptions = {},
+): Promise<ScrubberHost> {
   const parsed = decodeState(globalThis.location?.search ?? "");
+  const seededPins = (options.pinned ?? []).filter((id) =>
+    COORDINATES_BY_ID.has(id),
+  );
+  const seededMs = options.time === undefined ? null : fromUtc(options.time);
+  const syncUrl = options.syncUrl ?? true;
+  const clock = options.now ?? getUnixNow;
+  /** Now, rounded forward to the next 5 minutes: the default reference time and
+   *  what "Reset to today" returns to. */
+  const nowRounded = (): number => {
+    const now = clock();
+    return (now === null ? null : roundUpToStep(now)) ?? 0;
+  };
+  /* A permalink's or a call's time is the reader's own and is kept (to the
+     slider's step); only the absence of one means now. */
+  const givenMs = seededMs ?? parsed.effectiveMs ?? null;
+  /* Only the default state gets the reader's zone: a link or a call that names
+     zones is shown as given, with nothing prepended. */
+  const named = seededPins.length > 0 ? seededPins : parsed.pinned;
+  const opening = named ? null : openingPins(getSystemTimeZone());
   const state: ScrubberState = {
-    pinned: parsed.pinned ?? defaultPins(),
-    anchorMs: roundToStep(parsed.effectiveMs ?? getUnixNow() ?? 0),
+    pinned: named ?? opening!.pinned,
+    yours: opening?.yours ?? null,
+    anchorMs: givenMs === null ? nowRounded() : roundToStep(givenMs),
     offsetMin: 0,
   };
 
-  const lastOffset = new Map<string, string>();
   /** The `HH:MM` each zone's dial is currently drawn at, so it is only redrawn
       when that reading moves. */
   const lastFace = new Map<string, string>();
   const clockGlow = new AbortController();
-  const biteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
 
   host.classList.add("gmt-scrubber", "gmt-widget", "not-content");
@@ -245,9 +386,15 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     </div>
     <div class="gmt-scrubber-actions">
       <button type="button" class="gmt-button" data-role="dst-preset">
-        Jump to a DST transition
+        Jump to the next DST transition
+      </button>
+      <button type="button" class="gmt-button" data-role="reset"
+        title="Set the reference time to now, rounded forward to the next 5 minutes">
+        Reset to today
       </button>
     </div>
+    <p class="gmt-scrubber-jump-status" data-role="jump-status"></p>
+    <p class="gmt-scrubber-visually-hidden" role="status" aria-live="polite" data-role="live"></p>
     <div class="gmt-scrubber-slider">${rangeFieldHtml({
       role: "slider",
       min: -SLIDER_RANGE_MIN,
@@ -281,9 +428,24 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   const shareStatus = host.querySelector<HTMLElement>(
     "[data-role='share-status']",
   )!;
-  const presetButton = host.querySelector<HTMLElement>(
+  const presetButton = host.querySelector<HTMLButtonElement>(
     "[data-role='dst-preset']",
   )!;
+  const resetButton = host.querySelector<HTMLButtonElement>(
+    "[data-role='reset']",
+  )!;
+  const jumpStatus = host.querySelector<HTMLElement>(
+    "[data-role='jump-status']",
+  )!;
+  const announcer = settledAnnouncer(
+    host.querySelector<HTMLElement>("[data-role='live']"),
+  );
+  /* Marks on the slider's track at every switch the shown zones make within its
+     range. Decorative: each tile says the same in words. */
+  const marks = document.createElement("span");
+  marks.className = "gmt-scrubber-marks";
+  marks.setAttribute("aria-hidden", "true");
+  host.querySelector(".gmt-range-field")?.append(marks);
 
   function effectiveMs(): number {
     return state.anchorMs + state.offsetMin * 60_000;
@@ -297,27 +459,12 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   }
 
   function scheduleUrl(): void {
+    if (!syncUrl) return;
     if (urlTimer) clearTimeout(urlTimer);
     urlTimer = setTimeout(() => {
       const url = encodeState(state.pinned, effectiveMs());
       globalThis.history?.replaceState(null, "", url);
     }, 250);
-  }
-
-  function markBite(id: string, from: string, to: string): void {
-    const row = rows.querySelector<HTMLElement>(`[data-zone-row="${id}"]`);
-    if (!row) return;
-    const badge = row.querySelector<HTMLElement>(".gmt-scrubber-bite");
-    if (badge) badge.textContent = `DST ${from} → ${to}`;
-    row.dataset.bite = "true";
-    const existing = biteTimers.get(id);
-    if (existing) clearTimeout(existing);
-    biteTimers.set(
-      id,
-      setTimeout(() => {
-        if (row.isConnected) row.dataset.bite = "false";
-      }, BITE_CLEAR_MS),
-    );
   }
 
   /** Rebuild card structure — only when the pinned set changes. */
@@ -327,22 +474,27 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     for (const id of state.pinned) {
       const row = document.createElement("div");
       row.className = "gmt-scrubber-clock";
-      row.dataset.bite = "false";
+      row.dataset.switched = "false";
       row.dataset.zoneRow = id;
+      const yours = id === state.yours;
+      if (yours) row.dataset.yours = "true";
       row.innerHTML =
         `<div class="gmt-scrubber-clock-face" data-field="face"></div>` +
         `<p class="gmt-scrubber-clock-time" data-field="time">&nbsp;</p>` +
         `<p class="gmt-scrubber-clock-date" data-field="date">&nbsp;</p>` +
         `<p class="gmt-scrubber-clock-zone" title="${escapeHtml(id)}">${escapeHtml(shortZone(id))}</p>` +
         `<p class="gmt-scrubber-clock-offset" data-field="offset">&nbsp;</p>` +
-        `<span class="gmt-scrubber-bite" aria-live="polite"></span>` +
+        `<p class="gmt-scrubber-dst-slot"><span class="gmt-scrubber-dst" data-field="dst" data-state="none"></span></p>` +
+        `<p class="gmt-scrubber-switch-slot"><span class="gmt-scrubber-switch" data-field="switch"></span></p>` +
+        (yours
+          ? `<p class="gmt-scrubber-clock-yours" data-field="yours">Your time zone</p>`
+          : "") +
         `<button type="button" class="gmt-scrubber-remove" data-role="remove" ` +
-        `aria-label="Remove ${escapeHtml(id)}">✕</button>`;
+        `aria-label="Remove ${escapeHtml(id)}${yours ? " (your time zone)" : ""}">✕</button>`;
       row
         .querySelector<HTMLElement>("[data-role='remove']")
         ?.addEventListener("click", () => {
           state.pinned = state.pinned.filter((z) => z !== id);
-          lastOffset.delete(id);
           lastFace.delete(id);
           buildRows();
           render();
@@ -351,10 +503,15 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     }
   }
 
-  /** Refresh values in the existing rows, and flag any DST "bite". */
-  function updateRows(): void {
-    const anchor = anchorZoned(effectiveMs());
-    const instant = toUtc(effectiveMs());
+  /** Refresh values in the existing rows: the reading, the DST state at this
+   *  instant, and the switch the scrub has crossed since the reference time.
+   *  Returns the sentence about each crossed switch, for the settled
+   *  announcement. */
+  function updateRows(): string {
+    const instantMs = effectiveMs();
+    const anchor = anchorZoned(instantMs);
+    const instant = toUtc(instantMs);
+    const crossings: string[] = [];
     for (const id of state.pinned) {
       const row = rows.querySelector<HTMLElement>(`[data-zone-row="${id}"]`);
       if (!row) continue;
@@ -400,26 +557,128 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
           }
         }
       }
+
+      /* DST at this instant, from the library for this instant, in this zone's
+         own year. The tile always says it in words (never colour alone); only a
+         zone actually in DST draws the pill. */
+      const status = reading.ok
+        ? dstStatus(id, Number(reading.date.slice(0, 4)), reading.inDst)
+        : null;
       if (offsetEl) {
         offsetEl.textContent = currentOffset ? `UTC${currentOffset}` : "";
-        offsetEl.title = !reading.observesDst
-          ? "no DST"
-          : reading.inDst
-            ? "in DST"
-            : "standard time";
+      }
+      const dstEl = row.querySelector<HTMLElement>("[data-field='dst']");
+      if (dstEl) {
+        dstEl.dataset["state"] = status ?? "lost";
+        dstEl.textContent =
+          status === "dst"
+            ? "DST"
+            : status === "standard"
+              ? "Standard time"
+              : status === "none"
+                ? "No DST"
+                : "";
+        dstEl.title =
+          status === "dst"
+            ? "Daylight saving time is in effect at this instant"
+            : status === "standard"
+              ? "Standard time at this instant; this zone changes its clocks this year"
+              : status === "none"
+                ? "This zone keeps one offset all year"
+                : "";
       }
 
-      const previous = lastOffset.get(id);
-      if (previous && currentOffset && previous !== currentOffset) {
-        markBite(id, previous, currentOffset);
+      /* The switch the scrub has crossed since the reference time, from the
+         library's transition list for this zone: named, with its size, and the
+         new offset is the offset line above it. It shows for as long as the
+         scrub stays past it, and goes when the scrub comes back. */
+      const crossed = reading.ok
+        ? crossedSwitch(id, state.anchorMs, instantMs)
+        : null;
+      const switchEl = row.querySelector<HTMLElement>("[data-field='switch']");
+      if (switchEl) {
+        switchEl.textContent = crossed ? switchLabel(crossed) : "";
+        switchEl.title = crossed ? switchTitle(crossed) : "";
       }
-      if (currentOffset) lastOffset.set(id, currentOffset);
+      row.dataset["switched"] = crossed ? "true" : "false";
+      if (crossed) {
+        crossings.push(
+          `${shortZone(id)}: ${switchLabel(crossed).toLowerCase()}, now UTC${currentOffset}${status === "dst" ? ", daylight saving time" : ""}`,
+        );
+      }
+    }
+    return crossings.join(". ");
+  }
+
+  /** "Spring forward +1 h" or "Fall back −1 h". */
+  function switchLabel(s: DstSwitch): string {
+    return `${s.shiftMin > 0 ? "Spring forward" : "Fall back"} ${formatShift(s.shiftMin)}`;
+  }
+
+  function switchTitle(s: DstSwitch): string {
+    return `${s.zone}: UTC${s.offsetBefore} to UTC${s.offsetAfter} at ${formatInstantShort(s.instant)}`;
+  }
+
+  let lastCrossings = "";
+  let lastMarksKey = "";
+
+  /** Marks at each shown zone's switch inside the slider's range. They hang off
+   *  the reference time, so they move when it does, not on every drag step. */
+  function renderMarks(): void {
+    const key = `${state.anchorMs}|${state.pinned.join(",")}`;
+    if (key === lastMarksKey) return;
+    lastMarksKey = key;
+    marks.replaceChildren();
+    const seen = new Set<string>();
+    for (const s of switchesInWindow(
+      state.pinned,
+      state.anchorMs,
+      SLIDER_RANGE_MIN * 60_000,
+    )) {
+      const kind = s.shiftMin > 0 ? "forward" : "back";
+      const dedupe = `${s.instantMs}|${kind}`;
+      if (seen.has(dedupe)) continue;
+      seen.add(dedupe);
+      const minutes = (s.instantMs - state.anchorMs) / 60_000;
+      const pct = ((minutes + SLIDER_RANGE_MIN) / (2 * SLIDER_RANGE_MIN)) * 100;
+      const mark = document.createElement("span");
+      mark.className = "gmt-scrubber-mark";
+      mark.dataset["kind"] = kind;
+      mark.style.setProperty("--gmt-mark-pct", String(pct));
+      marks.append(mark);
+    }
+  }
+
+  /** The button is only for a switch there is to go to. */
+  let reasonShown = false;
+  function updateJumpState(): void {
+    const next = nextSwitch(state.pinned, effectiveMs());
+    presetButton.disabled = next === null;
+    if (next === null) {
+      jumpStatus.textContent =
+        "None of the shown zones changes its clocks in the next two years.";
+      reasonShown = true;
+    } else if (reasonShown) {
+      jumpStatus.textContent = "";
+      reasonShown = false;
     }
   }
 
   function render(): void {
     readout.textContent = formatReadout(effectiveMs());
-    updateRows();
+    const crossings = updateRows();
+    renderMarks();
+    updateJumpState();
+    /* Said once the scrub settles, and only when it changed: the slider speaks
+       its own value on every step. */
+    if (crossings !== lastCrossings) {
+      lastCrossings = crossings;
+      announcer.say(
+        () =>
+          crossings ||
+          "No clock change between the reference time and this time.",
+      );
+    }
     scheduleUrl();
   }
 
@@ -435,12 +694,16 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     if (ms !== null) {
       state.anchorMs = ms;
       state.offsetMin = 0;
-      lastOffset.clear();
       syncControls();
       render();
     }
   });
 
+  /* The attached "+" opens the same list the typeahead shows, so the whole set
+     is browsable without knowing an id to type. It mirrors the list's open
+     state for its own styling and for assistive tech; the input keeps the
+     `aria-expanded` that names the listbox. */
+  const addOpen = host.querySelector<HTMLElement>("[data-role='add-open']");
   const combobox = createZoneCombobox(
     addInput,
     [...COORDINATES_BY_ID.keys()],
@@ -452,40 +715,57 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
         render();
       }
     },
+    (open) => addOpen?.setAttribute("aria-expanded", String(open)),
   );
+  /* Pressing the button must not take focus from the input: the blur would
+     start the list's close timer, and a press longer than that shuts the list
+     just before the click reopens it. */
+  addOpen?.addEventListener("mousedown", (event) => event.preventDefault());
+  addOpen?.addEventListener("click", () => combobox.toggle());
 
-  /* The attached "+" opens the same list the typeahead shows, so the whole set
-     is browsable without knowing an id to type. It mirrors the input's
-     `aria-expanded` for its own open styling; the input keeps the one that
-     names the listbox. */
-  const addOpen = host.querySelector<HTMLElement>("[data-role='add-open']");
-  addOpen?.addEventListener("click", () => {
-    combobox.toggle();
-    addOpen.setAttribute(
-      "aria-expanded",
-      addInput.getAttribute("aria-expanded") ?? "false",
-    );
-  });
-
+  /* The earliest switch after the scrubbed instant among the shown zones,
+     whichever way it goes. Pressing again goes on to the next one: the scrubbed
+     instant lands an hour past the switch, so the next search starts after it. */
   presetButton.addEventListener("click", () => {
-    const transition = nextTransition(state.pinned, effectiveMs());
-    if (!transition) {
-      shareStatus.textContent =
-        "No upcoming DST transition for the pinned zones.";
+    const next = nextSwitch(state.pinned, effectiveMs());
+    if (!next) {
+      updateJumpState();
       return;
     }
-    // Land the anchor an hour before the transition; the slider then drags across it.
-    state.anchorMs = roundToStep(transition.instantMs - 60 * 60_000);
-    state.offsetMin = 0;
-    lastOffset.clear();
+    state.anchorMs = roundToStep(next.instantMs - JUMP_LEAD_MIN * 60_000);
+    state.offsetMin = JUMP_SHIFT_MIN;
+    reasonShown = false;
     syncControls();
     render();
-    shareStatus.textContent = `Drag the slider forward — ${transition.zone} shifts at the boundary.`;
+    const city = shortZone(next.zone);
+    const what =
+      next.shiftMin > 0
+        ? `${city} springs forward ${formatShift(next.shiftMin)}`
+        : `${city} falls back ${formatShift(next.shiftMin)}`;
+    jumpStatus.textContent = `${what} at ${formatInstantShort(next.instant)}. Showing one hour after it.`;
+    jumpStatus.title = switchTitle(next);
+    lastCrossings = jumpStatus.textContent;
+    announcer.say(() => jumpStatus.textContent ?? "");
+  });
+
+  /* Back to the opening reference time: now, rounded forward, taken at the
+     press. The link then carries that concrete time, so what it opens on is
+     what the reader sees. */
+  resetButton.addEventListener("click", () => {
+    state.anchorMs = nowRounded();
+    state.offsetMin = 0;
+    syncControls();
+    render();
+    jumpStatus.textContent = `Reset to now, rounded forward to ${formatInstantShort(toUtc(state.anchorMs))}.`;
+    jumpStatus.title = "";
+    reasonShown = false;
+    lastCrossings = "";
+    announcer.say(() => jumpStatus.textContent ?? "");
   });
 
   shareButton.addEventListener("click", async () => {
     const url = `${globalThis.location?.origin ?? ""}${
-      globalThis.location?.pathname ?? ""
+      options.sharePath ?? globalThis.location?.pathname ?? ""
     }${encodeState(state.pinned, effectiveMs())}`;
     try {
       await navigator.clipboard.writeText(url);
@@ -503,9 +783,10 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   bindClockGlow(host, clockGlow.signal);
 
   return {
+    getState: () => ({ pinned: [...state.pinned], time: toUtc(effectiveMs()) }),
     destroy() {
       if (urlTimer) clearTimeout(urlTimer);
-      for (const timer of biteTimers.values()) clearTimeout(timer);
+      announcer.cancel();
       combobox.destroy();
       clockGlow.abort();
       host.innerHTML = "";

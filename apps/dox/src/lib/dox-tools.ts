@@ -316,6 +316,17 @@ export const showDepartureBoardInput = z.object({
 });
 
 /**
+ * The Zone Planner: zones pinned side by side on one slider, so a meeting time
+ * can be proposed across them. `time` is the reference instant the slider shifts
+ * from, a UTC instant ending in `Z`; without it the planner starts at now,
+ * rounded forward to the next 5 minutes.
+ */
+export const showZonePlannerInput = z.object({
+  zones: z.array(zoneSchema).min(1).max(8),
+  time: z.string().min(10).max(64).optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -346,7 +357,8 @@ export type DoxToolName =
   | "showCutoffCountdown"
   | "showPunctualityBoard"
   | "showEtaDrift"
-  | "showDepartureBoard";
+  | "showDepartureBoard"
+  | "showZonePlanner";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -366,6 +378,7 @@ export const DOX_TOOL_INPUTS = {
   showPunctualityBoard: showPunctualityBoardInput,
   showEtaDrift: showEtaDriftInput,
   showDepartureBoard: showDepartureBoardInput,
+  showZonePlanner: showZonePlannerInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -494,6 +507,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks which departure from a timetable, or from a service every N minutes, an arrival can still make after a connection or boarding time",
     args: "after (the arrival: ISO date-time with an offset or a bracketed zone written with its offset), departures (1 to 6 departures, each with an offset) or headway with from and to (a service every headway, an ISO 8601 duration such as PT20M, from the first departure up to but never at to), minimumConnection (optional ISO 8601 duration such as PT45M), onwardDuration and onwardZone (optional: the next leg's duration and the IANA id of its destination, to hand the result to the Delivery Scheduler). Give either departures or headway, from and to.",
   },
+  {
+    name: "showZonePlanner",
+    purpose:
+      "Several zones pinned side by side on one slider: every pinned clock moves together, each says whether it is in daylight saving at that instant, and a clock change that falls inside the shift is named on the zone it affects. A button jumps to the next change among the zones shown.",
+    when: "the reader asks what time it is in several places at once, or wants to find or propose a meeting time across zones, or asks which of their zones changes clocks first",
+    args: "zones (1 to 8 IANA ids, in the order to show them), time (optional UTC instant ending in Z, such as 2026-03-08T06:45:00Z, that the slider shifts from; omit it to start at now, rounded forward to the next 5 minutes). Never invent a zone.",
+  },
 ];
 
 /**
@@ -570,6 +590,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[16].purpose,
     inputSchema: showDepartureBoardInput,
   }),
+  showZonePlanner: tool({
+    description: DOX_TOOL_DOCS[17].purpose,
+    inputSchema: showZonePlannerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -610,6 +634,7 @@ export const ENABLED_TOOL_NAMES = [
   "showPunctualityBoard",
   "showEtaDrift",
   "showDepartureBoard",
+  "showZonePlanner",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];
