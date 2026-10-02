@@ -16,7 +16,9 @@
  * Each handle has three ways in: pointer drag, keyboard (Arrow, Shift+Arrow,
  * PageUp, PageDown, Home, End) and the typed field it writes. The axis never
  * rescales while a handle is dragged or a key is held; it refits on
- * `pointerup`, on a typed value's `change`, on a preset and on a seed.
+ * `pointerup` (or a lost capture), on the handle key's `keyup` or a blur, on a
+ * typed value's `change`, on a preset and on a seed. The rate readout is not a
+ * live region; a visually hidden status line reads it once a change settles.
  */
 import { codeFrameHtml } from "./code-frame";
 import {
@@ -48,6 +50,7 @@ import {
   nextInstanceId,
   heroLinesHtml,
   setPresetDescription,
+  settledAnnouncer,
   signedText,
   spokenMinutes,
   stepMinutesFor,
@@ -69,6 +72,18 @@ import {
 } from "./widget-ui";
 
 export type { PunctualityBoardArgs } from "./punctuality-board";
+
+/** The keys that move a handle: a key coming up after one of these refits. */
+const HANDLE_KEYS = new Set([
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowLeft",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+]);
 
 const SENTINEL = '<span class="gmt-playground-sentinel">NO SIGNAL</span>';
 
@@ -141,9 +156,12 @@ export function renderPunctualityBoardTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Late, early or on time</h4>` +
-    `<div class="gmt-punct-rate" data-role="rate" aria-live="polite"></div>` +
+    `<div class="gmt-punct-rate" data-role="rate"></div>` +
+    // The readout is not live: a drag rewrites it every step, on top of the
+    // handle's own aria-valuetext. This is read out once the change settles.
+    `<p class="gmt-transport-visually-hidden" role="status" aria-live="polite" data-role="rate-live"></p>` +
     `<div class="gmt-punct-frame">` +
-    `<div class="gmt-punct-heroes" data-role="rate-heroes" aria-hidden="true"></div>` +
+    `<div class="gmt-punct-heroes" data-role="rate-heroes" data-grow="slot" aria-hidden="true"></div>` +
     `<div class="gmt-punct-grid" data-role="board" role="group" aria-label="Arrivals against the tolerance" aria-describedby="punct-summary-${id}">` +
     `<div class="gmt-punct-track-row">` +
     `<span class="gmt-punct-track-label" aria-hidden="true">Tolerance</span>` +
@@ -174,7 +192,7 @@ export function renderPunctualityBoardTemplate(
     codeFrameHtml("rate-b") +
     `<output class="gmt-widget-output" data-role="rate-output-b">&nbsp;</output>` +
     `</div>` +
-    `<table class="gmt-punct-table" data-role="calls-table"></table>` +
+    `<table class="gmt-punct-table" data-role="calls-table" role="table" tabindex="0" aria-label="The calls and what each returned"></table>` +
     `</div>` +
     `</div>` +
     `</div>`
@@ -250,6 +268,15 @@ function setupWidget(
   ) {
     return { release() {}, destroy() {}, state: () => start };
   }
+
+  const announcer = settledAnnouncer(q("rate-live"));
+  /** Read the rate lines out once, when the change that made them has settled. */
+  const announce = (): void =>
+    announcer.say(() =>
+      [...(q("rate")?.querySelectorAll("p") ?? [])]
+        .map((p) => p.textContent ?? "")
+        .join(" "),
+    );
 
   let rows = start.rows;
   let rowsPreset = start.preset;
@@ -620,23 +647,23 @@ function setupWidget(
     const table = q("calls-table");
     if (table) {
       const head =
-        `<thead><tr><th scope="col">Arrival</th><th scope="col"><code>scheduleDeviation</code></th>` +
+        `<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Arrival</th><th role="columnheader" scope="col"><code>scheduleDeviation</code></th>` +
         (s.compareOn
-          ? `<th scope="col"><code>classifyPunctuality</code>, late ${escapeHtml(toleranceText(s.late))}</th><th scope="col"><code>classifyPunctuality</code>, late ${escapeHtml(toleranceText(s.compareLate))}</th>`
-          : `<th scope="col"><code>classifyPunctuality</code></th>`) +
+          ? `<th role="columnheader" scope="col"><code>classifyPunctuality</code>, late ${escapeHtml(toleranceText(s.late))}</th><th role="columnheader" scope="col"><code>classifyPunctuality</code>, late ${escapeHtml(toleranceText(s.compareLate))}</th>`
+          : `<th role="columnheader" scope="col"><code>classifyPunctuality</code></th>`) +
         `</tr></thead>`;
       const body = s.rows
         .map((r, i) => {
           const f = facts.rows[i]!;
           return (
-            `<tr data-role="call-row-${i + 1}"><th scope="row">${escapeHtml(rowLabel(r.planned, r.actual))}</th>` +
-            `<td>${cell(f.deviation)}</td><td>${cell(f.classA)}</td>` +
-            (s.compareOn ? `<td>${cell(f.classB)}</td>` : "") +
+            `<tr role="row" data-role="call-row-${i + 1}"><th role="rowheader" scope="row">${escapeHtml(rowLabel(r.planned, r.actual))}</th>` +
+            `<td role="cell">${cell(f.deviation)}</td><td role="cell">${cell(f.classA)}</td>` +
+            (s.compareOn ? `<td role="cell">${cell(f.classB)}</td>` : "") +
             `</tr>`
           );
         })
         .join("");
-      table.innerHTML = `${head}<tbody>${body}</tbody>`;
+      table.innerHTML = `${head}<tbody role="rowgroup">${body}</tbody>`;
     }
   }
 
@@ -651,7 +678,6 @@ function setupWidget(
     const preset = PUNCTUALITY_PRESETS.find((p) => p.id === presetEl!.value);
     if (!preset) return;
     const next = state();
-    next.preset = preset.id;
     rows = preset.rows.map((r) => ({ ...r }));
     rowsPreset = preset.id;
     lateEl!.value = preset.late;
@@ -700,10 +726,13 @@ function setupWidget(
     spec.input.value = minutesToIso(Math.abs(Math.round(clamped)));
     syncPreset();
     render();
+    announce();
   }
 
   let dragging: string | null = null;
   let captured: { el: HTMLElement; id: number } | null = null;
+  /** A handle key moved a handle and its key has not been released yet. */
+  let keyMoved = false;
 
   root.addEventListener("pointerdown", (e) => {
     if (destroyed) return;
@@ -740,6 +769,12 @@ function setupWidget(
   };
   root.addEventListener("pointerup", stopDrag);
   root.addEventListener("pointercancel", stopDrag);
+  // A capture that was lost, or never taken (`setPointerCapture` threw), leaves
+  // the release to land outside `root`: the document sees it, the root does not.
+  root.addEventListener("lostpointercapture", stopDrag);
+  const doc = root.ownerDocument;
+  doc.addEventListener("pointerup", stopDrag);
+  doc.addEventListener("pointercancel", stopDrag);
 
   root.addEventListener("keydown", (e) => {
     if (destroyed) return;
@@ -778,7 +813,29 @@ function setupWidget(
     }
     if (next === null) return;
     ev.preventDefault();
+    keyMoved = true;
     setHandle(role, next);
+  });
+
+  // The axis never rescales while a key is held; the key coming up (or the
+  // handle losing focus) refits it, as a pointer coming up does, so a handle
+  // can be moved on past the edge the same way from the keyboard.
+  const keyDone = (): void => {
+    if (!keyMoved) return;
+    keyMoved = false;
+    refit();
+  };
+  root.addEventListener("keyup", (e) => {
+    if (destroyed || !HANDLE_KEYS.has((e as KeyboardEvent).key)) return;
+    keyDone();
+  });
+  root.addEventListener("focusout", (e) => {
+    if (
+      destroyed ||
+      !(e.target as HTMLElement).closest?.(".gmt-handle[data-role]")
+    )
+      return;
+    keyDone();
   });
 
   // ---- Typed fields, switches and the preset ----
@@ -789,6 +846,7 @@ function setupWidget(
     if (target === lateEl || target === earlyEl || target === compareEl) {
       syncPreset();
       render();
+      announce();
     }
   });
 
@@ -797,15 +855,18 @@ function setupWidget(
     const target = e.target as HTMLElement;
     if (target === presetEl) {
       applyPreset();
+      announce();
     } else if (
       target === lateEl ||
       target === earlyEl ||
       target === compareEl
     ) {
       refit();
+      announce();
     } else if (target === earlyOnEl || target === compareOnEl) {
       syncPreset();
       refit();
+      announce();
     }
   });
 
@@ -820,12 +881,13 @@ function setupWidget(
     if (row) thinTickLabels(row);
     fitBands();
   };
-  if (board) onWidthChange(board, refitText);
+  const stopWidthWatch = board ? onWidthChange(board, refitText) : () => {};
   // Text measured before the web fonts swap in is the wrong width: fit again
   // once they have loaded.
-  if (typeof document !== "undefined" && document.fonts) {
-    void document.fonts.ready.then(refitText);
-    document.fonts.addEventListener?.("loadingdone", refitText);
+  const fonts = typeof document !== "undefined" ? document.fonts : undefined;
+  if (fonts) {
+    void fonts.ready.then(refitText);
+    fonts.addEventListener?.("loadingdone", refitText);
   }
 
   return {
@@ -841,6 +903,11 @@ function setupWidget(
     },
     destroy() {
       destroyed = true;
+      stopWidthWatch();
+      announcer.cancel();
+      fonts?.removeEventListener?.("loadingdone", refitText);
+      doc.removeEventListener("pointerup", stopDrag);
+      doc.removeEventListener("pointercancel", stopDrag);
     },
   };
 }

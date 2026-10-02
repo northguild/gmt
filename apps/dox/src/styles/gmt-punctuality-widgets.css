@@ -40,23 +40,12 @@
   transform: translateX(-100%);
 }
 
-/* The one hatch recipe: "outside the tolerance" on a bar, the connection bar
-   on a rail. It reads the element's own `color`, so a hatch can never carry
-   meaning a reader without colour vision would miss: the pattern is the
-   signal and the words beside it say the rest. */
-.gmt-punct-hatch {
-  background-image: repeating-linear-gradient(
-    45deg,
-    currentColor 0,
-    currentColor 1px,
-    transparent 1px,
-    transparent 5px
-  );
-}
-
-/* Inside the three roots the hatch is the family's: 45 degrees, 2px on and 6px
-   off, in `--hatch` (a cyan wash by default; a rail or a bar sets its own). It
-   carries no text, and tints through `background-color`, never the shorthand. */
+/* The family hatch: "outside the tolerance" on a bar, the connection bar on a
+   rail. It reads no text and carries no meaning a reader without colour vision
+   would miss: the pattern is the signal and the words beside it say the rest. */
+/* 45 degrees, 2px on and 6px off, in `--hatch` (a cyan wash by default; a rail
+   or a bar sets its own). It tints through `background-color`, never the
+   shorthand. */
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
   .gmt-punct-hatch {
   background-image: repeating-linear-gradient(
@@ -122,6 +111,15 @@
    what is below it. */
 .gmt-punct-naive:empty::before {
   content: "\200b";
+}
+
+/* A naive line with nothing to say keeps its reserved height but draws nothing:
+   its `display: block` above beats the UA `[hidden]` rule, and removing it
+   from the flow would move the readout and everything below it each time a
+   dragged arrival or an edited event makes the naive pick equal the real one.
+   `visibility: hidden` also drops it from the accessibility tree. */
+.gmt-punct-naive[hidden] {
+  visibility: hidden;
 }
 
 /* ---------------------------------------------------------------------------
@@ -267,12 +265,14 @@
   min-inline-size: 3.9em;
 }
 
+/* Wide enough for "late tolerance 10 h 30 min", the longest line a keyboard
+   can reach (the handle runs past the old axis). */
 [data-role="rate-hero-a"] .gmt-punct-hero-sub {
-  min-inline-size: 25ch;
+  min-inline-size: 28ch;
 }
 
 [data-role="rate-hero-b"] .gmt-punct-hero-sub {
-  min-inline-size: 21ch;
+  min-inline-size: 24ch;
 }
 
 [data-role="drift-hero"] .gmt-punct-hero-value {
@@ -380,10 +380,6 @@
   border-bottom: 1px solid var(--gmt-border);
   text-align: left;
   vertical-align: baseline;
-}
-
-.gmt-punct-table th,
-.gmt-punct-table td {
   white-space: nowrap;
 }
 

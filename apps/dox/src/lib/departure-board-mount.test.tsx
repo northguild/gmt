@@ -6,6 +6,7 @@
  * row (DB1 to DB4, DBR1 to DBR5).
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { CHAT_STARTERS } from "./chat-constants";
 import { DEPARTURE_PRESETS } from "./departure-board";
@@ -72,6 +73,24 @@ function key(root: HTMLElement, k: string, shift = false) {
   q(root, "handle-after").dispatchEvent(
     new KeyboardEvent("keydown", { key: k, shiftKey: shift, bubbles: true }),
   );
+}
+
+function keyup(root: HTMLElement, k: string) {
+  q(root, "handle-after").dispatchEvent(
+    new KeyboardEvent("keyup", { key: k, bubbles: true }),
+  );
+}
+
+function stubStage(root: HTMLElement) {
+  q(root, "rail-stage").getBoundingClientRect = () =>
+    ({
+      left: 0,
+      right: 420,
+      width: 420,
+      top: 0,
+      bottom: 100,
+      height: 100,
+    }) as DOMRect;
 }
 
 function setText(root: HTMLElement, role: string, value: string) {
@@ -484,6 +503,46 @@ describe("mountDepartureBoard: the arrival handle", () => {
     expect(text(root, "rail-ticks")).toBe(before);
   });
 
+  it("refits the rail when the key comes up, so the next press moves past the old edge", async () => {
+    // Bug: only a pointer coming up refit the rail, so the keyboard could not
+    // take the arrival past the edge a pointer could.
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const handle = q(root, "handle-after");
+    key(root, "End");
+    const atEdge = Number(handle.getAttribute("aria-valuenow"));
+    expect(atEdge).toBe(Number(handle.getAttribute("aria-valuemax")));
+    // Held: more presses go nowhere, and the axis has not moved.
+    const held = text(root, "rail-ticks");
+    key(root, "End");
+    key(root, "ArrowRight");
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBe(atEdge);
+    expect(text(root, "rail-ticks")).toBe(held);
+    keyup(root, "End");
+    expect(Number(handle.getAttribute("aria-valuemax"))).toBeGreaterThan(
+      atEdge,
+    );
+    const before = q<HTMLInputElement>(root, "after").value;
+    key(root, "ArrowRight");
+    expect(q<HTMLInputElement>(root, "after").value).not.toBe(before);
+  });
+
+  it("does not refit for a key that moved nothing, or for a key that is not a handle key", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const ticks = text(root, "rail-ticks");
+    keyup(root, "ArrowLeft");
+    keyup(root, "Shift");
+    expect(text(root, "rail-ticks")).toBe(ticks);
+  });
+
+  it("refits when the handle loses focus with a moved key still down", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const handle = q(root, "handle-after");
+    key(root, "End");
+    const edge = Number(handle.getAttribute("aria-valuemax"));
+    handle.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    expect(Number(handle.getAttribute("aria-valuemax"))).toBeGreaterThan(edge);
+  });
+
   it("keeps aria on the handle in step", async () => {
     const { root } = await mount({ preset: "shuttle-headway" });
     const h = q(root, "handle-after");
@@ -545,6 +604,187 @@ describe("mountDepartureBoard: the arrival handle", () => {
     setText(root, "after", "soon");
     expect(q(root, "handle-after").hidden).toBe(true);
     expect(text(root, "rail-summary")).toContain("No signal.");
+  });
+});
+
+describe("mountDepartureBoard: a drag that loses its pointer", () => {
+  const move = (root: HTMLElement, x: number) =>
+    q(root, "handle-after").dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: x,
+      }),
+    );
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("ends when the capture is lost", async () => {
+    const { root } = await mount({ preset: "shuttle-headway" });
+    stubStage(root);
+    const handle = q(root, "handle-after");
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
+    );
+    move(root, 90);
+    expect(q<HTMLInputElement>(root, "after").value).toBe(AMS("06:30:00"));
+    handle.dispatchEvent(new Event("lostpointercapture", { bubbles: true }));
+    move(root, 300);
+    expect(q<HTMLInputElement>(root, "after").value).toBe(AMS("06:30:00"));
+  });
+
+  it("ends when capture never took and the pointer is released outside the widget", async () => {
+    vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(() => {
+      throw new Error("no such pointer");
+    });
+    const { root } = await mount({ preset: "shuttle-headway" });
+    stubStage(root);
+    q(root, "handle-after").dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
+    );
+    move(root, 90);
+    expect(q<HTMLInputElement>(root, "after").value).toBe(AMS("06:30:00"));
+    // The release lands on the page, not on the widget.
+    document.body.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
+    );
+    move(root, 300);
+    expect(q<HTMLInputElement>(root, "after").value).toBe(AMS("06:30:00"));
+  });
+
+  it("stops listening on the page once destroyed", async () => {
+    const remove = vi.spyOn(document, "removeEventListener");
+    const { handle } = await mount({ preset: "shuttle-headway" });
+    handle.destroy();
+    const names = remove.mock.calls.map((c) => c[0]);
+    expect(names).toContain("pointerup");
+    expect(names).toContain("pointercancel");
+  });
+});
+
+describe("mountDepartureBoard: the live region", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is not the verdict: a status line beside it speaks once, after the change settles", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { root } = await mount({ preset: "shuttle-headway" });
+    const verdict = q(root, "verdict");
+    const live = q(root, "verdict-live");
+    expect(verdict.hasAttribute("aria-live")).toBe(false);
+    expect(live.getAttribute("role")).toBe("status");
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toBe("");
+    const changes: string[] = [];
+    new MutationObserver(() => changes.push(live.textContent ?? "")).observe(
+      live,
+      { childList: true, characterData: true, subtree: true },
+    );
+    for (let i = 0; i < 5; i++) {
+      key(root, "ArrowRight");
+      vi.advanceTimersByTime(100);
+    }
+    expect(live.textContent).toBe("");
+    vi.advanceTimersByTime(500);
+    await Promise.resolve();
+    expect(live.textContent).toBe(verdict.textContent);
+    expect(live.textContent).not.toBe("");
+    expect(changes).toHaveLength(1);
+  });
+
+  it("drops a pending reading when destroyed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { root, handle } = await mount({ preset: "shuttle-headway" });
+    key(root, "ArrowRight");
+    handle.destroy();
+    vi.advanceTimersByTime(2000);
+    expect(q(root, "verdict-live").textContent).toBe("");
+  });
+});
+
+describe("mountDepartureBoard: text that is not a date", () => {
+  it.each([
+    "2024-06-31T10:05:00+03:00[Europe/Helsinki]",
+    "2024-02-30T08:00:00+00:00[Europe/London]",
+  ])(
+    "an impossible zoned arrival (%s) is NO SIGNAL with its reason and no hand-off link",
+    async (after) => {
+      // Bug: the weekday label threw a RangeError mid-render, leaving the old
+      // output and a live hand-off link on screen.
+      const { root } = await mount({ preset: "ferry-list" });
+      expect(q(root, "handoff").getAttribute("href")).not.toBeNull();
+      setText(root, "after", after);
+      expect(text(root, "made-output")).toBe("NO SIGNAL");
+      expect(text(root, "reason-aside")).toContain(
+        "date does not exist on the calendar",
+      );
+      expect(q(root, "handoff").getAttribute("aria-disabled")).toBe("true");
+      expect(q(root, "handoff").hasAttribute("href")).toBe(false);
+      expect(text(root, "rail-summary")).toContain("No signal.");
+    },
+  );
+
+  it("names the true fault for each kind of bad arrival", async () => {
+    const { root } = await mount({ preset: "ferry-list" });
+    setText(root, "after", "soon");
+    expect(text(root, "reason-aside")).toContain("not a date and time");
+    setText(root, "after", "2024-06-15T10:05:00");
+    expect(text(root, "reason-aside")).toContain("has no offset");
+    setText(root, "after", "2024-06-15T10:05:00+05:00[Europe/Helsinki]");
+    expect(text(root, "reason-aside")).toContain("disagrees with its offset");
+  });
+
+  it("an impossible zoned entry in the timetable does not throw either", async () => {
+    const { root } = await mount({ preset: "ferry-list" });
+    setText(root, "departure-2", "2024-06-31T10:05:00+03:00[Europe/Helsinki]");
+    expect(text(root, "made-output")).toBe("NO SIGNAL");
+  });
+});
+
+describe("mountDepartureBoard: fonts and growth", () => {
+  it("releases its font listener when destroyed", async () => {
+    const add = vi.fn();
+    const remove = vi.fn();
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(),
+        addEventListener: add,
+        removeEventListener: remove,
+      },
+    });
+    try {
+      const { handle } = await mount({ preset: "ferry-list" });
+      expect(add).toHaveBeenCalledWith("loadingdone", expect.any(Function));
+      handle.destroy();
+      handle.destroy();
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledWith("loadingdone", add.mock.calls[0]![1]);
+    } finally {
+      Reflect.deleteProperty(document, "fonts");
+    }
+  });
+
+  it("puts the swapping regions in growing slots so a preset switch eases", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderDepartureBoardTemplate();
+    const timetable = q(root, "timetable-fields");
+    expect(timetable.getAttribute("data-grow")).toBe("slot");
+    expect(timetable.contains(q(root, "list-fields"))).toBe(true);
+    expect(timetable.contains(q(root, "headway-fields"))).toBe(true);
+    expect(q(root, "reason-aside").getAttribute("data-grow")).toBe("slot");
+    expect(q(root, "rail-heroes").getAttribute("data-grow")).toBe("slot");
+  });
+
+  it("keeps the naive line in the page, hidden, when it has nothing to say", async () => {
+    const { root } = await mount({ preset: "arrival-at-to" });
+    const line = q(root, "naive-line");
+    expect(line.isConnected).toBe(true);
+    expect(line.hidden).toBe(true);
+    expect(line.textContent).toBe("");
   });
 });
 
@@ -727,6 +967,20 @@ describe("readouts that hold still", () => {
       expect(
         q(root, "rail-hero").querySelectorAll(".gmt-punct-hero-line"),
       ).toHaveLength(2);
+    }
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
     }
   });
 });

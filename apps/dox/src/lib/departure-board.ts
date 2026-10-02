@@ -21,6 +21,7 @@ import {
   isoToMinutes,
   writeLike,
   writtenLabel,
+  writtenParts,
   type Headway,
   type PunctualityLib,
 } from "./punctuality-widgets";
@@ -446,8 +447,18 @@ export type DepartureReasonKind =
   | "none-left"
   | "after-window";
 
+/** Why an arrival is not a moment the library reads. */
+export type MomentFault =
+  | "not-a-moment"
+  | "no-offset"
+  | "zone-without-offset"
+  | "impossible-date"
+  | "zone-mismatch";
+
 export interface DepartureReason {
   kind: DepartureReasonKind;
+  /** For `invalid-after`: the true reason, found by reading the text. */
+  fault?: MomentFault;
   /** 1-based, for `invalid-entry`. */
   entry?: number;
   /** A drawn label, for the two correct-empty reasons. */
@@ -481,6 +492,26 @@ export function thresholdOf(after: string, connection: string): string {
   }
 }
 
+const MOMENT_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?(?:\[([^\]]+)\])?$/;
+
+/**
+ * What is wrong with an arrival the library has already refused, read off the
+ * text. Only called after the probe said `""`, so some fault exists; this names
+ * the one the text shows. Diagnosis for the reader, never a result.
+ */
+export function momentFault(text: string): MomentFault {
+  const m = MOMENT_PATTERN.exec(text);
+  if (!m) return "not-a-moment";
+  const [, offset, zone] = m;
+  if (offset === undefined)
+    return zone === undefined ? "no-offset" : "zone-without-offset";
+  // `writtenParts` reads a date with the polyfill and is blank for one that
+  // does not exist (31 June).
+  if (writtenParts(text).date === "") return "impossible-date";
+  return zone === undefined ? "not-a-moment" : "zone-mismatch";
+}
+
 /**
  * Why the answer is `""`, found by probing the library, in this order: the
  * arrival, the connection time, then the timetable. A `""` with every probe
@@ -495,7 +526,7 @@ export function departureNullReason(
   const after = t(state.after);
   if (after === "") return { kind: "no-arrival" };
   if (lib.nextDeparture(after, [after]) === "")
-    return { kind: "invalid-after" };
+    return { kind: "invalid-after", fault: momentFault(after) };
   const connection = t(state.minimumConnection);
   if (
     connection !== "" &&
@@ -533,12 +564,25 @@ export function departureNullReason(
   };
 }
 
+const INVALID_AFTER_TEXT: Readonly<Record<MomentFault, string>> = {
+  "not-a-moment":
+    "The arrival is not a date and time. Write it like 2024-06-15T10:05:00+03:00.",
+  "no-offset":
+    "The arrival has no offset. Every moment needs its offset (Z, +02:00, or a zoned string written with its offset): in a repeated fall-back hour a wall time names two instants.",
+  "zone-without-offset":
+    "The arrival names a zone but gives no offset. Every moment needs its offset, written before the zone: in a repeated fall-back hour a wall time names two instants.",
+  "impossible-date":
+    "The arrival's date does not exist on the calendar, such as 31 June.",
+  "zone-mismatch":
+    "The arrival's zone disagrees with its offset at that time, or is not a time zone name.",
+};
+
 export function departureReasonText(r: DepartureReason): string {
   switch (r.kind) {
     case "no-arrival":
       return "No arrival time.";
     case "invalid-after":
-      return "The arrival has no offset. Every moment needs its offset (Z, +02:00, or a zoned string written with its offset): in a repeated fall-back hour a wall time names two instants.";
+      return INVALID_AFTER_TEXT[r.fault ?? "not-a-moment"];
     case "invalid-connection":
       return "The minimum connection is not an exact duration that is zero or more. Write it as PT45M or PT1H30M: weeks, months and years have no fixed length.";
     case "invalid-entry":

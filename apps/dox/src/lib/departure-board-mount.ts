@@ -14,7 +14,9 @@
  * The arrival handle has three ways in: pointer drag, keyboard (Arrow,
  * Shift+Arrow, PageUp, PageDown, Home, End) and the typed arrival field. The
  * rail never rescales while the handle is dragged or a key is held; it refits
- * on `pointerup`, on a typed value's `change`, on a preset and on a seed.
+ * on `pointerup` (or a lost capture), on a handle key's `keyup` or a blur, on a
+ * typed value's `change`, on a preset and on a seed. The verdict is not a live
+ * region; a visually hidden status line reads it once a change settles.
  */
 import { codeFrameHtml } from "./code-frame";
 import {
@@ -54,6 +56,7 @@ import {
   nextInstanceId,
   heroLinesHtml,
   setPresetDescription,
+  settledAnnouncer,
   placeLabels,
   type Rect,
   toleranceText,
@@ -156,6 +159,9 @@ export function renderDepartureBoardTemplate(
     `<label class="gmt-label">${labelTextHtml("Minimum connection", { optional: true })}` +
     `<input class="gmt-input" data-role="minimum-connection" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.minimumConnection)}"></label>` +
     `</div>` +
+    // One slot round the two timetable forms: switching between a list and a
+    // headway eases the swap instead of moving the page in one frame.
+    `<div data-role="timetable-fields" data-grow="slot">` +
     `<div class="gmt-field-grid" data-role="list-fields"${s.form === "list" ? "" : " hidden"}>` +
     `<label class="gmt-label">${labelTextHtml("Departures")}` +
     `<select class="gmt-select" data-role="departure-count">${countOptions}</select></label>` +
@@ -169,14 +175,18 @@ export function renderDepartureBoardTemplate(
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("To, excluded")}` +
     `<input class="gmt-input" data-role="to" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.to)}"></label>` +
     `</div>` +
+    `</div>` +
     `<p class="gmt-widget-hint">Every time needs its offset: 2024-06-15T10:05:00+03:00, or a zoned string written with its offset.</p>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. The departure you can make</h4>` +
-    `<p class="gmt-transport-verdict" data-role="verdict" aria-live="polite"></p>` +
+    `<p class="gmt-transport-verdict" data-role="verdict"></p>` +
+    // Not live: a drag rewrites the verdict every step, on top of the handle's
+    // own aria-valuetext. This is read out once the change settles.
+    `<p class="gmt-transport-visually-hidden" role="status" aria-live="polite" data-role="verdict-live"></p>` +
     `<p class="gmt-punct-naive" data-role="naive-line"></p>` +
     `<div class="gmt-punct-frame">` +
-    `<div class="gmt-punct-heroes" data-role="rail-heroes" aria-hidden="true"></div>` +
+    `<div class="gmt-punct-heroes" data-role="rail-heroes" data-grow="slot" aria-hidden="true"></div>` +
     `<div class="gmt-dep-stage" data-role="rail-stage">` +
     `<div class="gmt-dep-rail" data-role="departure-rail" role="img" aria-labelledby="rail-summary-${uid}"></div>` +
     `<div class="gmt-handle" data-role="handle-after" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Arrival"></div>` +
@@ -184,7 +194,7 @@ export function renderDepartureBoardTemplate(
     `<div class="gmt-punct-ticks gmt-dep-ticks" data-role="rail-ticks" aria-hidden="true"></div>` +
     `</div>` +
     `<p class="gmt-widget-hint" id="rail-summary-${uid}" data-role="rail-summary"></p>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
+    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What <code>nextDeparture</code> returns</h4>` +
@@ -214,6 +224,18 @@ export function renderDepartureBoardTemplate(
 // ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
+
+/** The keys that move the arrival: a key coming up after one of these refits. */
+const HANDLE_KEYS = new Set([
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowLeft",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+]);
 
 /** Write the state onto the controls. The page server-renders the first
  *  preset, so a permalink or chat seed has to reach the controls here. */
@@ -271,6 +293,10 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
   }
   let win: RailWindow | null = null;
   let destroyed = false;
+  const announcer = settledAnnouncer(q("verdict-live"));
+  /** Read the verdict out once, when the change that made it has settled. */
+  const announce = (): void =>
+    announcer.say(() => q("verdict")?.textContent ?? "");
 
   const val = (role: string) =>
     q<HTMLInputElement | HTMLSelectElement>(role)?.value ?? "";
@@ -748,10 +774,13 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     afterEl!.value = text;
     syncPreset();
     render();
+    announce();
   }
 
   let dragging = false;
   let captured: { el: HTMLElement; id: number } | null = null;
+  /** A handle key moved the arrival and its key has not been released yet. */
+  let keyMoved = false;
 
   root.addEventListener("pointerdown", (e) => {
     if (destroyed) return;
@@ -786,6 +815,12 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
   };
   root.addEventListener("pointerup", stopDrag);
   root.addEventListener("pointercancel", stopDrag);
+  // A capture that was lost, or never taken (`setPointerCapture` threw), leaves
+  // the release to land outside `root`: the document sees it, the root does not.
+  root.addEventListener("lostpointercapture", stopDrag);
+  const doc = root.ownerDocument;
+  doc.addEventListener("pointerup", stopDrag);
+  doc.addEventListener("pointercancel", stopDrag);
 
   root.addEventListener("keydown", (e) => {
     if (destroyed || win === null) return;
@@ -825,7 +860,26 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     }
     if (next === null) return;
     ev.preventDefault();
+    keyMoved = true;
     setAfter(next);
+  });
+
+  // The rail never rescales while a key is held; the key coming up (or the
+  // handle losing focus) refits it, as a pointer coming up does, so the arrival
+  // can be moved on past the edge the same way from the keyboard.
+  const keyDone = (): void => {
+    if (!keyMoved) return;
+    keyMoved = false;
+    refit();
+  };
+  root.addEventListener("keyup", (e) => {
+    if (destroyed || !HANDLE_KEYS.has((e as KeyboardEvent).key)) return;
+    keyDone();
+  });
+  root.addEventListener("focusout", (e) => {
+    if (destroyed) return;
+    if ((e.target as HTMLElement).closest?.('[data-role="handle-after"]'))
+      keyDone();
   });
 
   // ---- Typed fields, the form chips and the preset ----
@@ -848,16 +902,20 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     if (isTyped(role)) {
       syncPreset();
       render();
+      announce();
     }
   });
 
   root.addEventListener("change", (e) => {
     if (destroyed) return;
     const role = (e.target as HTMLElement).dataset?.role ?? "";
-    if (role === "preset") applyPreset();
-    else if (isTyped(role) || role === "form" || role === "departure-count") {
+    if (role === "preset") {
+      applyPreset();
+      announce();
+    } else if (isTyped(role) || role === "form" || role === "departure-count") {
       syncPreset();
       refit();
+      announce();
     } else if (role === "onward-zone") {
       syncPreset();
       render();
@@ -873,12 +931,13 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     const ticks = q("rail-ticks");
     if (ticks) thinTickLabels(ticks);
   };
-  onWidthChange(rail, refitText);
+  const stopWidthWatch = onWidthChange(rail, refitText);
   // Text measured before the web fonts swap in is the wrong width: fit again
   // once they have loaded.
-  if (typeof document !== "undefined" && document.fonts) {
-    void document.fonts.ready.then(refitText);
-    document.fonts.addEventListener?.("loadingdone", refitText);
+  const fonts = typeof document !== "undefined" ? document.fonts : undefined;
+  if (fonts) {
+    void fonts.ready.then(refitText);
+    fonts.addEventListener?.("loadingdone", refitText);
   }
 
   return {
@@ -894,6 +953,11 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     },
     destroy() {
       destroyed = true;
+      stopWidthWatch();
+      announcer.cancel();
+      fonts?.removeEventListener?.("loadingdone", refitText);
+      doc.removeEventListener("pointerup", stopDrag);
+      doc.removeEventListener("pointercancel", stopDrag);
     },
   };
 }

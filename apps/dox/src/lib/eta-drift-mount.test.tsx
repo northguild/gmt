@@ -6,6 +6,7 @@
  * appendix Z row (ED1 to ED4, ED1a to ED1c, ED2r, EDR1 to EDR3).
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { ETA_PRESETS } from "./eta-drift";
@@ -187,7 +188,7 @@ describe("mountEtaDrift: every preset", () => {
     "one-estimate": {
       call: '{ tolerance: "PT15M" })',
       best: '{ at: "2024-06-15T12:00:00Z", classifier: "PLN" }',
-      drift: "NO SIGNAL",
+      drift: "null",
       bestCallout: "Best available: PLN, Sat 15 Jun 12:00 (bestAvailable)",
       naiveCallout: "Naive, latest recorded: EST, Sat 15 Jun 12:40",
       notes: ["best available", "naive pick"],
@@ -354,13 +355,147 @@ describe("mountEtaDrift: classes and events", () => {
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
   });
 
-  it("one-estimate: NO SIGNAL for the drift with the one-estimate reason", async () => {
+  it("one-estimate: a correct empty answer, in a neutral note, never NO SIGNAL", async () => {
     const { root } = await mount({ preset: "one-estimate" });
+    const out = q(root, "drift-output");
+    expect(out.textContent).toBe("null");
+    expect(out.classList.contains("gmt-widget-output--empty")).toBe(true);
+    expect(out.classList.contains("gmt-playground-sentinel")).toBe(false);
+    const aside = q(root, "reason-aside");
+    expect(aside.querySelector(".starlight-aside--note")).not.toBeNull();
+    expect(aside.querySelector(".starlight-aside--caution")).toBeNull();
+    expect(aside.textContent).toContain("Nothing to measure yet");
+    expect(aside.textContent).toContain("no drift from one estimate");
+    expect(aside.textContent).not.toContain("NO SIGNAL");
+    expect(text(root, "drift-summary")).toContain(
+      "No estimate drift to measure yet: fewer than two estimates.",
+    );
+    expect(text(root, "drift-summary")).not.toContain("NO SIGNAL");
+    // The best pick is real, so nothing on the page is a sentinel.
+    expect(root.querySelector(".gmt-playground-sentinel")).toBeNull();
+  });
+
+  it("invalid input is still NO SIGNAL in a caution aside, apart from the empty note", async () => {
+    const { root } = await mount({ preset: "vessel-slide", tolerance: "P1W" });
     expect(text(root, "drift-output")).toBe("NO SIGNAL");
     expect(
-      q(root, "drift-output").classList.contains("gmt-playground-sentinel"),
+      q(root, "reason-aside").querySelector(".starlight-aside--caution"),
+    ).not.toBeNull();
+  });
+
+  it("copies the last event into a new one after a preset switch, not only after a seed", async () => {
+    // Bug: the count the select last held was read once at mount, so a preset
+    // that changed the count left it stale and the next event came up blank.
+    const { root } = await mount({ preset: "vessel-slide" });
+    const preset = q<HTMLSelectElement>(root, "preset");
+    preset.value = "one-estimate";
+    preset.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(q(root, "event-3").hidden).toBe(true);
+    const count = q<HTMLSelectElement>(root, "event-count");
+    count.value = "3";
+    count.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(q(root, "event-3").hidden).toBe(false);
+    expect(q<HTMLInputElement>(root, "at-3").value).toBe(
+      "2024-06-15T12:40:00Z",
+    );
+    expect(q<HTMLInputElement>(root, "recorded-at-3").value).toBe(
+      "2024-06-14T00:00:00Z",
+    );
+    expect(
+      root.querySelector<HTMLInputElement>('[data-role="classifier-3"]:checked')
+        ?.value,
+    ).toBe("EST");
+    expect(text(root, "drift-output")).toContain("revisions: 2");
+    expect(text(root, "drift-output")).not.toBe("NO SIGNAL");
+    expect(text(root, "best-output")).not.toBe("NO SIGNAL");
+  });
+
+  it.each([
+    "2024-02-30T08:00:00+00:00[Europe/London]",
+    "2024-06-31T10:05:00+03:00[Europe/Helsinki]",
+  ])(
+    "an impossible date (%s) in a zoned event shows NO SIGNAL and does not throw",
+    async (at) => {
+      // Bug: the weekday label threw out of the mount for a date that does not exist.
+      const { root } = await mount({
+        events: [{ classifier: "EST", at, recordedAt: "2024-06-14T00:00:00Z" }],
+      });
+      expect(text(root, "best-output")).toBe("NO SIGNAL");
+      expect(text(root, "drift-output")).toBe("NO SIGNAL");
+      expect(text(root, "callout-best")).toContain("NO SIGNAL");
+      expect(text(root, "reason-aside")).toContain(
+        "Event 1 is not a timestamp",
+      );
+      // The table prints the text as typed.
+      expect(text(root, "event-row-1")).toContain(at);
+    },
+  );
+
+  it("and re-renders without throwing when a typed date is impossible", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    setText(root, "at-2", "2024-02-30T08:00:00+00:00[Europe/London]");
+    expect(text(root, "best-output")).toBe("NO SIGNAL");
+    setText(root, "at-2", "2024-06-20T12:00:00Z");
+    expect(text(root, "best-output")).not.toBe("NO SIGNAL");
+  });
+
+  it("gives the results table table roles and a labelled, focusable scroll box", async () => {
+    const { root } = await mount({ preset: "vessel-slide" });
+    const table = q(root, "event-table");
+    expect(table.getAttribute("role")).toBe("table");
+    expect(table.getAttribute("tabindex")).toBe("0");
+    expect(table.getAttribute("aria-label")).toBeTruthy();
+    expect(table.querySelector("thead")!.getAttribute("role")).toBe("rowgroup");
+    expect(table.querySelector("tbody")!.getAttribute("role")).toBe("rowgroup");
+    expect(
+      [...table.querySelectorAll("thead th")].every(
+        (th) => th.getAttribute("role") === "columnheader",
+      ),
     ).toBe(true);
-    expect(text(root, "reason-aside")).toContain("no drift from one estimate");
+    const rows = [...table.querySelectorAll("tbody tr")];
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row.getAttribute("role")).toBe("row");
+      expect(row.querySelector("th")!.getAttribute("role")).toBe("rowheader");
+      expect(
+        [...row.querySelectorAll("td")].every(
+          (td) => td.getAttribute("role") === "cell",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("releases its font listener when destroyed", async () => {
+    const add = vi.fn();
+    const remove = vi.fn();
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(),
+        addEventListener: add,
+        removeEventListener: remove,
+      },
+    });
+    try {
+      const { handle } = await mount({ preset: "vessel-slide" });
+      expect(add).toHaveBeenCalledWith("loadingdone", expect.any(Function));
+      handle.destroy();
+      handle.destroy();
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledWith("loadingdone", add.mock.calls[0]![1]);
+    } finally {
+      Reflect.deleteProperty(document, "fonts");
+    }
+  });
+
+  it("wraps the event fieldsets in one growing slot, so a count change eases", async () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderEtaDriftTemplate();
+    const slot = q(root, "events");
+    expect(slot.getAttribute("data-grow")).toBe("slot");
+    expect(slot.querySelectorAll("fieldset.gmt-transport-leg")).toHaveLength(6);
+    expect(q(root, "reason-aside").getAttribute("data-grow")).toBe("slot");
+    expect(q(root, "drift-heroes").getAttribute("data-grow")).toBe("slot");
   });
 
   it("EDR2: a chat seed with a zoneless at shows NO SIGNAL twice", async () => {
@@ -618,5 +753,19 @@ describe("the restyled plot: marks, legend, plates and focus", () => {
   it("has nothing focusable in the plot", async () => {
     const { root } = await mount({ preset: "vessel-slide" });
     expect(q(root, "drift-plot").querySelectorAll(FOCUSABLE)).toHaveLength(0);
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });

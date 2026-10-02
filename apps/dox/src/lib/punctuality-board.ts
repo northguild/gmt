@@ -181,7 +181,8 @@ function flatRows(args: PunctualityBoardArgs): PlannedActual[] {
  * flat `planned1…` keys replace the rows and carry no preset, so the tolerance
  * is exactly what the call gives. Otherwise the preset named by `args.preset`
  * (else the first) is the base. Then each scalar present overrides its field:
- * `late`; `early` (`"none"` switches it off); `compareLate` (`"none"` the same).
+ * `late` (`"none"` clears it); `early` (`"none"` switches it off);
+ * `compareLate` (`"none"` the same).
  */
 export function readArgs(args: PunctualityBoardArgs): BoardState {
   const hasRows = Array.isArray(args.pairs) || args.planned1 !== undefined;
@@ -211,7 +212,10 @@ export function readArgs(args: PunctualityBoardArgs): BoardState {
       typeof args.preset === "string" ? presetById(args.preset) : undefined;
     state = presetState(named ?? PUNCTUALITY_PRESETS[0]!);
   }
-  if (args.late !== undefined) state.late = str(args.late);
+  if (args.late !== undefined) {
+    const late = str(args.late);
+    state.late = late === "none" ? "" : late;
+  }
   if (args.early !== undefined) {
     const early = str(args.early);
     state.earlyOn = early !== "none";
@@ -279,14 +283,19 @@ export function matchPreset(state: BoardState): string {
 /**
  * The permalink for the state, strings only, each 1 to 64 characters. When the
  * state carries a preset's rows: `{ preset }` plus each tolerance field that
- * differs from the preset's (`"none"` for one switched off). Otherwise the flat
+ * differs from the preset's (`"none"` for one switched off or, for the late
+ * tolerance, cleared). Otherwise the flat
  * form, which reproduces what the reader sees.
  */
 export function permalinkOf(state: BoardState): Record<string, string> {
   const preset = presetById(state.preset);
   if (preset) {
     const out: Record<string, string> = { preset: preset.id };
-    if (t(state.late) !== "" && t(state.late) !== t(preset.late)) {
+    // A cleared late tolerance is `"none"`: an absent key would restore the
+    // preset's own on reload.
+    if (t(state.late) === "") {
+      if (t(preset.late) !== "") out.late = "none";
+    } else if (t(state.late) !== t(preset.late)) {
       out.late = t(state.late);
     }
     if (state.earlyOn) {
@@ -504,7 +513,12 @@ export function barLayout(
     const inside = { from: 0, to: Math.min(deviation, edge) };
     let outside: BarSpan | null =
       deviation > edge ? { from: edge, to: deviation } : null;
-    if (outside === null && punctuality === "late") {
+    // On the plan exactly (0) with an early tolerance of `PT0S`, the library
+    // says "early": the bar has no length, so the cap is drawn there.
+    if (
+      outside === null &&
+      (punctuality === "late" || punctuality === "early")
+    ) {
       outside = { from: deviation, to: deviation };
     }
     return { inside: inside.to > 0 ? inside : null, outside };

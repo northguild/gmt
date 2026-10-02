@@ -124,7 +124,7 @@ export const ETA_PRESETS: readonly DriftPreset[] = [
     id: "one-estimate",
     label: "One estimate: no drift to measure",
     description:
-      "A plan and one estimate. There is no drift from one sample, so estimateDrift returns null. The plan is the best available: an estimate never replaces it.",
+      "A plan and one estimate. There is no drift from one sample, so estimateDrift returns null: a correct empty answer, nothing to measure yet, not invalid input. The plan is the best available: an estimate never replaces it.",
     events: E4,
     tolerance: "PT15M",
   },
@@ -428,6 +428,15 @@ export function driftNullReason(
   return null;
 }
 
+/**
+ * A correct empty answer, not a sentinel: the events are all valid and there is
+ * simply no drift to measure, because `estimateDrift` reads two or more EST
+ * records. The mount draws it as a neutral note, never as NO SIGNAL.
+ */
+export function isEmptyDriftReason(r: DriftNullReason | null): boolean {
+  return r !== null && (r.kind === "one-estimate" || r.kind === "no-estimate");
+}
+
 export function driftReasonText(reason: DriftNullReason): string {
   switch (reason.kind) {
     case "invalid-event":
@@ -435,9 +444,9 @@ export function driftReasonText(reason: DriftNullReason): string {
     case "invalid-tolerance":
       return "The tolerance is not an exact duration that is zero or more. Write it as PT8H or PT30M: weeks, months and years have no fixed length.";
     case "one-estimate":
-      return "There is no drift from one estimate: estimateDrift returns null with fewer than two EST records.";
+      return "There is no drift from one estimate: estimateDrift returns null with fewer than two EST records. Every event is valid; there is nothing to measure yet.";
     case "no-estimate":
-      return "No EST records: estimateDrift reads only estimates.";
+      return "No EST records: estimateDrift reads only estimates. Every event is valid; there is nothing to measure yet.";
   }
 }
 

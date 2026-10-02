@@ -211,6 +211,15 @@ describe("permalinkOf", () => {
     expect(readArgs(permalinkOf(sixty)).compareOn).toBe(false);
   });
 
+  it("writes none for a cleared late tolerance, so a reload does not restore the preset's", () => {
+    const state = stateOf("fifteen-minute", { late: "" });
+    expect(permalinkOf(state)).toEqual({
+      preset: "fifteen-minute",
+      late: "none",
+    });
+    expect(readArgs(permalinkOf(state))).toEqual(state);
+  });
+
   it("writes a late that differs", () => {
     const state = stateOf("fifteen-minute", { late: "PT16M" });
     expect(permalinkOf(state)).toEqual({
@@ -523,6 +532,20 @@ describe("barLayout", () => {
 
   it("with late at zero, an on-the-plan arrival is a cap at zero", () => {
     expect(barLayout(0, 0, null, "late")).toEqual({
+      inside: null,
+      outside: { from: 0, to: 0 },
+    });
+  });
+
+  it("draws what the library says when the arrival is on the plan and early is PT0S", () => {
+    // The library's own word for a zero deviation against an early tolerance
+    // of PT0S; the picture takes it from the call, never from the number.
+    const word = classifyPunctuality(LON("09:00:00"), LON("09:00:00"), {
+      late: "PT15M",
+      early: "PT0S",
+    });
+    expect(word).toBe("early");
+    expect(barLayout(0, 15, 0, word)).toEqual({
       inside: null,
       outside: { from: 0, to: 0 },
     });

@@ -251,8 +251,15 @@ function trimSeconds(time: string): string {
  * field is `""` when the text does not parse.
  */
 export function writtenParts(s: string): LocalParts {
-  const zoned = localParts(s);
-  if (zoned.date !== "") return zoned;
+  // `localParts` reads the weekday with an unguarded `PlainDate.from`, so an
+  // impossible date inside a zoned string (`2024-06-31T…[Europe/Helsinki]`)
+  // throws. Written text is the reader's, so it must read as unparseable.
+  try {
+    const zoned = localParts(s);
+    if (zoned.date !== "") return zoned;
+  } catch {
+    return { date: "", weekday: "", time: "", offset: "", zone: "" };
+  }
   const m = OFFSET_PATTERN.exec(s);
   if (!m) return { date: "", weekday: "", time: "", offset: "", zone: "" };
   const [, date, time, offset] = m;
@@ -621,6 +628,39 @@ export function placeLabels(
   });
 }
 
+/** How long a drag or a run of key presses must be still before it is read out. */
+export const SETTLE_MS = 500;
+
+/**
+ * Reads a result out once a change has settled. A handle's own `aria-valuetext`
+ * already speaks every step of a drag or key press, so a live region rewritten
+ * on the same steps would talk over it. `say` restarts a timer on every call;
+ * when it runs out (`delayMs` with no further call) the region gets `read()`
+ * once. The region is a visually hidden `role="status"` element next to the
+ * readout, never the readout itself. `cancel` drops a pending reading.
+ */
+export function settledAnnouncer(
+  region: HTMLElement | null,
+  delayMs: number = SETTLE_MS,
+): { say(read: () => string): void; cancel(): void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cancel = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  return {
+    say(read) {
+      if (!region) return;
+      cancel();
+      timer = setTimeout(() => {
+        timer = undefined;
+        region.textContent = read();
+      }, delayMs);
+    },
+    cancel,
+  };
+}
+
 /**
  * Writes a preset's description into its slot. Dragging a handle makes the
  * state "custom", which has no description; the slot then keeps the height it
@@ -648,8 +688,6 @@ export function setPresetDescription(slot: HTMLElement, text: string): void {
 export function heroLinesHtml(
   lines: readonly { text: string; sep?: string }[],
 ): string {
-  const esc = (t: string) =>
-    t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return (
     `<span class="gmt-punct-hero-sub">` +
     lines
@@ -657,9 +695,9 @@ export function heroLinesHtml(
         (l) =>
           `<span class="gmt-punct-hero-line">` +
           (l.sep && l.text !== ""
-            ? `<span class="gmt-punct-hero-sep">${esc(l.sep)}</span>`
+            ? `<span class="gmt-punct-hero-sep">${escapeHtml(l.sep)}</span>`
             : "") +
-          esc(l.text) +
+          escapeHtml(l.text) +
           `</span>`,
       )
       .join("") +

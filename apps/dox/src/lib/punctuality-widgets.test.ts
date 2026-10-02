@@ -25,7 +25,11 @@ import {
   writtenLabel,
   writtenParts,
   writtenTime,
+  heroLinesHtml,
+  settledAnnouncer,
 } from "./punctuality-widgets";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 describe("minutesToIso", () => {
   it.each([
@@ -151,6 +155,19 @@ describe("writtenParts, writtenLabel, writtenTime", () => {
     });
     expect(writtenLabel("soon")).toBe("");
     expect(writtenTime("2024-06-15T10:00:00")).toBe("");
+  });
+
+  it("is all empty, and does not throw, for an impossible date in a zoned string", () => {
+    const blank = { date: "", weekday: "", time: "", offset: "", zone: "" };
+    for (const s of [
+      "2024-06-31T10:05:00+03:00[Europe/Helsinki]",
+      "2024-02-30T08:00:00+00:00[Europe/London]",
+      "2023-02-29T08:00:00+00:00[Europe/London]",
+    ]) {
+      expect(writtenParts(s)).toEqual(blank);
+      expect(writtenLabel(s)).toBe("");
+      expect(writtenTime(s)).toBe("");
+    }
   });
 });
 
@@ -469,5 +486,87 @@ describe("placeLabels with lines, blocked rectangles and ring-sized marks", () =
       lines,
     });
     expect(p).toBeDefined();
+  });
+});
+
+describe("heroLinesHtml", () => {
+  it("escapes the text it is given, with the shared escaper", () => {
+    expect(heroLinesHtml([{ text: "a < b & c > d", sep: " & " }])).toBe(
+      '<span class="gmt-punct-hero-sub"><span class="gmt-punct-hero-line">' +
+        '<span class="gmt-punct-hero-sep"> &amp; </span>a &lt; b &amp; c &gt; d' +
+        "</span></span>",
+    );
+  });
+});
+
+describe("settledAnnouncer", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("writes once, after the last call has been quiet for the delay", () => {
+    const el = { textContent: "" } as HTMLElement;
+    const a = settledAnnouncer(el, 500);
+    let n = 0;
+    for (let i = 0; i < 4; i++) {
+      a.say(() => `read ${++n}`);
+      vi.advanceTimersByTime(200);
+    }
+    expect(el.textContent).toBe("");
+    vi.advanceTimersByTime(300);
+    expect(el.textContent).toBe("read 1");
+    vi.advanceTimersByTime(5000);
+    expect(el.textContent).toBe("read 1");
+  });
+
+  it("reads the text when the timer fires, not when `say` was called", () => {
+    const el = { textContent: "" } as HTMLElement;
+    const a = settledAnnouncer(el, 100);
+    let now = "early";
+    a.say(() => now);
+    now = "settled";
+    vi.advanceTimersByTime(100);
+    expect(el.textContent).toBe("settled");
+  });
+
+  it("cancel drops a pending reading, and a missing region is a no-op", () => {
+    const el = { textContent: "" } as HTMLElement;
+    const a = settledAnnouncer(el, 100);
+    a.say(() => "x");
+    a.cancel();
+    vi.advanceTimersByTime(1000);
+    expect(el.textContent).toBe("");
+    expect(() => settledAnnouncer(null).say(() => "x")).not.toThrow();
+  });
+});
+
+describe("the punctuality sheet", () => {
+  const css = readFileSync(
+    fileURLToPath(
+      new URL("../styles/gmt-punctuality-widgets.css", import.meta.url),
+    ),
+    "utf8",
+  );
+
+  it("keeps a hidden naive line's reserved height and draws nothing", () => {
+    // `.gmt-punct-naive { display: block }` beats the UA `[hidden]` rule, so the
+    // sheet states what hidden means: the space stays, nothing is painted.
+    expect(css).toMatch(
+      /\.gmt-punct-naive\[hidden\]\s*\{[^}]*visibility:\s*hidden/,
+    );
+    expect(css).not.toMatch(
+      /\.gmt-punct-naive\[hidden\]\s*\{[^}]*display:\s*none/,
+    );
+  });
+
+  it("states each table rule once", () => {
+    const heads = [...css.matchAll(/^([^{}\n][^{}]*)\{/gm)].map((m) =>
+      m[1]!.replace(/\s+/g, " ").trim(),
+    );
+    const dupes = heads.filter((h, i) => heads.indexOf(h) !== i);
+    expect(dupes).toEqual([]);
   });
 });

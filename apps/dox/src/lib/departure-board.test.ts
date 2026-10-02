@@ -310,7 +310,7 @@ describe("departureNullReason", () => {
   it("DBR1: a zoneless arrival is invalid-after, and the probe agrees", () => {
     const s = stateOf("ferry-list", { after: "2024-06-15T10:05:00" });
     expect(facts(s).made).toBe("");
-    expect(reasonOf(s)).toEqual({ kind: "invalid-after" });
+    expect(reasonOf(s)).toEqual({ kind: "invalid-after", fault: "no-offset" });
     expect(nextDeparture(HEL("10:05:00"), [HEL("10:05:00")])).toBe(
       HEL("10:05:00"),
     );
@@ -434,13 +434,49 @@ describe("departureNullReason", () => {
     expect(isEmptyReason(null)).toBe(false);
   });
 
+  it.each([
+    ["soon", "not-a-moment", "is not a date and time"],
+    ["2024-06-15T10:05:00", "no-offset", "has no offset"],
+    [
+      "2024-06-15T10:05:00[Europe/Helsinki]",
+      "zone-without-offset",
+      "names a zone but gives no offset",
+    ],
+    [
+      "2024-06-31T10:05:00+03:00[Europe/Helsinki]",
+      "impossible-date",
+      "does not exist on the calendar",
+    ],
+    [
+      "2024-06-31T10:05:00Z",
+      "impossible-date",
+      "does not exist on the calendar",
+    ],
+    [
+      "2024-06-15T10:05:00+05:00[Europe/Helsinki]",
+      "zone-mismatch",
+      "disagrees with its offset",
+    ],
+  ] as const)(
+    "invalid-after names the true fault for %s: %s",
+    (after, fault, words) => {
+      // The library refuses the text, and the reason says why in its own terms.
+      expect(nextDeparture(after, [after])).toBe("");
+      const s = stateOf("ferry-list", { after });
+      expect(reasonOf(s)).toEqual({ kind: "invalid-after", fault });
+      expect(departureReasonText({ kind: "invalid-after", fault })).toContain(
+        words,
+      );
+    },
+  );
+
   it("words every reason", () => {
     expect(departureReasonText({ kind: "no-arrival" })).toBe(
       "No arrival time.",
     );
-    expect(departureReasonText({ kind: "invalid-after" })).toContain(
-      "The arrival has no offset",
-    );
+    expect(
+      departureReasonText({ kind: "invalid-after", fault: "no-offset" }),
+    ).toContain("The arrival has no offset");
     expect(departureReasonText({ kind: "invalid-connection" })).toContain(
       "PT45M",
     );

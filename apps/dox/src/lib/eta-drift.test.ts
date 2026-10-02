@@ -19,6 +19,7 @@ import {
   CUSTOM_PRESET_ID,
   driftNullReason,
   driftReasonText,
+  isEmptyDriftReason,
   ETA_PRESETS,
   eventsOf,
   indexOfPick,
@@ -367,6 +368,14 @@ describe("driftNullReason", () => {
   it("EDR4: an empty list returns null from both calls", () => {
     expect(bestAvailable([])).toBeNull();
     expect(estimateDrift([])).toBeNull();
+  });
+
+  it("treats fewer than two estimates as a correct empty answer, the rest as invalid input", () => {
+    expect(isEmptyDriftReason({ kind: "one-estimate" })).toBe(true);
+    expect(isEmptyDriftReason({ kind: "no-estimate" })).toBe(true);
+    expect(isEmptyDriftReason({ kind: "invalid-event", event: 1 })).toBe(false);
+    expect(isEmptyDriftReason({ kind: "invalid-tolerance" })).toBe(false);
+    expect(isEmptyDriftReason(null)).toBe(false);
   });
 
   it("words every reason", () => {

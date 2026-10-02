@@ -20,12 +20,14 @@ import {
   collectDriftFacts,
   driftNullReason,
   driftReasonText,
+  isEmptyDriftReason,
   indexOfPick,
   initialState,
   matchPreset,
   permalinkOf,
   plotWindow,
   plotZone,
+  presetState,
   toleranceBand,
   visibleCount,
   xTicks,
@@ -152,16 +154,20 @@ export function renderEtaDriftTemplate(args: EtaDriftArgs = {}): string {
     `<select class="gmt-select" data-role="event-count">${countOptions}</select></label>` +
     `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
     `</div>` +
+    // One slot round every event, so showing or hiding one eases instead of
+    // moving the page by a whole fieldset in a frame.
+    `<div data-role="events" data-grow="slot">` +
     Array.from({ length: MAX_EVENTS }, (_, i) =>
       eventFieldsetHtml(s, i + 1, uid),
     ).join("") +
+    `</div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Which time, and how far it moved</h4>` +
     `<p class="gmt-punct-callout" data-role="callout-best"></p>` +
     `<p class="gmt-punct-callout gmt-punct-naive" data-role="callout-naive"></p>` +
     `<div class="gmt-punct-frame">` +
-    `<div class="gmt-punct-heroes" data-role="drift-heroes" aria-hidden="true"></div>` +
+    `<div class="gmt-punct-heroes" data-role="drift-heroes" data-grow="slot" aria-hidden="true"></div>` +
     `<div class="gmt-eta-plot" data-role="drift-plot" role="img" aria-labelledby="drift-summary-${uid}">` +
     `<div class="gmt-eta-yaxis" data-role="y-ticks"></div>` +
     `<div class="gmt-eta-area" data-role="plot-area"></div>` +
@@ -189,8 +195,8 @@ export function renderEtaDriftTemplate(args: EtaDriftArgs = {}): string {
     `</label>` +
     `</div>` +
     `<p class="gmt-widget-hint" id="drift-summary-${uid}" data-role="drift-summary"></p>` +
-    `<table class="gmt-punct-table" data-role="event-table"></table>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
+    `<table class="gmt-punct-table" data-role="event-table" role="table" tabindex="0" aria-label="Events in the order recorded"></table>` +
+    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What the calls return</h4>` +
@@ -591,6 +597,8 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     const s = state();
     const facts = collectDriftFacts(s, lib);
     const reason = driftNullReason(s, facts, lib);
+    // Fewer than two estimates is a correct empty answer, not invalid input.
+    const empty = isEmptyDriftReason(reason);
     const count = visibleCount(s);
     for (let n = 1; n <= MAX_EVENTS; n++) {
       const set = q(`event-${n}`);
@@ -658,7 +666,9 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       );
       sentences.push(
         facts.drift === null
-          ? "No estimate drift: NO SIGNAL."
+          ? empty
+            ? "No estimate drift to measure yet: fewer than two estimates."
+            : "No estimate drift: NO SIGNAL."
           : `Estimate drift ${signedText(facts.drift.drift)} over ${facts.drift.revisions} estimates${facts.drift.exceedsTolerance === null ? "" : `; exceeds the tolerance: ${facts.drift.exceedsTolerance}`}.`,
       );
       summary.textContent = sentences.join(" ");
@@ -666,11 +676,11 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     const table = q("event-table");
     if (table) {
       table.innerHTML =
-        `<thead><tr><th scope="col">#</th><th scope="col">Class</th><th scope="col">At</th><th scope="col">Recorded</th><th scope="col">Note</th></tr></thead><tbody>` +
+        `<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">#</th><th role="columnheader" scope="col">Class</th><th role="columnheader" scope="col">At</th><th role="columnheader" scope="col">Recorded</th><th role="columnheader" scope="col">Note</th></tr></thead><tbody role="rowgroup">` +
         facts.events
           .map(
             (e, i) =>
-              `<tr data-role="event-row-${i + 1}"><th scope="row">${i + 1}</th><td${seriesAttr(e.classifier)}>${glyphHtml(e.classifier)}${chip(e.classifier)}</td><td>${escapeHtml(labelOf(e.at))}</td><td>${escapeHtml(labelOf(e.recordedAt))}</td><td data-role="note-${i + 1}">${escapeHtml(notes(i))}</td></tr>`,
+              `<tr role="row" data-role="event-row-${i + 1}"><th role="rowheader" scope="row">${i + 1}</th><td role="cell"${seriesAttr(e.classifier)}>${glyphHtml(e.classifier)}${chip(e.classifier)}</td><td role="cell">${escapeHtml(labelOf(e.at))}</td><td role="cell">${escapeHtml(labelOf(e.recordedAt))}</td><td role="cell" data-role="note-${i + 1}">${escapeHtml(notes(i))}</td></tr>`,
           )
           .join("") +
         `</tbody>`;
@@ -681,8 +691,8 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       if (reason) {
         renderAside(
           aside,
-          "caution",
-          "Why NO SIGNAL",
+          empty ? "note" : "caution",
+          empty ? "Nothing to measure yet" : "Why NO SIGNAL",
           `<p>${escapeHtml(driftReasonText(reason))}</p>`,
         );
       } else {
@@ -706,26 +716,23 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     }
     const driftOut = q("drift-output");
     if (driftOut) {
-      if (facts.drift === null)
-        renderWidgetOutput(driftOut, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(driftOut, formatValue(facts.drift), "live");
+      if (facts.drift !== null)
+        renderWidgetOutput(driftOut, formatValue(facts.drift), "live");
+      else if (empty) renderWidgetOutput(driftOut, "null", "empty");
+      else renderWidgetOutput(driftOut, "NO SIGNAL", "sentinel");
     }
   }
+
+  /** How many events were visible before the Events select last changed. */
+  let lastCount = visibleCount(state());
 
   function applyPreset(): void {
     const preset = ETA_PRESETS.find((p) => p.id === presetEl!.value);
     if (!preset) return;
-    writeSeed(root, {
-      eventCount: String(preset.events.length),
-      events: Array.from({ length: MAX_EVENTS }, (_, i) => ({
-        ...(preset.events[i] ?? {
-          classifier: "" as never,
-          at: "",
-          recordedAt: "",
-        }),
-      })),
-      tolerance: preset.tolerance,
-    });
+    writeSeed(root, presetState(preset));
+    // The preset sets the visible count: the next change of the Events select
+    // copies from the events that were showing now, not before the preset.
+    lastCount = visibleCount(state());
     syncPreset();
     render();
   }
@@ -752,8 +759,6 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       if (rec) rec.value = from.recordedAt;
     }
   }
-
-  let lastCount = visibleCount(state());
 
   root.addEventListener("input", (e) => {
     if (destroyed) return;
@@ -797,18 +802,21 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     const xEl = q("x-ticks");
     if (xEl) thinTickLabels(xEl);
   };
-  onWidthChange(area, refitText);
+  const stopWidthWatch = onWidthChange(area, refitText);
   // Text measured before the web fonts swap in is the wrong width: fit again
   // once they have loaded.
-  if (typeof document !== "undefined" && document.fonts) {
-    void document.fonts.ready.then(refitText);
-    document.fonts.addEventListener?.("loadingdone", refitText);
+  const fonts = typeof document !== "undefined" ? document.fonts : undefined;
+  if (fonts) {
+    void fonts.ready.then(refitText);
+    fonts.addEventListener?.("loadingdone", refitText);
   }
 
   return {
     state,
     destroy() {
       destroyed = true;
+      stopWidthWatch();
+      fonts?.removeEventListener?.("loadingdone", refitText);
     },
   };
 }

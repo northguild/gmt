@@ -6,6 +6,7 @@
  * is an appendix Z row (PB1 to PB4, PBP, PBR1).
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { PUNCTUALITY_PRESETS } from "./punctuality-board";
@@ -64,6 +65,24 @@ function key(root: HTMLElement, role: string, k: string, shift = false) {
   q(root, role).dispatchEvent(
     new KeyboardEvent("keydown", { key: k, shiftKey: shift, bubbles: true }),
   );
+}
+
+function keyup(root: HTMLElement, role: string, k: string) {
+  q(root, role).dispatchEvent(
+    new KeyboardEvent("keyup", { key: k, bubbles: true }),
+  );
+}
+
+function stubTrack(root: HTMLElement) {
+  q(root, "tolerance-track").getBoundingClientRect = () =>
+    ({
+      left: 0,
+      right: 600,
+      width: 600,
+      top: 0,
+      bottom: 20,
+      height: 20,
+    }) as DOMRect;
 }
 
 function setText(root: HTMLElement, role: string, value: string) {
@@ -388,8 +407,11 @@ describe("mountPunctualityBoard: the early tolerance", () => {
     key(root, "handle-early", "End");
     expect(q<HTMLInputElement>(root, "early").value).toBe("PT0S");
     key(root, "handle-early", "Home");
-    const r = Number(q(root, "handle-early").getAttribute("aria-valuemin"));
-    expect(q<HTMLInputElement>(root, "early").value).toBe(minutesToIso(-r));
+    // The axis is not read back from the DOM: the preset's largest deviation is
+    // 17 minutes (09:30 due, 09:47 in), 1.2 x 17 = 20.4 rounds up to a 30-minute
+    // half-axis, so Home is 30 minutes early.
+    expect(q<HTMLInputElement>(root, "early").value).toBe("PT30M");
+    expect(q(root, "handle-early").getAttribute("aria-valuemin")).toBe("-30");
   });
 
   it("turning the day-based early tolerance off leaves the late edge", async () => {
@@ -591,7 +613,271 @@ describe("mountPunctualityBoard: a pointer drag", () => {
   });
 });
 
+describe("mountPunctualityBoard: keyboard past the axis", () => {
+  it("refits the axis when the key comes up, so the handle can move on past the old edge", async () => {
+    // Bug: only a pointer coming up refit the axis, so the keyboard could not
+    // take a handle past the edge a pointer could.
+    const { root } = await mountPreset("fifteen-minute");
+    const handle = q(root, "handle-late");
+    key(root, "handle-late", "End");
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT30M");
+    expect(handle.getAttribute("aria-valuemax")).toBe("30");
+    // Held: the axis does not move, and more presses go nowhere.
+    const held = text(root, "axis-ticks");
+    key(root, "handle-late", "ArrowRight");
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT30M");
+    expect(text(root, "axis-ticks")).toBe(held);
+    keyup(root, "handle-late", "End");
+    expect(text(root, "axis-ticks")).not.toBe(held);
+    expect(Number(handle.getAttribute("aria-valuemax"))).toBeGreaterThan(30);
+    key(root, "handle-late", "ArrowRight");
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT31M");
+  });
+
+  it("does not refit for a key that moved nothing, or one that is not a handle key", async () => {
+    const { root } = await mountPreset("fifteen-minute");
+    const ticks = text(root, "axis-ticks");
+    keyup(root, "handle-late", "ArrowLeft");
+    keyup(root, "handle-late", "Shift");
+    expect(text(root, "axis-ticks")).toBe(ticks);
+  });
+
+  it("refits when the handle loses focus with a moved key still down", async () => {
+    const { root } = await mountPreset("fifteen-minute");
+    key(root, "handle-late", "End");
+    const ticks = text(root, "axis-ticks");
+    q(root, "handle-late").dispatchEvent(
+      new FocusEvent("focusout", { bubbles: true }),
+    );
+    expect(text(root, "axis-ticks")).not.toBe(ticks);
+  });
+});
+
+describe("mountPunctualityBoard: a drag that loses its pointer", () => {
+  const down = (root: HTMLElement) =>
+    q(root, "handle-late").dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
+    );
+  const move = (root: HTMLElement, x: number) =>
+    q(root, "handle-late").dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: x,
+      }),
+    );
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("ends when the capture is lost", async () => {
+    const { root } = await mountPreset("fifteen-minute");
+    stubTrack(root);
+    down(root);
+    move(root, 460);
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT16M");
+    q(root, "handle-late").dispatchEvent(
+      new Event("lostpointercapture", { bubbles: true }),
+    );
+    move(root, 100);
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT16M");
+  });
+
+  it("ends when capture never took and the pointer is released outside the widget", async () => {
+    vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(() => {
+      throw new Error("no such pointer");
+    });
+    const { root } = await mountPreset("fifteen-minute");
+    stubTrack(root);
+    down(root);
+    move(root, 460);
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT16M");
+    document.body.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
+    );
+    move(root, 100);
+    expect(q<HTMLInputElement>(root, "late").value).toBe("PT16M");
+  });
+
+  it("stops listening on the page once destroyed", async () => {
+    const remove = vi.spyOn(document, "removeEventListener");
+    const { handle } = await mountPreset("fifteen-minute");
+    handle.destroy();
+    const names = remove.mock.calls.map((c) => c[0]);
+    expect(names).toContain("pointerup");
+    expect(names).toContain("pointercancel");
+  });
+});
+
+describe("mountPunctualityBoard: the live region", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is not the readout: a status line beside it speaks once, after the change settles", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { root } = await mountPreset("fifteen-minute");
+    const rate = q(root, "rate");
+    const live = q(root, "rate-live");
+    expect(rate.hasAttribute("aria-live")).toBe(false);
+    expect(live.getAttribute("role")).toBe("status");
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toBe("");
+    const changes: string[] = [];
+    new MutationObserver(() => changes.push(live.textContent ?? "")).observe(
+      live,
+      { childList: true, characterData: true, subtree: true },
+    );
+    for (let i = 0; i < 5; i++) {
+      key(root, "handle-late", "ArrowRight");
+      vi.advanceTimersByTime(100);
+    }
+    expect(live.textContent).toBe("");
+    vi.advanceTimersByTime(500);
+    await Promise.resolve();
+    expect(live.textContent).toContain("of 6 on time");
+    expect(live.textContent).toContain("PT20M");
+    expect(changes).toHaveLength(1);
+  });
+
+  it("drops a pending reading when destroyed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { root, handle } = await mountPreset("fifteen-minute");
+    key(root, "handle-late", "ArrowRight");
+    handle.destroy();
+    vi.advanceTimersByTime(2000);
+    expect(q(root, "rate-live").textContent).toBe("");
+  });
+});
+
+describe("mountPunctualityBoard: text that is not a date", () => {
+  it.each([
+    ["2024-02-30T08:00:00+00:00[Europe/London]", "08:00"],
+    ["2024-06-31T10:05:00+03:00[Europe/Helsinki]", "10:05"],
+  ])(
+    "an impossible zoned planned time (%s) is a NO SIGNAL row, and the mount does not reject",
+    async (planned, clock) => {
+      // Bug: the weekday label threw out of the mount.
+      const { root } = await mount({
+        pairs: [
+          { planned, actual: "2024-06-14T09:05:00+01:00[Europe/London]" },
+          {
+            planned: "2024-06-14T09:00:00+01:00[Europe/London]",
+            actual: "2024-06-14T09:05:00+01:00[Europe/London]",
+          },
+        ],
+        late: "PT15M",
+      });
+      expect(text(root, "row-delta-1")).toBe("NO SIGNAL");
+      expect(text(root, "row-delta-2")).toBe("+5 min");
+      expect(text(root, "rate-output-a")).toBe("NO SIGNAL");
+      expect(text(root, "reason-aside")).toContain(
+        "Arrival 1's planned or actual",
+      );
+      // The row prints the clock as typed; it has no date to compare.
+      expect(text(root, "row-label-1")).toBe(`${clock} \u2192 09:05`);
+    },
+  );
+
+  it("an impossible zoned actual time typed into a seed does not throw either", async () => {
+    const { root } = await mount({
+      pairs: [
+        {
+          planned: "2024-06-14T09:00:00+01:00[Europe/London]",
+          actual: "2024-02-30T08:00:00+00:00[Europe/London]",
+        },
+      ],
+      late: "PT15M",
+    });
+    expect(text(root, "row-delta-1")).toBe("NO SIGNAL");
+    expect(text(root, "board-summary")).toContain("NO SIGNAL");
+  });
+});
+
+describe("mountPunctualityBoard: the picture agrees with the library", () => {
+  it("draws a hatched cap for a zero deviation the library calls early (early tolerance PT0S)", async () => {
+    const at = "2024-06-14T09:00:00+01:00[Europe/London]";
+    const { root } = await mount({
+      pairs: [{ planned: at, actual: at }],
+      late: "PT15M",
+      early: "PT0S",
+    });
+    expect(text(root, "row-class-1")).toBe("early");
+    expect(
+      q(root, "row-1").querySelector(".gmt-punct-bar-out.gmt-punct-hatch"),
+    ).not.toBeNull();
+  });
+});
+
+describe("mountPunctualityBoard: fonts, tables and growth", () => {
+  it("releases its font listener when destroyed", async () => {
+    const add = vi.fn();
+    const remove = vi.fn();
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(),
+        addEventListener: add,
+        removeEventListener: remove,
+      },
+    });
+    try {
+      const { handle } = await mountPreset("fifteen-minute");
+      expect(add).toHaveBeenCalledWith("loadingdone", expect.any(Function));
+      handle.destroy();
+      handle.destroy();
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledWith("loadingdone", add.mock.calls[0]![1]);
+    } finally {
+      Reflect.deleteProperty(document, "fonts");
+    }
+  });
+
+  it("gives the calls table table roles and a labelled, focusable scroll box", async () => {
+    const { root } = await mountPreset("sixty-and-120");
+    const table = q(root, "calls-table");
+    expect(table.getAttribute("role")).toBe("table");
+    expect(table.getAttribute("tabindex")).toBe("0");
+    expect(table.getAttribute("aria-label")).toBeTruthy();
+    expect(table.querySelector("thead")!.getAttribute("role")).toBe("rowgroup");
+    expect(table.querySelector("tbody")!.getAttribute("role")).toBe("rowgroup");
+    expect(
+      [...table.querySelectorAll("thead th")].map((th) =>
+        th.getAttribute("role"),
+      ),
+    ).toEqual(Array(4).fill("columnheader"));
+    const rows = [...table.querySelectorAll("tbody tr")];
+    expect(rows).toHaveLength(6);
+    for (const row of rows) {
+      expect(row.getAttribute("role")).toBe("row");
+      expect(row.querySelector("th")!.getAttribute("role")).toBe("rowheader");
+      expect(
+        [...row.querySelectorAll("td")].map((td) => td.getAttribute("role")),
+      ).toEqual(Array(3).fill("cell"));
+    }
+  });
+
+  it("puts the result plates in a growing slot", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderPunctualityBoardTemplate();
+    expect(q(root, "rate-heroes").getAttribute("data-grow")).toBe("slot");
+  });
+});
+
 describe("mountPunctualityBoard: presets, permalinks and teardown", () => {
+  it("a cleared late tolerance survives the permalink instead of restoring the preset's", async () => {
+    // Bug: a blank late was left out of a preset permalink, so a reload
+    // brought the preset's own tolerance back.
+    const { root, handle } = await mountPreset("fifteen-minute");
+    setText(root, "late", "");
+    const state = handle.getPermalinkState!();
+    expect(state).toEqual({ preset: "fifteen-minute", late: "none" });
+    const again = await mount(state ?? {});
+    expect(q<HTMLInputElement>(again.root, "late").value).toBe("");
+    expect(text(again.root, "rate-output-a")).toBe("NO SIGNAL");
+  });
+
   it("choosing a preset replaces the rows and the tolerance", async () => {
     const { root } = await mountPreset("fifteen-minute");
     const select = q<HTMLSelectElement>(root, "preset");
@@ -803,5 +1089,19 @@ describe("readouts that hold still", () => {
     expect(
       q(root, "rate-hero-b").querySelectorAll(".gmt-punct-hero-line"),
     ).toHaveLength(3);
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });
