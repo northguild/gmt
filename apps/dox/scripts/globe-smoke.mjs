@@ -17,6 +17,19 @@
  *   seeing a failure;
  * - drag, keyboard and zoom all move the globe.
  *
+ * And for the Earth imagery (#293), which only the WebGPU renderer draws:
+ *
+ * - the parity comparison runs with the image withheld, so it compares the
+ *   vector layers alone — the base layer differs between the renderers by
+ *   design. Withholding it is also the failed-load path: the globe has to come
+ *   out flat and whole, not broken;
+ * - with the image allowed, WebGPU in the dark theme — and in the landing
+ *   hero, a dark island, in the light theme too — requests it once and draws
+ *   it, while the rest of the light theme, canvas-2D, the no-WebGPU fallback,
+ *   raised contrast, forced colours and a reference page never request it;
+ * - at 5× the imagery has faded out, and the WebGPU globe matches its own
+ *   flat rendering.
+ *
  * The clock is pinned so both renderers see the same instant — otherwise the
  * terminator moves between captures and every comparison is noise.
  *
@@ -62,9 +75,13 @@ const OUT = path.join(DOX, ".globe-smoke");
  */
 const FIXED_INSTANT = "2026-03-20T09:30:00Z";
 
-/** The pages the globe appears on, and the size to check each at. */
+/**
+ * The pages the globe appears on, and the size to check each at. `darkHero`
+ * marks the landing hero, a dark island that shows the imagery in the light
+ * theme too; every other globe is flat in the light theme.
+ */
 const PAGES = [
-  { name: "home", route: "/", width: 1440, height: 900 },
+  { name: "home", route: "/", width: 1440, height: 900, darkHero: true },
   {
     name: "zoned-earth",
     route: "/tools/zoned-earth/",
@@ -79,8 +96,46 @@ const PAGES = [
   },
 ];
 
-/** Zoom levels to compare at, since zoom changes line widths and label rules. */
-const ZOOMS = [1, 3];
+/**
+ * Presses of the zoom-in button (×1.4 each) to compare at, since zoom changes
+ * line widths and label rules. Five clamps at the 5× top of the range, where
+ * the imagery has faded out.
+ */
+const ZOOMS = [0, 3, 5];
+const TOP_ZOOM_PRESSES = 5;
+
+/** The zoom a number of presses lands on, for messages: `1×`, `2.74×`, `5×`. */
+function zoomLabel(presses) {
+  const zoom = Math.min(1.4 ** presses, 5);
+  return `${Number(zoom.toFixed(2))}×`;
+}
+
+/** The Earth imagery, which only the WebGPU renderer fetches. */
+const IMAGERY_PATH = "/earth-blue-marble.webp";
+
+/** A reference page, which must load no globe code and no image. */
+const REFERENCE_ROUTE = "/reference/zoned/calculate/addZoned/";
+
+/**
+ * The share of the stage the imagery has to change to count as drawn. It
+ * replaces the whole sphere's base layer, so a real draw changes far more;
+ * this only has to tell "drew" from "did not".
+ */
+const MIN_IMAGERY_RATIO = 0.15;
+
+/**
+ * A finer pixelmatch threshold for that check. The dark theme's flat sphere
+ * is a near-black wash and the imagery's ocean a deep blue, a change the
+ * parity threshold above is tuned to forgive.
+ */
+const IMAGERY_PIXELMATCH_THRESHOLD = 0.05;
+
+/**
+ * How far the WebGPU globe at 5× may differ from its own flat rendering. The
+ * imagery has faded out there, and both captures are taken still, with the
+ * tooltip's ticking clock masked, so the two should be the same picture.
+ */
+const MAX_FADED_RATIO = 0.005;
 
 /**
  * How far the two renderers may differ.
@@ -191,22 +246,85 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 
-/** Load a page with a pinned clock and collect anything that went wrong. */
-async function open(browser, base, { route, width, height }, query) {
-  const page = await browser.newPage({ viewport: { width, height } });
+/**
+ * Load a page with a pinned clock and collect anything that went wrong.
+ *
+ * `theme` is set the way `ThemeProvider.astro` reads it on first paint, so it
+ * is in force before any globe code runs; left out, the page takes its own
+ * default. `withholdImagery` fails the image request at the network, and
+ * `emulate` passes media emulation (`contrast`, `forcedColors`) to the page.
+ */
+async function open(
+  browser,
+  base,
+  { route, width, height },
+  query,
+  { theme, withholdImagery = false, emulate = {}, waitForStage = true } = {},
+) {
+  const page = await browser.newPage({
+    viewport: { width, height },
+    ...emulate,
+  });
   const problems = [];
+  const imagery = { requests: 0, statuses: [] };
+  const requests = [];
   page.on("console", (message) => {
-    if (message.type() === "error") problems.push(`console: ${message.text()}`);
+    if (message.type() !== "error") return;
+    // The withheld image failing is the point of that run, not a problem.
+    if (withholdImagery && /Failed to load resource/.test(message.text()))
+      return;
+    problems.push(`console: ${message.text()}`);
   });
   page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
+  page.on("request", (request) => {
+    requests.push(request.url());
+    if (new URL(request.url()).pathname === IMAGERY_PATH) imagery.requests++;
+  });
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname === IMAGERY_PATH) {
+      imagery.statuses.push(response.status());
+    }
+  });
+  if (withholdImagery) {
+    await page.route(`**${IMAGERY_PATH}`, (request) => request.abort());
+  }
+  if (theme) {
+    await page.addInitScript((value) => {
+      localStorage.setItem("starlight-theme", value);
+    }, theme);
+  }
   await page.clock.install({ time: FIXED_INSTANT });
   await page.goto(`${base}${route}${query}`, { waitUntil: "networkidle" });
   const stage = page.locator(".gmt-globe-stage").first();
-  await stage.waitFor({ state: "visible", timeout: 15_000 });
-  /* The globe mounts on an IntersectionObserver and reveals over a transition,
-     so give it a beat before reading pixels. */
-  await page.waitForTimeout(2500);
-  return { page, stage, problems };
+  if (waitForStage) {
+    await stage.waitFor({ state: "visible", timeout: 15_000 });
+    /* The globe mounts on an IntersectionObserver, reveals over a transition,
+       and fades the imagery in once it lands, so give it a beat before
+       reading pixels. */
+    await page.waitForTimeout(2500);
+  }
+  return { page, stage, problems, imagery, requests };
+}
+
+/** Press zoom-in `presses` times and let the ease settle. */
+async function zoomIn(page, presses) {
+  if (presses === 0) return;
+  await page.evaluate((count) => {
+    const button = document.querySelector("[data-globe-zoom='in']");
+    for (let i = 0; i < count; i++) button?.click();
+  }, presses);
+  await page.waitForTimeout(900);
+}
+
+/** The share of pixels that differ between two same-sized captures. */
+function diffRatio(a, b, file, threshold = PIXELMATCH_THRESHOLD) {
+  if (a.width !== b.width || a.height !== b.height) return null;
+  const diff = new PNG({ width: a.width, height: a.height });
+  const changed = pixelmatch(a.data, b.data, diff.data, a.width, a.height, {
+    threshold,
+  });
+  if (file) writeFileSync(path.join(OUT, file), PNG.sync.write(diff));
+  return changed / (a.width * a.height);
 }
 
 async function readState(page) {
@@ -276,37 +394,40 @@ async function main() {
     for (const zoom of ZOOMS) {
       const shots = {};
       for (const renderer of ["webgpu", "canvas2d"]) {
-        const { page, stage, problems } = await open(
+        const { page, stage, problems, imagery } = await open(
           browser,
           base,
           target,
           `?globe=${renderer}`,
+          { withholdImagery: renderer === "webgpu" },
         );
         const state = await readState(page);
 
         check(
           state.renderer === renderer,
-          `${target.name} @${zoom}: expected the ${renderer} renderer, got ${state.renderer}`,
+          `${target.name} @${zoomLabel(zoom)}: expected the ${renderer} renderer, got ${state.renderer}`,
         );
         check(
           !state.unavailable,
-          `${target.name} @${zoom} (${renderer}): the widget reported itself unavailable`,
+          `${target.name} @${zoomLabel(zoom)} (${renderer}): the widget reported itself unavailable`,
         );
         check(
           state.clockRows > 0,
-          `${target.name} @${zoom} (${renderer}): the zone clock list is empty`,
+          `${target.name} @${zoomLabel(zoom)} (${renderer}): the zone clock list is empty`,
         );
+        if (renderer === "canvas2d") {
+          check(
+            imagery.requests === 0,
+            `${target.name} @${zoomLabel(zoom)} (canvas2d): requested the Earth imagery, which only WebGPU draws`,
+          );
+        }
         for (const problem of problems) {
-          failures.push(`${target.name} @${zoom} (${renderer}): ${problem}`);
+          failures.push(
+            `${target.name} @${zoomLabel(zoom)} (${renderer}): ${problem}`,
+          );
         }
 
-        if (zoom !== 1) {
-          await page.evaluate((factor) => {
-            const button = document.querySelector("[data-globe-zoom='in']");
-            for (let i = 0; i < factor; i++) button?.click();
-          }, zoom);
-          await page.waitForTimeout(900);
-        }
+        await zoomIn(page, zoom);
 
         const file = path.join(OUT, `${target.name}-z${zoom}-${renderer}.png`);
         await stage.screenshot({ path: file });
@@ -315,40 +436,296 @@ async function main() {
         );
         check(
           !isBlank(shots[renderer]),
-          `${target.name} @${zoom} (${renderer}): the canvas is blank`,
+          `${target.name} @${zoomLabel(zoom)} (${renderer}): the canvas is blank`,
         );
         await page.close();
       }
 
-      // Parity between the two renderings of the same frame.
+      /* Parity between the two renderings of the same frame. The WebGPU one
+         had its imagery withheld, so this compares the vector layers alone. */
       const a = shots.webgpu;
       const b = shots.canvas2d;
-      if (a && b && a.width === b.width && a.height === b.height) {
-        const diff = new PNG({ width: a.width, height: a.height });
-        const changed = pixelmatch(
-          a.data,
-          b.data,
-          diff.data,
-          a.width,
-          a.height,
-          { threshold: PIXELMATCH_THRESHOLD },
-        );
-        const ratio = changed / (a.width * a.height);
-        writeFileSync(
-          path.join(OUT, `${target.name}-z${zoom}-diff.png`),
-          PNG.sync.write(diff),
-        );
+      const ratio =
+        a && b ? diffRatio(a, b, `${target.name}-z${zoom}-diff.png`) : null;
+      if (ratio !== null) {
         notes.push(
-          `${target.name} @${zoom}: ${(ratio * 100).toFixed(2)}% of pixels differ between renderers`,
+          `${target.name} @${zoomLabel(zoom)}: ${(ratio * 100).toFixed(2)}% of pixels differ between renderers`,
         );
         check(
           ratio <= MAX_DIFF_RATIO,
-          `${target.name} @${zoom}: renderers differ on ${(ratio * 100).toFixed(2)}% of pixels (limit ${(MAX_DIFF_RATIO * 100).toFixed(0)}%)`,
+          `${target.name} @${zoomLabel(zoom)}: renderers differ on ${(ratio * 100).toFixed(2)}% of pixels (limit ${(MAX_DIFF_RATIO * 100).toFixed(0)}%)`,
         );
       } else if (a && b) {
-        failures.push(`${target.name} @${zoom}: captures differ in size`);
+        failures.push(
+          `${target.name} @${zoomLabel(zoom)}: captures differ in size`,
+        );
       }
     }
+  }
+
+  // --- the Earth imagery ---------------------------------------------------
+  for (const target of PAGES) {
+    /* The dark theme draws the imagery: at rest the image is requested once,
+       arrives, and changes the globe from its own flat rendering. */
+    {
+      const theme = "dark";
+      const label = `${target.name} imagery (${theme})`;
+      const captures = {};
+      for (const withholdImagery of [true, false]) {
+        const { page, stage, problems, imagery } = await open(
+          browser,
+          base,
+          target,
+          "?globe=webgpu",
+          { theme, withholdImagery },
+        );
+        const state = await readState(page);
+        check(
+          state.renderer === "webgpu",
+          `${label}: expected the webgpu renderer, got ${state.renderer}`,
+        );
+        for (const problem of problems) failures.push(`${label}: ${problem}`);
+        if (!withholdImagery) {
+          check(
+            imagery.requests === 1,
+            `${label}: expected one request for the image, saw ${imagery.requests}`,
+          );
+          check(
+            imagery.statuses.includes(200),
+            `${label}: the image did not arrive (${imagery.statuses.join(", ") || "no response"})`,
+          );
+          await stage.screenshot({
+            path: path.join(OUT, `${target.name}-imagery-${theme}.png`),
+          });
+        }
+        captures[withholdImagery ? "flat" : "shown"] = PNG.sync.read(
+          await stage.screenshot({ type: "png" }),
+        );
+        await page.close();
+      }
+      const ratio = diffRatio(
+        captures.flat,
+        captures.shown,
+        `${target.name}-imagery-${theme}-diff.png`,
+        IMAGERY_PIXELMATCH_THRESHOLD,
+      );
+      notes.push(
+        `${label}: imagery changes ${(ratio * 100).toFixed(2)}% of pixels`,
+      );
+      check(
+        ratio !== null && ratio >= MIN_IMAGERY_RATIO,
+        `${label}: the imagery did not draw (${((ratio ?? 0) * 100).toFixed(2)}% changed, need ${(MIN_IMAGERY_RATIO * 100).toFixed(0)}%)`,
+      );
+    }
+
+    /* The light theme turns the imagery off — no request — except in the
+       landing hero, which keeps the dark theme and so shows it. */
+    {
+      const label = `${target.name} imagery (light)`;
+      const expected = target.darkHero ? 1 : 0;
+      const { page, problems, imagery } = await open(
+        browser,
+        base,
+        target,
+        "?globe=webgpu",
+        { theme: "light" },
+      );
+      const state = await readState(page);
+      check(
+        state.renderer === "webgpu",
+        `${label}: expected the webgpu renderer, got ${state.renderer}`,
+      );
+      for (const problem of problems) failures.push(`${label}: ${problem}`);
+      check(
+        imagery.requests === expected,
+        target.darkHero
+          ? `${label}: expected one request for the image in the dark hero, saw ${imagery.requests}`
+          : `${label}: requested the Earth imagery, which the light theme turns off`,
+      );
+      await page.close();
+    }
+
+    /* At 5× the imagery has faded out: the globe is its own flat rendering,
+       which the parity loop has already held against canvas-2D. Both captures
+       are taken with reduced motion, so the ambient spin cannot move the globe
+       between them, and with the tooltip masked, so its clock cannot tick. */
+    const still = {};
+    for (const withholdImagery of [true, false]) {
+      const { page, stage, problems, imagery } = await open(
+        browser,
+        base,
+        target,
+        "?globe=webgpu",
+        {
+          theme: "dark",
+          withholdImagery,
+          emulate: { reducedMotion: "reduce" },
+        },
+      );
+      for (const problem of problems) {
+        failures.push(
+          `${target.name} imagery @${zoomLabel(TOP_ZOOM_PRESSES)}: ${problem}`,
+        );
+      }
+      /* Without this the comparison below passes for a globe whose image
+         simply never arrived. */
+      if (!withholdImagery) {
+        check(
+          imagery.statuses.includes(200),
+          `${target.name} imagery @${zoomLabel(TOP_ZOOM_PRESSES)}: the image did not arrive, so the fade-out proves nothing`,
+        );
+      }
+      await zoomIn(page, TOP_ZOOM_PRESSES);
+      still[withholdImagery ? "flat" : "shown"] = PNG.sync.read(
+        await stage.screenshot({
+          type: "png",
+          mask: [page.locator(".gmt-globe-tooltip")],
+        }),
+      );
+      await page.close();
+    }
+    {
+      const ratio = diffRatio(
+        still.flat,
+        still.shown,
+        `${target.name}-z${TOP_ZOOM_PRESSES}-imagery-diff.png`,
+      );
+      notes.push(
+        `${target.name} @${zoomLabel(TOP_ZOOM_PRESSES)}: imagery-on differs from flat on ${((ratio ?? 1) * 100).toFixed(2)}% of pixels`,
+      );
+      check(
+        ratio !== null && ratio <= MAX_FADED_RATIO,
+        `${target.name} @${zoomLabel(TOP_ZOOM_PRESSES)}: the imagery has not faded out (${((ratio ?? 1) * 100).toFixed(2)}% differs from flat, limit ${(MAX_FADED_RATIO * 100).toFixed(1)}%)`,
+      );
+    }
+  }
+
+  /* The landing hero keeps the dark theme in the light theme: every element
+     in it computes the same colours in both. A light-only rule that reaches
+     into the island, or a Starlight colour it does not re-map, shows up here
+     as a difference — the CSS tests can only check the rules they know of. */
+  {
+    const hero = PAGES.find((target) => target.darkHero);
+    const computed = {};
+    for (const theme of ["dark", "light"]) {
+      const { page, problems } = await open(
+        browser,
+        base,
+        hero,
+        "?globe=webgpu",
+        { theme, emulate: { reducedMotion: "reduce" } },
+      );
+      for (const problem of problems) {
+        failures.push(`dark hero (${theme}): ${problem}`);
+      }
+      computed[theme] = await page.evaluate(() => {
+        const properties = [
+          "color",
+          "background-color",
+          "border-top-color",
+          "border-bottom-color",
+          "outline-color",
+          "box-shadow",
+          "text-decoration-color",
+          "fill",
+          "stroke",
+        ];
+        const root = document.querySelector(".gmt-herostage");
+        if (!root) return [];
+        return [...root.querySelectorAll("*")]
+          .filter((element) => element.tagName !== "CANVAS")
+          .map((element) => {
+            const style = getComputedStyle(element);
+            const name = `${element.tagName.toLowerCase()}${[
+              ...element.classList,
+            ]
+              .filter((c) => !c.startsWith("astro-"))
+              .map((c) => `.${c}`)
+              .join("")}`;
+            return {
+              name,
+              values: properties.map(
+                (property) =>
+                  `${property}: ${style.getPropertyValue(property)}`,
+              ),
+            };
+          });
+      });
+      await page.close();
+    }
+    const { dark, light } = computed;
+    check(
+      dark.length > 0 && dark.length === light.length,
+      `dark hero: ${dark.length} elements in the dark theme, ${light.length} in the light`,
+    );
+    const differences = [];
+    for (let i = 0; i < Math.min(dark.length, light.length); i++) {
+      dark[i].values.forEach((value, k) => {
+        if (value !== light[i].values[k]) {
+          differences.push(
+            `${dark[i].name} ${value} | light ${light[i].values[k]}`,
+          );
+        }
+      });
+    }
+    notes.push(`dark hero: ${dark.length} elements compared across themes`);
+    check(
+      differences.length === 0,
+      `dark hero: ${differences.length} computed colour(s) differ from the dark theme:\n      ${differences.slice(0, 12).join("\n      ")}`,
+    );
+  }
+
+  /* Raised contrast and forced colours zero the imagery token, which is also
+     what stops the download. In the dark theme, which would otherwise draw it. */
+  for (const [name, emulate] of [
+    ["prefers-contrast: more", { contrast: "more" }],
+    ["forced-colors: active", { forcedColors: "active" }],
+  ]) {
+    const { page, problems, imagery } = await open(
+      browser,
+      base,
+      PAGES[1],
+      "?globe=webgpu",
+      { theme: "dark", emulate },
+    );
+    const state = await readState(page);
+    check(
+      state.renderer === "webgpu",
+      `${name}: expected the webgpu renderer, got ${state.renderer}`,
+    );
+    check(
+      imagery.requests === 0,
+      `${name}: requested the Earth imagery, which this preference turns off`,
+    );
+    for (const problem of problems) failures.push(`${name}: ${problem}`);
+    await page.close();
+  }
+
+  /* A reference page loads no globe code and no image. The image check is
+     exact. The code check goes by chunk name, so it catches the globe's own
+     modules but would miss them folded into a shared chunk; the static
+     guarantee is `renderer-graph.test.ts` and the lazy mount in
+     `globe-mount.ts`. */
+  {
+    const { page, problems, requests } = await open(
+      browser,
+      base,
+      { route: REFERENCE_ROUTE, width: 1440, height: 900 },
+      "",
+      { waitForStage: false },
+    );
+    await page.waitForTimeout(1500);
+    const globeRequests = requests.filter((url) =>
+      /globe|renderer-webgpu|renderer-canvas2d|earth-blue-marble/i.test(
+        new URL(url).pathname,
+      ),
+    );
+    check(
+      globeRequests.length === 0,
+      `reference page: loaded globe code or imagery (${globeRequests.join(", ")})`,
+    );
+    for (const problem of problems) failures.push(`reference page: ${problem}`);
+    await page.close();
   }
 
   // --- the fallback, with WebGPU hidden from the page -----------------------
@@ -357,10 +734,14 @@ async function main() {
       viewport: { width: 1440, height: 900 },
     });
     const problems = [];
+    let imageryRequests = 0;
     page.on("console", (m) => {
       if (m.type() === "error") problems.push(`console: ${m.text()}`);
     });
     page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === IMAGERY_PATH) imageryRequests++;
+    });
     /* Hiding `navigator.gpu` rather than adding a product flag: this is exactly
        what a browser without WebGPU looks like, and it keeps the test out of the
        shipped code. */
@@ -369,6 +750,10 @@ async function main() {
         get: () => undefined,
         configurable: true,
       });
+    });
+    // The dark theme, which would draw the imagery if WebGPU were there.
+    await page.addInitScript(() => {
+      localStorage.setItem("starlight-theme", "dark");
     });
     await page.clock.install({ time: FIXED_INSTANT });
     await page.goto(`${base}/tools/zoned-earth/`, { waitUntil: "networkidle" });
@@ -385,6 +770,10 @@ async function main() {
     check(
       !state.unavailable,
       "no-WebGPU fallback: the widget reported itself unavailable",
+    );
+    check(
+      imageryRequests === 0,
+      "no-WebGPU fallback: requested the Earth imagery, which only WebGPU draws",
     );
     for (const problem of problems)
       failures.push(`no-WebGPU fallback: ${problem}`);
