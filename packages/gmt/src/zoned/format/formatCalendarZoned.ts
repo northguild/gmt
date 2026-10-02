@@ -4,6 +4,7 @@ import { formatCalendarDays } from "../../internal/formatCalendarDays";
 import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatCalendarZoned`: the moment the day label is measured from and the length of
@@ -21,11 +22,12 @@ export interface FormatCalendarZonedOptions {
   reference?: string | number;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
+   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
-  timeStyle?: "short" | "medium" | "full";
+  timeStyle?: "short" | "medium" | "long" | "full";
 }
 
 /**
@@ -59,25 +61,26 @@ export function formatCalendarZoned(
     if (options === null || typeof options !== "object") return "";
     if (!isValidZonedDateTime(value)) return "";
 
-    if (!isValidZonedFormatReference(options.reference)) return "";
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
       const target = zonedDateTimeFrom(value);
       const timeZone = target.timeZoneId;
 
       let reference: Temporal.ZonedDateTime;
-      if (options.reference === undefined) {
+      if (referenceOption === undefined) {
         reference = Temporal.Now.zonedDateTimeISO(timeZone);
-      } else if (typeof options.reference === "string") {
-        reference = isValidUtc(options.reference)
-          ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(
-              timeZone,
-            )
-          : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
+      } else if (typeof referenceOption === "string") {
+        reference = isValidUtc(referenceOption)
+          ? Temporal.Instant.from(referenceOption).toZonedDateTimeISO(timeZone)
+          : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
       } else {
-        reference = Temporal.Instant.fromEpochMilliseconds(
-          options.reference,
-        ).toZonedDateTimeISO(timeZone);
+        reference =
+          Temporal.Instant.fromEpochMilliseconds(
+            referenceOption,
+          ).toZonedDateTimeISO(timeZone);
       }
 
       return formatCalendarDays(
@@ -85,7 +88,7 @@ export function formatCalendarZoned(
         target.epochMilliseconds,
         timeZone,
         locale,
-        options.timeStyle === undefined ? "short" : options.timeStyle,
+        optionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

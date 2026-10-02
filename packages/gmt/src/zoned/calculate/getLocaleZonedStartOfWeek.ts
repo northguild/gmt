@@ -7,6 +7,7 @@ import {
 import type { FractionalDigit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return the start of the week containing `value`, using `locale`'s
@@ -58,10 +59,10 @@ export function getLocaleZonedStartOfWeek(
       return "";
     }
 
-    const fractionalSecondDigits =
-      optionsArg?.fractionalSecondDigits === undefined
-        ? 0
-        : optionsArg.fractionalSecondDigits;
+    const fractionalSecondDigits = optionOrDefault(
+      optionsArg?.fractionalSecondDigits,
+      0,
+    );
 
     if (!isValidZonedDateTime(value)) return "";
 

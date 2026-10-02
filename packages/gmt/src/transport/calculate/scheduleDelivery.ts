@@ -12,11 +12,12 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
 import { etaAtZone } from "../convert/etaAtZone";
 import { transitTime } from "./transitTime";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /** One leg of a multi-modal journey: a departure, how long it takes, and where it lands. */
 export interface Leg {
   /**
-   * Departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the
+   * The departure: an instant (`Z`/offset) or a zoned string, always exact; on any leg but the
    * first, a zoneless wall time is also accepted and is read in the previous leg's `timeZone`
    * (the first leg's equivalent is `ScheduleDeliveryOptions.startTimeZone`). Required on the
    * first leg; on later legs it is the scheduled connection the cargo waits for.
@@ -25,30 +26,30 @@ export interface Leg {
    * `dwellAfter` allows; a first leg without it is invalid input.
    */
   departure?: string;
-  /** ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule). */
+  /** The ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule). */
   duration: string;
   /** The time zone of the destination, the caller's fact: an IANA name or a UTC offset. */
   timeZone: string;
   /**
-   * Handling time at the handoff after this leg; the minimum connect time.
+   * The handling time at the handoff after this leg; the minimum connect time.
    *
    * @defaultValue `"PT0S"`
    */
   dwellAfter?: string;
   /**
-   * Opaque tag echoed back on the LegTime; GMT does not interpret transport modes.
+   * An opaque tag echoed back on the LegTime; GMT does not interpret transport modes.
    *
    * @defaultValue None. The LegTime carries no `mode`.
    */
   mode?: string;
   /**
-   * Opaque tag echoed back on the LegTime; never resolved to a zone.
+   * An opaque tag echoed back on the LegTime; never resolved to a zone.
    *
    * @defaultValue None. The LegTime carries no `origin`.
    */
   origin?: string;
   /**
-   * Opaque tag echoed back on the LegTime; never resolved to a zone.
+   * An opaque tag echoed back on the LegTime; never resolved to a zone.
    *
    * @defaultValue None. The LegTime carries no `destination`.
    */
@@ -63,11 +64,11 @@ export interface LegTime {
   localArrival: string;
   /** The leg's `dwellAfter` echoed as written, `"PT0S"` when omitted. */
   dwellAfter: string;
-  /** Echoed from the leg; absent when the leg did not supply it. */
+  /** The leg's `mode`, echoed back; absent when the leg did not supply it. */
   mode?: string;
-  /** Echoed from the leg; absent when the leg did not supply it. */
+  /** The leg's `origin`, echoed back; absent when the leg did not supply it. */
   origin?: string;
-  /** Echoed from the leg; absent when the leg did not supply it. */
+  /** The leg's `destination`, echoed back; absent when the leg did not supply it. */
   destination?: string;
 }
 
@@ -266,7 +267,7 @@ function legBoundaries(
   if (localArrival === "") {
     return null;
   }
-  const dwellAfter = leg.dwellAfter === undefined ? "PT0S" : leg.dwellAfter;
+  const dwellAfter = optionOrDefault(leg.dwellAfter, "PT0S");
   if (isFinal) {
     return isValidFinalDwell(dwellAfter)
       ? { arrival, localArrival, dwellAfter, released: null }

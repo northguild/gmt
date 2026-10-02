@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `zoned` is between `start` and `end` (inclusive by default).
@@ -49,10 +50,8 @@ export function isBetweenZoned(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart =
-      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-    const inclusiveEnd =
-      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
+    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
     if (
       !isValidZonedDateTime(zoned) ||

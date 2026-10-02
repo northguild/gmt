@@ -163,3 +163,42 @@ describe("formatUtc with a locale list", () => {
     ).toBe(expected);
   });
 });
+
+// ECMA-402 reads each option with Get, which follows the prototype chain: an inherited option is
+// an option. 15 March 2024 is a Friday, so dateStyle "full" in en-US is "Friday, March 15, 2024".
+describe("formatUtc with inherited options", () => {
+  it.each`
+    label                                    | options                                                         | expected
+    ${'an own dateStyle: "full"'}            | ${{ dateStyle: "full" }}                                        | ${"Friday, March 15, 2024"}
+    ${'an inherited dateStyle: "full"'}      | ${Object.create({ dateStyle: "full" })}                         | ${"Friday, March 15, 2024"}
+    ${'an inherited timeZone: "Asia/Tokyo"'} | ${Object.create({ dateStyle: "full", timeZone: "Asia/Tokyo" })} | ${"Saturday, March 16, 2024"}
+  `(
+    "returns $expected for 2024-03-15T20:00:00Z with $label",
+    ({ options, expected }) => {
+      expect(formatUtc("2024-03-15T20:00:00Z", "en-US", options)).toBe(
+        expected,
+      );
+    },
+  );
+});
+
+// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
+// an object option is asked for its value once and that answer is both checked and used: a long
+// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
+// print "M 15".
+describe("formatUtc with an option that is an object", () => {
+  it("calls month.toString() once and formats with its first answer, long", () => {
+    let coercions = 0;
+    const month = {
+      toString() {
+        coercions += 1;
+        return coercions === 1 ? "long" : "narrow";
+      },
+    };
+    const out = formatUtc("2024-03-15T20:00:00Z", "en-US", {
+      month,
+      day: "numeric",
+    } as never);
+    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+  });
+});

@@ -6,6 +6,7 @@
 
 import type { Temporal } from "@js-temporal/polyfill";
 import { plainDateTimeFormatOptions } from "./plainFormatOptions";
+import { optionOrDefault } from "./optionOrDefault";
 
 type Options = Intl.DateTimeFormatOptions;
 
@@ -68,8 +69,7 @@ export function instantFormatOptions(
     ...DEFAULT_FIELDS,
     ...(defaults === "zoned-date-time"
       ? {
-          timeZoneName:
-            options.timeZoneName === undefined ? "short" : options.timeZoneName,
+          timeZoneName: optionOrDefault(options.timeZoneName, "short"),
         }
       : {}),
     timeZone,

@@ -4,6 +4,8 @@ import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
 import { isValidUtc } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the
@@ -72,11 +74,12 @@ export function formatUtc(
     if (options === null) return "";
     if (!isValidUtc(value)) return "";
 
-    const {
-      timeZone,
-      includeTimeZoneName = false,
-      ...intlOptions
-    } = options ?? {};
+    // Each option is read once (GetOption), inherited ones included.
+    const includeTimeZoneName = optionOrDefault(
+      options?.includeTimeZoneName,
+      false,
+    );
+    const { timeZone, ...intlOptions } = readDateTimeFormatOptions(options);
 
     const instant = toInstantFromUtc(value);
     if (instant === null) return "";

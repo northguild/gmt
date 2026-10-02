@@ -6,6 +6,7 @@ import {
 } from "../../internal/unixEpochValue";
 import { resolveUnixFormatReference } from "../../internal/unixFormatReference";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatCalendarUnix`. Like `formatCalendar`, it takes a `reference` and a `timeStyle`
@@ -40,11 +41,12 @@ export interface FormatCalendarUnixOptions {
   timeZone?: string;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
+   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
-  timeStyle?: "short" | "medium" | "full";
+  timeStyle?: "short" | "medium" | "long" | "full";
 }
 
 /**
@@ -97,7 +99,7 @@ export function formatCalendarUnix(
         reference,
         timeZone,
         locale,
-        options.timeStyle === undefined ? "short" : options.timeStyle,
+        optionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

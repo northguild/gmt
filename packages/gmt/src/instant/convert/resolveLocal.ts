@@ -3,6 +3,7 @@ import type { Disambiguation } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
 import { isoStringBody, zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 const DISAMBIGUATIONS: readonly string[] = [
   "compatible",
@@ -64,10 +65,10 @@ export function resolveLocal(
       return "";
     }
 
-    const disambiguation =
-      optionsArg?.disambiguation === undefined
-        ? "compatible"
-        : optionsArg.disambiguation;
+    const disambiguation = optionOrDefault(
+      optionsArg?.disambiguation,
+      "compatible",
+    );
 
     if (
       !isValidDateTime(localDateTime) ||

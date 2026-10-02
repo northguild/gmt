@@ -7,6 +7,7 @@ import {
 } from "../../internal/toInstantFromUtc";
 import type { CalendarOptions } from "../../types";
 import { isValidUtc } from "../validate";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the
@@ -23,11 +24,12 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
   timeZone?: string;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
+   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
-  timeStyle?: "short" | "medium" | "full";
+  timeStyle?: "short" | "medium" | "long" | "full";
 }
 
 /**
@@ -63,13 +65,15 @@ export function formatCalendarUtc(
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const timeZone = normalizeTimeZone(options.timeZone);
     if (!timeZone) return "";
-    if (options.reference !== undefined && !isValidUtc(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidUtc(referenceOption))
       return "";
 
     const target = toInstantFromUtc(value);
     if (target === null) return "";
 
-    const reference = toReferenceInstantFromUtc(options.reference);
+    const reference = toReferenceInstantFromUtc(referenceOption);
     if (reference === null) return "";
 
     try {
@@ -78,7 +82,7 @@ export function formatCalendarUtc(
         reference,
         timeZone,
         locale,
-        options.timeStyle === undefined ? "short" : options.timeStyle,
+        optionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

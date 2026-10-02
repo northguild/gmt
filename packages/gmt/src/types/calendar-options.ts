@@ -14,9 +14,10 @@ export interface CalendarOptions {
   reference?: string;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds and `"full"` adds the time zone name.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
+   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
-  timeStyle?: "short" | "medium" | "full";
+  timeStyle?: "short" | "medium" | "long" | "full";
 }

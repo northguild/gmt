@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Plural unit keys rendered by `formatDuration`. Maps to singular `Intl.NumberFormat` unit
@@ -137,7 +138,7 @@ export function formatDuration(
 
   try {
     const duration = Temporal.Duration.from(value);
-    const style = options.style === undefined ? "long" : options.style;
+    const style = optionOrDefault(options.style, "long");
     const includeZero = options.zero ?? false;
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {

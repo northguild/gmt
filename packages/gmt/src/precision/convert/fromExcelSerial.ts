@@ -13,6 +13,7 @@ import {
 import { fromNanoseconds } from "./fromNanoseconds";
 import type { ExcelDateSystem } from "./toExcelSerial";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Convert an Excel day serial back to an ISO 8601 instant string.
@@ -65,7 +66,7 @@ export function fromExcelSerial(
       return "";
     }
 
-    const system = options?.system === undefined ? "1900" : options.system;
+    const system = optionOrDefault(options?.system, "1900");
 
     if (system !== "1900" && system !== "1904") {
       return "";

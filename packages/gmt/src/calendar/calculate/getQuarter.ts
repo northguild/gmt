@@ -1,5 +1,6 @@
 import { zonelessCalendarDate } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /** Months in a quarter. */
 const MONTHS_PER_QUARTER = 3;
@@ -14,7 +15,7 @@ const MONTHS_PER_YEAR = 12;
  *   the calendar year.
  * - Labelling a fiscal year by the calendar year it starts in matches the NRF retail
  *   convention `getFiscalPeriod` uses. Organisations that label a fiscal year by the calendar
- *   year it *ends* in — the US federal government's October-start FY2025 begins in October
+ *   year it *ends* in — for a fiscal year that starts in October, FY2025 begins in October
  *   2024 — should add one to `year`.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
  *   `getIsoWeekDate` for why a moment is not accepted here.
@@ -63,10 +64,10 @@ export function getQuarter(
       return null;
     }
 
-    const fiscalYearStartMonth =
-      optionsArg?.fiscalYearStartMonth === undefined
-        ? 1
-        : optionsArg.fiscalYearStartMonth;
+    const fiscalYearStartMonth = optionOrDefault(
+      optionsArg?.fiscalYearStartMonth,
+      1,
+    );
 
     if (
       !Number.isInteger(fiscalYearStartMonth) ||

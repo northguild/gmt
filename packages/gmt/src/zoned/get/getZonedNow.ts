@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return the current zoned datetime for the specified IANA timeZone.
@@ -38,14 +39,12 @@ export function getZonedNow(
       return "";
     }
 
-    // ECMA-262 GetOption: an option whose value is undefined is absent, so the default applies.
+    // ECMA-402 GetOption (the Temporal specification defines the same operation): the option is
+    // read once, and a value of undefined is absent, so the default applies.
     // Only smallestUnit is read: any other key on the caller's object (roundingMode, offset,
     // timeZoneName, calendarName, fractionalSecondDigits) never reaches Temporal's toString.
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-      smallestUnit:
-        optionsArg?.smallestUnit === undefined
-          ? "millisecond"
-          : optionsArg.smallestUnit,
+      smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "millisecond"),
     };
     if (!isValidTimeZone(ianaTimezone)) {
       return "";

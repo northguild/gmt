@@ -10,6 +10,7 @@ import {
 import type { Disambiguation, Overflow } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Construct a zoned interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -66,7 +67,7 @@ export function intervalFromDurationZoned(
      * applied, resolves when it falls in a DST gap or overlap. In a fall-back overlap
      * `"compatible"` and `"earlier"` take the earlier instant and `"later"` the later one; in a
      * spring-forward gap `"compatible"` and `"later"` move the wall clock forward by the gap length
-     * and `"earlier"` back by it. `"reject"` returns null for both, and a time-only duration
+     * and `"earlier"` back by it. `"reject"` returns `null` for both, and a time-only duration
      * ignores the option.
      *
      * @defaultValue `"compatible"`, Temporal's default.
@@ -74,7 +75,7 @@ export function intervalFromDurationZoned(
     disambiguation?: Disambiguation;
     /**
      * What happens when the result names a day its month does not have, such as adding 1 month to
-     * 31 January. `"constrain"` clamps to the last valid day; `"reject"` returns null.
+     * 31 January. `"constrain"` clamps to the last valid day; `"reject"` returns `null`.
      *
      * @defaultValue `"constrain"`, Temporal's default.
      */
@@ -110,10 +111,10 @@ export function intervalFromDurationZoned(
       return null;
     }
 
-    const disambiguation =
-      options?.disambiguation === undefined
-        ? "compatible"
-        : options.disambiguation;
+    const disambiguation = optionOrDefault(
+      options?.disambiguation,
+      "compatible",
+    );
     const overflow = resolveOverflow(options?.overflow);
 
     try {

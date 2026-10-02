@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { instantFrom, isObject } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { Interval } from "../../types";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * The events a container's charging clocks run between, named after the DCSA Track & Trace
@@ -29,7 +30,7 @@ export type ClockEventType =
 export interface ClockEvent {
   /** What happened to the container, as one of the events a charging clock can start or end at. */
   type: ClockEventType;
-  /** ISO 8601 instant string: `Z`, an offset, or a bracketed zone. */
+  /** The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone. */
   at: string;
 }
 
@@ -44,7 +45,10 @@ export type ClockStartEvent = "discharged" | "available";
 
 /** The options `demurrageClock` reads. */
 export interface ClockOptions {
-  /** `"import"` or `"export"`; required, because the same scope runs between different events in each. */
+  /**
+   * The leg of the container's cycle, `"import"` or `"export"`; required, because the same scope
+   * runs between different events in each.
+   */
   direction: ClockDirection;
   /**
    * Where an import demurrage, storage or combined clock starts: `"discharged"`, the classic
@@ -175,8 +179,10 @@ function selectClock(
   }
 
   // An explicit `undefined` is an omission (TC39 GetOption); `null` is a value, and not a valid one.
-  const startEvent: ClockStartEvent =
-    options.startEvent === undefined ? "discharged" : options.startEvent;
+  const startEvent: ClockStartEvent = optionOrDefault(
+    options.startEvent,
+    "discharged",
+  );
   if (!CLOCK_START_EVENTS.includes(startEvent)) {
     return null;
   }

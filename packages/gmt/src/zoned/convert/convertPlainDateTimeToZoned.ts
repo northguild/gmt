@@ -4,6 +4,7 @@ import type { Disambiguation } from "../../types";
 import { isValidTimeZone } from "../validate";
 import { isoStringBody, zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.
@@ -60,16 +61,13 @@ export function convertPlainDateTimeToZoned(
       return "";
     }
 
-    const disambiguation =
-      optionsArg?.disambiguation === undefined
-        ? "compatible"
-        : optionsArg.disambiguation;
+    const disambiguation = optionOrDefault(
+      optionsArg?.disambiguation,
+      "compatible",
+    );
 
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-      smallestUnit:
-        optionsArg?.smallestUnit === undefined
-          ? "milliseconds"
-          : optionsArg.smallestUnit,
+      smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "milliseconds"),
     };
 
     try {

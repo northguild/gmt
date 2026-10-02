@@ -53,7 +53,7 @@ export function joinDateTimeConnector(
   timeZone: string,
   locale: string | string[] | undefined,
   dayLabel: string,
-  timeStyle: "short" | "medium" | "full",
+  timeStyle: "short" | "medium" | "long" | "full",
 ): string {
   const parts = new Intl.DateTimeFormat(locale, {
     dateStyle: "full",

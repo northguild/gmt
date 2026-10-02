@@ -7,6 +7,7 @@ import {
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.
@@ -80,12 +81,12 @@ export function setZoned(
     if (!isValidZonedDateTime(value)) return "";
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation =
-      options?.disambiguation === undefined
-        ? "compatible"
-        : options.disambiguation;
+    const disambiguation = optionOrDefault(
+      options?.disambiguation,
+      "compatible",
+    );
     // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-    const offset = options?.offset === undefined ? "prefer" : options.offset;
+    const offset = optionOrDefault(options?.offset, "prefer");
 
     try {
       const zoned = zonedDateTimeFrom(value);

@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Return the locale-formatted parts of a PlainDateTime.
@@ -9,8 +10,7 @@ import { isValidDateTime } from "../validate";
  * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
  *   `format`). A token pattern hard-codes field order and ships US ordering to
  *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order. See Decision 1 in
- *   `context/roadmap/issues/J.md`.
+ *   while the *locale* keeps control of order.
  * - Each part is `{ type, value }` where `type` can be:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.
@@ -28,8 +28,11 @@ import { isValidDateTime } from "../validate";
  *   zone field): a `timeZoneName` option is ignored, and a `"long"`/`"full"` `timeStyle` keeps its
  *   hour, minute and second and drops the zone, formatting as the locale's `"medium"` time. As in
  *   `Intl.DateTimeFormat`, `timeZoneName` together with `dateStyle`/`timeStyle` yields `[]`.
- * - Before the day period, `en-US` has used U+202F NARROW NO-BREAK SPACE since CLDR 42 (ICU 72), not
- *   an ordinary space; the examples write it as `"\u202f"` so the difference is visible.
+ * - The literal before the day period depends on the runtime. CLDR 42 (ICU 72) put U+202F NARROW
+ *   NO-BREAK SPACE there for `en-US`; Node 22 and 24 return it in the parts, and Node 26 returns
+ *   an ordinary space (U+0020) instead. Both were checked on those runtimes. The examples show the
+ *   Node 22 and 24 form, written as `"\u202f"` so the difference is visible. Treat the two
+ *   characters as equal when you compare parts.
  * - Returns `[]` for invalid input.
  * - **Compatibility:** before 1.16.0 a call with no field options returned only the date parts.
  *   Pass `{ year: "numeric", month: "numeric", day: "numeric" }` to keep that output.
@@ -81,15 +84,13 @@ export function formatDateTimeToParts(
     // PlainDateTime format may contain, so no zone field can appear.
     // Constructing with the caller's options first surfaces the TypeError or
     // RangeError Intl.DateTimeFormat raises for invalid ones.
-    new Intl.DateTimeFormat(locale, options);
+    const read = readDateTimeFormatOptions(options);
+    new Intl.DateTimeFormat(locale, read);
     const epochMilliseconds =
       Temporal.PlainDateTime.from(value).toZonedDateTime(
         "UTC",
       ).epochMilliseconds;
-    return new Intl.DateTimeFormat(
-      locale,
-      plainDateTimeFormatOptions(options ?? {}),
-    )
+    return new Intl.DateTimeFormat(locale, plainDateTimeFormatOptions(read))
       .formatToParts(epochMilliseconds)
       .map((p) => ({ type: p.type, value: p.value }));
   } catch {

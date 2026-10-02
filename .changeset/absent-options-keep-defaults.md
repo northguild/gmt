@@ -4,7 +4,7 @@
 
 Keep the millisecond default of `getZonedNow` when `smallestUnit` is passed as `undefined`, and read no option but `smallestUnit`.
 
-Before, `{ smallestUnit: undefined }` replaced the default, and the string was written with as many fractional digits as the clock reading needed: none on a whole second. An option whose value is `undefined` is now read as absent, as ECMA-262 `GetOption` reads it, so the documented default applies.
+Before, `{ smallestUnit: undefined }` replaced the default, and the string was written with as many fractional digits as the clock reading needed: none on a whole second. An option whose value is `undefined` is now read as absent, as `GetOption` reads it in ECMA-402 and in the Temporal specification, so the documented default applies.
 
 ```typescript
 import { getZonedNow } from "@northguild/gmt";

@@ -91,10 +91,10 @@ export function roundZoned(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!isValidZonedDateTime(value)) return "";
 

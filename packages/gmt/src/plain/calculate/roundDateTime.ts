@@ -191,8 +191,9 @@ export function roundDateTime(
     /**
      * How many units make one rounding step. For `"day"` and the time units Temporal
      * requires it to divide the next larger unit evenly and be smaller than it (`15` minutes,
-     * not `7` or `60`; a day only by `1`); for `"year"`, `"month"` and `"week"` the steps are counted from the unit that
-     * holds `value`. A non-integer is truncated, and a value below 1 or not finite returns `""`.
+     * not `7` or `60`; a day only by `1`); for `"year"`, `"month"` and `"week"` the steps are
+     * counted from the unit that holds `value`. A non-integer is truncated, and a value below 1
+     * or not finite returns `""`.
      *
      * @defaultValue `1`, Temporal's default.
      */
@@ -211,10 +212,10 @@ export function roundDateTime(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit))
       return "";

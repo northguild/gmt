@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Name style for `formatTimeZoneName`, mirroring
@@ -92,7 +93,7 @@ export function formatTimeZoneName(
     if (resolvedLocale === null) return "";
 
     try {
-      const style = options?.style === undefined ? "long" : options.style;
+      const style = optionOrDefault(options?.style, "long");
       const formatter = new Intl.DateTimeFormat(resolvedLocale, {
         timeZone,
         timeZoneName: style,

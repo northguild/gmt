@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Roll an ISO 8601 duration string's small units into larger ones.
@@ -103,8 +104,7 @@ export function normalizeDuration(
   try {
     const duration = Temporal.Duration.from(value);
     return durationRound(duration, {
-      largestUnit:
-        options?.largestUnit === undefined ? "auto" : options.largestUnit,
+      largestUnit: optionOrDefault(options?.largestUnit, "auto"),
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,
       roundingMode: options?.roundingMode,

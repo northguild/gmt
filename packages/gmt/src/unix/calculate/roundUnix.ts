@@ -62,7 +62,7 @@ export function roundUnix(
   options: {
     /**
      * The unit to round to, from `"day"` down to `"nanosecond"`, singular or plural. A larger unit
-     * returns null, as `Temporal.ZonedDateTime.prototype.round` accepts none above `"day"`.
+     * returns `null`, as `Temporal.ZonedDateTime.prototype.round` accepts none above `"day"`.
      */
     smallestUnit: Temporal.SmallestUnit<
       | "day"
@@ -76,7 +76,7 @@ export function roundUnix(
     /**
      * The number of `smallestUnit` steps to round to, such as `15` with `"minute"` for quarter
      * hours. It must divide the next larger unit evenly and be smaller than it, and must be `1` for
-     * `"day"`; any other value returns null. A non-integer is truncated first, as Temporal does.
+     * `"day"`; any other value returns `null`. A non-integer is truncated first, as Temporal does.
      *
      * @defaultValue `1`, Temporal's default.
      */
@@ -91,14 +91,14 @@ export function roundUnix(
     roundingMode?: Temporal.RoundingMode;
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
-     * plural. Any other value returns null. The result is in the same unit.
+     * plural. Any other value returns `null`. The result is in the same unit.
      *
      * @defaultValue `"milliseconds"`
      */
     epochUnit?: UnixUnit;
     /**
      * The time zone the wall clock is rounded in: an IANA name, a UTC offset, or `"local"` for the
-     * system time zone. An unknown zone returns null.
+     * system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -111,10 +111,10 @@ export function roundUnix(
     const { roundingIncrement, roundingMode } = options;
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     const timeZone = normalizeTimeZone(options.timeZone);
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
       return null;

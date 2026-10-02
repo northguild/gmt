@@ -15,6 +15,7 @@ import type {
 } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Subtract a temporal amount from a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.
@@ -105,10 +106,10 @@ export function subtractZoned(
       return "";
     }
 
-    const disambiguation =
-      optionsArg?.disambiguation === undefined
-        ? "compatible"
-        : optionsArg.disambiguation;
+    const disambiguation = optionOrDefault(
+      optionsArg?.disambiguation,
+      "compatible",
+    );
     const overflow = resolveOverflow(optionsArg?.overflow);
 
     try {

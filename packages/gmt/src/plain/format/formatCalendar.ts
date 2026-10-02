@@ -4,6 +4,7 @@ import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
 import { isValidDateTime } from "../validate";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatCalendar`: the date-time the value is compared with, and the style of the
@@ -23,7 +24,7 @@ export interface FormatCalendarOptions extends CalendarOptions {
 
 // GMT's own rule, not a standard's: the relative day label is kept for distances
 // under one week (up to 6 calendar days either way). From 7 days out the phrase
-// is an absolute date, which is easier to place than a day count (see J15).
+// is an absolute date, which is easier to place than a day count.
 const ABS_DAY_THRESHOLD = 6;
 
 /**
@@ -47,7 +48,7 @@ const ABS_DAY_THRESHOLD = 6;
  *   own combined date+time pattern for the locale (see
  *   `internal/joinDateTimeConnector.ts`), not hardcoded — this is what lets
  *   `formatCalendar` avoid the i18n objection that excludes a token
- *   formatter (Decision 1 in `context/roadmap/issues/J.md`).
+ *   formatter.
  * - The time never carries a zone name: a plain value has none.
  * - Use `formatCalendar` for user-facing schedules ("Tomorrow at 2:30 PM");
  *   use `formatRelativeDateTime` for elapsed-time displays ("in 1 day").
@@ -75,13 +76,15 @@ export function formatCalendar(
     // invalid input.
     if (options === null || typeof options !== "object") return "";
     if (!isValidDateTime(value)) return "";
-    if (options.reference !== undefined && !isValidDateTime(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
       return "";
 
     try {
       const target = Temporal.PlainDateTime.from(value);
-      const reference = options.reference
-        ? Temporal.PlainDateTime.from(options.reference)
+      const reference = referenceOption
+        ? Temporal.PlainDateTime.from(referenceOption)
         : Temporal.Now.plainDateTimeISO();
 
       const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
@@ -89,7 +92,7 @@ export function formatCalendar(
       // name would describe the UTC anchor, not the value. Temporal's
       // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
       const timeStyle = plainTimeStyle(
-        options.timeStyle === undefined ? "short" : options.timeStyle,
+        optionOrDefault(options.timeStyle, "short"),
       );
 
       // Plain values carry no timezone. UTC is an arbitrary but stable anchor

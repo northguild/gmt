@@ -77,10 +77,10 @@ export function roundUtc(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
     if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";

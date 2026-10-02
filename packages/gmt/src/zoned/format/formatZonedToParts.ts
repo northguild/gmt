@@ -2,6 +2,7 @@ import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Return the locale-formatted parts of a ZonedDateTime.
@@ -9,8 +10,7 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
  * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
  *   `format`). A token pattern hard-codes field order and ships US ordering to
  *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order. See Decision 1 in
- *   `context/roadmap/issues/J.md`.
+ *   while the *locale* keeps control of order.
  * - Each part is `{ type, value }` where `type` can be:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`,
@@ -28,8 +28,11 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
  *   whitespace normalisation.
  * - A ZonedDateTime is formatted in its own zone: a `timeZone` option returns
  *   `[]`, as `ZonedDateTime#toLocaleString` throws a TypeError for one.
- * - Before the day period, `en-US` has used U+202F NARROW NO-BREAK SPACE since CLDR 42 (ICU 72), not
- *   an ordinary space; the examples write it as `"\u202f"` so the difference is visible.
+ * - The literal before the day period depends on the runtime. CLDR 42 (ICU 72) put U+202F NARROW
+ *   NO-BREAK SPACE there for `en-US`; Node 22 and 24 return it in the parts, and Node 26 returns
+ *   an ordinary space (U+0020) instead. Both were checked on those runtimes. The examples show the
+ *   Node 22 and 24 form, written as `"\u202f"` so the difference is visible. Treat the two
+ *   characters as equal when you compare parts.
  * - Returns `[]` for invalid input.
  * - **Compatibility:** before 1.16.0 a call with no field options returned only the date parts, with
  *   no time zone name. Pass `{ year: "numeric", month: "numeric", day: "numeric" }` to keep that output.
@@ -83,7 +86,7 @@ export function formatZonedToParts(
     // resolves to (GetDateTimeFormat ~any~, ~zoned-date-time~, ~all~).
     const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
-      options ?? {},
+      readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,
       "zoned-date-time",
     );

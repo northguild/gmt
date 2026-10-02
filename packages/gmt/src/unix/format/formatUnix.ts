@@ -7,6 +7,8 @@ import {
   unixEpochToInstant,
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUnix`: every `Intl.DateTimeFormatOptions` field, plus the epoch unit, the
@@ -80,12 +82,13 @@ export function formatUnix(
   try {
     // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
     if (options === null) return "";
-    const {
-      epochUnit,
-      timeZone,
-      includeTimeZoneName = false,
-      ...intlOptions
-    } = options ?? {};
+    // Each option is read once (GetOption), inherited ones included.
+    const epochUnit = options?.epochUnit;
+    const includeTimeZoneName = optionOrDefault(
+      options?.includeTimeZoneName,
+      false,
+    );
+    const { timeZone, ...intlOptions } = readDateTimeFormatOptions(options);
 
     const resolvedUnit = resolveUnixEpochUnit(epochUnit);
     if (resolvedUnit === null) return "";

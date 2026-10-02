@@ -102,9 +102,10 @@ describe("getZonedNow", () => {
     });
   }
 
-  // ECMA-262 GetOption: an option whose value is undefined is absent, so the documented
-  // default ("millisecond", three fractional digits) applies. The clock is on a whole second,
-  // where auto precision would print no fraction at all.
+  // ECMA-402 GetOption (the Temporal specification defines the same operation): an option whose
+  // value is undefined is absent, so the documented default ("millisecond", three fractional
+  // digits) applies. The clock is on a whole second, where auto precision would print no fraction
+  // at all.
   it.each`
     label                            | options                        | expected
     ${"{}"}                          | ${{}}                          | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
@@ -114,6 +115,29 @@ describe("getZonedNow", () => {
     ({ options, expected }) => {
       expect(getZonedNow("UTC", options)).toBe(expected);
       expect(getZonedNow("UTC", options)).toBe(getZonedNow("UTC"));
+    },
+  );
+
+  // GetOption starts with one Get(options, property) and works on that value. The getter answers
+  // `first` on the first read and undefined on any later one, so a second read would lose the
+  // unit and print auto precision ("2024-02-29T00:00:00+00:00[UTC]" on this whole-second clock).
+  it.each`
+    first        | expected                                | why
+    ${"minute"}  | ${"2024-02-29T00:00+00:00[UTC]"}        | ${"the unit from the one read"}
+    ${undefined} | ${"2024-02-29T00:00:00.000+00:00[UTC]"} | ${"the millisecond default"}
+  `(
+    "reads smallestUnit once: a getter answering $first first returns $expected ($why)",
+    ({ first, expected }) => {
+      let reads = 0;
+      const options = {
+        get smallestUnit() {
+          reads += 1;
+          return reads === 1 ? first : undefined;
+        },
+      };
+
+      expect(getZonedNow("UTC", options)).toBe(expected);
+      expect(reads).toBe(1);
     },
   );
 

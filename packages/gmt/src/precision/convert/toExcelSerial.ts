@@ -13,6 +13,7 @@ import {
   parseInstantNanoseconds,
 } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Which Excel date system a serial belongs to.
@@ -85,7 +86,7 @@ export function toExcelSerial(
       return null;
     }
 
-    const system = options?.system === undefined ? "1900" : options.system;
+    const system = optionOrDefault(options?.system, "1900");
 
     if (system !== "1900" && system !== "1904") {
       return null;
