@@ -6,6 +6,7 @@
  * and result is an appendix Z row.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { STACK_PRESETS } from "./cutoff-stack";
@@ -339,21 +340,31 @@ describe("the stack's series, markers and gate", () => {
         l.querySelector(".gmt-cutoff-stack-lane-label")?.textContent === name,
     )!;
 
-  it("shares one series between a lane and its table swatch", async () => {
+  it("colours a lane and its table swatch by the entry's place in the schedule", async () => {
     const { root } = await mount();
     choosePreset(root, "rotterdam-weekend");
+    const preset = STACK_PRESETS.find((p) => p.id === "rotterdam-weekend")!;
     const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
     expect(rows).toHaveLength(2);
+    const seen = new Set<string>();
     for (const tr of rows) {
+      const name = tr.children[0]!.textContent!;
       const swatch = tr.querySelector<HTMLElement>(
         ".gmt-cutoff-series-swatch",
       )!;
       expect(swatch.textContent).toBe("");
       expect(swatch.getAttribute("aria-hidden")).toBe("true");
-      expect(laneOf(root, tr.children[0]!.textContent!).dataset.series).toBe(
-        swatch.dataset.series,
+      // The rows are sorted earliest first, so a row's place in the table is not
+      // its series: the expected value comes from the preset's own entry order.
+      const expected = String(
+        preset.cutoffs.findIndex((c) => c.name === name) + 1,
       );
+      expect(expected).not.toBe("0");
+      expect(laneOf(root, name).dataset.series).toBe(expected);
+      expect(swatch.dataset.series).toBe(expected);
+      seen.add(expected);
     }
+    expect(seen.size).toBe(2);
   });
 
   it("draws a moved row with one hollow marker and one aria-hidden arc", async () => {
@@ -398,6 +409,37 @@ describe("the stack's series, markers and gate", () => {
       expect(
         q(root, "stack-timeline").querySelectorAll(FOCUSABLE),
       ).toHaveLength(0);
+    }
+  });
+});
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        anchor: "2024-06-12T18:00:00+03:00[Europe/Helsinki]",
+        timeZone: "Europe/Helsinki",
+        cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "stack-output").textContent).not.toBe("NO SIGNAL");
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
     }
   });
 });

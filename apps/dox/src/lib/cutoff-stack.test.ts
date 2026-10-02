@@ -471,7 +471,7 @@ describe("StackRow.series", () => {
     }
   });
 
-  it("cycles back to 1 past the fourth entry", () => {
+  it("numbers four entries 1 to 4, each once", () => {
     const state: StackState = {
       ...presetState(presetById("no-calendar")),
       cutoffCount: "4",
@@ -484,5 +484,20 @@ describe("StackRow.series", () => {
     };
     const facts = collectStackFacts(state, lib);
     expect(facts.rows.map((r) => r.series).sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("gives two identical entries their own series, in entry order", () => {
+    const state: StackState = {
+      ...presetState(presetById("no-calendar")),
+      cutoffCount: "2",
+      cutoffs: [
+        { name: "same", offset: "P1D", atLocalTime: "" },
+        { name: "same", offset: "P1D", atLocalTime: "" },
+        { name: "", offset: "", atLocalTime: "" },
+        { name: "", offset: "", atLocalTime: "" },
+      ],
+    };
+    const facts = collectStackFacts(state, lib);
+    expect(facts.rows.map((r) => r.series)).toEqual([1, 2]);
   });
 });

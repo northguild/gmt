@@ -47,7 +47,12 @@ import {
 } from "./cutoff-widgets";
 import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
-import { onWidthChange, pickLabelLeft, placeLabel } from "./label-fit";
+import {
+  layoutWidth,
+  onWidthChange,
+  pickLabelLeft,
+  placeLabel,
+} from "./label-fit";
 import type { CutoffLib } from "./cutoff-widgets";
 import { transportIcon } from "./transport-icons";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
@@ -59,6 +64,7 @@ import {
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -390,7 +396,7 @@ function fitStackTimeline(el: HTMLElement): void {
     gateChip.classList.remove("gmt-cutoff-stack-gate-chip--end");
     const side = placeLabel({
       atPx: gatePx,
-      labelPx: gateChip.getBoundingClientRect().width,
+      labelPx: layoutWidth(gateChip),
       trackPx,
       offsetPx: 10,
     });
@@ -408,7 +414,7 @@ function fitStackTimeline(el: HTMLElement): void {
     if (!time || track.clientWidth === 0) continue;
     const w = track.clientWidth;
     const at = (parseFloat(time.dataset.x ?? "0") / 100) * w;
-    const labelPx = time.getBoundingClientRect().width;
+    const labelPx = layoutWidth(time);
     // Hanging from just left of the marker; else just right of it; else
     // tucked against the departure gate's left side.
     const left = pickLabelLeft(
@@ -462,7 +468,7 @@ function renderTable(el: HTMLElement, facts: StackFacts): void {
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, lib: CutoffLib): void {
+function setupWidget(root: HTMLElement, lib: CutoffLib): () => void {
   const q = <T extends HTMLElement>(role: string) =>
     root.querySelector(`[data-role="${role}"]`) as T | null;
 
@@ -480,7 +486,7 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
     !holidaysEl ||
     !rollEl
   ) {
-    return;
+    return () => {};
   }
 
   function state(): StackState {
@@ -609,7 +615,9 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
   wireCopyButtons(root);
   render();
   const timelineEl = q<HTMLElement>("stack-timeline");
-  if (timelineEl) onWidthChange(timelineEl, () => fitStackTimeline(timelineEl));
+  return timelineEl
+    ? onWidthChange(timelineEl, () => fitStackTimeline(timelineEl))
+    : () => {};
 }
 
 function applyArgs(root: HTMLElement, args: CutoffStackArgs): void {
@@ -626,7 +634,7 @@ function applyArgs(root: HTMLElement, args: CutoffStackArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("anchor", s.anchor);
   set("time-zone", s.timeZone);
@@ -670,34 +678,31 @@ export const mountCutoffStack: MountFn<CutoffStackArgs> = async (
   if (signal.aborted) return onceDestroy(() => {});
 
   applyArgs(root, args);
-  setupWidget(root, lib);
+  const disposeWidget = setupWidget(root, lib);
 
-  return onceDestroy(
-    () => {},
-    () => {
-      const q = <T extends HTMLElement>(role: string) =>
-        root.querySelector(`[data-role="${role}"]`) as T | null;
-      const anchorEl = q<HTMLInputElement>("anchor");
-      if (!anchorEl) return null;
-      const cutoffs = [1, 2, 3, 4].map((n) => ({
-        name: q<HTMLInputElement>(`name-${n}`)?.value ?? "",
-        offset: q<HTMLInputElement>(`offset-${n}`)?.value ?? "",
-        atLocalTime: q<HTMLInputElement>(`at-local-time-${n}`)?.value ?? "",
-      })) as [CutoffFields, CutoffFields, CutoffFields, CutoffFields];
-      const weekend = WEEKDAYS.filter(
-        (w) => q<HTMLInputElement>(`weekday-${w.value}`)?.checked,
-      ).map((w) => w.value);
-      const state: StackState = {
-        anchor: anchorEl.value,
-        timeZone: q<HTMLSelectElement>("time-zone")?.value ?? "",
-        cutoffCount: String(MAX_CUTOFFS),
-        cutoffs,
-        calendar: q<HTMLInputElement>("calendar")?.checked ?? false,
-        weekend,
-        holidays: q<HTMLInputElement>("holidays")?.value ?? "",
-        roll: q<HTMLSelectElement>("roll")?.value ?? "",
-      };
-      return permalinkOf(state);
-    },
-  );
+  return onceDestroy(disposeWidget, () => {
+    const q = <T extends HTMLElement>(role: string) =>
+      root.querySelector(`[data-role="${role}"]`) as T | null;
+    const anchorEl = q<HTMLInputElement>("anchor");
+    if (!anchorEl) return null;
+    const cutoffs = [1, 2, 3, 4].map((n) => ({
+      name: q<HTMLInputElement>(`name-${n}`)?.value ?? "",
+      offset: q<HTMLInputElement>(`offset-${n}`)?.value ?? "",
+      atLocalTime: q<HTMLInputElement>(`at-local-time-${n}`)?.value ?? "",
+    })) as [CutoffFields, CutoffFields, CutoffFields, CutoffFields];
+    const weekend = WEEKDAYS.filter(
+      (w) => q<HTMLInputElement>(`weekday-${w.value}`)?.checked,
+    ).map((w) => w.value);
+    const state: StackState = {
+      anchor: anchorEl.value,
+      timeZone: q<HTMLSelectElement>("time-zone")?.value ?? "",
+      cutoffCount: String(MAX_CUTOFFS),
+      cutoffs,
+      calendar: q<HTMLInputElement>("calendar")?.checked ?? false,
+      weekend,
+      holidays: q<HTMLInputElement>("holidays")?.value ?? "",
+      roll: q<HTMLSelectElement>("roll")?.value ?? "",
+    };
+    return permalinkOf(state);
+  });
 };

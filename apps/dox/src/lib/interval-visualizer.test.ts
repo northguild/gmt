@@ -502,3 +502,23 @@ describe("createTimelineScale label granularity", () => {
     expect(scale.labels()).toEqual(["Jan 2024", "Mar", "Jun"]);
   });
 });
+
+describe("fitTimelineScale near the ends of the supported range", () => {
+  const LIMIT = 8.64e15;
+
+  it.each([
+    ["the late end", ["+270000-06-01T00:00:00Z", "+275000-06-01T00:00:00Z"]],
+    ["the early end", ["-271000-06-01T00:00:00Z", "-270000-06-01T00:00:00Z"]],
+    ["the very limits", ["-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z"]],
+  ])(
+    "keeps %s inside the range, so its labels never throw",
+    (_name, values) => {
+      const scale = fitTimelineScale(values)!;
+      expect(scale.startMs).toBeGreaterThanOrEqual(-LIMIT);
+      expect(scale.endMs).toBeLessThanOrEqual(LIMIT);
+      expect(() => scale.labels()).not.toThrow();
+      expect(() => scale.fromPercent(0)).not.toThrow();
+      expect(() => scale.fromPercent(100)).not.toThrow();
+    },
+  );
+});

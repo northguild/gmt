@@ -53,26 +53,8 @@ export function transitionType(t: DstTransition): "gap" | "overlap" {
 }
 
 // ---------------------------------------------------------------------------
-// Local-hour computation (zone-aware, replaces UTC-only transitionHour)
+// Local-time computation (zone-aware)
 // ---------------------------------------------------------------------------
-
-/**
- * Get the local hour at which a transition occurs in the given zone.
- * Uses Temporal to convert the UTC instant to local wall-clock time.
- * Returns NaN for invalid input (never throws).
- */
-export function localHourAtTransition(
-  t: DstTransition,
-  timeZone: string,
-): number {
-  try {
-    const instant = Temporal.Instant.from(t.instant);
-    const zdt = instant.toZonedDateTimeISO(timeZone);
-    return zdt.hour;
-  } catch {
-    return NaN;
-  }
-}
 
 /**
  * Get the local date (YYYY-MM-DD) of a transition in the given zone.
@@ -106,18 +88,6 @@ export function localMinuteOfDayAtTransition(
     const instant = Temporal.Instant.from(t.instant);
     const zdt = instant.toZonedDateTimeISO(timeZone);
     return zdt.hour * 60 + zdt.minute;
-  } catch {
-    return NaN;
-  }
-}
-
-/**
- * Get the UTC hour from a transition's instant.
- * Kept for backwards compatibility; prefer localHourAtTransition for visual positioning.
- */
-export function transitionHour(t: DstTransition): number {
-  try {
-    return Temporal.Instant.from(t.instant).toZonedDateTimeISO("UTC").hour;
   } catch {
     return NaN;
   }
@@ -334,6 +304,29 @@ export function buildZonedValueFromMinutes(
 export function toPlainLocalDateTime(value: string): string {
   const withoutZone = value.replace(/\[[^\]]*\]$/, "");
   return withoutZone.replace(/(?:Z|[+-]\d{2}:\d{2})$/, "");
+}
+
+/**
+ * What a probe's plain wall time (`YYYY-MM-DDTHH:MM[:SS]`) sits next to: the
+ * transitions on its local date, and its local time in hours (2.5 is 02:30).
+ *
+ * Any probe can land in a transition's range, not only a scrubbed one. In the
+ * southern hemisphere the "Exact transition instant" preset reads the
+ * fall-back's own wall time, which is the start of the repeated hour, so a
+ * preset cannot be assumed normal. `probeHour` is NaN for a value that is not a
+ * plain wall time.
+ */
+export function probeContext(
+  plainValue: string,
+  transitions: DstTransition[],
+  zone: string,
+): { onDate: DstTransition[]; probeHour: number } {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(plainValue);
+  if (!m) return { onDate: [], probeHour: NaN };
+  return {
+    onDate: transitions.filter((t) => localDateAtTransition(t, zone) === m[1]),
+    probeHour: Number(m[2]) + Number(m[3]) / 60,
+  };
 }
 
 // ---------------------------------------------------------------------------

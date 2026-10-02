@@ -91,11 +91,27 @@ describe("industry tags", () => {
    * shares) without taking that layer's tag, so the declared tags are a subset of the layers
    * used and not the whole set.
    */
-  it.each(pages)("$page is tagged with a layer it uses", ({ declared, used }) => {
-    if (used.length === 0) {
-      expect(declared).toEqual([CORE_INDUSTRY]);
-    } else {
-      expect(declared.filter((id) => !used.includes(id))).toEqual([]);
-    }
+  it.each(pages)(
+    "$page is tagged with a layer it uses",
+    ({ declared, used }) => {
+      if (used.length === 0) {
+        expect(declared).toEqual([CORE_INDUSTRY]);
+      } else {
+        expect(declared.filter((id) => !used.includes(id))).toEqual([]);
+      }
+    },
+  );
+});
+
+describe("IndustryTags.astro", () => {
+  const source = readFileSync(
+    path.resolve(import.meta.dirname, "..", "components", "IndustryTags.astro"),
+    "utf8",
+  );
+
+  it("puts a tag's definition where a keyboard or touch reader can reach it, not in a title on a span", () => {
+    // A `title` on a non-focusable span shows only on a mouse hover.
+    expect(source).not.toMatch(/title=\{/);
+    expect(source).toMatch(/<button[\s\S]*?aria-describedby=/);
   });
 });

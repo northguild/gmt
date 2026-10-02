@@ -43,6 +43,7 @@ import {
   durationText,
   epochMs,
   hourTickLabel,
+  isDayBoundary,
   isNegative,
   localLabel,
   localParts,
@@ -54,6 +55,7 @@ import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
 import type { CutoffLib } from "./cutoff-widgets";
 import {
+  layoutWidth,
   onWidthChange,
   pickLabelLeft,
   placeLabel,
@@ -69,12 +71,16 @@ import {
   renderCallLine,
   renderWidgetOutput,
   syncRange,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
 export type { CutoffCountdownArgs } from "./cutoff-countdown";
 
 const READING_YOUR_CLOCK = "Reading your clock…";
+
+/** How long the reader must stop before the verdict is announced. */
+const SETTLE_MS = 600;
 
 function presetOptionsHtml(presetId: string): string {
   return (
@@ -128,7 +134,11 @@ export function renderCutoffCountdownTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Late or on time</h4>` +
-    `<p class="gmt-transport-verdict" data-role="verdict" aria-live="polite">${isLive ? escapeHtml(READING_YOUR_CLOCK) : ""}</p>` +
+    `<p class="gmt-transport-verdict" data-role="verdict">${isLive ? escapeHtml(READING_YOUR_CLOCK) : ""}</p>` +
+    /* The verdict repaints every second in live mode and on every slider step,
+       so it is not itself a live region. This one is written to only when the
+       reader settles or the verdict changes kind. */
+    `<p class="gmt-transport-visually-hidden" role="status" aria-live="polite" data-role="verdict-status"></p>` +
     `<div class="gmt-cutoff-countdown-axis" data-role="countdown-axis" role="img" aria-labelledby="countdown-summary" tabindex="-1"></div>` +
     `<label class="gmt-label gmt-cutoff-countdown-drag">${labelTextHtml("Drag now")}` +
     rangeFieldHtml({
@@ -189,6 +199,22 @@ function setupWidget(
   let window_: AxisWindow | null = null;
   let interval: ReturnType<typeof setInterval> | undefined;
   let destroyed = false;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let announcedKind: string | undefined;
+  let latestVerdict = "";
+
+  /** Write the verdict to the status region once the reader stops moving, so
+   *  a drag or typing is announced once, not per step. */
+  function announceOnSettle(): void {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      settleTimer = undefined;
+      const status = q("verdict-status");
+      if (status && status.textContent !== latestVerdict) {
+        status.textContent = latestVerdict;
+      }
+    }, SETTLE_MS);
+  }
 
   function state(): CountdownState {
     return {
@@ -229,6 +255,13 @@ function setupWidget(
 
     const verdictEl = q("verdict");
     if (verdictEl) verdictEl.textContent = v.text;
+    latestVerdict = v.text;
+    /* A live tick that crosses the cut-off changes the verdict's kind and is
+       worth announcing; one that only counts down is not. */
+    if (announcedKind !== undefined && v.kind !== announcedKind) {
+      announceOnSettle();
+    }
+    announcedKind = v.kind;
 
     const [callPastHtml, callPastPlain] = callSource("isPastCutoff", [
       s.now,
@@ -294,21 +327,30 @@ function setupWidget(
       sliderEl.disabled = true;
     }
     const nowTime = facts.nowLocal ? localParts(facts.nowLocal).time : "";
-    const offsetMin = Number.parseInt(sliderEl!.value, 10) || 0;
+    /* Both read what `timeToCutoff` returned, so the chip, the spoken value
+       and the hero cannot disagree: one sign (positive is time left), one
+       precision. With no signal there is no value, and the control says so
+       rather than keeping the last reading. */
+    const hasValue = nowTime !== "" && facts.left !== "";
+    const signed = isNegative(facts.left)
+      ? "−"
+      : facts.left === "PT0S"
+        ? ""
+        : "+";
+    const leftText = durationText(facts.left);
     syncRange(
       sliderEl!,
-      nowTime === ""
+      !hasValue
         ? ""
-        : `${nowTime}, ${offsetMin === 0 ? "at" : `${offsetMin < 0 ? "−" : "+"}${Math.abs(offsetMin)} min from`} the cut-off`,
+        : facts.left === "PT0S"
+          ? `${nowTime}, at the cut-off`
+          : `${nowTime}, ${leftText} ${isNegative(facts.left) ? "after" : "before"} the cut-off`,
     );
-    // The chip is short ("16:45 · −75 min") so it fits a phone-width field;
-    // aria-valuetext keeps the whole sentence.
+    // The chip is short ("16:45 · +1 h 15 min") so it fits a phone-width
+    // field; aria-valuetext keeps the whole sentence.
     const chip = q("now-value");
     if (chip) {
-      chip.textContent =
-        nowTime === ""
-          ? ""
-          : `${nowTime} · ${offsetMin === 0 ? "0" : `${offsetMin < 0 ? "−" : "+"}${Math.abs(offsetMin)}`} min`;
+      chip.textContent = !hasValue ? "" : `${nowTime} · ${signed}${leftText}`;
     }
     const ends = sliderEl!
       .closest(".gmt-range-field")
@@ -433,6 +475,7 @@ function setupWidget(
       );
       syncPreset();
       render();
+      announceOnSettle();
       return;
     }
     if (target === cutoffEl || target === nowEl) {
@@ -440,6 +483,7 @@ function setupWidget(
       recomputeWindow();
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -447,11 +491,13 @@ function setupWidget(
     const target = e.target as HTMLElement;
     if (target === presetEl) {
       applyPreset();
+      announceOnSettle();
       return;
     }
     if (target === timeZoneEl) {
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -473,6 +519,7 @@ function setupWidget(
       recomputeWindow();
       syncPreset();
       render();
+      announceOnSettle();
     }
   });
 
@@ -486,13 +533,18 @@ function setupWidget(
   }
   syncPreset();
   const axisEl = q<HTMLElement>("countdown-axis");
-  if (axisEl) onWidthChange(axisEl, () => fitCountdownAxis(axisEl));
+  const disposeWidth = axisEl
+    ? onWidthChange(axisEl, () => fitCountdownAxis(axisEl))
+    : () => {};
 
   return {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      disposeWidth();
       stopLive();
+      clearTimeout(settleTimer);
+      settleTimer = undefined;
     },
   };
 }
@@ -513,7 +565,7 @@ function countdownTickPlan(spanMs: number): {
   if (spanMs <= 3 * DAY_MS) {
     return {
       unit: "hours",
-      step: spanMs <= 6 * HOUR_MS ? 1 : spanMs <= 24 * HOUR_MS ? 3 : 6,
+      step: spanMs <= 24 * HOUR_MS ? 3 : 6,
     };
   }
   if (spanMs <= 60 * DAY_MS) {
@@ -614,11 +666,6 @@ function renderAxis(
   fitCountdownAxis(el);
 }
 
-/** A tick that names a day or a month (or midnight), not an hour of one. */
-function isDayBoundary(label: string): boolean {
-  return label === "00:00" || !/^\d{2}:\d{2}$/.test(label);
-}
-
 /**
  * Place the chip row, the open/closed chips and the tick labels by measure, so
  * nothing overlaps at any width: the gate chip goes on the side away from now,
@@ -651,7 +698,7 @@ function fitCountdownAxis(el: HTMLElement): void {
 
   const OFFSET = 12;
   const GAP = 4;
-  const width = (chip: HTMLElement) => chip.getBoundingClientRect().width;
+  const width = (chip: HTMLElement) => layoutWidth(chip);
   const gw = width(gateChip);
   const nw = width(nowChip);
   type Span = [number, number];
@@ -762,7 +809,7 @@ function applyArgs(root: HTMLElement, args: CutoffCountdownArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("cutoff", s.cutoff);
   set("time-zone", s.timeZone);

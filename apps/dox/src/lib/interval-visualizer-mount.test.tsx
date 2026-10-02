@@ -419,3 +419,46 @@ describe("seeding with unzoned values, as a model actually supplies them", () =>
     );
   });
 });
+
+describe("typing instants near the ends of the supported range", () => {
+  it("never throws out of the input handler, and recovers on the next value", async () => {
+    const errors: unknown[] = [];
+    const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
+    window.addEventListener("error", onError);
+    try {
+      const { root } = await mount();
+      const type = (role: string, value: string) => {
+        const input = root.querySelector<HTMLInputElement>(
+          `[data-role="${role}"]`,
+        )!;
+        input.value = value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      for (const year of ["+270000", "-270000", "+275000", "-271000"]) {
+        for (const role of ["a-start", "a-end", "b-start", "b-end"]) {
+          type(role, `${year}-06-01T00:00:00Z`);
+        }
+      }
+      expect(errors.map(String)).toEqual([]);
+
+      for (const [role, value] of [
+        ["a-start", "2024-06-01T09:00:00+00:00[UTC]"],
+        ["a-end", "2024-06-01T10:00:00+00:00[UTC]"],
+        ["b-start", "2024-06-01T09:30:00+00:00[UTC]"],
+        ["b-end", "2024-06-01T11:00:00+00:00[UTC]"],
+      ] as const) {
+        type(role, value);
+      }
+      expect(errors.map(String)).toEqual([]);
+      const axis = [...root.querySelectorAll('[data-role="axis"] span')].map(
+        (s) => s.textContent,
+      );
+      expect(axis.every((label) => /^\d{2}:\d{2}$/.test(label ?? ""))).toBe(
+        true,
+      );
+    } finally {
+      window.removeEventListener("error", onError);
+    }
+  });
+});

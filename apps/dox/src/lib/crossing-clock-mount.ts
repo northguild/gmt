@@ -55,10 +55,13 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  isRangeError,
+  RANGE_EDGE_TEXT,
   labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -392,12 +395,19 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
     const exitFace = crossingClockFace(result.exit);
     const repeated = isRepeatedReading(entryFace, exitFace);
 
-    const strip = crossingStrip(result, s.targetZone);
+    /* A crossing at the very edge of the supported range has zoned strings
+       that cannot be placed on a bar: say so, and keep the clocks. */
+    let strip: ReturnType<typeof crossingStrip> | null = null;
+    try {
+      strip = crossingStrip(result, s.targetZone);
+    } catch (error) {
+      if (!isRangeError(error)) throw error;
+    }
     // Both clocks read the same targetZone, so a change found anywhere in
     // the crossing shows on both — see renderClockPanel's own comment.
     // Only the first change draws (a highlight is one hour, not a list);
     // realistic crossings have at most one in practice.
-    const firstChange = strip.changes[0];
+    const firstChange = strip?.changes[0];
     const highlight: CrystalClockHighlight | undefined = firstChange
       ? {
           fromHour: firstChange.fromHour,
@@ -425,7 +435,15 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
       highlight,
     );
 
-    renderStrip(q, strip);
+    if (strip) {
+      renderStrip(q, strip);
+    } else {
+      clearStrip(q);
+      const changesEl = q("strip-changes");
+      if (changesEl) {
+        changesEl.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
+      }
+    }
   }
 
   function applyPreset(): void {
@@ -470,7 +488,7 @@ function applyArgs(root: HTMLElement, args: CrossingClockArgs): void {
   const zone = s.targetZone.trim();
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("entry", zone === "" ? s.entry : resolveWallTime(s.entry, zone));
   set("exit", zone === "" ? s.exit : resolveWallTime(s.exit, zone));

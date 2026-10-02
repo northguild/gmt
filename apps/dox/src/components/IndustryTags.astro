@@ -3,6 +3,11 @@
  * The industry tags under a page's title: an icon and a word each. They are
  * labels, not links: there is no page per industry for one to lead to.
  *
+ * Each tag is a `<button>` that shows its one-line definition: on hover, on
+ * keyboard focus, and on a tap, which a `title` on a plain span gave only a mouse
+ * reader. The definition is also the button's accessible description, so a
+ * screen reader hears it without opening anything.
+ *
  * One style for every industry. The word carries the meaning and the icon backs
  * it up; no industry has a colour of its own, because colour never says anything
  * alone here and there will be more industries than accents. Core is the quiet
@@ -16,25 +21,58 @@ interface Props {
 }
 
 const tags = Astro.props.industries.flatMap((id) => industryTag(id) ?? []);
+const defId = (tagId: string) => `industry-tag-def-${tagId}`;
 ---
 
 {
   tags.length > 0 && (
     <ul class="gmt-industry-tags not-content" aria-label="Industry">
       {tags.map((tag) => (
-        <li>
-          <span
+        <li class="gmt-industry-tag-item">
+          <button
+            type="button"
             class:list={[
               "gmt-industry-tag",
               tag.id === CORE_INDUSTRY && "gmt-industry-tag--core",
             ]}
-            title={tag.definition}
+            aria-describedby={defId(tag.id)}
           >
             <Icon name={tag.icon} size="14px" />
             <span>{tag.label}</span>
+          </button>
+          <span
+            id={defId(tag.id)}
+            class="gmt-industry-tag-def gmt-popover"
+          >
+            {tag.definition}
           </span>
         </li>
       ))}
     </ul>
   )
 }
+
+<script>
+  /* A tap or an Enter on a tag opens its definition; a tap elsewhere or Escape
+     closes it. Hover and focus are handled in CSS, so this is only the touch and
+     keyboard "stay open" path. */
+  const items = () =>
+    document.querySelectorAll<HTMLElement>(".gmt-industry-tag-item");
+
+  document.addEventListener("click", (event) => {
+    const target = event.target as Element | null;
+    const hit = target?.closest<HTMLElement>(".gmt-industry-tag-item");
+    for (const item of items()) {
+      if (item === hit) {
+        item.toggleAttribute("data-open");
+      } else {
+        item.removeAttribute("data-open");
+      }
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    for (const item of items()) item.removeAttribute("data-open");
+  });
+</script>

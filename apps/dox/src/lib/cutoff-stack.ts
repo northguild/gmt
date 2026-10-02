@@ -446,8 +446,9 @@ export interface StackRow {
    *  after the departure (S7); `cutoffAt` does not check order. */
   afterDeparture: boolean;
   /** 1-based series (1-4) the chart colours this cut-off with: its matched
-   *  entry's place in `entriesOf(state)`, cycling past 4. Names an input
-   *  already matched; computes nothing. */
+   *  entry's place in `entriesOf(state)`; there are at most `MAX_CUTOFFS`
+   *  entries, so it never passes 4. Names an input already matched; computes
+   *  nothing. */
   series: number;
 }
 
@@ -579,7 +580,7 @@ export function collectStackFacts(
       moved,
       beforeDeparture: lib.timeToCutoff(r.at, anchor),
       afterDeparture: lib.isPastCutoff(r.at, anchor),
-      series: ((idx >= 0 ? idx : rowIdx) % 4) + 1,
+      series: (idx >= 0 ? idx : rowIdx) + 1,
     };
   });
 

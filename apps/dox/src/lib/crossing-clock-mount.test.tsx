@@ -369,3 +369,38 @@ describe("mountCrossingClock", () => {
     }).not.toThrow();
   });
 });
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        entry: "2024-06-10T00:00",
+        exit: "2024-06-10T08:00",
+        targetZone: "Europe/Helsinki",
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "target-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "crossing-output").textContent).not.toBe("NO SIGNAL");
+  });
+});
+
+describe("a crossing at the minimum instant", () => {
+  it("shows the range-edge notice instead of throwing out of the input handler", async () => {
+    const errors: unknown[] = [];
+    const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
+    window.addEventListener("error", onError);
+    try {
+      const { root } = await mount();
+      const entry = q<HTMLInputElement>(root, "entry");
+      entry.value = "-271821-04-20T00:00:00Z";
+      entry.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(errors.map(String)).toEqual([]);
+      expect(q(root, "strip-changes").textContent).toContain("NO SIGNAL");
+    } finally {
+      window.removeEventListener("error", onError);
+    }
+  });
+});

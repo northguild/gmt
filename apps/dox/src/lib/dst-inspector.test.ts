@@ -15,13 +15,12 @@ import {
   isOverlap,
   isSentinel,
   localDateAtTransition,
-  localHourAtTransition,
   localMinuteOfDayAtTransition,
   minuteToTickerPercent,
   parseOffsetMinutes,
+  probeContext,
   tickerPercentToMinute,
   toPlainLocalDateTime,
-  transitionHour,
   transitionType,
   type DstTransition,
   type TickerWindow,
@@ -107,33 +106,6 @@ describe("transitionType", () => {
 
   it("returns 'overlap' for fall-back", () => {
     expect(transitionType(FALL_BACK)).toBe("overlap");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// transitionHour (UTC-only, kept for backwards compatibility)
-// ---------------------------------------------------------------------------
-
-describe("transitionHour", () => {
-  it("extracts the UTC hour from the instant", () => {
-    expect(transitionHour(SPRING_FORWARD)).toBe(7);
-    expect(transitionHour(FALL_BACK)).toBe(6);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// localHourAtTransition (zone-aware)
-// ---------------------------------------------------------------------------
-
-describe("localHourAtTransition", () => {
-  it("returns the local hour for spring-forward in America/New_York", () => {
-    // 2024-03-10T07:00:00Z = 2024-03-10T03:00:00-04:00 (after transition)
-    expect(localHourAtTransition(SPRING_FORWARD, ZONE)).toBe(3);
-  });
-
-  it("returns the local hour for fall-back in America/New_York", () => {
-    // 2024-11-03T06:00:00Z = 2024-11-03T01:00:00-05:00 (after transition, the offset shifts back)
-    expect(localHourAtTransition(FALL_BACK, ZONE)).toBe(1);
   });
 });
 
@@ -661,7 +633,7 @@ describe("DST widget behavior", () => {
     // Fall back happens at 6am UTC = 2am EDT (after transition)
     const transition = NY_TRANSITIONS[1];
     expect(parseHourFromUtc(transition.instant)).toBe("06");
-    expect(localHourAtTransition(transition, ZONE)).toBe(1);
+    expect(localMinuteOfDayAtTransition(transition, ZONE)).toBe(60);
   });
 
   it("detects sentinel for failed convertPlainDateTimeToZoned (disambiguation: reject)", () => {
@@ -748,5 +720,40 @@ describe("what this module hands to Temporal.Instant.from", () => {
     expect(
       buildZonedValueFromMinutes("America/New_York", "2024-11-03", -1),
     ).toBe("");
+  });
+});
+
+describe("probeContext", () => {
+  const SYDNEY_FALL_BACK: DstTransition = {
+    instant: "2024-04-06T16:00:00Z",
+    offsetBefore: "+11:00",
+    offsetAfter: "+10:00",
+  };
+
+  it("finds the transitions on the probe's local date and its hour", () => {
+    const ctx = probeContext(
+      "2024-04-07T02:30:00",
+      [SYDNEY_FALL_BACK],
+      "Australia/Sydney",
+    );
+    expect(ctx.onDate).toEqual([SYDNEY_FALL_BACK]);
+    expect(ctx.probeHour).toBe(2.5);
+  });
+
+  it("finds none on another date", () => {
+    expect(
+      probeContext(
+        "2024-04-21T12:00:00",
+        [SYDNEY_FALL_BACK],
+        "Australia/Sydney",
+      ).onDate,
+    ).toEqual([]);
+  });
+
+  it("returns NaN for a value that is not a plain wall time", () => {
+    expect(probeContext("", [SYDNEY_FALL_BACK], "Australia/Sydney")).toEqual({
+      onDate: [],
+      probeHour: NaN,
+    });
   });
 });

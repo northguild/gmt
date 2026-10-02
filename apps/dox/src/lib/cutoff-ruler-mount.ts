@@ -36,6 +36,7 @@ import {
   dayTickLabel,
   durationText,
   hourTickLabel,
+  isDayBoundary,
   localLabel,
   epochMs,
   walkTicks,
@@ -43,6 +44,7 @@ import {
 import { codeFrameHtml } from "./code-frame";
 import { loadCutoffLib } from "./cutoff-lib";
 import {
+  layoutWidth,
   onWidthChange,
   pickLabelLeft,
   placeLabel,
@@ -52,12 +54,14 @@ import type { CutoffLib } from "./cutoff-widgets";
 import { transportIcon } from "./transport-icons";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  drawOrRangeEdge,
   escapeAttr,
   escapeHtml,
   labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -98,7 +102,7 @@ export function renderCutoffRulerTemplate(args: CutoffRulerArgs = {}): string {
     `<label class="gmt-label">${labelTextHtml("Terminal clock")}` +
     `<select class="gmt-select" data-role="time-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
     `<label class="gmt-label">${labelTextHtml("Days before")}` +
-    `<select class="gmt-select" data-role="days">${[1, 2, 3, 4, 5, 6, 7].map((n) => `<option value="${n}"${n === days ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
+    `<select class="gmt-select" data-role="days">${(days >= 1 && days <= 7 ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6, 7, days]).map((n) => `<option value="${n}"${n === days ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
     `<label class="gmt-label">${labelTextHtml("At local time")}` +
     `<input class="gmt-input" data-role="at-local-time" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.atLocalTime)}"></label>` +
     `</div>` +
@@ -147,11 +151,6 @@ const READING_SERIES: Record<string, number> = {
 const seriesOf = (r: RulerReading): number => READING_SERIES[r.key] ?? 1;
 
 const SWATCH = `<span class="gmt-cutoff-series-swatch" aria-hidden="true"></span>`;
-
-/** A tick that names a day (or midnight), not an hour of one. */
-function isDayBoundary(label: string): boolean {
-  return label === "00:00" || !/^\d{2}:\d{2}$/.test(label);
-}
 
 function tickHtml(t: { ms: number; label: string }, pct: number): string {
   return `<span class="gmt-cutoff-axis-tick${isDayBoundary(t.label) ? " gmt-cutoff-axis-tick--day" : ""}" style="left:${pct}%">${escapeHtml(t.label)}</span>`;
@@ -338,7 +337,7 @@ function fitRuler(el: HTMLElement): void {
     label.style.left = `${x}%`;
     const trackPx = row.clientWidth;
     const atPx = (x / 100) * trackPx;
-    const labelPx = label.getBoundingClientRect().width;
+    const labelPx = layoutWidth(label);
     const OFFSET = 14;
     const side = placeLabel({ atPx, labelPx, trackPx, offsetPx: OFFSET });
     const room =
@@ -372,7 +371,7 @@ function fitRuler(el: HTMLElement): void {
     const trackPx = row.clientWidth;
     const atPx =
       (parseFloat(label.style.getPropertyValue("--gmt-at")) / 100) * trackPx;
-    const width = label.getBoundingClientRect().width;
+    const width = layoutWidth(label);
     // Right of the line when it fits, else left of it, else wrap on the roomier side.
     const side = placeLabel({ atPx, labelPx: width, trackPx, offsetPx: 0 });
     const fits = side === "start" ? atPx + width <= trackPx : atPx >= width;
@@ -395,7 +394,7 @@ function fitRuler(el: HTMLElement): void {
     const lineX = line
       ? (parseFloat(line.style.left) / 100) * track.clientWidth
       : null;
-    const width = label.getBoundingClientRect().width;
+    const width = layoutWidth(label);
     // Beside the marker; else clear of the DST line; else right-aligned.
     const left = pickLabelLeft(
       [
@@ -459,7 +458,7 @@ function summaryText(facts: RulerFacts): string {
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, lib: CutoffLib): void {
+function setupWidget(root: HTMLElement, lib: CutoffLib): () => void {
   const q = <T extends HTMLElement>(role: string) =>
     root.querySelector(`[data-role="${role}"]`) as T | null;
 
@@ -469,7 +468,7 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
   const daysEl = q<HTMLSelectElement>("days");
   const atLocalTimeEl = q<HTMLInputElement>("at-local-time");
   if (!presetEl || !anchorEl || !timeZoneEl || !daysEl || !atLocalTimeEl)
-    return;
+    return () => {};
 
   function state(): RulerState {
     return {
@@ -512,9 +511,13 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
     }
 
     const overview = q<HTMLElement>("ruler-overview");
-    if (overview) renderOverview(overview, s, facts);
+    if (overview) {
+      drawOrRangeEdge(overview, () => renderOverview(overview, s, facts));
+    }
     const closeup = q<HTMLElement>("ruler-closeup");
-    if (closeup) renderCloseup(closeup, s, facts);
+    if (closeup) {
+      drawOrRangeEdge(closeup, () => renderCloseup(closeup, s, facts));
+    }
     const summary = q("ruler-summary");
     if (summary) summary.textContent = summaryText(facts);
     const readingsEl = q("readings");
@@ -568,10 +571,15 @@ function setupWidget(root: HTMLElement, lib: CutoffLib): void {
 
   wireCopyButtons(root);
   render();
+  const disposers: Array<() => void> = [];
   for (const role of ["ruler-overview", "ruler-closeup"]) {
     const surface = q<HTMLElement>(role);
-    if (surface) onWidthChange(surface, () => fitRuler(surface));
+    if (surface)
+      disposers.push(onWidthChange(surface, () => fitRuler(surface)));
   }
+  return () => {
+    for (const dispose of disposers) dispose();
+  };
 }
 
 function applyArgs(root: HTMLElement, args: CutoffRulerArgs): void {
@@ -581,7 +589,7 @@ function applyArgs(root: HTMLElement, args: CutoffRulerArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("anchor", s.anchor);
   set("time-zone", s.timeZone);
@@ -612,22 +620,19 @@ export const mountCutoffRuler: MountFn<CutoffRulerArgs> = async (
   if (signal.aborted) return onceDestroy(() => {});
 
   applyArgs(root, args);
-  setupWidget(root, lib);
+  const disposeWidget = setupWidget(root, lib);
 
-  return onceDestroy(
-    () => {},
-    () => {
-      const q = <T extends HTMLElement>(role: string) =>
-        root.querySelector(`[data-role="${role}"]`) as T | null;
-      const anchorEl = q<HTMLInputElement>("anchor");
-      if (!anchorEl) return null;
-      const state: RulerState = {
-        anchor: anchorEl.value,
-        timeZone: q<HTMLSelectElement>("time-zone")?.value ?? "",
-        days: q<HTMLSelectElement>("days")?.value ?? "",
-        atLocalTime: q<HTMLInputElement>("at-local-time")?.value ?? "",
-      };
-      return permalinkOf(state);
-    },
-  );
+  return onceDestroy(disposeWidget, () => {
+    const q = <T extends HTMLElement>(role: string) =>
+      root.querySelector(`[data-role="${role}"]`) as T | null;
+    const anchorEl = q<HTMLInputElement>("anchor");
+    if (!anchorEl) return null;
+    const state: RulerState = {
+      anchor: anchorEl.value,
+      timeZone: q<HTMLSelectElement>("time-zone")?.value ?? "",
+      days: q<HTMLSelectElement>("days")?.value ?? "",
+      atLocalTime: q<HTMLInputElement>("at-local-time")?.value ?? "",
+    };
+    return permalinkOf(state);
+  });
 };

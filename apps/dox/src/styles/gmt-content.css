@@ -419,8 +419,50 @@ dialog > .dialog-frame {
   background: var(--gmt-fill);
 }
 
+/* A button, so a keyboard or touch reader can reach the definition. Reset to
+   the tag's own look: no UA button chrome, the label's own cursor. */
+button.gmt-industry-tag {
+  appearance: none;
+  margin: 0;
+  cursor: help;
+}
+
+.gmt-industry-tag:focus-visible {
+  outline: 2px solid var(--gmt-cyan-ink);
+  outline-offset: 2px;
+}
+
 .gmt-industry-tag svg {
   flex: none;
+}
+
+.gmt-industry-tag-item {
+  position: relative;
+}
+
+/* The definition under its tag. Shown on hover and when a tap or Enter has
+   opened it (`data-open`; Escape or a tap elsewhere closes it). Its text is also
+   the button's accessible description, which display: none does not hide from a
+   screen reader. */
+.gmt-industry-tag-def {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--gmt-space-1));
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.gmt-industry-tag-item:hover > .gmt-industry-tag-def,
+.gmt-industry-tag-item[data-open] > .gmt-industry-tag-def {
+  display: block;
 }
 
 /* Core is not one more industry but the lack of one, so its tag is the quiet

@@ -28,6 +28,7 @@
 import { codeFrameHtml } from "./code-frame";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { onWidthChange } from "./label-fit";
 import {
   VALUE_PRESETS,
   buildValuePreset,
@@ -42,6 +43,7 @@ import {
   localDateAtTransition,
   localMinuteOfDayAtTransition,
   minuteToTickerPercent,
+  probeContext,
   tickerPercentToMinute,
   toPlainLocalDateTime,
   zoneMidpointMinutes,
@@ -60,6 +62,7 @@ import {
   labelTextHtml,
   renderAside,
   renderCallLine,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -138,7 +141,7 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<select class="gmt-select" data-role="disambiguation">${options(DISOPTIONS, dis)}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot"></p>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(VALUE_PRESETS.find((p) => p.type === preset)?.description ?? "")}</p>` +
     `<p class="gmt-widget-hint">Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>` +
     `<!-- Scrubbable local-time ticker (drag or arrow keys) -->` +
     `<div class="gmt-dst-ticker" data-role="ticker" hidden>` +
@@ -152,7 +155,7 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<div class="gmt-dst-ticker-ticks" data-role="ticker-ticks"></div>` +
     `</div>` +
     `<p class="gmt-dst-ticker-empty" data-role="ticker-empty" hidden>` +
-    `This preset targets a single fixed value — nothing to scrub.` +
+    `${TICKER_EMPTY_TEXT}` +
     `</p>` +
     codeFrameHtml("convert") +
     `<output class="gmt-widget-output gmt-playground-live" data-role="probe-result">&nbsp;</output>` +
@@ -164,6 +167,8 @@ export function renderDstTemplate(args: DstArgs = {}): string {
 }
 
 const KEY_STEP_MINUTES = 5;
+const TICKER_EMPTY_TEXT =
+  "This preset targets a single fixed value — nothing to scrub.";
 
 async function loadModules() {
   const [getMod, convertMod] = await Promise.all([
@@ -328,6 +333,24 @@ function renderTicker(
   }
 }
 
+const PRESET_NOUN: Record<string, string> = {
+  normal: "normal time",
+  gap: "skipped hour",
+  overlap: "repeated hour",
+  transition: "transition instant",
+};
+
+/** The probe call line when the zone has nothing to probe: a comment, and
+ *  nothing for the copy button to copy. */
+function renderNoProbe(codeEl: HTMLElement | null, zone: string, year: number) {
+  if (!codeEl) return;
+  codeEl.textContent = `// no call: ${zone} has no DST transitions in ${year}`;
+  const copyBtn = codeEl
+    .closest(".gmt-codeframe")
+    ?.querySelector<HTMLElement>('[data-role^="copy-"]');
+  if (copyBtn) delete copyBtn.dataset.copyText;
+}
+
 function renderPresetDescription(el: HTMLElement, presetType: string) {
   const info = VALUE_PRESETS.find((p) => p.type === presetType);
   el.textContent = info?.description ?? "";
@@ -369,7 +392,7 @@ function renderExplanationAside(
       el,
       "note",
       "Note",
-      "<p>No DST transitions in this zone/year — the value resolves normally.</p>",
+      "<p>No DST transitions in this zone and year, so there is nothing to probe.</p>",
     );
     return;
   }
@@ -420,7 +443,7 @@ function setupWidget(
     timeZone: string,
     options?: { disambiguation?: string },
   ) => string,
-): void {
+): () => void {
   const q = <T extends HTMLElement>(role: string) =>
     container.querySelector(`[data-role="${role}"]`) as T | null;
 
@@ -435,7 +458,7 @@ function setupWidget(
   const trackEl = q("ticker-track");
   const handleEl = q("ticker-handle");
 
-  if (!zoneEl || !yearEl || !presetEl || !tbodyEl || !outputEl) return;
+  if (!zoneEl || !yearEl || !presetEl || !tbodyEl || !outputEl) return () => {};
 
   // Scrub state — owned here so a drag isn't reset by an unrelated re-render.
   let activeTransition: DstTransition | null = null;
@@ -460,7 +483,13 @@ function setupWidget(
     );
 
     const presetDescEl = q("preset-description");
-    if (presetDescEl) renderPresetDescription(presetDescEl, presetType);
+    if (presetDescEl) {
+      if (transitions.length === 0) {
+        presetDescEl.textContent = `${zone} has no DST transitions in ${year}, so there is no ${PRESET_NOUN[presetType] ?? "value"} to probe. Pick another zone or year.`;
+      } else {
+        renderPresetDescription(presetDescEl, presetType);
+      }
+    }
 
     // Scrubbable presets take their value from the ticker; fixed ones don't.
     const scrubbable =
@@ -485,6 +514,12 @@ function setupWidget(
       ? convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
       : "";
 
+    if (tickerEmptyEl) {
+      tickerEmptyEl.textContent =
+        transitions.length === 0
+          ? "Nothing to scrub: this zone has no DST transitions in this year."
+          : TICKER_EMPTY_TEXT;
+    }
     if (tickerEl) {
       renderTicker(
         tickerEl,
@@ -495,22 +530,31 @@ function setupWidget(
       );
     }
 
-    renderCallLine(
-      q("call-convert"),
-      "convertPlainDateTimeToZoned",
-      `${codeSpan("str", `"${plainValue}"`)}, ${codeSpan("str", `"${zone}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)} }`,
-      `"${plainValue}", "${zone}", { disambiguation: "${dis}" }`,
-    );
+    if (plainValue === "") {
+      /* No transition means no value to probe, so there is no call to show:
+         a call on "" would teach the sentinel, not the zone. */
+      renderNoProbe(q("call-convert"), zone, year);
+    } else {
+      renderCallLine(
+        q("call-convert"),
+        "convertPlainDateTimeToZoned",
+        `${codeSpan("str", `"${plainValue}"`)}, ${codeSpan("str", `"${zone}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)} }`,
+        `"${plainValue}", "${zone}", { disambiguation: "${dis}" }`,
+      );
+    }
 
-    // Only a scrubbed probe sits on a transition's date, so only then is there a
-    // transition to classify it against. A fixed preset is a normal time.
-    const probeHour = handleMinuteOfDay !== null ? handleMinuteOfDay / 60 : NaN;
+    // Any probe can sit inside a transition's range, so classify against the
+    // transitions on its own date. A fixed preset is not assumed normal:
+    // southern zones' "Exact transition instant" is the start of the repeated hour.
+    const { onDate, probeHour } = probeContext(plainValue, transitions, zone);
     const classification = classifyProbeResult(
       result,
-      scrubbable ? [activeTransition!] : [],
+      onDate,
       probeHour,
       zone,
-      { disambiguation: dis },
+      {
+        disambiguation: dis,
+      },
     );
 
     renderProbeResult(outputEl!, value, result, classification);
@@ -638,27 +682,23 @@ function setupWidget(
   /* The tick labels are thinned to the track's measured width, so a width
      change (rotation, the chat rail opening) re-picks them. The observer is
      dropped once the widget leaves the document. */
-  if (trackEl && typeof ResizeObserver !== "undefined") {
-    let lastWidth = trackEl.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (!trackEl.isConnected) {
-        observer.disconnect();
-        return;
-      }
-      const width = trackEl.clientWidth;
-      if (width === lastWidth || tickerEl?.hidden) return;
-      lastWidth = width;
-      render();
-    });
-    observer.observe(trackEl);
-  }
+  return trackEl
+    ? onWidthChange(trackEl, () => {
+        if (!tickerEl?.hidden) render();
+      })
+    : () => {};
 }
 
-/** Write seeded arguments onto the controls. Silently skips anything the
- *  control does not offer — a zone the `<select>` has no option for leaves the
- *  widget on its default rather than on an empty selection. */
+/** Write seeded arguments onto the controls. A zone the `<select>` has no
+ *  option for is added, as the Dwell Ledger does; any other value the control
+ *  does not offer is skipped, which leaves the control on its default rather
+ *  than on an empty selection. */
 function applyArgs(root: HTMLElement, args: DstArgs): void {
-  const set = (role: string, value: string | number | undefined) => {
+  const set = (
+    role: string,
+    value: string | number | undefined,
+    addMissingOption = false,
+  ) => {
     if (value === undefined) return;
     const el = root.querySelector(`[data-role="${role}"]`) as
       | HTMLSelectElement
@@ -666,13 +706,17 @@ function applyArgs(root: HTMLElement, args: DstArgs): void {
       | null;
     if (!el) return;
     const next = String(value);
-    if (el instanceof HTMLSelectElement) {
-      if (![...el.options].some((o) => o.value === next)) return;
+    if (
+      !addMissingOption &&
+      el instanceof HTMLSelectElement &&
+      ![...el.options].some((o) => o.value === next)
+    ) {
+      return;
     }
-    el.value = next;
+    setControlValue(el, next);
   };
 
-  set("zone", args.zone);
+  set("zone", args.zone, true);
   set("year", args.year);
   set("value-preset", args.preset);
   set("disambiguation", args.disambiguation);
@@ -700,7 +744,7 @@ export const mountDstInspector: MountFn<DstArgs> = async (
      from `window.location` and Astro's frontmatter has no window. Applying them
      here covers both entrances with one path. */
   applyArgs(root, args);
-  setupWidget(
+  const disposeWidth = setupWidget(
     root,
     modules.getDstTransitions,
     modules.convertPlainDateTimeToZoned,
@@ -708,6 +752,7 @@ export const mountDstInspector: MountFn<DstArgs> = async (
 
   return onceDestroy(
     () => {
+      disposeWidth();
       /* Release a capture held mid-drag. Listeners inside `root` go with the
          subtree, but a pointer capture is held by the browser against the
          element, and leaving one set routes subsequent pointer events to a node

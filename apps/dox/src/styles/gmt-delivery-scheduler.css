@@ -428,7 +428,7 @@ ul.gmt-delivery-summary-flags > li::before {
   content: "";
   position: absolute;
   top: 0;
-  bottom: -var(--gmt-space-3);
+  bottom: calc(-1 * var(--gmt-space-3));
   left: 5px;
   border-left: 2px solid var(--leg-color, var(--gmt-border-strong));
 }

@@ -6,6 +6,7 @@
  * outputs and hours-before values are appendix Z rows.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { RULER_PRESETS } from "./cutoff-ruler";
@@ -304,6 +305,74 @@ describe("the ruler's series and DST chips", () => {
       expect(q(root, "ruler-closeup").querySelectorAll(FOCUSABLE)).toHaveLength(
         0,
       );
+    }
+  });
+});
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        anchor: "2024-06-10T18:00:00+03:00[Europe/Helsinki]",
+        timeZone: "Europe/Helsinki",
+        days: 2,
+        atLocalTime: "17:00",
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "ruler-output-calendar").textContent).not.toBe("NO SIGNAL");
+  });
+
+  it("keeps a seeded day count outside 1 to 7 instead of blanking the select", async () => {
+    const seed = {
+      anchor: "2024-06-20T18:00:00+03:00[Europe/Helsinki]",
+      timeZone: "Europe/Helsinki",
+      days: 9,
+      atLocalTime: "17:00",
+    };
+    for (const templateArgs of [{}, seed]) {
+      const { root } = await mount(seed, templateArgs);
+      expect(q<HTMLSelectElement>(root, "days").value).toBe("9");
+      expect(q(root, "days-heading").textContent).toBe("9");
+      expect(q(root, "ruler-output-calendar").textContent).toBe(
+        "2024-06-11T18:00:00+03:00[Europe/Helsinki]",
+      );
+      document.body.innerHTML = "";
+    }
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
+  });
+});
+
+describe("an anchor at the minimum instant", () => {
+  it("shows the range-edge notice instead of throwing out of the input handler", async () => {
+    const errors: unknown[] = [];
+    const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
+    window.addEventListener("error", onError);
+    try {
+      const { root } = await mount();
+      const anchor = q<HTMLInputElement>(root, "anchor");
+      anchor.value = "-271821-04-20T00:00:00Z";
+      anchor.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(errors.map(String)).toEqual([]);
+      expect(q(root, "ruler-overview").textContent).toContain("NO SIGNAL");
+    } finally {
+      window.removeEventListener("error", onError);
     }
   });
 });

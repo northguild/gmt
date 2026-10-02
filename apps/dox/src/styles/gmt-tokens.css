@@ -230,10 +230,6 @@
   --gmt-enter-duration: 0.5s;
   --gmt-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
   --gmt-enter-scale: 0.92;
-  /* Height easing for .gmt-grow (lib/smooth-height.ts): ease-out so a retarget
-     during a drag does not lag; the cap bounds the longest change. */
-  --gmt-grow-easing: cubic-bezier(0, 0, 0.58, 1);
-  --gmt-grow-max: 1250ms;
 
   /* ---- Radii ---- */
   --gmt-radius-sm: 4px;
@@ -477,11 +473,12 @@
   /* --gmt-syntax-fn and --gmt-syntax-str measured 5.96:1 and
      5.95:1 against white — below the 7:1 code-frame floor. Darkened, same
      hue, to 7.71:1 and 7.84:1 (WCAG relative-luminance formula). Dark theme
-     already clears 7:1 and is untouched. --gmt-syntax-num was not measured
-     and is left as-is. */
+     already clears 7:1 and is untouched. --gmt-syntax-num was #aa0982, 6.56:1
+     against white; it now takes the same hue family as its dark value
+     (orange) through --gmt-signal-ink, 8.16:1 against white. */
   --gmt-syntax-fn: #315192;
   --gmt-syntax-str: #7d403f;
-  --gmt-syntax-num: #aa0982;
+  --gmt-syntax-num: var(--gmt-signal-ink);
 
   --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
 

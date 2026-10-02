@@ -740,36 +740,38 @@ export function buildScaleChartDefinition(
     if (!next || leg.missed || next.missed) continue;
     if (next.departureMs <= leg.arrivalMs) continue;
     const handoffStation = data.stations.find((s) => s.index === leg.toStation);
-    marks.push(
-      barX(
-        [
-          {
-            x1: leg.arrivalMs,
-            x2: next.departureMs,
-            lane: laneFor(leg.legIndex),
-          },
-        ],
+    /* Only a bar with a station to describe is a focus target. Without one
+       there is no tip to show, and a focusable mark whose tooltip is empty
+       paints a blank box, so it is decorative. */
+    const handoffBar = barX(
+      [
         {
-          x1: "x1",
-          x2: "x2",
-          y: "lane",
-          xScale: "x",
-          yScale: "y",
-          fill: legColor(leg.legIndex),
-          fillOpacity: 0.25,
-          stroke: legColor(leg.legIndex),
-          strokeDasharray: "3 3",
-          strokeWidth: 1,
-          radius: 2,
-          maxThickness: BAR_THICKNESS,
-          ...(handoffStation
-            ? tips.tip<ChartStation>(`scale-handoff-${i}`, () =>
-                stationTooltip(handoffStation),
-              )
-            : {}),
+          x1: leg.arrivalMs,
+          x2: next.departureMs,
+          lane: laneFor(leg.legIndex),
         },
-      ),
+      ],
+      {
+        x1: "x1",
+        x2: "x2",
+        y: "lane",
+        xScale: "x",
+        yScale: "y",
+        fill: legColor(leg.legIndex),
+        fillOpacity: 0.25,
+        stroke: legColor(leg.legIndex),
+        strokeDasharray: "3 3",
+        strokeWidth: 1,
+        radius: 2,
+        maxThickness: BAR_THICKNESS,
+        ...(handoffStation
+          ? tips.tip<ChartStation>(`scale-handoff-${i}`, () =>
+              stationTooltip(handoffStation),
+            )
+          : {}),
+      },
     );
+    marks.push(handoffStation ? handoffBar : decorative(handoffBar));
   }
 
   // Every transition's own exact instant gets a rule line — the tooltip's
@@ -872,26 +874,32 @@ export function buildScaleChartDefinition(
             : { rows: [] },
         ),
       }),
-      dot([{ ...c, ms: c.readyMs }], {
-        x: "ms",
-        y: () => lane,
-        xScale: "x",
-        yScale: "y",
-        r: 5,
-        fill: "var(--gmt-void)",
-        stroke: CONFLICT,
-        strokeWidth: 2,
-      }),
-      dot([{ ...c, ms: c.scheduledMs }], {
-        x: "ms",
-        y: () => lane,
-        xScale: "x",
-        yScale: "y",
-        r: 5,
-        fill: CONFLICT,
-        stroke: CONFLICT,
-        strokeWidth: 2,
-      }),
+      // The link above carries the missed-connection tooltip; its two end
+      // dots only mark where it starts and stops.
+      decorative(
+        dot([{ ...c, ms: c.readyMs }], {
+          x: "ms",
+          y: () => lane,
+          xScale: "x",
+          yScale: "y",
+          r: 5,
+          fill: "var(--gmt-void)",
+          stroke: CONFLICT,
+          strokeWidth: 2,
+        }),
+      ),
+      decorative(
+        dot([{ ...c, ms: c.scheduledMs }], {
+          x: "ms",
+          y: () => lane,
+          xScale: "x",
+          yScale: "y",
+          r: 5,
+          fill: CONFLICT,
+          stroke: CONFLICT,
+          strokeWidth: 2,
+        }),
+      ),
       decorative(
         text([c], {
           x: "scheduledMs",

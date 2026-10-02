@@ -134,9 +134,12 @@ whenever one exists, else a `PLN`, else a `REQ`, else an `EST`. Within the class
 newest `recordedAt`. A tie goes to the later one in the array. It returns the class with the
 value.
 
-The order is GMT's own. It reads DCSA's port-call cycle (estimated, requested, planned, actual)
-from its most settled end. DCSA defines the classes and the cycle, not a selection rule. The
-order is not configurable.
+The order is GMT's own. DCSA's Port Call standard says that some port call services, such as a
+berth, pilotage or towage, "are expected to be negotiated through an (Estimated, Requested,
+Planned) ERP-pattern, including an (Actual) A"
+([DCSA Port Call 2.0.0, Use Cases](https://reference.dcsa.org/content/standards/releases/port-call/v2-0-0/port-call-v2-0-0-use-cases)).
+Other services have only an actual. GMT's order reads that pattern from its most settled end.
+DCSA defines the classes and the pattern, not a selection rule. The order is not configurable.
 
 ### Never put an EST in the ACT column
 
@@ -214,7 +217,8 @@ nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00[Europe/London]"]); /
 
 ### A service every N minutes
 
-`{ headway, from, to }` has the shape of a `frequencies.txt` row in GTFS, the General Transit
+`{ headway, from, to }` has the shape of a
+[`frequencies.txt`](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt) row in GTFS, the General Transit
 Feed Specification: a headway is the gap between departures. The window is half-open,
 `[from, to)`: `to` is never a departure. Departures are `from` plus whole headways in exact
 time, computed and never stepped. The result is written the way `from` was.

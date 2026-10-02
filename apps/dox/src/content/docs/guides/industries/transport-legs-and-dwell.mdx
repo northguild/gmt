@@ -237,8 +237,8 @@ one axis, across New York's fall-back.
 
 Loading, departure and arrival are different instants, and the same offset from the wrong
 one is late by days. `cutoffAt` takes the event you pass and never guesses which one a rule
-means. The anchor is exact: an instant (`Z` or an offset) or a zoned string, whose bracket is
-not read. `timeZone` alone is the local frame, and it may be a fixed offset such as `"+02:00"`,
+means. The anchor is exact: an instant (`Z` or an offset) or a zoned string, whose bracket never
+supplies the zone. `timeZone` alone is the local frame, and it may be a fixed offset such as `"+02:00"`,
 which observes no DST.
 
 ```typescript

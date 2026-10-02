@@ -6,6 +6,7 @@
  * and outputs are appendix Z rows.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { COUNTDOWN_PRESETS } from "./cutoff-countdown";
@@ -296,6 +297,125 @@ describe("the countdown's hero and axis", () => {
       expect(
         q(root, "countdown-axis").querySelectorAll(FOCUSABLE),
       ).toHaveLength(0);
+    }
+  });
+});
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps a zone outside the curated list and reads it", async () => {
+    const { root } = await mount(
+      {
+        cutoff: "2024-06-09T16:00:00+03:00[Europe/Helsinki]",
+        now: "2024-06-09T15:00:00+03:00[Europe/Helsinki]",
+        timeZone: "Europe/Helsinki",
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q(root, "countdown-output-left").textContent).not.toBe("NO SIGNAL");
+  });
+});
+
+describe("the slider's chip and spoken value", () => {
+  const type = (root: HTMLElement, role: string, value: string) => {
+    const input = q<HTMLInputElement>(root, role);
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const slider = (root: HTMLElement) => q<HTMLInputElement>(root, "now-slider");
+  const heroValue = (root: HTMLElement) =>
+    q(root, "countdown-axis").querySelector(".gmt-cutoff-countdown-hero-value")!
+      .textContent;
+
+  it("is blank, not the last reading, once the cut-off is garbage", async () => {
+    const { root } = await mount();
+    choosePreset(root, "late");
+    expect(q(root, "now-value").textContent).toBe("17:20 · −20 min");
+    type(root, "cutoff", "garbage");
+    expect(q(root, "now-value").textContent).toBe("");
+    expect(slider(root).getAttribute("aria-valuetext")).toBe("");
+  });
+
+  it("agrees with the hero on sign and precision 20 seconds before the cut-off", async () => {
+    const { root } = await mount();
+    choosePreset(root, "late");
+    type(root, "cutoff", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]");
+    type(root, "now", "2024-06-12T16:59:40+02:00[Europe/Amsterdam]");
+    expect(q(root, "verdict").textContent).toContain("On time: 20 s left");
+    expect(heroValue(root)).toBe("+20 s");
+    expect(q(root, "now-value").textContent).toBe("16:59:40 · +20 s");
+    expect(slider(root).getAttribute("aria-valuetext")).toBe(
+      "16:59:40, 20 s before the cut-off",
+    );
+  });
+
+  it("uses the hero's sign when late", async () => {
+    const { root } = await mount();
+    choosePreset(root, "late");
+    expect(heroValue(root)).toBe("−20 min");
+    expect(q(root, "now-value").textContent).toBe("17:20 · −20 min");
+    expect(slider(root).getAttribute("aria-valuetext")).toBe(
+      "17:20, 20 min after the cut-off",
+    );
+  });
+});
+
+describe("the verdict's announcement", () => {
+  it("is not a live region itself; a status region carries it", async () => {
+    const { root } = await mount();
+    expect(q(root, "verdict").hasAttribute("aria-live")).toBe(false);
+    expect(q(root, "verdict-status").getAttribute("role")).toBe("status");
+  });
+
+  it("is written once when the reader settles, not per slider step or live tick", async () => {
+    vi.useFakeTimers();
+    // oxlint-disable-next-line @northguild/gmt-oxlint/no-new-date
+    vi.setSystemTime(new Date("2024-06-12T15:20:00Z")); // date-ban: vi.setSystemTime's own API takes a Date
+    try {
+      const { root } = await mount({
+        cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
+        timeZone: "Europe/Amsterdam",
+      });
+      const status = q(root, "verdict-status");
+      const writes: string[] = [];
+      new MutationObserver(() => writes.push(status.textContent ?? "")).observe(
+        status,
+        { childList: true, characterData: true, subtree: true },
+      );
+      vi.advanceTimersByTime(10_000);
+      await Promise.resolve();
+      expect(writes).toEqual([]);
+
+      const slider = q<HTMLInputElement>(root, "now-slider");
+      for (const step of [-3, -4, -5]) {
+        slider.value = String(Number.parseInt(slider.value, 10) + step);
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+        vi.advanceTimersByTime(100);
+      }
+      await Promise.resolve();
+      expect(writes).toEqual([]);
+      vi.advanceTimersByTime(1000);
+      await Promise.resolve();
+      expect(writes).toHaveLength(1);
+      expect(status.textContent).toBe(q(root, "verdict").textContent);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("releasing observers", () => {
+  it("destroy disconnects every ResizeObserver the mount created", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBeGreaterThan(0);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
     }
   });
 });

@@ -294,6 +294,11 @@ export function durationText(iso: string): string {
   return parts.length === 0 ? "0 min" : parts.join(" ");
 }
 
+/** A tick that names a day or a month (or midnight), not an hour of one. */
+export function isDayBoundary(label: string): boolean {
+  return label === "00:00" || !/^\d{2}:\d{2}$/.test(label);
+}
+
 /** Whether a returned duration is negative — `isPastCutoff` reads the same
  *  sign as "late", never recomputed. */
 export function isNegative(iso: string): boolean {

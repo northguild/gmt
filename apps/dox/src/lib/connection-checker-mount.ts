@@ -39,6 +39,7 @@ import {
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
+  drawOrRangeEdge,
   escapeAttr,
   escapeHtml,
   labelTextHtml,
@@ -47,6 +48,7 @@ import {
   renderCallLine,
   renderWidgetOutput,
   syncRange,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -260,7 +262,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
 
     const strip = q("handoff-strip");
     const summary = q("handoff-summary");
-    if (strip) renderStrip(strip, legs, v, lib);
+    if (strip) drawOrRangeEdge(strip, () => renderStrip(strip, legs, v, lib));
     if (summary) {
       summary.textContent = naive
         ? `Arrival, then handling to ready ${v.readyLocal ?? ""}, then the onward departure ${v.departureLocal ?? ""}.`
@@ -370,7 +372,7 @@ function applyArgs(root: HTMLElement, args: ConnectionCheckerArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("inbound-departure", s.inboundDeparture);
   set("inbound-duration", s.inboundDuration);

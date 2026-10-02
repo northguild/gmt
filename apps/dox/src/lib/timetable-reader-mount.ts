@@ -47,6 +47,7 @@ import {
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -340,7 +341,9 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
     for (let i = 0; i < MAX_ROWS; i++) {
       const row = preset.rows[i] ?? { departure: "", offset: "" };
       rowInputs[i]!.departure!.value = row.departure;
-      rowInputs[i]!.offset!.value = row.offset;
+      /* The offset's options come from the previous render, so the preset's own
+         may be missing; a bare `.value =` would drop it. */
+      setControlValue(rowInputs[i]!.offset!, row.offset);
     }
     syncPreset();
     render();
@@ -384,7 +387,7 @@ function applyArgs(root: HTMLElement, args: TimetableReaderArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("start-zone", s.startTimeZone);
   set("duration", s.duration);

@@ -453,3 +453,27 @@ describe("mountDeliveryScheduler", () => {
     }).not.toThrow();
   });
 });
+
+describe("a seed applied to the default template (the tool page)", () => {
+  it("keeps zones outside the curated list and reads them", async () => {
+    const { root } = await mount(
+      {
+        startTimeZone: "Europe/Helsinki",
+        legs: [
+          {
+            departure: "2024-06-10T08:00:00+03:00[Europe/Helsinki]",
+            duration: "PT2H",
+            timeZone: "Europe/Helsinki",
+            mode: "truck",
+          },
+        ],
+      },
+      {},
+    );
+    expect(q<HTMLSelectElement>(root, "start-zone").value).toBe(
+      "Europe/Helsinki",
+    );
+    expect(q<HTMLSelectElement>(root, "zone-1").value).toBe("Europe/Helsinki");
+    expect(q(root, "delivery-output").textContent).not.toBe("NO SIGNAL");
+  });
+});

@@ -55,7 +55,7 @@ import {
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
-import { placeLabel } from "./label-fit";
+import { layoutWidth, onWidthChange, placeLabel } from "./label-fit";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   chipToggleHtml,
@@ -66,6 +66,7 @@ import {
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -350,7 +351,7 @@ function placeExpiry(
   if (label && track && track.clientWidth > 0) {
     const side = placeLabel({
       atPx: (pct / 100) * track.clientWidth,
-      labelPx: label.getBoundingClientRect().width,
+      labelPx: layoutWidth(label),
       trackPx: track.clientWidth,
       offsetPx: 3,
     });
@@ -396,7 +397,8 @@ function optionsSource(
 
 interface Controller {
   refit(): void;
-  /** Release a pointer capture held mid-drag, which outlives the subtree. */
+  /** Release what outlives the subtree: a pointer capture held mid-drag and
+   *  the track's width observer. */
   release(): void;
 }
 
@@ -755,9 +757,15 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
   wireCopyButtons(container);
 
+  /* The "expires" label is placed against the track's measured width, so a
+     width change (rotation, the chat rail opening) re-places it. */
+  const trackEl = q<HTMLElement>("track");
+  const disposeWidth = trackEl ? onWidthChange(trackEl, render) : () => {};
+
   return {
     refit,
     release() {
+      disposeWidth();
       if (!captured) return;
       try {
         captured.el.releasePointerCapture(captured.id);
@@ -789,7 +797,7 @@ function applyArgs(root: HTMLElement, args: FreeTimeLedgerArgs): void {
      offset. Read it in the zone the reader named; see `resolveWallTime`. */
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("clock-start", resolveWallTime(s.clockStart, s.zone));
   set("clock-end", resolveWallTime(s.clockEnd, s.zone));

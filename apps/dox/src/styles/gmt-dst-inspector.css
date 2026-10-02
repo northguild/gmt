@@ -24,7 +24,9 @@
   text-align: left;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border-bottom: 2px solid var(--gmt-border);
-  color: var(--gmt-ice-dim);
+  /* --gmt-ice-dim measured 6.95:1 here in dark mode, under the 7:1 body-text
+     target; the header is quiet enough from its size, case and weight. */
+  color: var(--gmt-ice);
   font-weight: 600;
   font-size: var(--gmt-text-xs);
   text-transform: uppercase;

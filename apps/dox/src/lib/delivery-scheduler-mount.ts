@@ -68,6 +68,7 @@ import {
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -716,8 +717,13 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
       if (value === "") renderWidgetOutput(out, "NO SIGNAL", "sentinel");
       else renderWidgetOutput(out, JSON.stringify(value), "live");
     };
-    const { departure = "", duration = "", arrival = "", zone = "", local = "" } =
-      calls ?? {};
+    const {
+      departure = "",
+      duration = "",
+      arrival = "",
+      zone = "",
+      local = "",
+    } = calls ?? {};
     renderCallLine(
       q("call-leg-transit"),
       "transitTime",
@@ -847,12 +853,12 @@ function applyArgs(root: HTMLElement, args: DeliverySchedulerArgs): void {
   const legCountEl = q<HTMLSelectElement>("leg-count");
   if (legCountEl) legCountEl.value = String(count);
   const startZoneEl = q<HTMLSelectElement>("start-zone");
-  if (startZoneEl) startZoneEl.value = state.startTimeZone;
+  setControlValue(startZoneEl, state.startTimeZone);
   for (let n = 1; n <= MAX_LEGS; n++) {
     const leg = state.legs[n - 1]!;
     const set = (field: string, value: string) => {
       const el = q<HTMLInputElement | HTMLSelectElement>(`${field}-${n}`);
-      if (el) el.value = value;
+      setControlValue(el, value);
     };
     set("departure", leg.departure);
     set("duration", leg.duration);

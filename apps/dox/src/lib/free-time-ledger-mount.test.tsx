@@ -8,6 +8,7 @@
  * so a drift in the library or the widget fails here.
  */
 /// <reference types="vitest/globals" />
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { FREE_TIME_PRESETS } from "./free-time-ledger";
 import {
@@ -536,5 +537,41 @@ describe("mountFreeTimeLedger", () => {
       handle.destroy();
       handle.destroy();
     }).not.toThrow();
+  });
+});
+
+describe("the track's width observer", () => {
+  it("re-places the expiry label when the track's width changes", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { root } = await mount();
+      const track = root.querySelector<HTMLElement>(".gmt-freetime-track")!;
+      const label = q(root, "expiry-marker").querySelector<HTMLElement>(
+        "span",
+      )!;
+      const measure = vi.fn(() => ({ width: 50 }) as DOMRect);
+      label.getBoundingClientRect = measure;
+      Object.defineProperty(track, "clientWidth", {
+        configurable: true,
+        value: 1000,
+      });
+      expect(measure).not.toHaveBeenCalled();
+      spy.fire();
+      expect(measure).toHaveBeenCalled();
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it("destroy disconnects it", async () => {
+    const spy = spyOnResizeObservers();
+    try {
+      const { handle } = await mount();
+      expect(spy.live.size).toBe(1);
+      handle.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });

@@ -100,7 +100,8 @@
   margin: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
-  color: var(--gmt-cyan);
+  /* Text, so the ink variant: --gmt-cyan is 3.68:1 on white in light mode. */
+  color: var(--gmt-cyan-ink);
   white-space: nowrap;
 }
 
