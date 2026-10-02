@@ -105,7 +105,6 @@ const BACKDROPS: Rgb[] = [
 ];
 
 /** The lowest contrast an ink reaches against its casing over any backdrop. */
-/** The lowest contrast an ink reaches against its casing over any backdrop. */
 function worstContrast(ink: string, inkAlpha: number): number {
   const casing = hex(token("--gmt-globe-casing"));
   const casingAlpha = Number.parseFloat(token("--gmt-globe-casing-alpha"));
