@@ -20,10 +20,17 @@ globe plots and is free of snow then.
 
 Licence
 -------
-Public domain. NASA material is not protected by copyright in the United
-States unless noted, and this image carries no such notice. The Earth
-Observatory's image use policy (https://earthobservatory.nasa.gov/ImageUse)
-asks for credit; the only mandatory credit is "NASA".
+Public domain in the United States: a work of the US Government carries no
+copyright there (17 U.S.C. § 105), and NASA's media guidelines say its content
+"generally [is] not subject to copyright in the United States". The same
+guidelines ask that "NASA should be acknowledged as the source of the
+material". That is a request, not a condition of use; the site honours it with
+one line at the foot of the Why GMT page (src/content/docs/why-gmt.mdx), off
+the homepage. Two things the guidelines do rule out: using the
+NASA insignia or logotype, which are not public domain, and implying that NASA
+endorses the product. Neither is done here.
+
+    https://www.nasa.gov/nasa-brand-center/images-and-media/
 
 Steps
 -----

@@ -356,12 +356,20 @@
      teal, cyan, ice — by brightness, 0..1. 0 keeps the photograph's colours;
      1 is the cyan "hologram" Earth. Experimental (#293). */
   --gmt-globe-imagery-duotone: 1;
-  /* The casing under markers, labels and the selected zone's outline where
-     the imagery shows. Without it a cyan dot that reads on the ocean vanishes
-     over the Sahara, and the outline over ice. No light value below: only
-     this theme draws the imagery. The alpha is what holds labels at 7:1 and
-     every marker at 3:1 even over ice-cap white — measured by
-     globe-contrast.test.ts, so re-run it if you change either. */
+  /* The globe's overlay — markers, labels, the selected zone's outline —
+     and the casing drawn under every piece of it, on every globe, in both
+     renderers. The backdrop behind a marker runs from night-side black to the
+     lit limb's cyan haze to the photo's ice-cap white, and no ink holds its
+     contrast over all of that on its own: without the casing a dark-theme
+     label fell to 3:1 by the lit limb, and a light-theme one to 1.5:1 on the
+     night side. Over the casing each ink only has to clear the casing, so the
+     inks are the dark palette in both themes, with no light values below.
+     globe-contrast.test.ts measures every ink against the casing over any
+     backdrop — labels at 7:1, markers and the outline at 3:1 — and pins that
+     neither theme overrides them. Re-run it if you change any of them. */
+  --gmt-globe-ink: #cfeaf2; /* labels and minor markers */
+  --gmt-globe-marker: #22d3ee; /* the curated zones' markers */
+  --gmt-globe-selected: #4ade80; /* the selected marker, ring and zone */
   --gmt-globe-casing: #03080c;
   --gmt-globe-casing-alpha: 0.9;
 

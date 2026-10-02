@@ -141,6 +141,12 @@ export const IMAGERY_FADE_START_ZOOM = 2;
  */
 export const IMAGERY_FADE_END_ZOOM = 2.7;
 
+/**
+ * Above this zoom, marker labels become clutter and both renderers drop them.
+ * One definition, so the two renderers cannot disagree on when it happens.
+ */
+export const LABEL_MAX_ZOOM = 2.5;
+
 /** How much of the imagery shows at a zoom: 1 at rest, easing to 0. */
 export function imageryZoomFade(zoom: number): number {
   return 1 - smoothstep(IMAGERY_FADE_START_ZOOM, IMAGERY_FADE_END_ZOOM, zoom);

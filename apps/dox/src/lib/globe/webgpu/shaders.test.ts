@@ -224,36 +224,51 @@ describe("imagery", () => {
   });
 
   it("can recolour the photograph onto the theme's own ramp", () => {
-    /* The duotone: the photo's brightness mapped from the casing's near-black
+    /* The duotone: the photo's brightness mapped from the night colour
        through the ocean teal and the day cyan to the label ice, mixed in by
-       `g.imagery.w`. At 0 the photograph keeps its own colours. */
+       `g.imagery.w`. At 0 the photograph keeps its own colours. The dark end
+       is not the casing's colour: that one is tuned for contrast, and
+       retuning it must not recolour the Earth. */
     expect(code).toContain("fn duotone(");
     expect(code).toContain("mix(photo, duotone(photo), g.imagery.w)");
+    expect(code).toContain("mix(g.night.rgb, g.ocean.rgb,");
+    expect(code).not.toMatch(/mix\(g\.casing\.rgb/);
   });
 
-  it("fades with zoom inside the shader, from the uniform's zoom", () => {
-    expect(code).toContain("return g.imagery.x * imageryZoomFade(g.view.z);");
-  });
-
-  it("cases the region outline, the markers and the labels over the imagery", () => {
-    /* Bright strokes and dots that read against a flat dark sphere vanish over
-       desert and ice, so each gets a casing in the theme's `casing` colour,
-       scaled by the imagery weight so the vector look is unchanged. */
-    expect(code).toMatch(/regionCasing\(/);
-    for (const build of [markerShader, labelShader]) {
+  it("draws every casing at full strength, on every globe", () => {
+    /* The casing is what holds every ink to its contrast floor whatever lies
+       behind it — the photo, the flat globe's lit limb, or a mix of both
+       partway through the zoom fade — so it never fades and never waits for
+       the imagery. `globe-contrast.test.ts` measures the inks against it. */
+    for (const build of [
+      surfaceShader,
+      regionOverlayShader,
+      markerShader,
+      labelShader,
+    ]) {
       const shader = stripComments(build());
-      expect(shader).toContain("imageryWeight()");
-      expect(shader).toContain("g.casing");
+      expect(shader).toContain("g.casing.a *");
+      expect(shader).not.toMatch(/g\.casing\.a \* [^;]*imageryW/);
+      expect(shader).not.toContain("casingWeight");
+    }
+    // The outline's casing is the region stroke dilated, in both passes.
+    expect(stripComments(surfaceShader())).toContain("regionCasing(");
+    expect(stripComments(regionOverlayShader())).toContain("regionCasing(");
+    /* Neither sprite shader depends on the imagery any more: the one mention
+       left is the shared helpers' definition of it, never a call. */
+    for (const build of [markerShader, labelShader]) {
+      expect(stripComments(build()).match(/imageryWeight\(\)/g)).toHaveLength(
+        1,
+      );
     }
   });
 
-  it("moves a ringed marker's label clear of its ring as the imagery fades in", () => {
+  it("moves a ringed marker's label clear of its ring", () => {
     /* The label's halo would otherwise cover the right half of the selection
-       ring — the one signal of which zone is selected. Scaled by the weight,
-       so the flat globe's labels stay exactly where they were. */
+       ring — the one signal of which zone is selected. */
     const label = stripComments(labelShader());
-    expect(label).toContain("@location(4) imageryShift: f32,");
-    expect(label).toContain("imageryShift * imageryWeight()");
+    expect(label).toContain("@location(4) ringShift: f32,");
+    expect(label).toContain("offset + vec2<f32>(ringShift, 0.0)");
   });
 });
 

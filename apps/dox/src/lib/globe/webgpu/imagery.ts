@@ -97,12 +97,8 @@ export async function acquireImagery(
   const entries = byUrl;
   let entry = entries.get(url);
   if (!entry) {
-    const created: Entry = { texture: loadTexture(device, url), holders: 0 };
-    created.texture.catch(() => {
-      if (entries.get(url) === created) entries.delete(url);
-    });
-    entries.set(url, created);
-    entry = created;
+    entry = { texture: loadTexture(device, url), holders: 0 };
+    entries.set(url, entry);
   }
   const claimed = entry;
   claimed.holders++;
@@ -124,6 +120,8 @@ export async function acquireImagery(
     const texture = await claimed.texture;
     return { view: texture.createView({ label: "globe-imagery" }), release };
   } catch (error) {
+    /* Every caller waiting on a failed load lets go here, so the last one
+       takes the entry out of the map and the next globe loads afresh. */
     release();
     throw error;
   }

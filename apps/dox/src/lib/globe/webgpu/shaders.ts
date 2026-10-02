@@ -385,6 +385,20 @@ fn srgbEncode(linear: vec3<f32>) -> vec3<f32> {
 }
 
 /**
+ * The photograph recoloured onto the theme's own ramp, by brightness: the
+ * night colour for deep ocean, the ocean teal, the day cyan, and the label ice
+ * for the ice caps. Relief and coastlines survive, because they are changes of
+ * brightness; only the hues are replaced. The dark end is the night colour,
+ * not the casing's, so retuning the casing for contrast leaves the Earth alone.
+ */
+fn duotone(photo: vec3<f32>) -> vec3<f32> {
+  let t = clamp(dot(photo, vec3<f32>(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+  if (t < 0.3) { return mix(g.night.rgb, g.ocean.rgb, t / 0.3); }
+  if (t < 0.6) { return mix(g.ocean.rgb, g.day.rgb, (t - 0.3) / 0.3); }
+  return mix(g.day.rgb, g.label.rgb, (t - 0.6) / 0.4);
+}
+
+/**
  * The imagery under a pixel, sRGB-encoded like every other colour here.
  *
  * Gradients are explicit, taken from \`geoAt\`'s analytic Jacobian. That keeps
@@ -395,19 +409,6 @@ fn srgbEncode(linear: vec3<f32>) -> vec3<f32> {
  * bound; the sampler's anisotropy holds the level down to within a few degrees
  * of the pole, where the image is uniform ice.
  */
-/**
- * The photograph recoloured onto the theme's own ramp, by brightness: the
- * casing's near-black for deep ocean, the ocean teal, the day cyan, and the
- * label ice for the ice caps. Relief and coastlines survive, because they are
- * changes of brightness; only the hues are replaced.
- */
-fn duotone(photo: vec3<f32>) -> vec3<f32> {
-  let t = clamp(dot(photo, vec3<f32>(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
-  if (t < 0.3) { return mix(g.casing.rgb, g.ocean.rgb, t / 0.3); }
-  if (t < 0.6) { return mix(g.ocean.rgb, g.day.rgb, (t - 0.3) / 0.3); }
-  return mix(g.day.rgb, g.label.rgb, (t - 0.6) / 0.4);
-}
-
 fn imageryAt(geo: Geo) -> vec3<f32> {
   // Wrapped into ±180 first, so u stays in [0, 1].
   let lng = geo.lngDeg - 360.0 * round(geo.lngDeg / 360.0);
@@ -555,8 +556,9 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   );
 
   /* --- land and region, from the coverage target ---
-     The vector land gives way to the imagery, which has real coastlines; the
-     region stays, cased where the imagery shows. */
+     The vector land gives way to the imagery, down to the vector overlay's
+     share of it (\`vectorW\`, lit like the photo); the region stays, cased
+     where the imagery shows. */
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
   colour = over(
     colour,
@@ -567,9 +569,9 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     vec4<f32>(g.landStroke.rgb, g.landStroke.a * texel.g * vectorW),
   );
   colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
-  if (imageryW > 0.0 && g.regionStroke.a > 0.0) {
+  if (g.regionStroke.a > 0.0) {
     let casing = regionCasing(position.xy, g.imagery.y);
-    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing * imageryW));
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
   }
   colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
 
@@ -647,12 +649,11 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   if (u * u + v * v > 1.0) { return vec4<f32>(0.0); }
 
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
-  let imageryW = imageryWeight();
   var colour = vec4<f32>(0.0);
   colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
-  if (imageryW > 0.0 && g.regionStroke.a > 0.0) {
+  if (g.regionStroke.a > 0.0) {
     let casing = regionCasing(position.xy, g.imagery.y);
-    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing * imageryW));
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
   }
   colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
   return vec4<f32>(colour.rgb * colour.a, colour.a);
@@ -855,18 +856,16 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
   }
   var colour = vec4<f32>(in.colour.rgb, in.colour.a * coverage);
 
-  /* Over the imagery, a casing in the theme's \`casing\` colour: the same disc
+  /* A casing in the theme's \`casing\` colour, on every globe: the same disc
      or ring grown by \`g.imagery.y\` device pixels each way, drawn under it. A
-     cyan dot reads on a dark ocean and disappears over the Sahara. */
-  let imageryW = imageryWeight();
-  if (imageryW > 0.0) {
-    let reach = g.imagery.y;
-    var casing = clamp(in.radii.x + reach + 0.5 - distance, 0.0, 1.0);
-    if (in.radii.y > 0.0) {
-      casing = casing * clamp(distance - (in.radii.y - reach) + 0.5, 0.0, 1.0);
-    }
-    colour = over(vec4<f32>(g.casing.rgb, g.casing.a * casing * imageryW), colour);
+     cyan dot that reads on a dark ocean disappears over the Sahara, or by the
+     flat globe's lit limb; over its casing it reads everywhere. */
+  let reach = g.imagery.y;
+  var casing = clamp(in.radii.x + reach + 0.5 - distance, 0.0, 1.0);
+  if (in.radii.y > 0.0) {
+    casing = casing * clamp(distance - (in.radii.y - reach) + 0.5, 0.0, 1.0);
   }
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * casing), colour);
 
   if (colour.a <= 0.0) { discard; }
   return premultiply(colour);
@@ -903,9 +902,9 @@ fn vs(
   @location(2) size: vec2<f32>,
   /** Atlas rectangle: \`(u0, v0, u1, v1)\`. */
   @location(3) rect: vec4<f32>,
-  /** How far right the label moves where the imagery shows, in CSS pixels:
-   *  clear of a selection ring that its halo would otherwise cover. */
-  @location(4) imageryShift: f32,
+  /** How far right the label moves, in CSS pixels: clear of a selection ring
+   *  that its halo would otherwise cover. */
+  @location(4) ringShift: f32,
 ) -> Out {
   let projected = projectGeo(lngLat.x, lngLat.y);
   var out: Out;
@@ -920,8 +919,7 @@ fn vs(
   );
   let corner = corners[index];
   let dpr = g.viewport.w;
-  let shift = vec2<f32>(imageryShift * imageryWeight(), 0.0);
-  let origin = projected.xy + (offset + shift) * dpr;
+  let origin = projected.xy + (offset + vec2<f32>(ringShift, 0.0)) * dpr;
   out.position = toClip(origin + corner * size * dpr);
   out.uv = mix(rect.xy, rect.zw, corner);
   return out;
@@ -930,11 +928,9 @@ fn vs(
 @fragment
 fn fs(in: Out) -> @location(0) vec4<f32> {
   let sampled = textureSample(atlas, atlasSampler, in.uv);
-  let imageryW = imageryWeight();
+  // The glyphs over their halo, on every globe.
   var colour = vec4<f32>(g.label.rgb, g.label.a * sampled.r);
-  if (imageryW > 0.0) {
-    colour = over(vec4<f32>(g.casing.rgb, g.casing.a * sampled.g * imageryW), colour);
-  }
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * sampled.g), colour);
   if (colour.a <= 0.0) { discard; }
   return premultiply(colour);
 }

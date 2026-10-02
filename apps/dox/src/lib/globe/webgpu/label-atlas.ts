@@ -11,10 +11,12 @@
  * Drag, zoom and the clock tick all reuse it.
  *
  * Two channels: red is the glyph coverage, green a halo round the glyphs. The
- * halo is what keeps a label readable over the Earth imagery (#293), where the
- * text colour that reads on a flat dark sphere can sit on desert or ice; the
- * label shader draws it only where the imagery shows.
+ * halo is what keeps a label readable whatever is behind it — the flat globe's
+ * lit limb, the Earth imagery's desert and ice (#293) — and the label shader
+ * draws it under every label, on every globe. `../casing.ts` sets its width.
  */
+
+import { LABEL_HALO_CSS } from "../casing";
 
 /**
  * Where one label sits in the atlas, and how big to draw it.
@@ -53,12 +55,6 @@ const MAX_ATLAS_WIDTH = 1024;
 const GUARD = 1;
 
 /**
- * Width of the halo round each glyph, in CSS pixels — a stroke twice this wide,
- * centred on the outline.
- */
-const HALO_CSS = 2;
-
-/**
  * Rasterise `labels` into one texture.
  *
  * Returns null when there is nothing to draw or no 2D context to draw it with —
@@ -94,7 +90,7 @@ export function buildLabelAtlas(
 
   /* The halo margin in whole device pixels, so a texel still lands on exactly
      one device pixel once the quad is grown by it. */
-  const marginDev = Math.ceil(HALO_CSS * dpr);
+  const marginDev = Math.ceil(LABEL_HALO_CSS * dpr);
   const inset = GUARD + marginDev;
 
   // Lay out in rows, in device pixels.
@@ -156,7 +152,7 @@ export function buildLabelAtlas(
 
   const glyphs = rasterise((ctx, label, x, y) => ctx.fillText(label, x, y));
   const halo = rasterise((ctx, label, x, y) => {
-    ctx.lineWidth = HALO_CSS * 2;
+    ctx.lineWidth = LABEL_HALO_CSS * 2;
     ctx.lineJoin = "round";
     ctx.strokeText(label, x, y);
     ctx.fillText(label, x, y);

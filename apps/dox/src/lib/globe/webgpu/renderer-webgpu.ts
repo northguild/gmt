@@ -43,6 +43,8 @@ import type {
   Rgba,
 } from "../types";
 import { greatCirclePoints } from "../geometry";
+import { CASING_CSS, LABEL_OFFSET_X, labelRingShift } from "../casing";
+import { LABEL_MAX_ZOOM } from "../shading";
 import { acquireDevice, createCheckedShaderModule } from "./device";
 import {
   acquireImagery,
@@ -76,21 +78,9 @@ const LIMB_STROKE_CSS = 1;
 /** How far the atmosphere glow reaches past the limb, as a multiple of R. */
 const ATMOSPHERE_REACH = 1.06;
 
-/**
- * How far the casing reaches past a marker or a region outline, in CSS
- * pixels. Drawn only where the imagery shows.
- */
-const CASING_CSS = 1;
-
-/** Above this zoom, labels become clutter and are dropped. */
-const LABEL_MAX_ZOOM = 2.5;
-
-/** Where a label sits relative to its marker, in CSS pixels. */
-const LABEL_OFFSET_X = 6;
+/** Where a label's box sits above its marker, in CSS pixels; `LABEL_OFFSET_X`
+ *  (../casing.ts) places it to the right. */
 const LABEL_OFFSET_Y = -7;
-
-/** Space left between a selection ring and its label's halo over the imagery. */
-const LABEL_RING_GAP_CSS = 1;
 
 /** Floats per marker instance — see `markerShader`'s vertex inputs. */
 const MARKER_FLOATS = 14;
@@ -790,16 +780,10 @@ export async function createWebgpuRenderer(
       const rect = atlas.rects.get(marker.label);
       if (!rect) continue;
       /* The atlas rectangle includes the halo margin, so the quad starts that
-         far up and left of the text, which stays where it always was. Over
-         the imagery, a ringed marker's label slides right until its halo
-         clears the ring; the shader scales the shift by the imagery weight.
-         Whole device pixels, so the glyphs still land one texel per pixel. */
-      const ringEdge = marker.ring
-        ? marker.ring.radius + marker.ring.width / 2
-        : 0;
-      const clearance =
-        ringEdge + rect.marginCss + LABEL_RING_GAP_CSS - LABEL_OFFSET_X;
-      const imageryShift = Math.max(0, Math.ceil(clearance * dpr) / dpr);
+         far up and left of the text, which stays where it always was. A
+         ringed marker's label slides right until its halo clears the ring,
+         by whole device pixels so the glyphs still land one texel per pixel. */
+      const ringShift = Math.ceil(labelRingShift(marker.ring) * dpr) / dpr;
       rows.push(
         marker.position[0],
         marker.position[1],
@@ -811,7 +795,7 @@ export async function createWebgpuRenderer(
         rect.v0,
         rect.u1,
         rect.v1,
-        imageryShift,
+        ringShift,
       );
     }
     upload(
@@ -1094,11 +1078,15 @@ export async function createWebgpuRenderer(
          without it: awaiting an error scope per frame would stall the loop, and by
          then a mistake would already have been caught here. */
       device.pushErrorScope("validation");
-      device.queue.submit([encoder.finish()]);
-      void device.popErrorScope().then((error) => {
-        if (error)
-          reportFailure(`first frame failed validation: ${error.message}`);
-      });
+      try {
+        device.queue.submit([encoder.finish()]);
+      } finally {
+        // Popped even if the submit throws, so the scope cannot leak.
+        void device.popErrorScope().then((error) => {
+          if (error)
+            reportFailure(`first frame failed validation: ${error.message}`);
+        });
+      }
       return;
     }
 

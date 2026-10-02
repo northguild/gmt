@@ -32,6 +32,30 @@ function selectorLists(css: string): string[][] {
   );
 }
 
+/** Custom properties declared in the first block whose selectors include `selector`. */
+function tokensOf(css: string, selector: string): Set<string> {
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = match[1].split(",").map((part) => part.trim());
+    if (!selectors.includes(selector)) continue;
+    return new Set([...match[2].matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
+  }
+  throw new Error(`no block for ${selector}`);
+}
+
+/** The body of the `@media` block whose condition is `condition`. */
+function mediaBlock(css: string, condition: string): string {
+  const start = css.indexOf(`@media ${condition} {`);
+  if (start < 0) throw new Error(`no @media ${condition} block`);
+  let depth = 0;
+  for (let i = css.indexOf("{", start); i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    if (css[i] === "}" && --depth === 0) {
+      return css.slice(css.indexOf("{", start) + 1, i);
+    }
+  }
+  throw new Error(`unclosed @media ${condition} block`);
+}
+
 describe("the landing hero", () => {
   it("is a dark island", () => {
     const hero = readFileSync(
@@ -53,6 +77,20 @@ describe("the landing hero", () => {
         list.includes(":root"),
       );
       expect(dark, file).toContain(".gmt-theme-dark");
+    }
+  });
+
+  it("has a dark value to return to for every token the light theme sets", () => {
+    /* The island re-declares the dark block on itself. A token that only the
+       light block sets has nothing to re-declare, so inside the island it
+       would keep the light value. */
+    for (const file of ["gmt-tokens.css", "gmt-theme.css"]) {
+      const css = read(file);
+      const dark = tokensOf(css, ":root");
+      const lightOnly = [...tokensOf(css, '[data-theme="light"]')].filter(
+        (token) => !dark.has(token),
+      );
+      expect(lightOnly, file).toEqual([]);
     }
   });
 
@@ -79,4 +117,35 @@ describe("the light theme", () => {
     );
     expect(light?.[2]).toMatch(/--gmt-globe-imagery-alpha:\s*0;/);
   });
+});
+
+describe("the accessibility switches", () => {
+  /* A busy photograph behind the markers costs contrast that raised contrast
+     asks for, and a canvas is not repainted in the forced palette. Under both,
+     the imagery is off — for `:root`, the light theme and the dark island — and
+     at 0 it is never downloaded. Pinned here because only the manual smoke
+     exercises it otherwise. */
+  for (const condition of [
+    "(prefers-contrast: more)",
+    "(forced-colors: active)",
+  ]) {
+    it(`turns the imagery off under ${condition}`, () => {
+      const block = mediaBlock(read("gmt-a11y.css"), condition);
+      const rule = [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find((match) =>
+        /--gmt-globe-imagery-alpha\s*:\s*0\s*;/.test(match[2]),
+      );
+      expect(
+        rule,
+        `${condition} sets --gmt-globe-imagery-alpha: 0`,
+      ).toBeDefined();
+      const selectors = rule![1].split(",").map((part) => part.trim());
+      expect(selectors).toEqual(
+        expect.arrayContaining([
+          ":root",
+          '[data-theme="light"]',
+          ".gmt-theme-dark",
+        ]),
+      );
+    });
+  }
 });

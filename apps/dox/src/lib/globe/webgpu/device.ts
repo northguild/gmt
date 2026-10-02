@@ -130,7 +130,14 @@ export async function createCheckedShaderModule(
   code: string,
 ): Promise<GPUShaderModule> {
   device.pushErrorScope("validation");
-  const module = device.createShaderModule({ label, code });
+  let module: GPUShaderModule;
+  try {
+    module = device.createShaderModule({ label, code });
+  } catch (error) {
+    // Popped either way, so a throw cannot leave the scope open.
+    void device.popErrorScope().catch(() => null);
+    throw error;
+  }
   const scope = device.popErrorScope();
   const [info, scopeError] = await Promise.all([
     module.getCompilationInfo(),

@@ -715,6 +715,11 @@ function readTheme(host: HTMLElement): DoxTheme {
   };
 
   const cyan = "--gmt-cyan";
+  /* The overlay inks are the same in both themes: every marker, ring, label
+     and outline sits on the dark casing (globe/casing.ts), so it is the casing
+     they contrast with, not the page. */
+  const ink = "--gmt-globe-ink";
+  const selected = "--gmt-globe-selected";
   return {
     ocean: colour(
       "--gmt-teal",
@@ -737,7 +742,7 @@ function readTheme(host: HTMLElement): DoxTheme {
       number("--gmt-globe-atmosphere-alpha", 0.42),
     ),
     haze: colour(cyan, "#22d3ee", number("--gmt-globe-haze-alpha", 0.2)),
-    label: colour("--gmt-ice", "#cfeaf2", LABEL_ALPHA),
+    label: colour(ink, "#cfeaf2", LABEL_ALPHA),
     casing: colour(
       "--gmt-globe-casing",
       "#03080c",
@@ -752,13 +757,13 @@ function readTheme(host: HTMLElement): DoxTheme {
       Math.max(number("--gmt-globe-imagery-duotone", 0), 0),
       1,
     ),
-    markerPrimary: colour(cyan, "#22d3ee", 1),
-    markerOther: colour("--gmt-ice", "#cfeaf2", MINOR_MARKER_ALPHA),
+    markerPrimary: colour("--gmt-globe-marker", "#22d3ee", 1),
+    markerOther: colour(ink, "#cfeaf2", MINOR_MARKER_ALPHA),
     markerNightPrimary: colour("--gmt-globe-gold", "#fde047", 1),
     markerNightOther: colour("--gmt-globe-gold", "#fde047", MINOR_MARKER_ALPHA),
-    markerSelected: colour("--gmt-spring", "#4ade80", 1),
-    regionFill: colour("--gmt-spring", "#4ade80", 0.12),
-    regionStroke: colour("--gmt-spring", "#4ade80", 1),
+    markerSelected: colour(selected, "#4ade80", 1),
+    regionFill: colour(selected, "#4ade80", 0.12),
+    regionStroke: colour(selected, "#4ade80", 1),
   };
 }
 

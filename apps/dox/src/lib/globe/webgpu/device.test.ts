@@ -93,6 +93,18 @@ describe("createCheckedShaderModule", () => {
     await expect(module).resolves.toBeDefined();
   });
 
+  it("still pops its scope when creating the module throws", async () => {
+    const { device, log } = fakeDevice();
+    (
+      device as unknown as { createShaderModule: () => never }
+    ).createShaderModule = () => {
+      throw new Error("device lost");
+    };
+    const module = createCheckedShaderModule(device, "globe-test", "");
+    expect(log).toEqual(["push validation", "pop validation"]);
+    await expect(module).rejects.toThrow("device lost");
+  });
+
   it("rejects when the scope caught a validation error", async () => {
     const { device } = fakeDevice({ validation: "bad shader" });
     await expect(

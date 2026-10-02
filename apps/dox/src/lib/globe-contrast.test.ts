@@ -1,22 +1,23 @@
 /// <reference types="vitest/globals" />
 
 /**
- * The globe's labels and markers hold the site's contrast floors over the
- * Earth imagery (#293).
+ * The globe's labels and markers hold the site's contrast floors on every
+ * globe: flat or with imagery, in either renderer and either theme (#293).
  *
- * Over the imagery, what sits behind a label or a marker is its casing: a
- * translucent halo over whatever the photograph shows there, which ranges from
- * night-side black to Antarctic white. So each ink is measured against its own
- * casing composited over a sweep of backdrops, and the worst one has to clear
- * the floor — 7:1 for text, as for all body text on the site, and 3:1 for the
- * markers and the zone outline, which are graphics (WCAG 2.2 SC 1.4.11).
+ * Behind every label and marker sits its casing, a dark halo that is always
+ * drawn, over whatever the globe shows there: night-side black, the lit limb's
+ * cyan haze, the photograph's Antarctic white, or any mix of them partway
+ * through the zoom fade. So each ink is measured against its own casing
+ * composited over a sweep of backdrops from black to white, and the worst one
+ * has to clear the floor — 7:1 for text, as for all body text on the site, and
+ * 3:1 for the markers and the zone outline, which are graphics (WCAG 2.2
+ * SC 1.4.11).
  *
- * The imagery shows only where the dark tokens apply — the dark theme, and the
- * landing hero's dark island in the light theme (`globe-stage.test.ts`) — so
- * the dark token block is what is measured. The
- * values come from `gmt-tokens.css` and the alphas from `globe-inks.ts`, the
- * same places `globe.ts` reads them, so retuning a token re-runs the
- * measurement rather than silently breaking it.
+ * The inks and the casing are the same in both themes: the overlay always sits
+ * on a dark casing, so it takes the dark palette. The second block pins that,
+ * so the one measurement covers both themes. The values come from
+ * `gmt-tokens.css` and the alphas from `globe-inks.ts`, the same places
+ * `globe.ts` reads them, so retuning any of them re-runs the measurement.
  */
 
 import { readFileSync } from "node:fs";
@@ -29,28 +30,39 @@ const TOKENS = readFileSync(
   "utf8",
 );
 
-/** Custom properties declared in the dark block, the one for `:root`. */
-function darkBlock(): Map<string, string> {
+/** Custom properties declared in the first block whose selectors include `selector`. */
+function block(selector: string): Map<string, string> {
   const css = TOKENS.replace(/\/\*[\s\S]*?\*\//g, "");
   for (const match of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
-    const selectors = match[1].split(",").map((selector) => selector.trim());
-    if (!selectors.includes(":root")) continue;
+    const selectors = match[1].split(",").map((part) => part.trim());
+    if (!selectors.includes(selector)) continue;
     const values = new Map<string, string>();
     for (const declaration of match[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
       values.set(declaration[1], declaration[2].trim());
     }
     return values;
   }
-  throw new Error("no :root block in gmt-tokens.css");
+  throw new Error(`no ${selector} block in gmt-tokens.css`);
 }
 
-const DARK = darkBlock();
+const DARK = block(":root");
+const LIGHT = block('[data-theme="light"]');
 
 function token(name: string): string {
   const value = DARK.get(name);
   if (value === undefined) throw new Error(`${name} is not declared`);
   return value;
 }
+
+/** Every token the overlay is drawn with. */
+const OVERLAY_TOKENS = [
+  "--gmt-globe-ink",
+  "--gmt-globe-marker",
+  "--gmt-globe-selected",
+  "--gmt-globe-gold",
+  "--gmt-globe-casing",
+  "--gmt-globe-casing-alpha",
+];
 
 type Rgb = [number, number, number];
 
@@ -93,6 +105,7 @@ const BACKDROPS: Rgb[] = [
 ];
 
 /** The lowest contrast an ink reaches against its casing over any backdrop. */
+/** The lowest contrast an ink reaches against its casing over any backdrop. */
 function worstContrast(ink: string, inkAlpha: number): number {
   const casing = hex(token("--gmt-globe-casing"));
   const casingAlpha = Number.parseFloat(token("--gmt-globe-casing-alpha"));
@@ -107,19 +120,20 @@ function worstContrast(ink: string, inkAlpha: number): number {
 const TEXT_FLOOR = 7;
 const GRAPHIC_FLOOR = 3;
 
-describe("over the imagery", () => {
+describe("on any globe", () => {
   it("keeps labels at the 7:1 text floor", () => {
-    const ink = token("--gmt-ice");
-    expect(worstContrast(ink, LABEL_ALPHA)).toBeGreaterThanOrEqual(TEXT_FLOOR);
+    expect(
+      worstContrast(token("--gmt-globe-ink"), LABEL_ALPHA),
+    ).toBeGreaterThanOrEqual(TEXT_FLOOR);
   });
 
   it("keeps every marker and the zone outline at the 3:1 graphics floor", () => {
     const inks: [string, string, number][] = [
-      ["primary marker", token("--gmt-cyan"), 1],
-      ["minor marker", token("--gmt-ice"), MINOR_MARKER_ALPHA],
+      ["primary marker", token("--gmt-globe-marker"), 1],
+      ["minor marker", token("--gmt-globe-ink"), MINOR_MARKER_ALPHA],
       ["night marker", token("--gmt-globe-gold"), 1],
       ["minor night marker", token("--gmt-globe-gold"), MINOR_MARKER_ALPHA],
-      ["selected marker and zone outline", token("--gmt-spring"), 1],
+      ["selected marker and zone outline", token("--gmt-globe-selected"), 1],
     ];
     for (const [name, ink, alpha] of inks) {
       expect(
@@ -127,5 +141,14 @@ describe("over the imagery", () => {
         `${name} (${ink} at ${alpha})`,
       ).toBeGreaterThanOrEqual(GRAPHIC_FLOOR);
     }
+  });
+});
+
+describe("in either theme", () => {
+  it("draws the overlay with the same inks and casing", () => {
+    /* A light-theme value for any of these would put light-theme ink on the
+       dark casing — near-black text on near-black — and nothing above measures
+       the light block. */
+    expect(OVERLAY_TOKENS.filter((name) => LIGHT.has(name))).toEqual([]);
   });
 });

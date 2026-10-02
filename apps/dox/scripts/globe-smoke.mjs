@@ -75,7 +75,6 @@ const OUT = path.join(DOX, ".globe-smoke");
  */
 const FIXED_INSTANT = "2026-03-20T09:30:00Z";
 
-/** The pages the globe appears on, and the size to check each at. */
 /**
  * The pages the globe appears on, and the size to check each at. `darkHero`
  * marks the landing hero, a dark island that shows the imagery in the light

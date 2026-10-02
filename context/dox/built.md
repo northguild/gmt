@@ -443,10 +443,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - **The asset.** `public/earth-blue-marble.webp`: Blue Marble Next Generation with
       topography and bathymetry, July 2004, resampled to 4096×2048 WebP (about 530 KB) by
       `scripts/prepare-globe-imagery.py`, which records the source URL and the licence.
-      Public domain; NASA Earth Observatory asks for the credit "NASA", which the script
-      records — the site shows no on-page credit, by choice. July, because the northern
-      hemisphere, where most plotted zones are, is free of snow then. One static file — no
-      tile service, no runtime dependency on anyone else's server.
+      Public domain in the US, as a work of the US Government (17 U.S.C. § 105). NASA's
+      media guidelines ask that NASA be acknowledged as the source — a request, not a
+      condition of use — and rule out its insignia and any implied endorsement; the script
+      records all three. The credit is one quiet line at the foot of `why-gmt.mdx` — "Earth
+      imagery: NASA Earth Observatory (Blue Marble Next Generation)." — off the homepage,
+      with no logo. July, because the
+      northern hemisphere, where most plotted zones are, is free of snow then. One static
+      file — no tile service, no runtime dependency on anyone else's server.
     - **Loading.** `webgpu/imagery.ts` fetches it once the WebGPU renderer has started and
       its theme asks for imagery, decodes it with `createImageBitmap`, uploads it and builds
       the mips. Never awaited: the globe draws flat and is interactive meanwhile, then
@@ -466,21 +470,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       brightness — `imageryLight` in `shading.ts`, `dayFactor`'s falloff above a 0.18
       ambient floor — and stands in for the day wash, which fades out as it fades in. The
       night wash, haze, atmosphere, limb, graticule, region, markers and labels draw on top
-      as before. The vector land fill and stroke fade out with it: the image has real
-      coastlines.
-    - **The cyber look (experimental).** Two tokens restyle the photograph, and both ship
-      at 1. `--gmt-globe-imagery-duotone` recolours it by brightness onto the globe's own
-      ramp — the casing's near-black, the ocean teal, the day cyan, the label ice — so the
-      relief and coastlines survive and only the hues change. `--gmt-globe-vector-overlay`
-      keeps that share of the vector land fill and coastline on top instead of fading them
-      out. That share is lit like the photograph under it, by `imageryLight`: the land
-      layers draw after the night wash, so an unlit overlay kept night-side land as bright
-      as day-side land and blurred the terminator. The day wash is deliberately not in the
-      overlay: over a photograph that carries its own light it read as milky haze. The
-      ambient floor came down from 0.3 to 0.18 at the same time, for a crisper terminator.
-      Both at 0 give the plain photograph back. An overlay on the plain photo alone was
-      tried first and was too faint to see: the vector land is styled to sit quietly on
-      the flat globe.
+      as before. The vector land fill and stroke fade out with it, down to the vector
+      overlay's share below: the image has real coastlines.
+    - **The cyber look (experimental).** Two tokens restyle the photograph, and both ship at
+      1. `--gmt-globe-imagery-duotone` recolours it by brightness onto the globe's own ramp
+      — the night colour, the ocean teal, the day cyan, the label ice — so the relief and
+      coastlines survive and only the hues change. The dark end is the night colour, not the
+      casing's, so retuning the casing for contrast leaves the Earth alone.
+      `--gmt-globe-vector-overlay` keeps that share of the vector land fill and coastline on
+      top instead of fading them out. That share is lit like the photograph under it, by
+      `imageryLight`: the land layers draw after the night wash, so an unlit overlay kept
+      night-side land as bright as day-side land and blurred the terminator. The day wash is
+      deliberately not in the overlay: over a photograph that carries its own light it read
+      as milky haze. The 0.18 ambient floor above is what keeps the night side dark enough
+      for a crisp terminator under all of this. Both at 0 give the plain photograph back. An
+      overlay on the plain photo alone was tried first and was too faint to see: the vector
+      land is styled to sit quietly on the flat globe.
     - **The zoom fade.** `IMAGERY_FADE_START_ZOOM` (2) to `IMAGERY_FADE_END_ZOOM` (2.7) in
       `shading.ts`, interpolated into the WGSL. A 4096-wide image is roughly a texel per
       device pixel at rest and soft by 2×. The dissolve is short because half-way the photo
@@ -500,32 +505,41 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       dark blocks of `gmt-tokens.css` and of `gmt-theme.css` (Starlight's colours, mapped
       from ours) name beside `:root`. The island re-declares them on itself, so everything
       in it — the copy, the buttons, the globe, the zone list — resolves the dark values and
-      draws exactly as in dark mode, imagery included, with nothing copied. Keeping that true
-      takes four things: every light token has a dark counterpart; each `gmt-a11y.css` block
-      that restates a token for `:root` names the island too, or its own declarations would
-      undo the override; a light-only component rule that can reach inside
+      draws exactly as in dark mode, imagery included, with nothing copied. Keeping that
+      true takes four things: every light token has a dark counterpart; each `gmt-a11y.css`
+      block that restates a token for `:root` names the island too, or its own declarations
+      would undo the override; a light-only component rule that can reach inside
       (`gmt-light.css`, the selection and scrollbar rules in `gmt-controls.css`) excludes it
-      with `:not(:where(.gmt-theme-dark *))`, which adds no specificity; and a dark-only rule
-      the hero needs (`.sl-link-button.secondary`) names the island beside
-      `[data-theme="dark"]`. `globe-stage.test.ts` pins the first three, and
-      `pnpm globe:smoke` checks the whole by comparing the computed colours of every
-      element in the hero across the two themes.
-    - **Legibility over the photograph.** A cyan dot that reads on the ocean vanishes over
-      the Sahara, and an outline over ice. So markers, labels and the selected zone's outline
-      get a casing in `--gmt-globe-casing`, scaled by the same weight: markers grow a disc or
-      ring in the fragment shader, labels carry a halo in the atlas's green channel (glyphs
-      are red) and the selected marker's label slides right until that halo clears its
-      ring, and the outline is the region-stroke coverage dilated by eight taps — cheaper
-      than a second coverage target. `globe-contrast.test.ts` measures every ink against its
-      casing over a sweep of backdrops from black to white, from the dark token block's real
-      values: labels at the 7:1 text floor, markers and the outline at 3:1. Re-run it after
-      retuning any of them, and if the imagery ever returns to the light theme, its inks
-      need measuring too: the light `--gmt-ice` is near-black.
+      with `:not(:where(.gmt-theme-dark *))`, which adds no specificity; and a dark-only
+      rule the hero needs (`.sl-link-button.secondary`) names the island beside
+      `[data-theme="dark"]`. `globe-stage.test.ts` pins the dark counterparts, the selector
+      lists and the `gmt-a11y.css` blocks. The exclusions and the dark-only rule are not
+      listed anywhere a unit test can read them; `pnpm globe:smoke` checks them, with the
+      rest, by comparing the computed colours of every element in the hero across the two
+      themes.
+    - **Legibility, on every globe.** A cyan dot that reads on the ocean vanishes over the
+      Sahara, and an outline over ice — and before #293's review the flat globe had the
+      same gap: dark-theme labels at 3:1 against the lit limb, light-theme markers near
+      1:1. So every marker, selection ring, label, region outline and arc sits on a dark
+      casing (`--gmt-globe-casing`), always at full strength, on every globe and in both
+      renderers. In the WebGPU shaders markers grow a disc or ring in the fragment shader,
+      labels carry a halo in the atlas's green channel (glyphs are red), and the outline is
+      the region-stroke coverage dilated by eight taps — cheaper than a second coverage
+      target. The canvas-2D fallback strokes the same shapes wider in the casing colour
+      first. `globe/casing.ts` holds the sizes both share, and `labelRingShift` slides the
+      selected marker's label right until its halo clears the ring. The inks
+      (`--gmt-globe-ink`, `--gmt-globe-marker`, `--gmt-globe-selected`, `--gmt-globe-gold`)
+      are the same in both themes, with no light value, because the casing is what they
+      contrast with. An earlier version faded the casing with the photo; it thinned out
+      while bright photo was still behind a label, and labels fell to about 3.7:1 partway
+      through the zoom fade. `globe-contrast.test.ts` measures every ink against its casing
+      over a sweep of backdrops from black to white — labels at the 7:1 text floor, markers
+      and outlines at 3:1 — and fails if any overlay token gains a light-theme value.
     - **Preferences.** `--gmt-globe-imagery-alpha` is 1 in the dark theme, and `gmt-a11y.css`
       zeroes it under `prefers-contrast: more` and `forced-colors: active`: a busy photograph
       behind the markers costs contrast that mode asked for, and a canvas is not repainted
       in the system palette. At 0 the image is never downloaded. Reduced transparency keeps
-      it; the photograph is opaque.
+      it; the photograph is opaque. `globe-stage.test.ts` pins both switches.
     - **The smoke.** Parity between the renderers runs with the image withheld at the
       network, so it compares the vector layers alone and doubles as the failed-load check.
       In the dark theme, with the image allowed, it must be requested once and change the

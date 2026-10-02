@@ -61,9 +61,9 @@ export interface GlobeTheme {
   /** Marker label text. */
   label: Rgba;
   /**
-   * The halo drawn under labels, markers and region outlines where the Earth
-   * imagery shows, so they stay legible over desert and ice. Unused by the
-   * canvas-2D renderer, which draws no imagery.
+   * The dark casing drawn under every marker, ring, label and region outline,
+   * on every globe and in both renderers, so the overlay reads over whatever is
+   * behind it: the lit limb, desert, ice. `casing.ts` sets its sizes.
    */
   casing: Rgba;
   /**
