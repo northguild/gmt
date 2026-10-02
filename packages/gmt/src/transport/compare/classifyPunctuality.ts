@@ -28,7 +28,10 @@ import type { Punctuality, PunctualityTolerance } from "../../types";
  *   `"PT0S"`, nothing is on time; late is checked first, so the plan itself is late.
  * - Tolerances are exact durations: a day is 24 hours; years, months and weeks return `null`, as
  *   does a negative tolerance (`-PT0S` is zero).
- * - Both times are an instant (`Z`/offset) or a zoned string; a bracketed zone is not read.
+ * - Both times are an instant (`Z`/offset) or a zoned string, read as `scheduleDeviation` reads
+ *   them: the offset fixes the instant, and an offset written to the minute that is the
+ *   bracketed zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names
+ *   the instant the zone gives. Otherwise the bracket is not checked.
  * - Returns `null` on invalid input.
  *
  * @param planned ISO 8601 instant or zoned datetime string of the planned time

@@ -10,9 +10,15 @@ export interface ClassifiedTimestamp {
 }
 
 /**
- * GMT's selection order: an actual, else a plan, else a request, else an estimate. DCSA defines
- * the classes and the port-call cycle (estimated → requested → planned → actual), not a
- * selection rule; this order reads that cycle from its most settled end.
+ * GMT's selection order: an actual, else a plan, else a request, else an estimate.
+ *
+ * GMT rule. DCSA defines the four classes (`eventClassifierCode`) and, in its Port Call
+ * standard, the pattern some port call services are negotiated through: "an (Estimated,
+ * Requested, Planned) ERP-pattern, including an (Actual) A" (DCSA Port Call 2.0.0, Use Cases,
+ * "Port Call Services Summary":
+ * https://reference.dcsa.org/content/standards/releases/port-call/v2-0-0/port-call-v2-0-0-use-cases).
+ * DCSA gives no rule for choosing among the classes; this order reads that pattern from its most
+ * settled end.
  */
 const PRECEDENCE: readonly TimestampClass[] = ["ACT", "PLN", "REQ", "EST"];
 
@@ -28,16 +34,20 @@ const PRECEDENCE: readonly TimestampClass[] = ["ACT", "PLN", "REQ", "EST"];
  * - **An `ACT` wins whenever there is one**, whatever was recorded after it: an estimate recorded
  *   after the arrival is still only an estimate.
  * - Otherwise `PLN`, then `REQ`, then `EST`. This `ACT` > `PLN` > `REQ` > `EST` selection is GMT's
- *   own convention, built on the DCSA port-call cycle order (estimated → requested → planned →
- *   actual) read from its most settled end: DCSA defines the classes and the cycle, not a rule
- *   for choosing among them. A plan is agreed; a request is asked for; an estimate is only
- *   predicted. So an `EST` or `REQ` never replaces a `PLN`, however much later it was recorded,
+ *   own convention. DCSA's Port Call standard negotiates some port call services — a berth,
+ *   pilotage, towage — through an estimated, then requested, then planned timestamp, followed by
+ *   an actual; this order reads that pattern from its most settled end. DCSA defines the classes
+ *   and the pattern, not a rule for choosing among them. A plan is agreed; a request is asked
+ *   for; an estimate is only predicted. So an `EST` or `REQ` never replaces a `PLN`, however much later it was recorded,
  *   and there is never an `EST` when a `REQ` exists. The order is fixed, not configurable.
  * - Within the chosen class, the newest-recorded event wins (latest `recordedAt`), so a revised
  *   plan or a corrected actual replaces the earlier one. Two records at the same instant go to
  *   the later one in the array.
  * - `at` is echoed exactly as written. `at` and `recordedAt` are instants (`Z`/offset) or zoned
- *   strings, compared as instants; a bracketed zone is not read.
+ *   strings, compared as instants and read as `scheduleDeviation` reads them: the offset fixes
+ *   the instant, and an offset written to the minute that is the bracketed zone's sub-minute
+ *   offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
+ *   Otherwise the bracket is not checked.
  * - Returns `null` for an empty list, or when any event is invalid — a `classifier` other than
  *   exactly `PLN`, `EST`, `REQ` or `ACT` included.
  *

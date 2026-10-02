@@ -64,6 +64,19 @@ export function isNudgeWindowCompatNeeded(): boolean {
   return isDefectPresent("D11", "iso8601");
 }
 
+/**
+ * True when this runtime matches a zoned string's offset by minutes even when the offset is
+ * written with seconds (defect D12).
+ *
+ * TC39 `ToTemporalZonedDateTime` matches by minutes only an offset with no seconds part; one
+ * written with seconds must equal the zone's offset exactly. A runtime that always matches by
+ * minutes accepts `-00:45:00[Africa/Monrovia]` for a zone at −00:44:30, and picks the wrong pass
+ * of a second repeated by a sub-minute transition (Pacific/Niue, 1952).
+ */
+export function isSecondsOffsetMatchCompatNeeded(): boolean {
+  return isDefectPresent("D12", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",

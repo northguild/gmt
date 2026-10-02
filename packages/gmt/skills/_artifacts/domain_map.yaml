@@ -308,6 +308,7 @@ skills:
       - Pick the best available timestamp from planned, estimated, requested and actual records without showing an estimate as an actual
       - Measure how far an estimated arrival moved between its first and last revision
       - Find the next departure a connection can make from a timetable or a headway service
+      - Read a zoned string for a zone with a sub-minute offset back as the instant it was written for
       - Lay out a container's free time and its half-open expiry in the terminal's local days
       - Count and list the chargeable days of a dwell, with tier bands
       - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg

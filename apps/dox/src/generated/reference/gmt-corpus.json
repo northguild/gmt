@@ -1655,6 +1655,14 @@
         "result": "null (offset contradicts the bracketed zone)"
       },
       {
+        "call": "toOffsetInstant(\"-271821-04-19T23:59:00-00:01[Europe/London]\")",
+        "result": "null (a bracketed zone on a local date before Temporal's date range)"
+      },
+      {
+        "call": "toOffsetInstant(\"-271821-04-20T00:00:15Z\", \"Europe/London\")",
+        "result": "{ instant: \"-271821-04-20T00:00:15Z\", offset: \"-00:01:15\", timeZone: \"Europe/London\" }"
+      },
+      {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00-04:00[foo=bar]\")",
         "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"-04:00\" } — an elective annotation is ignored"
       },
@@ -10093,7 +10101,11 @@
       },
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00+05:00[America/New_York]\")",
-        "result": "1710054000000000000n — the offset decides, the zone is ignored"
+        "result": "1710054000000000000n — the offset decides, the zone is not checked"
+      },
+      {
+        "call": "toNanoseconds(\"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
+        "result": "-315615330000000000n — the zone's −00:44:30, which `-00:45` rounds"
       },
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00\")",
@@ -11301,7 +11313,11 @@
       },
       {
         "call": "spanMs(\"2024-03-10T12:00:00+05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\")",
-        "result": "32400000 — offsets decide, the zone is ignored"
+        "result": "32400000 — offsets decide, the zone is not checked"
+      },
+      {
+        "call": "spanMs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
+        "result": "0 — the zone's −00:44:30, which `-00:45` rounds"
       },
       {
         "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -11345,7 +11361,11 @@
       },
       {
         "call": "spanNs(\"2024-03-10T12:00:00+05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\")",
-        "result": "32400000000000n — offsets decide, the zone is ignored"
+        "result": "32400000000000n — offsets decide, the zone is not checked"
+      },
+      {
+        "call": "spanNs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
+        "result": "0n — the zone's −00:44:30, which `-00:45` rounds"
       },
       {
         "call": "spanNs(\"2024-03-10T12:00:00Z\", \"invalid\")",
@@ -12082,12 +12102,24 @@
         "result": "\"2024-06-15T10:00:00-04:00[America/New_York]\""
       },
       {
+        "call": "transitTime(\"2024-11-03T01:30:00[America/New_York]\", \"PT0S\")",
+        "result": "\"2024-11-03T01:30:00-04:00[America/New_York]\" (an ambiguous wall time resolves to the earlier instant)"
+      },
+      {
+        "call": "transitTime(\"2024-03-10T02:30:00[America/New_York]\", \"PT0S\")",
+        "result": "\"2024-03-10T03:30:00-04:00[America/New_York]\" (a nonexistent wall time resolves to the later instant)"
+      },
+      {
         "call": "transitTime(\"2024-06-15T10:00:00-04:00[America/New_York]\", \"P1M\")",
         "result": "\"\" (calendar units need a reference point)"
       },
       {
         "call": "transitTime(\"2024-06-15T10:00:00-05:00[America/New_York]\", \"PT2H\")",
         "result": "\"\" (New York is -04:00 in June: the offset contradicts the zone)"
+      },
+      {
+        "call": "transitTime(\"-271821-04-19T23:59:00-00:01[Europe/London]\", \"PT0S\")",
+        "result": "\"\" (a zoned string on a local date before Temporal's date range)"
       },
       {
         "call": "transitTime(\"2024-06-15T10:00:00\", \"PT2H\")",
@@ -21033,6 +21065,26 @@
       {
         "call": "isValidZonedDateTime(\"2024-10-03[America/New_York]\")",
         "result": "false (no time)"
+      },
+      {
+        "call": "isValidZonedDateTime(\"2024-10-03T14:30:00-05:00[America/New_York]\")",
+        "result": "false (New York is -04:00 in October)"
+      },
+      {
+        "call": "isValidZonedDateTime(\"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
+        "result": "true (-00:45 is Monrovia's -00:44:30, rounded)"
+      },
+      {
+        "call": "isValidZonedDateTime(\"1960-01-01T00:20:00-00:44:30[Africa/Monrovia]\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidZonedDateTime(\"1960-01-01T00:20:00-00:45:00[Africa/Monrovia]\")",
+        "result": "false (an offset with seconds must be exact)"
+      },
+      {
+        "call": "isValidZonedDateTime(\"-271821-04-19T23:59:00-00:01[Europe/London]\")",
+        "result": "false (the local date is before Temporal's date range)"
       },
       {
         "call": "isValidZonedDateTime(\"invalid\")",

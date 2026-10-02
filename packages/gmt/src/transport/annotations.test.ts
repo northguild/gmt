@@ -33,15 +33,17 @@ import { hostileProxy, revokedProxy } from "../test/noThrow";
  *
  * The planned-versus-actual functions split the same way. `scheduleDeviation`,
  * `classifyPunctuality`, `punctualityRate`, `bestAvailable` and `estimateDrift` compare instants
- * and echo what they were given, so they never read the zone, as `timeToCutoff` does not.
+ * and echo what they were given, so they never validate the zone, as `timeToCutoff` does not.
+ * The one thing an instant-only function takes from a bracket is the real offset behind a
+ * minute-rounded one (`subMinuteOffsets.test.ts`); no row here has a sub-minute zone.
  * `nextDeparture` reads every moment as `transitTime` reads a departure — a headway result is
  * written in `from`'s zone, so the zone must be real — in both the list and the headway form.
  */
 const departure = "2024-06-15T10:00:00Z";
 
 /**
- * The instant-only planned-versus-actual functions: the bracket is never read, so they accept
- * exactly what `etaAtZone` accepts, and echo the value as written.
+ * The instant-only planned-versus-actual functions: the bracket is never validated, so they
+ * accept exactly what `etaAtZone` accepts, and echo the value as written.
  */
 function expectPlannedVersusActualReads(
   value: string,

@@ -85,7 +85,7 @@ export {
 export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
-export { parseInstantNanoseconds } from "./instantNanoseconds";
+export { instantFrom, parseInstantNanoseconds } from "./instantNanoseconds";
 export {
   coalesceIntervalNanoseconds,
   parseIntervalNanoseconds,

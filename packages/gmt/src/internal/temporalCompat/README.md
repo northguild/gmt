@@ -12,8 +12,8 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 ## Rules
 
 1. **Import surface.** `index.ts` is the only import surface. Call sites use `calendarDateFromFields`,
-   `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil` and `isCalendarArithmeticCompatNeeded`,
-   never the files behind them.
+   `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
+   `isNudgeWindowCompatNeeded` and `isSecondsOffsetMatchCompatNeeded`, never the files behind them.
 2. **Dormant unless needed.** Each defect has a repro in `repros.ts`, probed lazily in
    `capabilities.ts`: once per process, per calendar, memoized. If the installed runtime passes, that
    workaround never runs. When a probe fails, a per-call guard (a range check, a polyfill throw, a
@@ -44,6 +44,7 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 | **D10** | Guard, not a 0.5.1 defect: proposal-temporal #3292 gave `calendarToIsoDate` a fixed 8-day search step, which skips a 5- or 6-day month 13 in far years and trips an assertion (tc39/proposal-temporal#3329). 0.5.1 predates #3292. GMT computes coptic and ethiopic in ethioaa (`internal/calendarSystemIds.ts`), so ethioaa is probed. | `calendarDateFromFields.ts` → `fieldSearch.ts`; `calendarDateArithmetic.ts` → `nonIsoArithmetic.ts` | While the probe fails: every ethioaa fields → ISO searches, and add/until fall back on a throw. On any runtime, a polyfill throw that is not a `RangeError` takes GMT's own path instead of the sentinel |
 | **D9** | Non-ISO months are added (`addMonthsCalendar`) and counted (`until` by months) one month at a time, caching each step, so a few million in-range months is a fatal heap OOM (persian `1402-10-25` + 3,000,000 months aborts at 256 MB in about 3 s). Years and reads are O(1). Every non-ISO calendar. | `largeMonthSpan.ts`, called from `readArithmeticModel.ts` (`addMonths`, `monthsBetween`); `calendarDateArithmetic.ts` sends such adds and month differences to the spec algorithms | Amounts of at least `LARGE_MONTH_SPAN` (1,200) months, or years that far apart. Canary-only: no capability probe |
 | **D11** | The calendar nudge window is never retried. TC39 bounds a duration between `relativeTo + r1 units` and `relativeTo + r2 units` and, when the target falls outside that window, recomputes it one unit further along (`ComputeNudgeWindow` with `additionalShift`, tc39/proposal-temporal#3172). The polyfill computes it once — its `assert(start <= dest <= end)` is compiled out of production builds — so the answer is taken over bounds that exclude the target. Hits `Duration#total` (wrong fraction), `Duration#round` and `until`/`since` with a calendar `smallestUnit` (a whole unit lost: `2024-01-31` to `2024-02-29T12:00` truncates to `PT0S` instead of `P1M`). Any calendar; only a `relativeTo` past the 28th reaches it, because only there does adding a month constrain the day. | `internal/zonedWallClockDifference.ts`: `monthTotalBySpec` and `monthRoundBySpec` in `durationTotal`/`durationRound`, the defect-4 gate in `zonedUntil`, `plainUntilWithRounding`, and the D11 term in `internal/plainDateUntil.ts` | Unit `month` or `year` with a `relativeTo` past the 28th, while the probe fails |
+| **D12** | `ToTemporalZonedDateTime` matches a string's offset against the zone by minutes even when the offset is written with seconds, where TC39 requires an exact match. `1970-01-01T12:00-00:45:00[Africa/Monrovia]` is accepted (the zone stood at −00:44:30; the spec throws), and `1952-10-15T23:59:59-11:20:00[Pacific/Niue]` reads as the first pass of that repeated second (−11:19:40) instead of the second. Not a calendar defect: ISO strings, named zones with a sub-minute offset. | `internal/zonedWallClock.ts` `matchSecondsOffsetExactly`, called by `zonedDateTimeFrom`, which every GMT zoned-string parse goes through (a zoned `relativeTo` string included, via `internal/resolveDurationRelativeTo.ts`); it recomputes TC39 `InterpretISODateTimeOffset` with match-exactly | A string whose offset has a seconds part, read with `offset: "reject"` or `"prefer"`, whose polyfill result has a sub-minute offset, while the probe fails |
 
 Fields → ISO (`calendarDateFromFields`): asks the polyfill first. It keeps the result when the fields
 read back unchanged through `calendarFieldsOf`. Otherwise, inside a D1 window or a corrected read
@@ -133,6 +134,7 @@ limits) is the `D1` group.
 | D10 | A js-temporal release ports proposal-temporal #3292 **together with** the tc39/proposal-temporal#3329 fix. The group passes on 0.5.1 (no #3292); it fails only on a release with #3292 alone |
 | D9 | A js-temporal release adds and differences non-ISO months in bounded work: each `D9` probe reads at most 100 `Intl.DateTimeFormat` dates for 1,200 months |
 | D11 | A js-temporal release contains js-temporal/temporal-polyfill#361's `50d66d2`, which ports proposal-temporal #3172 (`5dd0b0d97ee1`, merged 2025-11-19 — the fix for tc39/proposal-temporal#3168), so the nudge window is retried. The port is **already written**, in ptomato's open PR #361 ("April 2026 rebase, part 3", opened 2026-04-22, no reviews as of 2026-09-20) — not on `main`, so a release alone will not do it, and no new filing is needed. Verified locally: `50d66d2` applies cleanly on `main` alone, touches only `lib/ecmascript.ts`, and flips all three probes (`total` 1.0172413793103448 → 1.0161290322580645; `until`/`round` `PT0S` → `P1M`) with test262 clean |
+| D12 | A js-temporal release contains `23d1275` ("Normative: Require strict matching with a precise ZonedDateTime offset"), on main since 2026-04 and in no release. Expected values are test262 `intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js` (bug doc § I) |
 | zoned.A | A js-temporal release contains `05ce7a3` (maximum) **and** `95237e0` (minimum), both on main. `05ce7a3` alone fixes only the `max.*` probes: a 0.5.1 build with just that commit still throws for every `min.*` probe |
 | zoned.B | A js-temporal release fixes `GetNamedTimeZoneNextTransition` near the maximum. Not fixed on main; the verified patch is in bug doc § B |
 | zoned.D | A js-temporal release ports proposal-temporal #3205 (`d90d432`), which validates the `"UTC"` fast path of `GetPossibleEpochNanoseconds` (bug doc § D) |
@@ -195,7 +197,14 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    spec's either way. Keep the `progress === 0n` branch in `nudgeToCalendarUnit` — that is GMT's own
    fix, not the polyfill's, and `Duration.compare` needs no gate (256 rows against Chromium 153,
    0 mismatches: it reaches no nudge window).
-12. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
+12. **D12:** delete `matchSecondsOffsetExactly` and its call in `zonedDateTimeFrom`
+   (`internal/zonedWallClock.ts`, with defect 4 in that file's header note),
+   `isSecondsOffsetMatchCompatNeeded` in `capabilities.ts` and its export in `index.ts`, and the
+   `D12` repros. `zonedDateTimeFrom`'s `try` returns the polyfill call again. Keep
+   `resolveDurationRelativeTo` reading a zoned string through `zonedDateTimeFrom` (the range-limit
+   fallbacks need it too) and
+   `test/secondsOffsetMatch.test.ts`: its values are test262's and hold either way.
+13. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
    `plain/validate/isValidCalendarDate`, `plain/calculate/{addDate,subtractDate,diffDate,diffDateAsDuration}`,
    `plain/interval/{intervalLengthDate,intervalCountDate,intervalFromDurationDate,splitIntervalByUnitDate}`,
    `zoned/calculate/{addZoned,subtractZoned,diffZoned,diffZonedAsDuration}`,

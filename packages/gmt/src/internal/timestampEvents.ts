@@ -47,8 +47,9 @@ function parseEvent(event: unknown): ParsedTimestampEvent | null {
  *
  * - Every event must be an object whose `classifier` is exactly `PLN`, `EST`, `REQ` or `ACT` and
  *   whose `at` and `recordedAt` are instants (`Z`/offset) or zoned strings, read as
- *   `parseInstantNanoseconds` reads them: a bracketed zone is not read. One invalid event makes
- *   the whole list invalid.
+ *   `parseInstantNanoseconds` reads them: the offset fixes the instant, a minute-rounded offset
+ *   is read as its bracketed zone's real offset, and the bracket is otherwise not checked. One
+ *   invalid event makes the whole list invalid.
  * - The result is sorted by `recordedAt`, earliest first. Events recorded at the same instant
  *   keep their input order, so of two ties the later index is the later record.
  * - `at` is kept exactly as written, so a caller can echo it.

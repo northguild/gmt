@@ -21,7 +21,8 @@ export type DefectId =
   | "D7"
   | "D8"
   | "D10"
-  | "D11";
+  | "D11"
+  | "D12";
 
 /**
  * Zoned defects worked around in `internal/zonedWallClock*`: the range-limit defects (upstream
@@ -766,6 +767,42 @@ const d9Repros: readonly Repro[] = (
   ];
 });
 
+/** The epoch nanoseconds `Temporal.ZonedDateTime.from(item)` reads, or the error's name. */
+function zonedStringEpoch(item: string): string {
+  try {
+    return String(Temporal.ZonedDateTime.from(item).epochNanoseconds);
+  } catch (error) {
+    return error instanceof Error ? error.name : "Error";
+  }
+}
+
+/**
+ * D12 (`internal/zonedWallClock.ts` defect 4): `ToTemporalZonedDateTime` matches a string's
+ * offset against the zone by minutes even when the offset is written with seconds, where TC39
+ * requires match-exactly ("If offsetParseResult contains more than one MinuteSecond Parse Node,
+ * set matchBehaviour to match-exactly"). Expected values: test262
+ * `test/intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js` ("rounded
+ * HH:MM:SS not accepted in string offset (offset=reject)", and the Pacific/Niue edge case,
+ * "-11:20:00 is accepted as -11:20:00": `reference + 20_000_000_000n`). The test writes the
+ * Monrovia time as `T12`; `T12:00` is the same wall time.
+ */
+const d12Repros: Repro[] = [
+  {
+    defect: "D12",
+    calendar: "iso8601",
+    name: "roundedSecondsRejected",
+    expected: "RangeError",
+    run: () => zonedStringEpoch("1970-01-01T12:00-00:45:00[Africa/Monrovia]"),
+  },
+  {
+    defect: "D12",
+    calendar: "iso8601",
+    name: "exactSecondsSecondPass",
+    expected: "-543069601000000000",
+    run: () => zonedStringEpoch("1952-10-15T23:59:59-11:20:00[Pacific/Niue]"),
+  },
+];
+
 export const repros: readonly Repro[] = [
   ...d9Repros,
   ...zonedARepros,
@@ -776,6 +813,7 @@ export const repros: readonly Repro[] = [
   ...d1ArithmeticRepros,
   d1RelativeToRepro,
   ...d10Repros,
+  ...d12Repros,
   ...d6Repros,
   d7Repro,
   d7LeapMonthEndRepro,

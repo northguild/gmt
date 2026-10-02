@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~57× more CI test executions than all four competitors combined**: 1,156,500 from 38,550 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~100× more test cases than `@internationalized/date`**: 38,550 vs. 386 — Adobe's own library, run at its own commit.
+- **~58× more CI test executions than all four competitors combined**: 1,162,440 from 38,748 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~100× more test cases than `@internationalized/date`**: 38,748 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 38,550 tests across 697 files that exercise real behavior differences without redundant permutations. They run in CI as 1,156,500 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 38,748 tests across 700 files that exercise real behavior differences without redundant permutations. They run in CI as 1,162,440 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 697                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **38,550**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,156,500**<br>(38,550 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 700                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **38,748**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,162,440**<br>(38,748 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~57×                                                  | 1,156,500 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~58×                                                  | 1,162,440 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -1807,6 +1807,40 @@ invalid input, and accepts only values inside the range `Temporal.Instant` can r
 first when the two must be told apart. Leap-second-aware time scales (TAI, GPS) are not
 part of this namespace — these are plain instant conversions.
 
+**A zoned string names one instant in every reader.** Temporal writes a zone's offset rounded
+to the minute, so a zone with a sub-minute offset is written with an offset up to 30 seconds
+from the real one: `Africa/Monrovia` stood at −00:44:30 until 1972 and is written `-00:45`.
+Every GMT function that reads a moment reads such a string as `Temporal.ZonedDateTime.from`
+does (TC39 `ToTemporalZonedDateTime` matches a minute-precision offset by minutes), so a zoned
+string GMT wrote reads back as the instant it was written for:
+
+```typescript
+import { isValidZonedDateTime, toNanoseconds } from "@northguild/gmt";
+
+toNanoseconds("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // -315615330000000000n (01:04:30Z)
+toNanoseconds("1960-01-01T00:20:00-00:45"); // -315615300000000000n (01:05:00Z; no zone, so the offset is exact)
+toNanoseconds("2024-06-15T10:00:00Z[Not/AZone]"); // 1718445600000000000n (an instant reader does not validate the bracket)
+
+isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // true  (the rounded offset)
+isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"); // true  (the exact offset)
+isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]"); // false (an offset with seconds must be exact)
+```
+
+- The rule applies to `precision/`, `span/`, `interval/`, `calendar/`, `intermodal/`,
+  `transport/` and `getTimeZoneOffset` alike. Any other string keeps its written offset: one
+  without a bracket, a `Z` instant, an offset written with seconds, and a bracket whose zone
+  does not exist or does not fit the offset.
+- Every string Temporal writes for an instant in range is valid, the first and last instants
+  included: `-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant.
+- A function that keeps the zone (`isValidZonedDateTime`, `transitTime`, `toOffsetInstant`,
+  every `zoned/` function, a zoned `relativeTo`) rejects a bracket that contradicts the
+  offset, and requires an offset written with seconds to be the zone's offset exactly.
+- Two limits are Temporal's own. A wall time repeated inside a sub-minute offset change,
+  written to the minute, reads as its first pass (`1952-10-15T23:59:59-11:20[Pacific/Niue]`);
+  write the offset with seconds (`-11:20:00`) to name the second. A zoned read refuses a local
+  date of −271821-04-19, which a zone west of Greenwich shows for the first hours of the
+  instant range; pass that instant in `Z` form.
+
 ### Foreign epoch bridges
 
 Other systems do not count from 1970. NTP counts from 1900 and rolls over in 2036, Windows
@@ -2164,7 +2198,15 @@ isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" });
 
 - **Endpoints are instants.** An offset (`Z` or `±HH:MM`) is required and a `[Zone]` annotation is
   optional. As with a TC39 `Temporal.Instant`, endpoints compare by epoch nanoseconds, so two of
-  them may name different zones. Leap seconds are rejected, and a `[u-ca=…]` annotation is ignored, as `Temporal.Instant.from` ignores it. For local-calendar
+  them may name different zones. Leap seconds are rejected, and a `[u-ca=…]` annotation is ignored, as `Temporal.Instant.from` ignores it.
+  The offset fixes the instant; an offset written to the minute that is the bracketed zone's
+  sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the
+  zone gives, so a zoned string GMT wrote is read back as the same moment. That holds
+  from the first instant of the range to the last. The one exception is Temporal's own: a wall
+  time repeated inside a sub-minute offset change, written with a minute-rounded offset, reads
+  as its first pass (for example `1952-10-15T23:59:59-11:20[Pacific/Niue]`; several zones have
+  such a change in their history).
+  For local-calendar
   edges, build them with `floorToZone` or `bucketRange` first.
 - **Outputs are the caller's own strings**, never re-serialised. When two strings spell the same
   instant, the first argument's spelling wins. No spec covers the tie, so this is a GMT rule.
@@ -2360,7 +2402,7 @@ crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York")
 //   enter: "2024-03-10T00:00:00-05:00[America/New_York]",
 //   exit: "2024-03-10T08:00:00-04:00[America/New_York]" } (seven hours across the spring-forward)
 
-// targetZone is always the rendering zone; a bracketed zone on the input is ignored.
+// targetZone is always the rendering zone; a bracketed zone on the input never is.
 crossingTime("2024-06-15T10:00:00+02:00[Europe/Berlin]", "2024-06-15T12:00:00+02:00[Europe/Berlin]", "Africa/Cairo");
 // { duration: "PT2H",
 //   enter: "2024-06-15T11:00:00+03:00[Africa/Cairo]",
@@ -2489,8 +2531,8 @@ timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam
   lands a day before `P2D`. Without it, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: `P2D`
   keeps the anchor's wall clock, and `PT96H` is 96 elapsed hours.
 - **The anchor is exact and is the caller's event.** An instant (`Z` or an offset) or a zoned
-  string; its bracket is not read, and `timeZone` (an IANA identifier or a fixed offset) is the
-  local frame. `cutoffAt` never guesses whether a rule counts from loading, departure or arrival.
+  string; its bracket never supplies the zone, and `timeZone` (an IANA identifier or a fixed
+  offset) is the local frame. `cutoffAt` never guesses whether a rule counts from loading, departure or arrival.
   The functions are pure, so a rescheduled departure is a new call, not a stored cut-off to fix.
 - **Non-business days roll as you say.** With `calendar` (a `BusinessCalendar`), a cut-off on a
   weekend or holiday moves by `roll`, as `rollDate` moves it, and keeps its local time of day.
@@ -2597,7 +2639,11 @@ nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
   hours as the largest unit: positive when late, negative when early, `"PT0S"` on the plan. A
   delay across a DST transition is measured in real minutes, never wall-clock ones. Both times
   are an instant (`Z` or an offset) or a zoned string; the zone each is written in does not
-  matter, and a bracketed zone is not read. To show a schedule's local time, use `etaAtZone`.
+  matter. The offset fixes the instant, and a bracketed zone resolves only a rounded one: an
+  offset written to the minute that is the zone's sub-minute offset rounded
+  (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, so a zoned string
+  GMT wrote is read back as the same moment, except a wall time repeated inside a sub-minute
+  offset change, which reads as its first pass. To show a schedule's local time, use `etaAtZone`.
 - **"On time" needs a stated tolerance.** GMT holds no default. A `PunctualityTolerance` is
   `{ late, early? }` as ISO 8601 durations of exact time: a day is 24 hours, and years, months,
   weeks or a negative value return `null`. Tolerances differ by mode (15 minutes, a 60/120-minute
@@ -2613,8 +2659,11 @@ nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
 - **The class travels with the value.** A `TimestampEvent` is `{ classifier, at, recordedAt }`,
   with `classifier` one of DCSA's `PLN`, `EST`, `REQ` and `ACT`. `bestAvailable` picks an `ACT`
   whenever one exists, else `PLN`, else `REQ`, else `EST`, and within that class the latest
-  `recordedAt`. This order is GMT's, read from the port-call cycle's most settled end, and is not
-  configurable. `at` is echoed exactly as written. An empty list or any invalid event returns
+  `recordedAt`. This order is GMT's and is not configurable. It reads, from its most settled
+  end, the estimated, requested, planned, then actual pattern that
+  [DCSA's Port Call standard](https://reference.dcsa.org/content/standards/releases/port-call/v2-0-0/port-call-v2-0-0-use-cases)
+  describes for some port call services; DCSA defines the classes and that pattern, not a
+  selection rule. `at` is echoed exactly as written. An empty list or any invalid event returns
   `null`.
 - **Drift needs two estimates.** `estimateDrift` reads only the `EST` records, in `recordedAt`
   order, and reports the last `at` minus the first, negative when the estimate moved earlier. It
@@ -2628,7 +2677,7 @@ nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
   `to`) must carry its offset, as `nextOpenAt` requires: a wall time without one returns `""`,
   because in a repeated fall-back hour it names two departures. One invalid entry returns `""`.
 - **A headway window is half-open.** `{ headway, from, to }` has the shape of a GTFS
-  `frequencies.txt` row. Departures are `from` plus whole headways in exact time, up to but never
+  [`frequencies.txt`](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt) row. Departures are `from` plus whole headways in exact time, up to but never
   at `to`, and are computed from `from`, not stepped, so a long window costs nothing. Across a DST
   transition they keep their spacing and the wall clock shifts. The result is written the way
   `from` was written.

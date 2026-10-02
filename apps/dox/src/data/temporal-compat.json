@@ -64,6 +64,13 @@
       "failing": 6
     },
     {
+      "defects": ["D12"],
+      "title": "D12 — a zoned string's offset written with seconds is matched by minutes instead of exactly (zonedWallClock.ts defect 4)",
+      "trigger": "a js-temporal release contains 23d1275 (\"Normative: Require strict matching with a precise ZonedDateTime offset\", on main)",
+      "probes": 2,
+      "failing": 2
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 
 /**
@@ -14,8 +14,15 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  * - **Signed:** `actual` after `planned` is positive (late), before it negative (`"-PT5M"`,
  *   early), and equal is `"PT0S"`.
  * - Both arguments are exact: an instant (`Z`/offset) or a zoned string. The zone each is written
- *   in does not matter, and a bracketed zone is not read. To show a schedule's local time, use
- *   `etaAtZone`.
+ *   in does not matter. To show a schedule's local time, use `etaAtZone`.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** Temporal
+ *   writes a zone's offset rounded to the minute, so an offset written to the minute that is the
+ *   bracketed zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names
+ *   the instant the zone gives, as `Temporal.ZonedDateTime.from` reads it. A zoned string GMT
+ *   wrote is therefore measured from the instant it was written for, except a wall time
+ *   repeated inside a sub-minute offset change, which reads as its first pass
+ *   (for example `1952-10-15T23:59:59-11:20[Pacific/Niue]`; see `isValidInstant`). Otherwise the bracket is
+ *   not checked: a zone that does not exist, or that disagrees with the offset, changes nothing.
  * - Returns `""` on invalid input, including a zoneless wall time, which is not a moment.
  *
  * @param planned ISO 8601 instant or zoned datetime string of the planned time
@@ -36,8 +43,8 @@ export function scheduleDeviation(planned: string, actual: string): string {
       return "";
     }
 
-    return Temporal.Instant.from(planned)
-      .until(Temporal.Instant.from(actual), { largestUnit: "hours" })
+    return instantFrom(planned)
+      .until(instantFrom(actual), { largestUnit: "hours" })
       .toString();
   } catch {
     // Never throws (Core Rule 3): a hostile

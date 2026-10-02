@@ -8,5 +8,6 @@ export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,
   isNudgeWindowCompatNeeded,
+  isSecondsOffsetMatchCompatNeeded,
 } from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";

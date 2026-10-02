@@ -10,7 +10,15 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  *   space or lower-case `t` separator, a lower-case `z`, an hour-only time or offset, and a date
  *   without a time are rejected, although `Temporal.ZonedDateTime.from` reads them.
  * - Uses Temporal.ZonedDateTime.from for validation.
+ * - A written offset must agree with the bracketed zone, as TC39 `ToTemporalZonedDateTime`
+ *   matches it: an offset written to the minute may be the zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]` for −00:44:30, which is how Temporal writes it), and an offset
+ *   written with seconds must be the zone's offset exactly.
  * - Rejects leap seconds.
+ * - With an offset, the local date must be inside Temporal's date range, as
+ *   `Temporal.ZonedDateTime.from` requires (`CheckISODaysRange`): a zoned string on
+ *   −271821-04-19, which a zone west of Greenwich shows for the first hours of the instant
+ *   range, is rejected although `isValidInstant` accepts it.
  * - Reads RFC 9557 annotations as `Temporal.ZonedDateTime.from` does: elective ones
  *   (`[foo=bar]`) are ignored and an unknown critical one (`[!foo=bar]`) is rejected.
  * - The calendar must be ISO: `[u-ca=iso8601]` is accepted, and a non-ISO calendar annotation is
@@ -28,6 +36,11 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  * @example isValidZonedDateTime("20241003T143000-0400[America/New_York]") // false (basic format)
  * @example isValidZonedDateTime("2024-10-03 14:30:00-04:00[America/New_York]") // false (space separator)
  * @example isValidZonedDateTime("2024-10-03[America/New_York]") // false (no time)
+ * @example isValidZonedDateTime("2024-10-03T14:30:00-05:00[America/New_York]") // false (New York is -04:00 in October)
+ * @example isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]") // true (-00:45 is Monrovia's -00:44:30, rounded)
+ * @example isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]") // true
+ * @example isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]") // false (an offset with seconds must be exact)
+ * @example isValidZonedDateTime("-271821-04-19T23:59:00-00:01[Europe/London]") // false (the local date is before Temporal's date range)
  * @example isValidZonedDateTime("invalid") // false
  */
 export function isValidZonedDateTime(value: string): boolean {

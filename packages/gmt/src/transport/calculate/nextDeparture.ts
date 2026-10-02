@@ -11,7 +11,8 @@ import { hasInstantShape } from "../../internal/isoStringBody";
 
 /**
  * A headway service: a departure every `headway` from `from`, up to (not including) `to` — the
- * shape of a GTFS `frequencies.txt` row (`headway_secs`, `start_time`, `end_time`).
+ * shape of a GTFS `frequencies.txt` row (`headway_secs`, `start_time`, `end_time`; GTFS Schedule
+ * Reference, https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt).
  *
  * The departures are modelled as GTFS `exact_times=1` (schedule-based): each `from + k × headway`
  * is a real departure. For a frequency-based service (`exact_times=0`, "a bus every 20 minutes"

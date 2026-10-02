@@ -155,6 +155,18 @@ describe("repros", () => {
     },
   );
 
+  // D12: test262 intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js. "rounded
+  // HH:MM:SS not accepted in string offset (offset=reject)" for -00:45:00[Africa/Monrovia], and
+  // "-11:20:00 is accepted as -11:20:00 in the Pacific/Niue edge case": reference
+  // -543069621_000_000_000n plus 20_000_000_000n.
+  it.each`
+    name                        | expected
+    ${"roundedSecondsRejected"} | ${"RangeError"}
+    ${"exactSecondsSecondPass"} | ${"-543069601000000000"}
+  `("D12 $name expects test262's $expected", ({ name, expected }) => {
+    expect(findRepro("D12", "iso8601", name)?.expected).toBe(expected);
+  });
+
   // D9: 1,200 months from M03 day 5. Persian: 12 months in every year (Intl era/monthCode proposal
   // §4.1.4 Table 3), so 100 years. Hebrew: the Dershowitz–Reingold count floor((235y − 234) / 19)
   // lands on 5881 ordinal 3, a common year.
@@ -219,6 +231,8 @@ describe("reproPasses", () => {
     ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.previousGuam"}     | ${"null"}
     ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.hoursInDayManila"} | ${"479340.06444444443"}
     ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.startOfDayManila"} | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}
+    ${"D12"}     | ${"iso8601"}       | ${"roundedSecondsRejected"}   | ${"45870000000000"}
+    ${"D12"}     | ${"iso8601"}       | ${"exactSecondsSecondPass"}   | ${"-543069621000000000"}
     ${"D9"}      | ${"persian"}       | ${"addMonths"}                | ${"1328 Intl reads for 1200 months"}
     ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}              | ${"1518 Intl reads for 1200 months"}
   `(

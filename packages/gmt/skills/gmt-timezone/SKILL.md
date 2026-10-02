@@ -201,7 +201,8 @@ converting between time zones, or doing arithmetic that must respect DST.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
     `crossingTime(entry, exit, targetZone)` returns `{ duration, enter, exit }`
     with no day count (a crossing that needs one is a dwell); `targetZone` is
-    required and always the rendering zone — a bracket on the input is ignored.
+    required and always the rendering zone — a bracket on the input never
+    supplies it.
     `scheduleDelivery(legs, { startTimeZone? })` chains legs into `{ eta,
     legTimes }`: each leg leaves at its explicit `departure` or at the previous
     arrival plus that leg's `dwellAfter`, the minimum connect time. A scheduled
@@ -306,7 +307,29 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-21. **Read the README.** This skill is a routing pointer. For the full DST
+21. **A zoned string names one instant in every reader.** Temporal writes a
+    zone's offset rounded to the minute, so a zone with a sub-minute offset
+    (`Africa/Monrovia` stood at −00:44:30 until 1972) is written `-00:45`.
+    Every function that reads a moment (`toNanoseconds`, `spanNs`, `Interval`
+    endpoints, `floorToZone`, `getTimeZoneOffset`, `scheduleDeviation`,
+    `timeToCutoff`, `dwellTime`) reads an offset written to the minute as the
+    bracketed zone's real offset when it is that offset rounded (TC39
+    `ToTemporalZonedDateTime`, match-minutes):
+    `1960-01-01T00:20:00-00:45[Africa/Monrovia]` is `01:04:30Z`. So a zoned
+    string GMT wrote reads back as the instant it was written for. Otherwise
+    the written offset fixes the instant. A function that reads only the
+    instant does not validate the bracket, and the bracket never supplies its
+    rendering zone. A function that keeps the zone (`isValidZonedDateTime`,
+    `transitTime`, `toOffsetInstant`, every `zoned/` function, a zoned
+    `relativeTo`) rejects a bracket that contradicts the offset, and an offset
+    written with seconds must be the zone's offset exactly:
+    `-00:45:00[Africa/Monrovia]` is invalid, `-00:44:30[Africa/Monrovia]` is
+    valid. Two limits are Temporal's own. A wall time repeated inside a
+    sub-minute offset change, written to the minute, reads as its first pass
+    (`1952-10-15T23:59:59-11:20[Pacific/Niue]`); write the offset with seconds
+    to name the second. A zoned read refuses a local date of −271821-04-19,
+    which an instant reader accepts; pass that instant in `Z` form.
+22. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 

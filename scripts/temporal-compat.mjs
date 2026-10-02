@@ -141,6 +141,18 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D12"],
+    title:
+      "D12 — a zoned string's offset written with seconds is matched by minutes instead of exactly (zonedWallClock.ts defect 4)",
+    trigger:
+      'a js-temporal release contains 23d1275 ("Normative: Require strict matching with a precise ZonedDateTime offset", on main)',
+    steps: [
+      "Delete matchSecondsOffsetExactly and its call in zonedDateTimeFrom (internal/zonedWallClock.ts), isSecondsOffsetMatchCompatNeeded in capabilities.ts and its export in index.ts, and the D12 repros.",
+      "Keep test/secondsOffsetMatch.test.ts: its values are test262's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 12.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

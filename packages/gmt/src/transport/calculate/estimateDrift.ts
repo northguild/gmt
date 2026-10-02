@@ -47,7 +47,10 @@ export interface DriftReport {
  * - With `tolerance`, `exceedsTolerance` is `true` when the drift, in either direction, is
  *   **greater** than the tolerance; exactly the tolerance is `false`. Without it, `null`.
  * - `first` and `last` echo `at` exactly as written; both are instants (`Z`/offset) or zoned
- *   strings compared as instants, and a bracketed zone is not read.
+ *   strings compared as instants, read as `scheduleDeviation` reads them: the offset fixes the
+ *   instant, and an offset written to the minute that is the bracketed zone's sub-minute offset
+ *   rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
+ *   Otherwise the bracket is not checked.
  * - Returns `null` with fewer than two EST records — there is no drift from one sample — and on
  *   invalid input: any invalid event, of any class, or an invalid, negative or calendar-unit
  *   `tolerance`.

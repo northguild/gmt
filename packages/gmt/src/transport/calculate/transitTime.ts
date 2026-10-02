@@ -28,7 +28,22 @@ import {
  *   the departure wrote it, sub-minute offsets such as `+05:30:15` included (an offset is not a
  *   zone, so nothing else can be inferred from it — see `toOffsetInstant`). A bracketed zone
  *   that does not exist, or that contradicts its offset, is rejected as `isValidZonedDateTime`
- *   rejects it; it does not fall back to the offset.
+ *   rejects it; it does not fall back to the offset. An offset written to the minute that is the
+ *   zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) agrees with the
+ *   zone, as Temporal writes and reads it, and names the instant the zone gives.
+ * - **One zoned departure in range is refused.** A zoned departure is read as
+ *   `Temporal.ZonedDateTime.from` reads it, which rejects a local date of −271821-04-19. A zone
+ *   west of Greenwich shows that date for the first hours of the instant range, so a departure
+ *   written there (`-271821-04-19T23:59:00-00:01[Europe/London]`) returns `""`, although
+ *   `etaAtZone` writes it and `scheduleDeviation` reads it. Pass the instant in `Z` form.
+ * - **Local-time resolution policy (`"compatible"`).** A departure written as a wall time with a
+ *   bracketed zone and no offset is resolved in that zone with the `"compatible"` policy,
+ *   Temporal's default and `resolveLocal`'s. An **ambiguous** wall time — a fall-back hour the
+ *   clock ran through twice — resolves to the **earlier** instant:
+ *   `2024-11-03T01:30:00[America/New_York]` is `01:30-04:00`. A **nonexistent** one — a
+ *   spring-forward hour the clock skipped — resolves to the **later** instant:
+ *   `2024-03-10T02:30:00[America/New_York]` is `03:30-04:00`. Write the offset to name the other
+ *   pass of a repeated hour; a departure that carries its offset is never re-resolved.
  * - RFC 9557 annotations are read as `Temporal.Instant.from` reads them: a bracket without `=`
  *   is a time zone, and a `key=value` bracket with an unknown key is ignored when elective and
  *   rejected when critical (`[!…]`). A calendar on a departure without a zone is accepted and
@@ -51,8 +66,11 @@ import {
  * @example transitTime("2024-06-15T10:00:00+05:30:15", "PT1H") // "2024-06-15T11:00:00+05:30:15" (a sub-minute offset is kept as written)
  * @example transitTime("2024-06-15T10:00:00Z[foo=bar]", "PT1H") // "2024-06-15T11:00:00Z" (an elective unknown annotation is ignored)
  * @example transitTime("2024-06-15T12:30:00-04:00[America/New_York]", "-PT2H30M") // "2024-06-15T10:00:00-04:00[America/New_York]"
+ * @example transitTime("2024-11-03T01:30:00[America/New_York]", "PT0S") // "2024-11-03T01:30:00-04:00[America/New_York]" (an ambiguous wall time resolves to the earlier instant)
+ * @example transitTime("2024-03-10T02:30:00[America/New_York]", "PT0S") // "2024-03-10T03:30:00-04:00[America/New_York]" (a nonexistent wall time resolves to the later instant)
  * @example transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "P1M") // "" (calendar units need a reference point)
  * @example transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H") // "" (New York is -04:00 in June: the offset contradicts the zone)
+ * @example transitTime("-271821-04-19T23:59:00-00:01[Europe/London]", "PT0S") // "" (a zoned string on a local date before Temporal's date range)
  * @example transitTime("2024-06-15T10:00:00", "PT2H") // "" (no zone and no offset: not a moment)
  * @example transitTime("2024-06-15T10:00:00Z", "2 hours") // ""
  */

@@ -39,10 +39,19 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  * Read an exact moment the way `transitTime` reads a departure, or `null`.
  *
  * - A zoned string (`…-04:00[America/New_York]`) is read through its bracket, which must name a
- *   real zone that agrees with the offset, as `isValidZonedDateTime` requires. A wall time with
- *   a bracket and no offset is read in that zone.
+ *   real zone that agrees with the offset, as `isValidZonedDateTime` requires. An offset written
+ *   to the minute agrees when it is the zone's sub-minute offset rounded (TC39
+ *   `ToTemporalZonedDateTime`, match-minutes), which is how `writeExactMoment` writes one.
+ * - A wall time with a bracket and no offset is read in that zone with the `"compatible"`
+ *   disambiguation policy (`context/reference/LOCAL_TIME_RESOLUTION.md`): an **ambiguous** wall
+ *   time, a fall-back hour the clock ran through twice, resolves to the **earlier** instant
+ *   (`2024-11-03T01:30:00[America/New_York]` is `01:30-04:00`), and a **nonexistent** one, a
+ *   spring-forward hour the clock skipped, to the **later** instant
+ *   (`2024-03-10T02:30:00[America/New_York]` is `03:30-04:00`). A caller that must not guess
+ *   refuses the offset-less form before calling, as `nextDeparture` does.
  * - A string that names a zone the zoned read rejects is `null`; it never falls back to its
- *   offset.
+ *   offset. That includes a zoned string whose local date is −271821-04-19, which
+ *   `Temporal.ZonedDateTime.from` refuses although its instant is in range.
  * - Otherwise an instant (`Z` or an offset) as `parseInstantNanoseconds` reads it: calendar and
  *   elective annotations are ignored and a critical unknown one is rejected. Its offset text is
  *   kept exactly as written, sub-minute and `,` fractions included.
@@ -52,6 +61,7 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  *
  * @example readExactMoment("2024-06-15T10:00:00+09:00") // { nanoseconds: 1718413200000000000n, notation: { kind: "offset", offset: "+09:00" } }
  * @example readExactMoment("2024-06-15T10:00:00Z[Not/AZone]") // null
+ * @example readExactMoment("2024-03-10T02:30:00[America/New_York]") // { nanoseconds: 1710055800000000000n, notation: { kind: "zone", timeZone: "America/New_York" } } (nonexistent: the later instant, 03:30-04:00)
  */
 export function readExactMoment(value: unknown): ExactMoment | null {
   if (typeof value !== "string") {
@@ -89,7 +99,15 @@ export function readExactMoment(value: unknown): ExactMoment | null {
  * `Z` instant. `""` when the nanoseconds leave the instant range (±8.64e21 ns).
  *
  * - A zone notation is written as Temporal writes a `ZonedDateTime`: the offset in force at that
- *   instant, then the bracket.
+ *   instant, rounded to the minute (`-00:45` for Monrovia's −00:44:30), then the bracket.
+ *   `readExactMoment` and `parseInstantNanoseconds` read that string back as the same instant,
+ *   with two exceptions, both Temporal's own. A wall time repeated inside a sub-minute offset
+ *   change reads as its first pass, in both readers (`parseInstantNanoseconds` states the
+ *   rule). And `readExactMoment`, a zoned read, refuses a string whose local date is
+ *   −271821-04-19 (`CheckISODaysRange` in `Temporal.ZonedDateTime.from`): the string written
+ *   for the first hours of the instant range in a zone west of Greenwich reads as `null` there,
+ *   and as its instant in `parseInstantNanoseconds`
+ *   (`context/domination/js-temporal-polyfill-bugs.md` § J).
  * - An offset notation keeps its text as written. The wall clock is shifted, never the instant
  *   (`wallClockAtOffset`), so the last hours of the range still write at a positive offset.
  *
