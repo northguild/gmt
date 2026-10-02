@@ -81,7 +81,9 @@
 
 /* The punctuality frame scrolls sideways rather than clipping a wide chart. */
 .gmt-punct-frame {
-  overflow-x: auto;
+  /* Clipped, not scrollable: a classic scrollbar (WebKit) appearing for a value
+     wider than the frame added 20px of height under the pointer. */
+  overflow-x: clip;
   /* A handle's 44px hit area reaches 22px from its centre; the rail's inset and
      this padding keep it inside the frame, so a handle at either end never
      makes the frame scroll (or grow a scrollbar). */
