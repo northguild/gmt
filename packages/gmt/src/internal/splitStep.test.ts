@@ -3,6 +3,7 @@ import {
   isExactDurationUnit,
   MAX_STALLED_SPLIT_STEPS,
   minSlicesForSpan,
+  stepNoFinerThan,
   tileByUnit,
 } from "./splitStep";
 
@@ -213,6 +214,30 @@ describe("minSlicesForSpan", () => {
     "returns $expected for $label",
     ({ spanNs, unit, amount, zoned, expected }) => {
       expect(minSlicesForSpan(spanNs, unit, amount, zoned)).toBe(expected);
+    },
+  );
+});
+
+describe("stepNoFinerThan", () => {
+  // A step is replaced by one floor unit only when it is exact, whole and shorter than that unit:
+  // 500 ms < 1 s, 999 µs < 1 ms, 999_999_999 ns < 1 s. 1000 ms = 1 s and 1_000_000 ns = 1 ms are
+  // not shorter. Calendar units and fractional amounts are never replaced.
+  it.each`
+    unit              | amount         | floorUnit         | expected
+    ${"milliseconds"} | ${500}         | ${"seconds"}      | ${["seconds", 1]}
+    ${"microseconds"} | ${999}         | ${"milliseconds"} | ${["milliseconds", 1]}
+    ${"nanoseconds"}  | ${999_999_999} | ${"seconds"}      | ${["seconds", 1]}
+    ${"milliseconds"} | ${1000}        | ${"seconds"}      | ${["milliseconds", 1000]}
+    ${"nanoseconds"}  | ${1_000_000}   | ${"milliseconds"} | ${["nanoseconds", 1_000_000]}
+    ${"milliseconds"} | ${1500}        | ${"seconds"}      | ${["milliseconds", 1500]}
+    ${"seconds"}      | ${1}           | ${"milliseconds"} | ${["seconds", 1]}
+    ${"days"}         | ${1}           | ${"seconds"}      | ${["days", 1]}
+    ${"microseconds"} | ${0.5}         | ${"milliseconds"} | ${["microseconds", 0.5]}
+    ${"milliseconds"} | ${500}         | ${"days"}         | ${["milliseconds", 500]}
+  `(
+    "returns $expected for $amount $unit floored to $floorUnit",
+    ({ unit, amount, floorUnit, expected }) => {
+      expect(stepNoFinerThan(unit, amount, floorUnit)).toEqual(expected);
     },
   );
 });
