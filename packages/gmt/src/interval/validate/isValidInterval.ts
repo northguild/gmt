@@ -6,9 +6,12 @@ import type { Interval } from "../../types";
  *
  * - True when `start` and `end` are ISO 8601 instant strings (offset required, no leap second)
  *   and `start` is not after `end`.
- * - Annotations are read as `Temporal.Instant.from` reads them: a bracketed zone, a calendar
- *   annotation (`[u-ca=hebrew]`, critical or not) and an elective unknown annotation
- *   (`[foo=bar]`) are ignored; an unknown critical annotation (`[!foo=bar]`) is rejected.
+ * - A calendar annotation (`[u-ca=hebrew]`, critical or not) and an elective unknown annotation
+ *   (`[foo=bar]`) are ignored, as `Temporal.Instant.from` ignores them; an unknown critical
+ *   annotation (`[!foo=bar]`) is rejected. A bracketed zone is not validated. It is read for
+ *   one thing: an offset written to the minute that is the zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it.
  * - Compares instants, not text: `{ start: "2024-01-01T10:00:00+01:00", end: "2024-01-01T09:30:00Z" }`
  *   is valid even though it sorts backwards as a string.
  * - `start === end` is valid — an empty interval.

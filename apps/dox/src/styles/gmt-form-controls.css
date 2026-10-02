@@ -22,7 +22,7 @@
   font-size: 0.85rem;
   height: 32px;
   padding: var(--gmt-space-1) var(--gmt-space-2);
-  background: var(--gmt-fill-subtle);
+  background-color: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -30,7 +30,7 @@
   min-width: 140px;
   box-sizing: border-box;
   transition:
-    background var(--gmt-duration-fast) var(--gmt-easing),
+    background-color var(--gmt-duration-fast) var(--gmt-easing),
     border-color var(--gmt-duration-fast) var(--gmt-easing),
     box-shadow var(--gmt-duration-med) var(--gmt-easing);
 }
@@ -38,7 +38,7 @@
 .gmt-input:focus,
 .gmt-select:focus {
   outline: none;
-  background: var(--gmt-fill-2);
+  background-color: var(--gmt-fill-2);
   border-color: var(--gmt-border-strong);
   /* Sonar ping: a hard 2px ring hugs the control while a second ring pulses
      outward and fades (@keyframes gmt-focus-sonar, gmt-primitives.css — shared
@@ -60,4 +60,617 @@
 .gmt-label-required {
   color: var(--gmt-signal-ink);
   margin-left: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Field grid — every row of labels lines up: one subgrid row for the label
+ * text, one for the control, shared across the row. The grid is its own named
+ * container: `span 2` on a one-column grid would create an implicit second
+ * column and overflow, and measured on the grid itself 23rem guarantees two
+ * 11rem tracks plus a gap of at most 1rem (keep column-gap <= 1rem).
+ * --------------------------------------------------------------------------- */
+
+.gmt-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  column-gap: var(--gmt-space-3);
+  row-gap: var(--gmt-space-3);
+  container: gmt-field-grid / inline-size;
+}
+
+.gmt-field-grid > .gmt-label {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: var(--gmt-space-1);
+  align-items: start;
+  min-width: 0;
+}
+
+/* Start, not end: when one label's text wraps (its hint chip drops to a second
+   line in a narrow column) every label text in the row still shares one top. */
+.gmt-field-grid > .gmt-label > .gmt-label-text {
+  align-self: start;
+}
+
+/* `hidden` must still hide a grid and a label: their author `display` would
+   otherwise beat the user-agent rule. */
+.gmt-field-grid[hidden],
+.gmt-field-grid > .gmt-label[hidden] {
+  display: none;
+}
+
+/* Anything that is not a label (a button row, a hint) takes a full row. */
+.gmt-field-grid > :not(.gmt-label) {
+  grid-column: 1 / -1;
+}
+
+.gmt-field-grid .gmt-input,
+.gmt-field-grid .gmt-select,
+.gmt-field-grid .gmt-range,
+.gmt-field-grid .gmt-range-field {
+  min-width: 0;
+  width: 100%;
+}
+
+@container gmt-field-grid (min-width: 23rem) {
+  .gmt-field-grid > .gmt-field-wide {
+    grid-column: span 2;
+  }
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .gmt-field-grid > .gmt-label {
+    display: flex;
+    flex-direction: column;
+    grid-row: auto;
+  }
+}
+
+/* The whole label text is one span so the subgrid row holds exactly one box. */
+.gmt-label-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-hint-chip {
+  text-transform: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: normal;
+  color: var(--gmt-ice-dim);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  padding: 0 var(--gmt-space-1);
+  /* Its 1px borders must not make a chipped label's text row taller than a
+     plain one's, or the label tops in a field-grid row drift by 2px. */
+  line-height: 1;
+  margin-block: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * .gmt-range — the faceted-grip dragger. A real <input type="range"> with a
+ * bevelled channel and a three-ridge thumb (bevel via corner-shape, never
+ * clip-path, which would clip the glow and the focus ring). --gmt-range-pct is
+ * a unitless 0-100 number so it can scale a length.
+ * --------------------------------------------------------------------------- */
+
+.gmt-range-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+  /* Room above the input for the value chip. */
+  padding-top: 1.5rem;
+}
+
+.gmt-range {
+  --gmt-range-center: calc(
+    var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
+      var(--gmt-range-pct, 0) / 100
+  );
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: var(--gmt-range-hit-h);
+  margin: 0;
+  background: transparent;
+  cursor: grab;
+}
+
+.gmt-range:active {
+  cursor: grabbing;
+}
+
+.gmt-range:focus-visible {
+  outline: none;
+}
+
+.gmt-range::-webkit-slider-runnable-track {
+  height: var(--gmt-range-track-h);
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: inset 0 1px 3px
+    color-mix(in srgb, var(--gmt-ink-fixed) 45%, transparent);
+  background: linear-gradient(
+    90deg,
+    color(from var(--gmt-cyan) srgb r g b / 0.4) var(--gmt-range-center),
+    var(--gmt-fill-deep) var(--gmt-range-center)
+  );
+}
+
+.gmt-range::-moz-range-track {
+  height: var(--gmt-range-track-h);
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: inset 0 1px 3px
+    color-mix(in srgb, var(--gmt-ink-fixed) 45%, transparent);
+  background: var(--gmt-fill-deep);
+}
+
+.gmt-range::-moz-range-progress {
+  height: var(--gmt-range-track-h);
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color(from var(--gmt-cyan) srgb r g b / 0.4);
+}
+
+.gmt-range::-webkit-slider-thumb {
+  --gmt-ridge: var(--gmt-cyan);
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--gmt-range-thumb-w);
+  height: var(--gmt-range-thumb-h);
+  margin-top: calc(
+    (var(--gmt-range-track-h) - 2px - var(--gmt-range-thumb-h)) / 2
+  );
+  border: 2px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    color-mix(in srgb, var(--gmt-cyan) 16%, var(--gmt-surface));
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    background-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-range::-moz-range-thumb {
+  --gmt-ridge: var(--gmt-cyan);
+  box-sizing: border-box;
+  width: var(--gmt-range-thumb-w);
+  height: var(--gmt-range-thumb-h);
+  border: 2px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    color-mix(in srgb, var(--gmt-cyan) 16%, var(--gmt-surface));
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    background-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-range:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 0.55);
+}
+
+.gmt-range:hover::-moz-range-thumb {
+  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 0.55);
+}
+
+.gmt-range:active::-webkit-slider-thumb {
+  --gmt-ridge: var(--gmt-void);
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    var(--gmt-cyan);
+}
+
+.gmt-range:active::-moz-range-thumb {
+  --gmt-ridge: var(--gmt-void);
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    var(--gmt-cyan);
+}
+
+/* The sonar ring rides the thumb (the input itself has no box to ring). */
+.gmt-range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    1;
+}
+
+.gmt-range:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    1;
+}
+
+.gmt-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.gmt-range:disabled::-webkit-slider-runnable-track {
+  background: var(--gmt-fill-deep);
+}
+
+.gmt-range:disabled::-webkit-slider-thumb {
+  --gmt-ridge: var(--gmt-ice-dim-fill);
+  border-color: var(--gmt-ice-dim-fill);
+  box-shadow: none;
+  animation: none;
+}
+
+.gmt-range:disabled::-moz-range-thumb {
+  --gmt-ridge: var(--gmt-ice-dim-fill);
+  border-color: var(--gmt-ice-dim-fill);
+  box-shadow: none;
+  animation: none;
+}
+
+.gmt-range:disabled::-moz-range-progress {
+  background: transparent;
+}
+
+/* The value the reader is reading: follows the thumb, never animates. */
+.gmt-range-chip {
+  position: absolute;
+  top: 0;
+  left: calc(
+    var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
+      var(--gmt-range-pct, 0) / 100
+  );
+  /* Shifted by pct% of its own width, not a fixed half: at the minimum its left
+     edge sits at the thumb centre, at the maximum its right edge does, and in
+     between it is centred on the thumb. It never leaves the field, so it
+     cannot cause sideways scroll at either end. */
+  translate: calc(var(--gmt-range-pct, 0) * -1%) 0;
+  max-width: calc(100% - var(--gmt-range-thumb-w));
+  padding: 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.25rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--gmt-ice);
+  background: var(--gmt-surface);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* A value that is not known yet (no signal) draws no empty box. */
+.gmt-range-chip:empty {
+  display: none;
+}
+
+.gmt-range-ends {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * .gmt-handle — the same faceted grip for the custom role="slider" handles.
+ * The element is the grip; ::before is the 44px hit area and nothing else.
+ * Individual translate / scale properties (never `transform`) so a widget's
+ * own override of top or translate composes. The edge stays currentColor, so
+ * each widget's meaningful colour survives.
+ * --------------------------------------------------------------------------- */
+
+.gmt-handle {
+  --gmt-ridge: currentColor;
+  position: absolute;
+  top: 50%;
+  translate: -50% -50%;
+  box-sizing: border-box;
+  width: var(--gmt-handle-w);
+  height: var(--gmt-handle-h);
+  margin: 0;
+  padding: 0;
+  border: 2px solid currentColor;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    linear-gradient(
+      color-mix(in srgb, currentColor 16%, transparent),
+      color-mix(in srgb, currentColor 16%, transparent)
+    ),
+    var(--gmt-void);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    scale var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--gmt-handle-hit);
+  height: var(--gmt-handle-hit);
+  translate: -50% -50%;
+}
+
+.gmt-handle:hover {
+  box-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent);
+}
+
+.gmt-handle:active {
+  --gmt-ridge: var(--gmt-void);
+  cursor: grabbing;
+  scale: 1.08;
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--gmt-ridge) 0 1px,
+        transparent 1px 3px
+      )
+      center / 7px 45% no-repeat,
+    currentColor;
+}
+
+.gmt-handle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    1;
+}
+
+/* ---------------------------------------------------------------------------
+ * .gmt-chip-toggle — a real checkbox / radio, painted as a bevelled chip.
+ * Generalised from .gmt-globe-filter-toggle (which keeps its own rules, icons
+ * and per-filter accents).
+ * --------------------------------------------------------------------------- */
+
+.gmt-chip-toggle {
+  --toggle-accent: var(--gmt-cyan-ink);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--gmt-ice);
+  cursor: pointer;
+}
+
+/* Load-bearing: an author `display` beats the UA `[hidden]` rule. */
+.gmt-chip-toggle[hidden] {
+  display: none;
+}
+
+/* The real input stays in the page, focusable and announced; only its paint
+   is ours. Never display: none, which would drop it from the tab order. */
+.gmt-chip-toggle input {
+  position: absolute;
+  opacity: 0;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.gmt-chip-toggle-face {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 0 var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--gmt-ice);
+  background-color: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  transition:
+    background-color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-chip-toggle:hover .gmt-chip-toggle-face {
+  background-color: var(--gmt-fill-strong);
+}
+
+/* State is never colour alone: a bevelled mark, hollow off and filled on. */
+.gmt-chip-toggle:not(.gmt-chip-toggle--switch) .gmt-chip-toggle-face::before {
+  content: "";
+  flex: none;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  corner-shape: bevel;
+}
+
+.gmt-chip-toggle input:checked + .gmt-chip-toggle-face {
+  border-color: var(--toggle-accent);
+  background-color: color(from var(--toggle-accent) srgb r g b / 0.2);
+  /* Body ink, not the accent ink: on the tinted fill the accent ink measured
+     5.93:1 (light) and 7.01:1 (dark). The state is carried by the accent
+     border, the tint and the filled mark, not by the text colour. */
+  color: var(--gmt-ice);
+}
+
+.gmt-chip-toggle:not(.gmt-chip-toggle--switch)
+  input:checked
+  + .gmt-chip-toggle-face::before {
+  background: currentColor;
+}
+
+.gmt-chip-toggle input:focus-visible + .gmt-chip-toggle-face {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+.gmt-chip-toggle input:disabled + .gmt-chip-toggle-face {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gmt-chip-toggle-track {
+  position: relative;
+  flex: none;
+  inline-size: 1.75rem;
+  block-size: 1rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-strong);
+  transition:
+    background-color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-chip-toggle-track::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 1px;
+  inset-inline-start: 1px;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-ice-dim);
+  transition:
+    translate var(--gmt-duration-fast) var(--gmt-easing),
+    background-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-chip-toggle input:checked + .gmt-chip-toggle-face .gmt-chip-toggle-track {
+  border-color: var(--toggle-accent);
+  background: color(from var(--toggle-accent) srgb r g b / 0.2);
+}
+
+.gmt-chip-toggle
+  input:checked
+  + .gmt-chip-toggle-face
+  .gmt-chip-toggle-track::after {
+  translate: 0.75rem 0;
+  background: var(--toggle-accent);
+}
+
+.gmt-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.gmt-chip-group > legend {
+  padding: 0;
+  margin-bottom: var(--gmt-space-1);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * .gmt-select chevron — two gradients in an ice-dim token (an SVG data URI
+ * would need a colour literal).
+ * --------------------------------------------------------------------------- */
+
+.gmt-select {
+  appearance: none;
+  /* WebKit lets a select's widest <option> text spill out of its box, and on a
+     phone the page then scrolls sideways; clip it to the box instead. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 1.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gmt-ice-dim) 50%),
+    linear-gradient(135deg, var(--gmt-ice-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 55%,
+    calc(100% - 10px) 55%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+.gmt-select option {
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+}
+
+/* Roomier button for widget action rows; the base .gmt-button is unchanged. */
+.gmt-button--pad {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+}
+
+/* The global reset in gmt-controls.css (`*, *::before, *::after`) does not
+   reach a range thumb's pseudo-elements, so the sonar ring on a focused range
+   and the thumb's own transitions are switched off here. Separate blocks: one
+   invalid selector in a list drops the whole list. */
+@media (prefers-reduced-motion: reduce) {
+  .gmt-range::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .gmt-range::-moz-range-thumb {
+    transition: none;
+  }
+
+  .gmt-range:focus-visible::-webkit-slider-thumb {
+    animation: none;
+  }
+
+  .gmt-range:focus-visible::-moz-range-thumb {
+    animation: none;
+  }
 }

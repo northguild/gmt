@@ -133,11 +133,36 @@ const WORKAROUNDS = [
     title:
       "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
     trigger:
-      "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; already written in ptomato's open PR #361 but not on main, so no new filing is needed",
+      "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
     steps: [
       "Delete the D11 repros in repros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
       "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",
       `Full wording: ${COMPAT_README} § Removal steps 11.`,
+    ],
+  },
+  {
+    defects: ["D12"],
+    title:
+      "D12 — a zoned string's offset written with seconds is matched by minutes instead of exactly (zonedWallClock.ts defect 4)",
+    trigger:
+      'a js-temporal release contains 23d1275 ("Normative: Require strict matching with a precise ZonedDateTime offset", on main)',
+    steps: [
+      "Delete matchSecondsOffsetExactly and its call in zonedDateTimeFrom (internal/zonedWallClock.ts), isSecondsOffsetMatchCompatNeeded in capabilities.ts and its export in index.ts, and the D12 repros.",
+      "Keep test/secondsOffsetMatch.test.ts: its values are test262's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 12.`,
+    ],
+  },
+  {
+    defects: ["D13"],
+    title:
+      "D13 — two offset changes inside one 14-day transition search step are skipped, or stall the search for ever (zonedWallClock.ts defect 5)",
+    trigger:
+      "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
+    steps: [
+      "Delete internal/zonedTransitionSearch.ts and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
+      "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
+      "Keep internal/zonedTransitionSearch.test.ts apart from its step guard, and every Boa_Vista, Riga and Simferopol row: their values are native Temporal's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 14.`,
     ],
   },
   {
@@ -157,7 +182,7 @@ const WORKAROUNDS = [
     title:
       "zoned.A — wall clock → exact time at the range limits (zonedWallClock.ts defect 1, zonedWallClockDifference.ts defect 1)",
     trigger:
-      "a js-temporal release contains 05ce7a3 (fixes the max.* probes only) AND an upstream fix for the minimum edge (min.* probes still fail with 05ce7a3 applied); upstream-issue draft A must ask for both",
+      "a js-temporal release contains 05ce7a3 (the max.* probes) and 95237e0 (the min.* probes); both are on main",
     steps: [
       "Delete the defect-1 fallbacks described in the header notes of internal/zonedWallClock.ts and internal/zonedWallClockOperations.ts, and the *AtLimit fallbacks with their mirrored abstract operations in internal/zonedWallClockDifference.ts; each wrapper returns its plain polyfill call.",
       "Delete the zoned.A repros. Run internal/zonedWallClock*.test.ts: no expected value changes.",

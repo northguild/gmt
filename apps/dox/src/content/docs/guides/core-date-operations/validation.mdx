@@ -3,6 +3,7 @@ title: Validation
 description: Validate date/time strings, timezone identifiers, intervals, and ranges before processing — sentinels instead of thrown errors.
 sidebar:
   order: 8
+industries: [core]
 ---
 
 GMT's public functions never throw on invalid input — they return a sentinel. But
@@ -38,8 +39,8 @@ isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
 ```typescript
 import { hasDaylightSaving, getDstTransitions } from "@northguild/gmt/zoned";
 
-hasDaylightSaving("America/New_York"); // true
-hasDaylightSaving("Asia/Tokyo"); // false
+hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }); // true
+hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }); // false
 
 getDstTransitions("America/New_York", 2024);
 // [

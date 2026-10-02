@@ -5,6 +5,7 @@ import { isValidRollConvention } from "../../calendar/validate/isValidRollConven
 import { isValidDuration } from "../../duration/validate/isValidDuration";
 import { classifyLocal } from "../../instant/convert/classifyLocal";
 import { resolveLocal } from "../../instant/convert/resolveLocal";
+import { instantFrom } from "../../internal";
 import { isObject } from "../../internal/isObject";
 import { isValidTime } from "../../plain/validate/isValidTime";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
@@ -169,8 +170,11 @@ function rolledDate(
  *   whatever the clock does. This is the advance-filing shape.
  * - **The anchor is the caller's event.** Loading, departure and arrival are different
  *   instants, and the same offset from the wrong one is late by days. `cutoffAt` never guesses
- *   which event a rule means. The anchor is exact: an instant (`Z`/offset) or a zoned string,
- *   whose bracket is not read — `timeZone` alone is the local frame. It is not cached: a
+ *   which event a rule means. The anchor is exact: an instant (`Z`/offset) or a zoned string.
+ *   Its bracket never supplies the zone — `timeZone` alone is the local frame — and is not
+ *   checked, with one exception: an offset written to the minute that is the bracketed zone's
+ *   sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the
+ *   zone gives, as `Temporal.ZonedDateTime.from` reads it. The anchor is not cached: a
  *   rescheduled departure is a new call.
  * - **Non-business days roll as the caller says.** With `calendar`, a cut-off on a weekend or
  *   holiday moves by `roll`, as `rollDate` moves it. Every industry answers "what if it lands
@@ -222,9 +226,7 @@ export function cutoffAt(
     }
 
     try {
-      const start = Temporal.Instant.from(anchor).toZonedDateTimeISO(
-        resolved.timeZone,
-      );
+      const start = instantFrom(anchor).toZonedDateTimeISO(resolved.timeZone);
       const duration = Temporal.Duration.from(offset);
 
       if (resolved.atLocalTime !== null) {

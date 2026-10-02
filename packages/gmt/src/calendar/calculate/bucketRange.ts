@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
+  instantFrom,
   nextZonedBucketStart,
   zonedNextTransition,
   zonedUnitStart,
@@ -113,8 +114,8 @@ function nextBucketStartWithinRange(
  * - The range is half-open: an `end` landing exactly on a boundary does not open that bucket.
  *   A zero-length range mid-bucket still returns the one bucket holding it; on a boundary it
  *   returns `[]`.
- * - Both endpoints are read in `timeZone`. Any bracketed zone they carry is ignored, as in
- *   `floorToZone`.
+ * - Both endpoints are read in `timeZone`. A bracketed zone they carry never supplies the
+ *   zone, as in `floorToZone`.
  * - Weeks start on Monday (ISO 8601). `unit` is the same four-unit set `floorToZone` takes,
  *   singular or plural, which `isValidZoneBucketUnit` narrows.
  * - A local boundary that does not exist is not invented: the day Samoa deleted crossing the
@@ -163,9 +164,8 @@ export function bucketRange(
   }
 
   try {
-    const startZoned =
-      Temporal.Instant.from(start).toZonedDateTimeISO(timeZone);
-    const endZoned = Temporal.Instant.from(end).toZonedDateTimeISO(timeZone);
+    const startZoned = instantFrom(start).toZonedDateTimeISO(timeZone);
+    const endZoned = instantFrom(end).toZonedDateTimeISO(timeZone);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
     if (certainlyExceedsBucketCap(startZoned, endZoned, resolvedUnit))

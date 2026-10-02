@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~56× more CI test executions than all four competitors combined**: 1,139,610 from 37,987 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~98× more test cases than `@internationalized/date`**: 37,987 vs. 386 — Adobe's own library, run at its own commit.
+- **~58× more CI test executions than all four competitors combined**: 1,172,730 from 39,091 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~101× more test cases than `@internationalized/date`**: 39,091 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 37,987 tests across 687 files that exercise real behavior differences without redundant permutations. They run in CI as 1,139,610 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 39,091 tests across 702 files that exercise real behavior differences without redundant permutations. They run in CI as 1,172,730 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 687                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **37,987**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,139,610**<br>(37,987 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 702                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **39,091**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,172,730**<br>(39,091 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~56×                                                  | 1,139,610 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~58×                                                  | 1,172,730 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -169,7 +169,7 @@ The fourteen namespace subpaths:
 - `@northguild/gmt/plain`: timezone-free helpers
 - `@northguild/gmt/precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `@northguild/gmt/span`: elapsed and wall-clock durations between two timestamps, as raw numbers
-- `@northguild/gmt/transport`: transit legs as exact elapsed time, arrivals rendered where they land, dwell measured in local calendar days, crossings read in the zone that administers them, and multi-leg schedules with missed connections flagged
+- `@northguild/gmt/transport`: transit legs as exact elapsed time, arrivals rendered where they land, dwell measured in local calendar days, crossings read in the zone that administers them, multi-leg schedules with missed connections flagged, cut-offs counted back from an anchor event, punctuality against a stated tolerance, planned, estimated, requested and actual timestamps kept apart, and the next departure a connection can make
 - `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count, and the invoice, dispute and resolution deadline chain with every window a caller parameter
 - `@northguild/gmt/zoned`: timezone-aware helpers
 - `@northguild/gmt/unix`: Unix epoch (seconds or milliseconds) helpers
@@ -1384,18 +1384,18 @@ diffZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01
 // null — calendar unit across two time zones
 ```
 
-`hasDaylightSaving` reports whether an IANA timezone observes daylight saving time at all:
+`hasDaylightSaving(timeZone, { at })` reports whether an IANA timezone observes daylight saving time at a reference instant. It is `true` when the zone is in daylight time at `at`, or a daylight period begins less than 365 days after it. So a zone in its winter is `true`, and a zone that has stopped changing its clocks is `false`. `at` is an ISO 8601 instant string. With it, the answer does not depend on the day the code runs; without it, the reference is the current instant. An invalid zone, an invalid `at` and a fixed offset return `false`:
 
 ```typescript
 import { hasDaylightSaving } from "@northguild/gmt";
 
-hasDaylightSaving("America/New_York");
+hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" });
 // true
 
-hasDaylightSaving("Asia/Tokyo");
+hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" });
 // false
 
-hasDaylightSaving("Invalid/Zone");
+hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" });
 // false
 ```
 
@@ -1423,12 +1423,18 @@ Each object's `instant` is a UTC ISO 8601 string; `offsetBefore`/`offsetAfter` a
 
 | Question                                                                        | Function                                      | Scope                                                |
 | ------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------- |
-| Does this zone observe DST at all?                                              | `hasDaylightSaving(timeZone)`                 | Zone-level, no instant                               |
+| Does this zone observe DST at this instant, or now?                             | `hasDaylightSaving(timeZone, { at })`         | Zone-level, judged from a reference instant          |
 | Where do this zone's transitions fall?                                          | `getDstTransitions(timeZone, year)`           | Enumerates instants                                  |
 | Is _this particular instant_ currently in DST?                                  | `isInDaylightSaving(value)`                   | A single zoned value                                 |
 | What should happen when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` options (Group C) | Orthogonal — a construction-time choice, not a query |
 
-`isInDaylightSaving` answers the third question:
+`isInDaylightSaving` answers the third question. It and `hasDaylightSaving` apply one rule, read from the zone's own clock changes in the runtime's time zone data. The rule is GMT's own definition, not the tz database's daylight flag: no JavaScript API exposes that flag, and it cannot be worked out from offsets.
+
+- **The rule.** Daylight time runs from a forward change of the zone's clocks to the backward change of the same size that undoes it, less than 365 days later.
+- **A forward change never undone, or undone 365 days or more later, is a change of standard time.** `Europe/Istanbul` has been on standard time since its last advance in March 2016.
+- **The higher of two alternating offsets is the daylight one.** `Europe/Dublin` is in daylight time in summer, and `Africa/Casablanca` at `+01:00`.
+
+The full list of what the rule reads as standard time is in [DST Disambiguation](../../docs/dst-disambiguation.md) and in the function's JSDoc.
 
 ```typescript
 import { isInDaylightSaving } from "@northguild/gmt/zoned";
@@ -1444,7 +1450,13 @@ isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]");
 // true
 
 isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
-// false — Asia/Tokyo has no DST, so this is always false
+// false — Asia/Tokyo has had no DST since 1951
+
+isInDaylightSaving("2015-07-01T12:00:00+03:00[Europe/Istanbul]");
+// true — the clocks went back on 2015-11-08
+
+isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]");
+// false — the advance of March 2016 was never undone
 
 isInDaylightSaving("invalid");
 // false
@@ -1807,6 +1819,40 @@ invalid input, and accepts only values inside the range `Temporal.Instant` can r
 first when the two must be told apart. Leap-second-aware time scales (TAI, GPS) are not
 part of this namespace — these are plain instant conversions.
 
+**A zoned string names one instant in every reader.** Temporal writes a zone's offset rounded
+to the minute, so a zone with a sub-minute offset is written with an offset up to 30 seconds
+from the real one: `Africa/Monrovia` stood at −00:44:30 until 1972 and is written `-00:45`.
+Every GMT function that reads a moment reads such a string as `Temporal.ZonedDateTime.from`
+does (TC39 `ToTemporalZonedDateTime` matches a minute-precision offset by minutes), so a zoned
+string GMT wrote reads back as the instant it was written for:
+
+```typescript
+import { isValidZonedDateTime, toNanoseconds } from "@northguild/gmt";
+
+toNanoseconds("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // -315615330000000000n (01:04:30Z)
+toNanoseconds("1960-01-01T00:20:00-00:45"); // -315615300000000000n (01:05:00Z; no zone, so the offset is exact)
+toNanoseconds("2024-06-15T10:00:00Z[Not/AZone]"); // 1718445600000000000n (an instant reader does not validate the bracket)
+
+isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // true  (the rounded offset)
+isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"); // true  (the exact offset)
+isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]"); // false (an offset with seconds must be exact)
+```
+
+- The rule applies to `precision/`, `span/`, `interval/`, `calendar/`, `intermodal/`,
+  `transport/` and `getTimeZoneOffset` alike. Any other string keeps its written offset: one
+  without a bracket, a `Z` instant, an offset written with seconds, and a bracket whose zone
+  does not exist or does not fit the offset.
+- Every string Temporal writes for an instant in range is valid, the first and last instants
+  included: `-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant.
+- A function that keeps the zone (`isValidZonedDateTime`, `transitTime`, `toOffsetInstant`,
+  every `zoned/` function, a zoned `relativeTo`) rejects a bracket that contradicts the
+  offset, and requires an offset written with seconds to be the zone's offset exactly.
+- Two limits are Temporal's own. A wall time repeated inside a sub-minute offset change,
+  written to the minute, reads as its first pass (`1952-10-15T23:59:59-11:20[Pacific/Niue]`);
+  write the offset with seconds (`-11:20:00`) to name the second. A zoned read refuses a local
+  date of −271821-04-19, which a zone west of Greenwich shows for the first hours of the
+  instant range; pass that instant in `Z` form.
+
 ### Foreign epoch bridges
 
 Other systems do not count from 1970. NTP counts from 1900 and rolls over in 2036, Windows
@@ -2164,7 +2210,15 @@ isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" });
 
 - **Endpoints are instants.** An offset (`Z` or `±HH:MM`) is required and a `[Zone]` annotation is
   optional. As with a TC39 `Temporal.Instant`, endpoints compare by epoch nanoseconds, so two of
-  them may name different zones. Leap seconds are rejected, and a `[u-ca=…]` annotation is ignored, as `Temporal.Instant.from` ignores it. For local-calendar
+  them may name different zones. Leap seconds are rejected, and a `[u-ca=…]` annotation is ignored, as `Temporal.Instant.from` ignores it.
+  The offset fixes the instant; an offset written to the minute that is the bracketed zone's
+  sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the
+  zone gives, so a zoned string GMT wrote is read back as the same moment. That holds
+  from the first instant of the range to the last. The one exception is Temporal's own: a wall
+  time repeated inside a sub-minute offset change, written with a minute-rounded offset, reads
+  as its first pass (for example `1952-10-15T23:59:59-11:20[Pacific/Niue]`; several zones have
+  such a change in their history).
+  For local-calendar
   edges, build them with `floorToZone` or `bucketRange` first.
 - **Outputs are the caller's own strings**, never re-serialised. When two strings spell the same
   instant, the first argument's spelling wins. No spec covers the tie, so this is a GMT rule.
@@ -2360,7 +2414,7 @@ crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York")
 //   enter: "2024-03-10T00:00:00-05:00[America/New_York]",
 //   exit: "2024-03-10T08:00:00-04:00[America/New_York]" } (seven hours across the spring-forward)
 
-// targetZone is always the rendering zone; a bracketed zone on the input is ignored.
+// targetZone is always the rendering zone; a bracketed zone on the input never is.
 crossingTime("2024-06-15T10:00:00+02:00[Europe/Berlin]", "2024-06-15T12:00:00+02:00[Europe/Berlin]", "Africa/Cairo");
 // { duration: "PT2H",
 //   enter: "2024-06-15T11:00:00+03:00[Africa/Cairo]",
@@ -2489,8 +2543,8 @@ timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam
   lands a day before `P2D`. Without it, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: `P2D`
   keeps the anchor's wall clock, and `PT96H` is 96 elapsed hours.
 - **The anchor is exact and is the caller's event.** An instant (`Z` or an offset) or a zoned
-  string; its bracket is not read, and `timeZone` (an IANA identifier or a fixed offset) is the
-  local frame. `cutoffAt` never guesses whether a rule counts from loading, departure or arrival.
+  string; its bracket never supplies the zone, and `timeZone` (an IANA identifier or a fixed
+  offset) is the local frame. `cutoffAt` never guesses whether a rule counts from loading, departure or arrival.
   The functions are pure, so a rescheduled departure is a new call, not a stored cut-off to fix.
 - **Non-business days roll as you say.** With `calendar` (a `BusinessCalendar`), a cut-off on a
   weekend or holiday moves by `roll`, as `rollDate` moves it, and keeps its local time of day.
@@ -2514,6 +2568,134 @@ timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam
   instants, and `now` is always the caller's. Both return their sentinel (`false`, `""`) for
   `cutoffAt`'s `""`, so check the cut-off first.
 - Also exported: the `CutoffOptions`, `Cutoff`, `CutoffTime` and `CutoffScheduleOptions` types.
+
+### Punctuality, timestamp classes and the next departure
+
+Every mode publishes a plan and records what happened, and measures the gap the same way. Only
+the tolerance differs, and it is the caller's. `scheduleDeviation` measures the gap,
+`classifyPunctuality` judges it against a tolerance, and `punctualityRate` counts a list of
+arrivals under one. One field often holds four kinds of time (planned, estimated, requested and
+actual), so `bestAvailable` returns the class with the value, and `estimateDrift` measures how far
+an estimate moved. `nextDeparture` finds the departure a connection can make.
+
+```typescript
+import {
+  bestAvailable,
+  classifyPunctuality,
+  estimateDrift,
+  nextDeparture,
+  punctualityRate,
+  scheduleDeviation,
+  type TimestampEvent,
+} from "@northguild/gmt";
+
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z"); // "PT14M"
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z"); // "-PT5M" (early)
+scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z"); // "PT49H30M" (hours, never days)
+// The same wall time, an hour later across New York's fall-back: 60 minutes, not 0.
+scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]");
+// "PT1H"
+
+// A 15-minute tolerance. Exactly 15 minutes is late: on time is strictly inside.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:59Z", { late: "PT15M" }); // "onTime"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:15:00Z", { late: "PT15M" }); // "late"
+// Without `early`, an early arrival is on time. With it, 11 minutes early is early.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M" }); // "onTime"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M", early: "PT10M" }); // "early"
+// The same 90-minute delay under a 60-minute and a 120-minute tolerance.
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT60M" }); // "late"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT120M" }); // "onTime"
+classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "P1W" }); // null (weeks have no exact length)
+
+punctualityRate([
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:05:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:14:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:16:00Z" },
+  { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T09:57:00Z" },
+], { late: "PT15M" }); // { onTime: 3, total: 4, rate: 0.75 }
+punctualityRate([], { late: "PT15M" }); // null
+
+// An estimate recorded after the actual is still only an estimate.
+bestAvailable([
+  { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+  { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+]); // { at: "2024-06-15T12:52:00Z", classifier: "ACT" }
+// Never an estimate when a request exists.
+bestAvailable([
+  { classifier: "EST", at: "2024-06-15T12:40:00Z", recordedAt: "2024-06-14T00:00:00Z" },
+  { classifier: "REQ", at: "2024-06-15T12:30:00Z", recordedAt: "2024-06-12T00:00:00Z" },
+]); // { at: "2024-06-15T12:30:00Z", classifier: "REQ" }
+
+// Three revisions of one arrival estimate: it slid nine hours.
+const estimates: TimestampEvent[] = [
+  { classifier: "EST", at: "2024-06-20T08:00:00Z", recordedAt: "2024-06-01T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-20T12:00:00Z", recordedAt: "2024-06-05T00:00:00Z" },
+  { classifier: "EST", at: "2024-06-20T17:00:00Z", recordedAt: "2024-06-10T00:00:00Z" },
+];
+estimateDrift(estimates, { tolerance: "PT8H" });
+// { first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: true }
+estimateDrift(estimates.slice(0, 1)); // null (no drift from one estimate)
+
+const timetable = ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"];
+nextDeparture("2024-06-15T09:00:00Z", timetable); // "2024-06-15T09:30:00Z"
+nextDeparture("2024-06-15T09:00:00Z", timetable, { minimumConnection: "PT45M" }); // "2024-06-15T11:00:00Z"
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00"]); // "" (a timetable entry needs an offset)
+
+// Every 20 minutes from 06:00, up to but never at 09:00.
+const shuttle = { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" };
+nextDeparture("2024-06-15T06:05:00+02:00", shuttle); // "2024-06-15T06:20:00+02:00"
+nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
+```
+
+- **A deviation is exact elapsed time.** `scheduleDeviation` is `actual` minus `planned` with
+  hours as the largest unit: positive when late, negative when early, `"PT0S"` on the plan. A
+  delay across a DST transition is measured in real minutes, never wall-clock ones. Both times
+  are an instant (`Z` or an offset) or a zoned string; the zone each is written in does not
+  matter. The offset fixes the instant, and a bracketed zone resolves only a rounded one: an
+  offset written to the minute that is the zone's sub-minute offset rounded
+  (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, so a zoned string
+  GMT wrote is read back as the same moment, except a wall time repeated inside a sub-minute
+  offset change, which reads as its first pass. To show a schedule's local time, use `etaAtZone`.
+- **"On time" needs a stated tolerance.** GMT holds no default. A `PunctualityTolerance` is
+  `{ late, early? }` as ISO 8601 durations of exact time: a day is 24 hours, and years, months,
+  weeks or a negative value return `null`. Tolerances differ by mode (15 minutes, a 60/120-minute
+  pair, a day), and each is the same call with different numbers.
+- **Both edges belong to the outside.** A deviation of `late` or more is late; with `early`, one
+  of `-early` or less is early. Without `early`, every early arrival is on time. `late: "PT0S"`
+  makes an arrival exactly on the plan late. This half-open convention is GMT's own, stated here.
+  `classifyPunctuality` returns `null` on invalid input.
+- **A rate is a count under one tolerance.** `punctualityRate` reads the tolerance once and
+  judges every pair under it. Only `"onTime"` counts, so with an `early` tolerance an early
+  arrival is not on time. `rate` is `onTime / total`, not rounded. An empty list, or any invalid
+  pair, returns `null`, never a rate over the rest. Percentiles and causes are the consumer's.
+- **The class travels with the value.** A `TimestampEvent` is `{ classifier, at, recordedAt }`,
+  with `classifier` one of DCSA's `PLN`, `EST`, `REQ` and `ACT`. `bestAvailable` picks an `ACT`
+  whenever one exists, else `PLN`, else `REQ`, else `EST`, and within that class the latest
+  `recordedAt`. This order is GMT's and is not configurable. It reads, from its most settled
+  end, the estimated, requested, planned, then actual pattern that
+  [DCSA's Port Call standard](https://reference.dcsa.org/content/standards/releases/port-call/v2-0-0/port-call-v2-0-0-use-cases)
+  describes for some port call services; DCSA defines the classes and that pattern, not a
+  selection rule. `at` is echoed exactly as written. An empty list or any invalid event returns
+  `null`.
+- **Drift needs two estimates.** `estimateDrift` reads only the `EST` records, in `recordedAt`
+  order, and reports the last `at` minus the first, negative when the estimate moved earlier. It
+  returns `null` with fewer than two, since one estimate has no drift. With `tolerance`,
+  `exceedsTolerance` is `true` when the drift in either direction is greater than it; exactly the
+  tolerance is `false`. Without it, `null`.
+- **`nextDeparture` is timetable lookup, not routing.** It returns the first departure at or
+  after `after` plus `minimumConnection` (default `"PT0S"`, exact time, not negative); one exactly
+  at that threshold is made. A list entry is returned exactly as written, so it can go straight
+  into `scheduleDelivery` as a leg's `departure`. Every moment (`after`, each entry, `from` and
+  `to`) must carry its offset, as `nextOpenAt` requires: a wall time without one returns `""`,
+  because in a repeated fall-back hour it names two departures. One invalid entry returns `""`.
+- **A headway window is half-open.** `{ headway, from, to }` has the shape of a GTFS
+  [`frequencies.txt`](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt) row. Departures are `from` plus whole headways in exact time, up to but never
+  at `to`, and are computed from `from`, not stepped, so a long window costs nothing. Across a DST
+  transition they keep their spacing and the wall clock shifts. The result is written the way
+  `from` was written.
+- Also exported: the `TimestampClass`, `TimestampEvent`, `PunctualityTolerance`, `Punctuality`,
+  `PlannedActual`, `OnTimeRate`, `ClassifiedTimestamp`, `EstimateDriftOptions`, `DriftReport`,
+  `Headway` and `NextDepartureOptions` types.
 
 ### Free time and demurrage
 
@@ -2725,7 +2907,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
 - [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars with holiday sets and roll conventions, and operating hours: open intervals, open or closed now, open time elapsed and SLA deadlines
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
-- [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days, crossings, multi-leg delivery schedules
+- [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days, crossings, multi-leg delivery schedules, cut-offs, schedule deviation and punctuality, PLN/EST/REQ/ACT timestamp classes, and timetable and headway departures
 - [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates an itemised invoice can list, plus the deadline chain around the invoice with every window a caller parameter
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities

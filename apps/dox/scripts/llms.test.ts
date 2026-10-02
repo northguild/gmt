@@ -334,6 +334,58 @@ Note about installation.
       expect(result).toContain("Note about installation.");
     });
 
+    it("renders a tool page's layout to prose, its key point named and its widget gone", () => {
+      const input = `<ToolLayout useCase="multi-leg freight ETAs">
+  <Fragment slot="keypoint">Every handoff is an exact instant.</Fragment>
+  <Fragment slot="intro">Each leg is a departure, a duration and a zone.</Fragment>
+
+  <DeliveryScheduler fullbleed />
+
+  <Fragment slot="after">**Worth trying:** a missed connection.</Fragment>
+</ToolLayout>`;
+      const result = stripMdx(input, { gmtVersion: "1.0.0" });
+      expect(result).toContain("**Key point — multi-leg freight ETAs**");
+      expect(result).toContain("Every handoff is an exact instant.");
+      expect(result).toContain(
+        "Each leg is a departure, a duration and a zone.",
+      );
+      expect(result).toContain("**Worth trying:** a missed connection.");
+      expect(result).not.toMatch(/(?<![A-Za-z0-9_])<\/?[A-Z]/);
+    });
+
+    /*
+     * The same question the built-surface gate asks further down, asked of the source instead, so
+     * it needs no build and runs in every `vitest`. The built gate is skipped when `dist` is
+     * missing, which is right for a 45-second build but means a component added to a page and not
+     * to `renderMdxComponents` is invisible locally until CI builds the site. Every page's `.md`
+     * is this same `stripMdx` over this same file, so a tag left here is a tag that ships.
+     */
+    it("leaves no raw component tag in any page's source once stripped", () => {
+      const docsDir = resolve(
+        import.meta.dirname,
+        "..",
+        "src",
+        "content",
+        "docs",
+      );
+      const pages = (
+        readdirSync(docsDir, { recursive: true }) as string[]
+      ).filter((f) => /\.mdx?$/.test(f));
+      expect(pages.length).toBeGreaterThan(0);
+
+      const left = pages.flatMap((name) => {
+        const { body } = stripFrontmatter(
+          readFileSync(resolve(docsDir, name), "utf8"),
+        );
+        const tags =
+          stripMdx(body, { gmtVersion: "1.0.0" }).match(
+            /(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g,
+          ) ?? [];
+        return tags.length > 0 ? [{ file: name, tags }] : [];
+      });
+      expect(left).toEqual([]);
+    });
+
     it("substitutes {gmtVersion}", () => {
       const input = "Current version: {gmtVersion}";
       const result = stripMdx(input, { gmtVersion: "2.5.0" });
@@ -541,13 +593,25 @@ Body text here.`;
         (found) => !PROSE_BRACES.test(found),
       );
 
+    /**
+     * Every `.md` the build wrote, at any depth.
+     *
+     * Both gates below used to read `readdirSync(distDir)`, which lists one directory. That is the
+     * four pages at the root of `dist`; the other 792 — every tool, guide, scenario, mistake and
+     * reference page — sit in subdirectories and were never opened. So the gates passed while each
+     * `/tools/*.md` shipped its widget as a raw tag (`<BillingDeadlines fullbleed />`), which is
+     * exactly what "no built text surface carries a raw component tag" exists to stop.
+     */
+    const builtMarkdown = (distDir: string): string[] =>
+      (readdirSync(distDir, { recursive: true }) as string[]).filter((f) =>
+        f.endsWith(".md"),
+      );
+
     it("no built text surface carries an unevaluated JSX expression", () => {
       const distDir = distDirOrSkip();
       if (distDir === null) return;
 
-      for (const name of readdirSync(distDir).filter((f) =>
-        f.endsWith(".md"),
-      )) {
+      for (const name of builtMarkdown(distDir)) {
         expect({
           file: name,
           left: unresolvedExpressions(
@@ -596,9 +660,7 @@ Body text here.`;
       const distDir = distDirOrSkip();
       if (distDir === null) return;
 
-      for (const name of readdirSync(distDir).filter((f) =>
-        f.endsWith(".md"),
-      )) {
+      for (const name of builtMarkdown(distDir)) {
         expect({
           file: name,
           left: rawComponentTags(readFileSync(resolve(distDir, name), "utf8")),

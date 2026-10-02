@@ -41,7 +41,13 @@ const outPath = resolve(
 function shouldSkip() {
   if (!existsSync(outPath)) return false;
   if (!existsSync(dstSrc)) return false;
-  return statSync(outPath).mtime > statSync(dstSrc).mtime;
+  // Newer than the canonical source and than this script: the frontmatter is
+  // written here, so a change to it must regenerate the page too.
+  const written = statSync(outPath).mtime;
+  return (
+    written > statSync(dstSrc).mtime &&
+    written > statSync(fileURLToPath(import.meta.url)).mtime
+  );
 }
 
 if (shouldSkip()) {
@@ -66,6 +72,7 @@ const body = canonical.replace(
 
 const frontmatter = `---
 title: DST Disambiguation
+industries: [core]
 description: >
   Why the mapping between local wall-clock time and real instant breaks down
   twice a year for timezones that observe daylight saving time, and how GMT's

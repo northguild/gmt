@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { instantFrom } from "../../internal/instantNanoseconds";
 import { hasInstantShape } from "../../internal/isoStringBody";
 import { instantLeapSecond } from "../../regex";
 import { isValidTimeZone } from "../validate";
@@ -19,6 +19,9 @@ import { isValidTimeZone } from "../validate";
  * - The instant is ISO 8601 extended format before any annotation (`<date>T<time>`, then `Z` or
  *   `±HH:MM[:SS[.fraction]]`): basic format, a `t` or space separator, a lower-case `z` and an
  *   hour-only offset return "".
+ * - Only the instant is read from `instant`, as `isValidInstant` describes it: a bracketed zone
+ *   in it is not validated, and an offset written to the minute that is that zone's sub-minute
+ *   offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
  *
  * @param timeZone IANA timeZone identifier
  * @param instant ISO 8601 instant string (e.g. "2024-07-15T12:00:00Z")
@@ -47,7 +50,7 @@ export function getTimeZoneOffset(timeZone: string, instant: string): string {
   }
 
   try {
-    return Temporal.Instant.from(instant).toZonedDateTimeISO(timeZone).offset;
+    return instantFrom(instant).toZonedDateTimeISO(timeZone).offset;
   } catch {
     return "";
   }

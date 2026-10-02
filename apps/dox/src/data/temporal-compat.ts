@@ -73,6 +73,8 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D9: "Adding or counting very large numbers of months in a non-ISO calendar",
   D10: "Coptic and Ethiopic dates in far years, where a short thirteenth month can be skipped",
   D11: "Rounding or measuring a span in months from the 29th, 30th or 31st",
+  D12: "Zoned strings whose offset is written with seconds, in a zone whose offset was not a whole number of minutes",
+  D13: "Finding a zone's clock changes, and the start or length of a day, where two changes fall less than 14 days apart",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

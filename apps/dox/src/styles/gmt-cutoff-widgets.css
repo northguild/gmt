@@ -1,188 +1,476 @@
 /*
- * Shared rules for the three cut-off widgets (TRAN-10): the Cut-off Stack,
- * the Cut-off Ruler and the Cut-off Countdown.
+ * The transport charts' recipe sheet: the three cut-off widgets (TRAN-10), the
+ * Cut-off Stack, the Cut-off Ruler and the Cut-off Countdown, and the three
+ * punctuality widgets (TRAN-57), the Punctuality Board, the ETA Drift Chart and
+ * the Departure Board. Six roots, one family look.
  *
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
  * labels/inputs/selects in gmt-form-controls.css; the leg fieldset grid, the
  * verdict line and the reason-aside spacing are reused unscoped from
- * gmt-transport-widgets.css. This sheet holds what is new here: the lane
- * grid, day columns, the closed-day pattern (a hatch plus the word
- * "closed", never colour alone), markers (solid for where a cut-off closes,
- * hollow for where it would have been), the departure line and the axis
- * tick labels.
+ * gmt-transport-widgets.css. This sheet holds the chart recipes the three
+ * share: the glass chart surface, the chip (every chart label sits on one),
+ * the series mark and swatch, the departure gate, the closed hatch, the axis
+ * ticks and the DST chips.
  *
- * Tokens only; no colour literal. Amber is reserved for the sentinel state
- * alone — nothing here uses it.
+ * Rules for every chart here:
+ * - Text sits on an opaque `--gmt-surface` plate (a chip or a header strip),
+ *   in `--gmt-ice` or `--gmt-ice-dim`. No glyph is drawn straight onto a
+ *   gradient, a hatch, a glow or a line.
+ * - A series colour (`--series`) goes on marks, stems, edges, swatches and
+ *   borders. Never on text.
+ * - Closed, late, open and moved are words and patterns, never a verdict
+ *   colour. Amber is reserved for the sentinel state alone; nothing here uses
+ *   it. `--gmt-dst-gold` marks a spring-forward gap only.
+ * - No `backdrop-filter` (the chart already sits inside a glass card), and
+ *   nothing animates except the Stack's dashed arc.
+ *
+ * The punctuality widgets' drawn frame (`.gmt-punct-frame`) joins the chart
+ * surface, their tick row (`.gmt-punct-ticks`) takes the rule marks, and every
+ * recipe below that lists the six roots applies to both families. The DST chips
+ * and the Stack's own rules stay scoped to the three cut-off roots.
+ *
+ * Tokens only; no colour literal. One-off gradient stops are written as
+ * `color(from var(--token) srgb r g b / a)`.
  */
 
-.gmt-cutoff-weekday {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--gmt-space-1);
-  margin-right: var(--gmt-space-2);
-  font-size: var(--gmt-text-sm);
+/* The Closed-days fieldset is a `.gmt-transport-leg` (the bevelled chrome)
+   holding the switch, the weekend chips and a field grid. */
+.gmt-cutoff-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-width: 0;
 }
 
-.gmt-cutoff-weekdays {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gmt-space-1);
-  margin: var(--gmt-space-2) 0;
-}
-
-.gmt-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: var(--gmt-space-2);
+.gmt-cutoff-calendar > .gmt-chip-toggle {
+  align-self: flex-start;
 }
 
 /* ---------------------------------------------------------------------------
- * The timeline / ruler / axis surface — a plain grid of divs, never a
- * focusable control of its own (§0: nothing inside a drawn timeline, ruler
- * or axis is focusable).
+ * The chart surface — a plain grid of divs, never a focusable control of its
+ * own (nothing inside a drawn timeline, ruler or axis is focusable).
  * --------------------------------------------------------------------------- */
 
-.gmt-cutoff-stack-timeline,
-.gmt-cutoff-ruler-overview,
-.gmt-cutoff-ruler-closeup,
-.gmt-cutoff-countdown-axis {
+/* The transport charts: a bevelled glass panel, a faint cyan wash from the top
+   left, a brighter hairline on the top edge and the inset highlight. */
+:is(
+  .gmt-punct-frame,
+  .gmt-cutoff-stack-timeline,
+  .gmt-cutoff-ruler-overview,
+  .gmt-cutoff-ruler-closeup,
+  .gmt-cutoff-countdown-axis
+) {
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
-  background: var(--gmt-fill-subtle);
-  overflow-x: auto;
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      color(from var(--gmt-cyan) srgb r g b / 0.08),
+      transparent 65%
+    ),
+    var(--gmt-glass-tint);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  overflow-x: clip;
 }
 
-/* The label column and the exact-time track share one width across every
-   row — the axis row and every lane row — so a percent position in any
-   track lands at the same real instant in every one of them. */
-.gmt-cutoff-stack-axis-row,
-.gmt-cutoff-stack-lane {
-  display: grid;
-  grid-template-columns: 6rem 1fr;
-  align-items: center;
-  gap: var(--gmt-space-2);
-  font-size: var(--gmt-text-sm);
+/* The punctuality frame scrolls sideways rather than clipping a wide chart. */
+.gmt-punct-frame {
+  /* Clipped, not scrollable: a classic scrollbar (WebKit) appearing for a value
+     wider than the frame added 20px of height under the pointer. */
+  overflow-x: clip;
+  /* A handle's 44px hit area reaches 22px from its centre; the rail's inset and
+     this padding keep it inside the frame, so a handle at either end never
+     makes the frame scroll (or grow a scrollbar). */
+  padding-inline: calc(var(--gmt-space-3) + 4px);
 }
 
-.gmt-cutoff-stack-row-spacer {
-  min-width: 6rem;
+/* ---------------------------------------------------------------------------
+ * Series: 1-4, the site's four series pairs (gmt-tokens.css).
+ * --------------------------------------------------------------------------- */
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  [data-series="1"] {
+  --series: var(--gmt-series-1);
+  --series-ink: var(--gmt-series-1-ink);
+}
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  [data-series="2"] {
+  --series: var(--gmt-series-2);
+  --series-ink: var(--gmt-series-2-ink);
+}
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  [data-series="3"] {
+  --series: var(--gmt-series-3);
+  --series-ink: var(--gmt-series-3-ink);
+}
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  [data-series="4"] {
+  --series: var(--gmt-series-4);
+  --series-ink: var(--gmt-series-4-ink);
 }
 
-.gmt-cutoff-stack-axis {
-  position: relative;
-  height: 2.4rem;
-}
-
-/* Each day column is positioned and sized by its own real bounds
-   (`dayBoundsFor`, from the polyfill's `startOfDay`), so a 23- or 25-hour
-   DST day draws at its real proportional width, never a fixed share. */
-.gmt-cutoff-stack-day {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  padding: var(--gmt-space-1);
-  border-left: 1px solid var(--gmt-border);
-  font-size: var(--gmt-text-xs);
-  text-align: left;
-  color: var(--gmt-ice-dim);
-  overflow: hidden;
-}
-
-/* The closed-day hatch: a repeating diagonal stripe, plus the word "closed"
-   — the pattern and the text both carry the meaning, never a fill colour
-   alone. */
-.gmt-cutoff-stack-day--closed {
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--gmt-border) 0,
-    var(--gmt-border) 1px,
-    transparent 1px,
-    transparent 6px
-  );
-}
-
-.gmt-cutoff-stack-day-label,
-.gmt-cutoff-stack-day-closed {
-  display: block;
-  white-space: nowrap;
-}
-
-.gmt-cutoff-stack-day-closed {
-  font-style: italic;
-}
-
-.gmt-cutoff-stack-lanes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gmt-space-2);
-}
-
-.gmt-cutoff-stack-lane-label {
-  font-family: var(--gmt-font-mono);
-}
-
-.gmt-cutoff-stack-lane-track {
-  position: relative;
-  height: 1.4rem;
-}
-
-.gmt-cutoff-stack-lane-time {
-  position: absolute;
-  top: 1.2rem;
-  transform: translateX(6px);
-  font-size: var(--gmt-text-xs);
-  color: var(--gmt-ice-dim);
-  white-space: nowrap;
-}
-
-/* Solid marker: where a cut-off closes. Hollow marker: where it would have
-   closed with no calendar. Shape (filled circle vs. ringed circle), not
-   colour, is what tells the two apart. */
-.gmt-cutoff-stack-marker,
-.gmt-cutoff-ruler-marker {
+/* A small bevelled square in the series colour; decorative, because a series
+   is always named in text beside it. */
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-series-swatch {
   display: inline-block;
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  border: 2px solid var(--gmt-ice);
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: var(--gmt-space-2);
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--series, var(--gmt-ice-dim));
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
 }
 
-.gmt-cutoff-stack-marker {
-  position: absolute;
-  top: 0.3rem;
-  transform: translateX(-50%);
+/* ---------------------------------------------------------------------------
+ * Chip: the plate every chart label sits on.
+ * --------------------------------------------------------------------------- */
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
 }
 
-.gmt-cutoff-stack-marker--solid {
-  background: var(--gmt-ice);
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-chip[hidden] {
+  display: none;
 }
 
-.gmt-cutoff-stack-marker--hollow {
-  background: transparent;
-  border-style: dashed;
-}
-
-.gmt-cutoff-stack-connector {
-  position: absolute;
-  top: 0.1rem;
-  transform: translateX(-50%);
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-chip--dim {
   color: var(--gmt-ice-dim);
 }
 
-/* The departure instant, drawn as one vertical line repeated at the same
-   percent in the axis track and every lane track — stacked with no gap
-   between rows, the repeated segments read as one continuous line. */
-.gmt-cutoff-stack-departure-marker {
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-icon {
+  flex: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Mark: the series marker. Solid is where a cut-off closes; hollow is where it
+ * would have closed with no calendar. Shape (filled vs dashed ring), not
+ * colour, tells the two apart.
+ * --------------------------------------------------------------------------- */
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-mark {
+  display: inline-block;
+  flex: none;
+  box-sizing: content-box;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--gmt-surface);
+  border-radius: 4px;
+  corner-shape: bevel;
+  background: var(--series, var(--gmt-ice));
+  box-shadow:
+    0 0 0 3px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.25),
+    0 0 12px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.45);
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-mark--hollow {
+  border: 2px dashed var(--series, var(--gmt-ice));
+  background: var(--gmt-surface);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Gate: the departure or cut-off line. Position and extent are the caller's.
+ * --------------------------------------------------------------------------- */
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-gate {
+  position: absolute;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--gmt-cyan-bright);
+  box-shadow:
+    0 0 6px var(--gmt-glow),
+    0 0 14px var(--gmt-glow);
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-gate::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  translate: -50% 0;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: var(--gmt-cyan-bright);
+}
+
+/* ---------------------------------------------------------------------------
+ * Closed: one hatch for "closed", used by the Countdown and the Stack. A 45
+ * degree teal hatch, 2px on and 6px off, under a veil of the page colour (which
+ * lightens it in the light theme, where the void is white). The word "closed"
+ * always rides on a chip; the hatch carries no text.
+ * --------------------------------------------------------------------------- */
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-closed {
+  background:
+    linear-gradient(
+      color(from var(--gmt-void) srgb r g b / 0.4),
+      color(from var(--gmt-void) srgb r g b / 0.4)
+    ),
+    repeating-linear-gradient(
+      45deg,
+      color(from var(--gmt-teal) srgb r g b / 0.5) 0,
+      color(from var(--gmt-teal) srgb r g b / 0.5) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+}
+
+/* ---------------------------------------------------------------------------
+ * Axis ticks. The base rule is shared with TRAN-57 and stays as it is below;
+ * the three cut-off roots add a rule mark above each label, a taller brighter
+ * one on a day boundary, and a day-boundary label in the primary ink.
+ * --------------------------------------------------------------------------- */
+
+.gmt-cutoff-axis-tick {
   position: absolute;
   top: 0;
-  bottom: 0;
-  border-left: 2px solid var(--gmt-ice);
+  transform: translateX(-2px);
+  font-size: var(--gmt-text-xs);
+  font-family: var(--gmt-font-mono);
+  line-height: 1.2;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
 }
+
+.gmt-cutoff-countdown-ticks,
+.gmt-punct-ticks {
+  position: relative;
+  height: 1.2rem;
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-axis-tick {
+  padding-top: 9px;
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-axis-tick::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 1px;
+  height: 5px;
+  background: var(--gmt-border-strong);
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-axis-tick--day {
+  color: var(--gmt-ice);
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  .gmt-cutoff-axis-tick--day::before {
+  width: 2px;
+  height: 8px;
+  background: var(--gmt-cyan-bright);
+}
+
+:is(
+    .gmt-cutoff-stack,
+    .gmt-cutoff-ruler,
+    .gmt-cutoff-countdown,
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board
+  )
+  :is(.gmt-cutoff-countdown-ticks, .gmt-cutoff-ruler-ticks, .gmt-punct-ticks) {
+  height: 1.9rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * DST chips. An overlap (clocks go back, an hour repeats) is purple; a gap
+ * (clocks go forward, an hour is skipped) is gold. Each sits on an opaque
+ * surface base under its wash, and is named in words.
+ * --------------------------------------------------------------------------- */
+
+:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown)
+  .gmt-cutoff-dst--overlap {
+  border-color: color(from var(--gmt-dst-purple) srgb r g b / 0.4);
+  background:
+    linear-gradient(
+      color(from var(--gmt-dst-purple) srgb r g b / 0.14),
+      color(from var(--gmt-dst-purple) srgb r g b / 0.14)
+    ),
+    var(--gmt-surface);
+  color: var(--gmt-dst-purple-ink);
+}
+
+:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown)
+  .gmt-cutoff-dst--gap {
+  border-color: color(from var(--gmt-dst-gold) srgb r g b / 0.4);
+  background:
+    linear-gradient(
+      color(from var(--gmt-dst-gold) srgb r g b / 0.14),
+      color(from var(--gmt-dst-gold) srgb r g b / 0.14)
+    ),
+    var(--gmt-surface);
+  color: var(--gmt-dst-gold-ink);
+}
+
+/* ---------------------------------------------------------------------------
+ * Departure captions under a chart.
+ * --------------------------------------------------------------------------- */
 
 .gmt-cutoff-stack-departure-line,
 .gmt-cutoff-ruler-departure-line,
@@ -193,34 +481,236 @@
   color: var(--gmt-ice-dim);
 }
 
-/* Axis tick labels, shared by the ruler and the countdown's axis. Each sits
-   in a `position: relative` ticks row of its own, positioned by the `left`
-   percent the mount writes inline, and never overlaps the drawn surface
-   above it (§0: nothing inside a drawn timeline, ruler or axis is
-   focusable — ticks are plain text, not controls). */
-.gmt-cutoff-axis-tick {
+:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown)
+  :is(
+    .gmt-cutoff-stack-departure-line,
+    .gmt-cutoff-ruler-departure-line,
+    .gmt-cutoff-countdown-departure-line
+  ) {
+  border-top: 1px solid var(--gmt-border);
+}
+
+/* ---------------------------------------------------------------------------
+ * The Stack's day-timeline plot: a label column and a track column, with the
+ * day columns and the departure gate in one layer behind every lane.
+ * --------------------------------------------------------------------------- */
+
+.gmt-cutoff-stack-plot {
+  --gmt-stack-label-w: 6rem;
+  --gmt-stack-col-gap: var(--gmt-space-2);
+  --gmt-stack-head: 2rem;
+  --gmt-stack-foot: 2.4rem;
+  position: relative;
+  min-width: 0;
+  min-height: calc(var(--gmt-stack-head) + var(--gmt-stack-foot) + 2rem);
+  padding-top: calc(var(--gmt-stack-head) + var(--gmt-space-2));
+  padding-bottom: var(--gmt-stack-foot);
+}
+
+/* A closed day also carries a "closed" chip under its header strip. */
+.gmt-cutoff-stack-plot--closed {
+  --gmt-stack-head: 3.7rem;
+}
+
+.gmt-cutoff-stack-days {
   position: absolute;
   top: 0;
-  transform: translateX(-2px);
+  bottom: 0;
+  left: calc(var(--gmt-stack-label-w) + var(--gmt-stack-col-gap));
+  right: 0;
+}
+
+/* Each day column is positioned and sized by its own real bounds
+   (`dayBoundsFor`, from the polyfill's `startOfDay`), so a 23- or 25-hour
+   DST day draws at its real proportional width, never a fixed share. */
+.gmt-cutoff-stack-day {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  box-sizing: border-box;
+  border-left: 1px solid var(--gmt-border);
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.04);
   font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+/* Neighbouring days alternate in strength. A closed day also carries the
+   closed hatch (its own `.gmt-cutoff-closed`) over the whole column. */
+div.gmt-cutoff-stack-day:nth-of-type(even) {
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+}
+
+/* The header strip: an opaque plate holding the date. */
+.gmt-cutoff-stack-day-label {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 3px var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border-strong);
+  background: var(--gmt-surface);
   font-family: var(--gmt-font-mono);
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
   white-space: nowrap;
+  overflow: hidden;
 }
 
-.gmt-cutoff-countdown-ticks {
+.gmt-cutoff-stack-day-closed {
+  margin-left: var(--gmt-space-1);
+}
+
+/* A column too narrow for "13 Jun · Thu" drops the weekday first, then the
+   date (its `title` still names both); measured by `fitStackTimeline` in
+   cutoff-stack-mount.ts. */
+.gmt-cutoff-stack-day--short .gmt-cutoff-stack-day-weekday,
+.gmt-cutoff-stack-day--narrow > * {
+  display: none;
+}
+
+/* The one departure gate, from under the headers to the foot, and its chip. */
+.gmt-cutoff-stack-days > .gmt-cutoff-gate {
+  top: var(--gmt-stack-head);
+  bottom: 0;
+}
+
+.gmt-cutoff-stack-gate-chip {
+  position: absolute;
+  bottom: var(--gmt-space-1);
+  margin-left: 10px;
+}
+
+.gmt-cutoff-stack-gate-chip--end {
+  margin-left: 0;
+  translate: calc(-100% - 10px) 0;
+}
+
+.gmt-cutoff-stack-lanes {
   position: relative;
-  height: 1.2rem;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Nothing in a drawn surface animates or transitions. */
+.gmt-cutoff-stack-lane {
+  display: grid;
+  grid-template-columns: var(--gmt-stack-label-w) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--gmt-stack-col-gap);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cutoff-stack-lane + .gmt-cutoff-stack-lane {
+  border-top: 1px solid var(--gmt-border);
+}
+
+.gmt-cutoff-stack-lane-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* Tall enough for the marker row (with its arc) and, under it, the time chip,
+   so a chip never lands on the arc or on the other marker. */
+.gmt-cutoff-stack-lane-track {
+  position: relative;
+  height: 3.3rem;
+}
+
+.gmt-cutoff-stack-lane-track > .gmt-cutoff-mark {
+  position: absolute;
+  top: 0.95rem;
+  translate: -50% -50%;
+}
+
+/* The chip hangs under its marker, placed by `fitStackTimeline` so it stays
+   inside the track and off the departure gate. The inline `left` in percent is
+   the pre-fit position, a few pixels left of the marker. */
+.gmt-cutoff-stack-lane-time {
+  position: absolute;
+  top: 1.85rem;
+}
+
+/* The moved cut-off's arc: from the hollow marker to the solid one, dashes
+   flowing that way. Drawn at the track's own height with the dash measured in
+   screen pixels. */
+.gmt-cutoff-stack-arc {
+  position: absolute;
+  top: 0;
+  height: 1.9rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.gmt-cutoff-stack-arc path {
+  fill: none;
+  stroke: var(--series, var(--gmt-ice));
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+  animation: gmt-cutoff-arc-flow 0.9s linear infinite;
+}
+
+@keyframes gmt-cutoff-arc-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
+/* A narrow widget (a phone, the /dox rail) stacks each lane's name above its
+   track, so the track gets the whole width and the day labels have room. The
+   name then sits over the day columns, so it takes an opaque plate. */
+@container (max-width: 30rem) {
+  .gmt-cutoff-stack-plot {
+    --gmt-stack-label-w: 0px;
+    --gmt-stack-col-gap: 0px;
+  }
+
+  .gmt-cutoff-stack-lane {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+  }
+
+  .gmt-cutoff-stack-lane-label {
+    position: relative;
+    justify-self: start;
+    max-width: 100%;
+    margin-top: var(--gmt-space-1);
+    padding: 2px var(--gmt-space-2);
+    border: 1px solid var(--series, var(--gmt-border-strong));
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    background: var(--gmt-surface);
+    font-size: var(--gmt-text-xs);
+    line-height: 1.2;
+  }
+
+  .gmt-cutoff-stack-lane-track {
+    height: 3.2rem;
+  }
+}
+
+/* Nothing in a drawn surface animates or transitions. The Stack's dashed arc
+   is the one exception, and it stops under reduced motion. */
 .gmt-cutoff-stack-timeline,
 .gmt-cutoff-ruler-overview,
 .gmt-cutoff-ruler-closeup,
 .gmt-cutoff-countdown-axis,
-.gmt-cutoff-stack-marker,
-.gmt-cutoff-ruler-marker,
+.gmt-punct-frame,
+.gmt-cutoff-mark,
+.gmt-cutoff-chip,
+.gmt-cutoff-gate,
 .gmt-cutoff-countdown-marker {
   transition: none;
   animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-cutoff-stack-arc path {
+    animation: none;
+  }
 }

@@ -1,44 +1,187 @@
 /*
- * Cut-off Ruler widget (TRAN-10). Shared lane/marker/departure-line rules
- * live in gmt-cutoff-widgets.css; this sheet holds the overview lanes, the
- * hour-ruler close-up and the readings list.
+ * Cut-off Ruler widget (TRAN-10). The chart recipes it shares (the glass
+ * surface, the chip, the mark, the gate, the axis ticks, the DST chips) live
+ * in gmt-cutoff-widgets.css; this sheet holds the overview lanes, the hour
+ * ruler close-up and the reading cards.
+ *
+ * A reading is a series (calendar 1, exact 2, pinned 3): a solid horizontal
+ * stem ending in a bevelled head. The DST change is a dashed vertical line
+ * with a labelled chip, so the two purples (series 3 and a fall-back) are told
+ * apart by shape and by words, never by colour alone.
  */
 
+/* Lane names and the tracks share one grid, so every track is the same width
+   and a percent position lands at the same instant in all of them; the tick
+   row below carries the same left offset. A narrow widget stacks each name
+   above its track. */
+.gmt-cutoff-ruler-overview {
+  --gmt-ruler-label-w: 12rem;
+}
+
 .gmt-cutoff-ruler-lanes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gmt-space-2);
+  display: grid;
+  grid-template-columns: var(--gmt-ruler-label-w) minmax(0, 1fr);
+  column-gap: var(--gmt-space-2);
+  row-gap: 0;
 }
 
 .gmt-cutoff-ruler-lane {
-  display: flex;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--gmt-space-2);
   font-size: var(--gmt-text-sm);
 }
 
-.gmt-cutoff-ruler-lane-label {
-  min-width: 12rem;
-  font-family: var(--gmt-font-mono);
+.gmt-cutoff-ruler-lane + .gmt-cutoff-ruler-lane {
+  border-top: 1px solid var(--gmt-border);
 }
 
-.gmt-cutoff-ruler-bar {
+.gmt-cutoff-ruler-lane-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* Tall enough for the stem and, under it, the reading's chip. */
+.gmt-cutoff-ruler-track {
   position: relative;
-  flex: 1 1 auto;
-  height: 1.5rem;
-  border-top: 2px solid var(--gmt-ice);
+  height: 3.1rem;
+}
+
+/* The stem: from the reading to the departure, a solid line fading as it goes. */
+.gmt-cutoff-ruler-bar {
+  position: absolute;
+  top: 0.95rem;
+  right: 0;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--series, var(--gmt-ice)),
+    color(from var(--series, var(--gmt-ice)) srgb r g b / 0.25)
+  );
+}
+
+.gmt-cutoff-ruler-bar > .gmt-cutoff-mark {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: -50% -50%;
 }
 
 .gmt-cutoff-ruler-bar-label {
-  margin-left: var(--gmt-space-2);
-  font-size: var(--gmt-text-xs);
-  color: var(--gmt-ice-dim);
+  position: absolute;
+  top: 0.55rem;
+  left: 13px;
+}
+
+.gmt-cutoff-ruler-track > .gmt-playground-sentinel {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  translate: 0 -50%;
+}
+
+/* The departure edge, a gate at the track's right end. */
+.gmt-cutoff-ruler-track > .gmt-cutoff-gate {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  margin-left: 0;
+  translate: 50% 0;
+}
+
+.gmt-cutoff-ruler-track > .gmt-cutoff-gate::before {
+  display: none;
+}
+
+/* The DST change: a dashed segment through every track (purple where an hour
+   repeats, gold where one is skipped), a faint band for the repeated hour, and
+   its chip in a row of its own above the lanes. */
+.gmt-cutoff-ruler-transition-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--gmt-dst-purple);
+}
+
+.gmt-cutoff-ruler-transition-line--gap {
+  border-left-color: var(--gmt-dst-gold);
+}
+
+.gmt-cutoff-ruler-dst-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color(from var(--gmt-dst-purple) srgb r g b / 0.18);
+}
+
+.gmt-cutoff-ruler-transition-row {
+  margin-left: calc(var(--gmt-ruler-label-w) + var(--gmt-space-2));
+  margin-bottom: var(--gmt-space-1);
+}
+
+/* In flow, so a label that has to wrap grows its row instead of running into
+   the lanes. `--gmt-at` is the DST change's position along the track. */
+.gmt-cutoff-ruler-transition {
+  display: flex;
+  width: max-content;
+  margin-left: calc(var(--gmt-at) - 1px);
+  white-space: nowrap;
+}
+
+.gmt-cutoff-ruler-transition--end {
+  margin-left: auto;
+  margin-right: calc(100% - var(--gmt-at) - 1px);
+  text-align: right;
+}
+
+.gmt-cutoff-ruler .gmt-cutoff-ruler-transition--wrap {
+  white-space: normal;
+  max-width: calc(100% - var(--gmt-at));
+}
+
+.gmt-cutoff-ruler-transition--end.gmt-cutoff-ruler-transition--wrap {
+  max-width: var(--gmt-at);
+}
+
+/* The departure line under the ticks: a chip, right under the gate. */
+.gmt-cutoff-ruler .gmt-cutoff-ruler-departure-line.gmt-cutoff-chip {
+  align-self: flex-end;
+  max-width: 100%;
+  border-color: var(--gmt-cyan-bright);
 }
 
 .gmt-cutoff-ruler-hourline {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
+  padding-block: 4px var(--gmt-space-1);
+  overflow: clip;
+}
+
+/* Alternating hour bands behind the rows: one per pair of adjacent hour
+   ticks, every other one tinted. */
+.gmt-cutoff-ruler-bands {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.gmt-cutoff-ruler-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.gmt-cutoff-ruler-band--tint {
+  background: var(--gmt-fill-2);
 }
 
 /* Each reading gets its own row, so its label is never stacked on top of
@@ -46,25 +189,60 @@
    distinct rows land at three distinct hours. */
 .gmt-cutoff-ruler-closeup-row {
   position: relative;
-  height: 1.2rem;
+  height: 2rem;
 }
 
-/* The dot is centred on its instant; the label starts clear of the dot's
-   right edge (half the 0.6rem dot, plus a gap). */
-.gmt-cutoff-ruler-closeup-row .gmt-cutoff-ruler-marker {
+.gmt-cutoff-ruler-closeup-row > .gmt-cutoff-mark {
   position: absolute;
-  top: 0.2rem;
-  transform: translateX(-50%);
+  top: 50%;
+  translate: -50% -50%;
 }
 
+/* A thin dotted guide from the marker down to the tick row; the hour line
+   clips it at its foot, and the rows below paint over it. */
+.gmt-cutoff-ruler-guide {
+  position: absolute;
+  top: 50%;
+  height: 100vh;
+  border-left: 1px dotted var(--series, var(--gmt-ice-dim));
+  pointer-events: none;
+}
+
+/* The dot is centred on its instant; the label starts clear of the mark's
+   right edge (half the mark, its ring and glow, plus a gap). */
 .gmt-cutoff-ruler-closeup-label {
   position: absolute;
+  top: 50%;
+  margin-left: 14px;
+  translate: 0 -50%;
+}
+
+/* Where neither side of the marker holds the label (a phone, the rail): the
+   row grows, the label sits above the marker and stays inside the row. */
+.gmt-cutoff-ruler-closeup-row--stack {
+  height: 3.4rem;
+}
+
+.gmt-cutoff-ruler-closeup-row--stack > .gmt-cutoff-mark {
+  top: calc(100% - 0.9rem);
+}
+
+.gmt-cutoff-ruler-closeup-row--stack > .gmt-cutoff-ruler-guide {
+  top: calc(100% - 0.9rem);
+}
+
+.gmt-cutoff-ruler-closeup-row--stack > .gmt-cutoff-ruler-closeup-label {
   top: 0;
-  transform: translateX(calc(0.3rem + var(--gmt-space-2)));
-  font-size: var(--gmt-text-xs);
-  font-family: var(--gmt-font-mono);
-  color: var(--gmt-ice-dim);
-  white-space: nowrap;
+  max-width: 100%;
+  margin-left: 0;
+  translate: 0 0;
+  white-space: normal;
+}
+
+/* Left of its marker when it would run past the row. */
+.gmt-cutoff-ruler-closeup-label--end {
+  margin-left: 0;
+  translate: calc(-100% - 14px) -50%;
 }
 
 .gmt-cutoff-ruler-ticks {
@@ -73,32 +251,98 @@
   margin-top: var(--gmt-space-1);
 }
 
+.gmt-cutoff-ruler-ticks--track {
+  margin-left: calc(var(--gmt-ruler-label-w) + var(--gmt-space-2));
+}
+
+/* The reading cards: bevelled, on an opaque surface, with a 3px series edge. */
 .gmt-cutoff-ruler-readings {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--gmt-space-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--gmt-space-3);
   font-size: var(--gmt-text-sm);
 }
 
-/* The DST-transition marker: a dashed vertical line across the lanes, with
-   its label. */
-.gmt-cutoff-ruler-transition {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 2px dashed var(--gmt-ice-dim);
-  padding-left: var(--gmt-space-1);
+.gmt-cutoff-ruler .gmt-cutoff-ruler-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-width: 0;
+  margin: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-3) calc(var(--gmt-space-3) + 3px);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  /* One 3px series bar along the bottom edge, inside the bevel. */
+  background:
+    linear-gradient(
+        var(--series, var(--gmt-border-strong)),
+        var(--series, var(--gmt-border-strong))
+      )
+      left bottom / 100% 3px no-repeat,
+    var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  /* The site's `[class*="card"]` glass would blur it; this plate is opaque. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-.gmt-cutoff-ruler-lanes {
-  position: relative;
+.gmt-cutoff-ruler-reading-head {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+.gmt-cutoff-ruler-reading-time {
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xl);
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+.gmt-cutoff-ruler-reading-meta {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+.gmt-cutoff-ruler-reading-gloss {
+  font-size: var(--gmt-text-sm);
+  font-style: italic;
+  color: var(--gmt-ice-dim);
 }
 
 @container (max-width: 34rem) {
-  .gmt-cutoff-ruler-lane-label {
-    min-width: 8rem;
+  .gmt-cutoff-ruler-overview {
+    --gmt-ruler-label-w: 0px;
   }
+
+  .gmt-cutoff-ruler-lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmt-cutoff-ruler-lane {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .gmt-cutoff-ruler-lane-label {
+    padding-top: var(--gmt-space-2);
+  }
+
+  .gmt-cutoff-ruler-transition-row,
+  .gmt-cutoff-ruler-ticks--track {
+    margin-left: 0;
+  }
+}
+
+.gmt-cutoff-ruler-reading-time > span {
+  white-space: nowrap;
 }

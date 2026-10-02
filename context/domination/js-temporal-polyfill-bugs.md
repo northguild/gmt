@@ -9,10 +9,52 @@ agent. The owner files every item.
 > rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. The four tc39 issues (#3327–#3330) are open with no maintainer reply.
-> **Nothing is released**, so no GMT workaround retires: `pnpm compat` reports 14 groups, 81 probes,
-> 13 still needed. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
+> **Nothing is released**, so no GMT workaround retires: `pnpm compat` reports 16 groups, 34 probes,
+> 15 still needed (§ I, D12, and § K, D13, are the newest: D12 is fixed on `main` with nothing to file; D13 is fixed there only in part, see § K). A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
 > contradictions" before changing any GMT trigger.
+
+## Waiting on a release
+
+The one place to check. Each workaround below has a fix on upstream `main` and in no release. Where the last column says
+"Nothing", nothing is left to file and the workaround waits only for a release. The latest `@js-temporal/polyfill` release
+is 0.5.1, and the latest ICU4C release is 78.3.
+
+| Workaround | Fix on upstream `main` | What else it waits for |
+| ---------- | ---------------------- | ---------------------- |
+| `zoned.A`: wall clock to exact time at the range limits | js-temporal `05ce7a3` and `95237e0` | Nothing |
+| `D2`: buddhist dates before 1582 | js-temporal `2bb6ba1` | Nothing |
+| `D3`: Hebrew leap years for negative years | js-temporal `57d7734` (PR #361; `86a89df` on its branch) | `D4`. The two share one group and one code path, and leave together |
+| `D4`: Hebrew years 0 and earlier, one day off | ICU `5267bb5778` (unicode-org/icu, ICU-23007). Not a polyfill fix | An ICU4C release with that commit, and a Node release that bundles it as GMT's `engines.node` floor |
+| `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
+| `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
+| `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
+| `D11`: the calendar nudge window is never retried | js-temporal `5af905f` (PR #361; `50d66d2` on its branch) | Nothing |
+| `D12`: a seconds offset matched by minutes (§ I) | js-temporal `23d1275` | Nothing |
+| `D13`: the transition search skips or stalls (§ K) | js-temporal `a79c6a1`, in part | A further upstream fix, which is unfiled: `main` still stalls for `Africa/El_Aaiun` in 1976 (§ K). `D13` retires only on a release where every `D13` probe passes |
+
+`D8` is part-way: `2bb6ba1` fixes two of its three probes, and the third needs tc39 `977d11e0` and
+`993e6322`, which are not on `main`. `D1`, `D9`, `zoned.B`, `zoned.D` and `zoned.E` have no fix on
+`main`.
+
+To check, without cloning anything:
+
+```sh
+# Is there a release newer than 0.5.1?
+npm view @js-temporal/polyfill version
+
+# Is a fix in that release? "behind" or "identical" means the tag contains the commit.
+gh api repos/js-temporal/temporal-polyfill/compare/v<release>...<commit> --jq .status
+
+# D4: is the ICU fix in an ICU4C release?
+gh api repos/unicode-org/icu/compare/release-<version>...5267bb5778 --jq .status
+```
+
+To confirm a removal, bump `@js-temporal/polyfill` in `packages/gmt/package.json`, install, and run
+`pnpm compat`. A group whose probes all pass prints `REMOVABLE` with its removal steps; follow them,
+then run `pnpm compat:snapshot`. For `D4`, run `pnpm compat` on the Node release that bundles the
+ICU fix. A group that still prints `STILL NEEDED` stays, whatever this table says: the canary
+decides, not the commit list.
 
 ## TODO — after PR #253
 
@@ -118,6 +160,9 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | E   | Transition search starts in 1847, after the first TZDB transition (1844-12-31)                      | **Bug report + PR** (new patch), both repositories                                                                                                                                                                                                                                                                                                                     | js-temporal PR #372 + tc39 #3330                                                                                            | Only as stated in the filings; not re-run in this document's builds                                                                      | `zoned.E`: defect-3 pre-1847 checks in `internal/zonedWallClock.ts`, `zonedWallClockOperations.ts`                                        | same release                                                                      |
 | F   | `calendarToIsoDate` overshoot assertion (tc39 #3292) is reachable, coptic/ethiopic/ethioaa month 13 | **Bug report** to tc39 only; js-temporal has not ported #3292                                                                                                                                                                                                                                                                                                          | tc39 #3329                                                                                                                  | Only as stated in the filing                                                                                                             | none: not in js-temporal, so not in GMT's runtime                                                                                         | none                                                                              |
 | H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Review and land what is already written**: the port is ptomato's `50d66d2` in js-temporal PR #361. **No filing of our own**, and **no tc39 filing** — tc39 #3168 is already fixed there by #3172 | Comment on js #361 (2026-09-20) adding the reproducer, the scan and the before/after measurements | Yes (Chromium 153 vs 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`. `50d66d2` measured on `main` and verified to flip all three) | `D11`: the defect-4 gates in `internal/zonedWallClockDifference.ts` and `internal/plainDateUntil.ts` | `50d66d2` on `main` **and then** a release |
+| I   | A zoned string's offset written with seconds is matched by minutes, not exactly | **Release** of `23d1275` (on `main`). No new patch and no filing: `main` already has the fix | Not filed: nothing to file. The release is the one already asked for in #373 | Yes, on 0.5.1 (Node 24.21.0): both `D12` probes fail; expected values from test262 `zoneddatetime-sub-minute-offset.js`, and Chromium 153 native Temporal agrees. `main` read, not built: `lib/ecmascript.ts` has `if (offsetSecondsPart) matchMinute = false` | D12: `matchSecondsOffsetExactly` in `internal/zonedWallClock.ts` and its probe | The first release containing `23d1275` |
+| J   | `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses when the local date is −271821-04-19 | **Spec issue** to tc39 only: `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local date before it matches a written offset. Not a polyfill bug: the polyfill and Chromium both follow the spec | **Not filed** | Yes: polyfill 0.5.1 (Node 24.21.0) and Chromium 153.0.8010.12 native Temporal both throw `RangeError` | None, and none is wanted: a workaround must compute the spec's answer, and this is the spec's answer. GMT's zoned reads return the sentinel; its instant readers read the string | None |
+| K   | The transition search skips, or never returns from, two offset changes inside one 14-day step | **Release** of `a79c6a1` (per-zone search windows, on `main`) fixes the 0.5.1 defect for the zones it lists. **A stall remains on `main`** for `Africa/El_Aaiun` in 1976 (17-day window, three offsets, `bisect` unchanged), which needs a further fix | **Not filed** (the remaining stall) | Yes, on 0.5.1 (Node 22.22.2, 24.21.0, 26.10.0): the `D13` probes fail; expected values from Node 26.10.0's native Temporal and `zdump -v` (tz 2026c). `main` read, not run | `D13`: `internal/zonedTransitionSearch.ts`, gates in `internal/zonedWallClock*.ts` | a release containing `a79c6a1` |
 
 ## Filed
 
@@ -208,6 +253,16 @@ only filings worth making now are in tc39.
    coptic `ERA0` change fixes the round trip before the coptic epoch, and #361 has now merged.
 7. **A release (#373) is the one remaining ask of ours that is open**, and the maintainers have
    already answered it: after the rebase. Nothing to add — re-asking would not help.
+8. **J: a tc39 issue, to file.** `ZonedDateTime.prototype.toString` and `ZonedDateTime.from` do
+   not round-trip on local date −271821-04-19. It is a question about the spec text, so it goes to
+   tc39/proposal-temporal and nowhere else; the polyfill and Chromium agree with the spec, and
+   there is no patch of ours to offer. The title, repro and ask are in § J. It has no entry on the
+   `/upstream/` tracker until it has an issue number: `apps/dox/src/data/upstream-filings.json`
+   lists filings only.
+9. **I (D12).** Nothing to file: fixed on js-temporal `main` by `23d1275`, and the release is #373.
+10. **K (D13): the stall that `a79c6a1` leaves.** js-temporal `main` still stalls for
+    `Africa/El_Aaiun` in 1976, so `a79c6a1` alone does not retire `D13`. Not filed. The repro and
+    the detail are in § K.
 
 ## Upstream issues these fixes close
 
@@ -1663,6 +1718,112 @@ change, since they already took this path. Fixed by the `progress === 0n` branch
   it is a port request. Appendix: coptic/ethiopic throw only on 0.5.1; chinese/dangi still throw on `main`
   (fixed in #361 `16dff41`).
 
+## I. A zoned string's offset written with seconds is matched by minutes
+
+### Status
+
+Fixed on js-temporal `main` by `23d1275` ("Normative: Require strict matching with a precise ZonedDateTime
+offset"); in no release, so polyfill 0.5.1 has the defect. Nothing to file: the ask is the release already
+requested in #373. GMT works around it as temporalCompat **D12** (`internal/zonedWallClock.ts`
+`matchSecondsOffsetExactly`, probe `isSecondsOffsetMatchCompatNeeded`).
+
+### What goes wrong
+
+TC39 `ToTemporalZonedDateTime` sets `matchBehaviour` to match-minutes for a string, then: "If
+offsetParseResult contains more than one MinuteSecond Parse Node, set matchBehaviour to match-exactly." An
+offset written with seconds must equal the zone's offset; only one written to the minute may match a
+sub-minute zone offset that rounds to it. Polyfill 0.5.1 `lib/ecmascript.ts` sets `matchMinute = true` for
+every string (and `matchMinutes = true` in `ToRelativeTemporalObject`) without looking at the offset's seconds
+part. `main` adds `if (offsetSecondsPart) matchMinute = false`.
+
+### Repro (0.5.1, Node 24.21.0; expected values from test262 `test/intl402/Temporal/ZonedDateTime/from/zoneddatetime-sub-minute-offset.js`)
+
+| Call | 0.5.1 | Expected |
+| ---- | ----- | -------- |
+| `Temporal.ZonedDateTime.from("1970-01-01T12:00-00:45:00[Africa/Monrovia]")` | `45870000000000n` (accepted) | `RangeError`: "rounded HH:MM:SS not accepted in string offset (offset=reject)" |
+| `Temporal.ZonedDateTime.from("1952-10-15T23:59:59-11:20:00[Pacific/Niue]").epochNanoseconds` | `-543069621000000000n` (the −11:19:40 pass) | `-543069601000000000n`: "-11:20:00 is accepted as -11:20:00 in the Pacific/Niue edge case" |
+| `new Temporal.Duration(1, 0, 0, 0, 24).round({ largestUnit: "years", relativeTo: "1970-01-01T00:00-00:45:00[Africa/Monrovia]" })` | `P1Y1D` (accepted) | `RangeError` by the same step of `ToRelativeTemporalObject`; no test262 file was found for a named zone here, and Chromium 153's native Temporal throws `RangeError` |
+
+Chromium 153.0.8010.12 native Temporal returns the Expected column for all three rows.
+
+### Effect on GMT
+
+Without the workaround `isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]")` is `true`, and
+`transitTime` and `nextDeparture` accept that string. GMT parses every zoned string, `relativeTo` included,
+through `zonedDateTimeFrom`, so the one workaround there covers them all.
+
+## J. `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses (tc39 only, spec)
+
+### Title
+
+ZonedDateTime.from rejects ZonedDateTime.prototype.toString's own output when the local date is -271821-04-19
+
+### Status
+
+**Not filed.** A spec item for tc39/proposal-temporal, not a polyfill defect: `@js-temporal/polyfill`
+0.5.1 and Chromium 153.0.8010.12's native Temporal both do what the spec says. GMT has no workaround
+and wants none. A workaround computes the spec's answer, and here the spec's answer is the
+`RangeError`.
+
+### What goes wrong
+
+The instant range starts at −271821-04-20T00:00:00Z. In a zone west of Greenwich the first hours of
+that range fall on local date −271821-04-19 (the first 1 min 15 s in Europe/London, at local mean
+time −00:01:15; the first 4 h 56 min 2 s in America/New_York). `ZonedDateTime.prototype.toString`
+writes those instants with that local date and the zone's offset. Reading the string back runs
+`InterpretISODateTimeOffset` with `offsetBehaviour` option and `offsetOption` reject, whose branch
+begins:
+
+> Assert: _offsetOption_ is prefer or reject.
+> Perform ? CheckISODaysRange(_isoDate_).
+
+`CheckISODaysRange` throws for a date more than 10^8 days from the epoch, and −271821-04-19 is one
+day beyond that. So the check rejects the local date before the offset is matched against the zone,
+although the instant the string names is in range. The wall branch of the same operation
+(`offsetBehaviour` wall, or `offsetOption` ignore) goes straight to `GetEpochNanosecondsFor` with no
+such check, so the same wall time written without its offset is accepted. A string is refused only
+because it carries the offset that makes it exact.
+
+### Repro
+
+`MIN` is `-8640000000000000000000n`, the first instant.
+
+| Call | Chromium 153 | polyfill 0.5.1 |
+| ---- | ------------ | -------------- |
+| `new Temporal.ZonedDateTime(MIN + 15_000_000_000n, "Europe/London").toString()` | `-271821-04-19T23:59:00-00:01[Europe/London]` | the same |
+| `Temporal.ZonedDateTime.from("-271821-04-19T23:59:00-00:01[Europe/London]")` | `RangeError` | `RangeError` |
+| the same with `{ offset: "prefer" }` | `RangeError` | `RangeError` |
+| `Temporal.ZonedDateTime.from("-271821-04-19T23:59:00[Europe/London]")` (no offset) | `-271821-04-19T23:59:00-00:01[Europe/London]` | `RangeError`, but for another reason: defect A (§ A), which `main` fixes and GMT's `zonedDateTimeFrom` works around |
+| the offset string with `{ offset: "ignore" }` | `-271821-04-19T23:59:00-00:01[Europe/London]` | `RangeError`, defect A again |
+| the offset string with `{ offset: "use" }` | `-271821-04-19T23:58:45-00:01[Europe/London]` (the offset read as −00:01:00, 15 s earlier) | the same |
+| `Temporal.Instant.from("-271821-04-19T23:59:00-00:01[Europe/London]")` | `-271821-04-20T00:00:00Z` (the offset read as −00:01:00; the instant written was 00:00:15Z) | the same |
+| `Temporal.ZonedDateTime.from(new Temporal.ZonedDateTime(MIN + 3_600_000_000_000n, "America/New_York").toString())` | `RangeError` | `RangeError` |
+
+East of Greenwich the local date at the first instant is −271821-04-20, inside the date range, and
+the round trip works (`-271821-04-20T09:18:59+09:19[Asia/Tokyo]`). At the other end of the range
+no zone has the problem: the largest local date, +275760-09-13, is inside the date range.
+
+### Ask
+
+Whether the `CheckISODaysRange(isoDate)` in the prefer/reject branch is meant to reject a local
+date whose instant is in range. If it is not, drop it or move it after the candidates are computed,
+so that `from(zdt.toString())` returns `zdt` for every `ZonedDateTime` that can exist, as the wall
+branch already allows. If it is meant, the round-trip gap is by design and worth a note.
+
+### GMT
+
+- **Zoned reads follow the spec.** `isValidZonedDateTime`, `transitTime`, `nextDeparture`,
+  `scheduleDelivery`, `toOffsetInstant` and every `zoned/` function return the sentinel for a
+  string with an offset on local date −271821-04-19. GMT's own
+  `interpretISODateTimeOffset` (`internal/zonedWallClock.ts`) keeps the same check.
+- **Instant readers read it.** `parseInstantNanoseconds` matches the offset against the zone with
+  no date-range check, so `isValidInstant`, `toNanoseconds`, `scheduleDeviation`, `etaAtZone` and
+  the rest read `-271821-04-19T23:59:00-00:01[Europe/London]` as −271821-04-20T00:00:15Z.
+- Stated in [coding-standards § Calendar & zone semantics, rule 9](../coding-standards.md#9-an-instant-string-is-read-as-the-zoned-string-it-may-be)
+  and pinned in `packages/gmt/src/test/minuteRoundedOffsets.test.ts`.
+- If tc39 changes the step, GMT's zoned reads follow: remove the `checkISODaysRange` call in
+  `interpretISODateTimeOffset`, and flip the two "zoned reads refuse" rows in that test file.
+
 ## Not verified
 
 - The polyfill's own jest suite and test262 runner were not run for any patch. (`test262` is an
@@ -1686,3 +1847,58 @@ change, since they already took this path. Fixed by the `progress === 0n` branch
   intact dist and agree with the re-runs.
 - Scratchpad artefacts (clones, builds, patches, repros, results, logs):
   `/private/tmp/claude-501/-Users-craigcurtis-workbench-northguild-gmt-worktrees-feature-187-core-6-interval-algebra-intersect-clamp-subtract-merge-split-sum-implementation/bdd796f6-e636-477b-bca7-b7182a6ed50b/scratchpad/polyfill-verify/`.
+
+## K. The transition search skips, or never returns from, two offset changes inside one step
+
+### Status
+
+The 0.5.1 defect is fixed on js-temporal `main` by `a79c6a1` for the zones it lists (per-zone search windows:
+`searchWindowForTransitions(id)` gives 6 to 17 days for the listed zones and 19 days otherwise); in no
+release, so polyfill 0.5.1 has the defect. **A stall remains on `main`**: `bisect` is unchanged, and the 17-day
+window for `Africa/El_Aaiun` holds three offsets in April 1976 (−01:00 → +00:00 at 1976-04-14T01:00:00Z, then
++00:00 → +01:00 at 1976-05-01T00:00:00Z, 16.958 days apart), so `getTimeZoneTransition("next")` from
+1976-04-14T00:30:00Z or 1976-03-28T00:30:00Z cannot narrow. 0.5.1's 14-day step is unaffected there, so
+`a79c6a1` introduces it. **Not filed.** `main` was read, not built or run here. `D13` retires only on a
+release where every `D13` probe passes, `stall.nextElAaiun` included. GMT works around it as temporalCompat **D13**
+(`internal/zonedTransitionSearch.ts`, probe `isTransitionSearchCompatNeeded`).
+
+### What goes wrong
+
+TC39 `GetNamedTimeZoneNextTransition` returns the first offset change strictly after an instant, and
+`GetNamedTimeZonePreviousTransition` the last strictly before it. Polyfill 0.5.1 `lib/ecmascript.ts` samples
+the offset every 14 days (`DAY_MS * 2 * 7`) and calls `bisect` on a step whose ends differ.
+
+- **Skipped pair.** Two changes inside one step that return to the same offset leave the ends equal, so both
+  are skipped. Whether they fall inside one step depends on where the search starts.
+- **Stall.** Three different offsets inside one step give `bisect` a middle state equal to neither end. Its
+  `assertNotReached` is compiled out of the production build, so the loop repeats the same middle for ever.
+- **`GetStartOfDay`** calls the same search when midnight is skipped, so it inherits the skipped pair.
+
+`zdump -v` on tz 2026c, 1800 to 2100, all zones: the closest two changes of one zone are 601,200 s apart
+(`America/Boa_Vista`, `America/Noronha`, `America/Recife` 2000-10-08 and 2000-10-15; `Asia/Gaza` and
+`Asia/Hebron` 2040, 2054, 2072). Pairs under 14 days: those, `Africa/Tunis` 1943 (8.04 d), `Europe/Simferopol`
+1944 (9.88 d), `Europe/Vienna` 1945 (10 d), `Europe/Riga` 1944 (10.92 d), `Europe/Tirane` 1943 (12 d),
+`America/Argentina/Tucuman` 2004 (12.04 d), `America/Fortaleza` and `America/Maceio` 2000 (13.96 d).
+
+### Repro (0.5.1; expected values from Node 26.10.0's native Temporal and `zdump -v`)
+
+| Call | 0.5.1 | Expected |
+| ---- | ----- | -------- |
+| `Temporal.Instant.from("2000-10-01T12:00:00Z").toZonedDateTimeISO("America/Boa_Vista").getTimeZoneTransition("next")` | `null` | `2000-10-08T01:00:00-03:00[America/Boa_Vista]` |
+| the same from `2000-07-02T00:00:00Z` | found (alignment) | the same value |
+| `Temporal.PlainDate.from("2000-10-08").toZonedDateTime("America/Boa_Vista")` | `TypeError: Cannot read properties of null (reading 'sign')` | `2000-10-08T01:00:00-03:00[America/Boa_Vista]` |
+| `Temporal.PlainDate.from("2000-10-08").toZonedDateTime("America/Noronha")` | `2001-10-14T01:00:00-01:00[America/Noronha]` | `2000-10-08T01:00:00-01:00[America/Noronha]` |
+| `Temporal.ZonedDateTime.from("2000-10-08T12:00[America/Noronha]").hoursInDay` | `-8881` | `23` |
+| `Temporal.ZonedDateTime.from("1944-04-15T14:00:00+02:00[Europe/Riga]").getTimeZoneTransition("next")` | never returns | `1944-10-02T02:00:00+01:00[Europe/Riga]` |
+| `Temporal.Instant.from("1943-10-15T12:00:00Z").toZonedDateTimeISO("Europe/Simferopol").getTimeZoneTransition("next")` | never returns | `1944-04-03T03:00:00+02:00[Europe/Simferopol]` |
+| `Temporal.Instant.from("1976-04-14T00:30:00Z").toZonedDateTimeISO("Africa/El_Aaiun").getTimeZoneTransition("next")` | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` (correct on 0.5.1); on `main` with `a79c6a1`: never returns (read, not run) | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` |
+| the same from `1976-03-28T00:30:00Z` | correct on 0.5.1; on `main`: never returns (read, not run) | the same value |
+
+### GMT impact and workaround (`D13`)
+
+Before the workaround `isInDaylightSaving("1944-04-15T14:00:00+02:00[Europe/Riga]")` never returned,
+and `getDstTransitions("America/Boa_Vista", 2000)` listed one of three changes. While the probe fails GMT never calls the polyfill's search
+in a named zone: `internal/zonedTransitionSearch.ts` samples every 5 days (432,000 s, 169,200 s under the
+closest pair) and bisects the one change a differing step can hold. The assumption is pinned by an all-zones
+guard that reads `Intl.DateTimeFormat`, and on Node 26 the search is compared with native Temporal for every
+change from 1900 to 2040 in every zone.

@@ -278,6 +278,77 @@ export function classify(
     : "skipped";
 }
 
+/** The written offset in a zoned instant string (`-05:00`), or `""`. */
+function offsetOf(text: string): string {
+  const m = /([+-]\d{2}:\d{2})(?:\[|$)/.exec(text);
+  return m ? m[1]! : "";
+}
+
+/** One choice for a row's Offset field: the value written into the departure,
+ *  and what it means in words. */
+export interface OffsetChoice {
+  value: string;
+  label: string;
+}
+
+/**
+ * What a row's Offset field can usefully hold, for the time it currently
+ * prints.
+ *
+ * The offset is only ever a way to name a pass of an hour the clock did not
+ * run through once, so the choices are not a list of every offset that exists
+ * — they are the two the zone actually runs at across this row's transition,
+ * read back from `resolveLocal`'s two resolutions through `etaAtZone`, plus
+ * leaving it blank.
+ *
+ * A `once` row has one instant, so writing an offset could only agree with it
+ * or contradict it, and the only honest choice is to write nothing. Both
+ * `twice` and `skipped` rows get the two offsets: on a `twice` row they pick
+ * the pass, which is the point of the field, and on a `skipped` row they name
+ * an hour the clock never showed and the call returns no instant at all —
+ * a case this widget exists to teach, so the field has to be able to express
+ * it.
+ *
+ * Nothing here computes an offset. Both values come from the library, through
+ * the same two calls `classify` already makes.
+ */
+export function offsetChoices(
+  printed: string,
+  zone: string,
+  lib: TransportLib,
+): OffsetChoice[] {
+  const none: OffsetChoice = { value: "", label: "None" };
+  if (printed === "" || zone === "" || !lib.isValidDateTime(printed)) {
+    return [none];
+  }
+  const kind = classify(printed, zone, lib);
+  if (kind === "once") return [none];
+
+  const passOffset = (disambiguation: "earlier" | "later"): string =>
+    offsetOf(
+      lib.etaAtZone(lib.resolveLocal(printed, zone, { disambiguation }), zone),
+    );
+  const earlier = passOffset("earlier");
+  const later = passOffset("later");
+
+  /* On a repeated hour the offset says which pass, so it is named that way. On
+     a skipped one neither offset names an instant, so neither is dressed as a
+     choice between passes. */
+  const out: OffsetChoice[] =
+    kind === "twice"
+      ? [{ value: "", label: "None \u2014 the earlier pass" }]
+      : [none];
+  const suffix = (which: "earlier" | "later"): string =>
+    kind === "twice"
+      ? ` \u2014 the ${which} pass`
+      : " \u2014 this hour never shows";
+  if (earlier !== "")
+    out.push({ value: earlier, label: `${earlier}${suffix("earlier")}` });
+  if (later !== "" && later !== earlier)
+    out.push({ value: later, label: `${later}${suffix("later")}` });
+  return out;
+}
+
 /** The badge text for a classified row, or `null` for `once`, which shows no
  *  badge. A `twice` row with an offset written shows that the offset is what
  *  picked the pass, rather than repeating the generic "occurs twice" text. */
@@ -298,7 +369,7 @@ export function rowBadge(kind: RowClass, hasOffset: boolean): string | null {
  *  deserves — a reading no offset can name, distinct from every reason
  *  `scheduleNullText` covers. */
 export const SKIPPED_OFFSET_TEXT =
-  "No offset names a time this clock skipped. Leave the offset off and it resolves to the later instant.";
+  "This clock skipped that time, so no offset can make it valid. Leave the offset off and it resolves to the later instant.";
 
 /**
  * The exact instant row `i`'s printed departure names, rendered back in

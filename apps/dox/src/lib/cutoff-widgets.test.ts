@@ -3,6 +3,7 @@
  * `cutoff-widgets.ts`'s pure helpers, against the real gmt modules — imported
  * by module path, as `transport-widgets.test.ts` does for the TRAN-9 widgets.
  */
+import { Temporal } from "@js-temporal/polyfill";
 import { cutoffSchedule } from "@northguild/gmt/transport/calculate";
 import { isValidDateTime } from "@northguild/gmt/plain/validate";
 import {
@@ -13,6 +14,8 @@ import {
   isZoneless,
   localLabel,
   localParts,
+  minuteTickLabel,
+  walkTicks,
   type CutoffLib,
 } from "./cutoff-widgets";
 
@@ -213,5 +216,30 @@ describe("formatStack", () => {
 
   it("is [] for an empty result", () => {
     expect(formatStack([])).toBe("[]");
+  });
+});
+
+describe("walkTicks with minutes", () => {
+  it("ticks every 15 minutes from the hour at or before the start", () => {
+    const start = Temporal.Instant.from(
+      "2024-06-12T14:30:00Z",
+    ).epochMilliseconds; // 16:30 in Amsterdam
+    const end = Temporal.Instant.from("2024-06-12T15:50:00Z").epochMilliseconds; // 17:50
+    const ticks = walkTicks(
+      start,
+      end,
+      "Europe/Amsterdam",
+      "minutes",
+      15,
+      minuteTickLabel,
+    );
+    expect(ticks.map((t) => t.label)).toEqual([
+      "16:30",
+      "16:45",
+      "17:00",
+      "17:15",
+      "17:30",
+      "17:45",
+    ]);
   });
 });

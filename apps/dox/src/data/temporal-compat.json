@@ -59,8 +59,22 @@
     {
       "defects": ["D11"],
       "title": "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
-      "trigger": "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; already written in ptomato's open PR #361 but not on main, so no new filing is needed",
+      "trigger": "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
       "probes": 6,
+      "failing": 6
+    },
+    {
+      "defects": ["D12"],
+      "title": "D12 — a zoned string's offset written with seconds is matched by minutes instead of exactly (zonedWallClock.ts defect 4)",
+      "trigger": "a js-temporal release contains 23d1275 (\"Normative: Require strict matching with a precise ZonedDateTime offset\", on main)",
+      "probes": 2,
+      "failing": 2
+    },
+    {
+      "defects": ["D13"],
+      "title": "D13 — two offset changes inside one 14-day transition search step are skipped, or stall the search for ever (zonedWallClock.ts defect 5)",
+      "trigger": "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
+      "probes": 8,
       "failing": 6
     },
     {
@@ -73,7 +87,7 @@
     {
       "defects": ["zoned.A"],
       "title": "zoned.A — wall clock → exact time at the range limits (zonedWallClock.ts defect 1, zonedWallClockDifference.ts defect 1)",
-      "trigger": "a js-temporal release contains 05ce7a3 (fixes the max.* probes only) AND an upstream fix for the minimum edge (min.* probes still fail with 05ce7a3 applied); upstream-issue draft A must ask for both",
+      "trigger": "a js-temporal release contains 05ce7a3 (the max.* probes) and 95237e0 (the min.* probes); both are on main",
       "probes": 10,
       "failing": 10
     },

@@ -5,7 +5,7 @@
   "description": "Documentation site for @northguild/gmt",
   "type": "module",
   "scripts": {
-    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
+    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && tsx ./scripts/build-tool-index.ts && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
     "predev": "pnpm --filter @northguild/gmt build:dev",
     "dev": "pnpm run generate && node ./scripts/dev-all.mjs",
     "predev:site": "pnpm --filter @northguild/gmt build:dev",
@@ -20,6 +20,8 @@
     "astro": "astro",
     "favicons": "node scripts/build-favicons.mjs",
     "globe:smoke": "node scripts/globe-smoke.mjs",
+    "grow:measure": "node scripts/grow-measure.mjs",
+    "readout:still": "node scripts/readout-still.mjs",
     "visual:before": "node scripts/visual-snapshot.mjs before",
     "visual:after": "node scripts/visual-snapshot.mjs after",
     "visual:diff": "node scripts/visual-snapshot.mjs diff"
@@ -74,6 +76,7 @@
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
     "@types/d3-geo": "^3.1.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

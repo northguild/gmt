@@ -11,16 +11,8 @@
  * and an aria-label, and never relies on colour alone.
  */
 
-/* Starlight's content layer gives every block after a sibling a top margin.
-   These are positioned by percentage or spaced by `gap`, so a margin would
-   push the second cell, handle or row out of line. */
-.gmt-dwell-timeline > *,
-.gmt-dwell-track > *,
-.gmt-dwell-cell,
-.gmt-dwell-cell > *,
-.gmt-dwell-handle,
-.gmt-dwell-compare-result > * {
-  margin: 0;
+.gmt-dwell {
+  container-type: inline-size;
 }
 
 .gmt-dwell-timeline {
@@ -124,47 +116,14 @@
   color: var(--gmt-signal-ink);
 }
 
-.gmt-dwell-handle {
-  position: absolute;
-  top: 50%;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--gmt-void);
-  border: 2px solid currentColor;
-  cursor: grab;
-  touch-action: none;
-  transition:
-    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
-    transform var(--gmt-duration-fast) var(--gmt-easing);
-}
-
-/* A 44px target around a 14px dot. */
-.gmt-dwell-handle::before {
-  content: "";
-  position: absolute;
-  inset: -15px;
-}
-
-.gmt-dwell-handle:first-child {
+/* The grip itself is the shared `.gmt-handle` (gmt-form-controls.css); only its
+   position on the bar is this widget's. Its edge reads currentColor. */
+.gmt-dwell-bar > .gmt-handle:first-child {
   left: 0;
 }
 
-.gmt-dwell-handle:last-child {
+.gmt-dwell-bar > .gmt-handle:last-child {
   left: 100%;
-}
-
-.gmt-dwell-handle:active {
-  cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.15);
-}
-
-.gmt-dwell-handle:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--gmt-void),
-    0 0 0 4px currentColor;
 }
 
 .gmt-dwell-axis {
@@ -185,8 +144,8 @@
   color: var(--gmt-ice);
 }
 
-.gmt-dwell-summary:empty {
-  display: none;
+.gmt-dwell-summary:empty::before {
+  content: "\200b";
 }
 
 .gmt-dwell-compare-result {
@@ -222,8 +181,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gmt-dwell-cell,
-  .gmt-dwell-handle {
+  .gmt-dwell-cell {
     transition: none;
   }
 }

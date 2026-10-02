@@ -32,9 +32,14 @@ const MAX_SAFE_NANOSECONDS =
  *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
  *   which is the one string shape `spanWallClock` accepts and these two do not. The
  *   endpoints need not share a zone; an instant is an instant.
- * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
- *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
- *   with the offset is not checked. `spanWallClock`, by contrast, rejects a mismatched offset.
+ * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
+ *   written to the minute that is the bracketed zone's sub-minute offset rounded
+ *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
+ *   `Temporal.ZonedDateTime.from` reads it, so a zoned string Temporal wrote is read back as
+ *   the instant it was written for, except a wall time repeated inside a sub-minute offset
+ *   change, which reads as its first pass (see `isValidInstant`). Otherwise the bracket is not
+ *   checked: a zone that does not exist, or that disagrees with the offset, changes nothing. `spanWallClock`, by
+ *   contrast, rejects a mismatched offset.
  * - Returns `null` on invalid input, not `0` — `0` is the span between an instant and itself.
  *   `null`, not `NaN`, because that is GMT's sentinel for every number-returning function:
  *   it is the one a caller already checks for, and the only one `strictNullChecks` forces
@@ -61,7 +66,8 @@ const MAX_SAFE_NANOSECONDS =
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.123456789Z") // 123.456789
  * @example spanMs("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 82800000 — 23 hours, not 24
- * @example spanMs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000 — offsets decide, the zone is ignored
+ * @example spanMs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000 — offsets decide, the zone is not checked
+ * @example spanMs("1960-01-01T01:04:30Z", "1960-01-01T00:20:00-00:45[Africa/Monrovia]") // 0 — the zone's −00:44:30, which `-00:45` rounds
  * @example spanMs("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // null — past the safe integer range, use spanNs
  * @example spanMs("2024-03-10T12:00:00Z", "invalid") // null
  */

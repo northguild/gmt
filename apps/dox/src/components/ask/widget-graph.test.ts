@@ -145,6 +145,11 @@ describe("the chat island's static import graph", () => {
       "lib/cutoff-stack.ts",
       "lib/cutoff-ruler.ts",
       "lib/cutoff-countdown.ts",
+      "lib/punctuality-widgets.ts",
+      "lib/punctuality-lib.ts",
+      "lib/punctuality-board.ts",
+      "lib/eta-drift.ts",
+      "lib/departure-board.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

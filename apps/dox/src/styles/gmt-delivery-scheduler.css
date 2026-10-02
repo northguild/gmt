@@ -5,10 +5,8 @@
  * labels/inputs/selects in gmt-form-controls.css; the shared leg fieldset
  * border/legend, verdict line, naive badge and reason-aside spacing in
  * gmt-transport-widgets.css. This sheet holds everything specific to this
- * widget: its own leg-card grid (overriding the shared one's five equal
- * columns, which clipped both the long zoned departure string and the zone
- * name — `.gmt-transport-leg-grid` stays untouched for the other three
- * widgets), the ETA summary card, the route map, and the itinerary rail.
+ * widget: the leg-card chrome (its fields are the shared field grid), the ETA
+ * summary card, the route map, and the itinerary rail.
  *
  * Every value shown here comes from `buildItinerary` / `buildEtaSummary`
  * (delivery-scheduler.ts), themselves reading `collectJourneyFacts`' real
@@ -27,36 +25,31 @@
  */
 
 .gmt-delivery [data-leg="1"] {
-  --leg-color: var(--gmt-cyan);
-  --leg-ink: var(--gmt-cyan-ink);
+  --leg-color: var(--gmt-series-1);
+  --leg-ink: var(--gmt-series-1-ink);
 }
 .gmt-delivery [data-leg="2"] {
-  --leg-color: var(--gmt-spring);
-  --leg-ink: var(--gmt-spring-ink);
+  --leg-color: var(--gmt-series-2);
+  --leg-ink: var(--gmt-series-2-ink);
 }
 .gmt-delivery [data-leg="3"] {
-  --leg-color: var(--gmt-dst-purple);
-  --leg-ink: var(--gmt-purple-ink);
+  --leg-color: var(--gmt-series-3);
+  --leg-ink: var(--gmt-series-3-ink);
 }
 .gmt-delivery [data-leg="4"] {
-  --leg-color: var(--gmt-severity-high);
-  --leg-ink: var(--gmt-severity-high-ink);
+  --leg-color: var(--gmt-series-4);
+  --leg-ink: var(--gmt-series-4-ink);
 }
 
 /* ---------------------------------------------------------------------------
  * Leg cards
  *
- * Row 1 (Mode | Duration | Arrives in) is three columns: a `<select>`
- * truncates its own displayed value with an ellipsis rather than clipping
- * mid-character the way a text `<input>` does, so `America/Los_Angeles`
- * sharing a row is fine — the full text is still in the option list and the
- * accessible name. Departs / Scheduled departure and Dwell after each keep a
- * row entirely their own: a full zoned departure
- * (`2024-03-08T08:00:00-06:00[America/Chicago]`) is a text `<input>`, which
- * has no such truncation. `minmax(0, …)` on every track, and `width: 100%`
- * overriding the shared `.gmt-input`/`.gmt-select` 140px `min-width` (gmt-
- * form-controls.css) — which is exactly what forced the old five-column grid
- * to overflow its card. Each leg card gets L-shaped corner brackets (top-left
+ * A `<select>` truncates its own displayed value with an ellipsis rather than
+ * clipping mid-character the way a text `<input>` does, so
+ * `America/Los_Angeles` in a single column is fine — the full text is still in
+ * the option list and the accessible name. The departure, a full zoned string
+ * (`2024-03-08T08:00:00-06:00[America/Chicago]`) in a text `<input>` with no
+ * such truncation, is `gmt-field-wide` and takes two columns. Each leg card gets L-shaped corner brackets (top-left
  * + bottom-right) in its own leg colour — the same `.gmt-brackets` recipe used
  * on the home page — instead of a left accent bar.
  * --------------------------------------------------------------------------- */
@@ -102,53 +95,11 @@
   color: var(--leg-ink, var(--gmt-ice));
 }
 
-.gmt-delivery-leg-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.75fr) minmax(0, 1.15fr);
-  grid-template-areas:
-    "mode duration arrives"
-    "departs departs departs"
-    "dwell dwell dwell";
-  gap: var(--gmt-space-1) var(--gmt-space-2);
-}
-
-.gmt-delivery-leg-grid select.gmt-select {
+/* Each leg's fields are a field grid (gmt-form-controls.css): Mode, Duration
+   and Arrives in share a row, the departure takes two columns, and a narrow
+   host (the `/dox` rail) stacks every field, one per row, on its own. */
+.gmt-delivery-leg-fieldset .gmt-select {
   text-overflow: ellipsis;
-}
-
-.gmt-delivery-field--mode {
-  grid-area: mode;
-}
-.gmt-delivery-field--duration {
-  grid-area: duration;
-}
-.gmt-delivery-field--arrives {
-  grid-area: arrives;
-}
-.gmt-delivery-field--departs {
-  grid-area: departs;
-}
-.gmt-delivery-field--dwell {
-  grid-area: dwell;
-}
-
-.gmt-delivery-leg-grid .gmt-input,
-.gmt-delivery-leg-grid .gmt-select {
-  width: 100%;
-  min-width: 0;
-}
-
-/* A narrow host (the `/dox` rail) stacks every field, one per row. */
-@container (max-width: 22rem) {
-  .gmt-delivery-leg-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "mode"
-      "duration"
-      "arrives"
-      "departs"
-      "dwell";
-  }
 }
 
 /* Below this, a full zoned departure such as
@@ -159,10 +110,14 @@
    trim their own padding; the card and leg-card chrome around them trims its
    horizontal padding too, so the fix is shared between "smaller text" and
    "more room", rather than pushing font-size below 12px on its own. Queried
-   on `.gmt-delivery` (the root container), because `.gmt-widget-card` is an
-   ancestor of the per-leg container queried above, not a descendant of it. */
+   on `.gmt-widget-section`, which is both where that padding now lives and the
+   nearest container once the sections became the cards (gmt-widget.css). It was
+   previously queried on `.gmt-delivery`, the root, because the card was an
+   ancestor of the per-leg container queried above rather than a descendant of
+   it; the section is a container in its own right, so the query and its subject
+   are now the same box. */
 @container (max-width: 24rem) {
-  .gmt-delivery .gmt-widget-card {
+  .gmt-delivery .gmt-widget-section {
     padding-left: var(--gmt-space-2);
     padding-right: var(--gmt-space-2);
   }
@@ -193,15 +148,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.gmt-delivery-optional {
-  margin-left: var(--gmt-space-1);
-  font-style: italic;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--gmt-ice-dim);
 }
 
 /* The mode icon inside a leg's own `<legend>`, or beside its itinerary event
@@ -482,7 +428,7 @@ ul.gmt-delivery-summary-flags > li::before {
   content: "";
   position: absolute;
   top: 0;
-  bottom: -var(--gmt-space-3);
+  bottom: calc(-1 * var(--gmt-space-3));
   left: 5px;
   border-left: 2px solid var(--leg-color, var(--gmt-border-strong));
 }

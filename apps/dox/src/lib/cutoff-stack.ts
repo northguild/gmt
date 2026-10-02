@@ -445,6 +445,11 @@ export interface StackRow {
   /** `isPastCutoff(row.at, anchor)` — true when the roll put this cut-off
    *  after the departure (S7); `cutoffAt` does not check order. */
   afterDeparture: boolean;
+  /** 1-based series (1-4) the chart colours this cut-off with: its matched
+   *  entry's place in `entriesOf(state)`; there are at most `MAX_CUTOFFS`
+   *  entries, so it never passes 4. Names an input already matched; computes
+   *  nothing. */
+  series: number;
 }
 
 export interface StackFacts {
@@ -558,7 +563,7 @@ export function collectStackFacts(
   });
 
   const used = new Set<number>();
-  const rows: StackRow[] = result.map((r) => {
+  const rows: StackRow[] = result.map((r, rowIdx) => {
     const idx = perEntry.findIndex(
       (e, i) => !used.has(i) && e.name === r.name && e.rolled === r.at,
     );
@@ -575,6 +580,7 @@ export function collectStackFacts(
       moved,
       beforeDeparture: lib.timeToCutoff(r.at, anchor),
       afterDeparture: lib.isPastCutoff(r.at, anchor),
+      series: (idx >= 0 ? idx : rowIdx) + 1,
     };
   });
 

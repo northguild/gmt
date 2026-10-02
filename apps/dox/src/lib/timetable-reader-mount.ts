@@ -18,12 +18,14 @@ import {
   classify,
   leavesAt,
   matchPreset,
+  offsetChoices,
   optionsOf,
   permalinkOf,
   readArgs,
   rowBadge,
   rowLeg,
   rowResult,
+  type OffsetChoice,
   type TimetableReaderArgs,
   type TimetableRow,
   type TimetableState,
@@ -41,9 +43,11 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   escapeAttr,
   escapeHtml,
+  labelTextHtml,
   renderAside,
   renderCallLine,
   renderWidgetOutput,
+  setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -88,16 +92,42 @@ function timeCell(iso: string): string {
   );
 }
 
+/**
+ * The Offset field's options: what the library says this row can mean, plus
+ * whatever the row already holds.
+ *
+ * The field was free text, which left the reader guessing at a format and at
+ * which values did anything at all — most do nothing, because an offset only
+ * picks a pass of a repeated hour. `choices` is empty before the library
+ * loads, so the server renders the blank option and the row's own value and
+ * the mount fills the rest in; `current` is always present as an option even
+ * when it is not among the choices, because a permalink may carry an offset
+ * for a row whose printed time has since changed, and a `<select>` silently
+ * drops a value it has no option for.
+ */
+function offsetOptionsHtml(choices: OffsetChoice[], current: string): string {
+  const list = choices.length === 0 ? [{ value: "", label: "None" }] : choices;
+  const all = list.some((c) => c.value === current)
+    ? list
+    : [...list, { value: current, label: current }];
+  return all
+    .map(
+      (c) =>
+        `<option value="${escapeAttr(c.value)}"${c.value === current ? " selected" : ""}>${escapeHtml(c.label)}</option>`,
+    )
+    .join("");
+}
+
 function rowGroup(i: number, row: TimetableRow): string {
   const n = i + 1;
   return (
     `<fieldset class="gmt-transport-leg" data-role="row-${n}">` +
     `<legend>Row ${n}</legend>` +
-    `<div class="gmt-widget-controls gmt-timetable-fields">` +
-    `<label class="gmt-label"><span>Printed departure</span>` +
+    `<div class="gmt-field-grid gmt-timetable-fields">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Printed departure")}` +
     `<input class="gmt-input" data-role="departure-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(row.departure)}"></label>` +
-    `<label class="gmt-label"><span>Offset</span>` +
-    `<input class="gmt-input" data-role="offset-${n}" type="text" spellcheck="false" autocomplete="off" placeholder="optional" value="${escapeAttr(row.offset)}"></label>` +
+    `<label class="gmt-label">${labelTextHtml("Offset", { optional: true })}` +
+    `<select class="gmt-select" data-role="offset-${n}">${offsetOptionsHtml([], row.offset)}</select></label>` +
     `</div>` +
     `</fieldset>`
   );
@@ -124,21 +154,21 @@ export function renderTimetableReaderTemplate(
   const preset = TIMETABLE_PRESETS.find((p) => p.id === presetId);
 
   return (
-    `<div class="gmt-timetable gmt-widget">` +
+    `<div class="gmt-timetable gmt-widget not-content">` +
     `<div class="gmt-widget-card">` +
     `<div class="gmt-widget-section">` +
     `<h4>1. The timetable</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Preset</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="preset">${presetOptions(presetId)}</select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
+    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-widget-controls gmt-timetable-fields">` +
-    `<label class="gmt-label"><span>Printed in</span>` +
+    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    `<div class="gmt-field-grid gmt-timetable-fields">` +
+    `<label class="gmt-label">${labelTextHtml("Printed in")}` +
     `<select class="gmt-select" data-role="start-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.startTimeZone)}</select></label>` +
-    `<label class="gmt-label"><span>Run time</span>` +
+    `<label class="gmt-label">${labelTextHtml("Run time")}` +
     `<input class="gmt-input" data-role="duration" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.duration)}"></label>` +
-    `<label class="gmt-label"><span>Arrives in</span>` +
+    `<label class="gmt-label">${labelTextHtml("Arrives in")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
     `</div>` +
     state.rows.map((row, i) => rowGroup(i, row)).join("") +
@@ -146,7 +176,7 @@ export function renderTimetableReaderTemplate(
     `<div class="gmt-widget-section">` +
     `<h4>2. What each printed time means</h4>` +
     `<table class="gmt-timetable-rows" data-role="rows" role="table">` +
-    `<thead role="rowgroup"><tr role="row"><th role="columnheader">Printed</th><th role="columnheader">Leaves (exact)</th><th role="columnheader">Badge</th><th role="columnheader">Local arrival</th></tr></thead>` +
+    `<thead role="rowgroup"><tr role="row"><th role="columnheader">Printed</th><th role="columnheader">Leaves (exact)</th><th role="columnheader">Note</th><th role="columnheader">Local arrival</th></tr></thead>` +
     `<tbody data-role="rows-body" role="rowgroup"></tbody>` +
     `</table>` +
     `<div class="gmt-transport-reason" data-role="reason-aside"></div>` +
@@ -154,9 +184,9 @@ export function renderTimetableReaderTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>3. What <code>scheduleDelivery</code> returns</h4>` +
-    `<div class="gmt-widget-controls">` +
-    `<label class="gmt-label gmt-label-wide"><span>Show the call for</span>` +
-    `<select class="gmt-select gmt-select-wide" data-role="row-pick"></select></label>` +
+    `<div class="gmt-field-grid">` +
+    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Show the call for")}` +
+    `<select class="gmt-select" data-role="row-pick"></select></label>` +
     `</div>` +
     codeFrameHtml("timetable") +
     `<output class="gmt-widget-output" data-role="timetable-output">&nbsp;</output>` +
@@ -181,7 +211,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
   const rowPickEl = q<HTMLSelectElement>("row-pick");
   const rowInputs = [1, 2, 3, 4].map((n) => ({
     departure: q<HTMLInputElement>(`departure-${n}`),
-    offset: q<HTMLInputElement>(`offset-${n}`),
+    offset: q<HTMLSelectElement>(`offset-${n}`),
   }));
   if (
     !presetEl ||
@@ -218,6 +248,20 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
 
   function render(): void {
     const s = state();
+    /* The choices depend on the printed time and the zone, so they are rebuilt
+       whenever either moves — not once at mount. */
+    for (let i = 0; i < MAX_ROWS; i++) {
+      const el = rowInputs[i]!.offset!;
+      const row = s.rows[i]!;
+      const html = offsetOptionsHtml(
+        offsetChoices(row.departure, s.startTimeZone, lib),
+        row.offset,
+      );
+      if (el.innerHTML !== html) {
+        el.innerHTML = html;
+        el.value = row.offset;
+      }
+    }
     const body = q("rows-body");
     if (body) {
       const rowsHtml: string[] = [];
@@ -233,7 +277,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
           `<tr data-role="row-${i + 1}-display" role="row">` +
             `<td data-label="Printed" role="cell">${wbrBeforeOffsetAndBracket(row.departure + row.offset)}</td>` +
             `<td data-label="Leaves (exact)" role="cell">${leaves ? timeCell(leaves) : "—"}</td>` +
-            `<td data-label="Badge" role="cell">${badge ? `<span class="gmt-transport-badge" data-role="badge-${i + 1}">${escapeHtml(badge)}</span>` : ""}</td>` +
+            `<td data-label="Note" role="cell">${badge ? `<span class="gmt-transport-badge" data-role="badge-${i + 1}">${escapeHtml(badge)}</span>` : ""}</td>` +
             `<td data-label="Local arrival" role="cell">${local ? timeCell(local) : "—"}</td>` +
             `</tr>`,
         );
@@ -297,7 +341,9 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
     for (let i = 0; i < MAX_ROWS; i++) {
       const row = preset.rows[i] ?? { departure: "", offset: "" };
       rowInputs[i]!.departure!.value = row.departure;
-      rowInputs[i]!.offset!.value = row.offset;
+      /* The offset's options come from the previous render, so the preset's own
+         may be missing; a bare `.value =` would drop it. */
+      setControlValue(rowInputs[i]!.offset!, row.offset);
     }
     syncPreset();
     render();
@@ -341,7 +387,7 @@ function applyArgs(root: HTMLElement, args: TimetableReaderArgs): void {
   const s = readArgs(args);
   const set = (role: string, value: string) => {
     const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    if (el) el.value = value;
+    setControlValue(el, value);
   };
   set("start-zone", s.startTimeZone);
   set("duration", s.duration);
