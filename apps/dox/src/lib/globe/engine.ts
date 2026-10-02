@@ -38,7 +38,12 @@ import {
   wrapLng,
 } from "./camera";
 import { createController, type Controller } from "./controller";
-import type { CreateRenderer, FrameState, GlobeRenderer } from "./renderer";
+import type {
+  CreateRenderer,
+  FrameState,
+  GlobeRenderer,
+  RendererInit,
+} from "./renderer";
 import { subsolarPoint } from "./sun";
 import { sunDirection } from "./camera";
 import type {
@@ -115,11 +120,14 @@ export async function createGlobeEngine(
   }
 
   async function loadRenderer(kind: RendererKind): Promise<GlobeRenderer> {
-    const init = {
+    const init: RendererInit = {
       host,
       theme,
       labelFont: options.labelFont,
       ariaLabel: options.ariaLabel,
+      imageryUrl: options.imageryUrl,
+      invalidate: () => requestDraw(),
+      reducedMotion,
     };
     const create: CreateRenderer =
       kind === "webgpu"
@@ -307,8 +315,12 @@ export async function createGlobeEngine(
   function step(now: number): void {
     frameHandle = 0;
     controller.step(now);
-    draw();
+    /* Scheduled before drawing, so a renderer that asks for another frame
+       from inside `render` (`RendererInit.invalidate`) finds this one already
+       pending and adds nothing. The other way round it queued a second draw
+       for the same vsync. */
     schedule();
+    draw();
   }
 
   /** Ask for the next frame, or set the one timer that wakes the ambient spin. */

@@ -7,7 +7,17 @@
  * light mode inverts to a bright field with darker accents.
  */
 
-:root {
+/* `.gmt-theme-dark` is a dark island: an element that keeps the dark theme
+   inside a light page. It re-declares this whole block on itself, which beats
+   the light values it would otherwise inherit. That holds only while every
+   light override below has a dark counterpart here, gmt-theme.css maps
+   Starlight's colours for the island too, gmt-a11y.css names it wherever it
+   restates a token for `:root`, and a light-only component rule that can reach
+   inside one (gmt-light.css, gmt-controls.css) excludes it. The landing hero is
+   the one island today: a dark band in the light theme, so the Earth imagery
+   can show there (HeroGlobe.astro). */
+:root,
+.gmt-theme-dark {
   /* ---- Color-scheme ---- */
   color-scheme: light dark;
 
@@ -315,6 +325,29 @@
   /* Graticule (lat/long grid line) stroke alpha — theme-tuned like the
      fills above, not a fixed literal in globe.ts's draw call. */
   --gmt-globe-grid-alpha: 0.18;
+  /* Earth imagery (#293): how opaque the Blue Marble photograph is where the
+     WebGPU globe draws it, in place of the ocean and land washes above. 0
+     turns it off and skips the download. The light theme does that (see its
+     value below), and gmt-a11y.css does it under raised contrast and forced
+     colours, where a photograph behind the markers and labels costs contrast
+     they need. The canvas-2D fallback never draws it. */
+  --gmt-globe-imagery-alpha: 1;
+  /* How much of the vector land — the cyan fill and coastline — stays on
+     top of the imagery, 0..1. 0 is the plain photograph; higher lays the
+     cyan land over it. Experimental (#293). */
+  --gmt-globe-vector-overlay: 1;
+  /* How far the imagery is recoloured onto the globe's own ramp — near-black,
+     teal, cyan, ice — by brightness, 0..1. 0 keeps the photograph's colours;
+     1 is the cyan "hologram" Earth. Experimental (#293). */
+  --gmt-globe-imagery-duotone: 1;
+  /* The casing under markers, labels and the selected zone's outline where
+     the imagery shows. Without it a cyan dot that reads on the ocean vanishes
+     over the Sahara, and the outline over ice. No light value below: only
+     this theme draws the imagery. The alpha is what holds labels at 7:1 and
+     every marker at 3:1 even over ice-cap white — measured by
+     globe-contrast.test.ts, so re-run it if you change either. */
+  --gmt-globe-casing: #03080c;
+  --gmt-globe-casing-alpha: 0.9;
 
   /* The GMT palette maps onto Starlight's --sl-* system in gmt-theme.css. */
 
@@ -372,6 +405,16 @@
      Fills, borders, outlines, focus rings and strokes — a focus ring is
      non-text and stays ≥3:1 (`--gmt-cyan` on `#f5f5f5` measures 3.38:1) —
      keep the bright token; only `color:` moved. */
+}
+
+/* An island is dark whatever the page's own scheme, so native controls and
+   scrollbars inside it render dark too. And it restates the text colour
+   Starlight sets on `body`: `color` is inherited as a value already resolved
+   there, with the light tokens, so without this every element in the island
+   that does not set its own colour would keep the light theme's ink. */
+.gmt-theme-dark {
+  color-scheme: dark;
+  color: var(--sl-color-text);
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -526,4 +569,12 @@
      pale day side either — raised well past the dark-theme value so the
      grid actually reads on both hemispheres. */
   --gmt-globe-grid-alpha: 0.45;
+  /* No Earth imagery in this theme. The Blue Marble is a dark photograph:
+     floating on this pale page it read as a hole punched in it, its glow as a
+     smudge, and labels near the limb carried dark halos out onto white. A
+     dark panel boxed round the globe was tried and rejected. The flat globe
+     above is this theme's own. The one exception is the landing hero, a
+     full-width dark band that keeps the dark theme (`.gmt-theme-dark`), where
+     the imagery shows as it does in dark mode. */
+  --gmt-globe-imagery-alpha: 0;
 }

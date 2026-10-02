@@ -9,18 +9,30 @@
  *
  * Rebuilt only when the label set, the font or the device pixel ratio changes.
  * Drag, zoom and the clock tick all reuse it.
+ *
+ * Two channels: red is the glyph coverage, green a halo round the glyphs. The
+ * halo is what keeps a label readable over the Earth imagery (#293), where the
+ * text colour that reads on a flat dark sphere can sit on desert or ice; the
+ * label shader draws it only where the imagery shows.
  */
 
-/** Where one label sits in the atlas, and how big to draw it. */
+/**
+ * Where one label sits in the atlas, and how big to draw it.
+ *
+ * The rectangle covers the glyph box plus the halo round it, so the quad is
+ * drawn `marginCss` up and left of where the text itself starts.
+ */
 export interface LabelRect {
   /** Texture coordinates, 0..1. */
   u0: number;
   v0: number;
   u1: number;
   v1: number;
-  /** Size in CSS pixels. */
+  /** Size in CSS pixels, halo margin included. */
   widthCss: number;
   heightCss: number;
+  /** The halo margin on each side, in CSS pixels. */
+  marginCss: number;
 }
 
 export interface LabelAtlas {
@@ -38,7 +50,13 @@ export interface LabelAtlas {
 const MAX_ATLAS_WIDTH = 1024;
 
 /** Breathing room around each label, so filtering cannot pull in a neighbour. */
-const PADDING = 2;
+const GUARD = 1;
+
+/**
+ * Width of the halo round each glyph, in CSS pixels — a stroke twice this wide,
+ * centred on the outline.
+ */
+const HALO_CSS = 2;
 
 /**
  * Rasterise `labels` into one texture.
@@ -74,13 +92,18 @@ export function buildLabelAtlas(
     widthCss: Math.ceil(measurer.measureText(label).width),
   }));
 
+  /* The halo margin in whole device pixels, so a texel still lands on exactly
+     one device pixel once the quad is grown by it. */
+  const marginDev = Math.ceil(HALO_CSS * dpr);
+  const inset = GUARD + marginDev;
+
   // Lay out in rows, in device pixels.
-  const rowHeight = Math.ceil(lineHeightCss * dpr) + PADDING * 2;
+  const rowHeight = Math.ceil(lineHeightCss * dpr) + inset * 2;
   let x = 0;
   let y = 0;
   let width = 0;
   const placements = measured.map((entry) => {
-    const boxWidth = Math.ceil(entry.widthCss * dpr) + PADDING * 2;
+    const boxWidth = Math.ceil(entry.widthCss * dpr) + inset * 2;
     if (x + boxWidth > MAX_ATLAS_WIDTH && x > 0) {
       x = 0;
       y += rowHeight;
@@ -95,49 +118,84 @@ export function buildLabelAtlas(
   const limit = device.limits.maxTextureDimension2D;
   if (width > limit || height > limit) return null;
 
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, width);
-  canvas.height = Math.max(1, height);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  const atlasWidth = Math.max(1, width);
+  const atlasHeight = Math.max(1, height);
 
-  ctx.scale(dpr, dpr);
-  ctx.font = font;
-  ctx.textBaseline = "alphabetic";
-  /* White text, so the theme's label colour multiplies the alpha channel in the
-     shader and one atlas serves both themes. */
-  ctx.fillStyle = "#ffffff";
-  for (const placement of placements) {
-    ctx.fillText(
-      placement.label,
-      (placement.x + PADDING) / dpr,
-      (placement.y + PADDING) / dpr + ascent,
-    );
+  /**
+   * One coverage layer, read back as alpha. White on transparent, so the
+   * alpha channel is the coverage and the theme supplies every colour.
+   */
+  const rasterise = (
+    paint: (
+      ctx: CanvasRenderingContext2D,
+      label: string,
+      x: number,
+      y: number,
+    ) => void,
+  ): Uint8ClampedArray | null => {
+    const canvas = document.createElement("canvas");
+    canvas.width = atlasWidth;
+    canvas.height = atlasHeight;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.scale(dpr, dpr);
+    ctx.font = font;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#ffffff";
+    for (const placement of placements) {
+      paint(
+        ctx,
+        placement.label,
+        (placement.x + inset) / dpr,
+        (placement.y + inset) / dpr + ascent,
+      );
+    }
+    return ctx.getImageData(0, 0, atlasWidth, atlasHeight).data;
+  };
+
+  const glyphs = rasterise((ctx, label, x, y) => ctx.fillText(label, x, y));
+  const halo = rasterise((ctx, label, x, y) => {
+    ctx.lineWidth = HALO_CSS * 2;
+    ctx.lineJoin = "round";
+    ctx.strokeText(label, x, y);
+    ctx.fillText(label, x, y);
+  });
+  if (!glyphs || !halo) return null;
+
+  const texels = new Uint8Array(atlasWidth * atlasHeight * 4);
+  for (let i = 0; i < texels.length; i += 4) {
+    texels[i] = glyphs[i + 3];
+    texels[i + 1] = halo[i + 3];
+    texels[i + 3] = 255;
   }
 
   const texture = device.createTexture({
     label: "globe-label-atlas",
-    size: [canvas.width, canvas.height],
+    size: [atlasWidth, atlasHeight],
     format: "rgba8unorm",
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
-  device.queue.copyExternalImageToTexture({ source: canvas }, { texture }, [
-    canvas.width,
-    canvas.height,
-  ]);
+  device.queue.writeTexture(
+    { texture },
+    texels,
+    { bytesPerRow: atlasWidth * 4 },
+    [atlasWidth, atlasHeight],
+  );
 
+  const marginCss = marginDev / dpr;
   const rects = new Map<string, LabelRect>();
   for (const placement of placements) {
+    const left = placement.x + GUARD;
+    const top = placement.y + GUARD;
     rects.set(placement.label, {
-      u0: (placement.x + PADDING) / canvas.width,
-      v0: (placement.y + PADDING) / canvas.height,
-      u1: (placement.x + PADDING + placement.widthCss * dpr) / canvas.width,
-      v1: (placement.y + PADDING + lineHeightCss * dpr) / canvas.height,
-      widthCss: placement.widthCss,
-      heightCss: lineHeightCss,
+      u0: left / atlasWidth,
+      v0: top / atlasHeight,
+      u1: (left + placement.widthCss * dpr + marginDev * 2) / atlasWidth,
+      v1: (top + lineHeightCss * dpr + marginDev * 2) / atlasHeight,
+      widthCss: placement.widthCss + marginCss * 2,
+      heightCss: lineHeightCss + marginCss * 2,
+      marginCss,
     });
   }
 

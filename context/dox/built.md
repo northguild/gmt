@@ -218,7 +218,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ## Tier 4 · Globe and scrubber
 
-`DOX-E1a`, `E1b`
+`DOX-E1a`–`E1d`
 
 - **Globe (`src/lib/globe/`):** a reusable WebGPU engine, with a canvas-2D renderer as the
   fallback. `src/lib/globe.ts` is the Dox layer on top — zones, clocks, selection and the
@@ -237,6 +237,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     rejected device, a shader that will not compile or a validation error on the first
     frame are all just "use canvas-2D". A lost device is retried once, while the tab is
     visible, then the fallback holds for the session. `?globe=webgpu|canvas2d` pins one.
+  - **Error scopes never span an `await`.** A device's scopes are one stack, and every globe
+    on the page shares the device, so a scope held open while its owner awaits catches the
+    other globe's errors and the pops cross over. `withValidation` takes synchronous work
+    only, and `createCheckedShaderModule` pops before it awaits the compiler; both are
+    pinned by `webgpu/device.test.ts`. Async creation that reports its own failure —
+    `createRenderPipelineAsync` — needs no scope.
   - **Three passes.** Coverage into a 4× MSAA `rgba8unorm` target, one channel per vector
     layer, blended with operation `max` so overlapping triangles and stroke joints never
     double-blend a translucent layer — a 2D canvas strokes a path as one coverage, and
@@ -267,7 +273,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     pixel from the sun's elevation. Stacked translucent caps were tried first and showed as
     rings and limb stripes. An atmosphere ring outside the limb follows the sun. Both
     washes are tokens that `gmt-a11y.css` zeroes under reduced transparency and raised
-    contrast.
+    contrast. `globe.ts` re-reads the theme when any of those preferences, or forced
+    colours, changes.
   - `rAF` and the 1 s clock tick both stop on `visibilitychange`; reduced motion gives a
     static globe with selection still working.
   - Lazy-mounted by `IntersectionObserver`, every instance on the page, not just the first.
@@ -282,6 +289,98 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     done. A software adapter (`GLOBE_SMOKE_SOFTWARE=1`) drops its GPU instance partway
     through a frame, so it cannot gate — though watching the globe fall back cleanly when
     that happens is worth something.
+  - **Earth imagery (`DOX-E1d`, #293).** In the dark theme, and in the landing hero in both,
+    the WebGPU globe wraps NASA's Blue Marble round the sphere in place of the flat ocean
+    and land. The light theme elsewhere and the canvas-2D fallback stay flat.
+    - **The asset.** `public/earth-blue-marble.webp`: Blue Marble Next Generation with
+      topography and bathymetry, July 2004, resampled to 4096×2048 WebP (about 530 KB) by
+      `scripts/prepare-globe-imagery.py`, which records the source URL and the licence.
+      Public domain; NASA Earth Observatory asks for the credit "NASA", which the script
+      records — the site shows no on-page credit, by choice. July, because the northern
+      hemisphere, where most plotted zones are, is free of snow then. One static file — no
+      tile service, no runtime dependency on anyone else's server.
+    - **Loading.** `webgpu/imagery.ts` fetches it once the WebGPU renderer has started and
+      its theme asks for imagery, decodes it with `createImageBitmap`, uploads it and builds
+      the mips. Never awaited: the globe draws flat and is interactive meanwhile, then
+      cross-fades over 600 ms (at once under reduced motion). The renderer asks for those
+      frames through `RendererInit.invalidate`. A failed fetch, decode or upload leaves the
+      flat globe and logs at `info`, nothing more. One texture per device, reference-counted
+      like the device, because two globes on one page would otherwise hold two 45 MB copies.
+    - **Sampling.** Stored `rgba8unorm-srgb`, so filtering and the mips run in linear light;
+      the shader re-encodes before compositing, like every other colour. WebGPU has no
+      `generateMipmap`, so each level is a render pass that box-filters the one above.
+      `textureSampleGrad` with the analytic gradients `geoAt` already computes for the
+      graticule: legal inside the on-sphere branch, and steady across the antimeridian, where
+      screen-space derivatives of a wrapping longitude would pick the smallest mip and draw a
+      seam. The sampler repeats in longitude, clamps in latitude, and is 16× anisotropic,
+      which holds the poles sharp to within a few degrees, where the image is uniform ice.
+    - **Shading.** The imagery is a photograph of a lit planet, so it takes the sun as a
+      brightness — `imageryLight` in `shading.ts`, `dayFactor`'s falloff above a 0.3 ambient
+      floor — and stands in for the day wash, which fades out as it fades in. The night wash,
+      haze, atmosphere, limb, graticule, region, markers and labels draw on top as before.
+      The vector land fill and stroke fade out with it: the image has real coastlines.
+    - **The cyber look (experimental).** Two tokens restyle the photograph, and both ship
+      at 1. `--gmt-globe-imagery-duotone` recolours it by brightness onto the globe's own
+      ramp — the casing's near-black, the ocean teal, the day cyan, the label ice — so the
+      relief and coastlines survive and only the hues change. `--gmt-globe-vector-overlay`
+      keeps that share of the vector land fill and coastline on top instead of fading them
+      out. The day wash is deliberately not in the overlay: over a photograph that carries
+      its own light it read as milky haze. Both at 0 give the plain photograph back. An
+      overlay on the plain photo alone was tried first and was too faint to see: the
+      vector land is styled to sit quietly on the flat globe.
+    - **The zoom fade.** `IMAGERY_FADE_START_ZOOM` (2) to `IMAGERY_FADE_END_ZOOM` (2.7) in
+      `shading.ts`, interpolated into the WGSL. A 4096-wide image is roughly a texel per
+      device pixel at rest and soft by 2×. The dissolve is short because half-way the photo
+      mixed with the flat washes reads as murky; three presses of zoom-in already land on
+      the vector look. Every imagery term in every shader is scaled by one weight, so at
+      weight 0 the output is the flat globe exactly: at 5× it matches its own flat rendering
+      pixel for pixel.
+    - **Dark theme, and the landing hero.** The light theme sets `--gmt-globe-imagery-alpha`
+      to 0 and keeps its own flat globe. The Blue Marble is a dark photograph: on the dark
+      page it reads as the planet in space, but floating on the pale page it read as a hole,
+      its glow as a smudge, and labels near the limb carried dark halos out onto white. A
+      dark panel boxed round the globe was tried and rejected. What stayed is a full-width
+      dark band behind the landing hero (`HeroGlobe.astro`), painted with a `border-image`
+      outset so it spans the window from inside the content column without widening the
+      page. A light-theme reader who never opens the front page never downloads the image.
+    - **The hero is a dark island.** `.gmt-herostage` carries `.gmt-theme-dark`, which the
+      dark blocks of `gmt-tokens.css` and of `gmt-theme.css` (Starlight's colours, mapped
+      from ours) name beside `:root`. The island re-declares them on itself, so everything
+      in it — the copy, the buttons, the globe, the zone list — resolves the dark values and
+      draws exactly as in dark mode, imagery included, with nothing copied. Keeping that true
+      takes four things: every light token has a dark counterpart; each `gmt-a11y.css` block
+      that restates a token for `:root` names the island too, or its own declarations would
+      undo the override; a light-only component rule that can reach inside
+      (`gmt-light.css`, the selection and scrollbar rules in `gmt-controls.css`) excludes it
+      with `:not(:where(.gmt-theme-dark *))`, which adds no specificity; and a dark-only rule
+      the hero needs (`.sl-link-button.secondary`) names the island beside
+      `[data-theme="dark"]`. `globe-stage.test.ts` pins the first three, and
+      `pnpm globe:smoke` checks the whole by comparing the computed colours of every
+      element in the hero across the two themes.
+    - **Legibility over the photograph.** A cyan dot that reads on the ocean vanishes over
+      the Sahara, and an outline over ice. So markers, labels and the selected zone's outline
+      get a casing in `--gmt-globe-casing`, scaled by the same weight: markers grow a disc or
+      ring in the fragment shader, labels carry a halo in the atlas's green channel (glyphs
+      are red) and the selected marker's label slides right until that halo clears its
+      ring, and the outline is the region-stroke coverage dilated by eight taps — cheaper
+      than a second coverage target. `globe-contrast.test.ts` measures every ink against its
+      casing over a sweep of backdrops from black to white, from the dark token block's real
+      values: labels at the 7:1 text floor, markers and the outline at 3:1. Re-run it after
+      retuning any of them, and if the imagery ever returns to the light theme, its inks
+      need measuring too: the light `--gmt-ice` is near-black.
+    - **Preferences.** `--gmt-globe-imagery-alpha` is 1 in the dark theme, and `gmt-a11y.css`
+      zeroes it under `prefers-contrast: more` and `forced-colors: active`: a busy photograph
+      behind the markers costs contrast that mode asked for, and a canvas is not repainted
+      in the system palette. At 0 the image is never downloaded. Reduced transparency keeps
+      it; the photograph is opaque.
+    - **The smoke.** Parity between the renderers runs with the image withheld at the
+      network, so it compares the vector layers alone and doubles as the failed-load check.
+      In the dark theme, with the image allowed, it must be requested once and change the
+      globe, and the landing hero in the light theme must request it too; at 5× the globe
+      must match its flat rendering, captured still with the tooltip masked. The light
+      theme's other globes, canvas-2D, the no-WebGPU fallback, raised contrast, forced
+      colours and a reference page must make no request for it. The hero's computed colours
+      must match across the two themes.
 - **DST answers are cached on `(zone, year, offset)`** (`src/lib/zone-clock.ts`), which is the
   complete input set of `isInDaylightSaving` — it compares an offset against the smaller of
   that year's own January and July offsets. The year is load-bearing: the same offset can be
