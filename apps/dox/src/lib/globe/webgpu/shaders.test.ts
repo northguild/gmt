@@ -197,7 +197,7 @@ describe("imagery", () => {
        imagery, every layer below has to come out exactly as before. */
     expect(code).toContain("if (imageryW > 0.0) {");
     expect(code).toContain(
-      "let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z);",
+      "let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z * imageryLight(elevation));",
     );
     expect(code).toContain(
       "let dayA = g.day.a * dayFactor(elevation) * (1.0 - imageryW);",
@@ -214,6 +214,13 @@ describe("imagery", () => {
     expect(code).toContain("g.land.a * texel.r * vectorW");
     expect(code).toContain("g.landStroke.a * texel.g * vectorW");
     expect(code).not.toMatch(/dayFactor\(elevation\) \* vectorW/);
+  });
+
+  it("lights the vector overlay like the photograph under it", () => {
+    /* Drawn after the night wash, an unlit overlay keeps the night side's land
+       as bright as the day side's and blurs the terminator. Scaled by
+       `imageryLight`, it dims to the photograph's own night-side level. */
+    expect(code).toContain("g.imagery.z * imageryLight(elevation)");
   });
 
   it("can recolour the photograph onto the theme's own ramp", () => {

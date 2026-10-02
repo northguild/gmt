@@ -503,9 +503,12 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   /* How much of the vector land — fill and coastline — stays on top: all of
      it with no imagery, falling to the theme's vector overlay share
      (\`g.imagery.z\`) as the imagery comes in. A share above 0 lays the cyan
-     land over the photograph. The day wash is not part of it: over a photo
-     that carries its own light it reads as haze. */
-  let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z);
+     land over the photograph. The share is lit like the photograph under it:
+     the land layers are drawn after the night wash, so an unlit overlay kept
+     the night side's land as bright as the day side's and blurred the
+     terminator. The day wash is not part of it: over a photo that carries
+     its own light it reads as haze. */
+  let vectorW = 1.0 - imageryW * (1.0 - g.imagery.z * imageryLight(elevation));
 
   var colour = vec4<f32>(0.0);
   colour = over(colour, g.ocean);

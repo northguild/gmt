@@ -315,8 +315,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       seam. The sampler repeats in longitude, clamps in latitude, and is 16× anisotropic,
       which holds the poles sharp to within a few degrees, where the image is uniform ice.
     - **Shading.** The imagery is a photograph of a lit planet, so it takes the sun as a
-      brightness — `imageryLight` in `shading.ts`, `dayFactor`'s falloff above a 0.3 ambient
-      floor — and stands in for the day wash, which fades out as it fades in. The night wash,
+      brightness — `imageryLight` in `shading.ts`, `dayFactor`'s falloff above a 0.18
+      ambient floor — and stands in for the day wash, which fades out as it fades in. The night wash,
       haze, atmosphere, limb, graticule, region, markers and labels draw on top as before.
       The vector land fill and stroke fade out with it: the image has real coastlines.
     - **The cyber look (experimental).** Two tokens restyle the photograph, and both ship
@@ -324,8 +324,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       ramp — the casing's near-black, the ocean teal, the day cyan, the label ice — so the
       relief and coastlines survive and only the hues change. `--gmt-globe-vector-overlay`
       keeps that share of the vector land fill and coastline on top instead of fading them
-      out. The day wash is deliberately not in the overlay: over a photograph that carries
-      its own light it read as milky haze. Both at 0 give the plain photograph back. An
+      out. That share is lit like the photograph under it, by `imageryLight`: the land
+      layers draw after the night wash, so an unlit overlay kept night-side land as bright
+      as day-side land and blurred the terminator. The day wash is deliberately not in the
+      overlay: over a photograph that carries its own light it read as milky haze. The
+      ambient floor came down from 0.3 to 0.18 at the same time, for a crisper terminator. Both at 0 give the plain photograph back. An
       overlay on the plain photo alone was tried first and was too faint to see: the
       vector land is styled to sit quietly on the flat globe.
     - **The zoom fade.** `IMAGERY_FADE_START_ZOOM` (2) to `IMAGERY_FADE_END_ZOOM` (2.7) in

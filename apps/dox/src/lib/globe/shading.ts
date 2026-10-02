@@ -153,7 +153,7 @@ export function imageryZoomFade(zoom: number): number {
  * floor is what keeps the continents readable on the night side, where the
  * gold markers sit.
  */
-export const IMAGERY_AMBIENT = 0.3;
+export const IMAGERY_AMBIENT = 0.18;
 
 /**
  * Brightness of the imagery for a given sine of the sun's elevation.
