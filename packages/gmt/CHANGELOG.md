@@ -1,5 +1,570 @@
 # @northguild/gmt
 
+## 1.18.0
+
+### Minor Changes
+
+- 083b4f8: `isInDaylightSaving` and `hasDaylightSaving` now read daylight time from a zone's own clock changes, and `hasDaylightSaving` takes a reference instant in `options.at` (Story CORE-77). `getDstTransitions`, `startOfZoned` and `getHoursInZonedDay` now find two clock changes that fall less than 14 days apart.
+  
+  Before, both functions compared a zone's 15 January and 15 July offsets, and `hasDaylightSaving` did so for the year 2024 only. A zone that moved its standard time during a year then read as being in daylight time afterwards: `Europe/Istanbul` has stayed at `+03:00` since 2016, and December 2016 read as daylight time.
+  
+  ```typescript
+  import { getDstTransitions, hasDaylightSaving, isInDaylightSaving } from "@northguild/gmt";
+  
+  isInDaylightSaving("2015-07-01T12:00:00+03:00[Europe/Istanbul]"); // true — the clocks went back on 2015-11-08
+  isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]"); // false — was true
+  isInDaylightSaving("2019-07-15T12:00:00+01:00[Europe/Dublin]"); // true
+  isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]"); // true — southern summer
+  
+  hasDaylightSaving("Australia/Sydney", { at: "2024-06-15T12:00:00Z" }); // true — winter; the next period begins in October
+  hasDaylightSaving("Europe/Istanbul", { at: "2015-06-15T12:00:00Z" }); // true
+  hasDaylightSaving("Europe/Istanbul", { at: "2016-06-15T12:00:00Z" }); // false
+  hasDaylightSaving("America/Sao_Paulo", { at: "2018-06-15T12:00:00Z" }); // true
+  hasDaylightSaving("America/Sao_Paulo", { at: "2019-06-15T12:00:00Z" }); // false — the last period ended 2019-02-17
+  
+  getDstTransitions("America/Boa_Vista", 2000).length; // 3 — was 1
+  ```
+  
+  - **The rule is GMT's own definition, not the tz database's daylight flag.** No JavaScript API exposes that flag, and it cannot be worked out from offsets. GMT holds no zone data: it reads the zone's offset changes from the runtime.
+  - **The rule.** Daylight time runs from a forward change of a zone's clocks to the backward change that undoes it. A backward change undoes the most recent forward change of the same size not yet undone, if it comes less than 365 days after it. An instant is in daylight time when it is at or after such a forward change and before its backward change.
+  - **A forward change never undone, or undone 365 days or more later, is a change of standard time.** `Europe/Istanbul` is on standard time from its last advance in March 2016.
+  - **The higher of two alternating offsets is the daylight one**, as in the tz database's rearguard form. `Europe/Dublin` is in daylight time in summer, and `Africa/Casablanca` in its months at `+01:00`. The database's main form names Dublin's winter and Casablanca's Ramadan weeks as daylight time.
+  - **Read as standard time, because the offsets do not show otherwise:**
+    - the last summer before a zone kept its daylight offset for good. The tz database dates Istanbul's switch 2016-09-07, with no clock change, so GMT reads March to September 2016 as standard time;
+    - a daylight period held 365 days or longer (`America/Santiago`, 2014 to 2016);
+    - a daylight period that began, ended or was interrupted by a move of standard time, so the clocks went back by another amount or not at all (`America/Kentucky/Monticello` 2000, `Asia/Tomsk` 2002, `Asia/Jerusalem` 1948);
+    - a daylight period whose end is past the last instant Temporal can represent.
+  - **Read as daylight time:** a move of standard time reversed by the same amount less than 365 days later (`America/Metlakatla`, 2018 to 2019).
+  - **`hasDaylightSaving(timeZone, { at })` answers for a reference instant.** It is `true` when the zone is in daylight time at `at`, or a daylight period begins less than 365 days after it. So a zone in its winter is `true`, and a zone that has stopped changing its clocks is `false`. `at` is an ISO 8601 instant string: `Z`, an offset, or a zoned string. A bracketed zone on `at` does not choose the zone that is judged; `timeZone` does.
+  - **Pass `at` for an answer that does not depend on the day the code runs.** Without it the reference is the current instant. An invalid `at`, such as the date `"2024-01-15"`, returns `false`.
+  - **The answer can change when the runtime's time zone data does.** An answer for a past instant changes when that data learns that a zone stopped changing its clocks.
+  - **Calls cost more.** On Node 24, `isInDaylightSaving` takes 0.2 to 0.6 ms a call where 1.17 took 0.05 ms, and `hasDaylightSaving` 0.4 to 1.1 ms where 1.17 took 0.03 ms. Each call searches the zone's clock changes, up to 365 days either side, and GMT keeps no cache. Cache the result yourself if you call either in a loop.
+  - **A function that walks a zone's clock changes costs two to three times more per change crossed.** GMT's search reads the zone every 5 days where the polyfill read it every 14. On Node 24, `getDstTransitions("America/New_York", 2024)` takes 0.9 ms where 1.17 took 0.4 ms, and `intervalCountZoned` by day over 30 years of `America/New_York` takes 24 ms where 1.17 took 8 ms. A span that crosses no clock change, or one or two, costs what it did.
+  - **Two clock changes less than 14 days apart are now found.** `America/Boa_Vista`, `America/Noronha` and `America/Recife` went forward on 8 October 2000 and back on 15 October. The Temporal polyfill GMT runs on steps through a zone 14 days at a time and missed both changes. `getDstTransitions` now lists them, and a day beside them has the right start and length.
+  
+  ### Breaking changes
+  
+  `isInDaylightSaving`:
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]")` | `true` | `false` |
+  | `isInDaylightSaving("2016-07-01T12:00:00+03:00[Europe/Istanbul]")` | `true` | `false` |
+  | `isInDaylightSaving("2011-07-01T12:00:00+04:00[Europe/Moscow]")` | `true` | `false` |
+  | `isInDaylightSaving("2018-12-01T12:00:00+09:00[Asia/Pyongyang]")` | `true` | `false` |
+  | `isInDaylightSaving("2016-07-01T12:00:00-04:00[America/Caracas]")` | `true` | `false` |
+  | `isInDaylightSaving("1996-07-01T12:00:00+06:30[Asia/Colombo]")` | `true` | `false` |
+  | `isInDaylightSaving("2019-12-01T12:00:00+01:00[Africa/Casablanca]")` | `false` | `true` |
+  | `isInDaylightSaving("+275760-09-12T20:00:00-04:00[America/New_York]")` | `true` | `false` |
+  
+  `hasDaylightSaving`. 1.17 took no options and compared January with July 2024:
+  
+  | 1.17 call | 1.17 | 1.18 call | 1.18 |
+  | --- | --- | --- | --- |
+  | `hasDaylightSaving("Africa/Casablanca")` | `false` | `hasDaylightSaving("Africa/Casablanca", { at: "2024-06-15T12:00:00Z" })` | `true` |
+  | `hasDaylightSaving("America/Sao_Paulo")` | `false` | `hasDaylightSaving("America/Sao_Paulo", { at: "2018-06-15T12:00:00Z" })` | `true` |
+  | `hasDaylightSaving("America/Asuncion")` | `true` | `hasDaylightSaving("America/Asuncion", { at: "2026-06-15T12:00:00Z" })` | `false` |
+  
+  Two clock changes less than 14 days apart:
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `getDstTransitions("America/Boa_Vista", 2000)` | one change, `2000-02-27T03:00:00Z` | three: that one, `2000-10-08T04:00:00Z` and `2000-10-15T03:00:00Z` |
+  | `startOfZoned("2000-10-08T01:00:00-03:00[America/Boa_Vista]", "day")` | `"2000-10-07T23:00:00-04:00[America/Boa_Vista]"` | `"2000-10-08T01:00:00-03:00[America/Boa_Vista]"` |
+  | `getHoursInZonedDay("2000-10-08T12:00:00-03:00[America/Boa_Vista]")` | `null` | `23` |
+  | `getHoursInZonedDay("2000-10-08T12:00:00-01:00[America/Noronha]")` | `-8881` | `23` |
+  
+  Unchanged: a zone that changes its clocks twice a year reads as before, in both hemispheres. So does a zone that has never changed its clocks, a fixed offset and `UTC`.
+  
+  Migration:
+  
+  - **`hasDaylightSaving(timeZone)` now answers for the current instant, not for 2024.** Pass `{ at }` wherever the result is stored, compared or tested. To ask about 2024, pass an instant in 2024.
+  - **A stored `isInDaylightSaving` result** for a zone that moved its standard time can be wrong under the new rule. Recompute it.
+  - **For where a zone's offset changes, use `getDstTransitions(timeZone, year)`.** It lists every change and classifies none of them. For the offset itself, use `getZonedOffset`.
+- 8110235: Add `cutoffAt`, `cutoffSchedule`, `isPastCutoff` and `timeToCutoff` to the `transport/` namespace, and the `@northguild/gmt/transport/compare` subpath (Story TRAN-10).
+  
+  A logistics deadline is not a fixed timestamp. It counts back from an event — a vessel's departure, a container's loading, an arrival — in the local time of the place that enforces it, and it moves when that event moves. An ocean booking carries a stack of them: documentation, VGM, gate-in, customs.
+  
+  ```typescript
+  import { cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff } from "@northguild/gmt";
+  
+  // A vessel sails Friday 14 June 2024 at 18:00 in Amsterdam. "Two days before, 17:00":
+  cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
+  // "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" — not 48 hours, which keeps 18:00
+  
+  cutoffSchedule("2024-06-14T16:00:00Z", [
+    { name: "gate-in", offset: "P1D" },
+    { name: "document", offset: "P2D", atLocalTime: "17:00" },
+    { name: "VGM", offset: "P1D", atLocalTime: "10:00" },
+  ], { timeZone: "Europe/Amsterdam" });
+  // [ { name: "document", at: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" },
+  //   { name: "VGM", at: "2024-06-13T10:00:00+02:00[Europe/Amsterdam]" },
+  //   { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" } ]
+  
+  // 96 hours before an arrival is exact elapsed time, across New York's fall-back.
+  cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" });
+  // "2024-11-01T13:00:00-04:00[America/New_York]"
+  
+  isPastCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // true
+  timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "-PT1H"
+  ```
+  
+  - **`atLocalTime` pins the time of day.** With it, the offset's exact part (hours and smaller) comes off the anchor's instant, its calendar part (years, months, weeks, days) off that local date, and the cut-off is `atLocalTime` on the day it lands on. The exact part comes off first, so it can change the day. Without it, the offset is taken off as Temporal's `ZonedDateTime#subtract` takes it: `P2D` keeps the anchor's wall clock and `PT96H` is 96 elapsed hours.
+  - **The anchor is the caller's event.** Loading, departure and arrival are different instants, and `cutoffAt` never guesses which one a rule means. The anchor is exact — an instant or a zoned string, whose bracket never supplies the zone — and `timeZone`, an IANA identifier or a fixed offset, is the local frame. The functions are pure: a rescheduled departure is a new call.
+  - **Closures roll the way the caller says.** With a `BusinessCalendar`, a cut-off on a weekend or holiday moves by `roll`, as `rollDate` moves it. Every industry answers this differently and no standard picks one, so there is no default: `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled day keeps the cut-off's local time of day, and `calendar.timeZone` is not read. `cutoffAt` does not check that the cut-off comes before the anchor.
+  - **A skipped hour is refused.** Every local wall time a cut-off lands on takes the first pass of a repeated hour, as RFC 5545 §3.3.5 reads it, and returns `""` for an hour the clock skipped or a day the zone deleted, rather than shifting the deadline.
+  - **`cutoffSchedule` is all or nothing.** It sorts the stack by instant, keeps the given order for ties, and returns `[]` if any entry fails.
+  - **The window closes at the cut-off.** `isPastCutoff` is `true` from the cut-off instant on. `timeToCutoff` is exact hours, `PT0S` at the cut-off and negative after it. Both return their sentinel for `cutoffAt`'s `""`.
+  - Also exported: the `CutoffOptions`, `Cutoff`, `CutoffTime` and `CutoffScheduleOptions` types.
+- 083b4f8: Add `scheduleDeviation`, `classifyPunctuality`, `punctualityRate`, `bestAvailable`, `estimateDrift` and `nextDeparture` to the `transport/` namespace (Story TRAN-57). Every function that reads a moment now reads a zoned string for a zone with a sub-minute offset as the instant Temporal wrote it for, and an offset written with seconds must match its zone exactly.
+  
+  Every mode publishes a plan and records what happened, and measures the gap the same way. Only the tolerance differs, and the tolerance is the caller's. The other shared problem is that one field often holds four kinds of time — planned, estimated, requested and actual — and an estimate shown as an actual is the standard tracking-dashboard error.
+  
+  ```typescript
+  import { bestAvailable, classifyPunctuality, estimateDrift, nextDeparture, punctualityRate, scheduleDeviation } from "@northguild/gmt";
+  
+  scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z"); // "PT14M"
+  scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z"); // "-PT5M" — five minutes early
+  scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]");
+  // "PT1H" — the same wall time, an hour later across the fall-back night
+  
+  classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:59Z", { late: "PT15M" }); // "onTime"
+  classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:15:00Z", { late: "PT15M" }); // "late"
+  classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M", early: "PT10M" }); // "early"
+  
+  punctualityRate([
+    { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:05:00Z" },
+    { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:14:00Z" },
+    { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:16:00Z" },
+    { planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T09:57:00Z" },
+  ], { late: "PT15M" });
+  // { onTime: 3, total: 4, rate: 0.75 }
+  
+  bestAvailable([
+    { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+    { classifier: "EST", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+  ]);
+  // { at: "2024-06-15T12:52:00Z", classifier: "ACT" } — an estimate recorded later never replaces an actual
+  
+  estimateDrift([
+    { classifier: "EST", at: "2024-06-20T08:00:00Z", recordedAt: "2024-06-01T00:00:00Z" },
+    { classifier: "EST", at: "2024-06-20T12:00:00Z", recordedAt: "2024-06-05T00:00:00Z" },
+    { classifier: "EST", at: "2024-06-20T17:00:00Z", recordedAt: "2024-06-10T00:00:00Z" },
+  ], { tolerance: "PT8H" });
+  // { first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: true }
+  
+  const timetable = ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"];
+  nextDeparture("2024-06-15T09:00:00Z", timetable, { minimumConnection: "PT45M" }); // "2024-06-15T11:00:00Z"
+  nextDeparture("2024-06-15T06:05:00+02:00", { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" });
+  // "2024-06-15T06:20:00+02:00"
+  ```
+  
+  - **A deviation is exact elapsed time.** `scheduleDeviation` returns `actual` minus `planned` with hours as the largest unit: positive when late, negative when early, `PT48H` rather than `P2D`. A delay across a fall-back night is `PT1H`, never the `PT0S` or `PT2H` a wall-clock subtraction gives. Both times are an instant or a zoned string, and the zone they are written in does not matter.
+  - **"On time" needs a stated tolerance.** GMT has no default. `PunctualityTolerance` is `{ late, early? }` as ISO 8601 durations of exact time: a day is 24 hours, and years, months, weeks or a negative value return `null`. A 15-minute tolerance, a 60/120-minute pair and a day-based one are all the same call with different numbers.
+  - **Both edges belong to the outside.** Exactly `late` is late, and exactly `-early` is early. Without `early`, every early arrival is on time. `classifyPunctuality` returns `null` on invalid input, as `classifyLocal` does.
+  - **A rate is a count under one tolerance.** `punctualityRate` reads the tolerance once and judges every pair under it. Only `"onTime"` counts, so with an `early` tolerance an early arrival is not on time. `rate` is not rounded. An empty list, or any invalid pair, returns `null` — never a rate over the rest.
+  - **The class travels with the value.** `TimestampEvent` records a `classifier` (`PLN`, `EST`, `REQ` or `ACT`, DCSA's vocabulary), the moment `at` and when it was `recordedAt`. `bestAvailable` picks an `ACT` whenever one exists, else `PLN`, else `REQ`, else `EST`, and the newest-recorded within that class. The order is GMT's and is fixed: DCSA's Port Call standard defines the classes and an estimated, requested, planned, then actual pattern, not a rule for choosing among them. It returns the class with the value, and echoes `at` exactly as written.
+  - **Drift needs two estimates.** `estimateDrift` reads only the `EST` records, in recording order, and reports the last minus the first. It returns `null` with fewer than two, since one estimate has no drift. With `tolerance`, `exceedsTolerance` is `true` when the drift in either direction is greater than it; exactly the tolerance is `false`.
+  - **`nextDeparture` is timetable lookup, not routing.** It returns the first departure at or after `after` plus `minimumConnection` (default `"PT0S"`); one exactly at that threshold is made. A list entry is returned exactly as written, so it can go straight into `scheduleDelivery` as a leg's `departure`. Every moment must carry its offset: a wall time without one returns `""`, because in a repeated fall-back hour it names two departures.
+  - **A headway window is half-open.** `{ headway, from, to }` has the shape of a GTFS [`frequencies.txt`](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md#frequenciestxt) row. Departures are `from` plus whole headways in exact time, up to but never at `to`, and are computed from `from` rather than stepped. The result is written the way `from` was written.
+  - Also exported: the `TimestampClass`, `TimestampEvent`, `PunctualityTolerance`, `Punctuality`, `PlannedActual`, `OnTimeRate`, `ClassifiedTimestamp`, `EstimateDriftOptions`, `DriftReport`, `Headway` and `NextDepartureOptions` types.
+  
+  ### A zoned string names one instant in every reader
+  
+  `Temporal.ZonedDateTime.prototype.toString` writes a zone's offset rounded to the minute. `Africa/Monrovia` stood at −00:44:30 until 1972, so Temporal writes it `-00:45`. `Temporal.ZonedDateTime.from` reads that string back to the same instant (TC39 `ToTemporalZonedDateTime` matches a minute-precision offset by minutes), but `Temporal.Instant.from` takes `-00:45` literally and lands 30 seconds late. GMT writes zoned strings and reads them back as instants, so a deviation, a span or a cut-off measured from one of its own strings was up to 30 seconds off in such a zone. Every instant reader now follows the zoned reading.
+  
+  ```typescript
+  import { etaAtZone, isValidZonedDateTime, scheduleDeviation, toNanoseconds } from "@northguild/gmt";
+  
+  const written = etaAtZone("1960-01-01T01:04:30Z", "Africa/Monrovia");
+  // "1960-01-01T00:20:00-00:45[Africa/Monrovia]" — Temporal rounds -00:44:30 to the minute
+  
+  scheduleDeviation("1960-01-01T01:04:30Z", written); // "PT0S" — was "PT30S"
+  toNanoseconds(written); // -315615330000000000n, which is 01:04:30Z
+  toNanoseconds("1960-01-01T00:20:00-00:45"); // -315615300000000000n — no zone, so the offset is exact
+  
+  isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // true — the rounded offset
+  isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"); // true — the exact offset
+  isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]"); // false — seconds must be exact
+  ```
+  
+  - **The rule.** When a string has a bracketed zone and an offset written to the minute, and that offset is the zone's real offset at that wall time rounded to the minute, the instant is the one the zone gives. Every other string keeps its written offset: one without a bracket, a `Z` instant, an offset written with seconds, and a bracket whose zone does not exist or does not fit the offset.
+  - **Only zones with a sub-minute offset are affected.** These are historical offsets: local mean time, and zones such as `Africa/Monrovia` before 1972. A string in a zone whose offset is a whole number of minutes reads exactly as before.
+  - **An instant reader still does not validate the bracket.** `toNanoseconds("2024-06-15T10:00:00Z[Not/AZone]")` is still the instant the `Z` names. A bracket never supplies the zone a result is rendered in: `timeZone` and `targetZone` do.
+  - **Every string Temporal writes for an instant in range is now valid.** At the first seconds of the range, the rounded offset alone can read as just outside it: `-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant, at London's local mean time of −00:01:15.
+  - **An offset written with seconds must be the zone's offset exactly**, as TC39 `ToTemporalZonedDateTime` requires. The Temporal polyfill GMT runs on matched it by minutes, so `-00:45:00[Africa/Monrovia]` was accepted as a zoned string. GMT now corrects that in every function that reads a zoned string.
+  - **A wall time repeated inside a sub-minute offset change reads as its first pass**, as it does in `Temporal.ZonedDateTime.from`. `Pacific/Niue` moved from −11:19:40 to −11:20:00 at the end of 15 October 1952, so 23:59:40 to 23:59:59 happened twice, and both passes are written `-11:20`. Write the offset with seconds (`-11:20:00`) to name the second pass.
+  - **A zoned read still refuses a local date of −271821-04-19**, as `Temporal.ZonedDateTime.from` does. A zone west of Greenwich shows that date for the first hours of the instant range. `isValidInstant` and the other instant readers accept such a string; `transitTime`, `toOffsetInstant`, `isValidZonedDateTime` and the `zoned/` functions return their sentinel. Pass that instant in `Z` form.
+  
+  ### Breaking changes
+  
+  `M` is `1960-01-01T00:20:00-00:45[Africa/Monrovia]`, a string Temporal writes for `1960-01-01T01:04:30Z`. `S` is the same wall time with the offset written `-00:45:00`.
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `toNanoseconds(M)`, likewise `toFileTime`, `toDotNetTicks`, `toNtpTimestamp`, `toExcelSerial`, `toPgMicroseconds` | `-315615300000000000n` (`01:05:00Z`) | `-315615330000000000n` (`01:04:30Z`) |
+  | `spanNs("1960-01-01T01:04:30Z", M)`, likewise `spanMs` | `30000000000n` | `0n` |
+  | `isValidInterval({ start: "1960-01-01T01:04:45Z", end: M })`, likewise every `interval/` function: `mergeIntervals`, `intersectIntervals`, `subtractIntervals`, `splitIntervalAt`, `sumIntervals`, `intervalContains`, `intervalsOverlap` | `true` (`end` read as `01:05:00Z`) | `false` (`end` is `01:04:30Z`, before `start`) |
+  | `etaAtZone(M, "UTC")`, likewise `dwellTime`, `floorToZone`, `bucketRange` and `getTimeZoneOffset`, which read the same instant | `"1960-01-01T01:05:00+00:00[UTC]"` | `"1960-01-01T01:04:30+00:00[UTC]"` |
+  | `freeTimeExpiry("1960-01-01T23:15:15-00:45[Africa/Monrovia]", 1, { basis: "calendar", timeZone: "UTC", firstDay: "eventDay" })`, likewise `chargeableDays` and `demurrageClock`, which read their events the same way | `freeTimeStart: "1960-01-02"` | `freeTimeStart: "1960-01-01"` |
+  | `isValidInstant("-271821-04-19T23:58:45-00:01[Europe/London]")`, likewise `isValidSpan` | `false` | `true` |
+  | `isValidZonedDateTime(S)` | `true` | `false` |
+  | `transitTime(S, "PT1H")`, likewise `toOffsetInstant`, `dwellTime` without `targetZone`, and every `zoned/` function | `"1960-01-01T01:20:00-00:45[Africa/Monrovia]"` | `""` (each function's own sentinel) |
+  | `durationAs("P1D", "hours", { relativeTo: S })`, likewise `normalizeDuration` and `compareDurations` | `24` | `null` |
+  | `convertZonedToUtc("1952-10-15T23:59:59-11:20:00[Pacific/Niue]")` | `"1952-10-16T11:19:39Z"` (the first pass) | `"1952-10-16T11:19:59Z"` (the second pass, which `-11:20:00` names) |
+  
+  Unchanged: a string without a bracket, a `Z` instant, and any string in a zone whose offset is a whole number of minutes. `toOffsetInstant(M)`, `transitTime(M, …)` and the `zoned/` functions already read `M` through its zone.
+  
+  Migration:
+  
+  - **A stored instant computed from a zoned string in a sub-minute-offset zone** moves by up to 30 seconds, to the instant Temporal wrote the string for. Recompute it. To keep the old reading, drop the bracket: `toNanoseconds("1960-01-01T00:20:00-00:45")` reads the offset as written.
+  - **A zoned string whose offset has seconds that are not the zone's** is now invalid. Write the zone's exact offset (`-00:44:30[Africa/Monrovia]`) or the minute-rounded one Temporal writes (`-00:45[Africa/Monrovia]`).
+- bc054ee: Read two adjacent single quotes in a parse pattern as one literal quote, wherever they appear.
+  
+  `parseDateWithPattern`, `parseTimeWithPattern` and `parseDateTimeWithPattern` follow the Unicode UTS #35 date format pattern rules for literal text. UTS #35 gives `''` one meaning, a literal `'`, inside and outside quoted text. These functions applied it only inside quoted text such as `'o''clock'`, and read `''` anywhere else as nothing at all. A pattern such as `"MMM d, ''yy"` now reads `"Mar 15, '24"`.
+  
+  ### Breaking changes
+  
+  A pattern with `''` outside quoted text now needs a `'` in the value at that position.
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `parseDateWithPattern("2024'01'15", "yyyy''MM''dd")` | `""` | `"2024-01-15"` |
+  | `parseDateWithPattern("20240115", "yyyy''MM''dd")` | `"2024-01-15"` | `""` |
+  | `parseTimeWithPattern("14'30", "HH''mm")` | `""` | `"14:30:00"` |
+  | `parseTimeWithPattern("1430", "HH''mm")` | `"14:30:00"` | `""` |
+  | `parseDateTimeWithPattern("2024-01-15'14:30:00", "yyyy-MM-dd''HH:mm:ss")` | `""` | `"2024-01-15T14:30:00"` |
+  | `parseDateTimeWithPattern("2024-01-1514:30:00", "yyyy-MM-dd''HH:mm:ss")` | `"2024-01-15T14:30:00"` | `""` |
+  | `parseDateWithPattern("''2024-01-15", "''''yyyy-MM-dd")` | `""` | `"2024-01-15"` |
+  | `parseDateWithPattern("'2024-01-15", "''''yyyy-MM-dd")` | `"2024-01-15"` | `""` |
+  
+  Four quotes in a row are two literal quotes, not one. Quoted text is unchanged: `'at'` still reads `at`, `'o''clock'` still reads `o'clock`, and a quote that never closes still makes the pattern malformed.
+  
+  To keep fields adjacent with nothing between them, remove the `''` from the pattern: `"yyyyMMdd"` reads `"20240115"`.
+- bc054ee: Accept `timeZone: "local"` for the system time zone in the `utc` readers and converters, as the `utc` formatters and every `unix` function already do.
+  
+  Before, `"local"` returned the empty result (`""` or `null`) from these functions, while `formatUtc`, `formatCalendarUtc`, `formatRelativeUtc` and the matching `unix` functions read it as the system zone. Every `utc` function that takes a `timeZone` option now reads it the same way: omitted is UTC, `"local"` is the system time zone, and an IANA name or a UTC offset is that zone.
+  
+  This applies to `parseDateFromUtc`, `parseTimeFromUtc`, `parseYearFromUtc`, `parseMonthFromUtc`, `parseWeekFromUtc`, `parseDayFromUtc`, `parseDayOfWeekFromUtc`, `parseHourFromUtc`, `parseMinuteFromUtc`, `parseSecondFromUtc`, `parseMillisecondFromUtc`, `parseMicrosecondFromUtc`, `parseNanosecondFromUtc`, `parseUnitFromUtc`, `convertUtcToPlainDate`, `convertUtcToPlainTime` and `convertUtcToPlainDateTime`.
+  
+  ```typescript
+  import { convertUtcToPlainDate, parseHourFromUtc } from "@northguild/gmt";
+  
+  // On a machine whose time zone is Asia/Tokyo (UTC+9)
+  parseHourFromUtc("2024-01-30T20:30:45Z"); // "20", unchanged: an omitted zone is UTC
+  parseHourFromUtc("2024-01-30T20:30:45Z", { timeZone: "Asia/Tokyo" }); // "05", unchanged
+  parseHourFromUtc("2024-01-30T20:30:45Z", { timeZone: "local" }); // "05" — was ""
+  convertUtcToPlainDate("2024-01-30T20:30:45Z", { timeZone: "local" }); // "2024-01-31" — was ""
+  ```
+  
+  Unchanged: an omitted `timeZone` still reads UTC, never the system zone, and an unknown zone still returns the empty result. `convertUtcToZoned` takes its zone as a required argument and still accepts only an IANA name or a UTC offset, as `convertUnixToZoned` does.
+- 69b2d6a: Add operating hours to `calendar/`: `recurringWindows`, `operatingIntervals`, `isOpenAt`, `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween` and `addOperatingTime` (Story CORE-55).
+  
+  A business day answers "is Thursday a working day". A terminal gate, a support desk, a customs office or a night curfew asks more: is it open now, how many open hours have passed, and when does an SLA measured in open hours fall due. One `OperatingSchedule` answers all of them: a zone, windows of local wall time for each ISO weekday, holiday dates, and dated overrides.
+  
+  ```typescript
+  import { addOperatingTime, nextOpenAt, operatingIntervals, operatingTimeBetween, recurringWindows } from "@northguild/gmt";
+  
+  const nineToFive = [{ from: "09:00", to: "17:00" }];
+  const desk = {
+    timeZone: "America/New_York",
+    weekly: { 1: nineToFive, 2: nineToFive, 3: nineToFive, 4: nineToFive, 5: nineToFive },
+    holidays: ["2024-07-04"],
+    overrides: [{ date: "2024-07-05", windows: [{ from: "10:00", to: "12:00" }] }],
+  };
+  
+  operatingIntervals(desk, { start: "2024-07-04T04:00:00Z", end: "2024-07-06T04:00:00Z" });
+  // [{ start: "2024-07-05T14:00:00Z", end: "2024-07-05T16:00:00Z" }] — holiday closed, Friday overridden
+  nextOpenAt("2024-06-15T16:00:00Z", desk); // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
+  operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", desk); // "PT2H"
+  addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk); // "2024-06-17T20:00:00Z" — Monday 16:00 local
+  addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk, { within: "P1D" }); // ""
+  
+  recurringWindows(
+    { 6: [{ from: "23:00", to: "06:00" }] },
+    { start: "2024-11-02T00:00:00Z", end: "2024-11-04T00:00:00Z" },
+    "America/New_York",
+  );
+  // [{ start: "2024-11-03T03:00:00Z", end: "2024-11-03T11:00:00Z" }] — 8 hours across the fall-back night
+  ```
+  
+  - **Windows are half-open local wall time.** A `to` at or before its `from` wraps past midnight (`23:00`–`06:00` is a night, `00:00`–`00:00` a whole day). A window belongs to the date it starts on, so a Friday holiday or override removes or replaces a Friday-night window and a Saturday one does not. Windows that overlap or touch are merged.
+  - **Every window edge goes through `resolveLocal`.** `disambiguation` defaults to `"compatible"`: an edge in a repeated fall-back hour takes the earlier instant, and one in a skipped spring-forward hour moves forward by the gap. `"earlier"` and `"later"` pick the other instant. `"reject"` returns the sentinel when a window with an ambiguous or nonexistent edge could change the answer, and ignores one that cannot. Every function takes the option.
+  - **Dates are the zone's real local dates.** Holidays and overrides are ISO dates in the schedule's zone. A `BusinessCalendar` can be passed as `holidays`; its `holidays` are read and its `weekend` is not. An override wins over a holiday, and `windows: []` closes a date. A date the zone deleted has no windows, and a date the clock re-enters after a fall-back is walked once.
+  - **Open time is exact elapsed time.** `operatingTimeBetween` sums the open intervals inside `[start, end)` with hours as the largest unit, the same number `sumIntervals` gives for their intersections with the range. `addOperatingTime` is its inverse: the earliest instant at which that much open time has passed. Its duration is hours and smaller; a duration with days, weeks, months or years returns `""`, because `P1D` of open time could mean 24 open hours or one working day.
+  - **Searches have a stated horizon.** `nextOpenAt`, `nextCloseAt` and `addOperatingTime` search up to `within` after the input (default `"P1Y"`, added in the schedule's zone). An answer exactly at the horizon counts; past it they return `""`. `nextOpenAt` returns the input when it is already open, and `nextCloseAt` returns the input when it is already closed.
+  - **Walks are bounded.** A range spanning more than 10,000 local dates (about 27 years) from its start's date, or a search that would go that far past its input, returns the sentinel, never a truncated answer. A search answers as soon as its answer is certain, and a horizon past Temporal's last instant stops there.
+  - Also exported: the `OperatingSchedule`, `LocalWindow`, `OperatingOverride` and `IsoWeekday` types under `/types`. The subpath `@northguild/gmt/calendar/hours` joins the package exports.
+- bc054ee: Read each option once per call, convert it once, and read inherited options in every formatter that passes its options to `Intl.DateTimeFormat`.
+  
+  **One read per option.** 56 functions read an option twice or more: once to check it or to choose its default, and again to use it. An options object whose property is a getter could answer a different value each time, so the value that was checked was not the value that was used. ECMA-402 and the Temporal specification read an option with one `Get` (`GetOption`), and every function that takes an `options` object now does the same.
+  
+  ```typescript
+  import { getZonedNow } from "@northguild/gmt";
+  
+  let reads = 0;
+  const options = {
+    get smallestUnit() {
+      reads += 1;
+      return reads === 1 ? ("minute" as const) : undefined;
+    },
+  };
+  
+  // With the clock at 2024-02-29T00:00:00Z
+  getZonedNow("UTC", options); // "2024-02-29T00:00+00:00[UTC]" — was "2024-02-29T00:00:00+00:00[UTC]"
+  reads; // 1 — was 2
+  ```
+  
+  **One conversion per option.** `GetOption` also converts the value it read once: to a string, or to a number for `fractionalSecondDigits`. Twelve functions asked an option given as an object for its value twice, once to check it and once to use it, so the object could answer `"long"` to the check and `"narrow"` to the formatter. They now ask once and use that answer throughout.
+  
+  **Inherited options.** ECMA-402 reads an option with `Get`, which follows the prototype chain, so an option an object inherits is an option. Five functions copied only the options an object holds itself and ignored the rest. They now read each option as `Intl.DateTimeFormat` does.
+  
+  A plain options object whose values are strings, numbers and booleans gives the same result as before.
+  
+  ### Breaking changes
+  
+  An inherited option is now read. Each call below passes `Object.create({ dateStyle: "full" })` as `options`.
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `formatUtc("2024-03-15T20:00:00Z", "en-US", options)` | `"3/15/2024, 8:00:00 PM"` | `"Friday, March 15, 2024"` |
+  | `formatUnix(1710532800000, "en-US", options)` | `"3/15/2024, 8:00:00 PM"` | `"Friday, March 15, 2024"` |
+  | `formatZonedDateTime("2024-03-15T20:00:00+00:00[UTC]", "en-US", options)` | `"3/15/2024"` | `"Friday, March 15, 2024"` |
+  | `formatZonedRange("2024-03-15T20:00:00+00:00[UTC]", "2024-03-17T20:00:00+00:00[UTC]", "en-US", options)` | `"3/15/2024 - 3/17/2024"` | `"Friday, March 15 - Sunday, March 17, 2024"` |
+  | `formatZonedToParts("2024-03-15T20:00:00+00:00[UTC]", "en-US", options)` | The parts of `"3/15/2024"`: month, day and year | The parts of `"Friday, March 15, 2024"`: weekday, month, day and year |
+  
+  To keep the 1.17 result, pass an object that does not inherit the option, for example `{}` or `Object.create(null)`. The other seven formatters (`formatDate`, `formatDateRange`, `formatDateTime`, `formatDateTimeRange`, `formatDateToParts`, `formatDateTimeToParts`, `formatTime`) already read inherited options and are unchanged.
+  
+  An option given as an object is now converted once. In the calls below `month` is an object whose `toString` returns `"long"` the first time and `"narrow"` after that, and `later` is one that returns `"later"` and then `"earlier"`.
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `formatDate("2024-03-15", "en-US", { month, day: "numeric" })`, likewise `formatDateTime`, `formatUtc` and `formatUnix` for the same day | `"M 15"` | `"March 15"` |
+  | `formatDateRange("2024-03-15", "2024-03-17", "en-US", { month, day: "numeric" })`, likewise `formatDateTimeRange` | `"M 15 - 17"` | `"March 15 - 17"` |
+  | `formatDateToParts("2024-03-15", "en-US", { month, day: "numeric" })`, likewise `formatDateTimeToParts` | A month part of `"M"` | A month part of `"March"` |
+  | `formatTime("20:05:00", "en-US", { hour, minute: "2-digit" })`, where `hour` returns `"2-digit"` and then `"numeric"` | `"8:05 PM"` | `"08:05 PM"` |
+  | `formatTime("20:05:00", "en-US", { timeStyle: new String("long") })` | `"8:05:00 PM UTC"` | `"8:05:00 PM"` |
+  | `formatDateTime("2024-03-15T20:05:00", "en-US", { timeStyle: new String("full") })` | `"8:05:00 PM Coordinated Universal Time"` | `"8:05:00 PM"` |
+  | `addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: later })` | `"2024-11-03T01:30:00-04:00[America/New_York]"` | `"2024-11-03T01:30:00-05:00[America/New_York]"` |
+  | `subtractZoned("2024-11-04T01:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: later })` | `"2024-11-03T01:30:00-04:00[America/New_York]"` | `"2024-11-03T01:30:00-05:00[America/New_York]"` |
+  | `intervalFromDurationZoned("2024-11-02T01:30:00-04:00[America/New_York]", "P1D", "start", { disambiguation: later })` | An `end` of `"2024-11-03T01:30:00-04:00[America/New_York]"` | An `end` of `"2024-11-03T01:30:00-05:00[America/New_York]"` |
+  
+  TypeScript rejects an object where each of these options expects a string, so only untyped callers and casts are affected. Pass the string itself and the result is the same in both versions.
+- bc054ee: Return `""` from the `formatRelative*` functions for a `largestUnit` their type does not list.
+  
+  Each function lists the units its values have: `formatRelativeDate` the date units, `formatRelativeTime` the time units, and the other four all seven. The type already rejected any other unit, but at run time `formatRelativeDate` wrote a date distance in hours and `formatRelativeTime` accepted `"day"`. Temporal throws `RangeError` for a unit outside the units of the type: `Temporal.PlainDate.prototype.until` rejects `largestUnit: "hour"`, and `Temporal.PlainTime.prototype.until` rejects `"day"`. The functions now follow that rule and return `""`.
+  
+  One rule here is GMT's own and stricter than Temporal: a `largestUnit` that is not a string returns `""`. Temporal converts any value to a string first, so it accepts `["day"]` and an object whose `toString` returns `"day"`. GMT takes string inputs, and its other functions that check a unit (`roundDate`, `roundDateTime`, `roundUtc`, `roundZoned`, `startOfDate`, `durationAs`, `areDatesEqualBy`) already reject a value that is not a string, so the `formatRelative*` functions now do too.
+  
+  | Function | `largestUnit` accepts, singular or plural |
+  | --- | --- |
+  | `formatRelativeDate` | `"day"`, `"week"`, `"month"`, `"year"` |
+  | `formatRelativeTime` | `"second"`, `"minute"`, `"hour"` |
+  | `formatRelativeDateTime`, `formatRelativeUtc`, `formatRelativeUnix`, `formatRelativeZoned` | `"second"`, `"minute"`, `"hour"`, `"day"`, `"week"`, `"month"`, `"year"` |
+  
+  A listed unit, singular or plural, formats as before. An omitted `largestUnit`, or one passed as `undefined`, still picks the unit from the distance.
+  
+  ### Breaking changes
+  
+  | Call | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `formatRelativeDate("2024-01-03", "en-US", { reference: "2024-01-01", largestUnit: "hour" })`, likewise `"hours"` | `"in 48 hours"` | `""` |
+  | The same call with `"minute"` or `"minutes"` | `"in 2,880 minutes"` | `""` |
+  | The same call with `"second"` or `"seconds"` | `"in 172,800 seconds"` | `""` |
+  | `formatRelativeTime("05:00", "en-US", { reference: "00:00", largestUnit: "day" })`, likewise `"days"` | `"today"` | `""` |
+  | Any of the six functions with a `largestUnit` that is not a string, such as `["day"]` or an object whose `toString` returns `"day"` (GMT's rule; Temporal accepts these) | The value was converted to a string and formatted, for example `"in 2 days"` | `""` |
+  
+  TypeScript already rejected each of these calls, so only untyped callers and `as never` casts are affected.
+  
+  To write a date distance in a time unit, give both dates a time and call `formatRelativeDateTime`:
+  
+  ```typescript
+  import { formatRelativeDateTime } from "@northguild/gmt";
+  
+  formatRelativeDateTime("2024-01-03T00:00:00", "en-US", {
+    reference: "2024-01-01T00:00:00",
+    largestUnit: "hour",
+  }); // "in 48 hours"
+  ```
+- 33b21d5: Add `crossingTime` and `scheduleDelivery` to the `transport/` namespace (Story TRAN-9).
+  
+  A crossing — a canal transit, a strait passage, a border queue — is logged as two instants and read on the clock of whoever runs it. A multi-leg move — truck, ship, rail — is one departure, a duration per leg and a handling time at each handoff, and the handoffs are where a naive ETA loses an hour. Every leg boundary here is an exact instant; local time is rendered only at the edges.
+  
+  ```typescript
+  import { crossingTime, scheduleDelivery } from "@northguild/gmt";
+  
+  crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York");
+  // { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]",
+  //   exit: "2024-03-10T08:00:00-04:00[America/New_York]" } — seven hours across the spring-forward
+  
+  const legs = [
+    { departure: "2024-06-14T08:00:00", duration: "PT6H", timeZone: "Asia/Shanghai", dwellAfter: "PT12H", mode: "truck" },
+    { departure: "2024-06-15T10:00:00+08:00[Asia/Shanghai]", duration: "PT336H", timeZone: "America/Los_Angeles", dwellAfter: "PT48H", mode: "ship" },
+    { duration: "PT70H", timeZone: "America/Chicago", mode: "rail" },
+  ];
+  scheduleDelivery(legs, { startTimeZone: "Asia/Shanghai" });
+  // { eta: "2024-07-03T19:00:00-05:00[America/Chicago]", legTimes: [
+  //   { arrival: "2024-06-14T06:00:00Z", localArrival: "2024-06-14T14:00:00+08:00[Asia/Shanghai]", dwellAfter: "PT12H", mode: "truck" },
+  //   { arrival: "2024-06-29T02:00:00Z", localArrival: "2024-06-28T19:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT48H", mode: "ship" },
+  //   { arrival: "2024-07-04T00:00:00Z", localArrival: "2024-07-03T19:00:00-05:00[America/Chicago]", dwellAfter: "PT0S", mode: "rail" } ] }
+  
+  scheduleDelivery([legs[0], { ...legs[1], departure: "2024-06-14T20:00:00+08:00[Asia/Shanghai]" }], { startTimeZone: "Asia/Shanghai" });
+  // null — the sailing leaves inside the truck leg's 12-hour dwell: a missed connection
+  ```
+  
+  - **`crossingTime` measures, it does not count days.** It returns the exact elapsed duration, hours as the largest unit, and the entry and exit rendered in `targetZone`, an IANA identifier or a fixed offset. `targetZone` is always the rendering zone; a bracketed zone on the input never is. A crossing that needs a day count is a dwell — use `dwellTime`. An exit before the entry returns `null`; a zero-length crossing is `PT0S`.
+  - **`dwellAfter` is the minimum connect time.** A leg leaves at its own `departure`, or, when it has none, at the previous arrival plus the previous leg's `dwellAfter`. A scheduled departure earlier than that — inside the dwell or before the arrival — is a missed connection and returns `null`; equal passes, so a zero-slack connection is feasible. `dwellAfter` is echoed as written, `"PT0S"` when omitted. The last leg's dwell is validated and echoed but never added to an instant, so it cannot turn a representable ETA into `null`.
+  - **Departures must be exact, with two wall-time exceptions.** An instant (`Z` or an offset) or a zoned string, whose bracketed zone must be real and agree with its offset. Schedules are published as local wall times, so a zoneless first departure is read in `startTimeZone`, and a zoneless later-leg departure is read in the _previous_ leg's own `timeZone` — leg N−1's destination is exactly leg N's departure zone. Zoneless without one of these returns `null`; the missed-connection check still applies after resolution.
+  - **Wall times resolve as `"compatible"`.** An ambiguous wall time — a fall-back hour the clock ran through twice — resolves to the earlier instant; a skipped one resolves to the later instant. Write the offset to pick the other pass of a repeated hour. At a hub, a printed timetable never says which pass it means, so on any leg but the first a repeated hour takes the earliest pass at or after the previous arrival plus its dwell; when neither is that late, the connection is missed.
+  - **Durations follow `transitTime`.** Time units are elapsed time, a day is 24 hours, and years, months and weeks return `null`. A negative leg returns `null`: a leg cannot arrive before it departs. A single-leg schedule is exactly `transitTime` composed with `etaAtZone`.
+  - **Tags are opaque.** `mode`, `origin` and `destination` are echoed onto each `LegTime`, and absent when not supplied, so a caller can join results to its own records. GMT never resolves a code to a zone; `timeZone` is the caller's fact. An empty legs array returns `{ eta: "", legTimes: [] }`.
+  - Also exported: the `Crossing`, `Leg`, `LegTime`, `ScheduleDeliveryOptions` and `DeliverySchedule` types.
+- bc054ee: Remove the `DurationUnit` type from the public exports.
+  
+  No public function takes or returns `DurationUnit`. It only typed two private lookup tables inside `formatDuration`, so it now lives there.
+  
+  ### Breaking changes
+  
+  | Import | 1.17 | 1.18 |
+  | --- | --- | --- |
+  | `import type { DurationUnit } from "@northguild/gmt"`, likewise from `@northguild/gmt/types` | The union `"years" \| "months" \| "weeks" \| "days" \| "hours" \| "minutes" \| "seconds"` | Not exported |
+  
+  For the unit keys a function accepts, import the type its signature names: `DateDurationUnit`, `TimeDurationUnit` or `DateTimeDurationUnit`. `DateTimeDurationUnit` is a wider union than `DurationUnit` was, so code that needs exactly the seven keys above declares that union itself.
+
+### Patch Changes
+
+- bc054ee: Keep the millisecond default of `getZonedNow` when `smallestUnit` is passed as `undefined`, and read no option but `smallestUnit`.
+  
+  Before, `{ smallestUnit: undefined }` replaced the default, and the string was written with as many fractional digits as the clock reading needed: none on a whole second. An option whose value is `undefined` is now read as absent, as `GetOption` reads it in ECMA-402 and in the Temporal specification, so the documented default applies.
+  
+  ```typescript
+  import { getZonedNow } from "@northguild/gmt";
+  
+  // With the clock at 2024-02-29T00:00:00Z
+  getZonedNow("UTC"); // "2024-02-29T00:00:00.000+00:00[UTC]"
+  getZonedNow("UTC", { smallestUnit: undefined }); // "2024-02-29T00:00:00.000+00:00[UTC]" — was "2024-02-29T00:00:00+00:00[UTC]"
+  getZonedNow("UTC", { smallestUnit: "second" }); // "2024-02-29T00:00:00+00:00[UTC]", unchanged
+  ```
+  
+  Before, the whole options object also went to Temporal's `toString`, so a key the function does not document changed the string. TypeScript rejects these keys; a JavaScript caller, or an object built elsewhere and passed through, could still carry them. Now only `smallestUnit` is read. The string always has the offset and the bracketed time zone, and units smaller than `smallestUnit` are always truncated, as the documentation says.
+  
+  ```typescript
+  // With the clock at 2024-02-29T00:00:00.999Z
+  const rounding = { smallestUnit: "second", roundingMode: "ceil" };
+  getZonedNow("UTC", rounding as never); // "2024-02-29T00:00:00+00:00[UTC]" — was "2024-02-29T00:00:01+00:00[UTC]"
+  getZonedNow("UTC", { timeZoneName: "never" } as never); // "2024-02-29T00:00:00.999+00:00[UTC]" — was "2024-02-29T00:00:00.999+00:00"
+  getZonedNow("UTC", { offset: "never" } as never); // "2024-02-29T00:00:00.999+00:00[UTC]" — was "2024-02-29T00:00:00.999[UTC]"
+  getZonedNow("UTC", { roundingMode: "bogus" } as never); // "2024-02-29T00:00:00.999+00:00[UTC]" — was ""
+  ```
+  
+  Unchanged: a call with no options, with `{}`, or with any `smallestUnit` from `"minute"` to `"nanosecond"`. A `smallestUnit` outside that range still returns `""`.
+- bc054ee: Accept `timeStyle: "long"` in the type of `formatCalendarUtc`, `formatCalendarUnix` and `formatCalendarZoned`, not only at run time.
+  
+  `timeStyle` is the `timeStyle` of `Intl.DateTimeFormat`, which takes `"short"`, `"medium"`, `"long"` and `"full"`. The three functions formatted `"long"` when called from JavaScript but rejected it in TypeScript.
+  
+  ```typescript
+  import { formatCalendarUtc } from "@northguild/gmt";
+  
+  formatCalendarUtc("2024-03-16T18:30:00Z", "en-US", {
+    reference: "2024-03-15T13:00:00Z",
+    timeStyle: "long",
+  }); // "tomorrow at 6:30:00 PM UTC" — was a type error
+  ```
+  
+  No output changes. `formatCalendar` is unchanged: a plain date-time has no time zone, so its type offers `"short"` and `"medium"` only.
+- bc054ee: Stop `splitIntervalByUnitUnix` returning empty or repeated pieces when the step is finer than the epoch unit, and always end the last piece of `splitIntervalByUnitZoned` at the `end` you passed.
+  
+  **A step finer than the epoch unit.** Boundaries are floored to whole seconds or milliseconds, so several finer steps used to floor to the same value and come back as empty pieces. Such a split now returns one piece per epoch unit, and `maxPieces` counts those pieces rather than the finer steps.
+  
+  ```typescript
+  import { splitIntervalByUnitUnix } from "@northguild/gmt";
+  
+  splitIntervalByUnitUnix(0, 2, "millisecond", 500, { epochUnit: "seconds" });
+  // was [{ start: 0, end: 0 }, { start: 0, end: 1 }, { start: 1, end: 1 }, { start: 1, end: 2 }]
+  // now [{ start: 0, end: 1 }, { start: 1, end: 2 }]
+  
+  splitIntervalByUnitUnix(0, 1, "microsecond", 500);
+  // was [{ start: 0, end: 0 }, { start: 0, end: 1 }]
+  // now [{ start: 0, end: 1 }]
+  
+  splitIntervalByUnitUnix(0, 2000, "millisecond", 1, { epochUnit: "seconds" }).length;
+  // was 0 (2,000,000 steps passed the default limit), now 2000
+  ```
+  
+  A step of one epoch unit or more is unchanged.
+  
+  **`start` and `end` in different zones.** When the last step landed exactly on `end`, `splitIntervalByUnitZoned` wrote that last boundary in `start`'s zone. It now returns the `end` argument in its own zone, as it already did when the last step passed `end`.
+  
+  ```typescript
+  import { splitIntervalByUnitZoned } from "@northguild/gmt";
+  
+  splitIntervalByUnitZoned(
+    "2024-01-01T00:00:00-05:00[America/New_York]",
+    "2024-01-01T11:00:00+00:00[Europe/London]",
+    "hour",
+    3,
+  ).at(-1)?.end;
+  // was "2024-01-01T06:00:00-05:00[America/New_York]" — the same instant
+  // now "2024-01-01T11:00:00+00:00[Europe/London]"
+  ```
+  
+  The same holds when `end` is another spelling of `start`'s zone, such as `[+00:00]` against `[UTC]`: the last `end` is the argument as you wrote it.
+  
+  ```typescript
+  splitIntervalByUnitZoned(
+    "2024-01-01T00:00:00+00:00[UTC]",
+    "2024-01-01T06:00:00+00:00[+00:00]",
+    "hour",
+    3,
+  ).at(-1)?.end;
+  // was "2024-01-01T06:00:00+00:00[UTC]"
+  // now "2024-01-01T06:00:00+00:00[+00:00]"
+  ```
+- bc054ee: Accept plural unit names in the type of the `largestUnit` option of the `formatRelative*` functions, not only at run time.
+  
+  `formatRelativeUnix` already typed `largestUnit` as singular or plural. The other five functions accepted `"hours"` when called from JavaScript but rejected it in TypeScript. Their types now accept the plural of every unit they already listed:
+  
+  | Function | `largestUnit` now also accepts |
+  | --- | --- |
+  | `formatRelativeUtc`, `formatRelativeZoned`, `formatRelativeDateTime` | `"years"`, `"months"`, `"weeks"`, `"days"`, `"hours"`, `"minutes"`, `"seconds"` |
+  | `formatRelativeDate` | `"years"`, `"months"`, `"weeks"`, `"days"` |
+  | `formatRelativeTime` | `"hours"`, `"minutes"`, `"seconds"` |
+  
+  ```typescript
+  import { formatRelativeUtc } from "@northguild/gmt";
+  
+  const reference = "2024-03-17T12:00:00Z";
+  
+  formatRelativeUtc("2024-03-17T10:00:00Z", "en-US", { reference, largestUnit: "hour" }); // "2 hours ago", unchanged
+  formatRelativeUtc("2024-03-17T10:00:00Z", "en-US", { reference, largestUnit: "hours" }); // "2 hours ago" — was a type error
+  ```
+  
+  No output changes: a plural names the same unit as its singular, as it does in `Intl.RelativeTimeFormat` and Temporal.
+- bc054ee: Return `""` from the `formatRelative*` functions for a `roundingMethod` that is not `"floor"`, `"ceil"` or `"round"`.
+  
+  Before, the value was used as the name of a `Math` function. Any name `Math` has was accepted, so `"abs"`, `"trunc"`, `"sign"`, `"random"` and inherited keys such as `"constructor"` produced a wrong phrase instead of the empty string that invalid input returns. The method is now matched against the three listed values only.
+  
+  This applies to `formatRelativeDate`, `formatRelativeTime`, `formatRelativeDateTime`, `formatRelativeZoned`, `formatRelativeUtc` and `formatRelativeUnix`.
+  
+  ```typescript
+  import { formatRelativeUtc } from "@northguild/gmt";
+  
+  const options = {
+    reference: "2024-03-17T12:00:00Z",
+    largestUnit: "hour",
+    numeric: "always",
+  } as const;
+  
+  // 10:30 is 1.5 hours before the reference
+  formatRelativeUtc("2024-03-17T10:30:00Z", "en-US", options); // "1 hour ago" (−1.5 rounds to −1), unchanged
+  formatRelativeUtc("2024-03-17T10:30:00Z", "en-US", { ...options, roundingMethod: "floor" }); // "2 hours ago", unchanged
+  formatRelativeUtc("2024-03-17T10:30:00Z", "en-US", { ...options, roundingMethod: "abs" as never }); // "" — was "in 1.5 hours"
+  formatRelativeUtc("2024-03-17T10:30:00Z", "en-US", { ...options, roundingMethod: "trunc" as never }); // "" — was "1 hour ago"
+  formatRelativeUtc("2024-03-17T10:30:00Z", "en-US", { ...options, roundingMethod: undefined }); // "1 hour ago", the default, unchanged
+  ```
+  
+  Unchanged: `"floor"`, `"ceil"`, `"round"`, an omitted `roundingMethod`, and `roundingMethod: undefined`, which is read as omitted and takes the default `"round"`.
+
 ## 1.17.0
 
 ### Minor Changes

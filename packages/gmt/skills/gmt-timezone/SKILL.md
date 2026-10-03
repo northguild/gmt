@@ -3,15 +3,15 @@ name: gmt-timezone
 description: >
   Timezone-aware operations — zoned now, formatting zoned values/ranges,
   plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
-  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal,
-  real unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix),
-  hours in a local day, floorToZone/bucketRange, calendar-annotated zoned
-  strings, range limits, transport legs (transitTime, etaAtZone, dwellTime,
-  crossingTime, scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), planned
-  versus actual (scheduleDeviation, classifyPunctuality, punctualityRate,
-  bestAvailable and estimateDrift over PLN/EST/REQ/ACT, nextDeparture),
-  intermodal free time (freeTimeExpiry, chargeableDays, demurrageClock),
-  billingTimeline, and operating hours (OperatingSchedule,
+  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal, real
+  unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
+  local day, floorToZone/bucketRange, calendar-annotated zoned strings, range
+  limits, transport legs (transitTime, etaAtZone, dwellTime, crossingTime,
+  scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff,
+  timeToCutoff), planned versus actual (scheduleDeviation, classifyPunctuality,
+  punctualityRate, bestAvailable and estimateDrift over PLN/EST/REQ/ACT,
+  nextDeparture), intermodal free time (freeTimeExpiry, chargeableDays,
+  demurrageClock), billingTimeline, and operating hours (OperatingSchedule,
   recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
   operatingTimeBetween, addOperatingTime), and daylight time
   (isInDaylightSaving, hasDaylightSaving). Points to the README and JSDoc.
