@@ -1,5 +1,11 @@
 ---
 import Default from '@astrojs/starlight/components/Head.astro';
+
+// Cloudflare Web Analytics. The site is registered in the NorthGuild Cloudflare account
+// under its hostname, and this token only names that site entry: it is public by design
+// and visible in every page's source. The beacon sets no cookie and does not identify
+// visitors. Production builds only, so `astro dev` never reports localhost page views.
+const CF_BEACON = JSON.stringify({ token: '94af68f89d8c4c8eac46ce6c17609d5f' });
 ---
 
 <Default />
@@ -38,3 +44,14 @@ import Default from '@astrojs/starlight/components/Head.astro';
 	import { mountRefTables } from '~/lib/ref-table';
 	mountRefTables(document);
 </script>
+
+{
+	import.meta.env.PROD && (
+		<script
+			is:inline
+			type="module"
+			src="https://static.cloudflareinsights.com/beacon.min.js"
+			data-cf-beacon={CF_BEACON}
+		/>
+	)
+}

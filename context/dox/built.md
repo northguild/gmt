@@ -57,6 +57,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `dist/` through the `ASSETS` binding (`not_found_handling: "404-page"`). A request
   matching a static asset is served before the Worker script runs, so only `/api/*`
   reaches it.
+- **Web Analytics.** Every HTML page loads Cloudflare's beacon
+  (`static.cloudflareinsights.com/beacon.min.js`) from the `Head` override
+  (`src/components/Head.astro`), in production builds only. The site is registered by
+  hostname in the NorthGuild Cloudflare account, where the page views and visits are read.
+  - The token in the script tag is public: it names the site entry and grants nothing.
+  - The beacon sets no cookie and does not identify visitors.
+  - A `workers.dev` hostname is not a zone in the account, so Cloudflare cannot inject the
+    beacon itself; that is why the tag is in the page. On a custom domain, change the
+    hostname of the site entry in the dashboard.
 - **Generator (`A3a`).** `scripts/build-reference.ts` uses the TypeScript compiler API
   (not TypeDoc) and emits one MDX page per exported function and regex, one per shared
   type, index pages, `gmt-corpus.json`, a typed route manifest (`ReadonlySet<string>`),
@@ -1176,7 +1185,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - a custom domain;
   - per-page OG images;
   - a second discovery page beside the mentor index;
-  - a feedback or analytics loop (it would need its own privacy and hosting decisions).
+  - a feedback loop (it would need its own privacy and hosting decisions).
 - **Motion and 3D:**
   - a boot sequence, scanlines, grain;
   - a full-bleed 3D globe behind panels. The globe renders on the GPU, but it stays an
