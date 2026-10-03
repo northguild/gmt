@@ -54,22 +54,22 @@ adding or removing a `Cut` is an owner decision; nothing generates this column.
 end of a realm, and never more than about seven stories, so the docs site is never far ahead of
 npm. A Core primitive ships with the realm that first uses it.
 
-| Cut after     | Ships                             | Why here                                                                                             |
-| ------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| INT-58 (#11)  | TRAN-8, INT-12, INT-58            | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete |
-| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57 | The rest of the transport primitives, with operating hours                                           |
-| INT-15 (#18)  | INT-14, INT-15                    | Intermodal complete: B/L and EDI interop                                                             |
-| CORE-76 (#19) | CORE-76                           | Hours of work: the one duty-log engine driver, seafarer, crew and resident rules run on              |
-| MAR-59 (#24)  | MAR-16 … MAR-19, MAR-59           | Maritime complete, laytime included                                                                  |
-| AV-64 (#30)   | CORE-54, AV-25 … AV-28, AV-64     | Aviation complete, with the holiday rules its seasons use                                            |
-| RAI-24 (#33)  | RAI-22 … RAI-24                   | Rail complete; Phase 2 done                                                                          |
-| IOT-66 (#39)  | CORE-56, IOT-29 … IOT-32, IOT-66  | IoT complete, with the identifier timestamps                                                         |
-| HLTH-39 (#46) | HLTH-33 … HLTH-39                 | The clinical date and time foundations                                                               |
-| HLTH-68 (#48) | HLTH-67, HLTH-68                  | Immunisation and adherence                                                                           |
-| FIN-45 (#54)  | FIN-40 … FIN-45                   | Sessions, day counts, settlement, tenors, 24/7 markets                                               |
-| FIN-73 (#57)  | FIN-71 … FIN-73                   | Schedules, RFR conventions, message timestamps                                                       |
-| SPA-74 (#62)  | SPA-46 … SPA-49, SPA-74           | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                        |
-| SPA-75 (#67)  | SPA-50 … SPA-53, SPA-75           | UT1, mission clocks, CCSDS, Mars time, solar events                                                  |
+| Cut after     | Ships                                      | Why here                                                                                             |
+| ------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| INT-58 (#11)  | TRAN-8, INT-12, INT-58                     | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete |
+| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77 | The rest of the transport primitives, with operating hours                                           |
+| INT-15 (#18)  | INT-14, INT-15                             | Intermodal complete: B/L and EDI interop                                                             |
+| CORE-76 (#19) | CORE-76                                    | Hours of work: the one duty-log engine driver, seafarer, crew and resident rules run on              |
+| MAR-59 (#24)  | MAR-16 … MAR-19, MAR-59                    | Maritime complete, laytime included                                                                  |
+| AV-64 (#30)   | CORE-54, AV-25 … AV-28, AV-64              | Aviation complete, with the holiday rules its seasons use                                            |
+| RAI-24 (#33)  | RAI-22 … RAI-24                            | Rail complete; Phase 2 done                                                                          |
+| IOT-66 (#39)  | CORE-56, IOT-29 … IOT-32, IOT-66           | IoT complete, with the identifier timestamps                                                         |
+| HLTH-39 (#46) | HLTH-33 … HLTH-39                          | The clinical date and time foundations                                                               |
+| HLTH-68 (#48) | HLTH-67, HLTH-68                           | Immunisation and adherence                                                                           |
+| FIN-45 (#54)  | FIN-40 … FIN-45                            | Sessions, day counts, settlement, tenors, 24/7 markets                                               |
+| FIN-73 (#57)  | FIN-71 … FIN-73                            | Schedules, RFR conventions, message timestamps                                                       |
+| SPA-74 (#62)  | SPA-46 … SPA-49, SPA-74                    | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                        |
+| SPA-75 (#67)  | SPA-50 … SPA-53, SPA-75                    | UT1, mission clocks, CCSDS, Mars time, solar events                                                  |
 
 ---
 
@@ -88,11 +88,11 @@ npm. A Core primitive ships with the realm that first uses it.
 | 9  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                        | —                      | #189  | 1.17.0  | Done        |
 | 10 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                           | —                      | #193  | 1.17.0  | Done        |
 | 11 | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                     | —                      | #260  | 1.17.0  | Done        |
-| 12 | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —                      | #257  | —       | Done        |
-| 13 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —                      | #190  | —       | Done        |
-| 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | —       | Done        |
-| 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | Cut     | Done        |
-| 16 | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | —       | Done        |
+| 12 | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —                      | #257  | 1.18.0  | Done        |
+| 13 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —                      | #190  | 1.18.0  | Done        |
+| 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | 1.18.0  | Done        |
+| 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | 1.18.0  | Done        |
+| 16 | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | 1.18.0  | Done        |
 | 17 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                    | —                      | #195  | —       | Not started |
 | 18 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | Cut     | Not started |
 | 19 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | Cut     | Not started |
