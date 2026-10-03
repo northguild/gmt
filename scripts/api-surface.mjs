@@ -47,8 +47,12 @@
  *                what a consumer's type-check sees. A binding without `type` may still name a
  *                type, as TypeScript allows, so every binding is accepted from either set
  *
- * A reference link, site-relative or on the docs site's own origin, must be a corpus entry's
- * `url` — the same list `apps/dox/src/generated/reference/route-manifest.ts` is built from.
+ * A reference link, site-relative or on the docs site's own origin, must name a route of the
+ * reference: a corpus entry's `page`, or an index page above one (every proper prefix of a
+ * `page`, from `/reference` down) — the same list
+ * `apps/dox/src/generated/reference/route-manifest.ts` is built from. A link with a `#fragment`
+ * must be a corpus entry's `url` exactly: the only anchors the corpus vouches for are those of
+ * the types documented on a function's page (`/reference/transport/calculate/dwellTime#dwell`).
  *
  * Needs `pnpm build` first (exit 2 without `dist` or the corpus). Runs under `TZ=UTC`, re-executing
  * itself if needed, so an example never depends on the machine's time zone.
@@ -135,8 +139,11 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * were *removed* (an example now runs instead of being skipped) or *legitimately added* (a new
  * `get/` reader, a new prose aside) — never to silence a regression without reading `show`'s list
  * first to confirm every new skip is one of those two things.
+ *
+ * `examples` counts 165: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
+ * example, which reads the clock like every other `get/` reader example in the `clock` bucket.
  */
-const SKIP_BUDGET = { examples: 164, docResults: 64 };
+const SKIP_BUDGET = { examples: 165, docResults: 64 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
@@ -215,6 +222,34 @@ function evaluate(src, scope = {}) {
 }
 const inspectValue = (v) =>
   inspect(v, { depth: 8, sorted: true, breakLength: Infinity });
+/**
+ * The calls whose result may hold U+202F NARROW NO-BREAK SPACE on one runtime and U+0020 on
+ * another: the two `*ToParts` functions that return a time. They pass `formatToParts` output
+ * through unchanged, and CLDR 42 (ICU 72) put U+202F before the day period of `en-US` times.
+ *
+ * - V8 reverts that character to U+0020 in `deps/v8/src/objects/js-date-time-format.cc`. In Node
+ *   22.22.2 and 24.21.0 (V8 12.4 and 13.6) the replacement is in `FormatDateTime` only, the text
+ *   path, so `formatToParts` returns U+202F. In Node 26.10.0 (V8 14.6) it is the helper
+ *   `Replace202F`, which `CallICUFormat` also applies to the text `formatToParts` is cut from, so
+ *   the parts hold U+0020.
+ * - Found by running every example with an exact comparison on those three versions: six examples
+ *   differ, on Node 26 only, and each one calls `formatDateTimeToParts` or `formatZonedToParts`.
+ * - No other function is listed. `formatDateToParts` returns no time, so no day period. The text
+ *   formatters replace U+202F themselves (`normalizeDateTime`), so their result is the same on
+ *   every runtime; treating the two characters as equal there would hide a formatter that
+ *   stopped replacing it.
+ */
+const NARROW_SPACE_VARIES =
+  /\b(?:formatDateTimeToParts|formatZonedToParts)\s*\(/;
+/**
+ * The form two results are compared in: exact, except that a call matching
+ * {@link NARROW_SPACE_VARIES} has U+202F read as U+0020, as `expectDateTimeEqual` reads it in the
+ * tests (`packages/gmt/src/test/icuVariants.ts`). Any other difference still fails.
+ */
+const comparable = (v, call) =>
+  NARROW_SPACE_VARIES.test(call)
+    ? inspectValue(v).replaceAll("\u202F", " ")
+    : inspectValue(v);
 
 /**
  * A call that pins the moment a relative formatter or predicate compares against: `reference:`, or
@@ -324,7 +359,7 @@ function judgeExample(tally, { where, call, result, clock, scope }) {
     return;
   }
   tally.checked++;
-  if (inspectValue(actual) !== inspectValue(expected)) {
+  if (comparable(actual, call) !== comparable(expected, call)) {
     tally.failures.push({
       where,
       call,
@@ -428,10 +463,22 @@ async function typeNames(dts) {
 
 const IMPORT =
   /\bimport\s+(type\s+)?([\w$*\s{},]*?)\s*from\s*\\?["'`](@northguild\/gmt(?:\/[^"'`\\\s]*)?)\\?["'`]/g;
-/** A site-relative or absolute link into the docs site's API reference. */
+/**
+ * A site-relative or absolute link into the docs site's API reference, with its `#fragment`
+ * when it has one.
+ */
 const REFERENCE_LINK =
-  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/gmt-dox\.northguild\.workers\.dev))\/reference\/[\w/-]*/g;
-const routes = new Set(entries.map((e) => e.url));
+  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/gmt-dox\.northguild\.workers\.dev))\/reference\/[\w/-]*(#[\w-]*)?/g;
+/** Every route of the reference: each entry's page, and the index pages above it. */
+const routes = new Set();
+for (const { page } of entries) {
+  const parts = page.split("/").filter(Boolean);
+  for (let depth = 1; depth <= parts.length; depth++) {
+    routes.add(`/${parts.slice(0, depth).join("/")}`);
+  }
+}
+/** Every link the corpus gives an entry; the ones with a fragment are the valid anchors. */
+const entryUrls = new Set(entries.map((e) => e.url));
 
 const documentedImports = [];
 const docImports = [];
@@ -453,8 +500,13 @@ for (const file of documentationFiles()) {
   }
   for (const m of text.matchAll(REFERENCE_LINK)) {
     linksChecked++;
-    const url = m[0].replace(/\/+$/, "");
-    if (!routes.has(url))
+    const fragment = m[1] && m[1].length > 1 ? m[1] : "";
+    const route = m[0].slice(0, m[0].length - (m[1]?.length ?? 0));
+    const page = route.replace(/\/+$/, "");
+    const known = fragment
+      ? entryUrls.has(`${page}${fragment}`)
+      : routes.has(page);
+    if (!known)
       docLinks.push({ where: `${file}:${lineOf(m.index)}`, url: m[0] });
   }
 }
@@ -946,7 +998,7 @@ for (const d of siteLinks) {
 }
 for (const d of docLinks) {
   console.log(
-    `  doc link: ${d.where} ${d.url} names no reference page (gmt-corpus.json)`,
+    `  doc link: ${d.where} ${d.url} names no reference page or anchor (gmt-corpus.json)`,
   );
 }
 

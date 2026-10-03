@@ -13,6 +13,7 @@ import {
   parseInstantNanoseconds,
 } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Which Excel date system a serial belongs to.
@@ -37,8 +38,6 @@ export type ExcelDateSystem = "1900" | "1904";
  *   compatibility. No instant maps to serial 60: 1900-02-28 is 59 and 1900-03-01 is 61.
  *   Silently "fixing" this would put GMT one day out from Excel for every date before March
  *   1900.
- * - `{ system: "1904" }` selects the legacy Mac system, whose serial 0 is 1904-01-01. The
- *   same instant is exactly 1462 lower there than in the 1900 system.
  * - **Instants outside Excel's own serial range are invalid input**, not an out-of-range
  *   number: the 1900 system runs from serial 1 (1900-01-01) to 2958465 (9999-12-31), the
  *   1904 system from serial 0 (1904-01-01) to 2957003. Serial 0 in the 1900 system is
@@ -55,7 +54,7 @@ export type ExcelDateSystem = "1900" | "1904";
  *   that Excel rejects on the way in.
  *
  * @param isoString ISO 8601 instant string (e.g. "2024-03-10T12:00:00Z")
- * @param options optional: system ("1900" (default) | "1904")
+ * @param options Which Excel date system the serial is in
  * @returns Excel day serial as a number, or null on invalid input
  *
  * @example toExcelSerial("1900-01-01T00:00:00Z") // 1 — Excel's first serial
@@ -70,14 +69,24 @@ export type ExcelDateSystem = "1900" | "1904";
  */
 export function toExcelSerial(
   isoString: string,
-  options?: { system?: ExcelDateSystem },
+  options?: {
+    /**
+     * Which Excel date system the serial is counted in. `"1900"` counts serial 1 as 1900-01-01
+     * and has the phantom serial 60; `"1904"` is the legacy Mac system, whose serial 0 is
+     * 1904-01-01 and which has no phantom day. The same instant is exactly 1462 lower in the 1904
+     * system.
+     *
+     * @defaultValue `"1900"`
+     */
+    system?: ExcelDateSystem;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {
       return null;
     }
 
-    const system = options?.system === undefined ? "1900" : options.system;
+    const system = optionOrDefault(options?.system, "1900");
 
     if (system !== "1900" && system !== "1904") {
       return null;

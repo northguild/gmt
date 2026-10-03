@@ -41,12 +41,10 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   1727532300000 (03:50+13:45) truncated to the hour gives 1727532900000, 15 minutes later.
  *   Use `floorToZone` for a boundary that never exceeds the instant.
  * - `value` is a safe integer or a digit string (`"1706661000000"`); anything else returns null.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone returns
- *   null.
  * - Returns null for invalid input.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
- * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options rounding settings: the unit to round to, how to round, and how `value` is read
  * @returns Rounded Unix epoch number, or null on invalid input
  *
  * @example roundUnix(1706661000000, { smallestUnit: "hour", timeZone: "UTC" }) // 1706662800000 (00:30 is a tie; halfExpand rounds up)
@@ -62,6 +60,10 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
 export function roundUnix(
   value: number | string,
   options: {
+    /**
+     * The unit to round to, from `"day"` down to `"nanosecond"`, singular or plural. A larger unit
+     * returns `null`, as `Temporal.ZonedDateTime.prototype.round` accepts none above `"day"`.
+     */
     smallestUnit: Temporal.SmallestUnit<
       | "day"
       | "hour"
@@ -71,9 +73,35 @@ export function roundUnix(
       | "microsecond"
       | "nanosecond"
     >;
+    /**
+     * The number of `smallestUnit` steps to round to, such as `15` with `"minute"` for quarter
+     * hours. It must divide the next larger unit evenly and be smaller than it, and must be `1` for
+     * `"day"`; any other value returns `null`. A non-integer is truncated first, as Temporal does.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * The step a value between two steps is rounded to. `"halfExpand"` picks the nearer step and
+     * sends a tie to the later one; `"floor"` and `"trunc"` pick the earlier step, `"ceil"` and
+     * `"expand"` the later, and the other `"half…"` modes differ only in how a tie breaks.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the wall clock is rounded in: an IANA name, a UTC offset, or `"local"` for the
+     * system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
   },
 ): number | null {
@@ -83,10 +111,10 @@ export function roundUnix(
     const { roundingIncrement, roundingMode } = options;
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     const timeZone = normalizeTimeZone(options.timeZone);
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
       return null;

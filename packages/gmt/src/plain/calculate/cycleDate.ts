@@ -18,24 +18,20 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   overflow into January of the *next* year. Reach for `addDate` when you want calendar
  *   arithmetic; reach for `cycleDate` when a single field (e.g. a datepicker segment) must stay
  *   isolated from the others.
- * - `year` has no upper/lower wrap — cycling it is plain addition (or rounding, see below).
+ * - `year` has no upper/lower wrap — cycling it is plain addition (or a step to a multiple, with
+ *   `round`): `2022` by `+5` with `round: true` lands on `2025`, the next multiple of 5.
  *   `month` wraps `1–12`. `day` wraps `1`–the **current** month's day count, so cycling `day`
  *   never changes `month`.
  * - Cycling `month` or `year` can still shift `day` via `overflow` — e.g. cycling `month` from a
  *   31st into a shorter month clamps under the default `"constrain"` (or returns `""` under
  *   `"reject"`) exactly the way `setDate`'s own `.with()` call does; this is the same clamping
  *   `addDate`'s Jan 31 + 1 month case produces, not new behavior.
- * - `options.round` does **not** round to the nearest increment — it steps to the *next* multiple
- *   of `amount` in the direction of its sign (ceiling for positive, floor for negative), matching
- *   `@internationalized/date`'s `CycleOptions.round`. E.g. cycling `year` `2022` by `+5` with
- *   `round: true` lands on `2025` (the next multiple of 5 above 2022), not `2020` (the nearest
- *   multiple).
  * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainDate string
  * @param field the field to cycle: "year" | "month" | "day"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false), overflow ("constrain" | "reject")
+ * @param options How the field is stepped and an out-of-range day is handled
  * @returns ISO PlainDate string with `field` cycled, or "" on invalid input
  *
  * @example cycleDate("2024-06-15", "month", 1) // "2024-07-15"
@@ -52,7 +48,23 @@ export function cycleDate(
   value: string,
   field: DateCycleField,
   amount: number,
-  options?: { round?: boolean; overflow?: Overflow },
+  options?: {
+    /**
+     * Whether to step to a multiple of `amount` instead of adding it. `true` moves to the next
+     * multiple in the direction of the sign of `amount` (the ceiling for a positive amount, the
+     * floor for a negative one), not to the nearest one; `false` adds `amount`.
+     *
+     * @defaultValue `false`
+     */
+    round?: boolean;
+    /**
+     * What to do when the cycled `month` or `year` leaves `day` past the end of its month.
+     * `"constrain"` clamps `day` to the last day of that month; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

@@ -14,10 +14,6 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *   schedule stays open.
  * - A window belongs to the date it starts on, so a Friday 23:00–06:00 window is open at 01:00
  *   on Saturday even when Saturday is a holiday.
- * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
- *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns
- *   `false` when only a window with an ambiguous or nonexistent edge could be open at `isoString`.
  * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required, and a bracketed zone
  *   never supplies the zone — the schedule's own zone reads the windows. Only its instant is
  *   read, a minute-rounded offset as the bracketed zone's real one (see `isValidInstant`).
@@ -27,7 +23,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *
  * @param isoString ISO 8601 instant string to test
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg How a window edge on a clock change is resolved
  * @returns true when open at that instant, or false when closed or on invalid input
  *
  * @example isOpenAt("2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // true — Monday 10:00 local
@@ -39,7 +35,18 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
 export function isOpenAt(
   isoString: string,
   schedule: OperatingSchedule,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `false` when a window with such an edge is the only one that
+     * could be open at `isoString`.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): boolean {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

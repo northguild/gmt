@@ -2,13 +2,13 @@ import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
 import { isValidTimeZone } from "../zoned/validate";
 
 /**
- * Resolve the `timeZone` option of every `unix/` function and the `utc/` formatters.
+ * Resolve the `timeZone` option of every `unix/` and `utc/` function that takes one.
  *
  * - Omitted (`undefined`) → `"UTC"`. A Unix epoch and a UTC string name an instant, so no host
  *   zone is read unless asked for.
  * - `"local"` → the system time zone (`getSystemTimeZone()`), or `""` when the host reports none
  *   that is valid.
- * - A valid IANA identifier → returned as-is.
+ * - A valid IANA identifier or UTC offset (`"+05:30"`) → returned as-is.
  * - Anything else (`null`, `""`, a typo, a non-string) → `""`, the caller's cue to return its
  *   sentinel. ECMA-402 `Intl.DateTimeFormat` and Temporal `ToTemporalTimeZoneIdentifier` throw
  *   `RangeError` for an unknown zone, so a typo never silently renders UTC.

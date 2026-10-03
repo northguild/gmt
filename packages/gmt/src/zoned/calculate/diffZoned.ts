@@ -57,7 +57,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value2 zoned ISO 8601 datetime string (end), optionally calendar-annotated
  * @param units date-time unit or units to measure the difference, singular or plural (`"day"` or
  *   `"days"`); a record result keeps the plural keys
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffZoned("2024-02-28T14:30:00+00:00[UTC]", "2024-03-01T15:30:00+00:00[UTC]", "days") // 2

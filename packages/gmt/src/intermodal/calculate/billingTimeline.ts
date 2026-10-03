@@ -9,35 +9,55 @@ export interface BillingDates {
    * last incurred or, for a re-bill, the issuance date of the invoice received.
    */
   anchorOn: string;
-  /** The date the invoice was issued, once it has been. */
+  /**
+   * The date the invoice was issued, once it has been, as an ISO date.
+   *
+   * @defaultValue None. `issuedByDeadline` and `disputeDeadline` are `null`.
+   */
   invoiceIssuedOn?: string;
-  /** The date the dispute request was received, once it has been. */
+  /**
+   * The date the dispute request was received, once it has been, as an ISO date. It needs
+   * `invoiceIssuedOn` and may not precede it.
+   *
+   * @defaultValue None. `requestedByDeadline` and `resolutionDeadline` are `null`.
+   */
   requestReceivedOn?: string;
 }
 
 /** The three windows the caller supplies, in calendar days, none defaulted, and an optional agreed resolution date. */
 export interface BillingWindows {
-  /** Days from `anchorOn` within which the invoice must be issued. */
+  /** The days from `anchorOn` within which the invoice must be issued. */
   issueDays: number;
-  /** Days from `invoiceIssuedOn` within which a dispute may be raised. */
+  /** The days from `invoiceIssuedOn` within which a dispute may be raised. */
   disputeDays: number;
-  /** Days from `requestReceivedOn` within which the dispute must be resolved. */
+  /** The days from `requestReceivedOn` within which the dispute must be resolved. */
   resolutionDays: number;
-  /** A resolution date the parties agreed instead; it replaces the computed one. */
+  /**
+   * A resolution date the parties agreed instead, as an ISO date on or after `requestReceivedOn`;
+   * it replaces the computed one.
+   *
+   * @defaultValue None. `resolutionDeadline` is `requestReceivedOn + resolutionDays`.
+   */
   agreedResolutionOn?: string;
 }
 
 /** What `billingTimeline` returns: each deadline as an ISO date, and each comparison once its date exists. */
 export interface BillingDeadlines {
-  /** `anchorOn + issueDays`. */
+  /** The last date the invoice may be issued: `anchorOn + issueDays`. */
   invoiceDeadline: string;
   /** Whether `invoiceIssuedOn` is on or before `invoiceDeadline`; `null` until an invoice date exists. */
   issuedByDeadline: boolean | null;
-  /** `invoiceIssuedOn + disputeDays`; `null` until an invoice date exists. */
+  /**
+   * The last date a dispute may be raised: `invoiceIssuedOn + disputeDays`; `null` until an invoice
+   * date exists.
+   */
   disputeDeadline: string | null;
   /** Whether `requestReceivedOn` is on or before `disputeDeadline`; `null` until a request date exists. */
   requestedByDeadline: boolean | null;
-  /** `requestReceivedOn + resolutionDays`, or `agreedResolutionOn`; `null` until a request date exists. */
+  /**
+   * The last date the dispute must be resolved: `requestReceivedOn + resolutionDays`, or
+   * `agreedResolutionOn`; `null` until a request date exists.
+   */
   resolutionDeadline: string | null;
 }
 
@@ -83,8 +103,8 @@ export interface BillingDeadlines {
  *   request exists without an invoice or before it, `agreedResolutionOn` is before the request,
  *   or a deadline would leave Temporal's range.
  *
- * @param dates { anchorOn: string, invoiceIssuedOn?: string, requestReceivedOn?: string } ISO dates
- * @param windows { issueDays: number, disputeDays: number, resolutionDays: number, agreedResolutionOn?: string } calendar-day windows, none defaulted
+ * @param dates The anchor date, and the invoice and request dates once they exist
+ * @param windows The three calendar-day windows, none defaulted, and an agreed resolution date
  * @returns { invoiceDeadline, issuedByDeadline, disputeDeadline, requestedByDeadline, resolutionDeadline }, or null on invalid input
  *
  * @example billingTimeline({ anchorOn: "2026-03-01" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 }) // { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null, requestedByDeadline: null, resolutionDeadline: null } (no invoice yet: a forecast)

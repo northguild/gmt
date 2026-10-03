@@ -14,19 +14,27 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
 /** Options for `cutoffAt`. */
 export interface CutoffOptions {
-  /** IANA timeZone identifier or fixed offset the cut-off is read in — the terminal's clock. */
+  /** The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset. */
   timeZone: string;
   /**
-   * Local time of day the cut-off is pinned to (`"17:00"`), as `isValidTime` accepts. Omit it
-   * for a cut-off that is an exact offset from the anchor.
+   * The local time of day the cut-off is pinned to (`"17:00"`), as `isValidTime` accepts.
+   *
+   * @defaultValue None. The cut-off is the offset taken off the anchor, with no time of day
+   * pinned.
    */
   atLocalTime?: string;
   /**
-   * Working week and holidays the cut-off's local date is rolled against. Its `timeZone` is not
-   * read: `timeZone` above is the local frame. Requires `roll`.
+   * The working week and holidays the cut-off's local date is rolled against. Its `timeZone` is
+   * not read: `timeZone` above is the local frame. Requires `roll`.
+   *
+   * @defaultValue None. The cut-off's date is not rolled; a `roll` without it returns `""`.
    */
   calendar?: BusinessCalendar;
-  /** How a cut-off on a non-business day moves. No default; requires `calendar`. */
+  /**
+   * How a cut-off on a non-business day moves, as `rollDate` moves it. Requires `calendar`.
+   *
+   * @defaultValue None. The cut-off's date is not rolled; a `calendar` without it returns `""`.
+   */
   roll?: RollConvention;
 }
 
@@ -195,7 +203,7 @@ function rolledDate(
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadline counts back from
  * @param offset ISO 8601 duration before the anchor
- * @param options timeZone (IANA identifier or fixed offset, required); optional atLocalTime; calendar and roll, together or not at all
+ * @param options The zone the cut-off is read in, the time of day it is pinned to, and how it rolls off a non-business day
  * @returns ISO 8601 zoned datetime string of the cut-off, or "" on invalid input
  *
  * @example cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" }) // "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"

@@ -15,8 +15,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Equality is measured on each value's own local wall-clock fields (its own
  *   time zone), not on the underlying instant or time zone identifier — the
  *   same instant can be "the same day" in one zone and a different day in
- *   another, and this function answers per each value's own zone, the way
- *   Luxon's `dt.hasSame(other, unit)` does for zoned `DateTime`s.
+ *   another, and this function answers per each value's own zone, because a
+ *   `Temporal.ZonedDateTime` reads its calendar and clock fields in its own
+ *   time zone.
+ * - Comparison: Luxon's `dt.hasSame(other, unit)` also compares the two values'
+ *   local times.
  * - Each value's start-of-unit is its real local bucket (see `startOfZoned`), so a bucket a
  *   zone transition shortened is still its own unit: in `Pacific/Chatham` on its 2024
  *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
@@ -27,10 +30,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   compared by their buckets' local labels, since their instants never line up.
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns false.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isSameDay(a, b)` → `areZonedEqualBy(a, b, "day")`
  * - `isSameMonth(a, b)` → `areZonedEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areZonedEqualBy(a, b, "year")`
@@ -38,7 +40,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 first zoned ISO datetime string
  * @param value2 second zoned ISO datetime string
  * @param unit date or time unit, singular or plural, to compare by
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
+ * @param optionsArg optional setting for the week's first day
  * @returns true if both values share the same local start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areZonedEqualBy("2024-03-15T10:00:00-04:00[America/New_York]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "day") // true (both are local March 15 in their own zone)
@@ -51,7 +53,16 @@ export function areZonedEqualBy(
   value1: string,
   value2: string,
   unit: Temporal.SmallestUnit<DateTimeUnit>,
-  optionsArg?: { weekStartsOn?: "monday" | "sunday" },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * false, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(optionsArg)) {

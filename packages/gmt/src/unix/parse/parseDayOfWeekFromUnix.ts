@@ -9,7 +9,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns null for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds: a safe integer, or a string of optionally negative ASCII digits
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone is invalid)
+ * @param options optional: how `value` is read and the zone its wall clock is read in
  * @returns Day of week (1-7) or null on invalid input
  *
  * @example parseDayOfWeekFromUnix(1704067200000, { timeZone: "UTC" }) // 1
@@ -20,7 +20,22 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseDayOfWeekFromUnix(
   value: number | string,
-  options?: { epochUnit?: UnixUnit; timeZone?: string },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {

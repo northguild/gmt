@@ -1,11 +1,33 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
+import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";
+import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
 
+/**
+ * Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the
+ * wording.
+ */
 export interface FormatRelativeTimeOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeTimeUnit;
+  /**
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"` or `"hour"`,
+   * singular or plural. Any other value returns `""`, a date unit such as `"day"` included: a time
+   * has no date, and Temporal throws RangeError for a unit outside the units of the type. Omitted,
+   * the unit is picked from the distance: second under a minute, minute under an hour and hour
+   * beyond.
+   *
+   * @defaultValue None. The unit is picked from the distance.
+   */
+  largestUnit?: RelativeTimeUnit | `${RelativeTimeUnit}s`;
 }
+
+// Temporal's time unit group down to the second: the units a PlainTime difference may be written
+// in, less the sub-second units, which Intl.RelativeTimeFormat does not have.
+const TIME_UNITS = [
+  "hour",
+  "minute",
+  "second",
+] as const satisfies readonly RelativeTimeUnit[];
 
 const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
   { unit: "second", maxSeconds: 60 },
@@ -18,13 +40,13 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  *
  * - Auto-picks the display unit (second/minute/hour) based on the distance, unless
  *   `largestUnit` forces one.
- * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `largestUnit` is one of those three units, singular or plural. Any other value returns `""`.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO time string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeTime("14:30:00", "en-US", { style: "short", reference: "16:30:00" }) // "2 hr. ago"
@@ -43,33 +65,33 @@ export function formatRelativeTime(
     // invalid input.
     if (options === null || typeof options !== "object") return "";
     if (!isValidTime(value)) return "";
-    if (options.reference !== undefined && !isValidTime(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidTime(referenceOption))
       return "";
 
     try {
+      const forcedUnit = resolveRelativeUnit(options.largestUnit, TIME_UNITS);
+      const roundingMethod = options.roundingMethod;
       const target = Temporal.PlainTime.from(value);
-      const reference = options.reference
-        ? Temporal.PlainTime.from(options.reference)
+      const reference = referenceOption
+        ? Temporal.PlainTime.from(referenceOption)
         : Temporal.Now.plainTimeISO();
 
       const diff = target.since(reference);
       const absSeconds = Math.abs(diff.total("second"));
 
       const unit =
-        options.largestUnit === undefined
+        forcedUnit === undefined
           ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "hour")
-          : options.largestUnit;
+          : forcedUnit;
 
-      const amount = resolveRelativeRounding(
+      return formatRelativeAmount(
         diff.total(unit),
-        options.roundingMethod,
-      );
-
-      return normalizeDateTime(
-        new Intl.RelativeTimeFormat(locale, {
-          numeric: options.numeric === undefined ? "auto" : options.numeric,
-          style: options.style === undefined ? "long" : options.style,
-        }).format(amount, unit),
+        unit,
+        locale,
+        options,
+        roundingMethod,
       );
     } catch {
       return "";

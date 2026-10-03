@@ -8,8 +8,20 @@ import type {
 } from "../../types";
 import { isValidDateTime } from "../validate";
 
+/**
+ * Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding
+ * and the wording.
+ */
 export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeDateTimeUnit;
+  /**
+   * The unit the distance is written in, whatever its size: `"second"`, `"minute"`, `"hour"`,
+   * `"day"`, `"week"`, `"month"` or `"year"`, singular or plural. Any other value returns `""`.
+   * Omitted, the unit is picked from the distance: second under a minute, minute under an hour,
+   * hour under a day, day under 7 days, week under 28, month under 365 and year beyond.
+   *
+   * @defaultValue None. The unit is picked from the distance.
+   */
+  largestUnit?: RelativeDateTimeUnit | `${RelativeDateTimeUnit}s`;
 }
 
 /**
@@ -21,13 +33,14 @@ export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions
  *   "3 years ago".
  * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
  *   Pass `largestUnit: "day"` to keep a day count.
- * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `largestUnit` is one of the seven units from `"second"` to `"year"`, singular or plural. Any
+ *   other value returns `""`.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO date-time string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", { style: "long", reference: "2026-03-17T06:00:00" }) // "in 3 hours"
@@ -47,13 +60,15 @@ export function formatRelativeDateTime(
     // invalid input.
     if (options === null || typeof options !== "object") return "";
     if (!isValidDateTime(value)) return "";
-    if (options.reference !== undefined && !isValidDateTime(options.reference))
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
       return "";
 
     try {
       const target = Temporal.PlainDateTime.from(value);
-      const reference = options.reference
-        ? Temporal.PlainDateTime.from(options.reference)
+      const reference = referenceOption
+        ? Temporal.PlainDateTime.from(referenceOption)
         : Temporal.Now.plainDateTimeISO();
 
       const diff = target.since(reference);

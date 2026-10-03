@@ -40,7 +40,7 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  * - Returns null on invalid input — never `"unique"`, which would read as a verdict.
  *
  * @param localDateTime zoneless ISO 8601 local datetime string (e.g. "2024-11-03T01:30:00")
- * @param timeZone IANA timeZone identifier the wall time is read in
+ * @param timeZone IANA name or UTC offset the wall time is read in
  * @returns "unique" | "ambiguous" | "nonexistent", or null on invalid input
  *
  * @example classifyLocal("2024-07-15T12:00:00", "America/New_York") // "unique"

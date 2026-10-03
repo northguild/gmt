@@ -26,7 +26,16 @@ import { halfOpenXor, parseUnixEpochIntervalList } from "../../internal";
  */
 export function intervalXorAllUnix(
   intervals: Array<{ start: number | string; end: number | string }>,
-): Array<{ start: number; end: number }> {
+): Array<{
+  /** The instant the interval begins at, as a Unix epoch number in the unit the arguments share. */
+  start: number;
+  /**
+   * The first instant after the interval, in the same unit as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It is always later
+   * than `start`.
+   */
+  end: number;
+}> {
   try {
     if (!Array.isArray(intervals) || intervals.length === 0) {
       return [];

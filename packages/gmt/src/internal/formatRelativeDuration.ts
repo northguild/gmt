@@ -6,6 +6,8 @@ import type {
 } from "../types";
 import { normalizeDateTime } from "./normalizeDateTime";
 import { resolveRelativeRounding } from "./resolveRelativeRounding";
+import { optionOrDefault } from "./optionOrDefault";
+import { resolveRelativeUnit } from "./resolveRelativeUnit";
 
 /** A relative unit, singular or plural (`Intl.RelativeTimeFormat` and Temporal accept both). */
 type RelativeUnitName = RelativeUnit | `${RelativeUnit}s`;
@@ -17,6 +19,18 @@ export interface RelativeDurationFormatOptions {
   largestUnit?: RelativeUnitName;
   roundingMethod?: RelativeRoundingMethod;
 }
+
+// The units of the seven-unit functions: Temporal's datetime unit group down to the second, less
+// the sub-second units, which Intl.RelativeTimeFormat does not have.
+const RELATIVE_UNITS = [
+  "year",
+  "month",
+  "week",
+  "day",
+  "hour",
+  "minute",
+  "second",
+] as const satisfies readonly RelativeUnit[];
 
 // Seconds up to a day, then formatRelativeDate's day thresholds (7, 28 and 365 days).
 const SECONDS_PER_DAY = 86_400;
@@ -48,30 +62,61 @@ export function formatRelativeDuration(
   diff: Temporal.Duration,
   locale: string | string[] | undefined,
   options: RelativeDurationFormatOptions,
-  calendarTotal: (unit: RelativeUnitName) => number,
+  calendarTotal: (unit: RelativeUnit) => number,
 ): string {
+  // Each option is read once (GetOption), and largestUnit is validated before anything is measured.
+  const forcedUnit = resolveRelativeUnit(options.largestUnit, RELATIVE_UNITS);
+  const roundingMethod = options.roundingMethod;
   const absSeconds = Math.abs(diff.total("second"));
 
   const unit =
-    options.largestUnit === undefined
+    forcedUnit === undefined
       ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "year")
-      : options.largestUnit;
+      : forcedUnit;
 
-  let amount: number;
+  let total: number;
   try {
-    amount = resolveRelativeRounding(diff.total(unit), options.roundingMethod);
+    total = diff.total(unit);
   } catch {
     // month/year are calendrical and need a relativeTo anchor.
-    amount = resolveRelativeRounding(
-      calendarTotal(unit),
-      options.roundingMethod,
-    );
+    total = calendarTotal(unit);
   }
+  // Outside the retry: an invalid roundingMethod throws once, straight to the caller's sentinel.
+  return formatRelativeAmount(total, unit, locale, options, roundingMethod);
+}
+
+/**
+ * Round a distance to a whole number of `unit` and render it with `Intl.RelativeTimeFormat`. The
+ * shared last step of every `formatRelative*` function.
+ *
+ * - `numeric` and `style` are read here, once each (GetOption); `roundingMethod` is passed in
+ *   because the caller has already read it.
+ *
+ * @param total the signed fractional distance in `unit`
+ * @param unit the singular unit the distance is written in
+ * @param locale BCP 47 locale(s) passed through to `Intl.RelativeTimeFormat`
+ * @param options the caller's options, read for `numeric` (default `"auto"`) and `style`
+ *   (default `"long"`)
+ * @param roundingMethod the caller's `roundingMethod`, `undefined` for the default `"round"`
+ * @returns the formatted phrase; throws where `Intl` throws or the rounding method is invalid, for
+ *   the caller's sentinel
+ * @example formatRelativeAmount(-1.5, "hour", "en-US", {}, "floor") // "2 hours ago"
+ * @example formatRelativeAmount(1, "day", "en-US", { numeric: "always" }, undefined) // "in 1 day"
+ * @example formatRelativeAmount(1, "day", "en-US", { style: "wide" as never }, undefined) // throws RangeError
+ */
+export function formatRelativeAmount(
+  total: number,
+  unit: RelativeUnit,
+  locale: string | string[] | undefined,
+  options: Pick<RelativeDurationFormatOptions, "numeric" | "style">,
+  roundingMethod: RelativeRoundingMethod | undefined,
+): string {
+  const amount = resolveRelativeRounding(total, roundingMethod);
 
   return normalizeDateTime(
     new Intl.RelativeTimeFormat(locale, {
-      numeric: options.numeric === undefined ? "auto" : options.numeric,
-      style: options.style === undefined ? "long" : options.style,
+      numeric: optionOrDefault(options.numeric, "auto"),
+      style: optionOrDefault(options.style, "long"),
     }).format(amount, unit),
   );
 }

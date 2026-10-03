@@ -52,6 +52,11 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       "outputs up-to-date, skipping" over a corpus it would never have produced, so
       confirm the new functions actually appear in
       `apps/dox/src/generated/reference/gmt-corpus.json` rather than trusting the skip.
+      Then run `pnpm dox:docs-check`. It lists every public type, member and option with no
+      description, and every optional input property with no `@defaultValue`
+      ([jsdoc standards § Options and members](../context/jsdoc-standards.md#options-and-members)).
+      A gap is not yours to fill with site copy: report it to `driver`, so `tdd-dev` writes it
+      from the implementation.
    4. `pnpm stats:sync` — rewrites the published test counts, CI execution totals and
       per-namespace function counts in both READMEs, and regenerates
       `apps/dox/src/data/gmt-stats.json`, which every dox page, chart and comparison
@@ -78,7 +83,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    - Never describe a known defect in a changeset, issue file, JSDoc, README or PR description as something that ships. It gets fixed instead.
 
 9. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's
-   Definition of Done, and it runs `deps check`, `test-markers check`, the full build, `stats check`, lint,
+   Definition of Done, and it runs `deps check`, `test-markers check`, `dox:docs-check`, the full build, `stats check`, lint,
    typecheck and every test in that order. Do not report a story closed on a partial run.
    If `deps check` or `stats check` fails, fix it here; both print the command that
    resolves them, and both exist because a checklist item asking someone to verify a

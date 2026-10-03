@@ -17,9 +17,6 @@ import { isObject } from "../../internal/isObject";
  * Round an ISO 8601 date string to the specified date unit.
  *
  * - Returns "" for invalid inputs.
- * - Accepts date units: "year", "month", "week", "day", each in its singular or plural form
- *   ("month" or "months"), as Temporal's GetTemporalUnitValuedOption accepts both (§13.17).
- * - Time units ("hour", "minute", etc.) are rejected and return "".
  * - All date units use manual start-of-unit rounding. Weeks start on Monday.
  * - The rounding grid is anchored at the unit containing `value`, so `"halfEven"` breaks an exact
  *   tie towards that unit's start (multiple 0, the even one).
@@ -28,13 +25,10 @@ import { isObject } from "../../internal/isObject";
  *   When it rounds down to that unrepresentable start, the result is "".
  * - In the last representable year (`+275760`) a date that rounds down still returns its unit's
  *   start; only rounding up past `+275760-09-13` returns "".
- * - `roundingIncrement` and `roundingMode` are read as Temporal reads them: a non-integer increment
- *   is truncated (`1.5` rounds by 1), an increment below 1 or not finite returns "", and a
- *   `roundingMode` outside Temporal's nine returns "" (previously it floored silently).
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
  *
  * @param value ISO 8601 date string
- * @param options Rounding options: smallestUnit, optional roundingIncrement and roundingMode
+ * @param options The unit to round to and how to round
  * @returns Rounded ISO 8601 date string, or "" on invalid input
  *
  * @example roundDate("2024-06-15", { smallestUnit: "year" }) // "2024-01-01"
@@ -53,8 +47,27 @@ import { isObject } from "../../internal/isObject";
 export function roundDate(
   value: string,
   options: {
+    /**
+     * The unit to round to: `"year"`, `"month"`, `"week"` or `"day"`, singular or plural, as
+     * Temporal's GetTemporalUnitValuedOption accepts both (§13.17). A time unit such as `"hour"`
+     * returns `""`.
+     */
     smallestUnit: Temporal.SmallestUnit<DateUnit>;
+    /**
+     * How many units make one rounding step, counted from the unit that holds `value`. Read as
+     * Temporal reads it: a non-integer is truncated (`1.5` rounds by 1), and a value below 1 or not
+     * finite returns `""`.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * Which way a date between two steps goes: one of Temporal's nine rounding modes, such as
+     * `"floor"`, `"ceil"` or `"halfExpand"` (to the nearer step, a tie going up). Any other value
+     * returns `""`.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
@@ -62,10 +75,10 @@ export function roundDate(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
 

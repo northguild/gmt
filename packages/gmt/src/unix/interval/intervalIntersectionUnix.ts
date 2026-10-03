@@ -35,7 +35,16 @@ export function intervalIntersectionUnix(
   aEnd: number | string,
   bStart: number | string,
   bEnd: number | string,
-): { start: number; end: number } | null {
+): {
+  /** The instant the interval begins at, as a Unix epoch number in the unit the arguments share. */
+  start: number;
+  /**
+   * The first instant after the interval, in the same unit as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: number;
+} | null {
   const pair = parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd);
   // Null unless `aStart < bEnd && bStart < aEnd` (so touching intervals, or an empty interval at
   // an edge, give null); otherwise the latest start and earliest end bound the overlap.

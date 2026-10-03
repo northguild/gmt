@@ -12,22 +12,14 @@ import { isValidUtc } from "../validate/isValidUtc";
  * Round a UTC datetime string to the specified unit.
  *
  * - Converts to Instant, rounds, converts back to UTC Instant string.
- * - Supports: "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
- * - Each unit is accepted in its singular or plural form ("hour" or "hours"), as Temporal's
- *   GetTemporalUnitValuedOption accepts both.
  * - Day and larger units ("day", "week", "month", "year") return "". This is the Temporal spec, not
  *   a polyfill limitation: `Instant.prototype.round` validates `smallestUnit` as a time unit
  *   (ValidateTemporalUnitValue with ~time~), because an instant has no calendar or zone to define a
  *   day. Round a zoned value with `roundZoned` for a day boundary.
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
- * - Output precision follows `smallestUnit`: no fractional seconds for "second" and coarser,
- *   3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the result never
- *   hides the precision the unit asked for.
- * - `fractionalSecondDigits` overrides that count outright, coarser or finer than the unit; an
- *   invalid value returns "".
  *
  * @param value ISO UTC datetime string
- * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, fractionalSecondDigits
+ * @param options What to round to, how, and the precision of the result
  * @returns Rounded ISO UTC Instant string, or "" on invalid input
  *
  * @example roundUtc("2024-06-15T12:34:56Z", { smallestUnit: "hour" }) // "2024-06-15T13:00:00Z"
@@ -43,6 +35,10 @@ import { isValidUtc } from "../validate/isValidUtc";
 export function roundUtc(
   value: string,
   options: {
+    /**
+     * The unit to round to: `"hour"`, `"minute"`, `"second"`, `"millisecond"`, `"microsecond"` or
+     * `"nanosecond"`, singular or plural as Temporal's GetTemporalUnitValuedOption accepts both.
+     */
     smallestUnit: Temporal.SmallestUnit<
       | "hour"
       | "minute"
@@ -51,8 +47,29 @@ export function roundUtc(
       | "microsecond"
       | "nanosecond"
     >;
+    /**
+     * The multiple of `smallestUnit` to round to, such as 15 for quarter hours. It must divide a
+     * 24-hour day evenly (Temporal's `Instant.prototype.round`); any other value returns `""`.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * Which multiple a value between two is rounded to. `"halfExpand"` picks the nearer one and
+     * sends a tie to the later instant; `"floor"` and `"trunc"` pick the earlier, `"ceil"` and
+     * `"expand"` the later, and the other `"half…"` modes differ only in how a tie breaks.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. It overrides the unit's own count, coarser or finer; an invalid value
+     * returns `""`.
+     *
+     * @defaultValue The digits `smallestUnit` names: `3` for `"millisecond"`, `6` for
+     * `"microsecond"`, `9` for `"nanosecond"` and `0` for any coarser unit.
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
@@ -60,10 +77,10 @@ export function roundUtc(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
     if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";

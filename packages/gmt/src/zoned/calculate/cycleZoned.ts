@@ -33,21 +33,14 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   whatever DST edge case results (the wrapped local time landing in a gap or an overlap) exactly
  *   the way it resolves any other field-set call. This is deliberately simpler than deriving
  *   DST-aware wrap boundaries directly.
- * - `disambiguation` defaults to `"compatible"` and `offset` defaults to `"prefer"`, as Temporal's
- *   `ZonedDateTime#with` does: when the source's offset is still valid for the cycled wall time
- *   (a repeated fall-back hour), it is kept and `disambiguation` is not consulted. Pass
- *   `offset: "ignore"` to resolve the cycled wall time through `disambiguation` instead.
  * - **Compatibility:** before 1.16.0 `offset` defaulted to `"ignore"`. Pass `{ offset: "ignore" }`
  *   to keep that resolution.
- * - `options.round` steps to the *next* multiple of `amount` in the direction of its sign
- *   (ceiling for positive, floor for negative) — not the nearest one. See `cycleDate`/`cycleTime`'s
- *   docs for worked examples.
  * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value zoned ISO 8601 datetime string
  * @param field the field to cycle: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false), overflow ("constrain" | "reject"), disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject", default "prefer")
+ * @param options optional settings for rounding the step and resolving the cycled wall-clock time
  * @returns zoned ISO 8601 string with `field` cycled, or "" on invalid input
  *
  * @example cycleZoned("2024-06-15T09:30:00-05:00[America/Chicago]", "hour", 1) // "2024-06-15T10:30:00-05:00[America/Chicago]"
@@ -64,9 +57,41 @@ export function cycleZoned(
   field: DateTimeCycleField,
   amount: number,
   options?: {
+    /**
+     * Whether to step to the next multiple of `amount` in the direction of its sign (up for a
+     * positive amount, down for a negative one) instead of adding `amount` to the current value. It
+     * is the next multiple, not the nearest one; see `cycleDate` and `cycleTime` for worked examples.
+     *
+     * @defaultValue `false`
+     */
     round?: boolean;
+    /**
+     * What happens when the result names a day its month does not have, such as cycling `month`
+     * from 31 January to February. `"constrain"` clamps to the last valid day; `"reject"` returns
+     * `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
+    /**
+     * How the new wall-clock time resolves when it falls in a DST gap or overlap and `offset` does
+     * not settle it. In a fall-back overlap `"compatible"` and `"earlier"` take the earlier instant
+     * and `"later"` the later one; in a spring-forward gap `"compatible"` and `"later"` move the
+     * wall clock forward by the gap length and `"earlier"` back by it. `"reject"` returns `""` for
+     * both.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
     disambiguation?: Disambiguation;
+    /**
+     * How the source's UTC offset is treated at the new wall-clock time, as in Temporal's
+     * `ZonedDateTime#with`. `"prefer"` keeps it while it is still valid there (a repeated fall-back
+     * hour) and otherwise resolves through `disambiguation`; `"ignore"` always resolves through
+     * `disambiguation`. `"use"` keeps the offset even when that moves the wall clock, and
+     * `"reject"` returns `""` when the offset is not valid for the new wall time.
+     *
+     * @defaultValue `"prefer"`, Temporal's default.
+     */
     offset?: Offset;
   },
 ): string {

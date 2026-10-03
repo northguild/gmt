@@ -523,3 +523,57 @@ describe("formatDateTime with primitive options", () => {
     ).toBe(expected);
   });
 });
+
+// ECMA-402 GetOption step 1 is Get(options, property), which follows the prototype chain, so an
+// inherited option is read exactly as the same option held as an own property. Here the date is 15
+// March 2024, a Friday, so dateStyle "full" in en-US names the weekday.
+describe("formatDateTime with inherited options", () => {
+  it.each`
+    label          | options
+    ${"own"}       | ${{ dateStyle: "full" }}
+    ${"inherited"} | ${Object.create({ dateStyle: "full" })}
+  `(
+    "formats with $label options { dateStyle: 'full' }, an inherited option being read like an own one",
+    ({ options }) => {
+      expect(formatDateTime("2024-03-15T20:00:00", "en-US", options)).toBe(
+        "Friday, March 15, 2024",
+      );
+    },
+  );
+});
+
+// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
+// an object option is asked for its value once and that answer is both checked and used: a long
+// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
+// print "M 15".
+describe("formatDateTime with an option that is an object", () => {
+  it("calls month.toString() once and formats with its first answer, long", () => {
+    let coercions = 0;
+    const month = {
+      toString() {
+        coercions += 1;
+        return coercions === 1 ? "long" : "narrow";
+      },
+    };
+    const out = formatDateTime("2024-03-15T20:00:00", "en-US", {
+      month,
+      day: "numeric",
+    } as never);
+    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+  });
+});
+
+// A plain date-time has no zone, so a "full" timeStyle is written without one
+// (AdjustDateTimeStyleFormat removes the zone field): 20:05:00 in en-US is "8:05:00 PM". The option
+// is converted to the string "full" before it is looked at, so a String object is treated as the
+// string it holds; 1.17 compared the object itself, missed, and wrote
+// "8:05:00 PM Coordinated Universal Time".
+describe("formatDateTime with a timeStyle that is a String object", () => {
+  it('formats 2024-03-15T20:05:00 with timeStyle new String("full") as 8:05:00 PM, with no zone name', () => {
+    expect(
+      formatDateTime("2024-03-15T20:05:00", "en-US", {
+        timeStyle: new String("full"),
+      } as never),
+    ).toBe("8:05:00 PM");
+  });
+});

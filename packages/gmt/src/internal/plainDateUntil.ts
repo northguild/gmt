@@ -36,10 +36,14 @@ export function plainDateUntil(
   largestUnit: string,
   options?: RoundingOptions<Temporal.DateUnit>,
 ): Temporal.Duration {
+  // Each option is read once (GetOption).
+  const smallestUnit = options?.smallestUnit;
+  const roundingIncrement = options?.roundingIncrement;
+  const roundingMode = options?.roundingMode;
   if (
-    options?.smallestUnit === undefined &&
-    options?.roundingIncrement === undefined &&
-    options?.roundingMode === undefined
+    smallestUnit === undefined &&
+    roundingIncrement === undefined &&
+    roundingMode === undefined
   ) {
     return Temporal.Duration.from(
       calendarDateUntil(start, end, singularDateUnit(largestUnit)),
@@ -47,9 +51,9 @@ export function plainDateUntil(
   }
   const untilOptions = {
     largestUnit: largestUnit as Temporal.DateUnit,
-    smallestUnit: options.smallestUnit,
-    roundingIncrement: options.roundingIncrement,
-    roundingMode: options.roundingMode,
+    smallestUnit,
+    roundingIncrement,
+    roundingMode,
   };
   // No D11 term here. The nudge window can only miss its target when the target sits strictly
   // between the window bounds by a sub-day amount, which is why every D11 case carries a time

@@ -39,12 +39,13 @@ export function durationUntilString(
   largestUnit: string,
   options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
 ): string {
-  const untilOptions = {
-    largestUnit,
+  // Each option is read once (GetOption); the difference below works on these values.
+  const roundingOptions = {
     smallestUnit: options?.smallestUnit,
     roundingIncrement: options?.roundingIncrement,
     roundingMode: options?.roundingMode,
   };
+  const untilOptions = { largestUnit, ...roundingOptions };
   const duration =
     start instanceof Temporal.ZonedDateTime
       ? zonedUntil(
@@ -57,7 +58,7 @@ export function durationUntilString(
             start,
             end as Temporal.PlainDate,
             largestUnit,
-            options as RoundingOptions<Temporal.DateUnit>,
+            roundingOptions as RoundingOptions<Temporal.DateUnit>,
           )
         : (
             start as {

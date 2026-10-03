@@ -2,24 +2,15 @@ import { Temporal } from "@js-temporal/polyfill";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Roll an ISO 8601 duration string's small units into larger ones.
  *
  * - Uses Temporal.Duration.from and .round to rebalance, then .toString() to re-emit.
- * - Defaults to { largestUnit: "auto" }, which resolves to the larger of smallestUnit and the
- *   duration's own largest non-zero unit, then balances up to it. Units are promoted only up to
- *   a unit already present: "PT90M" stays "PT90M", but "P1DT25H" becomes "P2DT1H" and "PT1H90M"
- *   becomes "PT2H30M". Pass an explicit largestUnit to promote further.
- * - relativeTo is required whenever a calendar unit (year/month/week) is involved,
- *   either as the requested largestUnit or because the input duration already has a
- *   nonzero year/month/week component (this applies even under the "auto" default).
- *   Without relativeTo in either case, returns "".
- * - roundingIncrement must evenly divide, and be less than, 24 for hour, 60 for minute/second
- *   and 1000 for millisecond/microsecond/nanosecond (so 60 and 24 themselves are rejected).
- *   For year/month/week/day it has no maximum, but an increment above 1 is rejected unless
- *   largestUnit is that same unit ("auto" resolves to the largest unit present). An invalid
- *   increment returns "".
+ * - With no options, units are promoted only up to a unit already present: "PT90M" stays
+ *   "PT90M", but "P1DT25H" becomes "P2DT1H" and "PT1H90M" becomes "PT2H30M". Pass an explicit
+ *   largestUnit to promote further.
  * - A zoned relativeTo string resolves its wall time with disambiguation "compatible" and offset
  *   "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a nonexistent
  *   one the later instant, and an offset that does not match the zone returns "". Pass an
@@ -41,7 +32,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   invalid relativeTo.
  *
  * @param value ISO 8601 duration string
- * @param options optional: { largestUnit, smallestUnit, roundingIncrement, roundingMode, relativeTo } per Temporal's Duration.round options
+ * @param options The units to balance between, the rounding, and the anchor for calendar units, as Temporal's Duration.round takes them
  * @returns rebalanced ISO 8601 duration string, or "" on invalid input
  *
  * @example normalizeDuration("PT90M", { largestUnit: "hour" }) // "PT1H30M"
@@ -60,10 +51,45 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function normalizeDuration(
   value: string,
   options?: {
+    /**
+     * The largest unit the result may carry; smaller units are rolled up into it. `"auto"` is
+     * the larger of `smallestUnit` and the duration's own largest nonzero unit, so nothing is
+     * promoted past a unit already present.
+     *
+     * @defaultValue `"auto"`
+     */
     largestUnit?: Temporal.LargestUnit<Temporal.DateTimeUnit>;
+    /**
+     * The smallest unit the result may carry; anything smaller is rounded into it.
+     *
+     * @defaultValue `"nanosecond"`, Temporal's default.
+     */
     smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>;
+    /**
+     * The step `smallestUnit` is rounded to. It must evenly divide, and be less than, 24 for
+     * hour, 60 for minute and second, and 1000 for the sub-second units. For year, month, week
+     * and day it has no maximum, but an increment above 1 is rejected unless `largestUnit` is
+     * that same unit; an invalid increment returns `""`.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * Which way a value between two steps goes when `smallestUnit` or `roundingIncrement` rounds
+     * the duration. `"halfExpand"` rounds to the nearest step, a half going away from zero, and
+     * `"trunc"` rounds toward zero.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
+    /**
+     * The date or zoned date-time the duration is measured from. It is required whenever a year,
+     * month or week is involved, as `largestUnit` or `smallestUnit` or as a nonzero field of the
+     * duration, even under the `"auto"` default.
+     *
+     * @defaultValue None. Days are 24 hours, and a duration or unit that involves a year, month
+     * or week returns `""`.
+     */
     relativeTo?: DurationRelativeTo;
   },
 ): string {
@@ -78,8 +104,7 @@ export function normalizeDuration(
   try {
     const duration = Temporal.Duration.from(value);
     return durationRound(duration, {
-      largestUnit:
-        options?.largestUnit === undefined ? "auto" : options.largestUnit,
+      largestUnit: optionOrDefault(options?.largestUnit, "auto"),
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,
       roundingMode: options?.roundingMode,

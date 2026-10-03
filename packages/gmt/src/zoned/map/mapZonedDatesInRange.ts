@@ -9,9 +9,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Both datetimes must have the same timezone.
  * - Returns [] for invalid inputs, mismatched timezones, start > end, or invalid step.
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when the
- *   range holds more dates than that, it returns `[]` without generating any. An invalid
- *   `maxPieces` also returns `[]`.
+ * - A range holding more dates than `options.maxPieces` returns `[]` without generating any.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
  *   reaches `options`. **Compatibility:** before 1.16.0 it returned `[]`.
  * - **End-inclusive, where the `interval*` functions are half-open.** This enumerates the dates a
@@ -22,7 +20,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * @param startZonedDateTime start zoned ISO 8601 datetime string
  * @param endZonedDateTime end zoned ISO 8601 datetime string
  * @param stepDays optional positive integer step in days
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options optional limit on the size of the output
  * @returns array of ISO date strings or [] when invalid
  *
  * @example mapZonedDatesInRange("+275760-09-12T00:00:00+00:00[UTC]", "+275760-09-13T00:00:00+00:00[UTC]") // ["+275760-09-12", "+275760-09-13"] (a range ending on the maximum instant)
@@ -37,7 +35,16 @@ export function mapZonedDatesInRange(
   startZonedDateTime: string,
   endZonedDateTime: string,
   stepDays?: number,
-  options?: { maxPieces?: number },
+  options?: {
+    /**
+     * The most dates the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
 ): string[] {
   try {
     // An explicit undefined is the omitted argument, as TC39 GetOption treats it.

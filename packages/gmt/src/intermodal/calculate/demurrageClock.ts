@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { instantFrom, isObject } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { Interval } from "../../types";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * The events a container's charging clocks run between, named after the DCSA Track & Trace
@@ -27,8 +28,9 @@ export type ClockEventType =
 
 /** A container event: what happened and the instant it happened. */
 export interface ClockEvent {
+  /** What happened to the container, as one of the events a charging clock can start or end at. */
   type: ClockEventType;
-  /** ISO 8601 instant string: `Z`, an offset, or a bracketed zone. */
+  /** The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone. */
   at: string;
 }
 
@@ -43,9 +45,18 @@ export type ClockStartEvent = "discharged" | "available";
 
 /** The options `demurrageClock` reads. */
 export interface ClockOptions {
-  /** `"import"` or `"export"`; required, because the same scope runs between different events in each. */
+  /**
+   * The leg of the container's cycle, `"import"` or `"export"`; required, because the same scope
+   * runs between different events in each.
+   */
   direction: ClockDirection;
-  /** Import only: `"discharged"` (the default) or `"available"`. Not read for export or detention. */
+  /**
+   * Where an import demurrage, storage or combined clock starts: `"discharged"`, the classic
+   * definition, or `"available"` for tariffs that start at the availability date. Not read for
+   * export or detention.
+   *
+   * @defaultValue `"discharged"`
+   */
   startEvent?: ClockStartEvent;
 }
 
@@ -98,9 +109,8 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  *
  * - **`direction` has no default.** The same scope name selects different events on the import and
  *   export legs, and guessing it from the events present would be a silent guess.
- * - **`startEvent` is import only**: `"discharged"` by default, the classic definition, or
- *   `"available"` for tariffs that start at the availability date. It is not read for detention
- *   or export, so one options object can serve every scope on a leg. A tariff that starts at
+ * - **`startEvent` is import only.** It is not read for detention or export, so one options
+ *   object can serve every scope on a leg. A tariff that starts at
  *   customs release (Hapag-Lloyd Japan) or ends export demurrage at the cut-off or the scheduled
  *   sailing passes that instant as the event's `at`; GMT does not invent an event for one tariff.
  * - Events may be in any order, and every one must be `{ type, at }` with a known type and a
@@ -116,7 +126,7 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  *
  * @param events the container's events, `{ type, at }`, `type` one of discharged, available, gatedOut, emptyReturned, emptyReleased, gatedIn, loaded
  * @param scope "demurrage" | "detention" | "storage" | "combined"
- * @param options { direction: "import" | "export", startEvent?: "discharged" | "available" }
+ * @param options Which leg of the cycle the clock is on, and where an import clock starts
  * @returns { start, end } of the requested clock, or null on invalid input
  *
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }, { type: "available", at: "2024-06-15T12:00:00Z" }, { type: "gatedOut", at: "2024-06-20T14:30:00Z" }, { type: "emptyReturned", at: "2024-06-27T09:00:00Z" }], "demurrage", { direction: "import" }) // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
@@ -169,8 +179,10 @@ function selectClock(
   }
 
   // An explicit `undefined` is an omission (TC39 GetOption); `null` is a value, and not a valid one.
-  const startEvent: ClockStartEvent =
-    options.startEvent === undefined ? "discharged" : options.startEvent;
+  const startEvent: ClockStartEvent = optionOrDefault(
+    options.startEvent,
+    "discharged",
+  );
   if (!CLOCK_START_EVENTS.includes(startEvent)) {
     return null;
   }

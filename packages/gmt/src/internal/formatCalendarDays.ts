@@ -25,7 +25,7 @@ export function formatCalendarDays(
   epochMilliseconds: number,
   timeZone: string,
   locale: string | string[] | undefined,
-  timeStyle: "short" | "medium" | "full",
+  timeStyle: "short" | "medium" | "long" | "full",
 ): string {
   if (Math.abs(diffDays) > ABS_DAY_THRESHOLD) {
     return normalizeDateTime(
@@ -68,7 +68,7 @@ export function formatCalendarInstants(
   reference: Temporal.Instant,
   timeZone: string,
   locale: string | string[] | undefined,
-  timeStyle: "short" | "medium" | "full",
+  timeStyle: "short" | "medium" | "long" | "full",
 ): string {
   const targetDate = target.toZonedDateTimeISO(timeZone).toPlainDate();
   const referenceDate = reference.toZonedDateTimeISO(timeZone).toPlainDate();

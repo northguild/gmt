@@ -253,6 +253,28 @@ describe("parseDateWithPattern", () => {
       ).toBe("2024-03-15");
     });
 
+    // UTS #35 Part 4, Date Format Patterns: "Two adjacent single vertical
+    // quotes (''), which represent a literal single quote, either inside or
+    // outside quoted text."
+    it.each`
+      value                 | pattern                 | expected        | why
+      ${"2024'01'15"}       | ${"yyyy''MM''dd"}       | ${"2024-01-15"} | ${"'' between fields is one literal quote"}
+      ${"20240115"}         | ${"yyyy''MM''dd"}       | ${""}           | ${"the literal quotes are missing from the value"}
+      ${"'2024-01-15'"}     | ${"''yyyy-MM-dd''"}     | ${"2024-01-15"} | ${"'' at the start and end of the pattern"}
+      ${"2024-01-15"}       | ${"''yyyy-MM-dd''"}     | ${""}           | ${"the leading and trailing quotes are missing"}
+      ${"''2024-01-15"}     | ${"''''yyyy-MM-dd"}     | ${"2024-01-15"} | ${"'''' is two '' pairs, two literal quotes"}
+      ${"'2024-01-15"}      | ${"''''yyyy-MM-dd"}     | ${""}           | ${"'''' needs two literal quotes, not one"}
+      ${"'T2024-01-15"}     | ${"'''T'yyyy-MM-dd"}    | ${"2024-01-15"} | ${"''' is a literal quote, then an opening quote"}
+      ${"'2024-01-15"}      | ${"'''yyyy-MM-dd"}      | ${""}           | ${"''' leaves the third quote unterminated"}
+      ${"a'' 2024-01-15"}   | ${"'a'''' 'yyyy-MM-dd"} | ${"2024-01-15"} | ${"two '' pairs inside quoted text"}
+      ${"Wed, Jul 10, '96"} | ${"EEE, MMM d, ''yy"}   | ${"1996-07-10"} | ${"the UTS #35 pattern example table row"}
+    `(
+      'returns "$expected" for "$value" against "$pattern" ($why)',
+      ({ value, pattern, expected }) => {
+        expect(parseDateWithPattern(value, pattern)).toBe(expected);
+      },
+    );
+
     it('returns "" for an unterminated quote (malformed pattern)', () => {
       expect(parseDateWithPattern("2024-03-15", "yyyy-MM-dd'")).toBe("");
     });

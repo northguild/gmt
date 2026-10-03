@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value1 first unix epoch: a safe integer or a digit string
  * @param value2 second unix epoch, in the same unit
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
+ * @param options optional: how both epochs are read
  * @returns `true` if `value1` is after `value2`, otherwise `false`
  *
  * @example isAfterUnix(1706659200, 1704067200) // true
@@ -24,7 +24,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function isAfterUnix(
   value1: number | string,
   value2: number | string,
-  options?: { epochUnit?: UnixUnit },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `false`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {

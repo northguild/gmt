@@ -15,11 +15,7 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  *   a `BusinessCalendar`, whose `holidays` are read.
  * - A window belongs to the date it starts on, so a holiday or override on Friday removes or
  *   replaces a Friday 23:00–06:00 window, and one on Saturday leaves it alone.
- * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
- *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns `[]`
- *   when a window with an ambiguous or nonexistent edge reaches the range. `recurringWindows`
- *   states the window rules in full.
+ * - Window edges are local wall times; `recurringWindows` states the window rules in full.
  * - The result is clipped to `range` (half-open), sorted, and merged where windows overlap or
  *   touch. Endpoints are UTC instants ending in `Z`, except a clipped edge, which is `range`'s
  *   own string.
@@ -32,7 +28,7 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  *
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the schedule inside
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg How a window edge on a clock change is resolved
  * @returns sorted, merged `{ start, end }` records of the open instants, or [] on invalid input
  *
  * @example operatingIntervals({ timeZone: "America/New_York", weekly: { 4: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] }, holidays: ["2024-07-04"] }, { start: "2024-07-04T00:00:00Z", end: "2024-07-06T00:00:00Z" }) // [{ start: "2024-07-05T13:00:00Z", end: "2024-07-05T21:00:00Z" }] — the holiday is closed
@@ -44,7 +40,17 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
 export function operatingIntervals(
   schedule: OperatingSchedule,
   range: Interval,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `[]` when a window with such an edge reaches the range.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): Interval[] {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

@@ -339,3 +339,58 @@ describe("intervalFromDurationZoned in non-ISO calendars (CORE-6)", () => {
     },
   );
 });
+
+// Temporal GetOption converts an option to a string once (ToString, after the one Get), so an
+// option given as an object is asked for its value once, and that answer is both checked and used.
+// A 1-day interval from 01:30 on 2 November 2024 in New York lands on 01:30 on 3 November, which
+// the fall-back overlap has twice: "later" is the second, at -05:00, and "earlier" the first, at
+// -04:00. From 31 January, 1 month under "reject" has no 31 February, and under "constrain" lands
+// on 29 February.
+describe("intervalFromDurationZoned with an option that is an object", () => {
+  function answering(first: string, second: string) {
+    const option = {
+      coercions: 0,
+      toString() {
+        option.coercions += 1;
+        return option.coercions === 1 ? first : second;
+      },
+    };
+    return option;
+  }
+
+  it("calls disambiguation.toString() once and resolves the overlap with its first answer, later", () => {
+    const disambiguation = answering("later", "earlier");
+    const options = { disambiguation };
+    const out = intervalFromDurationZoned(
+      "2024-11-02T01:30:00-04:00[America/New_York]",
+      "P1D",
+      "start",
+      options as never,
+    );
+    expect({ out, coercions: disambiguation.coercions }).toEqual({
+      out: {
+        start: "2024-11-02T01:30:00-04:00[America/New_York]",
+        end: "2024-11-03T01:30:00-05:00[America/New_York]",
+      },
+      coercions: 1,
+    });
+  });
+
+  it("calls overflow.toString() once, with disambiguation later, and clamps with its first answer, constrain", () => {
+    const overflow = answering("constrain", "reject");
+    const options = { overflow, disambiguation: "later" };
+    const out = intervalFromDurationZoned(
+      "2024-01-31T12:00:00-05:00[America/New_York]",
+      "P1M",
+      "start",
+      options as never,
+    );
+    expect({ out, coercions: overflow.coercions }).toEqual({
+      out: {
+        start: "2024-01-31T12:00:00-05:00[America/New_York]",
+        end: "2024-02-29T12:00:00-05:00[America/New_York]",
+      },
+      coercions: 1,
+    });
+  });
+});

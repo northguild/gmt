@@ -11,8 +11,11 @@ import { isValidDate } from "../validate";
  * - The count depends on which day the week starts — the same month can
  *   span 4, 5, or 6 rows depending on locale (e.g. February 2026 is 4
  *   rows starting Sunday but 5 rows starting Monday).
- * - Sized the same way `@internationalized/date`'s `getWeeksInMonth`
- *   sizes a datepicker's calendar grid.
+ * - The count is the row the month's last day falls on, where row 1 holds
+ *   the 1st (see `getWeekOfMonth`). This is GMT's own rule for sizing a
+ *   month grid, not a standard's; CLDR's `minDays` plays no part.
+ * - Comparison: `@internationalized/date`'s `getWeeksInMonth` returns the
+ *   same number for the same first day of week.
  * - Resolves the locale's first day of week via
  *   `Intl.Locale.prototype.weekInfo`.
  * - Returns null if `value` or `locale` is invalid.

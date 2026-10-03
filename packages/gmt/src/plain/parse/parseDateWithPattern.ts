@@ -10,9 +10,8 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  *   producer format — a CSV column, a legacy API field, a partially-typed
  *   form value — not for generating locale-correct output. For display,
  *   use `formatDate`/`formatDateToParts`, which order fields per locale
- *   instead of hard-coding a field order (see roadmap Decision 1 — a
- *   token *formatter*, the inverse of this function, is deliberately out
- *   of scope for GMT).
+ *   instead of hard-coding a field order (a token *formatter*, the
+ *   inverse of this function, is deliberately out of scope for GMT).
  * - `pattern` accepts only date-shaped tokens. A pattern containing a
  *   time-only token (`H h m s S a`) is malformed for this function and
  *   returns `""` — use `parseDateTimeWithPattern` for combined input.
@@ -33,10 +32,13 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  * | `GGGG` | era name (long) | locale | — | BCE label ⇒ final year = 1 − parsed year |
  * | `GG` | era name (short) | locale | — | same resolution |
  *
- * - Text in `'single quotes'` is a literal; a doubled `''` inside a
- *   quoted segment is a literal `'`. Any other character (`/ - , space`,
- *   literal digits, etc.) outside a quote/letter-run is automatically a
- *   literal — no explicit quoting required.
+ * - Literal text follows the Unicode UTS #35 date format pattern rules.
+ *   Text in `'single quotes'` is a literal, letters included. Two
+ *   adjacent quotes `''` are one literal `'`, inside or outside quoted
+ *   text: `"yyyy''MM"` reads `"2024'03"`, and `"'o''clock'"` reads
+ *   `"o'clock"`. A quote that never closes makes the pattern malformed
+ *   (`""`). Any other character that is not a letter (`/ - , space`,
+ *   digits and so on) is a literal with no quoting.
  * - `MMMM`/`MMM`/`EEEE`/`EEE`/`GGGG`/`GG` are locale-aware. If `locale`
  *   is omitted and the pattern uses any of them, GMT defaults to
  *   `"en-US"` rather than returning `""` for every caller who didn't
@@ -65,6 +67,7 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  *
  * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy") // "2024-03-15"
  * @example parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy") // "2024-03-15"
+ * @example parseDateWithPattern("Mar 15, '24", "MMM d, ''yy") // "2024-03-15" ('' is one literal quote)
  * @example parseDateWithPattern("02/31/2024", "MM/dd/yyyy") // "" (shape-valid, not a real date)
  * @example parseDateWithPattern("14:30", "HH:mm") // "" (time token in a date-only pattern)
  * @example parseDateWithPattern("19 mai 2024", "d MMMM yyyy", ["fr-FR", "en-US"]) // "2024-05-19"

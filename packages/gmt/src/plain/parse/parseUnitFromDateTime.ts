@@ -15,13 +15,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns zero-padded string for most units.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
- * - `weekStartsOn: "sunday"` numbers weeks by UTS #35 (week 1 holds 1 January, so late-December
- *   days can be week 1); any value other than `"monday"` or `"sunday"` returns "".
+ * - `optionsArg` must be an object or omitted: `null` or any other primitive returns "", as
+ *   Temporal's GetOptionsObject rejects it.
  * - Returns "" for invalid input.
  *
  * @param value ISO PlainDateTime string
  * @param unit unit to extract from the datetime
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday") for week calculations; a non-object value (such as `null`) is invalid
+ * @param optionsArg How weeks are numbered
  * @returns string representation of the requested unit or "" on invalid input
  *
  * @example parseUnitFromDateTime("2024-03-15T14:30:45.123", "year") // "2024"
@@ -48,7 +48,17 @@ export function parseUnitFromDateTime(
         | "nanosecond"
       >
     | "dayOfWeek",
-  optionsArg?: { weekStartsOn?: "monday" | "sunday" },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets how the `"week"` unit is numbered. `"monday"` gives the
+     * ISO 8601 week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS
+     * #35 week number with a Sunday first day and one minimal day, where week 1 holds 1 January.
+     * Any other value returns `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+  },
 ): string {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.

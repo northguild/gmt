@@ -456,3 +456,42 @@ describe("formatDate with primitive options", () => {
     ).toBe(expected);
   });
 });
+
+// ECMA-402 GetOption step 1 is Get(options, property), which follows the prototype chain, so an
+// inherited option is read exactly as the same option held as an own property. Here the date is 15
+// March 2024, a Friday, so dateStyle "full" in en-US names the weekday.
+describe("formatDate with inherited options", () => {
+  it.each`
+    label          | options
+    ${"own"}       | ${{ dateStyle: "full" }}
+    ${"inherited"} | ${Object.create({ dateStyle: "full" })}
+  `(
+    "formats with $label options { dateStyle: 'full' }, an inherited option being read like an own one",
+    ({ options }) => {
+      expect(formatDate("2024-03-15", "en-US", options)).toBe(
+        "Friday, March 15, 2024",
+      );
+    },
+  );
+});
+
+// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
+// an object option is asked for its value once and that answer is both checked and used: a long
+// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
+// print "M 15".
+describe("formatDate with an option that is an object", () => {
+  it("calls month.toString() once and formats with its first answer, long", () => {
+    let coercions = 0;
+    const month = {
+      toString() {
+        coercions += 1;
+        return coercions === 1 ? "long" : "narrow";
+      },
+    };
+    const out = formatDate("2024-03-15", "en-US", {
+      month,
+      day: "numeric",
+    } as never);
+    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+  });
+});

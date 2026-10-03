@@ -2,7 +2,10 @@ import { vi } from "vitest";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
-import { formatRelativeUnix } from "./formatRelativeUnix";
+import {
+  formatRelativeUnix,
+  type FormatRelativeUnixOptions,
+} from "./formatRelativeUnix";
 
 // Base: 2024-02-29T00:00:00Z (leap day)
 const REF_MS = 1709164800000;
@@ -396,13 +399,55 @@ describe("formatRelativeUnix", () => {
       },
     );
 
-    it("returns '' for an invalid roundingMethod", () => {
-      expect(
-        formatRelativeUnix(REF_MS - 8280000, MustTestLocales.enUS, {
+    // RelativeRoundingMethod is "floor" | "ceil" | "round". Any other value is invalid input and
+    // returns the sentinel (Core Rule 3), including the name of another Math function, an
+    // inherited Object.prototype key, another letter case and null.
+    it.each`
+      roundingMethod
+      ${"nonsense"}
+      ${"abs"}
+      ${"trunc"}
+      ${"sign"}
+      ${"random"}
+      ${"constructor"}
+      ${"hasOwnProperty"}
+      ${"toString"}
+      ${"ROUND"}
+      ${""}
+      ${null}
+    `(
+      "returns '' for the invalid roundingMethod $roundingMethod",
+      ({ roundingMethod }) => {
+        expect(
+          formatRelativeUnix(REF_MS - 8280000, MustTestLocales.enUS, {
+            reference: REF_MS,
+            roundingMethod,
+          }),
+        ).toBe("");
+      },
+    );
+
+    // ECMA-402 GetOption (the Temporal specification defines the same operation): an option whose
+    // value is undefined is absent, so the default applies.
+    it("reads roundingMethod: undefined as the omitted option (default 'round')", () => {
+      const omitted = formatRelativeUnix(
+        REF_MS - 8280000,
+        MustTestLocales.enUS,
+        {
           reference: REF_MS,
-          roundingMethod: "nonsense" as never,
-        }),
-      ).toBe("");
+        },
+      );
+      const explicitUndefined = formatRelativeUnix(
+        REF_MS - 8280000,
+        MustTestLocales.enUS,
+        {
+          reference: REF_MS,
+          roundingMethod: undefined,
+        },
+      );
+      // -2 h 18 min is -2.3 hours, which rounds to -2.
+      expect(omitted).toBe("2 hours ago");
+      expect(explicitUndefined).toBe(omitted);
     });
   });
 
@@ -684,5 +729,112 @@ describe("formatRelativeUnix with a locale list", () => {
         reference: REF_MS,
       }),
     ).toBe(expected);
+  });
+});
+
+// The allowed units of `largestUnit` are the ones the option's type lists: "year", "month", "week", "day", "hour", "minute", "second", each
+// singular or plural. Temporal reads a unit option with GetTemporalUnitValuedOption (a plural name
+// is its singular) and then ValidateTemporalUnitValue against the unit group of the type — here
+// datetime — which throws RangeError for a unit outside it (test262 largestunit-invalid-string.js
+// for PlainDate, PlainTime, PlainDateTime, Instant and ZonedDateTime `until`). A RangeError is "".
+describe("formatRelativeUnix largestUnit", () => {
+  // Every value is checked against the option's own type, so `tsc` fails this file if a singular
+  // or a plural name leaves the `largestUnit` type. The table below takes its units from here.
+  const UNIT = {
+    year: "year",
+    years: "years",
+    month: "month",
+    months: "months",
+    week: "week",
+    weeks: "weeks",
+    day: "day",
+    days: "days",
+    hour: "hour",
+    hours: "hours",
+    minute: "minute",
+    minutes: "minutes",
+    second: "second",
+    seconds: "seconds",
+  } satisfies Record<
+    string,
+    NonNullable<FormatRelativeUnixOptions["largestUnit"]>
+  >;
+
+  // 1679054400000 is 2023-03-17T12:00:00Z and 1710676800000 is 2024-03-17T12:00:00Z. That span
+  // spans 29 February 2024: 1 year, 12 months, 366 days (52.29 weeks,
+  // rounded to 52), 8,784 hours, 527,040 minutes, 31,622,400 seconds.
+  // A plural names the same unit as its singular, so both rows of a unit expect the same text.
+  it.each`
+    largestUnit     | expected
+    ${UNIT.year}    | ${"last year"}
+    ${UNIT.years}   | ${"last year"}
+    ${UNIT.month}   | ${"12 months ago"}
+    ${UNIT.months}  | ${"12 months ago"}
+    ${UNIT.week}    | ${"52 weeks ago"}
+    ${UNIT.weeks}   | ${"52 weeks ago"}
+    ${UNIT.day}     | ${"366 days ago"}
+    ${UNIT.days}    | ${"366 days ago"}
+    ${UNIT.hour}    | ${"8,784 hours ago"}
+    ${UNIT.hours}   | ${"8,784 hours ago"}
+    ${UNIT.minute}  | ${"527,040 minutes ago"}
+    ${UNIT.minutes} | ${"527,040 minutes ago"}
+    ${UNIT.second}  | ${"31,622,400 seconds ago"}
+    ${UNIT.seconds} | ${"31,622,400 seconds ago"}
+  `(
+    "returns $expected for the listed unit largestUnit: $largestUnit",
+    ({ largestUnit, expected }) => {
+      const options: FormatRelativeUnixOptions = {
+        reference: 1710676800000,
+        largestUnit,
+      };
+
+      expect(
+        formatRelativeUnix(1679054400000, MustTestLocales.enUS, options),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
+    label                          | largestUnit                  | why
+    ${"quarter"}                   | ${"quarter"}                 | ${"not a unit of the function"}
+    ${"quarters"}                  | ${"quarters"}                | ${"not a unit of the function"}
+    ${"millisecond"}               | ${"millisecond"}             | ${"not a unit of the function"}
+    ${"nanoseconds"}               | ${"nanoseconds"}             | ${"not a unit of the function"}
+    ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
+    ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
+    ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
+    ${""}                          | ${""}                        | ${"an empty string"}
+    ${"x"}                         | ${"x"}                       | ${"not a unit"}
+    ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
+    ${"1"}                         | ${1}                         | ${"a number"}
+    ${"true"}                      | ${true}                      | ${"a boolean"}
+    ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
+    ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
+  `(
+    'returns "" for largestUnit $label outside the listed units ($why)',
+    ({ largestUnit }) => {
+      expect(
+        formatRelativeUnix(1679054400000, MustTestLocales.enUS, {
+          reference: 1710676800000,
+          largestUnit: largestUnit as never,
+        }),
+      ).toBe("");
+    },
+  );
+
+  // An explicit undefined is the omitted option (GetOption), so the unit is picked from the
+  // distance exactly as it is with no largestUnit at all.
+  it("picks the unit from the distance for largestUnit: undefined, as when it is omitted", () => {
+    const picked = formatRelativeUnix(1679054400000, MustTestLocales.enUS, {
+      reference: 1710676800000,
+    });
+
+    expect(picked).toBe("last year");
+    expect(
+      formatRelativeUnix(1679054400000, MustTestLocales.enUS, {
+        reference: 1710676800000,
+        largestUnit: undefined,
+      }),
+    ).toBe(picked);
   });
 });

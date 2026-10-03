@@ -9,11 +9,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - Distinct from `intervalCountUnix`, which counts local calendar `unit` boundaries *crossed*
  *   rather than measuring exact duration.
- * - Reads `start` and `end` in `options.epochUnit` (`"milliseconds"` by default, `"seconds"`; singular
- *   accepted). Each is a safe integer or a string of optionally negative ASCII digits.
- * - Resolves calendar units in `options.timeZone`: omitted is `"UTC"`, `"local"` is the system
- *   zone, and an unknown zone returns `null`. Fixed-length units (hour, minute, second, …) are
- *   zone-independent; a day is a local day, so New York's 23-hour 2024-03-10 is 1 day long there.
+ * - `start` and `end` are each a safe integer or a string of optionally negative ASCII digits.
+ * - Fixed-length units (hour, minute, second, …) are zone-independent; a day is a local day in
+ *   `options.timeZone`, so New York's 23-hour 2024-03-10 is 1 day long there.
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `0` for a zero-length interval (`start === end`).
  * - Returns `null` on invalid input (`start`/`end` that is not a safe integer or numeric string of
@@ -23,7 +21,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param start Unix epoch in `epochUnit` — interval start
  * @param end Unix epoch in `epochUnit` — interval end
  * @param unit unit string — any `DateTimeUnit`, singular or plural
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options optional: how the epochs are read and the zone calendar units are measured in
  * @returns exact length of the interval expressed in `unit`, or null on invalid input
  *
  * @example intervalLengthUnix(0, 86400000, "hour") // 24
@@ -39,7 +37,22 @@ export function intervalLengthUnix(
   start: number | string,
   end: number | string,
   unit: string,
-  options?: { epochUnit?: UnixUnit; timeZone?: string },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+    /**
+     * The time zone calendar units are measured in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {

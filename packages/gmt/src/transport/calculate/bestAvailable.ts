@@ -5,7 +5,7 @@ import type { TimestampClass, TimestampEvent } from "../../types";
 export interface ClassifiedTimestamp {
   /** The chosen event's `at`, exactly as it was written. */
   at: string;
-  /** Its class, so the value is never shown as something it is not. */
+  /** The class of the chosen event, so the value is never shown as something it is not. */
   classifier: TimestampClass;
 }
 

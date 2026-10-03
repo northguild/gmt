@@ -29,15 +29,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   why).
  * - Cycling `month` or `year` can still shift `day` via `overflow`, exactly as `setDateTime`'s
  *   `.with()` call does.
- * - `options.round` steps to the *next* multiple of `amount` in the direction of its sign
- *   (ceiling for positive, floor for negative) — not the nearest one. See `cycleDate`/`cycleTime`'s
- *   docs for worked examples.
  * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainDateTime string
  * @param field the field to cycle: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false), overflow ("constrain" | "reject")
+ * @param options How the field is stepped and an out-of-range day is handled
  * @returns ISO PlainDateTime string with `field` cycled, or "" on invalid input
  *
  * @example cycleDateTime("2024-06-15T09:30:00", "hour", 1) // "2024-06-15T10:30:00"
@@ -51,7 +48,23 @@ export function cycleDateTime(
   value: string,
   field: DateTimeCycleField,
   amount: number,
-  options?: { round?: boolean; overflow?: Overflow },
+  options?: {
+    /**
+     * Whether to step to a multiple of `amount` instead of adding it. `true` moves to the next
+     * multiple in the direction of the sign of `amount` (the ceiling for a positive amount, the
+     * floor for a negative one), not to the nearest one; `false` adds `amount`.
+     *
+     * @defaultValue `false`
+     */
+    round?: boolean;
+    /**
+     * What to do when the cycled `month` or `year` leaves `day` past the end of its month.
+     * `"constrain"` clamps `day` to the last day of that month; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

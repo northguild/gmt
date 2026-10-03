@@ -19,10 +19,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   is no ISO representation for "this hour, but staying AM" to round-trip through GMT's string
  *   contract.
  * - `minute`/`second` wrap `0–59`; `millisecond`/`microsecond`/`nanosecond` wrap `0–999`.
- * - `options.round` does **not** round to the nearest increment — it steps to the *next* multiple
- *   of `amount` in the direction of its sign (ceiling for positive, floor for negative), matching
- *   `@internationalized/date`'s `CycleOptions.round`. E.g. cycling minute `22` by `+15` with
- *   `round: true` lands on `30` (the next multiple of 15 above 22), not `15` (the nearest one).
+ * - With `round: true`, minute `22` by `+15` lands on `30`, the next multiple of 15 above 22, not
+ *   on `15`, the nearest one.
  * - There is no `overflow` option (removed in 1.16.0): time fields don't share bounds the way `day`
  *   shares a month with `month`/`year`, so the wrapped value is always already valid and there is
  *   nothing to constrain or reject.
@@ -31,7 +29,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value ISO PlainTime string
  * @param field the field to cycle: "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false)
+ * @param options How the field is stepped
  * @returns ISO PlainTime string with `field` cycled, or "" on invalid input
  *
  * @example cycleTime("09:30:00", "hour", 1) // "10:30:00"
@@ -45,7 +43,16 @@ export function cycleTime(
   value: string,
   field: TimeCycleField,
   amount: number,
-  options?: { round?: boolean },
+  options?: {
+    /**
+     * Whether to step to a multiple of `amount` instead of adding it. `true` moves to the next
+     * multiple in the direction of the sign of `amount` (the ceiling for a positive amount, the
+     * floor for a negative one), not to the nearest one; `false` adds `amount`.
+     *
+     * @defaultValue `false`
+     */
+    round?: boolean;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

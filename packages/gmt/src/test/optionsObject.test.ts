@@ -268,3 +268,155 @@ describe("boolean option members: null is false, the way ToBoolean reads it", ()
     },
   );
 });
+
+describe("option members: each is read once and converted once per call", () => {
+  // ECMA-402 GetOption (and the Temporal specification's operation of the same name) starts with
+  // one `Get(options, property)` and works on that value from then on. A member read twice can
+  // give two answers — a getter may return a unit the first time and `undefined` the second — so
+  // the value that was validated is not the value that is used. Each documented member is
+  // replaced by a counting getter, once per value below.
+  //
+  // The values: the member's own value in the baseline call, then values that at least one
+  // member accepts, so the read after a validation is reached as well as the read before it.
+  const VALUES: unknown[] = [
+    "x",
+    1,
+    true,
+    false,
+    0,
+    3,
+    9,
+    "compatible",
+    "later",
+    "reject",
+    "use",
+    "prefer",
+    "constrain",
+    "year",
+    "week",
+    "day",
+    "hour",
+    "hours",
+    "second",
+    "nanosecond",
+    "short",
+    "long",
+    "full",
+    "auto",
+    "numeric",
+    "trunc",
+    "halfExpand",
+    "floor",
+    "monday",
+    "seconds",
+    "UTC",
+    "America/New_York",
+    "1904",
+    "discharged",
+    "gregory",
+    "latn",
+    "h23",
+    "longOffset",
+    "shortGeneric",
+  ];
+
+  /** Calls with `member` replaced by each value in turn; `build` wraps the value and counts. */
+  function counts(
+    testCase: OptionsCase,
+    member: string,
+    build: (value: unknown, count: () => void) => PropertyDescriptor,
+    counted: (result: unknown) => boolean,
+  ): number[] {
+    const baseline = testCase.baseline[testCase.position];
+    const others: Record<string, unknown> =
+      baseline !== null && typeof baseline === "object" ? { ...baseline } : {};
+    const own = member in others ? [others[member]] : [];
+    delete others[member];
+    return [...own, ...VALUES].map((value) => {
+      let count = 0;
+      const options = { ...others };
+      Object.defineProperty(options, member, {
+        enumerable: true,
+        ...build(value, () => {
+          count += 1;
+        }),
+      });
+      const result = callWith(testCase, options);
+      return counted(result) ? count : 0;
+    });
+  }
+
+  function readCounts(testCase: OptionsCase, member: string): number[] {
+    return counts(
+      testCase,
+      member,
+      (value, count) => ({
+        get() {
+          count();
+          return value;
+        },
+      }),
+      () => true,
+    );
+  }
+
+  // GetOption's second step converts the value it read: ToString, or ToNumber for a number
+  // option. An object is asked through `toString` or `valueOf`, so a member converted twice can
+  // also give two answers — "long" to the check and "narrow" to the formatter. Each value is
+  // wrapped in an object that answers with it and counts the calls; a function that accepts only
+  // primitives never asks, which is 0.
+  //
+  // Only a call that returned a result is counted. A call that returned the sentinel used no
+  // value, and the wrapper answers the same every time, so a second conversion there cannot have
+  // changed the outcome. (The polyfill itself converts a rejected `fractionalSecondDigits` a
+  // second time to write its RangeError message.)
+  function coercionCounts(testCase: OptionsCase, member: string): number[] {
+    return counts(
+      testCase,
+      member,
+      (value, count) => ({
+        value: {
+          toString() {
+            count();
+            return String(value);
+          },
+          valueOf() {
+            count();
+            return value;
+          },
+        },
+      }),
+      (result) => !isDeepStrictEqual(result, testCase.sentinel),
+    );
+  }
+
+  it.each(CASES)(
+    "$name reads each documented option member at most once",
+    (testCase) => {
+      const repeated = testCase.members
+        .map((member) => ({
+          member,
+          reads: Math.max(...readCounts(testCase, member)),
+        }))
+        .filter(({ reads }) => reads > 1)
+        .map(({ member, reads }) => `${member}: read ${reads} times`);
+      expect(repeated).toEqual([]);
+    },
+  );
+
+  it.each(CASES)(
+    "$name converts each documented option member to a primitive at most once",
+    (testCase) => {
+      const repeated = testCase.members
+        .map((member) => ({
+          member,
+          coercions: Math.max(...coercionCounts(testCase, member)),
+        }))
+        .filter(({ coercions }) => coercions > 1)
+        .map(
+          ({ member, coercions }) => `${member}: converted ${coercions} times`,
+        );
+      expect(repeated.join("; ")).toBe("");
+    },
+  );
+});

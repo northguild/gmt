@@ -7,7 +7,10 @@ import {
   utcMs,
 } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
-import { formatCalendarZoned } from "./formatCalendarZoned";
+import {
+  formatCalendarZoned,
+  type FormatCalendarZonedOptions,
+} from "./formatCalendarZoned";
 
 const REF = "2024-03-15T09:00:00";
 
@@ -282,5 +285,43 @@ describe("formatCalendarZoned with non-object options", () => {
         options as never,
       ),
     ).toBe("");
+  });
+});
+
+// `timeStyle` is the `timeStyle` of `Intl.DateTimeFormat`, whose values ECMA-402 lists as "full",
+// "long", "medium" and "short". The en-US time formats are h:mm a, h:mm:ss a, h:mm:ss a z and
+// h:mm:ss a zzzz (CLDR): New York is on daylight time
+// on 16 March 2024 (UTC-4), so z is "EDT" and zzzz is "Eastern Daylight Time".
+describe("formatCalendarZoned timeStyle", () => {
+  // Each value is checked against the option's own type, so `tsc` fails this file if one of
+  // ECMA-402's four styles leaves the `timeStyle` type.
+  const STYLE = {
+    short: "short",
+    medium: "medium",
+    long: "long",
+    full: "full",
+  } satisfies Record<
+    string,
+    NonNullable<FormatCalendarZonedOptions["timeStyle"]>
+  >;
+
+  it.each`
+    timeStyle       | expected
+    ${STYLE.short}  | ${"tomorrow at 2:30 PM"}
+    ${STYLE.medium} | ${"tomorrow at 2:30:00 PM"}
+    ${STYLE.long}   | ${"tomorrow at 2:30:00 PM EDT"}
+    ${STYLE.full}   | ${"tomorrow at 2:30:00 PM Eastern Daylight Time"}
+  `("returns $expected for timeStyle $timeStyle", ({ timeStyle, expected }) => {
+    expectDateTimeEqual(
+      formatCalendarZoned(
+        "2024-03-16T14:30:00-04:00[America/New_York]",
+        MustTestLocales.enUS,
+        {
+          reference: "2024-03-15T09:00:00-04:00[America/New_York]",
+          timeStyle,
+        },
+      ),
+      expected,
+    );
   });
 });

@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Return the locale-formatted parts of a PlainDate.
@@ -9,8 +10,7 @@ import { isValidDate } from "../validate";
  * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
  *   `format`). A token pattern hard-codes field order and ships US ordering to
  *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order. See Decision 1 in
- *   `context/roadmap/issues/J.md`.
+ *   while the *locale* keeps control of order.
  * - Each part is `{ type, value }` where `type` is one of:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"literal"`.
@@ -26,6 +26,9 @@ import { isValidDate } from "../validate";
  *   ignored. With both `dateStyle` and `timeStyle` the parts keep the date style and drop the
  *   `timeStyle` (the `Intl.DateTimeFormat` entry point, required ~any~), whereas the text sibling
  *   `formatDate` returns `""` (`PlainDate#toLocaleString`, required ~date~, is a TypeError).
+ * - The `formatZonedToParts` example below writes the literal before the day period as
+ *   `"\u202f"`, U+202F NARROW NO-BREAK SPACE, which Node 22 and 24 return; Node 26 returns an
+ *   ordinary space there (see `formatZonedToParts`).
  * - Returns `[]` for invalid input.
  * - **Compatibility:** before 1.16.0 time options leaked a UTC midnight and a `"UTC"` zone name
  *   into the parts. `formatZonedToParts` on the date at midnight UTC returns those parts.
@@ -51,7 +54,19 @@ export function formatDateToParts(
   value: string,
   locale?: string | string[],
   options?: DateTimeFormatOptions,
-): Array<{ type: string; value: string }> {
+): Array<{
+  /**
+   * The kind of part, named as ECMA-402 `Intl.DateTimeFormat.prototype.formatToParts` names it: a
+   * field such as `"year"`, `"month"` or `"day"`, or `"literal"` for the separator text between
+   * fields.
+   */
+  type: string;
+  /**
+   * The text of the part in the requested locale, exactly as the formatter wrote it. Joining every
+   * `value` in array order gives the whole formatted text.
+   */
+  value: string;
+}> {
   if (!isValidDate(value)) {
     return [];
   }
@@ -63,8 +78,9 @@ export function formatDateToParts(
     // PlainDate format may contain, so no time or zone field can appear.
     // Constructing with the caller's options first surfaces the TypeError or
     // RangeError Intl.DateTimeFormat raises for invalid ones.
-    new Intl.DateTimeFormat(locale, options);
-    const resolved = plainDateFormatOptions(options ?? {});
+    const read = readDateTimeFormatOptions(options);
+    new Intl.DateTimeFormat(locale, read);
+    const resolved = plainDateFormatOptions(read);
     if (resolved === null) {
       return [];
     }

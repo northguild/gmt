@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `time` is between `start` and `end` (inclusive by default).
@@ -10,13 +11,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Uses Temporal.PlainTime.compare to compare times.
  * - Returns false if start > end (invalid range).
  * - Returns false if any input is invalid.
- * - Use options.inclusiveStart and options.inclusiveEnd to control boundary inclusivity.
  * - Note: PlainTime comparison does not account for day overflow.
  *
  * @param time ISO PlainTime string to check
  * @param start ISO PlainTime string for the start of the range
  * @param end ISO PlainTime string for the end of the range
- * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
+ * @param options Whether each end of the range counts as inside it
  * @returns boolean indicating whether time is between start and end
  *
  * @example isBetweenTime("12:34:56", "12:00:00", "13:00:00") // true
@@ -32,7 +32,22 @@ export function isBetweenTime(
   time: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `time` equal to `start` counts as inside the range. `false` requires it to
+     * be after `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `time` equal to `end` counts as inside the range. `false` requires it to be
+     * before `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {
@@ -43,10 +58,8 @@ export function isBetweenTime(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart =
-      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-    const inclusiveEnd =
-      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
+    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
     if (!isValidTime(time) || !isValidTime(start) || !isValidTime(end)) {
       return false;

@@ -5,12 +5,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the second (0-59) from a UTC datetime string.
  *
  * - Returns zero-padded string for second.
- * - Reads the value on the wall clock of `options.timeZone` (an IANA zone, default UTC), as
- *   `parseTimeFromUtc` does; an invalid zone returns "".
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45Z")
- * @param options optional: timeZone (IANA, default "UTC")
+ * @param options The time zone the value is read in
  * @returns Second (00-59) or "" on invalid input
  *
  * @example parseSecondFromUtc("2024-03-17T14:30:45Z") // "45"
@@ -19,7 +17,15 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseSecondFromUtc(
   value: string,
-  options?: { timeZone?: string },
+  options?: {
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

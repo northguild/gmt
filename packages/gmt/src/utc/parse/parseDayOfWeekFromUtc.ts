@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveReadingTimeZone } from "../../internal/resolveReadingTimeZone";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { isValidUtc } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -7,12 +7,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the day of week (1-7) from a UTC datetime string.
  *
  * - Monday=1 through Sunday=7.
- * - Reads the value on the wall clock of `options.timeZone` (an IANA zone, default UTC), as
- *   `parseTimeFromUtc` does; an invalid zone returns null.
  * - Returns null for invalid input.
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45Z")
- * @param options optional: timeZone (IANA, default "UTC")
+ * @param options The time zone the value is read in
  * @returns Day of week (1-7) or null on invalid input
  *
  * @example parseDayOfWeekFromUtc("2024-03-17T14:30:45Z") // 7
@@ -22,7 +20,15 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseDayOfWeekFromUtc(
   value: string,
-  options?: { timeZone?: string },
+  options?: {
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {
@@ -31,8 +37,8 @@ export function parseDayOfWeekFromUtc(
 
     if (!isValidUtc(value)) return null;
 
-    const timeZone = resolveReadingTimeZone(options?.timeZone);
-    if (timeZone === null) return null;
+    const timeZone = normalizeTimeZone(options?.timeZone);
+    if (timeZone === "") return null;
 
     try {
       const dateTime =

@@ -21,14 +21,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - `duration` is hours and smaller units (`"PT8H"`, `"PT90M"`). A duration with days, weeks,
  *   months or years returns `""`: `P1D` of open time could mean 24 open hours or one working
  *   day, and GMT does not guess. `"PT0S"` returns `start` itself, in UTC.
- * - Searches up to `within` after `start` (default `"P1Y"`), an ISO duration added in the
- *   schedule's zone, so `"P1D"` is one local day. A deadline exactly at the horizon counts, and a
- *   horizon past Temporal's last instant stops there.
- *   Returns `""` when the deadline would fall past it, rather than searching forever.
- * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
- *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns `""`
- *   when a window with an ambiguous or nonexistent edge could add open time before the deadline.
+ * - Returns `""` when the deadline would fall past the search horizon, rather than searching
+ *   forever.
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - Returns `""` on invalid input: an invalid instant, duration or `OperatingSchedule`, a
  *   negative `duration`, a `within` that is not a non-negative ISO duration, a `disambiguation`
@@ -37,7 +31,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param start ISO 8601 instant string where the clock starts
  * @param duration ISO 8601 duration of open time, hours and smaller units (e.g. "PT8H")
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
- * @param optionsArg optional: within (ISO duration, default "P1Y"), disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg How far the search goes, and how a window edge on a clock change is resolved
  * @returns UTC instant string ending in "Z", or "" when past the horizon or on invalid input
  *
  * @example addOperatingTime("2024-06-14T20:00:00Z", "PT2H", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T14:00:00Z" — Friday 16:00 to Monday 10:00 local
@@ -51,7 +45,26 @@ export function addOperatingTime(
   start: string,
   duration: string,
   schedule: OperatingSchedule,
-  optionsArg?: { within?: string; disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How far after `start` the search may go, as a non-negative ISO 8601 duration added in the
+     * schedule's zone, so `"P1D"` is one local day. A deadline exactly at that horizon counts, and a
+     * horizon past Temporal's last instant stops there.
+     *
+     * @defaultValue `"P1Y"`
+     */
+    within?: string;
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `""` when a window with such an edge could add open time
+     * before the deadline.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): string {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

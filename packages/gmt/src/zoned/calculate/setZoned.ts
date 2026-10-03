@@ -7,6 +7,7 @@ import {
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.
@@ -22,20 +23,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   their current value. An empty object is a no-op. `calendar`, `timeZone`, and `offset` are
  *   deliberately excluded from `fields` — this function only sets date/time components, never
  *   the zone or calendar identity, and `offset` is controlled separately via `options.offset`.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. setting
- *   `month: 2` on a value whose `day` is 31: "constrain" clamps to Feb 29/28, "reject" throws
- *   (resulting in "").
- * - `offset` defaults to `"prefer"`, as Temporal's `ZonedDateTime#with` does: when the source's
- *   offset is still valid for the new wall time (a repeated fall-back hour), it is kept and
- *   `disambiguation` is not consulted; pass `offset: "ignore"` to re-resolve the wall time through
- *   `disambiguation` instead. In a gap the source offset cannot hold, so `disambiguation` applies.
  * - **Compatibility:** before 1.16.0 `offset` defaulted to `"ignore"`. Pass `{ offset: "ignore" }`
  *   to keep that resolution.
  * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
  * @param fields Partial<Temporal.ZonedDateTimeLike> object (excluding calendar/timeZone/offset) specifying fields to set
- * @param options optional: overflow ("constrain" | "reject"), disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject", default "prefer")
+ * @param options optional settings for resolving an out-of-range date and the new wall-clock time
  * @returns zoned ISO 8601 string with fields set, or "" on invalid input
  *
  * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", { hour: 9 }) // "2024-03-10T09:00:00-04:00[America/New_York]"
@@ -50,8 +44,32 @@ export function setZoned(
   value: string,
   fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
   options?: {
+    /**
+     * What happens when the result names a day its month does not have, such as setting `month: 2`
+     * on 31 January. `"constrain"` clamps to the last valid day; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
+    /**
+     * How the new wall-clock time resolves when it falls in a DST gap or overlap and `offset` does
+     * not settle it. In a fall-back overlap `"compatible"` and `"earlier"` take the earlier instant
+     * and `"later"` the later one; in a spring-forward gap `"compatible"` and `"later"` move the
+     * wall clock forward by the gap length and `"earlier"` back by it. `"reject"` returns `""` for
+     * both.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
     disambiguation?: Disambiguation;
+    /**
+     * How the source's UTC offset is treated at the new wall-clock time, as in Temporal's
+     * `ZonedDateTime#with`. `"prefer"` keeps it while it is still valid there (a repeated fall-back
+     * hour) and otherwise resolves through `disambiguation`; `"ignore"` always resolves through
+     * `disambiguation`. `"use"` keeps the offset even when that moves the wall clock, and
+     * `"reject"` returns `""` when the offset is not valid for the new wall time.
+     *
+     * @defaultValue `"prefer"`, Temporal's default.
+     */
     offset?: Offset;
   },
 ): string {
@@ -63,12 +81,12 @@ export function setZoned(
     if (!isValidZonedDateTime(value)) return "";
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation =
-      options?.disambiguation === undefined
-        ? "compatible"
-        : options.disambiguation;
+    const disambiguation = optionOrDefault(
+      options?.disambiguation,
+      "compatible",
+    );
     // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-    const offset = options?.offset === undefined ? "prefer" : options.offset;
+    const offset = optionOrDefault(options?.offset, "prefer");
 
     try {
       const zoned = zonedDateTimeFrom(value);

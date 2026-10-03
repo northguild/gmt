@@ -32,7 +32,16 @@ export function intervalUnionUnix(
   aEnd: number | string,
   bStart: number | string,
   bEnd: number | string,
-): { start: number; end: number } | null {
+): {
+  /** The instant the interval begins at, as a Unix epoch number in the unit the arguments share. */
+  start: number;
+  /**
+   * The first instant after the interval, in the same unit as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It is always later
+   * than `start`.
+   */
+  end: number;
+} | null {
   const pair = parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd);
 
   if (pair === null) {

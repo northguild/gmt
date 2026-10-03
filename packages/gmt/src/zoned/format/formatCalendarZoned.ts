@@ -4,23 +4,30 @@ import { formatCalendarDays } from "../../internal/formatCalendarDays";
 import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
+/**
+ * Options for `formatCalendarZoned`: the moment the day label is measured from and the length of
+ * the time-of-day half.
+ */
 export interface FormatCalendarZonedOptions {
   /**
-   * Anchor point for the relative diff.
+   * The instant the day label is measured from, as a zoned ISO string, a UTC ISO string or a
+   * numeric epoch in milliseconds. Whatever its form, it is converted into `value`'s own time zone
+   * before calendar days are compared, because a day label needs one zone's wall clock and
+   * `value`'s zone is whose "today" is being described. Any other value returns `""`.
    *
-   * - ZonedDateTime ISO string: converted into `value`'s own zone before
-   *   comparing calendar days. Unlike `formatRelativeZoned`'s `reference`
-   *   (which keeps a ZonedDateTime reference in its own zone for
-   *   elapsed-time diffing), a calendar *label* is meaningless without
-   *   picking one zone's wall clock — `value`'s zone is the natural choice,
-   *   since that is whose "today" is being described.
-   * - UTC ISO string or numeric epoch (ms): placed into `value`'s timezone.
-   * - Omitted: "now" in `value`'s own timezone.
+   * @defaultValue The current instant, read in `value`'s time zone.
    */
   reference?: string | number;
-  /** `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half. */
-  timeStyle?: "short" | "medium" | "full";
+  /**
+   * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
+   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
+   *
+   * @defaultValue `"short"`
+   */
+  timeStyle?: "short" | "medium" | "long" | "full";
 }
 
 /**
@@ -34,7 +41,7 @@ export interface FormatCalendarZonedOptions {
  *
  * @param value ZonedDateTime ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { reference, timeStyle }
+ * @param options optional settings for the reference moment and the time style
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "en-US", { reference: "2026-03-15T09:00:00-04:00[America/New_York]" }) // "tomorrow at 2:30 PM"
@@ -54,25 +61,26 @@ export function formatCalendarZoned(
     if (options === null || typeof options !== "object") return "";
     if (!isValidZonedDateTime(value)) return "";
 
-    if (!isValidZonedFormatReference(options.reference)) return "";
+    // Each option is read once (GetOption).
+    const referenceOption = options.reference;
+    if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
       const target = zonedDateTimeFrom(value);
       const timeZone = target.timeZoneId;
 
       let reference: Temporal.ZonedDateTime;
-      if (options.reference === undefined) {
+      if (referenceOption === undefined) {
         reference = Temporal.Now.zonedDateTimeISO(timeZone);
-      } else if (typeof options.reference === "string") {
-        reference = isValidUtc(options.reference)
-          ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(
-              timeZone,
-            )
-          : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
+      } else if (typeof referenceOption === "string") {
+        reference = isValidUtc(referenceOption)
+          ? Temporal.Instant.from(referenceOption).toZonedDateTimeISO(timeZone)
+          : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
       } else {
-        reference = Temporal.Instant.fromEpochMilliseconds(
-          options.reference,
-        ).toZonedDateTimeISO(timeZone);
+        reference =
+          Temporal.Instant.fromEpochMilliseconds(
+            referenceOption,
+          ).toZonedDateTimeISO(timeZone);
       }
 
       return formatCalendarDays(
@@ -80,7 +88,7 @@ export function formatCalendarZoned(
         target.epochMilliseconds,
         timeZone,
         locale,
-        options.timeStyle === undefined ? "short" : options.timeStyle,
+        optionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

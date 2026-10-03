@@ -35,7 +35,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param time1 ISO PlainTime string for the start
  * @param time2 ISO PlainTime string for the end
  * @param units TimeDurationUnit | TimeDurationUnit[] to measure the difference
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffTime("12:00:00", "14:30:00", "hours") // 2

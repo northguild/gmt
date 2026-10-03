@@ -714,3 +714,52 @@ describe("splitIntervalByUnitZoned rejects an invalid unit on a zero-length inte
     ).toEqual([]);
   });
 });
+
+// `start` and `end` may name different zones. Steps are taken from `start`, so inner boundaries
+// are written in `start`'s zone; the last piece ends at the `end` argument itself, so it keeps
+// `end`'s zone whether the last step is trimmed to `end` or lands exactly on it.
+// 2024-01-01T00:00-05:00 New York is 05:00Z; 3-hour steps reach 08:00Z and 11:00Z.
+describe("splitIntervalByUnitZoned with start and end in different zones", () => {
+  it.each`
+    end                                           | lastStep               | expected
+    ${"2024-01-01T12:00:00+00:00[Europe/London]"} | ${"is trimmed to end"} | ${[{ start: "2024-01-01T00:00:00-05:00[America/New_York]", end: "2024-01-01T03:00:00-05:00[America/New_York]" }, { start: "2024-01-01T03:00:00-05:00[America/New_York]", end: "2024-01-01T06:00:00-05:00[America/New_York]" }, { start: "2024-01-01T06:00:00-05:00[America/New_York]", end: "2024-01-01T12:00:00+00:00[Europe/London]" }]}
+    ${"2024-01-01T11:00:00+00:00[Europe/London]"} | ${"lands on end"}      | ${[{ start: "2024-01-01T00:00:00-05:00[America/New_York]", end: "2024-01-01T03:00:00-05:00[America/New_York]" }, { start: "2024-01-01T03:00:00-05:00[America/New_York]", end: "2024-01-01T11:00:00+00:00[Europe/London]" }]}
+  `(
+    "ends the last piece at $end when the last 3-hour step from New York $lastStep",
+    ({ end, expected }) => {
+      expect(
+        splitIntervalByUnitZoned(
+          "2024-01-01T00:00:00-05:00[America/New_York]",
+          end,
+          "hour",
+          3,
+        ),
+      ).toEqual(expected);
+    },
+  );
+});
+
+// The same zone can be spelled two ways: `[UTC]` and `[+00:00]` are both UTC+0. Steps are taken
+// from `start`, so the inner boundary is written `[UTC]`; the second 3-hour step lands exactly on
+// `end`, and the last piece ends at the `end` argument as written, `[+00:00]`.
+describe("splitIntervalByUnitZoned with end in another spelling of start's zone", () => {
+  it("ends the last piece at 2024-01-01T06:00:00+00:00[+00:00] as written, for 3-hour steps from [UTC]", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T06:00:00+00:00[+00:00]",
+        "hour",
+        3,
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-01T03:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-01T03:00:00+00:00[UTC]",
+        end: "2024-01-01T06:00:00+00:00[+00:00]",
+      },
+    ]);
+  });
+});
