@@ -18,18 +18,17 @@ const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
  *   `bigint`: the split is exact whenever the total divides evenly by `n`, and within half a
  *   nanosecond of the exact cut otherwise (an exact half rounds up), at any span length — the
  *   whole PlainDateTime range included.
+ * - When `n` is larger than the number of nanoseconds in the interval, some pieces are empty (their
+ *   `start` equals their `end`): the result always has exactly `n` pieces.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`).
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
- *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
- *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainDateTime string for the interval start
  * @param end ISO PlainDateTime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options The limit on the size of the result
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 3) // [{ start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" }, { start: "2024-01-02T00:00:00", end: "2024-01-03T00:00:00" }, { start: "2024-01-03T00:00:00", end: "2024-01-04T00:00:00" }]
@@ -43,8 +42,29 @@ export function intervalDivideEquallyDateTime(
   start: string,
   end: string,
   n: number,
-  options?: { maxPieces?: number },
-): Array<{ start: string; end: string }> {
+  options?: {
+    /**
+     * The most records the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
+): Array<{
+  /**
+   * The date-time the interval begins at, as an ISO 8601 date-time string with no offset or time
+   * zone.
+   */
+  start: string;
+  /**
+   * The first date-time after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
       return [];

@@ -10,13 +10,18 @@ import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime"
 
 /** What `dwellTime` returns: exact elapsed time plus the local view every charging regime counts in. */
 export interface Dwell {
-  /** Exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest unit. */
+  /**
+   * The exact elapsed time from entry to exit, as an ISO 8601 duration with hours as the largest
+   * unit.
+   */
   duration: string;
   /** The entry, rendered in the dwell zone. */
   enter: string;
   /** The exit, rendered in the dwell zone. */
   exit: string;
-  /** Distinct local calendar dates the dwell touched, counted half-open at the exit. */
+  /**
+   * The number of distinct local calendar dates the dwell touched, counted half-open at the exit.
+   */
   calendarDays: number;
 }
 

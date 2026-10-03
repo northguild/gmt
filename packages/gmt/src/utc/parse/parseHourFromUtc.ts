@@ -5,12 +5,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the hour (0-23) from a UTC datetime string.
  *
  * - Returns zero-padded string for hour.
- * - Reads the value on the wall clock of `options.timeZone` (an IANA zone, default UTC), as
- *   `parseTimeFromUtc` does; an invalid zone returns "".
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45Z")
- * @param options optional: timeZone (IANA, default "UTC")
+ * @param options The time zone the value is read in
  * @returns Hour (00-23) or "" on invalid input
  *
  * @example parseHourFromUtc("2024-03-17T14:30:45Z") // "14"
@@ -19,7 +17,15 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseHourFromUtc(
   value: string,
-  options?: { timeZone?: string },
+  options?: {
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

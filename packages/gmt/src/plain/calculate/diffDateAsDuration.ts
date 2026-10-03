@@ -39,7 +39,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param date1 ISO PlainDate string for the start, optionally calendar-annotated
  * @param date2 ISO PlainDate string for the end, optionally calendar-annotated
  * @param unit date unit, singular or plural (`"day"` or `"days"`), to use as the duration's largestUnit
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffDateAsDuration("2024-03-10", "2024-04-05", "days") // "P26D"

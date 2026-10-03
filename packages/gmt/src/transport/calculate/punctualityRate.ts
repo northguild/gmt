@@ -8,19 +8,19 @@ import type { PunctualityTolerance } from "../../types";
 
 /** One planned/actual pair for `punctualityRate`. */
 export interface PlannedActual {
-  /** ISO 8601 instant or zoned datetime string of the planned time. */
+  /** The planned time, as an ISO 8601 instant or zoned datetime string. */
   planned: string;
-  /** ISO 8601 instant or zoned datetime string of the actual time. */
+  /** The actual time, as an ISO 8601 instant or zoned datetime string. */
   actual: string;
 }
 
 /** What `punctualityRate` returns: the on-time count, the total, and their ratio. */
 export interface OnTimeRate {
-  /** Pairs `classifyPunctuality` calls `"onTime"`. */
+  /** The number of pairs `classifyPunctuality` calls `"onTime"`. */
   onTime: number;
   /** Every pair counted. */
   total: number;
-  /** `onTime / total`, from 0 to 1. */
+  /** The on-time share, `onTime / total`, from 0 to 1. */
   rate: number;
 }
 

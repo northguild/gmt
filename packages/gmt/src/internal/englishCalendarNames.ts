@@ -4,8 +4,7 @@ import type { Temporal } from "@js-temporal/polyfill";
 // RFC 7231) mandate English weekday/month
 // abbreviations regardless of the caller's locale — these are fixed,
 // non-locale-adaptive grammars, not a display format, so hardcoding the
-// English names here is not the i18n bug it would be in a formatter (see
-// roadmap Decision 1 / J13's "Why this survives Decision 1").
+// English names here is not the i18n bug it would be in a formatter.
 
 // Index 0 = Monday, aligned with Temporal's 1-7 `dayOfWeek` via `[dayOfWeek - 1]`.
 export const ENGLISH_WEEKDAY_NAMES = [

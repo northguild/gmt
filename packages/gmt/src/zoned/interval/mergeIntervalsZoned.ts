@@ -46,7 +46,19 @@ import { isValidCalendarZonedInterval } from "./validate";
  */
 export function mergeIntervalsZoned(
   intervals: Array<{ start: string; end: string }>,
-): Array<{ start: string; end: string }> {
+): Array<{
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It is always later
+   * than `start`.
+   */
+  end: string;
+}> {
   try {
     if (!Array.isArray(intervals) || intervals.length === 0) {
       return [];

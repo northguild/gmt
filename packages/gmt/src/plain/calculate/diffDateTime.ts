@@ -35,7 +35,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffDateTime("2024-03-10T12:00:00", "2024-03-15T12:00:00", "days") // 5

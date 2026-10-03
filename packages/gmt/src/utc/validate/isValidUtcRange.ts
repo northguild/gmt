@@ -5,17 +5,14 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid UTC range — both parseable as
- * ISO UTC datetime strings and the instant at `value1` is <= the instant at `value2`.
+ * ISO UTC datetime strings and the instant at `value1` is before the instant at `value2`.
  *
  * - Both inputs must be ISO 8601 UTC datetime strings (e.g. `"2024-01-01T10:00:00Z"`), as
  *   `isValidUtc` accepts, annotations included.
- * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Leap-second strings return `false`.
  * - Invalid input or malformed strings return `false`.
  *
- * @param value1 first ISO UTC datetime string
- * @param value2 second ISO UTC datetime string
- * @param options optional allowEqual flag
+ * @param props The two ends of the range, and whether equal ends are valid
  * @returns boolean indicating whether the UTC range is valid
  *
  * @example isValidUtcRange({ value1: "2024-01-01T10:00:00Z", value2: "2024-12-31T23:59:59Z" }) // true
@@ -23,9 +20,25 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
  * @example isValidUtcRange({ value1: "2024-01-01T10:00:00Z", value2: "2024-01-01T10:00:00Z", options: { allowEqual: true } }) // true
  */
 export function isValidUtcRange(props: {
+  /** The start of the range, as an ISO UTC datetime string. */
   value1: string;
+  /** The end of the range, as an ISO UTC datetime string. */
   value2: string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns `false`.
+   *
+   * @defaultValue None. Two values at the same instant are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` at the same instant as `value2` is a valid range. `false` requires `value1`
+     * to be before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }): boolean {
   try {
     if (!isObject(props)) return false;

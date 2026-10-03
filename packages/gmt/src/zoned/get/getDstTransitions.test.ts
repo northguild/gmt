@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones, dateLineCrossingTimeZones } from "../../test";
+import { isValidTimeZone } from "../validate";
 import { getDstTransitions } from ".";
 
 describe("getDstTransitions", () => {
@@ -13,6 +14,18 @@ describe("getDstTransitions", () => {
     ${true}
   `("returns [] for invalid timeZone $timeZone", ({ timeZone }) => {
     expect(getDstTransitions(timeZone as never, 2024)).toEqual([]);
+  });
+
+  // Temporal getTimeZoneTransition returns null for an offset time zone identifier: a fixed offset
+  // is a valid zone (isValidTimeZone accepts it) with no transitions, not invalid input.
+  it.each`
+    timeZone
+    ${"+05:30"}
+    ${"-08:00"}
+    ${"+00:00"}
+  `("returns [] for the fixed UTC offset $timeZone", ({ timeZone }) => {
+    expect(isValidTimeZone(timeZone)).toBe(true);
+    expect(getDstTransitions(timeZone, 2024)).toEqual([]);
   });
 
   it.each`

@@ -4,6 +4,7 @@ import { buildFunctionChunks } from "./function-chunks";
 
 const ENTRY: CorpusEntry = {
   url: "/reference/zoned/convert/convertZonedToZoned",
+  page: "/reference/zoned/convert/convertZonedToZoned",
   name: "convertZonedToZoned",
   namespace: "zoned",
   module: "convert",
@@ -45,6 +46,48 @@ describe("buildFunctionChunks", () => {
     };
     const [chunk] = buildFunctionChunks([typeEntry]);
     expect(chunk.text).not.toContain("convertZonedToZoned(value");
+  });
+
+  it("adds each member's name and description to a type chunk", () => {
+    const typeEntry: CorpusEntry = {
+      ...ENTRY,
+      kind: "type",
+      signature: "",
+      name: "Dwell",
+      description: "What `dwellTime` returns.",
+      examples: [],
+      members: [
+        { name: "duration", description: "Exact elapsed time." },
+        { name: "calendarDays", description: "" },
+      ],
+    };
+    const [chunk] = buildFunctionChunks([typeEntry]);
+    expect(chunk.text.split("\n")).toEqual([
+      "Dwell",
+      "What `dwellTime` returns.",
+      "duration: Exact elapsed time.",
+      // A member with no description is still named.
+      "calendarDays",
+    ]);
+  });
+
+  it("links a type documented on its function's page at its anchor there", () => {
+    const inline: CorpusEntry = {
+      ...ENTRY,
+      kind: "type",
+      signature: "",
+      name: "Dwell",
+      namespace: "transport",
+      module: "calculate",
+      url: "/reference/transport/calculate/dwellTime#dwell",
+      page: "/reference/transport/calculate/dwellTime",
+      inlineOn: "dwellTime",
+      examples: [],
+    };
+    const [chunk] = buildFunctionChunks([inline]);
+    expect(chunk.url).toBe("/reference/transport/calculate/dwellTime#dwell");
+    // Its id is its own, not its function's, so the two chunks stay apart.
+    expect(chunk.id).toBe("transport/calculate/Dwell");
   });
 
   it("produces one chunk per entry, ids scoped by namespace/module/name", () => {

@@ -1,6 +1,6 @@
 import type { APIContext, APIRoute } from "astro";
 import { gmtVersion } from "~/generated/versions";
-import { renderLlmsFull } from "~/lib/llms";
+import { isReferenceIndex, renderLlmsFull } from "~/lib/llms";
 import {
   pageToMarkdown,
   stripFrontmatter,
@@ -121,7 +121,8 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       const rel = path
         .replace(/^.*\/content\/docs\//, "")
         .replace(/\.(md|mdx)$/, "");
-      if (rel === "index") return null; // skip barrel pages
+      // A generated index page is a list of links to pages that are all here in full.
+      if (isReferenceIndex(rel)) return null;
 
       const { data, body } = stripFrontmatter(raw);
       const slug = data.slug ?? rel;

@@ -15,16 +15,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `fields` may set any of `year`, `month`, `monthCode`, `day`, `hour`, `minute`, `second`,
  *   `millisecond`, `microsecond`, `nanosecond`, `era`, and/or `eraYear`; omitted fields keep
  *   their current value. An empty object is a no-op.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. setting
- *   `month: 2` on a value whose `day` is 31: "constrain" clamps to Feb 29/28, "reject" throws
- *   (resulting in "").
  * - There are no `disambiguation` or `offset` options (removed in 1.16.0): a UTC instant's wall
  *   clock is never ambiguous and its offset is always +00:00, so neither had anything to act on.
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g. "2024-03-10T12:00:00Z")
  * @param fields Partial<Temporal.ZonedDateTimeLike> object (excluding calendar/timeZone/offset) specifying fields to set
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range result is handled
  * @returns UTC Instant string with fields set, or "" on invalid input
  *
  * @example setUtc("2024-03-10T12:00:00Z", { hour: 9 }) // "2024-03-10T09:00:00Z"
@@ -37,6 +34,12 @@ export function setUtc(
   value: string,
   fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
   options?: {
+    /**
+     * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
+     * so `month: 2` on Jan 31 is Feb 29/28 (TC39 Temporal); `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
   },
 ): string {

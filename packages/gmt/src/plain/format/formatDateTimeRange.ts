@@ -3,6 +3,7 @@ import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Format a plain datetime range using the Temporal Intl.DateTimeFormat formatRange API.
@@ -54,10 +55,11 @@ export function formatDateTimeRange(
     // (GetDateTimeFormat ~any~, ~all~, ~relevant~). Constructing with the
     // caller's options first surfaces the TypeError or RangeError
     // Intl.DateTimeFormat raises for invalid ones.
-    new Intl.DateTimeFormat(locale, options);
+    const read = readDateTimeFormatOptions(options);
+    new Intl.DateTimeFormat(locale, read);
     const out = new Intl.DateTimeFormat(
       locale,
-      plainDateTimeFormatOptions(options ?? {}),
+      plainDateTimeFormatOptions(read),
     ).formatRange(
       Temporal.PlainDateTime.from(start).toZonedDateTime("UTC")
         .epochMilliseconds,

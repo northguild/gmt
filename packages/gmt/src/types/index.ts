@@ -11,7 +11,6 @@ export * from "./datetime-format-options";
 export * from "./disambiguation";
 export * from "./duration-relative-to";
 export * from "./duration-string-options";
-export * from "./duration-unit";
 export * from "./fiscal-calendar";
 export * from "./fractional-digit";
 export * from "./free-time-options";

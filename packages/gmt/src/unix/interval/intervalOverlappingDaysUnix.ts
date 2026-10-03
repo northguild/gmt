@@ -18,8 +18,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Counts the local dates that hold at least one instant of the half-open intersection
  *   `[max(aStart, bStart), min(aEnd, bEnd))`. The end is excluded, so an intersection ending at
  *   local midnight does not touch the date that midnight starts.
- * - Uses `"UTC"` by default (consistent with `addUnix` and `intervalCountUnix`); `"local"` is the
- *   system zone and an unknown zone returns `null`.
  * - Each instant in the intersection contributes its own local date in `timeZone`, and each date
  *   counts once. A date the zone deleted is not counted (`Pacific/Apia` skipped 2011-12-30), and a
  *   fall-back into the previous date does not lose that date (`America/Goose_Bay`, 2010-11-07).
@@ -43,7 +41,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
  * @param bStart Unix epoch value (seconds or milliseconds) — second interval start
  * @param bEnd Unix epoch value (seconds or milliseconds) — second interval end
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options optional: how the epochs are read and the zone the dates are counted in
  * @returns number of shared calendar dates, `0` when disjoint, or null on invalid input
  *
  * @example intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC" }) // 1 (the intersection [86400000, 172800000) is 1970-01-02)
@@ -60,7 +58,19 @@ export function intervalOverlappingDaysUnix(
   bStart: number | string,
   bEnd: number | string,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the calendar dates are counted in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
   },
 ): number | null {

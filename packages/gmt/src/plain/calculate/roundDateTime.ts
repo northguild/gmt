@@ -147,9 +147,6 @@ function roundDateUnit(
  * Round an ISO 8601 datetime string to the specified date-time unit.
  *
  * - Returns "" for invalid inputs.
- * - Accepts all date and time units: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
- * - Each unit is accepted in its singular or plural form ("day" or "days"), as Temporal's
- *   GetTemporalUnitValuedOption accepts both.
  * - Time units use Temporal.PlainDateTime.round() directly.
  * - Date units (year, month, week) use manual start-of-unit rounding. Weeks start on Monday.
  * - For date units the rounding grid is anchored at the unit containing `value`, so `"halfEven"`
@@ -161,17 +158,13 @@ function roundDateUnit(
  *   that unrepresentable start, the result is "".
  * - In the last representable year (`+275760`) a value that rounds down to a date unit still
  *   returns that unit's start; only rounding up past `+275760-09-13T23:59:59.999999999` returns "".
- * - `roundingIncrement` and `roundingMode` are read as Temporal reads them for every unit: a
- *   non-integer increment is truncated (`1.5` rounds by 1), an increment below 1 or not finite
- *   returns "", and a `roundingMode` outside Temporal's nine returns "" (previously a date unit
- *   floored silently).
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
  * - Output precision follows `smallestUnit`: no fractional seconds for "second" and coarser,
  *   3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the result never
  *   hides the precision the unit asked for.
  *
  * @param value ISO 8601 datetime string
- * @param options Rounding options: smallestUnit, optional roundingIncrement and roundingMode
+ * @param options The unit to round to and how to round
  * @returns Rounded ISO 8601 datetime string, or "" on invalid input
  *
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "year" }) // "2024-01-01T00:00:00"
@@ -189,8 +182,29 @@ function roundDateUnit(
 export function roundDateTime(
   value: string,
   options: {
+    /**
+     * The unit to round to, any date or time unit from `"year"` to `"nanosecond"`, singular
+     * or plural, as Temporal's GetTemporalUnitValuedOption accepts both. It also sets how
+     * many fractional-second digits the result is written with.
+     */
     smallestUnit: Temporal.SmallestUnit<DateTimeUnit>;
+    /**
+     * How many units make one rounding step. For `"day"` and the time units Temporal
+     * requires it to divide the next larger unit evenly and be smaller than it (`15` minutes,
+     * not `7` or `60`; a day only by `1`); for `"year"`, `"month"` and `"week"` the steps are
+     * counted from the unit that holds `value`. A non-integer is truncated, and a value below 1
+     * or not finite returns `""`.
+     *
+     * @defaultValue `1`, Temporal's default.
+     */
     roundingIncrement?: number;
+    /**
+     * Which way a value between two steps goes: one of Temporal's nine rounding modes, such as
+     * `"floor"`, `"ceil"` or `"halfExpand"` (to the nearer step, a tie going up). Any other value
+     * returns `""`.
+     *
+     * @defaultValue `"halfExpand"`, Temporal's default.
+     */
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
@@ -198,10 +212,10 @@ export function roundDateTime(
     if (!isObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
-    const smallestUnit: unknown =
-      typeof options.smallestUnit === "string"
-        ? resolveDateTimeUnit(options.smallestUnit)
-        : options.smallestUnit;
+    // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
+    const smallestUnit: unknown = resolveDateTimeUnit(
+      options.smallestUnit as unknown,
+    );
 
     if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit))
       return "";

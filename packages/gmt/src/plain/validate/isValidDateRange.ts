@@ -10,9 +10,29 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
  * const range: IsValidDateRangeProps = { value1: "2024-02-28", value2: "2024-02-29" };
  */
 export interface IsValidDateRangeProps {
+  /**
+   * The start of the range, an ISO PlainDate string.
+   */
   value1: string;
+  /**
+   * The end of the range, an ISO PlainDate string.
+   */
   value2: string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns `false`.
+   *
+   * @defaultValue None. Equal values are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` equal to `value2` is a valid range. `false` requires `value1` to be
+     * before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }
 
 /**
@@ -21,11 +41,8 @@ export interface IsValidDateRangeProps {
  * - Validates both dates with `isValidDate`, so each endpoint's RFC 9557 annotations are read as
  *   `Temporal.PlainDate.from` reads them (an elective `[foo=bar]` or `[u-ca=iso8601]` is ignored).
  * - Rejects leap seconds in either date.
- * - When `options.allowEqual` is true, equality is considered valid as well.
  *
- * @param value1 first ISO PlainDate string
- * @param value2 second ISO PlainDate string
- * @param options optional allowEqual flag
+ * @param props The two values to compare and how equal values are treated
  * @returns boolean indicating whether the date range is valid
  *
  * @example isValidDateRange({ value1: "2024-02-28", value2: "2024-02-29" }) // true

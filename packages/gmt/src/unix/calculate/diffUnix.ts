@@ -44,15 +44,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   gives the same number back. For an exact count use the `bigint` APIs: `spanNs` in `span/`,
  *   or `toNanoseconds` in `precision/`.
  * - Each value is a safe integer or a digit string (`"1706659200000"`); anything else is invalid.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone is
- *   invalid.
  * - Unit names may be singular or plural (`"day"` or `"days"`), as in Temporal; a record result
  *   keeps the plural keys.
  *
  * @param value1 first Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param value2 second Unix epoch, in the same form and unit
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the epochs are read and how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffUnix(1706745600000, 1706659200000, "days", { timeZone: "UTC" }) // -1 (measured from the first value to the second)
@@ -70,7 +68,19 @@ export function diffUnix(
     | Temporal.DateTimeUnit
     | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone calendar units are measured in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
   } & RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {

@@ -12,11 +12,7 @@ import { isValidTimeZone } from "./isValidTimeZone";
  * - True when the zone is in daylight time at the reference instant, or a daylight period begins
  *   less than 365 days after it. So a zone in its winter is true, and a zone that has stopped
  *   changing its clocks is false.
- * - `options.at` is the reference instant, an ISO 8601 instant string (`Z`, an offset, or a zoned
- *   string). With `at` the answer does not depend on the day the code runs. Without it the
- *   reference is the current instant (Temporal.Now.zonedDateTimeISO).
- * - A bracketed zone on `at` is not validated and does not choose the zone: `at` only names an
- *   instant (as `isValidInstant` reads it), and `timeZone` is the zone that is judged.
+ * - With `options.at` the answer does not depend on the day the code runs.
  * - The rule is GMT's own definition, not the tz database's daylight flag, which no JavaScript
  *   API exposes: daylight time runs from a forward change of the zone's clocks to the backward
  *   change of the same size that undoes it, less than 365 days later.
@@ -32,7 +28,7 @@ import { isValidTimeZone } from "./isValidTimeZone";
  *   object, and a fixed offset.
  *
  * @param timeZone timeZone identifier to check
- * @param options optional: at (ISO 8601 instant string; default the current instant)
+ * @param options optional setting for the reference instant
  * @returns boolean indicating whether the timeZone observes DST, or false on invalid input
  *
  * @example hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }) // true
@@ -49,7 +45,17 @@ import { isValidTimeZone } from "./isValidTimeZone";
  */
 export function hasDaylightSaving(
   timeZone: string,
-  options?: { at?: string },
+  options?: {
+    /**
+     * The reference instant the zone is judged at, as an ISO 8601 instant string ending in `Z`, an
+     * offset or a bracketed zone. It only names an instant, as `isValidInstant` reads it: a
+     * bracketed zone is not validated and does not replace `timeZone`. An invalid value returns
+     * false.
+     *
+     * @defaultValue The current instant.
+     */
+    at?: string;
+  },
 ): boolean {
   if (!isValidTimeZone(timeZone) || !isOptionsArgument(options)) {
     return false;

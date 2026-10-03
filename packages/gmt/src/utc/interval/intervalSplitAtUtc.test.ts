@@ -99,3 +99,27 @@ describe("intervalSplitAtUtc", () => {
     ).toEqual([]);
   });
 });
+
+// A point on `start` or `end` is dropped, and no point lies strictly inside a zero-length
+// interval, so the whole interval comes back unsplit: one piece whose `end` equals its `start`.
+// This is the only way a piece can be empty.
+describe("intervalSplitAtUtc on a zero-length interval", () => {
+  it.each`
+    points                      | why
+    ${[]}                       | ${"no points"}
+    ${["2024-01-05T12:00:00Z"]} | ${"a point on the interval's only value"}
+  `(
+    "returns the one empty piece for start = end = 2024-01-05T12:00:00Z with points $points ($why)",
+    ({ points }) => {
+      expect(
+        intervalSplitAtUtc(
+          "2024-01-05T12:00:00Z",
+          "2024-01-05T12:00:00Z",
+          points,
+        ),
+      ).toEqual([
+        { start: "2024-01-05T12:00:00Z", end: "2024-01-05T12:00:00Z" },
+      ]);
+    },
+  );
+});

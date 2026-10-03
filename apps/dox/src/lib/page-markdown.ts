@@ -120,6 +120,8 @@ function dropMapBlocks(body: string): string {
  * - `{/* … *\/}` MDX comments
  * - JSX blocks that map over data (`{rows.map(…)}`) — the generated tables and charts, whose
  *   numbers the surrounding prose already states
+ * - The `<div class="gmt-ref-table">` wrapper round a generated table (the table stays)
+ * - The `<span class="gmt-nobreak">` round a quoted, hyphenated literal (the text stays)
  * - Starlight component tags (`<Card>`, `<CardGrid>`, `<Tabs>`, `<TabItem>`, `<Aside>`,
  *   `<Steps>`, `<Playground>`) — keeps inner text
  *
@@ -146,6 +148,12 @@ export function stripMdx(
       // `export` statements span lines too (`export const x = {\n …\n};`), and a single-line
       // rule left every continuation behind as prose.
       .replace(/^[ \t]*export\b[\s\S]*?;[ \t]*$/gm, "")
+      // The wrapper the generator puts round an Options or Members table (a styling hook); the
+      // table inside stays.
+      .replace(/<div class="gmt-ref-table"[^>]*>\s*([\s\S]*?)\s*<\/div>/g, "$1")
+      // The span the generator puts round a quoted, hyphenated literal in prose (`"4-5-4"`) so
+      // it never wraps after the hyphen; the text stays.
+      .replace(/<span class="gmt-nobreak">([^<]*)<\/span>/g, "$1")
       // Remove Starlight + playground component tags (keep inner text)
       .replace(
         /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground)\b[^>]*>/g,

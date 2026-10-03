@@ -28,7 +28,6 @@ const supported: readonly string[] = [
 /**
  * Return the end of the specified time `unit` for a given ISO 8601 time string.
  *
- * - The end is written at nanosecond precision by default, so the string names the end itself; an explicit `fractionalSecondDigits` (0, 3, 6 or 9) truncates it, as Temporal's `toString` does.
  * - `unit` accepts the singular or plural name (`"hour"` or `"hours"`), as Temporal does.
  * - Returns "" for invalid inputs.
  * - **Compatibility:** before 1.16.0 the default printed only the digits the unit names — none for
@@ -37,7 +36,7 @@ const supported: readonly string[] = [
  *
  * @param value ISO 8601 time string
  * @param unit EndOfTimeUnit to specify the unit for the end
- * @param optionsArg optional: fractionalSecondDigits (number)
+ * @param optionsArg How the result is written
  * @returns ISO 8601 string representing the end of the specified unit, or "" on invalid input
  *
  * @example endOfTime("12:34:56", "hour") // "12:59:59.999999999"
@@ -48,7 +47,16 @@ const supported: readonly string[] = [
 export function endOfTime(
   value: string,
   unit: EndOfTimeUnit,
-  optionsArg?: { fractionalSecondDigits?: FractionalDigit },
+  optionsArg?: {
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer than 9 digits truncate the string, as Temporal's `toString` does,
+     * so it names a moment before the end.
+     *
+     * @defaultValue `9`
+     */
+    fractionalSecondDigits?: FractionalDigit;
+  },
 ): string {
   try {
     if (!isOptionsArgument(optionsArg)) {

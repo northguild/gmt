@@ -11,12 +11,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Validates `value`, `units`, and `amount` before performing the subtract.
  * - Returns "" for invalid inputs.
  *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
- * 1 month from Mar 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in "").
- *
  * @param value ISO PlainDateTime string
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range result is handled
  * @returns ISO PlainDateTime string after subtraction, or "" on invalid input
  *
  * @example subtractDateTime("2024-03-15T12:00:00", { days: 5 }) // "2024-03-10T12:00:00"
@@ -26,7 +23,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function subtractDateTime(
   value: string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
-  options?: { overflow?: Overflow },
+  options?: {
+    /**
+     * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
+     * so Mar 31 - 1 month is Feb 29 or 28; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

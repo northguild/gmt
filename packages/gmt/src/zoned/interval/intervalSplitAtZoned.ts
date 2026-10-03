@@ -22,6 +22,8 @@ import { isValidCalendarZonedInterval } from "./validate";
  *   each record's `end` is the next record's `start` and belongs only to that next record, so the
  *   pieces share no instant and together cover `[start, end)` exactly once.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
+ * - A piece's `end` equals its `start` only when the interval itself is zero-length (`start`
+ *   equal to `end`): the result is then that one empty piece, whatever the points.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   ZonedDateTime string, or on invalid input (unparseable start/end, `start > end`,
  *   leap-second strings).
@@ -46,7 +48,19 @@ export function intervalSplitAtZoned(
   start: string,
   end: string,
   points: string[],
-): Array<{ start: string; end: string }> {
+): Array<{
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (!Array.isArray(points)) {
       return [];

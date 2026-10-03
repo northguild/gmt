@@ -7,6 +7,8 @@
  * - `##` sections, each containing a markdown list of `- [name](url): description`
  */
 
+import type { CorpusEntry } from "~/reference-types";
+
 export type LlmsLink = {
   title: string;
   url: string;
@@ -17,6 +19,50 @@ export type LlmsSection = {
   heading: string;
   links: LlmsLink[];
 };
+
+/**
+ * The reference sections of `llms.txt`: a link to the reference index, then one section per
+ * namespace, each entry linked to the `.md` twin of its page.
+ *
+ * A type documented on its function's page (`inlineOn`) has no page and so no twin; the
+ * function's twin already holds it, and listing it would link the same file twice.
+ */
+export function referenceSections(
+  corpus: readonly CorpusEntry[],
+  base: string,
+): LlmsSection[] {
+  const byNs = new Map<string, CorpusEntry[]>();
+  for (const entry of corpus) {
+    if (entry.inlineOn !== undefined) continue;
+    if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, []);
+    byNs.get(entry.namespace)!.push(entry);
+  }
+  const sections: LlmsSection[] = [
+    {
+      heading: "Reference",
+      links: [
+        {
+          title: "API reference",
+          url: `${base}/reference.md`,
+          description:
+            "Index of every namespace, with links to each module and to the shared types.",
+        },
+      ],
+    },
+  ];
+  for (const [ns, entries] of byNs) {
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    sections.push({
+      heading: `Reference — ${ns}`,
+      links: entries.map((e) => ({
+        title: e.name,
+        url: `${base}${e.page}.md`,
+        description: e.description,
+      })),
+    });
+  }
+  return sections;
+}
 
 /**
  * Render an `llms.txt` file from sections of links.
@@ -43,6 +89,15 @@ export function renderLlmsTxt(o: {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Whether a page under `content/docs/`, named by its path without the extension, is one of
+ * the reference's generated index pages: `reference/index`, `reference/types/index`,
+ * `reference/plain/index`, `reference/plain/calculate/index`.
+ */
+export function isReferenceIndex(rel: string): boolean {
+  return /^reference\/(?:.+\/)?index$/.test(rel);
 }
 
 /**

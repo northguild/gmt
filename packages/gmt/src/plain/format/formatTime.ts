@@ -3,6 +3,7 @@ import { normalizeDateTime } from "../../internal";
 import { plainTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidTime } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Return a localized string for a PlainTime ISO input using Intl options.
@@ -49,8 +50,9 @@ export function formatTime(
     // (CreateDateTimeFormat ~time~, ~time~). Constructing with the caller's
     // options first surfaces the TypeError or RangeError Intl.DateTimeFormat
     // raises for invalid ones.
-    new Intl.DateTimeFormat(locale, options);
-    const resolved = plainTimeFormatOptions(options ?? {});
+    const read = readDateTimeFormatOptions(options);
+    new Intl.DateTimeFormat(locale, read);
+    const resolved = plainTimeFormatOptions(read);
     if (resolved === null) {
       return "";
     }

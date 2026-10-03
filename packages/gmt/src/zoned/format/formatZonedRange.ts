@@ -3,6 +3,7 @@ import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Format a zoned datetime range using the Temporal Intl.DateTimeFormat formatRange API.
@@ -72,7 +73,7 @@ export function formatZonedRange(
     // the requested fields and widths are kept. A `timeZone` option is rejected
     // rather than silently overridden.
     const formatOptions = instantFormatOptions(
-      options ?? {},
+      readDateTimeFormatOptions(options),
       zdt1.timeZoneId,
       "all",
     );

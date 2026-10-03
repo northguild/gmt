@@ -12,16 +12,14 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `addTime()` calls field-by-field.
  * - `fields` may set any of `hour`, `minute`, `second`, `millisecond`, `microsecond`, and/or
  *   `nanosecond`; omitted fields keep their current value. An empty object is a no-op.
+ * - Unlike `addTime`, which takes no `overflow` because addition always wraps around the clock,
+ *   `overflow` has an effect here: `.with()` assigns fixed field values rather than adding a
+ *   delta.
  * - Returns "" for invalid input.
- *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range field values, e.g.
- * `hour: 25`: "constrain" clamps to 23, "reject" throws (resulting in ""). Unlike `addTime`
- * (which takes no `overflow`, because addition always wraps around the clock), `overflow` has
- * a real effect here because `.with()` assigns fixed field values rather than adding a delta.
  *
  * @param value ISO PlainTime string
  * @param fields Partial<Temporal.PlainTimeLike> object specifying fields to set
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range field value is handled
  * @returns ISO PlainTime string with fields set, or "" on invalid input
  *
  * @example setTime("12:00:00", { hour: 9 }) // "09:00:00"
@@ -33,7 +31,15 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function setTime(
   value: string,
   fields: Temporal.PlainTimeLike,
-  options?: { overflow?: Overflow },
+  options?: {
+    /**
+     * What to do when a field value is out of range. `"constrain"` clamps it to the nearest valid
+     * value, so `hour: 25` becomes 23; `"reject"` returns `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

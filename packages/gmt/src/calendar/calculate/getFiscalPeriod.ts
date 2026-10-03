@@ -28,11 +28,11 @@ const DAYS_PER_WEEK = 7;
  *   Saturday falling exactly on January 31. Passing a published year end from a 53-week year
  *   instead (`"2024-02-03"`) states a different rule, because that date sits three days off
  *   the target the rule is centred on, and yields a different, self-consistent calendar.
- * - `week` is the week of the fiscal year, 1–53, the numbering the NRF publishes. `period` is
- *   1–12. A 53rd week is appended to period 12 — the NRF adds it "to the end of the
- *   calendar", which makes a 4-5-4 year's final quarter 4-5-5.
- * - **`year` is the calendar year the fiscal year starts in**, matching the NRF: fiscal 2023
- *   runs 2023-01-29 to 2024-02-03. Organisations labelling by the end year should add one.
+ * - Weeks are numbered through the fiscal year as the NRF publishes them. A 53rd week is
+ *   appended to period 12 — the NRF adds it "to the end of the calendar" — which makes a 4-5-4
+ *   year's final quarter 4-5-5.
+ * - The `year` label follows the NRF: fiscal 2023 runs 2023-01-29 to 2024-02-03. Organisations
+ *   labelling by the end year should add one.
  * - **`year` is not a unique key for a rule anchored near 1 January.** A 52/53-week year is
  *   364 or 371 days, so it drifts against the calendar, and no label taken from a calendar
  *   year survives that for every anchor. Under `yearEndsOn: "2022-12-31"` — the Saturday
@@ -45,9 +45,10 @@ const DAYS_PER_WEEK = 7;
  *   date — which `yearEndsOn` determines, and which is yours to enumerate — not on `year`.
  *   GMT does not invent a label the inputs do not fix.
  * - A `yearEndsOn` month-day that does not exist in a year follows Temporal's
- *   `overflow: "constrain"`: a February 29 rule reads February 28 in common years. A
- *   "month-end" rule (26 CFR 1.441-2 style) would put a February 28 anchor on February 29 in
- *   leap years; this does not — state such a rule with a date that exists every year.
+ *   `overflow: "constrain"`: a February 29 rule reads February 28 in common years. A rule tied
+ *   to the end of a month (the weekday nearest to, or last in, the month's final days) would
+ *   put a February 28 anchor on February 29 in leap years; this does not — state such a rule
+ *   with a date that exists every year.
  * - Whether a fiscal year has 52 or 53 weeks is derived from the gap between its own two
  *   ends, never assumed from a table.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
@@ -72,7 +73,23 @@ const DAYS_PER_WEEK = 7;
 export function getFiscalPeriod(
   value: string,
   calendar: FiscalCalendar,
-): { year: number; period: number; week: number } | null {
+): {
+  /**
+   * The calendar year the fiscal year starts in, not the year it ends in. Two consecutive fiscal
+   * years can share this label when `yearEndsOn` sits near 1 January.
+   */
+  year: number;
+  /**
+   * The period of the fiscal year, 1 through 12. Each period is four or five weeks long as
+   * `calendar.pattern` sets, and a 53rd week belongs to period 12.
+   */
+  period: number;
+  /**
+   * The week of the fiscal year, 1 through 52, or 53 in a year with an inserted week. Week 1 starts
+   * on the fiscal year's first day.
+   */
+  week: number;
+} | null {
   try {
     const pattern = calendar?.pattern;
     const yearEndsOn = calendar?.yearEndsOn;

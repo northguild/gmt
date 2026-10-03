@@ -251,13 +251,13 @@ cutoffAt("2024-06-12T20:00:00Z", "PT24H", { timeZone: "Asia/Shanghai" });
 
 ### Closures roll the way you say
 
-With `calendar`, a [`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar), a
+With `calendar`, a [`BusinessCalendar`](/reference/types/BusinessCalendar), a
 cut-off on a weekend or holiday moves by `roll`, as
 [`rollDate`](/reference/calendar/business/rollDate) moves it. Every industry answers "what if
 it lands on a non-working day" differently, and no standard picks one, so the convention is
 always yours: there is no default. `calendar` without `roll`, or `roll` without `calendar`,
 returns `""`. The rolled day keeps the cut-off's local time of day, and `calendar.timeZone` is
-not read. Any [`RollConvention`](/reference/types/roll-convention/RollConvention) is accepted,
+not read. Any [`RollConvention`](/reference/types/RollConvention) is accepted,
 but `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention.
 
 ```typescript

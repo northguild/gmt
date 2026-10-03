@@ -447,3 +447,119 @@ describe("splitIntervalByUnitUnix rejects an invalid unit on a zero-length inter
     expect(splitIntervalByUnitUnix(0, 0, unit, 1)).toEqual([]);
   });
 });
+
+// Boundaries are floored to the epoch unit, and a boundary that floors to the same epoch value as
+// the previous one is skipped (as a calendar step that resolves to the previous instant is). A
+// step finer than the epoch unit moves each boundary by less than one unit, so the floored
+// boundaries are every whole unit from `start` to `end`: the pieces are one epoch unit long.
+describe("splitIntervalByUnitUnix with a step finer than the epoch unit", () => {
+  // 500 ms in seconds: exact boundaries 0, 0.5, 1, 1.5, 2 s floor to 0, 0, 1, 1, 2.
+  // 500 µs in milliseconds: exact boundaries 0, 0.5, 1 ms floor to 0, 0, 1.
+  // 250 ms from -2 s: -2, -1.75, -1.5, -1.25, -1, …, 0 s floor to -2 (×4), -1 (×4), 0.
+  // 1 ns across 3 ms: 3_000_000 exact steps, three whole milliseconds.
+  it.each`
+    start | end  | unit             | amount | options                     | expected
+    ${0}  | ${2} | ${"millisecond"} | ${500} | ${{ epochUnit: "seconds" }} | ${[{ start: 0, end: 1 }, { start: 1, end: 2 }]}
+    ${0}  | ${1} | ${"microsecond"} | ${500} | ${undefined}                | ${[{ start: 0, end: 1 }]}
+    ${-2} | ${0} | ${"millisecond"} | ${250} | ${{ epochUnit: "seconds" }} | ${[{ start: -2, end: -1 }, { start: -1, end: 0 }]}
+    ${0}  | ${3} | ${"nanosecond"}  | ${1}   | ${undefined}                | ${[{ start: 0, end: 1 }, { start: 1, end: 2 }, { start: 2, end: 3 }]}
+  `(
+    "returns $expected for [$start, $end) by $amount $unit with options $options",
+    ({ start, end, unit, amount, options, expected }) => {
+      expect(
+        splitIntervalByUnitUnix(start, end, unit, amount, options),
+      ).toEqual(expected);
+    },
+  );
+
+  // maxPieces limits the pieces returned, not the finer steps that fall inside one epoch unit:
+  // [0, 2) s by 500 ms is 2 pieces (4 exact steps).
+  it.each`
+    maxPieces | expected
+    ${2}      | ${[{ start: 0, end: 1 }, { start: 1, end: 2 }]}
+    ${1}      | ${[]}
+  `(
+    "returns $expected for [0, 2) seconds by 500 milliseconds with maxPieces $maxPieces",
+    ({ maxPieces, expected }) => {
+      expect(
+        splitIntervalByUnitUnix(0, 2, "millisecond", 500, {
+          epochUnit: "seconds",
+          maxPieces,
+        }),
+      ).toEqual(expected);
+    },
+  );
+
+  // 2_000 s by 1 ms is 2_000_000 exact steps, over the default limit of 1_000_000, but only 2_000
+  // one-second pieces.
+  it("returns 2000 one-second pieces for [0, 2000) seconds by 1 millisecond", () => {
+    const pieces = splitIntervalByUnitUnix(0, 2000, "millisecond", 1, {
+      epochUnit: "seconds",
+    });
+
+    expect(pieces.length).toBe(2000);
+    expect(pieces[0]).toEqual({ start: 0, end: 1 });
+    expect(pieces[1999]).toEqual({ start: 1999, end: 2000 });
+  });
+
+  // A step of one epoch unit or more is not replaced: 1500 µs boundaries 0, 1.5, 3, 4.5, 6 ms
+  // floor to 0, 1, 3, 4, 6, and 1000 µs is exactly one millisecond.
+  it.each`
+    end  | amount  | expected
+    ${6} | ${1500} | ${[{ start: 0, end: 1 }, { start: 1, end: 3 }, { start: 3, end: 4 }, { start: 4, end: 6 }]}
+    ${2} | ${1000} | ${[{ start: 0, end: 1 }, { start: 1, end: 2 }]}
+  `(
+    "returns $expected for [0, $end) milliseconds by $amount microseconds",
+    ({ end, amount, expected }) => {
+      expect(splitIntervalByUnitUnix(0, end, "microsecond", amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // Temporal durations take integer fields, so a fractional amount stays invalid input.
+  it.each`
+    amount
+    ${0.5}
+    ${500.5}
+  `(
+    "returns [] for [0, 1) milliseconds by a fractional $amount microseconds",
+    ({ amount }) => {
+      expect(splitIntervalByUnitUnix(0, 1, "microsecond", amount)).toEqual([]);
+    },
+  );
+});
+
+// The limits of the epoch range are ±8_640_000_000_000_000 ms (ECMAScript time value range, the
+// same limits Temporal.Instant has). A step finer than the epoch unit steps by one epoch unit, so
+// 1 µs across the last two milliseconds of the range is two one-millisecond pieces, at either end.
+describe("splitIntervalByUnitUnix with a fine step at the range limits", () => {
+  it.each`
+    start                | end                  | expected
+    ${8639999999999998}  | ${8640000000000000}  | ${[{ start: 8639999999999998, end: 8639999999999999 }, { start: 8639999999999999, end: 8640000000000000 }]}
+    ${-8640000000000000} | ${-8639999999999998} | ${[{ start: -8640000000000000, end: -8639999999999999 }, { start: -8639999999999999, end: -8639999999999998 }]}
+  `(
+    "returns two one-millisecond pieces for [$start, $end) by 1 microsecond",
+    ({ start, end, expected }) => {
+      expect(splitIntervalByUnitUnix(start, end, "microsecond", 1)).toEqual(
+        expected,
+      );
+    },
+  );
+});
+
+// A step that is not finer than the epoch unit is taken as given, and each boundary is floored
+// to a whole epoch unit, toward negative infinity. 1_500 µs is 1.5 ms: from -5 ms the exact
+// boundaries are -5, -3.5, -2, -0.5, 1, 2.5 and 4 ms, which floor to -5, -4, -2, -1, 1, 2 and 4.
+describe("splitIntervalByUnitUnix with negative epochs and a step of 1.5 epoch units", () => {
+  it("returns boundaries -5, -4, -2, -1, 1, 2, 4 for [-5, 4) by 1500 microseconds", () => {
+    expect(splitIntervalByUnitUnix(-5, 4, "microsecond", 1500)).toEqual([
+      { start: -5, end: -4 },
+      { start: -4, end: -2 },
+      { start: -2, end: -1 },
+      { start: -1, end: 1 },
+      { start: 1, end: 2 },
+      { start: 2, end: 4 },
+    ]);
+  });
+});

@@ -11,7 +11,7 @@ import { httpDate } from "../../regex";
  * `Last-Modified`/`Date`/`Expires` use — into a UTC ISO 8601 datetime string.
  *
  * - **Decoding, not display.** Accepts English weekday/month names only, per
- *   the fixed grammar (see `formatHttp`'s JSDoc and roadmap Decision 1).
+ *   the fixed grammar (see `formatHttp`'s JSDoc).
  * - **All three HTTP-date formats**, as RFC 9110 §5.6.7 requires ("A
  *   recipient that parses a timestamp value in an HTTP field MUST accept all
  *   three"): IMF-fixdate (`Sun, 06 Nov 1994 08:49:37 GMT`), the obsolete

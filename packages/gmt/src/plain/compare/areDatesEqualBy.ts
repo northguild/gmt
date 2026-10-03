@@ -14,19 +14,21 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
  *
  * - Equality means both values share the same start-of-`unit` boundary, so
  *   `"month"` requires the same month AND year — March 2023 and March 2024 are
- *   NOT equal by month, matching date-fns's `isSameMonth` and Luxon's
- *   `dt.hasSame(other, "month")`. This is a common point of confusion for
- *   callers expecting a bare "same month-of-year" comparison.
+ *   NOT equal by month. A calendar month is a year and a month together, as in
+ *   Temporal's `PlainYearMonth`, not a bare month-of-year number. This is a
+ *   common point of confusion for callers expecting a bare "same month-of-year"
+ *   comparison.
+ * - Comparison: date-fns's `isSameMonth` and Luxon's `dt.hasSame(other, "month")`
+ *   give the same answer.
  * - `"day"` matches `areDatesEqual` for PlainDate inputs only: `areDatesEqual` also accepts
  *   PlainDateTime strings (`areDatesEqual("2024-01-01", "2024-01-01T10:00")` is `true`), while this
  *   function accepts PlainDate strings only (`areDatesEqualBy` with those inputs and `"day"` is
  *   `false`).
  * - `"year"`, `"month"`, `"week"` are computed via `startOfDate`.
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns false.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isSameDay(a, b)` → `areDatesEqualBy(a, b, "day")`
  * - `isSameWeek(a, b, options)` → `areDatesEqualBy(a, b, "week", { weekStartsOn })`
  * - `isSameMonth(a, b)` → `areDatesEqualBy(a, b, "month")`
@@ -35,7 +37,7 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
  * @param value1 first ISO date string
  * @param value2 second ISO date string
  * @param unit date unit to compare by ("year" | "month" | "week" | "day", or its plural)
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
+ * @param optionsArg How the week is defined
  * @returns true if both dates share the same start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areDatesEqualBy("2024-03-15", "2024-03-20", "month") // true
@@ -50,7 +52,16 @@ export function areDatesEqualBy(
   value1: string,
   value2: string,
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
-  optionsArg?: { weekStartsOn?: "monday" | "sunday" },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * false, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(optionsArg)) {

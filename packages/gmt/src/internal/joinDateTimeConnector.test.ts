@@ -13,7 +13,7 @@ function join(
   timeZone: string,
   locale: string,
   dayLabel: string,
-  timeStyle: "short" | "medium" | "full",
+  timeStyle: "short" | "medium" | "long" | "full",
 ): string {
   return normalizeDateTime(
     joinDateTimeConnector(epochMs, timeZone, locale, dayLabel, timeStyle),

@@ -13,9 +13,8 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  *   `Temporal.ZonedDateTime.prototype.toString()` reproduces by default —
  *   that annotation is *not* valid RFC 3339. This function's only job is to
  *   strip it (`{ timeZoneName: "never" }`), which is exactly the detail a
- *   caller reaching for "give me RFC 3339" would otherwise miss. (Go/no-go
- *   recorded in roadmap `issues/J.md` J13: this narrow gap is real; a
- *   parallel `utc`/`unix` wrapper was *not* added, because
+ *   caller reaching for "give me RFC 3339" would otherwise miss. (This
+ *   narrow gap is real; a parallel `utc`/`unix` wrapper was *not* added, because
  *   `Temporal.Instant.prototype.toString()` is already fully RFC 3339
  *   compliant with no bracket to strip — that would be a pure passthrough.)
  * - **Sub-minute offsets are written in UTC.** `time-numoffset` holds whole minutes, and RFC 3339

@@ -286,8 +286,11 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
   border-color: var(--gmt-hairline-faint);
 }
 
-[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb:hover,
-[data-theme="light"] html.is-scrolling :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb {
+[data-theme="light"]
+  :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb:hover,
+[data-theme="light"]
+  html.is-scrolling
+  :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb {
   background: var(--gmt-border-strong);
   border-color: var(--gmt-border-strong);
 }
@@ -300,13 +303,15 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
  * pseudo-elements (they accept only a restricted property set), so we match
  * with border-radius alone.
  */
-.sl-markdown-content table::-webkit-scrollbar-track:horizontal {
+.sl-markdown-content table::-webkit-scrollbar-track:horizontal,
+.sl-markdown-content .gmt-ref-table::-webkit-scrollbar-track:horizontal {
   border-bottom-left-radius: var(--gmt-radius-lg);
   border-bottom-right-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
 }
 
-.sl-markdown-content table::-webkit-scrollbar-thumb:horizontal {
+.sl-markdown-content table::-webkit-scrollbar-thumb:horizontal,
+.sl-markdown-content .gmt-ref-table::-webkit-scrollbar-thumb:horizontal {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   border-bottom-left-radius: var(--gmt-radius-lg);

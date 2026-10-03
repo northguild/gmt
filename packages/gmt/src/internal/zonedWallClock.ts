@@ -9,6 +9,7 @@ import {
   isSecondsOffsetMatchCompatNeeded,
   isTransitionSearchCompatNeeded,
 } from "./temporalCompat";
+import { optionOrDefault } from "./optionOrDefault";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -407,7 +408,7 @@ export function startOfDayEpochNanoseconds(
  * may lie before the polyfill's transition search floor, so the polyfill's `GetStartOfDay` can
  * miss a transition that skips it. A zoned value from 1847-01-03T00:00Z on reads no offset.
  */
-export function isBeforePolyfillTransitionSearch(
+function isBeforePolyfillTransitionSearch(
   value: Temporal.PlainDate | Temporal.ZonedDateTime,
 ): boolean {
   if (value instanceof Temporal.ZonedDateTime) {
@@ -640,10 +641,7 @@ function stringEpochAtEdge(
     return startOfDayEpochNanoseconds(timeZone, wall.toPlainDate());
   }
 
-  const disambiguation =
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation;
+  const disambiguation = optionOrDefault(options?.disambiguation, "compatible");
   if (!UTC_OFFSET.test(item)) {
     return epochNanosecondsFor(timeZone, wall, disambiguation);
   }
@@ -665,7 +663,7 @@ function stringEpochAtEdge(
     wall,
     offset,
     disambiguation,
-    options?.offset === undefined ? "reject" : options.offset,
+    optionOrDefault(options?.offset, "reject"),
     !UTC_OFFSET_WITH_SECONDS.test(item),
   );
 }
@@ -729,10 +727,8 @@ function fromBagAtEdge(
     timeZone,
     wall,
     offset,
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation,
-    options?.offset === undefined ? "reject" : options.offset,
+    optionOrDefault(options?.disambiguation, "compatible"),
+    optionOrDefault(options?.offset, "reject"),
     false,
   );
   return new Temporal.ZonedDateTime(epoch, timeZone, wall.calendarId);

@@ -9,7 +9,7 @@ import { isValidUtc } from "../validate";
  * - **Fixed grammar, not a display format.** RFC 9110 mandates English
  *   weekday/month abbreviations and a literal `GMT` suffix regardless of
  *   caller locale — there is no locale-appropriate alternative ordering to
- *   lose (see roadmap `issues/J.md` Decision 1 / J13).
+ *   lose.
  * - Always `GMT`; HTTP-date carries no offset variation to preserve.
  * - Fractional seconds in `value` are truncated — IMF-fixdate has no
  *   sub-second field.

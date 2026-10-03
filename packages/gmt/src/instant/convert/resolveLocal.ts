@@ -3,6 +3,7 @@ import type { Disambiguation } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
 import { isoStringBody, zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 const DISAMBIGUATIONS: readonly string[] = [
   "compatible",
@@ -18,11 +19,8 @@ const DISAMBIGUATIONS: readonly string[] = [
  * into an instant takes a zone the sender did not send plus a policy for the two days a year
  * the mapping is not one-to-one. This states both.
  *
- * - `disambiguation` decides what happens when the wall time is ambiguous (a fall-back hour
- *   that happens twice) or nonexistent (a spring-forward hour that never happens):
- *   `"compatible"` (the default, matching Temporal), `"earlier"`, `"later"`, or `"reject"`,
- *   which returns `""` rather than resolving. Call `classifyLocal` first to find out which
- *   case you are in before a policy is applied.
+ * - Call `classifyLocal` first to find out whether the wall time is ambiguous or nonexistent
+ *   before a `disambiguation` policy is applied.
  * - Returns a UTC instant, exactly — no rounding, so a nanosecond wall time survives. Pass it
  *   to `toOffsetInstant` for the offset pair, or reach for `convertPlainDateTimeToZoned` when
  *   what you want is the bracketed zoned string (it defaults to millisecond precision).
@@ -33,8 +31,8 @@ const DISAMBIGUATIONS: readonly string[] = [
  * - Returns `""` on invalid input.
  *
  * @param localDateTime zoneless ISO 8601 local datetime string (e.g. "2024-11-03T01:30:00")
- * @param timeZone IANA timeZone identifier the wall time is read in
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param timeZone IANA name or UTC offset the wall time is read in
+ * @param optionsArg How an ambiguous or nonexistent wall time is resolved
  * @returns UTC instant string ending in "Z", or "" on invalid input
  *
  * @example resolveLocal("2024-07-15T12:00:00", "America/New_York") // "2024-07-15T16:00:00Z"
@@ -50,17 +48,27 @@ const DISAMBIGUATIONS: readonly string[] = [
 export function resolveLocal(
   localDateTime: string,
   timeZone: string,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * What happens when the wall time is ambiguous (a fall-back hour that happens twice) or
+     * nonexistent (a spring-forward hour that never happens). `"compatible"` takes the earlier
+     * instant of an ambiguous time and the later one of a nonexistent time, `"earlier"` and
+     * `"later"` take that side in both cases, and `"reject"` returns `""` rather than resolving.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): string {
   try {
     if (!isOptionsArgument(optionsArg)) {
       return "";
     }
 
-    const disambiguation =
-      optionsArg?.disambiguation === undefined
-        ? "compatible"
-        : optionsArg.disambiguation;
+    const disambiguation = optionOrDefault(
+      optionsArg?.disambiguation,
+      "compatible",
+    );
 
     if (
       !isValidDateTime(localDateTime) ||

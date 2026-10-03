@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `dateTime` is between `start` and `end` (inclusive by default).
@@ -10,12 +11,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Uses Temporal.PlainDateTime.compare to compare date-times.
  * - Returns false if start > end (invalid range).
  * - Returns false if any input is invalid.
- * - Use options.inclusiveStart and options.inclusiveEnd to control boundary inclusivity.
  *
  * @param dateTime ISO PlainDateTime string to check
  * @param start ISO PlainDateTime string for the start of the range
  * @param end ISO PlainDateTime string for the end of the range
- * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
+ * @param options Whether each end of the range counts as inside it
  * @returns boolean indicating whether dateTime is between start and end
  *
  * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-01T00:00:00", "2024-02-28T23:59:59") // false
@@ -30,7 +30,22 @@ export function isBetweenDateTime(
   dateTime: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `dateTime` equal to `start` counts as inside the range. `false` requires it to
+     * be after `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `dateTime` equal to `end` counts as inside the range. `false` requires it to be
+     * before `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {
@@ -41,10 +56,8 @@ export function isBetweenDateTime(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart =
-      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-    const inclusiveEnd =
-      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
+    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
     if (
       !isValidDateTime(dateTime) ||

@@ -17,6 +17,7 @@
     "typecheck": "pnpm run check",
     "test": "pnpm run generate && vitest run",
     "lint": "oxlint",
+    "docs-check": "tsx ./scripts/check-reference-docs.ts",
     "astro": "astro",
     "favicons": "node scripts/build-favicons.mjs",
     "globe:smoke": "node scripts/globe-smoke.mjs",

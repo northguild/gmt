@@ -22,13 +22,9 @@ const supported = [
 /**
  * Return the end of the specified date-time `unit` for a given ISO 8601 datetime string.
  *
- * - A Sunday-first week runs Sunday to Saturday, so a Sunday ends its week six days later.
  * - The end is computed forward from `value`, so it is returned even when the unit began before
  *   the first representable date (`-271821-04-19`).
- * - The end is written at nanosecond precision by default, so the string names the end itself; an
- *   explicit `fractionalSecondDigits` (0, 3, 6 or 9) truncates it, as Temporal's `toString` does.
  * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  * - **Compatibility:** before 1.16.0 the default printed only the digits the unit names — none for
  *   `second` and coarser, 3 for `millisecond`, 6 for `microsecond` — which wrote a moment earlier
@@ -36,7 +32,7 @@ const supported = [
  *
  * @param value ISO 8601 datetime string
  * @param unit date or time unit, singular or plural, to specify the unit for the end
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @param optionsArg How the week is defined and how the result is written
  * @returns ISO 8601 string representing the end of the specified unit, or "" on invalid input
  *
  * @example endOfDateTime("2024-02-29T12:34:56", "month") // "2024-02-29T23:59:59.999999999"
@@ -51,7 +47,21 @@ export function endOfDateTime(
   value: string,
   unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer than 9 digits truncate the string, as Temporal's `toString` does,
+     * so it names a moment before the end.
+     *
+     * @defaultValue `9`
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {

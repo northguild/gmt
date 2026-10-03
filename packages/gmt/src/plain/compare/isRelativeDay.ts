@@ -19,7 +19,7 @@ import { areDatesEqual } from "./areDatesEqual";
  * - `offsetDays` must be an integer; non-integer or non-finite values return false.
  * - Returns false if `value` is invalid or the system timeZone is unavailable.
  *
- * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
+ * Mapping from date-fns:
  * - `isToday(value)` → `isRelativeDay(value, 0)`
  * - `isYesterday(value)` → `isRelativeDay(value, -1)`
  * - `isTomorrow(value)` → `isRelativeDay(value, 1)`

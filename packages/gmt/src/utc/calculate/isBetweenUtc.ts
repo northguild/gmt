@@ -2,18 +2,18 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidUtc } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `value` is between `start` and `end` (inclusive by default).
  *
  * - Uses Temporal.Instant.compare for comparison.
  * - Returns false if start > end or inputs are invalid.
- * - Use options.inclusiveStart/inclusiveEnd to control boundaries.
  *
  * @param value ISO UTC datetime string to check
  * @param start ISO UTC datetime string for range start
  * @param end ISO UTC datetime string for range end
- * @param options optional: inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @param options Whether each boundary counts as inside the range
  * @returns boolean indicating whether value is between start and end
  *
  * @example isBetweenUtc("2024-03-15T12:00:00Z", "2024-03-10T12:00:00Z", "2024-03-20T12:00:00Z") // true
@@ -24,7 +24,22 @@ export function isBetweenUtc(
   value: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `value` equal to `start` counts as inside the range. `false` requires it to be after
+     * `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `value` equal to `end` counts as inside the range. `false` requires it to be before
+     * `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {
@@ -35,10 +50,8 @@ export function isBetweenUtc(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart =
-      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-    const inclusiveEnd =
-      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
+    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
     if (!isValidUtc(value) || !isValidUtc(start) || !isValidUtc(end)) {
       return false;

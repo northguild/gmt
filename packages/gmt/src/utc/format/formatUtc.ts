@@ -4,25 +4,33 @@ import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
 import { isValidUtc } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the
- * added/overridden members are listed below. All `Intl.DateTimeFormatOptions`
+ * added/overridden members are declared here. All `Intl.DateTimeFormatOptions`
  * (`dateStyle`, `timeStyle`, etc.) apply to the time-of-day portion.
- *
- * @remarks Members:
- *
- * | Member | Type | Default | Description |
- * | --- | --- | --- | --- |
- * | `timeZone` | `string` | `"UTC"` | IANA zone for rendering; omitted is UTC, `"local"` is the system zone, and an unknown zone makes `formatUtc` return `""`. |
- * | `includeTimeZoneName` | `boolean` | `false` | Appends the localized zone name (style via `Intl`) when true. |
  *
  * @example
  * import { FormatUtcOptions } from "@northguild/gmt/utc";
  * const opts: FormatUtcOptions = { includeTimeZoneName: true };
  */
 export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
+  /**
+   * The time zone the value is rendered in: an IANA name, a UTC offset, or `"local"` for the system
+   * time zone. An unknown zone returns `""`, as ECMA-402 throws RangeError for it.
+   *
+   * @defaultValue `"UTC"`
+   */
   timeZone?: string;
+  /**
+   * Whether the localized time zone name is appended. When true the value is formatted as Temporal's
+   * ECMA-402 ZonedDateTime format does, which adds a short zone name to the defaults; when false, as
+   * the PlainDateTime format does, and `timeZoneName` is ignored.
+   *
+   * @defaultValue `false`
+   */
   includeTimeZoneName?: boolean;
 }
 
@@ -30,12 +38,8 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  * Format a UTC ISO string as a localized date/time string.
  *
  * - Returns `""` if the input is not a valid UTC string.
- * - `timeZone` controls the IANA zone used for rendering; defaults to `"UTC"`.
- * - `includeTimeZoneName` appends the localized timezone name when true.
- * - Without `includeTimeZoneName` the wall clock is formatted as Temporal's ECMA-402 PlainDateTime
- *   format does (`timeZoneName` is ignored); with it, as the ZonedDateTime format does (a short
- *   zone name is added to the defaults). Either way the requested fields and style widths are kept,
- *   and `era` alone still gets the date and time defaults.
+ * - The requested fields and style widths are kept, and `era` alone still gets the date and time
+ *   defaults.
  * - **Compatibility:** before 1.16.0 some locales and calendars lost a requested width (ja-JP with
  *   the japanese calendar and `month: "long"` gave `"R6/2"`), a `long`/`full` `timeStyle` replaced
  *   the `dateStyle` width, `era` alone dropped the time, and `timeZoneName` alone without
@@ -44,7 +48,7 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
- * @param options optional: { timeZone, includeTimeZoneName }
+ * @param options The time zone, the zone-name switch and any `Intl.DateTimeFormatOptions`
  * @returns the formatted date/time string, or "" on invalid input
  *
  * @example formatUtc("2026-03-16T18:30:00Z") // "3/16/2026, 6:30:00 PM"
@@ -70,11 +74,12 @@ export function formatUtc(
     if (options === null) return "";
     if (!isValidUtc(value)) return "";
 
-    const {
-      timeZone,
-      includeTimeZoneName = false,
-      ...intlOptions
-    } = options ?? {};
+    // Each option is read once (GetOption), inherited ones included.
+    const includeTimeZoneName = optionOrDefault(
+      options?.includeTimeZoneName,
+      false,
+    );
+    const { timeZone, ...intlOptions } = readDateTimeFormatOptions(options);
 
     const instant = toInstantFromUtc(value);
     if (instant === null) return "";

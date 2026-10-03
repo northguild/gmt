@@ -13,9 +13,8 @@ import {
  *   producer format — a CSV column, a legacy API field, a partially-typed
  *   form value — not for generating locale-correct output. For display,
  *   use `formatDateTime`/`formatDateToParts`, which order fields per
- *   locale instead of hard-coding a field order (see roadmap Decision 1
- *   — a token *formatter*, the inverse of this function, is deliberately
- *   out of scope for GMT).
+ *   locale instead of hard-coding a field order (a token *formatter*,
+ *   the inverse of this function, is deliberately out of scope for GMT).
  * - Accepts the full combined date + time token set (unlike
  *   `parseDateWithPattern`/`parseTimeWithPattern`, which each reject the
  *   other's tokens).
@@ -46,10 +45,13 @@ import {
  * | `GGGG` | era name (long) | locale | — | BCE label ⇒ final year = 1 − parsed year |
  * | `GG` | era name (short) | locale | — | same resolution |
  *
- * - Text in `'single quotes'` is a literal; a doubled `''` inside a
- *   quoted segment is a literal `'`. Any other character (`/ - , space
- *   :`, literal digits, etc.) outside a quote/letter-run is automatically
- *   a literal — no explicit quoting required.
+ * - Literal text follows the Unicode UTS #35 date format pattern rules.
+ *   Text in `'single quotes'` is a literal, letters included. Two
+ *   adjacent quotes `''` are one literal `'`, inside or outside quoted
+ *   text: `"yyyy''MM"` reads `"2024'03"`, and `"'o''clock'"` reads
+ *   `"o'clock"`. A quote that never closes makes the pattern malformed
+ *   (`""`). Any other character that is not a letter (`/ - , space :`,
+ *   digits and so on) is a literal with no quoting.
  * - `MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG` are locale-aware. If
  *   `locale` is omitted and the pattern uses any of them, GMT defaults
  *   to `"en-US"` rather than returning `""` for every caller who didn't
@@ -85,6 +87,7 @@ import {
  *
  * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("15-Mar-2024 02:30 PM", "dd-MMM-yyyy hh:mm a") // "2024-03-15T14:30:00"
+ * @example parseDateTimeWithPattern("Mar 15, '24 at 14:30", "MMM d, ''yy 'at' HH:mm") // "2024-03-15T14:30:00" ('' is one literal quote)
  * @example parseDateTimeWithPattern("02/31/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "" (shape-valid, not a real date)
  * @example parseDateTimeWithPattern("not a date", "MM/dd/yyyy HH:mm:ss") // ""
  * @example parseDateTimeWithPattern("19 mai 2024 10:20", "d MMMM yyyy HH:mm", ["fr-FR", "en-US"]) // "2024-05-19T10:20:00"

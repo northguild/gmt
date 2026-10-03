@@ -6,7 +6,10 @@ import {
   MustTestDstTimeZones,
 } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import { formatCalendarUtc } from "./formatCalendarUtc";
+import {
+  formatCalendarUtc,
+  type FormatCalendarUtcOptions,
+} from "./formatCalendarUtc";
 
 const REF = "2024-03-15T13:00:00Z"; // 09:00 in America/New_York
 const VAL = "2024-03-16T18:30:00Z"; // 14:30 in America/New_York
@@ -249,6 +252,40 @@ describe("formatCalendarUtc with a locale list", () => {
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `("returns $expected for locale list $locale", ({ locale, expected }) => {
     expect(formatCalendarUtc(VAL, locale as string[], { reference: REF })).toBe(
+      expected,
+    );
+  });
+});
+
+// `timeStyle` is the `timeStyle` of `Intl.DateTimeFormat`, whose values ECMA-402 lists as "full",
+// "long", "medium" and "short". The en-US time formats are h:mm a, h:mm:ss a, h:mm:ss a z and
+// h:mm:ss a zzzz (CLDR): z is "UTC" and zzzz is
+// "Coordinated Universal Time" for the default zone, UTC. VAL is 18:30 UTC on the day after REF.
+describe("formatCalendarUtc timeStyle", () => {
+  // Each value is checked against the option's own type, so `tsc` fails this file if one of
+  // ECMA-402's four styles leaves the `timeStyle` type.
+  const STYLE = {
+    short: "short",
+    medium: "medium",
+    long: "long",
+    full: "full",
+  } satisfies Record<
+    string,
+    NonNullable<FormatCalendarUtcOptions["timeStyle"]>
+  >;
+
+  it.each`
+    timeStyle       | expected
+    ${STYLE.short}  | ${"tomorrow at 6:30 PM"}
+    ${STYLE.medium} | ${"tomorrow at 6:30:00 PM"}
+    ${STYLE.long}   | ${"tomorrow at 6:30:00 PM UTC"}
+    ${STYLE.full}   | ${"tomorrow at 6:30:00 PM Coordinated Universal Time"}
+  `("returns $expected for timeStyle $timeStyle", ({ timeStyle, expected }) => {
+    expectDateTimeEqual(
+      formatCalendarUtc(VAL, MustTestLocales.enUS, {
+        reference: REF,
+        timeStyle,
+      }),
       expected,
     );
   });

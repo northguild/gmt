@@ -20,7 +20,22 @@ const refDir = resolve(
 const mdxExists = existsSync(refDir);
 
 // Import pure helpers (no Astro globals needed)
-import { renderLlmsFull, renderLlmsTxt } from "../src/lib/llms";
+import {
+  isReferenceIndex,
+  referenceSections,
+  renderLlmsFull,
+  renderLlmsTxt,
+  type LlmsSection,
+} from "../src/lib/llms";
+import type { CorpusEntry } from "../src/reference-types";
+
+const BASE = "https://gmt-dox.northguild.workers.dev";
+
+function readCorpus(): CorpusEntry[] {
+  return JSON.parse(
+    readFileSync(resolve(outGen, "gmt-corpus.json"), "utf8"),
+  ) as CorpusEntry[];
+}
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
 
 /**
@@ -123,37 +138,11 @@ describe("llms.txt surface", () => {
   it("manifest integrity: every reference URL in llms.txt exists in route-manifest", async () => {
     if (!mdxExists) return;
 
-    const corpus = JSON.parse(
-      readFileSync(resolve(outGen, "gmt-corpus.json"), "utf8"),
-    ) as Array<{
-      url: string;
-      name: string;
-      namespace: string;
-      description: string;
-    }>;
     const mod = await import(resolve(outGen, "route-manifest.ts"));
     const routes = mod.referenceRoutes as Set<string>;
 
-    // Build the same sections llms.txt.ts builds
-    const byNs = new Map<string, typeof corpus>();
-    for (const entry of corpus) {
-      if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, []);
-      byNs.get(entry.namespace)!.push(entry);
-    }
-
-    const sections: Array<{
-      heading: string;
-      links: Array<{ title: string; url: string; description?: string }>;
-    }> = [];
-    for (const [ns, entries] of byNs) {
-      entries.sort((a, b) => a.name.localeCompare(b.name));
-      const links = entries.map((e) => ({
-        title: e.name,
-        url: `https://gmt-dox.northguild.workers.dev${e.url}.md`,
-        description: e.description,
-      }));
-      sections.push({ heading: `Reference — ${ns}`, links });
-    }
+    // The sections llms.txt.ts builds, from the function it builds them with.
+    const sections: LlmsSection[] = referenceSections(readCorpus(), BASE);
 
     // Build the same sections llms.txt.ts builds — derive guide links from
     // the same glob so the test validates the source's actual output.
@@ -212,8 +201,9 @@ describe("llms.txt surface", () => {
         mistakeAllowList.add(`/${rel}.md`);
       }
     }
+    expect(linkUrls).toContain(`${BASE}/reference.md`);
     for (const url of linkUrls) {
-      if (url.includes("/reference/")) {
+      if (/\/reference(\/|\.md$)/.test(url)) {
         // Strip leading site origin and .md suffix
         const slug = url
           .replace(/^https:\/\/gmt-dox\.northguild\.workers\.dev/, "")
@@ -242,33 +232,9 @@ describe("llms.txt surface", () => {
   });
 
   it("llms.txt format: H1, > summary, ## sections", () => {
-    const corpus = JSON.parse(
-      readFileSync(resolve(outGen, "gmt-corpus.json"), "utf8"),
-    ) as Array<{
-      url: string;
-      name: string;
-      namespace: string;
-      description: string;
-    }>;
-
-    const byNs = new Map<string, typeof corpus>();
-    for (const entry of corpus) {
-      if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, []);
-      byNs.get(entry.namespace)!.push(entry);
-    }
-
-    const sections: Array<{
-      heading: string;
-      links: Array<{ title: string; url: string }>;
-    }> = [];
-    for (const [ns, entries] of byNs) {
-      entries.sort((a, b) => a.name.localeCompare(b.name));
-      const links = entries.map((e) => ({
-        title: e.name,
-        url: `https://gmt-dox.northguild.workers.dev${e.url}.md`,
-      }));
-      sections.push({ heading: `Reference — ${ns}`, links });
-    }
+    const corpus = readCorpus();
+    const sections: LlmsSection[] = referenceSections(corpus, BASE);
+    const referenceSectionCount = sections.length;
     sections.push({
       heading: "Guides",
       links: [
@@ -293,11 +259,119 @@ describe("llms.txt surface", () => {
     expect(output.startsWith("# @northguild/gmt")).toBe(true);
     // Blockquote summary (line index 2: H1, blank, then >)
     expect(output.split("\n")[2]?.startsWith("> ")).toBe(true);
-    // One ## per namespace + Guides
+    // The index link, one ## per namespace that has a page of its own, + Guides. A
+    // namespace whose only entries are types documented on a function's page has nothing
+    // to list.
     const sectionHeadings = output.match(/^## /gm);
-    expect(sectionHeadings?.length).toBe(
-      corpus.length > 0 ? new Set(corpus.map((e) => e.namespace)).size + 1 : 0,
+    expect(referenceSectionCount).toBe(
+      1 +
+        new Set(
+          corpus
+            .filter((e) => e.inlineOn === undefined)
+            .map((e) => e.namespace),
+        ).size,
     );
+    expect(sectionHeadings?.length).toBe(referenceSectionCount + 1);
+  });
+
+  it("links each reference entry to the .md twin of its page, and skips types with no page", () => {
+    const corpus = readCorpus();
+    const inline = corpus.filter((e) => e.inlineOn !== undefined);
+    expect(inline.length).toBeGreaterThan(0);
+
+    const [index, ...namespaces] = referenceSections(corpus, BASE);
+    expect(index.links.map((l) => l.url)).toEqual([`${BASE}/reference.md`]);
+    const links = namespaces.flatMap((s) => s.links);
+    expect(links).toHaveLength(corpus.length - inline.length);
+    const urls = links.map((l) => l.url);
+    // No fragment, and no file listed twice.
+    for (const url of urls) expect(url).toMatch(/^[^#]+\.md$/);
+    expect(new Set(urls).size).toBe(urls.length);
+    for (const entry of inline) {
+      expect(urls, entry.name).not.toContain(`${BASE}${entry.url}.md`);
+    }
+  });
+
+  it("referenceSections skips an inline type and links a shared one by its page", () => {
+    const entry = (over: Partial<CorpusEntry>): CorpusEntry => ({
+      url: "",
+      page: "",
+      name: "",
+      namespace: "transport",
+      module: "calculate",
+      kind: "type",
+      signature: "",
+      description: "",
+      sourcePath: "",
+      examples: [],
+      ...over,
+    });
+    const sections = referenceSections(
+      [
+        entry({
+          name: "dwellTime",
+          kind: "function",
+          url: "/reference/transport/calculate/dwellTime",
+          page: "/reference/transport/calculate/dwellTime",
+          description: "Measure a dwell.",
+        }),
+        entry({
+          name: "Dwell",
+          url: "/reference/transport/calculate/dwellTime#dwell",
+          page: "/reference/transport/calculate/dwellTime",
+          inlineOn: "dwellTime",
+        }),
+        entry({
+          name: "Interval",
+          namespace: "types",
+          url: "/reference/types/Interval",
+          page: "/reference/types/Interval",
+        }),
+      ],
+      "https://x.test",
+    );
+    expect(sections.slice(1)).toEqual([
+      {
+        heading: "Reference — transport",
+        links: [
+          {
+            title: "dwellTime",
+            url: "https://x.test/reference/transport/calculate/dwellTime.md",
+            description: "Measure a dwell.",
+          },
+        ],
+      },
+      {
+        heading: "Reference — types",
+        links: [
+          {
+            title: "Interval",
+            url: "https://x.test/reference/types/Interval.md",
+            description: "",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("isReferenceIndex names the generated index pages and nothing else", () => {
+    for (const rel of [
+      "reference/index",
+      "reference/types/index",
+      "reference/plain/index",
+      "reference/plain/calculate/index",
+    ]) {
+      expect(isReferenceIndex(rel), rel).toBe(true);
+    }
+    for (const rel of [
+      "reference/plain/calculate/addDate",
+      "reference/types/Interval",
+      "guides/index",
+      "index",
+      "reference/regex/date/index-of",
+    ]) {
+      expect(isReferenceIndex(rel), rel).toBe(false);
+    }
   });
 
   describe("stripMdx", () => {

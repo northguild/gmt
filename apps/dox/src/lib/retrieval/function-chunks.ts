@@ -3,8 +3,14 @@ import type { RetrievalChunk } from "./types";
 
 /**
  * DOX-C1 (#137) — one chunk per reference entry (function, type, or regex):
- * signature + description + formatted examples + the entry's own page URL.
+ * signature + description + formatted examples + the entry's own link.
  * Pure function, no I/O — the same data `corpus.ts` already exports.
+ *
+ * A type chunk also carries each member's name and description, so a question
+ * about a field ("what is calendarDays?") finds the type that declares it.
+ *
+ * The link is `entry.url`, fragment included: a type documented on its
+ * function's page is cited at its own heading there, not at the top of the page.
  */
 export function buildFunctionChunks(corpus: CorpusEntry[]): RetrievalChunk[] {
   return corpus.map((entry) => {
@@ -16,6 +22,13 @@ export function buildFunctionChunks(corpus: CorpusEntry[]): RetrievalChunk[] {
         ex.note
           ? `${ex.call} // ${ex.result} — ${ex.note}`
           : `${ex.call} // ${ex.result}`,
+      );
+    }
+    for (const member of entry.members ?? []) {
+      parts.push(
+        member.description
+          ? `${member.name}: ${member.description}`
+          : member.name,
       );
     }
     return {

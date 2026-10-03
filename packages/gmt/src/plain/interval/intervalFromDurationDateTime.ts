@@ -14,15 +14,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   resolve against `value` itself — no separate `relativeTo` is needed, unlike `addDuration`.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionDateTime`'s `start > end` rejection.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
- *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
  * - Returns null on invalid input (unparseable `value`, invalid `duration`, or an `anchor` other
  *   than `"start"`/`"end"`).
  *
  * @param value ISO PlainDateTime string
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range endpoint is handled
  * @returns `{ start, end }` with the constructed span, or null on invalid input
  *
  * @example intervalFromDurationDateTime("2024-01-01T00:00:00", "P1DT2H", "start") // { start: "2024-01-01T00:00:00", end: "2024-01-02T02:00:00" }
@@ -35,8 +33,28 @@ export function intervalFromDurationDateTime(
   value: string,
   duration: string,
   anchor: "start" | "end",
-  options?: { overflow?: Overflow },
-): { start: string; end: string } | null {
+  options?: {
+    /**
+     * What to do when the computed endpoint is not a real date. `"constrain"` clamps it to the
+     * last valid day, so Jan 31 + 1 month is Feb 29 or 28; `"reject"` returns `null`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
+): {
+  /**
+   * The date-time the interval begins at, as an ISO 8601 date-time string with no offset or time
+   * zone.
+   */
+  start: string;
+  /**
+   * The first date-time after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+} | null {
   if (!isOptionsArgument(options)) {
     return null;
   }

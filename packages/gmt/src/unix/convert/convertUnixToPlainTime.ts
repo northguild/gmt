@@ -10,15 +10,13 @@ import { isOptionsArgument } from "../../internal/isObject";
 /**
  * Convert a Unix timestamp to a plain time string in the format "HH:mm:ss".
  *
- * - Converts to PlainTime in `timeZone`: omitted is UTC, `"local"` is the system zone, and an
- *   unknown zone returns "".
+ * - Converts to PlainTime in `timeZone`.
  * - `unix` is a safe integer or a string of optionally negative ASCII digits; anything else returns
  *   "".
- * - Validates epoch unit ("seconds" | "milliseconds", singular accepted).
  * - Returns "" for invalid input.
  *
  * @param unix Unix epoch: a safe integer or a digit string
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
+ * @param options optional: how `unix` is read and the zone its wall clock is read in
  * @returns plain time string in "HH:mm:ss" format or "" on invalid input
  *
  * @example convertUnixToPlainTime(1706659200000, { timeZone: "UTC" }) // "00:00:00"
@@ -29,7 +27,22 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function convertUnixToPlainTime(
   unix: number | string,
-  options?: { epochUnit?: UnixUnit; timeZone?: string },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

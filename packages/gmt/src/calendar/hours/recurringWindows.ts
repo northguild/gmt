@@ -16,16 +16,14 @@ import { isValidTimeZone } from "../../zoned/validate";
  *   starts on: `{ from: "23:00", to: "06:00" }` under 5 is Friday 23:00 to Saturday 06:00, and
  *   `{ from: "00:00", to: "00:00" }` is the whole day. No holidays or overrides; see
  *   `operatingIntervals` for those.
- * - Each window edge is a local wall time resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier** instant,
- *   and an edge in a skipped spring-forward hour the **later** one, shifted forward by the gap.
- *   `"earlier"` and `"later"` pick that instant instead. Under `"earlier"`, an edge in a skipped
- *   hour moves back by the gap (TC39 DisambiguatePossibleEpochNanoseconds), so in a zone that
- *   skips midnight a date's early window can open on the previous local date, before the date's
- *   own first instant; it still belongs to its own date. `"reject"` guesses nothing:
- *   it returns `[]` when a window with an ambiguous or nonexistent edge reaches the range —
- *   when the widest span it could cover (its `from` read `"earlier"`, its `to` read `"later"`)
- *   overlaps `range`. A rejected window elsewhere does not matter.
+ * - Each window edge is a local wall time resolved with `resolveLocal`. An edge in a skipped
+ *   spring-forward hour is shifted by the gap: forward, or back when it is read `"earlier"` (TC39
+ *   DisambiguatePossibleEpochNanoseconds), so in a zone that skips midnight a date's early
+ *   window can open on the previous local date, before the date's own first instant; it still
+ *   belongs to its own date.
+ * - A window "reaches the range" for `"reject"` when the widest span it could cover (its `from`
+ *   read `"earlier"`, its `to` read `"later"`) overlaps `range`. A rejected window elsewhere
+ *   does not matter.
  * - Windows are elapsed time between their resolved edges, so the wall-clock length is not the
  *   real one on transition nights: in New York, 23:00–06:00 is 8 hours across the fall-back
  *   night and 6 across the spring-forward one, and 00:00–00:00 is 25 and 23 hours.
@@ -44,8 +42,8 @@ import { isValidTimeZone } from "../../zoned/validate";
  *
  * @param weekly windows by ISO weekday, `{ 1: [{ from: "09:00", to: "17:00" }], … }`
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the pattern inside
- * @param timeZone IANA timeZone identifier the windows are read in
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param timeZone IANA name or UTC offset the windows are read in
+ * @param optionsArg How a window edge on a clock change is resolved
  * @returns sorted, merged `{ start, end }` records of the open instants, or [] on invalid input
  *
  * @example recurringWindows({ 1: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "America/New_York") // [{ start: "2024-06-10T13:00:00Z", end: "2024-06-10T21:00:00Z" }]
@@ -62,7 +60,17 @@ export function recurringWindows(
   weekly: OperatingSchedule["weekly"],
   range: Interval,
   timeZone: string,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `[]` when a window with such an edge reaches the range.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): Interval[] {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

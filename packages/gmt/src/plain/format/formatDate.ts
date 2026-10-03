@@ -3,6 +3,7 @@ import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Return a localized string for a PlainDate ISO input using Intl options.
@@ -52,12 +53,13 @@ export function formatDate(
     // (CreateDateTimeFormat ~date~, ~date~), so the requested fields and
     // widths are kept. Constructing with the caller's options first surfaces
     // the TypeError or RangeError Intl.DateTimeFormat raises for invalid ones.
-    new Intl.DateTimeFormat(locale, options);
+    const read = readDateTimeFormatOptions(options);
+    new Intl.DateTimeFormat(locale, read);
     // CreateDateTimeFormat: required ~date~ with a timeStyle is a TypeError.
-    if (options?.timeStyle !== undefined) {
+    if (read.timeStyle !== undefined) {
       return "";
     }
-    const resolved = plainDateFormatOptions(options ?? {});
+    const resolved = plainDateFormatOptions(read);
     if (resolved === null) {
       return "";
     }

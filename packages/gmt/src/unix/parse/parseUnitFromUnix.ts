@@ -47,15 +47,14 @@ export type PlainNowUnit =
  * Extract a unit from a unix epoch value.
  *
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond". Temporal units may also be plural ("hours").
- * - `value` is a safe integer or a string of optionally negative ASCII digits; an omitted `timeZone` is UTC and `"local"` is the system zone.
+ * - `value` is a safe integer or a string of optionally negative ASCII digits.
  * - `microsecond` and `nanosecond` are the 0–999 Temporal fields, zero-padded to 3 digits.
  * - Converts to ZonedDateTime then extracts the unit.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "", for every unit.
  * - Returns "" for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds: a safe integer, or a string of optionally negative ASCII digits
  * @param unit unit to extract (e.g. "year", "month", "hour")
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone is invalid), weekStartsOn ("monday" | "sunday"); a non-object value (such as `null`) is invalid
+ * @param options optional: how `value` is read, the zone its wall clock is read in and the first day of the week; a non-object value (such as `null`) is invalid
  * @returns extracted unit value as string, or "" on invalid input
  *
  * @example parseUnitFromUnix(1700000000000, "year") // "2023"
@@ -71,8 +70,28 @@ export function parseUnitFromUnix(
   value: number | string,
   unit: PlainNowUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * The first day of the week, which sets how the `"week"` unit is numbered. `"monday"` gives the
+     * ISO 8601 week number, where week 1 holds the year's first Thursday; `"sunday"` gives the UTS
+     * #35 week number with a Sunday first day and one minimal day, where week 1 holds 1 January.
+     * Any other value returns `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
   },
 ): string {

@@ -33,4 +33,8 @@ import Default from '@astrojs/starlight/components/Head.astro';
 	import { enterWidgetSections, releaseEntranceHold } from '~/lib/widget-enter';
 	enterWidgetSections(document);
 	releaseEntranceHold();
+	// A generated Options or Members table that scrolls sideways gets a tab stop, a name and a
+	// scroll cue — see src/lib/ref-table.ts.
+	import { mountRefTables } from '~/lib/ref-table';
+	mountRefTables(document);
 </script>

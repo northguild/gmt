@@ -73,6 +73,31 @@ describe("parseValueWithPattern", () => {
     });
   });
 
+  // UTS #35 Part 4, Date Format Patterns: "Two adjacent single vertical
+  // quotes (''), which represent a literal single quote, either inside or
+  // outside quoted text."
+  describe("single quotes in a pattern", () => {
+    it.each`
+      value             | pattern              | expected                             | why
+      ${"2024'01'15"}   | ${"yyyy''MM''dd"}    | ${{ year: 2024, month: 1, day: 15 }} | ${"'' outside quoted text is one literal quote"}
+      ${"20240115"}     | ${"yyyy''MM''dd"}    | ${null}                              | ${"the literal quotes are missing from the value"}
+      ${"''2024-01"}    | ${"''''yyyy-MM"}     | ${{ year: 2024, month: 1 }}          | ${"'''' is two literal quotes"}
+      ${"'2024-01"}     | ${"''''yyyy-MM"}     | ${null}                              | ${"'''' needs two literal quotes, not one"}
+      ${"it's 2024-01"} | ${"'it''s' yyyy-MM"} | ${{ year: 2024, month: 1 }}          | ${"'' inside quoted text is one literal quote"}
+      ${"at 2024-01"}   | ${"'at' yyyy-MM"}    | ${{ year: 2024, month: 1 }}          | ${"quoted letters are literal text"}
+      ${"'2024-01"}     | ${"'''yyyy-MM"}      | ${null}                              | ${"''' leaves the third quote unterminated"}
+      ${"2024-01"}      | ${"yyyy-MM'"}        | ${null}                              | ${"a lone trailing quote is unterminated"}
+      ${"2024-01'"}     | ${"yyyy-MM'"}        | ${null}                              | ${"an unterminated quote is not a literal quote"}
+    `(
+      'resolves "$value" against "$pattern" ($why)',
+      ({ value, pattern, expected }) => {
+        expect(
+          parseValueWithPattern(value, pattern, undefined, DATE_PATTERN_FIELDS),
+        ).toEqual(expected);
+      },
+    );
+  });
+
   describe("invalid input returns null", () => {
     it("returns null for a non-matching value", () => {
       expect(

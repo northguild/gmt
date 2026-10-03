@@ -3,6 +3,7 @@ import {
   isExactDurationUnit,
   MAX_STALLED_SPLIT_STEPS,
   minSlicesForSpan,
+  stepNoFinerThan,
   tileByUnit,
 } from "./splitStep";
 
@@ -183,6 +184,31 @@ describe("tileByUnit", () => {
   );
 });
 
+describe("tileByUnit when the last step lands exactly on end", () => {
+  // 2024-01-01 + 2 days is 2024-01-03, and + 4 days is 2024-01-05, the end. The last slice closes
+  // with the `end` argument itself, not with the equal value the step computed: the two compare
+  // equal but may be written differently (a zoned end in another zone than the start).
+  it("closes [2024-01-01, 2024-01-05) by 2 days with the end argument itself", () => {
+    const start = Temporal.PlainDate.from("2024-01-01");
+    const end = Temporal.PlainDate.from("2024-01-05");
+
+    const slices = tileByUnit(
+      start,
+      end,
+      Temporal.PlainDate.compare,
+      "days",
+      2,
+      100,
+    );
+
+    expect(slices && toStrings(slices)).toEqual([
+      ["2024-01-01", "2024-01-03"],
+      ["2024-01-03", "2024-01-05"],
+    ]);
+    expect(slices?.at(-1)?.[1]).toBe(end);
+  });
+});
+
 describe("minSlicesForSpan", () => {
   const HOUR = 3_600_000_000_000;
   const DAY = 86_400_000_000_000;
@@ -213,6 +239,30 @@ describe("minSlicesForSpan", () => {
     "returns $expected for $label",
     ({ spanNs, unit, amount, zoned, expected }) => {
       expect(minSlicesForSpan(spanNs, unit, amount, zoned)).toBe(expected);
+    },
+  );
+});
+
+describe("stepNoFinerThan", () => {
+  // A step is replaced by one floor unit only when it is exact, whole and shorter than that unit:
+  // 500 ms < 1 s, 999 µs < 1 ms, 999_999_999 ns < 1 s. 1000 ms = 1 s and 1_000_000 ns = 1 ms are
+  // not shorter. Calendar units and fractional amounts are never replaced.
+  it.each`
+    unit              | amount         | floorUnit         | expected
+    ${"milliseconds"} | ${500}         | ${"seconds"}      | ${["seconds", 1]}
+    ${"microseconds"} | ${999}         | ${"milliseconds"} | ${["milliseconds", 1]}
+    ${"nanoseconds"}  | ${999_999_999} | ${"seconds"}      | ${["seconds", 1]}
+    ${"milliseconds"} | ${1000}        | ${"seconds"}      | ${["milliseconds", 1000]}
+    ${"nanoseconds"}  | ${1_000_000}   | ${"milliseconds"} | ${["nanoseconds", 1_000_000]}
+    ${"milliseconds"} | ${1500}        | ${"seconds"}      | ${["milliseconds", 1500]}
+    ${"seconds"}      | ${1}           | ${"milliseconds"} | ${["seconds", 1]}
+    ${"days"}         | ${1}           | ${"seconds"}      | ${["days", 1]}
+    ${"microseconds"} | ${0.5}         | ${"milliseconds"} | ${["microseconds", 0.5]}
+    ${"milliseconds"} | ${500}         | ${"days"}         | ${["milliseconds", 500]}
+  `(
+    "returns $expected for $amount $unit floored to $floorUnit",
+    ({ unit, amount, floorUnit, expected }) => {
+      expect(stepNoFinerThan(unit, amount, floorUnit)).toEqual(expected);
     },
   );
 });

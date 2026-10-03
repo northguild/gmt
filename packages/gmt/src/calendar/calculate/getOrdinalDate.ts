@@ -3,9 +3,8 @@ import { zonelessCalendarDate } from "../../internal";
 /**
  * Return the ISO 8601 ordinal date — calendar year and day of year — for `value`.
  *
- * - `dayOfYear` is 1–365, or 1–366 in a leap year.
- * - `year` is the calendar year, unlike `getIsoWeekDate`'s week-numbering year: an ordinal
- *   date never disagrees with the calendar year it is written beside.
+ * - Unlike `getIsoWeekDate`, whose year is the week-numbering year, an ordinal date never
+ *   disagrees with the calendar year it is written beside.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
  *   `getIsoWeekDate` for why a moment is not accepted here.
  * - Returns null on invalid input.
@@ -21,9 +20,18 @@ import { zonelessCalendarDate } from "../../internal";
  * @example getOrdinalDate("2024-06-15T12:00:00Z") // null (a moment, not a calendar date)
  * @example getOrdinalDate("invalid") // null
  */
-export function getOrdinalDate(
-  value: string,
-): { year: number; dayOfYear: number } | null {
+export function getOrdinalDate(value: string): {
+  /**
+   * The calendar year of the date. It is not the ISO 8601 week-numbering year, so it always matches
+   * the year written in `value`.
+   */
+  year: number;
+  /**
+   * The 1-based day of that year, the ISO 8601 ordinal day: 1 is January 1, and December 31 is 365,
+   * or 366 in a leap year.
+   */
+  dayOfYear: number;
+} | null {
   const date = zonelessCalendarDate(value);
   if (!date) return null;
 

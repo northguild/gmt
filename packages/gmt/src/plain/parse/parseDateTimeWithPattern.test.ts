@@ -83,6 +83,25 @@ describe("parseDateTimeWithPattern", () => {
       ).toBe("2024-03-15T14:30:00");
     });
 
+    // UTS #35 Part 4, Date Format Patterns: "Two adjacent single vertical
+    // quotes (''), which represent a literal single quote, either inside or
+    // outside quoted text."
+    it.each`
+      value                      | pattern                         | expected                 | why
+      ${"2024-01-15'14:30:00"}   | ${"yyyy-MM-dd''HH:mm:ss"}       | ${"2024-01-15T14:30:00"} | ${"'' between fields is one literal quote"}
+      ${"2024-01-1514:30:00"}    | ${"yyyy-MM-dd''HH:mm:ss"}       | ${""}                    | ${"the literal quote is missing from the value"}
+      ${"'2024-01-15 14:30:00'"} | ${"''yyyy-MM-dd HH:mm:ss''"}    | ${"2024-01-15T14:30:00"} | ${"'' at the start and end of the pattern"}
+      ${"2024-01-15''14:30:00"}  | ${"yyyy-MM-dd''''HH:mm:ss"}     | ${"2024-01-15T14:30:00"} | ${"'''' is two '' pairs, two literal quotes"}
+      ${"2024-01-15'14:30:00"}   | ${"yyyy-MM-dd''''HH:mm:ss"}     | ${""}                    | ${"'''' needs two literal quotes, not one"}
+      ${"2024-01-15'14:30:00"}   | ${"yyyy-MM-dd'''HH:mm:ss"}      | ${""}                    | ${"''' leaves the third quote unterminated"}
+      ${"2024-01-15 at 'T14:30"} | ${"yyyy-MM-dd 'at' '''T'HH:mm"} | ${"2024-01-15T14:30:00"} | ${"''' after a quoted literal is a literal quote, then an opening quote"}
+    `(
+      'returns "$expected" for "$value" against "$pattern" ($why)',
+      ({ value, pattern, expected }) => {
+        expect(parseDateTimeWithPattern(value, pattern)).toBe(expected);
+      },
+    );
+
     it('returns "" for an unterminated quote (malformed pattern)', () => {
       expect(
         parseDateTimeWithPattern("2024-03-15 14:30:00", "yyyy-MM-dd HH:mm:ss'"),

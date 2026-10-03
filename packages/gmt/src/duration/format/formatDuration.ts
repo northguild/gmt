@@ -1,6 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { DurationUnit } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
+
+/**
+ * Plural unit keys rendered by `formatDuration`. Maps to singular `Intl.NumberFormat` unit
+ * labels through `UNIT_TO_INTL` (e.g. `"years"` → `"year"`).
+ */
+type DurationUnit =
+  | "years"
+  | "months"
+  | "weeks"
+  | "days"
+  | "hours"
+  | "minutes"
+  | "seconds";
 
 const UNIT_TO_INTL: Record<DurationUnit, string> = {
   years: "year",
@@ -52,8 +65,22 @@ function exactSeconds(duration: Temporal.Duration): Intl.StringNumericLiteral {
   return `${sign}${whole}${fraction === "" ? "" : `.${fraction}`}` as Intl.StringNumericLiteral;
 }
 
+/** How `formatDuration` writes unit names, and whether it writes zero components. */
 export interface FormatDurationOptions {
+  /**
+   * The length of each unit name, as the `unitDisplay` of `Intl.NumberFormat`: `"long"` ("90
+   * minutes"), `"short"` ("90 min") or `"narrow"` ("90m"). The components are joined as a long list
+   * ("1 day, 2 hours, and 30 minutes") for `"long"` and as a short list otherwise.
+   *
+   * @defaultValue `"long"`
+   */
   style?: "long" | "short" | "narrow";
+  /**
+   * Whether components that are zero are written. `false` leaves them out, so `"P1DT0H30M"`
+   * reads "1 day and 30 minutes"; `true` writes every unit from years to seconds.
+   *
+   * @defaultValue `false`
+   */
   zero?: boolean;
 }
 
@@ -71,10 +98,8 @@ export interface FormatDurationOptions {
  * - To render fewer fraction digits, round the string first with parseDuration, e.g.
  *   { smallestUnit: "millisecond", roundingMode: "halfExpand" } for the 3-digit output this
  *   function produced before (parseDuration's default roundingMode "trunc" drops the digits).
- * - By default, zero-valued components are omitted (e.g. "P1DT0H30M" -> "1 day and 30
- *   minutes"). Pass { zero: true } to include them.
  * - A zero-length duration (e.g. "PT0S") always renders its seconds component
- *   ("0 seconds") even with the default zero-omitting behavior, since omitting
+ *   ("0 seconds") even when zero components are left out, since omitting
  *   every component would otherwise produce "".
  * - Negative durations render each component with a leading "-" (Temporal stores
  *   every field of a negative duration as a negative number).
@@ -82,7 +107,7 @@ export interface FormatDurationOptions {
  *
  * @param value ISO 8601 duration string
  * @param locale BCP 47 locale tag, passed to Intl.NumberFormat/Intl.ListFormat; system default if omitted, or a preference list of tags (ECMA-402)
- * @param options optional: { style: "long" | "short" | "narrow" (default "long"), zero: boolean (default false) }
+ * @param options How unit names are written, and whether zero components are shown
  * @returns human-readable rendering of the duration, or "" on invalid input
  *
  * @example formatDuration("P1DT2H30M", "en-US") // "1 day, 2 hours, and 30 minutes"
@@ -113,7 +138,7 @@ export function formatDuration(
 
   try {
     const duration = Temporal.Duration.from(value);
-    const style = options.style === undefined ? "long" : options.style;
+    const style = optionOrDefault(options.style, "long");
     const includeZero = options.zero ?? false;
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {

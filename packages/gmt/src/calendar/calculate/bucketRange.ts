@@ -132,7 +132,7 @@ function nextBucketStartWithinRange(
  * @param start ISO 8601 instant string for the range start (inclusive)
  * @param end ISO 8601 instant string for the range end (exclusive)
  * @param unit bucket unit ("hour" | "day" | "week" | "month", or its plural)
- * @param timeZone IANA timeZone identifier the buckets are computed in
+ * @param timeZone IANA name or UTC offset the buckets are computed in
  * @returns array of UTC instant strings ending in "Z", or [] on invalid input
  *
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "day", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"]

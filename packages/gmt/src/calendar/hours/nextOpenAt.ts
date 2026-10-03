@@ -13,14 +13,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *
  * - Already open at `isoString`: returns `isoString` itself, in UTC. Otherwise returns the start
  *   of the next open interval — the moment a gate opens, or a notice can be tendered.
- * - Searches up to `within` after `isoString` (default `"P1Y"`), an ISO duration added in the
- *   schedule's zone, so `"P1D"` is one local day. An opening exactly at the horizon counts, and a
- *   horizon past Temporal's last instant stops there.
- *   Returns `""` when the schedule does not open within it, rather than searching forever.
- * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
- *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns `""`
- *   when a window with an ambiguous or nonexistent edge could open before the answer.
+ * - Returns `""` when the schedule does not open within the search horizon, rather than
+ *   searching forever.
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required.
  * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, a `within` that is
@@ -29,7 +23,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *
  * @param isoString ISO 8601 instant string to search from, inclusive
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
- * @param optionsArg optional: within (ISO duration, default "P1Y"), disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg How far the search goes, and how a window edge on a clock change is resolved
  * @returns UTC instant string ending in "Z", or "" when none within the horizon or on invalid input
  *
  * @example nextOpenAt("2024-06-15T16:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
@@ -41,7 +35,26 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
 export function nextOpenAt(
   isoString: string,
   schedule: OperatingSchedule,
-  optionsArg?: { within?: string; disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How far after `isoString` the search may go, as a non-negative ISO 8601 duration added in the
+     * schedule's zone, so `"P1D"` is one local day. An opening exactly at that horizon counts, and a
+     * horizon past Temporal's last instant stops there.
+     *
+     * @defaultValue `"P1Y"`
+     */
+    within?: string;
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `""` when a window with such an edge could open before the
+     * answer.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): string {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

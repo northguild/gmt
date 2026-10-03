@@ -1,6 +1,6 @@
 import type { APIContext, APIRoute } from "astro";
 import { corpus } from "~/generated/reference/corpus";
-import { renderLlmsTxt, type LlmsSection } from "~/lib/llms";
+import { referenceSections, renderLlmsTxt, type LlmsSection } from "~/lib/llms";
 import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
 import { topLevelPages } from "~/lib/top-level-pages";
 import { pageExpressionValues } from "~/lib/page-expression-values";
@@ -19,25 +19,8 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     site?.toString().replace(/\/$/, "") ??
     "https://gmt-dox.northguild.workers.dev";
 
-  // Group corpus by namespace
-  const byNs = new Map<string, typeof corpus>();
-  for (const entry of corpus) {
-    if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, []);
-    byNs.get(entry.namespace)!.push(entry);
-  }
-
-  const sections: LlmsSection[] = [];
-
   // Reference sections grouped by namespace
-  for (const [ns, entries] of byNs) {
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-    const links = entries.map((e) => ({
-      title: e.name,
-      url: `${base}${e.url}.md`,
-      description: e.description,
-    }));
-    sections.push({ heading: `Reference — ${ns}`, links });
-  }
+  const sections: LlmsSection[] = referenceSections(corpus, base);
 
   // Start here — every top-level page under content/docs/, in sidebar order.
   const startLinks = topLevelPages(RAW).map(({ slug, source }) => {

@@ -6,11 +6,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Extract the time portion from a unix epoch value.
  *
  * - Converts to ZonedDateTime then extracts the PlainTime.
- * - Uses UTC if `timeZone` is not specified; `"local"` is the system time zone.
  * - Returns "" for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds: a safe integer, or a string of optionally negative ASCII digits
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone is invalid)
+ * @param options optional: how `value` is read and the zone its wall clock is read in
  * @returns ISO time string (e.g., "14:30:45") or "" on invalid input
  *
  * @example parseTimeFromUnix(1700000000000, { timeZone: "UTC" }) // "22:13:20"
@@ -21,7 +20,22 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseTimeFromUnix(
   value: number | string,
-  options?: { epochUnit?: UnixUnit; timeZone?: string },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Name style for `formatTimeZoneName`, mirroring
@@ -30,7 +31,16 @@ export type TimeZoneNameStyle =
   | "shortGeneric"
   | "longGeneric";
 
+/** Options for `formatTimeZoneName`: the form the zone name is written in. */
 export interface FormatTimeZoneNameOptions {
+  /**
+   * The form of the name, one of `Intl.DateTimeFormat`'s `timeZoneName` values. `"short"` and
+   * `"long"` give the abbreviated or full name and `"shortOffset"` and `"longOffset"` the UTC
+   * offset, all four for the offset in effect now. `"shortGeneric"` and `"longGeneric"` give a name
+   * that does not change with daylight saving.
+   *
+   * @defaultValue `"long"`
+   */
   style?: TimeZoneNameStyle;
 }
 
@@ -40,7 +50,7 @@ export interface FormatTimeZoneNameOptions {
  * - `options.style` covers every `Intl.DateTimeFormatOptions` `timeZoneName`
  *   value: "short" (EST), "long" (Eastern Standard Time), "shortOffset"
  *   (GMT-5), "longOffset" (GMT-05:00), "shortGeneric" (ET), "longGeneric"
- *   (Eastern Time). Default "long".
+ *   (Eastern Time).
  * - "short"/"long"/"shortOffset"/"longOffset" name the zone's *current*
  *   offset — for a DST-observing zone the label flips between standard and
  *   daylight names depending on when this is called, since there's no
@@ -52,9 +62,9 @@ export interface FormatTimeZoneNameOptions {
  * - Output depends on runtime ICU data.
  * - Returns "" for an invalid timeZone or locale.
  *
- * @param timeZone IANA timeZone identifier
+ * @param timeZone IANA name or UTC offset
  * @param locale BCP 47 locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
- * @param options optional: { style } name style, default "long"
+ * @param options optional setting for the form of the name
  * @returns localized zone name, or "" on invalid input
  *
  * @example formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" }) // "ET"
@@ -83,7 +93,7 @@ export function formatTimeZoneName(
     if (resolvedLocale === null) return "";
 
     try {
-      const style = options?.style === undefined ? "long" : options.style;
+      const style = optionOrDefault(options?.style, "long");
       const formatter = new Intl.DateTimeFormat(resolvedLocale, {
         timeZone,
         timeZoneName: style,

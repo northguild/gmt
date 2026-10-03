@@ -17,15 +17,16 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - `anchor: "start"` treats `value` as the interval start and adds `duration` to get the end.
  * - `anchor: "end"` treats `value` as the interval end and subtracts `duration` to get the start.
- * - Converts to `ZonedDateTime` in `timeZone` (`"UTC"` by default, consistent with `addUnix`; `"local"`
- *   is the system zone), adds/subtracts
+ * - Converts to `ZonedDateTime` in `timeZone`, adds/subtracts
  *   the duration there, then converts back to epoch — this is what lets calendar units (years/months/
  *   weeks/days) resolve without a `relativeTo`: unlike a bare `Temporal.Instant`, the `ZonedDateTime`
  *   supplies its own implicit reference point.
+ * - The computed boundary is floored to a whole `epochUnit`, so a duration shorter than one unit does
+ *   not survive: with `anchor: "start"` the interval is empty (`"PT0.5S"` in seconds gives the
+ *   same `{ start, end }` as `"PT0S"`), and with `anchor: "end"` the start falls back to the
+ *   previous whole unit, making the interval one unit long.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionUnix`'s `start > end` rejection.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
- *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
  * - Returns null on invalid input (a `value` that is not a safe integer or numeric string of one —
  *   fractions, empty strings and values beyond ±(2^53 − 1) are invalid — invalid `duration`, an
  *   `anchor` other than `"start"`/`"end"`, or an invalid/unavailable timeZone).
@@ -33,7 +34,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value Unix epoch value (seconds or milliseconds): a safe integer or a digit string
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), overflow ("constrain" | "reject")
+ * @param options optional: how `value` is read and how an out-of-range result day is handled
  * @returns `{ start, end }` with the constructed span (epoch numbers), or null on invalid input
  *
  * @example intervalFromDurationUnix(1704067200000, "P1D", "start", { timeZone: "UTC" }) // { start: 1704067200000, end: 1704153600000 }
@@ -48,11 +49,41 @@ export function intervalFromDurationUnix(
   duration: string,
   anchor: "start" | "end",
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * How a result day that does not exist in its month is handled, such as January 31 plus one
+     * month. `"constrain"` clamps to the last valid day, and `"reject"` returns `null`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
   },
-): { start: number; end: number } | null {
+): {
+  /**
+   * The instant the interval begins at, as a Unix epoch number counted in `epochUnit`. A boundary
+   * that falls between two whole units is rounded down to the earlier one.
+   */
+  start: number;
+  /**
+   * The first instant after the interval, counted in `epochUnit` and rounded as `start` is. It is
+   * exclusive: the interval holds everything from `start` up to but not including this value. It
+   * can equal `start`, which makes the interval empty.
+   */
+  end: number;
+} | null {
   try {
     if (!isOptionsArgument(options)) {
       return null;

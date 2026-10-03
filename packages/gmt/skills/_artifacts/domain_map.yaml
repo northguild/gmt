@@ -96,6 +96,7 @@ skills:
     tasks:
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
+      - Decode a fixed producer format with a UTS #35 token pattern, literal quotes included
       - Decode RFC 2822/5322, HTTP, SQL, RFC 3339 fixed grammars
       - Format date/time for display with locale support
       - Format relative date/time ("yesterday", "in 2 hours")
@@ -333,6 +334,7 @@ skills:
     tasks:
       - Create stable cache keys from date values
       - Use with routers and query params
+      - Read a UTC or Unix instant's fields in the system zone with timeZone "local"
       - Use with table libraries for sort keys
       - Use with state management
       - Serialize nanosecond timestamps across a JSON boundary

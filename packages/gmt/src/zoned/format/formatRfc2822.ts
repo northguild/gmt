@@ -11,8 +11,8 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  * - **Fixed grammar, not a display format.** RFC 5322 mandates English
  *   weekday/month abbreviations and a numeric `+HHMM`/`-HHMM` offset
  *   regardless of caller locale — there is no locale-appropriate alternative
- *   ordering to lose, so this does not conflict with Decision 1's exclusion
- *   of a general token formatter (see roadmap `issues/J.md`, J13).
+ *   ordering to lose, so this does not conflict with GMT's exclusion of a
+ *   general token formatter.
  * - Uses the input's own UTC offset at that instant (DST-aware); never emits
  *   an obsolete named zone like "GMT" or "EST" on output, only numeric.
  * - Day, hour, minute, and second are always zero-padded to 2 digits; year

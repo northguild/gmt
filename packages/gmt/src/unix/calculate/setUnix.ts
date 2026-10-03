@@ -9,6 +9,7 @@ import {
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.
@@ -21,20 +22,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `fields` may set any of `year`, `month`, `monthCode`, `day`, `hour`, `minute`, `second`,
  *   `millisecond`, `microsecond`, `nanosecond`, `era`, and/or `eraYear`; omitted fields keep
  *   their current value. An empty object is a no-op.
- * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. setting
- *   `month: 2` on a value whose `day` is 31: "constrain" clamps to Feb 29/28, "reject" throws
- *   (resulting in null).
  * - `value` is a safe integer or a digit string (`"1710072000000"`); anything else returns null.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone.
- * - `offset` defaults to `"prefer"`, as `Temporal.ZonedDateTime.prototype.with`: the source's
- *   offset is kept while it is still valid for the new wall-clock time, so a repeated hour stays on
- *   the same side of a fall-back. Pass `offset: "ignore"` to re-resolve the wall clock with
- *   `disambiguation`.
  * - Returns null for invalid input.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param fields Partial<Temporal.ZonedDateTimeLike> object (excluding calendar/timeZone/offset) specifying fields to set
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"; an unknown zone returns null), overflow ("constrain" | "reject"), disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject", default "prefer")
+ * @param options optional: how `value` is read, and how an out-of-range field or a skipped or repeated wall-clock time is resolved
  * @returns Unix epoch number with fields set, or null on invalid input
  *
  * @example setUnix(1710072000000, { hour: 9 }, { timeZone: "UTC" }) // 1710061200000 (2024-03-10T09:00:00Z)
@@ -48,10 +41,44 @@ export function setUnix(
   value: number | string,
   fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the fields are set in: an IANA name, a UTC offset, or `"local"` for the system
+     * time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * How an out-of-range field is handled, such as `month: 2` on a value whose day is 31.
+     * `"constrain"` clamps to the nearest valid value, and `"reject"` returns `null`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
     overflow?: Overflow;
+    /**
+     * How a wall-clock time that a zone transition skips or repeats is resolved, once `offset` does
+     * not settle it. `"compatible"` takes the later time in a gap and the earlier of a repeat,
+     * `"earlier"` and `"later"` take that side, and `"reject"` returns `null`.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
     disambiguation?: Disambiguation;
+    /**
+     * How the source's UTC offset is weighed against the new wall-clock time, as in
+     * `Temporal.ZonedDateTime.prototype.with`. `"prefer"` keeps it while it is still valid, so a
+     * repeated hour stays on the same side of a fall-back, and `"use"` keeps it always. `"ignore"`
+     * re-resolves the wall clock with `disambiguation`, and `"reject"` returns `null` when the
+     * offset is no longer valid.
+     *
+     * @defaultValue `"prefer"`, Temporal's default.
+     */
     offset?: Offset;
   },
 ): number | null {
@@ -69,12 +96,12 @@ export function setUnix(
     if (instant === null) return null;
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation =
-      options?.disambiguation === undefined
-        ? "compatible"
-        : options.disambiguation;
+    const disambiguation = optionOrDefault(
+      options?.disambiguation,
+      "compatible",
+    );
     // Temporal ZonedDateTime.prototype.with: GetTemporalOffsetOption(options, "prefer").
-    const offset = options?.offset === undefined ? "prefer" : options.offset;
+    const offset = optionOrDefault(options?.offset, "prefer");
 
     try {
       const zoned = instant.toZonedDateTimeISO(timeZone);

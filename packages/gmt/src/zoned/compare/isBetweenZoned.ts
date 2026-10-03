@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `zoned` is between `start` and `end` (inclusive by default).
@@ -13,7 +14,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param zoned ISO ZonedDateTime string to check
  * @param start ISO ZonedDateTime string for the start of the range
  * @param end ISO ZonedDateTime string for the end of the range
- * @param options optional: inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @param options optional settings for whether each end of the range is included
  * @returns boolean indicating whether zoned is between start and end
  *
  * @example isBetweenZoned("2024-02-29T12:00:00+00:00[UTC]", "2024-02-29T11:00:00+00:00[UTC]", "2024-02-29T13:00:00+00:00[UTC]") // true
@@ -23,7 +24,22 @@ export function isBetweenZoned(
   zoned: string,
   start: string,
   end: string,
-  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
+  options?: {
+    /**
+     * Whether `zoned` at the same instant as `start` counts as inside the range. `false` requires
+     * it to be after `start`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveStart?: boolean;
+    /**
+     * Whether `zoned` at the same instant as `end` counts as inside the range. `false` requires it
+     * to be before `end`.
+     *
+     * @defaultValue `true`
+     */
+    inclusiveEnd?: boolean;
+  },
 ): boolean {
   try {
     if (!isOptionsArgument(options)) {
@@ -34,10 +50,8 @@ export function isBetweenZoned(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart =
-      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-    const inclusiveEnd =
-      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
+    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
     if (
       !isValidZonedDateTime(zoned) ||

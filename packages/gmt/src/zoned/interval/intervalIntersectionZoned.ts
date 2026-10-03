@@ -51,7 +51,19 @@ export function intervalIntersectionZoned(
   aEnd: string,
   bStart: string,
   bEnd: string,
-): { start: string; end: string } | null {
+): {
+  /**
+   * The instant the interval begins at, as a zoned ISO 8601 string with offset and bracketed time
+   * zone. It keeps a calendar annotation such as `[u-ca=hebrew]` when the inputs carry one.
+   */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+} | null {
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
   // and a calendar annotation before the zone, while accepting RFC 9557 calendar annotations.

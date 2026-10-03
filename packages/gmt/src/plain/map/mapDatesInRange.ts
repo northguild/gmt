@@ -9,9 +9,6 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Generates dates with optional step (default 1 day).
  * - Returns [] if start > end, invalid inputs, or step <= 0.
- * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when the
- *   range holds more dates than that, it returns `[]` without generating any. An invalid
- *   `maxPieces` also returns `[]`.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
  *   reaches `options`. **Compatibility:** before 1.16.0 it returned `[]`.
  * - **End-inclusive, where the `interval*` functions are half-open.** This enumerates the dates a
@@ -23,7 +20,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * @param startDate ISO PlainDate string for the first date
  * @param endDate ISO PlainDate string for the last date (inclusive)
  * @param stepDays optional number of days to step between results
- * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
+ * @param options The limit on the size of the result
  * @returns array of ISO PlainDate strings, or [] on invalid input
  *
  * @example mapDatesInRange("2024-03-01", "2024-03-05") // ["2024-03-01", "2024-03-02", "2024-03-03", "2024-03-04", "2024-03-05"]
@@ -41,7 +38,16 @@ export function mapDatesInRange(
   startDate: string,
   endDate: string,
   stepDays?: number,
-  options?: { maxPieces?: number },
+  options?: {
+    /**
+     * The most dates the result may hold. A result that would hold more, or more than the longest
+     * possible array (2^32 - 1 elements), returns `[]` and none is built. A value that is not a
+     * positive safe integer also returns `[]`.
+     *
+     * @defaultValue `1_000_000`
+     */
+    maxPieces?: number;
+  },
 ): string[] {
   try {
     // An explicit undefined is the omitted argument, as TC39 GetOption treats it.

@@ -341,3 +341,37 @@ describe("formatCalendarUnix with a locale list", () => {
     ).toBe(expected);
   });
 });
+
+// `timeStyle` is the `timeStyle` of `Intl.DateTimeFormat`, whose values ECMA-402 lists as "full",
+// "long", "medium" and "short". The en-US time formats are h:mm a, h:mm:ss a, h:mm:ss a z and
+// h:mm:ss a zzzz (CLDR): z is "UTC" and zzzz is
+// "Coordinated Universal Time" for the default zone, UTC. VAL_MS is 18:30 UTC on the day after REF_MS.
+describe("formatCalendarUnix timeStyle", () => {
+  // Each value is checked against the option's own type, so `tsc` fails this file if one of
+  // ECMA-402's four styles leaves the `timeStyle` type.
+  const STYLE = {
+    short: "short",
+    medium: "medium",
+    long: "long",
+    full: "full",
+  } satisfies Record<
+    string,
+    NonNullable<FormatCalendarUnixOptions["timeStyle"]>
+  >;
+
+  it.each`
+    timeStyle       | expected
+    ${STYLE.short}  | ${"tomorrow at 6:30 PM"}
+    ${STYLE.medium} | ${"tomorrow at 6:30:00 PM"}
+    ${STYLE.long}   | ${"tomorrow at 6:30:00 PM UTC"}
+    ${STYLE.full}   | ${"tomorrow at 6:30:00 PM Coordinated Universal Time"}
+  `("returns $expected for timeStyle $timeStyle", ({ timeStyle, expected }) => {
+    expectDateTimeEqual(
+      formatCalendarUnix(VAL_MS, MustTestLocales.enUS, {
+        reference: REF_MS,
+        timeStyle,
+      }),
+      expected,
+    );
+  });
+});

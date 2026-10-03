@@ -40,7 +40,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffUtc("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hours") // 24

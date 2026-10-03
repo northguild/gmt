@@ -5,12 +5,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the microsecond (0-999) from a UTC datetime string.
  *
  * - Returns zero-padded string for microsecond.
- * - Reads the value on the wall clock of `options.timeZone` (an IANA zone, default UTC), as
- *   `parseTimeFromUtc` does; an invalid zone returns "".
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45.123Z")
- * @param options optional: timeZone (IANA, default "UTC")
+ * @param options The time zone the value is read in
  * @returns Microsecond (000-999) or "" on invalid input
  *
  * @example parseMicrosecondFromUtc("2024-03-17T14:30:45.123Z") // "000"
@@ -20,7 +18,15 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function parseMicrosecondFromUtc(
   value: string,
-  options?: { timeZone?: string },
+  options?: {
+    /**
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `""`.
+     *
+     * @defaultValue `"UTC"`
+     */
+    timeZone?: string;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {

@@ -45,7 +45,7 @@ unstaged and report it ready; the user decides when it is committed.
    7. **Run the file again** (green), plus the sibling tests of anything you touched.
    8. Move to the next slice. Let what this slice taught you reshape the next one.
 
-4. **Finish:** JSDoc with `@example` for valid, invalid and edge inputs ([jsdoc standards](../context/jsdoc-standards.md)); export from the namespace `index.ts`; `pnpm --filter @northguild/gmt typecheck`; the full `pnpm --filter @northguild/gmt test`; the fallow gate below.
+4. **Finish:** JSDoc with `@example` for valid, invalid and edge inputs ([jsdoc standards](../context/jsdoc-standards.md)); a description on every public type, member and option property, and `@defaultValue` on every optional input property, read from the code you just wrote ([§ Options and members](../context/jsdoc-standards.md#options-and-members)); `pnpm dox:docs-check`; export from the namespace `index.ts`; `pnpm --filter @northguild/gmt typecheck`; the full `pnpm --filter @northguild/gmt test`; the fallow gate below.
 
 5. **Hand off:** list each slice with its red → green evidence, the files changed, and anything left open. Leave everything unstaged.
 
@@ -105,5 +105,7 @@ Suppression IDs (check with `npx fallow explain <issue-type>`):
 - No existing behaviour was pinned without first classifying it as intended or defect.
 - **Zero known bugs.** Every defect found, in new or existing code, was fixed in this run: red `it`, fix, green. Nothing was deferred, pinned or documented around. `node scripts/test-markers.mjs check` passes: no `.fails`/`.skip`/`.todo`/`.only`/`xit`, and no "known defect" notes. See [Zero known bugs](../context/testing-standards/references/index.md#zero-known-bugs).
 - The handoff lists every disagreement found (rule vs polyfill vs spec vs implementation) and how each was resolved.
+- Every public type, member and option property has a description, every optional input property has `@defaultValue` matching the implementation, and `pnpm dox:docs-check` reports no gaps.
+- A public type is reached by at least one public function. A type only private code uses is not exported.
 - Typecheck and the full gmt test suite pass; the fallow gate is clean or every suppression carries a reason.
 - Nothing staged, committed, or pushed.

@@ -33,7 +33,16 @@ export function intervalIntersectionUtc(
   aEnd: string,
   bStart: string,
   bEnd: string,
-): { start: string; end: string } | null {
+): {
+  /** The instant the interval begins at, as an ISO 8601 UTC string ending in `Z`. */
+  start: string;
+  /**
+   * The first instant after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+} | null {
   if (
     typeof aStart !== "string" ||
     typeof aEnd !== "string" ||

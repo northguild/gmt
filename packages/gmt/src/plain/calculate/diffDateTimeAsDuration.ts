@@ -30,7 +30,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffDateTimeAsDuration("2024-03-10T00:00:00", "2024-03-11T02:00:00", "days") // "P1DT2H"

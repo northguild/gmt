@@ -10,16 +10,14 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
 /**
  * Return the end of the specified date `unit` for a given ISO 8601 date string.
  *
- * - A Sunday-first week runs Sunday to Saturday, so a Sunday ends its week six days later.
  * - The end is computed forward from `value`, so it is returned even when the unit began before
  *   the first representable date (`-271821-04-19`).
  * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  *
  * @param value ISO 8601 date string
  * @param unit date unit, singular or plural, to specify the unit for the end
- * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
+ * @param optionsArg How the week is defined
  * @returns ISO 8601 string representing the end of the specified unit, or "" on invalid input
  *
  * @example endOfDate("2024-02-29", "month") // "2024-02-29"
@@ -31,7 +29,16 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
 export function endOfDate(
   value: string,
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
-  optionsArg?: { weekStartsOn?: "monday" | "sunday" },
+  optionsArg?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
+    weekStartsOn?: "monday" | "sunday";
+  },
 ): string {
   try {
     if (!isOptionsArgument(optionsArg)) {

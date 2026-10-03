@@ -483,3 +483,54 @@ describe("formatTime with primitive options", () => {
     );
   });
 });
+
+// ECMA-402 GetOption step 1 is Get(options, property), which follows the prototype chain, so an
+// inherited option is read exactly as the same option held as an own property. Here 20:05:00 with a
+// 2-digit hour and minute on the 24-hour cycle is 20:05.
+describe("formatTime with inherited options", () => {
+  it.each`
+    label          | options
+    ${"own"}       | ${{ hour: "2-digit", minute: "2-digit", hourCycle: "h23" }}
+    ${"inherited"} | ${Object.create({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}
+  `(
+    "formats with $label options { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, an inherited option being read like an own one",
+    ({ options }) => {
+      expect(formatTime("20:05:00", "en-US", options)).toBe("20:05");
+    },
+  );
+});
+
+// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
+// an object option is asked for its value once and that answer is both checked and used: 20:05:00
+// with a 2-digit hour in en-US is "08:05 PM"; a second ToString would answer "numeric" and print
+// "8:05 PM".
+describe("formatTime with an option that is an object", () => {
+  it("calls hour.toString() once and formats with its first answer, 2-digit", () => {
+    let coercions = 0;
+    const hour = {
+      toString() {
+        coercions += 1;
+        return coercions === 1 ? "2-digit" : "numeric";
+      },
+    };
+    const out = formatTime("20:05:00", "en-US", {
+      hour,
+      minute: "2-digit",
+    } as never);
+    expect({ out, coercions }).toEqual({ out: "08:05 PM", coercions: 1 });
+  });
+});
+
+// A plain time has no zone, so a "long" timeStyle is written without one (AdjustDateTimeStyleFormat
+// removes the zone field): 20:05:00 in en-US is "8:05:00 PM". The option is converted to the
+// string "long" before it is looked at, so a String object is treated as the string it holds;
+// 1.17 compared the object itself, missed, and wrote "8:05:00 PM UTC".
+describe("formatTime with a timeStyle that is a String object", () => {
+  it('formats 20:05:00 with timeStyle new String("long") as 8:05:00 PM, with no zone name', () => {
+    expect(
+      formatTime("20:05:00", "en-US", {
+        timeStyle: new String("long"),
+      } as never),
+    ).toBe("8:05:00 PM");
+  });
+});

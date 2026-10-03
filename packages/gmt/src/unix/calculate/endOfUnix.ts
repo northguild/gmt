@@ -14,15 +14,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns the last millisecond of the real local `unit` containing `value` in `timeZone` — just before the next bucket `floorToZone` would return — so the result is never before `value`: the second pass of a repeated fall-back hour ends at its own 1:59:59.999.
  * - Takes no `disambiguation` or `offset`: a boundary is always a real instant, as TC39's `startOfDay()`
  *   takes neither. Those ignored options were removed in 1.16.0.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns null, for every unit.
  * - Returns null for invalid input.
  * - `value` is a safe integer or a digit string (`"1706659200000"`); anything else returns null.
- * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone returns
- *   null.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the end
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), weekStartsOn ("monday" | "sunday")
+ * @param options optional: how `value` is read, the zone the unit is found in and the first day of the week
  * @returns Unix epoch number representing the end of the unit, or null on invalid input
  *
  * @example endOfUnix(1706659200000, "year", { timeZone: "UTC" }) // 1735689599999
@@ -38,8 +35,27 @@ export function endOfUnix(
   value: number | string,
   unit: Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
   options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `null`. The result is in the same unit.
+     *
+     * @defaultValue `"milliseconds"`
+     */
     epochUnit?: UnixUnit;
+    /**
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
+     * the system time zone. An unknown zone returns `null`.
+     *
+     * @defaultValue `"UTC"`
+     */
     timeZone?: string;
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * null, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
   },
 ): number | null {

@@ -16,10 +16,6 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Hours are the largest unit (`PT40H`, not `P1DT16H`): an open-time total has no calendar.
  *   Exact to the nanosecond, and elapsed time, not wall-clock distance, so a 00:00–00:00 window
  *   on a New York fall-back date adds 25 hours.
- * - Window edges are local wall times resolved with `resolveLocal` under `disambiguation`
- *   (default `"compatible"`): an edge in a repeated fall-back hour takes the **earlier**
- *   instant, and one in a skipped spring-forward hour the **later** one. `"reject"` returns `""`
- *   when a window with an ambiguous or nonexistent edge reaches the range.
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - `start === end` returns `"PT0S"`.
  * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, `start` after
@@ -29,7 +25,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param start ISO 8601 instant string where the clock starts (inclusive)
  * @param end ISO 8601 instant string where the clock stops (exclusive)
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg How a window edge on a clock change is resolved
  * @returns ISO 8601 duration string of the open time, or "" on invalid input
  *
  * @example operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "PT2H" — Friday 16:00 to Monday 10:00 local
@@ -42,7 +38,17 @@ export function operatingTimeBetween(
   start: string,
   end: string,
   schedule: OperatingSchedule,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: {
+    /**
+     * How a window edge in a repeated or skipped local hour becomes an instant, as `resolveLocal`
+     * resolves it. `"compatible"` takes the earlier instant of a repeated fall-back hour and the
+     * later one of a skipped spring-forward hour, and `"earlier"` and `"later"` take that side in
+     * both cases. `"reject"` returns `""` when a window with such an edge reaches the range.
+     *
+     * @defaultValue `"compatible"`, Temporal's default.
+     */
+    disambiguation?: Disambiguation;
+  },
 ): string {
   try {
     const disambiguation = parseScheduleDisambiguation(optionsArg);

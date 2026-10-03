@@ -14,4 +14,12 @@
  * Narrow a candidate with `isValidInterval`. Used by the `interval/` namespace; the older
  * `plain|utc|zoned|unix/interval` functions take positional strings and a different model.
  */
-export type Interval = { start: string; end: string };
+export type Interval = {
+  /** The first instant inside the interval, as an ISO 8601 instant string with an offset. */
+  start: string;
+  /**
+   * The first instant after the interval, as an ISO 8601 instant string with an offset; it is
+   * not itself inside. It may equal `start`, which makes the interval empty, but not precede it.
+   */
+  end: string;
+};

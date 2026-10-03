@@ -45,7 +45,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param date2 ISO PlainDate string for the end, optionally calendar-annotated
  * @param unitArg date unit or units to measure the difference, singular or plural (`"day"` or
  *   `"days"`); a record result keeps the plural keys
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded; a non-object value (such as `null`) is invalid
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffDate("2024-03-10", "2024-03-15", "days") // 5

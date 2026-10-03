@@ -7,6 +7,7 @@ import {
 import type { FractionalDigit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return the end of the week containing `value`, using `locale`'s first
@@ -20,8 +21,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   its own zone — one nanosecond before the next week bucket starts — so
  *   the result is never before `value`.
  * - The end is written at nanosecond precision by default (`.999999999`), like `endOfZoned`, so the
- *   string names the end itself. An explicit `fractionalSecondDigits` truncates it, as Temporal's
- *   `toString` does; pass `{ fractionalSecondDigits: 0 }` to keep the previous whole-second string.
+ *   string names the end itself. Pass `{ fractionalSecondDigits: 0 }` to keep the previous
+ *   whole-second string.
  * - Distinct from `endOfZoned(value, "week", { weekStartsOn })`, which
  *   takes an explicit ISO-biased `weekStartsOn` option instead of deriving
  *   it from a locale.
@@ -32,7 +33,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value zoned ISO 8601 datetime string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
- * @param options optional: fractionalSecondDigits (number, default 9)
+ * @param optionsArg optional setting for the precision of the output string
  * @returns zoned ISO 8601 string for the end of `value`'s locale-relative week, or "" on invalid input
  *
  * @example getLocaleZonedEndOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US") // "2024-03-02T23:59:59.999999999+00:00[UTC]" (Saturday)
@@ -46,6 +47,13 @@ export function getLocaleZonedEndOfWeek(
   value: string,
   locale: string | string[],
   optionsArg?: {
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer than 9 digits truncate the string, as Temporal's `toString` does,
+     * so it names a moment before the end.
+     *
+     * @defaultValue `9`
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
@@ -54,10 +62,10 @@ export function getLocaleZonedEndOfWeek(
       return "";
     }
 
-    const fractionalSecondDigits =
-      optionsArg?.fractionalSecondDigits === undefined
-        ? 9
-        : optionsArg.fractionalSecondDigits;
+    const fractionalSecondDigits = optionOrDefault(
+      optionsArg?.fractionalSecondDigits,
+      9,
+    );
 
     if (!isValidZonedDateTime(value)) return "";
 

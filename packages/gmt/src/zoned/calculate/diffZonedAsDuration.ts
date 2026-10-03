@@ -46,7 +46,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param value1 zoned ISO 8601 datetime string (start), optionally calendar-annotated
  * @param value2 zoned ISO 8601 datetime string (end), optionally calendar-annotated
  * @param unit date-time unit to use as the duration's largestUnit, singular or plural (`"day"` or `"days"`)
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
+ * @param options optional: how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffZonedAsDuration("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", "days") // "P2D" (wall-clock days; 47 elapsed hours)

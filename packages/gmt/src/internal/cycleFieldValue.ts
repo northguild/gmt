@@ -8,10 +8,12 @@
  *   not by repeatedly correcting a single overflow.
  * - Round path is **not** "round to nearest": it steps by `Math.sign(amount)` first, then snaps to
  *   the next multiple of `Math.abs(amount)` in the direction of that sign (ceiling for positive
- *   amounts, floor for negative). Multiples are relative to `0`, not `bounds.min`. This matches
- *   `@internationalized/date`'s `CycleOptions.round` behavior exactly (verified against its
- *   `manipulation.ts` source) — e.g. minute `22` cycled by `+15` with `round: true` lands on `30`
- *   (the next multiple of 15 above 22), not `15` (the nearest multiple).
+ *   amounts, floor for negative). Multiples are relative to `0`, not `bounds.min`. GMT's own
+ *   rule, not a standard's: a cycle always moves the way `amount` points, and the nearest
+ *   multiple can lie the other way — e.g. minute `22` cycled by `+15` with `round: true` lands on
+ *   `30` (the next multiple of 15 above 22), not `15` (the nearest multiple).
+ * - Comparison: `@internationalized/date`'s `CycleOptions.round` rounds a bounded field the same
+ *   way.
  *
  * @param current the field's current numeric value
  * @param amount signed amount to cycle by

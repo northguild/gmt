@@ -102,6 +102,134 @@ describe("getZonedNow", () => {
     });
   }
 
+  // ECMA-402 GetOption (the Temporal specification defines the same operation): an option whose
+  // value is undefined is absent, so the documented default ("millisecond", three fractional
+  // digits) applies. The clock is on a whole second, where auto precision would print no fraction
+  // at all.
+  it.each`
+    label                            | options                        | expected
+    ${"{}"}                          | ${{}}                          | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ smallestUnit: undefined }"} | ${{ smallestUnit: undefined }} | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+  `(
+    "returns millisecond precision $expected for options $label",
+    ({ options, expected }) => {
+      expect(getZonedNow("UTC", options)).toBe(expected);
+      expect(getZonedNow("UTC", options)).toBe(getZonedNow("UTC"));
+    },
+  );
+
+  // GetOption starts with one Get(options, property) and works on that value. The getter answers
+  // `first` on the first read and undefined on any later one, so a second read would lose the
+  // unit and print auto precision ("2024-02-29T00:00:00+00:00[UTC]" on this whole-second clock).
+  it.each`
+    first        | expected                                | why
+    ${"minute"}  | ${"2024-02-29T00:00+00:00[UTC]"}        | ${"the unit from the one read"}
+    ${undefined} | ${"2024-02-29T00:00:00.000+00:00[UTC]"} | ${"the millisecond default"}
+  `(
+    "reads smallestUnit once: a getter answering $first first returns $expected ($why)",
+    ({ first, expected }) => {
+      let reads = 0;
+      const options = {
+        get smallestUnit() {
+          reads += 1;
+          return reads === 1 ? first : undefined;
+        },
+      };
+
+      expect(getZonedNow("UTC", options)).toBe(expected);
+      expect(reads).toBe(1);
+    },
+  );
+
+  // Temporal.ZonedDateTime.prototype.toString: smallestUnit fixes the digits written.
+  it.each`
+    smallestUnit     | expected
+    ${"minute"}      | ${"2024-02-29T00:00+00:00[UTC]"}
+    ${"second"}      | ${"2024-02-29T00:00:00+00:00[UTC]"}
+    ${"millisecond"} | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+  `(
+    "returns $expected for smallestUnit $smallestUnit",
+    ({ smallestUnit, expected }) => {
+      expect(getZonedNow("UTC", { smallestUnit })).toBe(expected);
+    },
+  );
+
+  // Below a millisecond the system clock's digits are implementation-defined
+  // (SystemUTCEpochNanoseconds), so only the digit count is fixed.
+  it.each`
+    smallestUnit     | fractionDigits
+    ${"microsecond"} | ${6}
+    ${"nanosecond"}  | ${9}
+  `(
+    "returns $fractionDigits fractional digits for smallestUnit $smallestUnit",
+    ({ smallestUnit, fractionDigits }) => {
+      expect(getZonedNow("UTC", { smallestUnit })).toMatch(
+        new RegExp(
+          `^2024-02-29T00:00:00\\.000\\d{${fractionDigits - 3}}\\+00:00\\[UTC\\]$`,
+        ),
+      );
+    },
+  );
+
+  // smallestUnit is the one documented option. Every other key Temporal's
+  // ZonedDateTime.prototype.toString reads (roundingMode, fractionalSecondDigits, timeZoneName,
+  // offset, calendarName) is not an option of getZonedNow, so it is never read and the output
+  // is the same as without it, whether its value would be valid for Temporal or not.
+  it.each`
+    label                               | extra                             | expected
+    ${"{ timeZoneName: 'never' }"}      | ${{ timeZoneName: "never" }}      | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ timeZoneName: 'critical' }"}   | ${{ timeZoneName: "critical" }}   | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ offset: 'never' }"}            | ${{ offset: "never" }}            | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ calendarName: 'always' }"}     | ${{ calendarName: "always" }}     | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ fractionalSecondDigits: 9 }"}  | ${{ fractionalSecondDigits: 9 }}  | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ fractionalSecondDigits: 42 }"} | ${{ fractionalSecondDigits: 42 }} | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ roundingMode: 'bogus' }"}      | ${{ roundingMode: "bogus" }}      | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+    ${"{ timeZoneName: 'bogus' }"}      | ${{ timeZoneName: "bogus" }}      | ${"2024-02-29T00:00:00.000+00:00[UTC]"}
+  `(
+    "ignores the undocumented key $label and returns $expected",
+    ({ extra, expected }) => {
+      expect(getZonedNow("UTC", extra as never)).toBe(expected);
+      expect(getZonedNow("UTC", extra as never)).toBe(getZonedNow("UTC"));
+    },
+  );
+
+  // "Anything smaller is truncated": with the clock at 00:00:00.999 the second is 00, whatever
+  // roundingMode a caller adds. Temporal's toString would round 00:00:00.999 up to 00:00:01
+  // (and 00:00 up to 00:01 from 00:00:59.999) if it received "ceil" or "halfExpand".
+  it.each`
+    clock                         | smallestUnit | roundingMode    | expected
+    ${"2024-02-29T00:00:00.999Z"} | ${"second"}  | ${"ceil"}       | ${"2024-02-29T00:00:00+00:00[UTC]"}
+    ${"2024-02-29T00:00:00.999Z"} | ${"second"}  | ${"halfExpand"} | ${"2024-02-29T00:00:00+00:00[UTC]"}
+    ${"2024-02-29T00:00:00.999Z"} | ${"second"}  | ${"expand"}     | ${"2024-02-29T00:00:00+00:00[UTC]"}
+    ${"2024-02-29T00:00:59.999Z"} | ${"minute"}  | ${"ceil"}       | ${"2024-02-29T00:00+00:00[UTC]"}
+    ${"2024-02-29T23:59:59.999Z"} | ${"second"}  | ${"ceil"}       | ${"2024-02-29T23:59:59+00:00[UTC]"}
+  `(
+    "truncates $clock to $expected for smallestUnit $smallestUnit with an undocumented roundingMode $roundingMode",
+    ({ clock, smallestUnit, roundingMode, expected }) => {
+      vi.setSystemTime(clock);
+      expect(getZonedNow("UTC", { smallestUnit, roundingMode } as never)).toBe(
+        expected,
+      );
+      expect(getZonedNow("UTC", { smallestUnit })).toBe(expected);
+    },
+  );
+
+  // Temporal.ZonedDateTime.prototype.toString accepts smallestUnit from "minute" to
+  // "nanosecond" and throws RangeError for anything else, which is invalid input here.
+  it.each`
+    smallestUnit
+    ${"fortnight"}
+    ${"hour"}
+    ${"day"}
+    ${""}
+    ${null}
+  `(
+    "returns '' for the invalid smallestUnit $smallestUnit",
+    ({ smallestUnit }) => {
+      expect(getZonedNow("UTC", { smallestUnit })).toBe("");
+    },
+  );
+
   it("returns empty string on failure", () => {
     vi.useRealTimers();
     mockTemporalNowZonedDateTimeISOThrow();

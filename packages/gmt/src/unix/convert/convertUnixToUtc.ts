@@ -10,12 +10,11 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * - Converts to UTC Instant using Temporal.Instant.
  * - `value` is a safe integer or a string of optionally negative ASCII digits; anything else, or an
  *   instant outside the Temporal range, returns "".
- * - `options.epochUnit` is `"seconds"` or `"milliseconds"` (singular accepted), default
- *   `"milliseconds"`. An explicit `undefined` is the same as omitted; a non-object `options` (such
- *   as a bare `"seconds"` string) returns "".
+ * - An explicit `undefined` `options` is the same as omitted; a non-object `options` (such as a
+ *   bare `"seconds"` string) returns "".
  *
  * @param value epoch value: a safe integer or a digit string
- * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
+ * @param options optional: how `value` is read
  * @returns UTC Instant string or "" on invalid
  *
  * @example convertUnixToUtc(1709164800000) // "2024-02-29T00:00:00Z"
@@ -27,7 +26,15 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  */
 export function convertUnixToUtc(
   value: number | string,
-  options?: { epochUnit?: UnixUnit },
+  options?: {
+    /**
+     * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
+     * plural. Any other value returns `""`.
+     *
+     * @defaultValue `"milliseconds"`
+     */
+    epochUnit?: UnixUnit;
+  },
 ): string {
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);

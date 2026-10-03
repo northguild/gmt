@@ -18,6 +18,8 @@ import { isValidDateTime } from "../validate";
  *   there, so the pieces share no value and together cover the interval exactly once (the rule
  *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
+ * - A piece's `end` equals its `start` only when the interval itself is zero-length (`start`
+ *   equal to `end`): the result is then that one empty piece, whatever the points.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   PlainDateTime string, or on invalid input (unparseable start/end, `start > end`).
  *
@@ -35,7 +37,19 @@ export function intervalSplitAtDateTime(
   start: string,
   end: string,
   points: string[],
-): Array<{ start: string; end: string }> {
+): Array<{
+  /**
+   * The date-time the interval begins at, as an ISO 8601 date-time string with no offset or time
+   * zone.
+   */
+  start: string;
+  /**
+   * The first date-time after the interval, in the same format as `start`. It is exclusive: the
+   * interval holds everything from `start` up to but not including this value. It can equal
+   * `start`, which makes the interval empty.
+   */
+  end: string;
+}> {
   try {
     if (!Array.isArray(points)) {
       return [];

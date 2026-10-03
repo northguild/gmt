@@ -18,21 +18,21 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Week 1 is the week starting on `locale`'s first day of week that holds at least `minimalDays`
  *   days of January (UTS #35 Part 4, Week Data). The first day of week comes from
  *   `Intl.Locale.prototype.getWeekInfo`.
- * - **`minimalDays` defaults to `4`, the ISO 8601 rule, on every runtime.** ECMA-402 does not expose
- *   a locale's minimal days: Intl Locale Info returns only `firstDay` and `weekend`
- *   (tc39/proposal-intl-locale-info#86), so older runtimes that still reported it disagreed with
- *   newer ones about the same date. Pass CLDR's value when you need a locale's own rule: in CLDR 48
- *   `weekData`, the world default (`001`) is `1` — week 1 always contains January 1, as in `US`,
- *   `CA`, `MX`, `JP` and `CN` — and `4` is set for a list of mostly European regions such as `GB`,
- *   `DE` and `FR`, where it matches this default.
- * - Returns null if `value` or `locale` is invalid, or if `minimalDays` is not an integer from 1 to 7.
+ * - The minimal-days rule comes from the caller, never the runtime, so one input has one answer
+ *   everywhere. ECMA-402 does not expose a locale's minimal days: Intl Locale Info returns only
+ *   `firstDay` and `weekend` (tc39/proposal-intl-locale-info#86), so older runtimes that still
+ *   reported it disagreed with newer ones about the same date. Pass CLDR's value when you need a
+ *   locale's own rule: in CLDR 48 `weekData`, the world default (`001`) is `1`, as in `US`, `CA`,
+ *   `MX`, `JP` and `CN`, and `4` is set for a list of mostly European regions such as `GB`, `DE`
+ *   and `FR`.
+ * - Returns null if `value` or `locale` is invalid.
  * - **Compatibility:** before 1.16.0 the default read the runtime's `minimalDays` where one was
  *   exposed (Node 22), so a locale such as `en-US` got `1` there and `4` on Node 24 and later. Pass
  *   `{ minimalDays: 1 }` to keep the Node 22 result for such a locale on every runtime.
  *
  * @param value ISO PlainDate string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
- * @param options optional: minimalDays (integer 1–7, default 4)
+ * @param options The minimal-days-in-first-week rule
  * @returns locale-relative week-numbering year, or null on invalid input
  *
  * @example getLocaleWeekYear("2024-06-15", "en-US") // 2024
@@ -47,7 +47,16 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function getLocaleWeekYear(
   value: string,
   locale: string | string[],
-  options?: { minimalDays?: number },
+  options?: {
+    /**
+     * How many days of January the first week must hold to be week 1 (UTS #35 Part 4, Week
+     * Data). `4` is the ISO 8601 rule; `1` puts January 1 in week 1 every year, as CLDR's world
+     * default does. A value that is not an integer from 1 to 7 returns `null`.
+     *
+     * @defaultValue `4`
+     */
+    minimalDays?: number;
+  },
 ): number | null {
   try {
     if (!isOptionsArgument(options)) {

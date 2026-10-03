@@ -33,7 +33,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  *
  * @param value ISO 8601 instant string (e.g. "2024-06-15T03:00:00Z")
  * @param unit boundary unit ("hour" | "day" | "week" | "month", or its plural)
- * @param timeZone IANA timeZone identifier the boundary is computed in
+ * @param timeZone IANA name or UTC offset the boundary is computed in
  * @returns UTC instant string ending in "Z", or "" on invalid input
  *
  * @example floorToZone("2024-06-15T03:00:00Z", "day", "America/New_York") // "2024-06-14T04:00:00Z" (the 14 June local midnight — the instant is already 14 June there)

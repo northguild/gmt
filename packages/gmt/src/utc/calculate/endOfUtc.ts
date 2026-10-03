@@ -8,8 +8,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * - Converts to ZonedDateTime, sets to end of unit, converts back to Instant.
  * - Supports: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond", each also in its plural form (`"days"`), as Temporal accepts.
- * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
- * - The end is written at nanosecond precision by default, so the string names the end itself; an explicit `fractionalSecondDigits` (0, 3, 6 or 9) truncates it, as Temporal's `toString` does.
+ * - The end is the last nanosecond of the unit, one nanosecond before the next unit starts.
  * - Returns "" for invalid input.
  * - **Compatibility:** before 1.16.0 the default printed only the digits the unit names — none for
  *   `second` and coarser, 3 for `millisecond`, 6 for `microsecond` — which wrote a moment earlier
@@ -17,7 +16,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @param value ISO UTC datetime string
  * @param unit date or time unit, singular or plural, to specify the end
- * @param options optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @param options Where a week starts, and the precision of the result
  * @returns UTC Instant string representing the end of the unit, or "" on invalid input
  *
  * @example endOfUtc("2024-03-15T14:30:45Z", "year") // "2024-12-31T23:59:59.999999999Z"
@@ -30,7 +29,21 @@ export function endOfUtc(
   value: string,
   unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   options?: {
+    /**
+     * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO
+     * 8601 week, Monday to Sunday; `"sunday"` runs Sunday to Saturday. Any other value returns
+     * `""`, whatever the unit.
+     *
+     * @defaultValue `"monday"`
+     */
     weekStartsOn?: "monday" | "sunday";
+    /**
+     * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
+     * drop trailing zeros. Fewer than 9 digits truncate the string, as Temporal's `toString` does,
+     * so it names a moment before the end.
+     *
+     * @defaultValue `9`
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {

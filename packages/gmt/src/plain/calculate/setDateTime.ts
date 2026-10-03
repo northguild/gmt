@@ -15,13 +15,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   their current value. An empty object is a no-op.
  * - Returns "" for invalid input.
  *
- * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. setting
- * `month: 2` on a datetime whose `day` is 31: "constrain" clamps to Feb 29/28, "reject" throws
- * (resulting in "").
- *
  * @param value ISO PlainDateTime string
  * @param fields Partial<Temporal.PlainDateTimeLike> object specifying fields to set
- * @param options optional: overflow ("constrain" | "reject")
+ * @param options How an out-of-range field value is handled
  * @returns ISO PlainDateTime string with fields set, or "" on invalid input
  *
  * @example setDateTime("2024-03-10T12:00:00", { hour: 9 }) // "2024-03-10T09:00:00"
@@ -33,7 +29,16 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function setDateTime(
   value: string,
   fields: Omit<Temporal.PlainDateTimeLike, "calendar">,
-  options?: { overflow?: Overflow },
+  options?: {
+    /**
+     * What to do when the fields do not form a real date-time. `"constrain"` clamps each field to
+     * its nearest valid value, so `month: 2` on the 31st gives Feb 29 or 28; `"reject"` returns
+     * `""`.
+     *
+     * @defaultValue `"constrain"`, Temporal's default.
+     */
+    overflow?: Overflow;
+  },
 ): string {
   if (!isOptionsArgument(options)) {
     return "";

@@ -5,17 +5,14 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid time range — both parseable as
- * ISO PlainTime strings and `value1 <= value2`.
+ * ISO PlainTime strings and `value1` before `value2`.
  *
  * - Both inputs must be ISO 8601 time strings (e.g. `"14:30:00"`), as `isValidTime` accepts,
  *   annotations included.
  * - Ordered by `Temporal.PlainTime.compare`, to the nanosecond.
- * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  *
- * @param value1 first ISO PlainTime string
- * @param value2 second ISO PlainTime string
- * @param options optional allowEqual flag
+ * @param props The two values to compare and how equal values are treated
  * @returns boolean indicating whether the time range is valid
  *
  * @example isValidTimeRange({ value1: "09:00:00", value2: "17:00:00" }) // true
@@ -23,9 +20,29 @@ import { isObject, isOptionsArgument } from "../../internal/isObject";
  * @example isValidTimeRange({ value1: "12:00:00", value2: "12:00:00", options: { allowEqual: true } }) // true
  */
 export function isValidTimeRange(props: {
+  /**
+   * The start of the range, an ISO PlainTime string.
+   */
   value1: string;
+  /**
+   * The end of the range, an ISO PlainTime string.
+   */
   value2: string;
-  options?: { allowEqual?: boolean };
+  /**
+   * The settings for the comparison. It must be an object or omitted; any other value, `null`
+   * included, returns `false`.
+   *
+   * @defaultValue None. Equal values are not a valid range.
+   */
+  options?: {
+    /**
+     * Whether `value1` equal to `value2` is a valid range. `false` requires `value1` to be
+     * before `value2`.
+     *
+     * @defaultValue `false`
+     */
+    allowEqual?: boolean;
+  };
 }): boolean {
   try {
     if (!isObject(props)) return false;

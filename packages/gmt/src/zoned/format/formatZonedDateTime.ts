@@ -2,6 +2,7 @@ import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
+import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 
 /**
  * Format a zoned ISO 8601 datetime string using the Intl.DateTimeFormat implementation.
@@ -59,7 +60,7 @@ export function formatZonedDateTime(
     // fields and widths are kept.
     const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
-      options ?? {},
+      readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,
       "zoned-date-time",
     );

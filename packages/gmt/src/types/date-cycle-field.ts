@@ -1,3 +1,6 @@
-// the subset of Temporal.PlainDateLike fields that cycleDate/cycleDateTime/cycleZoned can wrap;
-// deliberately narrower than DateUnit, which includes "week" (not a .with()-settable field)
+/**
+ * A date field `cycleDate`, `cycleDateTime` and `cycleZoned` can step and wrap: `"year"`,
+ * `"month"` or `"day"`. Narrower than `DateUnit` on purpose: `"week"` is a unit, not a field a
+ * date can be set to with Temporal's `with()`.
+ */
 export type DateCycleField = "year" | "month" | "day";

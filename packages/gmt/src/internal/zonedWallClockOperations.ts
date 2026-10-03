@@ -27,6 +27,7 @@ import {
   timeZoneIdOf,
   utcOffsetStringNanoseconds,
 } from "./zonedWallClock";
+import { optionOrDefault } from "./optionOrDefault";
 
 /*
  * Polyfill-first wrappers for the Temporal operations that resolve a wall clock or a start of day
@@ -694,6 +695,7 @@ export function subtractFromZoned(
  *   "later"/"compatible" forward (DisambiguatePossibleEpochNanoseconds); "reject" throws for both.
  * - The time portion is then added in exact time and is never re-resolved.
  * - With no date portion, the whole duration is exact time and `disambiguation` never applies.
+ * - Each option is converted to a string once, as Temporal GetOption converts it.
  *
  * @param zoned the starting value
  * @param duration the duration to add or subtract
@@ -710,7 +712,14 @@ export function addToZonedDisambiguated(
     disambiguation: Disambiguation;
   },
 ): Temporal.ZonedDateTime {
-  const { overflow, disambiguation } = options;
+  // Temporal GetOption converts each option once (ToString). The steps below check an option and
+  // then use it, some more than once, so both are converted here and every step sees the same
+  // string: an option given as an object cannot answer the check one way and the use another.
+  const overflow =
+    options.overflow === undefined
+      ? undefined
+      : (`${options.overflow}` as Overflow);
+  const disambiguation = `${options.disambiguation}` as Disambiguation;
   // Validates `disambiguation` even when no wall clock is resolved below.
   DISAMBIGUATION_PROBE.toZonedDateTime("UTC", { disambiguation });
   const parsed = Temporal.Duration.from(duration);
@@ -770,10 +779,8 @@ function withAtEdge(
     zoned.timeZoneId,
     wall,
     offset,
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation,
-    options?.offset === undefined ? "prefer" : options.offset,
+    optionOrDefault(options?.disambiguation, "compatible"),
+    optionOrDefault(options?.offset, "prefer"),
     false,
   );
   return inZoneOf(epoch, zoned);

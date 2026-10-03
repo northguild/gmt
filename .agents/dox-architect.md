@@ -33,6 +33,16 @@ work is scoped against what is already built.
   `packages/gmt/src` once and emits the pages, `gmt-corpus.json`, the route manifest and the
   playground seeds. Re-deriving any of them by re-walking source or re-parsing MDX is a design
   error.
+- **A type gets a page only when it is shared.** A public type that two or more public functions
+  reach, directly or through another type, has one page at `/reference/types/<Name>`. Every other
+  type renders inline on its function page, under an anchored heading. The rule is by usage, never
+  by source directory; the generator's usage graph decides it, so no spec lists types by hand.
+- **Options and Members tables come from property JSDoc.** Each row carries name, type, default
+  (options only) and description, read from the property's own comment and its `@defaultValue`
+  tag ([jsdoc standards](../context/jsdoc-standards.md#options-and-members)).
+- **The gate, not the renderer, owns missing docs.** A missing description or default is fixed in
+  `packages/gmt/src` by the library pipeline. Never fill it with a fallback string, a dash or
+  site-side copy. `pnpm dox:docs-check` lists the gaps.
 - **The exports map is a hard constraint.** Module barrels only
   (`@northguild/gmt/plain/calculate`); namespace barrels drag the 2.98 MB polyfill.
 - **Counts drift.** Derive them from source; never trust a number in the docs.

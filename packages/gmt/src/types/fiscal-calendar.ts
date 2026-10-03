@@ -12,7 +12,7 @@ export type FiscalPattern = "4-5-4" | "4-4-5" | "5-4-4";
 
 /** Caller-supplied 52/53-week fiscal calendar. GMT bundles none. */
 export interface FiscalCalendar {
-  /** Weeks per period within each quarter. */
+  /** The weeks per period within each quarter. */
   pattern: FiscalPattern;
   /**
    * The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**,

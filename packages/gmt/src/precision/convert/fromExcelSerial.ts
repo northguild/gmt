@@ -13,6 +13,7 @@ import {
 import { fromNanoseconds } from "./fromNanoseconds";
 import type { ExcelDateSystem } from "./toExcelSerial";
 import { isOptionsArgument } from "../../internal/isObject";
+import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Convert an Excel day serial back to an ISO 8601 instant string.
@@ -22,9 +23,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   that never existed. Lotus 1-2-3 treated 1900 as a leap year and Excel keeps the bug for
  *   compatibility, so the whole serial day `[60, 61)` is a hole: 59 is 1900-02-28 and 61 is
  *   1900-03-01. Mapping 60 to either neighbour would put every earlier date one day out.
- * - `{ system: "1904" }` selects the legacy Mac system, whose serial 0 is 1904-01-01 and
- *   which has no phantom day — serial 60 there is a real 1904-03-01. A 1904 serial resolves
- *   to the same instant as the 1900 serial exactly 1462 higher.
+ * - In the 1904 system serial 60 is a real 1904-03-01.
  * - Accepted range is Excel's own: serial 1 (1900-01-01) to just under 2958466 (the end of
  *   9999-12-31) in the 1900 system, serial 0 to just under 2957004 in the 1904 system.
  *   Serial 0 in the 1900 system is Excel's "January 0, 1900" placeholder, not a date.
@@ -34,7 +33,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns "" on invalid input.
  *
  * @param value Excel day serial (number, may carry a fractional time of day)
- * @param options optional: system ("1900" (default) | "1904")
+ * @param options Which Excel date system the serial is in
  * @returns ISO 8601 instant string (UTC), or "" on invalid input
  *
  * @example fromExcelSerial(1) // "1900-01-01T00:00:00Z" — Excel's first serial
@@ -50,14 +49,24 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function fromExcelSerial(
   value: number,
-  options?: { system?: ExcelDateSystem },
+  options?: {
+    /**
+     * Which Excel date system the serial is counted in. `"1900"` counts serial 1 as 1900-01-01
+     * and has the phantom serial 60; `"1904"` is the legacy Mac system, whose serial 0 is
+     * 1904-01-01 and which has no phantom day. The same instant is exactly 1462 lower in the 1904
+     * system.
+     *
+     * @defaultValue `"1900"`
+     */
+    system?: ExcelDateSystem;
+  },
 ): string {
   try {
     if (!isOptionsArgument(options)) {
       return "";
     }
 
-    const system = options?.system === undefined ? "1900" : options.system;
+    const system = optionOrDefault(options?.system, "1900");
 
     if (system !== "1900" && system !== "1904") {
       return "";

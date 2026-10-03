@@ -80,7 +80,8 @@ function closedAtRangeLimit<T>(
  * - A step that goes backwards returns `null`.
  * - More than `maxSlices` slices returns `null` as soon as the next one is due, so the work stays
  *   bounded by the limit (owner decision A2, CORE-8).
- * - The last slice's end is trimmed to `end`. Callers handle `start >= end` before calling.
+ * - The last slice's end is `end` itself, whether the last step passes `end` (trimmed) or lands on
+ *   it. Callers handle `start >= end` before calling.
  * - A step that throws a RangeError (it lands past Temporal's last representable value, so after
  *   `end`) closes the split with a last slice ending at `end`.
  *
@@ -146,7 +147,9 @@ export function tileByUnit<
     }
 
     stalled = 0;
-    slices.push([current, compare(next, end) > 0 ? end : next]);
+    // A step that lands on `end` closes with `end` itself, as a trimmed one does: the two compare
+    // equal but may be written differently (a zoned `end` in another zone than `start`).
+    slices.push([current, compare(next, end) >= 0 ? end : next]);
     current = next;
   }
 
@@ -173,6 +176,42 @@ const LONGEST_UNIT_NANOSECONDS: Readonly<Record<string, number>> = {
   months: 31 * NANOSECONDS_PER_DAY,
   years: 385 * NANOSECONDS_PER_DAY,
 };
+
+/**
+ * The step a split takes when its boundaries are then floored to whole `floorUnit`s.
+ *
+ * - An exact step shorter than one `floorUnit` moves each boundary by less than one unit, so the
+ *   floored boundaries are every whole unit from the start to the end, each one repeated once per
+ *   step that falls inside it. Stepping by one `floorUnit` gives those boundaries once each: no
+ *   empty piece, and no work spent on steps the result cannot show.
+ * - Any other step is returned unchanged: a step of one `floorUnit` or more never floors two
+ *   boundaries to the same value, a calendar step is never shorter than a second, and a
+ *   fractional `amount` is left for Temporal to reject.
+ * - The split's start must itself be a whole `floorUnit`, as a Unix epoch is.
+ *
+ * @param unit plural duration unit, as returned by `resolveDurationUnit`
+ * @param amount positive number of units per step
+ * @param floorUnit plural exact unit the boundaries are floored to
+ * @returns the `[unit, amount]` to step by
+ *
+ * @example stepNoFinerThan("milliseconds", 500, "seconds") // ["seconds", 1]
+ * @example stepNoFinerThan("milliseconds", 1500, "seconds") // ["milliseconds", 1500]
+ * @example stepNoFinerThan("days", 1, "seconds") // ["days", 1]
+ */
+export function stepNoFinerThan(
+  unit: string,
+  amount: number,
+  floorUnit: string,
+): [unit: string, amount: number] {
+  const isFiner =
+    isExactDurationUnit(unit) &&
+    isExactDurationUnit(floorUnit) &&
+    Number.isInteger(amount) &&
+    LONGEST_UNIT_NANOSECONDS[unit] * amount <
+      LONGEST_UNIT_NANOSECONDS[floorUnit];
+
+  return isFiner ? [floorUnit, 1] : [unit, amount];
+}
 
 /**
  * A zoned boundary can sit this far from its wall-clock distance: a UTC offset lies strictly
