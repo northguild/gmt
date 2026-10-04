@@ -404,6 +404,138 @@ describe("ambient spin", () => {
     c.pointerUp(1, 0, 0, 3000);
     expect(c.needsFrame()).toBe(false);
   });
+
+  /** Degrees turned by each 16ms frame over `ms`, from the frame that starts
+   *  the spin. */
+  function spinFrames(
+    controller: ReturnType<typeof createController>,
+    from: number,
+    ms: number,
+  ): number[] {
+    const frames: number[] = [];
+    for (let now = from; now < from + ms; now += 16) {
+      const before = controller.rotation[0];
+      controller.step(now);
+      frames.push(controller.rotation[0] - before);
+    }
+    return frames;
+  }
+
+  it("eases in from rest instead of starting at full speed", () => {
+    const c = make();
+    c.markInteraction(0);
+    const [first] = spinFrames(c, 2500, 16);
+    expect(first).toBeGreaterThan(0);
+    // Full speed would turn 16 * 0.004 = 0.064° in the first frame.
+    expect(first).toBeLessThan(0.064 / 100);
+  });
+
+  it("builds speed without a jolt, then holds the full rate", () => {
+    const c = make();
+    c.markInteraction(0);
+    const frames = spinFrames(c, 2500, 4000);
+    for (let i = 1; i < frames.length; i++) {
+      const gain = frames[i] - frames[i - 1];
+      // Never slows on the way up, and no frame gains more than a sliver of
+      // the full 0.064° — a jump in speed is what reads as a jolt.
+      expect(gain).toBeGreaterThanOrEqual(-1e-12);
+      expect(gain).toBeLessThan(0.064 / 50);
+    }
+    expect(frames.at(-1)).toBeCloseTo(0.064, 9);
+  });
+
+  it("turns the same distance whatever the frame rate", () => {
+    const at60 = make();
+    at60.markInteraction(0);
+    for (let now = 2500; now <= 2500 + 3200; now += 16) at60.step(now);
+
+    const at120 = make();
+    at120.markInteraction(0);
+    // Same first frame, since a step from idle always counts as 16ms.
+    at120.step(2500);
+    for (let now = 2508; now <= 2500 + 3200; now += 8) at120.step(now);
+
+    expect(at120.rotation[0]).toBeCloseTo(at60.rotation[0], 9);
+  });
+
+  it("stops mid-spin when reduced motion is switched on", () => {
+    let reduced = false;
+    const c = make({ reducedMotion: () => reduced });
+    c.markInteraction(0);
+    spinFrames(c, 2500, 1008); // spinning, last frame at 3492
+    reduced = true;
+    const [turned] = spinFrames(c, 3508, 16);
+    expect(turned).toBe(0);
+    expect(c.needsFrame()).toBe(false);
+    expect(c.nextWakeAt()).toBeNull();
+  });
+
+  it("does not start when reduced motion is switched on during the countdown", () => {
+    let reduced = false;
+    const c = make({ reducedMotion: () => reduced });
+    c.markInteraction(0);
+    reduced = true;
+    const [turned] = spinFrames(c, 2500, 16);
+    expect(turned).toBe(0);
+    expect(c.needsFrame()).toBe(false);
+    expect(c.nextWakeAt()).toBeNull();
+  });
+
+  type Interruption = (
+    controller: ReturnType<typeof createController>,
+    now: number,
+  ) => void;
+
+  it.each<[string, Interruption]>([
+    [
+      "the pointer rested on it",
+      (c, now) => {
+        c.setHovered(true, now);
+        c.setHovered(false, now + 500);
+      },
+    ],
+    [
+      "a tap",
+      (c, now) => {
+        c.pointerDown(1, 0, 0, now);
+        c.pointerUp(1, 0, 0, now);
+      },
+    ],
+    [
+      "a flick that coasts to a stop",
+      (c, now) => {
+        c.pointerDown(1, 0, 0, now);
+        c.pointerMove(1, 200, 0, now + 16, RADIUS);
+        c.pointerUp(1, 200, 0, now + 16);
+      },
+    ],
+    ["a fly-to", (c, now) => c.flyTo([120, 30], now)],
+    ["an arrow key", (c, now) => c.key("ArrowLeft", now)],
+    [
+      "a zoom in and back out",
+      (c, now) => {
+        c.setZoom(3, now);
+        c.setZoom(1, now + 16);
+      },
+    ],
+    ["a wheel that hit the zoom floor", (c, now) => c.wheel(120, now)],
+    ["the tab coming back", (c, now) => c.markInteraction(now)],
+  ])("eases in again after %s", (_name, interrupt) => {
+    const c = make();
+    c.markInteraction(0);
+    spinFrames(c, 2500, 4000); // up to full speed
+    interrupt(c, 6500);
+    // Let any coast, fly-to or zoom ease finish, as the shell's frames would.
+    let now = 6500;
+    while (c.needsFrame()) c.step((now += 16));
+
+    const wakeAt = c.nextWakeAt();
+    expect(wakeAt).not.toBeNull();
+    const [first] = spinFrames(c, Math.max(wakeAt ?? 0, now + 16), 16);
+    expect(first).toBeGreaterThan(0);
+    // Full speed would turn 0.064° in the first frame back.
+    expect(first).toBeLessThan(0.064 / 100);
+  });
 });
 
 describe("step", () => {
