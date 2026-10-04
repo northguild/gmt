@@ -284,7 +284,11 @@ dialog > .dialog-frame {
 /* The Description, the last column, keeps a floor in table form. A table the author wrote in a
    behaviour note (`data-kind="notes"`) has no Description column and keeps its natural widths. */
 .sl-markdown-content
-  .gmt-ref-table:is([data-kind="options"], [data-kind="members"], [data-kind="parameters"])
+  .gmt-ref-table:is(
+    [data-kind="options"],
+    [data-kind="members"],
+    [data-kind="parameters"]
+  )
   tr
   > :last-child {
   min-width: 14rem;

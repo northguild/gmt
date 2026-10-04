@@ -13,8 +13,8 @@
  * ## What it models
  *
  * Drag with inertia, wheel and pinch zoom, an eased fly-to, arrow-key nudges,
- * and an ambient spin that starts once the reader has left the globe alone. All
- * of it collapses to "snap, don't animate" under reduced motion.
+ * and an ambient spin that eases in from rest once the reader has left the globe
+ * alone. All of it collapses to "snap, don't animate" under reduced motion.
  *
  * Two behaviours here differ from the canvas-2D globe this replaces, both
  * deliberate:
@@ -37,8 +37,11 @@ const DRAG_DEG_PER_RADIUS = 90;
 /** How long the globe must be left alone before it starts spinning. */
 const IDLE_MS = 2500;
 
-/** Ambient spin rate — a full turn in about 25 minutes. */
+/** Ambient spin rate — a full turn in 90 seconds. */
 const AMBIENT_DEG_PER_MS = 0.004;
+
+/** How long the ambient spin takes to build from rest to its full rate. */
+const AMBIENT_RAMP_MS = 2000;
 
 /** Inertia decay per 16ms frame. */
 const FRICTION_PER_16MS = 0.94;
@@ -168,6 +171,8 @@ export function createController(options: ControllerOptions): Controller {
   let inertiaActive = false;
 
   let ambientActive = false;
+  /** How long the current ambient spin has been running, in stepped ms. */
+  let ambientElapsed = 0;
   /** When the ambient spin becomes due, or null while it is off the table. */
   let ambientDueAt: number | null = null;
   let hovered = false;
@@ -205,6 +210,22 @@ export function createController(options: ControllerOptions): Controller {
       // Only at rest zoom: spinning a zoomed-in globe reads as a glitch.
       Math.abs(targetZoom - minZoom) < 0.01
     );
+  }
+
+  /**
+   * Degrees the ambient spin has turned `elapsed` ms after it started.
+   *
+   * The speed follows a smoothstep from zero to the full rate over
+   * `AMBIENT_RAMP_MS`, so the acceleration is zero at both ends: the globe
+   * neither lurches off nor snaps onto its cruising speed. This is that speed
+   * integrated, so a step turns by the difference between two readings and the
+   * ramp covers the same ground at any frame rate.
+   */
+  function ambientTravel(elapsed: number): number {
+    const u = Math.min(elapsed / AMBIENT_RAMP_MS, 1);
+    const ramp = AMBIENT_RAMP_MS * (u ** 3 - u ** 4 / 2);
+    const cruise = Math.max(elapsed - AMBIENT_RAMP_MS, 0);
+    return AMBIENT_DEG_PER_MS * (ramp + cruise);
   }
 
   /** The two-finger centroid, and their separation. */
@@ -253,6 +274,14 @@ export function createController(options: ControllerOptions): Controller {
       const dt = lastStep ? Math.min(now - lastStep, MAX_STEP_MS) : 16;
       lastStep = now;
 
+      const snap = reducedMotion();
+
+      // The preference can change under a running spin or a pending one.
+      if (snap) {
+        ambientActive = false;
+        ambientDueAt = null;
+      }
+
       // Due to spin, and nothing in the way.
       if (
         !ambientActive &&
@@ -261,9 +290,8 @@ export function createController(options: ControllerOptions): Controller {
         ambientEligible()
       ) {
         ambientActive = true;
+        ambientElapsed = 0;
       }
-
-      const snap = reducedMotion();
 
       if (Math.abs(targetZoom - zoom) > 0.001) {
         zoom += (targetZoom - zoom) * (snap ? 1 : ZOOM_EASE);
@@ -295,7 +323,11 @@ export function createController(options: ControllerOptions): Controller {
           omega[1] = 0;
         }
       } else if (ambientActive) {
-        rotation[0] = wrapLng(rotation[0] + AMBIENT_DEG_PER_MS * dt);
+        const turned = ambientTravel(ambientElapsed);
+        ambientElapsed += dt;
+        rotation[0] = wrapLng(
+          rotation[0] + ambientTravel(ambientElapsed) - turned,
+        );
       }
 
       // Idle again once nothing is animating, so the next wake is scheduled.

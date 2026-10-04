@@ -98,7 +98,8 @@ site-search button[data-open-modal] > kbd {
   color: var(--gmt-ice);
 }
 
-[data-theme="light"] [role="option"][aria-selected="true"]:not(:where(.gmt-theme-dark *)) {
+[data-theme="light"]
+  [role="option"][aria-selected="true"]:not(:where(.gmt-theme-dark *)) {
   background-color: var(--gmt-fill-deep);
   color: var(--gmt-cyan-ink);
 }
@@ -128,7 +129,9 @@ site-search button[data-open-modal] > kbd {
   a:not(:where(.gmt-theme-dark *)),
 [data-theme="light"]
   main
-  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]):not(:where(.gmt-theme-dark *)) {
+  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]):not(
+    :where(.gmt-theme-dark *)
+  ) {
   color: var(--gmt-cyan-ink);
 }
 
