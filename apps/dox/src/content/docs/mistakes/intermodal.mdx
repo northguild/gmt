@@ -1,14 +1,15 @@
 ---
 title: Intermodal
-description: Common mistakes with free time, demurrage and detention in GMT's intermodal layer.
+description: Common mistakes with free time, demurrage and detention, billing deadlines, bill of lading dates and multimodal ETAs in GMT's intermodal layer.
 industries: [intermodal]
 ---
 
-The intermodal layer is four functions, `freeTimeExpiry`, `chargeableDays`, `demurrageClock`
-and `billingTimeline`, and the mistakes around them are the ones that turn into disputed
-invoices: a defaulted start day, a free-time table keyed by port, a clock counted from the
-wrong event, a day count taken from elapsed hours, and a deadline window hard-coded or counted
-from the wrong date. Every output shown here is what the function returns.
+The intermodal layer is six functions, `freeTimeExpiry`, `chargeableDays`, `demurrageClock`,
+`billingTimeline`, `bolTimestamp` and `multimodalETA`, and the mistakes around them are the ones
+that turn into disputed invoices and documents: a defaulted start day, a free-time table keyed by
+port, a clock counted from the wrong event, a day count taken from elapsed hours, a deadline
+window hard-coded or counted from the wrong date, a B/L dated in UTC, and an ETA that forgets
+the schedule. Every output shown here is what the function returns.
 
 ## Free time and demurrage
 
@@ -265,4 +266,85 @@ billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", request
 billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
 // { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19", requestedByDeadline: true, resolutionDeadline: "2026-05-19" }`}
   rightSpecId="billingTimeline"
+/>
+
+## B/L dates and multimodal ETA
+
+<Mistake
+  severity="high"
+  title="Dating a bill of lading from the UTC date"
+  description="A B/L date is the local date where the event happened. Slicing an ISO instant, or reducing it without a zone, reads the UTC date, which is a day late for an evening west of Greenwich and a day early for a morning east of it. bolTimestamp requires the zone and has no UTC default."
+  wrongCode={`"2024-06-16T01:00:00Z".slice(0, 10);
+// "2024-06-16" — loaded at 21:00 on the 15th in New York`}
+  rightCode={`import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" });
+// "2024-06-15"`}
+  rightSpecId="bolTimestamp"
+/>
+
+<Mistake
+  severity="high"
+  title="Dating a B/L in the zone of the system that logged it"
+  description="A timestamp often carries the zone of the server or head office that recorded it, not of the port. bolTimestamp reads only the instant and dates it in the timeZone you pass, so pass the loading terminal's zone for a received or on-board date, and the place of issue's zone for the issue date."
+  wrongCode={`bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "Europe/Copenhagen" });
+// "2024-06-16" — the head office's date, not the port's`}
+  rightCode={`import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "America/New_York" });
+// "2024-06-15"`}
+  rightSpecId="bolTimestamp"
+/>
+
+<Mistake
+  severity="high"
+  title="Assuming every leg leaves when the dwell ends"
+  description="Adding every duration and every dwell to the first departure assumes each leg leaves the moment its handoff clears. A ship or a train leaves on its schedule, and the cargo waits. multimodalETA honours a leg's scheduled departure, returns null when it falls inside the dwell, and counts the wait as dwell."
+  wrongCode={`const hours = 6 + 48 + 342 + 36 + 52;
+new Date(Date.parse("2024-06-10T00:00:00Z") + hours * 3600e3).toISOString();
+// "2024-06-30T04:00:00.000Z" — the ship sails 20 hours after the dwell ends`}
+  rightCode={`import { multimodalETA } from "@northguild/gmt/intermodal";
+
+multimodalETA([
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H", timeZone: "Asia/Shanghai", dwellAfter: "P2D" },
+  { departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H" },
+  { duration: "PT52H", timeZone: "America/Chicago" },
+]);
+// { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT104H" }`}
+  rightSpecId="multimodalETA"
+/>
+
+<Mistake
+  severity="medium"
+  title="Reporting one total for a multimodal move"
+  description="Time moving and time waiting at handoffs are forecast differently and slip for different reasons, so one total hides the part a planner needs. multimodalETA reports totalTransit and totalDwell apart, and the two add up to the elapsed time."
+  wrongCode={`const totalHours = 6 + 48 + 342 + 36 + 52;
+// 484 — the sea, the road and two terminals in one number`}
+  rightCode={`import { multimodalETA } from "@northguild/gmt/intermodal";
+
+multimodalETA([
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H", timeZone: "Asia/Shanghai", dwellAfter: "P2D" },
+  { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H" },
+  { duration: "PT52H", timeZone: "America/Chicago" },
+]);
+// { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }`}
+  rightSpecId="multimodalETA"
+/>
+
+<Mistake
+  severity="medium"
+  title="Counting the last leg's dwell"
+  description="A dwellAfter on the last leg has no handoff after it: it moves nothing, so it is not part of the journey's dwell. Adding up every dwellAfter counts it anyway. multimodalETA leaves it out of totalDwell and out of the eta."
+  wrongCode={`const dwellHours = [48, 36, 5]; // every leg's dwellAfter
+dwellHours.reduce((sum, hours) => sum + hours);
+// 89 — the last 5 hours follow no handoff`}
+  rightCode={`import { multimodalETA } from "@northguild/gmt/intermodal";
+
+multimodalETA([
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H", timeZone: "Asia/Shanghai", dwellAfter: "P2D" },
+  { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H" },
+  { duration: "PT52H", timeZone: "America/Chicago", dwellAfter: "PT5H" },
+]);
+// { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }`}
+  rightSpecId="multimodalETA"
 />

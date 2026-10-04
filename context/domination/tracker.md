@@ -93,7 +93,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | 1.18.0  | Done        |
 | 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | 1.18.0  | Done        |
 | 16 | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | 1.18.0  | Done        |
-| 17 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                    | —                      | #195  | —       | Not started |
+| 17 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                    | —                      | #195  | —       | Done        |
 | 18 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | Cut     | Not started |
 | 19 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | Cut     | Not started |
 | 20 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | (SPA-46), (SPA-48)     | #197  | —       | Not started |

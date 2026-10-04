@@ -128,6 +128,46 @@ describe("CoerceOptionsToObject: null → sentinel; a string or a number reads a
   );
 });
 
+describe("an options bag that is a function is read as the object it is", () => {
+  // ECMA-262 GetOptionsObject returns any Object unchanged, and ECMA-402 CoerceOptionsToObject's
+  // ToObject returns an Object as it is. A function is an Object, so a function carrying the
+  // options as its own properties is an options bag like any other: the polyfill reads
+  // \`Object.assign(() => 0, { largestUnit: "hours" })\` as \`{ largestUnit: "hours" }\`.
+  function asFunction(testCase: OptionsCase): {
+    object: Record<string, unknown>;
+    fn: () => void;
+  } {
+    const baseline = testCase.baseline[testCase.position];
+    const members =
+      baseline !== null && typeof baseline === "object"
+        ? (baseline as Record<string, unknown>)
+        : {};
+    return {
+      object: { ...members },
+      fn: Object.assign(() => undefined, members),
+    };
+  }
+
+  it.each(CASES.filter(({ readsClock }) => !readsClock))(
+    "$name reads a function carrying the baseline options exactly as the object",
+    (testCase) => {
+      const { object, fn } = asFunction(testCase);
+      expect(callWith(testCase, fn)).toEqual(callWith(testCase, object));
+    },
+  );
+
+  // A clock reader's two calls see two instants, so only the sentinel is compared.
+  it.each(CASES.filter(({ readsClock }) => readsClock))(
+    "$name accepts a function carrying the baseline options as it accepts the object",
+    (testCase) => {
+      const { object, fn } = asFunction(testCase);
+      expect(isDeepStrictEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
+        isDeepStrictEqual(callWith(testCase, object), testCase.sentinel),
+      );
+    },
+  );
+});
+
 describe("GetOptionsObject inside a props object: a non-object props.options → false", () => {
   // Each range is valid (value1 < value2) with options omitted, so false comes from options alone.
   it.each`
@@ -139,7 +179,7 @@ describe("GetOptionsObject inside a props object: a non-object props.options →
     ${"isValidUtcRange"}      | ${isValidUtcRange}      | ${"2024-01-01T10:00:00Z"}                        | ${"2024-01-01T11:00:00Z"}
     ${"isValidZonedRange"}    | ${isValidZonedRange}    | ${"2024-06-15T12:00:00-04:00[America/New_York]"} | ${"2024-06-15T13:00:00-04:00[America/New_York]"}
   `(
-    "$name({ value1: $value1, value2: $value2, options: null | 'x' | 1 }) is false (omitted: true)",
+    "$name({ value1: $value1, value2: $value2, options: null | 'x' | 1 }) is false (omitted or a function: true)",
     ({ validate, value1, value2 }) => {
       const check = validate as (props: unknown) => boolean;
       expect({
@@ -147,7 +187,14 @@ describe("GetOptionsObject inside a props object: a non-object props.options →
         null: check({ value1, value2, options: null }),
         string: check({ value1, value2, options: "x" }),
         number: check({ value1, value2, options: 1 }),
-      }).toEqual({ omitted: true, null: false, string: false, number: false });
+        function: check({ value1, value2, options: () => undefined }),
+      }).toEqual({
+        omitted: true,
+        null: false,
+        string: false,
+        number: false,
+        function: true,
+      });
     },
   );
 });

@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { halfOpenXor } from "../../internal";
 import { isValidUtcInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return the symmetric difference across a list of UTC intervals — the set of instants covered
@@ -46,8 +47,7 @@ export function intervalXorAllUtc(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           typeof interval.start === "string" &&
           typeof interval.end === "string" &&
           isValidUtcInterval(interval.start, interval.end),

@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { halfOpenXor } from "../../internal";
 import { isValidDateTimeInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return the symmetric difference across a list of datetime intervals — the set of instants
@@ -49,8 +50,7 @@ export function intervalXorAllDateTime(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           isValidDateTimeInterval(interval.start, interval.end),
       )
     ) {

@@ -1,6 +1,7 @@
 import { canonicalInstantIntervals } from "../../internal";
 import { mergeIntervals } from "../../interval/calculate";
 import { isValidUtcInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Collapse a list of UTC intervals into the minimum set of non-overlapping intervals.
@@ -47,8 +48,7 @@ export function mergeIntervalsUtc(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           typeof interval.start === "string" &&
           typeof interval.end === "string" &&
           isValidUtcInterval(interval.start, interval.end),

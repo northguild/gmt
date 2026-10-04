@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
 import type { TimeDurationUnit } from "../../types";
 import { isValidTime, isValidTimeDurationUnit } from "../validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return a PlainTime ISO string with `units` subtracted from `value`.
@@ -28,9 +29,7 @@ export function subtractTime(
   try {
     const validTime = isValidTime(value);
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidTimeDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidTimeDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 

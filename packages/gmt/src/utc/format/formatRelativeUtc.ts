@@ -8,6 +8,7 @@ import {
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
 import { isValidUtc } from "../validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeUtc`: the instant the distance is measured from, the unit it is shown
@@ -71,7 +72,7 @@ export function formatRelativeUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidUtc(value)) return "";
     const tz = normalizeTimeZone(options.timeZone);
     if (!tz) return "";

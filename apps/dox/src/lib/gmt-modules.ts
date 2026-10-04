@@ -55,6 +55,7 @@ export const GMT_MODULES: Record<
 
   // --- intermodal ---
   "intermodal/calculate": () => import("@northguild/gmt/intermodal/calculate"),
+  "intermodal/format": () => import("@northguild/gmt/intermodal/format"),
 
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),

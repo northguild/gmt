@@ -2331,6 +2331,171 @@
     ]
   },
   {
+    "url": "/reference/intermodal/calculate/multimodalETA#multimodaljourney",
+    "page": "/reference/intermodal/calculate/multimodalETA",
+    "name": "MultimodalJourney",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "What `multimodalETA` returns: the end-to-end ETA, with the time moving and the time waiting kept apart.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/multimodalETA.ts",
+    "examples": [],
+    "inlineOn": "multimodalETA",
+    "members": [
+      {
+        "name": "eta",
+        "description": "The last leg's arrival rendered in its `timeZone`, as `scheduleDelivery` gives it. `\"\"` only for an empty legs array."
+      },
+      {
+        "name": "totalLegs",
+        "description": "The number of legs in the journey."
+      },
+      {
+        "name": "totalTransit",
+        "description": "The time the cargo spent moving: every leg's `duration` added up, as an ISO 8601 duration of elapsed time with hours as the largest unit."
+      },
+      {
+        "name": "totalDwell",
+        "description": "The time the cargo spent at the handoffs between legs: each leg's departure minus the previous leg's arrival, added up, in the same form as `totalTransit`. It includes any wait for a scheduled departure on top of the handoff's `dwellAfter`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/calculate/multimodalETA",
+    "page": "/reference/intermodal/calculate/multimodalETA",
+    "name": "multimodalETA",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "multimodalETA(legs: Leg[], options?: ScheduleDeliveryOptions): MultimodalJourney | null",
+    "description": "Compute an end-to-end ETA across the legs of a multimodal move, and report the time in transit and the time in dwell separately.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/multimodalETA.ts",
+    "examples": [
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-10T08:00:00+08:00[Asia/Shanghai]\", duration: \"PT6H\", timeZone: \"Asia/Shanghai\", dwellAfter: \"P2D\" }, { duration: \"P14DT6H\", timeZone: \"America/Los_Angeles\", dwellAfter: \"PT36H\" }, { duration: \"PT52H\", timeZone: \"America/Chicago\" }])",
+        "result": "{ eta: \"2024-06-29T23:00:00-05:00[America/Chicago]\", totalLegs: 3, totalTransit: \"PT400H\", totalDwell: \"PT84H\" } (truck, ship and rail: 484 hours door to door)"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T00:00:00Z\", duration: \"PT10H\", timeZone: \"UTC\", dwellAfter: \"PT2H\" }, { duration: \"PT5H\", timeZone: \"Asia/Tokyo\" }])",
+        "result": "{ eta: \"2024-06-16T02:00:00+09:00[Asia/Tokyo]\", totalLegs: 2, totalTransit: \"PT15H\", totalDwell: \"PT2H\" }"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T00:00:00Z\", duration: \"PT10H\", timeZone: \"UTC\", dwellAfter: \"PT2H\" }, { departure: \"2024-06-15T13:00:00Z\", duration: \"PT1H\", timeZone: \"UTC\" }])",
+        "result": "{ eta: \"2024-06-15T14:00:00+00:00[UTC]\", totalLegs: 2, totalTransit: \"PT11H\", totalDwell: \"PT3H\" } (two hours' handling and an hour's wait for the 13:00 departure)"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T10:00:00Z\", duration: \"PT36H\", timeZone: \"Asia/Tokyo\", dwellAfter: \"PT5H\" }])",
+        "result": "{ eta: \"2024-06-17T07:00:00+09:00[Asia/Tokyo]\", totalLegs: 1, totalTransit: \"PT36H\", totalDwell: \"PT0S\" } (no handoff after the last leg)"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T10:00:00\", duration: \"PT1H\", timeZone: \"UTC\" }], { startTimeZone: \"America/New_York\" })",
+        "result": "{ eta: \"2024-06-15T15:00:00+00:00[UTC]\", totalLegs: 1, totalTransit: \"PT1H\", totalDwell: \"PT0S\" } (a published 10:00 wall time, read in New York)"
+      },
+      {
+        "call": "multimodalETA([])",
+        "result": "{ eta: \"\", totalLegs: 0, totalTransit: \"PT0S\", totalDwell: \"PT0S\" }"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T00:00:00Z\", duration: \"PT10H\", timeZone: \"UTC\", dwellAfter: \"PT2H\" }, { departure: \"2024-06-15T11:00:00Z\", duration: \"PT1H\", timeZone: \"UTC\" }])",
+        "result": "null (the connection leaves inside the dwell: missed)"
+      },
+      {
+        "call": "multimodalETA([{ departure: \"2024-06-15T10:00:00Z\", duration: \"P1M\", timeZone: \"UTC\" }])",
+        "result": "null (calendar units have no exact length)"
+      },
+      {
+        "call": "multimodalETA(\"legs\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/format/bolTimestamp#billofladingevent",
+    "page": "/reference/intermodal/format/bolTimestamp",
+    "name": "BillOfLadingEvent",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "type",
+    "signature": "",
+    "description": "Which date on a bill of lading a value is rendered for:",
+    "sourcePath": "packages/gmt/src/intermodal/format/bolTimestamp.ts",
+    "examples": [],
+    "inlineOn": "bolTimestamp"
+  },
+  {
+    "url": "/reference/intermodal/format/bolTimestamp#boltimestampoptions",
+    "page": "/reference/intermodal/format/bolTimestamp",
+    "name": "BolTimestampOptions",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `bolTimestamp`.",
+    "sourcePath": "packages/gmt/src/intermodal/format/bolTimestamp.ts",
+    "examples": [],
+    "inlineOn": "bolTimestamp",
+    "members": [
+      {
+        "name": "timeZone",
+        "description": "The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue for `issue`, and the terminal at the port of loading for `received`, `onBoard` and `shippedOnBoard`. It is required, because every B/L date is local and a UTC date is a different date for part of every day."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/format/bolTimestamp",
+    "page": "/reference/intermodal/format/bolTimestamp",
+    "name": "bolTimestamp",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "function",
+    "signature": "bolTimestamp(value: string, event: BillOfLadingEvent, options: BolTimestampOptions): string",
+    "description": "Render an instant as the date a bill of lading carries for an event: the calendar date on the local clock where the event happened.",
+    "sourcePath": "packages/gmt/src/intermodal/format/bolTimestamp.ts",
+    "examples": [
+      {
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"America/New_York\" })",
+        "result": "\"2024-06-15\" (loaded at 21:00 local; the UTC date is the 16th)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-14T23:00:00Z\", \"shippedOnBoard\", { timeZone: \"Asia/Shanghai\" })",
+        "result": "\"2024-06-15\" (loaded at 07:00 local; the UTC date is the 14th)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-15T21:00:00-04:00\", \"received\", { timeZone: \"America/New_York\" })",
+        "result": "\"2024-06-15\""
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-16T09:00:00+08:00[Asia/Shanghai]\", \"issue\", { timeZone: \"America/New_York\" })",
+        "result": "\"2024-06-15\" (the bracketed zone is not the zone the date is read in)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"onBoard\", { timeZone: \"+08:00\" })",
+        "result": "\"2024-06-16\" (a fixed offset)"
+      },
+      {
+        "call": "bolTimestamp(\"2011-12-30T10:00:00Z\", \"shippedOnBoard\", { timeZone: \"Pacific/Apia\" })",
+        "result": "\"2011-12-31\" (Samoa deleted 30 December)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\")",
+        "result": "\"\" (every B/L date is local: the zone is required)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"loaded\", { timeZone: \"America/New_York\" })",
+        "result": "\"\" (not a B/L event)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-15T21:00:00\", \"shippedOnBoard\", { timeZone: \"America/New_York\" })",
+        "result": "\"\" (no offset: not a moment)"
+      },
+      {
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"America/Nowhere\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/interval/calculate/clampInterval",
     "page": "/reference/interval/calculate/clampInterval",
     "name": "clampInterval",
@@ -12807,8 +12972,8 @@
     ]
   },
   {
-    "url": "/reference/transport/calculate/scheduleDelivery#leg",
-    "page": "/reference/transport/calculate/scheduleDelivery",
+    "url": "/reference/types/Leg",
+    "page": "/reference/types/Leg",
     "name": "Leg",
     "namespace": "transport",
     "module": "calculate",
@@ -12817,7 +12982,6 @@
     "description": "One leg of a multi-modal journey: a departure, how long it takes, and where it lands.",
     "sourcePath": "packages/gmt/src/transport/calculate/scheduleDelivery.ts",
     "examples": [],
-    "inlineOn": "scheduleDelivery",
     "members": [
       {
         "name": "departure",
@@ -12889,8 +13053,8 @@
     ]
   },
   {
-    "url": "/reference/transport/calculate/scheduleDelivery#scheduledeliveryoptions",
-    "page": "/reference/transport/calculate/scheduleDelivery",
+    "url": "/reference/types/ScheduleDeliveryOptions",
+    "page": "/reference/types/ScheduleDeliveryOptions",
     "name": "ScheduleDeliveryOptions",
     "namespace": "transport",
     "module": "calculate",
@@ -12899,7 +13063,6 @@
     "description": "Options for `scheduleDelivery`.",
     "sourcePath": "packages/gmt/src/transport/calculate/scheduleDelivery.ts",
     "examples": [],
-    "inlineOn": "scheduleDelivery",
     "members": [
       {
         "name": "startTimeZone",

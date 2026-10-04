@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDate } from "../plain/validate/isValidDate";
 import type { BusinessCalendar } from "../types";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
+import { isObject } from "./isObject";
 
 const ISO_WEEKDAYS = 7;
 
@@ -84,11 +85,7 @@ export function parseHolidays(holidays: unknown): Set<string> | null {
 export function parseBusinessCalendar(
   calendar: unknown,
 ): ResolvedBusinessCalendar | null {
-  if (
-    typeof calendar !== "object" ||
-    calendar === null ||
-    Array.isArray(calendar)
-  ) {
+  if (!isObject(calendar) || Array.isArray(calendar)) {
     return null;
   }
 
