@@ -494,8 +494,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `import()` in `engine.ts`.
   - Features: drag with inertia, pinch and wheel zoom over `[1, 5]`, zoom buttons,
     `land-110m`, a day/night terminator from the current instant, and an arrow-key
-    `listbox` for zone selection. The wheel is only swallowed while the zoom can still
-    change, so a reader who scrolls onto the hero is not trapped on it.
+    `listbox` for zone selection. The ambient spin eases in from rest over 2 s every time
+    it starts — on mount and after any interruption — and never begins at full speed. The
+    wheel is only swallowed while the zoom can still change, so a reader who scrolls onto
+    the hero is not trapped on it.
   - Shading (`src/lib/globe/shading.ts`): day light, twilight and night are shaded per
     pixel from the sun's elevation. Stacked translucent caps were tried first and showed as
     rings and limb stripes. An atmosphere ring outside the limb follows the sun. Both
