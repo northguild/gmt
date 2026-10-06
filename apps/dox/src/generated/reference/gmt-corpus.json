@@ -2418,7 +2418,7 @@
     "module": "format",
     "kind": "type",
     "signature": "",
-    "description": "Which date on a bill of lading a value is rendered for:",
+    "description": "Which date on a bill of lading a value is rendered for, one per dated field of the DCSA Bill of Lading 3.0 `TransportDocument`:",
     "sourcePath": "packages/gmt/src/intermodal/format/bolTimestamp.ts",
     "examples": [],
     "inlineOn": "bolTimestamp"
@@ -2438,7 +2438,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue for `issue`, and the terminal at the port of loading for `received`, `onBoard` and `shippedOnBoard`. It is required, because every B/L date is local and a UTC date is a different date for part of every day."
+        "description": "The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue for `issue`, and the terminal at the port of loading for `received` and `shippedOnBoard`. It is required, because every B/L date is local and a UTC date is a different date for part of every day."
       }
     ]
   },
@@ -2470,7 +2470,7 @@
         "result": "\"2024-06-15\" (the bracketed zone is not the zone the date is read in)"
       },
       {
-        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"onBoard\", { timeZone: \"+08:00\" })",
+        "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"+08:00\" })",
         "result": "\"2024-06-16\" (a fixed offset)"
       },
       {

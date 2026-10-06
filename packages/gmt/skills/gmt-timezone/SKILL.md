@@ -297,10 +297,10 @@ converting between time zones, or doing arithmetic that must respect DST.
     `YYYY-MM-DD` date on the local clock in `timeZone` at the instant `value`:
     DCSA Bill of Lading 3.0 types `issueDate`, `receivedForShipmentDate` and
     `shippedOnBoardDate` as dates with no time or offset. `event` is
-    `"issue" | "received" | "onBoard" | "shippedOnBoard"`; all four render the
-    same way and anything else is `""`. `timeZone` is required (no UTC
-    default): the place of issue for `issue`, the loading terminal for
-    `received` and the on-board dates. 21:00 in New York
+    `"issue" | "received" | "shippedOnBoard"`, one per DCSA date field; all
+    three render the same way and anything else is `""`. `timeZone` is
+    required (no UTC default): the place of issue for `issue`, the loading
+    terminal for `received` and `shippedOnBoard`. 21:00 in New York
     is 01:00Z the next day, so the UTC date is wrong. Only the instant is read;
     a zoneless value is `""`. `multimodalETA(legs, { startTimeZone? })` takes
     `scheduleDelivery`'s `Leg[]` and returns `{ eta, totalLegs, totalTransit,

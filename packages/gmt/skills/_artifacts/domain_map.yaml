@@ -317,7 +317,7 @@ skills:
       - Count and list the chargeable days of a dwell, with tier bands
       - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg
       - Lay out the invoice, dispute and resolution deadlines around an invoice from an anchor date, with the caller's windows
-      - Date a bill of lading's issue, receipt or on-board event on the local calendar of the place it happened
+      - Date a bill of lading's issue, receipt or shipped-on-board event on the local calendar of the place it happened
       - Compute an end-to-end multimodal ETA with transit and dwell totalled apart
       - Expand a weekly pattern of local windows, including ones that wrap midnight, into instants in a zone
       - Resolve opening hours with holidays and dated overrides into open intervals

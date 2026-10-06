@@ -119,11 +119,12 @@ function parseWindows(value: unknown): ResolvedWindow[] | null {
 }
 
 /**
- * Parse `OperatingSchedule['weekly']`: an object whose own enumerable keys are ISO weekdays
- * `"1"`–`"7"`, each holding an array of `LocalWindow`s (or `undefined`, meaning closed). Any other
- * enumerable key, string or symbol, or a malformed window, returns `null`. Non-enumerable own
- * properties are not entries, as `Object.assign` and spread do not copy them, so a function
- * carrying the weekdays is read without its built-in `length` and `name`.
+ * Parse `OperatingSchedule['weekly']`: an object keyed by ISO weekday `"1"`–`"7"`, each holding an
+ * array of `LocalWindow`s (or `undefined`, meaning closed). Each weekday is read with an ordinary
+ * property get, as Temporal's `Get` reads a field list, so a non-enumerable or inherited weekday
+ * applies. Any other own enumerable key, string or symbol, or a malformed window, returns `null`;
+ * a non-enumerable one is not an entry, as `Object.assign` and spread do not copy it, so a
+ * function carrying the weekdays is read without its built-in `length` and `name`.
  */
 export function parseWeeklyPattern(value: unknown): ResolvedWindow[][] | null {
   if (!isObject(value) || Array.isArray(value)) {
@@ -131,21 +132,25 @@ export function parseWeeklyPattern(value: unknown): ResolvedWindow[][] | null {
   }
 
   const weekly: ResolvedWindow[][] = Array.from({ length: 8 }, () => []);
-  const record = value as Record<string, unknown>;
+  const record = value as Record<PropertyKey, unknown>;
 
-  const keys = Reflect.ownKeys(record).filter((key) =>
-    Object.prototype.propertyIsEnumerable.call(record, key),
-  );
-  for (const key of keys) {
-    if (typeof key !== "string" || !WEEKDAY_KEYS.includes(key)) {
+  for (const key of Reflect.ownKeys(record)) {
+    if (
+      (typeof key !== "string" || !WEEKDAY_KEYS.includes(key)) &&
+      Object.prototype.propertyIsEnumerable.call(record, key)
+    ) {
       return null;
     }
+  }
 
-    if (record[key] === undefined) {
+  for (const key of WEEKDAY_KEYS) {
+    const day = record[key];
+
+    if (day === undefined) {
       continue;
     }
 
-    const windows = parseWindows(record[key]);
+    const windows = parseWindows(day);
 
     if (windows === null) {
       return null;

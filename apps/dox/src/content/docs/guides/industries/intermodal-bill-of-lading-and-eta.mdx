@@ -57,8 +57,8 @@ the clock showed it.
 
 `timeZone` is required. There is no UTC default and no system zone, and without it the result
 is `""`. Each event is dated where it happened: an `issue` in the place of issue's zone, and
-`received`, `onBoard` and `shippedOnBoard` in the zone of the terminal at the port of loading.
-DCSA dates receipt when the last container is in the terminal, cleared for the intended vessel,
+`received` and `shippedOnBoard` in the zone of the terminal at the port of loading. DCSA dates
+receipt when the last container is in the terminal, customs-cleared against the intended vessel,
 and shipment when the last container is loaded. GMT does not resolve a port or a place of issue
 to a zone; you pass the IANA name.
 
@@ -87,14 +87,14 @@ bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_Y
 
 ## `event` names the date; it does not change it
 
-`issue`, `received`, `onBoard` (an on-board notation on a received-for-shipment B/L) and
-`shippedOnBoard` are all local dates, so all four render the same way. The event keeps the call
-site honest about which field it fills. Anything else returns `""`.
+`issue`, `received` and `shippedOnBoard` are the three dated fields of a DCSA B/L. All three are
+local dates, so they render the same way. The event keeps the call site honest about which field
+it fills. Anything else returns `""`.
 
 ```typescript
 import { bolTimestamp } from "@northguild/gmt/intermodal";
 
-bolTimestamp("2024-06-16T01:00:00Z", "onBoard", { timeZone: "America/New_York" }); // "2024-06-15"
+bolTimestamp("2024-06-16T01:00:00Z", "received", { timeZone: "America/New_York" }); // "2024-06-15"
 bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }); // "" — not a B/L event
 ```
 

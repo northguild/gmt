@@ -286,7 +286,7 @@ bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_
 <Mistake
   severity="high"
   title="Dating a B/L in the zone of the system that logged it"
-  description="A timestamp often carries the zone of the server or head office that recorded it, not of the port. bolTimestamp reads only the instant and dates it in the timeZone you pass, so pass the loading terminal's zone for a received or on-board date, and the place of issue's zone for the issue date."
+  description="A timestamp often carries the zone of the server or head office that recorded it, not of the port. bolTimestamp reads only the instant and dates it in the timeZone you pass, so pass the loading terminal's zone for a received-for-shipment or shipped-on-board date, and the place of issue's zone for the issue date."
   wrongCode={`bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "Europe/Copenhagen" });
 // "2024-06-16" — the head office's date, not the port's`}
   rightCode={`import { bolTimestamp } from "@northguild/gmt/intermodal";

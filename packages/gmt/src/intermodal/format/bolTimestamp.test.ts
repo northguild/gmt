@@ -89,7 +89,6 @@ describe("bolTimestamp", () => {
     event
     ${"issue"}
     ${"received"}
-    ${"onBoard"}
     ${"shippedOnBoard"}
   `("dates the 21:00 EDT event as 2024-06-15 for event $event", ({ event }) => {
     expect(
@@ -137,7 +136,7 @@ describe("bolTimestamp", () => {
   `(
     "dates $value in $timeZone as $expected ($reads)",
     ({ value, timeZone, expected }) => {
-      expect(bolTimestamp(value, "onBoard", { timeZone })).toBe(expected);
+      expect(bolTimestamp(value, "received", { timeZone })).toBe(expected);
     },
   );
 
@@ -212,6 +211,7 @@ describe("bolTimestamp", () => {
     ${"shipped"}             | ${"an unknown event"}
     ${"ShippedOnBoard"}      | ${"a different case"}
     ${"receivedForShipment"} | ${"a DCSA field name, not an event"}
+    ${"onBoard"}             | ${"an on-board notation, which has no DCSA date field"}
     ${""}                    | ${"an empty string"}
     ${undefined}             | ${"undefined"}
     ${null}                  | ${"null"}

@@ -16,5 +16,5 @@ addDate("2024-01-31", Object.assign(() => 0, { months: 1 })); // "2024-02-29"; i
 ```
 
 - Every options bag, property bag and record argument is checked by one helper that accepts any Object, functions included. `null`, strings, numbers, booleans, symbols and bigints are still refused with the function's sentinel.
-- An operating schedule's `weekly` record now reads only its enumerable keys, as `Object.assign` and spread copy them, so a function's built-in `length` and `name` are not read as unknown weekdays. A non-enumerable weekday key is ignored rather than read.
+- An operating schedule's `weekly` record reads each weekday `"1"`–`"7"` with an ordinary property get, as Temporal reads a field list, and refuses an unknown key only when it is an own enumerable one. So a function's built-in `length` and `name` are not read as unknown weekdays, and a non-enumerable weekday still applies. An inherited weekday now applies too; it used to be ignored.
 - A member is read with an ordinary property get, as Temporal's GetOption reads one. A `cutoffSchedule` entry written as a function is therefore labelled with the function's own `name` (`""` for an anonymous one), as `{ name: "", offset }` is.
