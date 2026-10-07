@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
+import { isObject } from "./isObject";
 
 // TC39 Temporal IsValidEpochNanoseconds bound (nsMaxInstant = 10^8 days) in milliseconds: 8.64e15.
 const MAX_EPOCH_MILLISECONDS = Number(MAX_EPOCH_NANOSECONDS / 1_000_000n);
@@ -103,7 +104,7 @@ export function resolveUnixEpochUnitOptions(
     return "milliseconds";
   }
 
-  if (options === null || typeof options !== "object") {
+  if (!isObject(options)) {
     return null;
   }
 
@@ -274,7 +275,7 @@ export function parseUnixEpochIntervalList(
 
   const parsed: Array<{ start: number; end: number }> = [];
   for (const interval of intervals) {
-    if (!interval || typeof interval !== "object") {
+    if (!isObject(interval)) {
       return null;
     }
 

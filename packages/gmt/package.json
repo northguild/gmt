@@ -93,6 +93,9 @@
       "intermodal/calculate": [
         "./dist/intermodal/calculate/index.d.ts"
       ],
+      "intermodal/format": [
+        "./dist/intermodal/format/index.d.ts"
+      ],
       "interval": [
         "./dist/interval/index.d.ts"
       ],
@@ -346,6 +349,10 @@
     "./intermodal/calculate": {
       "types": "./dist/intermodal/calculate/index.d.ts",
       "default": "./dist/intermodal/calculate/index.js"
+    },
+    "./intermodal/format": {
+      "types": "./dist/intermodal/format/index.d.ts",
+      "default": "./dist/intermodal/format/index.js"
     },
     "./interval": {
       "types": "./dist/interval/index.d.ts",

@@ -1,4 +1,5 @@
 import { parseInstantNanoseconds } from "./instantNanoseconds";
+import { isObject } from "./isObject";
 
 /** An `Interval` parsed once: bigint epoch nanoseconds plus the exact strings they came from. */
 export interface IntervalNanoseconds {
@@ -24,7 +25,7 @@ export interface IntervalNanoseconds {
 export function parseIntervalNanoseconds(
   value: unknown,
 ): IntervalNanoseconds | null {
-  if (typeof value !== "object" || value === null) {
+  if (!isObject(value)) {
     return null;
   }
 

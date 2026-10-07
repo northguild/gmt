@@ -6,6 +6,7 @@ import {
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidDateInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Collapse a list of date intervals into the minimum set of non-overlapping intervals.
@@ -58,8 +59,7 @@ export function mergeIntervalsDate(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           isValidDateInterval(interval.start, interval.end),
       )
     ) {

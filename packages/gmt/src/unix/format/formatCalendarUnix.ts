@@ -7,6 +7,7 @@ import {
 import { resolveUnixFormatReference } from "../../internal/unixFormatReference";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarUnix`. Like `formatCalendar`, it takes a `reference` and a `timeStyle`
@@ -81,7 +82,7 @@ export function formatCalendarUnix(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     if (epochUnit === null) return "";
     const timeZone = normalizeTimeZone(options.timeZone);

@@ -5,6 +5,7 @@ import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendar`: the date-time the value is compared with, and the style of the
@@ -74,7 +75,7 @@ export function formatCalendar(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidDateTime(value)) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;

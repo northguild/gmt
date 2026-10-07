@@ -7,6 +7,7 @@ import {
 } from "../../internal";
 import { utcOffset } from "../../regex";
 import type { OffsetInstant } from "./toOffsetInstant";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Render an instant-plus-offset pair back to the local time it describes.
@@ -57,7 +58,7 @@ import type { OffsetInstant } from "./toOffsetInstant";
  */
 export function fromOffsetInstant(value: OffsetInstant): string {
   try {
-    if (typeof value !== "object" || value === null) {
+    if (!isObject(value)) {
       return "";
     }
 

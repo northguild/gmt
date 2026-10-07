@@ -18,6 +18,7 @@ import {
   utcEpochNanoseconds,
   zonedDateTimeFrom,
 } from "./zonedWallClock";
+import { isObject } from "./isObject";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -1501,7 +1502,7 @@ function zonedRelativeTo(
         : null;
     }
     if (
-      typeof relativeTo === "object" &&
+      isObject(relativeTo) &&
       !(relativeTo instanceof Temporal.PlainDateTime) &&
       "timeZone" in relativeTo &&
       relativeTo.timeZone !== undefined
@@ -1780,7 +1781,7 @@ function relativeToDayOfMonth(
     if (typeof relativeTo === "string") {
       return Temporal.PlainDate.from(relativeTo).day;
     }
-    if (relativeTo !== null && typeof relativeTo === "object") {
+    if (isObject(relativeTo)) {
       return Temporal.PlainDate.from(relativeTo as never).day;
     }
   } catch {
@@ -1807,8 +1808,7 @@ function plainRelativeTo(
       return Temporal.PlainDate.from(relativeTo);
     }
     if (
-      relativeTo !== null &&
-      typeof relativeTo === "object" &&
+      isObject(relativeTo) &&
       !(relativeTo instanceof Temporal.ZonedDateTime)
     ) {
       return Temporal.PlainDate.from(relativeTo as never);

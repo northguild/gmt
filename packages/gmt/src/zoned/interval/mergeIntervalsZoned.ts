@@ -7,6 +7,7 @@ import {
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Collapse a list of zoned intervals into the minimum set of non-overlapping intervals.
@@ -67,8 +68,7 @@ export function mergeIntervalsZoned(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           typeof interval.start === "string" &&
           typeof interval.end === "string" &&
           isValidCalendarZonedInterval(interval.start, interval.end),

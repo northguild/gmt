@@ -3,6 +3,7 @@ import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the
@@ -63,7 +64,7 @@ export function formatRelativeTime(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidTime(value)) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;

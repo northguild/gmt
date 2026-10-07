@@ -10,7 +10,7 @@ import {
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
-import { isOptionsArgument } from "../../internal/isObject";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Add a temporal amount to a Unix epoch value and return the resulting epoch.
@@ -71,9 +71,7 @@ export function addUnix(
     if (!timeZone || epochUnit === null) return null;
 
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidDateTimeDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 

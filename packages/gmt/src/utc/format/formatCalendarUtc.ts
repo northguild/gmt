@@ -8,6 +8,7 @@ import {
 import type { CalendarOptions } from "../../types";
 import { isValidUtc } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the
@@ -60,7 +61,7 @@ export function formatCalendarUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidUtc(value)) return "";
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const timeZone = normalizeTimeZone(options.timeZone);

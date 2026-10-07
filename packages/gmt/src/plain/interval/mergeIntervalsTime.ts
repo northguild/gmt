@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { halfOpenMerge } from "../../internal";
 import { isValidTimeInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Collapse a list of time intervals into the minimum set of non-overlapping intervals.
@@ -48,8 +49,7 @@ export function mergeIntervalsTime(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           isValidTimeInterval(interval.start, interval.end),
       )
     ) {

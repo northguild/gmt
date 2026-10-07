@@ -1,0 +1,35 @@
+---
+title: "A B/L Dated a Day Late"
+description: Cargo loaded at 21:00 in New York, and a bill of lading dated the next day because the date was read in UTC.
+industries: [intermodal]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A B/L Dated a Day Late"
+  description="The terminal logs the last container on board at 21:00 local on 15 June, as an instant. The system that issues the bill of lading prints its shipped-on-board date."
+  naiveCode={`// The naive approach: the UTC date of the loading instant
+const loadedAt = new Date("2024-06-16T01:00:00Z"); // 21:00 on 15 June in New York
+loadedAt.toISOString().slice(0, 10);
+// "2024-06-16" — a day after the date on the dock`}
+  explanation={`A bill of lading's dates are local calendar dates. The DCSA Bill of Lading 3.0 standard types the issue, received-for-shipment and shipped-on-board dates as dates with no time and no offset. 21:00 in New York is 01:00Z the next day, so the UTC date is a day late: the document says the cargo shipped on the 16th, and against a letter of credit whose latest shipment date is 15 June it reads as late. The error runs the other way east of Greenwich: 07:00 in Shanghai is 23:00Z the day before. \`bolTimestamp\` reads the instant on the local clock of the port of loading, and requires that zone, so there is no UTC default to fall back on.`}
+  gmtCode={`import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" });
+// "2024-06-15"
+
+// East of Greenwich the UTC date is a day early instead.
+bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" });
+// "2024-06-15"
+
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard");
+// "" — every B/L date is local: the zone is required`}
+  fixedSpecId="bolTimestamp"
+/>
+
+Change the value in the widget above to `2024-06-16T03:59:59Z`, one second before midnight in New
+York, and the date is still `2024-06-15`; at `2024-06-16T04:00:00Z` it turns to `2024-06-16`. The
+day changes at the port's midnight, not at UTC's. Change the event to `issue` or `received` and
+nothing moves: every B/L date is a local date. The full rules are in [Intermodal: B/L Dates and
+Multimodal ETA](/guides/industries/intermodal-bill-of-lading-and-eta/).

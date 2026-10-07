@@ -1,0 +1,36 @@
+---
+title: "An ETA That Forgot the Sailing"
+description: A truck, ship and rail move whose ETA adds up every duration and dwell, and lands 20 hours early because the ship sails on its schedule.
+industries: [intermodal]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="An ETA That Forgot the Sailing"
+  description="Shanghai to Chicago: 6 hours by truck, 2 days at the terminal, 14 days 6 hours at sea, 36 hours at Los Angeles, 52 hours by rail. The ship sails at 10:00 Shanghai time on 13 June."
+  naiveCode={`// The naive approach: add every duration and every dwell to the first departure
+const hours = 6 + 48 + 342 + 36 + 52; // 484
+new Date(Date.parse("2024-06-10T00:00:00Z") + hours * 3600e3).toISOString();
+// "2024-06-30T04:00:00.000Z" — 20 hours early: the ship did not leave when the dwell ended`}
+  explanation={`The sum assumes every leg leaves the moment the handoff's dwell ends. A ship leaves on its schedule, so the cargo that cleared the terminal at 14:00 on the 12th waits until 10:00 on the 13th. One total also hides where the time went: the 484 hours mix time at sea, which the carrier's schedule forecasts, with time at terminals, which congestion moves. \`multimodalETA\` schedules the legs with \`scheduleDelivery\`, so a scheduled departure is honoured and one inside the dwell is a missed connection (\`null\`). It then reports \`totalTransit\`, the legs' durations, and \`totalDwell\`, the time actually spent at the handoffs, wait included. The two add up to the elapsed time: 400 + 104 = 504 hours.`}
+  gmtCode={`import { multimodalETA } from "@northguild/gmt/intermodal";
+
+multimodalETA([
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
+    timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" },
+  { departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H",
+    timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
+  { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+]);
+// { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3,
+//   totalTransit: "PT400H", totalDwell: "PT104H" }`}
+  fixedSpecId="multimodalETA"
+/>
+
+The widget above starts from the legs with no scheduled sailing: 400 hours moving and 84 at
+handoffs. Add `departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]"` to the ship leg and
+`totalDwell` grows to `PT104H` while `totalTransit` stays `PT400H`. Make it
+`"2024-06-12T13:00:00+08:00[Asia/Shanghai]"`, inside the two-day dwell, and the result is `null`:
+a missed connection. The full rules are in [Intermodal: B/L Dates and Multimodal
+ETA](/guides/industries/intermodal-bill-of-lading-and-eta/).

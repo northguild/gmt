@@ -7,6 +7,7 @@ import type {
   RelativeTimeFormatOptions,
 } from "../../types";
 import { isValidDateTime } from "../validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding
@@ -58,7 +59,7 @@ export function formatRelativeDateTime(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidDateTime(value)) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;

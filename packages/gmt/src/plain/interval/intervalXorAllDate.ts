@@ -7,6 +7,7 @@ import {
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidDateInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return the symmetric difference across a list of date intervals — the set of dates covered
@@ -60,8 +61,7 @@ export function intervalXorAllDate(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           isValidDateInterval(interval.start, interval.end),
       )
     ) {

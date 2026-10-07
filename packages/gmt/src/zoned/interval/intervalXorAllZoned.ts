@@ -7,6 +7,7 @@ import {
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return the symmetric difference across a list of zoned intervals — the set of instants
@@ -63,8 +64,7 @@ export function intervalXorAllZoned(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           typeof interval.start === "string" &&
           typeof interval.end === "string" &&
           isValidCalendarZonedInterval(interval.start, interval.end),

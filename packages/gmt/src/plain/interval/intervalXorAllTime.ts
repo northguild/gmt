@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { halfOpenXor } from "../../internal";
 import { isValidTimeInterval } from "./validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return the symmetric difference across a list of time intervals — the set of clock times
@@ -50,8 +51,7 @@ export function intervalXorAllTime(
     if (
       !intervals.every(
         (interval) =>
-          interval &&
-          typeof interval === "object" &&
+          isObject(interval) &&
           isValidTimeInterval(interval.start, interval.end),
       )
     ) {

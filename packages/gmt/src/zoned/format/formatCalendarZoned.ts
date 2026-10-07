@@ -5,6 +5,7 @@ import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarZoned`: the moment the day label is measured from and the length of
@@ -58,7 +59,7 @@ export function formatCalendarZoned(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidZonedDateTime(value)) return "";
 
     // Each option is read once (GetOption).
