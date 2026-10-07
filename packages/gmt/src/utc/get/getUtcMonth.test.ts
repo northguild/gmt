@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUtcMonth } from "./getUtcMonth";
 
 describe("getUtcMonth", () => {
@@ -9,17 +8,9 @@ describe("getUtcMonth", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.restoreAllMocks();
   });
 
   it("returns current month", () => {
     expect(getUtcMonth()).toBe("02");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUtcMonth();
-    expect(result).toBe("");
   });
 });

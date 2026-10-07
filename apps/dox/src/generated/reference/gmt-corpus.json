@@ -15252,10 +15252,6 @@
       {
         "call": "getUnixDay()",
         "result": "\"29\""
-      },
-      {
-        "call": "getUnixDay()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15273,10 +15269,6 @@
       {
         "call": "getUnixHour()",
         "result": "\"00\""
-      },
-      {
-        "call": "getUnixHour()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15294,10 +15286,6 @@
       {
         "call": "getUnixMicrosecond()",
         "result": "\"456\""
-      },
-      {
-        "call": "getUnixMicrosecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15315,10 +15303,6 @@
       {
         "call": "getUnixMillisecond()",
         "result": "\"123\""
-      },
-      {
-        "call": "getUnixMillisecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15336,10 +15320,6 @@
       {
         "call": "getUnixMinute()",
         "result": "\"30\""
-      },
-      {
-        "call": "getUnixMinute()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15357,10 +15337,6 @@
       {
         "call": "getUnixMonth()",
         "result": "\"02\""
-      },
-      {
-        "call": "getUnixMonth()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15378,10 +15354,6 @@
       {
         "call": "getUnixNanosecond()",
         "result": "\"789\""
-      },
-      {
-        "call": "getUnixNanosecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15457,10 +15429,6 @@
       {
         "call": "getUnixSecond()",
         "result": "\"45\""
-      },
-      {
-        "call": "getUnixSecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -15478,10 +15446,6 @@
       {
         "call": "getUnixYear()",
         "result": "\"2024\""
-      },
-      {
-        "call": "getUnixYear()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17693,10 +17657,6 @@
       {
         "call": "getUtcDay()",
         "result": "\"29\""
-      },
-      {
-        "call": "getUtcDay()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17714,10 +17674,6 @@
       {
         "call": "getUtcHour()",
         "result": "\"00\""
-      },
-      {
-        "call": "getUtcHour()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17735,10 +17691,6 @@
       {
         "call": "getUtcMicrosecond()",
         "result": "\"456\""
-      },
-      {
-        "call": "getUtcMicrosecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17756,10 +17708,6 @@
       {
         "call": "getUtcMillisecond()",
         "result": "\"123\""
-      },
-      {
-        "call": "getUtcMillisecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17777,10 +17725,6 @@
       {
         "call": "getUtcMinute()",
         "result": "\"30\""
-      },
-      {
-        "call": "getUtcMinute()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17798,10 +17742,6 @@
       {
         "call": "getUtcMonth()",
         "result": "\"02\""
-      },
-      {
-        "call": "getUtcMonth()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17819,10 +17759,6 @@
       {
         "call": "getUtcNanosecond()",
         "result": "\"789\""
-      },
-      {
-        "call": "getUtcNanosecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17840,10 +17776,6 @@
       {
         "call": "getUtcNow()",
         "result": "\"2024-02-29T00:00:00Z\""
-      },
-      {
-        "call": "getUtcNow()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17890,10 +17822,6 @@
       {
         "call": "getUtcSecond()",
         "result": "\"45\""
-      },
-      {
-        "call": "getUtcSecond()",
-        "result": "\"\" (on failure)"
       }
     ]
   },
@@ -17911,10 +17839,6 @@
       {
         "call": "getUtcYear()",
         "result": "\"2024\""
-      },
-      {
-        "call": "getUtcYear()",
-        "result": "\"\" (on failure)"
       }
     ]
   },

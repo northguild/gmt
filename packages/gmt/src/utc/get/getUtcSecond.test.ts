@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUtcSecond } from "./getUtcSecond";
 
 describe("getUtcSecond", () => {
@@ -13,12 +12,5 @@ describe("getUtcSecond", () => {
 
   it("returns current second", () => {
     expect(getUtcSecond()).toBe("45");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUtcSecond();
-    expect(result).toBe("");
   });
 });

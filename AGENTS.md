@@ -62,7 +62,7 @@ These are the non-negotiables. Full detail is in the context files above.
 1. **No `Date` object.** Use `@js-temporal/polyfill` exclusively.
 2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, arrays, `bigint`, or plain objects — never Temporal objects.
 3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers and objects, `false` for booleans, `[]` for arrays — the full table (bigint, span, exceptions) is [coding-standards § API Contract](./context/coding-standards.md#api-contract).
-4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input.
+4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input. One exception: a zero-argument reader that calls only `Temporal.Now.instant()`, then reads a field through an explicit `"UTC"` conversion or calls `.toString()` with no options, cannot fail, so it has no catch and no sentinel. The exception does not cover a read of the system time zone — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards.md#scoped-exception-the-utc-clock-readers).
 5. **Keep `plain/` and `zoned/` strictly separate.** Never mix `PlainDateTime` and `ZonedDateTime`.
 6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `expectOneOfIcu`/`expectDateTimeEqual` (from `packages/gmt/src/test/icuVariants.ts`) where CLDR wording differs.
 7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.

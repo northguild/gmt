@@ -84,7 +84,7 @@ The property's own JSDoc is the single source for what an option or member means
 ## Key Rules
 
 - **Show permutations**: valid input, invalid input, edge cases (empty array, boundary values).
-- **@returns must name the sentinel**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`, `or [] on invalid input`, `or 0n on invalid input`.
+- **@returns must name the sentinel**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`, `or [] on invalid input`, `or 0n on invalid input`. A function that cannot fail names none, and has no failure `@example`: that is only the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers).
 - **Match the sentinel to the return type** using the single table in [coding-standards § API Contract](./coding-standards.md#api-contract).
 - **Use `@example functionName(args) // result`** — inline comment style, one example per line.
 - Do not write multi-paragraph prose blocks. Keep it tight.
