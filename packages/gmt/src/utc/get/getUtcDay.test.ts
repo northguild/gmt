@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUtcDay } from "./getUtcDay";
 
 describe("getUtcDay", () => {
@@ -13,12 +12,5 @@ describe("getUtcDay", () => {
 
   it("returns current day", () => {
     expect(getUtcDay()).toBe("29");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUtcDay();
-    expect(result).toBe("");
   });
 });

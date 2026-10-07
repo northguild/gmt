@@ -14,7 +14,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 ## Architecture
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
-- [ ] All Temporal method calls wrapped in `try-catch`
+- [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
 - [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `instant/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
 - [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
