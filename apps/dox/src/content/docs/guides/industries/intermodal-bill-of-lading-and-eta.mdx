@@ -1,0 +1,189 @@
+---
+title: "Intermodal: B/L Dates and Multimodal ETA"
+description: bolTimestamp and multimodalETA — a bill of lading's dates on the local calendar of the place each event happened, and an end-to-end ETA with transit and dwell reported apart.
+sidebar:
+  order: 6
+industries: [intermodal]
+---
+
+A bill of lading carries dates, not timestamps: the date it was issued, the date the cargo was
+received, and the date it was loaded on board, each on the local calendar of the place it
+happened. A system that records the loading as an instant has to turn it back into that date,
+and the UTC date is wrong for part of every day. An end-to-end ETA has the opposite problem: it
+is one instant, but the time behind it is spent two ways, moving and waiting at handoffs, and
+the two are forecast differently.
+
+```typescript
+import { bolTimestamp, multimodalETA } from "@northguild/gmt/intermodal";
+```
+
+`bolTimestamp` lives under `@northguild/gmt/intermodal/format`, and `multimodalETA` under
+`@northguild/gmt/intermodal/calculate`.
+
+## A B/L date is a local date: `bolTimestamp`
+
+The DCSA Bill of Lading 3.0 standard types `issueDate`, `receivedForShipmentDate` and
+`shippedOnBoardDate` as dates with no time and no offset, and calls the issue date the "Local
+date when the transport document has been issued". `bolTimestamp` returns that date,
+`YYYY-MM-DD`, as the local clock in `timeZone` showed it at the instant you pass.
+
+```typescript
+import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+// Loaded at 21:00 in New York, which is 01:00Z on the 16th. The B/L is dated the 15th.
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" });
+// "2024-06-15"
+
+// Loaded at 07:00 in Shanghai, which is 23:00Z on the 14th. The UTC date is a day early.
+bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" });
+// "2024-06-15"
+```
+
+The UTC date is wrong in both directions: a day late for an evening west of Greenwich, a day
+early for a morning east of it. Reducing the instant without a zone reads it in UTC:
+
+```typescript
+import { convertUtcToPlainDate } from "@northguild/gmt/utc";
+
+convertUtcToPlainDate("2024-06-16T01:00:00Z"); // "2024-06-16" — the UTC date, not the date on the dock
+```
+
+A year outside 0000–9999 is written with a sign and six digits, as Temporal writes it. A moment
+has exactly one local date in any zone, so no disambiguation arises: a date the zone skipped is
+never returned, and after a fall-back into the previous date the result is that date again, as
+the clock showed it.
+
+## The zone is the place's
+
+`timeZone` is required. There is no UTC default and no system zone, and without it the result
+is `""`. Each event is dated where it happened: an `issue` in the place of issue's zone, and
+`received` and `shippedOnBoard` in the zone of the terminal at the port of loading. DCSA dates
+receipt when the last container is in the terminal, customs-cleared against the intended vessel,
+and shipment when the last container is loaded. GMT does not resolve a port or a place of issue
+to a zone; you pass the IANA name.
+
+```typescript
+import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+// One instant, two places, two dates.
+bolTimestamp("2024-06-15T16:30:00Z", "received", { timeZone: "Asia/Shanghai" }); // "2024-06-16"
+bolTimestamp("2024-06-15T16:30:00Z", "issue", { timeZone: "Europe/London" }); // "2024-06-15"
+
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard"); // "" — every B/L date is local: the zone is required
+```
+
+Only the instant is read. A bracketed zone in the value, often the zone of the system that logged
+it, is not the zone the date is read in:
+
+```typescript
+import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+// Logged in Copenhagen, loaded in New York.
+bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "America/New_York" });
+// "2024-06-15"
+
+bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_York" }); // "" — no offset: not a moment
+```
+
+## `event` names the date; it does not change it
+
+`issue`, `received` and `shippedOnBoard` are the three dated fields of a DCSA B/L. All three are
+local dates, so they render the same way. The event keeps the call site honest about which field
+it fills. Anything else returns `""`.
+
+```typescript
+import { bolTimestamp } from "@northguild/gmt/intermodal";
+
+bolTimestamp("2024-06-16T01:00:00Z", "received", { timeZone: "America/New_York" }); // "2024-06-15"
+bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }); // "" — not a B/L event
+```
+
+## Transit and dwell, apart: `multimodalETA`
+
+`multimodalETA` schedules the legs with
+[`scheduleDelivery`](/guides/industries/transport-multi-leg-scheduling/): the same `Leg` objects,
+the same missed-connection rule, the same wall-time departures and `startTimeZone`. Its `eta` is
+that function's `eta`. What it adds is the split: `totalTransit` is every leg's `duration` added
+up, and `totalDwell` is the time spent at the handoffs. The two add up to the elapsed time from
+the first departure to the ETA.
+
+```typescript
+import { multimodalETA } from "@northguild/gmt/intermodal";
+
+// Truck, ship and rail, Shanghai to Chicago: 6 hours to the port, 2 days at the terminal,
+// 14 days 6 hours at sea, 36 hours at Los Angeles, 52 hours by rail.
+const legs = [
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
+    timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" },
+  { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
+  { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+];
+multimodalETA(legs);
+// { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3,
+//   totalTransit: "PT400H", totalDwell: "PT84H" } — 484 hours door to door
+
+multimodalETA([]); // { eta: "", totalLegs: 0, totalTransit: "PT0S", totalDwell: "PT0S" }
+```
+
+Durations are exact time: a day is 24 hours, and years, months and weeks return `null`. Both
+totals have hours as the largest unit. A leg across a DST change counts the hours that passed,
+not the change in the wall clock:
+
+```typescript
+import { multimodalETA } from "@northguild/gmt/intermodal";
+
+// Four elapsed hours from 23:00 EST land at 04:00 EDT. The wall clock moved five.
+multimodalETA([{ departure: "2024-03-09T23:00:00-05:00[America/New_York]", duration: "PT4H", timeZone: "America/New_York" }]);
+// { eta: "2024-03-10T04:00:00-04:00[America/New_York]", totalLegs: 1, totalTransit: "PT4H", totalDwell: "PT0S" }
+```
+
+## A wait for a scheduled departure is dwell
+
+`dwellAfter` is the minimum connect time. When the next leg runs on a schedule, the cargo waits
+at the handoff until it leaves, and that wait is dwell too: `totalDwell` is the time actually spent
+at each handoff, each departure minus the previous arrival. When every leg chains from the one
+before, it is the sum of the `dwellAfter` values.
+
+```typescript
+import { multimodalETA } from "@northguild/gmt/intermodal";
+
+const truck = { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
+  timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" };
+const rail = { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" };
+
+// The ship sails at 10:00 Shanghai time on the 13th, 20 hours after the dwell ends.
+multimodalETA([truck, { departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H",
+  timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" }, rail]);
+// { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3,
+//   totalTransit: "PT400H", totalDwell: "PT104H" }
+
+// A sailing inside the two-day dwell is a missed connection.
+multimodalETA([truck, { departure: "2024-06-12T13:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H",
+  timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" }, rail]);
+// null
+```
+
+The last leg's `dwellAfter` is not dwell. No handoff follows it, so it moves nothing; it is still
+checked as a duration.
+
+```typescript
+import { multimodalETA } from "@northguild/gmt/intermodal";
+
+multimodalETA([{ departure: "2024-06-15T10:00:00Z", duration: "PT36H", timeZone: "Asia/Tokyo", dwellAfter: "PT5H" }]);
+// { eta: "2024-06-17T07:00:00+09:00[Asia/Tokyo]", totalLegs: 1, totalTransit: "PT36H", totalDwell: "PT0S" }
+```
+
+## Dwell is never estimated
+
+The dwell in these totals is your `dwellAfter` and your schedule. GMT has no customs-processing
+time, port congestion figure or free-time table, because none of them is a fact it can derive.
+How long a container sat, counted in the terminal's local days, is
+[`dwellTime`](/guides/industries/transport-legs-and-dwell/); what that costs is
+[free time and demurrage](/guides/industries/intermodal-free-time-and-demurrage/).
+
+## See it break, then work
+
+- [A B/L Dated a Day Late](/scenarios/bill-of-lading-dated-a-day-late/)
+- [An ETA That Forgot the Sailing](/scenarios/eta-that-forgot-the-sailing/)
+- [Intermodal mistakes: B/L dates and multimodal ETA](/mistakes/intermodal/#bl-dates-and-multimodal-eta)
+- [Delivery Scheduler: the same legs, leg by leg](/tools/delivery-scheduler/)

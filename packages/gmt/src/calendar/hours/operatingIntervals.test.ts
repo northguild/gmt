@@ -208,6 +208,16 @@ describe("operatingIntervals", () => {
       expect(operatingIntervals(valid, day)).toHaveLength(1);
     });
 
+    it("applies a non-enumerable weekday, as a property get reads it", () => {
+      const weekly = Object.defineProperty({}, "1", {
+        value: nineToFive,
+        enumerable: false,
+      });
+      expect(operatingIntervals({ ...valid, weekly }, day)).toEqual(
+        operatingIntervals(valid, day),
+      );
+    });
+
     it.each`
       schedule                                                                                                             | reads
       ${null}                                                                                                              | ${"null"}

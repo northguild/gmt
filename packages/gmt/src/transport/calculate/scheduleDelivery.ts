@@ -13,6 +13,7 @@ import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime"
 import { etaAtZone } from "../convert/etaAtZone";
 import { transitTime } from "./transitTime";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { isObject } from "../../internal/isObject";
 
 /** One leg of a multi-modal journey: a departure, how long it takes, and where it lands. */
 export interface Leg {
@@ -300,7 +301,7 @@ function chainLegs(
   let cursor: Temporal.Instant | null = null;
   let previousTimeZone: string | undefined;
   for (const [index, leg] of legs.entries()) {
-    if (typeof leg !== "object" || leg === null) {
+    if (!isObject(leg)) {
       return null;
     }
     const tags = legTags(leg);

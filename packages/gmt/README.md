@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~59× more CI test executions than all four competitors combined**: 1,200,990 from 40,033 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~104× more test cases than `@internationalized/date`**: 40,033 vs. 386 — Adobe's own library, run at its own commit.
+- **~60× more CI test executions than all four competitors combined**: 1,214,280 from 40,476 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~105× more test cases than `@internationalized/date`**: 40,476 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 40,033 tests across 706 files that exercise real behavior differences without redundant permutations. They run in CI as 1,200,990 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 40,476 tests across 709 files that exercise real behavior differences without redundant permutations. They run in CI as 1,214,280 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 706                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **40,033**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,200,990**<br>(40,033 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 709                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **40,476**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,214,280**<br>(40,476 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~59×                                                  | 1,200,990 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~60×                                                  | 1,214,280 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -170,7 +170,7 @@ The fourteen namespace subpaths:
 - `@northguild/gmt/precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `@northguild/gmt/span`: elapsed and wall-clock durations between two timestamps, as raw numbers
 - `@northguild/gmt/transport`: transit legs as exact elapsed time, arrivals rendered where they land, dwell measured in local calendar days, crossings read in the zone that administers them, multi-leg schedules with missed connections flagged, cut-offs counted back from an anchor event, punctuality against a stated tolerance, planned, estimated, requested and actual timestamps kept apart, and the next departure a connection can make
-- `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count, and the invoice, dispute and resolution deadline chain with every window a caller parameter
+- `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count, the invoice, dispute and resolution deadline chain with every window a caller parameter, bill of lading dates on the local calendar of the place each event happened, and an end-to-end multimodal ETA with transit and dwell reported apart
 - `@northguild/gmt/zoned`: timezone-aware helpers
 - `@northguild/gmt/unix`: Unix epoch (seconds or milliseconds) helpers
 - `@northguild/gmt/utc`: UTC instant helpers
@@ -2898,6 +2898,90 @@ convertUtcToPlainDate("2024-06-17T04:00:01Z", { timeZone: "America/New_York" });
   dates and say nothing else. Whether a charge is payable, whether a dispute must be heard, and
   any consequence are the consumer's, the sibling of "GMT computes days, never money".
 
+### Bill of lading dates and multimodal ETAs
+
+A bill of lading carries dates, not timestamps: the date it was issued, the date the cargo was
+received, and the date it was loaded on board, each on the local calendar of the place it
+happened. A system that records the loading as an instant has to turn it back into that date,
+and the UTC date is wrong for part of every day. An end-to-end ETA has the opposite problem: it
+is one instant, but the time behind it is spent two ways, moving and waiting at handoffs, and
+the two are forecast differently.
+
+```typescript
+import { bolTimestamp, convertUtcToPlainDate, multimodalETA } from "@northguild/gmt";
+
+// Loaded at 21:00 in New York, which is 01:00Z on the 16th. The B/L is dated the 15th.
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" }); // "2024-06-15"
+
+// Loaded at 07:00 in Shanghai, which is 23:00Z on the 14th. The UTC date is a day early.
+bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" }); // "2024-06-15"
+convertUtcToPlainDate("2024-06-14T23:00:00Z"); // "2024-06-14" (UTC by default: the wrong date)
+
+// Each event is dated in the zone of its own place: receipt at the loading terminal, issue at the carrier's office.
+bolTimestamp("2024-06-14T17:30:00Z", "received", { timeZone: "Asia/Shanghai" }); // "2024-06-15"
+bolTimestamp("2024-06-16T02:00:00Z", "issue", { timeZone: "Asia/Hong_Kong" }); // "2024-06-16"
+
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard"); // "" (every B/L date is local: the zone is required)
+bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }); // "" (not a B/L event)
+bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_York" }); // "" (no offset: not a moment)
+
+// Truck, ship and rail, Shanghai to Chicago: 6 hours to the port, 2 days at the terminal,
+// 14 days 6 hours at sea, 36 hours at Los Angeles, 52 hours by rail.
+const legs = [
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
+    timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" },
+  { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
+  { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+];
+multimodalETA(legs);
+// { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3,
+//   totalTransit: "PT400H", totalDwell: "PT84H" } (484 hours door to door)
+
+// The ship sails on a schedule: 10:00 Shanghai time on the 13th, 20 hours after the dwell ends.
+// The cargo waits at the terminal, so the wait is dwell too.
+multimodalETA([legs[0], { ...legs[1], departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]" }, legs[2]]);
+// { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3,
+//   totalTransit: "PT400H", totalDwell: "PT104H" }
+
+// A sailing inside the two-day dwell is a missed connection.
+multimodalETA([legs[0], { ...legs[1], departure: "2024-06-11T10:00:00+08:00[Asia/Shanghai]" }, legs[2]]); // null
+
+multimodalETA([]); // { eta: "", totalLegs: 0, totalTransit: "PT0S", totalDwell: "PT0S" }
+```
+
+- **A B/L date is a local date.** The DCSA Bill of Lading 3.0 standard types `issueDate`,
+  `receivedForShipmentDate` and `shippedOnBoardDate` as dates with no time and no offset, and
+  calls the issue date the "Local date when the transport document has been issued".
+  `bolTimestamp` returns `YYYY-MM-DD`, the date on the local clock in `timeZone` at the instant
+  given. A year outside 0000–9999 is written with a sign and six digits, as Temporal writes it.
+- **The zone is required, and it is the place's.** There is no UTC default and no system zone:
+  without `timeZone` the result is `""`. Date an `issue` in the place of issue's zone, and
+  `received` and `shippedOnBoard` in the zone of the terminal at the port of loading: DCSA dates
+  receipt when the last container is in the terminal, customs-cleared against the intended vessel,
+  and shipment when the last container is loaded. GMT does not resolve a port or a place of issue
+  to a zone.
+- **`event` names the date; it does not change it.** `issue`, `received` and `shippedOnBoard` are
+  the three dated fields of a DCSA B/L, all local dates, so they render the same way. Anything else
+  returns `""`.
+- **Only the instant is read.** `value` is a `Z` instant, an offset or a zoned string; a bracketed
+  zone in it is not the zone the date is read in. A zoneless wall time or a bare date names no
+  moment and returns `""`. A moment has one local date in any zone, so no disambiguation arises:
+  a date the zone skipped is never returned, and after a fall-back into the previous date the
+  result is that date again, as the clock showed it.
+- **`multimodalETA` schedules with `scheduleDelivery`.** The legs, the missed-connection rule,
+  wall-time departures and `startTimeZone` are that function's, and `eta` is its `eta`.
+- **Transit and dwell are reported apart, and add up to the elapsed time.** `totalTransit` is
+  every leg's `duration` added up: exact time, a day is 24 hours, years, months and weeks return
+  `null`. `totalDwell` is the time actually spent at the handoffs, each departure minus the
+  previous arrival. When every leg chains from the one before, that is the sum of the
+  `dwellAfter` values; a wait for a scheduled departure is dwell too. Both totals have hours as
+  the largest unit, as `crossingTime` and `dwellTime` report elapsed time.
+- **The last leg's `dwellAfter` is not dwell.** No handoff follows it, so it moves nothing.
+- **Dwell is never estimated.** It is the caller's `dwellAfter` and schedule. GMT has no
+  customs-processing time, port congestion figure or free-time table, because none of them is a
+  fact it can derive.
+- Also exported: the `BillOfLadingEvent`, `BolTimestampOptions` and `MultimodalJourney` types.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -2911,7 +2995,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars with holiday sets and roll conventions, and operating hours: open intervals, open or closed now, open time elapsed and SLA deadlines
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days, crossings, multi-leg delivery schedules, cut-offs, schedule deviation and punctuality, PLN/EST/REQ/ACT timestamp classes, and timetable and headway departures
-- [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates an itemised invoice can list, plus the deadline chain around the invoice with every window a caller parameter
+- [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates an itemised invoice can list, plus the deadline chain around the invoice with every window a caller parameter, bill of lading dates as local dates, and a multimodal ETA with transit and dwell reported apart
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns

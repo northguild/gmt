@@ -6,6 +6,8 @@ describe("isObject", () => {
     ${{}}                  | ${true}  | ${"empty object"}
     ${{ smallestUnit: 1 }} | ${true}  | ${"object with keys"}
     ${[]}                  | ${true}  | ${"array (an object)"}
+    ${() => 0}             | ${true}  | ${"function (an object)"}
+    ${class {}}            | ${true}  | ${"class (a function)"}
     ${null}                | ${false} | ${"null"}
     ${undefined}           | ${false} | ${"undefined"}
     ${0}                   | ${false} | ${"number"}
@@ -13,6 +15,8 @@ describe("isObject", () => {
     ${"day"}               | ${false} | ${"string"}
     ${true}                | ${false} | ${"boolean"}
     ${Number.NaN}          | ${false} | ${"NaN"}
+    ${Symbol("x")}         | ${false} | ${"symbol"}
+    ${1n}                  | ${false} | ${"bigint"}
   `("returns $expected for $kind", ({ value, expected }) => {
     expect(isObject(value)).toBe(expected);
   });
@@ -25,6 +29,7 @@ describe("isOptionsArgument (Temporal GetOptionsObject)", () => {
     ${{}}                | ${true}  | ${"empty object"}
     ${{ overflow: "x" }} | ${true}  | ${"object with keys"}
     ${[]}                | ${true}  | ${"array (an object)"}
+    ${() => 0}           | ${true}  | ${"function (an object)"}
     ${null}              | ${false} | ${"null (TypeError)"}
     ${"seconds"}         | ${false} | ${"string (TypeError)"}
     ${1}                 | ${false} | ${"number (TypeError)"}

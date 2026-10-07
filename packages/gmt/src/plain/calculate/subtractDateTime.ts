@@ -3,7 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount, resolveOverflow } from "../../internal";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
-import { isOptionsArgument } from "../../internal/isObject";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDateTime ISO string with `units` subtracted from `value`.
@@ -40,9 +40,7 @@ export function subtractDateTime(
 
     const validDateTime = isValidDateTime(value);
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidDateTimeDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 
