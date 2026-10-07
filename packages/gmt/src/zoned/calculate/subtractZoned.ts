@@ -14,7 +14,7 @@ import type {
   Overflow,
 } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
-import { isOptionsArgument } from "../../internal/isObject";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
@@ -96,9 +96,7 @@ export function subtractZoned(
 
     const validZonedDateTime = isValidCalendarZonedDateTime(value);
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidDateTimeDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 

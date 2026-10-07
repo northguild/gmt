@@ -5,6 +5,7 @@ import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeZoned`: how the phrase is worded, the unit it counts in, how the
@@ -88,7 +89,7 @@ export function formatRelativeZoned(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (options === null || typeof options !== "object") return "";
+    if (!isObject(options)) return "";
     if (!isValidZonedDateTime(value)) return "";
 
     // Each option is read once (GetOption).

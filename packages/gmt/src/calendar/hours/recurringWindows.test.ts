@@ -201,6 +201,56 @@ describe("recurringWindows", () => {
     });
   });
 
+  describe("reading the weekly record", () => {
+    // Each weekday is read with a property get, as Temporal's `Get` reads a field list; only an
+    // own enumerable key that is not a weekday makes the record invalid.
+    const wednesday = [
+      { start: "2024-06-12T13:00:00Z", end: "2024-06-12T21:00:00Z" },
+    ];
+    const everyDay = {
+      1: nineToFive,
+      2: nineToFive,
+      3: nineToFive,
+      4: nineToFive,
+      5: nineToFive,
+      6: nineToFive,
+      7: nineToFive,
+    };
+
+    it.each`
+      weekly                                                                                                   | reads
+      ${Object.defineProperty({}, "3", { value: nineToFive, enumerable: false })}                              | ${"a non-enumerable own weekday"}
+      ${Object.create({ 3: nineToFive })}                                                                      | ${"an inherited weekday"}
+      ${Object.defineProperty({ 3: nineToFive }, "8", { value: nineToFive, enumerable: false })}               | ${"a weekday beside a non-enumerable unknown key"}
+      ${Object.defineProperty({ 3: nineToFive }, Symbol("weekday"), { value: nineToFive, enumerable: false })} | ${"a weekday beside a non-enumerable symbol"}
+      ${Object.assign(() => undefined, { 3: nineToFive })}                                                     | ${"a weekday on an arrow function"}
+      ${Object.assign(function hours() {}, { 3: nineToFive })}                                                 | ${"a weekday on a named function"}
+    `("applies Wednesday from $reads", ({ weekly }) => {
+      expect(recurringWindows(weekly, juneWeek, "America/New_York")).toEqual(
+        wednesday,
+      );
+    });
+
+    it.each`
+      weekly                                          | reads
+      ${Object.assign(() => undefined, everyDay)}     | ${"an arrow function"}
+      ${Object.assign(function hours() {}, everyDay)} | ${"a named function"}
+    `(
+      "reads $reads carrying all seven weekdays as the object",
+      ({ weekly }) => {
+        const expected = recurringWindows(
+          everyDay,
+          juneWeek,
+          "America/New_York",
+        );
+        expect(expected).toHaveLength(7);
+        expect(recurringWindows(weekly, juneWeek, "America/New_York")).toEqual(
+          expected,
+        );
+      },
+    );
+  });
+
   describe("transition nights (America/New_York)", () => {
     // Derived from the wall clock: 23:00 EDT is 03:00Z; 06:00 EST is 11:00Z. Checked against the polyfill.
     it.each`
@@ -376,6 +426,7 @@ describe("recurringWindows", () => {
       ${{ 0: nineToFive }}                                  | ${"weekday 0"}
       ${{ 8: nineToFive }}                                  | ${"weekday 8"}
       ${{ Mon: nineToFive }}                                | ${"a weekday name"}
+      ${{ 3: nineToFive, [Symbol("weekday")]: nineToFive }} | ${"an enumerable symbol key"}
       ${{ 1: [{ from: "09:00" }] }}                         | ${"a window without to"}
       ${{ 1: [{ from: "9:00", to: "17:00" }] }}             | ${"a one-digit hour"}
       ${{ 1: [{ from: "09:00", to: "24:00" }] }}            | ${"24:00"}

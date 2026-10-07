@@ -10,6 +10,8 @@ import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
 import { chargeableDays } from "../intermodal/calculate/chargeableDays";
 import { demurrageClock } from "../intermodal/calculate/demurrageClock";
 import { freeTimeExpiry } from "../intermodal/calculate/freeTimeExpiry";
+import { multimodalETA } from "../intermodal/calculate/multimodalETA";
+import { bolTimestamp } from "../intermodal/format/bolTimestamp";
 import { intersectIntervals } from "../interval/calculate/intersectIntervals";
 import { mergeIntervals } from "../interval/calculate/mergeIntervals";
 import { splitIntervalAt } from "../interval/calculate/splitIntervalAt";
@@ -306,6 +308,31 @@ describe("intermodal/ reads a minute-rounded offset as its zone's real offset", 
     },
   );
 
+  // The same two clock starts as B/L events and as a first departure. Read literally, Monrovia's
+  // is dated the 2nd and New York's the 17th; an hour's leg lands 01:44:15Z and 05:56:03Z.
+  it.each`
+    zone                  | value                                            | date            | eta
+    ${"Africa/Monrovia"}  | ${"1960-01-01T23:59:45-00:45[Africa/Monrovia]"}  | ${"1960-01-01"} | ${"1960-01-02T01:44:15+00:00[UTC]"}
+    ${"America/New_York"} | ${"1883-11-18T00:00:01-04:56[America/New_York]"} | ${"1883-11-18"} | ${"1883-11-18T05:56:03+00:00[UTC]"}
+  `(
+    "bolTimestamp dates $value as $date, and multimodalETA departs at its real instant",
+    ({ zone, value, date, eta }) => {
+      expect(bolTimestamp(value, "shippedOnBoard", { timeZone: zone })).toBe(
+        date,
+      );
+      expect(
+        multimodalETA([
+          { departure: value, duration: "PT1H", timeZone: "UTC" },
+        ]),
+      ).toEqual({
+        eta,
+        totalLegs: 1,
+        totalTransit: "PT1H",
+        totalDwell: "PT0S",
+      });
+    },
+  );
+
   cases(
     "demurrageClock orders $zoned against $between by the real instant",
     ({ zoned, instant, between }) => {
@@ -412,6 +439,11 @@ describe("instant readers read a zoned string written at the range limits", () =
       expect(spanNs(utc, written)).toBe(0n);
       expect(scheduleDeviation(utc, written)).toBe("PT0S");
       expect(etaAtZone(written, zone)).toBe(written);
+      // The B/L date is the written string's own local date, −271821-04-19 west of Greenwich
+      // included: the zoned reading refuses that date, the instant reading does not.
+      expect(bolTimestamp(written, "issue", { timeZone: zone })).toBe(
+        written.slice(0, written.indexOf("T")),
+      );
     },
   );
 

@@ -10,7 +10,7 @@ import {
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
-import { isOptionsArgument } from "../../internal/isObject";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `units` subtracted from `value`.
@@ -53,9 +53,7 @@ export function subtractDate(
 
     const validDate = isValidCalendarDate(value);
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidDateDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidDateDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 

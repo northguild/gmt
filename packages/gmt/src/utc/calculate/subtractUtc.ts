@@ -4,7 +4,7 @@ import { isValidAmount, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidUtc } from "../validate";
-import { isOptionsArgument } from "../../internal/isObject";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Subtract a temporal amount from a UTC datetime string and return a new UTC Instant string.
@@ -42,9 +42,7 @@ export function subtractUtc(
 
     const validUtc = isValidUtc(value);
     const validUnits =
-      typeof units === "object" &&
-      units !== null &&
-      Object.keys(units).every(isValidDateTimeDurationUnit);
+      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
     const validAmounts =
       validUnits && Object.values(units).every(isValidAmount);
 

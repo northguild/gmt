@@ -1,3 +1,4 @@
+import { isObject } from "./isObject";
 /**
  * Default `maxPieces` for functions that return one array element per generated piece
  * (`splitIntervalByUnit*`, `intervalDivideEqually*`, `mapDatesInRange`, `mapZonedDatesInRange`).
@@ -32,7 +33,7 @@ export function resolveMaxPieces(
     return DEFAULT_MAX_PIECES;
   }
 
-  if (typeof options !== "object" || options === null) {
+  if (!isObject(options)) {
     return null;
   }
 
