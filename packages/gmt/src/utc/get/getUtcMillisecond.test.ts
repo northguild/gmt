@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUtcMillisecond } from "./getUtcMillisecond";
 
 describe("getUtcMillisecond", () => {
@@ -13,12 +12,5 @@ describe("getUtcMillisecond", () => {
 
   it("returns current millisecond", () => {
     expect(getUtcMillisecond()).toBe("123");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUtcMillisecond();
-    expect(result).toBe("");
   });
 });

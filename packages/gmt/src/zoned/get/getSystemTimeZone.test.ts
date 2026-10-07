@@ -15,6 +15,30 @@ describe("getSystemTimeZone", () => {
     },
   );
 
+  // ICU reports "Etc/Unknown" when it cannot work out the host zone (for example `TZ=""`), and
+  // Node reports `undefined` for a `TZ` it does not recognise. Neither is a zone that Temporal or
+  // `Intl.DateTimeFormat` accepts, so neither may be handed to a caller as the system zone.
+  it.each`
+    reported         | description
+    ${"Etc/Unknown"} | ${"ICU's unknown-zone placeholder"}
+    ${undefined}     | ${"no zone"}
+    ${""}            | ${"an empty identifier"}
+  `(
+    "returns an empty string when the host reports $description",
+    ({ reported }) => {
+      const defaultOptions = Intl.DateTimeFormat().resolvedOptions();
+      const resolvedOptionsSpy = vi
+        .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+        .mockReturnValue({ ...defaultOptions, timeZone: reported });
+
+      try {
+        expect(getSystemTimeZone()).toBe("");
+      } finally {
+        resolvedOptionsSpy.mockRestore();
+      }
+    },
+  );
+
   it("returns an empty string if an error occurs", () => {
     const resolvedOptionsSpy = vi
       .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")

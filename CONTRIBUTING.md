@@ -270,13 +270,15 @@ export function functionName(...): ... {}
 
 1. **Use `it.each` backtick syntax** in tests (see AGENTS.md for details)
 2. **Show permutations**: valid inputs, invalid inputs, edge cases, empty cases
-3. **Include return type in @returns**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`
+3. **Include return type in @returns**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`. A function that cannot fail names none — see the exception under [Error handling](#error-handling-always-wrap-temporal-methods)
 4. **No Date objects**: Use Temporal or ISO strings only (enforced elsewhere)
 5. **Match return sentinel** using the single [sentinel table](./context/coding-standards.md#api-contract) — `""` strings, `null` numbers and objects, `false` booleans, `[]` arrays, `0n` precision bigints
 
 ### Error handling: Always wrap Temporal methods
 
 Any code that calls Temporal methods (`.from()`, `.add()`, `.subtract()`, `.since()`, `.until()`, etc.) **MUST be wrapped in try-catch**.
+
+One exception: the zero-argument UTC clock readers (`getUtcNow`, `getUtcYear`, `getUnixYear` and their siblings) have no catch and no sentinel, because `Temporal.Now.instant()` read through an explicit `"UTC"` cannot fail. The exception does not cover a read of the system time zone or any function that takes an argument — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards.md#scoped-exception-the-utc-clock-readers).
 
 Temporal's static methods like `Temporal.PlainDate.from()` throw `RangeError` on invalid input (e.g., malformed strings, invalid calendars). These errors must be caught and converted to the appropriate sentinel value.
 

@@ -140,10 +140,13 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * `get/` reader, a new prose aside) — never to silence a regression without reading `show`'s list
  * first to confirm every new skip is one of those two things.
  *
- * `examples` counts 165: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
- * example, which reads the clock like every other `get/` reader example in the `clock` bucket.
+ * `examples` counts 146: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
+ * example, which reads the clock like every other `get/` reader example in the `clock` bucket,
+ * minus 19 `// "" (on failure)` examples. The 19 zero-argument UTC and Unix clock readers cannot
+ * fail, so they document no failure example
+ * (context/coding-standards.md § Scoped exception: the UTC clock readers).
  */
-const SKIP_BUDGET = { examples: 165, docResults: 64 };
+const SKIP_BUDGET = { examples: 146, docResults: 64 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {

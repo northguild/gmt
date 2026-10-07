@@ -64,6 +64,24 @@ export function addDays(dateStr: string, days: number): string {
 - Return the appropriate sentinel for the function's return type.
 - **Validate, then parse, is intentional.** A public function runs its `isValid*` guard and then parses the same string again inside `try`. The double parse keeps each function's contract explicit and self-contained; do not "optimise" it away or flag it in review.
 
+### Scoped exception: the UTC clock readers
+
+A function has no try-catch and documents no sentinel when all four of these hold:
+
+1. It takes no argument.
+2. Its only Temporal entry point is `Temporal.Now.instant()`.
+3. Every conversion of that instant names `"UTC"` explicitly (`.toZonedDateTimeISO("UTC")`), or is `.toString()` with no options.
+4. After the conversion it only reads a field or calls `.toString()` with no options — no arithmetic, rounding, `.with()` or options bag. `.add({ days: 1 })` throws at the upper limit of the `Instant` range.
+
+On a conformant clock nothing in that chain can throw. ECMA-262 defines `Date.now()` as an integral time value within ±8.64e15 ms, Temporal's `HostSystemUTCEpochNanoseconds` keeps the reading inside the `Instant` range, and `"UTC"` is always a valid time zone. A catch there is dead code, and a documented `""` is a result no caller can receive. Do not add either. The one way to make these functions throw is to replace `Date.now` with a function that returns a non-integer, which no host does.
+
+The functions are `getUtcNow`, `getUtc{Year,Month,Day,Hour,Minute,Second,Millisecond,Microsecond,Nanosecond}` and `getUnix{Year,Month,Day,Hour,Minute,Second,Millisecond,Microsecond,Nanosecond}`.
+
+The exception is narrow. It does **not** cover:
+
+- **A read of the system time zone** — `Temporal.Now.zonedDateTimeISO()` with no argument, `Temporal.Now.timeZoneId()`, or `Intl.DateTimeFormat().resolvedOptions().timeZone`. A host can report no usable zone: Node reports `Etc/Unknown` for an empty `TZ` and `undefined` for an unknown one, and `Temporal.Now.zonedDateTimeISO()` throws on both. `getNow`, `getToday`, `getSystemTimeZone` and the other system-zone readers keep their try-catch and their sentinel.
+- **Any function that takes an argument**, even one validated before the clock is read (`getUtcNowUnit`, `getUnixNow`, `getZonedNow`, the `getZoned*` readers). It keeps its validation, its try-catch and its sentinel.
+
 ### Scoped exception: manual string parsing in `parse*WithPattern` (J11 / Decision 4)
 
 "Manual string parsing" is forbidden everywhere in GMT **except** the `parseDateWithPattern` / `parseDateTimeWithPattern` / `parseTimeWithPattern` family (`packages/gmt/src/plain/parse/`, engine in `packages/gmt/src/internal/patternToken.ts`), because Temporal has no `fromFormat`-style equivalent and this is the only way to decode a caller-supplied token pattern. The exception is bound by three rules, not a blanket carve-out:

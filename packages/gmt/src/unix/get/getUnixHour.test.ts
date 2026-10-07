@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUnixHour } from "./getUnixHour";
 
 describe("getUnixHour", () => {
@@ -13,12 +12,5 @@ describe("getUnixHour", () => {
 
   it("returns current hour", () => {
     expect(getUnixHour()).toBe("12");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUnixHour();
-    expect(result).toBe("");
   });
 });

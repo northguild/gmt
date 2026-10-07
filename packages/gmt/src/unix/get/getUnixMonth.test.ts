@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUnixMonth } from "./getUnixMonth";
 
 describe("getUnixMonth", () => {
@@ -13,12 +12,5 @@ describe("getUnixMonth", () => {
 
   it("returns current month", () => {
     expect(getUnixMonth()).toBe("02");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUnixMonth();
-    expect(result).toBe("");
   });
 });

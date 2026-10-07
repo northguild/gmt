@@ -1,4 +1,3 @@
-import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { getUtcYear } from "./getUtcYear";
 
 describe("getUtcYear", () => {
@@ -13,12 +12,5 @@ describe("getUtcYear", () => {
 
   it("returns current year", () => {
     expect(getUtcYear()).toBe("2024");
-  });
-
-  it("returns empty string on failure", () => {
-    vi.useRealTimers();
-    mockTemporalNowInstantThrow();
-    const result = getUtcYear();
-    expect(result).toBe("");
   });
 });
