@@ -23,7 +23,7 @@ Separately, feeds routinely deliver a local wall time with no offset at all ("ga
 | --- | --- | --- |
 | GS1 EPCIS 2.0 | `eventTime` (UTC) | `eventTimeZoneOffset` — required, so the event can be shown in the local time where it occurred |
 | DCSA Track & Trace | `eventDateTime` | Carried in the timestamp, alongside an `eventClassifierCode` of planned / estimated / actual |
-| UN/EDIFACT DTM | Qualifier `102` / `203` (no offset) | Qualifier `303` / `304` (`CCYYMMDDHHMMZZZ` / `CCYYMMDDHHMMSSZZZ`) |
+| UN/EDIFACT DTM | The 2380 value under format codes `205`–`208`, or `301`–`304` when the zone is `±HH`, `UTC` or `GMT` | In the same value: `ZHHMM`, or `ZZZ`. Codes `102` and `203` carry none and name no instant |
 | DICOM | `DT` value | `&ZZXX` suffix |
 
 Sources: [OpenEPCIS](https://openepcis.io/docs/epcis/), [UNECE DTM](https://service.unece.org/trade/untdid/d03a/trsd/trsddtm.htm), [DCSA](https://dcsa.org/standards/track-and-trace/standard-documentation-track-and-trace).

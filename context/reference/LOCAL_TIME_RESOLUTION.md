@@ -83,7 +83,7 @@ This shape is what the interchange standards actually require:
 | ------------------ | ------------------------ | -------------------------------------------------------- |
 | GS1 EPCIS 2.0      | `eventTime` (UTC)        | `eventTimeZoneOffset` — required                          |
 | DCSA Track & Trace | `eventDateTime`          | Carried in the timestamp, with an `eventClassifierCode`  |
-| UN/EDIFACT DTM     | Qualifier `102` / `203`  | Qualifier `303` / `304` (`CCYYMMDDHHMMZZZ`)              |
+| UN/EDIFACT DTM     | The 2380 value under format codes `205`–`208`, or `301`–`304` when the zone is `±HH`, `UTC` or `GMT` | In the same value: `ZHHMM`, or `ZZZ`. Codes `102` and `203` carry none and name no instant |
 | DICOM              | `DT` value               | `&ZZXX` suffix                                            |
 
 Sources: [OpenEPCIS](https://openepcis.io/docs/epcis/),

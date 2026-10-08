@@ -100,7 +100,19 @@ The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) 
 2. Extracted fields are **always** handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })` for final construction and validation.
 3. The try-catch and sentinel-return rules above are unchanged.
 
-`parseSql` and `parseRfc3339` are **not** part of this exception — both validate shape with a regex and then hand the whole string to `Temporal.*.from(string)` directly (which strictly validates the calendar date on its own), never extracting or constructing a field property bag by hand. This prohibition stands for every other function in the library.
+`parseSql` and `parseRfc3339` are **not** part of this exception — both validate shape with a regex and then hand the whole string to `Temporal.*.from(string)` directly (which strictly validates the calendar date on its own), never extracting or constructing a field property bag by hand.
+
+### Scoped exception: EDI date/time grammars in `parseEdifactDtm`, `parseX12DateTime` and `parseX12DateTimePeriod` (INT-15)
+
+The same three rules extend to `parseEdifactDtm`, `parseX12DateTime` and `parseX12DateTimePeriod` (`packages/gmt/src/intermodal/parse/`). UN/EDIFACT data element 2379, X12 data element 1250 and X12 elements 373 and 337 name fixed digit-order grammars (`CCYYMMDDHHMM`, `YYMMDD`, `MMDDCCYY`, `YYDDD`, `HHMMSSDD`, …) that are not ISO 8601 and that Temporal's `.from()` cannot parse at any layer. As with J13 the grammar is fixed per code, never caller-supplied:
+
+1. Each grammar is a regex in one table keyed by the standard's own code, `internal/ediGrammar.ts`, built from fragments named in the standards' mask notation (`CCYY`, `MM`, `DD`, `HH`, `ZHHMM`, `ZZZ`); each code's layout is written once and both its regex and its field reader derive from it. `internal/ediDateTimeFields.ts` extracts the fields from those tables — never per-call string slicing in a public function. These grammars are not public patterns: a value is only valid against a code, so the public check is `isValidEdifactDtm(value, code)` / `isValidX12DateTimePeriod(value, code)`. `regex/` gains only the two grammars GS1 publishes verbatim, `epcisEventTime` and `epcisTimeZoneOffset`.
+2. Extracted date and time fields are **always** handed to `Temporal.PlainDate.from` / `Temporal.PlainTime.from` / `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. The two codes that carry a day of the year and no whole date (`TC`, `EH`) have no date to construct, and return the day as a number. A value that carries an offset (`205`–`208`, a `3xx` code whose zone is `±HH`, `UTC` or `GMT`, or an X12 time whose time code states one) is rebuilt as an extended ISO string and handed to `toOffsetInstant`; no offset digit is sliced by hand.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+**No century is guessed.** Neither UN/EDIFACT nor X12 says which century a two-digit year belongs to, so the caller does: every code whose grammar carries `YY` (`101`, `201`, `202`, `206`, `207`, `301`, `302`, `713`, `717`; `D6`, `TT`, `TR`, `RD6`, `TU`) needs `yearWindow` and returns the sentinel without it. `yearWindow` is either the first year of a fixed 100-year window (`2000` reads `00`–`99` as 2000–2099), for stored data, or `"rolling"`, the 100 years from 50 before the current UTC year to 49 after, for live data. `internal/twoDigitYear.ts` holds the arithmetic and no year of its own. The `yy` token of `parseDateWithPattern` and `parseDateTimeWithPattern` follows the same rule through the same `TwoDigitYearOptions`. A cut-off built into the library is right today and wrong later, so GMT never picks a century where it has a choice. Two formats have no choice: RFC 5322 §4.3 and RFC 9110 each mandate a two-digit-year rule for their own obsolete date forms, and `parseRfc2822` and `parseHttp` apply exactly those.
+
+This prohibition stands for every other function in the library.
 
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
