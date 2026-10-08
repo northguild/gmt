@@ -51,42 +51,15 @@
  * (`2024-03-08T08:00:00-06:00[America/Chicago]`) in a text `<input>` with no
  * such truncation, is `gmt-field-wide` and takes two columns. Each leg card gets L-shaped corner brackets (top-left
  * + bottom-right) in its own leg colour — the same `.gmt-brackets` recipe used
- * on the home page — instead of a left accent bar.
+ * on the home page — instead of a left accent bar. The bracket rule is shared
+ * with the Timetable Reader's row frames and lives in gmt-transport-widgets.css.
  * --------------------------------------------------------------------------- */
 
 .gmt-delivery-leg-fieldset {
   container-type: inline-size;
-  position: relative;
   padding-top: var(--gmt-space-1);
   padding-bottom: var(--gmt-space-2);
   margin-bottom: var(--gmt-space-2);
-}
-
-.gmt-delivery-leg-fieldset::before,
-.gmt-delivery-leg-fieldset::after {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: var(--leg-color, var(--gmt-cyan));
-  border-style: solid;
-  border-width: 0;
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-.gmt-delivery-leg-fieldset::before {
-  top: -1px;
-  left: -1px;
-  border-top-width: 2px;
-  border-left-width: 2px;
-}
-
-.gmt-delivery-leg-fieldset::after {
-  bottom: -1px;
-  right: -1px;
-  border-bottom-width: 2px;
-  border-right-width: 2px;
 }
 
 .gmt-delivery-leg-number {
@@ -106,7 +79,7 @@
    `2024-11-02T22:00:00-04:00[America/New_York]` (45 characters) no longer
    fits `.gmt-input`'s 0.85rem text in a single-column field, however wide the
    row — scrollWidth exceeded clientWidth by up to 72px, measured at 390px.
-   Text-only inputs shrink to `--gmt-text-sm` (12px, the legibility floor) and
+   Text-only inputs shrink to `--gmt-text-sm` (0.8rem, 12.8px; `--gmt-text-xs` is the 12px floor) and
    trim their own padding; the card and leg-card chrome around them trims its
    horizontal padding too, so the fix is shared between "smaller text" and
    "more room", rather than pushing font-size below 12px on its own. Queried

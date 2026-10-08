@@ -347,6 +347,7 @@ export function renderMdxComponents(body: string): string {
     "CutoffStack",
     "DeliveryScheduler",
     "DepartureBoard",
+    "DtmDecoder",
     "DwellLedger",
     "EtaDrift",
     "FreeTimeLedger",
@@ -354,6 +355,7 @@ export function renderMdxComponents(body: string): string {
     "TimetableReader",
     "Globe",
     "MultiZoneScrubber",
+    "X12TimeReader",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

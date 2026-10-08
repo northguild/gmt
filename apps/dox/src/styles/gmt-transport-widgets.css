@@ -32,8 +32,8 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Leg fieldsets (Delivery Scheduler; reused by the Timetable Reader's rows and the
- * Cut-off Stack's cut-offs and closed days)
+ * Leg fieldsets (Delivery Scheduler; reused by the Timetable Reader's rows, with
+ * corner brackets, and the Cut-off Stack's cut-offs and closed days)
  * --------------------------------------------------------------------------- */
 
 .gmt-transport-leg {
@@ -52,6 +52,47 @@
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
+}
+
+/* Corner brackets (top left and bottom right) in the frame's own colour mark a
+   numbered frame: a Delivery Scheduler leg, and, with `--brackets`, a Timetable
+   Reader row. The same L-shaped recipe as the home page's `.gmt-brackets`, in
+   place of a left accent bar. The colour is the frame's `--leg-color`, else its
+   `--series`. */
+.gmt-delivery-leg-fieldset,
+.gmt-transport-leg--brackets {
+  position: relative;
+}
+
+.gmt-delivery-leg-fieldset::before,
+.gmt-delivery-leg-fieldset::after,
+.gmt-transport-leg--brackets::before,
+.gmt-transport-leg--brackets::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--leg-color, var(--series, var(--gmt-cyan)));
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.gmt-delivery-leg-fieldset::before,
+.gmt-transport-leg--brackets::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.gmt-delivery-leg-fieldset::after,
+.gmt-transport-leg--brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
 }
 
 /* ---------------------------------------------------------------------------

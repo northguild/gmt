@@ -118,6 +118,8 @@ const PAGES = [
   { slug: "tool-punctuality-board", path: "/tools/punctuality-board/" },
   { slug: "tool-eta-drift", path: "/tools/eta-drift/" },
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
+  { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
+  { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   /* Added last, deliberately. Through DOX-C3b this was the page being changed
      on almost every step, so covering it earlier would have meant a gate that
      failed by design and got ignored. It is stable now, and it is the only page

@@ -55,10 +55,22 @@ redefine them.
   text-safe variant of an accent. See rule 6. A light-theme caution aside's title uses
   `--gmt-signal-ink` (`gmt-light.css`): Starlight's own orange measured 6.49:1 on the tinted
   caution fill.
-- **`--gmt-ice-dim`** is the muted/secondary text tier — retuned per theme so every `color:` use
-  clears 7:1 while staying visibly quieter than `--gmt-ice`. `--gmt-ice-dim-fill` keeps the old
-  (pre-retune) value for the handful of non-text consumers — a low-alpha wash or hatch pattern,
-  never a rule's `color:` — that would have looked wrong re-tinted alongside it.
+- **`--gmt-ice-dim`** is the muted/secondary text tier. Every `color:` use clears 7:1 in both
+  themes, measured by the worst-pixel method below on all 20 tool pages (every preset, plus a
+  sentinel state), the home page, Why GMT, a guide, an industry guide, a scenario, a mistakes
+  page, two reference pages, the tools index and the `/dox` page with a widget in the rail.
+  The tier stays clearly quieter than `--gmt-ice`.
+  - Dark `#98b2be`: 7.27:1 on the timetable chart's wash (`#06242e`, the lowest surface),
+    7.42:1 on the Free Time Ledger's event cell, 7.96:1 on `--gmt-surface-2`, 8.25:1 on the
+    widget card. 20 CIE L* points below `--gmt-ice`.
+  - Light `#4b4b4b`: 7.02:1 on the tinted card behind the interval rows (`#d2ebf1`, the lowest
+    surface), 8.0:1 on `--gmt-surface`. 22.6 L* points above `--gmt-ice`.
+  - A widget never overrides the token for itself. If a surface makes it fall short, fix the
+    surface. A chip's border sits clear of its glyphs (`.gmt-hint-chip` has 2px of vertical
+    padding, because the font's glyph box is taller than a line-height of 1 and a "p" drew
+    over the border), and a label has the width of its text (`--gmt-interval-label-w`).
+  - `--gmt-ice-dim-fill` keeps the dimmer, earlier value for the handful of non-text consumers
+    (a low-alpha wash or hatch, a disabled thumb), never a rule's `color:`.
 
 ## Maintenance rules
 
@@ -91,9 +103,8 @@ redefine them.
    and `--gmt-cyan` already clears it (3.38:1 against `#f5f5f5`). `--gmt-ice-dim` is the one
    token retuned directly rather than split: it is overwhelmingly a `color:` use (captions, table
    headers, idle sidebar links, and the tokens that alias it — Starlight's `--sl-color-gray-2`,
-   Pagefind's `--pagefind-ui-text`, shadcn's `--muted-foreground`), so the base value moved and
-   `--gmt-ice-dim-fill` keeps the old one for the few non-text consumers a retune would have
-   changed the look of.
+   Pagefind's `--pagefind-ui-text`, shadcn's `--muted-foreground`), so the base value is the
+   text-safe one and `--gmt-ice-dim-fill` keeps the dimmer value for the few non-text consumers.
 
 ## Form controls
 
@@ -158,6 +169,22 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   never the `background` shorthand, which would wipe the chevron. A select truncates with an
   ellipsis (`overflow: hidden; text-overflow: ellipsis`), because iOS WebKit otherwise sizes it
   to its longest option and widens the page.
+- **A disabled `.gmt-input` or `.gmt-select`** has one shared look in `gmt-form-controls.css`: the
+  `--gmt-ice-dim` text tier, a dashed border, a transparent fill and `cursor: not-allowed`.
+  The border is `color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent)`, not the widget
+  hairline: the hairline measures 1.2 to 1.4:1, and an empty disabled field (the X12 Time
+  Reader's "Window starts in") has nothing else to show where it is. The border measures 3.2:1
+  or more against its surface in dark and light (the 3:1 non-text bar).
+  - There is no `opacity`, so the text stays in the same tier as hints and labels and is never
+    faded below it.
+  - The border changes style as well as tone, so the state is never only a shade.
+  - The rule sets `background-color`, never `background`, so a select keeps its chevron.
+  - The look does not say why a field is off. The widget says the reason in words near the
+    field.
+  - Forced colours restate the text and the border as `GrayText` (`gmt-a11y.css`).
+  - A widget never styles the state itself; it sets `disabled` and the rule does the rest. The
+    tools that do are listed in built.md § Tier 2, "One control system for every widget".
+  - A disabled `.gmt-range` has its own rules in the same sheet.
 - **`.gmt-button--pad`** adds padding to a free-standing `.gmt-button`. The base padding is
   unchanged.
 - **Every widget root carries `not-content`** and `container-type: inline-size`.
@@ -256,8 +283,9 @@ teaching widget; nothing else does, and it never replays on a value change.
 ## Drawn charts
 
 The recipes in `gmt-cutoff-widgets.css` are the pattern for every drawn transport chart: the
-three cut-off tools and the Departure Board, Punctuality Board and ETA Drift Chart, whose
-`.gmt-punct-frame` surface joins the same `:is()` lists so the six read as one family:
+three cut-off tools; the Departure Board, Punctuality Board and ETA Drift Chart, whose
+`.gmt-punct-frame` surface joins the same `:is()` lists; and the Timetable Reader, whose day
+track and two-clocks chart join them too. The seven read as one family:
 
 - **Every label sits on an opaque `--gmt-surface` plate** (`.gmt-cutoff-chip`), in
   `--gmt-ice` or `--gmt-ice-dim`. Then no glyph ever touches a gradient, hatch, glow or line,
@@ -284,8 +312,29 @@ three cut-off tools and the Departure Board, Punctuality Board and ETA Drift Cha
   control reserves its measured line count with `min-block-size` in `lh`.
   `setPresetDescription` keeps the preset description's height once a drag makes the state
   custom. Gate: `pnpm --filter @gmt/dox run readout:still` (`scripts/readout-still.mjs`), which
-  drags every handle by keyboard and pointer in Chromium and WebKit at 1440, 390, 360 and 300
+  drags every handle of the Departure Board, the Punctuality Board, the ETA Drift Chart and the
+  Timetable Reader by keyboard and pointer in Chromium and WebKit at 1440, 390, 360 and 300
   and fails if a plate, the frame, the dragged control or anything above it moves or resizes.
+  For the Timetable Reader it measures every element in the widget, in all three sections.
+- **A cell whose content comes and goes holds its size with a hidden sizer** stacked in the
+  same grid cell (`.gmt-timetable-hold`, the Timetable Reader's note, time cells and output).
+  - The hold is a one-cell grid. Its two children are the sizer and the live wrapper
+    (`.gmt-timetable-live`; for the result, the `<output>` itself), both in
+    `grid-area: 1 / 1`.
+  - The sizer has the shape of the largest thing the cell can hold: the longest note, or a
+    value with the same character counts and break points as a real one, so it wraps the same
+    way at every width, and no height is a measured constant.
+  - The sizer's text lives in `data-t` attributes drawn by `::before`, and the sizer is
+    `visibility: hidden` and `aria-hidden`. So the text is never in `textContent`, never
+    copied and never read out.
+  - The live wrapper keeps the grid's default stretch, so its box is the sizer's size
+    whatever it holds. Aligned to the start, it would grow from nothing each time its content
+    appears.
+- **In these charts a clock change is purple for a repeated hour and gold for a skipped one**
+  (`--gmt-dst-purple`, `--gmt-dst-gold`; the Cut-off Ruler and the Timetable Reader), with a
+  pattern and a word as well. On the Timetable Reader that is a double edge, or a dashed edge
+  and a hatch, and a chip that says "happens twice" or "never shows". Series 3 is the same
+  purple, so a DST mark never has the form of a series mark.
 - **Class and series colours never say "good".** The ETA Drift Chart's classes are EST cyan,
   PLN spring, REQ purple and ACT teal. The Punctuality Board's two tolerances are series 1 and
   series 3, so the on-time band never reads as success. Late, early, made and missed are
@@ -407,10 +456,18 @@ pnpm visual:diff                   # exits non-zero over threshold
   separates "the widget changed" (✗) from "only the page around it changed" (~).
 - A diff over threshold is a regression unless it is the deliberate change — then re-baseline
   and say so. Never loosen the threshold.
-- **Measure text contrast against the worst pixel behind the glyph box.** Make the element's
-  text and its descendants' text transparent, screenshot the text's box, and compare the
-  text colour with every pixel. That covers gradients, hatches and glows a flat swatch
-  misses.
+- **Measure text contrast against the worst pixel behind the glyphs.** `pnpm run contrast:measure`
+  (`scripts/contrast-measure.mjs`, against a served build) does it for every element whose
+  colour is `--gmt-ice-dim`, in both themes, and fails under 7:1. Screenshot twice, as the page
+  is and with every glyph transparent (`-webkit-text-fill-color`, which leaves borders and
+  `currentColor` surfaces alone). The pixels that differ are the glyphs. Compose the text
+  colour over the transparent-glyph pixel at each glyph pixel and one pixel around it. That
+  covers gradients, hatches and glows a flat swatch misses. The same figure over the whole
+  glyph box is printed beside it; it also reaches a neighbouring border the glyphs never
+  touch, so the two should agree.
+  - Measure a text node from its first to its last visible character, with whole pixels only:
+    a leading space, or a half-covered edge pixel, reaches the border of an adjacent chip.
+  - Skip text in a closed `<details>`: it keeps its geometry and is not painted.
   - Hide fixed and sticky chrome first, because it lands in clip screenshots.
   - Skip text inside a 1px visually hidden box (an `sr-only` `thead`). A text range reports
     its full glyph rect even when an ancestor clips it, so it gives false overlaps and false

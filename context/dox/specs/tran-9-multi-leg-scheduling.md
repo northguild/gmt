@@ -1138,7 +1138,9 @@ Root: `<div class="gmt-connection gmt-widget">`.
 
 ## C-d. Timetable Reader: `startTimeZone`, `/tools/timetable-reader/`, key `timetable`
 
-Root: `<div class="gmt-timetable gmt-widget">`.
+Root: `<div class="gmt-timetable gmt-widget not-content">`. This section governs the state
+model, the presets, the chat registration and the permalinks. Everything the reader sees is
+specified in [timetable-reader.md](timetable-reader.md).
 
 ### C-d1. `src/lib/timetable-reader.ts` (pure)
 
@@ -1148,16 +1150,16 @@ Root: `<div class="gmt-timetable gmt-widget">`.
   and `offset1…4`.
 - `rowDeparture(row, zone)`: the printed text when `offset` is blank, else
   `${printed}${offset}[${zone}]`. That is the string passed.
-- `rowCall(state, i)`: `scheduleDelivery([{ departure: rowDeparture, duration, timeZone }], { startTimeZone })`.
+- `rowLeg(state, i)`: the one leg row `i` names, `{ departure: rowDeparture, duration, timeZone }`, or `null` for a blank row. Each row is its own call: `scheduleDelivery([rowLeg], { startTimeZone })`.
   Each row is its own call.
-- `classify(printed, zone, lib)`: from the library only. `e = resolveLocal(printed, zone,
-  { disambiguation: "earlier" })` and `l = …"later"`. `e === l` → `once`. When they differ,
-  it is `twice` when the `HH:MM` of `etaAtZone(e, zone)` equals the printed `HH:MM`, else
-  `skipped` (V89–V93). Badges: `once` shows no badge; `twice` "Occurs twice: the earlier
+- `classify(printed, zone, lib)`: from the library only, one `classifyLocal` call
+  ([timetable-reader.md](timetable-reader.md) § C0 has the mapping and the reason). V89–V93
+  are the `resolveLocal` readings that `offsetChoices` uses for a row's two offsets. Badges:
+  `once` shows no badge; `twice` "Occurs twice: the earlier
   instant" (or "Offset written: this pass" when the row has an offset); `skipped` "Never
   shows on the clock: the later instant". An offset written into a `skipped` row gives
-  `NO SIGNAL` with the reason "No offset names a time this clock skipped. Leave the offset off
-  and it resolves to the later instant." (V83).
+  `NO SIGNAL` with the reason "This clock skipped that time, so no offset can make it valid.
+  Leave the offset off and it resolves to the later instant." (V83).
 - `leavesAt(state, i, lib)`: the exact departure, `scheduleDelivery([{ departure: rowDeparture,
   duration: "PT0S", timeZone: startTimeZone }], { startTimeZone }).legTimes[0].localArrival`
   (V86–V88).
@@ -1181,22 +1183,13 @@ Root: `<div class="gmt-timetable gmt-widget">`.
 - **C-d2 test.** Cover `classify` for every preset row (`once` for 00:30 and 02:30 on
   3 November, `twice` for 01:30, `skipped` for 02:30 on 10 March, `twice` for Berlin's 02:30),
   `rowDeparture`, `readArgs` (a chat array or flat keys), and `matchPreset`.
-- **C-d3 mount.**
-  - `<h4>1. The timetable</h4>`: preset; "Printed in" (`start-zone`, a select); "Run time"
-    (`duration`, text); "Arrives in" (`zone`, a select); four row groups, each with "Printed
-    departure" (`departure-n`, text, no placeholder) and "Offset (optional)" (`offset-n`,
-    text).
-  - `<h4>2. What each printed time means</h4>`: a `<table data-role="rows">` with the columns
-    Printed, Leaves (exact), Badge and Local arrival. Then `reason-aside`, and a static note
-    linking the [DST Inspector](/tools/dst-inspector/) for the general rule.
-  - `<h4>3. What <code>scheduleDelivery</code> returns</h4>`: a "Show the call for"
-    `<select data-role="row-pick">` of the non-blank rows, `codeFrameHtml("timetable")`, then
-    `timetable-output` for the picked row.
+- **C-d3 mount.** The markup, the day track, the row frames, the chart and the table are
+  specified in [timetable-reader.md](timetable-reader.md) § C and § D.
 - **C-d4 mount test.**
   - For each preset, assert every row's Leaves, badge and local arrival, and the picked row's
     call and output. `published-local` is copied verbatim from the JSDoc (V4).
   - On `spring-forward`, rows 2 and 3 show the same Leaves text.
-  - Typing `-05:00` into row 2's offset on `spring-forward` gives `NO SIGNAL` and the
+  - Choosing `-05:00` in row 2's Offset select on `spring-forward` gives `NO SIGNAL` and the
     skipped-offset reason (V83).
   - The chat seed renders V84, and its row shows the "Occurs twice" badge.
   - Also cover the permalink round-trip, the abort and the double destroy.
@@ -1213,9 +1206,8 @@ Root: `<div class="gmt-timetable gmt-widget">`.
     hour).
   - A Reference paragraph linking `scheduleDelivery`,
     [`resolveLocal`](/reference/instant/convert/resolveLocal/) and the guide section.
-- **C-d7 CSS `gmt-timetable-reader.css`.** Registered with
-  `// Timetable Reader widget (TRAN-9)`. The table uses the content table styles. Badges are
-  text with an outline, never colour alone, and never amber.
+- **C-d7 CSS `gmt-timetable-reader.css`.** Its layout, the table and the shared sheets it
+  joins are specified in [timetable-reader.md](timetable-reader.md) § B, § D4 and § F.
 
 ### C-d8. Chat registration
 
@@ -1378,7 +1370,7 @@ Prefix every shell with `eval "$(fnm env)" && fnm use`. `$WT` is
    - Arrow keys change each preset and move the handling slider one minute at a time.
    - Delivery Scheduler: choosing `missed-connection` shows `NO SIGNAL` and the missed reason.
    - Connection Checker: sliding from 50 to 51 turns made into missed.
-   - Timetable Reader: typing `-05:00` into a skipped row shows the skipped-offset reason.
+   - Timetable Reader: choosing `-05:00` for a skipped row shows the skipped-offset reason.
    - The focus ring is visible on every control in both themes.
 9. **`prefers-reduced-motion: reduce`:** nothing animates on a preset change.
    **`forced-colors: active`:** timeline segments, handoff items, ruler ticks and badges stay

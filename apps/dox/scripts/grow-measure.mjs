@@ -130,7 +130,7 @@ const PAGES = [
     slug: "timetable-reader",
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
-    drag: null,
+    drag: '[data-role="handle-1"]',
   },
   {
     slug: "crossing-clock",
@@ -173,6 +173,18 @@ const PAGES = [
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
     drag: '[data-role="handle-after"]',
+  },
+  {
+    slug: "dtm-decoder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "x12-time-reader",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
   },
   {
     slug: "zone-planner",

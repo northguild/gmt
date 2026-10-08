@@ -19,6 +19,14 @@
   padding: var(--gmt-space-2) 0;
 }
 
+/* The row labels' width: wide enough for "INTERSECTION" in its tracked
+   capitals (at 5.5rem its last letter ran onto the track's border). The axis
+   under the rows indents by the same amount. */
+.gmt-interval-rows,
+.gmt-interval-axis {
+  --gmt-interval-label-w: 6.5rem;
+}
+
 .gmt-interval-rows {
   display: flex;
   flex-direction: column;
@@ -33,7 +41,7 @@
 
 .gmt-interval-row-label {
   flex: 0 0 auto;
-  width: 5.5rem;
+  width: var(--gmt-interval-label-w);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -53,7 +61,8 @@
 .gmt-interval-axis {
   display: flex;
   justify-content: space-between;
-  margin: var(--gmt-space-1) 0 0 calc(5.5rem + var(--gmt-space-2));
+  margin: var(--gmt-space-1) 0 0
+    calc(var(--gmt-interval-label-w) + var(--gmt-space-2));
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);

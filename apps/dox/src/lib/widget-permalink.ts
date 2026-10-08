@@ -50,7 +50,9 @@ export type WidgetKind =
   | "punctuality"
   | "etadrift"
   | "departure"
-  | "planner";
+  | "planner"
+  | "dtm"
+  | "xtime";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -85,6 +87,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   etadrift: "/tools/eta-drift/",
   departure: "/tools/departure-board/",
   planner: "/tools/zone-planner/",
+  dtm: "/tools/dtm-decoder/",
+  xtime: "/tools/x12-time-reader/",
 };
 
 export function encodeWidgetPermalink(

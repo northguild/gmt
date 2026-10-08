@@ -327,6 +327,65 @@ export const showZonePlannerInput = z.object({
 });
 
 /**
+ * A short code of the EDI timestamp tools: a UN/EDIFACT 2379 format code, an X12
+ * 623 time code or an X12 1250 qualifier. Checks shape, not validity: a code
+ * the library does not read is the widget's sentinel to show, never a schema
+ * failure.
+ */
+export const ediCodeSchema = z.string().min(1).max(8);
+
+/**
+ * A two-digit-year window: `rolling`, or the first year of a fixed hundred-year
+ * window. Checks shape, not validity: a window the library refuses is the
+ * widget's sentinel to show.
+ */
+export const yearWindowSchema = z.union([
+  z.literal("rolling"),
+  z.number().int().min(0).max(9900),
+]);
+
+/**
+ * The DTM Decoder: a UN/EDIFACT `DTM` segment, or a value and its 2379 format
+ * code, read by `parseEdifactDtm`. `zone1` to `zone4` are zones the reader named,
+ * to read an offsetless value in.
+ */
+export const showDtmDecoderInput = z.object({
+  input: z.string().min(1).max(64),
+  format: ediCodeSchema.optional(),
+  yearWindow: yearWindowSchema.optional(),
+  zone1: zoneSchema.optional(),
+  zone2: zoneSchema.optional(),
+  zone3: zoneSchema.optional(),
+  zone4: zoneSchema.optional(),
+});
+
+/**
+ * The X12 Time Reader: an X12 date (element 373), time (element 337) and time
+ * code (element 623), read together by `parseX12DateTime`, and optionally a
+ * `DTP` value (an element 1251 value and its 1250 qualifier) read by
+ * `parseX12DateTimePeriod`. `zone` to `zone4` are zones the reader named, to
+ * read a local time in. Every field is optional because any of the three
+ * elements may be empty; one of the date, the time, or the `DTP` value is
+ * needed, or the widget has nothing to read.
+ */
+export const showX12TimeReaderInput = z
+  .object({
+    date: z.string().min(1).max(64).optional(),
+    time: z.string().min(1).max(64).optional(),
+    timeCode: ediCodeSchema.optional(),
+    zone: zoneSchema.optional(),
+    zone2: zoneSchema.optional(),
+    zone3: zoneSchema.optional(),
+    zone4: zoneSchema.optional(),
+    format: ediCodeSchema.optional(),
+    value: z.string().min(1).max(64).optional(),
+    yearWindow: yearWindowSchema.optional(),
+  })
+  .refine((v) => v.date !== undefined || v.time !== undefined || v.value !== undefined, {
+    message: "Send a date, a time or a DTP value.",
+  });
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -358,7 +417,9 @@ export type DoxToolName =
   | "showPunctualityBoard"
   | "showEtaDrift"
   | "showDepartureBoard"
-  | "showZonePlanner";
+  | "showZonePlanner"
+  | "showDtmDecoder"
+  | "showX12TimeReader";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -379,6 +440,8 @@ export const DOX_TOOL_INPUTS = {
   showEtaDrift: showEtaDriftInput,
   showDepartureBoard: showDepartureBoardInput,
   showZonePlanner: showZonePlannerInput,
+  showDtmDecoder: showDtmDecoderInput,
+  showX12TimeReader: showX12TimeReaderInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -514,6 +577,20 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what time it is in several places at once, or wants to find or propose a meeting time across zones, or asks which of their zones changes clocks first",
     args: "zones (1 to 8 IANA ids, in the order to show them), time (optional UTC instant ending in Z, such as 2026-03-08T06:45:00Z, that the slider shifts from; omit it to start at now, rounded forward to the next 5 minutes). Never invent a zone.",
   },
+  {
+    name: "showDtmDecoder",
+    purpose:
+      "A UN/EDIFACT DTM segment or value decoded by parseEdifactDtm against its 2379 format code: the members the code states, whether the offset is stated, not stated or zone text, which is not an offset, the instant an offsetless value names in each zone the reader chooses, and the value written back by formatEdifactDtm.",
+    when: "the reader asks what a UN/EDIFACT DTM segment, value or 2379 format code such as 203, 303 or 718 means, whether it carries an offset, or what instant it names",
+    args: "input (a whole DTM segment such as DTM+137:202406151430:203' or the bare value such as 202406151430; at most 64 characters), format (the 2379 format code; needed with a bare value), yearWindow (only for a two-digit-year code: rolling, or the first year of the hundred-year window such as 2000; never assume it: ask), zone1 to zone4 (optional IANA ids to read an offsetless value in; only zones the reader named: never choose one from a port, a place, a partner or an abbreviation).",
+  },
+  {
+    name: "showX12TimeReader",
+    purpose:
+      "An X12 date, time and time code read together by parseX12DateTime (elements 373, 337 and 623, as AT7, G62 and DTM carry them): whether the offset is stated, a zone is named with no offset, or nothing is stated, the instant once a stated offset or a zone the reader picks fixes it, and the date and time written back by formatX12DateTimePeriod. A DTP value (a 1250 qualifier and an element 1251 value) is read by parseX12DateTimePeriod.",
+    when: "the reader asks what an X12 date, time or time code means, what a 623 time code such as ET, LT, UT or 13 states, what instant the date, time and time code of an AT7, G62 or DTM name, or what a DTP value under a 1250 qualifier such as D8, RD8 or RTM means",
+    args: "date (element 373 as sent, such as 20240615; leave out when only a time is sent), time (element 337 as sent, such as 1430; leave out when only a date is sent), timeCode (optional element 623 time code such as ET, LT, UT or 13, exactly as sent), zone, zone2, zone3 and zone4 (optional IANA ids to read a local time in; only zones the reader named: never choose one from the time code, a place or a partner), format and value (a DTP value: the 1250 qualifier such as RD8, and the element 1251 value such as 20240615-20240620), yearWindow (only for a two-digit-year qualifier: rolling, or the first year of the window; never assume it: ask).",
+  },
 ];
 
 /**
@@ -594,6 +671,14 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[17].purpose,
     inputSchema: showZonePlannerInput,
   }),
+  showDtmDecoder: tool({
+    description: DOX_TOOL_DOCS[18].purpose,
+    inputSchema: showDtmDecoderInput,
+  }),
+  showX12TimeReader: tool({
+    description: DOX_TOOL_DOCS[19].purpose,
+    inputSchema: showX12TimeReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -635,6 +720,8 @@ export const ENABLED_TOOL_NAMES = [
   "showEtaDrift",
   "showDepartureBoard",
   "showZonePlanner",
+  "showDtmDecoder",
+  "showX12TimeReader",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

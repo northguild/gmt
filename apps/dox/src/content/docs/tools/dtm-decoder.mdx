@@ -1,0 +1,43 @@
+---
+title: DTM Decoder
+description: "Paste a UN/EDIFACT DTM segment, or a value and its 2379 format code. parseEdifactDtm shows what the value states, says whether its offset is stated, and reads an offsetless value in the zones you choose."
+industries: [intermodal]
+---
+
+import DtmDecoder from "../../../components/DtmDecoder.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="UN/EDIFACT DTM dates and times">
+
+<Fragment slot="keypoint">
+
+A `DTM` value means nothing without its format code, and most codes carry no offset. A value with no offset is a local time at a place the value does not name. It is not UTC.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Paste a UN/EDIFACT `DTM` segment, or type a value and its format code (data element 2379). The tool takes the value apart field by field, says what it states, and reads an offsetless value in the zones you choose. A value means nothing without its code, and most codes carry no offset: [`parseEdifactDtm`](/reference/intermodal/parse/parseEdifactDtm/) reads the value, and everything on the page is what it returned.
+
+</Fragment>
+
+<DtmDecoder fullbleed />
+
+<Fragment slot="after">
+
+**How a segment is split.** The tool splits a segment with the UN/EDIFACT default service characters and reads the three components of the `DTM` composite. The function qualifier is shown as sent and never interpreted. A custom `UNA` service string is not read. Only a segment is un-released: a bare value reaches the library as typed, so a `?` left in it is refused, and the reason says so.
+
+**The three verdicts.** The offset is stated, as with `205`, `208` or a `303` value ending in `+02`, `UTC` or `GMT`. The offset is not stated, as with `203`, a date or a period. Or the value carries zone text: in a `ZZZ` field, any other three upper-case letters, such as `CET`, are zone text with no offset. Anything else in the field is `NO SIGNAL`.
+
+**Why the zones are yours.** The library maps no place to a zone, so the four zones are your picks. The `203` and `CET` presets open with four example zones, and the value does not say any of them. Each row calls `resolveLocal` with `disambiguation: "reject"`: a time the clock shows twice, or never, is not resolved, and the row says why.
+
+**The functions.** [`formatEdifactDtm`](/reference/intermodal/format/formatEdifactDtm/) writes the value back, [`isValidEdifactDtmFormat`](/reference/intermodal/validate/isValidEdifactDtmFormat/) tells an unknown code from a bad value, and [`resolveLocal`](/reference/instant/convert/resolveLocal/) turns a local time into an instant in a zone you name. The rules are in [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/).
+
+**Worth trying:** [a `CET` value](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22DTM%2B137%3A202406151430CET%3A303%27%22%7D) —
+the verdict says `CET` is zone text, not an offset. Pick a zone in the table and that row reads the same digits there: an instant, the offset in force, and the value written as a `205`. The written-back section stays `NO SIGNAL` whichever zone you pick, because zone text has no offset to write. Then [a two-digit year with no window](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22240615%22%2C%22format%22%3A%22101%22%7D) —
+the result is `NO SIGNAL`, with the reason. [The same value with a window from 2000](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22240615%22%2C%22format%22%3A%22101%22%2C%22yearWindow%22%3A%222000%22%7D)
+reads as 2024.
+
+</Fragment>
+
+</ToolLayout>

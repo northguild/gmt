@@ -361,7 +361,7 @@ export const EXAMPLE_AREAS = [
   { id: "zones", label: "Zones and DST" },
   { id: "intervals", label: "Intervals" },
   { id: "transport", label: "Transport" },
-  { id: "intermodal", label: "Intermodal and billing" },
+  { id: "intermodal", label: "Intermodal, billing and EDI" },
 ] as const;
 
 export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -487,6 +487,27 @@ export const CHAT_STARTERS: readonly {
       issueDays: 30,
       disputeDays: 30,
       resolutionDays: 30,
+    },
+  },
+  {
+    text: "An EDIFACT DTM says 202406151430 with format code 203. What instant is that in New York?",
+    widget: "showDtmDecoder",
+    area: "intermodal",
+    // The question names New York, so the seed names it and the widget shows an
+    // instant. Format code 203 does not choose the zone.
+    args: { input: "202406151430", format: "203", zone1: "America/New_York" },
+  },
+  {
+    text: "X12 date 20240615, time 1430, time code ET, read in New York: what instant is that?",
+    widget: "showX12TimeReader",
+    area: "intermodal",
+    // The question names New York, so the seed names it and the widget shows an
+    // instant. ET names a zone and states no offset; it does not choose this one.
+    args: {
+      date: "20240615",
+      time: "1430",
+      timeCode: "ET",
+      zone: "America/New_York",
     },
   },
   {
