@@ -12,6 +12,10 @@ import { demurrageClock } from "../intermodal/calculate/demurrageClock";
 import { freeTimeExpiry } from "../intermodal/calculate/freeTimeExpiry";
 import { multimodalETA } from "../intermodal/calculate/multimodalETA";
 import { bolTimestamp } from "../intermodal/format/bolTimestamp";
+import { formatEdifactDtm } from "../intermodal/format/formatEdifactDtm";
+import { formatEpcisEvent } from "../intermodal/format/formatEpcisEvent";
+import { parseEpcisEvent } from "../intermodal/parse/parseEpcisEvent";
+import { isValidEpcisEvent } from "../intermodal/validate/isValidEpcisEvent";
 import { intersectIntervals } from "../interval/calculate/intersectIntervals";
 import { mergeIntervals } from "../interval/calculate/mergeIntervals";
 import { splitIntervalAt } from "../interval/calculate/splitIntervalAt";
@@ -350,6 +354,57 @@ describe("intermodal/ reads a minute-rounded offset as its zone's real offset", 
       expect(clock(first, second)).toEqual({ start: first, end: second });
       // An end before its start is a data error.
       expect(clock(second, first)).toBeNull();
+    },
+  );
+
+  // EPCIS has no field for a zone, so `formatEpcisEvent` reads only the instant: the zone's real
+  // one, written in UTC.
+  cases(
+    "formatEpcisEvent writes $zoned as its real instant, $instant",
+    ({ zoned, instant }: { zoned: string; instant: string }) => {
+      expect(formatEpcisEvent({ instant: zoned, offset: "+00:00" })).toEqual({
+        eventTime: instant,
+        eventTimeZoneOffset: "+00:00",
+      });
+    },
+  );
+
+  // GS1's `eventTime` grammar ends at `Z` or the offset: a bracketed zone is not an event time,
+  // so there is no rounded offset for the parser to resolve. The bare instant is read as written;
+  // at +00:00 its local clock is the same digits.
+  cases(
+    "parseEpcisEvent and isValidEpcisEvent refuse the bracketed $zoned and read the bare $instant",
+    ({ zoned, instant }: { zoned: string; instant: string }) => {
+      const bracketed = { eventTime: zoned, eventTimeZoneOffset: "+00:00" };
+      const bare = { eventTime: instant, eventTimeZoneOffset: "+00:00" };
+      expect(parseEpcisEvent(bracketed)).toBeNull();
+      expect(isValidEpcisEvent(bracketed)).toBe(false);
+      expect(parseEpcisEvent(bare)).toEqual({
+        instant,
+        offset: "+00:00",
+        local: instant.slice(0, -1),
+      });
+      expect(isValidEpcisEvent(bare)).toBe(true);
+    },
+  );
+
+  // A 2379 offset is `ZHHMM` (205, 208) or the hours-only `ZZZ` (303, 304): no mask holds the
+  // seconds of the zone's real offset (−00:44:30, −04:56:02), and nothing is rounded to fit. The
+  // same instant in `Z` form is written, on the UTC clock: `CCYYMMDDHHMMSS` is the instant's own
+  // digits, `+00` its offset under 304 and `+0000` under 208.
+  cases(
+    "formatEdifactDtm returns '' for $zoned under 205, 208, 303 and 304, and writes $instant under 208 and 304",
+    ({ zoned, instant }: { zoned: string; instant: string }) => {
+      expect(formatEdifactDtm(zoned, "205")).toBe("");
+      expect(formatEdifactDtm(zoned, "208")).toBe("");
+      expect(formatEdifactDtm(zoned, "303")).toBe("");
+      expect(formatEdifactDtm(zoned, "304")).toBe("");
+      expect(formatEdifactDtm(instant, "304")).toBe(
+        `${instant.replace(/[-T:Z]/g, "")}+00`,
+      );
+      expect(formatEdifactDtm(instant, "208")).toBe(
+        `${instant.replace(/[-T:Z]/g, "")}+0000`,
+      );
     },
   );
 });

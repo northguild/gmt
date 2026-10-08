@@ -2496,6 +2496,1230 @@
     ]
   },
   {
+    "url": "/reference/intermodal/format/formatEdifactDtm",
+    "page": "/reference/intermodal/format/formatEdifactDtm",
+    "name": "formatEdifactDtm",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatEdifactDtm(value: string, formatQualifier: string, options?: TwoDigitYearOptions): string",
+    "description": "Write an ISO 8601 value as a UN/EDIFACT `DTM` value (data element 2380) in a format code (data element 2379). The inverse of `parseEdifactDtm`: what one writes, the other reads back.",
+    "sourcePath": "packages/gmt/src/intermodal/format/formatEdifactDtm.ts",
+    "examples": [
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00\", \"203\")",
+        "result": "\"202406151430\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15\", \"102\")",
+        "result": "\"20240615\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00+02:00\", \"205\")",
+        "result": "\"202406151430+0200\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00+02:00\", \"303\")",
+        "result": "\"202406151430+02\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00Z\", \"303\")",
+        "result": "\"202406151430+00\" (never \"UTC\")"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00+05:30\", \"303\")",
+        "result": "\"\" (ZZZ holds whole hours; use 205)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00\", \"303\")",
+        "result": "\"\" (a local time has no offset to write)"
+      },
+      {
+        "call": "formatEdifactDtm(\"14:30:00\", \"401\")",
+        "result": "\"1430\" (seconds of :00 are dropped)"
+      },
+      {
+        "call": "formatEdifactDtm(\"14:30:45\", \"401\")",
+        "result": "\"\" (the mask has no seconds; use 402)"
+      },
+      {
+        "call": "formatEdifactDtm(\"14:30:45+02:00\", \"404\")",
+        "result": "\"143045+02\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:45+05:30\", \"208\")",
+        "result": "\"20240615143045+0530\""
+      },
+      {
+        "call": "formatEdifactDtm(\"14:30:45+02:00\", \"209\")",
+        "result": "\"143045+0200\""
+      },
+      {
+        "call": "formatEdifactDtm(\"+02:00\", \"406\")",
+        "result": "\"+0200\""
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15/2024-06-20\", \"718\")",
+        "result": "\"2024061520240620\" (no hyphen)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-20/2024-06-15\", \"718\")",
+        "result": "\"\" (the end precedes the start)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15\", \"101\", { yearWindow: 2000 })",
+        "result": "\"240615\""
+      },
+      {
+        "call": "formatEdifactDtm(\"1969-01-01\", \"101\", { yearWindow: 2000 })",
+        "result": "\"\" (1969 is outside 2000–2099)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15\", \"101\")",
+        "result": "\"\" (a two-digit year with no window)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15\", \"102\", { yearWindow: 1950 })",
+        "result": "\"20240615\" (a four-digit year ignores the window)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15T14:30:00\", \"102\")",
+        "result": "\"\" (a date-time given to a date code)"
+      },
+      {
+        "call": "formatEdifactDtm(\"2024-06-15\", \"602\")",
+        "result": "\"\" (an unsupported code)"
+      },
+      {
+        "call": "formatEdifactDtm(\"not a date\", \"203\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/format/formatEpcisEvent",
+    "page": "/reference/intermodal/format/formatEpcisEvent",
+    "name": "formatEpcisEvent",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatEpcisEvent(value: OffsetInstant): EpcisEventTime | null",
+    "description": "Write an instant-plus-offset pair as the two required time fields of a GS1 EPCIS 2.0 event.",
+    "sourcePath": "packages/gmt/src/intermodal/format/formatEpcisEvent.ts",
+    "examples": [
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"-05:00\" })",
+        "result": "{ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-05:00\" }"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T09:30:00-05:00\", offset: \"-05:00\" })",
+        "result": "{ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-05:00\" } (the instant is written in UTC)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00.120Z\", offset: \"+05:45\" })",
+        "result": "{ eventTime: \"2024-06-15T14:30:00.12Z\", eventTimeZoneOffset: \"+05:45\" }"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"-04:00\", timeZone: \"America/New_York\" })",
+        "result": "{ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-04:00\" } (EPCIS carries no zone)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"-00:00\" })",
+        "result": "{ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"+00:00\" }"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"+14:30\" })",
+        "result": "null (past the range GS1 allows)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"+05:30:00\" })",
+        "result": "null (GS1 offsets have no seconds)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00Z\", offset: \"Z\" })",
+        "result": "null (a designator, not an offset)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"2024-06-15T14:30:00\", offset: \"-05:00\" })",
+        "result": "null (no offset: not an instant)"
+      },
+      {
+        "call": "formatEpcisEvent({ instant: \"+010000-01-01T00:00:00Z\", offset: \"-05:00\" })",
+        "result": "null (eventTime has a four-digit year)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/format/formatX12DateTimePeriod",
+    "page": "/reference/intermodal/format/formatX12DateTimePeriod",
+    "name": "formatX12DateTimePeriod",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatX12DateTimePeriod(value: string, formatQualifier: string, options?: TwoDigitYearOptions): string",
+    "description": "Write an ISO 8601 date, time, date-time or interval as an X12 Date Time Period (data element 1251) in a format qualifier (data element 1250): the inverse of `parseX12DateTimePeriod`.",
+    "sourcePath": "packages/gmt/src/intermodal/format/formatX12DateTimePeriod.ts",
+    "examples": [
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15\", \"D8\")",
+        "result": "\"20240615\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15\", \"DB\")",
+        "result": "\"06152024\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15T14:30\", \"DT\")",
+        "result": "\"202406151430\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15T14:30:45\", \"RTS\")",
+        "result": "\"20240615143045\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"14:30\", \"TM\")",
+        "result": "\"1430\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15/2024-06-20\", \"RD8\")",
+        "result": "\"20240615-20240620\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15/2024-06-20T16:00\", \"DDT\")",
+        "result": "\"20240615-202406201600\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"09:00/17:00\", \"RTM\")",
+        "result": "\"0900-1700\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"22:00/06:00\", \"RTM\")",
+        "result": "\"2200-0600\" (a window that crosses midnight)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15\", \"D6\", { yearWindow: 2000 })",
+        "result": "\"240615\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-14\", \"TU\", { yearWindow: 2000 })",
+        "result": "\"24166\""
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-14\", \"TC\")",
+        "result": "\"166\" (the year is dropped)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-14\", \"EH\")",
+        "result": "\"4166\" (only the year's last digit is kept)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15\", \"D6\")",
+        "result": "\"\" (two-digit year, no window)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"1969-01-01\", \"D6\", { yearWindow: 2000 })",
+        "result": "\"\" (the year is outside the window)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15T14:30:45\", \"DT\")",
+        "result": "\"\" (DT has no seconds field)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15T14:30Z\", \"DT\")",
+        "result": "\"\" (no 1250 code carries an offset)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15T14:30\", \"D8\")",
+        "result": "\"\" (a date-time under a date code)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-20/2024-06-15\", \"RD8\")",
+        "result": "\"\" (the end precedes the start)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2024-06-15\", \"UN\")",
+        "result": "\"\" (unstructured: nothing to write)"
+      },
+      {
+        "call": "formatX12DateTimePeriod(\"2023-02-29\", \"D8\")",
+        "result": "\"\" (not a real date)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseEdifactDtm",
+    "page": "/reference/intermodal/parse/parseEdifactDtm",
+    "name": "parseEdifactDtm",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseEdifactDtm(value: string, formatQualifier: string, options?: TwoDigitYearOptions): EdiDateTime | null",
+    "description": "Parse the value of a UN/EDIFACT `DTM` segment against its format code.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseEdifactDtm.ts",
+    "examples": [
+      {
+        "call": "parseEdifactDtm(\"202406151430\", \"203\")",
+        "result": "{ local: \"2024-06-15T14:30:00\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"20240615\", \"102\")",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430+0200\", \"205\")",
+        "result": "{ local: \"2024-06-15T14:30:00\", offset: \"+02:00\", instant: \"2024-06-15T12:30:00Z\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406150030+0200\", \"205\")",
+        "result": "{ local: \"2024-06-15T00:30:00\", offset: \"+02:00\", instant: \"2024-06-14T22:30:00Z\" } (the instant is on the UTC day before)"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430+02\", \"303\")",
+        "result": "{ local: \"2024-06-15T14:30:00\", offset: \"+02:00\", instant: \"2024-06-15T12:30:00Z\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430UTC\", \"303\")",
+        "result": "{ local: \"2024-06-15T14:30:00\", offset: \"+00:00\", instant: \"2024-06-15T14:30:00Z\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430GMT\", \"303\")",
+        "result": "{ local: \"2024-06-15T14:30:00\", offset: \"+00:00\", instant: \"2024-06-15T14:30:00Z\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430CET\", \"303\")",
+        "result": "{ local: \"2024-06-15T14:30:00\", zone: \"CET\" } (an undefined abbreviation: no offset)"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430+24\", \"303\")",
+        "result": "null (a broken offset, not a zone name)"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430Z\", \"303\")",
+        "result": "null (a lone Z: the mask has three zone characters)"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430cet\", \"303\")",
+        "result": "null (lower case: every published example is upper case)"
+      },
+      {
+        "call": "parseEdifactDtm(\"20240615143045+0200\", \"208\")",
+        "result": "{ local: \"2024-06-15T14:30:45\", offset: \"+02:00\", instant: \"2024-06-15T12:30:45Z\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"143045+0200\", \"209\")",
+        "result": "{ time: \"14:30:45\", offset: \"+02:00\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"202406151430?+02\", \"303\")",
+        "result": "null (the release character is the caller's to remove)"
+      },
+      {
+        "call": "parseEdifactDtm(\"143045+02\", \"404\")",
+        "result": "{ time: \"14:30:45\", offset: \"+02:00\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"+0200\", \"406\")",
+        "result": "{ offset: \"+02:00\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"2024061520240620\", \"718\")",
+        "result": "{ date: \"2024-06-15\", periodEnd: { date: \"2024-06-20\" } }"
+      },
+      {
+        "call": "parseEdifactDtm(\"20240615-20240620\", \"718\")",
+        "result": "null (a period is transmitted without a hyphen)"
+      },
+      {
+        "call": "parseEdifactDtm(\"2024062020240615\", \"718\")",
+        "result": "null (the end precedes the start)"
+      },
+      {
+        "call": "parseEdifactDtm(\"240615\", \"101\", { yearWindow: 2000 })",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"690101\", \"101\", { yearWindow: 1969 })",
+        "result": "{ date: \"1969-01-01\" }"
+      },
+      {
+        "call": "parseEdifactDtm(\"240615\", \"101\")",
+        "result": "null (a two-digit year with no window)"
+      },
+      {
+        "call": "parseEdifactDtm(\"20240615\", \"102\", { yearWindow: 1950 })",
+        "result": "{ date: \"2024-06-15\" } (a four-digit year ignores the window)"
+      },
+      {
+        "call": "parseEdifactDtm(\"2024\", \"602\")",
+        "result": "null (an unsupported code)"
+      },
+      {
+        "call": "parseEdifactDtm(\"20230229\", \"102\")",
+        "result": "null (2023 has no 29 February)"
+      },
+      {
+        "call": "parseEdifactDtm(\"not a date\", \"203\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseEpcisEvent#epcisinstant",
+    "page": "/reference/intermodal/parse/parseEpcisEvent",
+    "name": "EpcisInstant",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "type",
+    "signature": "",
+    "description": "When a GS1 EPCIS 2.0 event happened, read three ways: the instant, the UTC offset in force where it happened, and the local wall clock there. The result of `parseEpcisEvent`.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseEpcisEvent.ts",
+    "examples": [],
+    "inlineOn": "parseEpcisEvent",
+    "members": [
+      {
+        "name": "instant",
+        "description": "The moment the event happened, as an ISO 8601 instant in UTC ending in `Z` (`2024-06-15T14:30:00Z`). It orders events from every site on one timeline. A fraction is kept to the nanosecond and written without trailing zeros. An `eventTime` whose own offset carries it across either end of years 0000–9999 gives an instant with a sign and a six-digit year."
+      },
+      {
+        "name": "offset",
+        "description": "The UTC offset in force where the event happened, `±HH:MM`: the event's `eventTimeZoneOffset`, with `-00:00` written as `+00:00`. It is an offset and not a zone, so it says nothing about the local time of any other event."
+      },
+      {
+        "name": "local",
+        "description": "The date and time on the local clock where the event happened, `YYYY-MM-DDTHH:MM:SS[.fraction]` with no offset: `instant` shown at `offset`. Its date can be the day before or after the UTC date. A year outside 0000–9999, reachable only within 14 hours of either end of the four-digit range, is written with a sign and six digits."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseEpcisEvent",
+    "page": "/reference/intermodal/parse/parseEpcisEvent",
+    "name": "parseEpcisEvent",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseEpcisEvent(event: EpcisEventTime): EpcisInstant | null",
+    "description": "Read the two required time fields of a GS1 EPCIS 2.0 event as an instant, the UTC offset in force where the event happened, and the local wall clock there.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseEpcisEvent.ts",
+    "examples": [
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "{ instant: \"2024-06-15T14:30:00Z\", offset: \"-05:00\", local: \"2024-06-15T09:30:00\" }"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T23:30:00Z\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "{ instant: \"2024-06-15T23:30:00Z\", offset: \"+02:00\", local: \"2024-06-16T01:30:00\" } (the local date is the next day)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T10:00:00+02:00\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "{ instant: \"2024-06-15T08:00:00Z\", offset: \"+02:00\", local: \"2024-06-15T10:00:00\" }"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T10:00:00+02:00\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "{ instant: \"2024-06-15T08:00:00Z\", offset: \"-05:00\", local: \"2024-06-15T03:00:00\" } (the two offsets need not agree)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00.123456789Z\", eventTimeZoneOffset: \"+05:45\" })",
+        "result": "{ instant: \"2024-06-15T14:30:00.123456789Z\", offset: \"+05:45\", local: \"2024-06-15T20:15:00.123456789\" }"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-00:00\" })",
+        "result": "{ instant: \"2024-06-15T14:30:00Z\", offset: \"+00:00\", local: \"2024-06-15T14:30:00\" }"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\" })",
+        "result": "null (eventTimeZoneOffset is required)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"Z\" })",
+        "result": "null (a designator, not an offset)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"+0200\" })",
+        "result": "null (no colon)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30Z\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "null (seconds are required)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15 14:30:00Z\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "null (a space separator)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-02-30T14:30:00Z\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "null (30 February)"
+      },
+      {
+        "call": "parseEpcisEvent({ eventTime: \"2024-06-15T14:30:00.1234567891Z\", eventTimeZoneOffset: \"+02:00\" })",
+        "result": "null (finer than a nanosecond)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseX12DateTime#x12datetime",
+    "page": "/reference/intermodal/parse/parseX12DateTime",
+    "name": "X12DateTime",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "type",
+    "signature": "",
+    "description": "What the date, time and time code of an X12 segment state together: the result of `parseX12DateTime`.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseX12DateTime.ts",
+    "examples": [],
+    "inlineOn": "parseX12DateTime",
+    "members": [
+      {
+        "name": "date",
+        "description": "The calendar date of the date element (373), `YYYY-MM-DD`. Absent when no date was sent: a segment may carry a time alone."
+      },
+      {
+        "name": "time",
+        "description": "The time of the time element (337), `HH:MM:SS` with a fraction of one or two digits when the element carried tenths or hundredths that are not zero. Absent when no time was sent: a segment may carry a date alone."
+      },
+      {
+        "name": "local",
+        "description": "The date and time together, `YYYY-MM-DDTHH:MM:SS[.f[f]]`, on the clock the segment was written on. It carries no offset: pass it and an IANA zone to `resolveLocal` to get the moment. Absent unless both a date and a time were sent."
+      },
+      {
+        "name": "offset",
+        "description": "The UTC offset the time code states, `±HH:MM`, for the codes `01`–`29`, `UT` and `GM`. Absent when no time code was sent and when the code names a zone."
+      },
+      {
+        "name": "instant",
+        "description": "The moment as a UTC instant ending in `Z`: `local` read at `offset`. Present exactly when `local` and `offset` both are, so a time alone has an `offset` and no instant: it is on no day. A `local` within its offset of either end of years 0000–9999 gives an instant outside them, written with a sign and a six-digit year."
+      },
+      {
+        "name": "zone",
+        "description": "X12's own name for the zone a lettered time code names: `Alaska`, `Central`, `Eastern`, `Hawaii-Aleutian`, `Mountain`, `Newfoundland`, `Pacific`, `Atlantic`, or `Local` for `LT`. It is a name, not an IANA identifier and not an offset. Absent when no time code was sent and when the code states an offset."
+      },
+      {
+        "name": "daylight",
+        "description": "Whether the lettered time code says daylight time: `true` for a `D` code (`ED`), `false` for an `S` code (`ES`), and `null` for a code that says neither (`ET`, `LT`), where the date decides. Present exactly when `zone` is."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseX12DateTime",
+    "page": "/reference/intermodal/parse/parseX12DateTime",
+    "name": "parseX12DateTime",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseX12DateTime(date?: string, time?: string, timeCode?: string): X12DateTime | null",
+    "description": "Read the date, time and time code of an X12 segment as one moment, or as much of one as the three elements state.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseX12DateTime.ts",
+    "examples": [
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\" } (no time code: local, not UTC)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\")",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"UT\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\", offset: \"+00:00\", instant: \"2024-06-15T14:30:00Z\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"20\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\", offset: \"-05:00\", instant: \"2024-06-15T19:30:00Z\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"2330\", \"24\")",
+        "result": "{ date: \"2024-06-15\", time: \"23:30:00\", local: \"2024-06-15T23:30:00\", offset: \"-01:00\", instant: \"2024-06-16T00:30:00Z\" } (the instant is on the next UTC day)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"ES\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\", zone: \"Eastern\", daylight: false } (a zone name: no offset)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"ET\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\", zone: \"Eastern\", daylight: null }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"LT\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00\", local: \"2024-06-15T14:30:00\", zone: \"Local\", daylight: null }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"143045\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:45\", local: \"2024-06-15T14:30:45\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"14300012\")",
+        "result": "{ date: \"2024-06-15\", time: \"14:30:00.12\", local: \"2024-06-15T14:30:00.12\" } (hundredths of a second)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"\", \"\")",
+        "result": "{ date: \"2024-06-15\" } (empty elements were not sent)"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"1430\")",
+        "result": "{ time: \"14:30:00\" } (a time alone: no date, so no local)"
+      },
+      {
+        "call": "parseX12DateTime(undefined, \"14300012\")",
+        "result": "{ time: \"14:30:00.12\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"1430\", \"UT\")",
+        "result": "{ time: \"14:30:00\", offset: \"+00:00\" } (an offset, and no instant: the time is on no day)"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"2330\", \"24\")",
+        "result": "{ time: \"23:30:00\", offset: \"-01:00\" }"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"1430\", \"ES\")",
+        "result": "{ time: \"14:30:00\", zone: \"Eastern\", daylight: false }"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"1430\", \"LT\")",
+        "result": "{ time: \"14:30:00\", zone: \"Local\", daylight: null }"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"\")",
+        "result": "null (neither a date nor a time)"
+      },
+      {
+        "call": "parseX12DateTime(\"\", \"\", \"UT\")",
+        "result": "null (a time code needs a time)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"\", \"ET\")",
+        "result": "null (a time code needs a time)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"1430\", \"EST\")",
+        "result": "null (not an element 623 code)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"2430\")",
+        "result": "null (hour 24)"
+      },
+      {
+        "call": "parseX12DateTime(\"20240615\", \"14304\")",
+        "result": "null (five digits is not an element 337 form)"
+      },
+      {
+        "call": "parseX12DateTime(\"20230229\", \"1430\")",
+        "result": "null (2023 has no 29 February)"
+      },
+      {
+        "call": "parseX12DateTime(\"240615\")",
+        "result": "null (the date element has a four-digit year)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/parseX12DateTimePeriod",
+    "page": "/reference/intermodal/parse/parseX12DateTimePeriod",
+    "name": "parseX12DateTimePeriod",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseX12DateTimePeriod(value: string, formatQualifier: string, options?: TwoDigitYearOptions): EdiDateTime | null",
+    "description": "Parse an X12 Date Time Period (data element 1251) against its format qualifier (data element 1250).",
+    "sourcePath": "packages/gmt/src/intermodal/parse/parseX12DateTimePeriod.ts",
+    "examples": [
+      {
+        "call": "parseX12DateTimePeriod(\"20240615\", \"D8\")",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"06152024\", \"DB\")",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"202406151430\", \"DT\")",
+        "result": "{ local: \"2024-06-15T14:30:00\" } (no offset: not UTC)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20240615143000\", \"RTS\")",
+        "result": "{ local: \"2024-06-15T14:30:00\" } (one date-time, not a range)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"1430\", \"TM\")",
+        "result": "{ time: \"14:30:00\" }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20240615-20240620\", \"RD8\")",
+        "result": "{ date: \"2024-06-15\", periodEnd: { date: \"2024-06-20\" } }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20240615-202406201600\", \"DDT\")",
+        "result": "{ date: \"2024-06-15\", periodEnd: { local: \"2024-06-20T16:00:00\" } }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"0900-1700\", \"RTM\")",
+        "result": "{ time: \"09:00:00\", periodEnd: { time: \"17:00:00\" } }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"2200-0600\", \"RTM\")",
+        "result": "{ time: \"22:00:00\", periodEnd: { time: \"06:00:00\" } } (a window that crosses midnight)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"166\", \"TC\")",
+        "result": "{ dayOfYear: 166 }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"24366\", \"TU\", { yearWindow: 2000 })",
+        "result": "{ date: \"2024-12-31\", dayOfYear: 366 }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"4166\", \"EH\")",
+        "result": "{ yearDigit: 4, dayOfYear: 166 }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"240615\", \"D6\", { yearWindow: 2000 })",
+        "result": "{ date: \"2024-06-15\" }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"990615\", \"D6\", { yearWindow: 1950 })",
+        "result": "{ date: \"1999-06-15\" }"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"240615\", \"D6\", { yearWindow: \"rolling\" })",
+        "result": "{ date: \"2024-06-15\" } (while the current UTC year is 1975–2074)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"240615\", \"D6\")",
+        "result": "null (two-digit year, no window)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"23366\", \"TU\", { yearWindow: 2000 })",
+        "result": "null (2023 has 365 days)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"2024061520240620\", \"RD8\")",
+        "result": "null (X12 transmits the hyphen)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20240620-20240615\", \"RD8\")",
+        "result": "null (the end precedes the start)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20230229\", \"D8\")",
+        "result": "null (not a real date)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"20240615\", \"UN\")",
+        "result": "null (unstructured: never guessed)"
+      },
+      {
+        "call": "parseX12DateTimePeriod(\"202406\", \"CM\")",
+        "result": "null (a code GMT does not read)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/x12TimeCode#x12timecodeoffset",
+    "page": "/reference/intermodal/parse/x12TimeCode",
+    "name": "X12TimeCodeOffset",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "type",
+    "signature": "",
+    "description": "An X12 time code that resolves to a UTC offset: the numeric codes `01`–`29` and `UT`, whose offset the standard states, and `GM`, which GMT reads as UTC. Tell it from `X12TimeCodeZone` by its `offset` member.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/x12TimeCode.ts",
+    "examples": [],
+    "inlineOn": "x12TimeCode",
+    "members": [
+      {
+        "name": "offset",
+        "description": "The offset from UTC, `±HH:MM`. `UT` and `GM` are `+00:00`. `parseX12DateTime` pairs it with a segment's date and time to give the instant."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/x12TimeCode#x12timecodezone",
+    "page": "/reference/intermodal/parse/x12TimeCode",
+    "name": "X12TimeCodeZone",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "type",
+    "signature": "",
+    "description": "An X12 time code that names a zone and states no offset: the lettered codes other than `GM` and `UT`. Tell it from `X12TimeCodeOffset` by its `zone` member.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/x12TimeCode.ts",
+    "examples": [],
+    "inlineOn": "x12TimeCode",
+    "members": [
+      {
+        "name": "zone",
+        "description": "X12's own name for the zone, as its definition writes it: `Alaska`, `Central`, `Eastern`, `Hawaii-Aleutian`, `Mountain`, `Newfoundland`, `Pacific` or `Atlantic`, and `Local` for `LT`. It is a name, not an IANA identifier and not an offset: the caller maps it to a zone."
+      },
+      {
+        "name": "daylight",
+        "description": "Whether the code says daylight time. `true` for a `D` code (`ED`), `false` for an `S` code (`ES`), and `null` for a code that says neither (`ET`, `LT`), where the date decides."
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/parse/x12TimeCode#x12timecodemeaning",
+    "page": "/reference/intermodal/parse/x12TimeCode",
+    "name": "X12TimeCodeMeaning",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "type",
+    "signature": "",
+    "description": "What an X12 data element 623 time code states: an offset from UTC, or a zone name with no offset. A code is never both, so `\"offset\" in meaning` tells the two apart.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/x12TimeCode.ts",
+    "examples": [],
+    "inlineOn": "x12TimeCode"
+  },
+  {
+    "url": "/reference/intermodal/parse/x12TimeCode",
+    "page": "/reference/intermodal/parse/x12TimeCode",
+    "name": "x12TimeCode",
+    "namespace": "intermodal",
+    "module": "parse",
+    "kind": "function",
+    "signature": "x12TimeCode(timeCode: string): X12TimeCodeMeaning | null",
+    "description": "Read an X12 time code (data element 623) as what it states: an offset from UTC, or the name of a zone.",
+    "sourcePath": "packages/gmt/src/intermodal/parse/x12TimeCode.ts",
+    "examples": [
+      {
+        "call": "x12TimeCode(\"ES\")",
+        "result": "{ zone: \"Eastern\", daylight: false }"
+      },
+      {
+        "call": "x12TimeCode(\"ED\")",
+        "result": "{ zone: \"Eastern\", daylight: true }"
+      },
+      {
+        "call": "x12TimeCode(\"ET\")",
+        "result": "{ zone: \"Eastern\", daylight: null } (the date decides)"
+      },
+      {
+        "call": "x12TimeCode(\"LT\")",
+        "result": "{ zone: \"Local\", daylight: null } (the place is elsewhere in the message)"
+      },
+      {
+        "call": "x12TimeCode(\"UT\")",
+        "result": "{ offset: \"+00:00\" }"
+      },
+      {
+        "call": "x12TimeCode(\"GM\")",
+        "result": "{ offset: \"+00:00\" }"
+      },
+      {
+        "call": "x12TimeCode(\"01\")",
+        "result": "{ offset: \"+01:00\" }"
+      },
+      {
+        "call": "x12TimeCode(\"13\")",
+        "result": "{ offset: \"-12:00\" } (the 13–24 run counts down)"
+      },
+      {
+        "call": "x12TimeCode(\"24\")",
+        "result": "{ offset: \"-01:00\" }"
+      },
+      {
+        "call": "x12TimeCode(\"27\")",
+        "result": "{ offset: \"+05:30\" }"
+      },
+      {
+        "call": "x12TimeCode(\"et\")",
+        "result": "null (matching is exact)"
+      },
+      {
+        "call": "x12TimeCode(\"30\")",
+        "result": "null (not a 623 code)"
+      },
+      {
+        "call": "x12TimeCode(\"\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidEdifactDtm",
+    "page": "/reference/intermodal/validate/isValidEdifactDtm",
+    "name": "isValidEdifactDtm",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidEdifactDtm(value: string, formatQualifier: string, options?: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that fits its format code (data element 2379).",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidEdifactDtm.ts",
+    "examples": [
+      {
+        "call": "isValidEdifactDtm(\"202406151430\", \"203\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtm(\"202406151430+02\", \"303\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtm(\"202406151430CET\", \"303\")",
+        "result": "true (zone text the parser returns unread)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"202406151430+24\", \"303\")",
+        "result": "false (a broken offset, not a zone name)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"202406151430Z\", \"303\")",
+        "result": "false (a lone Z: the mask has three zone characters)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"20240615143045+0200\", \"208\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtm(\"2024061520240620\", \"718\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtm(\"20240615-20240620\", \"718\")",
+        "result": "false (a period is transmitted without a hyphen)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"2024062020240615\", \"718\")",
+        "result": "false (the end precedes the start)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"240615\", \"101\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtm(\"240615\", \"101\")",
+        "result": "false (a two-digit year with no window)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"20240615\", \"102\", { yearWindow: 1950 })",
+        "result": "true (a four-digit year ignores the window)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"20230229\", \"102\")",
+        "result": "false (2023 has no 29 February)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"202406151430\", \"204\")",
+        "result": "false (a 203 value under 204)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"2024\", \"602\")",
+        "result": "false (an unsupported code)"
+      },
+      {
+        "call": "isValidEdifactDtm(\"\", \"102\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidEdifactDtmFormat",
+    "page": "/reference/intermodal/validate/isValidEdifactDtmFormat",
+    "name": "isValidEdifactDtmFormat",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidEdifactDtmFormat(formatQualifier: unknown): formatQualifier is EdifactDtmFormat",
+    "description": "Return true when `formatQualifier` is a UN/EDIFACT data element 2379 format code that `parseEdifactDtm` and `formatEdifactDtm` implement.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidEdifactDtmFormat.ts",
+    "examples": [
+      {
+        "call": "isValidEdifactDtmFormat(\"203\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"718\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"208\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"602\")",
+        "result": "false (a partial value: not supported)"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"720\")",
+        "result": "false (a weekday period: not supported)"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"801\")",
+        "result": "false (a quantity: not supported)"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(\"0203\")",
+        "result": "false (matching is exact)"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(203)",
+        "result": "false (a code is a string)"
+      },
+      {
+        "call": "isValidEdifactDtmFormat(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidEpcisEvent",
+    "page": "/reference/intermodal/validate/isValidEpcisEvent",
+    "name": "isValidEpcisEvent",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidEpcisEvent(event: unknown): boolean",
+    "description": "Validate whether a value carries the two required time fields of a GS1 EPCIS 2.0 event, each in the grammar GS1 publishes for it.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidEpcisEvent.ts",
+    "examples": [
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T10:00:00+02:00\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "true (the two offsets need not agree)"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30:00.123456789Z\", eventTimeZoneOffset: \"+14:00\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\" })",
+        "result": "false (eventTimeZoneOffset is required)"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"Z\" })",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30:00Z\", eventTimeZoneOffset: \"+0200\" })",
+        "result": "false (no colon)"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-06-15T14:30Z\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "isValidEpcisEvent({ eventTime: \"2024-02-30T14:30:00Z\", eventTimeZoneOffset: \"-05:00\" })",
+        "result": "false (30 February)"
+      },
+      {
+        "call": "isValidEpcisEvent(\"2024-06-15T14:30:00Z\")",
+        "result": "false (not an event)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12DateTime",
+    "page": "/reference/intermodal/validate/isValidX12DateTime",
+    "name": "isValidX12DateTime",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidX12DateTime(date?: string, time?: string, timeCode?: string): boolean",
+    "description": "Return true when the date, time and time code of an X12 segment are values `parseX12DateTime` reads: element 373 (Date), element 337 (Time) and element 623 (Time Code), as `AT7`, `G62` and `DTM-02`/`03`/`04` carry them.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidX12DateTime.ts",
+    "examples": [
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"1430\", \"ET\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"1430\")",
+        "result": "true (no time code: a local time)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\")",
+        "result": "true (a date alone)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"14300012\", \"UT\")",
+        "result": "true (hundredths of a second)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"\", \"\")",
+        "result": "true (empty elements were not sent)"
+      },
+      {
+        "call": "isValidX12DateTime(\"\", \"1430\")",
+        "result": "true (a time alone)"
+      },
+      {
+        "call": "isValidX12DateTime(\"\", \"1430\", \"UT\")",
+        "result": "true (a time alone with its time code)"
+      },
+      {
+        "call": "isValidX12DateTime(\"\", \"\")",
+        "result": "false (neither a date nor a time)"
+      },
+      {
+        "call": "isValidX12DateTime(\"\", \"\", \"UT\")",
+        "result": "false (a time code needs a time)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"\", \"ET\")",
+        "result": "false (a time code needs a time)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"1430\", \"EST\")",
+        "result": "false (not an element 623 code)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20240615\", \"2430\")",
+        "result": "false (hour 24)"
+      },
+      {
+        "call": "isValidX12DateTime(\"20230229\", \"1430\")",
+        "result": "false (2023 has no 29 February)"
+      },
+      {
+        "call": "isValidX12DateTime(\"240615\")",
+        "result": "false (the date element has a four-digit year)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12DateTimePeriod",
+    "page": "/reference/intermodal/validate/isValidX12DateTimePeriod",
+    "name": "isValidX12DateTimePeriod",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidX12DateTimePeriod(value: string, formatQualifier: string, options?: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is an X12 Date Time Period (data element 1251) that `parseX12DateTimePeriod` reads under the format qualifier (data element 1250) `formatQualifier`.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidX12DateTimePeriod.ts",
+    "examples": [
+      {
+        "call": "isValidX12DateTimePeriod(\"20240615\", \"D8\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"20240615-20240620\", \"RD8\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"2200-0600\", \"RTM\")",
+        "result": "true (a window that crosses midnight)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"166\", \"TC\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"240615\", \"D6\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"240615\", \"D6\")",
+        "result": "false (two-digit year, no window)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"20230229\", \"D8\")",
+        "result": "false (not a real date)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"2024061520240620\", \"RD8\")",
+        "result": "false (X12 transmits the hyphen)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"20240620-20240615\", \"RD8\")",
+        "result": "false (the end precedes the start)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"20240615\", \"UN\")",
+        "result": "false (unstructured: never guessed)"
+      },
+      {
+        "call": "isValidX12DateTimePeriod(\"202406\", \"CM\")",
+        "result": "false (a code GMT does not read)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12DateTimePeriodFormat",
+    "page": "/reference/intermodal/validate/isValidX12DateTimePeriodFormat",
+    "name": "isValidX12DateTimePeriodFormat",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidX12DateTimePeriodFormat(formatQualifier: unknown): formatQualifier is X12DateTimePeriodFormat",
+    "description": "Return true when `formatQualifier` is an X12 data element 1250 (Date Time Period Format Qualifier) code that `parseX12DateTimePeriod` and `formatX12DateTimePeriod` name.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidX12DateTimePeriodFormat.ts",
+    "examples": [
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"D8\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"RD8\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"UN\")",
+        "result": "true (a real code; no value parses under it)"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"d8\")",
+        "result": "false (case is exact)"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"CM\")",
+        "result": "false (a year and month: a code GMT does not read)"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(\"DTM\")",
+        "result": "false (a segment name, not a 1250 code)"
+      },
+      {
+        "call": "isValidX12DateTimePeriodFormat(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12TimeCode",
+    "page": "/reference/intermodal/validate/isValidX12TimeCode",
+    "name": "isValidX12TimeCode",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidX12TimeCode(timeCode: unknown): timeCode is X12TimeCode",
+    "description": "Return true when `timeCode` is one of the 56 X12 data element 623 time codes, the codes `x12TimeCode` reads.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidX12TimeCode.ts",
+    "examples": [
+      {
+        "call": "isValidX12TimeCode(\"ES\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12TimeCode(\"13\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12TimeCode(\"LT\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12TimeCode(\"27\")",
+        "result": "true (in release 006010 and later)"
+      },
+      {
+        "call": "isValidX12TimeCode(\"et\")",
+        "result": "false (case is exact)"
+      },
+      {
+        "call": "isValidX12TimeCode(\"30\")",
+        "result": "false (not a 623 code)"
+      },
+      {
+        "call": "isValidX12TimeCode(\"EST\")",
+        "result": "false (an abbreviation, not a 623 code)"
+      },
+      {
+        "call": "isValidX12TimeCode(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/interval/calculate/clampInterval",
     "page": "/reference/interval/calculate/clampInterval",
     "name": "clampInterval",
@@ -8780,7 +10004,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseDateTimeWithPattern(value: string, pattern: string, locale?: string | string[]): string",
+    "signature": "parseDateTimeWithPattern(value: string, pattern: string, locale?: string | string[], options?: TwoDigitYearOptions): string",
     "description": "Parse a datetime string against a caller-supplied token pattern (e.g. `\"MM/dd/yyyy HH:mm:ss\"`, `\"dd-MMM-yyyy h:mm a\"`) and return it as an ISO `PlainDateTime` string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseDateTimeWithPattern.ts",
     "examples": [
@@ -8793,8 +10017,24 @@
         "result": "\"2024-03-15T14:30:00\""
       },
       {
-        "call": "parseDateTimeWithPattern(\"Mar 15, '24 at 14:30\", \"MMM d, ''yy 'at' HH:mm\")",
+        "call": "parseDateTimeWithPattern(\"Mar 15, '24 at 14:30\", \"MMM d, ''yy 'at' HH:mm\", undefined, { yearWindow: 2000 })",
         "result": "\"2024-03-15T14:30:00\" ('' is one literal quote)"
+      },
+      {
+        "call": "parseDateTimeWithPattern(\"99-03-15 14:30\", \"yy-MM-dd HH:mm\", undefined, { yearWindow: 1950 })",
+        "result": "\"1999-03-15T14:30:00\" (1950–2049 window)"
+      },
+      {
+        "call": "parseDateTimeWithPattern(\"24-03-15 14:30\", \"yy-MM-dd HH:mm\", undefined, { yearWindow: \"rolling\" })",
+        "result": "\"2024-03-15T14:30:00\" (while the current UTC year is 1975–2074)"
+      },
+      {
+        "call": "parseDateTimeWithPattern(\"24-03-15 14:30\", \"yy-MM-dd HH:mm\")",
+        "result": "\"\" (yy with no window)"
+      },
+      {
+        "call": "parseDateTimeWithPattern(\"03/15/2024 14:30:00\", \"MM/dd/yyyy HH:mm:ss\", undefined, { yearWindow: 2000 })",
+        "result": "\"2024-03-15T14:30:00\" (yyyy ignores the window)"
       },
       {
         "call": "parseDateTimeWithPattern(\"02/31/2024 14:30:00\", \"MM/dd/yyyy HH:mm:ss\")",
@@ -8817,7 +10057,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseDateWithPattern(value: string, pattern: string, locale?: string | string[]): string",
+    "signature": "parseDateWithPattern(value: string, pattern: string, locale?: string | string[], options?: TwoDigitYearOptions): string",
     "description": "Parse a date string against a caller-supplied token pattern (e.g. `\"MM/dd/yyyy\"`, `\"dd-MMM-yyyy\"`) and return it as an ISO `PlainDate` string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseDateWithPattern.ts",
     "examples": [
@@ -8830,8 +10070,28 @@
         "result": "\"2024-03-15\""
       },
       {
-        "call": "parseDateWithPattern(\"Mar 15, '24\", \"MMM d, ''yy\")",
+        "call": "parseDateWithPattern(\"Mar 15, '24\", \"MMM d, ''yy\", undefined, { yearWindow: 2000 })",
         "result": "\"2024-03-15\" ('' is one literal quote)"
+      },
+      {
+        "call": "parseDateWithPattern(\"03/15/24\", \"MM/dd/yy\", undefined, { yearWindow: 1950 })",
+        "result": "\"2024-03-15\" (1950–2049 window)"
+      },
+      {
+        "call": "parseDateWithPattern(\"03/15/99\", \"MM/dd/yy\", undefined, { yearWindow: 1950 })",
+        "result": "\"1999-03-15\""
+      },
+      {
+        "call": "parseDateWithPattern(\"03/15/24\", \"MM/dd/yy\", undefined, { yearWindow: \"rolling\" })",
+        "result": "\"2024-03-15\" (while the current UTC year is 1975–2074)"
+      },
+      {
+        "call": "parseDateWithPattern(\"03/15/24\", \"MM/dd/yy\")",
+        "result": "\"\" (yy with no window)"
+      },
+      {
+        "call": "parseDateWithPattern(\"03/15/2024\", \"MM/dd/yyyy\", undefined, { yearWindow: 2000 })",
+        "result": "\"2024-03-15\" (yyyy ignores the window)"
       },
       {
         "call": "parseDateWithPattern(\"02/31/2024\", \"MM/dd/yyyy\")",
@@ -11427,6 +12687,72 @@
     ]
   },
   {
+    "url": "/reference/regex/epcis/epcisTimeZoneOffset",
+    "page": "/reference/regex/epcis/epcisTimeZoneOffset",
+    "name": "epcisTimeZoneOffset",
+    "namespace": "regex",
+    "module": "epcis",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a GS1 EPCIS 2.0 `eventTimeZoneOffset`: the `pattern` the EPCIS JSON schema (https://ref.gs1.org/standards/epcis/epcis-json-schema.json, a normative artefact of EPCIS 2.0 / ISO/IEC 19987) gives for the field, verbatim: `^([+]|[-])((0[0-9]|1[0-3]):([0-5][0-9])|14:00)$`.",
+    "sourcePath": "packages/gmt/src/regex/epcis.ts",
+    "examples": [
+      {
+        "call": "epcisTimeZoneOffset.test(\"-05:00\")",
+        "result": "true"
+      },
+      {
+        "call": "epcisTimeZoneOffset.test(\"+14:00\")",
+        "result": "true"
+      },
+      {
+        "call": "epcisTimeZoneOffset.test(\"+14:01\")",
+        "result": "false (past the range GS1 allows)"
+      },
+      {
+        "call": "epcisTimeZoneOffset.test(\"Z\")",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "epcisTimeZoneOffset.test(\"+0200\")",
+        "result": "false (no colon)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/epcis/epcisEventTime",
+    "page": "/reference/regex/epcis/epcisEventTime",
+    "name": "epcisEventTime",
+    "namespace": "regex",
+    "module": "epcis",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a GS1 EPCIS 2.0 `eventTime` (and `recordTime`): the `DateTimeStamp` pattern of the EPCIS XSD (https://ref.gs1.org/standards/epcis/epcglobal-epcis-2_0.xsd, a normative artefact of EPCIS 2.0 / ISO/IEC 19987), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/epcis.ts",
+    "examples": [
+      {
+        "call": "epcisEventTime.test(\"2024-06-15T14:30:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "epcisEventTime.test(\"2024-06-15T14:30:00.123-05:00\")",
+        "result": "true"
+      },
+      {
+        "call": "epcisEventTime.test(\"2024-06-15T14:30Z\")",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "epcisEventTime.test(\"2024-06-15T14:30:00\")",
+        "result": "false (Z or an offset is required)"
+      },
+      {
+        "call": "epcisEventTime.test(\"2024-06-15T14:30:00+15:00\")",
+        "result": "false (offset past the range GS1 allows)"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/http-date/httpDate",
     "page": "/reference/regex/http-date/httpDate",
     "name": "httpDate",
@@ -13631,6 +14957,143 @@
     ]
   },
   {
+    "url": "/reference/intermodal/validate/isValidEdifactDtmFormat#edifactdtmformat",
+    "page": "/reference/intermodal/validate/isValidEdifactDtmFormat",
+    "name": "EdifactDtmFormat",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "The UN/EDIFACT data element 2379 (Date or time or period format code) values GMT reads and writes: 23 codes. Masks and descriptions are the UNTDID directory's. Twelve directories were read: UNECE's own [D.21B](http://web.archive.org/web/20240303123657/https://service.unece.org/trade/untdid/d21b/tred/tred2379.htm) and [D.22B](http://web.archive.org/web/20260311101223/https://service.unece.org/trade/untdid/d22b/tred/tred2379.htm) pages, archived, and mirrors of D.93A, D.96A, D.01B, D.01C, D.03A, D.03B, D.04B, D.11B, D.12A and D.13B. No mask of a code GMT reads changed across them.",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "inlineOn": "isValidEdifactDtmFormat"
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12DateTimePeriodFormat#x12datetimeperiodformat",
+    "page": "/reference/intermodal/validate/isValidX12DateTimePeriodFormat",
+    "name": "X12DateTimePeriodFormat",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "The X12 data element 1250 (Date Time Period Format Qualifier) values GMT reads and writes: 20 codes, and `UN`. Release 005010, read from [Stedi's X12-licensed dictionary](https://www.stedi.com/edi/x12-005010/element/1250); the X12 text itself was not reached. The 42-code list is the same in release 008010.",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "inlineOn": "isValidX12DateTimePeriodFormat"
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12TimeCode#x12timecode",
+    "page": "/reference/intermodal/validate/isValidX12TimeCode",
+    "name": "X12TimeCode",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "The 56 X12 data element 623 (Time Code) values, release 008010, read from [Stedi's X12-licensed dictionary](https://www.stedi.com/edi/x12-008010/element/623); the X12 text itself was not reached.",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "inlineOn": "isValidX12TimeCode"
+  },
+  {
+    "url": "/reference/types/EdiPeriodEnd",
+    "page": "/reference/types/EdiPeriodEnd",
+    "name": "EdiPeriodEnd",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "The end of an EDI period or range, read from the second half of the value. Each code fills only the members it can state. No period code GMT reads carries an offset, so an end is a date, a time or a local date-time, never an instant.",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "date",
+        "description": "The end date, `YYYY-MM-DD`, for a date period (`718`, `RD8`, …). Absent for a time-only range."
+      },
+      {
+        "name": "time",
+        "description": "The end time, `HH:MM:SS`, for a time range (`RTM`). Absent when the end carries a date. It can be earlier than the start's `time`: an `RTM` range carries no date, so `2200-0600` is a window that crosses midnight."
+      },
+      {
+        "name": "local",
+        "description": "The end date-time, `YYYY-MM-DDTHH:MM:SS`, for a date-time period (`713`, `719`, `RDT`, `DTS`, `DDT`). Absent when the end is a date or a time alone."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/EdiDateTime",
+    "page": "/reference/types/EdiDateTime",
+    "name": "EdiDateTime",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "What an EDI date/time value states, read against its format code. Each code fills only the members it can state, so a caller can tell a local time whose zone is unknown from an instant whose offset was transmitted: a `203` value yields `local` and nothing else; a `205` value yields `local`, `offset` and `instant`. The shape is shared by `parseEdifactDtm` and `parseX12DateTimePeriod`.",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "date",
+        "description": "`YYYY-MM-DD`, for a date-only code (`102`, `101`, `D8`, `DB`, …), for `TU`, and for the start of a date period."
+      },
+      {
+        "name": "time",
+        "description": "`HH:MM:SS`, for a time-only code (`401`, `402`, `404`, `209`, `TM`, `TS`) and the start of a time range. Seconds are always written, `00` for a mask without them."
+      },
+      {
+        "name": "local",
+        "description": "`YYYY-MM-DDTHH:MM:SS`, for every date-time code (`201`–`208`, `301`–`304`, `DT`, `TR`, `RTS`) and the start of a date-time period: the wall clock as written, never moved to UTC. Seconds are always written, `00` for a mask without them. With no `instant` (a `203` or `DT` value, a `3xx` value whose zone is a name such as `CET`), `local` is ready for `resolveLocal` once the caller knows the zone. A date-only code returns `date`, not `local`: a date names no instant."
+      },
+      {
+        "name": "instant",
+        "description": "The UTC instant ending in `Z`, when the code carries a date, a time and a resolvable offset: `205`–`208`, or `301`–`304` whose zone is `±HH`, `UTC` or `GMT`. It is `local` read at `offset`, and stands beside both, so its UTC date can be the day before or after `local`'s. Absent otherwise; a `209` or `404` value has no date, so it yields `time` and `offset` and no instant. A value within its offset of either end of years 0000–9999 yields an instant outside them, written with a sign and a six-digit year."
+      },
+      {
+        "name": "offset",
+        "description": "The offset in force where the event happened, `±HH:MM`. Present with `local` and `instant` for a date-time whose offset is known; beside `time` for a `209` value and for a `404` value whose zone is `±HH`, `UTC` or `GMT`; alone for `406`, whose value is the offset itself."
+      },
+      {
+        "name": "zone",
+        "description": "The three upper-case letters of a `301`–`304` or `404` zone that are neither `UTC` nor `GMT` (`CET`, `PDT`), as transmitted. No UN/EDIFACT text defines them, so GMT returns them unread and asserts nothing about them; `local` (or `time` for `404`) holds the wall clock."
+      },
+      {
+        "name": "dayOfYear",
+        "description": "The day of the year, 1–366, for `TC`, `TU` and `EH`. For `TU` it is checked against the year and stands beside the `date` it names; `TC` and `EH` name no year, so they have no `date`."
+      },
+      {
+        "name": "yearDigit",
+        "description": "The last digit of the year, 0–9, for `EH` only. A single digit names no year, so nothing is resolved from it."
+      },
+      {
+        "name": "periodEnd",
+        "description": "The end of a period or range code (`713`, `717`, `718`, `719`, `RD8`, `RDT`, `RTM`, …). Absent for a single value."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/EpcisEventTime",
+    "page": "/reference/types/EpcisEventTime",
+    "name": "EpcisEventTime",
+    "namespace": "types",
+    "module": "epcis",
+    "kind": "type",
+    "signature": "",
+    "description": "The two time fields every GS1 EPCIS 2.0 (ISO/IEC 19987) event must carry.",
+    "sourcePath": "packages/gmt/src/types/epcis.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "eventTime",
+        "description": "When the event happened, in the `DateTimeStamp` grammar of the EPCIS XSD, the XML binding (`epcisEventTime`): `YYYY-MM-DDTHH:MM:SS`, an optional fraction, then `Z` or a `±HH:MM` offset. It fixes the instant and nothing else: an offset written here is not the event's local offset, and it does not have to equal `eventTimeZoneOffset` (EPCIS 2.0 §7.4.1.1)."
+      },
+      {
+        "name": "eventTimeZoneOffset",
+        "description": "The UTC offset in force where the event happened, in the pattern the EPCIS JSON schema gives (`epcisTimeZoneOffset`), which is the rule of EPCIS 2.0 §7.4.1: `±HH:MM` from `-14:00` to `+14:00`, never `Z`. It sets the local clock the event is shown on and does not move the instant. It cannot be worked out from `eventTime`."
+      }
+    ]
+  },
+  {
     "url": "/reference/types/FiscalPattern",
     "page": "/reference/types/FiscalPattern",
     "name": "FiscalPattern",
@@ -14120,6 +15583,24 @@
     "sourcePath": "packages/gmt/src/types/transport-timestamps.ts",
     "examples": [],
     "inlineOn": "classifyPunctuality"
+  },
+  {
+    "url": "/reference/types/TwoDigitYearOptions",
+    "page": "/reference/types/TwoDigitYearOptions",
+    "name": "TwoDigitYearOptions",
+    "namespace": "types",
+    "module": "two-digit-year",
+    "kind": "type",
+    "signature": "",
+    "description": "How a two-digit year (`yy` in a pattern, `YYMMDD` in an EDI value) gets its century.",
+    "sourcePath": "packages/gmt/src/types/two-digit-year.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "yearWindow",
+        "description": "The hundred-year window a two-digit year falls in. A number is the first year of a fixed window, an integer from 0 to 9900: `2000` reads `00`–`99` as 2000–2099; `1950` reads `50`–`99` as 1950–1999 and `00`–`49` as 2000–2049. A fixed window gives the same answer in any year, so it is the form for stored data, archives and anything re-processed later. `\"rolling\"` is the hundred years around today: from 50 years before the current UTC calendar year to 49 years after it (in 2026, 1976–2075). It is the form for live messages and never needs maintenance, but it gives a different answer for the same stored value as years pass. Any other value returns the function's sentinel."
+      }
+    ]
   },
   {
     "url": "/reference/unix/get/getUnixNowUnit#unixnowunit",

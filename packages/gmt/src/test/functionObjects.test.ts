@@ -10,6 +10,9 @@ import {
   compareDurations,
   cutoffSchedule,
   durationAs,
+  formatEdifactDtm,
+  formatEpcisEvent,
+  formatX12DateTimePeriod,
   fromOffsetInstant,
   intervalXorAllDate,
   intervalXorAllDateTime,
@@ -18,6 +21,9 @@ import {
   intervalXorAllZoned,
   intervalsOverlap,
   isValidDateRange,
+  isValidEdifactDtm,
+  isValidEpcisEvent,
+  isValidX12DateTimePeriod,
   mergeIntervalsDate,
   mergeIntervalsDateTime,
   mergeIntervalsTime,
@@ -27,6 +33,11 @@ import {
   nextBusinessDay,
   normalizeDuration,
   operatingIntervals,
+  parseDateTimeWithPattern,
+  parseDateWithPattern,
+  parseEdifactDtm,
+  parseEpcisEvent,
+  parseX12DateTimePeriod,
   punctualityRate,
   scheduleDelivery,
   subtractDate,
@@ -115,6 +126,9 @@ describe("an Object argument that is a function is read as the object it is", ()
     ${"intervalsOverlap"}                                    | ${(w: Wrap) => intervalsOverlap(w(utc), w(utcLater))}
     ${"isValidDateRange props"}                              | ${(w: Wrap) => isValidDateRange(w({ value1: "2024-01-01", value2: "2024-01-02" }))}
     ${"fromOffsetInstant"}                                   | ${(w: Wrap) => fromOffsetInstant(w({ instant: "2024-06-15T12:00:00Z", offset: "+02:00" }))}
+    ${"parseEpcisEvent event"}                               | ${(w: Wrap) => parseEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
+    ${"formatEpcisEvent pair"}                               | ${(w: Wrap) => formatEpcisEvent(w({ instant: "2024-06-15T14:30:00Z", offset: "-05:00" }))}
+    ${"isValidEpcisEvent event"}                             | ${(w: Wrap) => isValidEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
     ${"nextBusinessDay"}                                     | ${(w: Wrap) => nextBusinessDay("2024-07-05", w({ weekend: [6, 7], holidays: [], timeZone: "UTC" }))}
     ${"operatingIntervals"}                                  | ${(w: Wrap) => operatingIntervals(w({ timeZone: "UTC", weekly: w({ 1: [w({ from: "09:00", to: "17:00" })] }) }), w({ start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }))}
     ${"punctualityRate"}                                     | ${(w: Wrap) => punctualityRate([w({ planned: "2024-06-15T12:00:00Z", actual: "2024-06-15T12:05:00Z" })], w({ late: "PT15M" }))}
@@ -126,6 +140,14 @@ describe("an Object argument that is a function is read as the object it is", ()
     ${"durationAs zoned relativeTo"}                         | ${(w: Wrap) => durationAs("P29DT12H", "months", { relativeTo: w(zonedRelativeBag) })}
     ${"normalizeDuration relativeTo near the range maximum"} | ${(w: Wrap) => normalizeDuration("PT73H", { largestUnit: "day", relativeTo: w(sydneyNearMax) })}
     ${"compareDurations relativeTo near the range maximum"}  | ${(w: Wrap) => compareDurations("P3D", "PT73H", { relativeTo: w(sydneyNearMax) })}
+    ${"parseDateWithPattern yearWindow"}                     | ${(w: Wrap) => parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, w({ yearWindow: 2000 }))}
+    ${"parseDateTimeWithPattern yearWindow"}                 | ${(w: Wrap) => parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm", undefined, w({ yearWindow: 2000 }))}
+    ${"parseEdifactDtm yearWindow"}                          | ${(w: Wrap) => parseEdifactDtm("240615", "101", w({ yearWindow: 2000 }))}
+    ${"formatEdifactDtm yearWindow"}                         | ${(w: Wrap) => formatEdifactDtm("2024-06-15", "101", w({ yearWindow: 2000 }))}
+    ${"isValidEdifactDtm yearWindow"}                        | ${(w: Wrap) => isValidEdifactDtm("240615", "101", w({ yearWindow: 2000 }))}
+    ${"parseX12DateTimePeriod yearWindow"}                   | ${(w: Wrap) => parseX12DateTimePeriod("240615", "D6", w({ yearWindow: 2000 }))}
+    ${"formatX12DateTimePeriod yearWindow"}                  | ${(w: Wrap) => formatX12DateTimePeriod("2024-06-15", "D6", w({ yearWindow: 2000 }))}
+    ${"isValidX12DateTimePeriod yearWindow"}                 | ${(w: Wrap) => isValidX12DateTimePeriod("240615", "D6", w({ yearWindow: 2000 }))}
   `("$name reads a function as the object", ({ call }) => {
     const plain = (call as (w: Wrap) => unknown)(asIs);
     expect(

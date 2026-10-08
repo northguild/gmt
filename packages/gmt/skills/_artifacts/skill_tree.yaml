@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-10-04'
+generated_at: '2026-10-08'
 
 skills:
   # Consumer-facing core skills
@@ -25,6 +25,7 @@ skills:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
       - 'northguild/gmt:packages/gmt/src/plain/format/index.ts'
       - 'northguild/gmt:packages/gmt/src/plain/locale/index.ts'
       - 'northguild/gmt:packages/gmt/src/plain/compare/index.ts'
@@ -65,7 +66,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/gmt-timezone/SKILL.md'
     package: 'packages/gmt'
-    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), local-time classification/resolution (classifyLocal/resolveLocal), real zone unit boundaries always (startOfZoned/endOfZoned/startOfUnix/endOfUnix, which take no disambiguation/offset options), hours in a local day (getHoursInZonedDay), zone-aware boundary flooring and bucketing (floorToZone/bucketRange) rather than roundZoned truncation, calendar-annotated zoned strings, and zoned values exact at the range limits (Australia/Sydney at the maximum, an offset-less Etc/GMT+12 wall clock at the minimum), and the transport leg primitives transitTime/etaAtZone/dwellTime (exact elapsed legs in the departure's zone, arrival rendered where it lands, local calendar days crossed), the crossing primitive crossingTime (exact duration with both ends read in the zone that administers the crossing), and the multi-leg chain scheduleDelivery (end-to-end ETA, local arrival at every handoff, dwell as the minimum connect time, a missed connection returned as null), the cut-off primitives cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff (deadlines counted back from the caller's anchor event, pinned to a local time of day, rolled backward off closures, a skipped local hour returned as the sentinel), the planned-versus-actual primitives scheduleDeviation/classifyPunctuality/punctualityRate (signed exact deviation, early/onTime/late against a caller tolerance with both edges outside, an on-time rate under one tolerance), bestAvailable/estimateDrift (PLN/EST/REQ/ACT timestamp classes: the class travels with the value, an ACT is never replaced by a later EST, drift between the first and last EST), and nextDeparture (the first timetable or half-open headway departure at or after the arrival plus a minimum connection), and the intermodal free-time primitives freeTimeExpiry/chargeableDays/demurrageClock (free window and half-open expiry in the terminal's local days, chargeable days and dates with tier bands, which events a demurrage, detention, storage or combined clock runs between on the import or export leg), and the billing deadline chain billingTimeline (invoice, dispute and resolution deadlines counted in calendar days from an anchor date, every window a caller parameter), bill of lading dates bolTimestamp (the local calendar date of an issue, receipt or shipped-on-board event in the zone of the place it happened, the zone required) and the end-to-end multimodalETA (scheduleDelivery's legs with transit and dwell totalled apart, a wait for a scheduled departure counted as dwell), and operating hours recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime (weekly local windows with midnight wrap, holidays and overrides resolved in the schedule's zone, open-time elapsed and SLA deadlines), and daylight time read from the zone's clock changes by GMT's own rule (isInDaylightSaving for a zoned value, hasDaylightSaving(timeZone, { at }) for a zone at a reference instant)
+    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), local-time classification/resolution (classifyLocal/resolveLocal), real zone unit boundaries always (startOfZoned/endOfZoned/startOfUnix/endOfUnix, which take no disambiguation/offset options), hours in a local day (getHoursInZonedDay), zone-aware boundary flooring and bucketing (floorToZone/bucketRange) rather than roundZoned truncation, calendar-annotated zoned strings, and zoned values exact at the range limits (Australia/Sydney at the maximum, an offset-less Etc/GMT+12 wall clock at the minimum), and the transport leg primitives transitTime/etaAtZone/dwellTime (exact elapsed legs in the departure's zone, arrival rendered where it lands, local calendar days crossed), the crossing primitive crossingTime (exact duration with both ends read in the zone that administers the crossing), and the multi-leg chain scheduleDelivery (end-to-end ETA, local arrival at every handoff, dwell as the minimum connect time, a missed connection returned as null), the cut-off primitives cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff (deadlines counted back from the caller's anchor event, pinned to a local time of day, rolled backward off closures, a skipped local hour returned as the sentinel), the planned-versus-actual primitives scheduleDeviation/classifyPunctuality/punctualityRate (signed exact deviation, early/onTime/late against a caller tolerance with both edges outside, an on-time rate under one tolerance), bestAvailable/estimateDrift (PLN/EST/REQ/ACT timestamp classes: the class travels with the value, an ACT is never replaced by a later EST, drift between the first and last EST), and nextDeparture (the first timetable or half-open headway departure at or after the arrival plus a minimum connection), and the intermodal free-time primitives freeTimeExpiry/chargeableDays/demurrageClock (free window and half-open expiry in the terminal's local days, chargeable days and dates with tier bands, which events a demurrage, detention, storage or combined clock runs between on the import or export leg), and the billing deadline chain billingTimeline (invoice, dispute and resolution deadlines counted in calendar days from an anchor date, every window a caller parameter), bill of lading dates bolTimestamp (the local calendar date of an issue, receipt or shipped-on-board event in the zone of the place it happened, the zone required) and the end-to-end multimodalETA (scheduleDelivery's legs with transit and dwell totalled apart, a wait for a scheduled departure counted as dwell), the EDI and event timestamp readers and writers parseEdifactDtm/formatEdifactDtm (a UN/EDIFACT DTM value against its 2379 format code), parseX12DateTime/x12TimeCode (X12 elements 373, 337 and 623: a date, a time and a time code), parseX12DateTimePeriod/formatX12DateTimePeriod (X12 element 1251 against its 1250 qualifier) and parseEpcisEvent/formatEpcisEvent (GS1 EPCIS eventTime and eventTimeZoneOffset), with the validators isValidEdifactDtm/isValidEdifactDtmFormat/isValidX12DateTime/isValidX12DateTimePeriod/isValidX12DateTimePeriodFormat/isValidX12TimeCode/isValidEpcisEvent (an offsetless value returned as a local time and never as UTC, a named X12 time code returned as a zone name, an unresolved UN/EDIFACT zone returned as text, a two-digit year read only in the caller's yearWindow), and operating hours recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime (weekly local windows with midnight wrap, holidays and overrides resolved in the schedule's zone, open-time elapsed and SLA deadlines), and daylight time read from the zone's clock changes by GMT's own rule (isInDaylightSaving for a zoned value, hasDaylightSaving(timeZone, { at }) for a zone at a reference instant)
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -85,10 +86,18 @@ skills:
       - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
       - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
+      - 'northguild/gmt:packages/gmt/src/types/transport-timestamps.ts'
       - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
       - 'northguild/gmt:packages/gmt/src/transport/compare/index.ts'
       - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
-      - 'northguild/gmt:packages/gmt/src/types/transport-timestamps.ts'
+      - 'northguild/gmt:packages/gmt/src/intermodal/calculate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/intermodal/format/index.ts'
+      - 'northguild/gmt:packages/gmt/src/intermodal/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/intermodal/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/edi.ts'
+      - 'northguild/gmt:packages/gmt/src/types/epcis.ts'
+      - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
 
   # Consumer-facing composition skills
   - name: GMT Integration
@@ -101,6 +110,10 @@ skills:
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
+      - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
+      - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
 
   # Lifecycle skills (contributors only — excluded from consumer intent install)
   - name: Issue Creation

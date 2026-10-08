@@ -23,17 +23,21 @@ import {
   formatCalendarUnix,
   formatCalendarUtc,
   formatCalendarZoned,
+  formatEdifactDtm,
   formatRelativeDate,
   formatRelativeDateTime,
   formatRelativeTime,
   formatRelativeUnix,
   formatRelativeUtc,
   formatRelativeZoned,
+  formatX12DateTimePeriod,
   isValidDateRange,
   isValidDateTimeRange,
+  isValidEdifactDtm,
   isValidTimeRange,
   isValidUnixRange,
   isValidUtcRange,
+  isValidX12DateTimePeriod,
   isValidZonedRange,
   isBetweenDate,
   isBetweenDateTime,
@@ -41,6 +45,10 @@ import {
   isBetweenUnix,
   isBetweenUtc,
   isBetweenZoned,
+  parseDateTimeWithPattern,
+  parseDateWithPattern,
+  parseEdifactDtm,
+  parseX12DateTimePeriod,
 } from "../index";
 import { type OptionsCase, optionsCases } from "./noThrow";
 
@@ -164,6 +172,80 @@ describe("an options bag that is a function is read as the object it is", () => 
       expect(isDeepStrictEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
         isDeepStrictEqual(callWith(testCase, object), testCase.sentinel),
       );
+    },
+  );
+});
+
+describe("GetOptionsObject on the pattern parsers' TwoDigitYearOptions bag", () => {
+  // The corpus-driven tables above cover these two as well; this table states the contract by
+  // hand on a `yyyy` pattern, which never reads the bag, so the sentinel for null | "x" | 1
+  // comes from the options argument alone.
+  it.each`
+    name                          | parse                       | value                 | pattern               | expected
+    ${"parseDateWithPattern"}     | ${parseDateWithPattern}     | ${"2024-03-15"}       | ${"yyyy-MM-dd"}       | ${"2024-03-15"}
+    ${"parseDateTimeWithPattern"} | ${parseDateTimeWithPattern} | ${"2024-03-15 14:30"} | ${"yyyy-MM-dd HH:mm"} | ${"2024-03-15T14:30:00"}
+  `(
+    '$name($value, $pattern, undefined, options = null | "x" | 1) returns "" (omitted, {} or a function: $expected)',
+    ({ parse, value, pattern, expected }) => {
+      const call = parse as (
+        v: string,
+        p: string,
+        l: undefined,
+        o: unknown,
+      ) => string;
+      expect({
+        omitted: call(value, pattern, undefined, undefined),
+        empty: call(value, pattern, undefined, {}),
+        function: call(value, pattern, undefined, () => undefined),
+        null: call(value, pattern, undefined, null),
+        string: call(value, pattern, undefined, "x"),
+        number: call(value, pattern, undefined, 1),
+      }).toEqual({
+        omitted: expected,
+        empty: expected,
+        function: expected,
+        null: "",
+        string: "",
+        number: "",
+      });
+    },
+  );
+});
+
+describe("GetOptionsObject on the EDI functions' TwoDigitYearOptions bag", () => {
+  // The corpus-driven tables above cover these six as well; this table states the contract by
+  // hand on `102` and `D8` (`CCYYMMDD`), which carry a four-digit year and never read the bag, so
+  // the sentinel for null | "x" | 1 comes from the options argument alone. `expected` is
+  // 15 June 2024 placed under the mask by hand, or read off it.
+  it.each`
+    name                          | fn                          | value           | code     | expected                  | sentinel
+    ${"parseEdifactDtm"}          | ${parseEdifactDtm}          | ${"20240615"}   | ${"102"} | ${{ date: "2024-06-15" }} | ${null}
+    ${"formatEdifactDtm"}         | ${formatEdifactDtm}         | ${"2024-06-15"} | ${"102"} | ${"20240615"}             | ${""}
+    ${"isValidEdifactDtm"}        | ${isValidEdifactDtm}        | ${"20240615"}   | ${"102"} | ${true}                   | ${false}
+    ${"parseX12DateTimePeriod"}   | ${parseX12DateTimePeriod}   | ${"20240615"}   | ${"D8"}  | ${{ date: "2024-06-15" }} | ${null}
+    ${"formatX12DateTimePeriod"}  | ${formatX12DateTimePeriod}  | ${"2024-06-15"} | ${"D8"}  | ${"20240615"}             | ${""}
+    ${"isValidX12DateTimePeriod"} | ${isValidX12DateTimePeriod} | ${"20240615"}   | ${"D8"}  | ${true}                   | ${false}
+  `(
+    '$name($value, $code, options = null | "x" | 1) returns $sentinel (omitted, {} or a function: $expected)',
+    ({ fn, value, code, expected, sentinel }) => {
+      const call = fn as (v: string, c: string, o?: unknown) => unknown;
+      expect({
+        omitted: call(value, code),
+        undefined: call(value, code, undefined),
+        empty: call(value, code, {}),
+        function: call(value, code, () => undefined),
+        null: call(value, code, null),
+        string: call(value, code, "x"),
+        number: call(value, code, 1),
+      }).toEqual({
+        omitted: expected,
+        undefined: expected,
+        empty: expected,
+        function: expected,
+        null: sentinel,
+        string: sentinel,
+        number: sentinel,
+      });
     },
   );
 });

@@ -96,6 +96,12 @@
       "intermodal/format": [
         "./dist/intermodal/format/index.d.ts"
       ],
+      "intermodal/parse": [
+        "./dist/intermodal/parse/index.d.ts"
+      ],
+      "intermodal/validate": [
+        "./dist/intermodal/validate/index.d.ts"
+      ],
       "interval": [
         "./dist/interval/index.d.ts"
       ],
@@ -353,6 +359,14 @@
     "./intermodal/format": {
       "types": "./dist/intermodal/format/index.d.ts",
       "default": "./dist/intermodal/format/index.js"
+    },
+    "./intermodal/parse": {
+      "types": "./dist/intermodal/parse/index.d.ts",
+      "default": "./dist/intermodal/parse/index.js"
+    },
+    "./intermodal/validate": {
+      "types": "./dist/intermodal/validate/index.d.ts",
+      "default": "./dist/intermodal/validate/index.js"
     },
     "./interval": {
       "types": "./dist/interval/index.d.ts",

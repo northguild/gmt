@@ -17,7 +17,8 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  *
  * Neither `instant` nor `offset` derives from the other, which is why both are stored. It is
  * the shape GS1 EPCIS 2.0 (`eventTime` + a required `eventTimeZoneOffset`), UN/EDIFACT DTM
- * (qualifier `303`/`304`) and DICOM (`DT` + `&ZZXX`) all exchange.
+ * (format codes `205`–`208`, a date and time with a `±HHMM` offset) and DICOM (`DT` + `&ZZXX`)
+ * all exchange.
  *
  * @example
  * import { OffsetInstant } from "@northguild/gmt/instant";

@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { Temporal } from "@js-temporal/polyfill";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MustTestLocales } from "../../test";
+import { mockTemporalNowInstantThrow } from "../../test/mocks";
+import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
 import { getLocaleWeekdayNames } from "../locale/getLocaleWeekdayNames";
 import { parseDateWithPattern } from "./parseDateWithPattern";
@@ -10,7 +13,7 @@ describe("parseDateWithPattern", () => {
       value           | pattern         | expected
       ${"2024"}       | ${"yyyy"}       | ${""}
       ${"2024-03"}    | ${"yyyy-MM"}    | ${""}
-      ${"03/15/24"}   | ${"MM/dd/yy"}   | ${"2024-03-15"}
+      ${"03/15/24"}   | ${"MM/dd/yy"}   | ${""}
       ${"03/15/2024"} | ${"MM/dd/yyyy"} | ${"2024-03-15"}
       ${"3/5/2024"}   | ${"M/d/yyyy"}   | ${"2024-03-05"}
       ${"3/15/2024"}  | ${"M/d/yyyy"}   | ${"2024-03-15"}
@@ -48,20 +51,234 @@ describe("parseDateWithPattern", () => {
     });
   });
 
-  describe("two-digit year pivot (yy)", () => {
+  describe("two-digit year (yy) resolves in the caller's yearWindow", () => {
+    // The window names a hundred consecutive years; exactly one ends in yy. Derived by hand and
+    // checked against Temporal.PlainDate.from({ year, month: 3, day: 15 }) for each row.
     it.each`
-      value         | expected
-      ${"00-03-15"} | ${"2000-03-15"}
-      ${"68-03-15"} | ${"2068-03-15"}
-      ${"69-03-15"} | ${"1969-03-15"}
-      ${"99-03-15"} | ${"1999-03-15"}
-      ${"24-03-15"} | ${"2024-03-15"}
+      value         | yearWindow | expected
+      ${"00-03-15"} | ${2000}    | ${"2000-03-15"}
+      ${"99-03-15"} | ${2000}    | ${"2099-03-15"}
+      ${"24-03-15"} | ${2000}    | ${"2024-03-15"}
+      ${"50-03-15"} | ${1950}    | ${"1950-03-15"}
+      ${"99-03-15"} | ${1950}    | ${"1999-03-15"}
+      ${"00-03-15"} | ${1950}    | ${"2000-03-15"}
+      ${"49-03-15"} | ${1950}    | ${"2049-03-15"}
+      ${"69-03-15"} | ${1969}    | ${"1969-03-15"}
+      ${"68-03-15"} | ${1969}    | ${"2068-03-15"}
+      ${"01-03-15"} | ${0}       | ${"0001-03-15"}
+      ${"99-03-15"} | ${9900}    | ${"9999-03-15"}
     `(
-      "parses two-digit year $value against yy-MM-dd to $expected",
-      ({ value, expected }) => {
-        expect(parseDateWithPattern(value, "yy-MM-dd")).toBe(expected);
+      "parses $value against yy-MM-dd with yearWindow $yearWindow to $expected",
+      ({ value, yearWindow, expected }) => {
+        expect(
+          parseDateWithPattern(value, "yy-MM-dd", undefined, { yearWindow }),
+        ).toBe(expected);
       },
     );
+
+    it.each`
+      options                                     | description
+      ${undefined}                                | ${"options omitted"}
+      ${{}}                                       | ${"yearWindow absent"}
+      ${{ yearWindow: undefined }}                | ${"yearWindow undefined"}
+      ${{ yearWindow: null }}                     | ${"null"}
+      ${{ yearWindow: 1.5 }}                      | ${"a non-integer"}
+      ${{ yearWindow: -1 }}                       | ${"negative"}
+      ${{ yearWindow: 9901 }}                     | ${"past the last four-digit window"}
+      ${{ yearWindow: Number.NaN }}               | ${"NaN"}
+      ${{ yearWindow: Number.POSITIVE_INFINITY }} | ${"Infinity"}
+      ${{ yearWindow: "2000" }}                   | ${"a numeric string"}
+      ${{ yearWindow: "Rolling" }}                | ${"wrong case"}
+      ${{ yearWindow: "roll" }}                   | ${"a prefix of rolling"}
+    `('returns "" for a yy pattern when $description', ({ options }) => {
+      expect(
+        parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, options),
+      ).toBe("");
+    });
+
+    it.each`
+      options | description
+      ${null} | ${"null"}
+      ${"x"}  | ${"a string"}
+      ${1}    | ${"a number"}
+      ${true} | ${"a boolean"}
+    `(
+      'returns "" when the options argument is $description, even for a yyyy pattern',
+      ({ options }) => {
+        expect(
+          parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, options),
+        ).toBe("");
+      },
+    );
+
+    it.each`
+      options
+      ${undefined}
+      ${{}}
+      ${{ yearWindow: 2000 }}
+      ${{ yearWindow: 1950 }}
+      ${{ yearWindow: "rolling" }}
+      ${{ yearWindow: 9901 }}
+    `(
+      "a yyyy pattern gives 2024-03-15 with options $options: the window is ignored",
+      ({ options }) => {
+        expect(
+          parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, options),
+        ).toBe("2024-03-15");
+      },
+    );
+
+    // A hostile bag is an Object, so it passes the GetOptionsObject guard; reading `yearWindow`
+    // from it throws. Only a yy pattern reads it.
+    it.each`
+      make                                                                | kind
+      ${() => hostileProxy()}                                             | ${"a Proxy that throws on any trap"}
+      ${() => revokedProxy()}                                             | ${"a revoked Proxy"}
+      ${() => Object.defineProperty({}, "yearWindow", { get: throwing })} | ${"an object whose yearWindow getter throws"}
+    `(
+      'returns "" for a yy pattern with options that are $kind, and never reads them for a yyyy pattern',
+      ({ make }) => {
+        expect(
+          parseDateWithPattern(
+            "24-03-15",
+            "yy-MM-dd",
+            undefined,
+            make() as never,
+          ),
+        ).toBe("");
+        expect(
+          parseDateWithPattern(
+            "2024-03-15",
+            "yyyy-MM-dd",
+            undefined,
+            make() as never,
+          ),
+        ).toBe("2024-03-15");
+      },
+    );
+
+    it("reads yearWindow once per call for a yy pattern, and never for a yyyy pattern", () => {
+      let reads = 0;
+      const options = {
+        get yearWindow(): number {
+          reads += 1;
+          return 2000;
+        },
+      };
+      parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, options);
+      expect(reads).toBe(1);
+      parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, options);
+      expect(reads).toBe(1);
+    });
+
+    it("reads a function carrying yearWindow as the options object it is", () => {
+      expect(
+        parseDateWithPattern(
+          "24-03-15",
+          "yy-MM-dd",
+          undefined,
+          Object.assign(() => undefined, { yearWindow: 2000 }),
+        ),
+      ).toBe("2024-03-15");
+    });
+
+    describe('yearWindow "rolling" is the hundred years around the current UTC year', () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      function setNow(instant: string): void {
+        vi.spyOn(Temporal.Now, "instant").mockReturnValue(
+          Temporal.Instant.from(instant),
+        );
+      }
+
+      // GMT rule: the window runs from 50 years before the current UTC calendar year to 49
+      // after it. 2050 - 50 = 2000, so at the UTC new year 2050 the window becomes 2000–2099
+      // and 99 moves from 1999 to 2099. A fixed window gives the same answer at every date.
+      // The last two rows are instants whose local date and UTC date fall in different years
+      // (22:00Z on 31 December 2049; 04:59:59Z on 1 January 2050): the UTC year decides.
+      it.each`
+        now                            | windowStart | ninetyNine      | first           | last
+        ${"2026-10-07T12:00:00Z"}      | ${1976}     | ${"1999-03-15"} | ${"1976-03-15"} | ${"2075-03-15"}
+        ${"2049-12-31T23:59:59Z"}      | ${1999}     | ${"1999-03-15"} | ${"1999-03-15"} | ${"2098-03-15"}
+        ${"2050-01-01T00:00:00Z"}      | ${2000}     | ${"2099-03-15"} | ${"2000-03-15"} | ${"2099-03-15"}
+        ${"2050-01-01T00:00:00+02:00"} | ${1999}     | ${"1999-03-15"} | ${"1999-03-15"} | ${"2098-03-15"}
+        ${"2049-12-31T23:59:59-05:00"} | ${2000}     | ${"2099-03-15"} | ${"2000-03-15"} | ${"2099-03-15"}
+      `(
+        "at $now the rolling window starts $windowStart: 99 → $ninetyNine, edges $first and $last; fixed 1950 still gives 1999",
+        ({ now, windowStart, ninetyNine, first, last }) => {
+          setNow(now);
+          const rolling = { yearWindow: "rolling" as const };
+          const yy = (year: number): string =>
+            String(year % 100).padStart(2, "0");
+          expect(
+            parseDateWithPattern("99-03-15", "yy-MM-dd", undefined, rolling),
+          ).toBe(ninetyNine);
+          expect(
+            parseDateWithPattern(
+              `${yy(windowStart)}-03-15`,
+              "yy-MM-dd",
+              undefined,
+              rolling,
+            ),
+          ).toBe(first);
+          expect(
+            parseDateWithPattern(
+              `${yy(windowStart + 99)}-03-15`,
+              "yy-MM-dd",
+              undefined,
+              rolling,
+            ),
+          ).toBe(last);
+          expect(
+            parseDateWithPattern("99-03-15", "yy-MM-dd", undefined, {
+              yearWindow: 1950,
+            }),
+          ).toBe("1999-03-15");
+        },
+      );
+
+      // The rolling window holds 2024 from UTC 1975 (1925–2024) through UTC 2074 (2024–2123): 24
+      // is 1924 one second before that span and 2124 one second after it.
+      it.each`
+        now                       | window         | expected
+        ${"1974-12-31T23:59:59Z"} | ${"1924–2023"} | ${"1924-03-15"}
+        ${"1975-01-01T00:00:00Z"} | ${"1925–2024"} | ${"2024-03-15"}
+        ${"2074-12-31T23:59:59Z"} | ${"2024–2123"} | ${"2024-03-15"}
+        ${"2075-01-01T00:00:00Z"} | ${"2025–2124"} | ${"2124-03-15"}
+      `(
+        "at $now the rolling window is $window: 03/15/24 against MM/dd/yy is $expected",
+        ({ now, expected }) => {
+          setNow(now);
+          expect(
+            parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, {
+              yearWindow: "rolling",
+            }),
+          ).toBe(expected);
+        },
+      );
+
+      // A pattern with no yy token never reads the option, so the clock a rolling window needs
+      // is never read for it: the result is the one the same call gives with no options.
+      it("a yyyy pattern gives 2024-03-15 with a rolling window when the clock cannot be read", () => {
+        mockTemporalNowInstantThrow();
+        expect(
+          parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, {
+            yearWindow: "rolling",
+          }),
+        ).toBe("2024-03-15");
+      });
+
+      it('returns "" for a rolling window when the clock cannot be read', () => {
+        mockTemporalNowInstantThrow();
+        expect(
+          parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, {
+            yearWindow: "rolling",
+          }),
+        ).toBe("");
+      });
+    });
   });
 
   describe("month name tokens (MMMM / MMM) — 17-locale matrix", () => {
@@ -257,23 +474,35 @@ describe("parseDateWithPattern", () => {
     // quotes (''), which represent a literal single quote, either inside or
     // outside quoted text."
     it.each`
-      value                 | pattern                 | expected        | why
-      ${"2024'01'15"}       | ${"yyyy''MM''dd"}       | ${"2024-01-15"} | ${"'' between fields is one literal quote"}
-      ${"20240115"}         | ${"yyyy''MM''dd"}       | ${""}           | ${"the literal quotes are missing from the value"}
-      ${"'2024-01-15'"}     | ${"''yyyy-MM-dd''"}     | ${"2024-01-15"} | ${"'' at the start and end of the pattern"}
-      ${"2024-01-15"}       | ${"''yyyy-MM-dd''"}     | ${""}           | ${"the leading and trailing quotes are missing"}
-      ${"''2024-01-15"}     | ${"''''yyyy-MM-dd"}     | ${"2024-01-15"} | ${"'''' is two '' pairs, two literal quotes"}
-      ${"'2024-01-15"}      | ${"''''yyyy-MM-dd"}     | ${""}           | ${"'''' needs two literal quotes, not one"}
-      ${"'T2024-01-15"}     | ${"'''T'yyyy-MM-dd"}    | ${"2024-01-15"} | ${"''' is a literal quote, then an opening quote"}
-      ${"'2024-01-15"}      | ${"'''yyyy-MM-dd"}      | ${""}           | ${"''' leaves the third quote unterminated"}
-      ${"a'' 2024-01-15"}   | ${"'a'''' 'yyyy-MM-dd"} | ${"2024-01-15"} | ${"two '' pairs inside quoted text"}
-      ${"Wed, Jul 10, '96"} | ${"EEE, MMM d, ''yy"}   | ${"1996-07-10"} | ${"the UTS #35 pattern example table row"}
+      value               | pattern                 | expected        | why
+      ${"2024'01'15"}     | ${"yyyy''MM''dd"}       | ${"2024-01-15"} | ${"'' between fields is one literal quote"}
+      ${"20240115"}       | ${"yyyy''MM''dd"}       | ${""}           | ${"the literal quotes are missing from the value"}
+      ${"'2024-01-15'"}   | ${"''yyyy-MM-dd''"}     | ${"2024-01-15"} | ${"'' at the start and end of the pattern"}
+      ${"2024-01-15"}     | ${"''yyyy-MM-dd''"}     | ${""}           | ${"the leading and trailing quotes are missing"}
+      ${"''2024-01-15"}   | ${"''''yyyy-MM-dd"}     | ${"2024-01-15"} | ${"'''' is two '' pairs, two literal quotes"}
+      ${"'2024-01-15"}    | ${"''''yyyy-MM-dd"}     | ${""}           | ${"'''' needs two literal quotes, not one"}
+      ${"'T2024-01-15"}   | ${"'''T'yyyy-MM-dd"}    | ${"2024-01-15"} | ${"''' is a literal quote, then an opening quote"}
+      ${"'2024-01-15"}    | ${"'''yyyy-MM-dd"}      | ${""}           | ${"''' leaves the third quote unterminated"}
+      ${"a'' 2024-01-15"} | ${"'a'''' 'yyyy-MM-dd"} | ${"2024-01-15"} | ${"two '' pairs inside quoted text"}
     `(
       'returns "$expected" for "$value" against "$pattern" ($why)',
       ({ value, pattern, expected }) => {
         expect(parseDateWithPattern(value, pattern)).toBe(expected);
       },
     );
+
+    it("reads the UTS #35 pattern example table row, '' before yy, with a window", () => {
+      expect(
+        parseDateWithPattern(
+          "Wed, Jul 10, '96",
+          "EEE, MMM d, ''yy",
+          undefined,
+          {
+            yearWindow: 1950,
+          },
+        ),
+      ).toBe("1996-07-10");
+    });
 
     it('returns "" for an unterminated quote (malformed pattern)', () => {
       expect(parseDateWithPattern("2024-03-15", "yyyy-MM-dd'")).toBe("");
@@ -375,3 +604,8 @@ describe("parseDateWithPattern", () => {
     },
   );
 });
+
+/** A getter that throws, for an options bag that cannot be read. */
+function throwing(): never {
+  throw new Error("hostile getter");
+}

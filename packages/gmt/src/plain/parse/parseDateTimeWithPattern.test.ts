@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { Temporal } from "@js-temporal/polyfill";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MustTestLocales } from "../../test";
+import { mockTemporalNowInstantThrow } from "../../test/mocks";
+import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
 import { getLocaleMeridiems } from "../locale/getLocaleMeridiems";
 import { getLocaleMonthNames } from "../locale/getLocaleMonthNames";
@@ -183,21 +186,274 @@ describe("parseDateTimeWithPattern", () => {
     });
   });
 
-  describe("two-digit year pivot (yy)", () => {
+  describe("two-digit year (yy) resolves in the caller's yearWindow", () => {
+    // Derived by hand: the one year in [yearWindow, yearWindow + 99] ending in yy; checked
+    // against Temporal.PlainDateTime.from({ year, month: 3, day: 15 }).
     it.each`
-      value               | expected
-      ${"00-03-15 00:00"} | ${"2000-03-15T00:00:00"}
-      ${"68-03-15 00:00"} | ${"2068-03-15T00:00:00"}
-      ${"69-03-15 00:00"} | ${"1969-03-15T00:00:00"}
-      ${"99-03-15 00:00"} | ${"1999-03-15T00:00:00"}
+      value               | yearWindow | expected
+      ${"00-03-15 00:00"} | ${2000}    | ${"2000-03-15T00:00:00"}
+      ${"99-03-15 00:00"} | ${2000}    | ${"2099-03-15T00:00:00"}
+      ${"50-03-15 00:00"} | ${1950}    | ${"1950-03-15T00:00:00"}
+      ${"99-03-15 00:00"} | ${1950}    | ${"1999-03-15T00:00:00"}
+      ${"00-03-15 00:00"} | ${1950}    | ${"2000-03-15T00:00:00"}
+      ${"49-03-15 00:00"} | ${1950}    | ${"2049-03-15T00:00:00"}
+      ${"69-03-15 00:00"} | ${1969}    | ${"1969-03-15T00:00:00"}
+      ${"68-03-15 00:00"} | ${1969}    | ${"2068-03-15T00:00:00"}
+      ${"01-03-15 00:00"} | ${0}       | ${"0001-03-15T00:00:00"}
+      ${"99-03-15 00:00"} | ${9900}    | ${"9999-03-15T00:00:00"}
     `(
-      "parses two-digit year $value against yy-MM-dd HH:mm to $expected",
-      ({ value, expected }) => {
-        expect(parseDateTimeWithPattern(value, "yy-MM-dd HH:mm")).toBe(
-          expected,
-        );
+      "parses $value against yy-MM-dd HH:mm with yearWindow $yearWindow to $expected",
+      ({ value, yearWindow, expected }) => {
+        expect(
+          parseDateTimeWithPattern(value, "yy-MM-dd HH:mm", undefined, {
+            yearWindow,
+          }),
+        ).toBe(expected);
       },
     );
+
+    it.each`
+      options                                     | description
+      ${undefined}                                | ${"options omitted"}
+      ${{}}                                       | ${"yearWindow absent"}
+      ${{ yearWindow: null }}                     | ${"null"}
+      ${{ yearWindow: 1.5 }}                      | ${"a non-integer"}
+      ${{ yearWindow: -1 }}                       | ${"negative"}
+      ${{ yearWindow: 9901 }}                     | ${"past the last four-digit window"}
+      ${{ yearWindow: Number.NaN }}               | ${"NaN"}
+      ${{ yearWindow: Number.POSITIVE_INFINITY }} | ${"Infinity"}
+      ${{ yearWindow: "2000" }}                   | ${"a numeric string"}
+      ${{ yearWindow: "Rolling" }}                | ${"wrong case"}
+    `('returns "" for a yy pattern when $description', ({ options }) => {
+      expect(
+        parseDateTimeWithPattern(
+          "24-03-15 14:30",
+          "yy-MM-dd HH:mm",
+          undefined,
+          options,
+        ),
+      ).toBe("");
+    });
+
+    it.each`
+      options | description
+      ${null} | ${"null"}
+      ${"x"}  | ${"a string"}
+      ${1}    | ${"a number"}
+    `(
+      'returns "" when the options argument is $description, even for a yyyy pattern',
+      ({ options }) => {
+        expect(
+          parseDateTimeWithPattern(
+            "2024-03-15 14:30",
+            "yyyy-MM-dd HH:mm",
+            undefined,
+            options,
+          ),
+        ).toBe("");
+      },
+    );
+
+    it.each`
+      options
+      ${undefined}
+      ${{}}
+      ${{ yearWindow: 2000 }}
+      ${{ yearWindow: 1950 }}
+      ${{ yearWindow: "rolling" }}
+      ${{ yearWindow: 9901 }}
+    `(
+      "a yyyy pattern gives 2024-03-15T14:30:00 with options $options: the window is ignored",
+      ({ options }) => {
+        expect(
+          parseDateTimeWithPattern(
+            "2024-03-15 14:30",
+            "yyyy-MM-dd HH:mm",
+            undefined,
+            options,
+          ),
+        ).toBe("2024-03-15T14:30:00");
+      },
+    );
+
+    // A hostile bag is an Object, so it passes the GetOptionsObject guard; reading `yearWindow`
+    // from it throws. Only a yy pattern reads it.
+    it.each`
+      make                                                                | kind
+      ${() => hostileProxy()}                                             | ${"a Proxy that throws on any trap"}
+      ${() => revokedProxy()}                                             | ${"a revoked Proxy"}
+      ${() => Object.defineProperty({}, "yearWindow", { get: throwing })} | ${"an object whose yearWindow getter throws"}
+    `(
+      'returns "" for a yy pattern with options that are $kind, and never reads them for a yyyy pattern',
+      ({ make }) => {
+        expect(
+          parseDateTimeWithPattern(
+            "24-03-15 14:30",
+            "yy-MM-dd HH:mm",
+            undefined,
+            make() as never,
+          ),
+        ).toBe("");
+        expect(
+          parseDateTimeWithPattern(
+            "2024-03-15 14:30",
+            "yyyy-MM-dd HH:mm",
+            undefined,
+            make() as never,
+          ),
+        ).toBe("2024-03-15T14:30:00");
+      },
+    );
+
+    it("reads yearWindow once per call for a yy pattern, and never for a yyyy pattern", () => {
+      let reads = 0;
+      const options = {
+        get yearWindow(): number {
+          reads += 1;
+          return 2000;
+        },
+      };
+      parseDateTimeWithPattern(
+        "24-03-15 14:30",
+        "yy-MM-dd HH:mm",
+        undefined,
+        options,
+      );
+      expect(reads).toBe(1);
+      parseDateTimeWithPattern(
+        "2024-03-15 14:30",
+        "yyyy-MM-dd HH:mm",
+        undefined,
+        options,
+      );
+      expect(reads).toBe(1);
+    });
+
+    it("reads a function carrying yearWindow as the options object it is", () => {
+      expect(
+        parseDateTimeWithPattern(
+          "24-03-15 14:30",
+          "yy-MM-dd HH:mm",
+          undefined,
+          Object.assign(() => undefined, { yearWindow: 2000 }),
+        ),
+      ).toBe("2024-03-15T14:30:00");
+    });
+
+    describe('yearWindow "rolling" is the hundred years around the current UTC year', () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      function setNow(instant: string): void {
+        vi.spyOn(Temporal.Now, "instant").mockReturnValue(
+          Temporal.Instant.from(instant),
+        );
+      }
+
+      // GMT rule: 50 years before the current UTC calendar year to 49 after it; 2050 - 50 = 2000.
+      // The last two rows are instants whose local date and UTC date fall in different years
+      // (22:00Z on 31 December 2049; 04:59:59Z on 1 January 2050): the UTC year decides.
+      it.each`
+        now                            | windowStart | ninetyNine
+        ${"2026-10-07T12:00:00Z"}      | ${1976}     | ${"1999-03-15T14:30:00"}
+        ${"2049-12-31T23:59:59Z"}      | ${1999}     | ${"1999-03-15T14:30:00"}
+        ${"2050-01-01T00:00:00Z"}      | ${2000}     | ${"2099-03-15T14:30:00"}
+        ${"2050-01-01T00:00:00+02:00"} | ${1999}     | ${"1999-03-15T14:30:00"}
+        ${"2049-12-31T23:59:59-05:00"} | ${2000}     | ${"2099-03-15T14:30:00"}
+      `(
+        "at $now the rolling window starts $windowStart: 99 → $ninetyNine and both edges resolve; fixed 1950 still gives 1999",
+        ({ now, windowStart, ninetyNine }) => {
+          setNow(now);
+          const rolling = { yearWindow: "rolling" as const };
+          const yy = (year: number): string =>
+            String(year % 100).padStart(2, "0");
+          expect(
+            parseDateTimeWithPattern(
+              "99-03-15 14:30",
+              "yy-MM-dd HH:mm",
+              undefined,
+              rolling,
+            ),
+          ).toBe(ninetyNine);
+          expect(
+            parseDateTimeWithPattern(
+              `${yy(windowStart)}-03-15 14:30`,
+              "yy-MM-dd HH:mm",
+              undefined,
+              rolling,
+            ),
+          ).toBe(`${windowStart}-03-15T14:30:00`);
+          expect(
+            parseDateTimeWithPattern(
+              `${yy(windowStart + 99)}-03-15 14:30`,
+              "yy-MM-dd HH:mm",
+              undefined,
+              rolling,
+            ),
+          ).toBe(`${windowStart + 99}-03-15T14:30:00`);
+          expect(
+            parseDateTimeWithPattern(
+              "99-03-15 14:30",
+              "yy-MM-dd HH:mm",
+              undefined,
+              { yearWindow: 1950 },
+            ),
+          ).toBe("1999-03-15T14:30:00");
+        },
+      );
+
+      // The rolling window holds 2024 from UTC 1975 (1925–2024) through UTC 2074 (2024–2123): 24
+      // is 1924 one second before that span and 2124 one second after it.
+      it.each`
+        now                       | window         | expected
+        ${"1974-12-31T23:59:59Z"} | ${"1924–2023"} | ${"1924-03-15T14:30:00"}
+        ${"1975-01-01T00:00:00Z"} | ${"1925–2024"} | ${"2024-03-15T14:30:00"}
+        ${"2074-12-31T23:59:59Z"} | ${"2024–2123"} | ${"2024-03-15T14:30:00"}
+        ${"2075-01-01T00:00:00Z"} | ${"2025–2124"} | ${"2124-03-15T14:30:00"}
+      `(
+        "at $now the rolling window is $window: 24-03-15 14:30 against yy-MM-dd HH:mm is $expected",
+        ({ now, expected }) => {
+          setNow(now);
+          expect(
+            parseDateTimeWithPattern(
+              "24-03-15 14:30",
+              "yy-MM-dd HH:mm",
+              undefined,
+              { yearWindow: "rolling" },
+            ),
+          ).toBe(expected);
+        },
+      );
+
+      // A pattern with no yy token never reads the option, so the clock a rolling window needs
+      // is never read for it: the result is the one the same call gives with no options.
+      it("a yyyy pattern gives 2024-03-15T14:30:00 with a rolling window when the clock cannot be read", () => {
+        mockTemporalNowInstantThrow();
+        expect(
+          parseDateTimeWithPattern(
+            "2024-03-15 14:30",
+            "yyyy-MM-dd HH:mm",
+            undefined,
+            {
+              yearWindow: "rolling",
+            },
+          ),
+        ).toBe("2024-03-15T14:30:00");
+      });
+
+      it('returns "" for a rolling window when the clock cannot be read', () => {
+        mockTemporalNowInstantThrow();
+        expect(
+          parseDateTimeWithPattern(
+            "24-03-15 14:30",
+            "yy-MM-dd HH:mm",
+            undefined,
+            { yearWindow: "rolling" },
+          ),
+        ).toBe("");
+      });
+    });
   });
 
   describe("ambiguous adjacent variable-width tokens", () => {
@@ -267,3 +523,8 @@ describe("parseDateTimeWithPattern", () => {
     },
   );
 });
+
+/** A getter that throws, for an options bag that cannot be read. */
+function throwing(): never {
+  throw new Error("hostile getter");
+}

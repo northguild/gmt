@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 40464,
-  "files": 709,
-  "executions": 1213920,
+  "tests": 44185,
+  "files": 731,
+  "executions": 1325550,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,8 +37,8 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 579,
-  "patterns": 25,
+  "functions": 594,
+  "patterns": 27,
   "byNamespace": [
     {
       "namespace": "plain",
@@ -61,6 +61,10 @@
       "count": 22
     },
     {
+      "namespace": "intermodal",
+      "count": 21
+    },
+    {
       "namespace": "precision",
       "count": 18
     },
@@ -77,10 +81,6 @@
       "count": 9
     },
     {
-      "namespace": "intermodal",
-      "count": 6
-    },
-    {
       "namespace": "instant",
       "count": 4
     },
@@ -89,5 +89,5 @@
       "count": 4
     }
   ],
-  "industries": ["transport", "intermodal"]
+  "industries": ["intermodal", "transport"]
 }
