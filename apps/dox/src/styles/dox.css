@@ -230,10 +230,13 @@ html:not([data-has-sidebar]) .sl-container {
 }
 
 /* Starlight's Card colours cards by grid position: 1 orange, 3 green, 4 red, 5 blue, and every
- * other position the default purple. A six-card section therefore repeats purple at cards 2 and
- * 6, so the sixth card takes the theme's ice colour instead. --gmt-ice flips with the theme (ice
- * blue in dark, near-black in light), so the icon stays legible in both. Starlight's rules sit
- * in its components layer, so this unlayered rule wins without !important. */
+ * other position the default purple. The home sections hold six and seven cards, so purple would
+ * repeat at cards 2 and 6, and the sixth card takes the theme's ice colour instead. --gmt-ice
+ * flips with the theme (ice blue in dark, near-black in light), so the icon stays legible in
+ * both. Starlight's rules sit in its components layer, so this unlayered rule wins without
+ * !important. A seventh card is position 4n + 3, so it takes Starlight's green and needs no rule
+ * here. An odd last card spans both columns of a two-column grid: see the gmt-grid-section
+ * container query below. */
 .gmt-home-grid .card:nth-child(6n) {
   --sl-card-border: var(--gmt-ice);
   --sl-card-bg: color-mix(in srgb, var(--gmt-ice) 12%, transparent);
@@ -327,5 +330,11 @@ html:not([data-has-sidebar]) .sl-container {
 @container gmt-grid-section (min-width: 40rem) {
   .gmt-grid-section .card-grid {
     grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* An odd last card would sit alone in the left column. It is the pointer card, so a full-width
+   * closing row reads as intended, and the rule needs no change when a card is added. */
+  .gmt-grid-section .card-grid > .card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 }

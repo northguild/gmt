@@ -147,7 +147,8 @@ and `zoned` carries them into a real time zone, where a day is not always 24 hou
 The industry layers are small on purpose. Each is built on the core, so every layer agrees on
 what a midnight, a day or an elapsed hour is. The facts come from the caller: GMT does not
 map a port to a time zone or look up a carrier's free days, so it holds no registry that can
-go stale. [Read the industry guides →](/guides/industries/)
+go stale. The intermodal layer also reads and writes the timestamp formats freight exchanges:
+UN/EDIFACT `DTM`, ANSI X12 dates and time codes, and GS1 EPCIS 2.0 event times. [Read the industry guides →](/guides/industries/)
 
 </Fragment>
 

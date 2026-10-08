@@ -1,8 +1,8 @@
 ---
 title: The Standards
 description: >
-  A quick guide to the acronyms behind GMT — TC39, Temporal, ISO 8601, the RFCs, IANA, BCP 47,
-  CLDR and test262 — what each one is, and what GMT uses it for.
+  A quick guide to the standards behind GMT — TC39, Temporal, ISO 8601, the RFCs, IANA, BCP 47,
+  CLDR, SQL, UN/EDIFACT, X12, EPCIS and test262 — what each one is, and what GMT uses it for.
 sidebar:
   order: 3
 industries: [core]
@@ -74,6 +74,55 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   is used by headers like `Last-Modified`, and it replaced RFC 7231. **GMT** formats and parses it
   with `formatHttp` and `parseHttp`.
 
+## EDI and supply-chain events
+
+- **UN/EDIFACT** is the United Nations rules for electronic data interchange, maintained by
+  UNECE through UN/CEFACT. Its `DTM` segment carries a value and a format code from **UNTDID data
+  element 2379**, which you can read in UNECE's own
+  [D.21B page, archived](http://web.archive.org/web/20240303123657/https://service.unece.org/trade/untdid/d21b/tred/tred2379.htm),
+  and in the directory mirrors for [D.04B](https://www.stylusstudio.com/edifact/D04B/2379.htm) and
+  [D.13B](https://www.edifactory.de/edifact/directory/D13B/data-element/2379). The UNECE host
+  refuses automated requests, so two of those are mirrors and one is an archive. The
+  [UN/EDIFACT syntax rules](http://web.archive.org/web/20151228090930/http://www.unece.org/trade/untdid/texts/d422_d.htm)
+  (UNTDID Part 4) define the service characters and the release character.
+  [**UN/ECE Recommendation 7**](http://web.archive.org/web/20201020110807/http://www.unece.org/fileadmin/DAM/cefact/recommendations/rec07/rec07_1988_inf108.pdf)
+  is its numerical representation of dates and times, including a UTC difference written in hours
+  (the link is an archived copy). **GMT** reads and writes the value with `parseEdifactDtm` and
+  `formatEdifactDtm`, and checks it with `isValidEdifactDtm` and `isValidEdifactDtmFormat`.
+- [**ANSI X12**](https://x12.org/) is a United States standard, and the dominant one in North
+  American freight and healthcare EDI. **Data elements 373, 337 and 623** are a segment's date,
+  time and time code, as `AT7`, `G62` and `DTM-02` to `DTM-04` carry them. **Data element 1250** is
+  the format qualifier for a date time period, and **data element 1251** is its value. GMT read
+  these lists through an X12-licensed dictionary, not the X12 text:
+  [373](https://www.stedi.com/edi/x12-005010/element/373),
+  [337](https://www.stedi.com/edi/x12-005010/element/337),
+  [623](https://www.stedi.com/edi/x12-008010/element/623) and
+  [1250](https://www.stedi.com/edi/x12-005010/element/1250). **GMT** reads the date, time and time
+  code together with `parseX12DateTime`, reads a 1250 pair with `parseX12DateTimePeriod`, writes
+  with `formatX12DateTimePeriod`, reads a time code with `x12TimeCode`, and checks them with
+  `isValidX12DateTime`, `isValidX12DateTimePeriod`, `isValidX12DateTimePeriodFormat` and
+  `isValidX12TimeCode`.
+- [**GS1 EPCIS 2.0**](https://www.gs1.org/standards/epcis) ([**ISO/IEC 19987**](https://www.iso.org/standard/85557.html)) is GS1's event
+  standard for supply-chain visibility. Its
+  [JSON schema](https://ref.gs1.org/standards/epcis/epcis-json-schema.json) and
+  [XSD](https://ref.gs1.org/standards/epcis/epcglobal-epcis-2_0.xsd) are its normative artefacts,
+  and they give the grammar of `eventTime` and `eventTimeZoneOffset`. **GMT** reads and writes
+  them with `parseEpcisEvent` and `formatEpcisEvent`, and checks them with `isValidEpcisEvent`.
+
+[Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/) shows each of these
+with real values.
+
+## Databases and other systems' clocks
+
+- **SQL-92** defines the `<timestamp string>` literal, in section 5.3. The ODBC `ts` escape is
+  a related form. **GMT** parses and formats both with `parseSql` and `formatSql`.
+- **NTP timestamps** are defined by [RFC 5905](https://www.rfc-editor.org/rfc/rfc5905). **GMT**
+  converts them with `toNtpTimestamp` and `fromNtpTimestamp`.
+- **.NET `DateTime.Ticks`**, **Windows `FILETIME`** and **PostgreSQL's `timestamptz`
+  microseconds** are vendor formats, not standards. **GMT** converts them exactly with
+  `toDotNetTicks` and `fromDotNetTicks`, `toFileTime` and `fromFileTime`, and `toPgMicroseconds`
+  and `fromPgMicroseconds`. The reference page of each states the format's documented limits.
+
 ## Conformance: test262
 
 [**test262**](https://github.com/tc39/test262) is TC39's official conformance test suite for
@@ -95,3 +144,7 @@ with the most authoritative source available, in this order:
 4. **CLDR**.
 5. **test262**.
 6. Real engines, such as Chromium's built-in Temporal, used only to corroborate.
+
+A realm's own primary source decides a realm rule: the UNTDID directory for a 2379 code, the X12
+dictionary for a time code, the GS1 schema for an EPCIS field. The list above decides anything it
+covers.
