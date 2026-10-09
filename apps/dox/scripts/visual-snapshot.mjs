@@ -37,6 +37,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import { blockOffSite } from "./gate-checks.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -359,6 +360,7 @@ async function newThemedContext(browser, viewport, theme) {
     viewport: { width: viewport.width, height: viewport.height },
     reducedMotion: "reduce",
   });
+  await blockOffSite(context, BASE_URL);
   await context.addInitScript((t) => {
     localStorage.setItem("starlight-theme", t);
   }, theme);

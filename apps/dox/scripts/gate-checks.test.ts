@@ -1,10 +1,15 @@
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   MIN_FRAMES,
+  blockOffSite,
   controlPresence,
   crashProblem,
   dragProblem,
   emptyRunProblem,
+  isOffSite,
   jumpProblems,
   keyboardMoveProblems,
   maxFrameJump,
@@ -174,5 +179,112 @@ describe("crashProblem", () => {
       "the run crashed: page.evaluate: Target page, context or browser has been closed",
     ]);
     expect(crashProblem("boom")).toEqual(["the run crashed: boom"]);
+  });
+});
+
+describe("isOffSite", () => {
+  const base = "http://127.0.0.1:4381";
+  it.each`
+    url                                                      | expected | why
+    ${"http://127.0.0.1:4381/tools/dtm-decoder/"}            | ${false} | ${"a page of the site under test"}
+    ${"http://127.0.0.1:4381/_astro/a.js?v=1#x"}             | ${false} | ${"a query and a fragment do not change the origin"}
+    ${"https://static.cloudflareinsights.com/beacon.min.js"} | ${true}  | ${"the analytics script"}
+    ${"https://cloudflareinsights.com/cdn-cgi/rum"}          | ${true}  | ${"the request that script sends"}
+    ${"http://127.0.0.1:4382/"}                              | ${true}  | ${"another port is another origin"}
+    ${"http://localhost:4381/"}                              | ${true}  | ${"another host name is another origin"}
+    ${"https://127.0.0.1:4381/"}                             | ${true}  | ${"another scheme is another origin"}
+    ${"data:text/plain,hello"}                               | ${false} | ${"a data URL makes no request"}
+    ${"blob:http://127.0.0.1:4381/1f0c"}                     | ${false} | ${"a blob URL makes no request"}
+    ${"about:blank"}                                         | ${false} | ${"about:blank makes no request"}
+  `("$url is $expected: $why", ({ url, expected }) => {
+    expect(isOffSite(url, base)).toBe(expected);
+    // Playwright hands a route predicate a URL object, not a string.
+    expect(isOffSite(new URL(url), base)).toBe(expected);
+  });
+
+  it("ignores a trailing slash and a path on the base", () => {
+    expect(isOffSite("http://127.0.0.1:4381/x", `${base}/`)).toBe(false);
+    expect(isOffSite("http://127.0.0.1:4381/x", `${base}/tools/`)).toBe(false);
+  });
+});
+
+describe("blockOffSite", () => {
+  /** A stand-in for a Playwright page or context: it records the one route. */
+  const fakeTarget = () => {
+    const routes: {
+      matches: (url: URL) => boolean;
+      handler: (route: { fulfill: (answer: unknown) => void }) => void;
+    }[] = [];
+    return {
+      routes,
+      route: async (
+        matches: (url: URL) => boolean,
+        handler: (route: { fulfill: (answer: unknown) => void }) => void,
+      ) => {
+        routes.push({ matches, handler });
+      },
+    };
+  };
+
+  it("routes off-site requests only, so a same-site request is never intercepted", async () => {
+    const target = fakeTarget();
+    await blockOffSite(target, "http://127.0.0.1:4381");
+    expect(target.routes).toHaveLength(1);
+    const [{ matches }] = target.routes;
+    expect(matches(new URL("https://cloudflareinsights.com/cdn-cgi/rum"))).toBe(
+      true,
+    );
+    expect(matches(new URL("http://127.0.0.1:4381/tools/"))).toBe(false);
+  });
+
+  it("answers an off-site request with an empty script, and never lets it leave", async () => {
+    const target = fakeTarget();
+    await blockOffSite(target, "http://127.0.0.1:4381");
+    const answers: unknown[] = [];
+    target.routes[0].handler({ fulfill: (answer) => answers.push(answer) });
+    expect(answers).toEqual([
+      { status: 200, contentType: "text/javascript", body: "" },
+    ]);
+  });
+});
+
+describe("every browser gate", () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const gates = readdirSync(here)
+    .filter((file) => file.endsWith(".mjs"))
+    .map((file) => ({
+      file,
+      source: readFileSync(path.join(here, file), "utf8"),
+    }))
+    // A gate loads pages of the built site. A script that draws its own markup
+    // in a browser (the favicon build) loads none.
+    .filter(
+      ({ source }) =>
+        source.includes('from "@playwright/test"') && source.includes(".goto("),
+    );
+
+  it("finds the gates that load a page of the site", () => {
+    expect(gates.map(({ file }) => file).sort()).toEqual([
+      "contrast-measure.mjs",
+      "globe-smoke.mjs",
+      "grow-measure.mjs",
+      "readout-still.mjs",
+      "visual-snapshot.mjs",
+    ]);
+  });
+
+  // A context covers the pages opened from it. A page opened straight from the
+  // browser has a context of its own, so it needs its own call.
+  it("each keeps every context and page it opens on the site under test", () => {
+    const count = (source: string, pattern: RegExp) =>
+      [...source.matchAll(pattern)].length;
+    const uncovered = gates
+      .map(({ file, source }) => ({
+        file,
+        opened: count(source, /\bbrowser\.new(?:Context|Page)\(/g),
+        blocked: count(source, /\bblockOffSite\(/g),
+      }))
+      .filter(({ opened, blocked }) => opened === 0 || blocked !== opened);
+    expect(uncovered).toEqual([]);
   });
 });

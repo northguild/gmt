@@ -58,6 +58,7 @@ import { chromium, webkit } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  blockOffSite,
   crashProblem,
   dragProblem,
   emptyRunProblem,
@@ -546,6 +547,9 @@ async function runOneUnguarded(
       await route.fulfill({ response, body });
     });
   }
+  /* After the route above: Playwright asks the newest route first, and that one
+     continues every request it does not rewrite. */
+  await blockOffSite(context, o.base);
   const page = await context.newPage();
   await context.addInitScript(samplerInit, {
     rootSelector: def.root,

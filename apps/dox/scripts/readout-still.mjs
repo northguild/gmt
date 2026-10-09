@@ -90,6 +90,7 @@
 
 import { chromium, webkit } from "@playwright/test";
 import {
+  blockOffSite,
   controlPresence,
   emptyRunProblem,
   keyboardMoveProblems,
@@ -346,6 +347,7 @@ async function run() {
       const context = await browser.newContext({
         viewport: { width: v.viewport, height: 900 },
       });
+      await blockOffSite(context, BASE);
       const page = await context.newPage();
       for (const tool of tools) {
         if (v.extra && !tool.extraWidths?.includes(v.viewport)) continue;

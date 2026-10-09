@@ -47,6 +47,7 @@ import { readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
+import { blockOffSite } from "./gate-checks.mjs";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -616,6 +617,7 @@ for (const p of PAGES) {
       colorScheme: theme,
       reducedMotion: "reduce",
     });
+    await blockOffSite(context, BASE);
     const page = await context.newPage();
     try {
       await setup(page, theme, p);
