@@ -39,6 +39,8 @@ Empty intervals (`start === end`) follow the same rule:
 ```typescript
 import { intervalContains } from "@northguild/gmt";
 
+const morning = { start: "2024-01-01T09:00:00Z", end: "2024-01-01T13:00:00Z" };
+
 intervalContains(morning, "2024-01-01T09:00:00Z"); // true
 intervalContains(morning, "2024-01-01T13:00:00Z"); // false — the end is excluded
 intervalContains(morning, "2024-01-01T04:00:00-05:00"); // true — the same instant as 09:00Z
@@ -118,6 +120,112 @@ intervalAbutsUtc(
   "2024-01-01T17:00:00Z",
 ); // false — 1 ns apart
 ```
+
+## One call for each value kind
+
+Each positional function exists in six variants: `Date`, `Time`, `DateTime`, `Utc`, `Zoned`
+and `Unix`. The examples above use `Date` and `Utc`. These show the others, one call each.
+The `Unix` variants take epoch numbers (milliseconds by default), and `Time` has no calendar,
+so it compares times of day.
+
+Containment of a point, then of an inner interval:
+
+```typescript
+import {
+  intervalContainsDateTime,
+  intervalContainsTime,
+  intervalContainsUnix,
+  intervalContainsZoned,
+  intervalEngulfsDate,
+  intervalEngulfsDateTime,
+  intervalEngulfsTime,
+  intervalEngulfsUnix,
+  intervalEngulfsUtc,
+  intervalEngulfsZoned,
+} from "@northguild/gmt";
+
+intervalContainsTime("09:00:00", "17:00:00", "12:00:00"); // true
+intervalContainsDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-01T12:00:00"); // true
+intervalContainsUnix(0, 1700000000, 170000000); // true
+intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]"); // true
+
+intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00"); // true — inner interval
+
+intervalEngulfsDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01"); // true
+intervalEngulfsDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31"); // true — equal intervals
+intervalEngulfsDate("2024-06-01", "2024-07-01", "2024-01-01", "2024-12-31"); // false — B is larger than A
+intervalEngulfsTime("09:00:00", "17:00:00", "10:00:00", "12:00:00"); // true
+intervalEngulfsDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-01T06:00:00", "2024-01-01T12:00:00"); // true
+intervalEngulfsUnix(0, 1700000000, 1000000, 2000000); // true
+intervalEngulfsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-01T00:00:00Z", "2024-07-01T00:00:00Z"); // true
+intervalEngulfsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-01T00:00:00+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]"); // true
+```
+
+`intervalEngulfs*` asks whether B lies within A and overlaps it. B may share A's `start` or
+`end`, but an empty B at A's `end` is not engulfed. It is the same test as the four-argument
+`intervalContains*`.
+
+Overlap and intersection:
+
+```typescript
+import {
+  intervalIntersectionDateTime,
+  intervalIntersectionTime,
+  intervalIntersectionUnix,
+  intervalIntersectionUtc,
+  intervalIntersectionZoned,
+  intervalsOverlapDateTime,
+  intervalsOverlapTime,
+  intervalsOverlapUnix,
+  intervalsOverlapUtc,
+  intervalsOverlapZoned,
+} from "@northguild/gmt";
+
+intervalsOverlapTime("09:00:00", "12:00:00", "11:00:00", "14:00:00"); // true
+intervalsOverlapDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-01T12:00:00", "2024-01-03T00:00:00"); // true
+intervalsOverlapUnix(0, 1700000000, 1000000, 2000000); // true
+intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T18:00:00Z"); // false — touching at 17:00
+intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-01T00:00:00+00:00[UTC]", "2024-03-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]"); // true
+
+intervalIntersectionTime("09:00:00", "12:00:00", "11:00:00", "14:00:00");
+// { start: "11:00:00", end: "12:00:00" }
+intervalIntersectionDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-01T12:00:00", "2024-01-03T00:00:00");
+// { start: "2024-01-01T12:00:00", end: "2024-01-02T00:00:00" }
+intervalIntersectionUnix(0, 1700000000, 1000000, 2000000);
+// { start: 1000000, end: 2000000 } — B lies inside A
+intervalIntersectionUtc("2024-01-01T00:00:00Z", "2024-07-01T00:00:00Z", "2024-04-01T00:00:00Z", "2025-01-01T00:00:00Z");
+// { start: "2024-04-01T00:00:00Z", end: "2024-07-01T00:00:00Z" }
+intervalIntersectionZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-01T00:00:00+00:00[UTC]", "2024-03-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]");
+// { start: "2024-03-01T00:00:00+00:00[UTC]", end: "2024-06-01T00:00:00+00:00[UTC]" }
+```
+
+Adjacency in the remaining variants:
+
+```typescript
+import {
+  intervalAbutsDateTime,
+  intervalAbutsTime,
+  intervalAbutsUnix,
+  intervalAbutsZoned,
+} from "@northguild/gmt";
+
+intervalAbutsTime("09:00:00", "12:00:00", "12:00:00", "17:00:00"); // true
+intervalAbutsDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00"); // true
+intervalAbutsUnix(0, 1000000, 1000000, 2000000); // true
+intervalAbutsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-01T00:00:00+00:00[UTC]", "2024-06-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]"); // true
+```
+
+`intervalAbuts*` is Allen's "meets": one interval's `end` equals the other's `start`, so the two
+share no instant and leave no gap. A gap of even one epoch unit means they do not abut:
+
+```typescript
+intervalAbutsUnix(0, 1000000, 1000001, 2000000); // false — one millisecond apart
+```
+
+All of these return the sentinel for the same invalid input: `false` for the boolean checks
+and `null` for the intersections. A wrong type, a malformed string, a leap second, an inverted
+interval, or an epoch outside the `unix/` grammar (not a safe integer or a digit string)
+all count.
 
 ## See also
 

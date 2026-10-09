@@ -106,7 +106,9 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   `x12TimeCodeOffset` or `x12TimeCodeZone`, sorts a code that arrives as data with
   `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`, checks the date and the time
   together with `isValidX12DateAndTime`, and checks codes with `isValidX12DateTimePeriodFormat`
-  and `isValidX12TimeCode`.
+  and `isValidX12TimeCode`. Healthcare uses the same 1250 and 1251 pair: 837 and 834 `DTP`
+  segments carry `D8` and `RD8`. **GMT** reads 11 UN/EDIFACT format codes, 10 X12 format
+  qualifiers and all 56 X12 time codes. Every other code returns the sentinel.
 - [**GS1 EPCIS 2.0**](https://www.gs1.org/standards/epcis) ([**ISO/IEC 19987**](https://www.iso.org/standard/85557.html)) is GS1's event
   standard for supply-chain visibility. Its
   [JSON schema](https://ref.gs1.org/standards/epcis/epcis-json-schema.json) and

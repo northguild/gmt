@@ -51,6 +51,38 @@ and the [D.04B](https://www.stylusstudio.com/edifact/D04B/2379.htm) and
 The live UNECE host refuses automated requests, which is why two of these links are mirrors and
 one is an archive.
 
+### A date, a time and a local date-time
+
+A parser returns the same house value for every code of its kind. A date is `YYYY-MM-DD`, and
+a time and a local date-time always carry seconds, even when the code holds only minutes. A
+formatter takes that value back and cuts it to the code's mask:
+
+```typescript
+import {
+  parseEdifactDateTime,
+  parseEdifactTime,
+} from "@northguild/gmt/intermodal/parse";
+import {
+  formatEdifactDate,
+  formatEdifactDateTime,
+  formatEdifactDateTimePeriod,
+  formatEdifactTime,
+} from "@northguild/gmt/intermodal/format";
+
+parseEdifactTime("1430", "401"); // "14:30:00"
+parseEdifactTime("143045", "402"); // "14:30:45"
+parseEdifactTime("143045", "401"); // "" — a 401 value holds minutes
+
+formatEdifactDate("2024-06-15", "102"); // "20240615"
+formatEdifactTime("14:30:45", "401"); // "1430" — 401 holds minutes
+formatEdifactDateTime("2024-06-15T14:30:00", "203"); // "202406151430"
+formatEdifactDateTime("2024-06-15T14:30:45.9", "204"); // "20240615143045" — cut, not rounded
+formatEdifactDateTimePeriod("2024-06-15T08:00:00", "2024-06-20T17:00:00", "719"); // "202406150800202406201700"
+```
+
+A formatter cuts a time to the mask and never rounds it. A fraction of a second is always
+dropped, and a minute-precision code drops the seconds too.
+
 ### Which codes carry an offset
 
 Only the four codes of the date-time with offset kind do. The other kinds state none, so the
@@ -101,12 +133,29 @@ parseEdifactOffsetDateTime("202406151430+24", "303"); // "" — +24 is not an ho
 parseEdifactOffsetDateTime("202406151430+0530", "303"); // "" — the field holds whole hours: use 205 or 208
 ```
 
+Where a partner sends letters such as `CET`, remove the letters, read the rest with
+`parseEdifactDateTime` under `203` or `204`, and resolve it in the zone you map the letters to.
+
 A formatter writes the offset as a signed hour and never as `UTC` or `GMT`:
 
 ```typescript
 formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "205"); // "202406151430+0200"
 formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "303"); // "202406151430+02"
 formatEdifactOffsetDateTime("2024-06-15T14:30:00Z", "303"); // "202406151430+00"
+```
+
+An offset is never cut. A formatter returns `""` when the code cannot hold the value it was
+given: `+05:30` under `303` or `304`, because the field holds whole hours, and a local
+date-time under `205`, because it has no offset to write. A year outside 0000–9999 returns
+`""` as well. Write the half-hour offset under `205` or `208` instead:
+
+```typescript
+import { formatEdifactDate, formatEdifactOffsetDateTime } from "@northguild/gmt/intermodal/format";
+
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "303"); // "" — the field holds whole hours
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "205"); // "202406151430+0530"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00", "205"); // "" — a local date-time has no offset to write
+formatEdifactDate("+010000-01-01", "102"); // "" — the year is outside 0000–9999
 ```
 
 ### A period has no hyphen on the wire
@@ -124,6 +173,11 @@ parseEdifactDatePeriod("20240615-20240620", "718"); // null — UN/EDIFACT sends
 parseEdifactDateTimePeriod("202406151430202406201600", "719"); // { start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }
 formatEdifactDatePeriod("2024-06-15", "2024-06-20", "718"); // "2024061520240620"
 ```
+
+Neither standard says whether the end is inside the period, so both ends come back as
+transmitted. The interval functions read an `end` as outside the interval, so
+`intervalLengthDate("2024-06-15", "2024-06-20", "days")` is `5`. Whether your partner counts
+the end day is for you to decide.
 
 ### The release character is yours
 
@@ -160,6 +214,39 @@ element 1251 value instead, and it has no time code.
 `parseX12Time(value)` reads every form element 337 takes (`HHMM`, `HHMMSS`, `HHMMSSD` and
 `HHMMSSDD`), and `formatX12Time(value, "TM" | "TS")` writes four or six digits. No 1250 code
 states an offset.
+
+A time of day, a local date-time and the rest of the formatters, one call each. `RTS` is one
+date-time, despite the R:
+
+```typescript
+import {
+  parseX12DateTime,
+  parseX12Time,
+} from "@northguild/gmt/intermodal/parse";
+import {
+  formatX12Date,
+  formatX12DateTime,
+  formatX12DateTimeRange,
+  formatX12Time,
+} from "@northguild/gmt/intermodal/format";
+
+parseX12DateTime("202406151430", "DT"); // "2024-06-15T14:30:00"
+parseX12DateTime("20240615143045", "RTS"); // "2024-06-15T14:30:45" — one date-time, despite the R
+parseX12Time("1430"); // "14:30:00"
+parseX12Time("14300012"); // "14:30:00.12"
+parseX12Time("143045", "TS"); // "14:30:45"
+parseX12Time("143045", "TM"); // "" — six digits is a TS value
+
+formatX12Date("2024-06-15", "D8"); // "20240615"
+formatX12Date("2024-06-15", "DB"); // "06152024"
+formatX12Time("14:30:00", "TM"); // "1430"
+formatX12Time("14:30:45.9", "TS"); // "143045" — cut, not rounded
+formatX12DateTime("2024-06-15T14:30:45", "DT"); // "202406151430"
+formatX12DateTime("2024-06-15T14:30:00Z", "DT"); // "" — no 1250 code carries an offset
+formatX12DateTimeRange("2024-06-15T08:00:00", "2024-06-20T17:00:00", "RDT"); // "202406150800-202406201700"
+```
+
+A formatter returns `""` for a year outside 0000–9999, as the UN/EDIFACT formatters do.
 
 ### The freight read: three calls
 
@@ -231,6 +318,11 @@ parseX12DateTimeRange("20240615143000-20240620160000", "DTS"); // { start: "2024
 formatX12DateRange("2024-06-15", "2024-06-20", "RD8"); // "20240615-20240620"
 ```
 
+Healthcare uses the same pair: 837 and 834 `DTP` segments carry `D8` and `RD8`. An X12 range
+writes its hyphen, and a UN/EDIFACT period does not, so each parser reads only its own wire
+form. As with UN/EDIFACT, X12 does not say whether the end is inside the range, and both ends
+come back as transmitted.
+
 Tenths and hundredths of a second in an element 337 time are read by `parseX12Time`. A formatter
 cuts them to the mask: `formatX12Time("14:30:00.12", "TS")` is `"143000"`.
 
@@ -288,6 +380,24 @@ parseDateWithPattern("240615", "yyMMdd"); // "" — no window, so no century
 parseDateTimeWithPattern("2406151430", "yyMMddHHmm", undefined, { yearWindow: 2000 }); // "2024-06-15T14:30:00"
 ```
 
+The two-digit-year period codes (`713`, `717` and `RD6`) have no reader. Split the period and
+read each half with a pattern parser. No function writes a two-digit year.
+
+`yearWindow` is the caller's, and it takes two forms. A number is the first year of a fixed
+hundred-year window: `2000` reads `00`–`99` as 2000–2099, and `1950` reads `50`–`99` as
+1950–1999 and `00`–`49` as 2000–2049. It gives the same answer in any year, so it is the form
+for stored data. `"rolling"` is the hundred years around the current UTC year, from 50 years
+before it to 49 after. It suits live messages, and it reads the same stored value differently
+as years pass. Without a window, a `yy` token returns `""`:
+
+```typescript
+import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 1950 }); // "1999-06-15"
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2099-06-15"
+parseDateWithPattern("490615", "yyMMdd", undefined, { yearWindow: 1950 }); // "2049-06-15"
+```
+
 ## What is not read
 
 - The two-digit-year codes above.
@@ -295,6 +405,8 @@ parseDateTimeWithPattern("2406151430", "yyMMddHHmm", undefined, { yearWindow: 20
   `406` (an offset alone), `TC` and `EH` (a day of the year with no year), `DDT` and `DTD` (a range
   with a date on one side and a date-time on the other), `RTM` (a time window that may cross
   midnight) and `UN` (unstructured). Their classifiers return `null`.
+- Every code outside the lists above. GMT reads 11 UN/EDIFACT format codes, 10 X12 format
+  qualifiers and all 56 X12 time codes, and every other code returns the sentinel.
 - Every other 2379 and 1250 code. That covers partial values such as a year, a month or a week,
   the weekday periods (`720`), the quantities (`801` and up), the day-first and month-first dates,
   the week date `103`, the ordinal date `105` and the time spans (`501` to `503`). This guide lists
@@ -322,6 +434,30 @@ isValidX12DateAndTime("20230229", "1430"); // false — 2023 has no 29 February
 isValidX12DateAndTime("20240615", ""); // false — both elements are required
 isValidEdifactDtmFormat("203"); // true
 isValidEdifactDtmFormat("101"); // false
+```
+
+The validators of the other kinds follow the same rule. A value validator agrees with its
+parser, and a code validator checks the code alone:
+
+```typescript
+import {
+  isValidEdifactDateTime,
+  isValidX12DateRange,
+  isValidX12DateTimePeriodFormat,
+  isValidX12Time,
+  isValidX12TimeCode,
+} from "@northguild/gmt/intermodal/validate";
+
+isValidEdifactDateTime("202406151430", "203"); // true
+isValidEdifactDateTime("202406151430", "204"); // false — a 204 value carries seconds
+isValidX12DateRange("20240615-20240620", "RD8"); // true
+isValidX12DateRange("2024061520240620", "RD8"); // false — X12 writes the hyphen
+isValidX12Time("1430"); // true
+isValidX12Time("1430", "TS"); // false — four digits is a TM value
+isValidX12DateTimePeriodFormat("D8"); // true
+isValidX12DateTimePeriodFormat("UN"); // false — unstructured
+isValidX12TimeCode("ET"); // true
+isValidX12TimeCode("EST"); // false
 ```
 
 ## EPCIS: two facts, both required
@@ -383,10 +519,12 @@ formatEpcisEvent({ local: "2024-06-15T23:30:00", offset: "+02:00", instant: "202
 formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "Z" }); // null — a designator, not an offset
 ```
 
-`isValidEpcisEvent` checks the pair. It is two field validators together:
+The two grammars are GS1's, exported as the `epcisEventTime` and `epcisTimeZoneOffset` patterns
+from `@northguild/gmt/regex`. `isValidEpcisEvent` checks the pair. It is two field validators together:
 `isValidEpcisEventTime` checks `eventTime` and `isValidEpcisTimeZoneOffset` checks
 `eventTimeZoneOffset`. Use one of them to say which field is wrong. The `epcisEventTime` pattern
-proves the shape alone, so it matches a day that does not exist:
+proves the shape alone, so it matches a day that does not exist. `isValidEpcisEventTime`
+also returns `false` for a fraction of more than nine digits:
 
 ```typescript
 import {
@@ -400,6 +538,7 @@ epcisEventTime.test("2024-02-30T14:30:00Z"); // true
 isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false — February has no 30th
 isValidEpcisTimeZoneOffset("+02:00"); // true
 isValidEpcisTimeZoneOffset("+0200"); // false — GS1 writes the colon
+isValidEpcisEventTime("2024-06-15T23:30:00.1234567890Z"); // false — ten digits of fraction
 isValidEpcisEvent({ eventTime: "2024-02-30T14:30:00Z", eventTimeZoneOffset: "+02:00" }); // false
 ```
 
@@ -444,6 +583,32 @@ toOffsetInstant("2024-06-15T14:30:00+01:00"); // { instant: "2024-06-15T13:30:00
 - A two-digit year gets no century from an EDI function. Use the pattern parsers and state
   `yearWindow`.
 - EPCIS `eventTime` and `eventTimeZoneOffset` are independent facts. The library keeps both.
+
+## The exported types
+
+Each kind has a type for its codes, so a call with a code of the wrong kind does not compile:
+[`EdifactDateFormat`](/reference/types/EdifactDateFormat),
+[`EdifactTimeFormat`](/reference/types/EdifactTimeFormat),
+[`EdifactDateTimeFormat`](/reference/types/EdifactDateTimeFormat),
+[`EdifactOffsetDateTimeFormat`](/reference/types/EdifactOffsetDateTimeFormat),
+[`EdifactDatePeriodFormat`](/reference/types/EdifactDatePeriodFormat),
+[`EdifactDateTimePeriodFormat`](/reference/types/EdifactDateTimePeriodFormat),
+[`X12DateFormat`](/reference/types/X12DateFormat),
+[`X12TimeFormat`](/reference/types/X12TimeFormat),
+[`X12DateTimeFormat`](/reference/types/X12DateTimeFormat),
+[`X12DateRangeFormat`](/reference/types/X12DateRangeFormat),
+[`X12DateTimeRangeFormat`](/reference/types/X12DateTimeRangeFormat),
+[`X12OffsetTimeCode`](/reference/types/X12OffsetTimeCode) and
+[`X12ZoneTimeCode`](/reference/types/X12ZoneTimeCode).
+
+The unions of those are `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`. The
+classifiers return `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass` and `X12TimeCodeClass`,
+and `x12TimeCodeZone` returns an `X12NamedZone`. The period parsers return
+[`EdiDatePeriod`](/reference/types/EdiDatePeriod) and
+[`EdiDateTimePeriod`](/reference/types/EdiDateTimePeriod). `parseEpcisEvent` and
+`formatEpcisEvent` use [`EpcisEventTime`](/reference/types/EpcisEventTime) and `EpcisInstant`.
+[`TwoDigitYearOptions`](/reference/types/TwoDigitYearOptions) is the options type of the pattern
+parsers.
 
 ## See it break, then work
 

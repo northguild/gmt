@@ -70,6 +70,13 @@ durationAs("P1M", "days"); // null — calendar unit needs relativeTo
 durationAs("P1M", "days", { relativeTo: "2024-02-01" }); // 29
 ```
 
+`getDurationUnit("PT90M", "hours")` is `0` but `durationAs("PT90M", "hours")` is `1.5`: the
+first reads a stored component, the second totals the whole duration. `durationAs` returns
+`null` when a calendar unit (year, month or week) is involved without a `relativeTo` anchor.
+`normalizeDuration` carries the same constraint. `negateDuration`, `absDuration`,
+`getDurationSign` and `getDurationUnit` only read the sign or a field, so they never need
+an anchor.
+
 ## Sign operations
 
 ```typescript
@@ -90,6 +97,7 @@ compareDurations("PT1H", "PT30M"); // 1
 compareDurations("PT60M", "PT1H"); // 0 — equal by length, not spelling
 compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" }); // 1
 compareDurations("P1M", "P30D", { relativeTo: "2024-02-01" }); // -1
+compareDurations("P1M", "P30D"); // null — a calendar unit needs a relativeTo anchor
 ```
 
 ## Render as human-readable text
@@ -131,6 +139,19 @@ diffZonedAsDuration(
   "hours",
 );
 // "PT47H" — real elapsed time: the spring-forward day had 23 hours
+```
+
+`diffDateAsDuration`/`diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/
+`diffUtcAsDuration` are siblings of `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc`.
+They return an ISO 8601 duration string (sentinel `""`) where the plain functions return a
+single-unit number (sentinel `null`). They take a single `unit`, not an array, which sets
+the duration's `largestUnit`:
+
+```typescript
+import { diffDate, diffDateAsDuration } from "@northguild/gmt";
+
+diffDate("not a date", "2024-04-05", "days"); // null
+diffDateAsDuration("not a date", "2024-04-05", "days"); // ""
 ```
 
 Feed the result straight into any duration function:
