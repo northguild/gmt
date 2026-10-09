@@ -1,11 +1,12 @@
 /**
  * RegExp matching the shape of a time zone identifier: Temporal's `TimeZoneIdentifier` grammar
- * (§14.6.2 Time Zone Identifiers), `UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`.
+ * (§13.31, the ISO 8601 / RFC 9557 grammar),
+ * `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`.
  *
  * - An offset identifier (`UTCOffset[~SubMinutePrecision]`): an ASCII sign and a two-digit hour
  *   `00`–`23`, optionally followed by two minute digits `00`–`59`, with or without `:` (`+05`,
  *   `+0530`, `-08:00`). No seconds and no fraction. `Intl.DateTimeFormat` accepts the same
- *   offsets (ECMA-402 `IsTimeZoneOffsetString`).
+ *   offsets (ECMA-262 `IsTimeZoneOffsetString`, which ECMA-402 calls).
  * - An IANA name (`TimeZoneIANAName`): one or more `/`-separated components. Each starts with a
  *   letter, `.` or `_` (`TZLeadingChar`) and continues with letters, digits, `.`, `_`, `-` or `+`
  *   (`TZChar`). So single-component names match (`UTC`, `Japan`, `Zulu`, `EST5EDT`, `GMT+0`,
