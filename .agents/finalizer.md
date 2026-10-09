@@ -37,11 +37,13 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    nothing, silently — CI runs this on every PR, so a missing entry fails the branch
    rather than surfacing at release time.
 
-4. **Update the docs surface — all of it, every time.** These four were being done
-   inconsistently, which is how `16,701 tests` and `504 functions` both went two stories
-   stale and the namespace chart shipped without `precision` or `span`:
+4. **Update the docs surface — all of it, every time.** No published figure is typed by
+   hand and no namespace is left out of a list: all four items below run on every story, so
+   each figure and each list is regenerated and checked against the repository:
 
-   1. `packages/gmt/README.md` and the relevant namespace READMEs, for the new API surface.
+   1. The namespace READMEs (`packages/gmt/src/<namespace>/README.md`). Each is a one-line
+      stub that points at the docs site. A new namespace gets one; the others change only
+      when their reference path does. The two landing-page READMEs are item 4.
    2. `apps/dox/src/lib/gmt-modules.ts` — register any **new module barrel**, or its
       reference pages render without a live playground.
    3. Regenerate the reference corpus:
@@ -57,14 +59,51 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       ([jsdoc standards § Options and members](../context/jsdoc-standards.md#options-and-members)).
       A gap is not yours to fill with site copy: report it to `driver`, so `tdd-dev` writes it
       from the implementation.
-   4. `pnpm stats:sync` — rewrites the published test counts, CI execution totals and
-      per-namespace function counts in both READMEs, and regenerates
-      `apps/dox/src/data/gmt-stats.json`, which every dox page, chart and comparison
-      renders from. Every figure counts `packages/gmt`'s suite only. Never type these
-      numbers by hand — dox copy imports them from `apps/dox/src/data/gmt-stats.ts`.
-      `pnpm stats` fails the build when they drift, and reports the two cases it cannot
-      fix itself (a new namespace the api-surface prose does not name, or README text
-      that was reworded so a rule no longer matches).
+   4. **Make sure the READMEs are up to date.** `README.md` and `packages/gmt/README.md`
+      are one short landing page, kept as two identical files. It holds four fact lines,
+      one comparison table, the install command, a sample, the namespace links and the
+      agent prompt. Do this on every story, after item 3. The checks read the regenerated
+      corpus and the built library.
+
+      - **Run `pnpm stats:sync`.** It rewrites the digits of every published figure in
+        both READMEs: the fact lines (tests, CI test runs, time zones, Node versions, the
+        multiple, functions, locales), each row of the comparison table, and the days the
+        other libraries were measured. It also pads the table's columns. It writes nothing
+        else. GMT's figures come from the repository and count `packages/gmt`'s suite
+        only. The other libraries' figures come from
+        `apps/dox/src/data/library-measurements.json`. It also regenerates
+        `apps/dox/src/data/gmt-stats.json`, which every dox page, chart and comparison
+        renders from. The function count of each namespace lives in that file, not in a
+        README. Never type any of these numbers by hand.
+      - **Run `node scripts/stats.mjs check` and `node scripts/api-surface.mjs check`, and
+        fix what they report.** `stats check` fails when a figure is stale, when a guarded
+        line was reworded so its figure is no longer checked, when the comparison table's
+        rows or the namespace links are wrong, or when the two files differ.
+        `api-surface check` runs every `call // result` line of the sample against the
+        built library. `sync` fixes a stale figure. Everything else needs a hand edit, and
+        `check` says which.
+      - **The story adds or removes a namespace that exports functions:** add or remove
+        its `/reference/<namespace>/` link. An industry namespace goes on the
+        "By industry:" line. Any other goes in the line of namespace links above it.
+      - **`library-measurements.json` gains or loses a library:** add or delete its row
+        in the comparison table, and correct the count word in the fact lines ("six").
+        **A re-measurement changes the order of the rows:** move them. GMT's row is first,
+        then the others by tests, most first. Then run `pnpm stats:sync` to fill the
+        figures and pad the columns.
+      - **The story renames or removes a function shown in the sample, or changes its
+        result:** update the sample. Paste each result from a real call against the built
+        library. Never type a result from memory.
+      - **The story changes the agent prompt:** `AGENT_PROMPT` in
+        `apps/dox/src/lib/agent-prompt.ts` is the source. Change it and all three copies
+        together: `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`.
+      - **Never add a section for a function or a feature to a README.** That content
+        goes in a docs guide under `apps/dox/src/content/docs/guides/`, which the Dox
+        agents write, and in the generated reference.
+      - **The two files are identical.** Edit one and copy it to the other:
+        `cp README.md packages/gmt/README.md`.
+      - **Report the `measuredOn` date of each other library's figures**, read from
+        `library-measurements.json`. Those figures are a dated snapshot and nothing
+        measures them again automatically. The owner decides when to re-measure.
 
 5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): laytime, laycan and NOR (MAR-19, #200)`). Output it; never run `git commit`.
 

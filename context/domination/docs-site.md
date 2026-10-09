@@ -58,8 +58,10 @@ output, asserted in the mount test.
 
 ## Rules
 
-- **Ported, not rewritten.** The guide ports the section the story added to
-  `packages/gmt/README.md`. Prose may be tightened; examples and results are the README's.
+- **The guide is the feature's home.** A story writes its explanation and examples in the
+  guide, and nowhere else: `README.md` and `packages/gmt/README.md` are landing pages that
+  hold no section for a function or a feature. Signatures and options come from the JSDoc,
+  through the generated reference.
 - **Every result shown is the function's real output.** `api-surface.mjs` scans every MDX page
   outside `reference/` for imports, links and each import-bound `call // result`, but it cannot
   check a result shown any other way. Before publishing, run each page's examples against

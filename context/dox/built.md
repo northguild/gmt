@@ -7,7 +7,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 ## Rules that bind every change
 
 - **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green,
-  including the CI timezone matrix (10 zones × Node 22/24/26 — see README). No changesets unless a change also touches
+  including the CI time-zone matrix (`gmt-matrix` in `.github/workflows/ci.yml`; its zones and
+  Node versions are in `src/data/gmt-stats.json`). No changesets unless a change also touches
   `packages/gmt`.
 - **Merging to `main` deploys.** `deploy-dox.yml` runs when the Release workflow finishes
   on `main`, which Release does on every push, so every merge still deploys, after its
@@ -226,9 +227,43 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   and code; a display face for headings only; self-hosted fonts; body text ≥ 7:1; amber
   reserved for the sentinel. See [reference/visual-design.md](reference/visual-design.md)
   and [reference/design-system.md](reference/design-system.md).
-- **Guides (`A4a`).** Ported, not rewritten: `packages/gmt/README.md`'s Quick Start,
-  `docs/dst-disambiguation.md`, and the domain `SKILL.md` Core Patterns. Maintainer and
+- **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
+  feature's explanation and examples; the generated reference holds the signatures.
+  `README.md` and `packages/gmt/README.md` are landing pages that hold neither, so a story
+  that adds or changes a function adds to a guide and never to a README. The guides, by group:
+  - `concepts/`: `plain-vs-zoned`, `dst-disambiguation` (written by `scripts/build-guides.mjs`
+    from `docs/dst-disambiguation.md`), `standards`, `correct-at-the-edges`.
+  - `core-date-operations/`: `get-current`, `plain-arithmetic`, `comparisons`, `durations`,
+    `parsing`, `formatting`, `relative-time`, `validation`, `calendar-systems`,
+    `business-calendars`, `operating-hours`, `nanosecond-precision`, `spans`.
+  - `zoned-date-operations/`: `zoned-operations`, `calendar-boundaries`,
+    `offset-instants-and-local-resolution`.
+  - `conversion/`: `converting-types`, `foreign-epoch-bridges`.
+  - `intervals/`: `interval-basics`, `containment-and-overlap`, `set-operations`,
+    `splitting-and-counting`.
+  - `integration/`: `app-integration`, `linting`, `skills`.
+  - `industries/`: one guide per topic, each named for its namespace
+    (`transport-legs-and-dwell`).
+
+  The domain `SKILL.md` Core Patterns teach the same patterns to agents. Maintainer and
   contributor skills are excluded.
+- **`/compare/` is a top-level page**, in "Start here" after `why-gmt` (`astro.config.mjs`
+  for the sidebar, `START_ORDER` in `src/lib/top-level-pages.ts` for `llms.txt` and
+  `llms-full.txt`). `<LibraryCompare table="…">` renders each of its tables and the notes list
+  from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
+  the same builders for the text surfaces (`.md`, `llms.txt`, the retrieval chunks), so the
+  page and its text twin cannot state different figures. Its figures come only from
+  `gmt-stats.json` and `library-measurements.json`; none is typed into `compare.mdx`.
+- **`src/data/library-measurements.json` is the one source for the six other libraries.** It
+  holds each library's name, measured facts (tests, CI executions, Node versions, time-zone
+  and locale test files, public API) and provenance (version, repository, commit, command, CI
+  configuration, `measuredOn`, note). `src/data/library-comparison.ts` reads it for every dox
+  page, chart and card, and `scripts/stats.mjs` reads it for the READMEs' comparison table. A
+  re-measurement is an edit to that file only: `pnpm stats:sync` then writes the READMEs, and
+  the site renders from it.
+- **`agent-prompt.test.ts` keeps `AGENT_PROMPT` (`src/lib/agent-prompt.ts`) equal to the
+  fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
+  is the source; a change to it goes into all three files in the same edit.
 
 ## Tier 2 · Widget platform
 
@@ -1164,8 +1199,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **System prompt** (`worker/system-prompt.ts`), eight sections in order: Persona and
   scope · Standing order (the prompt-injection boundary) · Linking rules (only this
   answer's retrieved URLs) · Vocabulary (consumer `SKILL.md`s) · Core rules
-  (`packages/gmt/README.md` §Core Rules) · Retrieved context · Available tools · Refusal
-  instruction. The order is pinned by `system-prompt.test.ts`.
+  (`worker/core-rules.md`, pinned by `core-rules.test.ts`) · Retrieved context · Available
+  tools · Refusal instruction. The order is pinned by `system-prompt.test.ts`.
 - **No provider flag restricts a model to a corpus.** Grounding is the prompt, the context
   and the refusal instruction.
 - **Key custody:** keys live only in Worker secrets and `.dev.vars`, never in `dist/` or a

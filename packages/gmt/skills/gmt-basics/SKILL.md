@@ -4,10 +4,16 @@ description: >
   Core date/time basics — get current values, parse components, read ISO week,
   ordinal, quarter and fiscal-period identifiers, format for display, format
   relative time, compare dates, and validate strings/timezones/intervals. Reads
-  the installed package README.md and source JSDoc for API details; this skill
-  is a routing pointer, not an API dump.
+  the docs site (llms.txt and each page's .md twin) and the installed package's
+  JSDoc for API details; this skill is a routing pointer, not an API dump.
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/get-current.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/parsing.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/formatting.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/relative-time.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/comparisons.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/validation.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/calendar-boundaries.mdx'
   - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
@@ -56,9 +62,13 @@ input before you act on it.
    `false` for booleans, `[]` for arrays. Always check before using. This holds
    for a `null` or wrong-typed argument too (`addDate(x, null)` is `""`), so a
    `try`/`catch` around a GMT call is dead code.
-3. **Read the README.** This skill is a routing pointer. For full API
-   signatures, locale matrices, and code examples, read the installed package's
-   `README.md` and the source JSDoc of the function you intend to call.
+3. **Read the docs site.** This skill is a routing pointer. For full API
+   signatures, locale matrices, and code examples, read these:
+   - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+   - Each page has a `.md` twin that holds its text, for example
+     `https://gmt-dox.northguild.workers.dev/guides/core-date-operations/parsing.md`.
+   - The JSDoc of the function you intend to call ships in the installed
+     package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
 ## Key functions
 
@@ -149,5 +159,7 @@ input before you act on it.
 
 ## References
 
-- [README — API Surface and Quick Start](README.md)
+- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [API reference](https://gmt-dox.northguild.workers.dev/reference/)
+- [Core date operations guides index](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/)
 - [Core date operations guides](/guides/core-date-operations/get-current/)

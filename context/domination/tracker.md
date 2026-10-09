@@ -255,7 +255,7 @@ Highest commercial value and the thinnest coverage in the original plan.
 
 ## Definition of Done — Binding for Every Story
 
-- `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24/26 — see README).
+- `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
 - **Changesets required** per the [changeset rule](../coding-standards.md#changesets): a new
   API story is `minor`; a fix to shipped behaviour is `patch`; no behaviour change, none.
 - No `Date` object anywhere. All inputs are ISO 8601 strings; outputs are strings, numbers,

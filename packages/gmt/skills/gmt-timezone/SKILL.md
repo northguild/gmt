@@ -17,7 +17,10 @@ description: >
   operatingTimeBetween, addOperatingTime), and daylight time
   (isInDaylightSaving, hasDaylightSaving).
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/operating-hours.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/*.mdx'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -433,9 +436,10 @@ converting between time zones, or doing arithmetic that must respect DST.
     read the runtime's time zone data, so an answer can change when that data
     does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
     standard time.
-25. **Read the README.** This skill is a routing pointer. For the full DST
-    disambiguation walkthrough, code examples, and locale ICU notes, read the
-    installed package's `README.md` and the source JSDoc.
+25. **Read the docs site.** This skill is a routing pointer. The map of the
+    docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+    has a `.md` twin that holds its text. The JSDoc ships in the installed
+    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
 ## Key functions
 
@@ -489,5 +493,5 @@ converting between time zones, or doing arithmetic that must respect DST.
 
 ## References
 
-- [README — Timezone and Calendar examples](README.md)
+- [Zoned operations guide](https://gmt-dox.northguild.workers.dev/guides/zoned-date-operations/zoned-operations/)
 - [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/guides/concepts/dst-disambiguation/)
