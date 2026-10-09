@@ -6,7 +6,7 @@ import { isValidDateTime } from "../validate";
  * `YYYY-MM-DD HH:MM:SS[.fff]` form of standard SQL `TIMESTAMP` and MySQL/SQLite `DATETIME`
  * columns.
  *
- * - **Grammar:** SQL-92 §5.3 `<timestamp string>` and the ODBC `ts` escape, which `parseSql`
+ * - **Grammar:** SQL-92 §5.3 `<timestamp string>` and the ODBC `ts` escape, which `parseSqlDateTime`
  *   reads: the date, a single space, and the time with seconds always written.
  * - A year outside SQL-92's `0001`–`9999` (Table 10) returns `""`: the literal has no sign and
  *   no expanded year to write it with.
@@ -19,13 +19,13 @@ import { isValidDateTime } from "../validate";
  * @param value plain ISO 8601 datetime string (e.g. "2024-03-15T14:30:00")
  * @returns SQL timestamp literal, or "" on invalid input
  *
- * @example formatSql("2024-03-15T14:30:00") // "2024-03-15 14:30:00"
- * @example formatSql("2024-03-15T14:30") // "2024-03-15 14:30:00"
- * @example formatSql("2024-03-15T14:30:00.500") // "2024-03-15 14:30:00.5"
- * @example formatSql("0000-01-01T00:00:00") // "" (year outside 0001–9999)
- * @example formatSql("invalid") // ""
+ * @example formatSqlDateTime("2024-03-15T14:30:00") // "2024-03-15 14:30:00"
+ * @example formatSqlDateTime("2024-03-15T14:30") // "2024-03-15 14:30:00"
+ * @example formatSqlDateTime("2024-03-15T14:30:00.500") // "2024-03-15 14:30:00.5"
+ * @example formatSqlDateTime("0000-01-01T00:00:00") // "" (year outside 0001–9999)
+ * @example formatSqlDateTime("invalid") // ""
  */
-export function formatSql(value: string): string {
+export function formatSqlDateTime(value: string): string {
   if (!isValidDateTime(value)) return "";
 
   try {

@@ -7,11 +7,11 @@ import {
 import { httpDate } from "../../regex";
 
 /**
- * Parse an RFC 9110 HTTP-date — the fixed grammar HTTP headers like
- * `Last-Modified`/`Date`/`Expires` use — into a UTC ISO 8601 datetime string.
+ * Parse an HTTP header date — the RFC 9110 HTTP-date that headers like
+ * `Last-Modified`/`Date`/`Expires` carry — into a UTC ISO 8601 datetime string.
  *
  * - **Decoding, not display.** Accepts English weekday/month names only, per
- *   the fixed grammar (see `formatHttp`'s JSDoc).
+ *   the fixed grammar (see `formatHttpDate`'s JSDoc).
  * - **All three HTTP-date formats**, as RFC 9110 §5.6.7 requires ("A
  *   recipient that parses a timestamp value in an HTTP field MUST accept all
  *   three"): IMF-fixdate (`Sun, 06 Nov 1994 08:49:37 GMT`), the obsolete
@@ -44,17 +44,17 @@ import { httpDate } from "../../regex";
  * @param value RFC 9110 HTTP-date string (e.g. "Fri, 15 Mar 2024 14:30:00 GMT")
  * @returns UTC ISO 8601 datetime string, or "" on invalid input
  *
- * @example parseHttp("Fri, 15 Mar 2024 14:30:00 GMT") // "2024-03-15T14:30:00Z"
- * @example parseHttp("Sunday, 06-Nov-94 08:49:37 GMT") // "1994-11-06T08:49:37Z" (rfc850-date)
- * @example parseHttp("Sun Nov  6 08:49:37 1994") // "1994-11-06T08:49:37Z" (asctime-date)
- * @example parseHttp("Fri, 15 Mar 2024 14:30:00 -0400") // "" (not an HTTP-date)
- * @example parseHttp("Sat, 15 Mar 2024 14:30:00 GMT") // "" (15 Mar 2024 was a Friday)
- * @example parseHttp("Mon Nov  6 08:49:37 1994") // "" (asctime-date; 6 Nov 1994 was a Sunday)
+ * @example parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT") // "2024-03-15T14:30:00Z"
+ * @example parseHttpDate("Sunday, 06-Nov-94 08:49:37 GMT") // "1994-11-06T08:49:37Z" (rfc850-date)
+ * @example parseHttpDate("Sun Nov  6 08:49:37 1994") // "1994-11-06T08:49:37Z" (asctime-date)
+ * @example parseHttpDate("Fri, 15 Mar 2024 14:30:00 -0400") // "" (not an HTTP-date)
+ * @example parseHttpDate("Sat, 15 Mar 2024 14:30:00 GMT") // "" (15 Mar 2024 was a Friday)
+ * @example parseHttpDate("Mon Nov  6 08:49:37 1994") // "" (asctime-date; 6 Nov 1994 was a Sunday)
  * @example convertZonedToUtc(parseRfc2822("15 Mar 2024 14:30:00 GMT")) // "2024-03-15T14:30:00Z" — the day name removed
- * @example parseHttp("Sat, 31 Feb 2024 14:30:00 GMT") // "" (impossible date)
- * @example parseHttp("not a date") // ""
+ * @example parseHttpDate("Sat, 31 Feb 2024 14:30:00 GMT") // "" (impossible date)
+ * @example parseHttpDate("not a date") // ""
  */
-export function parseHttp(value: string): string {
+export function parseHttpDate(value: string): string {
   if (typeof value !== "string") return "";
 
   try {

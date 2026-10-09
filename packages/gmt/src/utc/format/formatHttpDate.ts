@@ -3,8 +3,8 @@ import { englishDateTimeStem } from "../../internal/englishCalendarNames";
 import { isValidUtc } from "../validate";
 
 /**
- * Format a UTC ISO 8601 datetime string as an RFC 9110 IMF-fixdate — the
- * fixed grammar HTTP headers like `Last-Modified`/`Date`/`Expires` require.
+ * Format a UTC ISO 8601 datetime string as an HTTP header date — the RFC 9110
+ * IMF-fixdate that headers like `Last-Modified`/`Date`/`Expires` require.
  *
  * - **Fixed grammar, not a display format.** RFC 9110 mandates English
  *   weekday/month abbreviations and a literal `GMT` suffix regardless of
@@ -23,13 +23,13 @@ import { isValidUtc } from "../validate";
  * @param value UTC ISO 8601 datetime string (e.g. "2024-03-15T14:30:00Z")
  * @returns RFC 9110 IMF-fixdate string, or "" on invalid input or a year outside 0000–9999
  *
- * @example formatHttp("2024-03-15T14:30:00Z") // "Fri, 15 Mar 2024 14:30:00 GMT"
- * @example formatHttp("2024-03-15T14:30:00.500Z") // "Fri, 15 Mar 2024 14:30:00 GMT"
- * @example formatHttp("-000001-06-15T12:00:00Z") // ""
+ * @example formatHttpDate("2024-03-15T14:30:00Z") // "Fri, 15 Mar 2024 14:30:00 GMT"
+ * @example formatHttpDate("2024-03-15T14:30:00.500Z") // "Fri, 15 Mar 2024 14:30:00 GMT"
+ * @example formatHttpDate("-000001-06-15T12:00:00Z") // ""
  * @example Temporal.Instant.from("-000001-06-15T12:00:00Z").toString() // "-000001-06-15T12:00:00Z"
- * @example formatHttp("invalid") // ""
+ * @example formatHttpDate("invalid") // ""
  */
-export function formatHttp(value: string): string {
+export function formatHttpDate(value: string): string {
   if (!isValidUtc(value)) return "";
 
   try {

@@ -1,10 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { vi } from "vitest";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import { formatHttp } from "../format/formatHttp";
-import { parseHttp } from "./parseHttp";
+import { formatHttpDate } from "../format/formatHttpDate";
+import { parseHttpDate } from "./parseHttpDate";
 
-describe("parseHttp", () => {
+describe("parseHttpDate", () => {
   it.each`
     value                              | expected
     ${"Fri, 15 Mar 2024 14:30:00 GMT"} | ${"2024-03-15T14:30:00Z"}
@@ -13,7 +13,7 @@ describe("parseHttp", () => {
   `(
     "parses $value to $expected",
     ({ value, expected }: { value: string; expected: string }) => {
-      expect(parseHttp(value)).toBe(expected);
+      expect(parseHttpDate(value)).toBe(expected);
     },
   );
 
@@ -37,7 +37,7 @@ describe("parseHttp", () => {
       ${"Sat Nov  6 08:49:37 1994"}         | ${""}
     `("$value → ''", ({ value, expected }) => {
       setNow("2026-09-16T12:00:00Z");
-      expect(parseHttp(value)).toBe(expected);
+      expect(parseHttpDate(value)).toBe(expected);
     });
   });
 
@@ -48,7 +48,7 @@ describe("parseHttp", () => {
       ${"Sun Nov 06 08:49:37 1994"} | ${"1994-11-06T08:49:37Z"}
       ${"Fri Mar 15 14:30:00 2024"} | ${"2024-03-15T14:30:00Z"}
     `("parses $value to $expected", ({ value, expected }) => {
-      expect(parseHttp(value)).toBe(expected);
+      expect(parseHttpDate(value)).toBe(expected);
     });
 
     it.each`
@@ -59,7 +59,7 @@ describe("parseHttp", () => {
       ${"Sun Nov  6 08:49:37 1994 GMT"} | ${"no zone in asctime-date"}
       ${"Sun Nov  6 08:49:37 94"}       | ${"year = 4DIGIT"}
     `("returns '' for $value ($reason)", ({ value }) => {
-      expect(parseHttp(value)).toBe("");
+      expect(parseHttpDate(value)).toBe("");
     });
   });
 
@@ -85,7 +85,7 @@ describe("parseHttp", () => {
       "now 2026-09-16: $value → '$expected' ($reason)",
       ({ value, expected }) => {
         setNow("2026-09-16T12:00:00Z");
-        expect(parseHttp(value)).toBe(expected);
+        expect(parseHttpDate(value)).toBe(expected);
       },
     );
 
@@ -93,7 +93,7 @@ describe("parseHttp", () => {
       // 2130-01-01 (a Sunday) is 40 years ahead, so it is not in the future
       // beyond 50 years; 2030 would be the century-fixed reading.
       setNow("2090-01-01T00:00:00Z");
-      expect(parseHttp("Sunday, 01-Jan-30 00:00:00 GMT")).toBe(
+      expect(parseHttpDate("Sunday, 01-Jan-30 00:00:00 GMT")).toBe(
         "2130-01-01T00:00:00Z",
       );
     });
@@ -108,17 +108,17 @@ describe("parseHttp", () => {
       ${"Friday, 31-Feb-24 08:49:37 GMT"}   | ${"February has no 31st"}
     `("returns '' for $value ($reason)", ({ value }) => {
       setNow("2026-09-16T12:00:00Z");
-      expect(parseHttp(value)).toBe("");
+      expect(parseHttpDate(value)).toBe("");
     });
 
     it("returns '' when the clock cannot be read", () => {
       mockTemporalNowInstantThrow();
-      expect(parseHttp("Sunday, 06-Nov-94 08:49:37 GMT")).toBe("");
+      expect(parseHttpDate("Sunday, 06-Nov-94 08:49:37 GMT")).toBe("");
     });
 
     it("IMF-fixdate does not read the clock", () => {
       mockTemporalNowInstantThrow();
-      expect(parseHttp("Fri, 15 Mar 2024 14:30:00 GMT")).toBe(
+      expect(parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT")).toBe(
         "2024-03-15T14:30:00Z",
       );
     });
@@ -134,7 +134,7 @@ describe("parseHttp", () => {
     ${"Fri, 32 Mar 2024 14:30:00 GMT"}
     ${"Fri, 15 Mar 2024 14:30 GMT"}
   `("returns '' for invalid input $value", ({ value }: { value: string }) => {
-    expect(parseHttp(value)).toBe("");
+    expect(parseHttpDate(value)).toBe("");
   });
 
   it.each`
@@ -145,12 +145,12 @@ describe("parseHttp", () => {
   `(
     "returns '' for impossible date $value ($reason) instead of clamping",
     ({ value }: { value: string }) => {
-      expect(parseHttp(value)).toBe("");
+      expect(parseHttpDate(value)).toBe("");
     },
   );
 
-  it("round-trips through formatHttp", () => {
+  it("round-trips through formatHttpDate", () => {
     const original = "Fri, 15 Mar 2024 14:30:00 GMT";
-    expect(formatHttp(parseHttp(original))).toBe(original);
+    expect(formatHttpDate(parseHttpDate(original))).toBe(original);
   });
 });

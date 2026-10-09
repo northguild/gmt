@@ -1,9 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { httpDate } from "../../regex";
 import { localeZonedDateTimeInputByLocale, MustTestLocales } from "../../test";
-import { formatHttp } from "./formatHttp";
+import { formatHttpDate } from "./formatHttpDate";
 
-describe("formatHttp", () => {
+describe("formatHttpDate", () => {
   it.each`
     value                     | expected
     ${"2024-03-15T14:30:00Z"} | ${"Fri, 15 Mar 2024 14:30:00 GMT"}
@@ -12,18 +12,18 @@ describe("formatHttp", () => {
   `(
     "formats $value as $expected",
     ({ value, expected }: { value: string; expected: string }) => {
-      expect(formatHttp(value)).toBe(expected);
+      expect(formatHttpDate(value)).toBe(expected);
     },
   );
 
   it("zero-pads a single-digit day to 2 digits", () => {
-    expect(formatHttp("2024-03-05T09:00:00Z")).toBe(
+    expect(formatHttpDate("2024-03-05T09:00:00Z")).toBe(
       "Tue, 05 Mar 2024 09:00:00 GMT",
     );
   });
 
   it("truncates fractional seconds — IMF-fixdate has no sub-second field", () => {
-    expect(formatHttp("2024-03-15T14:30:00.987654321Z")).toBe(
+    expect(formatHttpDate("2024-03-15T14:30:00.987654321Z")).toBe(
       "Fri, 15 Mar 2024 14:30:00 GMT",
     );
   });
@@ -36,7 +36,7 @@ describe("formatHttp", () => {
     ${"2024-03-15"}
     ${"2024-02-30T14:30:00Z"}
   `("returns '' for invalid input $value", ({ value }: { value: string }) => {
-    expect(formatHttp(value)).toBe("");
+    expect(formatHttpDate(value)).toBe("");
   });
 
   describe("year = 4DIGIT (RFC 9110 §5.6.7 IMF-fixdate)", () => {
@@ -52,7 +52,7 @@ describe("formatHttp", () => {
     `(
       "$value → '$expected'",
       ({ value, expected }: { value: string; expected: string }) => {
-        expect(formatHttp(value)).toBe(expected);
+        expect(formatHttpDate(value)).toBe(expected);
       },
     );
   });
@@ -85,7 +85,7 @@ describe("formatHttp", () => {
         const utcValue = Temporal.ZonedDateTime.from(valueByLocale[locale])
           .toInstant()
           .toString();
-        const result = formatHttp(utcValue);
+        const result = formatHttpDate(utcValue);
         expect(httpDate.test(result)).toBe(true);
       },
     );

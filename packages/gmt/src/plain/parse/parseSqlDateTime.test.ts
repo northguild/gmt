@@ -1,7 +1,7 @@
-import { formatSql } from "../format/formatSql";
-import { parseSql } from "./parseSql";
+import { formatSqlDateTime } from "../format/formatSqlDateTime";
+import { parseSqlDateTime } from "./parseSqlDateTime";
 
-describe("parseSql", () => {
+describe("parseSqlDateTime", () => {
   it.each`
     value                              | expected
     ${"2024-03-15 14:30:00"}           | ${"2024-03-15T14:30:00"}
@@ -14,7 +14,7 @@ describe("parseSql", () => {
   `(
     "parses $value to $expected",
     ({ value, expected }: { value: string; expected: string }) => {
-      expect(parseSql(value)).toBe(expected);
+      expect(parseSqlDateTime(value)).toBe(expected);
     },
   );
 
@@ -32,11 +32,11 @@ describe("parseSql", () => {
     ${"+002024-03-15 14:30:00"}
     ${"-000001-01-01 00:00:00"}
   `("returns '' for invalid input $value", ({ value }: { value: string }) => {
-    expect(parseSql(value)).toBe("");
+    expect(parseSqlDateTime(value)).toBe("");
   });
 
-  it("round-trips through formatSql", () => {
+  it("round-trips through formatSqlDateTime", () => {
     const original = "2024-03-15 14:30:00";
-    expect(formatSql(parseSql(original))).toBe(original);
+    expect(formatSqlDateTime(parseSqlDateTime(original))).toBe(original);
   });
 });
