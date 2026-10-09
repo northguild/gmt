@@ -18,7 +18,8 @@
  * - `Z` does not match: it is `eventTime`'s designator, and this field records the offset in
  *   force where the event happened. `+0200` (no colon) and `+02` (hours only) do not match.
  * - Shape only. `parseEpcisEvent` reads the value through Temporal, and returns `-00:00` as
- *   `+00:00`.
+ *   `+00:00`. To check a value that may not be a string, use `isValidEpcisTimeZoneOffset`: for a
+ *   string it gives this pattern's answer.
  *
  * Capture groups: 1 sign, 2 the hours-and-minutes or `14:00`, 3 hours, 4 minutes (3 and 4 are
  * `undefined` for `14:00`).
@@ -44,7 +45,9 @@ export const epcisTimeZoneOffset: RegExp =
  * - GS1 published the grammar, so it is neither loosened nor tightened here: four-digit years
  *   only, upper-case `T` and `Z`, a colon in the offset, no space separator.
  * - Shape only; calendar validity is Temporal's (`2023-02-29T00:00:00Z` matches and
- *   `Temporal.Instant.from` rejects it).
+ *   `Temporal.Instant.from` rejects it). To check that a string is a real `eventTime`, use
+ *   `isValidEpcisEventTime`: this pattern also matches a day that does not exist and a fraction
+ *   longer than nine digits.
  *
  * Capture groups: 1 year, 2 month, 3 day, 4 hour, 5 minute, 6 second, 7 fraction with its
  * period (optional), 8 `Z` or the offset, 9 the offset, 10 sign, 11 hours-and-minutes or

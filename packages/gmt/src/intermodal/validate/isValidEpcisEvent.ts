@@ -1,12 +1,15 @@
-import type { EpcisEventTime } from "../../types";
-import { parseEpcisEvent } from "../parse/parseEpcisEvent";
+import { isObject } from "../../internal";
+import { isValidEpcisEventTime } from "./isValidEpcisEventTime";
+import { isValidEpcisTimeZoneOffset } from "./isValidEpcisTimeZoneOffset";
 
 /**
  * Validate whether a value carries the two required time fields of a GS1 EPCIS 2.0 event, each in
  * the grammar GS1 publishes for it.
  *
  * EPCIS (ISO/IEC 19987) is GS1's event standard for supply-chain visibility. True exactly when
- * `parseEpcisEvent` returns a result for the same value: the two share one check.
+ * `isValidEpcisEventTime` is true of `eventTime` and `isValidEpcisTimeZoneOffset` is true of
+ * `eventTimeZoneOffset`: this validator calls the two, and no check needs both fields at once.
+ * `parseEpcisEvent` returns a result for exactly the same values.
  *
  * - `eventTime` must match `epcisEventTime` (the `DateTimeStamp` pattern of the EPCIS XSD, the
  *   XML binding; the JSON schema says only `format: date-time`) and name a real instant: `YYYY-MM-DDTHH:MM:SS`, an optional fraction of up to nine digits, then
@@ -40,7 +43,20 @@ import { parseEpcisEvent } from "../parse/parseEpcisEvent";
  * @example isValidEpcisEvent("2024-06-15T14:30:00Z") // false (not an event)
  */
 export function isValidEpcisEvent(event: unknown): boolean {
-  // `parseEpcisEvent` is the one check, and it never throws: it returns null for a value of any
-  // type, a hostile one included.
-  return parseEpcisEvent(event as EpcisEventTime) !== null;
+  try {
+    if (!isObject(event)) {
+      return false;
+    }
+
+    // Each field is read once, in the order `parseEpcisEvent` reads them.
+    const { eventTime, eventTimeZoneOffset } = event as Record<string, unknown>;
+
+    return (
+      isValidEpcisEventTime(eventTime as string) &&
+      isValidEpcisTimeZoneOffset(eventTimeZoneOffset as string)
+    );
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return false;
+  }
 }

@@ -22,6 +22,7 @@ import {
   isValidEdifactOffsetDateTime,
   isValidEdifactTime,
   isValidX12Date,
+  isValidX12DateAndTime,
   isValidX12DateRange,
   isValidX12DateTime,
   isValidX12DateTimePeriodFormat,
@@ -904,6 +905,48 @@ describe("EDI permutations: a call the types accept returns a value", () => {
     );
   });
 
+  describe("(b) an X12 date and time sent as two elements read together, and neither reads alone", () => {
+    // Element 373 is `CCYYMMDD`, the `D8` mask, and element 337 holds `HHMM` and `HHMMSS`, the
+    // `TM` and `TS` masks. Each house date-time is written as its two wire values and cut to the
+    // mask by plain Temporal; the pair has no qualifier, so there is no code to get wrong.
+    it.each`
+      code    | mask
+      ${"TM"} | ${"HHMM"}
+      ${"TS"} | ${"HHMMSS"}
+    `(
+      "every house date-time, its date as CCYYMMDD and its time as $mask, reads back cut to the mask and is valid",
+      ({ code }: { code: string }) => {
+        for (const value of DATE_TIMES) {
+          const date = dateDigits(value, "D8");
+          const time = timeDigits(value, code);
+          const expected = Temporal.PlainDateTime.from(value)
+            .round({ smallestUnit: PRECISION[code], roundingMode: "trunc" })
+            .toString();
+
+          expect(parseX12DateAndTime(date, time), value).toBe(expected);
+          expect(isValidX12DateAndTime(date, time), value).toBe(true);
+        }
+      },
+    );
+
+    it.each`
+      date          | time       | reads
+      ${""}         | ${"1430"}  | ${"no date"}
+      ${"20240615"} | ${""}      | ${"no time"}
+      ${""}         | ${""}      | ${"neither element"}
+      ${"20230229"} | ${"1430"}  | ${"29 February 2023"}
+      ${"06152024"} | ${"1430"}  | ${"MMDDCCYY, the DB mask: element 373 is CCYYMMDD"}
+      ${"20240615"} | ${"2430"}  | ${"hour 24"}
+      ${"20240615"} | ${"14304"} | ${"five digits is not an element 337 form"}
+    `(
+      "$date and $time ($reads) return '' from the parser and false from the validator",
+      ({ date, time }: { date: string; time: string }) => {
+        expect(parseX12DateAndTime(date, time)).toBe("");
+        expect(isValidX12DateAndTime(date, time)).toBe(false);
+      },
+    );
+  });
+
   describe("(c) every cut code returns the sentinel from every function", () => {
     const cutCodesOf = (standard: string) =>
       standard === "UN/EDIFACT" ? CUT_EDIFACT_FORMATS : CUT_X12_FORMATS;
@@ -1233,6 +1276,7 @@ describe("EDI permutations: a call the types accept returns a value", () => {
       ${"isValidX12Date"}                  | ${isValidX12Date}                  | ${2}
       ${"isValidX12Time"}                  | ${isValidX12Time}                  | ${2}
       ${"isValidX12DateTime"}              | ${isValidX12DateTime}              | ${2}
+      ${"isValidX12DateAndTime"}           | ${isValidX12DateAndTime}           | ${2}
       ${"isValidX12DateRange"}             | ${isValidX12DateRange}             | ${2}
       ${"isValidX12DateTimeRange"}         | ${isValidX12DateTimeRange}         | ${2}
       ${"x12TimeCodeOffset"}               | ${x12TimeCodeOffset}               | ${1}

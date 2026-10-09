@@ -262,11 +262,13 @@ const PINS_REFERENCE = /\b(?:reference|at)\s*:/;
 const readsClockCache = new Map();
 /**
  * A public function reads the clock when its source calls `Temporal.Now` — a `get/` accessor, a
- * relative or calendar formatter, a now-relative predicate. `parse/` is excluded: `parseHttp` reads
+ * relative or calendar formatter, a now-relative predicate. `parse/` is excluded: `parseHttpDate` reads
  * the clock only to window an obsolete two-digit year, and its documented results do not move.
+ * `isValidHttpDate` is excluded for the same reason: it calls that parser, and its source names
+ * `Temporal.Now` only in the JSDoc that says so.
  */
 function readsClock(entry) {
-  if (entry.module === "parse") return false;
+  if (entry.module === "parse" || entry.name === "isValidHttpDate") return false;
   if (!readsClockCache.has(entry.sourcePath)) {
     readsClockCache.set(
       entry.sourcePath,

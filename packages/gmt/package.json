@@ -87,6 +87,9 @@
       "instant/convert": [
         "./dist/instant/convert/index.d.ts"
       ],
+      "instant/validate": [
+        "./dist/instant/validate/index.d.ts"
+      ],
       "intermodal": [
         "./dist/intermodal/index.d.ts"
       ],
@@ -347,6 +350,10 @@
     "./instant/convert": {
       "types": "./dist/instant/convert/index.d.ts",
       "default": "./dist/instant/convert/index.js"
+    },
+    "./instant/validate": {
+      "types": "./dist/instant/validate/index.d.ts",
+      "default": "./dist/instant/validate/index.js"
     },
     "./intermodal": {
       "types": "./dist/intermodal/index.d.ts",

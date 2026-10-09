@@ -12,7 +12,8 @@
  * - Sub-second offsets are rejected. ISO 8601 permits them and `Temporal.Instant.from` parses
  *   them, but no zone, and no standard that stores this pair, has ever used one.
  * - Shape only. Whether the offset is in Temporal's representable range is a separate check —
- *   `internal/utcOffsetString.ts` applies both.
+ *   `internal/utcOffsetString.ts` applies both. To check a value that may not be a string, use
+ *   `isValidUtcOffset`: for a string it gives this pattern's answer.
  *
  * @example utcOffset.test("-04:00") // true
  * @example utcOffset.test("+05:45") // true

@@ -2,6 +2,8 @@ import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import { parseEpcisEvent } from "../parse/parseEpcisEvent";
 import { isValidEpcisEvent } from "./isValidEpcisEvent";
+import { isValidEpcisEventTime } from "./isValidEpcisEventTime";
+import { isValidEpcisTimeZoneOffset } from "./isValidEpcisTimeZoneOffset";
 
 // GS1 EPCIS 2.0 (ISO/IEC 19987). An event's time is valid when both required fields are present
 // and each matches the grammar GS1 publishes for it: the XSD's `DateTimeStamp` for `eventTime`,
@@ -74,6 +76,42 @@ describe("isValidEpcisEvent", () => {
 
       expect(isValidEpcisEvent(event)).toBe(expected);
       expect(parseEpcisEvent(event) !== null).toBe(expected);
+      // The event is valid exactly when each field is: no check needs both fields at once.
+      expect(
+        isValidEpcisEventTime(eventTime) &&
+          isValidEpcisTimeZoneOffset(eventTimeZoneOffset),
+      ).toBe(expected);
+    },
+  );
+
+  // The event validator is the two field validators and nothing more. Each field takes a valid
+  // value, a value its pattern refuses, a value its pattern matches and the field validator
+  // refuses (`eventTime` only: for the offset the pattern is the whole rule), and a non-string.
+  it.each`
+    eventTime                            | eventTimeZoneOffset | reads
+    ${"2024-06-15T14:30:00Z"}            | ${"-05:00"}         | ${"both valid"}
+    ${"2024-06-15T10:00:00+02:00"}       | ${"+14:00"}         | ${"both valid, two offsets that differ"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+0200"}          | ${"a valid time, an offset the pattern refuses"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+14:01"}         | ${"a valid time, an offset past 14:00"}
+    ${"2024-06-15T14:30:00Z"}            | ${undefined}        | ${"a valid time, no offset"}
+    ${"2024-06-15T14:30:00Z"}            | ${-300}             | ${"a valid time, a number for the offset"}
+    ${"2024-06-15T14:30Z"}               | ${"-05:00"}         | ${"a time the pattern refuses, a valid offset"}
+    ${"2024-02-30T14:30:00Z"}            | ${"-05:00"}         | ${"30 February, a valid offset"}
+    ${"2024-06-15T14:30:00.1234567891Z"} | ${"-05:00"}         | ${"a ten-digit fraction, a valid offset"}
+    ${undefined}                         | ${"-05:00"}         | ${"no time, a valid offset"}
+    ${1718461800000}                     | ${"-05:00"}         | ${"a number for the time, a valid offset"}
+    ${"2024-06-15T14:30Z"}               | ${"+0200"}          | ${"both refused by their patterns"}
+    ${"2024-02-30T14:30:00Z"}            | ${"Z"}              | ${"30 February and Z"}
+    ${"2024-06-15T14:30:00.1234567891Z"} | ${"+15:00"}         | ${"a ten-digit fraction and hour 15"}
+    ${undefined}                         | ${undefined}        | ${"neither field"}
+    ${null}                              | ${null}             | ${"both null"}
+  `(
+    "isValidEpcisEvent is isValidEpcisEventTime and isValidEpcisTimeZoneOffset for $eventTime and $eventTimeZoneOffset ($reads)",
+    ({ eventTime, eventTimeZoneOffset }) => {
+      expect(isValidEpcisEvent({ eventTime, eventTimeZoneOffset })).toBe(
+        isValidEpcisEventTime(eventTime) &&
+          isValidEpcisTimeZoneOffset(eventTimeZoneOffset),
+      );
     },
   );
 
