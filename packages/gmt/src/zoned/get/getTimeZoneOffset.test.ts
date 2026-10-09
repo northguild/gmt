@@ -106,6 +106,46 @@ describe("getTimeZoneOffset", () => {
     });
   }
 
+  // A stored UTC offset is its own answer at every instant, in the canonical spelling
+  // `getTimeZoneOffset` returns for a zone: whole minutes lose the seconds, and zero is `+00:00`.
+  it.each`
+    timeZone       | instant                          | expected
+    ${"-00:44:30"} | ${"1970-01-01T12:00:00Z"}        | ${"-00:44:30"}
+    ${"-00:44:30"} | ${"2024-07-15T12:00:00Z"}        | ${"-00:44:30"}
+    ${"+23:59:59"} | ${"2024-07-15T12:00:00-04:00"}   | ${"+23:59:59"}
+    ${"+05:30:00"} | ${"2024-07-15T12:00:00Z"}        | ${"+05:30"}
+    ${"+00:00:00"} | ${"2024-07-15T12:00:00Z"}        | ${"+00:00"}
+    ${"-00:00:00"} | ${"2024-07-15T12:00:00Z"}        | ${"+00:00"}
+    ${"+00:00:30"} | ${"+275760-09-13T00:00:00Z"}     | ${"+00:00:30"}
+    ${"-00:44:30"} | ${"not an instant"}              | ${""}
+    ${"-00:44:30"} | ${"2016-12-31T23:59:60Z"}        | ${""}
+    ${"-00:44:30"} | ${"+275760-09-13T00:00:00.001Z"} | ${""}
+    ${"Z"}         | ${"2024-07-15T12:00:00Z"}        | ${""}
+    ${"+24:00:00"} | ${"2024-07-15T12:00:00Z"}        | ${""}
+    ${"-0400:30"}  | ${"2024-07-15T12:00:00Z"}        | ${""}
+  `(
+    "returns $expected for the stored offset $timeZone at $instant",
+    ({ timeZone, instant, expected }) => {
+      expect(getTimeZoneOffset(timeZone, instant)).toBe(expected);
+    },
+  );
+
+  // What the function returns is accepted back, for the zones whose offset had seconds.
+  it.each`
+    timeZone              | instant
+    ${"Africa/Monrovia"}  | ${"1970-01-01T12:00:00Z"}
+    ${"America/St_Johns"} | ${"1910-01-01T12:00:00Z"}
+    ${"Africa/Khartoum"}  | ${"1925-01-01T12:00:00Z"}
+  `(
+    "returns its own result for $timeZone at $instant when given that result as the zone",
+    ({ timeZone, instant }) => {
+      const offset = getTimeZoneOffset(timeZone, instant);
+
+      expect(offset).toMatch(/^[+-]\d{2}:\d{2}:\d{2}$/);
+      expect(getTimeZoneOffset(offset, instant)).toBe(offset);
+    },
+  );
+
   it("returns '' on failure", () => {
     mockTemporalInstantFromThrow();
     expect(getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z")).toBe(

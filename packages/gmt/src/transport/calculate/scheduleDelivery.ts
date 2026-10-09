@@ -29,7 +29,10 @@ export interface Leg {
   departure?: string;
   /** The ISO 8601 duration of the leg; time units and 24-hour days only (`transitTime`'s rule). */
   duration: string;
-  /** The time zone of the destination, the caller's fact: an IANA name or a UTC offset. */
+  /**
+   * The time zone of the destination, the caller's fact: an IANA name or a UTC offset to the minute
+   * (what `isValidTimeZone` accepts).
+   */
   timeZone: string;
   /**
    * The handling time at the handoff after this leg; the minimum connect time.
@@ -76,10 +79,11 @@ export interface LegTime {
 /** Options for `scheduleDelivery`. */
 export interface ScheduleDeliveryOptions {
   /**
-   * The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset, for
-   * schedules published as local wall times. An ambiguous wall time resolves to the earlier instant
-   * and a nonexistent one to the later instant (`"compatible"`). Ignored when the first departure
-   * is already exact; never applied to later legs.
+   * The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset to the
+   * minute (what `isValidTimeZone` accepts), for schedules published as local wall times. An
+   * ambiguous wall time resolves to the earlier instant and a nonexistent one to the later instant
+   * (`"compatible"`). Ignored when the first departure is already exact; never applied to later
+   * legs.
    *
    * @defaultValue None. A zoneless first-leg departure is invalid input.
    */
@@ -388,6 +392,10 @@ function chainLegs(
  * - An empty legs array is valid vacuous input and returns `{ eta: "", legTimes: [] }`;
  *   malformed input (a non-array, a non-object leg, an invalid field) returns `null`.
  * - Returns `null` on invalid input.
+ * - An offset with seconds (`-00:44:30`) as a leg's `timeZone` or as `startTimeZone` returns
+ *   `null`. A written zone cannot carry seconds (RFC 9557 §4.1), so `eta` and `localArrival` could
+ *   not name it. Pass the IANA name, or call `fromOffsetInstant({ instant, offset })` on a leg's
+ *   `arrival` for the local time with its full offset and no bracket.
  *
  * @param legs the journey's legs, in travel order
  * @param options The zone a zoneless first-leg departure is read in

@@ -101,6 +101,9 @@ function snapshotLeg(leg: unknown): unknown {
  * - An empty legs array returns `{ eta: "", totalLegs: 0, totalTransit: "PT0S", totalDwell: "PT0S" }`.
  *   Returns `null` on invalid input: a non-array, a malformed leg, a missed connection, an invalid
  *   `startTimeZone`, or an arrival outside the instant range.
+ * - An offset with seconds (`-00:44:30`) as a leg's `timeZone` or as `startTimeZone` returns
+ *   `null`, as in `scheduleDelivery`. A written zone cannot carry seconds (RFC 9557 §4.1), so `eta`
+ *   could not name it. Pass the IANA name.
  *
  * @param legs the journey's legs, in travel order
  * @param options The zone a zoneless first-leg departure is read in

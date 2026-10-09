@@ -1,6 +1,10 @@
-import { instantFrom, isOptionsArgument } from "../../internal";
+import {
+  frameWallClock,
+  instantFrom,
+  isOptionsArgument,
+  zoneFrame,
+} from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
 /**
  * Which date on a bill of lading a value is rendered for, one per dated field of the DCSA
@@ -20,9 +24,10 @@ export type BillOfLadingEvent = "issue" | "received" | "shippedOnBoard";
 export interface BolTimestampOptions {
   /**
    * The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue
-   * for `issue`, and the terminal at the port of loading for `received` and `shippedOnBoard`. It
-   * is required, because every B/L date is local and a UTC date is a different date for part of
-   * every day.
+   * for `issue`, and the terminal at the port of loading for `received` and `shippedOnBoard`. A UTC
+   * offset is a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`,
+   * what `getTimeZoneOffset` returns). It is required, because every B/L date is local and a UTC
+   * date is a different date for part of every day.
    */
   timeZone: string;
 }
@@ -83,6 +88,7 @@ const BILL_OF_LADING_EVENTS: ReadonlySet<unknown> = new Set<BillOfLadingEvent>([
  * @example bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }) // "" (not a B/L event)
  * @example bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_York" }) // "" (no offset: not a moment)
  * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/Nowhere" }) // ""
+ * @example bolTimestamp("1970-01-01T00:30:00Z", "issue", { timeZone: "-00:44:30" }) // "1969-12-31" (23:45:30 the day before, at a stored offset with seconds)
  */
 export function bolTimestamp(
   value: string,
@@ -93,20 +99,16 @@ export function bolTimestamp(
     if (options === undefined || !isOptionsArgument(options)) {
       return "";
     }
-    const { timeZone } = options;
+    const frame = zoneFrame(options.timeZone);
     if (
-      typeof timeZone !== "string" ||
-      !isValidTimeZone(timeZone) ||
+      frame === null ||
       !BILL_OF_LADING_EVENTS.has(event) ||
       !isValidInstant(value)
     ) {
       return "";
     }
 
-    return instantFrom(value)
-      .toZonedDateTimeISO(timeZone)
-      .toPlainDate()
-      .toString();
+    return frameWallClock(instantFrom(value), frame).toPlainDate().toString();
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDurationUnit, tileByUnit } from "../../internal";
+import { frameInstant, resolveDurationUnit, tileByUnit } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import { resolveUnixIntervalPair } from "../../internal/resolveUnixIntervalPair";
 import { minSlicesForSpan, stepNoFinerThan } from "../../internal/splitStep";
@@ -39,6 +39,12 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - A split into more than `options.maxPieces` slices returns `[]`, decided from the span before
  *   stepping where it can be, and otherwise as soon as slice `maxPieces + 1` is due.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `[]`. An offset to the minute has no
+ *   such limit.
  *
  * @param start Unix epoch in `epochUnit` — interval start
  * @param end Unix epoch in `epochUnit` — interval end
@@ -80,8 +86,10 @@ export function splitIntervalByUnitUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `[]`.
+     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `[]`.
      *
      * @defaultValue `"UTC"`
      */
@@ -117,7 +125,7 @@ export function splitIntervalByUnitUnix(
       return [];
     }
 
-    const { startVal, endVal, epochUnit } = pair;
+    const { startVal, endVal, epochUnit, frame } = pair;
     // Temporal's plural duration field name, as the tiling steps add `{ [unit]: amount }`. A step
     // finer than the epoch unit would floor neighbouring boundaries to one value (an empty slice),
     // so it steps by one epoch unit instead.
@@ -130,8 +138,8 @@ export function splitIntervalByUnitUnix(
     if (startVal.epochNanoseconds === endVal.epochNanoseconds) {
       return [
         {
-          start: toUnixEpoch(startVal, epochUnit),
-          end: toUnixEpoch(endVal, epochUnit),
+          start: toUnixEpoch(frameInstant(startVal, frame), epochUnit),
+          end: toUnixEpoch(frameInstant(endVal, frame), epochUnit),
         },
       ];
     }
@@ -161,8 +169,8 @@ export function splitIntervalByUnitUnix(
       );
 
       return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-        start: toUnixEpoch(sliceStart, epochUnit),
-        end: toUnixEpoch(sliceEnd, epochUnit),
+        start: toUnixEpoch(frameInstant(sliceStart, frame), epochUnit),
+        end: toUnixEpoch(frameInstant(sliceEnd, frame), epochUnit),
       }));
     } catch {
       return [];

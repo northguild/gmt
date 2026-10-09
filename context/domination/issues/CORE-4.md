@@ -11,11 +11,11 @@ Separately, feeds routinely deliver a local wall time with no offset at all ("ga
 ## Scope
 
 - `packages/gmt/src/instant/convert/toOffsetInstant.ts`:
-  - `toOffsetInstant(isoString: string, timeZone?: string): { instant: string, offset: string, timeZone?: string } | null` — Splits a zoned string into the two-field pair. `offset` is `±HH:MM`.
+  - `toOffsetInstant(isoString: string, timeZone?: string): { instant: string, offset: string, timeZone?: string } | null` — Splits a zoned string into the two-field pair. `offset` is `±HH:MM`, or `±HH:MM:SS` where the zone was not on a whole minute. `timeZone` is an IANA name, an offset to the minute, or a stored offset (`±HH:MM[:SS]`).
   - `fromOffsetInstant(value: { instant: string, offset: string }): string` — Renders the pair back to a local-time string with its original offset.
 - `packages/gmt/src/instant/convert/resolveLocal.ts`:
-  - `resolveLocal(localDateTime: string, timeZone: string, options?: { disambiguation?: 'compatible' | 'earlier' | 'later' | 'reject' }): string` — Resolves a zoneless wall time against a zone. Defaults to `'compatible'`, matching Temporal.
-  - `classifyLocal(localDateTime: string, timeZone: string): 'unique' | 'ambiguous' | 'nonexistent' | null` — Reports which case a wall time falls into **before** resolving it, so callers can branch rather than silently accept a policy.
+  - `resolveLocal(localDateTime: string, timeZone: string, options?: { disambiguation?: 'compatible' | 'earlier' | 'later' | 'reject' }): string` — Resolves a zoneless wall time in a time zone. `timeZone` is a time zone identifier (an IANA name, or an offset to the minute) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). Defaults to `'compatible'`, matching Temporal.
+  - `classifyLocal(localDateTime: string, timeZone: string): 'unique' | 'ambiguous' | 'nonexistent' | null` — Reports which case a wall time falls into **before** resolving it, so callers can branch rather than silently accept a policy. Takes the same `timeZone` as `resolveLocal`; at a fixed offset the answer is always `'unique'`.
 
 ## Why two fields
 
@@ -42,6 +42,8 @@ Sources: [OpenEPCIS](https://openepcis.io/docs/epcis/), [UNECE DTM](https://serv
   `getZonedOffset` (a zoned string's own offset) and `getTimeZoneOffset` (a zone's offset at
   a given instant), both `zoned/`.
 - `isValidTimeZone` — zone validation
+- `isValidUtcOffset` — validation of a stored offset (`±HH:MM[:SS]`)
+- `internal/zoneFrame` — the one reader of a time zone argument that may be a stored offset
 - `isValidDateTime` — the zoneless `<date>T<time>` gate `resolveLocal`/`classifyLocal` use
 - `internal/parseInstantNanoseconds` (CORE-1/CORE-2) — the one definition of an instant
   string GMT accepts, minus leap seconds and calendar annotations
@@ -56,6 +58,8 @@ Sources: [OpenEPCIS](https://openepcis.io/docs/epcis/), [UNECE DTM](https://serv
 - `classifyLocal('2024-03-10T02:30:00', 'America/New_York')` returns `'nonexistent'`
 - `resolveLocal` with `'earlier'` and `'later'` returns instants one hour apart for the ambiguous case
 - `resolveLocal` with `'reject'` returns the sentinel rather than throwing
+- `resolveLocal(local, getTimeZoneOffset(zone, at))` equals `resolveLocal(local, zone)` where the zone held that offset, for offsets with and without seconds
+- `classifyLocal('1970-01-01T12:00:00', '-00:44:30')` returns `'unique'`
 - Full IANA timezone coverage
 - `pnpm run validate` stays green
 
@@ -104,7 +108,8 @@ and DST-guide updates. Decisions taken while building it:
   slash, so it would also have dropped the zone from `[EST5EDT]` and `[Zulu]`, which
   `isValidZonedDateTime` and the rest of `zoned/` accept. Temporal canonicalises every offset
   spelling (`[-0400]`, `[+05]`) to `±HH:MM`, so testing for one catches them all. The
-  `timeZone` *argument* still gates on `isValidTimeZone`, as every zone argument in GMT does.
+  `timeZone` *argument* takes a time zone identifier or a stored offset, through
+  `internal/zoneFrame`.
   `fromOffsetInstant` had to move with it: it gated `value.timeZone` on `isValidTimeZone`,
   so a pair `toOffsetInstant` produced from `"...[EST5EDT]"` would not render back, breaking
   the documented inverse. It now hands the identifier to Temporal and tests the
@@ -116,6 +121,21 @@ and DST-guide updates. Decisions taken while building it:
   rounding would put it thirty seconds from the event it describes and break the round trip.
   Sub-second offsets, which ISO 8601 permits and `Temporal.Instant.from` parses, are rejected
   — no zone and no standard that stores this pair has ever used one.
+- **The `timeZone` argument is a time zone identifier or a stored offset.** `toOffsetInstant`,
+  `resolveLocal` and `classifyLocal` return nothing with a zone in it that the argument could
+  not name, so they accept everything `isValidTimeZone` or `isValidUtcOffset` accepts, through
+  `internal/zoneFrame`. The library returns `-00:44:30` for `Africa/Monrovia` in 1970, so the
+  library reads it back: `resolveLocal(local, getTimeZoneOffset(zone, at))` is the instant the
+  zone gives. An offset with seconds is still not a time zone identifier (TC39 Temporal
+  `TimeZoneIdentifier : UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`), so it never goes in
+  a bracket: the wall time and the offset are joined into one date-time string, which Temporal
+  reads with seconds (`DateTimeUTCOffset : UTCDesignator | UTCOffset[+SubMinutePrecision]`). A
+  whole-minute offset spelled with seconds (`+05:30:00`) is read as the identifier `+05:30`. A
+  fixed offset has no transition, so `classifyLocal` returns `'unique'` and `disambiguation`
+  has nothing to decide. With an offset, `toOffsetInstant` returns no `timeZone` field. The
+  three functions read an offset with seconds up to both ends of the instant range.
+  `fromOffsetInstant` writes `value.timeZone` into a bracket, so it takes a time zone
+  identifier only.
 - **A bracketed zone, not the string's offset, fixes the instant.** The first cut took the
   instant from `parseInstantNanoseconds` in every case, and the round trip was 30 seconds out
   for `Africa/Monrovia`: RFC 9557 caps a written offset at minutes, so Temporal writes

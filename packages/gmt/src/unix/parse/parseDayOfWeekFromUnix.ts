@@ -1,4 +1,4 @@
-import { unixZonedDateTime } from "../../internal/unixZonedDateTime";
+import { unixWallClock } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -29,8 +29,10 @@ export function parseDayOfWeekFromUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -42,7 +44,7 @@ export function parseDayOfWeekFromUnix(
       return null;
     }
 
-    return unixZonedDateTime(value, options)?.dayOfWeek ?? null;
+    return unixWallClock(value, options)?.dayOfWeek ?? null;
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

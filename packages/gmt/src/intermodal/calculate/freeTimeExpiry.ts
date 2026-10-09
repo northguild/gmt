@@ -1,8 +1,11 @@
 import {
+  frameInstant,
+  frameZoned,
   instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   walkFreeTime,
+  zoneFrame,
 } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { FreeTimeOptions } from "../../types";
@@ -55,6 +58,12 @@ export interface FreeTime {
  *   least `1`, `options` is not an object, `basis` or `firstDay` is missing or unknown,
  *   `timeZone` is invalid, `basis` is `"working"` without a valid `BusinessCalendar`, or the walk
  *   would pass 10,000 local days.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param clockStart ISO 8601 instant string of the event that starts the clock (discharge, availability or gate-out)
  * @param freeDays whole number of free days the tariff allows, at least 1
@@ -72,6 +81,7 @@ export interface FreeTime {
  * @example freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "working", timeZone: "America/New_York", firstDay: "eventDay" }) // null (a working-day count needs the terminal's calendar)
  * @example freeTimeExpiry("2024-06-14T19:00:00Z", 0, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // null (no free days means no last free day)
  * @example freeTimeExpiry("2024-06-14T19:00:00", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }) // null (no offset: not an instant)
+ * @example freeTimeExpiry("1970-01-01T00:30:00Z", 3, { basis: "calendar", firstDay: "eventDay", timeZone: "-00:44:30" }) // { freeTimeStart: "1969-12-31", lastFreeDay: "1970-01-02", expiresAt: "1970-01-03T00:44:30Z" }
  */
 export function freeTimeExpiry(
   clockStart: string,
@@ -81,11 +91,17 @@ export function freeTimeExpiry(
   try {
     const terms = parseFreeTimeTerms(options);
     const allowed = parseFreeDays(freeDays, 1);
-    if (!isValidInstant(clockStart) || terms === null || allowed === null) {
+    const frame = terms === null ? null : zoneFrame(terms.timeZone);
+    if (
+      !isValidInstant(clockStart) ||
+      terms === null ||
+      frame === null ||
+      allowed === null
+    ) {
       return null;
     }
 
-    const start = instantFrom(clockStart).toZonedDateTimeISO(terms.timeZone);
+    const start = frameZoned(instantFrom(clockStart), frame);
     const ledger = walkFreeTime(start, allowed, terms);
     if (ledger === null) {
       return null;
@@ -94,7 +110,7 @@ export function freeTimeExpiry(
     return {
       freeTimeStart: ledger.free[0].date,
       lastFreeDay: ledger.free[allowed - 1].date,
-      expiresAt: ledger.expiresAt.toInstant().toString(),
+      expiresAt: frameInstant(ledger.expiresAt, frame).toString(),
     };
   } catch {
     // Never throws (Core Rule 3): a hostile

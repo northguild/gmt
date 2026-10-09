@@ -69,6 +69,22 @@ describe("convertUtcToZoned", () => {
     },
   );
 
+  // The result names its zone in a bracket, and a written zone cannot carry seconds (RFC 9557
+  // §4.1). So an offset with seconds is refused, in either spelling, and the minute offset is not.
+  it.each`
+    timeZone       | expected
+    ${"-00:44:30"} | ${""}
+    ${"+05:30:00"} | ${""}
+    ${"+05:30"}    | ${"2024-02-29T20:00:45+05:30[+05:30]"}
+  `(
+    "returns $expected for the offset $timeZone as the zone",
+    ({ timeZone, expected }) => {
+      expect(convertUtcToZoned("2024-02-29T14:30:45Z", timeZone)).toBe(
+        expected,
+      );
+    },
+  );
+
   for (const timeZone of battleTestTimeZones) {
     it(`converts UTC to battle-test timeZone ${timeZone}`, () => {
       expect(

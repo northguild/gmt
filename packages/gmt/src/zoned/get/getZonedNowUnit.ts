@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "@js-temporal/polyfill";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
 import { parseWeekFromDate } from "../../plain/parse";
-import { isValidTimeZone } from "../validate";
+import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 /**
@@ -12,7 +12,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  *
  * | Member | Description |
  * | --- | --- |
- * | `year` | Full calendar year (e.g. `2024`), no padding. |
+ * | `year` | Four digits (e.g. `2024`, `0005`); a sign and six digits outside 0000–9999 (e.g. `+010000`). |
  * | `month` | 1–12, zero-padded to 2 digits (e.g. `02`). |
  * | `week` | Week-of-year from `parseWeekFromDate`, 1–53. |
  * | `day` | Day of month 1–31, zero-padded (e.g. `15`). |
@@ -67,8 +67,11 @@ function isValidZonedNowUnit(unit: string): unit is ZonedNowUnit {
  * - Validation is performed on timezone and unit.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
- * @param ianaTimezone IANA timeZone identifier
+ * @param ianaTimezone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or
+ *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @param unit unit to extract from current zoned time
  * @returns string representation of the requested unit or "" on invalid input
  *
@@ -85,15 +88,17 @@ export function getZonedNowUnit(
   }
 
   const resolvedUnit = resolveDateTimeUnit(unit);
-  if (!isValidTimeZone(ianaTimezone) || !isValidZonedNowUnit(resolvedUnit)) {
+  const frame = zoneFrame(ianaTimezone);
+
+  if (frame === null || !isValidZonedNowUnit(resolvedUnit)) {
     return "";
   }
 
   try {
-    const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
+    const now = frameNowWallClock(frame);
 
-    return zonedNowUnitValue(now, resolvedUnit, (zdt) => {
-      const w = parseWeekFromDate(zdt.toPlainDate().toString());
+    return zonedNowUnitValue(now, resolvedUnit, (wallClock) => {
+      const w = parseWeekFromDate(wallClock.toPlainDate().toString());
       return w === null ? "" : w.toString();
     });
   } catch {

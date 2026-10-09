@@ -48,17 +48,21 @@ its own bracketed zone returns `null` rather than a guess.
 ## Validate the offset
 
 [`isValidUtcOffset`](/reference/instant/validate/isValidUtcOffset) checks the `offset` half
-of the pair: `±HH:MM`, or `±HH:MM:SS` for a zone that did not run on a whole minute. It is
-not the check for a `timeZone` argument, which is
-[`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone).
+of the pair: `±HH:MM`, or `±HH:MM:SS` for a zone that was not on a whole minute. A function
+whose result has no zone in it takes this offset in its time zone position too. A function
+that returns a zoned string, or formats with `Intl`, takes a time zone identifier only: check
+that with [`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone).
 
 ```typescript
-import { isValidUtcOffset } from "@northguild/gmt";
+import { isValidTimeZone, isValidUtcOffset } from "@northguild/gmt";
 
 isValidUtcOffset("-04:00"); // true
 isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
 isValidUtcOffset("Z"); // false (a designator, not an offset)
 isValidUtcOffset("+0530"); // false (no colon)
+
+isValidTimeZone("-00:44:30"); // false (an offset with seconds is not a time zone identifier)
+isValidTimeZone("+0530"); // true (an offset to the minute is one)
 ```
 
 ## Resolve a wall time that has no offset
@@ -92,6 +96,73 @@ human. It should not silently accept whichever of two instants an hour apart a d
 handed it. See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the four
 strategies in full.
 
+## Pass a stored offset where a time zone goes
+
+A stored offset is the offset the library returns for a zone at one instant: `±HH:MM`, or
+`±HH:MM:SS` where the zone was not on a whole minute.
+[`getTimeZoneOffset`](/reference/zoned/get/getTimeZoneOffset),
+[`getZonedOffset`](/reference/zoned/parse/getZonedOffset) and `toOffsetInstant` return one. A
+fixed offset is a complete rule for local time, so it goes straight back in as the time zone:
+
+```typescript
+import {
+  classifyLocal,
+  convertUtcToPlainDateTime,
+  getTimeZoneOffset,
+  resolveLocal,
+} from "@northguild/gmt";
+
+getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"); // "-00:44:30"
+
+resolveLocal("1970-01-01T12:00:00", getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"));
+// "1970-01-01T12:44:30Z"
+resolveLocal("1970-01-01T12:00:00", "Africa/Monrovia"); // "1970-01-01T12:44:30Z" (the same instant)
+resolveLocal("1970-01-01T12:00:00", "+05:30:00"); // "1970-01-01T06:30:00Z" (the same as "+05:30")
+
+convertUtcToPlainDateTime("1970-01-01T12:44:30Z", { timeZone: "-00:44:30" }); // "1970-01-01T12:00:00"
+
+classifyLocal("1970-01-01T12:00:00", "-00:44:30"); // "unique"
+resolveLocal("1970-01-01T12:00:00", "-00:44:30", { disambiguation: "reject" }); // "1970-01-01T12:44:30Z"
+```
+
+A fixed offset has no transitions, so a wall time at one is never ambiguous and never
+nonexistent. `classifyLocal` returns `"unique"`, and `disambiguation` has nothing to decide.
+
+An offset with seconds is still not a time zone identifier. A written zone cannot carry
+seconds (RFC 9557), and `Intl.DateTimeFormat` takes an offset to the minute only. So the
+result of a function decides what it takes:
+
+- **The result has no zone in it** (an instant, a plain value, a number or a yes or no). The
+  function takes anything `isValidTimeZone` or `isValidUtcOffset` accepts. These are
+  `resolveLocal`, `classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset`, the `getZoned*`
+  field readers, the `utc/` and `unix/` functions that convert, parse or calculate,
+  `floorToZone`, `bucketRange`, the operating-hours functions, `freeTimeExpiry`,
+  `chargeableDays` and `bolTimestamp`.
+- **The result carries the zone, or the zone goes to `Intl.DateTimeFormat`.** The function
+  takes a time zone identifier only, and returns its empty result for an offset with seconds.
+  These are the functions that return a zoned string, such as `convertUtcToZoned`, the
+  functions that take a business calendar, and `formatUtc`, `formatCalendarUtc`, `formatUnix`,
+  `formatCalendarUnix` and `formatTimeZoneName`. Pass the IANA name, or call
+  `fromOffsetInstant` for the local time with its full offset and no bracket.
+
+```typescript
+import { convertUtcToZoned, fromOffsetInstant } from "@northguild/gmt";
+
+convertUtcToZoned("1970-01-01T12:44:30Z", "-00:44:30"); // ""
+convertUtcToZoned("1970-01-01T12:44:30Z", "Africa/Monrovia");
+// "1970-01-01T12:00:00-00:45[Africa/Monrovia]" — the written offset is rounded to the minute
+
+fromOffsetInstant({ instant: "1970-01-01T12:44:30Z", offset: "-00:44:30" });
+// "1970-01-01T12:00:00-00:44:30"
+```
+
+There is one limit. With an offset with seconds, a function that does arithmetic returns its
+empty result within the offset's seconds (under a minute) of one end of the range of instants
+Temporal supports: the last instant for an offset east of UTC, the first for one west. A
+function that only reads a value has no limit, and neither have `resolveLocal`,
+`classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset` and `isBetweenUnix`. An offset to the
+minute has no limit at all.
+
 ## Two notes on the boundaries of this namespace
 
 - **`resolveLocal` returns an instant. `convertPlainDateTimeToZoned` returns a zoned
@@ -100,9 +171,10 @@ strategies in full.
   [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned)
   defaults to milliseconds. Neither takes an `offset` option. Reach for whichever shape you
   need next.
-- **`offset` is `±HH:MM`, except where it is not.** A handful of zones did not run on a
-  whole minute before 1972. `Africa/Monrovia` really was `-00:44:30`, and those zones report
-  `±HH:MM:SS`. Rounding them would put the pair thirty seconds from the event it describes.
+- **`offset` is `±HH:MM`, except where it is not.** Most zones kept local mean time before
+  they adopted a standard time, and local mean time is rarely a whole minute.
+  `Africa/Monrovia` stayed at `-00:44:30` until 1972. For those instants the offset is
+  `±HH:MM:SS`. Rounding it would put the pair up to thirty seconds from the event it describes.
 
 ## See also
 

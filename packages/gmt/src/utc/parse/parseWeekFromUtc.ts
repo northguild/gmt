@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidUtc } from "../validate";
@@ -37,8 +37,10 @@ export function parseWeekFromUtc(
      */
     weekStartsOn?: "monday" | "sunday";
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -53,12 +55,12 @@ export function parseWeekFromUtc(
     if (!isValidUtc(value)) return null;
 
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const timeZone = normalizeTimeZone(optionsArg?.timeZone);
-    if (weekStartsOn === null || timeZone === "") return null;
+    const frame = normalizeZoneFrame(optionsArg?.timeZone);
+    if (weekStartsOn === null || frame === null) return null;
 
     try {
       const instant = Temporal.Instant.from(value);
-      const dt = instant.toZonedDateTimeISO(timeZone);
+      const dt = frameWallClock(instant, frame);
       const dateStr = dt.toPlainDate().toString();
       return getWeekNumber(dateStr, weekStartsOn);
     } catch {

@@ -1,12 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { isoYearString } from "./isoYearString";
 
 /**
  * One field of a zoned "now" as the `get*NowUnit` accessors return it: zero-padded to two digits
- * (three for sub-second fields), the year and day of week unpadded. The week number is the
+ * (three for sub-second fields), the day of week unpadded, and the year as Temporal writes one
+ * (`isoYearString`: four digits, or a sign and six outside 0000–9999). The week number is the
  * caller's, since the plain and zoned accessors read it through `parseWeekFromDate` and the utc and
  * unix ones from the ISO date.
  *
- * @param now the current moment on the wall clock being read
+ * @param now the current moment on the wall clock being read: a zoned date-time, or the plain wall
+ *   clock of a stored UTC offset with seconds, which no time zone identifier can carry
  * @param unit a singular unit, `dayOfWeek` included (already validated by the caller)
  * @param week the week number for `now`, as a string
  * @returns the field, or "" for any other unit
@@ -14,14 +17,16 @@ import { Temporal } from "@js-temporal/polyfill";
  * @example zonedNowUnitValue(Temporal.ZonedDateTime.from("2024-03-05T07:08:09+00:00[UTC]"), "week", () => "10") // "10"
  * @example zonedNowUnitValue(Temporal.ZonedDateTime.from("2024-03-05T07:08:09+00:00[UTC]"), "quarter", () => "10") // ""
  */
-export function zonedNowUnitValue(
-  now: Temporal.ZonedDateTime,
+export function zonedNowUnitValue<
+  Clock extends Temporal.ZonedDateTime | Temporal.PlainDateTime,
+>(
+  now: Clock,
   unit: string | null | undefined,
-  week: (now: Temporal.ZonedDateTime) => string,
+  week: (now: Clock) => string,
 ): string {
   switch (unit) {
     case "year":
-      return now.year.toString();
+      return isoYearString(now.year);
     case "month":
       return now.month.toString().padStart(2, "0");
     case "week":
@@ -50,7 +55,8 @@ export function zonedNowUnitValue(
 /**
  * The ISO 8601 week number of `now`'s date, the week the utc and unix `get*NowUnit` accessors read.
  *
- * @param now the current moment on the wall clock being read
+ * @param now the current moment on the wall clock being read: a zoned date-time, or the plain wall
+ *   clock of a stored UTC offset with seconds, which no time zone identifier can carry
  * @returns the week number as a string
  * @example isoWeekOfYear(Temporal.ZonedDateTime.from("2024-12-30T00:00:00+00:00[UTC]")) // "1"
  */

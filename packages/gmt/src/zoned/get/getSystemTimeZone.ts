@@ -1,4 +1,4 @@
-import { isValidTimeZone } from "../validate";
+import { isValidTimeZone } from "../validate/isValidTimeZone";
 
 /**
  * Return the runtime system timeZone name (for example "America/New_York").

@@ -1,7 +1,8 @@
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import {
   countZonedLocalDates,
+  frameZoned,
   halfOpenIntersection,
+  normalizeZoneFrame,
   parseUnixEpochInterval,
 } from "../../internal";
 import {
@@ -36,6 +37,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   24-hour periods instead of counting calendar dates. To reproduce date-fns's number,
  *   compose `intervalIntersectionUnix` with `intervalCountUnix`:
  *   `const span = intervalIntersectionUnix(aStart, aEnd, bStart, bEnd); span ? intervalCountUnix(span.start, span.end, "day") : 0;`
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param aStart Unix epoch value (seconds or milliseconds) — first interval start
  * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
@@ -66,8 +73,10 @@ export function intervalOverlappingDaysUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the calendar dates are counted in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the calendar dates are counted in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -90,9 +99,9 @@ export function intervalOverlappingDaysUnix(
     const { start: b1, end: b2 } = b;
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
 
-    if (!timeZone || epochUnit === null) {
+    if (frame === null || epochUnit === null) {
       return null;
     }
 
@@ -123,8 +132,8 @@ export function intervalOverlappingDaysUnix(
       // The last instant the half-open intersection holds is one nanosecond before its end, so the
       // closed local-date count runs to there.
       return countZonedLocalDates(
-        first.toZonedDateTimeISO(timeZone),
-        afterLast.toZonedDateTimeISO(timeZone).subtract({ nanoseconds: 1 }),
+        frameZoned(first, frame),
+        frameZoned(afterLast, frame).subtract({ nanoseconds: 1 }),
       );
     } catch {
       return null;

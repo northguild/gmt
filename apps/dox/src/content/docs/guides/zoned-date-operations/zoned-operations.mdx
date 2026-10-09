@@ -249,9 +249,10 @@ re-enters the previous date (America/Goose_Bay, 2010-11-07).
 
 ## Read a zoned value's UTC offset
 
-`getZonedOffset` reads a zoned value's UTC offset as a `±HH:MM` string. `getZonedOffsetAs`
-reads it as a number, in minutes or nanoseconds. `getTimeZoneOffset` looks up a timezone's
-offset at a given instant without a zoned value in hand:
+`getZonedOffset` reads a zoned value's UTC offset as a `±HH:MM` string, or `±HH:MM:SS` where
+the zone was not on a whole minute. `getZonedOffsetAs` reads it as a number, in minutes or
+nanoseconds. `getTimeZoneOffset` looks up a timezone's offset at a given instant without a
+zoned value in hand:
 
 ```typescript
 import { getZonedOffset, getZonedOffsetAs, getTimeZoneOffset } from "@northguild/gmt/zoned";
@@ -266,6 +267,20 @@ getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z"); // "-04:00"
 getTimeZoneOffset("America/New_York", "2024-01-15T12:00:00Z"); // "-05:00"
 getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z"); // ""
 getZonedOffset("invalid"); // ""
+
+getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"); // "-00:44:30"
+```
+
+The offset these functions return can go straight into the time zone position of any function
+whose result has no zone in it, seconds included. A function that returns a zoned string, or
+formats with `Intl`, takes a time zone identifier only, and an offset with seconds is not one.
+See [Pass a stored offset where a time zone goes](/guides/zoned-date-operations/offset-instants-and-local-resolution/#pass-a-stored-offset-where-a-time-zone-goes).
+
+```typescript
+import { getTimeZoneOffset, resolveLocal } from "@northguild/gmt";
+
+resolveLocal("1970-01-01T12:00:00", getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"));
+// "1970-01-01T12:44:30Z"
 ```
 
 ## Daylight saving: four questions, four functions
@@ -300,8 +315,8 @@ hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }); // false
 
 `getDstTransitions` enumerates the exact transition instants for a timezone in a given year.
 Each object's `instant` is a UTC ISO 8601 string, and `offsetBefore`/`offsetAfter` are
-`±HH:MM` offset strings. It returns `[]` for a zone with no transitions in the year, and on
-invalid input:
+`±HH:MM` offset strings (`±HH:MM:SS` where the zone was not on a whole minute). It returns
+`[]` for a zone with no transitions in the year, and on invalid input:
 
 ```typescript
 import { getDstTransitions } from "@northguild/gmt/zoned";

@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import {
   isBusinessDate,
   parseBusinessCalendar,
@@ -7,6 +6,7 @@ import {
 } from "./businessCalendar";
 import { isObject } from "./isObject";
 import { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
+import { zoneFrame } from "./zoneFrame";
 
 /**
  * Local days a free-time walk may visit before giving up: the same cap as `bucketRange`. A
@@ -31,6 +31,11 @@ const MAX_REVISITED_BUCKETS = 8;
  * are counted against, `null` when every local day after expiry is charged.
  */
 export type FreeTimeTerms = {
+  /**
+   * The counting zone as the caller wrote it: a time zone identifier or a stored UTC offset
+   * (`±HH:MM[:SS]`), so always readable by `zoneFrame`. The walk's zoned values are placed with
+   * `frameZoned` and turned back with `frameInstant`.
+   */
   timeZone: string;
   firstDay: "eventDay" | "nextDay";
   calendar: ResolvedBusinessCalendar | null;
@@ -61,7 +66,7 @@ function readFreeTimeTerms(
   if (firstDay !== "eventDay" && firstDay !== "nextDay") {
     return null;
   }
-  if (typeof timeZone !== "string" || !isValidTimeZone(timeZone)) {
+  if (typeof timeZone !== "string" || zoneFrame(timeZone) === null) {
     return null;
   }
 

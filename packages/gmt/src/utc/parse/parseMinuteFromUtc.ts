@@ -1,4 +1,4 @@
-import { utcZonedDateTime } from "../../internal/utcZonedDateTime";
+import { utcWallClock } from "../../internal/utcWallClock";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -19,8 +19,10 @@ export function parseMinuteFromUtc(
   value: string,
   options?: {
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -32,7 +34,7 @@ export function parseMinuteFromUtc(
       return "";
     }
 
-    const dateTime = utcZonedDateTime(value, options);
+    const dateTime = utcWallClock(value, options);
 
     return dateTime === null ? "" : dateTime.minute.toString().padStart(2, "0");
   } catch {

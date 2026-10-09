@@ -48,8 +48,9 @@ export type OperatingOverride = {
  */
 export type OperatingSchedule = {
   /**
-   * The time zone the windows are read in: an IANA name or a UTC offset. A UTC offset such as
-   * `"+02:00"` observes no DST.
+   * The time zone the windows are read in, an IANA name or UTC offset: a time zone identifier
+   * (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset`
+   * returns). A UTC offset such as `"+02:00"` observes no DST.
    */
   timeZone: string;
   /**

@@ -1,13 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   formatUtcOffset,
+  frameOffset,
   isoStringBody,
   parseInstantNanoseconds,
   TIME_ZONE_ANNOTATION,
   zonedDateTimeFrom,
+  zoneFrame,
 } from "../../internal";
 import { utcOffset } from "../../regex";
-import { isValidTimeZone } from "../../zoned/validate";
 
 /** A leading RFC 9557 time zone annotation: `[zone]` or `[!zone]`, with no `=`. */
 const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
@@ -68,12 +69,13 @@ export interface OffsetInstant {
  *   event happened when all it has is the offset it already stores. Every other bracketed
  *   identifier Temporal accepts is kept, including the single-component IANA names (`EST5EDT`,
  *   `Zulu`), in its IANA casing.
- * - `timeZone` names the zone the offset is read in, and is how a UTC-only feed gets a pair
- *   with a local offset. It also overrides a zone bracketed in the string — the instant is
- *   unchanged either way, only the local rendering differs. It is validated with
- *   `isValidTimeZone`, so any IANA Zone or Link name is accepted, single-component ones
- *   (`Japan`, `Zulu`, `EST5EDT`) included. An offset identifier (`"-05:00"`) sets the offset
- *   and, like a bracketed offset zone, yields no `timeZone` field.
+ * - `timeZone` names the zone the offset is read in, and is how a UTC-only feed gets a pair with a
+ *   local offset. It also overrides a zone bracketed in the string — the instant is unchanged
+ *   either way, only the local rendering differs. Any IANA Zone or Link name is accepted,
+ *   single-component ones (`Japan`, `Zulu`, `EST5EDT`) included, and so is a UTC offset: a time
+ *   zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what
+ *   `getTimeZoneOffset` returns). An offset (`"-05:00"`, `"-00:44:30"`) sets the pair's offset and,
+ *   like a bracketed offset zone, yields no `timeZone` field.
  * - The returned `timeZone` is the identifier in its IANA casing on every path —
  *   `"america/new_york"` comes back as `"America/New_York"` — because identifiers match
  *   case-insensitively (ECMA-402). That is what the bracket path and `fromOffsetInstant` return,
@@ -98,7 +100,8 @@ export interface OffsetInstant {
  * - Returns null on invalid input, not a zero-offset pair — `+00:00` is a real offset.
  *
  * @param value ISO 8601 instant string, with an offset designator and optionally a bracketed zone
- * @param timeZone optional IANA name or UTC offset to read the offset in
+ * @param timeZone optional IANA name or UTC offset to read the offset in: a time zone identifier
+ *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns `{ instant, offset, timeZone? }`, or null on invalid input
  *
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
@@ -107,6 +110,7 @@ export interface OffsetInstant {
  * @example toOffsetInstant("2024-07-15T16:00:00Z", "America/New_York") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
  * @example toOffsetInstant("2024-01-15T17:00:00Z", "America/New_York") // { instant: "2024-01-15T17:00:00Z", offset: "-05:00", timeZone: "America/New_York" } — same wall time, different offset, six months apart
  * @example toOffsetInstant("1970-01-01T00:00:00Z", "Africa/Monrovia") // { instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" }
+ * @example toOffsetInstant("1970-01-01T12:44:30Z", "-00:44:30") // { instant: "1970-01-01T12:44:30Z", offset: "-00:44:30" } — a stored offset with seconds, and no timeZone field
  * @example toOffsetInstant("1969-12-31T23:15:30-00:45[Africa/Monrovia]") // { instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" } — the zone, not the rounded offset, fixes the instant
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[-04:00]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — a bracketed offset is not a zone, so no timeZone field
  * @example toOffsetInstant("2024-07-15T12:00:00-05:00[America/New_York]") // null (offset contradicts the bracketed zone)
@@ -132,7 +136,9 @@ export function toOffsetInstant(
     return null;
   }
 
-  if (timeZone !== undefined && !isValidTimeZone(timeZone)) {
+  const frame = timeZone === undefined ? undefined : zoneFrame(timeZone);
+
+  if (frame === null) {
     return null;
   }
 
@@ -171,7 +177,13 @@ export function toOffsetInstant(
         ? bracketed.toInstant()
         : Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
 
-    const resolvedZone = timeZone ?? bracketedZone;
+    // A stored offset with seconds is the pair's offset as it stands. Like an offset identifier it
+    // names no place, so it fills no `timeZone` field.
+    if (frame !== undefined && frame.shiftNanoseconds !== 0n) {
+      return { instant: instant.toString(), offset: frameOffset(frame) };
+    }
+
+    const resolvedZone = frame?.timeZone ?? bracketedZone;
 
     if (resolvedZone !== undefined) {
       return offsetInstantInZone(instant, resolvedZone);

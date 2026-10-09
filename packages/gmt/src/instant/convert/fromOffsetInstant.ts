@@ -39,6 +39,10 @@ import { isObject } from "../../internal/isObject";
  *   string whose local date is −271821-04-19 is refused by `toOffsetInstant`. Without a `timeZone` there is no zone to resolve against, so the
  *   full `±HH:MM:SS` is written instead; that is ISO 8601, not RFC 9557.
  * - Returns `""` on invalid input.
+ * - A `timeZone` that is an offset with seconds (`-00:44:30`) returns `""`, as any offset there
+ *   does. A written zone cannot carry seconds (RFC 9557 §4.1), so the result could not name it.
+ *   Pass the IANA name as `timeZone`, or leave `timeZone` out for the local time with its full
+ *   offset and no bracket.
  *
  * @param value `{ instant, offset, timeZone? }` pair, as produced by `toOffsetInstant`
  * @returns local ISO 8601 string carrying the pair's own offset, or "" on invalid input

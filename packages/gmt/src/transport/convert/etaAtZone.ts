@@ -31,9 +31,14 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  *   identifier, or a fixed offset such as `"+09:00"`, which renders with the offset as its zone.
  *   A fixed offset is a legitimate rendering choice for a ship's log (MAR-18); it is not a place.
  * - Returns `""` when the instant or the zone is invalid.
+ * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call
+ *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
+ *   bracket.
  *
  * @param arrivalUtc ISO 8601 instant string of the arrival
- * @param targetZone IANA timeZone identifier of the place the arrival is read in
+ * @param targetZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts), for
+ *   the place the arrival is read in
  * @returns zoned ISO 8601 string of the local arrival, or "" on invalid input
  *
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokyo") // "2024-06-15T21:30:00+09:00[Asia/Tokyo]"

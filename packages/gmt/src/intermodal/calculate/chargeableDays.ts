@@ -1,11 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   bandsByTier,
+  frameInstant,
+  frameZoned,
   instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   parseTiers,
   walkFreeTime,
+  zoneFrame,
 } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { FreeTimeBasis, FreeTimeOptions } from "../../types";
@@ -91,6 +94,12 @@ export type FreeTimeChargeOptions = FreeTimeOptions & {
  *   inverted dwell is a data error), `freeDays` is not a whole number of at least `0`, the
  *   options fail as they do for `freeTimeExpiry`, `tiers` has a hole, an unsafe integer or does not ascend, or the walk would pass
  *   10,000 local days.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param clockStart ISO 8601 instant string of the event that starts the clock
  * @param clockEnd ISO 8601 instant string of the event that stops it (gate-out or empty return)
@@ -122,18 +131,20 @@ export function chargeableDays(
     const allowed = parseFreeDays(freeDays, 0);
     // Read after the terms, so a non-object `options` is never read from.
     const tiers = terms === null ? null : parseTiers(options.tiers);
+    const frame = terms === null ? null : zoneFrame(terms.timeZone);
     if (
       !isValidInstant(clockStart) ||
       !isValidInstant(clockEnd) ||
       terms === null ||
+      frame === null ||
       allowed === null ||
       tiers === null
     ) {
       return null;
     }
 
-    const start = instantFrom(clockStart).toZonedDateTimeISO(terms.timeZone);
-    const end = instantFrom(clockEnd).toZonedDateTimeISO(terms.timeZone);
+    const start = frameZoned(instantFrom(clockStart), frame);
+    const end = frameZoned(instantFrom(clockEnd), frame);
     if (Temporal.ZonedDateTime.compare(start, end) > 0) {
       return null;
     }
@@ -146,7 +157,7 @@ export function chargeableDays(
     return {
       freeDaysUsed: ledger.used,
       chargeableDays: ledger.charged.length,
-      expiresAt: ledger.expiresAt.toInstant().toString(),
+      expiresAt: frameInstant(ledger.expiresAt, frame).toString(),
       chargedDates: ledger.charged.map((day) => day.date),
       byTier: bandsByTier(tiers, ledger.charged.length),
     };

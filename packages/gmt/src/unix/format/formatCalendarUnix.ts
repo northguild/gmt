@@ -34,8 +34,8 @@ export interface FormatCalendarUnixOptions {
   epochUnit?: UnixUnit;
   /**
    * The time zone used for both the calendar-day comparison and the rendered clock time: an IANA
-   * name, a UTC offset, or `"local"` for the system time zone. An unknown zone returns `""`, as
-   * ECMA-402 throws RangeError for it.
+   * name, a UTC offset to the minute (what `isValidTimeZone` accepts), or `"local"` for the system
+   * time zone. An unknown zone returns `""`, as ECMA-402 throws RangeError for it.
    *
    * @defaultValue `"UTC"`
    */
@@ -60,6 +60,10 @@ export interface FormatCalendarUnixOptions {
  *   digits; anything else returns `""`.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
+ * - An offset with seconds (`-00:44:30`) returns `""`. `Intl.DateTimeFormat` takes a time zone
+ *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
+ *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
+ *   Node, throw a RangeError exception"). Pass the IANA name.
  *
  * @param value unix epoch (string or number, per `epochUnit`) to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)

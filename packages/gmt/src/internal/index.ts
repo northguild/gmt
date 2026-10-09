@@ -171,3 +171,12 @@ export {
   zonedStartOfDay,
 } from "./zonedWallClockOperations";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";
+export {
+  frameInstant,
+  frameOffset,
+  frameWallClock,
+  frameZoned,
+  instantOfWallClock,
+  normalizeZoneFrame,
+  zoneFrame,
+} from "./zoneFrame";

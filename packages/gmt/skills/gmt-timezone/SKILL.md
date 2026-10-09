@@ -129,11 +129,11 @@ converting between time zones, or doing arithmetic that must respect DST.
    on a spring-forward one. `resolveLocal(local, zone, { disambiguation })` then
    returns the instant, exact to the nanosecond, or `""` under `"reject"`. Reach
    for `convertPlainDateTimeToZoned` instead when you want the zoned string.
-6. **An offset is not a zone.** `-05:00` does not identify `America/New_York`.
-   `toOffsetInstant` splits a timestamp into `{ instant, offset, timeZone? }` —
-   the shape EPCIS 2.0, EDIFACT DTM and DICOM all exchange, because the instant
-   orders events and the offset renders them where they happened, and neither
-   derives from the other. Keep the zone for what is still to be scheduled.
+6. **An offset is not a zone, but a stored one is a rule for local time.**
+   `toOffsetInstant` gives `{ instant, offset, timeZone? }`, the pair EPCIS 2.0,
+   EDIFACT DTM and DICOM exchange. Its `±HH:MM[:SS]` offset is a valid `timeZone`
+   for `resolveLocal` and every function whose result has no zone in it. One
+   that returns a zoned string or formats with `Intl` takes none with seconds.
 7. **Bucket in the zone, not in UTC.** `floorToZone(instant, unit, zone)` and
    `bucketRange(start, end, unit, zone)` floor on the zone's own calendar
    boundaries. Flooring a UTC instant to a UTC day and calling it a local day is

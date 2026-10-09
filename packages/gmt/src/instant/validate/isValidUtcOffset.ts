@@ -15,9 +15,10 @@ import { utcOffset } from "../../regex";
  *   `-00:44:30` until 1972. A fraction of a second is false.
  * - Basic format (`-0400`) and an hour alone (`-04`) are false.
  * - `-00:00` is true, and the functions that take an offset read it as `+00:00`.
- * - **Not the check for a time zone argument.** A `timeZone` parameter takes an offset as a time
- *   zone identifier, which is another grammar: `isValidTimeZone` accepts `+0530` and `-08` and
- *   rejects an offset with seconds.
+ * - A function whose result has no zone in it takes this offset in its time zone position too. A
+ *   function that returns a zoned string, or formats with `Intl`, takes a time zone identifier
+ *   only: check that with `isValidTimeZone`, which accepts `+0530` and `-08` and rejects an offset
+ *   with seconds.
  *
  * @param value candidate UTC offset string
  * @returns boolean indicating validity
