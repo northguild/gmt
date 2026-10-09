@@ -136,6 +136,51 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `/reference/<ns>/<mod>/`, each listing its children with a one-line summary. Their
     frontmatter uses the block form `sidebar:` / `order: 0`: `ensure-sidebar-order.mjs`
     matches only that form and rewrites any other on every run, which defeats `syncTree`.
+  - **The two industry namespaces stand apart from the general ones.** Which namespaces are
+    industries comes from `INDUSTRY_LAYER_IDS` in `src/lib/industry-tags.ts` (`gmt-stats.json`
+    `industries`, core excluded), never a list typed in the generator, so a new layer lands
+    in every place below with no edit to the generator.
+    - **Sidebar.** `buildSidebar` writes `Overview`, the general namespace groups and `types`
+      in alphabetical order, then a divider reading `By industry`, then the industry namespace
+      groups in `INDUSTRY_LAYER_IDS` order, as siblings of the general groups. Each group
+      keeps its namespace name as its label (the import path) and its inner structure.
+      - **The divider is text, not a group.** Starlight's sidebar holds only links and groups,
+        so the generator writes it as a link entry with `attrs: { "data-gmt-divider": "true" }`
+        and the `Sidebar` override (`src/components/Sidebar.astro`, with its own copy of
+        `SidebarSublist.astro`) draws it as a `<span id>` under a thin rule, in the quiet text
+        tier, and puts the entries after it in their own `<ul aria-labelledby>`. It is not a
+        link, a `<details>` or a tab stop, and a screen reader hears the label before the list.
+        Everything else is Starlight's markup, so current-page highlighting, a page opening
+        only its ancestors, `sl-sidebar-state` and the mobile menu are unchanged. The divider is
+        also a link in Starlight's data, so the override recomputes the previous and next links
+        under a page without it. `SidebarSublist.astro` follows Starlight's file of the same
+        name: compare them on a Starlight upgrade.
+      - **The icon.** The industry's `Overview` link carries `attrs: { "data-gmt-industry":
+        <id> }`; `Head.astro` writes one `--gmt-industry-icon` custom property per layer from
+        `industrySidebarCss()` (the tag's own glyph as a mask), and a `:has()` rule in
+        `gmt-shell.css` draws it before the group's label as a mask over the label colour, with
+        `white-space: nowrap`. Forced colours repaint it in `CanvasText` (`gmt-a11y.css`).
+    - **Root page.** `/reference/` lists the general namespaces under "For any industry",
+      then "By industry": each industry's icon (`Icon.astro`, imported by the generated MDX;
+      `stripMdx` drops the import and the tag), its label as a link to its overview, and its
+      one-line definition from `industry-tags.ts`.
+    - **Overview text.** `src/lib/industry-overview.ts` is the one hand-kept leaf: per layer, a
+      plain paragraph, three to five pain points and the title of the guide the tag points at.
+      A pain point is a short `problem` sentence (shown in bold, naming no function) and an `answer` of one or two short sentences with `{{functionName}}` tokens that the generator turns
+      into links to the function pages, and the guide, tool, scenario or mistakes pages that
+      show it. `index-pages.ts` writes them above the per-module lists, then a one-line
+      pointer to the guide. A token naming a function the namespace does not export stops the
+      generator. `industry-overview.test.ts` also fails when a layer has no text, a link has
+      no page, a sentence holds a digit (no figure typed by hand) or the word GMT, or the
+      guide title drifts from the guide. The text names no law or regulator and makes no
+      claim about another library.
+    - **Page tag.** `withIndustry` writes `industries: [<id>]` into the frontmatter of every
+      function page, module index and overview of an industry namespace, so `PageTitle`
+      shows the tag. A general page has no tag, not even `core`. A shared type's page is
+      tagged only when every public function that reaches it (`usedBy` in the usage graph)
+      is in one industry namespace (`typeIndustry`); a type any general function reaches,
+      or two industries share, has none. The tag adds a row under the title of those pages
+      only. The Markdown export of a tagged page gains the `Industry:` line.
   - **The corpus keeps one entry per public type.** `url` is the link to cite (owner page
     plus `#anchor` for an inline type), `page` is the route that serves it, `inlineOn`
     names the owner function, `members` feeds retrieval. The route manifest is the unique

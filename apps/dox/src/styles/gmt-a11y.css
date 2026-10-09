@@ -111,6 +111,17 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* The industry icon in the sidebar is a mask over a background colour, which
+     forced-colors would repaint as the canvas and hide. Keep the mask and paint
+     it in the text colour. */
+  .sidebar-pane
+    details:has(> ul > li > a[data-gmt-industry])
+    > summary
+    > .group-label::before {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
   /* A canvas is not repainted in the system palette, so the globe's colours
      stay its own. Drop the photograph from behind them at least: the flat
      globe is the plainer of the two, and it never downloads the image. */

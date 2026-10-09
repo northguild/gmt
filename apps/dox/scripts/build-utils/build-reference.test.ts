@@ -2508,3 +2508,213 @@ describe("buildSidebar", () => {
     expect(out).not.toContain("badge");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Industry namespaces: the sidebar group and the page tag
+// ---------------------------------------------------------------------------
+
+describe("buildSidebar with industries", () => {
+  const sym = (ns: string, mod: string, name: string, unreleased = false) => ({
+    key: `${ns}/${mod}`,
+    entry: {
+      name,
+      slug: `reference/${ns}/${mod}/${name}`,
+      ...(unreleased ? { unreleased } : {}),
+    },
+  });
+  const symbols = (
+    rows: Array<ReturnType<typeof sym>>,
+  ): Map<string, Array<(typeof rows)[number]["entry"]>> => {
+    const map = new Map<string, Array<(typeof rows)[number]["entry"]>>();
+    for (const { key, entry } of rows) {
+      map.set(key, [...(map.get(key) ?? []), entry]);
+    }
+    return map;
+  };
+  const rows = [
+    sym("zoned", "format", "a"),
+    sym("plain", "format", "b"),
+    sym("transport", "calculate", "dwellTime"),
+    sym("transport", "calculate", "transitTime"),
+    sym("intermodal", "parse", "p"),
+    sym("regex", "date", "year"),
+  ];
+  /** Labels at each nesting depth, in file order. */
+  const labelsAt = (out: string, indent: number) =>
+    [...out.matchAll(new RegExp(`^ {${indent}}label: "([^"]+)"`, "gm"))].map(
+      (m) => m[1],
+    );
+
+  const DIVIDER =
+    '  { label: "By industry", link: "#by-industry", attrs: { "data-gmt-divider": "true" } },';
+
+  it("puts the industries after a divider, as siblings of the general groups, with no `By industry` group", () => {
+    const out = BR.buildSidebar(
+      symbols(rows),
+      [{ name: "T", slug: "reference/types/T" }],
+      ["intermodal", "transport"],
+    );
+    // Every namespace group is at the same level; the industries come last, in order.
+    expect(labelsAt(out, 4)).toEqual([
+      "plain",
+      "regex",
+      "types",
+      "zoned",
+      "intermodal",
+      "transport",
+    ]);
+    // The divider is one entry, once, between the last general group and the first industry.
+    expect(out.split(DIVIDER)).toHaveLength(2);
+    expect(out.indexOf(DIVIDER)).toBeGreaterThan(out.indexOf('label: "zoned"'));
+    expect(out.indexOf(DIVIDER)).toBeLessThan(
+      out.indexOf('label: "intermodal"'),
+    );
+    // It is not a group: nothing to open.
+    expect(out).not.toMatch(/label: "By industry",\n/);
+  });
+
+  it("does not change a single general group when industries are added", () => {
+    const general = rows.filter(
+      ({ key }) => !/^(transport|intermodal)\//.test(key),
+    );
+    const without = BR.buildSidebar(symbols(general));
+    const withIndustries = BR.buildSidebar(
+      symbols(rows),
+      [],
+      ["intermodal", "transport"],
+    );
+    // Everything before the divider is the general sidebar, text for text.
+    const body = (out: string, end: number) =>
+      out.slice(out.indexOf("export const"), end);
+    expect(body(withIndustries, withIndustries.indexOf(DIVIDER))).toBe(
+      body(without, without.lastIndexOf("];")),
+    );
+  });
+
+  it("marks each industry's Overview link so the stylesheet can draw its icon, and no other link", () => {
+    const out = BR.buildSidebar(symbols(rows), [], ["intermodal", "transport"]);
+    expect(out).toContain(
+      '{ label: "Overview", slug: "reference/intermodal", attrs: { "data-gmt-industry": "intermodal" } }',
+    );
+    expect(out).toContain(
+      '{ label: "Overview", slug: "reference/transport", attrs: { "data-gmt-industry": "transport" } }',
+    );
+    expect(out.match(/data-gmt-industry/g)).toHaveLength(2);
+    expect(out).toContain('{ label: "Overview", slug: "reference/plain" }');
+  });
+
+  it("keeps an industry group's inner structure: Overview, multi-symbol module groups, then hoisted items", () => {
+    const out = BR.buildSidebar(symbols(rows), [], ["intermodal", "transport"]);
+    const group = out.slice(out.indexOf('label: "transport"'));
+    expect(
+      group
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("{ ") || l.startsWith("label:"))
+        .slice(0, 5),
+    ).toEqual([
+      'label: "transport",',
+      '{ label: "Overview", slug: "reference/transport", attrs: { "data-gmt-industry": "transport" } },',
+      'label: "calculate",',
+      '{ slug: "reference/transport/calculate/dwellTime" },',
+      '{ slug: "reference/transport/calculate/transitTime" },',
+    ]);
+  });
+
+  it("puts a third industry in the group with no change to the generator", () => {
+    const out = BR.buildSidebar(
+      symbols([...rows, sym("maritime", "calculate", "laytime")]),
+      [],
+      ["intermodal", "transport", "maritime"],
+    );
+    expect(labelsAt(out, 4)).toEqual([
+      "plain",
+      "regex",
+      "zoned",
+      "intermodal",
+      "transport",
+      "maritime",
+    ]);
+    expect(out.split(DIVIDER)).toHaveLength(2);
+    expect(out).toContain('"data-gmt-industry": "maritime"');
+  });
+
+  it("emits no divider when no industry has a page", () => {
+    const out = BR.buildSidebar(symbols(rows.slice(0, 2)), [], ["transport"]);
+    expect(out).not.toContain("By industry");
+  });
+
+  it("badges an industry group by the same rule as any namespace group", () => {
+    const out = BR.buildSidebar(
+      symbols([
+        sym("transport", "calculate", "a", true),
+        sym("intermodal", "parse", "b"),
+      ]),
+      [],
+      ["intermodal", "transport"],
+    );
+    expect(out).toMatch(/label: "transport",\n\s+badge:/);
+    expect(out).not.toMatch(/label: "intermodal",\n\s+badge:/);
+    expect(out).not.toMatch(/label: "By industry",\n/);
+  });
+});
+
+describe("industry tag on a page", () => {
+  const SOURCE = `
+    /** What \`charge\` takes. */
+    interface ChargeOptions {
+      /** The rate. */
+      rate: number;
+    }
+    /**
+     * Charge it.
+     * @param options - The terms.
+     * @returns The charge.
+     * @example charge({ rate: 1 }) // 1
+     */
+    function charge(options: ChargeOptions): number { return 0; }
+  `;
+
+  it("writes `industries: [id]` into a function page's frontmatter, after the slug", () => {
+    const mdx = BR.withIndustry(placed(SOURCE).fnPage("charge"), "intermodal");
+    expect(mdx.split("\n").slice(0, 6)).toEqual([
+      "---",
+      'title: "charge"',
+      expect.stringMatching(/^description: /),
+      'slug: "reference/plain/calculate/charge"',
+      "industries: [intermodal]",
+      "---",
+    ]);
+    // Nothing else on the page moves.
+    expect(mdx.replace("industries: [intermodal]\n", "")).toBe(
+      placed(SOURCE).fnPage("charge"),
+    );
+  });
+
+  it("tags a shared type's page the same way", () => {
+    const page = placed(SOURCE).typePage("ChargeOptions");
+    const tagged = BR.withIndustry(page, "transport");
+    expect(tagged).toMatch(/^---\n[\s\S]*?\nindustries: \[transport\]\n---\n/);
+  });
+
+  it("leaves a general page byte for byte as it was", () => {
+    const page = placed(SOURCE).fnPage("charge");
+    expect(BR.withIndustry(page, undefined)).toBe(page);
+    expect(page).not.toContain("industries:");
+  });
+
+  it("tags a type only when every function that reaches it is in one industry namespace", () => {
+    const layers = ["intermodal", "transport"];
+    expect(
+      BR.typeIndustry(["transport/calculate/a", "transport/compare/b"], layers),
+    ).toBe("transport");
+    expect(
+      BR.typeIndustry(["transport/calculate/a", "plain/calculate/b"], layers),
+    ).toBeUndefined();
+    expect(
+      BR.typeIndustry(["transport/calculate/a", "intermodal/parse/b"], layers),
+    ).toBeUndefined();
+    expect(BR.typeIndustry(["plain/calculate/a"], layers)).toBeUndefined();
+    expect(BR.typeIndustry([], layers)).toBeUndefined();
+  });
+});

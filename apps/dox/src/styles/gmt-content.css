@@ -755,3 +755,12 @@ button.gmt-industry-tag {
 .gmt-industry-tag--core {
   background: transparent;
 }
+
+/* The industry icon beside each industry on the API Reference root: on the line
+   of its link, not above it (the content stylesheet makes an svg a block). It
+   takes the text colour, so it has the text's contrast. */
+.sl-markdown-content .gmt-ref-industry-icon {
+  display: inline-block;
+  vertical-align: -0.2em;
+  margin-inline-end: 0.4em;
+}

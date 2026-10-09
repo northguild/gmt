@@ -418,6 +418,17 @@ Note about installation.
       expect(result).toContain("Note about installation.");
     });
 
+    it("drops the icon the API Reference root puts beside an industry, keeping the line", () => {
+      const input = `import Icon from "../../../components/Icon.astro";
+
+- <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> [Transport](/reference/transport): Legs and dwell.`;
+      const result = stripMdx(input, { gmtVersion: "1.0.0" }).trim();
+      expect(result).not.toMatch(/<Icon|import/);
+      expect(result.replace(/\s+/g, " ")).toBe(
+        "- [Transport](/reference/transport): Legs and dwell.",
+      );
+    });
+
     it("renders a tool page's layout to prose, its key point named and its widget gone", () => {
       const input = `<ToolLayout useCase="multi-leg freight ETAs">
   <Fragment slot="keypoint">Every handoff is an exact instant.</Fragment>
