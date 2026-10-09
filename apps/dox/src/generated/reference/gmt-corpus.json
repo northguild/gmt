@@ -254,6 +254,10 @@
       {
         "call": "bucketRange(\"2024-06-15T03:00:00Z\", \"2024-06-17T03:00:00Z\", \"year\", \"UTC\")",
         "result": "[] (not a bucketing unit)"
+      },
+      {
+        "call": "bucketRange(\"1970-01-01T00:00:00Z\", \"1970-01-02T01:00:00Z\", \"day\", \"-00:44:30\")",
+        "result": "[\"1969-12-31T00:44:30Z\", \"1970-01-01T00:44:30Z\", \"1970-01-02T00:44:30Z\"]"
       }
     ]
   },
@@ -307,6 +311,10 @@
       {
         "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"day\", \"Invalid/Zone\")",
         "result": "\"\""
+      },
+      {
+        "call": "floorToZone(\"1970-01-01T13:00:00Z\", \"day\", \"-00:44:30\")",
+        "result": "\"1970-01-01T00:44:30Z\" (local midnight at a stored offset with seconds)"
       }
     ]
   },
@@ -545,6 +553,10 @@
       {
         "call": "isOpenAt(\"2024-06-17T14:00:00\", { timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
         "result": "false — no offset, not an instant"
+      },
+      {
+        "call": "isOpenAt(\"1970-01-01T08:44:30Z\", { timeZone: \"-00:44:30\", weekly: { 4: [{ from: \"08:00\", to: \"17:00\" }] } })",
+        "result": "true (08:00 at a stored offset with seconds)"
       }
     ]
   },
@@ -730,6 +742,10 @@
       {
         "call": "recurringWindows({ 1: [{ from: \"09:00\", to: \"17:00\" }] }, { start: \"2024-06-10T00:00:00Z\", end: \"2024-06-11T00:00:00Z\" }, \"Invalid/Zone\")",
         "result": "[]"
+      },
+      {
+        "call": "recurringWindows({ 4: [{ from: \"08:00\", to: \"17:00\" }] }, { start: \"1970-01-01T00:00:00Z\", end: \"1970-01-02T00:00:00Z\" }, \"-00:44:30\")",
+        "result": "[{ start: \"1970-01-01T08:44:30Z\", end: \"1970-01-01T17:44:30Z\" }]"
       }
     ]
   },
@@ -1529,6 +1545,10 @@
         "result": "\"unique\" (UTC has no transitions)"
       },
       {
+        "call": "classifyLocal(\"1970-01-01T12:00:00\", \"-00:44:30\")",
+        "result": "\"unique\" (a fixed offset has no transitions)"
+      },
+      {
         "call": "classifyLocal(\"2024-11-03T01:30:00-04:00\", \"America/New_York\")",
         "result": "null (not a zoneless wall time)"
       },
@@ -1607,7 +1627,7 @@
     "module": "convert",
     "kind": "function",
     "signature": "resolveLocal(localDateTime: string, timeZone: string, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
-    "description": "Resolve a zoneless local wall time against an IANA zone and return the instant it names.",
+    "description": "Resolve a zoneless local wall time in a time zone and return the instant it names.",
     "sourcePath": "packages/gmt/src/instant/convert/resolveLocal.ts",
     "examples": [
       {
@@ -1637,6 +1657,10 @@
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00-04:00\", \"America/New_York\")",
         "result": "\"\" (not a zoneless wall time)"
+      },
+      {
+        "call": "resolveLocal(\"1970-01-01T12:00:00\", \"-00:44:30\")",
+        "result": "\"1970-01-01T12:44:30Z\" (a stored offset with seconds, what `getTimeZoneOffset` returns for Africa/Monrovia then)"
       },
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00[foo=bar]\", \"America/New_York\")",
@@ -1708,6 +1732,10 @@
       {
         "call": "toOffsetInstant(\"1970-01-01T00:00:00Z\", \"Africa/Monrovia\")",
         "result": "{ instant: \"1970-01-01T00:00:00Z\", offset: \"-00:44:30\", timeZone: \"Africa/Monrovia\" }"
+      },
+      {
+        "call": "toOffsetInstant(\"1970-01-01T12:44:30Z\", \"-00:44:30\")",
+        "result": "{ instant: \"1970-01-01T12:44:30Z\", offset: \"-00:44:30\" } — a stored offset with seconds, and no timeZone field"
       },
       {
         "call": "toOffsetInstant(\"1969-12-31T23:15:30-00:45[Africa/Monrovia]\")",
@@ -2035,7 +2063,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day: an IANA name or a UTC offset. GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
+        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day, an IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "firstDay",
@@ -2368,6 +2396,10 @@
       {
         "call": "freeTimeExpiry(\"2024-06-14T19:00:00\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
         "result": "null (no offset: not an instant)"
+      },
+      {
+        "call": "freeTimeExpiry(\"1970-01-01T00:30:00Z\", 3, { basis: \"calendar\", firstDay: \"eventDay\", timeZone: \"-00:44:30\" })",
+        "result": "{ freeTimeStart: \"1969-12-31\", lastFreeDay: \"1970-01-02\", expiresAt: \"1970-01-03T00:44:30Z\" }"
       }
     ]
   },
@@ -2479,7 +2511,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue for `issue`, and the terminal at the port of loading for `received` and `shippedOnBoard`. It is required, because every B/L date is local and a UTC date is a different date for part of every day."
+        "description": "The zone of the place the event happened, as an IANA name or a UTC offset: the place of issue for `issue`, and the terminal at the port of loading for `received` and `shippedOnBoard`. A UTC offset is a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). It is required, because every B/L date is local and a UTC date is a different date for part of every day."
       }
     ]
   },
@@ -2533,6 +2565,10 @@
       {
         "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"America/Nowhere\" })",
         "result": "\"\""
+      },
+      {
+        "call": "bolTimestamp(\"1970-01-01T00:30:00Z\", \"issue\", { timeZone: \"-00:44:30\" })",
+        "result": "\"1969-12-31\" (23:45:30 the day before, at a stored offset with seconds)"
       }
     ]
   },
@@ -11447,6 +11483,10 @@
         "result": "\"2024\""
       },
       {
+        "call": "parseUnitFromDate(\"0005-06-01\", \"year\")",
+        "result": "\"0005\""
+      },
+      {
         "call": "parseUnitFromDate(\"2024-03-15\", \"month\")",
         "result": "\"03\""
       },
@@ -11494,6 +11534,10 @@
       {
         "call": "parseUnitFromDateTime(\"2024-03-15T14:30:45.123\", \"year\")",
         "result": "\"2024\""
+      },
+      {
+        "call": "parseUnitFromDateTime(\"0005-06-01T12:30:00\", \"year\")",
+        "result": "\"0005\""
       },
       {
         "call": "parseUnitFromDateTime(\"2024-03-15T14:30:45.123\", \"week\")",
@@ -11648,6 +11692,14 @@
         "result": "\"2024\""
       },
       {
+        "call": "parseYearFromDate(\"0005-06-01\")",
+        "result": "\"0005\""
+      },
+      {
+        "call": "parseYearFromDate(\"+010000-01-01\")",
+        "result": "\"+010000\""
+      },
+      {
         "call": "parseYearFromDate(\"invalid\")",
         "result": "\"\""
       }
@@ -11667,6 +11719,10 @@
       {
         "call": "parseYearFromDateTime(\"2024-03-15T12:30:00\")",
         "result": "\"2024\""
+      },
+      {
+        "call": "parseYearFromDateTime(\"0005-06-01T12:30:00\")",
+        "result": "\"0005\""
       },
       {
         "call": "parseYearFromDateTime(\"invalid\")",
@@ -13884,7 +13940,7 @@
     "module": "time-zone-like",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching the shape of a time zone identifier: Temporal's `TimeZoneIdentifier` grammar (§14.6.2 Time Zone Identifiers), `UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`.",
+    "description": "RegExp matching the shape of a time zone identifier: Temporal's `TimeZoneIdentifier` grammar (§13.31, the ISO 8601 / RFC 9557 grammar), `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`.",
     "sourcePath": "packages/gmt/src/regex/time-zone-like.ts",
     "examples": [
       {
@@ -14606,7 +14662,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset."
+        "description": "The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)."
       },
       {
         "name": "atLocalTime",
@@ -14744,7 +14800,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The time zone every cut-off is read in: an IANA name or a UTC offset."
+        "description": "The time zone every cut-off is read in: an IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)."
       },
       {
         "name": "calendar",
@@ -15160,7 +15216,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone of the destination, the caller's fact: an IANA name or a UTC offset."
+        "description": "The time zone of the destination, the caller's fact: an IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)."
       },
       {
         "name": "dwellAfter",
@@ -15233,7 +15289,7 @@
     "members": [
       {
         "name": "startTimeZone",
-        "description": "The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset, for schedules published as local wall times. An ambiguous wall time resolves to the earlier instant and a nonexistent one to the later instant (`\"compatible\"`). Ignored when the first departure is already exact; never applied to later legs."
+        "description": "The time zone a zoneless first-leg departure is read in, an IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts), for schedules published as local wall times. An ambiguous wall time resolves to the earlier instant and a nonexistent one to the later instant (`\"compatible\"`). Ignored when the first departure is already exact; never applied to later legs."
       }
     ]
   },
@@ -15625,7 +15681,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone recording which locality the calendar describes, an IANA name or a UTC offset. It must be a valid zone, but the business-day functions never use it: they take and return local dates, so the answer is the same whatever it says. A caller holding an instant uses it to reduce that instant to a local date first, with `floorToZone` or `getZonedDateTimeFields`."
+        "description": "The time zone recording which locality the calendar describes, an IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts). It must be a valid zone, but the business-day functions never use it: they take and return local dates, so the answer is the same whatever it says. A caller holding an instant uses it to reduce that instant to a local date first, with `floorToZone` or `getZonedDateTimeFields`."
       }
     ]
   },
@@ -16209,7 +16265,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day: an IANA name or a UTC offset. GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
+        "description": "The time zone of the terminal, depot or yard whose local midnight ends a day, an IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). GMT does not resolve a port or terminal code to a zone. A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "firstDay",
@@ -16338,7 +16394,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The time zone the windows are read in: an IANA name or a UTC offset. A UTC offset such as `\"+02:00\"` observes no DST."
+        "description": "The time zone the windows are read in, an IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). A UTC offset such as `\"+02:00\"` observes no DST."
       },
       {
         "name": "weekly",
@@ -16701,6 +16757,10 @@
       {
         "call": "addUnix(1706659200000, { days: 1 }, { timeZone: \"Mars/Olympus\" })",
         "result": "null (unknown zone)"
+      },
+      {
+        "call": "addUnix(45870000, { days: 1 }, { timeZone: \"-00:44:30\" })",
+        "result": "132270000 (a stored offset with seconds)"
       }
     ]
   },
@@ -16845,6 +16905,10 @@
       {
         "call": "endOfUnix(NaN, \"day\")",
         "result": "null"
+      },
+      {
+        "call": "endOfUnix(45870000, \"day\", { timeZone: \"-00:44:30\" })",
+        "result": "89069999 (a stored offset with seconds)"
       }
     ]
   },
@@ -17133,6 +17197,10 @@
       {
         "call": "startOfUnix(NaN, \"day\")",
         "result": "null"
+      },
+      {
+        "call": "startOfUnix(45870000, \"day\", { timeZone: \"-00:44:30\" })",
+        "result": "2670000 (local midnight at a stored offset with seconds)"
       }
     ]
   },
@@ -17240,6 +17308,10 @@
       {
         "call": "areUnixEqualBy(Number.NaN, 1710498000000, \"day\")",
         "result": "false"
+      },
+      {
+        "call": "areUnixEqualBy(2669999, 2670000, \"day\", { timeZone: \"-00:44:30\" })",
+        "result": "false (the local day turns at 00:44:30Z)"
       }
     ]
   },
@@ -17351,6 +17423,10 @@
       {
         "call": "convertUnixToPlainDate(NaN)",
         "result": "\"\""
+      },
+      {
+        "call": "convertUnixToPlainDate(1800000, { timeZone: \"-00:44:30\" })",
+        "result": "\"1969-12-31\" (a stored offset with seconds)"
       }
     ]
   },
@@ -17384,6 +17460,10 @@
       {
         "call": "convertUnixToPlainDateTime(NaN)",
         "result": "\"\""
+      },
+      {
+        "call": "convertUnixToPlainDateTime(45870000, { timeZone: \"-00:44:30\" })",
+        "result": "\"1970-01-01T12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -17417,6 +17497,10 @@
       {
         "call": "convertUnixToPlainTime(NaN)",
         "result": "\"\""
+      },
+      {
+        "call": "convertUnixToPlainTime(45870000, { timeZone: \"-00:44:30\" })",
+        "result": "\"12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -17513,7 +17597,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
+        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset to the minute (what `isValidTimeZone` accepts), or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "timeStyle",
@@ -17601,7 +17685,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit, as ECMA-402 throws RangeError for it."
+        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset (a time zone identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what `getTimeZoneOffset` returns), or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit."
       }
     ]
   },
@@ -17647,6 +17731,10 @@
       {
         "call": "formatRelativeUnix(1709163000000, [\"fr-FR\", \"en-US\"], { reference: 1709164800000 })",
         "result": "\"il y a 30 minutes\""
+      },
+      {
+        "call": "formatRelativeUnix(218670000, \"en-US\", { reference: 45870000, timeZone: \"-00:44:30\" })",
+        "result": "\"in 2 days\" (a stored offset with seconds)"
       }
     ]
   },
@@ -17669,7 +17757,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone the value is rendered in: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
+        "description": "The time zone the value is rendered in: an IANA name, a UTC offset to the minute (what `isValidTimeZone` accepts), or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "includeTimeZoneName",
@@ -18085,6 +18173,10 @@
       {
         "call": "intervalCountUnix(NaN, 86400000, \"hour\")",
         "result": "null"
+      },
+      {
+        "call": "intervalCountUnix(2669999, 2670001, \"day\", { timeZone: \"-00:44:30\" })",
+        "result": "2 (the local day turns at 00:44:30Z)"
       }
     ]
   },
@@ -18947,6 +19039,10 @@
       {
         "call": "parseTimeFromUnix(1.5)",
         "result": "\"\" (not an integer epoch)"
+      },
+      {
+        "call": "parseTimeFromUnix(45870000, { timeZone: \"-00:44:30\" })",
+        "result": "\"12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -18979,6 +19075,10 @@
         "result": "\"2023\""
       },
       {
+        "call": "parseUnitFromUnix(-61996320000000, \"year\")",
+        "result": "\"0005\" (1 June of year 5)"
+      },
+      {
         "call": "parseUnitFromUnix(1700000000, \"hour\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"22\""
       },
@@ -19005,6 +19105,10 @@
       {
         "call": "parseUnitFromUnix(\"\", \"year\")",
         "result": "\"\" (a blank string is not epoch 0)"
+      },
+      {
+        "call": "parseUnitFromUnix(45870000, \"minute\", { timeZone: \"-00:44:30\" })",
+        "result": "\"00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -19059,6 +19163,10 @@
       {
         "call": "parseYearFromUnix(1700000000000)",
         "result": "\"2023\""
+      },
+      {
+        "call": "parseYearFromUnix(-61996320000000)",
+        "result": "\"0005\" (1 June of year 5)"
       },
       {
         "call": "parseYearFromUnix(1704067200000, { epochUnit: \"milliseconds\", timeZone: \"UTC\" })",
@@ -19791,6 +19899,14 @@
       {
         "call": "convertUtcToPlainDate(\"invalid\")",
         "result": "\"\""
+      },
+      {
+        "call": "convertUtcToPlainDate(\"+010000-01-01T00:00:00Z\")",
+        "result": "\"+010000-01-01\" (a year past 9999 has a sign and six digits)"
+      },
+      {
+        "call": "convertUtcToPlainDate(\"1970-01-01T00:30:00Z\", { timeZone: \"-00:44:30\" })",
+        "result": "\"1969-12-31\" (a stored offset with seconds)"
       }
     ]
   },
@@ -19816,6 +19932,14 @@
       {
         "call": "convertUtcToPlainDateTime(\"invalid\")",
         "result": "\"\""
+      },
+      {
+        "call": "convertUtcToPlainDateTime(\"+010000-01-01T00:00:00Z\")",
+        "result": "\"+010000-01-01T00:00:00\" (a year past 9999 has a sign and six digits)"
+      },
+      {
+        "call": "convertUtcToPlainDateTime(\"1970-01-01T12:44:30Z\", { timeZone: \"-00:44:30\" })",
+        "result": "\"1970-01-01T12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -19841,6 +19965,10 @@
       {
         "call": "convertUtcToPlainTime(\"invalid\")",
         "result": "\"\""
+      },
+      {
+        "call": "convertUtcToPlainTime(\"1970-01-01T12:44:30Z\", { timeZone: \"-00:44:30\" })",
+        "result": "\"12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -19913,7 +20041,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
+        "description": "The time zone used for both the calendar-day comparison and the rendered clock time: an IANA name, a UTC offset to the minute (what `isValidTimeZone` accepts), or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "timeStyle",
@@ -20014,7 +20142,7 @@
       },
       {
         "name": "timeZone",
-        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit, as ECMA-402 throws RangeError for it."
+        "description": "The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset (a time zone identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what `getTimeZoneOffset` returns), or `\"local\"` for the system time zone. An unknown zone returns `\"\"` whatever the unit."
       },
       {
         "name": "style",
@@ -20064,6 +20192,10 @@
       {
         "call": "formatRelativeUtc(\"2024-03-15T11:30:00Z\", [\"fr-FR\", \"en-US\"], { reference: \"2024-03-15T12:00:00Z\" })",
         "result": "\"il y a 30 minutes\""
+      },
+      {
+        "call": "formatRelativeUtc(\"1970-01-03T12:00:00Z\", \"en-US\", { reference: \"1970-01-01T12:00:00Z\", timeZone: \"-00:44:30\" })",
+        "result": "\"in 2 days\" (a stored offset with seconds)"
       }
     ]
   },
@@ -20082,7 +20214,7 @@
     "members": [
       {
         "name": "timeZone",
-        "description": "The time zone the value is rendered in: an IANA name, a UTC offset, or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
+        "description": "The time zone the value is rendered in: an IANA name, a UTC offset to the minute (what `isValidTimeZone` accepts), or `\"local\"` for the system time zone. An unknown zone returns `\"\"`, as ECMA-402 throws RangeError for it."
       },
       {
         "name": "includeTimeZoneName",
@@ -21257,6 +21389,10 @@
       {
         "call": "parseTimeFromUtc(\"invalid\")",
         "result": "\"\""
+      },
+      {
+        "call": "parseTimeFromUtc(\"1970-01-01T12:44:30Z\", { timeZone: \"-00:44:30\" })",
+        "result": "\"12:00:00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -21293,6 +21429,14 @@
         "result": "\"14\""
       },
       {
+        "call": "parseUnitFromUtc(\"2024-03-17T14:30:45Z\", \"year\")",
+        "result": "\"2024\""
+      },
+      {
+        "call": "parseUnitFromUtc(\"0005-06-01T12:30:00Z\", \"year\")",
+        "result": "\"0005\""
+      },
+      {
         "call": "parseUnitFromUtc(\"2024-03-17T02:30:45Z\", \"day\", { timeZone: \"America/New_York\" })",
         "result": "\"16\""
       },
@@ -21307,6 +21451,10 @@
       {
         "call": "parseUnitFromUtc(\"invalid\", \"month\")",
         "result": "\"\""
+      },
+      {
+        "call": "parseUnitFromUtc(\"1970-01-01T12:44:30Z\", \"minute\", { timeZone: \"-00:44:30\" })",
+        "result": "\"00\" (a stored offset with seconds)"
       }
     ]
   },
@@ -21361,6 +21509,10 @@
       {
         "call": "parseYearFromUtc(\"2024-03-17T14:30:45Z\")",
         "result": "\"2024\""
+      },
+      {
+        "call": "parseYearFromUtc(\"0005-06-01T12:30:00Z\")",
+        "result": "\"0005\""
       },
       {
         "call": "parseYearFromUtc(\"2025-01-01T02:00:00Z\", { timeZone: \"America/New_York\" })",
@@ -23513,6 +23665,10 @@
       {
         "call": "getDstTransitions(\"Invalid/Zone\", 2024)",
         "result": "[]"
+      },
+      {
+        "call": "getDstTransitions(\"-00:44:30\", 1970)",
+        "result": "[] (a fixed offset)"
       }
     ]
   },
@@ -23541,7 +23697,7 @@
     "module": "get",
     "kind": "function",
     "signature": "getTimeZoneOffset(timeZone: string, instant: string): string",
-    "description": "Return an IANA timeZone's UTC offset at a given instant.",
+    "description": "Return a time zone's UTC offset at a given instant.",
     "sourcePath": "packages/gmt/src/zoned/get/getTimeZoneOffset.ts",
     "examples": [
       {
@@ -23555,6 +23711,18 @@
       {
         "call": "getTimeZoneOffset(\"Asia/Kathmandu\", \"2024-01-15T12:00:00Z\")",
         "result": "\"+05:45\""
+      },
+      {
+        "call": "getTimeZoneOffset(\"Africa/Monrovia\", \"1970-01-01T12:00:00Z\")",
+        "result": "\"-00:44:30\" (an offset with seconds)"
+      },
+      {
+        "call": "getTimeZoneOffset(\"-00:44:30\", \"1970-01-01T12:00:00Z\")",
+        "result": "\"-00:44:30\" (its own result, read back)"
+      },
+      {
+        "call": "getTimeZoneOffset(\"+05:30:00\", \"1970-01-01T12:00:00Z\")",
+        "result": "\"+05:30\""
       },
       {
         "call": "getTimeZoneOffset(\"Invalid/Zone\", \"2024-07-15T12:00:00Z\")",
@@ -25122,6 +25290,10 @@
         "result": "\"2024\""
       },
       {
+        "call": "parseUnitFromZoned(\"0005-06-01T12:30:00+00:00[UTC]\", \"year\")",
+        "result": "\"0005\""
+      },
+      {
         "call": "parseUnitFromZoned(\"2024-02-29T12:34:56.789+00:00[UTC]\", \"milliseconds\")",
         "result": "\"789\""
       },
@@ -25188,6 +25360,10 @@
         "result": "\"2024\""
       },
       {
+        "call": "parseYearFromZoned(\"0005-06-01T12:30:00+00:00[UTC]\")",
+        "result": "\"0005\""
+      },
+      {
         "call": "parseYearFromZoned(\"invalid\")",
         "result": "\"\""
       }
@@ -25247,6 +25423,10 @@
       {
         "call": "hasDaylightSaving(\"America/New_York\", { at: \"2024-01-15\" })",
         "result": "false (not an instant)"
+      },
+      {
+        "call": "hasDaylightSaving(\"-00:44:30\", { at: \"1970-01-01T12:00:00Z\" })",
+        "result": "false (a fixed offset)"
       }
     ]
   },
@@ -25431,6 +25611,10 @@
       {
         "call": "isValidTimeZone(\"+05:00:00\")",
         "result": "false (no seconds in an offset identifier)"
+      },
+      {
+        "call": "isValidTimeZone(\"-00:44:30\")",
+        "result": "false (a stored offset with seconds; `isValidUtcOffset` accepts it)"
       },
       {
         "call": "\"Japan\".includes(\"/\")",

@@ -58,7 +58,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | ------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | INT-58 (#11)  | TRAN-8, INT-12, INT-58                     | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete |
 | TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77 | The rest of the transport primitives, with operating hours                                           |
-| INT-15 (#18)  | INT-14, INT-15                             | Intermodal complete: B/L and EDI interop                                                             |
+| INT-14 (#18)  | INT-15, INT-14                             | Intermodal complete: B/L and EDI interop, with the intermodal tools (#304)                           |
 | CORE-76 (#19) | CORE-76                                    | Hours of work: the one duty-log engine driver, seafarer, crew and resident rules run on              |
 | MAR-59 (#24)  | MAR-16 … MAR-19, MAR-59                    | Maritime complete, laytime included                                                                  |
 | AV-64 (#30)   | CORE-54, AV-25 … AV-28, AV-64              | Aviation complete, with the holiday rules its seasons use                                            |
@@ -93,8 +93,8 @@ npm. A Core primitive ships with the realm that first uses it.
 | 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | 1.18.0  | Done        |
 | 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | 1.18.0  | Done        |
 | 16 | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | 1.18.0  | Done        |
-| 17 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                                    | —                      | #195  | —       | Not started |
-| 18 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | Cut     | Done        |
+| 17 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | —       | Done        |
+| 18 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                      | #195  | Cut     | Not started |
 | 19 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | Cut     | Not started |
 | 20 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | (SPA-46), (SPA-48)     | #197  | —       | Not started |
 | 21 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                      | #198  | —       | Not started |
