@@ -1,0 +1,111 @@
+---
+title: Offset-Preserving Instants and Local Resolution
+description: Keep an instant together with the UTC offset it was seen at, validate offsets, and resolve a wall time that arrived with no offset, with a policy for the two days a year it is ambiguous.
+sidebar:
+  order: 3
+industries: [core]
+---
+
+An instant orders events globally. The UTC offset in force where the event happened renders
+it as the human on the ground saw it. Neither derives from the other, which is why GS1 EPCIS
+2.0 requires both fields (`eventTime` plus `eventTimeZoneOffset`). UN/EDIFACT DTM has format
+codes `205` to `208` for the pair (a date and time with a `±HHMM` offset), and DICOM appends
+`&ZZXX` to a `DT` value.
+
+The `instant/` namespace is that pair:
+[`toOffsetInstant`](/reference/instant/convert/toOffsetInstant) and
+[`fromOffsetInstant`](/reference/instant/convert/fromOffsetInstant).
+
+```typescript
+import { fromOffsetInstant, toOffsetInstant } from "@northguild/gmt";
+
+toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+
+// Most feeds send no zone at all — the offset alone is what happened.
+toOffsetInstant("2024-07-15T12:00:00-04:00");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00" }
+
+// A UTC-only feed plus a zone you know from somewhere else.
+toOffsetInstant("2024-07-15T16:00:00Z", "America/New_York");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+
+fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00" });
+// "2024-07-15T12:00:00-04:00"
+```
+
+## An offset is not a zone
+
+`-05:00` does not identify `America/New_York`. It is every zone sitting at `-05:00` that
+day, and it says nothing about what that zone will do next spring.
+
+**Store the zone for anything still to be scheduled. Store the offset for anything that
+already happened.**
+
+`timeZone` is optional because most feeds do not send one. A string whose offset contradicts
+its own bracketed zone returns `null` rather than a guess.
+
+## Validate the offset
+
+[`isValidUtcOffset`](/reference/instant/validate/isValidUtcOffset) checks the `offset` half
+of the pair: `±HH:MM`, or `±HH:MM:SS` for a zone that did not run on a whole minute. It is
+not the check for a `timeZone` argument, which is
+[`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone).
+
+```typescript
+import { isValidUtcOffset } from "@northguild/gmt";
+
+isValidUtcOffset("-04:00"); // true
+isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
+isValidUtcOffset("Z"); // false (a designator, not an offset)
+isValidUtcOffset("+0530"); // false (no colon)
+```
+
+## Resolve a wall time that has no offset
+
+The other half of the namespace is the reverse problem: a wall time that arrives with no
+offset at all ("gate-out 08:00"). Resolving one needs a zone the sender did not send, plus a
+policy for the two days a year the mapping is not one-to-one.
+[`classifyLocal`](/reference/instant/convert/classifyLocal) and
+[`resolveLocal`](/reference/instant/convert/resolveLocal) do it:
+
+```typescript
+import { classifyLocal, resolveLocal } from "@northguild/gmt";
+
+classifyLocal("2024-11-03T01:30:00", "America/New_York"); // "ambiguous"
+classifyLocal("2024-03-10T02:30:00", "America/New_York"); // "nonexistent"
+classifyLocal("2024-07-15T12:00:00", "America/New_York"); // "unique"
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York");
+// "2024-11-03T05:30:00Z" — the default "compatible" takes the first 01:30
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" });
+// "2024-11-03T06:30:00Z" — the same wall clock, an hour of real time later
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "reject" });
+// "" — ambiguous, and not guessed
+```
+
+`classifyLocal` exists so code can branch **before** a policy is applied. A demurrage clock,
+a medication window or a duty limit should refuse an ambiguous wall time, or route it to a
+human. It should not silently accept whichever of two instants an hour apart a default
+handed it. See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the four
+strategies in full.
+
+## Two notes on the boundaries of this namespace
+
+- **`resolveLocal` returns an instant. `convertPlainDateTimeToZoned` returns a zoned
+  string.** They share the underlying resolution but differ in output and precision.
+  `resolveLocal` is exact to the nanosecond, while
+  [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned)
+  defaults to milliseconds. Neither takes an `offset` option. Reach for whichever shape you
+  need next.
+- **`offset` is `±HH:MM`, except where it is not.** A handful of zones did not run on a
+  whole minute before 1972. `Africa/Monrovia` really was `-00:44:30`, and those zones report
+  `±HH:MM:SS`. Rounding them would put the pair thirty seconds from the event it describes.
+
+## See also
+
+- [DST Disambiguation](/guides/concepts/dst-disambiguation/): the four strategies behind `resolveLocal`
+- [Nanosecond Precision](/guides/core-date-operations/nanosecond-precision/): how zoned strings with sub-minute offsets are read
+- [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/): the interchange formats that carry an offset

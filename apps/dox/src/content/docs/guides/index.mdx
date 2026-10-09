@@ -5,18 +5,19 @@ sidebar:
   order: 0
 ---
 
-These guides are organized by task, not by namespace. Each one ports the runnable
-patterns from the `gmt` README and [skill docs](/guides/integration/skills/) into a single page, then links to the
-reference page of every function mentioned for its full signature.
+These guides are organized by task, not by namespace. Each one gathers the runnable
+patterns for a task into a single page, then links to the reference page of every function
+mentioned for its full signature. The [agent skills](/guides/integration/skills/) teach the
+same patterns to coding agents.
 
 ## How the guides are organized
 
 | Group                                             | What it covers                                                                                                 |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | [Concepts](./concepts/)                           | Plain vs zoned, DST disambiguation                                                                             |
-| [Core Date Operations](./core-date-operations/)   | Getting the current time, arithmetic, comparison, durations, parsing, formatting, validation, calendar systems |
-| [Zoned Date Operations](./zoned-date-operations/zoned-operations/) | Timezone-aware arithmetic, boundaries, DST control                                                             |
-| [Conversion](./conversion/)                       | Between plain/zoned/unix/UTC and calendar systems                                                              |
+| [Core Date Operations](./core-date-operations/)   | Getting the current time, arithmetic, comparison, durations, parsing, formatting, validation, calendar systems, business calendars, operating hours, nanosecond precision, spans |
+| [Zoned Date Operations](./zoned-date-operations/zoned-operations/) | Timezone-aware arithmetic, boundaries, DST control, [zone-aware buckets](./zoned-date-operations/calendar-boundaries/), [offset-preserving instants](./zoned-date-operations/offset-instants-and-local-resolution/) |
+| [Conversion](./conversion/)                       | Between plain/zoned/unix/UTC and calendar systems, and foreign epochs (NTP, FILETIME, Excel, PostgreSQL) |
 | [Intervals](./intervals/interval-basics/)                         | Range math — containment, overlap, set operations, splitting                                                   |
 | [Integration](./integration/)                     | Cache keys, routers, tables, lint config                                                                       |
 | [Industries](./industries/)                       | The industry layers on top of the core — transport legs and dwell, cut-offs, multi-leg scheduling, punctuality and timestamp classes, free time and demurrage, billing deadlines, bill of lading dates and multimodal ETAs, EDI timestamps — with real-world scenarios |
