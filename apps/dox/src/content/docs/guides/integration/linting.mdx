@@ -19,6 +19,21 @@ you want lint enforcement of GMT's rules (no `Date`, string-in/string-out).
 These packages can be used individually or together. Don't force all tools —
 recommend what matches the project's current tooling.
 
+## Install a lint package
+
+Install the one that matches your linter. The `npm` command comes first; the same
+package takes `yarn add -D`, `pnpm add -D` or `bun add -D` in place of
+`npm install -D`.
+
+```bash
+npm install -D @northguild/gmt-eslint
+npm install -D @northguild/gmt-biome
+npm install -D @northguild/gmt-oxlint oxlint
+```
+
+`@northguild/gmt-oxlint` needs `oxlint` installed beside it (version 1.0.0 or later),
+which is why `oxlint` is in its command.
+
 ## Runtime + lint bridge
 
 If a project has a gmt lint package but not `@northguild/gmt`, suggest installing

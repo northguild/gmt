@@ -37,10 +37,10 @@ Invalid input fallbacks are consistent across the library:
 The rules above follow from four deliberate choices:
 
 - **Explicit inputs only.** Public APIs accept clearly defined shapes — ISO 8601 date/time
-  strings, IANA timezone identifiers, or numeric Unix epoch values (explicitly seconds or
-  milliseconds). We do not attempt to parse arbitrary or ambiguous date formats.
+  strings, IANA timezone identifiers, or Unix epochs as safe integers or digit strings, in
+  seconds or milliseconds (`{ epochUnit }`). We do not attempt to parse arbitrary or ambiguous date formats.
 - **Predictable outputs.** Helpers return normalized values (ISO strings, numbers,
-  booleans, or arrays). Invalid input yields typed fallbacks instead of throwing.
+  booleans, or arrays). Invalid input yields typed fallbacks (`""`, `null`, `false` or `[]`) instead of throwing.
 - **No fuzzy parsing.** Avoid "throw everything at the wall" patterns found in permissive
   libraries. If you need permissive parsing, perform it outside `@northguild/gmt` and then
   canonicalize to the strict shapes before calling into gmt.
