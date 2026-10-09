@@ -147,23 +147,17 @@ export function measuredTable(): CompareTable {
     return [
       plain(library.displayName),
       plain(
-        m.version === undefined
-          ? `${NOT_RECORDED}; API counted at ${m.publicApi.version}`
-          : m.version === m.publicApi.version
-            ? m.version
-            : `${m.version}; API counted at ${m.publicApi.version}`,
+        m.version === m.publicApi.version
+          ? m.version
+          : `${m.version}; API counted at ${m.publicApi.version}`,
       ),
       m.commit ? code(`${m.repository}@${m.commit}`) : plain(m.repository),
       { text: m.measuredOn, nobreak: true },
       m.command ? code(m.command) : plain(NOT_RECORDED),
-      m.ciConfigUrl
-        ? {
-            text: m.ciConfigUrl.replace("https://github.com/", ""),
-            href: m.ciConfigUrl,
-          }
-        : m.ciConfigPath
-          ? code(m.ciConfigPath)
-          : plain(NOT_RECORDED),
+      {
+        text: m.ciConfigUrl.replace("https://github.com/", ""),
+        href: m.ciConfigUrl,
+      },
     ];
   });
 

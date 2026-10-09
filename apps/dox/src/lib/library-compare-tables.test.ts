@@ -75,9 +75,25 @@ describe("the /compare tables", () => {
     expect(intl[4].text).toContain("jest");
   });
 
+  it("gives every library a version and a link to its CI configuration", () => {
+    const rows = measuredTable().rows.slice(1);
+    expect(rows).toHaveLength(6);
+    for (const row of rows) {
+      expect(row[1].text).toMatch(/^\d+\.\d+\.\d+/);
+      expect(row[5].href).toMatch(/^https:\/\/github\.com\//);
+    }
+    const byName = Object.fromEntries(rows.map((r) => [r[0].text, r]));
+    expect(byName["Day.js"][1].text).toBe("1.11.23");
+    expect(byName["Day.js"][5].text).toBe(
+      "iamkun/dayjs/blob/dev/.github/workflows/lint-test.yml",
+    );
+    expect(byName["Spacetime"][1].text).toBe("7.13.0");
+    expect(byName["Spacetime"][5].text).toBe(
+      "spencermountain/spacetime/tree/master/.github/workflows",
+    );
+  });
+
   it("never invents a field that was not recorded", () => {
-    const dayjs = measuredTable().rows.find((r) => r[0].text === "Day.js")!;
-    expect(dayjs[1].text).toBe("not recorded; API counted at 1.11.23");
     const dateFns = measuredTable().rows.find((r) => r[0].text === "date-fns")!;
     expect(dateFns[4].text).toBe("not recorded");
   });

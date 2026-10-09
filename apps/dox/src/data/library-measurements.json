@@ -96,11 +96,12 @@
     {
       "id": "dayjs",
       "name": "Day.js",
+      "version": "1.11.23",
       "repository": "iamkun/dayjs",
       "commit": "539c4b9",
       "measuredOn": "2026-09-09",
       "command": "npm test",
-      "ciConfigPath": ".github/workflows/lint-test.yml",
+      "ciConfigUrl": "https://github.com/iamkun/dayjs/blob/dev/.github/workflows/lint-test.yml",
       "tests": 794,
       "executions": 1034,
       "nodeVersions": 1,
@@ -116,16 +117,17 @@
         "methods": 112,
         "version": "1.11.23"
       },
-      "note": "A single default run is 93 suites and 794 tests. The repository's `test` script first re-runs test/timezone.test.js (6 tests) and test/plugin/timezone.test.js (54 tests) under 6 distinct TZ values (Pacific/Auckland, Europe/London, America/Whitehorse, the system default, Europe/Paris, America/New_York), then runs the full jest suite: 4 × 6 + 4 × 54 + 794 = 1,034 executions. `locales` counts test/locale.test.js plus the 41 files in test/locale/. CI runs `npm test` on a single Node LTS. The API count covers the core and the 37 plugins shipped in the same npm package; core alone is 4 functions and 30 methods."
+      "note": "A single default run is 93 suites and 794 tests. The repository's `test` script first re-runs test/timezone.test.js (6 tests) and test/plugin/timezone.test.js (54 tests) under 6 distinct TZ values (Pacific/Auckland, Europe/London, America/Whitehorse, the system default, Europe/Paris, America/New_York), then runs the full jest suite: 4 × 6 + 4 × 54 + 794 = 1,034 executions. `locales` counts test/locale.test.js plus the 41 files in test/locale/. CI runs `npm test` on a single Node LTS. The API count covers the core and the 37 plugins shipped in the same npm package; core alone is 4 functions and 30 methods. The commit is on the `dev` branch, where `package.json` carries the placeholder version `0.0.0-development`: its `src`, `test` and `types` trees are the same as those of the tag v1.11.23."
     },
     {
       "id": "spacetime",
       "name": "Spacetime",
+      "version": "7.13.0",
       "repository": "spencermountain/spacetime",
       "commit": "2acdc4e",
       "measuredOn": "2026-09-09",
       "command": "tape ./test/**/*.test.js",
-      "ciConfigPath": ".github/workflows",
+      "ciConfigUrl": "https://github.com/spencermountain/spacetime/tree/master/.github/workflows",
       "tests": 6086,
       "executions": 12172,
       "nodeVersions": 2,

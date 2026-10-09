@@ -29,17 +29,20 @@ export interface LibraryMeasurement {
    * library's row in the README comparison table by this name.
    */
   name: string;
-  /** The package version the tests were run at, where the repository records it. */
-  version?: string;
+  /**
+   * The package version the tests were run at: the `version` of `package.json` at `commit`, or,
+   * where the repository stamps the version only when it publishes, the release tag whose source
+   * and tests are the same as that commit's.
+   */
+  version: string;
   repository: string;
   commit?: string;
   /** ISO date the figures were taken. Each is a snapshot of that day. */
   measuredOn: string;
   /** The command that produced the test count, where the repository records it. */
   command?: string;
-  /** The library's CI configuration, as a link or as a path inside its repository. */
-  ciConfigUrl?: string;
-  ciConfigPath?: string;
+  /** A link to the library's CI configuration, a workflow file or the folder that holds them. */
+  ciConfigUrl: string;
   tests: number;
   executions: number;
   nodeVersions: number;
