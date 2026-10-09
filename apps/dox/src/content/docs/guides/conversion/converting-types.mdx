@@ -54,6 +54,17 @@ convertUnixToPlainDate(1710685845000);
 // "2024-03-17" — UTC by default
 ```
 
+`convertUtcToPlainDate` does the same for a UTC string. Both write the year as Temporal
+does: four digits from 0000 to 9999, and a sign and six digits outside that range:
+
+```typescript
+import { convertUtcToPlainDate } from "@northguild/gmt";
+
+convertUtcToPlainDate("2024-03-17T14:30:45Z"); // "2024-03-17"
+convertUtcToPlainDate("+010000-01-01T00:00:00Z"); // "+010000-01-01"
+convertUtcToPlainDate("-000005-01-01T00:00:00Z"); // "-000005-01-01"
+```
+
 Both directions above default to **milliseconds** and take an optional `{ epochUnit: "seconds" }` — there
 are no separate `…Ms` functions. Name the unit whenever you store or send a value, and be
 consistent: mixing the two is a common source of 1000x errors.

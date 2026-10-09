@@ -15,7 +15,7 @@ describe("parseUnitFromDate", () => {
 
   it.each`
     value           | unit       | expected
-    ${"0001-01-01"} | ${"year"}  | ${"1"}
+    ${"0001-01-01"} | ${"year"}  | ${"0001"}
     ${"2024-12-31"} | ${"month"} | ${"12"}
     ${"2024-03-01"} | ${"day"}   | ${"01"}
   `(

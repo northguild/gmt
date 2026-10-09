@@ -4,6 +4,7 @@ import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../calculate/getWeekNumber";
 import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Return a specific date unit extracted from a PlainDate string.
@@ -15,6 +16,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `optionsArg` must be an object or omitted: `null` or any other primitive returns "", as
  *   Temporal's GetOptionsObject rejects it.
  * - Returns "" for invalid input.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param value ISO PlainDate string
  * @param unit unit to extract from the date
@@ -22,6 +25,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns string representation of the requested unit or "" on invalid input
  *
  * @example parseUnitFromDate("2024-03-15", "year") // "2024"
+ * @example parseUnitFromDate("0005-06-01", "year") // "0005"
  * @example parseUnitFromDate("2024-03-15", "month") // "03"
  * @example parseUnitFromDate("2024-03-15", "day") // "15"
  * @example parseUnitFromDate("2024-03-15", "week") // "11"
@@ -62,7 +66,7 @@ export function parseUnitFromDate(
 
       switch (resolveDateTimeUnit(unit)) {
         case "year":
-          return date.year.toString();
+          return isoYearString(date.year);
         case "month":
           return date.month.toString().padStart(2, "0");
         case "day":

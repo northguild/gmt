@@ -34,6 +34,19 @@ These return zero-padded **strings** (sentinel `""`), not numbers. Months are
 1-indexed (matching the Temporal spec): `"03"` is March, so convert with `Number` and
 subtract 1 before using it as an array index.
 
+A year is written as Temporal writes it: four digits from 0000 to 9999, and a sign and six
+digits outside that range. Every function that returns a year does this, the `"year"` unit
+of `parseUnitFromDate` and its siblings included:
+
+```typescript
+import { parseUnitFromDate, parseYearFromDate } from "@northguild/gmt";
+
+parseYearFromDate("0005-06-01"); // "0005"
+parseYearFromDate("+010000-01-01"); // "+010000"
+parseYearFromDate("-000005-01-01"); // "-000005"
+parseUnitFromDate("0005-06-01", "year"); // "0005"
+```
+
 There are `parse*FromDateTime` siblings for datetime strings, plus
 `parseDayOfWeekFromDate` and `parseWeekFromDate`, which return numbers (sentinel `null`).
 

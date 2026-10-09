@@ -21,6 +21,8 @@ function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
  * - Returns "" on invalid unit or failure.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param unit unit to extract from current utc instant
  * @returns string representation of the requested unit or "" on invalid
