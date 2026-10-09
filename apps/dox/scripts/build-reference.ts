@@ -9,7 +9,8 @@
  *   2. src/generated/reference/route-manifest.ts — ReadonlySet<string>
  *   3. content/docs/reference MDX            - one page per function, regex and shared
  *                                              type, plus the index pages
- *   4. public/_redirects                     - the old URL of every type that moved
+ *   4. public/_redirects                     - the old URL of every type that moved and of
+ *                                              every renamed function
  *
  * Which public function uses which public type comes from `build-utils/type-usage.ts`. A
  * type two or more functions reach gets a page at `/reference/types/<Name>`; a type one
@@ -79,6 +80,7 @@ import {
   type TableContext,
 } from "./build-utils/render-table";
 import { buildRedirects } from "./build-utils/redirects";
+import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
   functionUrl,
   indexRoutes,
@@ -2882,6 +2884,7 @@ function referenceInputs(): string[] {
     resolve(appRoot, "scripts", "build-utils", "index-pages.ts"),
     resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
     resolve(appRoot, "scripts", "build-utils", "redirects.ts"),
+    resolve(appRoot, "scripts", "build-utils", "renamed-functions.ts"),
     resolve(appRoot, "scripts", "build-utils", "reference-urls.ts"),
     resolve(appRoot, "scripts", "build-utils", "released-exports.ts"),
     resolve(appRoot, "scripts", "build-utils", "render-table.ts"),
@@ -3319,12 +3322,14 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 `;
   writeIfChanged(join(outGen, "route-manifest.ts"), manifestTs);
 
-  // 3. redirects: the old URL of every type, to its page or to its anchor.
+  // 3. redirects: the old URL of every type, to its page or to its anchor, and of every
+  // renamed function.
   writeIfChanged(
     outRedirects,
     buildRedirects(
       dedupedDocs.filter((d) => d.kind === "type"),
       usage,
+      RENAMED_FUNCTIONS,
     ),
   );
 

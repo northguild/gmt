@@ -188,7 +188,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `/reference/…#fragment` link only when it is a corpus `url`.
   - **`public/_redirects` is generated and ignored by git.** A type's old URL is a pure
     function of its source path, so each gets three `301` rules: bare, trailing slash and
-    the `.md` twin. An inline type redirects to its owner page and anchor. Astro's
+    the `.md` twin. A renamed function cannot be derived: `scripts/build-utils/renamed-functions.ts`
+    lists each released function that was renamed, and each gets the same three rules to its
+    new page. The generation fails when a rename's target is not a function page or its source
+    is one. Sources are written in the case the pages are built in. An inline type redirects to its owner page and anchor. Astro's
     `redirects` is not used: it emits meta-refresh pages. Under `wrangler dev` the source
     match is case-sensitive and the fragment survives in `Location`; `astro dev` does not
     apply the file.
