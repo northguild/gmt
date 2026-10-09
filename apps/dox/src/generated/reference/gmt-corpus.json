@@ -1768,6 +1768,47 @@
     ]
   },
   {
+    "url": "/reference/instant/validate/isValidUtcOffset",
+    "page": "/reference/instant/validate/isValidUtcOffset",
+    "name": "isValidUtcOffset",
+    "namespace": "instant",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidUtcOffset(value: string): boolean",
+    "description": "Return true when `value` is a UTC offset in the form the offset-instant pair stores: ISO 8601 extended `±HH:MM`, optionally `±HH:MM:SS`.",
+    "sourcePath": "packages/gmt/src/instant/validate/isValidUtcOffset.ts",
+    "examples": [
+      {
+        "call": "isValidUtcOffset(\"-04:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidUtcOffset(\"+05:45\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidUtcOffset(\"-00:44:30\")",
+        "result": "true (Africa/Monrovia before 1972)"
+      },
+      {
+        "call": "isValidUtcOffset(\"Z\")",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "isValidUtcOffset(\"-0400\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "isValidUtcOffset(\"+24:00\")",
+        "result": "false (out of range)"
+      },
+      {
+        "call": "isValidUtcOffset(\"America/New_York\")",
+        "result": "false (a zone, not an offset)"
+      }
+    ]
+  },
+  {
     "url": "/reference/intermodal/calculate/billingTimeline#billingdates",
     "page": "/reference/intermodal/calculate/billingTimeline",
     "name": "BillingDates",
@@ -4109,6 +4150,84 @@
     ]
   },
   {
+    "url": "/reference/intermodal/validate/isValidEpcisEventTime",
+    "page": "/reference/intermodal/validate/isValidEpcisEventTime",
+    "name": "isValidEpcisEventTime",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidEpcisEventTime(value: string): boolean",
+    "description": "Return true when `value` is a real GS1 EPCIS 2.0 `eventTime`: the moment a supply-chain event happened, written as a date and time with `Z` or a UTC offset.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidEpcisEventTime.ts",
+    "examples": [
+      {
+        "call": "isValidEpcisEventTime(\"2024-06-15T14:30:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2024-06-15T10:00:00.123+02:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2024-02-30T14:30:00Z\")",
+        "result": "false (30 February; the epcisEventTime pattern matches it)"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2023-02-29T00:00:00Z\")",
+        "result": "false (2023 has no 29 February; the epcisEventTime pattern matches it)"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2024-06-15T14:30:00.1234567891Z\")",
+        "result": "false (finer than a nanosecond; the epcisEventTime pattern matches it)"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2024-06-15T14:30Z\")",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "isValidEpcisEventTime(\"2024-06-15T14:30:00\")",
+        "result": "false (Z or an offset is required)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidEpcisTimeZoneOffset",
+    "page": "/reference/intermodal/validate/isValidEpcisTimeZoneOffset",
+    "name": "isValidEpcisTimeZoneOffset",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidEpcisTimeZoneOffset(value: string): boolean",
+    "description": "Return true when `value` is a GS1 EPCIS 2.0 `eventTimeZoneOffset`: the UTC offset the local clock ran at where a supply-chain event happened, written `±HH:MM`.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidEpcisTimeZoneOffset.ts",
+    "examples": [
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"-05:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"+14:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"+14:01\")",
+        "result": "false (past the range GS1 allows)"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"Z\")",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"+0200\")",
+        "result": "false (no colon)"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(\"+05:30:00\")",
+        "result": "false (seconds)"
+      }
+    ]
+  },
+  {
     "url": "/reference/intermodal/validate/isValidX12Date",
     "page": "/reference/intermodal/validate/isValidX12Date",
     "name": "isValidX12Date",
@@ -4134,6 +4253,43 @@
       {
         "call": "isValidX12Date(\"20230229\", \"D8\")",
         "result": "false (2023 has no 29 February)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/validate/isValidX12DateAndTime",
+    "page": "/reference/intermodal/validate/isValidX12DateAndTime",
+    "name": "isValidX12DateAndTime",
+    "namespace": "intermodal",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidX12DateAndTime(date: string, time: string): boolean",
+    "description": "Return true when the date and the time of an X12 segment, sent as two elements, together state a real local date and time.",
+    "sourcePath": "packages/gmt/src/intermodal/validate/isValidX12DateAndTime.ts",
+    "examples": [
+      {
+        "call": "isValidX12DateAndTime(\"20240615\", \"1430\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidX12DateAndTime(\"20240615\", \"14300012\")",
+        "result": "true (hundredths of a second)"
+      },
+      {
+        "call": "isValidX12DateAndTime(\"20240615\", \"\")",
+        "result": "false (both elements are required)"
+      },
+      {
+        "call": "isValidX12DateAndTime(\"20230229\", \"1430\")",
+        "result": "false (2023 has no 29 February)"
+      },
+      {
+        "call": "isValidX12DateAndTime(\"20240615\", \"2430\")",
+        "result": "false (hour 24)"
+      },
+      {
+        "call": "isValidX12DateAndTime(\"240615\", \"1430\")",
+        "result": "false (the date element has a four-digit year)"
       }
     ]
   },
@@ -8203,34 +8359,34 @@
     ]
   },
   {
-    "url": "/reference/plain/format/formatSql",
-    "page": "/reference/plain/format/formatSql",
-    "name": "formatSql",
+    "url": "/reference/plain/format/formatSqlDateTime",
+    "page": "/reference/plain/format/formatSqlDateTime",
+    "name": "formatSqlDateTime",
     "namespace": "plain",
     "module": "format",
     "kind": "function",
-    "signature": "formatSql(value: string): string",
+    "signature": "formatSqlDateTime(value: string): string",
     "description": "Format a plain ISO 8601 datetime string as a SQL timestamp literal without a time zone — the `YYYY-MM-DD HH:MM:SS[.fff]` form of standard SQL `TIMESTAMP` and MySQL/SQLite `DATETIME` columns.",
-    "sourcePath": "packages/gmt/src/plain/format/formatSql.ts",
+    "sourcePath": "packages/gmt/src/plain/format/formatSqlDateTime.ts",
     "examples": [
       {
-        "call": "formatSql(\"2024-03-15T14:30:00\")",
+        "call": "formatSqlDateTime(\"2024-03-15T14:30:00\")",
         "result": "\"2024-03-15 14:30:00\""
       },
       {
-        "call": "formatSql(\"2024-03-15T14:30\")",
+        "call": "formatSqlDateTime(\"2024-03-15T14:30\")",
         "result": "\"2024-03-15 14:30:00\""
       },
       {
-        "call": "formatSql(\"2024-03-15T14:30:00.500\")",
+        "call": "formatSqlDateTime(\"2024-03-15T14:30:00.500\")",
         "result": "\"2024-03-15 14:30:00.5\""
       },
       {
-        "call": "formatSql(\"0000-01-01T00:00:00\")",
+        "call": "formatSqlDateTime(\"0000-01-01T00:00:00\")",
         "result": "\"\" (year outside 0001–9999)"
       },
       {
-        "call": "formatSql(\"invalid\")",
+        "call": "formatSqlDateTime(\"invalid\")",
         "result": "\"\""
       }
     ]
@@ -11202,38 +11358,38 @@
     ]
   },
   {
-    "url": "/reference/plain/parse/parseSql",
-    "page": "/reference/plain/parse/parseSql",
-    "name": "parseSql",
+    "url": "/reference/plain/parse/parseSqlDateTime",
+    "page": "/reference/plain/parse/parseSqlDateTime",
+    "name": "parseSqlDateTime",
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseSql(value: string): string",
+    "signature": "parseSqlDateTime(value: string): string",
     "description": "Parse a SQL timestamp literal without a time zone — the `YYYY-MM-DD HH:MM:SS[.fff]` form of standard SQL `TIMESTAMP` and MySQL/SQLite `DATETIME` columns — into a plain ISO 8601 datetime string.",
-    "sourcePath": "packages/gmt/src/plain/parse/parseSql.ts",
+    "sourcePath": "packages/gmt/src/plain/parse/parseSqlDateTime.ts",
     "examples": [
       {
-        "call": "parseSql(\"2024-03-15 14:30:00\")",
+        "call": "parseSqlDateTime(\"2024-03-15 14:30:00\")",
         "result": "\"2024-03-15T14:30:00\""
       },
       {
-        "call": "parseSql(\"2024-03-15 14:30:00.5\")",
+        "call": "parseSqlDateTime(\"2024-03-15 14:30:00.5\")",
         "result": "\"2024-03-15T14:30:00.5\""
       },
       {
-        "call": "parseSql(\"2024-03-15 14:30\")",
+        "call": "parseSqlDateTime(\"2024-03-15 14:30\")",
         "result": "\"\" (seconds are required)"
       },
       {
-        "call": "parseSql(\"0000-01-01 00:00:00\")",
+        "call": "parseSqlDateTime(\"0000-01-01 00:00:00\")",
         "result": "\"\" (year outside 0001–9999)"
       },
       {
-        "call": "parseSql(\"2024-03-15T14:30:00\")",
+        "call": "parseSqlDateTime(\"2024-03-15T14:30:00\")",
         "result": "\"\" (wrong separator)"
       },
       {
-        "call": "parseSql(\"not a date\")",
+        "call": "parseSqlDateTime(\"not a date\")",
         "result": "\"\""
       }
     ]
@@ -12104,6 +12260,51 @@
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=hebrew]\")",
         "result": "false (non-ISO calendar)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/validate/isValidSqlDateTime",
+    "page": "/reference/plain/validate/isValidSqlDateTime",
+    "name": "isValidSqlDateTime",
+    "namespace": "plain",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSqlDateTime(value: string): boolean",
+    "description": "Return true when `value` is a real SQL timestamp literal without a time zone: the `YYYY-MM-DD HH:MM:SS[.fff]` value of a standard SQL `TIMESTAMP` or a MySQL/SQLite `DATETIME` column. It checks one date-and-time value, not a SQL statement.",
+    "sourcePath": "packages/gmt/src/plain/validate/isValidSqlDateTime.ts",
+    "examples": [
+      {
+        "call": "isValidSqlDateTime(\"2024-03-15 14:30:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2024-03-15 14:30:00.123456789\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2024-02-30 14:30:00\")",
+        "result": "false (February has no 30th; the sqlDateTime pattern matches it)"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2023-02-29 14:30:00\")",
+        "result": "false (2023 has no 29 February; the sqlDateTime pattern matches it)"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2024-06-31 00:00:00\")",
+        "result": "false (June has 30 days; the sqlDateTime pattern matches it)"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2024-03-15 14:30\")",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "isValidSqlDateTime(\"2024-03-15T14:30:00\")",
+        "result": "false (T separator)"
+      },
+      {
+        "call": "isValidSqlDateTime(\"not a date\")",
+        "result": "false"
       }
     ]
   },
@@ -13400,7 +13601,7 @@
     "module": "http-date",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp` emits and the preferred HTTP-date form. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 5322's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset.",
+    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttpDate` emits and the preferred HTTP-date form. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 5322's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset.",
     "sourcePath": "packages/gmt/src/regex/http-date.ts",
     "examples": [
       {
@@ -13421,7 +13622,7 @@
       },
       {
         "call": "httpDate.test(\"Wednesday, 09-Jun-21 10:18:14 GMT\")",
-        "result": "false (rfc850-date: parseHttp reads it)"
+        "result": "false (rfc850-date: parseHttpDate reads it)"
       }
     ]
   },
@@ -19758,26 +19959,26 @@
     ]
   },
   {
-    "url": "/reference/utc/format/formatHttp",
-    "page": "/reference/utc/format/formatHttp",
-    "name": "formatHttp",
+    "url": "/reference/utc/format/formatHttpDate",
+    "page": "/reference/utc/format/formatHttpDate",
+    "name": "formatHttpDate",
     "namespace": "utc",
     "module": "format",
     "kind": "function",
-    "signature": "formatHttp(value: string): string",
-    "description": "Format a UTC ISO 8601 datetime string as an RFC 9110 IMF-fixdate — the fixed grammar HTTP headers like `Last-Modified`/`Date`/`Expires` require.",
-    "sourcePath": "packages/gmt/src/utc/format/formatHttp.ts",
+    "signature": "formatHttpDate(value: string): string",
+    "description": "Format a UTC ISO 8601 datetime string as an HTTP header date — the RFC 9110 IMF-fixdate that headers like `Last-Modified`/`Date`/`Expires` require.",
+    "sourcePath": "packages/gmt/src/utc/format/formatHttpDate.ts",
     "examples": [
       {
-        "call": "formatHttp(\"2024-03-15T14:30:00Z\")",
+        "call": "formatHttpDate(\"2024-03-15T14:30:00Z\")",
         "result": "\"Fri, 15 Mar 2024 14:30:00 GMT\""
       },
       {
-        "call": "formatHttp(\"2024-03-15T14:30:00.500Z\")",
+        "call": "formatHttpDate(\"2024-03-15T14:30:00.500Z\")",
         "result": "\"Fri, 15 Mar 2024 14:30:00 GMT\""
       },
       {
-        "call": "formatHttp(\"-000001-06-15T12:00:00Z\")",
+        "call": "formatHttpDate(\"-000001-06-15T12:00:00Z\")",
         "result": "\"\""
       },
       {
@@ -19785,7 +19986,7 @@
         "result": "\"-000001-06-15T12:00:00Z\""
       },
       {
-        "call": "formatHttp(\"invalid\")",
+        "call": "formatHttpDate(\"invalid\")",
         "result": "\"\""
       }
     ]
@@ -20828,38 +21029,38 @@
     ]
   },
   {
-    "url": "/reference/utc/parse/parseHttp",
-    "page": "/reference/utc/parse/parseHttp",
-    "name": "parseHttp",
+    "url": "/reference/utc/parse/parseHttpDate",
+    "page": "/reference/utc/parse/parseHttpDate",
+    "name": "parseHttpDate",
     "namespace": "utc",
     "module": "parse",
     "kind": "function",
-    "signature": "parseHttp(value: string): string",
-    "description": "Parse an RFC 9110 HTTP-date — the fixed grammar HTTP headers like `Last-Modified`/`Date`/`Expires` use — into a UTC ISO 8601 datetime string.",
-    "sourcePath": "packages/gmt/src/utc/parse/parseHttp.ts",
+    "signature": "parseHttpDate(value: string): string",
+    "description": "Parse an HTTP header date — the RFC 9110 HTTP-date that headers like `Last-Modified`/`Date`/`Expires` carry — into a UTC ISO 8601 datetime string.",
+    "sourcePath": "packages/gmt/src/utc/parse/parseHttpDate.ts",
     "examples": [
       {
-        "call": "parseHttp(\"Fri, 15 Mar 2024 14:30:00 GMT\")",
+        "call": "parseHttpDate(\"Fri, 15 Mar 2024 14:30:00 GMT\")",
         "result": "\"2024-03-15T14:30:00Z\""
       },
       {
-        "call": "parseHttp(\"Sunday, 06-Nov-94 08:49:37 GMT\")",
+        "call": "parseHttpDate(\"Sunday, 06-Nov-94 08:49:37 GMT\")",
         "result": "\"1994-11-06T08:49:37Z\" (rfc850-date)"
       },
       {
-        "call": "parseHttp(\"Sun Nov  6 08:49:37 1994\")",
+        "call": "parseHttpDate(\"Sun Nov  6 08:49:37 1994\")",
         "result": "\"1994-11-06T08:49:37Z\" (asctime-date)"
       },
       {
-        "call": "parseHttp(\"Fri, 15 Mar 2024 14:30:00 -0400\")",
+        "call": "parseHttpDate(\"Fri, 15 Mar 2024 14:30:00 -0400\")",
         "result": "\"\" (not an HTTP-date)"
       },
       {
-        "call": "parseHttp(\"Sat, 15 Mar 2024 14:30:00 GMT\")",
+        "call": "parseHttpDate(\"Sat, 15 Mar 2024 14:30:00 GMT\")",
         "result": "\"\" (15 Mar 2024 was a Friday)"
       },
       {
-        "call": "parseHttp(\"Mon Nov  6 08:49:37 1994\")",
+        "call": "parseHttpDate(\"Mon Nov  6 08:49:37 1994\")",
         "result": "\"\" (asctime-date; 6 Nov 1994 was a Sunday)"
       },
       {
@@ -20867,11 +21068,11 @@
         "result": "\"2024-03-15T14:30:00Z\" — the day name removed"
       },
       {
-        "call": "parseHttp(\"Sat, 31 Feb 2024 14:30:00 GMT\")",
+        "call": "parseHttpDate(\"Sat, 31 Feb 2024 14:30:00 GMT\")",
         "result": "\"\" (impossible date)"
       },
       {
-        "call": "parseHttp(\"not a date\")",
+        "call": "parseHttpDate(\"not a date\")",
         "result": "\"\""
       }
     ]
@@ -21168,6 +21369,47 @@
       {
         "call": "parseYearFromUtc(\"invalid\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/utc/validate/isValidHttpDate",
+    "page": "/reference/utc/validate/isValidHttpDate",
+    "name": "isValidHttpDate",
+    "namespace": "utc",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidHttpDate(value: string): boolean",
+    "description": "Return true when `value` is a real HTTP header date: the RFC 9110 §5.6.7 HTTP-date that headers like `Last-Modified`, `Date` and `Expires` carry, such as `Fri, 15 Mar 2024 14:30:00 GMT`.",
+    "sourcePath": "packages/gmt/src/utc/validate/isValidHttpDate.ts",
+    "examples": [
+      {
+        "call": "isValidHttpDate(\"Fri, 15 Mar 2024 14:30:00 GMT\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidHttpDate(\"Sun Nov  6 08:49:37 1994\")",
+        "result": "true (asctime-date; the httpDate pattern does not match it)"
+      },
+      {
+        "call": "isValidHttpDate(\"Sat, 15 Mar 2024 14:30:00 GMT\")",
+        "result": "false (15 Mar 2024 was a Friday; the httpDate pattern matches it)"
+      },
+      {
+        "call": "isValidHttpDate(\"Wed, 29 Feb 2023 14:30:00 GMT\")",
+        "result": "false (2023 has no 29 February; the httpDate pattern matches it)"
+      },
+      {
+        "call": "isValidHttpDate(\"Fri, 15 Mar 2024 24:00:00 GMT\")",
+        "result": "false (hour 24; the httpDate pattern matches it)"
+      },
+      {
+        "call": "isValidHttpDate(\"Fri, 15 Mar 2024 14:30:00 -0400\")",
+        "result": "false (not an HTTP-date)"
+      },
+      {
+        "call": "isValidHttpDate(\"not a date\")",
+        "result": "false"
       }
     ]
   },
@@ -25053,6 +25295,100 @@
       },
       {
         "call": "isValidCalendarZonedDateTime(\"invalid\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/zoned/validate/isValidRfc2822DateTime",
+    "page": "/reference/zoned/validate/isValidRfc2822DateTime",
+    "name": "isValidRfc2822DateTime",
+    "namespace": "zoned",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidRfc2822DateTime(value: string): boolean",
+    "description": "Return true when `value` is a real RFC 5322 (RFC 2822) date-time: the date an email `Date:` header carries, such as `Fri, 15 Mar 2024 14:30:00 -0400`.",
+    "sourcePath": "packages/gmt/src/zoned/validate/isValidRfc2822DateTime.ts",
+    "examples": [
+      {
+        "call": "isValidRfc2822DateTime(\"Fri, 15 Mar 2024 14:30:00 -0400\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"5 Jan 2024 09:00:00 GMT\")",
+        "result": "true (no day-of-week, 1-digit day)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"fri,15 Mar 24 14:30 -0400 (EDT)\")",
+        "result": "true (obsolete 2-digit year, comment; the rfc2822DateTime pattern does not match it)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"Sat, 15 Mar 2024 14:30:00 -0400\")",
+        "result": "false (15 Mar 2024 was a Friday; the rfc2822DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"Wed, 29 Feb 2023 14:30:00 -0400\")",
+        "result": "false (2023 has no 29 February; the rfc2822DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"Fri, 15 Mar 2024 14:30:00 -0460\")",
+        "result": "false (zone minutes above 59; the rfc2822DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"Fri, 15 Mar 2024 14:30:00\")",
+        "result": "false (no zone)"
+      },
+      {
+        "call": "isValidRfc2822DateTime(\"not a date\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/zoned/validate/isValidRfc3339DateTime",
+    "page": "/reference/zoned/validate/isValidRfc3339DateTime",
+    "name": "isValidRfc3339DateTime",
+    "namespace": "zoned",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidRfc3339DateTime(value: string): boolean",
+    "description": "Return true when `value` is a real RFC 3339 date-time: an ISO 8601 date and time that always states its UTC offset, as `Z` or `±HH:MM` (RFC 3339 §5.6).",
+    "sourcePath": "packages/gmt/src/zoned/validate/isValidRfc3339DateTime.ts",
+    "examples": [
+      {
+        "call": "isValidRfc3339DateTime(\"2024-03-15T14:30:00-04:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2024-03-15t14:30:00z\")",
+        "result": "true (lower-case t and z)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2024-03-15 14:30:00.5Z\")",
+        "result": "true (space separator, fraction)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2023-02-29T10:00:00Z\")",
+        "result": "false (2023 has no 29 February; the rfc3339DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2024-06-31T10:00:00Z\")",
+        "result": "false (June has 30 days; the rfc3339DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2016-12-31T23:59:60Z\")",
+        "result": "false (leap second)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2024-03-15T14:30:00\")",
+        "result": "false (no offset)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"2024-03-15T14:30:00+00:00[UTC]\")",
+        "result": "false (bracketed zone: use isValidZonedDateTime)"
+      },
+      {
+        "call": "isValidRfc3339DateTime(\"not a date\")",
         "result": "false"
       }
     ]

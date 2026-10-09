@@ -18,6 +18,9 @@ sources:
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
@@ -62,17 +65,21 @@ input before you act on it.
 - **Current values**: `getNow`, `getToday`, `getUtcNow`, `getUnixNow`,
   `getSystemTimeZone`, `getTimeZones`
 - **Parsing**: `parseYearFromDate`, `parseMonthFromDate`,
-  `parseDateTimeWithPattern`, `parseRfc3339`, `parseHttp`, `parseSql`
+  `parseDateTimeWithPattern`, `parseRfc3339`, `parseRfc2822`,
+  `parseHttpDate`, `parseSqlDateTime`
 - **Calendar identifiers**: `getIsoWeekDate`, `getOrdinalDate`, `getQuarter`,
   `getFiscalPeriod`
 - **Formatting**: `formatDate`, `formatTime`, `formatDateTime`,
-  `formatRelativeDate`, `formatCalendar`, `formatRfc3339`
+  `formatRelativeDate`, `formatCalendar`, `formatRfc3339`, `formatRfc2822`,
+  `formatHttpDate`, `formatSqlDateTime`
 - **Locale names**: `getLocaleMonthNames`, `getLocaleWeekdayNames`,
   `getLocaleMeridiems`, `getLocaleEraNames`
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
   `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
+- **Interchange-format validation**: `isValidRfc3339DateTime`,
+  `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 
 ## Common pitfalls
 
@@ -91,17 +98,22 @@ input before you act on it.
   `yearWindow` returns `""`; a pattern with no `yy` never reads the option.
 - `getZonedNow` reads `smallestUnit` only, and writes milliseconds when it is
   omitted or `undefined`. The string always carries the offset and the zone.
-- `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
+- `parseDateWithPattern`, `parseRfc2822` and `parseHttpDate` return `""` on
   shape-valid-but-unreal dates such as 31 February (regex only proves shape;
   Temporal validates the real value). Parsers reject; only arithmetic clamps.
 - `parseRfc2822` reads everything RFC 5322 says a receiver must: comments,
   folding whitespace, any case, two-digit years and zone names such as `EST`
-  (an unknown name reads as `+00:00`). `parseHttp` reads all three HTTP-date
+  (an unknown name reads as `+00:00`). `parseHttpDate` reads all three HTTP-date
   forms, including `rfc850-date` and `asctime-date`. Both return `""` when the
   day name contradicts the date (`"Sat, 15 Mar 2024 …"`), so do not synthesise
   a day name; omit it. The `rfc2822DateTime` and `httpDate` regexes stay strict
   and match only what GMT writes, so do not use them to pre-filter parser input.
-- `formatRfc2822`, `formatHttp` and `formatRfc3339` return `""` for a year their
+- To check an interchange string, call its validator, not its regex.
+  `isValidRfc3339DateTime`, `isValidRfc2822DateTime`, `isValidHttpDate` and
+  `isValidSqlDateTime` are each true exactly when the parser returns a value.
+  A regex proves shape only: `rfc3339DateTime.test("2023-02-29T10:00:00Z")`
+  is `true` and `isValidRfc3339DateTime` returns `false` for it.
+- `formatRfc2822`, `formatHttpDate` and `formatRfc3339` return `""` for a year their
   grammar cannot hold (before 0000, or after 9999 for RFC 3339 and HTTP).
   `formatRfc3339` writes a sub-minute historical offset as the same instant at
   `+00:00`. Use Temporal's `toString()` when you need any year.

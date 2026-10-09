@@ -2,7 +2,7 @@
 "@northguild/gmt": minor
 ---
 
-Add 45 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). A `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller: see **Breaking changes**.
+Add 45 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
 
 Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, X12 date and time elements, and GS1 EPCIS events. Some of those formats carry a UTC offset and some do not, and the only signal is a format code or a time code. So the functions are split by the kind of value a code states: a date, a time, a local date-time, a date-time with an offset, or a period. Each function takes only the codes of its kind, and each parser returns one value the rest of the library takes. A value with no offset comes back as a local time, never as UTC.
 
@@ -142,7 +142,79 @@ Wire details:
 - X12 is a United States standard. Its code lists were read through an X12-licensed dictionary.
 - Also exported: a type for each kind's codes (`EdifactDateFormat`, `EdifactTimeFormat`, `EdifactDateTimeFormat`, `EdifactOffsetDateTimeFormat`, `EdifactDatePeriodFormat`, `EdifactDateTimePeriodFormat`, `X12DateFormat`, `X12TimeFormat`, `X12DateTimeFormat`, `X12DateRangeFormat`, `X12DateTimeRangeFormat`, `X12OffsetTimeCode`, `X12ZoneTimeCode`), the unions `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`, and the `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass`, `X12TimeCodeClass`, `X12NamedZone`, `EdiDatePeriod`, `EdiDateTimePeriod`, `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions` types.
 
+Eight validators for interchange formats. A pattern from `regex` proves shape only, so it matches a day that does not exist. Each validator is true exactly when its parser returns a value. The two offset forms have no parser: their validator is true when the library accepts the string.
+
+| Validator | What it checks | A value its pattern matches and it rejects |
+| --- | --- | --- |
+| `isValidRfc3339DateTime(value)` | An RFC 3339 date-time, the value `parseRfc3339` reads | `"2023-02-29T10:00:00Z"` (`rfc3339DateTime`): 2023 has no 29 February |
+| `isValidRfc2822DateTime(value)` | The date of an email `Date:` header (RFC 5322), the value `parseRfc2822` reads | `"Sat, 15 Mar 2024 14:30:00 -0400"` (`rfc2822DateTime`): that day was a Friday |
+| `isValidHttpDate(value)` | An HTTP header date (RFC 9110 `HTTP-date`), the value `parseHttpDate` reads | `"Sat, 15 Mar 2024 14:30:00 GMT"` (`httpDate`): that day was a Friday |
+| `isValidSqlDateTime(value)` | A SQL timestamp literal, `YYYY-MM-DD HH:MM:SS[.fff]`, the value `parseSqlDateTime` reads | `"2024-02-30 14:30:00"` (`sqlDateTime`): February has no 30th |
+| `isValidX12DateAndTime(date, time)` | X12 elements 373 and 337 together, the pair `parseX12DateAndTime` reads | No public pattern |
+| `isValidEpcisEventTime(value)` | The `eventTime` field of a GS1 EPCIS 2.0 event | `"2024-02-30T14:30:00Z"` (`epcisEventTime`): February has no 30th |
+| `isValidEpcisTimeZoneOffset(value)` | The `eventTimeZoneOffset` field of an EPCIS event: `±HH:MM` from `-14:00` to `+14:00` | None: `epcisTimeZoneOffset` is the whole rule |
+| `isValidUtcOffset(value)` | A stored UTC offset, `±HH:MM` or `±HH:MM:SS`: the offset `toOffsetInstant` returns and `fromOffsetInstant` takes | None: `utcOffset` is the whole rule |
+
+```typescript
+import {
+  isValidEpcisEvent,
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+  isValidHttpDate,
+  isValidRfc2822DateTime,
+  isValidRfc3339DateTime,
+  isValidSqlDateTime,
+  isValidUtcOffset,
+  isValidX12DateAndTime,
+  rfc3339DateTime,
+} from "@northguild/gmt";
+
+// The pattern proves the shape. The validator also checks that the day exists.
+rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false
+isValidRfc3339DateTime("2024-03-15T14:30:00-04:00"); // true
+
+isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false (15 March 2024 was a Friday)
+isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false (hour 24)
+isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true (asctime-date, which the httpDate pattern does not match)
+isValidSqlDateTime("2024-02-30 14:30:00"); // false
+isValidSqlDateTime("2024-03-15 14:30"); // false (seconds are required)
+
+isValidX12DateAndTime("20240615", "1430"); // true
+isValidX12DateAndTime("20230229", "1430"); // false
+isValidX12DateAndTime("20240615", ""); // false (both elements are required)
+
+isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false
+isValidEpcisTimeZoneOffset("+02:00"); // true
+isValidEpcisTimeZoneOffset("+0200"); // false (no colon)
+isValidEpcisEvent({ eventTime: "2024-02-30T14:30:00Z", eventTimeZoneOffset: "+02:00" }); // false
+
+isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
+isValidUtcOffset("Z"); // false
+isValidUtcOffset("+0530"); // false (no colon)
+```
+
+- **`isValidEpcisEvent` is the two field validators together.** It is true when `isValidEpcisEventTime` accepts `eventTime` and `isValidEpcisTimeZoneOffset` accepts `eventTimeZoneOffset`. Its results are unchanged. Use a field validator to say which field is wrong.
+- **`isValidRfc2822DateTime` and `isValidHttpDate` also accept values their patterns do not match.** The parsers read the obsolete forms a receiver must accept, such as a two-digit year in an email date and the `asctime-date` form of an HTTP date. The patterns match only what the formatters write.
+- **`isValidEpcisEventTime` rejects a fraction of more than nine digits**, which the `epcisEventTime` pattern matches. An instant holds nanoseconds.
+- **`isValidUtcOffset` is not the check for a `timeZone` argument.** `isValidTimeZone` accepts `+0530` and rejects an offset with seconds. `isValidUtcOffset` does the opposite.
+- **All eight return `false` for a value that is not a string.** The six that read a time of day return `false` for a leap second (`:60`).
+- `isValidUtcOffset` is also exported from the new `@northguild/gmt/instant/validate` subpath.
+
 ### Breaking changes
+
+**1. Four functions are renamed.** `parseSql` reads as "parse SQL", the language. Each of these functions handles one date format, so each name now states the format. No alias is kept.
+
+| 1.18 | 1.19 | Format |
+| --- | --- | --- |
+| `parseSql` | `parseSqlDateTime` | A SQL timestamp literal, `YYYY-MM-DD HH:MM:SS[.fff]` |
+| `formatSql` | `formatSqlDateTime` | The same |
+| `parseHttp` | `parseHttpDate` | An HTTP header date (RFC 9110 `HTTP-date`) |
+| `formatHttp` | `formatHttpDate` | The same |
+
+Migration: rename the call and its import. The arguments, the results and the subpaths are the same. `parseRfc3339`, `formatRfc3339`, `parseRfc2822` and `formatRfc2822` keep their names.
+
+**2. A `yy` token needs a window from the caller.**
 
 `parseDateWithPattern` and `parseDateTimeWithPattern` take a fourth parameter, `options?: TwoDigitYearOptions`. A pattern with a `yy` token now returns `""` unless `options.yearWindow` is given. 1.18 read `yy` in a window fixed in the library, 1969 to 2068.
 
@@ -170,7 +242,7 @@ parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: "rolling" 
 
 Why: no standard says which century a two-digit year belongs to. A cut-off built into the library is right today and wrong later, and the caller is the one who knows whether the data is live or stored. So the caller states the window.
 
-Unchanged: a pattern with no `yy` reads exactly as before, and never reads the option or the clock. `parseTimeWithPattern` has no year token and takes no options. `parseRfc2822` and `parseHttp` keep the two-digit-year rules that RFC 5322 and RFC 9110 give for their own formats.
+Unchanged: a pattern with no `yy` reads exactly as before, and never reads the option or the clock. `parseTimeWithPattern` has no year token and takes no options. `parseRfc2822` and `parseHttpDate` keep the two-digit-year rules that RFC 5322 and RFC 9110 give for their own formats.
 
 Migration:
 

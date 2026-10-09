@@ -32,6 +32,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/instant/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
@@ -370,9 +371,11 @@ converting between time zones, or doing arithmetic that must respect DST.
     formatter cuts seconds and fractions to the code's mask and never rounds.
     It writes `ZZZ` as `±HH`, and `+05:30` under `303` or `304` returns `""`:
     use `205` or `208`. Each value validator is true exactly when its parser
-    returns a value, and `isValidEdifactDtmFormat`,
-    `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode` check a code
-    alone.
+    returns a value (`isValidX12DateAndTime(date, time)` for the freight
+    pair), and `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat`
+    and `isValidX12TimeCode` check a code alone. `isValidEpcisEvent` is
+    `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset` together: the
+    `epcisEventTime` regex matches `2024-02-30`, the validator does not.
 22. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
@@ -452,7 +455,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `endOfUnix`, `mapZonedHoursInDay`, `getHoursInZonedDay`
 - **Offset/DST reads**: `getZonedOffset`, `getZonedOffsetAs`,
   `getTimeZoneOffset`, `parseTimeZoneFromZoned`
-- **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`
+- **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`,
+  `isValidUtcOffset` (the pair's `±HH:MM[:SS]` offset; not `Z`, not `+0530`)
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
@@ -476,8 +480,10 @@ converting between time zones, or doing arithmetic that must respect DST.
   `classifyX12DateTimePeriodFormat`, `classifyX12TimeCode`,
   `parseEpcisEvent`; a `format…` and an `isValid…` for each `parseEdifact…`
   kind, for `X12Date`, `X12Time`, `X12DateTime`, `X12DateRange` and
-  `X12DateTimeRange`, and for `EpcisEvent`; `isValidEdifactDtmFormat`,
-  `isValidX12DateTimePeriodFormat`, `isValidX12TimeCode`
+  `X12DateTimeRange`, and for `EpcisEvent`; `isValidX12DateAndTime`,
+  `isValidEpcisEventTime`, `isValidEpcisTimeZoneOffset`,
+  `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat`,
+  `isValidX12TimeCode`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
   `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
 

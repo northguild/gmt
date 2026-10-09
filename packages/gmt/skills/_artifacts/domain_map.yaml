@@ -59,15 +59,15 @@ skills:
       - getLocaleWeekdayNames
       - getLocaleMeridiems
       - formatRfc2822
-      - formatHttp
-      - formatSql
+      - formatHttpDate
+      - formatSqlDateTime
       - formatRfc3339
       - parseDateWithPattern
       - parseDateTimeWithPattern
       - parseTimeWithPattern
       - parseRfc2822
-      - parseHttp
-      - parseSql
+      - parseHttpDate
+      - parseSqlDateTime
       - parseRfc3339
       - isAfterDate
       - isBeforeDate
@@ -82,10 +82,15 @@ skills:
       - isValidTimeZone
       - isValidZonedDateTime
       - isValidDateInterval
+      - isValidRfc3339DateTime
+      - isValidRfc2822DateTime
+      - isValidHttpDate
+      - isValidSqlDateTime
       - hasDaylightSaving
       - getDstTransitions
       - toOffsetInstant
       - fromOffsetInstant
+      - isValidUtcOffset
       - classifyLocal
       - resolveLocal
       - getIsoWeekDate
@@ -106,6 +111,7 @@ skills:
       - Compare date values for ordering
       - Check locale-aware weekends and business days
       - Validate date/time strings, timezones, and intervals
+      - Check an RFC 3339, RFC 2822/5322, HTTP-date or SQL timestamp string with the validator that agrees with its parser, not the shape-only regex
       - List DST transitions for a timezone
       - Read the ISO week date or ordinal date a calendar date falls in
       - Read the calendar or fiscal quarter a date falls in
@@ -309,6 +315,7 @@ skills:
       - classifyX12DateTimePeriodFormat
       - isValidX12DateTimePeriodFormat
       - parseX12DateAndTime
+      - isValidX12DateAndTime
       - x12TimeCodeOffset
       - x12TimeCodeZone
       - classifyX12TimeCode
@@ -316,6 +323,8 @@ skills:
       - parseEpcisEvent
       - formatEpcisEvent
       - isValidEpcisEvent
+      - isValidEpcisEventTime
+      - isValidEpcisTimeZoneOffset
       - recurringWindows
       - operatingIntervals
       - isOpenAt

@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~68× more CI test executions than all four competitors combined**: 1,378,380 from 45,946 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~119× more test cases than `@internationalized/date`**: 45,946 vs. 386 — Adobe's own library, run at its own commit.
+- **~69× more CI test executions than all four competitors combined**: 1,390,140 from 46,338 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~120× more test cases than `@internationalized/date`**: 46,338 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 45,946 tests across 761 files that exercise real behavior differences without redundant permutations. They run in CI as 1,378,380 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 46,338 tests across 769 files that exercise real behavior differences without redundant permutations. They run in CI as 1,390,140 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 761                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **45,946**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,378,380**<br>(45,946 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 769                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **46,338**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,390,140**<br>(46,338 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~68×                                                  | 1,378,380 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~69×                                                  | 1,390,140 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -1674,12 +1674,17 @@ mandates them).
 import {
   formatRfc2822,
   parseRfc2822,
-  formatHttp,
-  parseHttp,
-  formatSql,
-  parseSql,
+  isValidRfc2822DateTime,
+  formatHttpDate,
+  parseHttpDate,
+  isValidHttpDate,
+  formatSqlDateTime,
+  parseSqlDateTime,
+  isValidSqlDateTime,
   formatRfc3339,
   parseRfc3339,
+  isValidRfc3339DateTime,
+  rfc3339DateTime,
 } from "@northguild/gmt";
 
 // Email `Date:` headers (RFC 5322 / RFC 2822).
@@ -1696,20 +1701,20 @@ parseRfc2822("Sat, 15 Mar 2024 14:30:00 -0400");
 // "" — 15 March 2024 was a Friday
 
 // HTTP headers (RFC 9110 IMF-fixdate) — Last-Modified, Date, Expires.
-formatHttp("2024-03-15T14:30:00Z");
+formatHttpDate("2024-03-15T14:30:00Z");
 // "Fri, 15 Mar 2024 14:30:00 GMT"
-parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT");
 // "2024-03-15T14:30:00Z"
-// parseHttp also reads the obsolete rfc850-date and asctime-date forms.
-parseHttp("Sun Nov  6 08:49:37 1994");
+// parseHttpDate also reads the obsolete rfc850-date and asctime-date forms.
+parseHttpDate("Sun Nov  6 08:49:37 1994");
 // "1994-11-06T08:49:37Z"
 
 // ANSI SQL / ODBC datetime literals (DATETIME/TIMESTAMP columns, no tz).
-formatSql("2024-03-15T14:30:00");
+formatSqlDateTime("2024-03-15T14:30:00");
 // "2024-03-15 14:30:00"
-parseSql("2024-03-15 14:30:00");
+parseSqlDateTime("2024-03-15 14:30:00");
 // "2024-03-15T14:30:00"
-parseSql("2024-03-15 14:30");
+parseSqlDateTime("2024-03-15 14:30");
 // "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
 // Strict RFC 3339 — strips the bracketed IANA zone GMT's own zoned strings
@@ -1718,7 +1723,22 @@ formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
 // "2024-03-15T14:30:00-04:00"
 parseRfc3339("2024-03-15T14:30:00-04:00");
 // "2024-03-15T14:30:00-04:00[-04:00]"
+
+// A validator for each format. A pattern proves the shape alone; the validator
+// is true exactly when the parser returns a value.
+rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true (the shape is right)
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false (2023 has no 29 February)
+isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false (a Friday)
+isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true (asctime-date)
+isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false (hour 24)
+isValidSqlDateTime("2024-02-30 14:30:00"); // false (February has no 30th)
+isValidSqlDateTime("2024-03-15 14:30:00"); // true
 ```
+
+Check a value with `isValidRfc3339DateTime`, `isValidRfc2822DateTime`, `isValidHttpDate` or
+`isValidSqlDateTime`, not with the `rfc3339DateTime`, `rfc2822DateTime`, `httpDate` or
+`sqlDateTime` pattern. A pattern matches a day that does not exist, such as 29 February 2023, and
+the `rfc2822DateTime` and `httpDate` patterns do not match the obsolete forms the parsers read.
 
 The formatters return `""` for a value their grammar cannot express, such as a year outside `0000`–`9999` for RFC 3339 and HTTP-date or outside `0001`–`9999` for SQL, rather than writing a string no conforming parser accepts. Use Temporal's own `toString()` when you need any year.
 
@@ -2034,6 +2054,19 @@ sitting at `-05:00` that day, and it says nothing about what that zone will do n
 Store the zone for anything still to be scheduled; store the offset for anything that already
 happened. `timeZone` is optional because most feeds do not send one, and a string whose
 offset contradicts its own bracketed zone returns `null` rather than a guess.
+
+`isValidUtcOffset` checks the `offset` half of the pair: `±HH:MM`, or `±HH:MM:SS` for a zone that
+did not run on a whole minute. It is not the check for a `timeZone` argument, which is
+`isValidTimeZone`.
+
+```typescript
+import { isValidUtcOffset } from "@northguild/gmt";
+
+isValidUtcOffset("-04:00"); // true
+isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
+isValidUtcOffset("Z"); // false (a designator, not an offset)
+isValidUtcOffset("+0530"); // false (no colon)
+```
 
 The other half of the namespace is the reverse problem: a wall time that arrives with no
 offset at all ("gate-out 08:00"). Resolving one needs a zone the sender did not send, plus a
@@ -3014,6 +3047,9 @@ import {
   isValidEdifactDtmFormat,
   isValidEdifactOffsetDateTime,
   isValidEpcisEvent,
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+  isValidX12DateAndTime,
   isValidX12DateRange,
   isValidX12DateTimePeriodFormat,
   isValidX12Time,
@@ -3183,6 +3219,17 @@ isValidX12TimeCode("EST"); // false
 isValidEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" }); // false (no eventTimeZoneOffset)
 isValidEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }); // true
 
+// isValidEpcisEvent is the two field validators together. Each one checks one field.
+isValidEpcisEventTime("2024-06-15T23:30:00Z"); // true
+isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false (the epcisEventTime pattern matches it)
+isValidEpcisTimeZoneOffset("+02:00"); // true
+isValidEpcisTimeZoneOffset("+0200"); // false (GS1 writes the colon)
+
+// The date and the time of an X12 freight segment, checked as parseX12DateAndTime reads them.
+isValidX12DateAndTime("20240615", "1430"); // true
+isValidX12DateAndTime("20230229", "1430"); // false (2023 has no 29 February)
+isValidX12DateAndTime("20240615", ""); // false (both elements are required)
+
 // An offsetless local time becomes an instant only when the caller names the zone.
 resolveLocal("2024-06-15T14:30:00", "America/New_York"); // "2024-06-15T18:30:00Z"
 resolveLocal("2024-01-15T14:30:00", "America/New_York"); // "2024-01-15T19:30:00Z"
@@ -3286,6 +3333,11 @@ carry.
   `+14:00`, and it sets the `local` clock. An offset written inside `eventTime` need not match it.
   A missing offset, `Z` and `+0200` return `null`: UTC is not assumed. The two grammars are GS1's,
   exported as the `epcisEventTime` and `epcisTimeZoneOffset` patterns.
+- **Check one EPCIS field with its own validator.** `isValidEpcisEventTime` checks `eventTime` and
+  `isValidEpcisTimeZoneOffset` checks `eventTimeZoneOffset`; `isValidEpcisEvent` is the two
+  together. The `epcisEventTime` pattern proves the shape alone, so it matches `2024-02-30`;
+  `isValidEpcisEventTime` returns `false` for it, and for a fraction of more than nine digits.
+  `isValidX12DateAndTime(date, time)` is the same check for the pair `parseX12DateAndTime` reads.
 - **GMT reads 11 UN/EDIFACT format codes, 10 X12 format qualifiers and all 56 X12 time codes.**
   Every other code returns the sentinel. `classifyEdifactDtmFormat`,
   `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode` return a code with its kind, or `null`

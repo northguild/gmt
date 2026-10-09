@@ -52,6 +52,7 @@ One function per file. Parsers and classifiers go in `intermodal/parse/`, format
 ### X12 — the date, time and time code of a freight segment (elements 373, 337, 623)
 
 - `parseX12DateAndTime(date: string, time: string): string` reads the two elements `AT7`, `G62` and `DTM-02`/`03` carry side by side, as one local date-time. Both are required.
+- `isValidX12DateAndTime(date: string, time: string): boolean` takes the same two elements and is true exactly when `parseX12DateAndTime` returns a value: it calls the parser.
 - `x12TimeCodeOffset(timeCode: X12OffsetTimeCode): string` returns the offset the code states, `±HH:MM`, for the 31 codes that state one: `01`–`29`, `UT` and `GM`. It returns `""` for any other value.
 - `x12TimeCodeZone(timeCode: X12ZoneTimeCode): X12NamedZone | null` returns `{ zone, daylight }` for the 25 codes that name a zone. Both members are always present. It returns `null` for any other value.
 - `classifyX12TimeCode(timeCode: string): X12TimeCodeClass | null` returns `{ kind, timeCode }`, with `kind` `"offset"` or `"zone"`. `isValidX12TimeCode` checks a code alone.
@@ -68,7 +69,9 @@ resolveLocal(local, offset); // "2024-06-15T19:30:00Z"
 
 - `parseEpcisEvent(event: EpcisEventTime): EpcisInstant | null`, returning `{ instant, offset, local }`.
 - `formatEpcisEvent(value: OffsetInstant): EpcisEventTime | null`.
-- `isValidEpcisEvent(event: unknown): boolean`.
+- `isValidEpcisEvent(event: unknown): boolean`. It is the two field validators together: it calls `isValidEpcisEventTime` on `eventTime` and `isValidEpcisTimeZoneOffset` on `eventTimeZoneOffset`.
+- `isValidEpcisEventTime(value: string): boolean` checks an `eventTime`. The value matches `epcisEventTime`, names a day that exists and carries a fraction of at most nine digits. The pattern proves the shape alone, so it matches `2024-02-30T14:30:00Z` and a ten-digit fraction; the validator returns `false` for both.
+- `isValidEpcisTimeZoneOffset(value: string): boolean` checks an `eventTimeZoneOffset`. The `epcisTimeZoneOffset` pattern is the whole rule for a string, so the validator and the pattern agree on every string; the validator adds `false` for a value that is not a string.
 - `regex/epcis.ts` — `epcisEventTime` and `epcisTimeZoneOffset`, the two grammars GS1 publishes. They are the only public patterns this story adds.
 
 ### Types and internals — `packages/gmt/src/`
@@ -313,5 +316,9 @@ UN/EDIFACT (UNECE, UN/CEFACT) and GS1 EPCIS (ISO/IEC 19987) are international st
 - `parseDateWithPattern('2024-03-15', 'yyyy-MM-dd', undefined, { yearWindow: 'rolling' })` returns `2024-03-15` with a clock that throws
 - `parseEpcisEvent` preserves the original offset through a round-trip, including a negative offset
 - An EPCIS event missing `eventTimeZoneOffset`, or carrying `Z` or `+0200` there, returns the sentinel
+- `isValidX12DateAndTime('20240615', '1430')` and `('20240615', '14300012')` return `true`; an empty time, `'20230229'`, a time of `'2430'` and a six-digit date return `false`
+- `isValidEpcisEventTime('2024-06-15T14:30:00Z')` returns `true`; `'2024-02-30T14:30:00Z'` and `'2024-06-15T14:30:00.1234567891Z'` return `false`, and `epcisEventTime` matches both; a value with no seconds or with no `Z` or offset returns `false`
+- `isValidEpcisTimeZoneOffset('-05:00')` and `('+14:00')` return `true`; `'+14:01'`, `'Z'`, `'+0200'` and `'+05:30:00'` return `false`
+- `isValidEpcisEvent` returns the same answer as the two field validators together for every event the suite gives it
 - Each `isValid*` value validator agrees with its parser on every row above
 - `pnpm run validate` stays green

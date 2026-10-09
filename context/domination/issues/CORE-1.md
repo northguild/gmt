@@ -72,7 +72,7 @@ while building it, binding on CORE-2 and CORE-3 unless a later story overrides t
   parser *rejects* real JSON text. The name also invited
   `parseNanoseconds(JSON.stringify(formatNanoseconds(n)))`, which returns `0n` — the
   epoch, indistinguishable from the sentinel. They were the only two functions in any
-  GMT `format/` namespace not prefixed `format`; `formatSql` / `formatHttp` are the
+  GMT `format/` namespace not prefixed `format`; `formatSqlDateTime` / `formatHttpDate` are the
   precedent. JSON stays prominent in the JSDoc summary so the keyword remains
   searchable. **Binding on CORE-2/CORE-3: name by the operation and the namespace verb,
   not by the downstream use case.**
