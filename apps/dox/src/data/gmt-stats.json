@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 55601,
-  "files": 776,
-  "executions": 1668030,
+  "tests": 55962,
+  "files": 777,
+  "executions": 1678860,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 632,
+  "functions": 633,
   "patterns": 27,
   "byNamespace": [
     {
@@ -58,7 +58,7 @@
     },
     {
       "namespace": "intermodal",
-      "count": 54
+      "count": 55
     },
     {
       "namespace": "calendar",

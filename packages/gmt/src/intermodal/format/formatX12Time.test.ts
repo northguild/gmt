@@ -3,6 +3,7 @@ import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import { parseX12Time } from "../parse/parseX12Time";
 import { formatX12Time } from "./formatX12Time";
+import { formatX12TimeElement } from "./formatX12TimeElement";
 
 /**
  * Every expected value is the ISO 8601 time placed under the X12 1250 mask by hand: `TM` is
@@ -38,11 +39,12 @@ describe("formatX12Time", () => {
       },
     );
 
-    // Element 337 can hold tenths and hundredths, which no 1250 code has: they are read by
-    // `parseX12Time` and never written.
-    it("writes no tenths or hundredths: a time read from 14300012 is written 143000 under TS", () => {
+    // Element 337 can hold tenths and hundredths, which no 1250 code has. `TS` is `HHMMSS`, so
+    // this function cuts them; `formatX12TimeElement` writes them under the element's own masks.
+    it("TS has no decimal seconds: a time read from 14300012 is written 143000 under TS, and 14300012 by formatX12TimeElement under HHMMSSDD", () => {
       expect(parseX12Time("14300012")).toBe("14:30:00.12");
       expect(formatX12Time("14:30:00.12", "TS")).toBe("143000");
+      expect(formatX12TimeElement("14:30:00.12", "HHMMSSDD")).toBe("14300012");
     });
   });
 

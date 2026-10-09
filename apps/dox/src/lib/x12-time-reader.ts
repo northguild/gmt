@@ -204,7 +204,7 @@ export const X12_PRESETS: readonly X12Preset[] = [
     id: "hundredths",
     label: "A time with hundredths",
     description:
-      "Element 337 can carry tenths or hundredths of a second. The library reads them, and the formatter cuts them back to the mask it writes (TS has seconds and no fraction). The four zones are this example's picks, so the strip shows the instants: change them to the places your message means.",
+      "Element 337 can carry tenths or hundredths of a second. The library reads them, and formatX12TimeElement writes them back in the form they were sent (HHMMSSDD here). The four zones are this example's picks, so the strip shows the instants: change them to the places your message means.",
     date: "20240615",
     time: "14300012",
     timeCode: "",
@@ -890,24 +890,32 @@ export function writeDate(read: X12Read, lib: EdiLib): ElementWrite | null {
   };
 }
 
+/** The element 337 form for the number of digits typed. */
+function timeForm(time: string): string {
+  switch (time.length) {
+    case 4:
+      return "HHMM";
+    case 7:
+      return "HHMMSSD";
+    case 8:
+      return "HHMMSSDD";
+    default:
+      return "HHMMSS";
+  }
+}
+
 /**
- * The time, as element 337: `TM` when the time was sent as four digits, `TS`
- * otherwise, so the value comes back in the form it was sent. A fraction is cut,
- * not refused. `null` when the time element was not read.
+ * The time, as element 337, written in the form it was sent: `HHMM`, `HHMMSS`,
+ * `HHMMSSD` or `HHMMSSDD` for four, six, seven or eight digits. `null` when the
+ * time element was not read.
  */
 export function writeTime(read: X12Read, lib: EdiLib): ElementWrite | null {
   const r = read.timeCall?.result;
   if (!ok(read) || typeof r !== "string" || r === "") return null;
-  const code = read.time.length === 4 ? "TM" : "TS";
-  const call = runCall(lib, "formatX12Time", r, code);
+  const call = runCall(lib, "formatX12TimeElement", r, timeForm(read.time));
   const notes: string[] = [];
   if (read.mainKind === "dateAndTime") {
     notes.push("The time is element 337 read alone by parseX12Time.");
-  }
-  if (r.includes(".")) {
-    notes.push(
-      "formatX12Time cuts tenths and hundredths of a second: neither mask has a field for them.",
-    );
   }
   return { call, output: call.result as string, note: notes.join(" ") };
 }
@@ -1331,7 +1339,7 @@ export function x12Texts() {
       "The last two digits of the time are hundredths of a second.",
     ],
     formatNotes: [
-      "The date is element 373 read alone by parseX12Date. The time is element 337 read alone by parseX12Time. formatX12Time cuts tenths and hundredths of a second: neither mask has a field for them.",
+      "The date is element 373 read alone by parseX12Date. The time is element 337 read alone by parseX12Time.",
     ],
     dtpFormatNotes: [
       "formatX12DateRange returned the sentinel for this value and qualifier.",
@@ -1347,6 +1355,6 @@ export function x12Texts() {
     resolveCall: `resolveLocal("2024-06-15T14:30:00.12", "${LONGEST_ZONE}", { disambiguation: "reject" })`,
     dtpFormatCall:
       'formatX12DateTimeRange("2024-06-15T14:30:00", "2024-06-20T16:00:00", "DTS")',
-    writeCall: 'formatX12Time("14:30:00.12", "TS")',
+    writeCall: 'formatX12TimeElement("14:30:00.12", "HHMMSSDD")',
   };
 }

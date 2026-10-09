@@ -67,7 +67,9 @@
  * One table per standard describes each code as its kind and its parts in mask order; the
  * classifier, the regex, the field reader (`ediDateTimeFields.ts`) and the writer
  * (`ediDateTimeWriter.ts`) are all derived from it, so a code's kind, its grammar, the fields it
- * yields and the digits written for it cannot drift apart.
+ * yields and the digits written for it cannot drift apart. Element 337 has no code, so its table
+ * is keyed by the element's four masks, and gives the same guarantee: the forms `parseX12Time`
+ * reads are the forms `formatX12TimeElement` writes.
  */
 import type {
   EdifactDateFormat,
@@ -85,6 +87,7 @@ import type {
   X12DateTimePeriodFormatClass,
   X12DateTimeRangeFormat,
   X12TimeCode,
+  X12TimeElementForm,
   X12TimeFormat,
 } from "../types/edi";
 
@@ -92,6 +95,8 @@ import type {
  * One field of a mask, named as the standards print it. Each part is one capture group. The
  * standards write `MM` for both month and minute; `MI` is this file's name for the minute. `ZS`,
  * `ZH` and `ZM` are the sign, hours and minutes of the `ZHHMM` offset of codes 205 and 208.
+ * Element 337 writes `D` for tenths of a second and `DD` for hundredths, and `DD` is already the
+ * day of the month: `SD` and `SDD` are this file's names for the two.
  */
 export type EdiPart =
   | "CCYY"
@@ -100,6 +105,8 @@ export type EdiPart =
   | "HH"
   | "MI"
   | "SS"
+  | "SD"
+  | "SDD"
   | "ZS"
   | "ZH"
   | "ZM"
@@ -173,6 +180,10 @@ const FRAGMENT: Readonly<Record<EdiPart, string>> = {
   MI,
   // Second, 00–59. `60` does not match: GMT rejects a leap second, which Temporal would read as 59.
   SS: "([0-5][0-9])",
+  // Element 337: "D = tenths (0-9)". One digit.
+  SD: "(\\d)",
+  // Element 337: "DD = hundredths (00-99)". Two digits.
+  SDD: "(\\d{2})",
   // 2379 codes 205 and 208: "Z is plus (+) or minus (-)", then hours and minutes.
   ZS: "([+-])",
   ZH: HH,
@@ -366,16 +377,75 @@ export const X12_DATE_TIME_PERIOD_GRAMMAR: Readonly<
  * 24-hour clock time as follows: HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD, where H = hours
  * (00-23), M = minutes (00-59), S = integer seconds (00-59) and DD = decimal seconds; decimal
  * seconds are expressed as follows: D = tenths (0-9) and DD = hundredths (00-99)", length 4 to 8
- * (release 005010, https://www.stedi.com/edi/x12-005010/element/337). Not a 1250 value: its
- * four- and six-digit forms coincide with `TM` and `TS`, and no 1250 code holds decimal seconds.
- * Built from the same fragments as the 1250 masks.
+ * (release 005010, https://www.stedi.com/edi/x12-005010/element/337).
  *
- * Capture groups: 1 hour, 2 minute, 3 second (absent for `HHMM`), 4 decimal seconds (absent, one
- * digit of tenths, or two digits of hundredths).
+ * Mask → its parts, keyed by the element's own four masks in the order the definition gives
+ * them. Not a 1250 table: the element has no format qualifier, its four- and six-digit forms
+ * coincide with `TM` and `TS`, and no 1250 code holds decimal seconds. Typed from the public
+ * union, so a missing form fails typecheck.
  */
-export const X12_TIME_GRAMMAR: RegExp = new RegExp(
-  `^${FRAGMENT.HH}${FRAGMENT.MI}(?:${FRAGMENT.SS}(\\d{1,2})?)?$`,
-);
+export const X12_TIME_ELEMENT_LAYOUT: {
+  readonly [Form in X12TimeElementForm]: EdiLayout<"time">;
+} = {
+  // HHMM — "H = hours (00-23), M = minutes (00-59)"
+  HHMM: { kind: "time", start: ["HH", "MI"] },
+  // HHMMSS — "S = integer seconds (00-59)"
+  HHMMSS: { kind: "time", start: ["HH", "MI", "SS"] },
+  // HHMMSSD — "D = tenths (0-9)"
+  HHMMSSD: { kind: "time", start: ["HH", "MI", "SS", "SD"] },
+  // HHMMSSDD — "DD = hundredths (00-99)"
+  HHMMSSDD: { kind: "time", start: ["HH", "MI", "SS", "SDD"] },
+};
+
+/**
+ * The four forms of X12 data element 337, shortest first: the layout table's own keys, so the
+ * list cannot name a form the table lacks.
+ */
+export const X12_TIME_ELEMENT_FORMS: readonly X12TimeElementForm[] =
+  Object.keys(X12_TIME_ELEMENT_LAYOUT) as X12TimeElementForm[];
+
+/**
+ * Element 337 form → the anchored, flagless grammar of its value. The four masks have four
+ * lengths (4, 6, 7 and 8 digits), so a value fits one form or none, and the reader needs no
+ * qualifier to tell them apart.
+ */
+export const X12_TIME_ELEMENT_GRAMMAR: Readonly<
+  Record<X12TimeElementForm, RegExp>
+> = grammarsOf<X12TimeElementForm>(X12_TIME_ELEMENT_LAYOUT, "");
+
+/**
+ * The milliseconds one unit of each decimal-seconds part is worth: a tenth of a second is 100
+ * and a hundredth is 10. The reader multiplies by it and the writer divides by it, so the two
+ * agree on what `D` and `DD` mean.
+ */
+export const MILLISECONDS_PER_DECIMAL_SECOND: Readonly<
+  Record<"SD" | "SDD", number>
+> = { SD: 100, SDD: 10 };
+
+/**
+ * Look a form of X12 data element 337 up by its mask, for the writer
+ * (`writeX12TimeElement`), whose caller names the form. The reader (`readX12Time`) is given no
+ * form: it tries the grammar of each form in the same table.
+ *
+ * - Matching is exact and by own key, so `"__proto__"`, `" HHMM"` and `"hhmm"` are not forms.
+ * - Null for a data element 1250 code (`TM`, `TS`): a qualifier is not a mask.
+ * - Null for a non-string argument.
+ *
+ * @param form the element's mask: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`
+ * @returns the form's parts in mask order, as a single time, or null
+ *
+ * @example x12TimeElementLayoutOf("HHMMSSDD") // { kind: "time", start: ["HH", "MI", "SS", "SDD"] }
+ * @example x12TimeElementLayoutOf("TS") // null (a 1250 code, not a mask)
+ * @example x12TimeElementLayoutOf("__proto__") // null
+ */
+export function x12TimeElementLayoutOf(
+  form: unknown,
+): EdiLayout<"time"> | null {
+  return typeof form === "string" &&
+    Object.hasOwn(X12_TIME_ELEMENT_LAYOUT, form)
+    ? X12_TIME_ELEMENT_LAYOUT[form as X12TimeElementForm]
+    : null;
+}
 
 /**
  * The 56 X12 623 codes, release 008010, in dictionary order: `01`–`12` (UTC+1 … UTC+12), `13`–`24`

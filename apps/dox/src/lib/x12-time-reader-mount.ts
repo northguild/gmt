@@ -377,7 +377,7 @@ export function renderX12TimeReaderTemplate(
     `</div>` +
     // 4. Written back: each element and its call on one line
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>4. Written back by <code>formatX12Date</code> and <code>formatX12Time</code></h4>` +
+    `<h4>4. Written back by <code>formatX12Date</code> and <code>formatX12TimeElement</code></h4>` +
     `<div class="gmt-edi-pairs">` +
     `<div class="gmt-edi-written">` +
     `<div class="gmt-edi-written-cell">` +
@@ -391,7 +391,7 @@ export function renderX12TimeReaderTemplate(
     `</div>` +
     `<div class="gmt-edi-written">` +
     `<div class="gmt-edi-written-cell">` +
-    `<p class="gmt-widget-hint">The time as element 337, with TM or TS.</p>` +
+    `<p class="gmt-widget-hint">The time as element 337, in the form it was sent.</p>` +
     `<output class="gmt-widget-output gmt-edi-out" data-role="time-output">&nbsp;</output>` +
     `</div>` +
     holdHtml(

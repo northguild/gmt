@@ -12,7 +12,9 @@ import {
   type EdiPart,
   type EdiStandard,
   type EdiValueKind,
+  MILLISECONDS_PER_DECIMAL_SECOND,
   ediCodeOfKind,
+  x12TimeElementLayoutOf,
 } from "./ediGrammar";
 import { parseUtcOffsetNanoseconds } from "./utcOffsetString";
 
@@ -50,8 +52,9 @@ type PartText = Partial<Record<EdiPart, string | null>>;
  *   (an offset, `Z`, or a bracketed zone that agrees). Temporal then reads the fields; no digit
  *   of the input is sliced.
  * - Precision is cut to the mask and never refused: a fraction of a second is dropped under
- *   every mask and the seconds under a mask with no `SS`. The cut is a truncation, never a
- *   rounding, so a written value never names a later minute or second than its input.
+ *   every 2379 and 1250 mask (none has decimal seconds) and the seconds under a mask with no
+ *   `SS`. The cut is a truncation, never a rounding, so a written value never names a later
+ *   minute or second than its input.
  * - A value with an offset is written on its own wall clock, never the UTC clock. `ZHHMM` holds
  *   whole minutes and `ZZZ` whole hours, always written as the signed hour of UN/ECE
  *   Recommendation 7 ¶12 (`+02`), never `UTC` or `GMT`. An offset the field cannot hold returns
@@ -140,6 +143,46 @@ export function writeEdiRange(
   }
 }
 
+/**
+ * Write one ISO 8601 time as an X12 data element 337 (Time) value in one of the element's four
+ * forms: the inverse of `readX12Time`, driven by the same layout table (`ediGrammar.ts`), so
+ * what one writes the other reads back.
+ *
+ * - The form is the element's own mask (`HHMM`, `HHMMSS`, `HHMMSSD`, `HHMMSSDD`), looked up
+ *   exactly and by own key. A data element 1250 code (`TM`, `TS`) and any other string return
+ *   `""`.
+ * - `value` is a time, as `isValidTime` accepts it; Temporal then reads the fields. No digit of
+ *   the input is sliced.
+ * - The form alone fixes the digits written. It is never read off the value, so the width of the
+ *   field does not depend on the data: a time with no fraction is `14300000` under `HHMMSSDD`.
+ * - Precision is cut to the mask and never refused: `D` is the whole tenths of the second and
+ *   `DD` its whole hundredths. The cut is a truncation, never a rounding, so a written value
+ *   never names a later second than its input.
+ * - Never throws: any failure is `""`.
+ *
+ * @param form the element's mask
+ * @param value one ISO 8601 time
+ * @returns the element value, or `""`
+ *
+ * @example writeX12TimeElement("HHMMSSDD", "14:30:00.12") // "14300012"
+ * @example writeX12TimeElement("HHMMSSD", "14:30:00.12") // "1430001" (cut, not rounded)
+ * @example writeX12TimeElement("HHMMSSDD", "14:30") // "14300000"
+ * @example writeX12TimeElement("HHMM", "14:30:45.999") // "1430"
+ * @example writeX12TimeElement("TS", "14:30:45") // "" (a 1250 code, not a mask)
+ * @example writeX12TimeElement("HHMM", "2024-06-15T14:30:00") // "" (a date-time is not a time)
+ */
+export function writeX12TimeElement(form: string, value: string): string {
+  try {
+    const layout = x12TimeElementLayoutOf(form);
+    if (layout === null || typeof value !== "string") {
+      return "";
+    }
+    return writeHalf(layout.start, READERS.time(value)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /** One ISO 8601 string read as the kind its code's halves are, or null when it is not that kind. */
 function readHalf(entry: EdiCode, text: string): IsoHalf | null {
   return typeof text === "string" ? READERS[entry.valueKind](text) : null;
@@ -215,7 +258,8 @@ function endPrecedesStart(start: IsoHalf, end: IsoHalf): boolean {
 /**
  * One half written in its mask, or null when there is no half, its year or its offset does not
  * fit the mask, or a part has no value to write. A field the mask does not have (seconds, a
- * fraction of a second) is left out, which is the truncation.
+ * fraction of a second, or what is below its tenths or hundredths) is left out, which is the
+ * truncation.
  */
 function writeHalf(
   parts: readonly EdiPart[],
@@ -270,7 +314,12 @@ function dateText(date: Temporal.PlainDate | null): PartText {
       };
 }
 
-/** The digits of each time part of a mask, read from the time's Temporal fields. */
+/**
+ * The digits of each time part of a mask, read from the time's Temporal fields. The two decimal
+ * parts of X12 data element 337 are the whole tenths (`SD`) and the whole hundredths (`SDD`) of
+ * the second, counted from its milliseconds: 129 ms is 1 tenth and 12 hundredths. What is below
+ * the part is cut, never rounded, and the microseconds and nanoseconds are below both.
+ */
 function timeText(time: Temporal.PlainTime | null): PartText {
   return time === null
     ? {}
@@ -278,6 +327,14 @@ function timeText(time: Temporal.PlainTime | null): PartText {
         HH: digits(time.hour, 2),
         MI: digits(time.minute, 2),
         SS: digits(time.second, 2),
+        SD: digits(
+          Math.trunc(time.millisecond / MILLISECONDS_PER_DECIMAL_SECOND.SD),
+          1,
+        ),
+        SDD: digits(
+          Math.trunc(time.millisecond / MILLISECONDS_PER_DECIMAL_SECOND.SDD),
+          2,
+        ),
       };
 }
 

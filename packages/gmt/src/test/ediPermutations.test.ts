@@ -14,6 +14,7 @@ import {
   formatX12DateTime,
   formatX12DateTimeRange,
   formatX12Time,
+  formatX12TimeElement,
   isValidEdifactDate,
   isValidEdifactDatePeriod,
   isValidEdifactDateTime,
@@ -44,7 +45,11 @@ import {
   x12TimeCodeOffset,
   x12TimeCodeZone,
 } from "../intermodal";
-import type { EdiDatePeriod, EdiDateTimePeriod } from "../types/edi";
+import type {
+  EdiDatePeriod,
+  EdiDateTimePeriod,
+  X12TimeElementForm,
+} from "../types/edi";
 import {
   CUT_EDIFACT_FORMATS,
   CUT_X12_FORMATS,
@@ -79,6 +84,10 @@ type EdiPeriod = EdiDatePeriod | EdiDateTimePeriod;
  * The digits each valid pair writes are asserted too, so a round trip that is wrong the same way
  * in both directions (a zero offset written `UTC`, or with a minus sign) cannot pass. They are
  * plain Temporal strings with their punctuation removed, laid out by the three tables below.
+ *
+ * X12 data element 337 (Time) has no code: `formatX12TimeElement` takes the element's own mask,
+ * and `parseX12Time` reads the result with no qualifier. Its four forms are proved the same way
+ * in their own block, and are counted apart from the code pairs above.
  */
 
 type Precision = "minute" | "second";
@@ -134,6 +143,20 @@ function timeDigits(value: string, code: string): string {
   return Temporal.PlainTime.from(value)
     .toString({ smallestUnit: PRECISION[code], roundingMode: "trunc" })
     .replaceAll(":", "");
+}
+
+/**
+ * The digits of a time under a mask of X12 data element 337: Temporal's string at the mask's
+ * precision, truncated, without its colons and its decimal point.
+ */
+function elementTimeDigits(
+  value: string,
+  precision: Temporal.ToStringPrecisionOptions,
+): string {
+  return Temporal.PlainTime.from(value)
+    .toString({ ...precision, roundingMode: "trunc" })
+    .replaceAll(":", "")
+    .replace(".", "");
 }
 
 /**
@@ -797,6 +820,23 @@ describe("EDI permutations: a call the types accept returns a value", () => {
       },
     );
 
+    // The element 337 writer takes a time too: every value of another kind is refused under
+    // each of its four masks.
+    it.each`
+      form
+      ${"HHMM"}
+      ${"HHMMSS"}
+      ${"HHMMSSD"}
+      ${"HHMMSSDD"}
+    `(
+      "formatX12TimeElement returns '' under $form for every value that is not a time",
+      ({ form }: { form: X12TimeElementForm }) => {
+        for (const value of otherKinds("time")) {
+          expect(formatX12TimeElement(value, form), value).toBe("");
+        }
+      },
+    );
+
     it("checks 42 other-kind values against each date function, 41 against each time function, 40 against each date-time function and 22 against each offset function", () => {
       expect({
         date: otherKinds("date").length,
@@ -905,24 +945,164 @@ describe("EDI permutations: a call the types accept returns a value", () => {
     );
   });
 
-  describe("(b) an X12 date and time sent as two elements read together, and neither reads alone", () => {
-    // Element 373 is `CCYYMMDD`, the `D8` mask, and element 337 holds `HHMM` and `HHMMSS`, the
-    // `TM` and `TS` masks. Each house date-time is written as its two wire values and cut to the
-    // mask by plain Temporal; the pair has no qualifier, so there is no code to get wrong.
+  describe("(a) an element 337 time is written under the mask the caller names, and reads back with no qualifier", () => {
+    // X12 data element 337: "HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD … D = tenths (0-9) and
+    // DD = hundredths (00-99)". The wire value is what plain Temporal writes at the mask's
+    // precision (`elementTimeDigits` removes its punctuation), and `cut` is the same precision
+    // as a truncating `round`: a tenth of a second is 100 milliseconds and a hundredth is 10.
+
     it.each`
-      code    | mask
-      ${"TM"} | ${"HHMM"}
-      ${"TS"} | ${"HHMMSS"}
+      form          | digits | precision                        | cut
+      ${"HHMM"}     | ${4}   | ${{ smallestUnit: "minute" }}    | ${{ smallestUnit: "minute" }}
+      ${"HHMMSS"}   | ${6}   | ${{ smallestUnit: "second" }}    | ${{ smallestUnit: "second" }}
+      ${"HHMMSSD"}  | ${7}   | ${{ fractionalSecondDigits: 1 }} | ${{ smallestUnit: "millisecond", roundingIncrement: 100 }}
+      ${"HHMMSSDD"} | ${8}   | ${{ fractionalSecondDigits: 2 }} | ${{ smallestUnit: "millisecond", roundingIncrement: 10 }}
     `(
-      "every house date-time, its date as CCYYMMDD and its time as $mask, reads back cut to the mask and is valid",
-      ({ code }: { code: string }) => {
-        for (const value of DATE_TIMES) {
-          const date = dateDigits(value, "D8");
-          const time = timeDigits(value, code);
-          const expected = Temporal.PlainDateTime.from(value)
-            .round({ smallestUnit: PRECISION[code], roundingMode: "trunc" })
+      "formatX12TimeElement writes every house time under $form as $digits digits, and parseX12Time reads each back cut to the form",
+      ({
+        form,
+        digits,
+        precision,
+        cut,
+      }: {
+        form: X12TimeElementForm;
+        digits: number;
+        precision: Temporal.ToStringPrecisionOptions;
+        cut: {
+          smallestUnit: "minute" | "second" | "millisecond";
+          roundingIncrement?: number;
+        };
+      }) => {
+        expect(form).toHaveLength(digits);
+        for (const value of TIMES) {
+          const wire = elementTimeDigits(value, precision);
+          const expected = Temporal.PlainTime.from(value)
+            .round({ ...cut, roundingMode: "trunc" })
             .toString();
 
+          expect(wire, value).toHaveLength(digits);
+          expect(formatX12TimeElement(value, form), value).toBe(wire);
+          expect(parseX12Time(wire), value).toBe(expected);
+          expect(isValidX12Time(wire), value).toBe(true);
+          // What is read back writes the same digits again: the form, not the value, fixes them.
+          expect(formatX12TimeElement(expected, form), value).toBe(wire);
+        }
+      },
+    );
+
+    it("covers 20 element 337 pairs: 4 forms × 5 times", () => {
+      expect(4 * TIMES.length).toBe(20);
+    });
+
+    // `HHMM` and `HHMMSS` are also the masks of the 1250 codes `TM` and `TS`, so the two
+    // writers give the same digits there, and each reader takes them.
+    it.each`
+      form        | code
+      ${"HHMM"}   | ${"TM"}
+      ${"HHMMSS"} | ${"TS"}
+    `(
+      "under $form every house time is the digits formatX12Time writes under $code",
+      ({ form, code }: { form: X12TimeElementForm; code: "TM" | "TS" }) => {
+        for (const value of TIMES) {
+          const wire = timeDigits(value, code);
+          expect(formatX12TimeElement(value, form), value).toBe(wire);
+          expect(formatX12Time(value, code), value).toBe(wire);
+          const expected = cutTime(value, PRECISION[code]);
+          expect(parseX12Time(wire, code), value).toBe(expected);
+          expect(parseX12Time(wire), value).toBe(expected);
+        }
+      },
+    );
+
+    // The form is a mask of the element, never a code of data element 1250 or 2379: every
+    // supported and every cut code is refused, and so is a mask given in a third argument.
+    it.each`
+      count | group                     | codes
+      ${10} | ${"supported 1250 codes"} | ${Object.keys(X12_FORMAT_KINDS)}
+      ${11} | ${"cut 1250 codes"}       | ${CUT_X12_FORMATS.map(({ code }) => code)}
+      ${11} | ${"supported 2379 codes"} | ${Object.keys(EDIFACT_FORMAT_KINDS)}
+      ${12} | ${"cut 2379 codes"}       | ${CUT_EDIFACT_FORMATS.map(({ code }) => code)}
+    `(
+      "formatX12TimeElement returns '' for each of the $count $group, given as the form",
+      ({ count: expectedCount, codes }: { count: number; codes: string[] }) => {
+        expect(codes).toHaveLength(expectedCount);
+        for (const code of codes) {
+          for (const value of TIMES) {
+            expect(
+              loose<string>(formatX12TimeElement)(value, code),
+              `${value} under ${code}`,
+            ).toBe("");
+            expect(
+              loose<string>(formatX12TimeElement)(value, code, "HHMMSSDD"),
+              `${value} under ${code}, with a mask as a third argument`,
+            ).toBe("");
+          }
+        }
+      },
+    );
+
+    // The other direction: a mask is not a code. `wire` is 14:30:45.12 under the mask, by hand,
+    // so each refusal is for the mask given as the qualifier and never for the value.
+    it.each`
+      form          | wire
+      ${"HHMM"}     | ${"1430"}
+      ${"HHMMSS"}   | ${"143045"}
+      ${"HHMMSSD"}  | ${"1430451"}
+      ${"HHMMSSDD"} | ${"14304512"}
+    `(
+      "the mask $form is not a 1250 or a 2379 code: no time function takes it as its qualifier",
+      ({ form, wire }: { form: X12TimeElementForm; wire: string }) => {
+        expect(formatX12TimeElement("14:30:45.12", form)).toBe(wire);
+        for (const value of TIMES) {
+          expect(loose<string>(formatX12Time)(value, form), value).toBe("");
+          expect(loose<string>(formatEdifactTime)(value, form), value).toBe("");
+        }
+        expect(loose<string>(parseX12Time)(wire, form)).toBe("");
+        expect(loose<boolean>(isValidX12Time)(wire, form)).toBe(false);
+        expect(loose<string>(parseEdifactTime)(wire, form)).toBe("");
+        expect(loose<boolean>(isValidEdifactTime)(wire, form)).toBe(false);
+      },
+    );
+  });
+
+  describe("(b) an X12 date and time sent as two elements read together, and neither reads alone", () => {
+    // Element 373 is `CCYYMMDD`, the `D8` mask, and element 337 is one of its four masks. Each
+    // house date-time is split by plain Temporal into its date and its time, written as its two
+    // wire values and cut to the mask; the pair has no qualifier, so there is no code to get
+    // wrong. `formatX12Date` under `D8` and `formatX12TimeElement` under the mask write the same
+    // two values, so the pair `parseX12DateAndTime` reads is the pair they write.
+    it.each`
+      form          | precision                        | cut
+      ${"HHMM"}     | ${{ smallestUnit: "minute" }}    | ${{ smallestUnit: "minute" }}
+      ${"HHMMSS"}   | ${{ smallestUnit: "second" }}    | ${{ smallestUnit: "second" }}
+      ${"HHMMSSD"}  | ${{ fractionalSecondDigits: 1 }} | ${{ smallestUnit: "millisecond", roundingIncrement: 100 }}
+      ${"HHMMSSDD"} | ${{ fractionalSecondDigits: 2 }} | ${{ smallestUnit: "millisecond", roundingIncrement: 10 }}
+    `(
+      "every house date-time, its date as CCYYMMDD and its time as $form, is what the two formatters write, reads back cut to the mask and is valid",
+      ({
+        form,
+        precision,
+        cut,
+      }: {
+        form: X12TimeElementForm;
+        precision: Temporal.ToStringPrecisionOptions;
+        cut: {
+          smallestUnit: "minute" | "second" | "millisecond";
+          roundingIncrement?: number;
+        };
+      }) => {
+        for (const value of DATE_TIMES) {
+          const dateTime = Temporal.PlainDateTime.from(value);
+          const datePart = dateTime.toPlainDate().toString();
+          const timePart = dateTime.toPlainTime().toString();
+          const date = dateDigits(datePart, "D8");
+          const time = elementTimeDigits(timePart, precision);
+          const expected = dateTime
+            .round({ ...cut, roundingMode: "trunc" })
+            .toString();
+
+          expect(formatX12Date(datePart, "D8"), value).toBe(date);
+          expect(formatX12TimeElement(timePart, form), value).toBe(time);
           expect(parseX12DateAndTime(date, time), value).toBe(expected);
           expect(isValidX12DateAndTime(date, time), value).toBe(true);
         }
@@ -1270,6 +1450,7 @@ describe("EDI permutations: a call the types accept returns a value", () => {
       ${"parseX12DateAndTime"}             | ${parseX12DateAndTime}             | ${2}
       ${"formatX12Date"}                   | ${formatX12Date}                   | ${2}
       ${"formatX12Time"}                   | ${formatX12Time}                   | ${2}
+      ${"formatX12TimeElement"}            | ${formatX12TimeElement}            | ${2}
       ${"formatX12DateTime"}               | ${formatX12DateTime}               | ${2}
       ${"formatX12DateRange"}              | ${formatX12DateRange}              | ${3}
       ${"formatX12DateTimeRange"}          | ${formatX12DateTimeRange}          | ${3}

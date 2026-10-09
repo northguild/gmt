@@ -20,6 +20,7 @@ import {
   formatX12DateTime,
   formatX12DateTimeRange,
   formatX12Time,
+  formatX12TimeElement,
 } from "@northguild/gmt/intermodal/format";
 import {
   classifyEdifactDtmFormat,
@@ -71,6 +72,7 @@ export const lib = {
   parseX12DateAndTime,
   formatX12Date,
   formatX12Time,
+  formatX12TimeElement,
   formatX12DateTime,
   formatX12DateRange,
   formatX12DateTimeRange,

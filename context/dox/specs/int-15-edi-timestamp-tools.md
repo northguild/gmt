@@ -13,7 +13,7 @@ A parser returns one house value, and a formatter takes it back.
 | Barrel | Functions |
 | --- | --- |
 | `@northguild/gmt/intermodal/parse` | `parseEdifactDate`, `parseEdifactTime`, `parseEdifactDateTime`, `parseEdifactOffsetDateTime`, `parseEdifactDatePeriod`, `parseEdifactDateTimePeriod`, `parseX12Date`, `parseX12Time`, `parseX12DateTime`, `parseX12DateRange`, `parseX12DateTimeRange`, `parseX12DateAndTime`, `x12TimeCodeOffset`, `x12TimeCodeZone`, `classifyEdifactDtmFormat`, `classifyX12DateTimePeriodFormat`, `classifyX12TimeCode`, `parseEpcisEvent` |
-| `@northguild/gmt/intermodal/format` | `formatEdifactDate`, `formatEdifactTime`, `formatEdifactDateTime`, `formatEdifactOffsetDateTime`, `formatEdifactDatePeriod`, `formatEdifactDateTimePeriod`, `formatX12Date`, `formatX12Time`, `formatX12DateTime`, `formatX12DateRange`, `formatX12DateTimeRange`, `formatEpcisEvent` |
+| `@northguild/gmt/intermodal/format` | `formatEdifactDate`, `formatEdifactTime`, `formatEdifactDateTime`, `formatEdifactOffsetDateTime`, `formatEdifactDatePeriod`, `formatEdifactDateTimePeriod`, `formatX12Date`, `formatX12Time`, `formatX12TimeElement`, `formatX12DateTime`, `formatX12DateRange`, `formatX12DateTimeRange`, `formatEpcisEvent` |
 | `@northguild/gmt/intermodal/validate` | an `isValid…` for each parser, `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat`, `isValidX12TimeCode`, `isValidEpcisEvent` |
 | `@northguild/gmt/regex` | `epcisEventTime`, `epcisTimeZoneOffset` |
 
@@ -446,8 +446,9 @@ a time alone).
 
 **Readouts:** Kind, Value, Time code, Offset, Zone name, Daylight, Instant.
 
-**Written back:** `formatX12Date(date, "D8")` and `formatX12Time(time, "TM" | "TS")`, `TM` when
-the time was typed as four characters. A fraction is cut and the note says so.
+**Written back:** `formatX12Date(date, "D8")` and `formatX12TimeElement(time, form)`, with the
+form named by the digits typed: `HHMM` for four, `HHMMSS` for six, `HHMMSSD` for seven and
+`HHMMSSDD` for eight. The time comes back as it was sent, so nothing is cut and there is no note.
 
 **The `DTP` section:** `classifyX12DateTimePeriodFormat(format)`, then the parser of the kind
 (for a `time` kind, `parseX12Time(value, format)` with the narrowed `TM` or `TS`, so a `TM` value

@@ -298,22 +298,31 @@ describe("writing back", () => {
     expect(w.output).toBe("20240615");
   });
 
-  it("writes the time with TM when sent as four digits and TS otherwise", () => {
+  it("writes the time in the form it was sent: four digits as HHMM, six as HHMMSS", () => {
+    expect(writeTime(readOf("status-et"), lib)!.call.fn).toBe(
+      "formatX12TimeElement",
+    );
     expect(writeTime(readOf("status-et"), lib)!.call.args).toEqual([
       "14:30:00",
-      "TM",
+      "HHMM",
     ]);
     expect(writeTime(readOf("status-et"), lib)!.output).toBe("1430");
     const ts = writeTime(readX12(state("20240615", "143045", ""), lib), lib)!;
-    expect(ts.call.args).toEqual(["14:30:45", "TS"]);
+    expect(ts.call.args).toEqual(["14:30:45", "HHMMSS"]);
     expect(ts.output).toBe("143045");
   });
 
-  it("cuts a fraction instead of refusing it, and says so", () => {
+  it("writes hundredths back as HHMMSSDD, with nothing cut", () => {
     const w = writeTime(readOf("hundredths"), lib)!;
-    expect(w.call.args).toEqual(["14:30:00.12", "TS"]);
-    expect(w.output).toBe("143000");
-    expect(w.note).toContain("cuts tenths and hundredths");
+    expect(w.call.args).toEqual(["14:30:00.12", "HHMMSSDD"]);
+    expect(w.output).toBe("14300012");
+    expect(w.note).not.toContain("cut");
+  });
+
+  it("writes tenths back as HHMMSSD", () => {
+    const w = writeTime(readX12(state("20240615", "1430001", ""), lib), lib)!;
+    expect(w.call.args).toEqual(["14:30:00.1", "HHMMSSD"]);
+    expect(w.output).toBe("1430001");
   });
 
   it("has nothing to write for an element that was not read", () => {

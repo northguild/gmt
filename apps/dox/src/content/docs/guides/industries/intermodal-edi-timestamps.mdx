@@ -212,8 +212,9 @@ element 1251 value instead, and it has no time code.
 | Date-time range   | `X12DateTimeRange`                            | `RDT` `DTS`  | `{ start, end }`                               |
 
 `parseX12Time(value)` reads every form element 337 takes (`HHMM`, `HHMMSS`, `HHMMSSD` and
-`HHMMSSDD`), and `formatX12Time(value, "TM" | "TS")` writes four or six digits. No 1250 code
-states an offset.
+`HHMMSSDD`). `formatX12TimeElement(value, form)` writes an element 337 time in the form you name
+(`"HHMM"`, `"HHMMSS"`, `"HHMMSSD"` or `"HHMMSSDD"`). `formatX12Time(value, "TM" | "TS")` writes a
+time that travels with a 1250 qualifier. No 1250 code states an offset.
 
 A time of day, a local date-time and the rest of the formatters, one call each. `RTS` is one
 date-time, despite the R:
@@ -228,6 +229,7 @@ import {
   formatX12DateTime,
   formatX12DateTimeRange,
   formatX12Time,
+  formatX12TimeElement,
 } from "@northguild/gmt/intermodal/format";
 
 parseX12DateTime("202406151430", "DT"); // "2024-06-15T14:30:00"
@@ -239,8 +241,9 @@ parseX12Time("143045", "TM"); // "" — six digits is a TS value
 
 formatX12Date("2024-06-15", "D8"); // "20240615"
 formatX12Date("2024-06-15", "DB"); // "06152024"
-formatX12Time("14:30:00", "TM"); // "1430"
-formatX12Time("14:30:45.9", "TS"); // "143045" — cut, not rounded
+formatX12TimeElement("14:30:00.12", "HHMMSSDD"); // "14300012"
+formatX12TimeElement("14:30", "HHMM"); // "1430"
+formatX12Time("14:30:00", "TM"); // "1430" — a time with a 1250 qualifier
 formatX12DateTime("2024-06-15T14:30:45", "DT"); // "202406151430"
 formatX12DateTime("2024-06-15T14:30:00Z", "DT"); // "" — no 1250 code carries an offset
 formatX12DateTimeRange("2024-06-15T08:00:00", "2024-06-20T17:00:00", "RDT"); // "202406150800-202406201700"
@@ -323,8 +326,10 @@ writes its hyphen, and a UN/EDIFACT period does not, so each parser reads only i
 form. As with UN/EDIFACT, X12 does not say whether the end is inside the range, and both ends
 come back as transmitted.
 
-Tenths and hundredths of a second in an element 337 time are read by `parseX12Time`. A formatter
-cuts them to the mask: `formatX12Time("14:30:00.12", "TS")` is `"143000"`.
+Tenths and hundredths of a second in an element 337 time are read by `parseX12Time` and written
+by `formatX12TimeElement` with `"HHMMSSD"` or `"HHMMSSDD"`. The two 1250 masks `TM` and `TS`
+have no field for them, so `formatX12Time` cuts them: `formatX12Time("14:30:00.12", "TS")` is
+`"143000"`.
 
 ## A code that arrives as data
 

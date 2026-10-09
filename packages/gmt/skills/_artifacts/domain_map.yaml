@@ -211,7 +211,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff, scheduleDeviation/classifyPunctuality/punctualityRate, bestAvailable/estimateDrift, nextDeparture, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, bolTimestamp/multimodalETA, the EDI readers and writers split by kind of value (parseEdifactDate/Time/DateTime/OffsetDateTime/DatePeriod/DateTimePeriod, parseX12Date/Time/DateTime/DateRange/DateTimeRange, parseX12DateAndTime, x12TimeCodeOffset/x12TimeCodeZone, classifyEdifactDtmFormat/classifyX12DateTimePeriodFormat/classifyX12TimeCode, parseEpcisEvent/formatEpcisEvent) with their format* and isValid* twins, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff, scheduleDeviation/classifyPunctuality/punctualityRate, bestAvailable/estimateDrift, nextDeparture, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, bolTimestamp/multimodalETA, the EDI readers and writers split by kind of value (parseEdifactDate/Time/DateTime/OffsetDateTime/DatePeriod/DateTimePeriod, parseX12Date/Time/DateTime/DateRange/DateTimeRange, parseX12DateAndTime, formatX12TimeElement, x12TimeCodeOffset/x12TimeCodeZone, classifyEdifactDtmFormat/classifyX12DateTimePeriodFormat/classifyX12TimeCode, parseEpcisEvent/formatEpcisEvent) with their format* and isValid* twins, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime
     type: core
     packages:
       - '@northguild/gmt'
@@ -302,6 +302,7 @@ skills:
       - isValidX12Date
       - parseX12Time
       - formatX12Time
+      - formatX12TimeElement
       - isValidX12Time
       - parseX12DateTime
       - formatX12DateTime
@@ -378,6 +379,7 @@ skills:
       - Read an X12 date and time as one local date-time, and resolve it at the offset its time code states
       - Tell an X12 time code that states an offset from one that names a zone
       - Read an X12 date, time, date-time or range against its format qualifier
+      - Write an X12 element 337 time in the mask the caller names, with tenths or hundredths of a second
       - Classify a format code or time code that arrives as data, and pass it on with no cast
       - Read a GS1 EPCIS event's instant and the offset in force where it happened
       - Write a UN/EDIFACT DTM value, an X12 date time period or an EPCIS event time pair from ISO 8601 values

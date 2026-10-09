@@ -201,7 +201,7 @@ const EXPECTED: Record<string, Expected> = {
     members: { kind: "local date-time", value: "2024-06-15T14:30:00.12" },
     instant: "2024-06-15T18:30:00.12Z",
     date: "20240615",
-    time: "143000",
+    time: "14300012",
   },
   "no-code": {
     calls: `parseX12DateAndTime(${AT})`,
@@ -467,20 +467,20 @@ describe("writing back", () => {
       'formatX12Date("2024-06-15", "D8")',
     );
     expect(q(root, "copy-write-time").dataset["copyText"]).toBe(
-      'formatX12Time("14:30:00", "TM")',
+      'formatX12TimeElement("14:30:00", "HHMM")',
     );
     expect(text(root, "format-note")).toContain("read alone by parseX12Date");
   });
 
-  it("cuts hundredths and says so, instead of showing NO SIGNAL", async () => {
+  it("writes hundredths back with their hundredths", async () => {
     const { root } = await mount();
     choose(root, "preset", "hundredths");
     expect(q(root, "copy-write-time").dataset["copyText"]).toBe(
-      'formatX12Time("14:30:00.12", "TS")',
+      'formatX12TimeElement("14:30:00.12", "HHMMSSDD")',
     );
-    expect(text(root, "time-output")).toBe('"143000"');
+    expect(text(root, "time-output")).toBe('"14300012"');
     expect(isSentinel(root, "time-output")).toBe(false);
-    expect(text(root, "format-note")).toContain("cuts tenths and hundredths");
+    expect(text(root, "format-note")).not.toContain("cut");
   });
 });
 

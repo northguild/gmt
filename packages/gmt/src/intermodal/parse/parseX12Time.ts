@@ -35,6 +35,9 @@ import type { X12TimeFormat } from "../../types/edi";
  * - With no qualifier, tenths and hundredths become the fraction of the second exactly:
  *   `1430001` is `14:30:00.1` and `14300012` is `14:30:00.12`. A zero fraction is not written
  *   (`14300000` is `14:30:00`).
+ * - **To write the value back**, use `formatX12TimeElement` for an element 337 time and name
+ *   the form by its mask: `formatX12TimeElement("14:30:00.12", "HHMMSSDD")` is `14300012`. Use
+ *   `formatX12Time` for a time that travels with a `TM` or `TS` qualifier.
  * - Fields are checked, not clamped: hour 24, minute 60, second 60 and a value of 5 or 9 digits
  *   return `""`.
  * - **The time is local to a place the value does not name.** In a freight segment the time

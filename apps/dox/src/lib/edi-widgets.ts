@@ -112,6 +112,8 @@ export interface EdiLib {
   parseX12DateAndTime(date: string, time: string): string;
   formatX12Date(value: string, format: string): string;
   formatX12Time(value: string, format: string): string;
+  /** Element 337 in the form the caller names by its mask: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`. */
+  formatX12TimeElement(value: string, form: string): string;
   formatX12DateTime(value: string, format: string): string;
   formatX12DateRange(start: string, end: string, format: string): string;
   formatX12DateTimeRange(start: string, end: string, format: string): string;

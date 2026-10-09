@@ -1,14 +1,21 @@
 import * as root from "../index";
 import * as regex from "../regex";
-import type { EdifactDtmFormat, X12DateTimePeriodFormat } from "../types/edi";
+import type {
+  EdifactDtmFormat,
+  X12DateTimePeriodFormat,
+  X12TimeElementForm,
+} from "../types/edi";
 import {
   EDIFACT_DTM_FORMATS,
   EDIFACT_DTM_GRAMMAR,
   X12_DATE_TIME_PERIOD_FORMATS,
   X12_DATE_TIME_PERIOD_GRAMMAR,
   X12_TIME_CODES,
+  X12_TIME_ELEMENT_FORMS,
+  X12_TIME_ELEMENT_GRAMMAR,
   ediCodeOf,
   ediCodeOfKind,
+  x12TimeElementLayoutOf,
 } from "./ediGrammar";
 
 // UNTDID data element 2379 and X12 data element 1250. Every entry proves shape only: month 01–12,
@@ -236,6 +243,109 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
   });
 });
 
+describe("X12_TIME_ELEMENT_GRAMMAR", () => {
+  // X12 data element 337 (Time), release 005010: "HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD, where
+  // H = hours (00-23), M = minutes (00-59), S = integer seconds (00-59) and DD = decimal seconds;
+  // decimal seconds are expressed as follows: D = tenths (0-9) and DD = hundredths (00-99)".
+  it.each`
+    form          | value         | reason
+    ${"HHMM"}     | ${"1430"}     | ${"HHMM"}
+    ${"HHMM"}     | ${"0000"}     | ${"midnight"}
+    ${"HHMM"}     | ${"2359"}     | ${"the last minute of the day"}
+    ${"HHMMSS"}   | ${"143045"}   | ${"HHMMSS"}
+    ${"HHMMSS"}   | ${"235959"}   | ${"the last second of the day"}
+    ${"HHMMSSD"}  | ${"1430451"}  | ${"HHMMSSD: one tenth"}
+    ${"HHMMSSD"}  | ${"1430450"}  | ${"zero tenths"}
+    ${"HHMMSSD"}  | ${"2359599"}  | ${"the last tenth of the day"}
+    ${"HHMMSSDD"} | ${"14304512"} | ${"HHMMSSDD: twelve hundredths"}
+    ${"HHMMSSDD"} | ${"14304500"} | ${"zero hundredths"}
+    ${"HHMMSSDD"} | ${"14304505"} | ${"five hundredths"}
+    ${"HHMMSSDD"} | ${"23595999"} | ${"the last hundredth of the day"}
+  `("form $form matches $value ($reason)", ({ form, value }) => {
+    expect(
+      X12_TIME_ELEMENT_GRAMMAR[form as X12TimeElementForm].test(value),
+    ).toBe(true);
+  });
+
+  it.each`
+    form          | value          | reason
+    ${"HHMM"}     | ${"143045"}    | ${"HHMMSS's value"}
+    ${"HHMM"}     | ${"2400"}      | ${"hour 24"}
+    ${"HHMM"}     | ${"1460"}      | ${"minute 60"}
+    ${"HHMM"}     | ${"930"}       | ${"an unpadded hour"}
+    ${"HHMM"}     | ${"14:30"}     | ${"a colon"}
+    ${"HHMM"}     | ${" 1430"}     | ${"leading whitespace"}
+    ${"HHMM"}     | ${"1430 "}     | ${"trailing whitespace"}
+    ${"HHMM"}     | ${"1430\n"}    | ${"a trailing newline: $ is the end of the value, not of a line"}
+    ${"HHMM"}     | ${"１４３０"}  | ${"full-width digits: a digit is 0–9"}
+    ${"HHMM"}     | ${""}          | ${"empty string"}
+    ${"HHMM"}     | ${"-143"}      | ${"a sign and three digits"}
+    ${"HHMM"}     | ${"1e30"}      | ${"an exponent: four characters, not four digits"}
+    ${"HHMMSS"}   | ${"1430"}      | ${"HHMM's value"}
+    ${"HHMMSS"}   | ${"1430451"}   | ${"HHMMSSD's value"}
+    ${"HHMMSS"}   | ${"143060"}    | ${"second 60: GMT rejects a leap second"}
+    ${"HHMMSS"}   | ${"14304"}     | ${"five digits"}
+    ${"HHMMSS"}   | ${"240000"}    | ${"hour 24"}
+    ${"HHMMSS"}   | ${"146000"}    | ${"minute 60"}
+    ${"HHMMSS"}   | ${"1430.5"}    | ${"a decimal point: six characters, not six digits"}
+    ${"HHMMSSD"}  | ${"143045"}    | ${"HHMMSS's value"}
+    ${"HHMMSSD"}  | ${"14304512"}  | ${"HHMMSSDD's value"}
+    ${"HHMMSSD"}  | ${"1430601"}   | ${"second 60"}
+    ${"HHMMSSD"}  | ${"2430451"}   | ${"hour 24"}
+    ${"HHMMSSD"}  | ${"1460451"}   | ${"minute 60"}
+    ${"HHMMSSD"}  | ${"-143045"}   | ${"a sign and six digits: seven characters, not seven digits"}
+    ${"HHMMSSD"}  | ${"143045.1"}  | ${"a decimal point: the element has none"}
+    ${"HHMMSSD"}  | ${"143045A"}   | ${"a letter for the tenths"}
+    ${"HHMMSSDD"} | ${"1430451"}   | ${"HHMMSSD's value"}
+    ${"HHMMSSDD"} | ${"143045123"} | ${"nine digits: thousandths are not an element 337 form"}
+    ${"HHMMSSDD"} | ${"24304512"}  | ${"hour 24"}
+    ${"HHMMSSDD"} | ${"14306012"}  | ${"second 60"}
+    ${"HHMMSSDD"} | ${"14604512"}  | ${"minute 60"}
+    ${"HHMMSSDD"} | ${"+1430451"}  | ${"a sign and seven digits: eight characters, not eight digits"}
+    ${"HHMMSSDD"} | ${"143045.12"} | ${"a decimal point: the element has none"}
+    ${"HHMMSSDD"} | ${"1430451 "}  | ${"a space for the hundredths digit"}
+  `("form $form rejects $value ($reason)", ({ form, value }) => {
+    expect(
+      X12_TIME_ELEMENT_GRAMMAR[form as X12TimeElementForm].test(value),
+    ).toBe(false);
+  });
+
+  it.each`
+    form          | value         | groups
+    ${"HHMM"}     | ${"1430"}     | ${["14", "30"]}
+    ${"HHMMSS"}   | ${"143045"}   | ${["14", "30", "45"]}
+    ${"HHMMSSD"}  | ${"1430451"}  | ${["14", "30", "45", "1"]}
+    ${"HHMMSSDD"} | ${"14304512"} | ${["14", "30", "45", "12"]}
+    ${"HHMMSSDD"} | ${"14304505"} | ${["14", "30", "45", "05"]}
+  `("form $form captures $groups from $value", ({ form, value, groups }) => {
+    expect(
+      X12_TIME_ELEMENT_GRAMMAR[form as X12TimeElementForm]
+        .exec(value)
+        ?.slice(1),
+    ).toEqual(groups);
+  });
+
+  // The four masks have four lengths (4, 6, 7 and 8 characters), so a value fits one form or
+  // none: the reader needs no qualifier to tell them apart.
+  it.each`
+    value          | fits
+    ${"1430"}      | ${["HHMM"]}
+    ${"143045"}    | ${["HHMMSS"]}
+    ${"1430451"}   | ${["HHMMSSD"]}
+    ${"14304512"}  | ${["HHMMSSDD"]}
+    ${"14304"}     | ${[]}
+    ${"143045123"} | ${[]}
+    ${"2400"}      | ${[]}
+    ${""}          | ${[]}
+  `("$value fits the forms $fits and no other", ({ value, fits }) => {
+    expect(
+      X12_TIME_ELEMENT_FORMS.filter((form) =>
+        X12_TIME_ELEMENT_GRAMMAR[form].test(value),
+      ),
+    ).toEqual(fits);
+  });
+});
+
 describe("code lists", () => {
   it("EDIFACT_DTM_FORMATS is the 11 supported 2379 codes, each with a grammar", () => {
     expect([...EDIFACT_DTM_FORMATS]).toEqual([
@@ -272,6 +382,18 @@ describe("code lists", () => {
     expect(Object.keys(X12_DATE_TIME_PERIOD_GRAMMAR).sort()).toEqual(
       [...X12_DATE_TIME_PERIOD_FORMATS].sort(),
     );
+  });
+
+  it("X12_TIME_ELEMENT_FORMS is the four forms of element 337, shortest first, each with a grammar", () => {
+    expect([...X12_TIME_ELEMENT_FORMS]).toEqual([
+      "HHMM",
+      "HHMMSS",
+      "HHMMSSD",
+      "HHMMSSDD",
+    ]);
+    expect(Object.keys(X12_TIME_ELEMENT_GRAMMAR)).toEqual([
+      ...X12_TIME_ELEMENT_FORMS,
+    ]);
   });
 
   it("X12_TIME_CODES is the 56 DE 623 codes: 01–29 then the letter codes", () => {
@@ -315,6 +437,7 @@ describe("code lists", () => {
     table                             | grammar
     ${"EDIFACT_DTM_GRAMMAR"}          | ${EDIFACT_DTM_GRAMMAR}
     ${"X12_DATE_TIME_PERIOD_GRAMMAR"} | ${X12_DATE_TIME_PERIOD_GRAMMAR}
+    ${"X12_TIME_ELEMENT_GRAMMAR"}     | ${X12_TIME_ELEMENT_GRAMMAR}
   `(
     "every $table entry is anchored at both ends with no flags",
     ({ grammar }) => {
@@ -555,6 +678,100 @@ describe("ediCodeOfKind", () => {
   });
 });
 
+describe("x12TimeElementLayoutOf", () => {
+  // The mask of each row is element 337's own, written as this file's part names: `MI` is the
+  // minute, `SD` the tenths of a second (the element's `D`) and `SDD` the hundredths (its `DD`).
+  it.each`
+    form          | start
+    ${"HHMM"}     | ${["HH", "MI"]}
+    ${"HHMMSS"}   | ${["HH", "MI", "SS"]}
+    ${"HHMMSSD"}  | ${["HH", "MI", "SS", "SD"]}
+    ${"HHMMSSDD"} | ${["HH", "MI", "SS", "SDD"]}
+  `("the form $form is one time with the parts $start", ({ form, start }) => {
+    const layout = x12TimeElementLayoutOf(form);
+    expect(layout?.kind).toBe("time");
+    expect(layout?.start).toEqual(start);
+    expect(layout?.end).toBeUndefined();
+  });
+
+  // Element 337: "HHMM, or HHMMSS, …". The 1250 codes `TM` ("Time Expressed in Format HHMM") and
+  // `TS` ("… HHMMSS") state the same two masks, so the same digits are a value of both elements.
+  it.each`
+    form        | code
+    ${"HHMM"}   | ${"TM"}
+    ${"HHMMSS"} | ${"TS"}
+  `(
+    "the form $form has the parts and the grammar of the 1250 code $code",
+    ({ form, code }) => {
+      const qualified = ediCodeOf("x12", code);
+      expect(x12TimeElementLayoutOf(form)?.start).toEqual(
+        qualified?.layout.start,
+      );
+      expect(X12_TIME_ELEMENT_GRAMMAR[form as X12TimeElementForm].source).toBe(
+        qualified?.grammar.source,
+      );
+    },
+  );
+
+  // The form is the element's mask, matched exactly and by own key. A 1250 qualifier is not a
+  // form.
+  it.each`
+    form             | reads
+    ${"TM"}          | ${"the 1250 qualifier for HHMM"}
+    ${"TS"}          | ${"the 1250 qualifier for HHMMSS"}
+    ${"hhmm"}        | ${"lower case: matching is exact"}
+    ${" HHMM"}       | ${"a leading space"}
+    ${"HHMM "}       | ${"a trailing space"}
+    ${"HHMMSSDDD"}   | ${"thousandths: not a form of the element"}
+    ${"HHMISS"}      | ${"this file's part names, not the element's mask"}
+    ${""}            | ${"an empty form"}
+    ${"__proto__"}   | ${"an inherited key, not a form"}
+    ${"constructor"} | ${"an inherited key, not a form"}
+    ${"toString"}    | ${"an inherited key, not a form"}
+  `("returns null for the form '$form' ($reads)", ({ form }) => {
+    expect(x12TimeElementLayoutOf(form)).toBeNull();
+  });
+
+  it.each`
+    input        | description
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${1430}      | ${"a number"}
+    ${true}      | ${"a boolean"}
+    ${["HHMM"]}  | ${"an array holding the form"}
+    ${{}}        | ${"an object"}
+  `("returns null for a form that is $description", ({ input }) => {
+    expect(x12TimeElementLayoutOf(input)).toBeNull();
+  });
+
+  // The other direction: a mask is not a code. Element 337 has no format qualifier, so its
+  // four masks are in neither code table, and no 2379 or 1250 reader or writer finds one.
+  it.each`
+    form
+    ${"HHMM"}
+    ${"HHMMSS"}
+    ${"HHMMSSD"}
+    ${"HHMMSSDD"}
+  `("the mask $form is not a 2379 or a 1250 code", ({ form }) => {
+    expect(ediCodeOf("x12", form)).toBeNull();
+    expect(ediCodeOf("edifact", form)).toBeNull();
+    expect(ediCodeOfKind("x12", "time", form)).toBeNull();
+    expect(ediCodeOfKind("edifact", "time", form)).toBeNull();
+  });
+
+  // `SD` and `SDD` are element 337's alone: no 2379 or 1250 mask has decimal seconds (see "no
+  // supported code has a part other than …" above).
+  it("the four forms use the parts HH, MI, SS, SD and SDD and no other", () => {
+    const parts = new Set<string>();
+    for (const form of X12_TIME_ELEMENT_FORMS) {
+      for (const part of x12TimeElementLayoutOf(form)?.start ?? []) {
+        parts.add(part);
+      }
+    }
+    expect([...parts].sort()).toEqual(["HH", "MI", "SD", "SDD", "SS"]);
+  });
+});
+
 describe("the grammars are private", () => {
   // A value-plus-code grammar is a two-argument relation; its public form is the validator
   // function, not a constant per code. Nothing EDI-shaped reaches the root or regex barrels.
@@ -577,6 +794,11 @@ describe("the grammars are private", () => {
     ${"EDIFACT_DTM_GRAMMAR"}
     ${"X12_DATE_TIME_PERIOD_GRAMMAR"}
     ${"X12_TIME_CODES"}
+    ${"X12_TIME_ELEMENT_LAYOUT"}
+    ${"X12_TIME_ELEMENT_FORMS"}
+    ${"X12_TIME_ELEMENT_GRAMMAR"}
+    ${"MILLISECONDS_PER_DECIMAL_SECOND"}
+    ${"x12TimeElementLayoutOf"}
   `(
     "$name is exported from neither the root nor the regex barrel",
     ({ name }) => {

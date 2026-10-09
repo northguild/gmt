@@ -79,6 +79,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/intermodal/format/formatX12DateTime",
   "/reference/intermodal/format/formatX12DateTimeRange",
   "/reference/intermodal/format/formatX12Time",
+  "/reference/intermodal/format/formatX12TimeElement",
   "/reference/intermodal/parse",
   "/reference/intermodal/parse/classifyEdifactDtmFormat",
   "/reference/intermodal/parse/classifyX12DateTimePeriodFormat",

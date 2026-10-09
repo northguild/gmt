@@ -448,7 +448,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `parseX12Date` or `parseX12Time` when only one is sent), `classifyX12TimeCode`, and then
   `x12TimeCodeOffset` or `x12TimeCodeZone`, with the same strip (a code that states an offset
   gives the instant with `resolveLocal(local, offset)`), the date and time written back by
-  `formatX12Date` and `formatX12Time`, and a second section that classifies a `DTP` qualifier
+  `formatX12Date` and `formatX12TimeElement` (the time in the form it was sent), and a second section that classifies a `DTP` qualifier
   (1250) and reads its value (1251) with the parser of that kind. A code or value the library does
   not read is the sentinel with one plain sentence: for a two-digit-year code, the pattern parsers
   with a `yearWindow`; for `CET` under `303`, that the field holds a signed hour, `UTC` or `GMT`.
@@ -498,10 +498,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     verdict, the detail line and the instant output reserve the height of their longest text for
     the container width they sit in (`4lh` down to `1lh` for the detail line), so no preset
     moves what is below.
-  - **The X12 time is written back with `TM` when it was typed as four characters and `TS`
-    otherwise**, so the value comes back in the form it was sent. A time with tenths or
-    hundredths is cut to the mask and the note says so: the library reads a fraction and the
-    formatter truncates it.
+  - **The X12 time is written back by `formatX12TimeElement`, in the form named by the digits
+    typed**: `HHMM` for four, `HHMMSS` for six, `HHMMSSD` for seven and `HHMMSSDD` for eight. The
+    value comes back in the form it was sent, tenths and hundredths of a second included, so
+    nothing is cut and there is no note.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,

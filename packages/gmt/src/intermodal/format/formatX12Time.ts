@@ -20,10 +20,10 @@ import type { X12TimeFormat } from "../../types/edi";
  *   second if it has them. A date-time, a date or a time with an offset returns `""`.
  * - Precision is cut to the mask, never rounded: a fraction of a second is always dropped, and
  *   `TM` drops the seconds too. `14:30:45.123` is `1430` under `TM` and `143045` under `TS`.
- * - **These two codes write the time element of a freight segment** (`AT7-06`, `G62-04`,
- *   `DTM-03`): data element 337 is `HHMM` or `HHMMSS`, the same digits. Element 337 can also
- *   hold tenths or hundredths of a second, which no 1250 code has: `parseX12Time` reads them and
- *   this function does not write them.
+ * - **To write the time element of a freight segment** (`AT7-06`, `G62-04`, `DTM-03`), use
+ *   `formatX12TimeElement`: it writes all four forms of data element 337, named by the
+ *   element's own masks, tenths and hundredths of a second included. `TM` and `TS` give the same
+ *   digits as that element's `HHMM` and `HHMMSS` forms, and no 1250 code holds decimal seconds.
  * - `TS` here is the format `HHMMSS`. As a data element 623 time code, `TS` is Atlantic Standard
  *   Time: read that with `x12TimeCodeZone`.
  * - Returns `""` for any other code, a code of another kind included, and for a non-string

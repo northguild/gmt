@@ -11,3 +11,4 @@ export * from "./formatX12DateRange";
 export * from "./formatX12DateTime";
 export * from "./formatX12DateTimeRange";
 export * from "./formatX12Time";
+export * from "./formatX12TimeElement";

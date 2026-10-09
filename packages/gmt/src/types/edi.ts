@@ -182,10 +182,35 @@ export type X12DateFormat = "D8" | "DB";
  *
  * Taken by `formatX12Time`, and by `parseX12Time` and `isValidX12Time` as their optional
  * qualifier. Both are also forms of data element 337 (Time), which `parseX12Time` reads when no
- * qualifier is given. `TS` is a code of data element 623 too (`X12TimeCode`), where it means
+ * qualifier is given and `formatX12TimeElement` writes by the element's own mask
+ * (`X12TimeElementForm`). `TS` is a code of data element 623 too (`X12TimeCode`), where it means
  * Atlantic Standard Time.
  */
 export type X12TimeFormat = "TM" | "TS";
+
+/**
+ * The four forms of X12 data element 337 (Time), each named by the element's own mask. Release
+ * 005010, read from
+ * [Stedi's X12-licensed dictionary](https://www.stedi.com/edi/x12-005010/element/337); the X12
+ * text itself was not reached. The dictionary's definition: "Time expressed in 24-hour clock
+ * time as follows: HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD, where H = hours (00-23),
+ * M = minutes (00-59), S = integer seconds (00-59) and DD = decimal seconds; decimal seconds are
+ * expressed as follows: D = tenths (0-9) and DD = hundredths (00-99)".
+ *
+ * - `HHMM`: hours and minutes, 4 digits.
+ * - `HHMMSS`: hours, minutes and seconds, 6 digits.
+ * - `HHMMSSD`: with tenths of a second, 7 digits.
+ * - `HHMMSSDD`: with hundredths of a second, 8 digits.
+ *
+ * These are the element's own masks, not data element 1250 codes. Element 337 has no format
+ * qualifier, so no code names its form: the caller names it by the mask. `TM` and `TS`
+ * (`X12TimeFormat`) are the 1250 codes for the first two masks, and no 1250 code holds decimal
+ * seconds.
+ *
+ * Taken by `formatX12TimeElement`. `parseX12Time` reads all four forms when it is given no
+ * qualifier.
+ */
+export type X12TimeElementForm = "HHMM" | "HHMMSS" | "HHMMSSD" | "HHMMSSDD";
 
 /**
  * The X12 data element 1250 values that state a date and a time with no offset: a local time at

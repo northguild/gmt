@@ -5,7 +5,11 @@ import {
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../test/mocks";
-import { writeEdiRange, writeEdiValue } from "./ediDateTimeWriter";
+import {
+  writeEdiRange,
+  writeEdiValue,
+  writeX12TimeElement,
+} from "./ediDateTimeWriter";
 
 /**
  * Every expected value is the ISO 8601 input placed under the standard's mask by hand: each
@@ -323,5 +327,105 @@ describe("writeEdiRange", () => {
     expect(
       writeEdiRange("x12", "dateRange", "RD8", "2024-06-15", "2024-06-20"),
     ).toBe("");
+  });
+});
+
+/**
+ * X12 data element 337 (Time): "HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD … D = tenths (0-9) and
+ * DD = hundredths (00-99)". Every expected value is the time placed under the mask by hand: `D`
+ * is the whole tenths of the second and `DD` its whole hundredths.
+ */
+describe("writeX12TimeElement", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each`
+    form          | value            | expected
+    ${"HHMM"}     | ${"14:30"}       | ${"1430"}
+    ${"HHMMSS"}   | ${"14:30:45"}    | ${"143045"}
+    ${"HHMMSSD"}  | ${"14:30:45.1"}  | ${"1430451"}
+    ${"HHMMSSDD"} | ${"14:30:45.12"} | ${"14304512"}
+    ${"HHMMSSDD"} | ${"14:30:45.05"} | ${"14304505"}
+    ${"HHMMSSD"}  | ${"14:30"}       | ${"1430000"}
+    ${"HHMMSSDD"} | ${"14:30"}       | ${"14300000"}
+    ${"HHMM"}     | ${"00:00"}       | ${"0000"}
+    ${"HHMMSSDD"} | ${"00:00"}       | ${"00000000"}
+    ${"HHMMSSDD"} | ${"23:59:59.99"} | ${"23595999"}
+  `("writes $value under $form as $expected", ({ form, value, expected }) => {
+    expect(writeX12TimeElement(form, value)).toBe(expected);
+  });
+
+  describe("precision is cut to the mask, never rounded and never refused", () => {
+    // 0.999 of a second is 9 whole tenths and 99 whole hundredths, and no whole second: the
+    // cut is a truncation. Digits below the millisecond are below both decimal parts.
+    it.each`
+      form          | value                   | expected
+      ${"HHMM"}     | ${"14:30:59.999999999"} | ${"1430"}
+      ${"HHMMSS"}   | ${"14:30:45.999"}       | ${"143045"}
+      ${"HHMMSSD"}  | ${"14:30:45.99"}        | ${"1430459"}
+      ${"HHMMSSD"}  | ${"14:30:45.999"}       | ${"1430459"}
+      ${"HHMMSSD"}  | ${"14:30:45.129"}       | ${"1430451"}
+      ${"HHMMSSD"}  | ${"14:30:45.09"}        | ${"1430450"}
+      ${"HHMMSSDD"} | ${"14:30:45.9"}         | ${"14304590"}
+      ${"HHMMSSDD"} | ${"14:30:45.999"}       | ${"14304599"}
+      ${"HHMMSSDD"} | ${"14:30:45.129"}       | ${"14304512"}
+      ${"HHMMSSDD"} | ${"14:30:45.009"}       | ${"14304500"}
+      ${"HHMMSSDD"} | ${"14:30:45.129999999"} | ${"14304512"}
+      ${"HHMMSSD"}  | ${"23:59:59.999999999"} | ${"2359599"}
+      ${"HHMMSSDD"} | ${"23:59:59.999999999"} | ${"23595999"}
+    `("writes $value under $form as $expected", ({ form, value, expected }) => {
+      expect(writeX12TimeElement(form, value)).toBe(expected);
+    });
+  });
+
+  // The value is a time, as `isValidTime` accepts it. Nothing is coerced from another kind.
+  it.each`
+    value                    | reads
+    ${"2024-06-15T14:30:00"} | ${"a date-time"}
+    ${"2024-06-15"}          | ${"a date"}
+    ${"14:30:00+02:00"}      | ${"a time with an offset"}
+    ${"14:30:00Z"}           | ${"a time with a UTC designator"}
+    ${"T14:30"}              | ${"a leading time designator"}
+    ${"1430"}                | ${"basic format: the input is extended ISO 8601"}
+    ${"24:00"}               | ${"hour 24"}
+    ${"23:59:60"}            | ${"a leap second"}
+    ${""}                    | ${"an empty value"}
+  `("returns '' for $value under every form ($reads)", ({ value }) => {
+    for (const form of ["HHMM", "HHMMSS", "HHMMSSD", "HHMMSSDD"]) {
+      expect(writeX12TimeElement(form, value), form).toBe("");
+    }
+  });
+
+  // The form is the element's own mask, matched exactly and by own key.
+  it.each`
+    form             | reads
+    ${"TM"}          | ${"the 1250 qualifier for HHMM"}
+    ${"TS"}          | ${"the 1250 qualifier for HHMMSS"}
+    ${"402"}         | ${"the 2379 code for HHMMSS"}
+    ${"hhmmss"}      | ${"lower case"}
+    ${"HHMMSSDDD"}   | ${"thousandths: not a form of the element"}
+    ${""}            | ${"an empty form"}
+    ${"__proto__"}   | ${"an inherited property name"}
+    ${"constructor"} | ${"an inherited property name"}
+  `("returns '' for the form '$form' ($reads)", ({ form }) => {
+    expect(writeX12TimeElement(form, "14:30:45.12")).toBe("");
+  });
+
+  it.each`
+    description               | value
+    ${"null"}                 | ${null}
+    ${"undefined"}            | ${undefined}
+    ${"a number"}             | ${1430}
+    ${"an array of a string"} | ${["14:30"]}
+    ${"an object"}            | ${{}}
+  `("returns '' for a value or a form that is $description", ({ value }) => {
+    expect(writeX12TimeElement("HHMM", value as never)).toBe("");
+    expect(writeX12TimeElement(value as never, "14:30")).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(writeX12TimeElement("HHMMSSDD", "14:30")).toBe("");
   });
 });

@@ -10,7 +10,10 @@ import {
   type EdiPart,
   type EdiStandard,
   type EdiValueKind,
-  X12_TIME_GRAMMAR,
+  MILLISECONDS_PER_DECIMAL_SECOND,
+  X12_TIME_ELEMENT_FORMS,
+  X12_TIME_ELEMENT_GRAMMAR,
+  X12_TIME_ELEMENT_LAYOUT,
   ediCodeOfKind,
 } from "./ediGrammar";
 
@@ -22,6 +25,10 @@ interface EdiFieldBag {
   hour?: number;
   minute?: number;
   second?: number;
+  /** Whole tenths of a second, 0–9: the `D` of X12 data element 337. */
+  tenths?: number;
+  /** Whole hundredths of a second, 0–99: the `DD` of X12 data element 337. */
+  hundredths?: number;
   /** `±HH:MM`, from the `ZHHMM` groups or from the three `ZZZ` characters. */
   offset?: string;
 }
@@ -41,6 +48,8 @@ const NUMBER_FIELD_OF_PART: Readonly<Partial<Record<EdiPart, EdiNumberField>>> =
     HH: "hour",
     MI: "minute",
     SS: "second",
+    SD: "tenths",
+    SDD: "hundredths",
   };
 
 /**
@@ -138,14 +147,13 @@ export function readEdiRange(
   }
 }
 
-/** The digits a decimal-seconds field is padded to before it is read as milliseconds. */
-const MILLISECOND_DIGITS = 3;
-
 /**
  * Read an X12 data element 337 (Time) value as an ISO 8601 time, `HH:MM:SS[.f[f]]`.
  *
- * - The value is tested against `X12_TIME_GRAMMAR` (`HHMM`, `HHMMSS`, `HHMMSSD`, `HHMMSSDD`) and
- *   its fields go through `Temporal.PlainTime.from` with `overflow: "reject"`.
+ * - The value is tested against the grammar of each form in the element's layout table
+ *   (`HHMM`, `HHMMSS`, `HHMMSSD`, `HHMMSSDD`; `ediGrammar.ts`). The four masks have four lengths,
+ *   so at most one matches. Its digits are read by part name, and the fields go through
+ *   `Temporal.PlainTime.from` with `overflow: "reject"`.
  * - Decimal seconds become the fraction of the second exactly: one digit is tenths, two are
  *   hundredths. Temporal writes no trailing zero, so `14304550` is `14:30:45.5`.
  * - `""` for a non-string, a value of any other length or shape, hour 24, and minute or second
@@ -164,21 +172,15 @@ export function readX12Time(value: string): string {
     if (typeof value !== "string") {
       return "";
     }
-    const match = X12_TIME_GRAMMAR.exec(value);
-    if (match === null) {
-      return "";
+    for (const form of X12_TIME_ELEMENT_FORMS) {
+      const match = X12_TIME_ELEMENT_GRAMMAR[form].exec(value);
+      if (match !== null) {
+        return timeOf(
+          readBag(X12_TIME_ELEMENT_LAYOUT[form].start, match.slice(1)),
+        );
+      }
     }
-    const [, hour, minute, second = "0", decimal = ""] = match;
-    return Temporal.PlainTime.from(
-      {
-        hour: Number(hour),
-        minute: Number(minute),
-        second: Number(second),
-        // "1" is one tenth (100 ms); "12" is twelve hundredths (120 ms).
-        millisecond: Number(decimal.padEnd(MILLISECOND_DIGITS, "0")),
-      },
-      { overflow: "reject" },
-    ).toString();
+    return "";
   } catch {
     return "";
   }
@@ -281,6 +283,26 @@ function offsetOf(text: Partial<Record<EdiPart, string>>): string | null {
   return UTC_LITERALS.includes(text.ZZZ) ? "+00:00" : `${text.ZZZ}:00`;
 }
 
+/**
+ * The time of day of a half that has no date, built by Temporal from its fields. The decimal
+ * seconds of X12 data element 337 are counted in milliseconds: "1" is one tenth (100 ms) and
+ * "12" is twelve hundredths (120 ms). A mask without them, which is every 2379 and 1250 mask,
+ * gives 0.
+ */
+function timeOf(bag: EdiFieldBag): string {
+  return Temporal.PlainTime.from(
+    {
+      hour: bag.hour,
+      minute: bag.minute,
+      second: bag.second ?? 0,
+      millisecond:
+        (bag.tenths ?? 0) * MILLISECONDS_PER_DECIMAL_SECOND.SD +
+        (bag.hundredths ?? 0) * MILLISECONDS_PER_DECIMAL_SECOND.SDD,
+    },
+    { overflow: "reject" },
+  ).toString();
+}
+
 /** The wall clock of a half that has a date and a time, built by Temporal from its fields. */
 function localDateTime(bag: EdiFieldBag): string {
   return Temporal.PlainDateTime.from(
@@ -308,11 +330,7 @@ const HALF_READERS: Readonly<
       { year: bag.year, month: bag.month, day: bag.day },
       { overflow: "reject" },
     ).toString(),
-  time: (bag) =>
-    Temporal.PlainTime.from(
-      { hour: bag.hour, minute: bag.minute, second: bag.second ?? 0 },
-      { overflow: "reject" },
-    ).toString(),
+  time: timeOf,
   dateTime: localDateTime,
   // The wall clock and its offset, read by `toOffsetInstant` and written back by
   // `fromOffsetInstant`: the pair's own string, so `-00:00` is `+00:00` and the result reads

@@ -2,7 +2,7 @@
 "@northguild/gmt": minor
 ---
 
-Add 45 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
+Add 46 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
 
 Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, X12 date and time elements, and GS1 EPCIS events. Some of those formats carry a UTC offset and some do not, and the only signal is a format code or a time code. So the functions are split by the kind of value a code states: a date, a time, a local date-time, a date-time with an offset, or a period. Each function takes only the codes of its kind, and each parser returns one value the rest of the library takes. A value with no offset comes back as a local time, never as UTC.
 
@@ -15,6 +15,7 @@ import {
   formatEpcisEvent,
   formatX12Date,
   formatX12Time,
+  formatX12TimeElement,
   parseDateWithPattern,
   parseEdifactDate,
   parseEdifactDatePeriod,
@@ -56,12 +57,19 @@ x12TimeCodeZone("ES"); // { zone: "Eastern", daylight: false }
 x12TimeCodeZone("ET"); // { zone: "Eastern", daylight: null }
 resolveLocal(local, "America/New_York"); // "2024-06-15T18:30:00Z"
 
+// X12 element 337 has four forms and no format qualifier. `parseX12Time` reads all four. `formatX12TimeElement` writes the one the caller names.
+parseX12Time("14300012"); // "14:30:00.12"
+formatX12TimeElement("14:30:00.12", "HHMMSSDD"); // "14300012"
+formatX12TimeElement("14:30:00.12", "HHMMSSD"); // "1430001" (cut, not rounded)
+formatX12TimeElement("14:30:00", "HHMMSSDD"); // "14300000" (the form fixes the width, not the value)
+formatX12TimeElement("14:30", "HHMM"); // "1430"
+
 // X12: a Date Time Period (element 1251) and its format qualifier (1250), as a DTP segment carries them.
 parseX12DateRange("20240615-20240620", "RD8"); // { start: "2024-06-15", end: "2024-06-20" }
-parseX12Time("14300012"); // "14:30:00.12" (element 337, no qualifier)
 parseX12Time("143045", "TS"); // "14:30:45"
 formatX12Date("2024-06-15", "D8"); // "20240615"
 formatX12Time("14:30:45", "TS"); // "143045"
+formatX12Time("14:30:00.12", "TS"); // "143000" (TS is HHMMSS: no 1250 code holds a fraction)
 
 // A code that arrives as data is a plain string. Classify it, and testing `kind` narrows `format` with no cast.
 const code: string = "203";
@@ -100,14 +108,17 @@ X12: an element 1251 value against its 1250 format qualifier, the pair a `DTP` s
 | Kind of value | Parser, formatter, validator | Codes | Value |
 | --- | --- | --- | --- |
 | Date | `parseX12Date`, `formatX12Date`, `isValidX12Date` | `D8` `DB` | `"2024-06-15"` |
-| Time | `parseX12Time`, `formatX12Time`, `isValidX12Time` | `TM` `TS`, or element 337 with no qualifier | `"14:30:00"` |
+| Time | `parseX12Time`, `formatX12Time`, `formatX12TimeElement`, `isValidX12Time` | `TM` `TS`. With no format qualifier, the four forms of element 337: `HHMM` `HHMMSS` `HHMMSSD` `HHMMSSDD` | `"14:30:00"`, `"14:30:00.12"` |
 | Local date-time | `parseX12DateTime`, `formatX12DateTime`, `isValidX12DateTime` | `DT` `RTS` | `"2024-06-15T14:30:00"` |
 | Range of dates | `parseX12DateRange`, `formatX12DateRange`, `isValidX12DateRange` | `RD8` `RD` | `{ start: "2024-06-15", end: "2024-06-20" }` |
 | Range of local date-times | `parseX12DateTimeRange`, `formatX12DateTimeRange`, `isValidX12DateTimeRange` | `RDT` `DTS` | `{ start: "2024-06-15T08:00:00", end: "2024-06-20T17:00:00" }` |
 
+Element 337 is the time of a freight segment, among others, and no format qualifier travels with it. All four of its forms are read and written: `parseX12Time(value)` and `isValidX12Time(value)` read them, and `formatX12TimeElement(value, form)` writes them.
+
 The other functions:
 
 - **`parseX12DateAndTime(date, time)`** reads X12 elements 373 and 337, the date and time that `AT7`, `G62` and `DTM-02`/`03` carry side by side, as one local date-time. Both are required.
+- **`formatX12TimeElement(value, form)`** writes a time as an X12 element 337 value. `form` is one of the element's own four masks: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`, where `D` is tenths of a second and `DD` hundredths. The caller names the form, and the function never reads it off the value. So the width of the field does not depend on the data: `14:30:00` under `HHMMSSDD` is `14300000`. `parseX12Time` reads the result back when it is given no qualifier. A 1250 code is not a form: `TS` returns `""` here. `formatX12Time` writes a time that travels with a 1250 qualifier.
 - **`x12TimeCodeOffset(timeCode)`** reads the 31 element 623 time codes that state an offset: `01` to `29`, `UT` and `GM`. The codes `13` to `24` count down: `13` is `-12:00` and `24` is `-01:00`.
 - **`x12TimeCodeZone(timeCode)`** reads the 25 time codes that name a zone, and returns `{ zone, daylight }`. `daylight` is `true`, `false`, or `null` when the code says neither.
 - **`classifyEdifactDtmFormat`, `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`** take a code as a plain string and return it with its kind, `{ kind, format }` or `{ kind, timeCode }`, or `null` for a code no function reads. `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode` check a code alone.
@@ -125,7 +136,7 @@ What the functions never guess:
 - **An offsetless value never becomes UTC.** UN/EDIFACT `203` and `204`, an X12 date and time, and every X12 1250 code state no offset. The result is a local date-time. Pass it and the place's IANA zone to `resolveLocal`. GMT maps no place to a zone.
 - **A named X12 time code is a zone name, not an offset.** `ES` returns the name `Eastern` and `daylight: false`. X12 states no offset for a named zone, so the caller maps the name to an IANA zone. `x12TimeCodeOffset` returns `""` for such a code, and `x12TimeCodeZone` returns `null` for an offset code.
 - **A UN/EDIFACT zone abbreviation is not an offset.** The three zone characters of `303` and `304` are read when they are a signed hour (`+02`), `UTC` or `GMT`. Letters such as `CET` return `""`: no UN/EDIFACT text defines them. Where a partner sends one, remove the letters, read the rest with `parseEdifactDateTime` under `203` or `204`, and resolve it in the zone you map the letters to.
-- **A formatter cuts a time to the mask and never rounds it.** A fraction of a second is always dropped, and a minute-precision code drops the seconds too. An offset is never cut: `+05:30` under `303` or `304` returns `""`, because the field holds whole hours. Write it under `205` or `208`.
+- **A formatter cuts a time to the mask and never rounds it.** Under a 2379 or 1250 code a fraction of a second is always dropped, and a minute-precision code drops the seconds too. Under an element 337 mask, `D` holds the whole tenths of the second and `DD` its whole hundredths: `14:30:45.999` is `1430459` under `HHMMSSD`. An offset is never cut: `+05:30` under `303` or `304` returns `""`, because the field holds whole hours. Write it under `205` or `208`.
 
 Codes that are not read:
 
@@ -137,10 +148,10 @@ Wire details:
 
 - **A UN/EDIFACT period has no hyphen, and an X12 range has one.** `2024061520240620` is a `718` period and `20240615-20240620` is an `RD8` range. Each parser reads only its own form.
 - **The UN/EDIFACT release character is the caller's.** An interchange transmits `+02` as `?+02`. The parsers take the unescaped value and the formatters return it.
-- **An X12 time with no qualifier may carry tenths or hundredths of a second.** `parseX12Time` and `parseX12DateAndTime` read them. No 1250 code holds them, so `formatX12Time` does not write them.
+- **An X12 time with no format qualifier may carry tenths or hundredths of a second.** `parseX12Time` and `parseX12DateAndTime` read them, and `formatX12TimeElement` writes them under `HHMMSSD` and `HHMMSSDD`. No 1250 code holds them, so `formatX12Time` cuts them.
 - **EPCIS requires both fields, and they are independent.** A missing `eventTimeZoneOffset`, `Z` and `+0200` return `null`. An offset written inside `eventTime` need not match the offset field.
 - X12 is a United States standard. Its code lists were read through an X12-licensed dictionary.
-- Also exported: a type for each kind's codes (`EdifactDateFormat`, `EdifactTimeFormat`, `EdifactDateTimeFormat`, `EdifactOffsetDateTimeFormat`, `EdifactDatePeriodFormat`, `EdifactDateTimePeriodFormat`, `X12DateFormat`, `X12TimeFormat`, `X12DateTimeFormat`, `X12DateRangeFormat`, `X12DateTimeRangeFormat`, `X12OffsetTimeCode`, `X12ZoneTimeCode`), the unions `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`, and the `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass`, `X12TimeCodeClass`, `X12NamedZone`, `EdiDatePeriod`, `EdiDateTimePeriod`, `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions` types.
+- Also exported: a type for each kind's codes (`EdifactDateFormat`, `EdifactTimeFormat`, `EdifactDateTimeFormat`, `EdifactOffsetDateTimeFormat`, `EdifactDatePeriodFormat`, `EdifactDateTimePeriodFormat`, `X12DateFormat`, `X12TimeFormat`, `X12DateTimeFormat`, `X12DateRangeFormat`, `X12DateTimeRangeFormat`, `X12OffsetTimeCode`, `X12ZoneTimeCode`), `X12TimeElementForm` for the four masks of element 337, the unions `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`, and the `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass`, `X12TimeCodeClass`, `X12NamedZone`, `EdiDatePeriod`, `EdiDateTimePeriod`, `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions` types.
 
 Eight validators for interchange formats. A pattern from `regex` proves shape only, so it matches a day that does not exist. Each validator is true exactly when its parser returns a value. The two offset forms have no parser: their validator is true when the library accepts the string.
 

@@ -45,6 +45,7 @@ const FORMAT_NAMES = [
   "formatEdifactDateTimePeriod",
   "formatX12Date",
   "formatX12Time",
+  "formatX12TimeElement",
   "formatX12DateTime",
   "formatX12DateRange",
   "formatX12DateTimeRange",

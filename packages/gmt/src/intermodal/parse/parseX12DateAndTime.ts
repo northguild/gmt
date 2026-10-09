@@ -29,6 +29,9 @@ import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
  * - The time is one of the four element 337 forms, 4, 6, 7 or 8 digits. Seconds are always
  *   written, `00` for `HHMM`. Tenths and hundredths become the fraction of the second exactly:
  *   `14300012` is `14:30:00.12`. A zero fraction is not written.
+ * - **To write the two elements back**, write the date with `formatX12Date(date, "D8")` and the
+ *   time with `formatX12TimeElement`, naming the element 337 form by its mask:
+ *   `formatX12TimeElement("14:30:00.12", "HHMMSSDD")` is `14300012`.
  * - Fields are checked, not clamped: 29 February 2023, 31 June, hour 24, minute or second 60
  *   and a time of 5 or 9 digits return `""`.
  * - The date has a four-digit year. Before release 004010, element 373 was `YYMMDD`: read such

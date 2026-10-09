@@ -335,7 +335,9 @@ converting between time zones, or doing arithmetic that must respect DST.
     `DB`), `X12Time` (`TM`, `TS`), `X12DateTime` (`DT`, `RTS`), `X12DateRange`
     (`RD8`, `RD`), `X12DateTimeRange` (`RDT`, `DTS`). `parseX12Time(value)`
     with no `format` reads element 337, tenths and hundredths included
-    (`"14300012"` is `"14:30:00.12"`). A parser returns one value:
+    (`"14300012"` is `"14:30:00.12"`), and `formatX12TimeElement(value, form)`
+    writes it in the mask named: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`
+    (`"14:30:00"` under `HHMMSSDD` is `"14300000"`). A parser returns one value:
     `"2024-06-15"`, `"14:30:00"`, `"2024-06-15T14:30:00"`,
     `"2024-06-15T14:30:00+02:00"` (the string `toOffsetInstant` reads), or
     `{ start, end }` for a period or range. The sentinel is `""`, or `null`
@@ -371,7 +373,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     hyphen (`2024061520240620` under `718`) and an X12 range has one
     (`20240615-20240620` under `RD8`); a reversed one returns the sentinel.
     Pass a UN/EDIFACT parser the unescaped value (`+02`, not `?+02`). A
-    formatter cuts seconds and fractions to the code's mask and never rounds.
+    formatter cuts seconds and fractions to its mask and never rounds.
     It writes `ZZZ` as `±HH`, and `+05:30` under `303` or `304` returns `""`:
     use `205` or `208`. Each value validator is true exactly when its parser
     returns a value (`isValidX12DateAndTime(date, time)` for the freight
@@ -484,10 +486,10 @@ converting between time zones, or doing arithmetic that must respect DST.
   `classifyX12DateTimePeriodFormat`, `classifyX12TimeCode`,
   `parseEpcisEvent`; a `format…` and an `isValid…` for each `parseEdifact…`
   kind, for `X12Date`, `X12Time`, `X12DateTime`, `X12DateRange` and
-  `X12DateTimeRange`, and for `EpcisEvent`; `isValidX12DateAndTime`,
-  `isValidEpcisEventTime`, `isValidEpcisTimeZoneOffset`,
-  `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat`,
-  `isValidX12TimeCode`
+  `X12DateTimeRange`, and for `EpcisEvent`; `formatX12TimeElement`,
+  `isValidX12DateAndTime`, `isValidEpcisEventTime`,
+  `isValidEpcisTimeZoneOffset`, `isValidEdifactDtmFormat`,
+  `isValidX12DateTimePeriodFormat`, `isValidX12TimeCode`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
   `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
 

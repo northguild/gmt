@@ -3049,6 +3049,55 @@
     ]
   },
   {
+    "url": "/reference/intermodal/format/formatX12TimeElement",
+    "page": "/reference/intermodal/format/formatX12TimeElement",
+    "name": "formatX12TimeElement",
+    "namespace": "intermodal",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatX12TimeElement(value: string, form: X12TimeElementForm): string",
+    "description": "Write an ISO 8601 time as an X12 data element 337 (Time) value, in the form the caller names by the element's own mask. `parseX12Time` reads the result back when it is given no qualifier.",
+    "sourcePath": "packages/gmt/src/intermodal/format/formatX12TimeElement.ts",
+    "examples": [
+      {
+        "call": "formatX12TimeElement(\"14:30:00.12\", \"HHMMSSDD\")",
+        "result": "\"14300012\""
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30:00.12\", \"HHMMSSD\")",
+        "result": "\"1430001\" (cut, not rounded)"
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30:00\", \"HHMMSSDD\")",
+        "result": "\"14300000\""
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30\", \"HHMM\")",
+        "result": "\"1430\""
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30:45.999\", \"HHMMSS\")",
+        "result": "\"143045\""
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30:45.999\", \"HHMMSSD\")",
+        "result": "\"1430459\" (cut, not rounded)"
+      },
+      {
+        "call": "formatX12TimeElement(\"14:30:45\", \"TS\")",
+        "result": "\"\" (a 1250 code is not a mask)"
+      },
+      {
+        "call": "formatX12TimeElement(\"2024-06-15T14:30:00\", \"HHMM\")",
+        "result": "\"\" (a date-time is not a time)"
+      },
+      {
+        "call": "formatX12TimeElement(\"24:00\", \"HHMM\")",
+        "result": "\"\" (not a real time)"
+      }
+    ]
+  },
+  {
     "url": "/reference/intermodal/parse/classifyEdifactDtmFormat",
     "page": "/reference/intermodal/parse/classifyEdifactDtmFormat",
     "name": "classifyEdifactDtmFormat",
@@ -15974,6 +16023,19 @@
     "description": "The X12 data element 1250 values that state a time of day. Release 005010, read from [Stedi's X12-licensed dictionary](https://www.stedi.com/edi/x12-005010/element/1250); the X12 text itself was not reached.",
     "sourcePath": "packages/gmt/src/types/edi.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/intermodal/format/formatX12TimeElement#x12timeelementform",
+    "page": "/reference/intermodal/format/formatX12TimeElement",
+    "name": "X12TimeElementForm",
+    "namespace": "types",
+    "module": "edi",
+    "kind": "type",
+    "signature": "",
+    "description": "The four forms of X12 data element 337 (Time), each named by the element's own mask. Release 005010, read from [Stedi's X12-licensed dictionary](https://www.stedi.com/edi/x12-005010/element/337); the X12 text itself was not reached. The dictionary's definition: \"Time expressed in 24-hour clock time as follows: HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD, where H = hours (00-23), M = minutes (00-59), S = integer seconds (00-59) and DD = decimal seconds; decimal seconds are expressed as follows: D = tenths (0-9) and DD = hundredths (00-99)\".",
+    "sourcePath": "packages/gmt/src/types/edi.ts",
+    "examples": [],
+    "inlineOn": "formatX12TimeElement"
   },
   {
     "url": "/reference/types/X12DateTimeFormat",

@@ -12,6 +12,8 @@ import {
   readX12DateAndTime,
   readX12Time,
 } from "./ediDateTimeFields";
+import { writeX12TimeElement } from "./ediDateTimeWriter";
+import { X12_TIME_ELEMENT_FORMS, X12_TIME_ELEMENT_GRAMMAR } from "./ediGrammar";
 
 /**
  * Every expected value is read off the standard's mask by hand: the fixture is 15 June 2024 at
@@ -312,16 +314,34 @@ describe("readX12Time", () => {
   });
 
   it.each`
-    value          | reads
-    ${"2400"}      | ${"hour 24"}
-    ${"1460"}      | ${"minute 60"}
-    ${"143060"}    | ${"second 60: GMT rejects a leap second"}
-    ${"14304"}     | ${"five digits"}
-    ${"143045123"} | ${"nine digits: thousandths are not an element 337 form"}
-    ${"14:30"}     | ${"a colon"}
-    ${"930"}       | ${"an unpadded hour"}
-    ${" 1430"}     | ${"a leading space"}
-    ${""}          | ${"an empty value"}
+    value             | reads
+    ${"2400"}         | ${"hour 24"}
+    ${"1460"}         | ${"minute 60"}
+    ${"143060"}       | ${"second 60: GMT rejects a leap second"}
+    ${"1"}            | ${"one digit"}
+    ${"14"}           | ${"two digits: an hour alone"}
+    ${"14304"}        | ${"five digits"}
+    ${"143045123"}    | ${"nine digits: thousandths are not an element 337 form"}
+    ${"1430451234"}   | ${"ten digits"}
+    ${"2430451"}      | ${"hour 24 with tenths"}
+    ${"14604512"}     | ${"minute 60 with hundredths"}
+    ${"14:30"}        | ${"a colon"}
+    ${"930"}          | ${"an unpadded hour"}
+    ${" 1430"}        | ${"a leading space"}
+    ${"1430 "}        | ${"a trailing space"}
+    ${"1430\n"}       | ${"a trailing line feed: the value ends where the string ends, not where a line does"}
+    ${"\n1430"}       | ${"a leading line feed"}
+    ${"1430\r\n"}     | ${"a trailing carriage return and line feed"}
+    ${"1430\n143045"} | ${"two values on two lines"}
+    ${"+1430"}        | ${"a plus sign"}
+    ${"-1430"}        | ${"a minus sign"}
+    ${"-143045"}      | ${"a sign and six digits: seven characters, not HHMMSSD"}
+    ${"1430.5"}       | ${"a decimal point: six characters, not HHMMSS"}
+    ${"1e30"}         | ${"an exponent: four characters a number is read from, not four digits"}
+    ${"0x10"}         | ${"hexadecimal: four characters a number is read from, not four digits"}
+    ${"14A0"}         | ${"a letter"}
+    ${"１４３０"}     | ${"full-width digits: a digit is 0–9"}
+    ${""}             | ${"an empty value"}
   `("returns '' for $value ($reads)", ({ value }) => {
     expect(readX12Time(value)).toBe("");
   });
@@ -330,6 +350,172 @@ describe("readX12Time", () => {
     expect(readX12Time(1430 as never)).toBe("");
     expect(readX12Time(null as never)).toBe("");
   });
+
+  // The reader has no grammar of its own: it reads a value exactly when one form of the layout
+  // table matches it. Each mask allows only real hours, minutes and seconds, so every match is a
+  // time. `form` is the mask with as many characters as the value has digits.
+  it.each`
+    value         | form          | expected
+    ${"2359"}     | ${"HHMM"}     | ${"23:59:00"}
+    ${"000000"}   | ${"HHMMSS"}   | ${"00:00:00"}
+    ${"235959"}   | ${"HHMMSS"}   | ${"23:59:59"}
+    ${"0000000"}  | ${"HHMMSSD"}  | ${"00:00:00"}
+    ${"0905039"}  | ${"HHMMSSD"}  | ${"09:05:03.9"}
+    ${"2359599"}  | ${"HHMMSSD"}  | ${"23:59:59.9"}
+    ${"00000000"} | ${"HHMMSSDD"} | ${"00:00:00"}
+    ${"09050307"} | ${"HHMMSSDD"} | ${"09:05:03.07"}
+    ${"09050370"} | ${"HHMMSSDD"} | ${"09:05:03.7"}
+    ${"246000"}   | ${null}       | ${""}
+    ${"1430601"}  | ${null}       | ${""}
+    ${"14306012"} | ${null}       | ${""}
+    ${"143045.1"} | ${null}       | ${""}
+  `(
+    "reads $value as '$expected': the form of the table that matches it is $form",
+    ({ value, form, expected }) => {
+      expect(
+        X12_TIME_ELEMENT_FORMS.filter((candidate) =>
+          X12_TIME_ELEMENT_GRAMMAR[candidate].test(value),
+        ),
+      ).toEqual(form === null ? [] : [form]);
+      expect(readX12Time(value)).toBe(expected);
+    },
+  );
+
+  // "H = hours (00-23), M = minutes (00-59), S = integer seconds (00-59)": `HHMM` names each of
+  // the 24 × 60 minutes of a day and `HHMMSS` each of its 86,400 seconds. Plain Temporal counts
+  // them from midnight and writes each one; the reader takes every one of them, and of all the
+  // strings of that many digits it takes exactly that many, so it takes no other.
+  it.each`
+    form        | digits | unit        | count
+    ${"HHMM"}   | ${4}   | ${"minute"} | ${1440}
+    ${"HHMMSS"} | ${6}   | ${"second"} | ${86400}
+  `(
+    "reads each of the $count $unit values of a day from the $digits digits of $form, and no other string of $digits digits",
+    ({
+      digits,
+      unit,
+      count,
+    }: {
+      digits: number;
+      unit: "minute" | "second";
+      count: number;
+    }) => {
+      const midnight = new Temporal.PlainTime();
+      const misread: string[] = [];
+      for (let elapsed = 0; elapsed < count; elapsed++) {
+        const time = midnight.add({ [`${unit}s`]: elapsed });
+        const wire = time.toString({ smallestUnit: unit }).replaceAll(":", "");
+        if (readX12Time(wire) !== time.toString()) {
+          misread.push(wire);
+        }
+      }
+      expect(misread).toEqual([]);
+
+      let read = 0;
+      for (let number = 0; number < 10 ** digits; number++) {
+        if (readX12Time(String(number).padStart(digits, "0")) !== "") {
+          read++;
+        }
+      }
+      expect(read).toBe(count);
+    },
+  );
+
+  // The element has no form of 1, 2, 3 or 5 digits: all 101,110 such strings are refused.
+  it("reads no string of 1, 2, 3 or 5 digits", () => {
+    const read: string[] = [];
+    for (const digits of [1, 2, 3, 5]) {
+      for (let number = 0; number < 10 ** digits; number++) {
+        const value = String(number).padStart(digits, "0");
+        if (readX12Time(value) !== "") {
+          read.push(value);
+        }
+      }
+    }
+    expect(read).toEqual([]);
+  });
+
+  // "D = tenths (0-9) and DD = hundredths (00-99)": every decimal value is read after a real
+  // second, as that many times 100 ms or 10 ms, and none after hour 24, minute 60 or second 60.
+  // Each field is tried at its first value, its last, and the first one past it.
+  it.each`
+    form          | values | milliseconds
+    ${"HHMMSSD"}  | ${10}  | ${100}
+    ${"HHMMSSDD"} | ${100} | ${10}
+  `(
+    "$form reads each of its $values decimal values after a real second, and none after hour 24, minute 60 or second 60",
+    ({
+      form,
+      values,
+      milliseconds,
+    }: {
+      form: string;
+      values: number;
+      milliseconds: number;
+    }) => {
+      const two = (field: number): string => String(field).padStart(2, "0");
+      const misread: string[] = [];
+      let read = 0;
+      for (const hour of [0, 23, 24]) {
+        for (const minute of [0, 59, 60]) {
+          for (const second of [0, 59, 60]) {
+            for (let decimal = 0; decimal < values; decimal++) {
+              const wire = `${two(hour)}${two(minute)}${two(second)}${String(
+                decimal,
+              ).padStart(form.length - 6, "0")}`;
+              const real = hour <= 23 && minute <= 59 && second <= 59;
+              const expected = real
+                ? new Temporal.PlainTime(
+                    hour,
+                    minute,
+                    second,
+                    decimal * milliseconds,
+                  ).toString()
+                : "";
+              if (readX12Time(wire) !== expected) {
+                misread.push(wire);
+              }
+              read += readX12Time(wire) === "" ? 0 : 1;
+            }
+          }
+        }
+      }
+      expect(misread).toEqual([]);
+      // 2 real hours × 2 real minutes × 2 real seconds, each with every decimal value.
+      expect(read).toBe(8 * values);
+    },
+  );
+
+  // The reader and the writer share the layout table, so what one writes the other reads back:
+  // the time, cut to the form by plain Temporal. A tenth of a second is 100 ms and a hundredth
+  // is 10.
+  it.each`
+    form          | smallestUnit     | roundingIncrement
+    ${"HHMM"}     | ${"minute"}      | ${1}
+    ${"HHMMSS"}   | ${"second"}      | ${1}
+    ${"HHMMSSD"}  | ${"millisecond"} | ${100}
+    ${"HHMMSSDD"} | ${"millisecond"} | ${10}
+  `(
+    "every time written under $form reads back cut to the $roundingIncrement $smallestUnit",
+    ({ form, smallestUnit, roundingIncrement }) => {
+      for (const time of [
+        "00:00",
+        "09:05:03.07",
+        "14:30",
+        "14:30:45",
+        "14:30:45.1",
+        "14:30:45.12",
+        "14:30:45.129",
+        "14:30:45.999",
+        "23:59:59.999999999",
+      ]) {
+        const cut = Temporal.PlainTime.from(time)
+          .round({ smallestUnit, roundingIncrement, roundingMode: "trunc" })
+          .toString();
+        expect(readX12Time(writeX12TimeElement(form, time)), time).toBe(cut);
+      }
+    },
+  );
 
   it("returns '' when Temporal.PlainTime.from throws", () => {
     mockTemporalPlainTimeFromThrow();
