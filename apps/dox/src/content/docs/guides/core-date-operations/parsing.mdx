@@ -89,17 +89,17 @@ These four return `""` on invalid input (they produce a whole datetime string, n
 a number), matching the sentinel convention of their `format*` counterparts:
 
 ```typescript
-import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@northguild/gmt";
+import { parseRfc2822, parseHttpDate, parseSqlDateTime, parseRfc3339 } from "@northguild/gmt";
 
 parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
 // "2024-03-15T14:30:00-04:00[-04:00]"
 
-parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT");
 // "2024-03-15T14:30:00Z"
 
-parseSql("2024-03-15 14:30:00");
+parseSqlDateTime("2024-03-15 14:30:00");
 // "2024-03-15T14:30:00"
-parseSql("2024-03-15 14:30");
+parseSqlDateTime("2024-03-15 14:30");
 // "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
 parseRfc3339("2024-03-15T14:30:00-04:00");
@@ -108,6 +108,20 @@ parseRfc3339("2024-03-15T14:30:00-04:00");
 
 Each has a `format*` counterpart in the [Formatting](../formatting/) guide.
 
+Each also has a validator that is `true` exactly when the parser returns a value:
+`isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime` and `isValidRfc3339DateTime`.
+Use it to check a string, not the `regex` pattern for the format. A pattern proves the shape
+alone, so it matches a day that does not exist:
+
+```typescript
+import { isValidRfc3339DateTime, isValidSqlDateTime, rfc3339DateTime } from "@northguild/gmt";
+
+rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false — 2023 has no 29 February
+isValidSqlDateTime("2024-02-30 14:30:00"); // false — February has no 30th
+isValidSqlDateTime("2024-03-15 14:30:00"); // true
+```
+
 ## See also
 
 - [Formatting](../formatting/) — the inverse: producing strings for display and interchange
@@ -115,3 +129,4 @@ Each has a `format*` counterpart in the [Formatting](../formatting/) guide.
 - [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
 - [`parseDateWithPattern` reference](/reference/plain/parse/parseDateWithPattern)
 - [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)
+- [`isValidRfc3339DateTime` reference](/reference/zoned/validate/isValidRfc3339DateTime)

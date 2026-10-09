@@ -68,7 +68,7 @@ describe("searchChunks — DOX-C1 DoD question spread", () => {
 
   it("a genuinely out-of-domain question returns few or no chunks — the honest-refusal path DOX-C2 depends on", () => {
     // Not "parse a cron expression" — verified 2026-09-09 that one actually
-    // surfaces real, keyword-relevant parseHttp/parseRfc3339/parseSql
+    // surfaces real, keyword-relevant parseHttpDate/parseRfc3339/parseSqlDateTime
     // chunks (the corpus genuinely has a family of parse* functions), which
     // is honest retrieval, not padding; DOX-C2's own DoD uses that example
     // for the end-to-end *LLM* refusal test, where recognizing "none of

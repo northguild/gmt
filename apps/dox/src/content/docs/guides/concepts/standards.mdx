@@ -49,7 +49,8 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   standard for writing dates and times, e.g. `2024-03-15T14:30:00`. **GMT** takes and returns ISO
   8601 strings everywhere.
 - [**RFC 3339**](https://www.rfc-editor.org/rfc/rfc3339) is the IETF's internet profile of ISO
-  8601: a stricter subset for timestamps with a UTC offset. **GMT** emits it with `formatRfc3339`.
+  8601: a stricter subset for timestamps with a UTC offset. **GMT** emits it with `formatRfc3339`
+  and checks it with `isValidRfc3339DateTime`.
 - [**RFC 9557**](https://www.rfc-editor.org/rfc/rfc9557) extends RFC 3339 with bracketed
   annotations, such as a time zone (`[Europe/Paris]`) and the calendar key `u-ca`. **GMT**'s zoned
   values carry their time zone this way.
@@ -69,10 +70,10 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
 
 - [**RFC 5322**](https://www.rfc-editor.org/rfc/rfc5322) is the Internet Message Format. It
   defines the email `Date:` header and replaced RFC 2822. **GMT** formats and parses it with
-  `formatRfc2822` and `parseRfc2822`.
+  `formatRfc2822` and `parseRfc2822`, and checks it with `isValidRfc2822DateTime`.
 - [**RFC 9110**](https://www.rfc-editor.org/rfc/rfc9110) is HTTP Semantics. Its HTTP-date format
   is used by headers like `Last-Modified`, and it replaced RFC 7231. **GMT** formats and parses it
-  with `formatHttp` and `parseHttp`.
+  with `formatHttpDate` and `parseHttpDate`, and checks it with `isValidHttpDate`.
 
 ## EDI and supply-chain events
 
@@ -103,14 +104,16 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   with `parseX12DateAndTime`, reads a 1250 value with the parser of its kind (`parseX12Date`,
   `parseX12DateRange` and the others), writes with the matching formatter, reads a time code with
   `x12TimeCodeOffset` or `x12TimeCodeZone`, sorts a code that arrives as data with
-  `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`, and checks codes with
-  `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode`.
+  `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`, checks the date and the time
+  together with `isValidX12DateAndTime`, and checks codes with `isValidX12DateTimePeriodFormat`
+  and `isValidX12TimeCode`.
 - [**GS1 EPCIS 2.0**](https://www.gs1.org/standards/epcis) ([**ISO/IEC 19987**](https://www.iso.org/standard/85557.html)) is GS1's event
   standard for supply-chain visibility. Its
   [JSON schema](https://ref.gs1.org/standards/epcis/epcis-json-schema.json) and
   [XSD](https://ref.gs1.org/standards/epcis/epcglobal-epcis-2_0.xsd) are its normative artefacts,
   and they give the grammar of `eventTime` and `eventTimeZoneOffset`. **GMT** reads and writes
-  them with `parseEpcisEvent` and `formatEpcisEvent`, and checks them with `isValidEpcisEvent`.
+  them with `parseEpcisEvent` and `formatEpcisEvent`, and checks them with `isValidEpcisEvent`. It
+  checks one field with `isValidEpcisEventTime` or `isValidEpcisTimeZoneOffset`.
 
 [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/) shows each of these
 with real values.
@@ -118,7 +121,8 @@ with real values.
 ## Databases and other systems' clocks
 
 - **SQL-92** defines the `<timestamp string>` literal, in section 5.3. The ODBC `ts` escape is
-  a related form. **GMT** parses and formats both with `parseSql` and `formatSql`.
+  a related form. **GMT** parses and formats both with `parseSqlDateTime` and `formatSqlDateTime`,
+  and checks one with `isValidSqlDateTime`.
 - **NTP timestamps** are defined by [RFC 5905](https://www.rfc-editor.org/rfc/rfc5905). **GMT**
   converts them with `toNtpTimestamp` and `fromNtpTimestamp`.
 - **.NET `DateTime.Ticks`**, **Windows `FILETIME`** and **PostgreSQL's `timestamptz`

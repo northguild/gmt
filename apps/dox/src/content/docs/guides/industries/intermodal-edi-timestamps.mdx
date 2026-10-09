@@ -304,14 +304,22 @@ parseDateTimeWithPattern("2406151430", "yyMMddHHmm", undefined, { yearWindow: 20
 ## Check before reading: the validators
 
 Each function has an `isValid` twin that takes the same arguments and returns `true` exactly when
-the parser returns a value. The three code guards, `isValidEdifactDtmFormat`,
+the parser returns a value. `isValidX12DateAndTime(date, time)` is the twin of
+`parseX12DateAndTime`. The three code guards, `isValidEdifactDtmFormat`,
 `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode`, are true exactly when the classifier
 returns a result.
 
 ```typescript
-import { isValidEdifactDtmFormat, isValidEdifactOffsetDateTime } from "@northguild/gmt/intermodal/validate";
+import {
+  isValidEdifactDtmFormat,
+  isValidEdifactOffsetDateTime,
+  isValidX12DateAndTime,
+} from "@northguild/gmt/intermodal/validate";
 
 isValidEdifactOffsetDateTime("202406151430+0200", "205"); // true
+isValidX12DateAndTime("20240615", "1430"); // true
+isValidX12DateAndTime("20230229", "1430"); // false — 2023 has no 29 February
+isValidX12DateAndTime("20240615", ""); // false — both elements are required
 isValidEdifactDtmFormat("203"); // true
 isValidEdifactDtmFormat("101"); // false
 ```
@@ -373,6 +381,26 @@ formatEpcisEvent({ local: "2024-06-15T23:30:00", offset: "+02:00", instant: "202
 // { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
 
 formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "Z" }); // null — a designator, not an offset
+```
+
+`isValidEpcisEvent` checks the pair. It is two field validators together:
+`isValidEpcisEventTime` checks `eventTime` and `isValidEpcisTimeZoneOffset` checks
+`eventTimeZoneOffset`. Use one of them to say which field is wrong. The `epcisEventTime` pattern
+proves the shape alone, so it matches a day that does not exist:
+
+```typescript
+import {
+  isValidEpcisEvent,
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+} from "@northguild/gmt/intermodal/validate";
+import { epcisEventTime } from "@northguild/gmt/regex";
+
+epcisEventTime.test("2024-02-30T14:30:00Z"); // true
+isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false — February has no 30th
+isValidEpcisTimeZoneOffset("+02:00"); // true
+isValidEpcisTimeZoneOffset("+0200"); // false — GS1 writes the colon
+isValidEpcisEvent({ eventTime: "2024-02-30T14:30:00Z", eventTimeZoneOffset: "+02:00" }); // false
 ```
 
 ## From a local time to an instant

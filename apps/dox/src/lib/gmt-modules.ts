@@ -36,6 +36,7 @@ export const GMT_MODULES: Record<
 
   // --- instant ---
   "instant/convert": () => import("@northguild/gmt/instant/convert"),
+  "instant/validate": () => import("@northguild/gmt/instant/validate"),
 
   // --- calendar ---
   "calendar/business": () => import("@northguild/gmt/calendar/business"),
