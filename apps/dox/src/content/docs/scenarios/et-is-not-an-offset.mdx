@@ -13,12 +13,18 @@ import Scenario from "~/components/Scenario.astro";
 const OFFSETS = { ET: "-05:00", CT: "-06:00", MT: "-07:00", PT: "-08:00" };
 new Date("2024-06-15T14:30:00" + OFFSETS.ET).toISOString();
 // "2024-06-15T19:30:00.000Z" — an hour late: in June the Eastern zone is on daylight time`}
-  explanation={`ET names a zone and says neither standard nor daylight. X12 states no offset for it. The offset depends on the date and on which IANA zone "Eastern" means for this sender. parseX12DateTime reads the date, the time and the time code together and returns the zone name and the daylight flag, with no offset and no instant. resolveLocal then reads the local time in the zone you pick. The same wall time in January lands an hour later in UTC, because the offset changed.`}
-  gmtCode={`import { parseX12DateTime } from "@northguild/gmt/intermodal";
-import { resolveLocal } from "@northguild/gmt/instant";
+  explanation={`ET names a zone and says neither standard nor daylight. X12 states no offset for it. The offset depends on the date and on which IANA zone "Eastern" means for this sender. parseX12DateAndTime reads the date and the time as a local date-time, and x12TimeCodeZone returns the zone name and the daylight flag for the code, with no offset and no instant. resolveLocal then reads the local time in the zone you pick. The same wall time in January lands an hour later in UTC, because the offset changed.`}
+  gmtCode={`import { parseX12DateAndTime, x12TimeCodeOffset, x12TimeCodeZone } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
 
-parseX12DateTime("20240615", "1430", "ET");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: null }
+parseX12DateAndTime("20240615", "1430");
+// "2024-06-15T14:30:00"
+
+// The code names a zone and states no offset.
+x12TimeCodeZone("ET");
+// { zone: "Eastern", daylight: null }
+x12TimeCodeOffset("ET");
+// ""
 
 // You pick the zone. In June it is on daylight time, so the offset is -04:00.
 resolveLocal("2024-06-15T14:30:00", "America/New_York");
@@ -29,21 +35,23 @@ resolveLocal("2024-01-15T14:30:00", "America/New_York");
 // "2024-01-15T19:30:00Z"
 
 // Codes that say standard or daylight name the zone and the flag.
-parseX12DateTime("20240615", "1430", "ES");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: false }
-parseX12DateTime("20240615", "1430", "ED");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: true }
+x12TimeCodeZone("ES");
+// { zone: "Eastern", daylight: false }
+x12TimeCodeZone("ED");
+// { zone: "Eastern", daylight: true }
 
-// A numbered code does state its offset, so it returns the instant.
-parseX12DateTime("20240615", "1430", "13");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", offset: "-12:00", instant: "2024-06-16T02:30:00Z" }`}
-  fixedSpecId="parseX12DateTime"
+// A numbered code does state its offset, so resolveLocal takes it in place of a zone.
+x12TimeCodeOffset("13");
+// "-12:00"
+resolveLocal("2024-06-15T14:30:00", "-12:00");
+// "2024-06-16T02:30:00Z"`}
+  fixedSpecId="x12TimeCodeZone"
 />
 
-Type `ET` in the time code field of the widget above. The result holds a zone name and no
-offset. Type `13` and it holds an offset and an instant, because X12 states that offset. Clear
-the field and it holds a local time and nothing else: with no time code the time is local to the
-event.
+Choose `ET` in the widget above. The result holds a zone name and no offset, and `ED` and `ES`
+add a daylight flag. A numbered code such as `13` is not a zone: it states an offset, and
+[`x12TimeCodeOffset`](/reference/intermodal/parse/x12TimeCodeOffset/) returns it. With no time
+code at all the time is local to the event.
 
 In the X12 Time Reader, [ET read in New York and Atikokan](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%22ET%22%2C%22zone%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22America%2FAtikokan%22%7D)
 shows one wall clock as two instants an hour apart, so the name alone does not fix the offset.

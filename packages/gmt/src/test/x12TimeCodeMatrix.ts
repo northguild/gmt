@@ -15,7 +15,7 @@ export type X12TimeCodeExpectation =
 /**
  * The 56 codes of X12 data element 623, release 008010 (`25`–`29` were added in release 006010),
  * keyed by the code union so that a code with no row fails typecheck. Shared by the tests of
- * `x12TimeCode` and of `parseX12DateTime`, which resolves a segment's time code through it.
+ * `x12TimeCodeOffset` and `x12TimeCodeZone`, which read the list between them.
  *
  * `GM` ("Greenwich Mean Time") and `UT` ("Universal Time Coordinate") are zero minutes: UN/ECE
  * Recommendation 7 ¶12 names one scale by both names, "Co-ordinated Universal Time (formerly

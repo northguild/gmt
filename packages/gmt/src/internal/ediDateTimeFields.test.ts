@@ -2,459 +2,384 @@ import { Temporal } from "@js-temporal/polyfill";
 import { vi } from "vitest";
 import {
   mockTemporalInstantFromThrow,
-  mockTemporalNowInstantThrow,
   mockTemporalPlainDateFromThrow,
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../test/mocks";
-import { readEdiDateTime } from "./ediDateTimeFields";
 import {
-  EDIFACT_TWO_DIGIT_YEAR_FORMATS,
-  X12_TWO_DIGIT_YEAR_FORMATS,
-} from "./ediGrammar";
+  readEdiRange,
+  readEdiValue,
+  readX12DateAndTime,
+  readX12Time,
+} from "./ediDateTimeFields";
 
-/** The instant a wall clock names at an offset, from plain Temporal: the cross-check for every instant below. */
-function instantAt(local: string, offset: string): string {
-  return Temporal.Instant.from(`${local}${offset}`).toString();
-}
-
-const WINDOW_2000 = { yearWindow: 2000 };
-
-describe("readEdiDateTime: UNTDID 2379 happy paths", () => {
-  // Each expected value is read off the mask by hand (2024-06-15 14:30 is the fixture throughout)
-  // and the instants are cross-checked against Temporal.Instant.from in `instantAt`.
-  it.each`
-    code     | value                         | expected
-    ${"101"} | ${"240615"}                   | ${{ date: "2024-06-15" }}
-    ${"102"} | ${"20240615"}                 | ${{ date: "2024-06-15" }}
-    ${"201"} | ${"2406151430"}               | ${{ local: "2024-06-15T14:30:00" }}
-    ${"202"} | ${"240615143045"}             | ${{ local: "2024-06-15T14:30:45" }}
-    ${"203"} | ${"202406151430"}             | ${{ local: "2024-06-15T14:30:00" }}
-    ${"204"} | ${"20240615143045"}           | ${{ local: "2024-06-15T14:30:45" }}
-    ${"205"} | ${"202406151430+0200"}        | ${{ local: "2024-06-15T14:30:00", offset: "+02:00", instant: instantAt("2024-06-15T14:30:00", "+02:00") }}
-    ${"205"} | ${"202406151430+0530"}        | ${{ local: "2024-06-15T14:30:00", offset: "+05:30", instant: instantAt("2024-06-15T14:30:00", "+05:30") }}
-    ${"205"} | ${"202406151430-0000"}        | ${{ local: "2024-06-15T14:30:00", offset: "+00:00", instant: instantAt("2024-06-15T14:30:00", "+00:00") }}
-    ${"206"} | ${"2406151430+0200"}          | ${{ local: "2024-06-15T14:30:00", offset: "+02:00", instant: instantAt("2024-06-15T14:30:00", "+02:00") }}
-    ${"207"} | ${"240615143045-0530"}        | ${{ local: "2024-06-15T14:30:45", offset: "-05:30", instant: instantAt("2024-06-15T14:30:45", "-05:30") }}
-    ${"208"} | ${"20240615143045+0200"}      | ${{ local: "2024-06-15T14:30:45", offset: "+02:00", instant: instantAt("2024-06-15T14:30:45", "+02:00") }}
-    ${"209"} | ${"143045+0200"}              | ${{ time: "14:30:45", offset: "+02:00" }}
-    ${"209"} | ${"143045-0000"}              | ${{ time: "14:30:45", offset: "+00:00" }}
-    ${"301"} | ${"2406151430+02"}            | ${{ local: "2024-06-15T14:30:00", offset: "+02:00", instant: instantAt("2024-06-15T14:30:00", "+02:00") }}
-    ${"302"} | ${"240615143045UTC"}          | ${{ local: "2024-06-15T14:30:45", offset: "+00:00", instant: instantAt("2024-06-15T14:30:45", "+00:00") }}
-    ${"303"} | ${"202406151430+02"}          | ${{ local: "2024-06-15T14:30:00", offset: "+02:00", instant: instantAt("2024-06-15T14:30:00", "+02:00") }}
-    ${"303"} | ${"202406151430-05"}          | ${{ local: "2024-06-15T14:30:00", offset: "-05:00", instant: instantAt("2024-06-15T14:30:00", "-05:00") }}
-    ${"303"} | ${"202406151430+00"}          | ${{ local: "2024-06-15T14:30:00", offset: "+00:00", instant: instantAt("2024-06-15T14:30:00", "+00:00") }}
-    ${"303"} | ${"202406151430UTC"}          | ${{ local: "2024-06-15T14:30:00", offset: "+00:00", instant: instantAt("2024-06-15T14:30:00", "+00:00") }}
-    ${"303"} | ${"202406151430PDT"}          | ${{ local: "2024-06-15T14:30:00", zone: "PDT" }}
-    ${"303"} | ${"202406151430CET"}          | ${{ local: "2024-06-15T14:30:00", zone: "CET" }}
-    ${"303"} | ${"202406151430GMT"}          | ${{ local: "2024-06-15T14:30:00", offset: "+00:00", instant: "2024-06-15T14:30:00Z" }}
-    ${"404"} | ${"143045GMT"}                | ${{ time: "14:30:45", offset: "+00:00" }}
-    ${"304"} | ${"20240615143045+02"}        | ${{ local: "2024-06-15T14:30:45", offset: "+02:00", instant: instantAt("2024-06-15T14:30:45", "+02:00") }}
-    ${"401"} | ${"1430"}                     | ${{ time: "14:30:00" }}
-    ${"402"} | ${"143045"}                   | ${{ time: "14:30:45" }}
-    ${"404"} | ${"143045+02"}                | ${{ time: "14:30:45", offset: "+02:00" }}
-    ${"404"} | ${"143045UTC"}                | ${{ time: "14:30:45", offset: "+00:00" }}
-    ${"404"} | ${"143045PDT"}                | ${{ time: "14:30:45", zone: "PDT" }}
-    ${"406"} | ${"+0200"}                    | ${{ offset: "+02:00" }}
-    ${"406"} | ${"-0530"}                    | ${{ offset: "-05:30" }}
-    ${"406"} | ${"-0000"}                    | ${{ offset: "+00:00" }}
-    ${"713"} | ${"24061514302406201600"}     | ${{ local: "2024-06-15T14:30:00", periodEnd: { local: "2024-06-20T16:00:00" } }}
-    ${"717"} | ${"240615240620"}             | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-20" } }}
-    ${"718"} | ${"2024061520240620"}         | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-20" } }}
-    ${"718"} | ${"2024061520240615"}         | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-15" } }}
-    ${"719"} | ${"202406151430202406201600"} | ${{ local: "2024-06-15T14:30:00", periodEnd: { local: "2024-06-20T16:00:00" } }}
-  `(
-    "reads $value under code $code as $expected",
-    ({ code, value, expected }) => {
-      expect(readEdiDateTime("edifact", code, value, WINDOW_2000)).toEqual(
-        expected,
-      );
-    },
-  );
-});
-
-describe("readEdiDateTime: X12 1250 happy paths", () => {
-  it.each`
-    code     | value                              | expected
-    ${"D6"}  | ${"240615"}                        | ${{ date: "2024-06-15" }}
-    ${"D8"}  | ${"20240615"}                      | ${{ date: "2024-06-15" }}
-    ${"DB"}  | ${"06152024"}                      | ${{ date: "2024-06-15" }}
-    ${"TT"}  | ${"061524"}                        | ${{ date: "2024-06-15" }}
-    ${"DT"}  | ${"202406151430"}                  | ${{ local: "2024-06-15T14:30:00" }}
-    ${"TR"}  | ${"1506241430"}                    | ${{ local: "2024-06-15T14:30:00" }}
-    ${"RTS"} | ${"20240615143045"}                | ${{ local: "2024-06-15T14:30:45" }}
-    ${"TM"}  | ${"1430"}                          | ${{ time: "14:30:00" }}
-    ${"TS"}  | ${"143045"}                        | ${{ time: "14:30:45" }}
-    ${"RD6"} | ${"240615-240620"}                 | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-20" } }}
-    ${"RD8"} | ${"20240615-20240620"}             | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-20" } }}
-    ${"RD"}  | ${"06152024-06202024"}             | ${{ date: "2024-06-15", periodEnd: { date: "2024-06-20" } }}
-    ${"RDT"} | ${"202406151430-202406201600"}     | ${{ local: "2024-06-15T14:30:00", periodEnd: { local: "2024-06-20T16:00:00" } }}
-    ${"DTS"} | ${"20240615143045-20240620160000"} | ${{ local: "2024-06-15T14:30:45", periodEnd: { local: "2024-06-20T16:00:00" } }}
-    ${"DDT"} | ${"20240615-202406201600"}         | ${{ date: "2024-06-15", periodEnd: { local: "2024-06-20T16:00:00" } }}
-    ${"DDT"} | ${"20240615-202406150000"}         | ${{ date: "2024-06-15", periodEnd: { local: "2024-06-15T00:00:00" } }}
-    ${"DTD"} | ${"202406151430-20240620"}         | ${{ local: "2024-06-15T14:30:00", periodEnd: { date: "2024-06-20" } }}
-    ${"DTD"} | ${"202406151430-20240615"}         | ${{ local: "2024-06-15T14:30:00", periodEnd: { date: "2024-06-15" } }}
-    ${"RTM"} | ${"0900-1700"}                     | ${{ time: "09:00:00", periodEnd: { time: "17:00:00" } }}
-    ${"TC"}  | ${"166"}                           | ${{ dayOfYear: 166 }}
-    ${"TC"}  | ${"001"}                           | ${{ dayOfYear: 1 }}
-    ${"TC"}  | ${"366"}                           | ${{ dayOfYear: 366 }}
-    ${"TU"}  | ${"24166"}                         | ${{ date: "2024-06-14", dayOfYear: 166 }}
-    ${"TU"}  | ${"24366"}                         | ${{ date: "2024-12-31", dayOfYear: 366 }}
-    ${"TU"}  | ${"23365"}                         | ${{ date: "2023-12-31", dayOfYear: 365 }}
-    ${"EH"}  | ${"4166"}                          | ${{ yearDigit: 4, dayOfYear: 166 }}
-    ${"EH"}  | ${"3366"}                          | ${{ yearDigit: 3, dayOfYear: 366 }}
-  `(
-    "reads $value under code $code as $expected",
-    ({ code, value, expected }) => {
-      expect(readEdiDateTime("x12", code, value, WINDOW_2000)).toEqual(
-        expected,
-      );
-    },
-  );
-});
-
-describe("readEdiDateTime: two-digit years resolve in the caller's yearWindow", () => {
+/**
+ * Every expected value is read off the standard's mask by hand: the fixture is 15 June 2024 at
+ * 14:30 (and 45 seconds where the mask has `SS`). The digit-level grammar of each mask is
+ * asserted in `ediGrammar.test.ts`; this file holds what the reader adds: one ISO 8601 value per
+ * kind, the calendar check, the offset forms and the order of a period's ends.
+ */
+describe("readEdiValue", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
+  // The house value of each kind: a date `YYYY-MM-DD`, a time `HH:MM:SS`, a local date-time
+  // `YYYY-MM-DDTHH:MM:SS`, and a date-time with its offset `YYYY-MM-DDTHH:MM:SS±HH:MM`. Seconds
+  // are always written, `00` for a mask without them.
   it.each`
-    standard     | code     | value             | yearWindow | expected
-    ${"edifact"} | ${"101"} | ${"690101"}       | ${1969}    | ${{ date: "1969-01-01" }}
-    ${"edifact"} | ${"101"} | ${"680101"}       | ${1969}    | ${{ date: "2068-01-01" }}
-    ${"edifact"} | ${"101"} | ${"990101"}       | ${1950}    | ${{ date: "1999-01-01" }}
-    ${"edifact"} | ${"101"} | ${"490101"}       | ${1950}    | ${{ date: "2049-01-01" }}
-    ${"edifact"} | ${"101"} | ${"000101"}       | ${2000}    | ${{ date: "2000-01-01" }}
-    ${"edifact"} | ${"717"} | ${"991231000101"} | ${1950}    | ${{ date: "1999-12-31", periodEnd: { date: "2000-01-01" } }}
-    ${"x12"}     | ${"TT"}  | ${"010169"}       | ${1969}    | ${{ date: "1969-01-01" }}
-    ${"x12"}     | ${"TR"}  | ${"0101690000"}   | ${1969}    | ${{ local: "1969-01-01T00:00:00" }}
-    ${"x12"}     | ${"TU"}  | ${"96366"}        | ${1950}    | ${{ date: "1996-12-31", dayOfYear: 366 }}
+    standard     | kind                | code     | value                    | expected
+    ${"edifact"} | ${"date"}           | ${"102"} | ${"20240615"}            | ${"2024-06-15"}
+    ${"edifact"} | ${"time"}           | ${"401"} | ${"1430"}                | ${"14:30:00"}
+    ${"edifact"} | ${"time"}           | ${"402"} | ${"143045"}              | ${"14:30:45"}
+    ${"edifact"} | ${"dateTime"}       | ${"203"} | ${"202406151430"}        | ${"2024-06-15T14:30:00"}
+    ${"edifact"} | ${"dateTime"}       | ${"204"} | ${"20240615143045"}      | ${"2024-06-15T14:30:45"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"205"} | ${"202406151430+0200"}   | ${"2024-06-15T14:30:00+02:00"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"208"} | ${"20240615143045+0530"} | ${"2024-06-15T14:30:45+05:30"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"303"} | ${"202406151430+02"}     | ${"2024-06-15T14:30:00+02:00"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"304"} | ${"20240615143045-05"}   | ${"2024-06-15T14:30:45-05:00"}
+    ${"x12"}     | ${"date"}           | ${"D8"}  | ${"20240615"}            | ${"2024-06-15"}
+    ${"x12"}     | ${"date"}           | ${"DB"}  | ${"06152024"}            | ${"2024-06-15"}
+    ${"x12"}     | ${"dateTime"}       | ${"DT"}  | ${"202406151430"}        | ${"2024-06-15T14:30:00"}
+    ${"x12"}     | ${"dateTime"}       | ${"RTS"} | ${"20240615143045"}      | ${"2024-06-15T14:30:45"}
+    ${"x12"}     | ${"time"}           | ${"TM"}  | ${"1430"}                | ${"14:30:00"}
+    ${"x12"}     | ${"time"}           | ${"TS"}  | ${"143045"}              | ${"14:30:45"}
   `(
-    "$standard $code $value with yearWindow $yearWindow reads as $expected",
-    ({ standard, code, value, yearWindow, expected }) => {
-      expect(readEdiDateTime(standard, code, value, { yearWindow })).toEqual(
-        expected,
-      );
+    "reads $standard $code $value as the $kind $expected",
+    ({ standard, kind, code, value, expected }) => {
+      expect(readEdiValue(standard, kind, code, value)).toBe(expected);
     },
   );
 
-  // GMT rule: rolling is 50 years before the current UTC calendar year to 49 after it.
+  // A function reads one kind. A code of another kind is refused whatever the value, and so is a
+  // period or range code: `readEdiRange` reads those.
   it.each`
-    now                       | expected
-    ${"2026-10-07T12:00:00Z"} | ${{ date: "1999-06-15" }}
-    ${"2049-12-31T23:59:59Z"} | ${{ date: "1999-06-15" }}
-    ${"2050-01-01T00:00:00Z"} | ${{ date: "2099-06-15" }}
+    standard     | kind                | code     | value                  | reads
+    ${"edifact"} | ${"date"}           | ${"203"} | ${"202406151430"}      | ${"a date-time code under a date reader"}
+    ${"edifact"} | ${"dateTime"}       | ${"102"} | ${"20240615"}          | ${"a date code under a date-time reader"}
+    ${"edifact"} | ${"dateTime"}       | ${"205"} | ${"202406151430+0200"} | ${"an offset code under a local date-time reader"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"203"} | ${"202406151430"}      | ${"a local code under an offset reader"}
+    ${"edifact"} | ${"time"}           | ${"203"} | ${"202406151430"}      | ${"a date-time code under a time reader"}
+    ${"edifact"} | ${"date"}           | ${"718"} | ${"2024061520240620"}  | ${"a period code under a date reader"}
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${"2024061520240620"}  | ${"a period code read as a single value"}
+    ${"x12"}     | ${"date"}           | ${"DT"}  | ${"202406151430"}      | ${"a date-time code under a date reader"}
+    ${"x12"}     | ${"dateRange"}      | ${"RD8"} | ${"20240615-20240620"} | ${"a range code read as a single value"}
+    ${"x12"}     | ${"date"}           | ${"102"} | ${"20240615"}          | ${"a UN/EDIFACT code under X12"}
+    ${"edifact"} | ${"date"}           | ${"D8"}  | ${"20240615"}          | ${"an X12 code under UN/EDIFACT"}
+    ${"edifact"} | ${"date"}           | ${"101"} | ${"240615"}            | ${"a two-digit-year code: not read"}
+    ${"x12"}     | ${"date"}           | ${"D6"}  | ${"240615"}            | ${"a two-digit-year code: not read"}
+    ${"x12"}     | ${"date"}           | ${"UN"}  | ${"20240615"}          | ${"Unstructured: not read"}
   `(
-    '101 "990615" with yearWindow "rolling" at $now reads as $expected',
-    ({ now, expected }) => {
-      vi.spyOn(Temporal.Now, "instant").mockReturnValue(
-        Temporal.Instant.from(now),
-      );
-      expect(
-        readEdiDateTime("edifact", "101", "990615", { yearWindow: "rolling" }),
-      ).toEqual(expected);
-      expect(
-        readEdiDateTime("edifact", "101", "990615", { yearWindow: 1950 }),
-      ).toEqual({ date: "1999-06-15" });
+    "returns '' for $standard $code under $kind ($reads)",
+    ({ standard, kind, code, value }) => {
+      expect(readEdiValue(standard, kind, code, value)).toBe("");
     },
   );
 
-  it("returns null for a rolling window when the clock cannot be read", () => {
-    mockTemporalNowInstantThrow();
-    expect(
-      readEdiDateTime("edifact", "101", "240615", { yearWindow: "rolling" }),
-    ).toBeNull();
+  // The grammar proves the shape; Temporal, with overflow "reject", proves the date is real.
+  it.each`
+    standard     | kind                | code     | value                | reads
+    ${"edifact"} | ${"date"}           | ${"102"} | ${"20230229"}        | ${"29 February 2023, not a leap year"}
+    ${"edifact"} | ${"date"}           | ${"102"} | ${"20240631"}        | ${"31 June"}
+    ${"edifact"} | ${"dateTime"}       | ${"203"} | ${"202302291430"}    | ${"29 February 2023 with a time"}
+    ${"edifact"} | ${"dateTime"}       | ${"203"} | ${"202406152430"}    | ${"hour 24"}
+    ${"edifact"} | ${"dateTime"}       | ${"204"} | ${"20240615143060"}  | ${"second 60: GMT rejects a leap second"}
+    ${"edifact"} | ${"offsetDateTime"} | ${"303"} | ${"202302291430+02"} | ${"29 February 2023 with an offset"}
+    ${"edifact"} | ${"time"}           | ${"401"} | ${"2400"}            | ${"hour 24"}
+    ${"x12"}     | ${"date"}           | ${"DB"}  | ${"02292023"}        | ${"29 February 2023, month first"}
+    ${"x12"}     | ${"dateTime"}       | ${"RTS"} | ${"20240631143045"}  | ${"31 June"}
+    ${"x12"}     | ${"date"}           | ${"D8"}  | ${"2024-06-15"}      | ${"an ISO 8601 date is not the mask"}
+    ${"x12"}     | ${"date"}           | ${"D8"}  | ${""}                | ${"an empty value"}
+  `(
+    "returns '' for $standard $code $value ($reads)",
+    ({ standard, kind, code, value }) => {
+      expect(readEdiValue(standard, kind, code, value)).toBe("");
+    },
+  );
+
+  // 29 February exists in 2024 and in year 0000 (divisible by 400), and the four digits of
+  // `CCYY` run from 0000 to 9999.
+  it.each`
+    code     | value         | expected
+    ${"102"} | ${"20240229"} | ${"2024-02-29"}
+    ${"102"} | ${"00000101"} | ${"0000-01-01"}
+    ${"102"} | ${"00000229"} | ${"0000-02-29"}
+    ${"102"} | ${"99991231"} | ${"9999-12-31"}
+  `("reads $code $value as $expected", ({ code, value, expected }) => {
+    expect(Temporal.PlainDate.from(expected).toString()).toBe(expected);
+    expect(readEdiValue("edifact", "date", code, value)).toBe(expected);
   });
 
-  const TWO_DIGIT_VALUES: Record<string, string> = {
-    "101": "240615",
-    "201": "2406151430",
-    "202": "240615143000",
-    "206": "2406151430+0200",
-    "207": "240615143000+0200",
-    "301": "2406151430+02",
-    "302": "240615143000+02",
-    "713": "24061514302406201600",
-    "717": "240615240620",
-    D6: "240615",
-    TT: "061524",
-    TR: "1506241430",
-    RD6: "240615-240620",
-    TU: "24166",
-  };
-
-  const BAD_WINDOWS: [string, unknown][] = [
-    ["omitted", undefined],
-    ["an empty bag", {}],
-    ["null", { yearWindow: null }],
-    ["a non-integer", { yearWindow: 1.5 }],
-    ["negative", { yearWindow: -1 }],
-    ["9901", { yearWindow: 9901 }],
-    ["NaN", { yearWindow: Number.NaN }],
-    ["Infinity", { yearWindow: Number.POSITIVE_INFINITY }],
-    ["a numeric string", { yearWindow: "2000" }],
-    ["Rolling", { yearWindow: "Rolling" }],
-  ];
-
-  it.each(
-    EDIFACT_TWO_DIGIT_YEAR_FORMATS.map((code) => ({
-      standard: "edifact" as const,
-      code,
-    })),
-  )(
-    "$standard $code returns null for every missing or invalid window, and a value with 2000",
-    ({ standard, code }) => {
-      const value = TWO_DIGIT_VALUES[code];
-      expect(
-        readEdiDateTime(standard, code, value, WINDOW_2000),
-      ).not.toBeNull();
-      for (const [, options] of BAD_WINDOWS) {
-        expect(readEdiDateTime(standard, code, value, options)).toBeNull();
-      }
-    },
-  );
-
-  it.each(
-    X12_TWO_DIGIT_YEAR_FORMATS.map((code) => ({
-      standard: "x12" as const,
-      code,
-    })),
-  )(
-    "$standard $code returns null for every missing or invalid window, and a value with 2000",
-    ({ standard, code }) => {
-      const value = TWO_DIGIT_VALUES[code];
-      expect(
-        readEdiDateTime(standard, code, value, WINDOW_2000),
-      ).not.toBeNull();
-      for (const [, options] of BAD_WINDOWS) {
-        expect(readEdiDateTime(standard, code, value, options)).toBeNull();
-      }
-    },
-  );
-
-  it.each`
-    standard     | code     | value
-    ${"edifact"} | ${"102"} | ${"20240615"}
-    ${"edifact"} | ${"203"} | ${"202406151430"}
-    ${"edifact"} | ${"205"} | ${"202406151430+0200"}
-    ${"edifact"} | ${"401"} | ${"1430"}
-    ${"edifact"} | ${"406"} | ${"+0200"}
-    ${"edifact"} | ${"718"} | ${"2024061520240620"}
-    ${"x12"}     | ${"D8"}  | ${"20240615"}
-    ${"x12"}     | ${"DB"}  | ${"06152024"}
-    ${"x12"}     | ${"RD8"} | ${"20240615-20240620"}
-    ${"x12"}     | ${"TC"}  | ${"166"}
-    ${"x12"}     | ${"EH"}  | ${"4166"}
-  `(
-    "$standard $code ignores the window: the same result with none, 2000, 1950 and an invalid one",
-    ({ standard, code, value }) => {
-      const reference = readEdiDateTime(standard, code, value, WINDOW_2000);
-      expect(reference).not.toBeNull();
-      for (const options of [
-        undefined,
-        {},
-        { yearWindow: 1950 },
-        { yearWindow: 9901 },
-      ]) {
-        expect(readEdiDateTime(standard, code, value, options)).toEqual(
-          reference,
+  describe("a date-time with an offset", () => {
+    // The value is the wall clock as written with its offset: the string `fromOffsetInstant`
+    // writes. `instant` is that wall clock less the offset, worked out by hand and checked
+    // against plain `Temporal.Instant.from`: the value names that instant.
+    it.each`
+      code     | value                    | expected                       | instant                      | reads
+      ${"205"} | ${"202406151430-0500"}   | ${"2024-06-15T14:30:00-05:00"} | ${"2024-06-15T19:30:00Z"}    | ${"a whole hour west"}
+      ${"205"} | ${"202406151430+0000"}   | ${"2024-06-15T14:30:00+00:00"} | ${"2024-06-15T14:30:00Z"}    | ${"UTC"}
+      ${"205"} | ${"202406151430-0000"}   | ${"2024-06-15T14:30:00+00:00"} | ${"2024-06-15T14:30:00Z"}    | ${"-0000 is the offset +00:00"}
+      ${"205"} | ${"202406151430+0545"}   | ${"2024-06-15T14:30:00+05:45"} | ${"2024-06-15T08:45:00Z"}    | ${"a 45-minute offset"}
+      ${"205"} | ${"202406151430+2359"}   | ${"2024-06-15T14:30:00+23:59"} | ${"2024-06-14T14:31:00Z"}    | ${"the largest offset the mask holds"}
+      ${"205"} | ${"202406150030+0200"}   | ${"2024-06-15T00:30:00+02:00"} | ${"2024-06-14T22:30:00Z"}    | ${"the wall clock stays on its own day: the instant is the day before"}
+      ${"205"} | ${"000001010030+0200"}   | ${"0000-01-01T00:30:00+02:00"} | ${"-000001-12-31T22:30:00Z"} | ${"the first four-digit year: the instant is before it"}
+      ${"205"} | ${"999912312330-0200"}   | ${"9999-12-31T23:30:00-02:00"} | ${"+010000-01-01T01:30:00Z"} | ${"the last four-digit year: the instant is after it"}
+      ${"208"} | ${"20240615143045+0200"} | ${"2024-06-15T14:30:45+02:00"} | ${"2024-06-15T12:30:45Z"}    | ${"seconds"}
+      ${"303"} | ${"202406151430-05"}     | ${"2024-06-15T14:30:00-05:00"} | ${"2024-06-15T19:30:00Z"}    | ${"-05, the Recommendation 7 example"}
+      ${"303"} | ${"202406151430-00"}     | ${"2024-06-15T14:30:00+00:00"} | ${"2024-06-15T14:30:00Z"}    | ${"-00 is the offset +00:00"}
+      ${"303"} | ${"202406151430UTC"}     | ${"2024-06-15T14:30:00+00:00"} | ${"2024-06-15T14:30:00Z"}    | ${"the literal UTC"}
+      ${"303"} | ${"202406151430GMT"}     | ${"2024-06-15T14:30:00+00:00"} | ${"2024-06-15T14:30:00Z"}    | ${"the literal GMT: UTC's former name (Rec 7 ¶12)"}
+      ${"303"} | ${"202406151430+23"}     | ${"2024-06-15T14:30:00+23:00"} | ${"2024-06-14T15:30:00Z"}    | ${"+23, the largest hour"}
+      ${"304"} | ${"20241231233045-12"}   | ${"2024-12-31T23:30:45-12:00"} | ${"2025-01-01T11:30:45Z"}    | ${"seconds: the instant is in the year after"}
+    `(
+      "reads $code $value as $expected, the instant $instant ($reads)",
+      ({ code, value, expected, instant }) => {
+        expect(Temporal.Instant.from(expected).toString()).toBe(instant);
+        expect(readEdiValue("edifact", "offsetDateTime", code, value)).toBe(
+          expected,
         );
-      }
-    },
-  );
-});
+      },
+    );
 
-describe("readEdiDateTime: calendar validity is Temporal's", () => {
-  // 2023 and 2100 have no 29 February and 365 days; 2024 and 2000 have both (plain Temporal).
+    // The three zone characters are read as an offset only. No UN/EDIFACT text defines an
+    // abbreviation, so letters other than `UTC` and `GMT` are not read.
+    it.each`
+      text     | reads
+      ${"CET"} | ${"an abbreviation"}
+      ${"PDT"} | ${"an abbreviation"}
+      ${"UTZ"} | ${"one letter off UTC"}
+      ${"ZZZ"} | ${"Z is not read as a UTC designator"}
+      ${"+24"} | ${"a signed 24: one past the last hour"}
+      ${"000"} | ${"digits alone, no sign"}
+      ${"utc"} | ${"lower case"}
+      ${"Z"}   | ${"a lone Z: the mask has three zone characters"}
+      ${" 02"} | ${"a space for the sign"}
+    `(
+      "returns '' for the zone characters '$text' under 303 ($reads)",
+      ({ text }) => {
+        expect(
+          readEdiValue(
+            "edifact",
+            "offsetDateTime",
+            "303",
+            `202406151430${text}`,
+          ),
+        ).toBe("");
+      },
+    );
+  });
+
   it.each`
-    standard     | code     | value                  | yearWindow | reason
-    ${"edifact"} | ${"102"} | ${"20230229"}          | ${2000}    | ${"29 February 2023"}
-    ${"edifact"} | ${"102"} | ${"20240230"}          | ${2000}    | ${"30 February"}
-    ${"edifact"} | ${"102"} | ${"20240631"}          | ${2000}    | ${"31 June"}
-    ${"edifact"} | ${"101"} | ${"230229"}            | ${2000}    | ${"29 February 2023 through the window"}
-    ${"edifact"} | ${"101"} | ${"000229"}            | ${2001}    | ${"00 is 2100 in a 2001–2100 window: no 29 February"}
-    ${"edifact"} | ${"203"} | ${"202302291430"}      | ${2000}    | ${"29 February 2023 with a time"}
-    ${"edifact"} | ${"303"} | ${"202302291430+02"}   | ${2000}    | ${"29 February 2023 with an offset"}
-    ${"edifact"} | ${"718"} | ${"2024061520240631"}  | ${2000}    | ${"31 June in the end"}
-    ${"edifact"} | ${"718"} | ${"2023022920240620"}  | ${2000}    | ${"29 February 2023 in the start"}
-    ${"x12"}     | ${"D8"}  | ${"20240431"}          | ${2000}    | ${"31 April"}
-    ${"x12"}     | ${"DB"}  | ${"02292023"}          | ${2000}    | ${"29 February 2023 in MMDDCCYY"}
-    ${"x12"}     | ${"RD8"} | ${"20230229-20240620"} | ${2000}    | ${"29 February 2023 in the start of a range"}
-    ${"x12"}     | ${"TU"}  | ${"23366"}             | ${2000}    | ${"day 366 of 2023, which has 365 days"}
-    ${"x12"}     | ${"TU"}  | ${"00366"}             | ${2001}    | ${"00 is 2100 in a 2001–2100 window, which has 365 days"}
-  `(
-    "$standard $code $value with yearWindow $yearWindow is null ($reason)",
-    ({ standard, code, value, yearWindow }) => {
-      expect(Temporal.PlainDate.from("2023-12-31").dayOfYear).toBe(365);
-      expect(Temporal.PlainDate.from("2100-12-31").dayOfYear).toBe(365);
-      expect(readEdiDateTime(standard, code, value, { yearWindow })).toBeNull();
-    },
-  );
+    description               | value
+    ${"null"}                 | ${null}
+    ${"undefined"}            | ${undefined}
+    ${"a number"}             | ${20240615}
+    ${"an array of a string"} | ${["20240615"]}
+    ${"an object"}            | ${{}}
+  `("returns '' for a value that is $description", ({ value }) => {
+    expect(readEdiValue("edifact", "date", "102", value as never)).toBe("");
+    expect(readEdiValue("edifact", "date", value as never, "20240615")).toBe(
+      "",
+    );
+  });
 
-  it("TU 00366 in a window where 00 is 2000 is day 366 of a leap year", () => {
-    expect(Temporal.PlainDate.from("2000-12-31").dayOfYear).toBe(366);
-    expect(readEdiDateTime("x12", "TU", "00366", WINDOW_2000)).toEqual({
-      date: "2000-12-31",
-      dayOfYear: 366,
+  describe("the catch path", () => {
+    it("returns '' when Temporal.PlainDate.from throws", () => {
+      mockTemporalPlainDateFromThrow();
+      expect(readEdiValue("edifact", "date", "102", "20240615")).toBe("");
     });
-  });
-});
 
-describe("readEdiDateTime: a period whose end precedes its start is null (GMT rule)", () => {
-  it.each`
-    standard     | code     | value                              | reason
-    ${"edifact"} | ${"718"} | ${"2024062020240615"}              | ${"end date before start date"}
-    ${"edifact"} | ${"717"} | ${"240620240615"}                  | ${"two-digit years"}
-    ${"edifact"} | ${"719"} | ${"202406151431202406151430"}      | ${"end one minute before start"}
-    ${"edifact"} | ${"713"} | ${"24061514312406151430"}          | ${"two-digit years, one minute"}
-    ${"x12"}     | ${"RD8"} | ${"20240620-20240615"}             | ${"end date before start date"}
-    ${"x12"}     | ${"RD"}  | ${"06202024-06152024"}             | ${"MMDDCCYY order"}
-    ${"x12"}     | ${"RDT"} | ${"202406151431-202406151430"}     | ${"one minute"}
-    ${"x12"}     | ${"DTS"} | ${"20240615143001-20240615143000"} | ${"one second"}
-    ${"x12"}     | ${"DDT"} | ${"20240616-202406152359"}         | ${"end date-time on the day before the start date"}
-    ${"x12"}     | ${"DTD"} | ${"202406160000-20240615"}         | ${"end date before the start date-time's date"}
-  `("$standard $code $value is null ($reason)", ({ standard, code, value }) => {
-    expect(readEdiDateTime(standard, code, value, WINDOW_2000)).toBeNull();
-  });
-
-  it("an equal start and end is a zero-length period, not a reversed one", () => {
-    expect(readEdiDateTime("x12", "RD8", "20240615-20240615")).toEqual({
-      date: "2024-06-15",
-      periodEnd: { date: "2024-06-15" },
+    it("returns '' when Temporal.PlainDateTime.from throws", () => {
+      mockTemporalPlainDateTimeFromThrow();
+      expect(readEdiValue("edifact", "dateTime", "203", "202406151430")).toBe(
+        "",
+      );
     });
-  });
-});
 
-describe("readEdiDateTime: a time-only range is returned as written (GMT rule)", () => {
-  // RTM (`HHMM-HHMM`) carries no date, so an end before its start is a window that crosses
-  // midnight, not a reversed range: the reader has no date to compare and returns both times.
-  // Each expected time is the value's own digits with `:00` seconds.
-  it.each`
-    value          | expected                                                 | reads
-    ${"2200-0600"} | ${{ time: "22:00:00", periodEnd: { time: "06:00:00" } }} | ${"an overnight window"}
-    ${"1700-0900"} | ${{ time: "17:00:00", periodEnd: { time: "09:00:00" } }} | ${"an end eight hours before its start"}
-    ${"2359-0000"} | ${{ time: "23:59:00", periodEnd: { time: "00:00:00" } }} | ${"one minute across midnight"}
-    ${"0001-0000"} | ${{ time: "00:01:00", periodEnd: { time: "00:00:00" } }} | ${"an end one minute before its start"}
-    ${"0600-0600"} | ${{ time: "06:00:00", periodEnd: { time: "06:00:00" } }} | ${"equal times"}
-    ${"0900-1700"} | ${{ time: "09:00:00", periodEnd: { time: "17:00:00" } }} | ${"a window inside one day"}
-  `("x12 RTM $value reads as $expected ($reads)", ({ value, expected }) => {
-    expect(readEdiDateTime("x12", "RTM", value)).toEqual(expected);
-  });
-});
+    it("returns '' when Temporal.PlainTime.from throws", () => {
+      mockTemporalPlainTimeFromThrow();
+      expect(readEdiValue("edifact", "time", "401", "1430")).toBe("");
+    });
 
-describe("readEdiDateTime: shape mismatches and unsupported codes", () => {
-  it.each`
-    standard     | code     | value                    | reason
-    ${"edifact"} | ${"303"} | ${"202406151430?+02"}    | ${"release character: the element value is taken unescaped"}
-    ${"edifact"} | ${"303"} | ${"202406151430+0200"}   | ${"205's ZHHMM under a ZZZ code"}
-    ${"edifact"} | ${"303"} | ${"202406151430+24"}     | ${"ZZZ +24: a broken offset, not a zone name"}
-    ${"edifact"} | ${"404"} | ${"143045000"}           | ${"ZZZ of digits alone"}
-    ${"edifact"} | ${"304"} | ${"20240615143000+0200"} | ${"the spec's own corrected 304 example"}
-    ${"edifact"} | ${"203"} | ${"20240615143000"}      | ${"204's value under 203"}
-    ${"edifact"} | ${"204"} | ${"202406151430"}        | ${"203's value under 204"}
-    ${"edifact"} | ${"203"} | ${" 202406151430"}       | ${"leading whitespace"}
-    ${"edifact"} | ${"203"} | ${""}                    | ${"empty value"}
-    ${"edifact"} | ${"718"} | ${"20240615-20240620"}   | ${"a hyphen: never transmitted in a 2379 period"}
-    ${"x12"}     | ${"RD8"} | ${"2024061520240620"}    | ${"no hyphen: X12 transmits it"}
-    ${"x12"}     | ${"TC"}  | ${"000"}                 | ${"day 000"}
-    ${"x12"}     | ${"TC"}  | ${"367"}                 | ${"day 367"}
-    ${"x12"}     | ${"UN"}  | ${"x"}                   | ${"unstructured: never guessed"}
-    ${"x12"}     | ${"UN"}  | ${"20240615"}            | ${"unstructured, even when it looks like D8"}
-  `("$standard $code $value is null ($reason)", ({ standard, code, value }) => {
-    expect(readEdiDateTime(standard, code, value, WINDOW_2000)).toBeNull();
-  });
-
-  it.each`
-    standard     | code
-    ${"edifact"} | ${"2"}
-    ${"edifact"} | ${"3"}
-    ${"edifact"} | ${"602"}
-    ${"edifact"} | ${"609"}
-    ${"edifact"} | ${"610"}
-    ${"edifact"} | ${"616"}
-    ${"edifact"} | ${"720"}
-    ${"edifact"} | ${"801"}
-    ${"edifact"} | ${"804"}
-    ${"edifact"} | ${"D8"}
-    ${"edifact"} | ${""}
-    ${"x12"}     | ${"CC"}
-    ${"x12"}     | ${"CY"}
-    ${"x12"}     | ${"CM"}
-    ${"x12"}     | ${"YM"}
-    ${"x12"}     | ${"MD"}
-    ${"x12"}     | ${"DD"}
-    ${"x12"}     | ${"MM"}
-    ${"x12"}     | ${"TQ"}
-    ${"x12"}     | ${"YY"}
-    ${"x12"}     | ${"CD"}
-    ${"x12"}     | ${"KA"}
-    ${"x12"}     | ${"YMM"}
-    ${"x12"}     | ${"RMY"}
-    ${"x12"}     | ${"203"}
-    ${"x12"}     | ${"d8"}
-    ${"x12"}     | ${""}
-  `(
-    "$standard code $code is unsupported: null for a value that fits some other code",
-    ({ standard, code }) => {
+    it("returns '' when Temporal.Instant.from throws under an offset code", () => {
+      mockTemporalInstantFromThrow();
       expect(
-        readEdiDateTime(standard, code, "20240615", WINDOW_2000),
-      ).toBeNull();
-    },
-  );
-
-  it.each`
-    input        | description
-    ${null}      | ${"null"}
-    ${undefined} | ${"undefined"}
-    ${20240615}  | ${"number"}
-    ${true}      | ${"boolean"}
-    ${[]}        | ${"array"}
-    ${{}}        | ${"object"}
-  `("returns null when the value is $description", ({ input }) => {
-    expect(
-      readEdiDateTime("edifact", "102", input as never, WINDOW_2000),
-    ).toBeNull();
-    expect(
-      readEdiDateTime("x12", "D8", input as never, WINDOW_2000),
-    ).toBeNull();
-    expect(
-      readEdiDateTime("edifact", input as never, "20240615", WINDOW_2000),
-    ).toBeNull();
-    expect(
-      readEdiDateTime(input as never, "102", "20240615", WINDOW_2000),
-    ).toBeNull();
+        readEdiValue("edifact", "offsetDateTime", "205", "202406151430+0200"),
+      ).toBe("");
+    });
   });
 });
 
-describe("readEdiDateTime: the catch path", () => {
+describe("readEdiRange", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // A UN/EDIFACT period is run together; an X12 range has its one hyphen.
+  it.each`
+    standard     | kind                | code     | value                              | expected
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${"2024061520240620"}              | ${{ start: "2024-06-15", end: "2024-06-20" }}
+    ${"edifact"} | ${"dateTimePeriod"} | ${"719"} | ${"202406151430202406201600"}      | ${{ start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }}
+    ${"x12"}     | ${"dateRange"}      | ${"RD8"} | ${"20240615-20240620"}             | ${{ start: "2024-06-15", end: "2024-06-20" }}
+    ${"x12"}     | ${"dateRange"}      | ${"RD"}  | ${"06152024-06202024"}             | ${{ start: "2024-06-15", end: "2024-06-20" }}
+    ${"x12"}     | ${"dateTimeRange"}  | ${"RDT"} | ${"202406151430-202406201600"}     | ${{ start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }}
+    ${"x12"}     | ${"dateTimeRange"}  | ${"DTS"} | ${"20240615143045-20240620160030"} | ${{ start: "2024-06-15T14:30:45", end: "2024-06-20T16:00:30" }}
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${"2024061520240615"}              | ${{ start: "2024-06-15", end: "2024-06-15" }}
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${"0000010199991231"}              | ${{ start: "0000-01-01", end: "9999-12-31" }}
+    ${"x12"}     | ${"dateTimeRange"}  | ${"RDT"} | ${"202406151430-202406151430"}     | ${{ start: "2024-06-15T14:30:00", end: "2024-06-15T14:30:00" }}
+  `(
+    "reads $standard $code $value as $expected",
+    ({ standard, kind, code, value, expected }) => {
+      expect(readEdiRange(standard, kind, code, value)).toEqual(expected);
+    },
+  );
+
+  // GMT rule: a period whose end precedes its start names no span of time.
+  it.each`
+    standard     | kind                | code     | value                              | reads
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${"2024062020240615"}              | ${"the end date is five days before the start"}
+    ${"edifact"} | ${"dateTimePeriod"} | ${"719"} | ${"202406151431202406151430"}      | ${"the end is one minute before the start"}
+    ${"x12"}     | ${"dateRange"}      | ${"RD8"} | ${"20240620-20240615"}             | ${"the end date is five days before the start"}
+    ${"x12"}     | ${"dateRange"}      | ${"RD"}  | ${"01012025-12312024"}             | ${"month first: the end is a day before the start, although its digits sort after"}
+    ${"x12"}     | ${"dateTimeRange"}  | ${"DTS"} | ${"20240615143001-20240615143000"} | ${"the end is one second before the start"}
+  `(
+    "returns null for the reversed $standard $code $value ($reads)",
+    ({ standard, kind, code, value }) => {
+      expect(readEdiRange(standard, kind, code, value)).toBeNull();
+    },
+  );
+
+  it.each`
+    standard     | kind               | code     | value                          | reads
+    ${"edifact"} | ${"datePeriod"}    | ${"718"} | ${"20240615-20240620"}         | ${"a hyphen: X12's wire form, never a 2379 one"}
+    ${"edifact"} | ${"datePeriod"}    | ${"718"} | ${"2023022920240620"}          | ${"29 February 2023 in the start"}
+    ${"edifact"} | ${"datePeriod"}    | ${"718"} | ${"2024061520230229"}          | ${"29 February 2023 in the end"}
+    ${"edifact"} | ${"datePeriod"}    | ${"719"} | ${"202406151430202406201600"}  | ${"a date-time period code under a date period reader"}
+    ${"edifact"} | ${"datePeriod"}    | ${"102"} | ${"20240615"}                  | ${"a single date code"}
+    ${"edifact"} | ${"date"}          | ${"102"} | ${"20240615"}                  | ${"a single date read as a period"}
+    ${"x12"}     | ${"dateRange"}     | ${"RD8"} | ${"2024061520240620"}          | ${"no hyphen: UN/EDIFACT's wire form, never an X12 one"}
+    ${"x12"}     | ${"dateRange"}     | ${"RD8"} | ${"20240615--20240620"}        | ${"two hyphens"}
+    ${"x12"}     | ${"dateRange"}     | ${"RDT"} | ${"202406151430-202406201600"} | ${"a date-time range code under a date range reader"}
+    ${"x12"}     | ${"dateRange"}     | ${"RD6"} | ${"240615-240620"}             | ${"a two-digit-year code: not read"}
+    ${"x12"}     | ${"dateTimeRange"} | ${"DDT"} | ${"20240615-202406201600"}     | ${"a date and a date-time: not read"}
+  `(
+    "returns null for $standard $code $value under $kind ($reads)",
+    ({ standard, kind, code, value }) => {
+      expect(readEdiRange(standard, kind, code, value)).toBeNull();
+    },
+  );
+
+  it("returns null for a value that is not a string", () => {
+    expect(
+      readEdiRange("edifact", "datePeriod", "718", null as never),
+    ).toBeNull();
+    expect(
+      readEdiRange("edifact", "datePeriod", "718", 20240615 as never),
+    ).toBeNull();
   });
 
   it("returns null when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(
-      readEdiDateTime("edifact", "102", "20240615", WINDOW_2000),
+      readEdiRange("edifact", "datePeriod", "718", "2024061520240620"),
     ).toBeNull();
   });
+});
 
-  it("returns null when Temporal.PlainDateTime.from throws", () => {
-    mockTemporalPlainDateTimeFromThrow();
-    expect(
-      readEdiDateTime("edifact", "203", "202406151430", WINDOW_2000),
-    ).toBeNull();
+describe("readX12Time", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("returns null when Temporal.PlainTime.from throws", () => {
+  // X12 data element 337: "HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD … D = tenths (0-9) and
+  // DD = hundredths (00-99)". One digit of decimal seconds is tenths (0.1 s); two are hundredths
+  // (0.12 s). A zero fraction is not written.
+  it.each`
+    value         | expected         | reads
+    ${"1430"}     | ${"14:30:00"}    | ${"HHMM"}
+    ${"143045"}   | ${"14:30:45"}    | ${"HHMMSS"}
+    ${"1430451"}  | ${"14:30:45.1"}  | ${"HHMMSSD: one tenth"}
+    ${"14304512"} | ${"14:30:45.12"} | ${"HHMMSSDD: twelve hundredths"}
+    ${"14304505"} | ${"14:30:45.05"} | ${"five hundredths"}
+    ${"14304550"} | ${"14:30:45.5"}  | ${"fifty hundredths is five tenths"}
+    ${"1430450"}  | ${"14:30:45"}    | ${"zero tenths: no fraction"}
+    ${"14304500"} | ${"14:30:45"}    | ${"zero hundredths: no fraction"}
+    ${"0000"}     | ${"00:00:00"}    | ${"midnight"}
+    ${"23595999"} | ${"23:59:59.99"} | ${"the last hundredth of the day"}
+  `("reads $value as $expected ($reads)", ({ value, expected }) => {
+    expect(Temporal.PlainTime.from(expected).toString()).toBe(expected);
+    expect(readX12Time(value)).toBe(expected);
+  });
+
+  it.each`
+    value          | reads
+    ${"2400"}      | ${"hour 24"}
+    ${"1460"}      | ${"minute 60"}
+    ${"143060"}    | ${"second 60: GMT rejects a leap second"}
+    ${"14304"}     | ${"five digits"}
+    ${"143045123"} | ${"nine digits: thousandths are not an element 337 form"}
+    ${"14:30"}     | ${"a colon"}
+    ${"930"}       | ${"an unpadded hour"}
+    ${" 1430"}     | ${"a leading space"}
+    ${""}          | ${"an empty value"}
+  `("returns '' for $value ($reads)", ({ value }) => {
+    expect(readX12Time(value)).toBe("");
+  });
+
+  it("returns '' for a value that is not a string", () => {
+    expect(readX12Time(1430 as never)).toBe("");
+    expect(readX12Time(null as never)).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws", () => {
     mockTemporalPlainTimeFromThrow();
-    expect(readEdiDateTime("edifact", "401", "1430", WINDOW_2000)).toBeNull();
+    expect(readX12Time("1430")).toBe("");
+  });
+});
+
+describe("readX12DateAndTime", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("returns null when Temporal.Instant.from throws under an offset code", () => {
-    mockTemporalInstantFromThrow();
-    expect(
-      readEdiDateTime("edifact", "205", "202406151430+0200", WINDOW_2000),
-    ).toBeNull();
-    expect(readEdiDateTime("edifact", "406", "+0200", WINDOW_2000)).toBeNull();
+  // Element 373 is `CCYYMMDD` and element 337 is one of its four forms; together they are one
+  // local date-time, with the fraction the time carried.
+  it.each`
+    date          | time          | expected
+    ${"20240615"} | ${"1430"}     | ${"2024-06-15T14:30:00"}
+    ${"20240615"} | ${"143045"}   | ${"2024-06-15T14:30:45"}
+    ${"20240615"} | ${"1430001"}  | ${"2024-06-15T14:30:00.1"}
+    ${"20240615"} | ${"14300012"} | ${"2024-06-15T14:30:00.12"}
+    ${"20240229"} | ${"0000"}     | ${"2024-02-29T00:00:00"}
+    ${"00000101"} | ${"0000"}     | ${"0000-01-01T00:00:00"}
+    ${"99991231"} | ${"23595999"} | ${"9999-12-31T23:59:59.99"}
+  `("reads $date and $time as $expected", ({ date, time, expected }) => {
+    expect(Temporal.PlainDateTime.from(expected).toString()).toBe(expected);
+    expect(readX12DateAndTime(date, time)).toBe(expected);
+  });
+
+  it.each`
+    date          | time       | reads
+    ${""}         | ${"1430"}  | ${"no date"}
+    ${"20240615"} | ${""}      | ${"no time"}
+    ${""}         | ${""}      | ${"neither"}
+    ${"20230229"} | ${"1430"}  | ${"29 February 2023"}
+    ${"20240615"} | ${"2430"}  | ${"hour 24"}
+    ${"240615"}   | ${"1430"}  | ${"a two-digit year: element 373 is CCYYMMDD"}
+    ${"06152024"} | ${"1430"}  | ${"month first: element 373 is CCYYMMDD"}
+    ${"20240615"} | ${"14:30"} | ${"a colon in the time"}
+  `("returns '' for $date and $time ($reads)", ({ date, time }) => {
+    expect(readX12DateAndTime(date, time)).toBe("");
+  });
+
+  it("returns '' when either argument is not a string", () => {
+    expect(readX12DateAndTime(undefined as never, "1430")).toBe("");
+    expect(readX12DateAndTime("20240615", undefined as never)).toBe("");
+    expect(readX12DateAndTime(20240615 as never, 1430 as never)).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainDate.from throws", () => {
+    mockTemporalPlainDateFromThrow();
+    expect(readX12DateAndTime("20240615", "1430")).toBe("");
   });
 });

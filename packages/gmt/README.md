@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~66× more CI test executions than all four competitors combined**: 1,325,550 from 44,185 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~114× more test cases than `@internationalized/date`**: 44,185 vs. 386 — Adobe's own library, run at its own commit.
+- **~68× more CI test executions than all four competitors combined**: 1,378,380 from 45,946 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~119× more test cases than `@internationalized/date`**: 45,946 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 44,185 tests across 731 files that exercise real behavior differences without redundant permutations. They run in CI as 1,325,550 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 45,946 tests across 761 files that exercise real behavior differences without redundant permutations. They run in CI as 1,378,380 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 731                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **44,185**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,325,550**<br>(44,185 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 761                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **45,946**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,378,380**<br>(45,946 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~66×                                                  | 1,325,550 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~68×                                                  | 1,378,380 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -2987,123 +2987,169 @@ multimodalETA([]); // { eta: "", totalLegs: 0, totalTransit: "PT0S", totalDwell:
 Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, X12 date and time
 elements, and GS1 EPCIS events. Some of those formats carry a UTC offset and some do not, and the
 only signal is a format code or a time code. A reader who takes an offsetless value for UTC has
-invented a place, and the error is the offset of the real one. These functions read and write
-each format against its own code list, and the result says whether an offset was stated.
+invented a place, and the error is the offset of the real one. So these functions are split by the
+kind of value a code states: a date, a time, a local date-time, a date-time with an offset, or a
+period. Each function takes only the codes of its kind, and each parser returns one value the rest
+of the library takes.
 
 ```typescript
 import {
-  formatEdifactDtm,
+  classifyEdifactDtmFormat,
+  classifyX12DateTimePeriodFormat,
+  classifyX12TimeCode,
+  formatEdifactDate,
+  formatEdifactDatePeriod,
+  formatEdifactDateTime,
+  formatEdifactDateTimePeriod,
+  formatEdifactOffsetDateTime,
+  formatEdifactTime,
   formatEpcisEvent,
-  formatX12DateTimePeriod,
-  isValidEdifactDtm,
+  formatX12Date,
+  formatX12DateRange,
+  formatX12DateTime,
+  formatX12DateTimeRange,
+  formatX12Time,
+  intervalLengthDate,
+  isValidEdifactDateTime,
   isValidEdifactDtmFormat,
+  isValidEdifactOffsetDateTime,
   isValidEpcisEvent,
-  isValidX12DateTime,
-  isValidX12DateTimePeriod,
+  isValidX12DateRange,
   isValidX12DateTimePeriodFormat,
+  isValidX12Time,
   isValidX12TimeCode,
+  parseDateTimeWithPattern,
   parseDateWithPattern,
-  parseEdifactDtm,
+  parseEdifactDate,
+  parseEdifactDatePeriod,
+  parseEdifactDateTime,
+  parseEdifactDateTimePeriod,
+  parseEdifactOffsetDateTime,
+  parseEdifactTime,
   parseEpcisEvent,
+  parseX12Date,
+  parseX12DateAndTime,
+  parseX12DateRange,
   parseX12DateTime,
-  parseX12DateTimePeriod,
+  parseX12DateTimeRange,
+  parseX12Time,
   resolveLocal,
-  x12TimeCode,
+  toOffsetInstant,
+  x12TimeCodeOffset,
+  x12TimeCodeZone,
 } from "@northguild/gmt";
 
-// UN/EDIFACT: a DTM value (data element 2380) read against its format code (2379).
-parseEdifactDtm("202406151430", "203"); // { local: "2024-06-15T14:30:00" } (203 states no offset: a local time, not UTC)
-parseEdifactDtm("20240615", "102"); // { date: "2024-06-15" }
-parseEdifactDtm("202406151430+0200", "205"); // { local: "2024-06-15T14:30:00", offset: "+02:00", instant: "2024-06-15T12:30:00Z" }
-parseEdifactDtm("20240615143000+0200", "208"); // { local: "2024-06-15T14:30:00", offset: "+02:00", instant: "2024-06-15T12:30:00Z" }
-parseEdifactDtm("143000+0200", "209"); // { time: "14:30:00", offset: "+02:00" } (a time alone names no instant)
-parseEdifactDtm("+0200", "406"); // { offset: "+02:00" }
+// UN/EDIFACT: a DTM value (data element 2380) and its format code (2379). One parser per kind of value.
+parseEdifactDate("20240615", "102"); // "2024-06-15"
+parseEdifactTime("1430", "401"); // "14:30:00"
+parseEdifactTime("143045", "402"); // "14:30:45"
+parseEdifactDateTime("202406151430", "203"); // "2024-06-15T14:30:00" (203 states no offset: a local time, not UTC)
+parseEdifactDateTime("20240615143045", "204"); // "2024-06-15T14:30:45"
+parseEdifactDateTime("202406151430", "204"); // "" (a 204 value carries seconds)
 
-// The three zone characters of 301–304 and 404: a signed hour, UTC or GMT, or text GMT does not interpret.
-parseEdifactDtm("202406151430+02", "303"); // { local: "2024-06-15T14:30:00", offset: "+02:00", instant: "2024-06-15T12:30:00Z" }
-parseEdifactDtm("202406151430UTC", "303"); // { local: "2024-06-15T14:30:00", offset: "+00:00", instant: "2024-06-15T14:30:00Z" }
-parseEdifactDtm("202406151430CET", "303"); // { local: "2024-06-15T14:30:00", zone: "CET" }
-parseEdifactDtm("202406151430+24", "303"); // null (+24 is not an hour)
-parseEdifactDtm("202406151430cet", "303"); // null (lower case is not zone text)
-parseEdifactDtm("202406151430?+02", "303"); // null (the release character is the caller's to remove)
+// A date-time with an offset comes back as the wall clock as written, with its offset.
+parseEdifactOffsetDateTime("202406151430+0200", "205"); // "2024-06-15T14:30:00+02:00"
+parseEdifactOffsetDateTime("20240615143045+0530", "208"); // "2024-06-15T14:30:45+05:30"
+toOffsetInstant("2024-06-15T14:30:00+02:00"); // { instant: "2024-06-15T12:30:00Z", offset: "+02:00" }
+
+// The three zone characters of 303 and 304: a signed hour, UTC or GMT. Nothing else is an offset.
+parseEdifactOffsetDateTime("202406151430+02", "303"); // "2024-06-15T14:30:00+02:00"
+parseEdifactOffsetDateTime("20240615143045-05", "304"); // "2024-06-15T14:30:45-05:00"
+parseEdifactOffsetDateTime("202406151430UTC", "303"); // "2024-06-15T14:30:00+00:00"
+parseEdifactOffsetDateTime("202406151430GMT", "303"); // "2024-06-15T14:30:00+00:00"
+parseEdifactOffsetDateTime("202406151430CET", "303"); // "" (an abbreviation names no offset)
+parseEdifactOffsetDateTime("202406151430+24", "303"); // "" (+24 is not an hour)
+parseEdifactOffsetDateTime("202406151430?+02", "303"); // "" (the release character is the caller's to remove)
 
 // A UN/EDIFACT period has no hyphen on the wire.
-parseEdifactDtm("2024061520240620", "718"); // { date: "2024-06-15", periodEnd: { date: "2024-06-20" } }
-parseEdifactDtm("20240615-20240620", "718"); // null (the hyphen is notation, not data)
-parseEdifactDtm("2024062020240615", "718"); // null (the end precedes the start)
+parseEdifactDatePeriod("2024061520240620", "718"); // { start: "2024-06-15", end: "2024-06-20" }
+parseEdifactDatePeriod("20240615-20240620", "718"); // null (the hyphen is notation, not data)
+parseEdifactDatePeriod("2024062020240615", "718"); // null (the end is before the start)
+parseEdifactDateTimePeriod("202406150800202406201700", "719");
+// { start: "2024-06-15T08:00:00", end: "2024-06-20T17:00:00" }
+intervalLengthDate("2024-06-15", "2024-06-20", "days"); // 5
 
-formatEdifactDtm("2024-06-15T14:30:00", "203"); // "202406151430"
-formatEdifactDtm("2024-06-15T14:30:00+02:00", "205"); // "202406151430+0200"
-formatEdifactDtm("2024-06-15T14:30:00+02:00", "303"); // "202406151430+02"
-formatEdifactDtm("2024-06-15T14:30:00Z", "303"); // "202406151430+00" (never "UTC")
-formatEdifactDtm("2024-06-15/2024-06-20", "718"); // "2024061520240620"
-formatEdifactDtm("2024-06-15T14:30:00", "303"); // "" (a local time has no offset to write)
+// Each formatter takes the value its parser returns, and cuts it to the code's mask.
+formatEdifactDate("2024-06-15", "102"); // "20240615"
+formatEdifactTime("14:30:45", "401"); // "1430" (401 holds minutes)
+formatEdifactDateTime("2024-06-15T14:30:00", "203"); // "202406151430"
+formatEdifactDateTime("2024-06-15T14:30:45.9", "204"); // "20240615143045" (cut, not rounded)
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "205"); // "202406151430+0200"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "303"); // "202406151430+02"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00Z", "303"); // "202406151430+00" (never "UTC")
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "303"); // "" (the field holds whole hours)
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "205"); // "202406151430+0530"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00", "205"); // "" (a local date-time has no offset to write)
+formatEdifactDatePeriod("2024-06-15", "2024-06-20", "718"); // "2024061520240620"
+formatEdifactDateTimePeriod("2024-06-15T08:00:00", "2024-06-20T17:00:00", "719"); // "202406150800202406201700"
 
-// X12: the date (element 373), time (337) and time code (623) of an AT7, G62 or DTM segment.
-parseX12DateTime("20240615", "1430", "UT");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", offset: "+00:00", instant: "2024-06-15T14:30:00Z" }
-parseX12DateTime("20240615", "1430", "20");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", offset: "-05:00", instant: "2024-06-15T19:30:00Z" }
-parseX12DateTime("20240615", "2330", "24");
-// { date: "2024-06-15", time: "23:30:00", local: "2024-06-15T23:30:00", offset: "-01:00", instant: "2024-06-16T00:30:00Z" }
+// X12 freight: the date (element 373), time (337) and time code (623) of an AT7, G62 or DTM segment, in three calls.
+const local = parseX12DateAndTime("20240615", "1430"); // "2024-06-15T14:30:00"
+const offset = x12TimeCodeOffset("20"); // "-05:00"
+resolveLocal(local, offset); // "2024-06-15T19:30:00Z"
+parseX12DateAndTime("20240615", "14300012"); // "2024-06-15T14:30:00.12" (hundredths of a second)
+parseX12DateAndTime("20240615", ""); // "" (both elements are required)
 
-// A lettered time code names a zone and states no offset. No time code means local to the event.
-parseX12DateTime("20240615", "1430", "ET");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: null }
-parseX12DateTime("20240615", "1430", "ES");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: false }
-parseX12DateTime("20240615", "1430");
-// { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00" }
+// A numbered time code, UT or GM states an offset. The codes 13 to 24 count down.
+x12TimeCodeOffset("UT"); // "+00:00"
+x12TimeCodeOffset("GM"); // "+00:00"
+x12TimeCodeOffset("13"); // "-12:00"
+x12TimeCodeOffset("24"); // "-01:00"
+x12TimeCodeOffset("27"); // "+05:30"
 
-parseX12DateTime("20240615"); // { date: "2024-06-15" }
-parseX12DateTime("", "1430"); // { time: "14:30:00" }
-parseX12DateTime("", "1430", "UT"); // { time: "14:30:00", offset: "+00:00" } (a time alone is on no day: no instant)
-parseX12DateTime("20240615", "14300012");
-// { date: "2024-06-15", time: "14:30:00.12", local: "2024-06-15T14:30:00.12" }
-parseX12DateTime("20240615", "", "ET"); // null (a time code needs a time)
-parseX12DateTime("", ""); // null (neither a date nor a time)
-parseX12DateTime("20240615", "1430", "EST"); // null (not an element 623 code)
+// A lettered time code names a zone and states no offset. The caller maps the name to an IANA zone.
+x12TimeCodeZone("ES"); // { zone: "Eastern", daylight: false }
+x12TimeCodeZone("ED"); // { zone: "Eastern", daylight: true }
+x12TimeCodeZone("ET"); // { zone: "Eastern", daylight: null }
+x12TimeCodeZone("LT"); // { zone: "Local", daylight: null }
+resolveLocal(local, "America/New_York"); // "2024-06-15T18:30:00Z"
 
-x12TimeCode("ES"); // { zone: "Eastern", daylight: false }
-x12TimeCode("ED"); // { zone: "Eastern", daylight: true }
-x12TimeCode("ET"); // { zone: "Eastern", daylight: null }
-x12TimeCode("LT"); // { zone: "Local", daylight: null }
-x12TimeCode("UT"); // { offset: "+00:00" }
-x12TimeCode("GM"); // { offset: "+00:00" }
-x12TimeCode("13"); // { offset: "-12:00" }
-x12TimeCode("24"); // { offset: "-01:00" }
-x12TimeCode("27"); // { offset: "+05:30" }
-x12TimeCode("EST"); // null (not a 623 code)
+// X12: a Date Time Period (element 1251) and its format qualifier (1250), as a DTP segment carries them.
+parseX12Date("20240615", "D8"); // "2024-06-15"
+parseX12Date("06152024", "DB"); // "2024-06-15"
+parseX12DateTime("202406151430", "DT"); // "2024-06-15T14:30:00"
+parseX12DateTime("20240615143045", "RTS"); // "2024-06-15T14:30:45" (one date-time, despite the R)
+parseX12DateRange("20240615-20240620", "RD8"); // { start: "2024-06-15", end: "2024-06-20" }
+parseX12DateRange("2024061520240620", "RD8"); // null (X12 writes the hyphen)
+parseX12DateTimeRange("202406150800-202406201700", "RDT");
+// { start: "2024-06-15T08:00:00", end: "2024-06-20T17:00:00" }
 
-// X12: a Date Time Period (element 1251) against its format qualifier (1250), as a DTP segment carries it.
-parseX12DateTimePeriod("20240615", "D8"); // { date: "2024-06-15" }
-parseX12DateTimePeriod("202406151430", "DT"); // { local: "2024-06-15T14:30:00" }
-parseX12DateTimePeriod("20240615143000", "RTS"); // { local: "2024-06-15T14:30:00" }
-parseX12DateTimePeriod("20240615-20240620", "RD8"); // { date: "2024-06-15", periodEnd: { date: "2024-06-20" } }
-parseX12DateTimePeriod("2024061520240620", "RD8"); // null (X12 writes the hyphen)
-parseX12DateTimePeriod("2200-0600", "RTM"); // { time: "22:00:00", periodEnd: { time: "06:00:00" } }
-parseX12DateTimePeriod("166", "TC"); // { dayOfYear: 166 }
-parseX12DateTimePeriod("24366", "TU", { yearWindow: 2000 }); // { date: "2024-12-31", dayOfYear: 366 }
-parseX12DateTimePeriod("20240615", "UN"); // null (unstructured text is never guessed)
+// An X12 time: element 337 with no qualifier, or a 1250 value under TM or TS.
+parseX12Time("1430"); // "14:30:00"
+parseX12Time("14300012"); // "14:30:00.12"
+parseX12Time("143045", "TS"); // "14:30:45"
+parseX12Time("143045", "TM"); // "" (six digits is a TS value)
 
-formatX12DateTimePeriod("2024-06-15", "D8"); // "20240615"
-formatX12DateTimePeriod("14:30:00", "TM"); // "1430"
-formatX12DateTimePeriod("14:30:45", "TS"); // "143045"
-formatX12DateTimePeriod("14:30:00.12", "TS"); // "" (hundredths are read, never written)
-formatX12DateTimePeriod("2024-06-15/2024-06-20", "RD8"); // "20240615-20240620"
-formatX12DateTimePeriod("22:00:00/06:00:00", "RTM"); // "2200-0600"
-formatX12DateTimePeriod("2024-06-15T14:30Z", "DT"); // "" (no 1250 code carries an offset)
+formatX12Date("2024-06-15", "D8"); // "20240615"
+formatX12Date("2024-06-15", "DB"); // "06152024"
+formatX12Time("14:30:00", "TM"); // "1430"
+formatX12Time("14:30:45.9", "TS"); // "143045" (cut, not rounded)
+formatX12DateTime("2024-06-15T14:30:45", "DT"); // "202406151430"
+formatX12DateTime("2024-06-15T14:30:00Z", "DT"); // "" (no 1250 code carries an offset)
+formatX12DateRange("2024-06-15", "2024-06-20", "RD8"); // "20240615-20240620"
+formatX12DateTimeRange("2024-06-15T08:00:00", "2024-06-20T17:00:00", "RDT"); // "202406150800-202406201700"
 
-// A two-digit year needs the hundred-year window the caller names.
-parseEdifactDtm("240615", "101"); // null (a two-digit year with no window)
-parseEdifactDtm("240615", "101", { yearWindow: 2000 }); // { date: "2024-06-15" }
-parseEdifactDtm("990615", "101", { yearWindow: 1950 }); // { date: "1999-06-15" }
-parseEdifactDtm("990615", "101", { yearWindow: 2000 }); // { date: "2099-06-15" }
-parseEdifactDtm("20240615", "102", { yearWindow: 1950 }); // { date: "2024-06-15" } (a four-digit year ignores the window)
-formatEdifactDtm("1969-01-01", "101", { yearWindow: 2000 }); // "" (1969 is outside 2000–2099)
-parseDateWithPattern("03/15/24", "MM/dd/yy"); // ""
-parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: 1950 }); // "2024-03-15"
-parseDateWithPattern("03/15/99", "MM/dd/yy", undefined, { yearWindow: 1950 }); // "1999-03-15"
+// A code that arrives as data is a plain string. Classify it, and testing `kind` narrows `format` with no cast.
+const code: string = "203";
+const classified = classifyEdifactDtmFormat(code); // { kind: "dateTime", format: "203" }
+if (classified?.kind === "dateTime") {
+  parseEdifactDateTime("202406151430", classified.format); // "2024-06-15T14:30:00"
+}
+classifyEdifactDtmFormat("303"); // { kind: "offsetDateTime", format: "303" }
+classifyEdifactDtmFormat("101"); // null (a two-digit-year code: no function reads it)
+classifyX12DateTimePeriodFormat("RD8"); // { kind: "dateRange", format: "RD8" }
+classifyX12DateTimePeriodFormat("RTM"); // null (a range of times with no date: no function reads it)
+classifyX12TimeCode("20"); // { kind: "offset", timeCode: "20" }
+classifyX12TimeCode("ET"); // { kind: "zone", timeCode: "ET" }
+classifyX12TimeCode("EST"); // null (not an element 623 code)
+
+// A two-digit year is read with the pattern parsers, in the hundred-year window the caller names.
+parseDateWithPattern("240615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2024-06-15" (101, D6)
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 1950 }); // "1999-06-15"
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2099-06-15"
+parseDateWithPattern("240615", "yyMMdd"); // "" (no window)
+parseDateTimeWithPattern("2406151430", "yyMMddHHmm", undefined, { yearWindow: 2000 }); // "2024-06-15T14:30:00" (201)
+parseDateWithPattern("061524", "MMddyy", undefined, { yearWindow: 2000 }); // "2024-06-15" (TT)
 
 // GS1 EPCIS 2.0: eventTime is the instant, eventTimeZoneOffset the offset where it happened. Both are required.
 parseEpcisEvent({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" });
@@ -3120,16 +3166,19 @@ formatEpcisEvent({ local: "2024-06-15T23:30:00", offset: "+02:00", instant: "202
 // { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
 formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "Z" }); // null (a designator, not an offset)
 
-// Each value validator agrees with its parser. Each format validator checks the code alone.
-isValidEdifactDtm("202406151430", "203"); // true
-isValidEdifactDtm("202406151430", "204"); // false (a 204 value carries seconds)
+// Each value validator agrees with its parser. Each code validator checks the code alone.
+isValidEdifactDateTime("202406151430", "203"); // true
+isValidEdifactDateTime("202406151430", "204"); // false (a 204 value carries seconds)
+isValidEdifactOffsetDateTime("202406151430CET", "303"); // false
+isValidX12DateRange("20240615-20240620", "RD8"); // true
+isValidX12Time("1430"); // true
+isValidX12Time("1430", "TS"); // false (four digits is a TM value)
 isValidEdifactDtmFormat("203"); // true
-isValidEdifactDtmFormat("602"); // false (GMT does not read code 602)
-isValidX12DateTime("20240615", "1430", "ET"); // true
-isValidX12DateTime("20240615", "", "ET"); // false (a time code needs a time)
-isValidX12DateTimePeriod("20240615", "D8"); // true
-isValidX12DateTimePeriodFormat("UN"); // true (GMT knows the code, and its value always returns null)
-isValidX12DateTimePeriodFormat("CM"); // false (a partial value that GMT does not read)
+isValidEdifactDtmFormat("101"); // false (a two-digit year)
+isValidEdifactDtmFormat("602"); // false
+isValidX12DateTimePeriodFormat("D8"); // true
+isValidX12DateTimePeriodFormat("UN"); // false (unstructured)
+isValidX12TimeCode("ET"); // true
 isValidX12TimeCode("EST"); // false
 isValidEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" }); // false (no eventTimeZoneOffset)
 isValidEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }); // true
@@ -3140,76 +3189,121 @@ resolveLocal("2024-01-15T14:30:00", "America/New_York"); // "2024-01-15T19:30:00
 resolveLocal("2024-06-15T14:30:00", "Europe/Berlin"); // "2024-06-15T12:30:00Z"
 ```
 
-- **A value is read against its code, and the result holds only what the code states.** A
-  date-only code gives `date`, a time-only code gives `time`, and every date-time gives `local`,
-  the wall clock as written. `offset` and `instant` appear only when the value states an offset.
-  `parseEdifactDtm` and `parseX12DateTimePeriod` return the same shape, and a period or range
-  adds `periodEnd`. An invalid value, or a code GMT does not read, returns `null`.
-- **An offsetless value never becomes UTC.** UN/EDIFACT `203`, an X12 date and time with no time
-  code, the time code `LT` and every X12 1250 code state no offset, so the result has `local` and
-  no `instant`. Pass `local` and the place's IANA zone to `resolveLocal`. GMT maps no place to a
-  zone.
-- **The UN/EDIFACT codes that state an offset are `205` to `208`**, a signed `HHMM`. The
+UN/EDIFACT: a `DTM` value (data element 2380) against its format code (data element 2379).
+
+| Kind of value              | Parser, formatter, validator                                                                | Codes                   | Value                       |
+| -------------------------- | ------------------------------------------------------------------------------------------- | ----------------------- | --------------------------- |
+| Date                       | `parseEdifactDate`, `formatEdifactDate`, `isValidEdifactDate`                               | `102`                   | `2024-06-15`                |
+| Time                       | `parseEdifactTime`, `formatEdifactTime`, `isValidEdifactTime`                               | `401` `402`             | `14:30:00`                  |
+| Local date-time            | `parseEdifactDateTime`, `formatEdifactDateTime`, `isValidEdifactDateTime`                   | `203` `204`             | `2024-06-15T14:30:00`       |
+| Date-time with an offset   | `parseEdifactOffsetDateTime`, `formatEdifactOffsetDateTime`, `isValidEdifactOffsetDateTime` | `205` `208` `303` `304` | `2024-06-15T14:30:00+02:00` |
+| Period of dates            | `parseEdifactDatePeriod`, `formatEdifactDatePeriod`, `isValidEdifactDatePeriod`             | `718`                   | `{ start, end }`            |
+| Period of local date-times | `parseEdifactDateTimePeriod`, `formatEdifactDateTimePeriod`, `isValidEdifactDateTimePeriod` | `719`                   | `{ start, end }`            |
+
+X12: an element 1251 value against its 1250 format qualifier, the pair `DTP` and `DTM-05`/`06`
+carry.
+
+| Kind of value             | Parser, formatter, validator                                                 | Codes                                       | Value                 |
+| ------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------- | --------------------- |
+| Date                      | `parseX12Date`, `formatX12Date`, `isValidX12Date`                            | `D8` `DB`                                   | `2024-06-15`          |
+| Time                      | `parseX12Time`, `formatX12Time`, `isValidX12Time`                            | `TM` `TS`, or element 337 with no qualifier | `14:30:00`            |
+| Local date-time           | `parseX12DateTime`, `formatX12DateTime`, `isValidX12DateTime`                | `DT` `RTS`                                  | `2024-06-15T14:30:00` |
+| Range of dates            | `parseX12DateRange`, `formatX12DateRange`, `isValidX12DateRange`             | `RD8` `RD`                                  | `{ start, end }`      |
+| Range of local date-times | `parseX12DateTimeRange`, `formatX12DateTimeRange`, `isValidX12DateTimeRange` | `RDT` `DTS`                                 | `{ start, end }`      |
+
+- **A function reads every code its `format` type accepts.** `parseEdifactDate(value, "203")` does
+  not compile: `203` is a date-time code. No EDI function takes options. A period or range
+  formatter takes `(start, end, format)`.
+- **A parser returns one value, the same for every code of its kind.** A date is `YYYY-MM-DD`. A
+  time and a local date-time always carry seconds. A date-time with an offset is the wall clock as
+  written with its offset, the string `toOffsetInstant` reads and `fromOffsetInstant` writes. A
+  period or range is `{ start, end }`. An invalid value returns `""`, or `null` for a period, a
+  range, a zone or a classifier.
+- **What still returns the sentinel is a fact about the value.** A value that does not fit its
+  code's mask, or names a day or an hour that does not exist. Under `303` and `304`, zone
+  characters that are not a signed hour, `UTC` or `GMT`. A period or range whose end is before its
+  start. In a formatter, a year outside 0000–9999, or an offset the code cannot hold.
+- **An offsetless value never becomes UTC.** UN/EDIFACT `203` and `204`, an X12 date and time, and
+  every X12 1250 code state no offset, so the result is a local date-time. Pass it and the place's
+  IANA zone to `resolveLocal`. GMT maps no place to a zone.
+- **The UN/EDIFACT codes that state an offset are `205` and `208`**, a signed `HHMM`. The
   directory's entry for `205` reads "ZHHMM = time zone given as offset from Coordinated Universal
-  Time (UTC)". `209` is a time with an offset and `406` is the offset alone. Neither has a date,
-  so neither gives an instant.
-- **`ZZZ` is three characters the UN/EDIFACT directory does not define**; it says only "Z = Time
-  zone". GMT reads a signed hour from `00` to `23` as an offset, the hours-only form UN/ECE
-  Recommendation 7 ¶12 gives for a difference from UTC. It reads `UTC` and `GMT` as `+00:00`. Any
-  other three upper-case letters, such as `CET`, come back as `zone` text with no offset: no
-  UN/EDIFACT text defines them, so GMT does not say what they mean. Anything else returns `null`.
-  A formatter always writes `±HH`.
+  Time (UTC)". `303` and `304` end in three characters, `ZZZ`, that the directory does not define;
+  it says only "Z = Time zone".
+- **`ZZZ` is read as an offset only.** GMT reads a signed hour from `00` to `23` as an offset, the
+  hours-only form UN/ECE Recommendation 7 ¶12 gives for a difference from UTC. It reads `UTC` and
+  `GMT` as `+00:00`. Letters such as `CET` return `""`: no UN/EDIFACT text defines them, so GMT does
+  not say what they mean. Where a partner sends one, remove the letters, read the rest with
+  `parseEdifactDateTime` under `203` or `204`, and resolve it in the zone you map the letters to. A
+  formatter always writes `±HH`.
+- **X12 freight sends a moment as three elements.** `parseX12DateAndTime(date, time)` reads
+  elements 373 and 337, which `AT7`, `G62` and `DTM-02`/`03` carry side by side, as one local
+  date-time. Both are required. The time code beside them, element 623, says where the clock was:
+  `x12TimeCodeOffset` reads the 31 codes that state an offset, and `x12TimeCodeZone` the 25 that
+  name a zone. `classifyX12TimeCode` says which of the two a code is.
 - **A named X12 time code is a zone name, not an offset.** The codes `01` to `29` and `UT` state
   an offset, and GMT reads `GM`, which X12 defines only as "Greenwich Mean Time", as `+00:00`. The
   codes `13` to `24` count down: `13` is UTC−12 and `24` is UTC−1. A lettered code such as `ES`,
   `ED` or `ET` returns X12's name for the zone and a `daylight` flag: `true`, `false`, or `null`
   when the code says neither. X12 states no offset for a named zone, so the caller maps the name
-  to an IANA zone.
-- **X12 has two readers, for two sets of elements.** `parseX12DateTime(date, time, timeCode)`
-  reads elements 373, 337 and 623, which `AT7`, `G62` and `DTM-02`/`03`/`04` carry side by side.
-  An element that was not sent is `""` or left out. A date alone and a time alone are both read,
-  and a time code with no time returns `null`. `parseX12DateTimePeriod(value, formatQualifier)`
-  reads an element 1251 value against its 1250 qualifier, which `DTP` and `DTM-05`/`06` carry.
-  Healthcare uses the same pair: 837 and 834 `DTP` segments carry `D8` and `RD8`. X12 is a United
-  States standard, and its code lists were read through an X12-licensed dictionary.
+  to an IANA zone. `x12TimeCodeOffset` returns `""` for a named code, and `x12TimeCodeZone` returns
+  `null` for an offset code.
+- **A `DTP` segment sends a value with its format qualifier.** The X12 functions in the table read
+  an element 1251 value against its 1250 qualifier, which `DTP` and `DTM-05`/`06` carry.
+  Healthcare uses the same pair: 837 and 834 `DTP` segments carry `D8` and `RD8`. `parseX12Time`
+  also reads an element 337 time with no qualifier: omit `format`. X12 is a United States standard,
+  and its code lists were read through an X12-licensed dictionary.
 - **A UN/EDIFACT period has no hyphen, and an X12 range has one.** The UN/EDIFACT directory says a
   period is given "without hyphen"; the hyphen in its mask is notation. Each X12 range code gives
-  its format with the hyphen. Each parser reads only its own wire form. A dated period whose end
-  precedes its start returns `null`. An `RTM` time range carries no date, so `2200-0600` is a
-  window that crosses midnight and is returned as written.
-- **A two-digit year needs `yearWindow`.** Neither UN/EDIFACT nor X12 says which century `YY`
-  belongs to, and a cut-off built into the library is right today and wrong later, so GMT holds
-  none. A number is the first year of a fixed hundred-year window: `2000` reads `00`–`99` as
-  2000–2099, and `1950` reads `50`–`99` as 1950–1999 and `00`–`49` as 2000–2049. It gives the same
-  answer in any year, so it is the form for stored data. `"rolling"` is the hundred years around
-  the current UTC year, from 50 years before it to 49 after. It suits live messages, and it reads
-  the same stored value differently as years pass. Without a window, the codes `101`, `201`, `202`,
-  `206`, `207`, `301`, `302`, `713`, `717`, `D6`, `TT`, `TR`, `RD6` and `TU` return the sentinel.
-  So does a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern`. A formatter
-  returns `""` for a year outside the window, so a round trip never changes a century.
-- **A formatter writes a value only when the code holds it exactly.** Seconds other than `:00`
-  under a minute-precision code, offset minutes under `ZZZ`, an offset under a code that has none,
-  and a fraction of a second all return `""`. Nothing is rounded. `formatX12DateTimePeriod` also
-  writes elements 373 and 337, with `D8`, `TM` and `TS`.
+  its format with the hyphen. Each parser reads only its own wire form. Neither standard says
+  whether the end is inside the period, so both ends come back as transmitted.
+- **A formatter cuts a time to the mask and never rounds it.** A fraction of a second is always
+  dropped, and a minute-precision code drops the seconds too. An offset is never cut: `+05:30`
+  under `303` or `304` returns `""`, because the field holds whole hours. Write it under `205` or
+  `208`. `formatX12Date` with `D8` and `formatX12Time` also write elements 373 and 337.
+- **The two-digit-year codes are not read.** They are UN/EDIFACT `101`, `201`, `202`, `206`,
+  `207`, `301`, `302`, `713` and `717`, and X12 `D6`, `TT`, `TR`, `RD6` and `TU`. Neither standard
+  says which century `YY` belongs to, and a cut-off built into the library is right today and wrong
+  later, so GMT holds none. Read one with `parseDateWithPattern` or `parseDateTimeWithPattern`, a
+  `yy` pattern and `yearWindow`: `yyMMdd` for `101` and `D6`, `yyMMddHHmm` for `201`,
+  `yyMMddHHmmss` for `202`, `MMddyy` for `TT`, `ddMMyyHHmm` for `TR`. Split a period (`713`, `717`,
+  `RD6`) and read each half. No function writes a two-digit year.
+- **`yearWindow` is the caller's.** A number is the first year of a fixed hundred-year window:
+  `2000` reads `00`–`99` as 2000–2099, and `1950` reads `50`–`99` as 1950–1999 and `00`–`49` as
+  2000–2049. It gives the same answer in any year, so it is the form for stored data. `"rolling"`
+  is the hundred years around the current UTC year, from 50 years before it to 49 after. It suits
+  live messages, and it reads the same stored value differently as years pass. Without a window, a
+  `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` returns `""`.
+- **The codes that state no single date, time or date-time are not read.** They are UN/EDIFACT
+  `209` and `404` (a time with an offset and no date) and `406` (an offset alone), and X12 `TC` and
+  `EH` (a day of the year with no whole year), `DDT` and `DTD` (a date on one side of a range and a
+  date-time on the other), `RTM` (a range of times with no date) and `UN` (unstructured).
 - **The release character is the caller's.** `+` is the UN/EDIFACT data element separator, so an
-  interchange transmits `+02` as `?+02`. `parseEdifactDtm` takes the unescaped element value, and
-  `formatEdifactDtm` returns it.
+  interchange transmits `+02` as `?+02`. The parsers take the unescaped element value, and the
+  formatters return it.
 - **EPCIS requires both fields, and they are independent.** `eventTime` fixes the instant.
   `eventTimeZoneOffset` is the offset in force where the event happened, `±HH:MM` from `-14:00` to
   `+14:00`, and it sets the `local` clock. An offset written inside `eventTime` need not match it.
   A missing offset, `Z` and `+0200` return `null`: UTC is not assumed. The two grammars are GS1's,
   exported as the `epcisEventTime` and `epcisTimeZoneOffset` patterns.
-- **GMT reads the codes its reference tables list.** Every other code returns the sentinel, and
-  `isValidEdifactDtmFormat` and `isValidX12DateTimePeriodFormat` tell a code GMT does not read
-  apart from a value that does not fit its code. Which segment of a message holds which date is
+- **GMT reads 11 UN/EDIFACT format codes, 10 X12 format qualifiers and all 56 X12 time codes.**
+  Every other code returns the sentinel. `classifyEdifactDtmFormat`,
+  `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode` return a code with its kind, or `null`
+  for a code no function reads, and `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat` and
+  `isValidX12TimeCode` check a code alone. Which segment of a message holds which date is
   implementation-guide data, and GMT bundles none.
-- The parsers are also at `@northguild/gmt/intermodal/parse`, the formatters at
+- The parsers and classifiers are also at `@northguild/gmt/intermodal/parse`, the formatters at
   `@northguild/gmt/intermodal/format` and the validators at `@northguild/gmt/intermodal/validate`.
   The [EDI Timestamps guide](https://gmt-dox.northguild.workers.dev/guides/industries/intermodal-edi-timestamps/)
   lists every code GMT reads.
-- Also exported: the `EdiDateTime`, `EdiPeriodEnd`, `EdifactDtmFormat`, `X12DateTimePeriodFormat`,
-  `X12TimeCode`, `X12DateTime`, `X12TimeCodeMeaning`, `X12TimeCodeOffset`, `X12TimeCodeZone`,
-  `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions` types.
+- Also exported: a type for each kind's codes (`EdifactDateFormat`, `EdifactTimeFormat`,
+  `EdifactDateTimeFormat`, `EdifactOffsetDateTimeFormat`, `EdifactDatePeriodFormat`,
+  `EdifactDateTimePeriodFormat`, `X12DateFormat`, `X12TimeFormat`, `X12DateTimeFormat`,
+  `X12DateRangeFormat`, `X12DateTimeRangeFormat`, `X12OffsetTimeCode`, `X12ZoneTimeCode`), the
+  unions `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`, and the
+  `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass`, `X12TimeCodeClass`, `X12NamedZone`,
+  `EdiDatePeriod`, `EdiDateTimePeriod`, `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions`
+  types.
 
 ## API Surface
 

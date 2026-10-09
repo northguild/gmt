@@ -4,23 +4,24 @@
  *
  * The main section takes the three elements a freight segment carries side by
  * side (`AT7`, `G62`, `DTM-02`/`03`/`04`): a date (element 373), a time (element
- * 337) and a time code (element 623), any of which may be empty. One call,
- * `parseX12DateTime(date, time, timeCode)`, reads them, and the call line prints
- * it exactly as made. The verdict, the members, the instant and the written-back
- * elements all come from the library's own results. X12 is a United States
- * standard.
+ * 337) and a time code (element 623), any of which may be empty. It reads them
+ * with `parseX12DateAndTime` (or `parseX12Date` or `parseX12Time` when only one is
+ * sent), classifies the code with `classifyX12TimeCode`, and then asks
+ * `x12TimeCodeOffset` or `x12TimeCodeZone`. A code that states an offset gives the
+ * instant with `resolveLocal(local, offset)`; a code that does not leaves the
+ * instant to the zones the reader picks. The call line prints every call as made.
+ * X12 is a United States standard.
  *
  * A second, smaller section reads an element 1251 value against its 1250
- * qualifier with `parseX12DateTimePeriod`: a `DTP` value. It has no time code
- * and no instant.
+ * qualifier: it classifies the qualifier and calls the parser of its kind. It has
+ * no time code and no instant.
  *
- * `null` and `""` from the library render as NO SIGNAL with a reason decided by
- * probing the library. A state with no library call behind it renders as empty,
- * never amber. Nothing derives a zone from a time code or a zone name: a
- * preset states its own example's zones, and every other zone is the reader's. Follows the DTM Decoder's split: every listener is
- * delegated on the root, so the host dropping the subtree is a complete
- * teardown. The clock is read only by the library and only after mount
- * (`yearWindow: "rolling"`).
+ * `null` and `""` from the library render as NO SIGNAL with one sentence saying
+ * why. A state with no library call behind it renders as empty, never amber.
+ * Nothing derives a zone from a time code or a zone name: a preset states its own
+ * example's zones, and every other zone is the reader's. Follows the DTM
+ * Decoder's split: every listener is delegated on the root, so the host dropping
+ * the subtree is a complete teardown.
  */
 import { codeFrameHtml } from "./code-frame";
 import { loadEdiLib } from "./edi-lib";
@@ -34,7 +35,12 @@ import {
   sizerHtml,
   textSizers,
 } from "./edi-picture";
-import { drawFigure, drawTimeline } from "./edi-render";
+import {
+  callResultsText,
+  drawFigure,
+  drawTimeline,
+  renderCalls,
+} from "./edi-render";
 import {
   EDI_ZONES,
   NO_RESULT_TITLE,
@@ -46,10 +52,6 @@ import {
   readoutRowsHtml,
   REJECT,
   widestGap,
-  yearWindowControls,
-  yearWindowFieldsHtml,
-  yearWindowFromControls,
-  yearWindowOptions,
   zoneOptionsHtml,
   type EdiLib,
 } from "./edi-widgets";
@@ -76,15 +78,10 @@ import {
   dtpFigure,
   dtpMemberText,
   dtpParts,
-  x12Texts,
-  dtpNullReasonText,
   dtpPresetState,
-  dtpWindowApplies,
-  dtpWindowOffNote,
+  dtpSentinelText,
   dtpWriteBack,
   elementFigure,
-  explainDtpNull,
-  explainNull,
   gapRows,
   instantPlan,
   isSeeded,
@@ -92,18 +89,20 @@ import {
   matchDtpPreset,
   matchPreset,
   memberText,
-  nothingToWriteNote,
-  nullReasonText,
-  parseArgs,
+  ok,
   permalinkOf,
   presetState,
   readArgs,
+  readDtp,
+  readX12,
+  sentinelText,
   stripApplies,
   stripNote,
   timelineEmptyText,
   verdictOf,
   writeDate,
   writeTime,
+  x12Texts,
   type DtpState,
   type X12State,
   type X12TimeReaderArgs,
@@ -172,16 +171,38 @@ export function renderX12TimeReaderTemplate(
 
   const t = x12Texts();
   const hint = "gmt-widget-hint";
-  const longest = (xs: readonly string[]): string => xs.reduce((a, b) => (b.length > a.length ? b : a), "");
+  const longest = (xs: readonly string[]): string =>
+    xs.reduce((a, b) => (b.length > a.length ? b : a), "");
   const noteSlot = (role: string, texts: readonly string[], cls = hint) =>
-    holdHtml(`<p class="${cls}" data-role="${role}" data-grow="slot"></p>`, textSizers("p", cls, texts));
+    holdHtml(
+      `<p class="${cls}" data-role="${role}" data-grow="slot"></p>`,
+      textSizers("p", cls, texts),
+    );
   const refusal = (reasons: readonly string[], times = 1) =>
-    asideSizer(NO_RESULT_TITLE, Array.from({ length: times }, () => longest(reasons)));
+    asideSizer(
+      NO_RESULT_TITLE,
+      Array.from({ length: times }, () => longest(reasons)),
+    );
   const elementFigures = figureSizer([
     {
       halves: [
-        { label: "373", fields: [lit("2024", "CCYY", "date"), lit("06", "MM", "date"), lit("15", "DD", "date")] },
-        { label: "337", fields: [lit("14", "HH", "time"), lit("30", "MM", "time"), lit("00", "SS", "time"), lit("12", "DD", "time")] },
+        {
+          label: "373",
+          fields: [
+            lit("2024", "CCYY", "date"),
+            lit("06", "MM", "date"),
+            lit("15", "DD", "date"),
+          ],
+        },
+        {
+          label: "337",
+          fields: [
+            lit("14", "HH", "time"),
+            lit("30", "MM", "time"),
+            lit("00", "SS", "time"),
+            lit("12", "DD", "time"),
+          ],
+        },
         { label: "623", fields: [lit("ABCDEFGH", "623", "offset")] },
       ],
       separator: "",
@@ -191,23 +212,55 @@ export function renderX12TimeReaderTemplate(
   const dtpFigures = figureSizer([
     {
       parts: [
-        { text: "24166", caption: "1251 value", after: "", kind: "value" },
-        { text: "TU", caption: "1250", after: "", kind: "code" },
+        { text: "06152024", caption: "1251 value", after: "", kind: "value" },
+        { text: "DB", caption: "1250", after: "", kind: "code" },
       ],
       halves: [
-        { label: "", fields: [lit("24", "YY", "date"), lit("166", "DDD", "date")] },
+        {
+          label: "",
+          fields: [
+            lit("06", "MM", "date"),
+            lit("15", "DD", "date"),
+            lit("2024", "CCYY", "date"),
+          ],
+        },
       ],
       separator: "",
       closing: "no offset",
     },
     {
       parts: [
-        { text: "20240615143000-20240620160000", caption: "1251 value", after: "", kind: "value" },
+        {
+          text: "20240615143000-20240620160000",
+          caption: "1251 value",
+          after: "",
+          kind: "value",
+        },
         { text: "DTS", caption: "1250", after: "", kind: "code" },
       ],
       halves: [
-        { label: "start", fields: [lit("2024", "CCYY", "date"), lit("06", "MM", "date"), lit("15", "DD", "date"), lit("14", "HH", "time"), lit("30", "MM", "time"), lit("00", "SS", "time")] },
-        { label: "end", fields: [lit("2024", "CCYY", "date"), lit("06", "MM", "date"), lit("20", "DD", "date"), lit("16", "HH", "time"), lit("00", "MM", "time"), lit("00", "SS", "time")] },
+        {
+          label: "start",
+          fields: [
+            lit("2024", "CCYY", "date"),
+            lit("06", "MM", "date"),
+            lit("15", "DD", "date"),
+            lit("14", "HH", "time"),
+            lit("30", "MM", "time"),
+            lit("00", "SS", "time"),
+          ],
+        },
+        {
+          label: "end",
+          fields: [
+            lit("2024", "CCYY", "date"),
+            lit("06", "MM", "date"),
+            lit("20", "DD", "date"),
+            lit("16", "HH", "time"),
+            lit("00", "MM", "time"),
+            lit("00", "SS", "time"),
+          ],
+        },
       ],
       separator: "-",
       closing: "no offset",
@@ -238,23 +291,47 @@ export function renderX12TimeReaderTemplate(
     `</div>` +
     // 2. What parseX12DateTime returns: the elements taken apart, and what they state
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. What <code>parseX12DateTime</code> returns</h4>` +
+    `<h4>2. What the calls return</h4>` +
     `<div class="gmt-edi-split">` +
     `<div class="gmt-edi-pane">` +
     `<div class="gmt-edi-panel">` +
-    holdHtml(`<div class="gmt-edi-figure" data-role="figure" role="img" aria-label=""></div>`, [elementFigures]) +
-    holdHtml(`<p class="gmt-widget-hint gmt-edi-figure-note" data-role="figure-note"></p>`, [
-      sizerHtml("p", "gmt-widget-hint gmt-edi-figure-note", t.timeNotes.map((n) => `<span class="gmt-edi-line">${escapeHtml(n)}</span>`).join("")),
-    ]) +
+    holdHtml(
+      `<div class="gmt-edi-figure" data-role="figure" role="img" aria-label=""></div>`,
+      [elementFigures],
+    ) +
+    holdHtml(
+      `<p class="gmt-widget-hint gmt-edi-figure-note" data-role="figure-note"></p>`,
+      [
+        sizerHtml(
+          "p",
+          "gmt-widget-hint gmt-edi-figure-note",
+          t.timeNotes
+            .map((n) => `<span class="gmt-edi-line">${escapeHtml(n)}</span>`)
+            .join(""),
+        ),
+      ],
+    ) +
     holdHtml(`<div data-role="reason-aside"></div>`, [refusal(t.reasons)]) +
     `</div>` +
-    holdHtml(`<div class="gmt-edi-call" data-role="parse-block">${codeFrameHtml("parse")}</div>`, [callSizer(t.parseCall)]) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="parse-block">${codeFrameHtml("parse")}</div>`,
+      [callSizer(t.parseCall)],
+    ) +
     `</div>` +
     `<div class="gmt-edi-pane">` +
-    holdHtml(`<p class="gmt-edi-verdict" data-role="verdict" aria-live="polite"></p>`, textSizers("p", "gmt-edi-verdict", t.verdicts)) +
-    holdHtml(`<p class="gmt-edi-detail" data-role="verdict-detail"></p>`, textSizers("p", "gmt-edi-detail", t.details)) +
+    holdHtml(
+      `<p class="gmt-edi-verdict" data-role="verdict" aria-live="polite"></p>`,
+      textSizers("p", "gmt-edi-verdict", t.verdicts),
+    ) +
+    holdHtml(
+      `<p class="gmt-edi-detail" data-role="verdict-detail"></p>`,
+      textSizers("p", "gmt-edi-detail", t.details),
+    ) +
     `<dl class="gmt-edi-readouts" data-role="readouts">${readoutRowsHtml(MEMBER_ROWS)}</dl>` +
-    holdHtml(`<output class="gmt-widget-output gmt-edi-out" data-role="parse-output">&nbsp;</output>`, [outputSizer("gmt-widget-output gmt-edi-out", t.parseOutput)]) +
+    holdHtml(
+      `<output class="gmt-widget-output gmt-edi-out" data-role="parse-output">&nbsp;</output>`,
+      [outputSizer("gmt-widget-output gmt-edi-out", t.parseOutput)],
+    ) +
     `</div>` +
     `</div>` +
     `</div>` +
@@ -265,8 +342,17 @@ export function renderX12TimeReaderTemplate(
     `<div class="gmt-edi-split">` +
     `<div class="gmt-edi-pane">` +
     `<div class="gmt-edi-timeline gmt-edi-panel" data-role="timeline" role="img" aria-label=""></div>` +
-    holdHtml(`<p class="gmt-edi-verdict gmt-edi-verdict--long" data-role="gap"></p>`, textSizers("p", "gmt-edi-verdict gmt-edi-verdict--long", [...t.gaps, GAP_PROMPT])) +
-    holdHtml(`<div class="gmt-edi-call" data-role="resolve-block" hidden>${codeFrameHtml("resolve")}</div>`, [callSizer(t.resolveCall)]) +
+    holdHtml(
+      `<p class="gmt-edi-verdict gmt-edi-verdict--long" data-role="gap"></p>`,
+      textSizers("p", "gmt-edi-verdict gmt-edi-verdict--long", [
+        ...t.gaps,
+        GAP_PROMPT,
+      ]),
+    ) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="resolve-block" hidden>${codeFrameHtml("resolve")}</div>`,
+      [callSizer(t.resolveCall)],
+    ) +
     `</div>` +
     `<div class="gmt-edi-pane">` +
     `<div class="gmt-dtm-strip" data-role="gap-strip" role="group" aria-label="The same local time in up to four zones">` +
@@ -275,7 +361,14 @@ export function renderX12TimeReaderTemplate(
     `</div>` +
     `<p class="gmt-transport-visually-hidden" data-role="strip-summary" aria-live="polite"></p>` +
     holdHtml(`<div data-role="strip-aside"></div>`, [
-      asideSizer(NO_RESULT_TITLE, Array.from({ length: 2 }, () => `${SHORT_ZONE}: The 01:30 time happens twice in ${SHORT_ZONE} on that date. With disambiguation: "reject", resolveLocal does not pick one.`)),
+      asideSizer(
+        NO_RESULT_TITLE,
+        Array.from(
+          { length: 2 },
+          () =>
+            `${SHORT_ZONE}: The 01:30 time happens twice in ${SHORT_ZONE} on that date. With disambiguation: "reject", resolveLocal does not pick one.`,
+        ),
+      ),
     ]) +
     `<output class="gmt-widget-output gmt-edi-out" data-role="instant-output">&nbsp;</output>` +
     noteSlot("instant-note", t.instantNotes) +
@@ -284,21 +377,27 @@ export function renderX12TimeReaderTemplate(
     `</div>` +
     // 4. Written back: each element and its call on one line
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>4. Written back by <code>formatX12DateTimePeriod</code></h4>` +
+    `<h4>4. Written back by <code>formatX12Date</code> and <code>formatX12Time</code></h4>` +
     `<div class="gmt-edi-pairs">` +
     `<div class="gmt-edi-written">` +
     `<div class="gmt-edi-written-cell">` +
     `<p class="gmt-widget-hint">The date as element 373, with D8.</p>` +
     `<output class="gmt-widget-output gmt-edi-out" data-role="date-output">&nbsp;</output>` +
     `</div>` +
-    holdHtml(`<div class="gmt-edi-call" data-role="date-block" hidden>${codeFrameHtml("write-date")}</div>`, [callSizer(t.writeCall)]) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="date-block" hidden>${codeFrameHtml("write-date")}</div>`,
+      [callSizer(t.writeCall)],
+    ) +
     `</div>` +
     `<div class="gmt-edi-written">` +
     `<div class="gmt-edi-written-cell">` +
     `<p class="gmt-widget-hint">The time as element 337, with TM or TS.</p>` +
     `<output class="gmt-widget-output gmt-edi-out" data-role="time-output">&nbsp;</output>` +
     `</div>` +
-    holdHtml(`<div class="gmt-edi-call" data-role="time-block" hidden>${codeFrameHtml("write-time")}</div>`, [callSizer(t.writeCall)]) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="time-block" hidden>${codeFrameHtml("write-time")}</div>`,
+      [callSizer(t.writeCall)],
+    ) +
     `</div>` +
     `</div>` +
     noteSlot("format-note", t.formatNotes) +
@@ -312,31 +411,42 @@ export function renderX12TimeReaderTemplate(
     `</label>` +
     textField("dtp-format", "Qualifier (1250)", dtp.format, { maxlength: 8 }) +
     textField("dtp-value", "Value (1251)", dtp.value) +
-    yearWindowFieldsHtml(dtp.yearWindow, true) +
     `</div>` +
     holdHtml(
       `<p class="gmt-widget-hint" data-role="dtp-preset-description" data-grow="slot">${escapeHtml(dtpPreset?.description ?? "")}</p>`,
       textSizers("p", hint, t.dtpDescriptions),
     ) +
-    noteSlot("dtp-note", [t.dtpWindowNote]) +
     `<p class="gmt-widget-hint">A DTP segment carries a 1250 qualifier and an element 1251 value. It carries no time code, and no 1250 code states an offset.</p>` +
     `</div>` +
-    // 6. What parseX12DateTimePeriod returns: the value taken apart, and its members
+    // 6. What the DTP calls return: the value taken apart, and its members
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>6. What <code>parseX12DateTimePeriod</code> returns</h4>` +
+    `<h4>6. What the DTP calls return</h4>` +
     `<div class="gmt-edi-split">` +
     `<div class="gmt-edi-pane">` +
     `<div class="gmt-edi-panel">` +
-    holdHtml(`<div class="gmt-edi-figure" data-role="dtp-figure" role="img" aria-label=""></div>`, [dtpFigures]) +
-    holdHtml(`<p class="gmt-widget-hint gmt-edi-figure-note" data-role="dtp-figure-note"></p>`, textSizers("p", "gmt-widget-hint gmt-edi-figure-note", t.yearNotes)) +
-    holdHtml(`<div data-role="dtp-reason-aside"></div>`, [refusal(t.dtpReasons)]) +
+    holdHtml(
+      `<div class="gmt-edi-figure" data-role="dtp-figure" role="img" aria-label=""></div>`,
+      [dtpFigures],
+    ) +
+    holdHtml(`<div data-role="dtp-reason-aside"></div>`, [
+      refusal(t.dtpReasons),
+    ]) +
     `</div>` +
     `</div>` +
     `<div class="gmt-edi-pane">` +
     `<dl class="gmt-edi-readouts" data-role="dtp-readouts">${readoutRowsHtml(DTP_MEMBER_ROWS)}</dl>` +
-    holdHtml(`<div class="gmt-edi-call" data-role="dtp-parse-block">${codeFrameHtml("dtp-parse")}</div>`, [callSizer(t.dtpParseCall)]) +
-    holdHtml(`<output class="gmt-widget-output gmt-edi-out" data-role="dtp-parse-output">&nbsp;</output>`, [outputSizer("gmt-widget-output gmt-edi-out", t.dtpParseOutput)]) +
-    holdHtml(`<div class="gmt-edi-call" data-role="dtp-format-block" hidden>${codeFrameHtml("dtp-format")}</div>`, [callSizer(t.dtpFormatCall)]) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="dtp-parse-block">${codeFrameHtml("dtp-parse")}</div>`,
+      [callSizer(t.dtpParseCall)],
+    ) +
+    holdHtml(
+      `<output class="gmt-widget-output gmt-edi-out" data-role="dtp-parse-output">&nbsp;</output>`,
+      [outputSizer("gmt-widget-output gmt-edi-out", t.dtpParseOutput)],
+    ) +
+    holdHtml(
+      `<div class="gmt-edi-call" data-role="dtp-format-block" hidden>${codeFrameHtml("dtp-format")}</div>`,
+      [callSizer(t.dtpFormatCall)],
+    ) +
     `<output class="gmt-widget-output gmt-edi-out" data-role="dtp-format-output">&nbsp;</output>` +
     noteSlot("dtp-format-note", t.dtpFormatNotes) +
     `</div>` +
@@ -373,8 +483,6 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
   const dtpPresetEl = q<HTMLSelectElement>("dtp-preset")!;
   const dtpFormatEl = q<HTMLInputElement>("dtp-format")!;
   const dtpValueEl = q<HTMLInputElement>("dtp-value")!;
-  const windowEl = q<HTMLSelectElement>("year-window")!;
-  const startEl = q<HTMLInputElement>("year-start")!;
 
   let destroyed = false;
   signal.addEventListener("abort", () => {
@@ -387,10 +495,9 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     timeCode: codeEl.value,
     zones: zoneEls.map((z) => z.value) as X12State["zones"],
   });
-  const readDtp = (): DtpState => ({
+  const readDtpState = (): DtpState => ({
     format: dtpFormatEl.value,
     value: dtpValueEl.value,
-    yearWindow: yearWindowFromControls(windowEl.value, startEl.value),
   });
 
   function syncPreset(): void {
@@ -403,7 +510,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
         X12_PRESETS.find((p) => p.id === id)?.description ?? "",
       );
     }
-    const dtpId = matchDtpPreset(readDtp());
+    const dtpId = matchDtpPreset(readDtpState());
     dtpPresetEl.value = dtpId;
     const dtpSlot = q("dtp-preset-description");
     if (dtpSlot) {
@@ -418,13 +525,13 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
 
   function renderStrip(
     s: X12State,
-    result: ReturnType<EdiLib["parseX12DateTime"]>,
+    read: ReturnType<typeof readX12>,
   ): ReturnType<typeof gapRows> {
-    const applies = stripApplies(result);
+    const applies = stripApplies(read);
     const note = q("strip-note");
-    if (note) note.textContent = stripNote(result);
+    if (note) note.textContent = stripNote(read);
     const rows = applies
-      ? gapRows(result!.local!, s.zones, lib)
+      ? gapRows(read.house!, s.zones, lib)
       : s.zones.map((zone) => ({
           zone: zone.trim(),
           instant: "",
@@ -460,10 +567,10 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
           .filter((r) => r.zone !== ""),
         gap,
       });
-    } else if (result?.instant !== undefined) {
-      drawTimeline(timeline, { kind: "stated", instant: result.instant });
+    } else if (read.instant !== "") {
+      drawTimeline(timeline, { kind: "stated", instant: read.instant });
     } else {
-      drawTimeline(timeline, { kind: "empty", text: timelineEmptyText(result) });
+      drawTimeline(timeline, { kind: "empty", text: timelineEmptyText(read) });
     }
 
     const summary = q("strip-summary");
@@ -478,7 +585,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
                   : `Zone ${i + 1}, ${r.zone}: ${r.instant}, offset ${r.offset}.`,
             )
             .join(" ") + (gap ? ` ${gap.text}.` : "")
-        : stripNote(result);
+        : stripNote(read);
     }
 
     const aside = q("strip-aside");
@@ -502,26 +609,27 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
   function renderMain(): void {
     const s = readMain();
     const blank = mainBlank(s);
-    const args = parseArgs(s);
-    const result = blank
-      ? null
-      : lib.parseX12DateTime(...(args as [string?, string?, string?]));
+    const read = readX12(
+      blank ? { ...s, date: "", time: "", timeCode: "" } : s,
+      lib,
+    );
+    const valid = ok(read);
 
-    // Section 2: parseX12DateTime.
+    // Section 2: the element parse, the code's classifier and its offset or zone.
     const parseBlock = q("parse-block");
-    if (parseBlock) parseBlock.hidden = blank;
+    if (parseBlock) parseBlock.hidden = blank || read.calls.length === 0;
     const out = q("parse-output");
     if (blank) {
       if (out) renderWidgetOutput(out, "nothing to read", "empty");
+      clearCallLine(q("call-parse"));
     } else {
-      const [html, plain] = callArgs(args);
-      renderCallLine(q("call-parse"), "parseX12DateTime", html, plain);
+      renderCalls(q("call-parse"), read.calls);
       if (out) {
-        if (result === null) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-        else renderWidgetOutput(out, formatValue(result), "live");
+        if (!valid) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
+        else renderWidgetOutput(out, callResultsText(read.calls), "live");
       }
     }
-    const v = verdictOf(result);
+    const v = verdictOf(read);
     const verdict = q("verdict");
     if (verdict) verdict.textContent = v.verdict;
     const detail = q("verdict-detail");
@@ -529,10 +637,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     for (const row of MEMBER_ROWS) {
       const cell = q(row.role);
       if (!cell) continue;
-      const r = readoutOf(
-        result === null ? null : memberText(result, row.key),
-        result !== null,
-      );
+      const r = readoutOf(memberText(read, row.key), valid);
       cell.textContent = r.text;
       cell.dataset["state"] = r.state;
     }
@@ -545,7 +650,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
       });
       if (figureNote) figureNote.innerHTML = "";
     } else {
-      const fig = elementFigure(s, result, lib);
+      const fig = elementFigure(s, read);
       drawFigure(q("figure"), {
         kind: "value",
         parts: [],
@@ -562,12 +667,12 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     }
     const aside = q("reason-aside");
     if (aside) {
-      if (!blank && result === null) {
+      if (!blank && !valid) {
         renderAside(
           aside,
           "caution",
           NO_RESULT_TITLE,
-          `<p>${escapeHtml(nullReasonText(explainNull(s, lib), s))}</p>`,
+          `<p>${escapeHtml(sentinelText(read, lib))}</p>`,
         );
       } else {
         aside.innerHTML = "";
@@ -575,18 +680,20 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     }
 
     // Section 3: the instant, and the strip.
-    const rows = renderStrip(s, result);
-    const plan = instantPlan(result, s.zones);
+    const rows = renderStrip(s, read);
+    const plan = instantPlan(blank ? null : read, s.zones);
     const instantOut = q("instant-output");
     const resolveBlock = q("resolve-block");
-    if (resolveBlock) resolveBlock.hidden = plan.kind !== "resolve";
-    if (plan.kind !== "resolve") clearCallLine(q("call-resolve"));
+    const showsResolve = plan.kind === "resolve" || plan.kind === "stated";
+    if (resolveBlock) resolveBlock.hidden = !showsResolve;
+    if (!showsResolve) clearCallLine(q("call-resolve"));
     if (instantOut) {
-      if (plan.kind === "stated") {
-        renderWidgetOutput(instantOut, formatValue(result!.instant), "live");
+      if (plan.kind === "stated" && read.resolve !== null) {
+        renderCalls(q("call-resolve"), [read.resolve]);
+        renderWidgetOutput(instantOut, formatValue(read.instant), "live");
       } else if (plan.kind === "resolve") {
         const first = rows.find((r) => r.zone !== "")!;
-        const [html, plain] = callArgs([result!.local, first.zone, REJECT]);
+        const [html, plain] = callArgs([read.house, first.zone, REJECT]);
         renderCallLine(q("call-resolve"), "resolveLocal", html, plain);
         if (first.instant === "") {
           renderWidgetOutput(instantOut, "NO SIGNAL", "sentinel");
@@ -602,10 +709,9 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     if (instantNote) instantNote.textContent = plan.note;
 
     // Section 4: written back, one element each.
-    const dateW = writeDate(result, lib);
-    const timeW = writeTime(result, s.time, lib);
-    const emptyText =
-      result === null ? "nothing to write back" : "not sent";
+    const dateW = blank ? null : writeDate(read, lib);
+    const timeW = blank ? null : writeTime(read, lib);
+    const emptyText = !valid ? "nothing to write back" : "not sent";
     const dateOut = q("date-output");
     const dateBlock = q("date-block");
     if (dateBlock) dateBlock.hidden = dateW === null;
@@ -613,10 +719,10 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
       clearCallLine(q("call-write-date"));
       if (dateOut) renderWidgetOutput(dateOut, emptyText, "empty");
     } else {
-      const [html, plain] = callArgs([dateW.iso, dateW.code]);
-      renderCallLine(q("call-write-date"), "formatX12DateTimePeriod", html, plain);
+      renderCalls(q("call-write-date"), [dateW.call]);
       if (dateOut) {
-        if (dateW.output === "") renderWidgetOutput(dateOut, "NO SIGNAL", "sentinel");
+        if (dateW.output === "")
+          renderWidgetOutput(dateOut, "NO SIGNAL", "sentinel");
         else renderWidgetOutput(dateOut, formatValue(dateW.output), "live");
       }
     }
@@ -627,68 +733,55 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
       clearCallLine(q("call-write-time"));
       if (timeOut) renderWidgetOutput(timeOut, emptyText, "empty");
     } else {
-      const [html, plain] = callArgs([timeW.iso, timeW.code]);
-      renderCallLine(q("call-write-time"), "formatX12DateTimePeriod", html, plain);
+      renderCalls(q("call-write-time"), [timeW.call]);
       if (timeOut) {
-        if (timeW.output === "") renderWidgetOutput(timeOut, "NO SIGNAL", "sentinel");
+        if (timeW.output === "")
+          renderWidgetOutput(timeOut, "NO SIGNAL", "sentinel");
         else renderWidgetOutput(timeOut, formatValue(timeW.output), "live");
       }
     }
     const fmtNote = q("format-note");
-    if (fmtNote) fmtNote.textContent = timeW?.note ?? "";
+    if (fmtNote) {
+      fmtNote.textContent = [dateW?.note, timeW?.note]
+        .filter((n): n is string => n !== undefined && n !== "")
+        .join(" ");
+    }
   }
 
   // -- The DTP section ----------------------------------------------------
 
   function renderDtp(): void {
-    const d = readDtp();
+    const d = readDtpState();
     const blank = dtpBlank(d);
-    const applies = dtpWindowApplies(d, lib);
-    windowEl.disabled = !applies;
-    startEl.disabled = !applies || windowEl.value !== "fixed";
-    const note = q("dtp-note");
-    if (note) note.textContent = dtpWindowOffNote(d, lib);
-
-    const options = applies ? yearWindowOptions(d.yearWindow) : undefined;
-    const value = d.value.trim();
-    const format = d.format.trim();
-    const result = blank
-      ? null
-      : lib.parseX12DateTimePeriod(value, format, options);
+    const read = readDtp(d, lib);
     const parseBlock = q("dtp-parse-block");
-    if (parseBlock) parseBlock.hidden = blank;
+    if (parseBlock) parseBlock.hidden = blank || read.calls.length === 0;
     const out = q("dtp-parse-output");
     if (blank) {
       if (out) renderWidgetOutput(out, "nothing to read", "empty");
+      clearCallLine(q("call-dtp-parse"));
     } else {
-      const [html, plain] = callArgs(
-        options === undefined ? [value, format] : [value, format, options],
-      );
-      renderCallLine(q("call-dtp-parse"), "parseX12DateTimePeriod", html, plain);
+      renderCalls(q("call-dtp-parse"), read.calls);
       if (out) {
-        if (result === null) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-        else renderWidgetOutput(out, formatValue(result), "live");
+        if (read.house === null)
+          renderWidgetOutput(out, "NO SIGNAL", "sentinel");
+        else renderWidgetOutput(out, callResultsText(read.calls), "live");
       }
     }
     for (const row of DTP_MEMBER_ROWS) {
       const cell = q(row.role);
       if (!cell) continue;
-      const r = readoutOf(
-        result === null ? null : dtpMemberText(result, row.key),
-        result !== null,
-      );
+      const r = readoutOf(dtpMemberText(read, row.key), read.house !== null);
       cell.textContent = r.text;
       cell.dataset["state"] = r.state;
     }
-    const dtpNote = q("dtp-figure-note");
     if (blank) {
       drawFigure(q("dtp-figure"), {
         kind: "empty",
         text: "Type a qualifier and a value to take it apart.",
       });
-      if (dtpNote) dtpNote.textContent = "";
     } else {
-      const fig = dtpFigure(d, result, lib);
+      const fig = dtpFigure(read, lib);
       drawFigure(q("dtp-figure"), {
         kind: "value",
         parts: dtpParts(d),
@@ -697,33 +790,32 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
         closing: fig.closing,
         aria: fig.aria,
       });
-      if (dtpNote) dtpNote.textContent = fig.note;
     }
     const aside = q("dtp-reason-aside");
     if (aside) {
-      if (!blank && result === null) {
+      if (!blank && read.house === null) {
         renderAside(
           aside,
           "caution",
           NO_RESULT_TITLE,
-          `<p>${escapeHtml(dtpNullReasonText(explainDtpNull(d, lib), d))}</p>`,
+          `<p>${escapeHtml(dtpSentinelText(read))}</p>`,
         );
       } else {
         aside.innerHTML = "";
       }
     }
 
-    const written = dtpWriteBack(d, result, lib);
+    const written = dtpWriteBack(read, lib);
     const fmtOut = q("dtp-format-output");
     const fmtNote = q("dtp-format-note");
     const fmtBlock = q("dtp-format-block");
     if (fmtBlock) fmtBlock.hidden = written === null;
     if (written === null) {
+      clearCallLine(q("call-dtp-format"));
       if (fmtOut) renderWidgetOutput(fmtOut, "nothing to write back", "empty");
-      if (fmtNote) fmtNote.textContent = nothingToWriteNote(result);
+      if (fmtNote) fmtNote.textContent = "";
     } else {
-      const [html, plain] = callArgs(written.args);
-      renderCallLine(q("call-dtp-format"), "formatX12DateTimePeriod", html, plain);
+      renderCalls(q("call-dtp-format"), [written.call]);
       if (fmtOut) {
         if (written.output === "") {
           renderWidgetOutput(fmtOut, "NO SIGNAL", "sentinel");
@@ -753,9 +845,6 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
   function applyDtp(d: DtpState): void {
     setControlValue(dtpFormatEl, d.format);
     setControlValue(dtpValueEl, d.value);
-    const { mode, start } = yearWindowControls(d.yearWindow);
-    setControlValue(windowEl, mode);
-    setControlValue(startEl, start);
   }
 
   const TYPED = new Set([
@@ -764,7 +853,6 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
     "time-code",
     "dtp-format",
     "dtp-value",
-    "year-start",
   ]);
 
   root.addEventListener("input", (e) => {
@@ -790,7 +878,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
       applyDtp(dtpPresetState(preset));
       syncPreset();
       render();
-    } else if (role === "year-window" || /^zone-\d$/.test(role)) {
+    } else if (/^zone-\d$/.test(role)) {
       syncPreset();
       render();
     }
@@ -802,7 +890,7 @@ function setupWidget(root: HTMLElement, lib: EdiLib, signal: AbortSignal) {
 
   return {
     readMain,
-    readDtp,
+    readDtp: readDtpState,
     applyMain,
     applyDtp,
     render,

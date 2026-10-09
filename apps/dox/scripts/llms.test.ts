@@ -23,6 +23,7 @@ const mdxExists = existsSync(refDir);
 import {
   isReferenceIndex,
   referenceSections,
+  withoutLinks,
   renderLlmsFull,
   renderLlmsTxt,
   type LlmsSection,
@@ -110,6 +111,15 @@ describe("llms.txt surface", () => {
       "- [absDuration](/reference/duration/calculate/absDuration.md): Absolute value of a duration",
     );
     expect(output).toContain("- [Install](/install.md)");
+  });
+
+  it("withoutLinks keeps a description's words and drops its links", () => {
+    expect(
+      withoutLinks(
+        "Read from [UNECE's D.21B page](http://web.archive.org/web/x/tred2379.htm); see `x`.",
+      ),
+    ).toBe("Read from UNECE's D.21B page; see `x`.");
+    expect(withoutLinks("No link here.")).toBe("No link here.");
   });
 
   it("renderLlmsFull includes page markdown bodies", () => {

@@ -2,9 +2,10 @@
 /**
  * DTM Decoder widget (INT-15).
  *
- * A pasted UN/EDIFACT `DTM` segment, or a value and its 2379 format code, read by
- * `parseEdifactDtm`: what the value states, whether its offset is stated, and the
- * same offsetless value read in the zones you choose.
+ * A pasted UN/EDIFACT `DTM` segment, or a value and its 2379 format code: the
+ * code is classified, the parser of its kind reads the value, and the widget shows
+ * whether the offset is stated and the same offsetless value read in the zones you
+ * choose.
  *
  * **The markup and the wiring both live in `lib/dtm-decoder-mount.ts`**,
  * so the chat rail mounts the same widget this page server-renders.

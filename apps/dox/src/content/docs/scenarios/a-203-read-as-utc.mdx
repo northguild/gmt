@@ -14,24 +14,27 @@ const value = "202406151430"; // DTM+137:202406151430:203'
 const iso = value.slice(0, 4) + "-" + value.slice(4, 6) + "-" + value.slice(6, 8) + "T" + value.slice(8, 10) + ":" + value.slice(10, 12) + ":00Z";
 new Date(iso).toISOString();
 // "2024-06-15T14:30:00.000Z" — an instant the message never stated`}
-  explanation={`Code 203 is CCYYMMDDHHMM with no offset: a local time at a place the value does not name. Appending Z invents the place. If the terminal is in Shanghai, the event happened at 06:30 UTC, eight hours earlier than the stored instant. parseEdifactDtm returns local and no instant, so the zone has to come from you. A code that does carry its offset, such as 205, returns the instant itself.`}
-  gmtCode={`import { parseEdifactDtm } from "@northguild/gmt/intermodal";
-import { resolveLocal } from "@northguild/gmt/instant";
+  explanation={`Code 203 is CCYYMMDDHHMM with no offset: a local time at a place the value does not name. Appending Z invents the place. If the terminal is in Shanghai, the event happened at 06:30 UTC, eight hours earlier than the stored instant. parseEdifactDateTime returns a local date-time and no instant, so the zone has to come from you. A code that does carry its offset, such as 205, is read by parseEdifactOffsetDateTime, which returns the date-time with its offset.`}
+  gmtCode={`import { parseEdifactDateTime, parseEdifactOffsetDateTime } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal, toOffsetInstant } from "@northguild/gmt/instant/convert";
 
-parseEdifactDtm("202406151430", "203");
-// { local: "2024-06-15T14:30:00" }
+parseEdifactDateTime("202406151430", "203");
+// "2024-06-15T14:30:00"
 
 // The terminal is in Shanghai, so you say so.
 resolveLocal("2024-06-15T14:30:00", "Asia/Shanghai");
 // "2024-06-15T06:30:00Z"
 
 // A 205 value carries its own offset, so it names an instant.
-parseEdifactDtm("202406151430+0200", "205");
-// { local: "2024-06-15T14:30:00", offset: "+02:00", instant: "2024-06-15T12:30:00Z" }`}
-  fixedSpecId="parseEdifactDtm"
+parseEdifactOffsetDateTime("202406151430+0200", "205");
+// "2024-06-15T14:30:00+02:00"
+toOffsetInstant("2024-06-15T14:30:00+02:00");
+// { instant: "2024-06-15T12:30:00Z", offset: "+02:00" }`}
+  fixedSpecId="parseEdifactDateTime"
 />
 
-Change the format code in the widget above to `205` and the value to `202406151430+0200`, and an
-instant appears. Open [the same value read in four zones](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22DTM%2B137%3A202406151430%3A203%27%22%2C%22zone1%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22Europe%2FBerlin%22%2C%22zone3%22%3A%22Asia%2FShanghai%22%2C%22zone4%22%3A%22America%2FLos_Angeles%22%7D)
+The widget above reads a `203` value and returns a local date-time with no offset. Switch to
+[`parseEdifactOffsetDateTime`](/reference/intermodal/parse/parseEdifactOffsetDateTime/) with the
+value `202406151430+0200` and code `205`, and the result states its offset. Open [the same value read in four zones](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22DTM%2B137%3A202406151430%3A203%27%22%2C%22zone1%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22Europe%2FBerlin%22%2C%22zone3%22%3A%22Asia%2FShanghai%22%2C%22zone4%22%3A%22America%2FLos_Angeles%22%7D)
 in the DTM Decoder: the four instants are 15 hours apart. The full rules are in [Intermodal: EDI
 Timestamps](/guides/industries/intermodal-edi-timestamps/).

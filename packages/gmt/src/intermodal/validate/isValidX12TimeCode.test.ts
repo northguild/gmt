@@ -1,6 +1,16 @@
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
-import { x12TimeCode } from "../parse/x12TimeCode";
+import type { X12TimeCode } from "../../types/edi";
+import { x12TimeCodeOffset } from "../parse/x12TimeCodeOffset";
+import { x12TimeCodeZone } from "../parse/x12TimeCodeZone";
 import { isValidX12TimeCode } from "./isValidX12TimeCode";
+
+/** Whether one of the two readers reads the code: an offset, or a zone. */
+function isRead(timeCode: unknown): boolean {
+  return (
+    x12TimeCodeOffset(timeCode as never) !== "" ||
+    x12TimeCodeZone(timeCode as never) !== null
+  );
+}
 
 describe("isValidX12TimeCode", () => {
   // The 56 codes of X12 data element 623, release 008010, with each definition as Stedi's
@@ -64,15 +74,19 @@ describe("isValidX12TimeCode", () => {
     ${"TT"}  | ${"Atlantic Time"}
     ${"UT"}  | ${"Universal Time Coordinate"}
   `(
-    "returns true for $timeCode ($definition), which x12TimeCode reads",
+    "returns true for $timeCode ($definition), which exactly one of x12TimeCodeOffset and x12TimeCodeZone reads",
     ({ timeCode }) => {
       expect(isValidX12TimeCode(timeCode)).toBe(true);
-      expect(x12TimeCode(timeCode)).not.toBeNull();
+      expect(isRead(timeCode)).toBe(true);
+      expect(
+        x12TimeCodeOffset(timeCode) !== "" &&
+          x12TimeCodeZone(timeCode) !== null,
+      ).toBe(false);
     },
   );
 
-  // Membership is by the list, never by shape, and matching is exact. Each row is also
-  // `x12TimeCode`'s answer: null exactly where the validator is false.
+  // Membership is by the list, never by shape, and matching is exact. Each row is also the two
+  // readers' answer: neither reads a code the validator refuses.
   it.each`
     timeCode         | reads
     ${"et"}          | ${"lower case: matching is exact"}
@@ -97,14 +111,14 @@ describe("isValidX12TimeCode", () => {
     ${"toString"}    | ${"an inherited property name"}
     ${"constructor"} | ${"an inherited property name"}
   `(
-    "returns false for '$timeCode' ($reads), which x12TimeCode does not read",
+    "returns false for '$timeCode' ($reads), which neither x12TimeCodeOffset nor x12TimeCodeZone reads",
     ({ timeCode }) => {
       expect(isValidX12TimeCode(timeCode)).toBe(false);
-      expect(x12TimeCode(timeCode)).toBeNull();
+      expect(isRead(timeCode)).toBe(false);
     },
   );
 
-  it("returns false for a time code that is not a string, which x12TimeCode does not read", () => {
+  it("returns false for a time code that is not a string, which neither reader reads", () => {
     const nonStrings: [string, () => unknown][] = [
       ["null", () => null],
       ["undefined", () => undefined],
@@ -117,16 +131,16 @@ describe("isValidX12TimeCode", () => {
     ];
     for (const [kind, make] of nonStrings) {
       expect(isValidX12TimeCode(make()), kind).toBe(false);
-      expect(x12TimeCode(make() as never), kind).toBeNull();
+      expect(isRead(make()), kind).toBe(false);
     }
   });
 
   it("narrows an unknown value to X12TimeCode", () => {
     const candidate: unknown = "ES";
-    // The guard is the only thing that makes this call typecheck.
-    const meaning = isValidX12TimeCode(candidate)
-      ? x12TimeCode(candidate)
+    // The guard is the only thing that makes this assignment typecheck.
+    const narrowed: X12TimeCode | null = isValidX12TimeCode(candidate)
+      ? candidate
       : null;
-    expect(meaning).toEqual({ zone: "Eastern", daylight: false });
+    expect(narrowed).toBe("ES");
   });
 });

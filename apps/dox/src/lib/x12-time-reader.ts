@@ -2,23 +2,25 @@
  * Pure helpers for the X12 Time Reader (INT-15).
  *
  * The main section reads the three elements a freight segment carries side by
- * side: a date (element 373), a time (element 337) and a time code (element
- * 623), as `AT7` in a 214, `G62` in a 204 and `DTM-02`/`03`/`04` carry them.
- * One call reads all three: `parseX12DateTime(date, time, timeCode)`. X12 is a
- * United States standard.
+ * side: a date (element 373), a time (element 337) and a time code (element 623),
+ * as `AT7` in a 214, `G62` in a 204 and `DTM-02`/`03`/`04` carry them. Three
+ * small calls read them: `parseX12DateAndTime(date, time)` (or `parseX12Date` or
+ * `parseX12Time` when only one element is filled), `classifyX12TimeCode(code)`,
+ * and then `x12TimeCodeOffset(code)` for a code that states an offset or
+ * `x12TimeCodeZone(code)` for a code that names a zone. When the code states an
+ * offset, `resolveLocal(local, offset)` gives the instant. X12 is a United States
+ * standard.
  *
  * A second, smaller section reads a data element 1251 value against its 1250
- * qualifier with `parseX12DateTimePeriod`. A qualifier has no time code, and no
- * instant.
+ * qualifier: it classifies the qualifier (`classifyX12DateTimePeriodFormat`) and
+ * calls the parser of the kind that came back. A qualifier has no time code, and
+ * no instant.
  *
- * Every parsed member, time-code verdict, instant, offset in force and
- * written-back value is a real `EdiLib` call. The site-side code only builds the
- * argument list of the call it prints (`parseArgs`), builds the string a
- * formatter takes from the members a parser returned (`isoOf`), and formats a
- * returned duration as "15 h". Nothing here derives a zone from a time code, a
- * zone name, a place or a partner. A preset is an example and states its own
- * zones, written by hand beside its description; every other zone is the
- * reader's pick.
+ * Every printed call, and every result beside it, is a real `EdiLib` call. The
+ * site-side code builds nothing of its own: it picks the function a kind names.
+ * Nothing here derives a zone from a time code, a zone name, a place or a
+ * partner. A preset is an example and states its own zones, written by hand beside
+ * its description; every other zone is the reader's pick.
  *
  * No DOM and no gmt import: the library comes in from the mount.
  *
@@ -30,26 +32,34 @@
  */
 
 import {
-  figureTail,
-  isoNote,
+  KIND_WORDS,
   LONGEST_ZONE,
-  isoOf,
-  needsYearWindow,
+  X12_FUNCTIONS,
+  formatClassified,
+  isInterval,
+  isSentinel,
+  parseClassified,
   resolveInZone,
-  yearWindowNote,
-  yearWindowOptions,
+  runCall,
+  unreadCodeText,
+  type EdiCall,
+  type EdiHouse,
   type EdiLib,
-  type EdiResult,
+  type X12Class,
+  type X12TimeCodeClass,
+  type X12Zone,
 } from "./edi-widgets";
 import {
+  cutValue,
   figureAria,
   picHalves,
   plainHalves,
+  probeFamily,
+  shapeOf,
   type PicField,
   type PicHalf,
   type PicPart,
 } from "./edi-picture";
-import { cutValue, shapeOf } from "./edi-shape";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -57,7 +67,8 @@ export const CUSTOM_PRESET_ID = "custom";
 // State and args
 // ---------------------------------------------------------------------------
 
-/** What a chat call or a permalink hands over. */
+/** What a chat call or a permalink hands over. An old link may still carry a
+ *  `yearWindow`; it is ignored. */
 export interface X12TimeReaderArgs {
   /** Element 373, as sent. */
   date?: string;
@@ -74,7 +85,6 @@ export interface X12TimeReaderArgs {
   format?: string;
   /** The element 1251 value of the `DTP` section. */
   value?: string;
-  yearWindow?: string | number;
 }
 
 /** What the main section's DOM holds: all strings. */
@@ -89,28 +99,15 @@ export interface X12State {
 export interface DtpState {
   format: string;
   value: string;
-  yearWindow: string;
-}
-
-// ---------------------------------------------------------------------------
-// The call that is printed
-// ---------------------------------------------------------------------------
-
-/**
- * The arguments of the one `parseX12DateTime` call, exactly as the library is
- * called and exactly as the call line prints them. A blank optional element is
- * left out of the call; a blank element before a sent one is the empty string,
- * which the library reads as "not sent".
- */
-export function parseArgs(state: X12State): string[] {
-  const args = [state.date.trim(), state.time.trim(), state.timeCode.trim()];
-  while (args.length > 0 && args[args.length - 1] === "") args.pop();
-  return args;
 }
 
 /** Whether nothing was typed into any of the three elements. */
 export function mainBlank(state: X12State): boolean {
-  return parseArgs(state).length === 0;
+  return (
+    state.date.trim() === "" &&
+    state.time.trim() === "" &&
+    state.timeCode.trim() === ""
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -126,8 +123,8 @@ export interface X12Preset {
   timeCode: string;
   /**
    * The example's own zones, literal and hand-written. Blank where the strip
-   * does not apply (an offset code, a date or a time alone, a refused value).
-   * Nothing derives them from `timeCode`.
+   * does not apply (an offset code, a date or a time alone). Nothing derives
+   * them from `timeCode`.
    */
   zones: [string, string, string, string];
 }
@@ -136,7 +133,7 @@ export interface X12Preset {
  * A preset is an example, and an example may state its place: each preset that
  * states no offset carries the zones that make it most informative, and says in
  * its description that the zone is the example's pick. Typing a time code never
- * fills a zone.
+ * fills a zone. Every preset returns a value.
  */
 export const X12_PRESETS: readonly X12Preset[] = [
   {
@@ -207,12 +204,17 @@ export const X12_PRESETS: readonly X12Preset[] = [
     id: "hundredths",
     label: "A time with hundredths",
     description:
-      "Element 337 can carry tenths or hundredths of a second. The library reads them and does not write them back, so the written-back time shows NO SIGNAL. The four zones are this example's picks, so the strip shows the instants: change them to the places your message means.",
+      "Element 337 can carry tenths or hundredths of a second. The library reads them, and the formatter cuts them back to the mask it writes (TS has seconds and no fraction). The four zones are this example's picks, so the strip shows the instants: change them to the places your message means.",
     date: "20240615",
     time: "14300012",
     timeCode: "",
     // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
-    zones: ["America/New_York", "Europe/Berlin", "Asia/Shanghai", "America/Los_Angeles"],
+    zones: [
+      "America/New_York",
+      "Europe/Berlin",
+      "Asia/Shanghai",
+      "America/Los_Angeles",
+    ],
   },
   {
     id: "no-code",
@@ -223,7 +225,12 @@ export const X12_PRESETS: readonly X12Preset[] = [
     time: "1430",
     timeCode: "",
     // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
-    zones: ["America/New_York", "Europe/Berlin", "Asia/Shanghai", "America/Los_Angeles"],
+    zones: [
+      "America/New_York",
+      "Europe/Berlin",
+      "Asia/Shanghai",
+      "America/Los_Angeles",
+    ],
   },
   {
     id: "local-lt",
@@ -234,7 +241,12 @@ export const X12_PRESETS: readonly X12Preset[] = [
     time: "1430",
     timeCode: "LT",
     // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
-    zones: ["America/New_York", "Europe/Berlin", "Asia/Shanghai", "America/Los_Angeles"],
+    zones: [
+      "America/New_York",
+      "Europe/Berlin",
+      "Asia/Shanghai",
+      "America/Los_Angeles",
+    ],
   },
   {
     id: "date-only",
@@ -254,16 +266,6 @@ export const X12_PRESETS: readonly X12Preset[] = [
     date: "",
     time: "1430",
     timeCode: "",
-    zones: ["", "", "", ""],
-  },
-  {
-    id: "code-no-time",
-    label: "A time code with no time",
-    description:
-      "A time code qualifies a time, so X12 requires the time whenever the code is sent. A date and a code with no time return NO SIGNAL.",
-    date: "20240615",
-    time: "",
-    timeCode: "ET",
     zones: ["", "", "", ""],
   },
 ];
@@ -309,9 +311,10 @@ export interface DtpPreset {
   description: string;
   format: string;
   value: string;
-  yearWindow: string;
 }
 
+/** Every preset returns a value except the last, which shows a two-digit-year
+ *  qualifier, the one a reader will try. */
 export const DTP_PRESETS: readonly DtpPreset[] = [
   {
     id: "range-rd8",
@@ -320,61 +323,41 @@ export const DTP_PRESETS: readonly DtpPreset[] = [
       "A range of dates is sent with a hyphen between its two ends. It names no instant, and a qualifier has no time code.",
     format: "RD8",
     value: "20240615-20240620",
-    yearWindow: "",
   },
   {
-    id: "ordinal-tc",
-    label: "TC: a day of the year with no year",
+    id: "range-dts",
+    label: "DTS: a range of date-times",
     description:
-      "TC keeps only the day of the year. With no year there is no date, so nothing can be written back.",
-    format: "TC",
-    value: "166",
-    yearWindow: "",
+      "A range of date-times, each end with seconds, joined by a hyphen. The qualifier states no offset, so neither end names an instant.",
+    format: "DTS",
+    value: "20240615143000-20240620160000",
   },
   {
-    id: "overnight-rtm",
-    label: "RTM: a window that crosses midnight",
+    id: "date-db",
+    label: "DB: month, day, then year",
     description:
-      "A window that crosses midnight is read as written: the start is 22:00 and the end is 06:00. The value does not say which day either time falls on.",
-    format: "RTM",
-    value: "2200-0600",
-    yearWindow: "",
+      "The same date as D8 with the fields in another order: DB is MMDDCCYY. The library reads the order the qualifier states.",
+    format: "DB",
+    value: "06152024",
   },
   {
-    id: "d6-no-window",
-    label: "D6: a two-digit year, no window",
+    id: "d6-two-digit",
+    label: "D6: a two-digit year, not read",
     description:
-      "D6 has a two-digit year, and no standard says which century it belongs to. With no window the library returns NO SIGNAL. A two-digit year is a legacy form.",
+      "D6 has a two-digit year, and no standard says which century it belongs to. The EDI functions do not read it, so the library returns the sentinel. The pattern parsers read the same digits with a yearWindow that states the century.",
     format: "D6",
     value: "240615",
-    yearWindow: "",
-  },
-  {
-    id: "d6-window",
-    label: "D6: a two-digit year, window from 2000",
-    description:
-      "The same value with a window that starts in 2000, so 24 is read as 2024. A fixed window gives the same answer in any year.",
-    format: "D6",
-    value: "240615",
-    yearWindow: "2000",
   },
 ];
 
 export function dtpPresetState(preset: DtpPreset): DtpState {
-  return {
-    format: preset.format,
-    value: preset.value,
-    yearWindow: preset.yearWindow,
-  };
+  return { format: preset.format, value: preset.value };
 }
 
 /** The `DTP` preset whose every field equals the state's (trimmed), else custom. */
 export function matchDtpPreset(state: DtpState): string {
   const hit = DTP_PRESETS.find(
-    (p) =>
-      p.format === state.format.trim() &&
-      p.value === state.value.trim() &&
-      p.yearWindow === state.yearWindow.trim(),
+    (p) => p.format === state.format.trim() && p.value === state.value.trim(),
   );
   return hit ? hit.id : CUSTOM_PRESET_ID;
 }
@@ -398,9 +381,8 @@ export function isSeeded(args: X12TimeReaderArgs): boolean {
   );
 }
 
-/** The states a seed names. A string is kept as typed, a numeric `yearWindow`
- *  becomes its text, and an absent key is blank. Nothing falls back to a
- *  preset. */
+/** The states a seed names. A string is kept as typed and an absent key is blank.
+ *  Nothing falls back to a preset. A `yearWindow` an old link carries is not read. */
 export function readArgs(args: X12TimeReaderArgs): {
   main: X12State;
   dtp: DtpState;
@@ -420,7 +402,6 @@ export function readArgs(args: X12TimeReaderArgs): {
     dtp: {
       format: text(args.format),
       value: text(args.value),
-      yearWindow: text(args.yearWindow),
     },
   };
 }
@@ -445,8 +426,149 @@ export function permalinkOf(
   put("zone4", main.zones[3]);
   put("format", dtp.format);
   put("value", dtp.value);
-  put("yearWindow", dtp.yearWindow);
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Reading the three elements
+// ---------------------------------------------------------------------------
+
+/** The element parse the main section made. */
+export type MainKind = "dateAndTime" | "date" | "time";
+
+export interface X12Read {
+  date: string;
+  time: string;
+  code: string;
+  /** The date-and-time, date or time parse; `null` when no element was typed. */
+  main: EdiCall | null;
+  mainKind: MainKind | null;
+  /** What the parse returned; `null` for the sentinel or no call. */
+  house: string | null;
+  /** `classifyX12TimeCode`'s call; `null` when no code was typed. */
+  classify: EdiCall | null;
+  codeClass: X12TimeCodeClass | null;
+  /** `x12TimeCodeOffset` or `x12TimeCodeZone`, by the class. */
+  codeCall: EdiCall | null;
+  /** The offset an offset code states, else `""`. */
+  offset: string;
+  /** The zone a zone code names, else `null`. */
+  zone: X12Zone | null;
+  /** `resolveLocal(local, offset)` for a local date-time and an offset code. */
+  resolve: EdiCall | null;
+  /** The instant a stated offset fixes, else `""`. */
+  instant: string;
+  /** The calls for the call frame, in order. */
+  calls: EdiCall[];
+  /** The date element read alone (for the written-back date), else `null`. */
+  dateCall: EdiCall | null;
+  /** The time element read alone (for the written-back time), else `null`. */
+  timeCall: EdiCall | null;
+}
+
+/**
+ * Read the three elements: the element parse, the code's classifier and its
+ * offset or zone, and `resolveLocal(local, offset)` when an offset code and a
+ * local date-time give an instant. The element parse is chosen by what is typed:
+ * both date and time, one alone, or (when a code is sent without a time) the
+ * two-element parse, which returns the sentinel because a time code qualifies a
+ * time.
+ */
+export function readX12(state: X12State, lib: EdiLib): X12Read {
+  const date = state.date.trim();
+  const time = state.time.trim();
+  const code = state.timeCode.trim();
+  const read: X12Read = {
+    date,
+    time,
+    code,
+    main: null,
+    mainKind: null,
+    house: null,
+    classify: null,
+    codeClass: null,
+    codeCall: null,
+    offset: "",
+    zone: null,
+    resolve: null,
+    instant: "",
+    calls: [],
+    dateCall: null,
+    timeCall: null,
+  };
+
+  if (date !== "" && time !== "") {
+    read.mainKind = "dateAndTime";
+    read.main = runCall(lib, "parseX12DateAndTime", date, time);
+  } else if (time !== "") {
+    read.mainKind = "time";
+    read.main = runCall(lib, "parseX12Time", time);
+  } else if (date !== "" && code === "") {
+    read.mainKind = "date";
+    read.main = runCall(lib, "parseX12Date", date, "D8");
+  } else if (date !== "" || code !== "") {
+    // A code is sent with no time: the two-element parse needs both.
+    read.mainKind = "dateAndTime";
+    read.main = runCall(lib, "parseX12DateAndTime", date, time);
+  }
+  if (read.main !== null) {
+    read.calls.push(read.main);
+    if (!isSentinel(read.main.result)) read.house = read.main.result as string;
+  }
+
+  if (code !== "") {
+    read.classify = runCall(lib, "classifyX12TimeCode", code);
+    read.calls.push(read.classify);
+    read.codeClass = read.classify.result as X12TimeCodeClass | null;
+    if (read.codeClass !== null) {
+      if (read.codeClass.kind === "offset") {
+        read.codeCall = runCall(
+          lib,
+          "x12TimeCodeOffset",
+          read.codeClass.timeCode,
+        );
+        read.offset = read.codeCall.result as string;
+      } else {
+        read.codeCall = runCall(
+          lib,
+          "x12TimeCodeZone",
+          read.codeClass.timeCode,
+        );
+        read.zone = read.codeCall.result as X12Zone | null;
+      }
+      read.calls.push(read.codeCall);
+    }
+  }
+
+  // The element parses behind the written-back lines, when both elements were sent.
+  if (read.mainKind === "dateAndTime" && date !== "" && time !== "") {
+    read.dateCall = runCall(lib, "parseX12Date", date, "D8");
+    read.timeCall = runCall(lib, "parseX12Time", time);
+  } else if (read.mainKind === "date") {
+    read.dateCall = read.main;
+  } else if (read.mainKind === "time") {
+    read.timeCall = read.main;
+  }
+
+  if (
+    ok(read) &&
+    read.mainKind === "dateAndTime" &&
+    read.offset !== "" &&
+    read.house !== null
+  ) {
+    read.resolve = runCall(lib, "resolveLocal", read.house, read.offset);
+    read.instant = isSentinel(read.resolve.result)
+      ? ""
+      : (read.resolve.result as string);
+  }
+  return read;
+}
+
+/** Whether the read holds a value: the element parse returned one, and a code that
+ *  was sent is one the classifier knows. */
+export function ok(read: X12Read): boolean {
+  if (read.house === null) return false;
+  return read.code === "" || read.codeClass !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -454,37 +576,65 @@ export function permalinkOf(
 // ---------------------------------------------------------------------------
 
 export type MemberKey =
-  | "date"
-  | "time"
-  | "local"
-  | "instant"
+  | "kind"
+  | "value"
+  | "code"
   | "offset"
   | "zone"
-  | "daylight";
+  | "daylight"
+  | "instant";
 
 export const MEMBER_ROWS: readonly {
   key: MemberKey;
   role: string;
   label: string;
 }[] = [
-  { key: "date", role: "member-date", label: "Date" },
-  { key: "time", role: "member-time", label: "Time" },
-  { key: "local", role: "member-local", label: "Local date-time" },
-  { key: "instant", role: "member-instant", label: "Instant" },
+  { key: "kind", role: "member-kind", label: "Kind" },
+  { key: "value", role: "member-value", label: "Value" },
+  { key: "code", role: "member-code", label: "Time code" },
   { key: "offset", role: "member-offset", label: "Offset" },
   { key: "zone", role: "member-zone", label: "Zone name" },
   { key: "daylight", role: "member-daylight", label: "Daylight" },
+  { key: "instant", role: "member-instant", label: "Instant" },
 ];
 
-/** The member's text, or `null` when the result does not hold it. `daylight`
- *  (`true`, `false` or `null`) is shown as `daylight`, `standard` or `not said`. */
-export function memberText(result: EdiResult, key: MemberKey): string | null {
-  const v = result[key];
-  if (v === undefined) return null;
-  // The flag is shown as its meaning, as the verdict says it. The call line
-  // keeps the literal `true`, `false` or `null` the library returned.
-  if (key === "daylight") return v === true ? "daylight" : v === false ? "standard" : "not said";
-  return String(v);
+const MAIN_KIND_WORDS: Record<MainKind, string> = {
+  dateAndTime: KIND_WORDS["dateTime"]!,
+  date: KIND_WORDS["date"]!,
+  time: KIND_WORDS["time"]!,
+};
+
+/** The member's text, or `null` when the read does not hold it. `daylight`
+ *  (`true`, `false` or `null`) is shown as `daylight`, `standard` or `not said`,
+ *  as its meaning; the call line keeps the literal the library returned. */
+export function memberText(read: X12Read, key: MemberKey): string | null {
+  if (!ok(read)) return null;
+  switch (key) {
+    case "kind":
+      return read.mainKind === null ? null : MAIN_KIND_WORDS[read.mainKind];
+    case "value":
+      return read.house;
+    case "code":
+      return read.codeClass === null
+        ? null
+        : read.codeClass.kind === "offset"
+          ? "states an offset"
+          : "names a zone";
+    case "offset":
+      return read.offset === "" ? null : read.offset;
+    case "zone":
+      return read.zone === null ? null : read.zone.zone;
+    case "daylight":
+      return read.zone === null
+        ? null
+        : read.zone.daylight === true
+          ? "daylight"
+          : read.zone.daylight === false
+            ? "standard"
+            : "not said";
+    case "instant":
+      return read.instant === "" ? null : read.instant;
+  }
 }
 
 export interface Verdict {
@@ -495,60 +645,55 @@ export interface Verdict {
 const NO_DAY = " A time alone names no instant: it is on no day.";
 
 /**
- * What the elements state, in words, decided by the result's own members.
- * `null` (the sentinel) has no verdict.
+ * What the elements state, in words, decided by the calls' own results. The
+ * verdict has two forms: the offset is stated, or it is not. The detail says
+ * which, and what the time code names when it names a zone.
  */
-export function verdictOf(result: EdiResult | null): Verdict {
-  if (result === null) return { verdict: "", detail: "" };
-  const timeAlone = result.date === undefined && result.time !== undefined;
-  if (result.offset !== undefined) {
+export function verdictOf(read: X12Read): Verdict {
+  if (!ok(read)) return { verdict: "", detail: "" };
+  const timeAlone = read.mainKind === "time";
+  if (read.offset !== "") {
     return {
-      verdict: `Offset stated: ${result.offset}`,
+      verdict: `Offset: stated (${read.offset})`,
       detail:
-        result.instant !== undefined
+        read.instant !== ""
           ? "The time code gives the offset from UTC, so the date and the time name one instant."
-          : `The time code gives the offset from UTC.${NO_DAY}`,
+          : `The time code gives the offset from UTC.${timeAlone ? NO_DAY : ""}`,
     };
   }
-  if (result.zone === "Local") {
+  const zone = read.zone;
+  if (zone !== null && zone.zone === "Local") {
     return {
-      verdict: "Nothing stated: local to the event",
-      detail: `The place is elsewhere in the message. You supply its zone.${timeAlone ? NO_DAY : ""}`,
+      verdict: "Offset: not stated",
+      detail: `The time code says local to the event. The place is elsewhere in the message. You supply its zone.${timeAlone ? NO_DAY : ""}`,
     };
   }
-  if (result.zone !== undefined) {
-    const daylight =
-      result.daylight === true
-        ? "daylight"
-        : result.daylight === false
-          ? "standard"
-          : "not said";
+  if (zone !== null) {
     const said =
-      result.daylight === true
-        ? "The code says daylight time."
-        : result.daylight === false
-          ? "The code says standard time."
-          : "The code says neither standard nor daylight, so the date decides.";
+      zone.daylight === true
+        ? "The code names the zone and says daylight time."
+        : zone.daylight === false
+          ? "The code names the zone and says standard time."
+          : "The code names the zone and says neither standard nor daylight, so the date decides.";
     return {
-      verdict: `Zone named, offset not stated: ${result.zone} (${daylight})`,
-      detail: `${said} X12 states no offset for a named zone.${timeAlone ? NO_DAY : ""}`,
+      verdict: "Offset: not stated",
+      detail: `${said} X12 states no offset for a named zone: ${zone.zone}.${timeAlone ? NO_DAY : ""}`,
     };
   }
-  if (result.time === undefined) {
+  if (read.mainKind === "date") {
     return {
-      verdict: "A date only",
+      verdict: "Offset: not stated",
       detail: "A date alone names no instant in any zone.",
     };
   }
-  if (result.date === undefined) {
+  if (read.mainKind === "time") {
     return {
-      verdict: "A time only: a time alone names no instant",
-      detail:
-        "There is no date and no time code, so nothing says which day or where the clock was.",
+      verdict: "Offset: not stated",
+      detail: `There is no date and no time code, so nothing says which day or where the clock was.${NO_DAY}`,
     };
   }
   return {
-    verdict: "Nothing stated: no time code was sent",
+    verdict: "Offset: not stated",
     detail:
       "A blank time code means local to the event. The place is elsewhere in the message. You supply its zone.",
   };
@@ -561,29 +706,30 @@ export function verdictOf(result: EdiResult | null): Verdict {
 const REJECT_NOTE =
   'Read with disambiguation: "reject": a time the clock shows twice or never is not resolved.';
 
-/** The strip applies to a local date-time that states no offset. */
-export function stripApplies(result: EdiResult | null): boolean {
+/** The strip applies to a local date-time whose code states no offset. */
+export function stripApplies(read: X12Read | null): boolean {
   return (
-    result !== null &&
-    result.local !== undefined &&
-    result.offset === undefined &&
-    result.instant === undefined
+    read !== null &&
+    ok(read) &&
+    read.mainKind === "dateAndTime" &&
+    read.offset === ""
   );
 }
 
 const STRIP_NOTE_NONE = "No value.";
 const STRIP_NOTE_STATED =
   "The time code states the offset, so there is nothing to choose.";
-const STRIP_NOTE_ALONE =
-  "A date or a time alone names no instant in any zone.";
+const STRIP_NOTE_ALONE = "A date or a time alone names no instant in any zone.";
+const STRIP_NOTE_APPLIES =
+  'The elements state no offset. Each zone above is a pick, from the example or from you, and not something the elements say: the same digits, read there. Every row uses resolveLocal with disambiguation: "reject", so a time the clock shows twice or never is not resolved.';
 
-/** The line above the strip, by what the result holds. */
-export function stripNote(result: EdiResult | null): string {
-  if (result === null) return STRIP_NOTE_NONE;
-  if (stripApplies(result)) {
-    return `The elements state no offset. Each zone above is a pick, from the example or from you, and not something the elements say: the same digits, read there. Every row uses resolveLocal with disambiguation: "reject", so a time the clock shows twice or never is not resolved.`;
+/** The line above the strip, by what the read holds. */
+export function stripNote(read: X12Read | null): string {
+  if (read === null || !ok(read)) return STRIP_NOTE_NONE;
+  if (stripApplies(read)) return STRIP_NOTE_APPLIES;
+  if (read.offset !== "" && read.mainKind === "dateAndTime") {
+    return STRIP_NOTE_STATED;
   }
-  if (result.instant !== undefined) return STRIP_NOTE_STATED;
   return STRIP_NOTE_ALONE;
 }
 
@@ -629,24 +775,25 @@ export interface InstantPlan {
 
 /**
  * Which step fixes the instant, or why none does:
- *  - `stated`: the result holds an `instant`, so the library already named it;
+ *  - `stated`: an offset code and a local date-time, so `resolveLocal(local,
+ *    offset)` gave it;
  *  - `resolve`: a local date-time and a zone the reader picked, so the first
  *    chosen zone's `resolveLocal` call is shown;
  *  - `none`: no call, and the note says why.
  */
 export function instantPlan(
-  result: EdiResult | null,
+  read: X12Read | null,
   zones: readonly string[],
 ): InstantPlan {
-  if (result === null) return { kind: "none", note: "No value." };
-  if (result.instant !== undefined) {
+  if (read === null || !ok(read)) return { kind: "none", note: "No value." };
+  if (read.instant !== "") {
     return {
       kind: "stated",
-      note: "This is the instant member of the call above: the local date-time read at the offset the time code states.",
+      note: "The local date-time read at the offset the time code states, with resolveLocal.",
     };
   }
-  if (result.local === undefined) {
-    if (result.time !== undefined) {
+  if (read.mainKind !== "dateAndTime") {
+    if (read.mainKind === "time") {
       return {
         kind: "none",
         note: "A time alone names no instant: there is no date.",
@@ -657,10 +804,10 @@ export function instantPlan(
   if (zones.some((z) => z.trim() !== "")) {
     return { kind: "resolve", note: REJECT_NOTE };
   }
-  if (result.zone !== undefined && result.zone !== "Local") {
+  if (read.zone !== null && read.zone.zone !== "Local") {
     return {
       kind: "none",
-      note: `No instant: the code names ${result.zone} time and states no offset. Pick the IANA zone it means for you.`,
+      note: `No instant: the code names ${read.zone.zone} time and states no offset. Pick the IANA zone it means for you.`,
     };
   }
   return {
@@ -670,22 +817,22 @@ export function instantPlan(
 }
 
 // ---------------------------------------------------------------------------
-// Why null: the main section
+// Why the sentinel: the main section
 // ---------------------------------------------------------------------------
 
-export type X12NullReason =
+export type X12Why =
   | "bad-date"
   | "bad-time"
   | "not-a-code"
   | "needs-time"
   | "bad-combination";
 
-export const NULL_REASON_TEXT: Record<
-  X12NullReason,
+export const REASON_TEXT: Record<
+  X12Why,
   (context: { timeCode: string }) => string
 > = {
   "bad-date": () =>
-    "The date is not a CCYYMMDD date: it has a four-digit year and names a day that exists.",
+    "The date is not a CCYYMMDD date: it has a four-digit year and names a day that exists. A two-digit year is not read.",
   "bad-time": () =>
     "The time is not one of the four element 337 forms: HHMM, HHMMSS, HHMMSSD or HHMMSSDD, with an hour from 00 to 23 and a minute and second from 00 to 59.",
   "not-a-code": ({ timeCode }) =>
@@ -695,29 +842,25 @@ export const NULL_REASON_TEXT: Record<
   "bad-combination": () => "These elements do not fit together.",
 };
 
-export function nullReasonText(
-  reason: X12NullReason,
-  state: X12State,
-): string {
-  return NULL_REASON_TEXT[reason]({ timeCode: state.timeCode.trim() });
-}
-
 /**
- * Why `parseX12DateTime` returned `null`, decided by probing the library with
- * one element at a time, never by a list of codes held here. Not called for a
- * blank section (`mainBlank`): nothing typed makes no call.
+ * Why the main section is the sentinel, decided by probing the library with one
+ * element at a time, never by a list of codes held here. Not called for a blank
+ * section (`mainBlank`): nothing typed makes no call.
  */
-export function explainNull(state: X12State, lib: EdiLib): X12NullReason {
-  const date = state.date.trim();
-  const time = state.time.trim();
-  const code = state.timeCode.trim();
-  if (date !== "" && lib.parseX12DateTime(date) === null) return "bad-date";
-  if (time !== "" && lib.parseX12DateTime("", time) === null) return "bad-time";
-  if (code !== "" && lib.x12TimeCode(code) === null) return "not-a-code";
-  if (time === "" && code !== "" && lib.parseX12DateTime(date, "0000", code) !== null) {
-    return "needs-time";
+export function whyNot(read: X12Read, lib: EdiLib): X12Why {
+  if (read.code !== "" && read.codeClass === null) return "not-a-code";
+  if (read.time === "" && read.code !== "") return "needs-time";
+  if (read.date !== "" && isSentinel(lib.parseX12Date(read.date, "D8"))) {
+    return "bad-date";
+  }
+  if (read.time !== "" && isSentinel(lib.parseX12Time(read.time))) {
+    return "bad-time";
   }
   return "bad-combination";
+}
+
+export function sentinelText(read: X12Read, lib: EdiLib): string {
+  return REASON_TEXT[whyNot(read, lib)]({ timeCode: read.code });
 }
 
 // ---------------------------------------------------------------------------
@@ -725,92 +868,62 @@ export function explainNull(state: X12State, lib: EdiLib): X12NullReason {
 // ---------------------------------------------------------------------------
 
 export interface ElementWrite {
-  /** The string handed to the formatter. */
-  iso: string;
-  /** The 1250 code that writes the element: `D8`, `TM` or `TS`. */
-  code: string;
+  /** The formatter's call. */
+  call: EdiCall;
   output: string;
   note: string;
 }
 
-const TIME_FRACTION_NOTE =
-  "formatX12DateTimePeriod writes the time as HHMM or HHMMSS. Tenths and hundredths of a second are read and not written, so there is no value to show.";
-
-/** The date, as element 373: `formatX12DateTimePeriod(date, "D8")`. `null` when
- *  the result holds no date. */
-export function writeDate(
-  result: EdiResult | null,
-  lib: EdiLib,
-): ElementWrite | null {
-  if (result === null || result.date === undefined) return null;
+/** The date, as element 373: `formatX12Date(date, "D8")`, from `parseX12Date`'s
+ *  result. `null` when the date element was not read. */
+export function writeDate(read: X12Read, lib: EdiLib): ElementWrite | null {
+  const r = read.dateCall?.result;
+  if (!ok(read) || typeof r !== "string" || r === "") return null;
+  const call = runCall(lib, "formatX12Date", r, "D8");
   return {
-    iso: result.date,
-    code: "D8",
-    output: lib.formatX12DateTimePeriod(result.date, "D8"),
-    note: "",
+    call,
+    output: call.result as string,
+    note:
+      read.mainKind === "dateAndTime"
+        ? "The date is element 373 read alone by parseX12Date."
+        : "",
   };
 }
 
 /**
  * The time, as element 337: `TM` when the time was sent as four digits, `TS`
- * otherwise. The code follows the form the reader typed, so the value comes back
- * in that form. `null` when the result holds no time.
+ * otherwise, so the value comes back in the form it was sent. A fraction is cut,
+ * not refused. `null` when the time element was not read.
  */
-export function writeTime(
-  result: EdiResult | null,
-  sentTime: string,
-  lib: EdiLib,
-): ElementWrite | null {
-  if (result === null || result.time === undefined) return null;
-  const code = sentTime.trim().length === 4 ? "TM" : "TS";
-  const output = lib.formatX12DateTimePeriod(result.time, code);
-  return {
-    iso: result.time,
-    code,
-    output,
-    note: output === "" ? TIME_FRACTION_NOTE : "",
-  };
+export function writeTime(read: X12Read, lib: EdiLib): ElementWrite | null {
+  const r = read.timeCall?.result;
+  if (!ok(read) || typeof r !== "string" || r === "") return null;
+  const code = read.time.length === 4 ? "TM" : "TS";
+  const call = runCall(lib, "formatX12Time", r, code);
+  const notes: string[] = [];
+  if (read.mainKind === "dateAndTime") {
+    notes.push("The time is element 337 read alone by parseX12Time.");
+  }
+  if (r.includes(".")) {
+    notes.push(
+      "formatX12Time cuts tenths and hundredths of a second: neither mask has a field for them.",
+    );
+  }
+  return { call, output: call.result as string, note: notes.join(" ") };
 }
 
 // ---------------------------------------------------------------------------
 // The DTP section
 // ---------------------------------------------------------------------------
 
-export type DtpMemberKey =
-  | "date"
-  | "time"
-  | "local"
-  | "dayOfYear"
-  | "yearDigit"
-  | "periodEnd";
-
-/** No 1250 code carries an offset, so there is no instant, offset or zone row. */
-export const DTP_MEMBER_ROWS: readonly {
-  key: DtpMemberKey;
-  role: string;
-  label: string;
-}[] = [
-  { key: "date", role: "dtp-member-date", label: "Date" },
-  { key: "time", role: "dtp-member-time", label: "Time" },
-  { key: "local", role: "dtp-member-local", label: "Local date-time" },
-  { key: "dayOfYear", role: "dtp-member-day-of-year", label: "Day of year" },
-  { key: "yearDigit", role: "dtp-member-year-digit", label: "Year digit" },
-  { key: "periodEnd", role: "dtp-member-range-end", label: "Range end" },
-];
-
-/** The member's text, or `null` when the result does not hold it. A range end
- *  shows its `local`, else its `date`, else its `time`. */
-export function dtpMemberText(
-  result: EdiResult,
-  key: DtpMemberKey,
-): string | null {
-  if (key === "periodEnd") {
-    const end = result.periodEnd;
-    if (end === undefined) return null;
-    return end.local ?? end.date ?? end.time ?? null;
-  }
-  const v = result[key];
-  return v === undefined ? null : String(v);
+export interface DtpRead {
+  value: string;
+  format: string;
+  classify: EdiCall | null;
+  classified: X12Class | null;
+  parse: EdiCall | null;
+  house: EdiHouse | null;
+  calls: EdiCall[];
 }
 
 /** Whether the `DTP` section has nothing typed, so no call is made. */
@@ -818,125 +931,109 @@ export function dtpBlank(state: DtpState): boolean {
   return state.format.trim() === "" && state.value.trim() === "";
 }
 
-export type DtpNullReason =
-  | "blank-value"
-  | "no-format"
-  | "unstructured"
-  | "unread-format"
-  | "needs-year-window"
-  | "bad-year-window"
-  | "bad-value";
+/** Classify the qualifier, then call the parser of the kind that came back. */
+export function readDtp(state: DtpState, lib: EdiLib): DtpRead {
+  const value = state.value.trim();
+  const format = state.format.trim();
+  const read: DtpRead = {
+    value,
+    format,
+    classify: null,
+    classified: null,
+    parse: null,
+    house: null,
+    calls: [],
+  };
+  if (format === "") return read;
+  read.classify = runCall(lib, "classifyX12DateTimePeriodFormat", format);
+  read.calls.push(read.classify);
+  read.classified = read.classify.result as X12Class | null;
+  if (read.classified === null) return read;
+  read.parse = parseClassified(
+    lib,
+    X12_FUNCTIONS[read.classified.kind],
+    value,
+    read.classified.format,
+  );
+  read.calls.push(read.parse);
+  if (!isSentinel(read.parse.result))
+    read.house = read.parse.result as EdiHouse;
+  return read;
+}
 
-export const DTP_NULL_REASON_TEXT: Record<
-  DtpNullReason,
+export type DtpMemberKey = "kind" | "value" | "rangeEnd";
+
+/** No 1250 code carries an offset, so there is no instant, offset or zone row. */
+export const DTP_MEMBER_ROWS: readonly {
+  key: DtpMemberKey;
+  role: string;
+  label: string;
+}[] = [
+  { key: "kind", role: "dtp-member-kind", label: "Kind" },
+  { key: "value", role: "dtp-member-value", label: "Value" },
+  { key: "rangeEnd", role: "dtp-member-range-end", label: "Range end" },
+];
+
+/** The member's text, or `null` when the read does not hold it. */
+export function dtpMemberText(read: DtpRead, key: DtpMemberKey): string | null {
+  if (read.classified === null || read.house === null) return null;
+  switch (key) {
+    case "kind":
+      return KIND_WORDS[read.classified.kind] ?? read.classified.kind;
+    case "value":
+      return isInterval(read.house) ? read.house.start : read.house;
+    case "rangeEnd":
+      return isInterval(read.house) ? read.house.end : null;
+  }
+}
+
+export type DtpWhy = "blank-value" | "no-format" | "unread-code" | "bad-value";
+
+export const DTP_REASON_TEXT: Record<
+  Exclude<DtpWhy, "unread-code">,
   (context: { format: string }) => string
 > = {
   "blank-value": () => "Type an element 1251 value.",
   "no-format": () => "Type the 1250 qualifier the value is read under.",
-  unstructured: () =>
-    "UN is unstructured: it has no layout, and the library never guesses one.",
-  "unread-format": ({ format }) =>
-    `${format} is not a qualifier the library reads. A partial value or a month-name form is not a complete date or time, and DTM is a segment name, not a 1250 code.`,
-  "needs-year-window": ({ format }) =>
-    `Qualifier ${format} has a two-digit year. No standard says which century it belongs to, so choose a window: rolling, or a start year. A two-digit year is a legacy form: where a partner can send a four-digit year, ask for it.`,
-  "bad-year-window": () =>
-    "The window is rolling or a whole year from 0 to 9900.",
-  "bad-value": () =>
-    "The value does not fit this qualifier, names a date that does not exist, is a range sent without its hyphen, or is a dated range whose end is before its start.",
+  "bad-value": ({ format }) =>
+    `The value does not fit qualifier ${format}, names a date that does not exist, is a range sent without its hyphen, or is a dated range whose end is before its start.`,
 };
 
-export function dtpNullReasonText(
-  reason: DtpNullReason,
-  state: DtpState,
-): string {
-  return DTP_NULL_REASON_TEXT[reason]({ format: state.format.trim() });
-}
-
-/**
- * Why `parseX12DateTimePeriod` returned `null` for this state, decided by
- * probing the library in a fixed order, never by a list of codes held here.
- */
-export function explainDtpNull(state: DtpState, lib: EdiLib): DtpNullReason {
-  const value = state.value.trim();
-  const format = state.format.trim();
-  if (value === "") return "blank-value";
-  if (format === "") return "no-format";
-  if (format === "UN") return "unstructured";
-  if (!lib.isValidX12DateTimePeriodFormat(format)) return "unread-format";
-  if (needsYearWindow(lib.formatX12DateTimePeriod, format)) {
-    if (yearWindowOptions(state.yearWindow) === undefined) {
-      return "needs-year-window";
-    }
-    if (lib.isValidX12DateTimePeriod(value, format, { yearWindow: 2000 })) {
-      return "bad-year-window";
-    }
-  }
-  return "bad-value";
-}
-
-/** Whether the qualifier has a two-digit year, by probing the formatter. */
-export function dtpWindowApplies(state: DtpState, lib: EdiLib): boolean {
-  const format = state.format.trim();
-  return format !== "" && needsYearWindow(lib.formatX12DateTimePeriod, format);
-}
-
-/** The line under the `DTP` fields when the year controls are off. */
-export function dtpWindowOffNote(state: DtpState, lib: EdiLib): string {
-  const format = state.format.trim();
-  if (format === "" || dtpWindowApplies(state, lib)) return "";
-  return lib.isValidX12DateTimePeriodFormat(format)
-    ? `Qualifier ${format} carries a four-digit year. The window is not read.`
-    : "";
+/** The one sentence under NO SIGNAL for the `DTP` section. */
+export function dtpSentinelText(read: DtpRead): string {
+  if (read.value === "")
+    return DTP_REASON_TEXT["blank-value"]({ format: read.format });
+  if (read.format === "")
+    return DTP_REASON_TEXT["no-format"]({ format: read.format });
+  if (read.classified === null) return unreadCodeText(read.format, "x12");
+  return DTP_REASON_TEXT["bad-value"]({ format: read.format });
 }
 
 export interface DtpWriteBack {
-  /** The string handed to the formatter. */
-  iso: string;
-  args: unknown[];
+  call: EdiCall;
   output: string;
   note: string;
 }
 
-/** The note under the output when `isoOf` finds nothing to write. */
-export function nothingToWriteNote(result: EdiResult | null): string {
-  if (result === null) return "";
-  if (result.date === undefined && result.dayOfYear !== undefined) {
-    return result.yearDigit === undefined
-      ? "TC keeps only the day of the year, so there is no date to write back."
-      : "EH keeps only the last digit of the year, so there is no date to write back.";
-  }
-  return "";
-}
-
-/**
- * `formatX12DateTimePeriod` of what the parser returned, with the same
- * qualifier and, for a qualifier that reads one, the same window. `null` when
- * there is nothing to write.
- */
-export function dtpWriteBack(
-  state: DtpState,
-  result: EdiResult | null,
-  lib: EdiLib,
-): DtpWriteBack | null {
-  if (result === null) return null;
-  const iso = isoOf(result, lib);
-  if (iso === null) return null;
-  const format = state.format.trim();
-  const options = dtpWindowApplies(state, lib)
-    ? yearWindowOptions(state.yearWindow)
-    : undefined;
-  const args: unknown[] =
-    options === undefined ? [iso, format] : [iso, format, options];
-  const output = lib.formatX12DateTimePeriod(iso, format, options);
-  const notes: string[] = [];
-  const built = isoNote(result);
-  if (built !== "") notes.push(built);
-  if (output === "") {
-    notes.push(
-      "formatX12DateTimePeriod returned the sentinel for this value and qualifier.",
-    );
-  }
-  return { iso, args, output, note: notes.join(" ") };
+/** The kind's formatter, called with what the parser returned. `null` when there
+ *  is no value to write. */
+export function dtpWriteBack(read: DtpRead, lib: EdiLib): DtpWriteBack | null {
+  if (read.classified === null || read.house === null) return null;
+  const call = formatClassified(
+    lib,
+    X12_FUNCTIONS[read.classified.kind],
+    read.house,
+    read.classified.format,
+  );
+  const output = call.result as string;
+  return {
+    call,
+    output,
+    note:
+      output === ""
+        ? `${call.fn} returned the sentinel for this value and qualifier.`
+        : "",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -945,26 +1042,26 @@ export function dtpWriteBack(
 
 const DIGITS = /^\d+$/;
 
-/** What `x12TimeCode` returned, in words. */
-export function timeCodeWords(
-  meaning: ReturnType<EdiLib["x12TimeCode"]>,
-): string {
-  if (meaning === null) return "not a 623 time code";
-  if ("offset" in meaning) return `offset ${meaning.offset}`;
-  if (meaning.zone === "Local") return "local to the event, no zone named";
+/** What the code calls returned, in words. */
+export function timeCodeWords(read: X12Read): string {
+  if (read.code === "") return "";
+  if (read.codeClass === null) return "not a 623 time code";
+  if (read.codeClass.kind === "offset") return `offset ${read.offset}`;
+  if (read.zone === null) return "a zone";
+  if (read.zone.zone === "Local") return "local to the event, no zone named";
   const daylight =
-    meaning.daylight === true
+    read.zone.daylight === true
       ? "daylight time"
-      : meaning.daylight === false
+      : read.zone.daylight === false
         ? "standard time"
         : "daylight not said";
-  return `zone ${meaning.zone}, ${daylight}`;
+  return `zone ${read.zone.zone}, ${daylight}`;
 }
 
 export interface ElementFigure {
   halves: PicHalf[];
   aria: string;
-  /** Words under the picture: what `x12TimeCode` returned, and what the last
+  /** Words under the picture: what the code calls returned, and what the last
    *  digits of the time are. Empty lines are left out. */
   notes: string[];
 }
@@ -981,16 +1078,12 @@ const NOT_SENT: PicField = {
  * The date, the time and the time code taken apart. The date is `CCYY MM DD`; the
  * time `HH MM`, then `SS`, then a tenth (`D`) or hundredths (`DD`) by the digits
  * the reader typed, which are the four forms element 337 defines (HHMM, HHMMSS,
- * HHMMSSD, HHMMSSDD); the time code is its own box, with what `x12TimeCode`
+ * HHMMSSD, HHMMSSDD); the time code is its own box, with what the code calls
  * returned. An element that is not the shape its element defines sits in one
  * neutral box, and a refused read (`result` null) draws every element neutral.
  */
-export function elementFigure(
-  state: X12State,
-  result: EdiResult | null,
-  lib: EdiLib,
-): ElementFigure {
-  const refused = result === null;
+export function elementFigure(state: X12State, read: X12Read): ElementFigure {
+  const refused = !ok(read);
   const group = <G extends "date" | "time" | "offset">(g: G): G | "neutral" =>
     refused ? "neutral" : g;
   const date = state.date.trim();
@@ -1002,9 +1095,25 @@ export function elementFigure(
       ? [NOT_SENT]
       : DIGITS.test(date) && date.length === 8
         ? [
-            { text: date.slice(0, 4), mask: "CCYY", group: group("date"), word: "year", bracket: "date" },
-            { text: date.slice(4, 6), mask: "MM", group: group("date"), word: "month" },
-            { text: date.slice(6, 8), mask: "DD", group: group("date"), word: "day" },
+            {
+              text: date.slice(0, 4),
+              mask: "CCYY",
+              group: group("date"),
+              word: "year",
+              bracket: "date",
+            },
+            {
+              text: date.slice(4, 6),
+              mask: "MM",
+              group: group("date"),
+              word: "month",
+            },
+            {
+              text: date.slice(6, 8),
+              mask: "DD",
+              group: group("date"),
+              word: "day",
+            },
           ]
         : [{ text: date, mask: "", group: "neutral", word: "text" }];
 
@@ -1014,10 +1123,28 @@ export function elementFigure(
       ? [NOT_SENT]
       : DIGITS.test(time) && [4, 6, 7, 8].includes(time.length)
         ? [
-            { text: time.slice(0, 2), mask: "HH", group: group("time"), word: "hour", bracket: "time" },
-            { text: time.slice(2, 4), mask: "MM", group: group("time"), word: "minute" },
+            {
+              text: time.slice(0, 2),
+              mask: "HH",
+              group: group("time"),
+              word: "hour",
+              bracket: "time",
+            },
+            {
+              text: time.slice(2, 4),
+              mask: "MM",
+              group: group("time"),
+              word: "minute",
+            },
             ...(time.length >= 6
-              ? [{ text: time.slice(4, 6), mask: "SS", group: group("time"), word: "second" }]
+              ? [
+                  {
+                    text: time.slice(4, 6),
+                    mask: "SS",
+                    group: group("time"),
+                    word: "second",
+                  },
+                ]
               : []),
             ...(time.length >= 7
               ? [
@@ -1025,14 +1152,17 @@ export function elementFigure(
                     text: time.slice(6),
                     mask: decimals === 1 ? "D" : "DD",
                     group: group("time"),
-                    word: decimals === 1 ? "tenths of a second" : "hundredths of a second",
+                    word:
+                      decimals === 1
+                        ? "tenths of a second"
+                        : "hundredths of a second",
                   },
                 ]
               : []),
           ]
         : [{ text: time, mask: "", group: "neutral", word: "text" }];
 
-  const meaning = code === "" ? null : lib.x12TimeCode(code);
+  const meaning = read.codeClass;
   const codeFields: PicField[] =
     code === ""
       ? [NOT_SENT]
@@ -1043,7 +1173,7 @@ export function elementFigure(
             group: meaning === null || refused ? "neutral" : "offset",
             word: "time code",
             bracket:
-              meaning !== null && !refused && !("offset" in meaning)
+              meaning !== null && !refused && meaning.kind === "zone"
                 ? "zone"
                 : "offset",
           },
@@ -1057,7 +1187,11 @@ export function elementFigure(
 
   const notes: string[] = [];
   if (code !== "") {
-    notes.push(`x12TimeCode("${code}") returned ${timeCodeWords(meaning)}.`);
+    notes.push(
+      read.codeCall === null
+        ? `classifyX12TimeCode("${code}") does not know it: ${timeCodeWords(read)}.`
+        : `${read.codeCall.fn}("${code}") returned ${timeCodeWords(read)}.`,
+    );
   }
   if (timeFields.some((f) => f.mask === "D" || f.mask === "DD")) {
     notes.push(
@@ -1074,7 +1208,7 @@ export function elementFigure(
     say("Time", timeFields),
     code === ""
       ? "Time code: not sent"
-      : `Time code ${code}: ${timeCodeWords(meaning)}`,
+      : `Time code ${code}: ${timeCodeWords(read)}`,
   ].join(". ");
   return { halves, aria: `${aria}.`, notes };
 }
@@ -1082,7 +1216,12 @@ export function elementFigure(
 /** The parts row of a `DTP` value: the element 1251 value and its 1250 qualifier. */
 export function dtpParts(state: DtpState): PicPart[] {
   return [
-    { text: state.value.trim(), caption: "1251 value", after: "", kind: "value" },
+    {
+      text: state.value.trim(),
+      caption: "1251 value",
+      after: "",
+      kind: "value",
+    },
     { text: state.format.trim(), caption: "1250", after: "", kind: "code" },
   ];
 }
@@ -1092,45 +1231,51 @@ export interface DtpFigure {
   separator: string;
   closing: string;
   aria: string;
-  note: string;
 }
 
 /**
- * A `DTP` value taken apart from the shape the formatter's own output gives its
- * 1250 qualifier. The field order is read off where each distinct probe field
- * lands, so `MMDDCCYY`, `DDMMYYHHMM`, `YYDDD` and a range with a hyphen each get
- * their own order. No 1250 code states an offset, so a read value closes with
+ * A `DTP` value taken apart along the layout the kind's formatter writes for the
+ * qualifier (`shapeOf`), so `MMDDCCYY` and a range with a hyphen each get their
+ * own order. No 1250 code states an offset, so a read value closes with
  * `no offset`.
  */
-export function dtpFigure(
-  state: DtpState,
-  result: EdiResult | null,
-  lib: EdiLib,
-): DtpFigure {
-  const value = state.value.trim();
-  const format = state.format.trim();
-  const shape = format === "" ? null : shapeOf(lib.formatX12DateTimePeriod, format);
+export function dtpFigure(read: DtpRead, lib: EdiLib): DtpFigure {
+  const { value, format, classified } = read;
+  let shape = null as ReturnType<typeof shapeOf>;
+  if (classified !== null) {
+    const fns = X12_FUNCTIONS[classified.kind];
+    const write = (a: string, b: string): string => {
+      if (fns.format === "formatX12Time")
+        return lib.formatX12Time(a, classified.format);
+      return fns.period
+        ? (lib[fns.format] as (s: string, e: string, f: string) => string)(
+            a,
+            b,
+            classified.format,
+          )
+        : (lib[fns.format] as (v: string, f: string) => string)(
+            a,
+            classified.format,
+          );
+    };
+    shape = shapeOf(write, probeFamily(classified.kind));
+  }
   const cut = shape === null ? null : cutValue(value, shape);
-  const refused = result === null;
-  const halves =
-    cut === null || shape === null ? plainHalves(value) : picHalves(cut, refused);
+  const refused = read.house === null;
+  const halves = cut === null ? plainHalves(value) : picHalves(cut, refused);
   const closing = !refused && cut !== null ? "no offset" : "";
-  const window = shape?.window === true && cut !== null;
-  const read = result === null ? undefined : (result.date ?? result.local);
-  const note = window ? yearWindowNote(state.yearWindow, read) : "";
   return {
     halves,
     separator: shape?.separator ?? "",
     closing,
-    aria: figureAria(value, format, halves, figureTail(closing, note)),
-    note,
+    aria: figureAria(value, format, halves, closing),
   };
 }
 
 /** The words the timeline shows when there is no instant to place. */
-export function timelineEmptyText(result: EdiResult | null): string {
-  if (result === null) return "No value, so no instant to place.";
-  if (result.local === undefined && result.time !== undefined) {
+export function timelineEmptyText(read: X12Read | null): string {
+  if (read === null || !ok(read)) return "No value, so no instant to place.";
+  if (read.mainKind === "time") {
     return "A time alone names no instant: nothing to place.";
   }
   return "A date alone names no instant: nothing to place.";
@@ -1140,66 +1285,68 @@ export function timelineEmptyText(result: EdiResult | null): string {
 // Every text a region can show, for the height it reserves (`holdHtml`)
 // ---------------------------------------------------------------------------
 
-/** Results shaped like each kind `parseX12DateTime` returns, to run the pure text
- *  functions over. Never shown; only their texts are measured. */
-const SHAPES: readonly EdiResult[] = [
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: null },
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: true },
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Eastern", daylight: false },
-  { time: "14:30:00", zone: "Eastern", daylight: null },
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", zone: "Local", daylight: null },
-  { time: "14:30:00", zone: "Local", daylight: null },
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", instant: "2024-06-15T14:30:00Z", offset: "+00:00" },
-  { time: "14:30:00", offset: "+00:00" },
-  { date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00" },
-  { date: "2024-06-15" },
-  { time: "14:30:00" },
-];
-
 /** The texts each X12 Time Reader region can show. */
 export function x12Texts() {
-  const verdicts = SHAPES.map(verdictOf);
-  const plans = SHAPES.map((r) => instantPlan(r, ["a zone", "", "", ""]).note).concat(
-    SHAPES.map((r) => instantPlan(r, ["", "", "", ""]).note),
-  );
+  const verdicts = ["Offset: stated (-12:00)", "Offset: not stated"];
+  const details = [
+    "The time code gives the offset from UTC, so the date and the time name one instant.",
+    `The time code gives the offset from UTC.${NO_DAY}`,
+    `The time code says local to the event. The place is elsewhere in the message. You supply its zone.${NO_DAY}`,
+    `The code names the zone and says neither standard nor daylight, so the date decides. X12 states no offset for a named zone: Eastern.${NO_DAY}`,
+    "A date alone names no instant in any zone.",
+    `There is no date and no time code, so nothing says which day or where the clock was.${NO_DAY}`,
+    "A blank time code means local to the event. The place is elsewhere in the message. You supply its zone.",
+  ];
+  const instantNotes = [
+    "The local date-time read at the offset the time code states, with resolveLocal.",
+    "A time alone names no instant: there is no date.",
+    "A date alone names no instant.",
+    REJECT_NOTE,
+    "No instant: the code names Eastern time and states no offset. Pick the IANA zone it means for you.",
+    "No instant: nothing here states an offset. Pick the zone.",
+    "No value.",
+  ];
   return {
     descriptions: X12_PRESETS.map((p) => p.description),
     dtpDescriptions: DTP_PRESETS.map((p) => p.description),
-    verdicts: verdicts.map((v) => v.verdict),
-    details: verdicts.map((v) => v.detail),
-    stripNotes: [null, ...SHAPES].map((r) => stripNote(r)),
-    instantNotes: plans,
-    gaps: [
-      `Widest gap: 26 h, between ${LONGEST_ZONE} and ${LONGEST_ZONE}`,
+    verdicts,
+    details,
+    stripNotes: [
+      STRIP_NOTE_NONE,
+      STRIP_NOTE_STATED,
+      STRIP_NOTE_ALONE,
+      STRIP_NOTE_APPLIES,
     ],
-    reasons: Object.values(NULL_REASON_TEXT).map((f) => f({ timeCode: "XX" })),
-    dtpReasons: Object.values(DTP_NULL_REASON_TEXT).map((f) => f({ format: "XX" })),
-    yearNotes: [
-      yearWindowNote("", undefined),
-      yearWindowNote("rolling", "2024-06-15"),
-      yearWindowNote("2000", "2024-06-15"),
+    instantNotes,
+    gaps: [`Widest gap: 26 h, between ${LONGEST_ZONE} and ${LONGEST_ZONE}`],
+    reasons: Object.values(REASON_TEXT).map((f) => f({ timeCode: "XX" })),
+    dtpReasons: [
+      ...Object.values(DTP_REASON_TEXT).map((f) => f({ format: "XX" })),
+      unreadCodeText("D6", "x12"),
+      unreadCodeText("TR", "x12"),
+      unreadCodeText("RTM", "x12"),
     ],
     timeNotes: [
-      "x12TimeCode(\"ABCDEFGH\") returned local to the event, no zone named.",
+      'classifyX12TimeCode("ABCDEFGH") does not know it: not a 623 time code.',
       "The last two digits of the time are hundredths of a second.",
     ],
-    formatNotes: [TIME_FRACTION_NOTE],
-    dtpWindowNote: "Qualifier RD8 carries a four-digit year. The window is not read.",
+    formatNotes: [
+      "The date is element 373 read alone by parseX12Date. The time is element 337 read alone by parseX12Time. formatX12Time cuts tenths and hundredths of a second: neither mask has a field for them.",
+    ],
     dtpFormatNotes: [
-      `${isoNote({ date: "2024-06-15", periodEnd: { date: "2024-06-20" } })} formatX12DateTimePeriod returned the sentinel for this value and qualifier.`,
-      "EH keeps only the last digit of the year, so there is no date to write back.",
+      "formatX12DateRange returned the sentinel for this value and qualifier.",
     ],
     parseOutput:
-      '{ date: "2024-06-15", time: "14:30:00.12", local: "2024-06-15T14:30:00.12", instant: "2024-06-15T14:30:00.12Z", offset: "+00:00" }',
+      '"2024-06-15T14:30:00.12"\n{ kind: "offset", timeCode: "ABCDEFGH" }\n"-05:00"',
     dtpParseOutput:
-      '{ date: "2024-06-15", time: "14:30:00", local: "2024-06-15T14:30:00", periodEnd: { local: "2024-06-20T16:00:00" } }',
-    parseCall: 'parseX12DateTime("20240615", "14300012", "ET")',
+      '{ kind: "dateTimeRange", format: "DTS" }\n{ start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }',
+    parseCall:
+      'parseX12DateAndTime("20240615", "14300012")\nclassifyX12TimeCode("ABCDEFGH")\nx12TimeCodeOffset("ABCDEFGH")',
     dtpParseCall:
-      'parseX12DateTimePeriod("20240615143000-20240620160000", "DTS", { yearWindow: "rolling" })',
-    resolveCall:
-      `resolveLocal("2024-06-15T14:30:00.12", "${LONGEST_ZONE}", { disambiguation: "reject" })`,
+      'classifyX12DateTimePeriodFormat("DTS")\nparseX12DateTimeRange("20240615143000-20240620160000", "DTS")',
+    resolveCall: `resolveLocal("2024-06-15T14:30:00.12", "${LONGEST_ZONE}", { disambiguation: "reject" })`,
     dtpFormatCall:
-      'formatX12DateTimePeriod("2024-06-15T14:30:00/2024-06-20T16:00:00", "DTS", { yearWindow: "rolling" })',
-    writeCall: 'formatX12DateTimePeriod("14:30:00.12", "TS")',
+      'formatX12DateTimeRange("2024-06-15T14:30:00", "2024-06-20T16:00:00", "DTS")',
+    writeCall: 'formatX12Time("14:30:00.12", "TS")',
   };
 }

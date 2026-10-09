@@ -12,7 +12,7 @@ import { demurrageClock } from "../intermodal/calculate/demurrageClock";
 import { freeTimeExpiry } from "../intermodal/calculate/freeTimeExpiry";
 import { multimodalETA } from "../intermodal/calculate/multimodalETA";
 import { bolTimestamp } from "../intermodal/format/bolTimestamp";
-import { formatEdifactDtm } from "../intermodal/format/formatEdifactDtm";
+import { formatEdifactOffsetDateTime } from "../intermodal/format/formatEdifactOffsetDateTime";
 import { formatEpcisEvent } from "../intermodal/format/formatEpcisEvent";
 import { parseEpcisEvent } from "../intermodal/parse/parseEpcisEvent";
 import { isValidEpcisEvent } from "../intermodal/validate/isValidEpcisEvent";
@@ -393,16 +393,16 @@ describe("intermodal/ reads a minute-rounded offset as its zone's real offset", 
   // same instant in `Z` form is written, on the UTC clock: `CCYYMMDDHHMMSS` is the instant's own
   // digits, `+00` its offset under 304 and `+0000` under 208.
   cases(
-    "formatEdifactDtm returns '' for $zoned under 205, 208, 303 and 304, and writes $instant under 208 and 304",
+    "formatEdifactOffsetDateTime returns '' for $zoned under 205, 208, 303 and 304, and writes $instant under 208 and 304",
     ({ zoned, instant }: { zoned: string; instant: string }) => {
-      expect(formatEdifactDtm(zoned, "205")).toBe("");
-      expect(formatEdifactDtm(zoned, "208")).toBe("");
-      expect(formatEdifactDtm(zoned, "303")).toBe("");
-      expect(formatEdifactDtm(zoned, "304")).toBe("");
-      expect(formatEdifactDtm(instant, "304")).toBe(
+      expect(formatEdifactOffsetDateTime(zoned, "205")).toBe("");
+      expect(formatEdifactOffsetDateTime(zoned, "208")).toBe("");
+      expect(formatEdifactOffsetDateTime(zoned, "303")).toBe("");
+      expect(formatEdifactOffsetDateTime(zoned, "304")).toBe("");
+      expect(formatEdifactOffsetDateTime(instant, "304")).toBe(
         `${instant.replace(/[-T:Z]/g, "")}+00`,
       );
-      expect(formatEdifactDtm(instant, "208")).toBe(
+      expect(formatEdifactOffsetDateTime(instant, "208")).toBe(
         `${instant.replace(/[-T:Z]/g, "")}+0000`,
       );
     },

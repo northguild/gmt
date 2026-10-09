@@ -3,7 +3,7 @@ import type { X12TimeCode } from "../../types/edi";
 
 /**
  * Return true when `timeCode` is one of the 56 X12 data element 623 time codes, the codes
- * `x12TimeCode` reads.
+ * `x12TimeCodeOffset` and `x12TimeCodeZone` read between them.
  *
  * - The codes are `01`–`29`, `GM`, `UT`, `LT` and the named zone codes (`AD`, `AS`, `AT`, `CD`,
  *   `CS`, `CT`, `ED`, `ES`, `ET`, `HD`, `HS`, `HT`, `MD`, `MS`, `MT`, `ND`, `NS`, `NT`, `PD`,
@@ -20,8 +20,10 @@ import type { X12TimeCode } from "../../types/edi";
  * - Membership is by the list, never by shape: `00` and `30` are two digits and are not codes.
  * - Matching is exact: two characters, upper case, no padding.
  * - Accepts any input type and returns false for non-string values.
- * - True exactly when `x12TimeCode` returns a non-null result. A valid code says the value is
- *   in the list, not that it carries an offset: `ES` is valid and names a zone.
+ * - True exactly when one of `x12TimeCodeOffset` and `x12TimeCodeZone` returns a value: the 31
+ *   codes that state an offset and the 25 that name a zone are the 56. A valid code says the
+ *   value is in the list, not that it carries an offset: `ES` is valid and names a zone.
+ *   `classifyX12TimeCode` says which of the two a code is, and narrows it for that reader.
  *
  * @param timeCode candidate value of any type
  * @returns boolean indicating validity

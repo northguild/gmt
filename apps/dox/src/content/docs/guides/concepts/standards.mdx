@@ -87,8 +87,10 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   (UNTDID Part 4) define the service characters and the release character.
   [**UN/ECE Recommendation 7**](http://web.archive.org/web/20201020110807/http://www.unece.org/fileadmin/DAM/cefact/recommendations/rec07/rec07_1988_inf108.pdf)
   is its numerical representation of dates and times, including a UTC difference written in hours
-  (the link is an archived copy). **GMT** reads and writes the value with `parseEdifactDtm` and
-  `formatEdifactDtm`, and checks it with `isValidEdifactDtm` and `isValidEdifactDtmFormat`.
+  (the link is an archived copy). **GMT** reads, writes and checks a value with one small function
+  for each kind the codes state (`parseEdifactDateTime`, `formatEdifactDateTime` and
+  `isValidEdifactDateTime` are one of six sets), and sorts a code that arrives as data with
+  `classifyEdifactDtmFormat`.
 - [**ANSI X12**](https://x12.org/) is a United States standard, and the dominant one in North
   American freight and healthcare EDI. **Data elements 373, 337 and 623** are a segment's date,
   time and time code, as `AT7`, `G62` and `DTM-02` to `DTM-04` carry them. **Data element 1250** is
@@ -97,11 +99,12 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   [373](https://www.stedi.com/edi/x12-005010/element/373),
   [337](https://www.stedi.com/edi/x12-005010/element/337),
   [623](https://www.stedi.com/edi/x12-008010/element/623) and
-  [1250](https://www.stedi.com/edi/x12-005010/element/1250). **GMT** reads the date, time and time
-  code together with `parseX12DateTime`, reads a 1250 pair with `parseX12DateTimePeriod`, writes
-  with `formatX12DateTimePeriod`, reads a time code with `x12TimeCode`, and checks them with
-  `isValidX12DateTime`, `isValidX12DateTimePeriod`, `isValidX12DateTimePeriodFormat` and
-  `isValidX12TimeCode`.
+  [1250](https://www.stedi.com/edi/x12-005010/element/1250). **GMT** reads the date and the time
+  with `parseX12DateAndTime`, reads a 1250 value with the parser of its kind (`parseX12Date`,
+  `parseX12DateRange` and the others), writes with the matching formatter, reads a time code with
+  `x12TimeCodeOffset` or `x12TimeCodeZone`, sorts a code that arrives as data with
+  `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`, and checks codes with
+  `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode`.
 - [**GS1 EPCIS 2.0**](https://www.gs1.org/standards/epcis) ([**ISO/IEC 19987**](https://www.iso.org/standard/85557.html)) is GS1's event
   standard for supply-chain visibility. Its
   [JSON schema](https://ref.gs1.org/standards/epcis/epcis-json-schema.json) and

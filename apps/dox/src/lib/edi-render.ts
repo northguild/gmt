@@ -16,8 +16,47 @@ import {
   type PicPart,
   type TimelineInput,
 } from "./edi-picture";
-import { durationText, type WidestGap } from "./edi-widgets";
-import { escapeHtml } from "./widget-ui";
+import {
+  callArgs,
+  durationText,
+  formatValue,
+  type EdiCall,
+  type WidestGap,
+} from "./edi-widgets";
+import { codeSpan, escapeHtml } from "./widget-ui";
+
+/**
+ * Writes the calls a widget made into a call frame, one per line, in the order
+ * made, and stashes their plain text on the frame's copy button. The line is the
+ * call made: its function name and its arguments as passed.
+ */
+export function renderCalls(
+  codeEl: HTMLElement | null,
+  calls: readonly EdiCall[],
+): void {
+  if (!codeEl) return;
+  const lines = calls.map((c) => {
+    const [html, plain] = callArgs(c.args);
+    return {
+      html: `${codeSpan("fn", c.fn)}(${html})`,
+      plain: `${c.fn}(${plain})`,
+    };
+  });
+  codeEl.innerHTML = lines.map((l) => l.html).join("\n");
+  const frame = codeEl.closest(".gmt-codeframe");
+  const copyBtn = frame?.querySelector(
+    '[data-role^="copy-"]',
+  ) as HTMLButtonElement | null;
+  if (copyBtn) {
+    if (lines.length === 0) delete copyBtn.dataset["copyText"];
+    else copyBtn.dataset["copyText"] = lines.map((l) => l.plain).join("\n");
+  }
+}
+
+/** What the calls returned, one result per line in the order the calls were made. */
+export function callResultsText(calls: readonly EdiCall[]): string {
+  return calls.map((c) => formatValue(c.result)).join("\n");
+}
 
 /** What the "value taken apart" region draws. `empty` is the words it shows when
  *  there is nothing to take apart. */

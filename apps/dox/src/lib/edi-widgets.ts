@@ -3,17 +3,17 @@
  * Decoder and the X12 Time Reader.
  *
  * No gmt import: every function that calls the library takes an `EdiLib` — the
- * real `parseEdifactDtm`, `formatEdifactDtm`, `parseX12DateTime`,
- * `parseX12DateTimePeriod`, `formatX12DateTimePeriod`, `x12TimeCode`, the validators, `resolveLocal`,
- * `classifyLocal`, `toOffsetInstant`, `fromOffsetInstant`, `minUtc`, `maxUtc`
- * and `diffUtcAsDuration` — loaded by the mount from the real package
- * (`edi-lib.ts`). That keeps this module free of gmt imports and lets the tests
+ * real classifiers, the per-kind parsers and formatters, `x12TimeCodeOffset`,
+ * `x12TimeCodeZone`, `resolveLocal`, `classifyLocal`, `toOffsetInstant`,
+ * `fromOffsetInstant`, `minUtc`, `maxUtc` and `diffUtcAsDuration` — loaded by the
+ * mount from the real package (`edi-lib.ts`). That keeps this module free of gmt imports and lets the tests
  * inject the real library by module path.
  *
- * The widgets draw the library's results and compute none of them. The
- * site-side code only splits and joins the text a reader typed, builds the ISO
- * string a formatter takes from the members a parser returned (`isoOf`), and
- * formats a returned ISO 8601 duration as "15 h". Nothing here computes a result.
+ * The widgets draw the library's results and compute none of them. Each tool
+ * classifies the code first, then calls that kind's parser, and prints the call
+ * it made and the result that came back. The site-side code only splits the text
+ * a reader typed, picks the function a kind names, and formats a returned ISO 8601
+ * duration as "15 h". Nothing here computes a result.
  *
  * Naming rule: strings in these widgets name codes and standards as data —
  * UN/EDIFACT data elements 2379 and 2380, the UN/EDIFACT syntax rules (UNTDID
@@ -25,7 +25,7 @@
  */
 
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import { escapeAttr, escapeHtml, labelTextHtml } from "./widget-ui";
+import { escapeAttr, escapeHtml } from "./widget-ui";
 
 export { callArgs, formatValue } from "./punctuality-widgets";
 export { zoneOptionsHtml } from "./transport-widgets";
@@ -34,78 +34,92 @@ export { zoneOptionsHtml } from "./transport-widgets";
 // The library, injected
 // ---------------------------------------------------------------------------
 
-/** The century option every two-digit-year code takes. */
-export interface YearWindowOptions {
-  yearWindow?: "rolling" | number;
+/** A period or range: the start and the end, each a house value. */
+export interface Interval {
+  start: string;
+  end: string;
 }
 
-/** The period end of a result: `local`, else `date`, else `time`. */
-export interface EdiPeriodEndResult {
-  date?: string;
-  time?: string;
-  local?: string;
+/** What a parser returns: one house value, a period's two ends, or the sentinel
+ *  (`""` for a value, `null` for a period). */
+export type EdiHouse = string | Interval;
+
+/** The kinds of value a UN/EDIFACT 2379 code states, as the classifier names them. */
+export type EdifactKind =
+  | "date"
+  | "time"
+  | "dateTime"
+  | "offsetDateTime"
+  | "datePeriod"
+  | "dateTimePeriod";
+
+export interface EdifactClass {
+  kind: EdifactKind;
+  format: string;
 }
 
-/** `EdiDateTime`, mirrored: every member optional. */
-export interface EdiResult {
-  date?: string;
-  time?: string;
-  local?: string;
-  instant?: string;
-  offset?: string;
-  zone?: string;
-  /** Present exactly when `zone` is, on a result of `parseX12DateTime`. */
-  daylight?: boolean | null;
-  dayOfYear?: number;
-  yearDigit?: number;
-  periodEnd?: EdiPeriodEndResult;
+/** The kinds of value an X12 1250 qualifier states, as the classifier names them. */
+export type X12Kind =
+  | "date"
+  | "time"
+  | "dateTime"
+  | "dateRange"
+  | "dateTimeRange";
+
+export interface X12Class {
+  kind: X12Kind;
+  format: string;
 }
 
-export type X12TimeMeaning =
-  | { offset: string }
-  | { zone: string; daylight: boolean | null };
+export interface X12TimeCodeClass {
+  kind: "offset" | "zone";
+  timeCode: string;
+}
+
+export interface X12Zone {
+  zone: string;
+  daylight: boolean | null;
+}
 
 export interface EdiLib {
-  parseEdifactDtm(
-    value: string,
+  classifyEdifactDtmFormat(format: string): EdifactClass | null;
+  parseEdifactDate(value: string, format: string): string;
+  parseEdifactTime(value: string, format: string): string;
+  parseEdifactDateTime(value: string, format: string): string;
+  parseEdifactOffsetDateTime(value: string, format: string): string;
+  parseEdifactDatePeriod(value: string, format: string): Interval | null;
+  parseEdifactDateTimePeriod(value: string, format: string): Interval | null;
+  formatEdifactDate(value: string, format: string): string;
+  formatEdifactTime(value: string, format: string): string;
+  formatEdifactDateTime(value: string, format: string): string;
+  formatEdifactOffsetDateTime(value: string, format: string): string;
+  formatEdifactDatePeriod(start: string, end: string, format: string): string;
+  formatEdifactDateTimePeriod(
+    start: string,
+    end: string,
     format: string,
-    options?: YearWindowOptions,
-  ): EdiResult | null;
-  formatEdifactDtm(
-    value: string,
-    format: string,
-    options?: YearWindowOptions,
   ): string;
-  isValidEdifactDtm(
-    value: string,
-    format: string,
-    options?: YearWindowOptions,
-  ): boolean;
-  isValidEdifactDtmFormat(format: unknown): boolean;
-  /** Elements 373, 337 and 623, as `AT7`, `G62` and `DTM-02`/`03`/`04` carry them. */
-  parseX12DateTime(
-    date?: string,
-    time?: string,
-    timeCode?: string,
-  ): EdiResult | null;
-  /** Element 1251 against its 1250 qualifier, as a `DTP` carries them. */
-  parseX12DateTimePeriod(
-    value: string,
-    format: string,
-    options?: YearWindowOptions,
-  ): EdiResult | null;
-  formatX12DateTimePeriod(
-    value: string,
-    format: string,
-    options?: YearWindowOptions,
-  ): string;
-  isValidX12DateTimePeriod(
-    value: string,
-    format: string,
-    options?: YearWindowOptions,
-  ): boolean;
-  isValidX12DateTimePeriodFormat(format: unknown): boolean;
-  x12TimeCode(code: string): X12TimeMeaning | null;
+
+  classifyX12DateTimePeriodFormat(format: string): X12Class | null;
+  /** Element 373 with `D8`, or a 1251 value under its qualifier. */
+  parseX12Date(value: string, format: string): string;
+  /** Element 337: every form with no `format`, exactly `HHMM` (`TM`) or `HHMMSS` (`TS`) with one. */
+  parseX12Time(value: string, format?: string): string;
+  parseX12DateTime(value: string, format: string): string;
+  parseX12DateRange(value: string, format: string): Interval | null;
+  parseX12DateTimeRange(value: string, format: string): Interval | null;
+  /** Elements 373 and 337, as `AT7`, `G62` and `DTM` carry them side by side. */
+  parseX12DateAndTime(date: string, time: string): string;
+  formatX12Date(value: string, format: string): string;
+  formatX12Time(value: string, format: string): string;
+  formatX12DateTime(value: string, format: string): string;
+  formatX12DateRange(start: string, end: string, format: string): string;
+  formatX12DateTimeRange(start: string, end: string, format: string): string;
+
+  classifyX12TimeCode(timeCode: string): X12TimeCodeClass | null;
+  x12TimeCodeOffset(timeCode: string): string;
+  x12TimeCodeZone(timeCode: string): X12Zone | null;
+
   resolveLocal(
     local: string,
     zone: string,
@@ -130,6 +144,156 @@ export interface EdiLib {
 export const REJECT = { disambiguation: "reject" } as const;
 
 // ---------------------------------------------------------------------------
+// Calls: the one function made, its arguments and its real result
+// ---------------------------------------------------------------------------
+
+/** One real library call: what was called, with what, and what came back. */
+export interface EdiCall {
+  fn: keyof EdiLib;
+  args: unknown[];
+  result: unknown;
+}
+
+/** Calls `lib[fn](...args)` and keeps all three, so what the widget prints is the call made. */
+export function runCall(
+  lib: EdiLib,
+  fn: keyof EdiLib,
+  ...args: unknown[]
+): EdiCall {
+  const f = lib[fn] as (...a: unknown[]) => unknown;
+  return { fn, args, result: f(...args) };
+}
+
+/** Whether a parser returned the sentinel: `""` for a value, `null` for a period. */
+export function isSentinel(result: unknown): boolean {
+  return result === "" || result === null || result === undefined;
+}
+
+/** A period or range result. */
+export function isInterval(result: unknown): result is Interval {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "start" in result &&
+    "end" in result
+  );
+}
+
+/** The parser, formatter and kind-name word of each UN/EDIFACT kind. The kind names
+ *  come from the classifier; this maps them to the function that reads them. */
+export const EDIFACT_FUNCTIONS: Record<
+  EdifactKind,
+  { parse: keyof EdiLib; format: keyof EdiLib; period: boolean }
+> = {
+  date: {
+    parse: "parseEdifactDate",
+    format: "formatEdifactDate",
+    period: false,
+  },
+  time: {
+    parse: "parseEdifactTime",
+    format: "formatEdifactTime",
+    period: false,
+  },
+  dateTime: {
+    parse: "parseEdifactDateTime",
+    format: "formatEdifactDateTime",
+    period: false,
+  },
+  offsetDateTime: {
+    parse: "parseEdifactOffsetDateTime",
+    format: "formatEdifactOffsetDateTime",
+    period: false,
+  },
+  datePeriod: {
+    parse: "parseEdifactDatePeriod",
+    format: "formatEdifactDatePeriod",
+    period: true,
+  },
+  dateTimePeriod: {
+    parse: "parseEdifactDateTimePeriod",
+    format: "formatEdifactDateTimePeriod",
+    period: true,
+  },
+};
+
+/** The same for the X12 1250 qualifiers. */
+export const X12_FUNCTIONS: Record<
+  X12Kind,
+  { parse: keyof EdiLib; format: keyof EdiLib; period: boolean }
+> = {
+  date: { parse: "parseX12Date", format: "formatX12Date", period: false },
+  time: { parse: "parseX12Time", format: "formatX12Time", period: false },
+  dateTime: {
+    parse: "parseX12DateTime",
+    format: "formatX12DateTime",
+    period: false,
+  },
+  dateRange: {
+    parse: "parseX12DateRange",
+    format: "formatX12DateRange",
+    period: true,
+  },
+  dateTimeRange: {
+    parse: "parseX12DateTimeRange",
+    format: "formatX12DateTimeRange",
+    period: true,
+  },
+};
+
+/** The kind named in words, for the Kind row. */
+export const KIND_WORDS: Record<string, string> = {
+  date: "date",
+  time: "time",
+  dateTime: "local date-time",
+  offsetDateTime: "date-time with offset",
+  datePeriod: "date period",
+  dateTimePeriod: "date-time period",
+  dateRange: "date range",
+  dateTimeRange: "date-time range",
+};
+
+/**
+ * The read of one classified value: the parser called with the value and the
+ * code the classifier returned. A period parser's two-argument form is the same
+ * call, so the arguments are always `(value, format)`; `parseX12Time` takes the
+ * narrowed `TM` or `TS` too, so a value with seconds under `TM` is the sentinel.
+ */
+export function parseClassified(
+  lib: EdiLib,
+  functions: { parse: keyof EdiLib },
+  value: string,
+  format: string,
+): EdiCall {
+  return runCall(lib, functions.parse, value, format);
+}
+
+/**
+ * The written-back call for a house value: the kind's formatter, with the period's
+ * start and end as two arguments. `null` when there is no house value.
+ */
+export function formatClassified(
+  lib: EdiLib,
+  functions: { format: keyof EdiLib },
+  house: EdiHouse,
+  format: string,
+): EdiCall {
+  return isInterval(house)
+    ? runCall(lib, functions.format, house.start, house.end, format)
+    : runCall(lib, functions.format, house, format);
+}
+
+/** The one or two ISO strings of a house value, start first. */
+export function houseEnds(house: EdiHouse): string[] {
+  return isInterval(house) ? [house.start, house.end] : [house];
+}
+
+/** The text of a house value for a table cell: the string, or `start / end`. */
+export function houseText(house: EdiHouse): string {
+  return isInterval(house) ? `${house.start} / ${house.end}` : house;
+}
+
+// ---------------------------------------------------------------------------
 // Zones
 // ---------------------------------------------------------------------------
 
@@ -143,179 +307,61 @@ export const EDI_ZONES: readonly string[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Two-digit years
+// Codes the library does not read
 // ---------------------------------------------------------------------------
 
-/** The year-window select's "no window" value. */
-const YEAR_WINDOW_NONE = "none";
+/**
+ * A two-digit-year code the library does not read, and the pattern the pattern
+ * parsers read the same digits with. The library has no function that says why a
+ * code is unread, so this advisory list names the legacy two-digit-year codes
+ * and, where the guide gives one, their pattern. A test asserts every code here is
+ * one the classifiers return `null` for, so a code the library starts reading
+ * cannot stay on this list.
+ */
+export const TWO_DIGIT_YEAR_CODES: Readonly<
+  Record<string, string | undefined>
+> = {
+  // UN/EDIFACT 2379
+  "101": "yyMMdd",
+  "201": "yyMMddHHmm",
+  "202": "yyMMddHHmmss",
+  "206": undefined,
+  "207": undefined,
+  "301": undefined,
+  "302": undefined,
+  "713": undefined,
+  "717": undefined,
+  // X12 1250
+  D6: "yyMMdd",
+  TT: "MMddyy",
+  TR: "ddMMyyHHmm",
+  RD6: undefined,
+  TU: undefined,
+};
+
+/** The pattern parser a two-digit-year value is read with, for the sentinel's sentence. */
+function patternAdvice(code: string): string {
+  const pattern = TWO_DIGIT_YEAR_CODES[code];
+  return pattern === undefined
+    ? "Read it with the pattern parsers (parseDateWithPattern or parseDateTimeWithPattern) and a yearWindow."
+    : `Read it with parseDateWithPattern or parseDateTimeWithPattern: the pattern ${pattern} and a yearWindow, which states the century you choose.`;
+}
 
 /**
- * The `options` argument for a year window as typed. A blank or `none` gives
- * `undefined`, so the call is made — and printed — with no third argument.
- * `rolling` passes the library's own name for the hundred years around the
- * current UTC year. Anything else is passed as a number exactly as read, even
- * `NaN` or `9901`, so the printed call is the real call.
+ * The one sentence saying why the classifier returned `null` for a code: a
+ * two-digit-year code (with what to use instead) or a code the library does not
+ * read.
  */
-export function yearWindowOptions(text: string): YearWindowOptions | undefined {
-  const t = text.trim();
-  if (t === "" || t === YEAR_WINDOW_NONE) return undefined;
-  if (t === "rolling") return { yearWindow: "rolling" };
-  return { yearWindow: Number(t) };
-}
-
-/** What the year-window select and the start-year input hold, from the state's
- *  one string: `""`, `"rolling"` or a year as text. */
-export function yearWindowControls(yearWindow: string): {
-  mode: "none" | "rolling" | "fixed";
-  start: string;
-} {
-  const t = yearWindow.trim();
-  if (t === "" || t === YEAR_WINDOW_NONE) return { mode: "none", start: "" };
-  if (t === "rolling") return { mode: "rolling", start: "" };
-  return { mode: "fixed", start: t };
-}
-
-/** The state's one year-window string, from the two controls. */
-export function yearWindowFromControls(mode: string, start: string): string {
-  if (mode === "rolling") return "rolling";
-  if (mode === "fixed") return start.trim();
-  return "";
-}
-
-const SAMPLES = [
-  "2024-06-15",
-  "2024-06-15T14:30",
-  "2024-06-15T14:30:00+02:00",
-  "14:30",
-  "14:30:00+02:00",
-  "+02:00",
-  "2024-06-15/2024-06-20",
-  "2024-06-15T14:30/2024-06-20T16:00",
-  "2024-06-15/2024-06-20T16:00",
-  "2024-06-15T14:30/2024-06-20",
-  "09:00/17:00",
-] as const;
-
-/**
- * Whether a code has a two-digit year, found by probing the formatter, so the
- * site holds no copy of the library's code table. A code needs a window when
- * every sample comes back `""` with no options and at least one comes back
- * non-empty once a window is given.
- */
-export function needsYearWindow(
-  format: (value: string, code: string, options?: YearWindowOptions) => string,
+export function unreadCodeText(
   code: string,
-): boolean {
-  if (SAMPLES.some((sample) => format(sample, code) !== "")) return false;
-  return SAMPLES.some((sample) => format(sample, code, { yearWindow: 2000 }) !== "");
-}
-
-/** The window a state names, in words: `rolling window`, `window starting in
- *  2000`, or `""` for none. */
-export function yearWindowWords(yearWindow: string): string {
-  const { mode, start } = yearWindowControls(yearWindow);
-  if (mode === "rolling") return "rolling window";
-  if (mode === "fixed") return `window starting in ${start}`;
-  return "";
-}
-
-/** The words for which window read a two-digit year, or that none was given. */
-export function yearWindowNote(
-  yearWindow: string,
-  read: string | undefined,
+  standard: "edifact" | "x12",
 ): string {
-  const words = yearWindowWords(yearWindow);
-  if (words === "") {
-    return "Two-digit year: no window was given, so the century is not read.";
+  if (Object.prototype.hasOwnProperty.call(TWO_DIGIT_YEAR_CODES, code)) {
+    return `Code ${code} has a two-digit year. No standard says which century it belongs to, so the EDI functions do not read it. ${patternAdvice(code)}`;
   }
-  return read === undefined
-    ? `Two-digit year: ${words}.`
-    : `Two-digit year, read as ${read.slice(0, 4)} by the ${words}.`;
-}
-
-/** The clauses after a picture's fields in its spoken line: `no offset`, then the
- *  window note. */
-export function figureTail(closing: string, note: string): string {
-  return [closing, note.replace(/\.$/, "")].filter((t) => t !== "").join("; ");
-}
-
-/** Markup for the two year-window controls. Always rendered, so a code change
- *  never adds or removes a row; `disabled` when the code reads no window. */
-export function yearWindowFieldsHtml(
-  yearWindow: string,
-  disabled: boolean,
-): string {
-  const { mode, start } = yearWindowControls(yearWindow);
-  const off = disabled ? " disabled" : "";
-  const option = (value: string, label: string): string =>
-    `<option value="${value}"${mode === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
-  return (
-    `<label class="gmt-label">${labelTextHtml("Year window")}` +
-    `<select class="gmt-select" data-role="year-window"${off}>` +
-    option("none", "No window") +
-    option("rolling", "Rolling") +
-    option("fixed", "From a start year") +
-    `</select></label>` +
-    `<label class="gmt-label">${labelTextHtml("Window starts in")}` +
-    `<input class="gmt-input" data-role="year-start" type="number" min="0" max="9900" step="1" inputmode="numeric" value="${escapeAttr(start)}"${mode === "fixed" && !disabled ? "" : " disabled"}></label>`
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Reading a result back into the string a formatter takes
-// ---------------------------------------------------------------------------
-
-/** One half of a period, or a single value: `local`, else `date`, else `time`. */
-function half(part: EdiPeriodEndResult): string | null {
-  return part.local ?? part.date ?? part.time ?? null;
-}
-
-/**
- * The one ISO 8601 string a formatter takes, built from the members a parser
- * returned (the `formatEdifactDtm` JSDoc: "Takes what `parseEdifactDtm`
- * returns"). `null` when nothing can be written back: a day of the year with
- * no year (`TC`, `EH`).
- */
-export function isoOf(result: EdiResult, lib: EdiLib): string | null {
-  if (result.periodEnd) {
-    const start = half(result);
-    const end = half(result.periodEnd);
-    return start !== null && end !== null ? `${start}/${end}` : null;
-  }
-  if (result.instant !== undefined && result.offset !== undefined) {
-    return lib.fromOffsetInstant({
-      instant: result.instant,
-      offset: result.offset,
-    });
-  }
-  if (result.time !== undefined && result.offset !== undefined) {
-    return `${result.time}${result.offset}`;
-  }
-  if (result.local !== undefined) return result.local;
-  // `TU` holds a date and a day of the year: the date is the whole value.
-  // `TC` and `EH` hold a day of the year (and a year digit) and no date.
-  if (result.date === undefined && (result.dayOfYear !== undefined || result.yearDigit !== undefined)) {
-    return null;
-  }
-  return result.date ?? result.time ?? result.offset ?? null;
-}
-
-/**
- * One sentence saying how `isoOf` built the string a formatter was given, so the
- * site-side step is stated on screen. Blank when the result's own string is
- * passed unchanged.
- */
-export function isoNote(result: EdiResult): string {
-  if (result.periodEnd) {
-    return "The start and the end are joined with a slash, the form the formatter takes.";
-  }
-  if (result.instant !== undefined && result.offset !== undefined) {
-    return "The instant and the offset are joined first with fromOffsetInstant.";
-  }
-  if (result.time !== undefined && result.offset !== undefined) {
-    return "The time and the offset are joined, the form the formatter takes.";
-  }
-  return "";
+  return standard === "edifact"
+    ? `${code} is not a format code the library reads. A partial value, a weekday period, a quantity or an unstructured value is not a date, time or period, and a code is never guessed.`
+    : `${code} is not a qualifier the library reads. A partial value, a day of the year, a month-name form or an unstructured value is not a complete date or time, and a code is never guessed.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -345,9 +391,7 @@ export type MemberRow<K extends string> = {
 };
 
 /** The `<dl>` rows of a readout block, all always present. */
-export function readoutRowsHtml(
-  rows: readonly MemberRow<string>[],
-): string {
+export function readoutRowsHtml(rows: readonly MemberRow<string>[]): string {
   return rows
     .map(
       (r) =>
@@ -373,7 +417,11 @@ export function readoutOf(
  * Why `resolveLocal(local, zone, { disambiguation: "reject" })` returned `""`,
  * decided by `classifyLocal`, never guessed.
  */
-export function resolveReason(local: string, zone: string, lib: EdiLib): string {
+export function resolveReason(
+  local: string,
+  zone: string,
+  lib: EdiLib,
+): string {
   const time = local.slice(11, 16);
   switch (lib.classifyLocal(local, zone)) {
     case "ambiguous":

@@ -1,49 +1,44 @@
 /// <reference types="vitest/globals" />
 /**
  * `dtm-decoder.ts`'s pure helpers, against the real gmt modules. Every expected
- * library result is an appendix Z row (INT-15, D*) or a JSDoc example.
+ * library result is a JSDoc example of the function that returns it.
  */
-import { parseEdifactDtm } from "@northguild/gmt/intermodal/parse";
 import { lib } from "~/test/edi-lib";
 import {
   CUSTOM_PRESET_ID,
   DTM_PRESETS,
   MEMBER_ROWS,
-  NULL_REASON_TEXT,
   detailText,
   dtmBlank,
+  dtmFigure,
+  dtmTexts,
   effective,
-  explainNull,
   gapRows,
   matchPreset,
   memberText,
-  nullReasonText,
-  offsetVerdict,
   permalinkOf,
   presetState,
   readArgs,
+  readDtm,
+  sentinelText,
   splitDtm,
   splitText,
   stripApplies,
   stripNote,
   verdictText,
-  windowOffNote,
   writeBack,
-  type DtmNullReason,
   type DtmState,
 } from "./dtm-decoder";
+import { TWO_DIGIT_YEAR_CODES } from "./edi-widgets";
 
 const preset = (id: string) => DTM_PRESETS.find((p) => p.id === id)!;
-const stateOf = (id: string, over: Partial<DtmState> = {}): DtmState => ({
-  ...presetState(preset(id)),
-  ...over,
-});
-const value = (input: string, format: string, yearWindow = ""): DtmState => ({
+const value = (input: string, format = ""): DtmState => ({
   input,
   format,
-  yearWindow,
   zones: ["", "", "", ""],
 });
+const read = (id: string) => readDtm(presetState(preset(id)), lib);
+
 describe("splitDtm", () => {
   it("reads the four segment presets", () => {
     expect(splitDtm("DTM+137:202406151430:203'")).toEqual({
@@ -157,377 +152,384 @@ describe("readArgs", () => {
     expect(readArgs({ input: "240615", format: "101" })).toEqual({
       input: "240615",
       format: "101",
-      yearWindow: "",
       zones: ["", "", "", ""],
     });
   });
 
-  it("turns a numeric yearWindow into its text", () => {
-    expect(
-      readArgs({ input: "240615", format: "101", yearWindow: 2000 }).yearWindow,
-    ).toBe("2000");
-    expect(readArgs({ input: "x", yearWindow: "rolling" }).yearWindow).toBe(
-      "rolling",
-    );
-  });
-
-  it("reads the four zones", () => {
-    expect(
-      readArgs({ input: "x", zone1: "A", zone2: "B", zone3: "C", zone4: "D" })
-        .zones,
-    ).toEqual(["A", "B", "C", "D"]);
-  });
-});
-
-describe("matchPreset", () => {
-  it.each(DTM_PRESETS.map((p) => [p.id]))("matches %s", (id) => {
-    expect(matchPreset(presetState(preset(id!)))).toBe(id);
-  });
-
-  it("gives local-203 and cet-303 the example's zones and every offset-stating preset none", () => {
-    const four = [
-      "America/New_York",
-      "Europe/Berlin",
-      "Asia/Shanghai",
-      "America/Los_Angeles",
-    ];
-    expect(preset("local-203").zones).toEqual(four);
-    expect(preset("cet-303").zones).toEqual(four);
-    for (const p of DTM_PRESETS) {
-      if (p.id === "local-203" || p.id === "cet-303") continue;
-      expect(p.zones, p.id).toEqual(["", "", "", ""]);
-    }
-  });
-
-  it("is custom when any field differs, and ignores surrounding blanks", () => {
-    expect(matchPreset(stateOf("local-203", { zones: ["", "", "", ""] }))).toBe(
-      CUSTOM_PRESET_ID,
-    );
-    expect(matchPreset(stateOf("period-718", { input: " 2024061520240620 " }))).toBe(
-      "period-718",
-    );
-    expect(matchPreset(value("", ""))).toBe(CUSTOM_PRESET_ID);
-  });
-
-  it("gives every preset a distinct state", () => {
-    const keys = DTM_PRESETS.map((p) => JSON.stringify(presetState(p)));
-    expect(new Set(keys).size).toBe(DTM_PRESETS.length);
+  it("ignores a yearWindow an old link or chat call still carries", () => {
+    const old = { input: "240615", format: "101", yearWindow: "2000" } as never;
+    expect(readArgs(old)).toEqual({
+      input: "240615",
+      format: "101",
+      zones: ["", "", "", ""],
+    });
   });
 });
 
 describe("permalinkOf", () => {
-  it("holds strings only, and only non-blank fields", () => {
-    expect(permalinkOf(stateOf("local-203"))).toEqual({
-      input: "DTM+137:202406151430:203'",
-      zone1: "America/New_York",
-      zone2: "Europe/Berlin",
-      zone3: "Asia/Shanghai",
-      zone4: "America/Los_Angeles",
+  it("carries the format only for a bare value, and never a year window", () => {
+    expect(permalinkOf(value("202406151430", "203"))).toEqual({
+      input: "202406151430",
+      format: "203",
     });
-    expect(permalinkOf(stateOf("two-digit-window"))).toEqual({
-      input: "240615",
-      format: "101",
-      yearWindow: "2000",
-    });
-  });
-
-  it("leaves the format out in segment form", () => {
-    expect(permalinkOf(value("DTM+137:202406151430:203'", "999"))).toEqual({
+    expect(permalinkOf(value("DTM+137:202406151430:203'", "203"))).toEqual({
       input: "DTM+137:202406151430:203'",
     });
   });
+});
 
-  it("is empty for a blank state", () => {
-    expect(permalinkOf(value("", ""))).toEqual({});
+describe("the presets, against the real library", () => {
+  const EXPECTED: Record<string, { kind: string; house: unknown } | null> = {
+    "local-203": { kind: "dateTime", house: "2024-06-15T14:30:00" },
+    "released-303": {
+      kind: "offsetDateTime",
+      house: "2024-06-15T14:30:00+00:00",
+    },
+    "utc-303": { kind: "offsetDateTime", house: "2024-06-15T14:30:00+00:00" },
+    "gmt-303": { kind: "offsetDateTime", house: "2024-06-15T14:30:00+00:00" },
+    "offset-205": {
+      kind: "offsetDateTime",
+      house: "2024-06-15T14:30:00+02:00",
+    },
+    "offset-208": {
+      kind: "offsetDateTime",
+      house: "2024-06-15T14:30:45+02:00",
+    },
+    "date-102": { kind: "date", house: "2024-06-15" },
+    "time-402": { kind: "time", house: "14:30:45" },
+    "period-718": {
+      kind: "datePeriod",
+      house: { start: "2024-06-15", end: "2024-06-20" },
+    },
+    "period-719": {
+      kind: "dateTimePeriod",
+      house: { start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" },
+    },
+    "cet-303": null,
+    "two-digit-101": null,
+  };
+
+  it("names every preset in the expectations", () => {
+    expect(DTM_PRESETS.map((p) => p.id).sort()).toEqual(
+      Object.keys(EXPECTED).sort(),
+    );
+  });
+
+  it.each(DTM_PRESETS.map((p) => [p.id]))("%s", (id) => {
+    const r = read(id!);
+    const expected = EXPECTED[id!];
+    if (expected === null) {
+      expect(r.house).toBeNull();
+      return;
+    }
+    expect(r.classified?.kind).toBe(expected.kind);
+    expect(r.house).toEqual(expected.house);
+    // Every other preset returns a value, and writes it back to the wire value.
+    const written = writeBack(r, lib);
+    expect(written?.output).not.toBe("");
+    // The written value parses back to the house value it was written from
+    // (UTC and GMT come back as +00, which the signed-hour code reads).
+    const again = lib.parseEdifactOffsetDateTime;
+    if (r.classified?.kind === "offsetDateTime") {
+      expect(again(written!.output, r.classified.format)).toBe(r.house);
+    } else {
+      expect(written?.output).toBe(r.value);
+    }
+  });
+
+  it("matches a preset by its fields and falls back to custom", () => {
+    expect(matchPreset(presetState(preset("local-203")))).toBe("local-203");
+    expect(matchPreset(value("202406151430", "203"))).toBe(CUSTOM_PRESET_ID);
+  });
+
+  it("gives only the presets that state no offset and have instants a set of example zones", () => {
+    for (const p of DTM_PRESETS) {
+      const r = readDtm(presetState(p), lib);
+      const zones = p.zones.some((z) => z !== "");
+      expect(zones, p.id).toBe(stripApplies(r));
+    }
   });
 });
 
-describe("offsetVerdict, verdictText and detailText", () => {
-  const cases: [string, string, string, string, string][] = [
-    // [row, value, format, verdict, detail]
-    ["D1", "202406151430", "203", "Offset: not stated", "A local time at a place the value does not name. It is not UTC."],
-    ["D2", "202406151430+00", "303", "Offset: stated (+00:00)", "The value names one instant."],
-    ["D4", "202406151430CET", "303", 'Offset: not stated. "CET" is zone text, not an offset.', "No UN/EDIFACT text defines these three characters, so the library returns them unread."],
-    ["D6", "2024061520240620", "718", "Offset: not stated", "A period: a start and an end. The code states no offset, so neither end names an instant."],
-    ["D13", "143045+02", "404", "Offset: stated (+02:00)", "A time and an offset, but no date, so no instant."],
-    ["D14", "+0200", "406", "Offset: stated (+02:00)", "The value is an offset and nothing else."],
-    ["D15", "20240615", "102", "Offset: not stated", "A date. A date alone names no instant in any zone."],
-    ["D-time", "1430", "401", "Offset: not stated", "A time of day with no date and no offset."],
-  ];
-  it.each(cases)("%s", (_row, v, f, verdict, detail) => {
-    const result = parseEdifactDtm(v, f)!;
-    expect(result).not.toBeNull();
-    expect(verdictText(result)).toBe(verdict);
-    expect(detailText(result)).toBe(detail);
-  });
-
-  it("names the three verdicts", () => {
-    expect(offsetVerdict({ instant: "x", offset: "+00:00" })).toBe("stated");
-    expect(offsetVerdict({ local: "x", zone: "CET" })).toBe("zone-text");
-    expect(offsetVerdict({ local: "x" })).toBe("not-stated");
-    expect(offsetVerdict({ time: "14:30:00" })).toBe("not-stated");
-  });
-
-  it("detail is blank for an empty result", () => {
-    expect(detailText({})).toBe("");
-  });
-});
-
-describe("memberText and MEMBER_ROWS", () => {
-  it("lists seven rows with their roles", () => {
-    expect(MEMBER_ROWS.map((r) => r.role)).toEqual([
-      "member-date",
-      "member-time",
-      "member-local",
-      "member-instant",
-      "member-offset",
-      "member-zone",
-      "member-period-end",
+describe("classifying first, then the kind's parser", () => {
+  it("prints the classifier's call and the parser's call, in order", () => {
+    const r = read("local-203");
+    expect(r.calls.map((c) => [c.fn, ...c.args])).toEqual([
+      ["classifyEdifactDtmFormat", "203"],
+      ["parseEdifactDateTime", "202406151430", "203"],
     ]);
-    expect(MEMBER_ROWS.map((r) => r.label)).toEqual([
-      "Date",
-      "Time",
-      "Local date-time",
-      "Instant",
-      "Offset",
-      "Zone text",
-      "Period end",
+    expect(r.calls.map((c) => c.result)).toEqual([
+      { kind: "dateTime", format: "203" },
+      "2024-06-15T14:30:00",
     ]);
   });
 
-  it("reads the member, or null when the result does not hold it", () => {
-    const d1 = parseEdifactDtm("202406151430", "203")!;
-    expect(memberText(d1, "local")).toBe("2024-06-15T14:30:00");
-    expect(memberText(d1, "instant")).toBeNull();
-    const d6 = parseEdifactDtm("2024061520240620", "718")!;
-    expect(memberText(d6, "date")).toBe("2024-06-15");
-    expect(memberText(d6, "periodEnd")).toBe("2024-06-20");
-    const d12 = parseEdifactDtm("202406151430202406201600", "719")!;
-    expect(memberText(d12, "periodEnd")).toBe("2024-06-20T16:00:00");
-    expect(memberText(parseEdifactDtm("202406151430CET", "303")!, "zone")).toBe(
-      "CET",
-    );
+  it("adds toOffsetInstant for a date-time with an offset", () => {
+    const r = read("offset-205");
+    expect(r.calls.map((c) => c.fn)).toEqual([
+      "classifyEdifactDtmFormat",
+      "parseEdifactOffsetDateTime",
+      "toOffsetInstant",
+    ]);
+    expect(memberText(r, "instant")).toBe("2024-06-15T12:30:00Z");
+    expect(memberText(r, "offset")).toBe("+02:00");
+    expect(verdictText(r)).toBe("Offset: stated (+02:00)");
+  });
+
+  it("states the offset of UTC and GMT, which the signed-hour code reads", () => {
+    for (const id of ["utc-303", "gmt-303", "released-303"]) {
+      expect(verdictText(read(id))).toBe("Offset: stated (+00:00)");
+    }
+  });
+
+  it("makes no parse call for a code the classifier does not know", () => {
+    const r = read("two-digit-101");
+    expect(r.classified).toBeNull();
+    expect(r.parse).toBeNull();
+    expect(r.calls.map((c) => c.fn)).toEqual(["classifyEdifactDtmFormat"]);
+  });
+
+  it("calls the period parser for a period and holds both ends", () => {
+    const r = read("period-718");
+    expect(memberText(r, "value")).toBe("2024-06-15");
+    expect(memberText(r, "periodEnd")).toBe("2024-06-20");
+    expect(memberText(r, "kind")).toBe("date period");
+    expect(memberText(r, "instant")).toBeNull();
+  });
+
+  it("returns no member for a refused value, never a raw null", () => {
+    const r = read("cet-303");
+    for (const row of MEMBER_ROWS) expect(memberText(r, row.key)).toBeNull();
+    expect(verdictText(r)).toBe("Offset: not stated");
+    expect(detailText(r)).toBe("");
   });
 });
 
-describe("stripApplies and stripNote", () => {
-  it("applies to a local time with no instant and no period", () => {
-    expect(stripApplies(parseEdifactDtm("202406151430", "203"))).toBe(true);
-    expect(stripApplies(parseEdifactDtm("202406151430CET", "303"))).toBe(true);
-    expect(stripApplies(parseEdifactDtm("202406151430+00", "303"))).toBe(false);
-    expect(stripApplies(parseEdifactDtm("2024061520240620", "718"))).toBe(false);
-    expect(
-      stripApplies(parseEdifactDtm("202406151430202406201600", "719")),
-    ).toBe(false);
-    expect(stripApplies(null)).toBe(false);
+describe("the sentinel and its sentence", () => {
+  const why = (state: DtmState) =>
+    sentinelText(state, readDtm(state, lib), lib);
+
+  it("says CET under 303 is not a signed hour, UTC or GMT", () => {
+    const text = why(presetState(preset("cet-303")));
+    expect(text).toContain("signed hour");
+    expect(text).toContain("UTC");
+    expect(text).toContain("CET");
+    expect(text).not.toContain("GMT)");
   });
 
-  it("says why it does not", () => {
-    expect(stripNote(null)).toBe("No value.");
-    expect(stripNote(parseEdifactDtm("202406151430+00", "303"))).toBe(
-      "The value states its offset, so there is nothing to choose.",
-    );
-    expect(stripNote(parseEdifactDtm("20240615", "102"))).toBe(
-      "A date or a time alone names no instant in any zone.",
-    );
-    expect(
-      stripNote(parseEdifactDtm("202406151430202406201600", "719")),
-    ).toBe("A period: each end is a local time. Resolve each with resolveLocal.");
-    expect(stripNote(parseEdifactDtm("202406151430", "203"))).toContain(
-      'disambiguation: "reject"',
+  it("points a two-digit-year code at the pattern parsers with a yearWindow", () => {
+    const text = why(presetState(preset("two-digit-101")));
+    expect(text).toContain("two-digit year");
+    expect(text).toContain("yyMMdd");
+    expect(text).toContain("yearWindow");
+  });
+
+  it("says a code the library does not read is not read, with no pattern", () => {
+    const text = why(value("20240615", "602"));
+    expect(text).toContain("602 is not a format code the library reads");
+    expect(text).not.toContain("yearWindow");
+  });
+
+  it("names the missing code and the missing value", () => {
+    expect(why(value("20240615", ""))).toContain("Type the code");
+    expect(why(value("DTM+137:20240615'"))).toContain("carries none");
+    expect(why(value("", "203"))).toContain("Paste a DTM segment");
+  });
+
+  it("names a released character left in a bare value", () => {
+    expect(why(value("202406151430?+0200", "205"))).toContain(
+      "release character",
     );
   });
 
-  it("gives an offset alone its own sentence, not the date-or-time one", () => {
-    const offsetAlone = parseEdifactDtm("+0200", "406");
-    expect(offsetAlone).toEqual({ offset: "+02:00" });
-    expect(stripApplies(offsetAlone)).toBe(false);
-    expect(stripNote(offsetAlone)).toBe(
-      "An offset alone names no instant: it needs a date and a time.",
+  it("names a value that does not fit its code", () => {
+    expect(why(value("2024061514", "203"))).toContain("does not fit code 203");
+    expect(why(value("2024-06-15", "102"))).toContain("does not fit code 102");
+  });
+
+  it("does not call a zone-text reason for a code with hours and minutes", () => {
+    expect(why(value("202406151430CET", "205"))).toContain(
+      "does not fit code 205",
     );
-    expect(stripNote(offsetAlone)).not.toContain("A date or a time");
-    // A time of day alone still reads as before.
-    expect(stripNote(parseEdifactDtm("1430", "401"))).toBe(
-      "A date or a time alone names no instant in any zone.",
-    );
+  });
+
+  it("reads a seconds field a signed-hour code has no room for as not fitting", () => {
+    expect(why(value("20240615143045+0200", "304"))).toContain("does not fit");
   });
 });
 
-describe("dtmBlank", () => {
-  it("is true only when neither the input nor the format has a character", () => {
-    expect(dtmBlank(value("", ""))).toBe(true);
-    expect(dtmBlank(value("  ", " "))).toBe(true);
-    expect(dtmBlank(value("", "203"))).toBe(false);
-    expect(dtmBlank(value("202406151430", ""))).toBe(false);
-    expect(dtmBlank(value("DTM+", ""))).toBe(false);
+describe("the advisory list of two-digit-year codes", () => {
+  it("lists only codes the classifiers return null for", () => {
+    for (const code of Object.keys(TWO_DIGIT_YEAR_CODES)) {
+      expect(
+        lib.classifyEdifactDtmFormat(code) ??
+          lib.classifyX12DateTimePeriodFormat(code),
+        code,
+      ).toBeNull();
+    }
   });
 
-  it("ignores zones and the year window, which are not the value", () => {
+  it("gives the pattern the guide gives for the five it maps", () => {
+    expect(TWO_DIGIT_YEAR_CODES).toMatchObject({
+      "101": "yyMMdd",
+      D6: "yyMMdd",
+      TT: "MMddyy",
+      "201": "yyMMddHHmm",
+      "202": "yyMMddHHmmss",
+      TR: "ddMMyyHHmm",
+    });
+  });
+});
+
+describe("the strip", () => {
+  it("resolves a local date-time in each zone, with the offset and as 205", () => {
+    const r = read("local-203");
+    expect(stripApplies(r)).toBe(true);
+    const rows = gapRows(r.house!, preset("local-203").zones, lib);
+    expect(rows.map((x) => x.instant)).toEqual([
+      "2024-06-15T18:30:00Z",
+      "2024-06-15T12:30:00Z",
+      "2024-06-15T06:30:00Z",
+      "2024-06-15T21:30:00Z",
+    ]);
+    expect(rows[0]!.offset).toBe("-04:00");
+    expect(rows[0]!.third).toBe("202406151430-0400");
+  });
+
+  it("resolves both ends of a period of local date-times", () => {
+    const r = read("period-719");
+    expect(stripApplies(r)).toBe(true);
+    const row = gapRows(r.house!, ["Europe/Berlin", "", "", ""], lib)[0]!;
+    expect(row.instant).toBe("2024-06-15T12:30:00Z");
+    expect(row.third).toBe("2024-06-20T14:00:00Z");
+  });
+
+  it("carries the refusal reason for a time the clock shows twice", () => {
+    const rows = gapRows("2024-11-03T01:30:00", ["America/New_York"], lib);
+    expect(rows[0]!.instant).toBe("");
+    expect(rows[0]!.reason).toContain("happens twice");
+  });
+
+  it("does not apply to a date, a time, a period of dates or an offset date-time", () => {
+    for (const id of ["date-102", "time-402", "period-718", "offset-205"]) {
+      expect(stripApplies(read(id)), id).toBe(false);
+    }
+    expect(stripNote(read("offset-205"))).toContain("states its offset");
+    expect(stripNote(read("period-718"))).toContain("period of dates");
+  });
+});
+
+describe("writing back", () => {
+  it("calls the period formatter with the start and the end as two arguments", () => {
+    const w = writeBack(read("period-719"), lib)!;
+    expect(w.call.fn).toBe("formatEdifactDateTimePeriod");
+    expect(w.call.args).toEqual([
+      "2024-06-15T14:30:00",
+      "2024-06-20T16:00:00",
+      "719",
+    ]);
+    expect(w.output).toBe("202406151430202406201600");
+    expect(w.note).toContain("without a hyphen");
+  });
+
+  it("writes UTC as +00 and says so", () => {
+    const w = writeBack(read("utc-303"), lib)!;
+    expect(w.output).toBe("202406151430+00");
+    expect(w.note).toContain("never as UTC or GMT");
+    expect(w.note).toContain("?+");
+  });
+
+  it("has nothing to write for a refused value", () => {
+    expect(writeBack(read("cet-303"), lib)).toBeNull();
+  });
+});
+
+describe("the value taken apart", () => {
+  it("cuts a date-time with an offset into date, time and offset", () => {
+    const fig = dtmFigure(
+      presetState(preset("offset-208")),
+      read("offset-208"),
+      lib,
+    );
+    expect(fig.halves[0]!.fields.map((f) => [f.text, f.mask, f.group])).toEqual(
+      [
+        ["2024", "CCYY", "date"],
+        ["06", "MM", "date"],
+        ["15", "DD", "date"],
+        ["14", "HH", "time"],
+        ["30", "MM", "time"],
+        ["45", "SS", "time"],
+        ["+0200", "ZHHMM", "offset"],
+      ],
+    );
+    expect(fig.closing).toBe("");
+  });
+
+  it("closes an offsetless value with no offset", () => {
+    const fig = dtmFigure(
+      presetState(preset("local-203")),
+      read("local-203"),
+      lib,
+    );
+    expect(fig.closing).toBe("no offset");
+  });
+
+  it("cuts a period into its two halves with no separator", () => {
+    const fig = dtmFigure(
+      presetState(preset("period-719")),
+      read("period-719"),
+      lib,
+    );
+    expect(fig.halves.map((h) => h.label)).toEqual(["start", "end"]);
+    expect(fig.separator).toBe("");
+    expect(fig.halves[1]!.fields[2]!.text).toBe("20");
+  });
+
+  it("cuts the zone field of 303 as a three-character field", () => {
+    const fig = dtmFigure(presetState(preset("utc-303")), read("utc-303"), lib);
+    const last = fig.halves[0]!.fields.at(-1)!;
+    expect([last.text, last.mask]).toEqual(["UTC", "ZZZ"]);
+  });
+
+  it("draws a refused value in neutral boxes", () => {
+    const s = presetState(preset("cet-303"));
+    const fig = dtmFigure(s, readDtm(s, lib), lib);
     expect(
-      dtmBlank({ ...value("", ""), yearWindow: "rolling", zones: ["Europe/Berlin", "", "", ""] }),
+      fig.halves.every((h) => h.fields.every((f) => f.group === "neutral")),
     ).toBe(true);
   });
 });
 
-describe("gapRows", () => {
-  const L = "2024-06-15T14:30:00";
-  const zones = ["America/New_York", "Europe/Berlin", "Asia/Shanghai", "America/Los_Angeles"];
+describe("splitText and the blank form", () => {
+  it("is blank only when nothing is typed in either field", () => {
+    expect(dtmBlank(value("", ""))).toBe(true);
+    expect(dtmBlank(value("  ", " "))).toBe(true);
+    expect(dtmBlank(value("", "203"))).toBe(false);
+  });
 
-  it("reads the local time in each zone (D1a to D1d)", () => {
-    const rows = gapRows(L, zones, lib);
-    expect(rows.map((r) => [r.zone, r.instant, r.offset, r.as205])).toEqual([
-      ["America/New_York", "2024-06-15T18:30:00Z", "-04:00", "202406151430-0400"],
-      ["Europe/Berlin", "2024-06-15T12:30:00Z", "+02:00", "202406151430+0200"],
-      ["Asia/Shanghai", "2024-06-15T06:30:00Z", "+08:00", "202406151430+0800"],
-      ["America/Los_Angeles", "2024-06-15T21:30:00Z", "-07:00", "202406151430-0700"],
+  it("says how a segment was read", () => {
+    expect(splitText(value("DTM+137:2024:203'"))).toContain(
+      "function qualifier 137",
+    );
+    expect(splitText(value("2024", "203"))).toBe("Read as a bare value.");
+  });
+});
+
+describe("naming", () => {
+  it("names no regulator, statute, agency, docket or business event", () => {
+    const all = JSON.stringify([dtmTexts(), DTM_PRESETS]);
+    expect(all).not.toMatch(
+      /\b(customs|statute|regulation|docket|agency|FMC|FMCSA|CBP|demurrage|detention)\b/i,
+    );
+  });
+
+  it("never calls the library GMT in a sentence the reader sees", () => {
+    const all = JSON.stringify([
+      dtmTexts(),
+      DTM_PRESETS.map((p) => p.description),
     ]);
-    expect(rows.every((r) => r.reason === "")).toBe(true);
-  });
-
-  it("leaves a blank slot as just a blank zone", () => {
-    const rows = gapRows(L, ["", "Europe/Berlin", " ", ""], lib);
-    expect(rows[0]).toEqual({ zone: "", instant: "", offset: "", as205: "", reason: "" });
-    expect(rows[1]!.instant).toBe("2024-06-15T12:30:00Z");
-  });
-
-  it("gives a reason for a time the clock shows twice (D16)", () => {
-    const [row] = gapRows("2024-11-03T01:30:00", ["America/New_York"], lib);
-    expect(row!.instant).toBe("");
-    expect(row!.reason).toContain("happens twice in America/New_York");
-  });
-
-  it("changes the Kolkata row (D-kolkata)", () => {
-    const rows = gapRows(L, ["Asia/Kolkata"], lib);
-    expect(rows[0]!.instant).toBe("2024-06-15T09:00:00Z");
-  });
-});
-
-describe("explainNull", () => {
-  const cases: [DtmNullReason, DtmState][] = [
-    ["blank-value", value("", "203")],
-    ["no-format", value("202406151430", "")],
-    ["no-format", value("DTM+137:202406151430'", "")],
-    ["unsupported-format", value("2024", "602")],
-    ["needs-year-window", stateOf("two-digit-no-window")],
-    ["bad-year-window", value("240615", "101", "9901")],
-    ["released-character", value("202406151430?+02", "303")],
-    ["bad-value", value("not a date", "203")],
-    ["bad-value", value("2024062020240615", "718")],
-  ];
-  it.each(cases)("%s", (reason, state) => {
-    const e = effective(state);
-    const options =
-      state.yearWindow === "9901"
-        ? { yearWindow: 9901 }
-        : state.yearWindow === ""
-          ? undefined
-          : { yearWindow: Number(state.yearWindow) };
-    expect(parseEdifactDtm(e.value, e.format, options)).toBeNull();
-    expect(explainNull(state, lib)).toBe(reason);
-  });
-
-  it("writes a text for every reason, naming no body", () => {
-    const context = { format: "602", form: "value" as const };
-    for (const [reason, text] of Object.entries(NULL_REASON_TEXT)) {
-      const line = text(context);
-      expect(line.length, reason).toBeGreaterThan(10);
-      expect(line, reason).not.toMatch(/\b(CFR|statut|regulat|docket|agency|customs)\b/i);
-    }
-    expect(NULL_REASON_TEXT["no-format"]({ format: "", form: "segment" })).toContain(
-      "The segment carries none.",
+    expect(all).not.toMatch(
+      /the GMT library|@northguild\/gmt|GMT (provides|returns|reads|library)/,
     );
-    expect(NULL_REASON_TEXT["no-format"]({ format: "", form: "value" })).toContain(
-      "Type the code.",
-    );
-    expect(nullReasonText("unsupported-format", value("2024", "602"))).toContain(
-      "602 is not a format code the library reads",
-    );
-  });
-});
-
-describe("windowOffNote and splitText", () => {
-  it("says a four-digit-year code does not read the window", () => {
-    expect(windowOffNote(stateOf("local-203"), lib)).toBe(
-      "Code 203 carries a four-digit year. The window is not read.",
-    );
-    expect(windowOffNote(stateOf("two-digit-window"), lib)).toBe("");
-    expect(windowOffNote(value("x", ""), lib)).toBe("");
-    expect(windowOffNote(value("x", "602"), lib)).toBe("");
-  });
-
-  it("describes how the input was read", () => {
-    expect(splitText(stateOf("local-203"))).toBe(
-      "Read as a segment: function qualifier 137, shown as sent and not interpreted; value 202406151430; format code 203.",
-    );
-    expect(splitText(stateOf("period-718"))).toBe("Read as a bare value.");
-    expect(splitText(value("DTM+137:202406151430:203:x'", ""))).toContain(
-      "Text after the first composite is not read.",
-    );
-  });
-});
-
-describe("writeBack", () => {
-  const wb = (id: string) => {
-    const s = stateOf(id);
-    const e = effective(s);
-    const result = parseEdifactDtm(
-      e.value,
-      e.format,
-      s.yearWindow === "2000" ? { yearWindow: 2000 } : undefined,
-    );
-    return writeBack(s, result, lib);
-  };
-
-  it("writes each preset back", () => {
-    expect(wb("local-203")).toMatchObject({
-      iso: "2024-06-15T14:30:00",
-      args: ["2024-06-15T14:30:00", "203"],
-      output: "202406151430",
-    });
-    expect(wb("released-303")).toMatchObject({
-      iso: "2024-06-15T14:30:00+00:00",
-      args: ["2024-06-15T14:30:00+00:00", "303"],
-      output: "202406151430+00",
-    });
-    expect(wb("utc-303")!.output).toBe("202406151430+00");
-    expect(wb("offset-205")).toMatchObject({
-      iso: "2024-06-15T14:30:00+02:00",
-      output: "202406151430+0200",
-    });
-    expect(wb("period-718")).toMatchObject({
-      iso: "2024-06-15/2024-06-20",
-      output: "2024061520240620",
-    });
-    expect(wb("two-digit-window")).toMatchObject({
-      iso: "2024-06-15",
-      args: ["2024-06-15", "101", { yearWindow: 2000 }],
-      output: "240615",
-    });
-  });
-
-  it("returns a sentinel with the zone-text note (D4w)", () => {
-    const w = wb("cet-303")!;
-    expect(w.output).toBe("");
-    expect(w.note).toContain(
-      "A zone text has no offset to write. Resolve the local time in a zone first, then write it with its offset.",
-    );
-  });
-
-  it("has nothing to write without a result", () => {
-    expect(wb("two-digit-no-window")).toBeNull();
-  });
-
-  it("explains the notes it adds", () => {
-    expect(wb("utc-303")!.note).toContain("never as UTC or GMT");
-    expect(wb("gmt-303")!.note).toContain("never as UTC or GMT");
-    expect(wb("period-718")!.note).toContain("without a hyphen");
-    expect(wb("released-303")!.note).toContain("+ is sent as ?+");
-    expect(wb("local-203")!.note).toBe("");
-  });
-
-  it("does not pass a window to a four-digit-year code", () => {
-    const s = stateOf("local-203", { yearWindow: "2000" });
-    const w = writeBack(s, parseEdifactDtm("202406151430", "203"), lib)!;
-    expect(w.args).toEqual(["2024-06-15T14:30:00", "203"]);
   });
 });

@@ -10,9 +10,7 @@ import {
   compareDurations,
   cutoffSchedule,
   durationAs,
-  formatEdifactDtm,
   formatEpcisEvent,
-  formatX12DateTimePeriod,
   fromOffsetInstant,
   intervalXorAllDate,
   intervalXorAllDateTime,
@@ -21,9 +19,7 @@ import {
   intervalXorAllZoned,
   intervalsOverlap,
   isValidDateRange,
-  isValidEdifactDtm,
   isValidEpcisEvent,
-  isValidX12DateTimePeriod,
   mergeIntervalsDate,
   mergeIntervalsDateTime,
   mergeIntervalsTime,
@@ -35,9 +31,7 @@ import {
   operatingIntervals,
   parseDateTimeWithPattern,
   parseDateWithPattern,
-  parseEdifactDtm,
   parseEpcisEvent,
-  parseX12DateTimePeriod,
   punctualityRate,
   scheduleDelivery,
   subtractDate,
@@ -142,12 +136,6 @@ describe("an Object argument that is a function is read as the object it is", ()
     ${"compareDurations relativeTo near the range maximum"}  | ${(w: Wrap) => compareDurations("P3D", "PT73H", { relativeTo: w(sydneyNearMax) })}
     ${"parseDateWithPattern yearWindow"}                     | ${(w: Wrap) => parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, w({ yearWindow: 2000 }))}
     ${"parseDateTimeWithPattern yearWindow"}                 | ${(w: Wrap) => parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm", undefined, w({ yearWindow: 2000 }))}
-    ${"parseEdifactDtm yearWindow"}                          | ${(w: Wrap) => parseEdifactDtm("240615", "101", w({ yearWindow: 2000 }))}
-    ${"formatEdifactDtm yearWindow"}                         | ${(w: Wrap) => formatEdifactDtm("2024-06-15", "101", w({ yearWindow: 2000 }))}
-    ${"isValidEdifactDtm yearWindow"}                        | ${(w: Wrap) => isValidEdifactDtm("240615", "101", w({ yearWindow: 2000 }))}
-    ${"parseX12DateTimePeriod yearWindow"}                   | ${(w: Wrap) => parseX12DateTimePeriod("240615", "D6", w({ yearWindow: 2000 }))}
-    ${"formatX12DateTimePeriod yearWindow"}                  | ${(w: Wrap) => formatX12DateTimePeriod("2024-06-15", "D6", w({ yearWindow: 2000 }))}
-    ${"isValidX12DateTimePeriod yearWindow"}                 | ${(w: Wrap) => isValidX12DateTimePeriod("240615", "D6", w({ yearWindow: 2000 }))}
   `("$name reads a function as the object", ({ call }) => {
     const plain = (call as (w: Wrap) => unknown)(asIs);
     expect(

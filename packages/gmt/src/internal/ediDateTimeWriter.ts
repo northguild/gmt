@@ -7,16 +7,14 @@ import { isValidDate } from "../plain/validate/isValidDate";
 import { isValidDateTime } from "../plain/validate/isValidDateTime";
 import { isValidTime } from "../plain/validate/isValidTime";
 import {
-  type EdiLayout,
+  type EdiCode,
+  type EdiKind,
   type EdiPart,
   type EdiStandard,
-  ediCodeOf,
+  type EdiValueKind,
+  ediCodeOfKind,
 } from "./ediGrammar";
-import { splitIsoInterval } from "./isoInterval";
-import { isoStringBody } from "./isoStringBody";
-import { twoDigitYear } from "./twoDigitYear";
 import { parseUtcOffsetNanoseconds } from "./utcOffsetString";
-import { readYearWindowStart } from "./yearWindowStart";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000n;
 const NANOSECONDS_PER_HOUR = 3_600_000_000_000n;
@@ -25,200 +23,145 @@ const MINUTES_PER_HOUR = 60n;
 /** The first and last years a `CCYY` mask can hold: four digits and no sign. */
 const MIN_FOUR_DIGIT_YEAR = 0;
 const MAX_FOUR_DIGIT_YEAR = 9999;
-/** The years a `YY` mask counts through: the two digits are the year within its century. */
-const YEARS_PER_CENTURY = 100;
-/** The years a `Y` mask counts through: the one digit is the year within its decade. */
-const YEARS_PER_DECADE = 10;
-
-/**
- * The date a time with an offset (`209`, `404`) is read on. A time with an offset has no date, and
- * Temporal reads an offset only as part of a date-time, so the value is read as that time on the
- * epoch date, the way `internal/utcOffsetString.ts` reads an offset alone. Only the time and the
- * offset are written, so the date never reaches the output.
- */
-const ANCHOR_DATE = "1970-01-01";
 
 /** What one half of a value states, as the Temporal objects its digits are read from. */
 interface IsoHalf {
-  /** The calendar date, or null when the mask has none. */
+  /** The calendar date, or null when the kind has none. */
   readonly date: Temporal.PlainDate | null;
-  /** The time of day on the value's own wall clock, or null when the mask has none. */
+  /** The time of day on the value's own wall clock, or null when the kind has none. */
   readonly time: Temporal.PlainTime | null;
-  /** Nanoseconds the wall clock runs ahead of UTC, or null when the mask has no offset. */
+  /** Nanoseconds the wall clock runs ahead of UTC, or null when the kind has no offset. */
   readonly offset: bigint | null;
 }
-
-/** The ISO 8601 kind a mask takes: fixed by the parts the mask has. */
-type IsoKind =
-  | "date"
-  | "dateTime"
-  | "time"
-  | "instant"
-  | "offsetTime"
-  | "offset";
 
 /** The digits (or sign) written for each part of a mask; null for a part that cannot hold its value. */
 type PartText = Partial<Record<EdiPart, string | null>>;
 
 /**
- * Write an ISO 8601 value as an EDI date/time value in a format code: the inverse of
- * `readEdiDateTime`, driven by the same `EdiLayout` tables (`ediGrammar.ts`), so what one writes
- * the other reads back.
+ * Write one ISO 8601 value as a single EDI date/time value in a format code of one kind: the
+ * inverse of `readEdiValue`, driven by the same layout tables (`ediGrammar.ts`), so what one
+ * writes the other reads back.
  *
- * - The code's mask fixes the ISO 8601 kind `value` must be: a date (a mask with a day or a day
- *   of the year), a local date-time, a time, a date-time with an offset or `Z` (a mask with a
- *   date, a time and `ZHHMM` or `ZZZ`), a time with an offset (`209`, `404`), or an offset alone
- *   (`406`).
- *   Each is checked by `isValidDate`, `isValidDateTime`, `isValidTime`, `toOffsetInstant` or
- *   `parseUtcOffsetNanoseconds` and then read by Temporal; no digit of the input is sliced.
- * - A period or range takes an ISO 8601 interval, `<start>/<end>`, one half per mask. The halves
- *   are joined by what the standard transmits: nothing for UNTDID 2379, a hyphen for X12 1250.
- * - A value with an offset is written on its own wall clock, never the UTC clock. `ZZZ` is always
- *   the signed hour of UN/ECE Recommendation 7 ¶12 (`+02`), never `UTC`, `GMT` or an
- *   abbreviation.
- * - The mask must hold the value exactly; nothing is rounded or dropped. A fraction of a second,
- *   seconds under a mask with no `SS`, offset minutes under `ZZZ`, offset seconds under any mask
- *   and a year outside 0000–9999 return `""`. `TC` (`DDD`) and `EH` (`YDDD`) are lossy by
- *   definition and write what their masks have.
- * - A two-digit year is written only inside the caller's `options.yearWindow`
- *   (`readYearWindowStart`), so the same window reads it back as the same year. A mask with no
- *   `YY` never reads the option.
- * - When both halves of a range carry a date, an end that precedes its start returns `""`
- *   (**GMT rule**), comparing by calendar date first and by time when both halves have one. A
- *   time-only range (`RTM`) is written whatever the order of its times: it carries no date, so
- *   `22:00/06:00` is a window that crosses midnight.
- * - Never throws: any failure, including a clock that cannot be read for a rolling window, is
- *   `""`.
+ * - The code must be one of `kind`; a code of another kind, a period or range code and a code
+ *   that is not written return `""`.
+ * - The kind fixes the ISO 8601 string `value` must be, as the house plain functions fix theirs:
+ *   a date is what `isValidDate` accepts, a time what `isValidTime` accepts, a local date-time
+ *   what `isValidDateTime` accepts, and a date-time with an offset what `toOffsetInstant` reads
+ *   (an offset, `Z`, or a bracketed zone that agrees). Temporal then reads the fields; no digit
+ *   of the input is sliced.
+ * - Precision is cut to the mask and never refused: a fraction of a second is dropped under
+ *   every mask and the seconds under a mask with no `SS`. The cut is a truncation, never a
+ *   rounding, so a written value never names a later minute or second than its input.
+ * - A value with an offset is written on its own wall clock, never the UTC clock. `ZHHMM` holds
+ *   whole minutes and `ZZZ` whole hours, always written as the signed hour of UN/ECE
+ *   Recommendation 7 ¶12 (`+02`), never `UTC` or `GMT`. An offset the field cannot hold returns
+ *   `""`: rounding it would name another instant.
+ * - A year outside 0000–9999 returns `""`: `CCYY` is four digits and no sign.
+ * - Never throws: any failure is `""`.
  *
  * @param standard which element the code belongs to
+ * @param kind the kind of value the calling function writes
  * @param code the 2379 or 1250 format code
- * @param value one ISO 8601 string of the kind the code takes
- * @param options the caller's `TwoDigitYearOptions` bag, already accepted by `isOptionsArgument`
+ * @param value one ISO 8601 string of that kind
  * @returns the element value, or `""`
  *
- * @example writeEdiDateTime("edifact", "203", "2024-06-15T14:30:00") // "202406151430"
- * @example writeEdiDateTime("edifact", "303", "2024-06-15T14:30:00+02:00") // "202406151430+02"
- * @example writeEdiDateTime("edifact", "718", "2024-06-15/2024-06-20") // "2024061520240620"
- * @example writeEdiDateTime("x12", "RD8", "2024-06-15/2024-06-20") // "20240615-20240620"
- * @example writeEdiDateTime("x12", "RTM", "22:00/06:00") // "2200-0600"
- * @example writeEdiDateTime("x12", "D6", "2024-06-15", { yearWindow: 2000 }) // "240615"
- * @example writeEdiDateTime("x12", "D6", "2024-06-15") // "" (two-digit year, no window)
- * @example writeEdiDateTime("x12", "UN", "2024-06-15") // ""
+ * @example writeEdiValue("edifact", "dateTime", "203", "2024-06-15T14:30:45") // "202406151430"
+ * @example writeEdiValue("edifact", "offsetDateTime", "303", "2024-06-15T14:30:00+02:00") // "202406151430+02"
+ * @example writeEdiValue("x12", "date", "DB", "2024-06-15") // "06152024"
+ * @example writeEdiValue("edifact", "offsetDateTime", "303", "2024-06-15T14:30:00+05:30") // "" (ZZZ holds whole hours)
+ * @example writeEdiValue("edifact", "date", "102", "2024-06-15T14:30:00") // "" (a date-time is not a date)
  */
-export function writeEdiDateTime(
+export function writeEdiValue(
   standard: EdiStandard,
+  kind: EdiKind,
   code: string,
   value: string,
-  options?: unknown,
 ): string {
   try {
-    const entry = ediCodeOf(standard, code);
-    if (entry === null || typeof value !== "string") {
+    const entry = ediCodeOfKind(standard, kind, code);
+    if (entry === null || entry.layout.end !== undefined) {
       return "";
     }
-    const masks = masksOf(entry.layout);
-    const halves = readHalves(masks, value);
-    if (halves === null || endPrecedesStart(halves)) {
-      return "";
-    }
+    return writeHalf(entry.layout.start, readHalf(entry, value)) ?? "";
+  } catch {
+    return "";
+  }
+}
 
-    // The window is read only when a mask carries a two-digit year, so a four-digit code never
-    // reads the option and a rolling window never reads the clock for nothing.
-    const needsWindow = masks.some((parts) => parts.includes("YY"));
-    const windowStart = needsWindow ? readYearWindowStart(options) : null;
-    if (needsWindow && windowStart === null) {
+/**
+ * Write two ISO 8601 values as an EDI period or range in a format code of one kind: the inverse
+ * of `readEdiRange`.
+ *
+ * - The code must be one of `kind`; a single-value code and a code of another kind return `""`.
+ * - Each end is read and written as `writeEdiValue` reads and writes a date or a local
+ *   date-time. The halves are joined by what the standard transmits: nothing for UNTDID 2379,
+ *   one hyphen for X12 1250.
+ * - An end that precedes its start returns `""` (**GMT rule**: a reversed period names no span
+ *   of time). The ends are compared as given, before either is cut to the mask, so an end 35
+ *   seconds before its start is reversed under a minute mask too. An end equal to its start is
+ *   written.
+ * - Never throws: any failure is `""`.
+ *
+ * @param standard which element the code belongs to
+ * @param kind the kind of period or range the calling function writes
+ * @param code the 2379 or 1250 format code
+ * @param start the first end, one ISO 8601 string of the kind's half
+ * @param end the second end, of the same kind
+ * @returns the element value, or `""`
+ *
+ * @example writeEdiRange("edifact", "datePeriod", "718", "2024-06-15", "2024-06-20") // "2024061520240620"
+ * @example writeEdiRange("x12", "dateRange", "RD8", "2024-06-15", "2024-06-20") // "20240615-20240620"
+ * @example writeEdiRange("x12", "dateRange", "RD8", "2024-06-20", "2024-06-15") // "" (the end precedes the start)
+ */
+export function writeEdiRange(
+  standard: EdiStandard,
+  kind: EdiKind,
+  code: string,
+  start: string,
+  end: string,
+): string {
+  try {
+    const entry = ediCodeOfKind(standard, kind, code);
+    if (entry === null || entry.layout.end === undefined) {
       return "";
     }
-
-    const written = halves.map((half, index) =>
-      writeHalf(masks[index], half, windowStart),
-    );
+    const first = readHalf(entry, start);
+    const second = readHalf(entry, end);
+    if (first === null || second === null || endPrecedesStart(first, second)) {
+      return "";
+    }
+    const written = [
+      writeHalf(entry.layout.start, first),
+      writeHalf(entry.layout.end, second),
+    ];
     return written.includes(null) ? "" : written.join(entry.rangeSeparator);
   } catch {
     return "";
   }
 }
 
-/** A layout's masks in order: one for a single value, two for a period or range. */
-function masksOf(layout: EdiLayout): (readonly EdiPart[])[] {
-  return layout.end === undefined ? [layout.start] : [layout.start, layout.end];
-}
-
-/**
- * The value as one half per mask: the value itself for a single mask, the two halves of an ISO
- * 8601 interval for two. Null when the value is not an interval of two halves under a range code,
- * or when a half is not the kind its mask takes.
- */
-function readHalves(
-  masks: readonly (readonly EdiPart[])[],
-  value: string,
-): IsoHalf[] | null {
-  const texts = masks.length === 1 ? [value] : splitIsoInterval(value);
-  if (texts === null) {
-    return null;
-  }
-  const halves: IsoHalf[] = [];
-  for (const [index, parts] of masks.entries()) {
-    const half = READERS[kindOf(parts)](texts[index]);
-    if (half === null) {
-      return null;
-    }
-    halves.push(half);
-  }
-  return halves;
-}
-
-/** Whether the mask has any of the named parts. */
-function hasAny(parts: readonly EdiPart[], ...names: EdiPart[]): boolean {
-  return names.some((name) => parts.includes(name));
-}
-
-/** The ISO 8601 kind a mask takes, from whether it has a date, a time and an offset. */
-function kindOf(parts: readonly EdiPart[]): IsoKind {
-  const hasDate = hasAny(parts, "DD", "DDD");
-  const hasTime = hasAny(parts, "HH");
-  const hasOffset = hasAny(parts, "ZS", "ZZZ");
-  if (hasDate && hasTime) {
-    return hasOffset ? "instant" : "dateTime";
-  }
-  if (hasDate) {
-    return "date";
-  }
-  if (hasTime) {
-    return hasOffset ? "offsetTime" : "time";
-  }
-  return "offset";
+/** One ISO 8601 string read as the kind its code's halves are, or null when it is not that kind. */
+function readHalf(entry: EdiCode, text: string): IsoHalf | null {
+  return typeof text === "string" ? READERS[entry.valueKind](text) : null;
 }
 
 /** Each kind's reader: the public validator proves the string, then Temporal reads its fields. */
-const READERS: Readonly<Record<IsoKind, (text: string) => IsoHalf | null>> = {
+const READERS: Readonly<
+  Record<EdiValueKind, (text: string) => IsoHalf | null>
+> = {
   date: (text) =>
     isValidDate(text)
       ? { date: Temporal.PlainDate.from(text), time: null, offset: null }
-      : null,
-  dateTime: (text) =>
-    isValidDateTime(text)
-      ? wallClockHalf(Temporal.PlainDateTime.from(text), null)
       : null,
   time: (text) =>
     isValidTime(text)
       ? { date: null, time: Temporal.PlainTime.from(text), offset: null }
       : null,
-  instant: readInstant,
-  // A time has no date to check a bracketed zone against, so a 209 or 404 value takes no
-  // annotation.
-  // The anchor date it is read on is not part of the value and is dropped again.
-  offsetTime: (text) => {
-    const anchored =
-      isoStringBody(text) === text
-        ? readInstant(`${ANCHOR_DATE}T${text}`)
-        : null;
-    return anchored === null ? null : { ...anchored, date: null };
-  },
-  offset: (text) => {
-    const offset = parseUtcOffsetNanoseconds(text);
-    return offset === null ? null : { date: null, time: null, offset };
-  },
+  dateTime: (text) =>
+    isValidDateTime(text)
+      ? wallClockHalf(Temporal.PlainDateTime.from(text), null)
+      : null,
+  offsetDateTime: readOffsetDateTime,
 };
 
 /**
@@ -226,13 +169,14 @@ const READERS: Readonly<Record<IsoKind, (text: string) => IsoHalf | null>> = {
  * string (an offset, `Z`, or a bracketed zone that agrees), and the wall clock is the instant
  * seen at that offset, so no digit of the input is sliced.
  */
-function readInstant(text: string): IsoHalf | null {
+function readOffsetDateTime(text: string): IsoHalf | null {
   const pair = toOffsetInstant(text);
   if (pair === null) {
     return null;
   }
   const offset = parseUtcOffsetNanoseconds(pair.offset);
-  // An offset with seconds fits no mask, and is not a time zone Temporal can show a clock in.
+  // An offset with a non-zero seconds part fits no mask, and is not a time zone Temporal can
+  // show a clock in. A seconds part of zero is already gone: the pair's offset is `±HH:MM`.
   if (offset === null || offset % NANOSECONDS_PER_MINUTE !== 0n) {
     return null;
   }
@@ -254,13 +198,11 @@ function wallClockHalf(
 }
 
 /**
- * GMT rule: a reversed period names no span of time, when both halves carry a date. A date beside
- * a date-time (`DDT`, `DTD`) compares by calendar date. A time-only range (`RTM`) has no date to
- * compare, so an end before its start is a window that crosses midnight and is never reversed.
+ * GMT rule: a reversed period names no span of time. The ends compare by calendar date first
+ * and by time of day, to the nanosecond, when both have one.
  */
-function endPrecedesStart(halves: readonly IsoHalf[]): boolean {
-  const [start, end] = halves;
-  if (end === undefined || start.date === null || end.date === null) {
+function endPrecedesStart(start: IsoHalf, end: IsoHalf): boolean {
+  if (start.date === null || end.date === null) {
     return false;
   }
   const byDate = Temporal.PlainDate.compare(end.date, start.date);
@@ -271,15 +213,19 @@ function endPrecedesStart(halves: readonly IsoHalf[]): boolean {
 }
 
 /**
- * One half written in its mask, or null when the mask cannot hold it exactly (`maskHolds`) or a
- * part has no value to write.
+ * One half written in its mask, or null when there is no half, its year or its offset does not
+ * fit the mask, or a part has no value to write. A field the mask does not have (seconds, a
+ * fraction of a second) is left out, which is the truncation.
  */
 function writeHalf(
   parts: readonly EdiPart[],
-  half: IsoHalf,
-  windowStart: number | null,
+  half: IsoHalf | null,
 ): string | null {
-  if (!maskHolds(parts, half, windowStart)) {
+  if (
+    half === null ||
+    !maskHoldsYear(half.date) ||
+    !maskHoldsOffset(parts, half.offset)
+  ) {
     return null;
   }
   const text: PartText = {
@@ -291,57 +237,12 @@ function writeHalf(
   return written.includes(null) ? null : written.join("");
 }
 
-/** Whether the mask holds the half exactly, so that nothing is rounded or dropped. */
-function maskHolds(
-  parts: readonly EdiPart[],
-  half: IsoHalf,
-  windowStart: number | null,
-): boolean {
+/** Whether `CCYY` can hold the date's year: 0000–9999. */
+function maskHoldsYear(date: Temporal.PlainDate | null): boolean {
   return (
-    maskHoldsYear(parts, half.date, windowStart) &&
-    maskHoldsTime(parts, half.time) &&
-    maskHoldsOffset(parts, half.offset)
+    date === null ||
+    (date.year >= MIN_FOUR_DIGIT_YEAR && date.year <= MAX_FOUR_DIGIT_YEAR)
   );
-}
-
-/**
- * Whether the mask can hold the date's year: 0000–9999 for every mask, and inside the caller's
- * hundred-year window when the mask has `YY`, so that the two digits read back as the same year.
- */
-function maskHoldsYear(
-  parts: readonly EdiPart[],
-  date: Temporal.PlainDate | null,
-  windowStart: number | null,
-): boolean {
-  if (date === null) {
-    return true;
-  }
-  const { year } = date;
-  if (year < MIN_FOUR_DIGIT_YEAR || year > MAX_FOUR_DIGIT_YEAR) {
-    return false;
-  }
-  if (!parts.includes("YY")) {
-    return true;
-  }
-  return (
-    windowStart !== null &&
-    twoDigitYear(year % YEARS_PER_CENTURY, windowStart) === year
-  );
-}
-
-/**
- * Whether the mask can hold the time without dropping anything: cutting the time to the mask's
- * smallest field (the second when it has `SS`, the minute otherwise) changes nothing.
- */
-function maskHoldsTime(
-  parts: readonly EdiPart[],
-  time: Temporal.PlainTime | null,
-): boolean {
-  if (time === null) {
-    return true;
-  }
-  const smallestUnit = parts.includes("SS") ? "second" : "minute";
-  return time.equals(time.round({ smallestUnit, roundingMode: "trunc" }));
 }
 
 /** Whether the mask can hold the offset: whole minutes, or whole hours where the mask has `ZZZ`. */
@@ -364,11 +265,8 @@ function dateText(date: Temporal.PlainDate | null): PartText {
     ? {}
     : {
         CCYY: digits(date.year, 4),
-        YY: digits(date.year % YEARS_PER_CENTURY, 2),
-        Y: digits(date.year % YEARS_PER_DECADE, 1),
         MM: digits(date.month, 2),
         DD: digits(date.day, 2),
-        DDD: digits(date.dayOfYear, 3),
       };
 }
 

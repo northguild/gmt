@@ -2,7 +2,7 @@ import {
   bolTimestamp,
   chargeableDays,
   demurrageClock,
-  formatEdifactDtm,
+  formatEdifactOffsetDateTime,
   formatEpcisEvent,
   freeTimeExpiry,
   multimodalETA,
@@ -30,16 +30,17 @@ import {
  * - `parseEpcisEvent` reads GS1's `eventTime` grammar (the `DateTimeStamp` pattern of the EPCIS
  *   XSD), which ends at `Z` or the offset: it has no annotation, so every bracketed value is
  *   null and only the bare instant is read. `isValidEpcisEvent` is the same check.
- * - `formatEdifactDtm` under `303` (and `205`–`208`, `301`, `302`, `304`, which read their value
- *   the same way) writes the value's own wall clock and offset, so it reads the bracket through
- *   `toOffsetInstant`: a zone must be real, and it sets the clock the digits are written on.
- *   19:00Z in `Europe/London` on 14 June 2024 is 20:00 at +01:00 (British Summer Time), checked
- *   against `Temporal.Instant.from("2024-06-14T19:00:00Z").toZonedDateTimeISO("Europe/London")`.
+ * - `formatEdifactOffsetDateTime` under `303` (and `205`, `208` and `304`, which read their
+ *   value the same way) writes the value's own wall clock and offset, so it reads the bracket
+ *   through `toOffsetInstant`: a zone must be real, and it sets the clock the digits are written
+ *   on. 19:00Z in `Europe/London` on 14 June 2024 is 20:00 at +01:00 (British Summer Time),
+ *   checked against
+ *   `Temporal.Instant.from("2024-06-14T19:00:00Z").toZonedDateTimeISO("Europe/London")`.
  *
- * Not here, because they read no ISO 8601 instant: `parseEdifactDtm`, `parseX12DateTimePeriod`,
- * `parseX12DateTime`, `x12TimeCode` and their validators read EDI element values, which have no
- * bracket; `formatX12DateTimePeriod` takes a date, a time or a local date-time, since no 1250
- * code carries an offset; and the `formatEdifactDtm` codes with no offset take the same. For the
+ * Not here, because they read no ISO 8601 instant: the `parseEdifact…` and `parseX12…` functions,
+ * `x12TimeCodeOffset`, `x12TimeCodeZone` and their validators read EDI element values, which
+ * have no bracket; the `formatX12…` functions take a date, a time or a local date-time, since no
+ * 1250 code carries an offset; and the other `formatEdifact…` functions take the same. For the
  * same reason none of them has a row in `test/minuteRoundedOffsets.test.ts`.
  */
 const clockStart = "2024-06-14T19:00:00Z";
@@ -124,7 +125,7 @@ describe("intermodal annotations (RFC 9557)", () => {
           : null,
       );
       // A 303 value is the wall clock and its offset, so the bracketed zone is read.
-      expect(formatEdifactDtm(value, "303")).toBe(dtm303);
+      expect(formatEdifactOffsetDateTime(value, "303")).toBe(dtm303);
       // A departure's bracket makes it exact, so a zone that does not exist is refused.
       expect(
         multimodalETA([

@@ -55,10 +55,10 @@ export {
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
-// `readEdiDateTime` (./ediDateTimeFields) and `writeEdiDateTime` (./ediDateTimeWriter) are
-// deliberately not re-exported here: they import `instant/convert/toOffsetInstant`, which reads
-// this barrel at module top level, so a barrel entry would close a cycle. Import each from its
-// own file ("../../internal/ediDateTimeFields", "../../internal/ediDateTimeWriter").
+// The EDI readers (./ediDateTimeFields) and writers (./ediDateTimeWriter) are deliberately not
+// re-exported here: they import `instant/convert/toOffsetInstant`, which reads this barrel at
+// module top level, so a barrel entry would close a cycle. Import each from its own file
+// ("../../internal/ediDateTimeFields", "../../internal/ediDateTimeWriter").
 export {
   EDIFACT_DTM_FORMATS,
   X12_DATE_TIME_PERIOD_FORMATS,

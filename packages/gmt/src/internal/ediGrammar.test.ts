@@ -4,28 +4,23 @@ import type { EdifactDtmFormat, X12DateTimePeriodFormat } from "../types/edi";
 import {
   EDIFACT_DTM_FORMATS,
   EDIFACT_DTM_GRAMMAR,
-  EDIFACT_TWO_DIGIT_YEAR_FORMATS,
   X12_DATE_TIME_PERIOD_FORMATS,
   X12_DATE_TIME_PERIOD_GRAMMAR,
   X12_TIME_CODES,
-  X12_TWO_DIGIT_YEAR_FORMATS,
   ediCodeOf,
+  ediCodeOfKind,
 } from "./ediGrammar";
 
 // UNTDID data element 2379 and X12 data element 1250. Every entry proves shape only: month 01–12,
-// day 01–31, hour 00–23, minute and second 00–59, ordinal day 001–366. Whether the day exists in
-// its month, or day 366 in its year, is Temporal's job in `ediDateTimeFields.ts`.
+// day 01–31, hour 00–23, minute and second 00–59. Whether the day exists in its month is
+// Temporal's job in `ediDateTimeFields.ts`.
 
 describe("EDIFACT_DTM_GRAMMAR", () => {
   it.each`
     code     | value                         | reason
-    ${"101"} | ${"240615"}                   | ${"YYMMDD"}
-    ${"101"} | ${"690101"}                   | ${"YY 69: the reader resolves the century"}
     ${"102"} | ${"20240615"}                 | ${"CCYYMMDD"}
     ${"102"} | ${"20230229"}                 | ${"a day the year does not have still matches: calendar validity is Temporal's"}
     ${"102"} | ${"00000101"}                 | ${"year 0000"}
-    ${"201"} | ${"2406151430"}               | ${"YYMMDDHHMM"}
-    ${"202"} | ${"240615143000"}             | ${"YYMMDDHHMMSS"}
     ${"203"} | ${"202406151430"}             | ${"CCYYMMDDHHMM"}
     ${"203"} | ${"202406152359"}             | ${"last minute of the day"}
     ${"204"} | ${"20240615143000"}           | ${"CCYYMMDDHHMMSS"}
@@ -33,33 +28,17 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"205"} | ${"202406151430+0200"}        | ${"CCYYMMDDHHMMZHHMM"}
     ${"205"} | ${"202406151430+0530"}        | ${"half-hour offset"}
     ${"205"} | ${"202406151430-0000"}        | ${"negative zero"}
-    ${"206"} | ${"2406151430+0200"}          | ${"YYMMDDHHMMZHHMM"}
-    ${"207"} | ${"240615143000+0200"}        | ${"YYMMDDHHMMSSZHHMM"}
     ${"208"} | ${"20240615143000+0200"}      | ${"CCYYMMDDHHMMSSZHHMM"}
     ${"208"} | ${"20240615143000-0530"}      | ${"western half-hour"}
-    ${"209"} | ${"143000+0200"}              | ${"HHMMSSZHHMM"}
-    ${"301"} | ${"2406151430+02"}            | ${"YYMMDDHHMMZZZ"}
-    ${"301"} | ${"6901010000UTC"}            | ${"literal UTC"}
-    ${"302"} | ${"240615143000+02"}          | ${"YYMMDDHHMMSSZZZ"}
-    ${"302"} | ${"240615143000UTC"}          | ${"literal UTC"}
     ${"303"} | ${"202406151430+02"}          | ${"ZZZ as ±HH (Rec 7 ¶12)"}
     ${"303"} | ${"202406151430-05"}          | ${"ZZZ as -05 (Rec 7 ¶12 example)"}
     ${"303"} | ${"202406151430+00"}          | ${"ZZZ as +00"}
     ${"303"} | ${"202406151430UTC"}          | ${"ZZZ as the literal UTC (SMDG)"}
     ${"303"} | ${"202406151430GMT"}          | ${"ZZZ as the literal GMT (Rec 7 ¶12)"}
-    ${"303"} | ${"202406151430PDT"}          | ${"ZZZ as an undefined abbreviation: raw zone text"}
     ${"304"} | ${"20240615143000+02"}        | ${"CCYYMMDDHHMMSSZZZ"}
-    ${"304"} | ${"20240615143000CET"}        | ${"undefined abbreviation"}
     ${"401"} | ${"1430"}                     | ${"HHMM"}
     ${"401"} | ${"0000"}                     | ${"midnight"}
     ${"402"} | ${"143000"}                   | ${"HHMMSS"}
-    ${"404"} | ${"143000+02"}                | ${"HHMMSSZZZ"}
-    ${"404"} | ${"143000UTC"}                | ${"literal UTC"}
-    ${"406"} | ${"+0200"}                    | ${"ZHHMM"}
-    ${"406"} | ${"-0530"}                    | ${"western half-hour"}
-    ${"406"} | ${"+2359"}                    | ${"highest hour and minute the shape allows"}
-    ${"713"} | ${"24061514302406201600"}     | ${"wire form, no hyphen"}
-    ${"717"} | ${"240615240620"}             | ${"wire form"}
     ${"718"} | ${"2024061520240620"}         | ${"wire form"}
     ${"718"} | ${"2024062020240615"}         | ${"a reversed period still matches: ordering is the reader's"}
     ${"719"} | ${"202406151430202406201600"} | ${"wire form"}
@@ -71,12 +50,7 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
 
   it.each`
     code     | value                           | reason
-    ${"101"} | ${"20240615"}                   | ${"102's value"}
-    ${"101"} | ${"241301"}                     | ${"month 13"}
-    ${"101"} | ${"240632"}                     | ${"day 32"}
-    ${"101"} | ${"240600"}                     | ${"day 00"}
-    ${"101"} | ${"24615"}                      | ${"unpadded month"}
-    ${"102"} | ${"240615"}                     | ${"101's value"}
+    ${"102"} | ${"240615"}                     | ${"YYMMDD: a two-digit year is not read"}
     ${"102"} | ${"202406151430"}               | ${"203's value"}
     ${"102"} | ${"20241301"}                   | ${"month 13"}
     ${"102"} | ${"20240001"}                   | ${"month 00"}
@@ -87,14 +61,8 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"102"} | ${"20240615\n"}                 | ${"a trailing newline: $ is the end of the value, not of a line"}
     ${"102"} | ${"２０２４０６１５"}           | ${"full-width digits: a digit is 0–9"}
     ${"102"} | ${""}                           | ${"empty string"}
-    ${"201"} | ${"202406151430"}               | ${"203's value"}
-    ${"201"} | ${"240615143000"}               | ${"202's value"}
-    ${"201"} | ${"2406152400"}                 | ${"hour 24"}
-    ${"201"} | ${"2406151460"}                 | ${"minute 60"}
-    ${"202"} | ${"2406151430"}                 | ${"201's value"}
-    ${"202"} | ${"240615143060"}               | ${"second 60"}
     ${"203"} | ${"20240615143000"}             | ${"204's value"}
-    ${"203"} | ${"2406151430"}                 | ${"201's value"}
+    ${"203"} | ${"2406151430"}                 | ${"YYMMDDHHMM: a two-digit year is not read"}
     ${"203"} | ${"20240615"}                   | ${"102's value"}
     ${"203"} | ${"202406152400"}               | ${"hour 24"}
     ${"203"} | ${"202406151460"}               | ${"minute 60"}
@@ -113,30 +81,22 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"205"} | ${"202406151430+2400"}          | ${"offset hour 24"}
     ${"205"} | ${"202406151430+0260"}          | ${"offset minute 60"}
     ${"205"} | ${"20240615143000+0200"}        | ${"208's value: 205 has no seconds"}
-    ${"206"} | ${"2406151430+02"}              | ${"301's value: ZZZ is three characters"}
-    ${"206"} | ${"202406151430+0200"}          | ${"205's value: four-digit year"}
-    ${"207"} | ${"2406151430+0200"}            | ${"206's value: no seconds"}
-    ${"207"} | ${"240615143060+0200"}          | ${"second 60"}
     ${"208"} | ${"202406151430+0200"}          | ${"205's value: no seconds"}
     ${"208"} | ${"20240615143000+2400"}        | ${"offset hour 24"}
     ${"208"} | ${"20240615143000Z"}            | ${"Z designator: 2379 has none"}
-    ${"209"} | ${"143000+02"}                  | ${"404's value: ZZZ is three characters"}
-    ${"209"} | ${"1430+0200"}                  | ${"no seconds"}
-    ${"209"} | ${"143000+0260"}                | ${"offset minute 60"}
-    ${"209"} | ${"143000"}                     | ${"402's value: no offset"}
     ${"205"} | ${"202406151430"}               | ${"203's value: no offset"}
     ${"205"} | ${"202406151430?+0200"}         | ${"release character"}
-    ${"301"} | ${"202406151430+02"}            | ${"303's value"}
-    ${"301"} | ${"240615143000+02"}            | ${"302's value"}
-    ${"301"} | ${"2406151430"}                 | ${"201's value: no zone"}
-    ${"301"} | ${"2406151430?+02"}             | ${"release character"}
-    ${"302"} | ${"2406151430+02"}              | ${"301's value"}
-    ${"302"} | ${"240615143000"}               | ${"202's value: no zone"}
     ${"303"} | ${"202406151430"}               | ${"203's value: no zone"}
     ${"303"} | ${"202406151430+0200"}          | ${"205's value: ZHHMM"}
     ${"303"} | ${"20240615143000+02"}          | ${"304's value"}
     ${"303"} | ${"202406151430?+02"}           | ${"release character is not part of the element value"}
     ${"303"} | ${"202406151430utc"}            | ${"lower case"}
+    ${"303"} | ${"202406151430PDT"}            | ${"an abbreviation: no UN/EDIFACT text defines one, so it is not read"}
+    ${"303"} | ${"202406151430CET"}            | ${"an abbreviation"}
+    ${"303"} | ${"202406151430UTZ"}            | ${"one letter off UTC is not UTC"}
+    ${"303"} | ${"202406151430ZZZ"}            | ${"Z is not read as a UTC designator"}
+    ${"303"} | ${"202406151430Z"}              | ${"a lone Z: the mask has three zone characters"}
+    ${"304"} | ${"20240615143000CET"}          | ${"an abbreviation after seconds"}
     ${"303"} | ${"202406151430+24"}            | ${"ZZZ +24: a broken offset, not a zone name"}
     ${"303"} | ${"202406151430-99"}            | ${"ZZZ -99"}
     ${"303"} | ${"202406151430+-1"}            | ${"ZZZ of two signs and a digit"}
@@ -159,32 +119,11 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"401"} | ${""}                           | ${"empty string"}
     ${"402"} | ${"1430"}                       | ${"401's value"}
     ${"402"} | ${"143060"}                     | ${"second 60"}
-    ${"404"} | ${"1430+02"}                    | ${"HHMM with a zone: 2379 defines no such code"}
-    ${"404"} | ${"143000"}                     | ${"402's value: no zone"}
-    ${"404"} | ${"143000?+02"}                 | ${"release character"}
-    ${"404"} | ${"240000+02"}                  | ${"hour 24"}
-    ${"406"} | ${"+2400"}                      | ${"hour 24"}
-    ${"406"} | ${"+0260"}                      | ${"minute 60"}
-    ${"406"} | ${"0200"}                       | ${"no sign"}
-    ${"406"} | ${"+02"}                        | ${"hours only: that is a ZZZ form, not ZHHMM"}
-    ${"406"} | ${"+02:00"}                     | ${"colon"}
-    ${"406"} | ${"Z"}                          | ${"designator"}
-    ${"406"} | ${"−0200"}                      | ${"U+2212 minus sign"}
-    ${"406"} | ${"?+0200"}                     | ${"release character"}
-    ${"406"} | ${""}                           | ${"empty string"}
-    ${"713"} | ${"202406151430202406201600"}   | ${"719's value"}
-    ${"713"} | ${"2406151430"}                 | ${"201's value: one date-time"}
-    ${"713"} | ${"2406151430-2406201600"}      | ${"one hyphen: the mask's notation, never transmitted"}
-    ${"713"} | ${"2406151430--2406201600"}     | ${"two hyphens"}
-    ${"717"} | ${"2024061520240620"}           | ${"718's value"}
-    ${"717"} | ${"240615"}                     | ${"101's value: one date"}
-    ${"717"} | ${"240615-240620"}              | ${"one hyphen: the mask's notation, never transmitted"}
-    ${"717"} | ${"240615--240620"}             | ${"two hyphens"}
     ${"718"} | ${"20240615-20240620"}          | ${"one hyphen: X12 RD8's wire form, never a 2379 one"}
     ${"718"} | ${"20240615--20240620"}         | ${"two hyphens"}
     ${"718"} | ${"20240615/20240620"}          | ${"solidus"}
     ${"718"} | ${"20240615"}                   | ${"102's value: one date"}
-    ${"718"} | ${"240615240620"}               | ${"717's value"}
+    ${"718"} | ${"240615240620"}               | ${"YYMMDD-YYMMDD: a two-digit year is not read"}
     ${"718"} | ${"2024061520241320"}           | ${"month 13 in the end"}
     ${"718"} | ${" 2024061520240620"}          | ${"leading whitespace"}
     ${"719"} | ${"2024061520240620"}           | ${"718's value: no times"}
@@ -204,8 +143,6 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"205"} | ${"202406151430+0530"}        | ${["2024", "06", "15", "14", "30", "+", "05", "30"]}
     ${"303"} | ${"202406151430+02"}          | ${["2024", "06", "15", "14", "30", "+02"]}
     ${"304"} | ${"20240615143000UTC"}        | ${["2024", "06", "15", "14", "30", "00", "UTC"]}
-    ${"404"} | ${"143000+02"}                | ${["14", "30", "00", "+02"]}
-    ${"406"} | ${"-0530"}                    | ${["-", "05", "30"]}
     ${"718"} | ${"2024061520240620"}         | ${["2024", "06", "15", "2024", "06", "20"]}
     ${"719"} | ${"202406151430202406201600"} | ${["2024", "06", "15", "14", "30", "2024", "06", "20", "16", "00"]}
   `("code $code captures $groups from $value", ({ code, value, groups }) => {
@@ -218,34 +155,18 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
 describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
   it.each`
     code     | value                              | reason
-    ${"D6"}  | ${"240615"}                        | ${"YYMMDD"}
     ${"D8"}  | ${"20240615"}                      | ${"CCYYMMDD"}
     ${"DB"}  | ${"06152024"}                      | ${"MMDDCCYY"}
     ${"DB"}  | ${"02292023"}                      | ${"a day the year does not have still matches: calendar validity is Temporal's"}
-    ${"TT"}  | ${"061524"}                        | ${"MMDDYY"}
     ${"DT"}  | ${"202406151430"}                  | ${"CCYYMMDDHHMM"}
-    ${"TR"}  | ${"1506241430"}                    | ${"DDMMYYHHMM"}
-    ${"TR"}  | ${"2406151430"}                    | ${"the EDIFACT 201 digits also read as day 24, month 06, year 15: the qualifier tells the orders apart"}
     ${"RTS"} | ${"20240615143000"}                | ${"CCYYMMDDHHMMSS, one date-time despite the R"}
     ${"TM"}  | ${"1430"}                          | ${"HHMM"}
     ${"TS"}  | ${"143000"}                        | ${"HHMMSS"}
-    ${"RD6"} | ${"240615-240620"}                 | ${"YYMMDD-YYMMDD, hyphen transmitted"}
     ${"RD8"} | ${"20240615-20240620"}             | ${"CCYYMMDD-CCYYMMDD"}
     ${"RD8"} | ${"20240620-20240615"}             | ${"a reversed range still matches: ordering is the reader's"}
     ${"RD"}  | ${"06152024-06202024"}             | ${"MMDDCCYY-MMDDCCYY"}
     ${"RDT"} | ${"202406151430-202406201600"}     | ${"CCYYMMDDHHMM-CCYYMMDDHHMM"}
     ${"DTS"} | ${"20240615143000-20240620160000"} | ${"CCYYMMDDHHMMSS-CCYYMMDDHHMMSS, a range despite having no R"}
-    ${"DDT"} | ${"20240615-202406201600"}         | ${"CCYYMMDD-CCYYMMDDHHMM"}
-    ${"DTD"} | ${"202406151430-20240620"}         | ${"CCYYMMDDHHMM-CCYYMMDD"}
-    ${"RTM"} | ${"0900-1700"}                     | ${"HHMM-HHMM"}
-    ${"RTM"} | ${"1700-0900"}                     | ${"a reversed range still matches: ordering is the reader's"}
-    ${"TC"}  | ${"166"}                           | ${"DDD"}
-    ${"TC"}  | ${"001"}                           | ${"first day of the year"}
-    ${"TC"}  | ${"366"}                           | ${"day 366: shape only, the reader checks the year"}
-    ${"TU"}  | ${"24166"}                         | ${"YYDDD"}
-    ${"TU"}  | ${"23366"}                         | ${"day 366 of a common year still matches: calendar validity is Temporal's"}
-    ${"EH"}  | ${"4166"}                          | ${"YDDD"}
-    ${"EH"}  | ${"0001"}                          | ${"year digit 0, day 001"}
   `("code $code matches $value ($reason)", ({ code, value }) => {
     expect(
       X12_DATE_TIME_PERIOD_GRAMMAR[code as X12DateTimePeriodFormat].test(value),
@@ -254,9 +175,7 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
 
   it.each`
     code     | value                              | reason
-    ${"D6"}  | ${"20240615"}                      | ${"D8's value"}
-    ${"D6"}  | ${"241301"}                        | ${"month 13"}
-    ${"D8"}  | ${"240615"}                        | ${"D6's value"}
+    ${"D8"}  | ${"240615"}                        | ${"YYMMDD: a two-digit year is not read"}
     ${"D8"}  | ${"06152024"}                      | ${"DB's value read as CCYYMMDD: 20 is not a month"}
     ${"D8"}  | ${"20240632"}                      | ${"day 32"}
     ${"D8"}  | ${""}                              | ${"empty string"}
@@ -266,35 +185,23 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
     ${"DB"}  | ${"13152024"}                      | ${"month 13"}
     ${"DB"}  | ${"06322024"}                      | ${"day 32"}
     ${"DB"}  | ${"6152024"}                       | ${"unpadded month"}
-    ${"DB"}  | ${"061524"}                        | ${"TT's value"}
+    ${"DB"}  | ${"061524"}                        | ${"MMDDYY: a two-digit year is not read"}
     ${"DB"}  | ${"06/15/2024"}                    | ${"separators"}
     ${"DB"}  | ${" 06152024"}                     | ${"leading whitespace"}
     ${"DB"}  | ${"06152024 "}                     | ${"trailing whitespace"}
-    ${"TT"}  | ${"240615"}                        | ${"D6's value: 24 is not a month"}
-    ${"TT"}  | ${"131524"}                        | ${"month 13"}
-    ${"TT"}  | ${"06152024"}                      | ${"DB's value"}
     ${"DT"}  | ${"20240615143000"}                | ${"RTS's value"}
     ${"DT"}  | ${"202406152400"}                  | ${"hour 24"}
-    ${"TR"}  | ${"202406151430"}                  | ${"DT's value"}
-    ${"TR"}  | ${"1513241430"}                    | ${"month 13"}
-    ${"TR"}  | ${"3206241430"}                    | ${"day 32"}
-    ${"TR"}  | ${"1506242400"}                    | ${"hour 24"}
-    ${"TR"}  | ${"1506241460"}                    | ${"minute 60"}
-    ${"TR"}  | ${"150624"}                        | ${"no time"}
     ${"RTS"} | ${"202406151430"}                  | ${"DT's value"}
     ${"RTS"} | ${"20240615143060"}                | ${"second 60"}
     ${"TM"}  | ${"143000"}                        | ${"TS's value"}
     ${"TM"}  | ${"2400"}                          | ${"hour 24"}
     ${"TS"}  | ${"1430"}                          | ${"TM's value"}
     ${"TS"}  | ${"143060"}                        | ${"second 60"}
-    ${"RD6"} | ${"240615240620"}                  | ${"no hyphen: X12 transmits it"}
-    ${"RD6"} | ${"20240615-20240620"}             | ${"RD8's value"}
-    ${"RD6"} | ${"240615"}                        | ${"D6's value"}
     ${"RD8"} | ${"2024061520240620"}              | ${"no hyphen: EDIFACT 718's wire form, not X12"}
     ${"RD8"} | ${"20240615--20240620"}            | ${"two hyphens"}
     ${"RD8"} | ${"20240615/20240620"}             | ${"solidus"}
     ${"RD8"} | ${"20240615"}                      | ${"D8's value"}
-    ${"RD8"} | ${"240615-240620"}                 | ${"RD6's value"}
+    ${"RD8"} | ${"240615-240620"}                 | ${"YYMMDD-YYMMDD: a two-digit year is not read"}
     ${"RD8"} | ${"20241315-20240620"}             | ${"month 13 in the start"}
     ${"RD8"} | ${" 20240615-20240620"}            | ${"leading whitespace"}
     ${"RD8"} | ${""}                              | ${"empty string"}
@@ -309,42 +216,6 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
     ${"DTS"} | ${"202406151430-202406201600"}     | ${"RDT's value"}
     ${"DTS"} | ${"20240615143000"}                | ${"RTS's value"}
     ${"DTS"} | ${"20240615143060-20240620160000"} | ${"second 60 in the start"}
-    ${"DDT"} | ${"202406151430-20240620"}         | ${"DTD's order"}
-    ${"DDT"} | ${"20240615-20240620"}             | ${"RD8's value: no time on the end"}
-    ${"DDT"} | ${"202406151430-202406201600"}     | ${"RDT's value: time on the start"}
-    ${"DDT"} | ${"20240615202406201600"}          | ${"no hyphen"}
-    ${"DTD"} | ${"20240615-202406201600"}         | ${"DDT's order"}
-    ${"DTD"} | ${"20240615-20240620"}             | ${"RD8's value: no time on the start"}
-    ${"DTD"} | ${"202406151430-202406201600"}     | ${"RDT's value: time on the end"}
-    ${"DTD"} | ${"20240615143020240620"}          | ${"no hyphen"}
-    ${"RTM"} | ${"09001700"}                      | ${"no hyphen"}
-    ${"RTM"} | ${"0900"}                          | ${"TM's value"}
-    ${"RTM"} | ${"2400-1700"}                     | ${"hour 24"}
-    ${"RTM"} | ${"0900-1760"}                     | ${"minute 60"}
-    ${"RTM"} | ${"09:00-17:00"}                   | ${"colons"}
-    ${"TC"}  | ${"000"}                           | ${"day 000"}
-    ${"TC"}  | ${"367"}                           | ${"day 367"}
-    ${"TC"}  | ${"400"}                           | ${"day 400"}
-    ${"TC"}  | ${"999"}                           | ${"day 999"}
-    ${"TC"}  | ${"66"}                            | ${"unpadded"}
-    ${"TC"}  | ${"0166"}                          | ${"four digits"}
-    ${"TC"}  | ${"24166"}                         | ${"TU's value"}
-    ${"TC"}  | ${" 166"}                          | ${"leading whitespace"}
-    ${"TC"}  | ${"166 "}                          | ${"trailing whitespace"}
-    ${"TC"}  | ${""}                              | ${"empty string"}
-    ${"TU"}  | ${"24000"}                         | ${"day 000"}
-    ${"TU"}  | ${"24367"}                         | ${"day 367"}
-    ${"TU"}  | ${"4166"}                          | ${"EH's value"}
-    ${"TU"}  | ${"166"}                           | ${"TC's value"}
-    ${"TU"}  | ${"2024166"}                       | ${"four-digit year"}
-    ${"EH"}  | ${"4000"}                          | ${"day 000"}
-    ${"EH"}  | ${"4367"}                          | ${"day 367"}
-    ${"EH"}  | ${"24166"}                         | ${"TU's value"}
-    ${"EH"}  | ${"166"}                           | ${"TC's value"}
-    ${"EH"}  | ${"A166"}                          | ${"letter year digit"}
-    ${"UN"}  | ${"20240615"}                      | ${"unstructured: nothing matches, GMT never guesses a format"}
-    ${"UN"}  | ${"anything"}                      | ${"unstructured"}
-    ${"UN"}  | ${""}                              | ${"unstructured"}
   `("code $code rejects $value ($reason)", ({ code, value }) => {
     expect(
       X12_DATE_TIME_PERIOD_GRAMMAR[code as X12DateTimePeriodFormat].test(value),
@@ -354,15 +225,8 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
   it.each`
     code     | value                              | groups
     ${"DB"}  | ${"06152024"}                      | ${["06", "15", "2024"]}
-    ${"TT"}  | ${"061524"}                        | ${["06", "15", "24"]}
-    ${"TR"}  | ${"1506241430"}                    | ${["15", "06", "24", "14", "30"]}
-    ${"EH"}  | ${"4166"}                          | ${["4", "166"]}
-    ${"TU"}  | ${"24166"}                         | ${["24", "166"]}
     ${"RD"}  | ${"06152024-06202024"}             | ${["06", "15", "2024", "06", "20", "2024"]}
     ${"DTS"} | ${"20240615143000-20240620160000"} | ${["2024", "06", "15", "14", "30", "00", "2024", "06", "20", "16", "00", "00"]}
-    ${"DDT"} | ${"20240615-202406201600"}         | ${["2024", "06", "15", "2024", "06", "20", "16", "00"]}
-    ${"DTD"} | ${"202406151430-20240620"}         | ${["2024", "06", "15", "14", "30", "2024", "06", "20"]}
-    ${"RTM"} | ${"0900-1700"}                     | ${["09", "00", "17", "00"]}
   `("code $code captures $groups from $value", ({ code, value, groups }) => {
     expect(
       X12_DATE_TIME_PERIOD_GRAMMAR[code as X12DateTimePeriodFormat]
@@ -373,29 +237,17 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
 });
 
 describe("code lists", () => {
-  it("EDIFACT_DTM_FORMATS is the 23 supported 2379 codes, each with a grammar", () => {
+  it("EDIFACT_DTM_FORMATS is the 11 supported 2379 codes, each with a grammar", () => {
     expect([...EDIFACT_DTM_FORMATS]).toEqual([
-      "101",
       "102",
-      "201",
-      "202",
       "203",
       "204",
       "205",
-      "206",
-      "207",
       "208",
-      "209",
-      "301",
-      "302",
       "303",
       "304",
       "401",
       "402",
-      "404",
-      "406",
-      "713",
-      "717",
       "718",
       "719",
     ]);
@@ -404,54 +256,22 @@ describe("code lists", () => {
     );
   });
 
-  it("X12_DATE_TIME_PERIOD_FORMATS is the 21 supported 1250 codes, each with a grammar", () => {
+  it("X12_DATE_TIME_PERIOD_FORMATS is the 10 supported 1250 codes, each with a grammar", () => {
     expect([...X12_DATE_TIME_PERIOD_FORMATS]).toEqual([
-      "D6",
       "D8",
       "DB",
-      "TT",
       "DT",
-      "TR",
       "RTS",
       "TM",
       "TS",
-      "RD6",
       "RD8",
       "RD",
       "RDT",
       "DTS",
-      "DDT",
-      "DTD",
-      "RTM",
-      "TC",
-      "TU",
-      "EH",
-      "UN",
     ]);
     expect(Object.keys(X12_DATE_TIME_PERIOD_GRAMMAR).sort()).toEqual(
       [...X12_DATE_TIME_PERIOD_FORMATS].sort(),
     );
-  });
-
-  it("the two-digit-year lists name exactly the codes whose mask has YY and no CC", () => {
-    expect([...EDIFACT_TWO_DIGIT_YEAR_FORMATS]).toEqual([
-      "101",
-      "201",
-      "202",
-      "206",
-      "207",
-      "301",
-      "302",
-      "713",
-      "717",
-    ]);
-    expect([...X12_TWO_DIGIT_YEAR_FORMATS]).toEqual([
-      "D6",
-      "TT",
-      "TR",
-      "RD6",
-      "TU",
-    ]);
   });
 
   it("X12_TIME_CODES is the 56 DE 623 codes: 01–29 then the letter codes", () => {
@@ -508,31 +328,39 @@ describe("code lists", () => {
 });
 
 describe("ediCodeOf", () => {
-  // The mask of each row is the standard's own (UNTDID 2379; X12 1250 release 005010),
-  // written as this file's part names: `MI` is the minute, `ZS`/`ZH`/`ZM` the `ZHHMM` offset.
+  // The mask of each row is the standard's own (UNTDID 2379; X12 1250 release 005010), written
+  // as this file's part names: `MI` is the minute, `ZS`/`ZH`/`ZM` the `ZHHMM` offset. `kind` is
+  // what the mask states, and `valueKind` is what each half of it is: a period of dates is two
+  // dates.
   it.each`
-    standard     | code     | start                                                       | end
-    ${"edifact"} | ${"102"} | ${["CCYY", "MM", "DD"]}                                     | ${undefined}
-    ${"edifact"} | ${"201"} | ${["YY", "MM", "DD", "HH", "MI"]}                           | ${undefined}
-    ${"edifact"} | ${"205"} | ${["CCYY", "MM", "DD", "HH", "MI", "ZS", "ZH", "ZM"]}       | ${undefined}
-    ${"edifact"} | ${"206"} | ${["YY", "MM", "DD", "HH", "MI", "ZS", "ZH", "ZM"]}         | ${undefined}
-    ${"edifact"} | ${"207"} | ${["YY", "MM", "DD", "HH", "MI", "SS", "ZS", "ZH", "ZM"]}   | ${undefined}
-    ${"edifact"} | ${"208"} | ${["CCYY", "MM", "DD", "HH", "MI", "SS", "ZS", "ZH", "ZM"]} | ${undefined}
-    ${"edifact"} | ${"209"} | ${["HH", "MI", "SS", "ZS", "ZH", "ZM"]}                     | ${undefined}
-    ${"edifact"} | ${"303"} | ${["CCYY", "MM", "DD", "HH", "MI", "ZZZ"]}                  | ${undefined}
-    ${"edifact"} | ${"404"} | ${["HH", "MI", "SS", "ZZZ"]}                                | ${undefined}
-    ${"edifact"} | ${"406"} | ${["ZS", "ZH", "ZM"]}                                       | ${undefined}
-    ${"edifact"} | ${"718"} | ${["CCYY", "MM", "DD"]}                                     | ${["CCYY", "MM", "DD"]}
-    ${"x12"}     | ${"DB"}  | ${["MM", "DD", "CCYY"]}                                     | ${undefined}
-    ${"x12"}     | ${"TR"}  | ${["DD", "MM", "YY", "HH", "MI"]}                           | ${undefined}
-    ${"x12"}     | ${"DDT"} | ${["CCYY", "MM", "DD"]}                                     | ${["CCYY", "MM", "DD", "HH", "MI"]}
-    ${"x12"}     | ${"RTM"} | ${["HH", "MI"]}                                             | ${["HH", "MI"]}
-    ${"x12"}     | ${"TU"}  | ${["YY", "DDD"]}                                            | ${undefined}
-    ${"x12"}     | ${"EH"}  | ${["Y", "DDD"]}                                             | ${undefined}
+    standard     | code     | kind                | valueKind           | start                                                       | end
+    ${"edifact"} | ${"102"} | ${"date"}           | ${"date"}           | ${["CCYY", "MM", "DD"]}                                     | ${undefined}
+    ${"edifact"} | ${"203"} | ${"dateTime"}       | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI"]}                         | ${undefined}
+    ${"edifact"} | ${"204"} | ${"dateTime"}       | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI", "SS"]}                   | ${undefined}
+    ${"edifact"} | ${"205"} | ${"offsetDateTime"} | ${"offsetDateTime"} | ${["CCYY", "MM", "DD", "HH", "MI", "ZS", "ZH", "ZM"]}       | ${undefined}
+    ${"edifact"} | ${"208"} | ${"offsetDateTime"} | ${"offsetDateTime"} | ${["CCYY", "MM", "DD", "HH", "MI", "SS", "ZS", "ZH", "ZM"]} | ${undefined}
+    ${"edifact"} | ${"303"} | ${"offsetDateTime"} | ${"offsetDateTime"} | ${["CCYY", "MM", "DD", "HH", "MI", "ZZZ"]}                  | ${undefined}
+    ${"edifact"} | ${"304"} | ${"offsetDateTime"} | ${"offsetDateTime"} | ${["CCYY", "MM", "DD", "HH", "MI", "SS", "ZZZ"]}            | ${undefined}
+    ${"edifact"} | ${"401"} | ${"time"}           | ${"time"}           | ${["HH", "MI"]}                                             | ${undefined}
+    ${"edifact"} | ${"402"} | ${"time"}           | ${"time"}           | ${["HH", "MI", "SS"]}                                       | ${undefined}
+    ${"edifact"} | ${"718"} | ${"datePeriod"}     | ${"date"}           | ${["CCYY", "MM", "DD"]}                                     | ${["CCYY", "MM", "DD"]}
+    ${"edifact"} | ${"719"} | ${"dateTimePeriod"} | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI"]}                         | ${["CCYY", "MM", "DD", "HH", "MI"]}
+    ${"x12"}     | ${"D8"}  | ${"date"}           | ${"date"}           | ${["CCYY", "MM", "DD"]}                                     | ${undefined}
+    ${"x12"}     | ${"DB"}  | ${"date"}           | ${"date"}           | ${["MM", "DD", "CCYY"]}                                     | ${undefined}
+    ${"x12"}     | ${"DT"}  | ${"dateTime"}       | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI"]}                         | ${undefined}
+    ${"x12"}     | ${"RTS"} | ${"dateTime"}       | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI", "SS"]}                   | ${undefined}
+    ${"x12"}     | ${"TM"}  | ${"time"}           | ${"time"}           | ${["HH", "MI"]}                                             | ${undefined}
+    ${"x12"}     | ${"TS"}  | ${"time"}           | ${"time"}           | ${["HH", "MI", "SS"]}                                       | ${undefined}
+    ${"x12"}     | ${"RD8"} | ${"dateRange"}      | ${"date"}           | ${["CCYY", "MM", "DD"]}                                     | ${["CCYY", "MM", "DD"]}
+    ${"x12"}     | ${"RD"}  | ${"dateRange"}      | ${"date"}           | ${["MM", "DD", "CCYY"]}                                     | ${["MM", "DD", "CCYY"]}
+    ${"x12"}     | ${"RDT"} | ${"dateTimeRange"}  | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI"]}                         | ${["CCYY", "MM", "DD", "HH", "MI"]}
+    ${"x12"}     | ${"DTS"} | ${"dateTimeRange"}  | ${"dateTime"}       | ${["CCYY", "MM", "DD", "HH", "MI", "SS"]}                   | ${["CCYY", "MM", "DD", "HH", "MI", "SS"]}
   `(
-    "$standard $code has the parts $start and the end $end",
-    ({ standard, code, start, end }) => {
+    "$standard $code is a $kind of $valueKind halves with the parts $start and the end $end",
+    ({ standard, code, kind, valueKind, start, end }) => {
       const entry = ediCodeOf(standard, code);
+      expect(entry?.kind).toBe(kind);
+      expect(entry?.valueKind).toBe(valueKind);
       expect(entry?.layout.start).toEqual(start);
       expect(entry?.layout.end).toEqual(end);
     },
@@ -548,10 +376,8 @@ describe("ediCodeOf", () => {
     }
   });
 
-  it("every 1250 code but UN has its own grammar, and a range is joined by a hyphen", () => {
-    for (const code of X12_DATE_TIME_PERIOD_FORMATS.filter(
-      (code) => code !== "UN",
-    )) {
+  it("every supported 1250 code has its own grammar, and a range is joined by a hyphen", () => {
+    for (const code of X12_DATE_TIME_PERIOD_FORMATS) {
       const entry = ediCodeOf("x12", code);
       expect(entry?.grammar).toBe(X12_DATE_TIME_PERIOD_GRAMMAR[code]);
       // X12 1250: "Range of Dates Expressed in Format CCYYMMDD-CCYYMMDD".
@@ -559,24 +385,83 @@ describe("ediCodeOf", () => {
     }
   });
 
-  it("the two-digit-year lists are exactly the codes whose layout has YY", () => {
-    const hasTwoDigitYear = (standard: string, code: string): boolean => {
-      const layout = ediCodeOf(standard, code)?.layout;
-      return [...(layout?.start ?? []), ...(layout?.end ?? [])].includes("YY");
-    };
-    expect(
-      EDIFACT_DTM_FORMATS.filter((code) => hasTwoDigitYear("edifact", code)),
-    ).toEqual([...EDIFACT_TWO_DIGIT_YEAR_FORMATS]);
-    expect(
-      [...X12_DATE_TIME_PERIOD_FORMATS]
-        .filter((code) => hasTwoDigitYear("x12", code))
-        .sort(),
-    ).toEqual([...X12_TWO_DIGIT_YEAR_FORMATS].sort());
+  it("a code has an end exactly when its kind is a period or a range", () => {
+    const ranges = [
+      "datePeriod",
+      "dateTimePeriod",
+      "dateRange",
+      "dateTimeRange",
+    ];
+    for (const [standard, codes] of [
+      ["edifact", EDIFACT_DTM_FORMATS],
+      ["x12", X12_DATE_TIME_PERIOD_FORMATS],
+    ] as const) {
+      for (const code of codes) {
+        const entry = ediCodeOf(standard, code);
+        expect(entry?.layout.end !== undefined, `${standard} ${code}`).toBe(
+          ranges.includes(entry?.kind ?? ""),
+        );
+      }
+    }
   });
+
+  // No mask that is read carries a two-digit year, a day of the year or a year digit: the cut
+  // codes took those parts with them.
+  it("no supported code has a part other than CCYY, MM, DD, HH, MI, SS, ZS, ZH, ZM and ZZZ", () => {
+    const parts = new Set<string>();
+    for (const [standard, codes] of [
+      ["edifact", EDIFACT_DTM_FORMATS],
+      ["x12", X12_DATE_TIME_PERIOD_FORMATS],
+    ] as const) {
+      for (const code of codes) {
+        const layout = ediCodeOf(standard, code)?.layout;
+        for (const part of [...(layout?.start ?? []), ...(layout?.end ?? [])]) {
+          parts.add(part);
+        }
+      }
+    }
+    expect([...parts].sort()).toEqual(
+      ["CCYY", "DD", "HH", "MI", "MM", "SS", "ZH", "ZM", "ZS", "ZZZ"].sort(),
+    );
+  });
+
+  // The codes cut from the EDI functions. A two-digit year is read by the pattern parsers
+  // (`parseDateWithPattern` with a `yy` pattern and `yearWindow`); the rest state no date, time,
+  // date-time or instant.
+  it.each`
+    standard     | code     | reads
+    ${"edifact"} | ${"101"} | ${"YYMMDD: a two-digit year"}
+    ${"edifact"} | ${"201"} | ${"YYMMDDHHMM: a two-digit year"}
+    ${"edifact"} | ${"202"} | ${"YYMMDDHHMMSS: a two-digit year"}
+    ${"edifact"} | ${"206"} | ${"YYMMDDHHMMZHHMM: a two-digit year"}
+    ${"edifact"} | ${"207"} | ${"YYMMDDHHMMSSZHHMM: a two-digit year"}
+    ${"edifact"} | ${"301"} | ${"YYMMDDHHMMZZZ: a two-digit year"}
+    ${"edifact"} | ${"302"} | ${"YYMMDDHHMMSSZZZ: a two-digit year"}
+    ${"edifact"} | ${"713"} | ${"YYMMDDHHMM-YYMMDDHHMM: a two-digit year"}
+    ${"edifact"} | ${"717"} | ${"YYMMDD-YYMMDD: a two-digit year"}
+    ${"edifact"} | ${"209"} | ${"HHMMSSZHHMM: a time with an offset and no date"}
+    ${"edifact"} | ${"404"} | ${"HHMMSSZZZ: a time with a zone and no date"}
+    ${"edifact"} | ${"406"} | ${"ZHHMM: an offset alone"}
+    ${"x12"}     | ${"D6"}  | ${"YYMMDD: a two-digit year"}
+    ${"x12"}     | ${"TT"}  | ${"MMDDYY: a two-digit year"}
+    ${"x12"}     | ${"TR"}  | ${"DDMMYYHHMM: a two-digit year"}
+    ${"x12"}     | ${"RD6"} | ${"YYMMDD-YYMMDD: a two-digit year"}
+    ${"x12"}     | ${"TU"}  | ${"YYDDD: a two-digit year"}
+    ${"x12"}     | ${"TC"}  | ${"DDD: a day of the year with no year"}
+    ${"x12"}     | ${"EH"}  | ${"YDDD: a day of the year with one digit of the year"}
+    ${"x12"}     | ${"DDT"} | ${"CCYYMMDD-CCYYMMDDHHMM: a date on one side, a date-time on the other"}
+    ${"x12"}     | ${"DTD"} | ${"CCYYMMDDHHMM-CCYYMMDD: a date-time on one side, a date on the other"}
+    ${"x12"}     | ${"RTM"} | ${"HHMM-HHMM: a range of times with no date"}
+    ${"x12"}     | ${"UN"}  | ${"Unstructured"}
+  `(
+    "returns null for the cut $standard code $code ($reads)",
+    ({ standard, code }) => {
+      expect(ediCodeOf(standard, code)).toBeNull();
+    },
+  );
 
   it.each`
     standard         | code             | reads
-    ${"x12"}         | ${"UN"}          | ${"Unstructured: a real 1250 code with no layout"}
     ${"edifact"}     | ${"D8"}          | ${"an X12 code under UN/EDIFACT"}
     ${"x12"}         | ${"102"}         | ${"a UN/EDIFACT code under X12"}
     ${"edifact"}     | ${"602"}         | ${"a 2379 code GMT does not read"}
@@ -614,6 +499,60 @@ describe("ediCodeOf", () => {
       expect(ediCodeOf(input, "102")).toBeNull();
     },
   );
+});
+
+describe("ediCodeOfKind", () => {
+  // Each public function names its own kind, so a code of any other kind is refused before a
+  // value is read. The kind of each code is the one its mask states (see the table above).
+  it.each`
+    standard     | kind                | code     | found
+    ${"edifact"} | ${"date"}           | ${"102"} | ${true}
+    ${"edifact"} | ${"date"}           | ${"203"} | ${false}
+    ${"edifact"} | ${"date"}           | ${"718"} | ${false}
+    ${"edifact"} | ${"dateTime"}       | ${"203"} | ${true}
+    ${"edifact"} | ${"dateTime"}       | ${"205"} | ${false}
+    ${"edifact"} | ${"dateTime"}       | ${"719"} | ${false}
+    ${"edifact"} | ${"offsetDateTime"} | ${"303"} | ${true}
+    ${"edifact"} | ${"offsetDateTime"} | ${"203"} | ${false}
+    ${"edifact"} | ${"time"}           | ${"401"} | ${true}
+    ${"edifact"} | ${"time"}           | ${"102"} | ${false}
+    ${"edifact"} | ${"datePeriod"}     | ${"718"} | ${true}
+    ${"edifact"} | ${"datePeriod"}     | ${"719"} | ${false}
+    ${"edifact"} | ${"dateTimePeriod"} | ${"719"} | ${true}
+    ${"edifact"} | ${"dateRange"}      | ${"718"} | ${false}
+    ${"x12"}     | ${"date"}           | ${"DB"}  | ${true}
+    ${"x12"}     | ${"date"}           | ${"DT"}  | ${false}
+    ${"x12"}     | ${"time"}           | ${"TS"}  | ${true}
+    ${"x12"}     | ${"dateTime"}       | ${"RTS"} | ${true}
+    ${"x12"}     | ${"dateTime"}       | ${"DTS"} | ${false}
+    ${"x12"}     | ${"dateRange"}      | ${"RD"}  | ${true}
+    ${"x12"}     | ${"dateRange"}      | ${"RDT"} | ${false}
+    ${"x12"}     | ${"dateTimeRange"}  | ${"DTS"} | ${true}
+    ${"x12"}     | ${"datePeriod"}     | ${"RD8"} | ${false}
+    ${"x12"}     | ${"date"}           | ${"102"} | ${false}
+    ${"edifact"} | ${"date"}           | ${"D8"}  | ${false}
+    ${"edifact"} | ${"date"}           | ${"101"} | ${false}
+    ${"x12"}     | ${"date"}           | ${"D6"}  | ${false}
+  `(
+    "finds $standard $code as a $kind code: $found",
+    ({ standard, kind, code, found }) => {
+      const entry = ediCodeOfKind(standard, kind, code);
+      expect(entry !== null).toBe(found);
+      if (found) {
+        expect(entry).toEqual(ediCodeOf(standard, code));
+      }
+    },
+  );
+
+  it.each`
+    input        | description
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${102}       | ${"a number"}
+    ${["102"]}   | ${"an array holding the code"}
+  `("returns null for a code that is $description", ({ input }) => {
+    expect(ediCodeOfKind("edifact", "date", input)).toBeNull();
+  });
 });
 
 describe("the grammars are private", () => {

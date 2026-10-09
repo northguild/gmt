@@ -2,9 +2,10 @@
  * The pictures the two EDI timestamp widgets draw (INT-15): a value taken apart
  * into its fields, and one shared UTC timeline for the zones a reader chose.
  *
- * Pure string builders and one small layout function. Nothing here calls the
- * library or reads the clock: the fields come from `edi-shape.ts` (probed from
- * the formatter) and the instants are ones the library already returned. The
+ * Pure string builders and one small layout function. Nothing here reads the
+ * clock or imports the library: a code's fields are read off what a formatter
+ * the caller passes in writes for a probe (`shapeOf`), and the instants are ones
+ * the library already returned. The
  * timeline's positions are drawing only, from the polyfill's epoch milliseconds,
  * as `markPositions` always was.
  *
@@ -13,13 +14,232 @@
  * its series, and no text is coloured by either.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import {
-  maskOf,
-  partWord,
-  type ShapeGroup,
-  type ValueCells,
-} from "./edi-shape";
 import { escapeAttr, escapeHtml } from "./widget-ui";
+
+// ---------------------------------------------------------------------------
+// The layout of a code, read off the formatter's own output
+// ---------------------------------------------------------------------------
+
+/** The fields a mask holds, as the standards name them (`MI` is the minute, which
+ *  the standards also write `MM`). `ZHHMM` is a signed hours-and-minutes offset;
+ *  `ZZZ` is the three-character field that holds a signed hour, `UTC` or `GMT`. */
+export type ShapePart =
+  | "CCYY"
+  | "MM"
+  | "DD"
+  | "HH"
+  | "MI"
+  | "SS"
+  | "ZHHMM"
+  | "ZZZ";
+
+/** What a field belongs to, which sets its group's mark. */
+export type ShapeGroup = "date" | "time" | "offset";
+
+export interface ShapeField {
+  part: ShapePart;
+  /** Characters the field takes. */
+  width: number;
+  group: ShapeGroup;
+}
+
+export interface Shape {
+  /** The value's fields, or a period's first half. */
+  start: readonly ShapeField[];
+  /** A period's second half. */
+  end?: readonly ShapeField[];
+  /** What sits between a period's halves: `""` for UN/EDIFACT, `"-"` for X12. */
+  separator: string;
+}
+
+/**
+ * How a value of a kind is probed: house values whose every field differs, so a
+ * digit run in what the formatter writes names its field. The kind comes from the
+ * classifier; the formatter is the library's. The site holds no table of codes:
+ * a code's layout is whatever its formatter writes for these values.
+ *
+ * The start half is the year 1987, month 03, day 14, hour 15, minute 26, second 48
+ * and an offset of +07:30; a period's end half is 1991, 05, 22, 08, 11 and 37.
+ */
+export type ProbeFamily = "date" | "time" | "dateTime" | "offsetDateTime";
+
+const PROBES: Record<ProbeFamily, readonly [string, string][]> = {
+  date: [["1987-03-14", "1991-05-22"]],
+  time: [["15:26:48", "08:11:37"]],
+  dateTime: [["1987-03-14T15:26:48", "1991-05-22T08:11:37"]],
+  // Whole-hour offsets for the codes that hold only a signed hour.
+  offsetDateTime: [
+    ["1987-03-14T15:26:48+07:30", "1991-05-22T08:11:37+07:30"],
+    ["1987-03-14T15:26:48+07:00", "1991-05-22T08:11:37+07:00"],
+  ],
+};
+
+/** The probe family of a classifier kind. */
+export function probeFamily(kind: string): ProbeFamily {
+  if (kind === "time") return "time";
+  if (
+    kind === "dateTime" ||
+    kind === "dateTimePeriod" ||
+    kind === "dateTimeRange"
+  ) {
+    return "dateTime";
+  }
+  if (kind === "offsetDateTime") return "offsetDateTime";
+  return "date";
+}
+
+type Token = {
+  text: string;
+  half: 0 | 1;
+  part: ShapePart;
+  group: ShapeGroup;
+};
+
+const TOKENS: readonly Token[] = [
+  { text: "1987", half: 0, part: "CCYY", group: "date" },
+  { text: "03", half: 0, part: "MM", group: "date" },
+  { text: "14", half: 0, part: "DD", group: "date" },
+  { text: "15", half: 0, part: "HH", group: "time" },
+  { text: "26", half: 0, part: "MI", group: "time" },
+  { text: "48", half: 0, part: "SS", group: "time" },
+  { text: "1991", half: 1, part: "CCYY", group: "date" },
+  { text: "05", half: 1, part: "MM", group: "date" },
+  { text: "22", half: 1, part: "DD", group: "date" },
+  { text: "08", half: 1, part: "HH", group: "time" },
+  { text: "11", half: 1, part: "MI", group: "time" },
+  { text: "37", half: 1, part: "SS", group: "time" },
+];
+
+/** Reads a written probe back into fields; `null` when some of it is not a field
+ *  of the probe, so a shape is never half-read. */
+function readFields(written: string): Shape | null {
+  const halves: ShapeField[][] = [[]];
+  let separator = "";
+  let i = 0;
+  while (i < written.length) {
+    const here = written.slice(i);
+    const current = halves[halves.length - 1]!;
+    if ((here[0] === "+" || here[0] === "-") && here.slice(1, 3) === "07") {
+      if (here.slice(3, 5) === "30") {
+        current.push({ part: "ZHHMM", width: 5, group: "offset" });
+        i += 5;
+      } else {
+        current.push({ part: "ZZZ", width: 3, group: "offset" });
+        i += 3;
+      }
+      continue;
+    }
+    const token = TOKENS.find((t) => here.startsWith(t.text));
+    if (token !== undefined) {
+      if (token.half === 1 && halves.length === 1) halves.push([]);
+      halves[token.half]!.push({
+        part: token.part,
+        width: token.text.length,
+        group: token.group,
+      });
+      i += token.text.length;
+      continue;
+    }
+    if (
+      /^[^0-9A-Za-z]/.test(here) &&
+      halves.length === 1 &&
+      current.length > 0
+    ) {
+      separator = here[0]!;
+      halves.push([]);
+      i += 1;
+      continue;
+    }
+    return null;
+  }
+  const [start, end] = halves;
+  if (start === undefined || start.length === 0) return null;
+  if (end !== undefined && end.length === 0) return null;
+  return { start, ...(end === undefined ? {} : { end }), separator };
+}
+
+/**
+ * The layout of a code: what `write` (the kind's formatter, with the code fixed)
+ * writes for the family's probe, read back as fields. `write` takes the probe's
+ * start and, for a period, its end. `null` when nothing is written.
+ */
+export function shapeOf(
+  write: (start: string, end: string) => string,
+  family: ProbeFamily,
+): Shape | null {
+  for (const [start, end] of PROBES[family]) {
+    const written = write(start, end);
+    if (written !== "") return readFields(written);
+  }
+  return null;
+}
+
+/** The characters a shape takes, halves and separator included. */
+export function shapeWidth(shape: Shape): number {
+  const sum = (fields: readonly ShapeField[]): number =>
+    fields.reduce((n, f) => n + f.width, 0);
+  return (
+    sum(shape.start) +
+    (shape.end === undefined ? 0 : shape.separator.length + sum(shape.end))
+  );
+}
+
+/** One field of a real value: its characters and the field they sit in. */
+export interface ValueCell {
+  field: ShapeField;
+  text: string;
+}
+
+/** A value cut along a shape: one list of cells per half. */
+export interface ValueCells {
+  halves: ValueCell[][];
+  separator: string;
+}
+
+/** Cuts a value along a shape. `null` when the value's length is not the shape's. */
+export function cutValue(value: string, shape: Shape): ValueCells | null {
+  if (value.length !== shapeWidth(shape)) return null;
+  let at = 0;
+  const take = (fields: readonly ShapeField[]): ValueCell[] =>
+    fields.map((field) => {
+      const text = value.slice(at, at + field.width);
+      at += field.width;
+      return { field, text };
+    });
+  const first = take(shape.start);
+  if (shape.end === undefined) return { halves: [first], separator: "" };
+  const gap = value.slice(at, at + shape.separator.length);
+  if (gap !== shape.separator) return null;
+  at += shape.separator.length;
+  return { halves: [first, take(shape.end)], separator: shape.separator };
+}
+
+/** The mask letters of a part, as the standards print them. */
+export function maskOf(part: ShapePart): string {
+  return part === "MI" ? "MM" : part;
+}
+
+/** A part named in words, for the label a screen reader hears. */
+export function partWord(part: ShapePart): string {
+  switch (part) {
+    case "CCYY":
+      return "year";
+    case "MM":
+      return "month";
+    case "DD":
+      return "day";
+    case "HH":
+      return "hour";
+    case "MI":
+      return "minute";
+    case "SS":
+      return "second";
+    case "ZHHMM":
+      return "offset";
+    case "ZZZ":
+      return "zone";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // The value, taken apart
@@ -260,7 +480,8 @@ const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /** Whole UTC hours and the day, from epoch milliseconds: drawing only. */
 function utcHour(ms: number): { hour: number; day: string } {
-  const z = Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO("UTC");
+  const z =
+    Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO("UTC");
   return { hour: z.hour, day: `${pad2(z.month)}-${pad2(z.day)}` };
 }
 
@@ -275,7 +496,9 @@ export function timelineLayout(
   inputs: readonly { n: number; instant: string }[],
 ): TimelineLayout | null {
   if (inputs.length === 0) return null;
-  const ms = inputs.map((i) => Temporal.Instant.from(i.instant).epochMilliseconds);
+  const ms = inputs.map(
+    (i) => Temporal.Instant.from(i.instant).epochMilliseconds,
+  );
   const lowest = Math.min(...ms);
   const highest = Math.max(...ms);
   const hours = Math.max(0, Math.ceil((highest - lowest) / HOUR));
@@ -368,7 +591,8 @@ export function timelineAria(
   gap: string,
   stated: string,
 ): string {
-  if (stated !== "") return `The instant the value states, ${stated}, on a UTC timeline.`;
+  if (stated !== "")
+    return `The instant the value states, ${stated}, on a UTC timeline.`;
   const marks = inputs
     .filter((i) => i.instant !== "")
     .map((i) => `${i.n}, ${i.zone}, ${i.instant}`)
@@ -408,7 +632,9 @@ export function textSizers(
   className: string,
   texts: readonly string[],
 ): string[] {
-  return [...new Set(texts)].map((t) => sizerHtml(tag, className, escapeHtml(t)));
+  return [...new Set(texts)].map((t) =>
+    sizerHtml(tag, className, escapeHtml(t)),
+  );
 }
 
 /** The call frame's sizer: the longest call the region prints. */
@@ -423,7 +649,10 @@ export function outputSizer(className: string, text: string): string {
 
 /** An aside's sizer, in the markup `renderAside` writes, holding the longest
  *  paragraphs the region can show. */
-export function asideSizer(title: string, paragraphs: readonly string[]): string {
+export function asideSizer(
+  title: string,
+  paragraphs: readonly string[],
+): string {
   return (
     `<aside class="starlight-aside starlight-aside--caution gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore>` +
     `<p class="starlight-aside__title"><svg viewBox="0 0 24 24" width="16" height="16" class="starlight-aside__icon"></svg>${escapeHtml(title)}</p>` +
@@ -438,7 +667,12 @@ export function asideSizer(title: string, paragraphs: readonly string[]): string
  * as tall as the tallest at the width it has.
  */
 export function figureSizer(
-  rows: readonly { parts?: readonly PicPart[]; halves: readonly PicHalf[]; separator: string; closing: string }[],
+  rows: readonly {
+    parts?: readonly PicPart[];
+    halves: readonly PicHalf[];
+    separator: string;
+    closing: string;
+  }[],
 ): string {
   return rows
     .map(

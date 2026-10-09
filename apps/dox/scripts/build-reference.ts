@@ -28,6 +28,8 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import type {
+  ChoiceSeed,
+  ChoiceSeeds,
   LivePlaygroundTemplate,
   PlaygroundField,
 } from "../src/lib/playground-spec";
@@ -1480,6 +1482,106 @@ export function buildPlaygroundFields(
   return optionsSuffix ? { fields, optionsSuffix } : { fields };
 }
 
+/** A documented result that means "invalid input", not an answer. */
+function isSentinelResult(result: string): boolean {
+  const t = result.replace(/^\s*\/\/\s*/, "").trim();
+  // The literal may be followed by a note: `[] (start after end)`.
+  return t === "" || /^(""|''|null|false|\[\])(\s|\(|$)/.test(t);
+}
+
+/** `spec` with each positional param's value taken from `call` instead of the first example. */
+function specForCall(spec: PlaygroundSpec, call: string): PlaygroundSpec {
+  const raw = parseCallArgs(call).map((a) => a.trim());
+  return {
+    ...spec,
+    params: spec.params.map((p, i) => {
+      const r = raw[i];
+      if (r === undefined || (r.startsWith("{") && p.type !== "units"))
+        return p;
+      if (p.type === "units") {
+        const { unit, amount } = BU.parseUnitsArg(r);
+        return {
+          ...p,
+          value: amount,
+          unitValue: p.options?.includes(unit) ? unit : p.unitValue,
+        };
+      }
+      return { ...p, value: argToValue(r) };
+    }),
+  };
+}
+
+/** The ChoiceSeed a field carries when loaded from an example. */
+function seedOfField(f: PlaygroundField): ChoiceSeed {
+  const out: ChoiceSeed = { seed: f.seed };
+  if (f.kind === "units") out.unitSeed = f.unitSeed;
+  if (f.kind === "list") out.items = f.items ?? [];
+  if (f.kind === "intervals") out.pairs = f.pairs ?? [];
+  return out;
+}
+
+/**
+ * Per-choice example values for each enum field of a playground.
+ *
+ * For every choice of an enum field, the first `@example` (JSDoc order) that
+ * writes that choice as a quoted literal at the field's position, whose other
+ * arguments are all literals the form can hold, and whose documented result is
+ * not a sentinel. Its other fields' values are stored. A choice with no such
+ * example has no entry; a field whose entries are fewer than two or all equal
+ * contributes nothing, so a function whose examples do not vary by choice gets
+ * no `choiceSeeds`.
+ */
+export function buildChoiceSeeds(
+  spec: PlaygroundSpec,
+  examples: Array<{ call: string; result: string }>,
+  baseFields: PlaygroundField[],
+): ChoiceSeeds | undefined {
+  const enumFields = baseFields.filter(
+    (f) => f.kind === "enum" && f.choices?.length,
+  );
+  if (!enumFields.length) return undefined;
+
+  const out: ChoiceSeeds = {};
+  for (const ef of enumFields) {
+    const entries: Record<string, Record<string, ChoiceSeed>> = {};
+    for (const ex of examples) {
+      if (isSentinelResult(ex.result)) continue;
+      const res = buildPlaygroundFields(specForCall(spec, ex.call), ex.call);
+      if (!res || res.fields.length !== baseFields.length) continue;
+      const idx = baseFields.indexOf(ef);
+      // A field the example fills with another kind (a locale list where the
+      // form holds a locale string) cannot be loaded into the form's control.
+      if (res.fields.some((f, i) => f.kind !== baseFields[i].kind)) continue;
+      const exField = res.fields[idx];
+      if (exField?.name !== ef.name || exField.kind !== "enum") continue;
+
+      // The choice as the example wrote it — `fieldForParam` falls back to the
+      // first choice for a value outside the list, which is not this choice.
+      const rawArgs = parseCallArgs(ex.call).map((a) => a.trim());
+      const raw = res.objectArg
+        ? BU.parseObjectArgEntries(rawArgs[0]).find(([k]) => k === ef.name)?.[1]
+        : rawArgs[idx];
+      if (raw === undefined || !QUOTED_ARG.test(raw)) continue;
+      const choice = argToValue(raw);
+      if (!ef.choices!.includes(choice) || entries[choice]) continue;
+
+      const others: Record<string, ChoiceSeed> = {};
+      res.fields.forEach((f, i) => {
+        if (i !== idx) others[f.name] = seedOfField(f);
+      });
+      entries[choice] = others;
+    }
+    const seeds = Object.values(entries);
+    if (
+      seeds.length >= 2 &&
+      seeds.some((s) => JSON.stringify(s) !== JSON.stringify(seeds[0]))
+    ) {
+      out[ef.name] = entries;
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function buildLivePlaygroundTemplate(
   checker: ts.TypeChecker,
   sig: ts.Signature | undefined,
@@ -1512,6 +1614,11 @@ function buildLivePlaygroundTemplate(
     ? buildPlaygroundFields(doc.playgroundSpec, template)
     : undefined;
 
+  const choiceSeeds =
+    formFields && doc.playgroundSpec
+      ? buildChoiceSeeds(doc.playgroundSpec, doc.examples, formFields.fields)
+      : undefined;
+
   return {
     module,
     fn: doc.name,
@@ -1526,6 +1633,7 @@ function buildLivePlaygroundTemplate(
             ? { optionsSuffix: formFields.optionsSuffix }
             : {}),
           ...(formFields.objectArg ? { objectArg: true } : {}),
+          ...(choiceSeeds ? { choiceSeeds } : {}),
         }
       : {}),
   };

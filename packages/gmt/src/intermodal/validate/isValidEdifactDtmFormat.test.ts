@@ -1,44 +1,41 @@
 import { EDIFACT_DTM_FORMATS } from "../../internal";
+import { CUT_EDIFACT_FORMATS } from "../../test/ediCodes";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
-import { isValidEdifactDtm } from "./isValidEdifactDtm";
+import { isValidEdifactDate } from "./isValidEdifactDate";
 import { isValidEdifactDtmFormat } from "./isValidEdifactDtmFormat";
 
 describe("isValidEdifactDtmFormat", () => {
-  // The 23 UNTDID 2379 codes of the story's table, written out so a code dropped from the
-  // internal list fails here.
+  // The 11 UNTDID 2379 codes GMT reads, with the directory's mask for each, written out so a
+  // code dropped from the internal list fails here.
   it.each`
     code     | mask
-    ${"101"} | ${"YYMMDD"}
     ${"102"} | ${"CCYYMMDD"}
-    ${"201"} | ${"YYMMDDHHMM"}
-    ${"202"} | ${"YYMMDDHHMMSS"}
     ${"203"} | ${"CCYYMMDDHHMM"}
     ${"204"} | ${"CCYYMMDDHHMMSS"}
     ${"205"} | ${"CCYYMMDDHHMMZHHMM"}
-    ${"206"} | ${"YYMMDDHHMMZHHMM"}
-    ${"207"} | ${"YYMMDDHHMMSSZHHMM"}
     ${"208"} | ${"CCYYMMDDHHMMSSZHHMM"}
-    ${"209"} | ${"HHMMSSZHHMM"}
-    ${"301"} | ${"YYMMDDHHMMZZZ"}
-    ${"302"} | ${"YYMMDDHHMMSSZZZ"}
     ${"303"} | ${"CCYYMMDDHHMMZZZ"}
     ${"304"} | ${"CCYYMMDDHHMMSSZZZ"}
     ${"401"} | ${"HHMM"}
     ${"402"} | ${"HHMMSS"}
-    ${"404"} | ${"HHMMSSZZZ"}
-    ${"406"} | ${"ZHHMM"}
-    ${"713"} | ${"YYMMDDHHMM-YYMMDDHHMM"}
-    ${"717"} | ${"YYMMDD-YYMMDD"}
     ${"718"} | ${"CCYYMMDD-CCYYMMDD"}
     ${"719"} | ${"CCYYMMDDHHMM-CCYYMMDDHHMM"}
   `("returns true for the supported code $code ($mask)", ({ code }) => {
     expect(isValidEdifactDtmFormat(code)).toBe(true);
   });
 
-  it("accepts exactly the 23 codes of the internal list", () => {
-    expect(EDIFACT_DTM_FORMATS).toHaveLength(23);
+  it("accepts exactly the 11 codes of the internal list", () => {
+    expect(EDIFACT_DTM_FORMATS).toHaveLength(11);
     expect(EDIFACT_DTM_FORMATS.every(isValidEdifactDtmFormat)).toBe(true);
   });
+
+  // The codes cut from the EDI functions: real 2379 codes that no function reads.
+  it.each(CUT_EDIFACT_FORMATS)(
+    "returns false for the cut code $code ($reads)",
+    ({ code }) => {
+      expect(isValidEdifactDtmFormat(code)).toBe(false);
+    },
+  );
 
   // 2379 codes GMT does not read: the partial values, the weekday period and the quantities, the
   // day-first and month-first dates (2–5), 10 (CCYYMMDDTHHMM), the week date 103, the ordinal
@@ -90,21 +87,21 @@ describe("isValidEdifactDtmFormat", () => {
     expect(isValidEdifactDtmFormat(code)).toBe(false);
   });
 
-  // `parseEdifactDtm` returns one null for an unsupported code and for a value that does not
-  // fit its code. The format validator is what tells the two apart: the value validator is false
-  // for both, and the code is still a supported one when only the value is bad.
+  // A parser returns one sentinel for an unsupported code and for a value that does not fit its
+  // code. The format guard is what tells the two apart: the value validator is false for both,
+  // and the code is still a supported one when only the value is bad.
   it.each`
     value         | code     | valueIsValid | codeIsSupported | reads
     ${"20240615"} | ${"102"} | ${true}      | ${true}         | ${"a value that fits its code"}
     ${"20230229"} | ${"102"} | ${false}     | ${true}         | ${"a bad value under a supported code: 29 February 2023"}
-    ${"240615"}   | ${"102"} | ${false}     | ${true}         | ${"a 101 value under 102: the code is supported, the value is not its mask"}
-    ${"240615"}   | ${"101"} | ${false}     | ${true}         | ${"a two-digit year with no window: the code is supported"}
+    ${"240615"}   | ${"102"} | ${false}     | ${true}         | ${"a YYMMDD value under 102: the code is supported, the value is not its mask"}
+    ${"240615"}   | ${"101"} | ${false}     | ${false}        | ${"a two-digit-year code: not read"}
     ${"20240615"} | ${"602"} | ${false}     | ${false}        | ${"a code GMT does not read"}
     ${"20240615"} | ${"999"} | ${false}     | ${false}        | ${"not a 2379 code"}
   `(
-    "$value under $code: isValidEdifactDtm is $valueIsValid and isValidEdifactDtmFormat is $codeIsSupported ($reads)",
+    "$value under $code: isValidEdifactDate is $valueIsValid and isValidEdifactDtmFormat is $codeIsSupported ($reads)",
     ({ value, code, valueIsValid, codeIsSupported }) => {
-      expect(isValidEdifactDtm(value, code)).toBe(valueIsValid);
+      expect(isValidEdifactDate(value, code)).toBe(valueIsValid);
       expect(isValidEdifactDtmFormat(code)).toBe(codeIsSupported);
     },
   );

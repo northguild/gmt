@@ -1,45 +1,47 @@
+import { X12_DATE_TIME_PERIOD_FORMATS } from "../../internal";
+import { CUT_X12_FORMATS } from "../../test/ediCodes";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
-import { isValidX12DateTimePeriod } from "./isValidX12DateTimePeriod";
+import { isValidX12Date } from "./isValidX12Date";
 import { isValidX12DateTimePeriodFormat } from "./isValidX12DateTimePeriodFormat";
 
 describe("isValidX12DateTimePeriodFormat", () => {
-  // The 21 codes of X12 data element 1250 GMT names, with the mask each definition gives
+  // The 10 codes of X12 data element 1250 GMT reads, with the mask each definition gives
   // (release 005010, Stedi's X12-licensed dictionary).
   it.each`
-    formatQualifier | mask
-    ${"D8"}         | ${"CCYYMMDD"}
-    ${"D6"}         | ${"YYMMDD"}
-    ${"DB"}         | ${"MMDDCCYY"}
-    ${"TT"}         | ${"MMDDYY"}
-    ${"DT"}         | ${"CCYYMMDDHHMM"}
-    ${"TR"}         | ${"DDMMYYHHMM"}
-    ${"RTS"}        | ${"CCYYMMDDHHMMSS"}
-    ${"TM"}         | ${"HHMM"}
-    ${"TS"}         | ${"HHMMSS"}
-    ${"RD8"}        | ${"CCYYMMDD-CCYYMMDD"}
-    ${"RD6"}        | ${"YYMMDD-YYMMDD"}
-    ${"RD"}         | ${"MMDDCCYY-MMDDCCYY"}
-    ${"RDT"}        | ${"CCYYMMDDHHMM-CCYYMMDDHHMM"}
-    ${"DTS"}        | ${"CCYYMMDDHHMMSS-CCYYMMDDHHMMSS"}
-    ${"DDT"}        | ${"CCYYMMDD-CCYYMMDDHHMM"}
-    ${"DTD"}        | ${"CCYYMMDDHHMM-CCYYMMDD"}
-    ${"RTM"}        | ${"HHMM-HHMM"}
-    ${"TC"}         | ${"DDD"}
-    ${"TU"}         | ${"YYDDD"}
-    ${"EH"}         | ${"YDDD"}
-  `("returns true for $formatQualifier ($mask)", ({ formatQualifier }) => {
-    expect(isValidX12DateTimePeriodFormat(formatQualifier)).toBe(true);
+    format   | mask
+    ${"D8"}  | ${"CCYYMMDD"}
+    ${"DB"}  | ${"MMDDCCYY"}
+    ${"DT"}  | ${"CCYYMMDDHHMM"}
+    ${"RTS"} | ${"CCYYMMDDHHMMSS"}
+    ${"TM"}  | ${"HHMM"}
+    ${"TS"}  | ${"HHMMSS"}
+    ${"RD8"} | ${"CCYYMMDD-CCYYMMDD"}
+    ${"RD"}  | ${"MMDDCCYY-MMDDCCYY"}
+    ${"RDT"} | ${"CCYYMMDDHHMM-CCYYMMDDHHMM"}
+    ${"DTS"} | ${"CCYYMMDDHHMMSS-CCYYMMDDHHMMSS"}
+  `("returns true for $format ($mask)", ({ format }) => {
+    expect(isValidX12DateTimePeriodFormat(format)).toBe(true);
   });
 
-  // UN is a real 1250 code and a member of X12DateTimePeriodFormat, so it is a valid format. It has no
-  // mask, so no value is ever valid against it: that is parseX12DateTimePeriod's null.
-  it("returns true for UN (Unstructured): a code GMT names and never reads", () => {
-    expect(isValidX12DateTimePeriodFormat("UN")).toBe(true);
+  it("accepts exactly the 10 codes of the internal list", () => {
+    expect(X12_DATE_TIME_PERIOD_FORMATS).toHaveLength(10);
+    expect(
+      X12_DATE_TIME_PERIOD_FORMATS.every(isValidX12DateTimePeriodFormat),
+    ).toBe(true);
   });
 
-  // The other 21 codes the dictionary lists for data element 1250, each with its definition:
-  // real codes GMT does not read, because each names a partial value, a range of partial values
-  // or a month-name form.
+  // The codes cut from the EDI functions: real 1250 codes that no function reads. `UN`
+  // (Unstructured) is one of them: it has no mask, so no value is ever valid against it.
+  it.each(CUT_X12_FORMATS)(
+    "returns false for the cut code $code ($reads)",
+    ({ code }) => {
+      expect(isValidX12DateTimePeriodFormat(code)).toBe(false);
+    },
+  );
+
+  // 21 more codes the dictionary lists for data element 1250, each with its definition: real
+  // codes GMT does not read, because each names a partial value, a range of partial values or a
+  // month-name form.
   it.each`
     formatQualifier | definition
     ${"CC"}         | ${"First Two Digits of Year Expressed in Format CCYY"}
@@ -87,26 +89,22 @@ describe("isValidX12DateTimePeriodFormat", () => {
     expect(isValidX12DateTimePeriodFormat(formatQualifier)).toBe(false);
   });
 
-  // `parseX12DateTimePeriod` returns one null for a code GMT does not read and for a value that does
-  // not fit its code. The format validator is what tells the two apart: the value validator is
-  // false for both, and the code is still one GMT names when only the value is bad. `UN` is the
-  // one code that is a valid format and has no valid value.
+  // A parser returns one sentinel for a code GMT does not read and for a value that does not fit
+  // its code. The format guard is what tells the two apart.
   it.each`
-    value         | formatQualifier | valueIsValid | codeIsNamed | reads
-    ${"20240615"} | ${"D8"}         | ${true}      | ${true}     | ${"a value that fits its code"}
-    ${"20230229"} | ${"D8"}         | ${false}     | ${true}     | ${"a bad value under a code GMT reads: 29 February 2023"}
-    ${"240615"}   | ${"D8"}         | ${false}     | ${true}     | ${"a D6 value under D8: the code is read, the value is not its mask"}
-    ${"240615"}   | ${"D6"}         | ${false}     | ${true}     | ${"a two-digit year with no window: the code is read"}
-    ${"20240615"} | ${"UN"}         | ${false}     | ${true}     | ${"Unstructured: a real code that reads no value"}
-    ${"202406"}   | ${"CM"}         | ${false}     | ${false}    | ${"a 1250 code GMT does not read"}
-    ${"20240615"} | ${"ZZ"}         | ${false}     | ${false}    | ${"not a 1250 code"}
+    value         | format  | valueIsValid | codeIsRead | reads
+    ${"20240615"} | ${"D8"} | ${true}      | ${true}    | ${"a value that fits its code"}
+    ${"20230229"} | ${"D8"} | ${false}     | ${true}    | ${"a bad value under a code GMT reads: 29 February 2023"}
+    ${"240615"}   | ${"D8"} | ${false}     | ${true}    | ${"a YYMMDD value under D8: the code is read, the value is not its mask"}
+    ${"240615"}   | ${"D6"} | ${false}     | ${false}   | ${"a two-digit-year code: not read"}
+    ${"20240615"} | ${"UN"} | ${false}     | ${false}   | ${"Unstructured: not read"}
+    ${"202406"}   | ${"CM"} | ${false}     | ${false}   | ${"a 1250 code GMT does not read"}
+    ${"20240615"} | ${"ZZ"} | ${false}     | ${false}   | ${"not a 1250 code"}
   `(
-    "$value under $formatQualifier: isValidX12DateTimePeriod is $valueIsValid and isValidX12DateTimePeriodFormat is $codeIsNamed ($reads)",
-    ({ value, formatQualifier, valueIsValid, codeIsNamed }) => {
-      expect(isValidX12DateTimePeriod(value, formatQualifier)).toBe(
-        valueIsValid,
-      );
-      expect(isValidX12DateTimePeriodFormat(formatQualifier)).toBe(codeIsNamed);
+    "$value under $format: isValidX12Date is $valueIsValid and isValidX12DateTimePeriodFormat is $codeIsRead ($reads)",
+    ({ value, format, valueIsValid, codeIsRead }) => {
+      expect(isValidX12Date(value, format)).toBe(valueIsValid);
+      expect(isValidX12DateTimePeriodFormat(format)).toBe(codeIsRead);
     },
   );
 

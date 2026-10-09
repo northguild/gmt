@@ -1327,6 +1327,148 @@ describe("synthesizeTemplate", () => {
 });
 
 // ---------------------------------------------------------------------------
+// buildChoiceSeeds
+// ---------------------------------------------------------------------------
+
+describe("buildChoiceSeeds", () => {
+  const spec = (optional = false) => ({
+    module: "intermodal/edi",
+    fn: "parseStamp",
+    returnType: "string" as const,
+    params: [
+      { name: "value", type: "string" as const, value: "202406151430" },
+      {
+        name: "format",
+        type: "enum" as const,
+        value: "203",
+        options: ["203", "204"],
+        ...(optional ? { optional: true } : {}),
+      },
+    ],
+  });
+  const fieldsFor = (call: string, optional = false) =>
+    BR.buildPlaygroundFields(spec(optional), call)!.fields;
+
+  const fieldsFor3 = (sp: ReturnType<typeof spec>, call: string) =>
+    BR.buildPlaygroundFields(sp, call)!.fields;
+
+  it("stores the other fields' values for each choice's example", () => {
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"2024-06-15"' },
+      { call: 'parseStamp("20240615143000", "204")', result: '"2024-06-15"' },
+    ];
+    expect(
+      BR.buildChoiceSeeds(spec(), examples, fieldsFor(examples[0].call)),
+    ).toEqual({
+      format: {
+        "203": { value: { seed: "202406151430" } },
+        "204": { value: { seed: "20240615143000" } },
+      },
+    });
+  });
+
+  it("leaves out a choice that has no example", () => {
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"a"' },
+      { call: 'parseStamp("202406151431", "203")', result: '"b"' },
+    ];
+    // One choice only: nothing varies by choice, so nothing is emitted.
+    expect(
+      BR.buildChoiceSeeds(spec(), examples, fieldsFor(examples[0].call)),
+    ).toBeUndefined();
+  });
+
+  it("gives a three-choice enum entries only for the choices with examples", () => {
+    const base = spec();
+    const three = {
+      ...base,
+      params: [
+        base.params[0],
+        { ...base.params[1], options: ["203", "204", "102"] },
+      ],
+    };
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"a"' },
+      { call: 'parseStamp("20240615143000", "204")', result: '"b"' },
+    ];
+    const seeds = BR.buildChoiceSeeds(
+      three,
+      examples,
+      fieldsFor3(three, examples[0].call),
+    )!;
+    expect(Object.keys(seeds.format)).toEqual(["203", "204"]);
+  });
+
+  it("skips an example whose documented result is a sentinel", () => {
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"a"' },
+      { call: 'parseStamp("not a stamp", "204")', result: '""' },
+    ];
+    expect(
+      BR.buildChoiceSeeds(spec(), examples, fieldsFor(examples[0].call)),
+    ).toBeUndefined();
+    for (const bad of ["null", "false", "[]", "// null", '"" (invalid)']) {
+      const withBad = [examples[0], { ...examples[1], result: bad }];
+      expect(
+        BR.buildChoiceSeeds(spec(), withBad, fieldsFor(examples[0].call)),
+      ).toBeUndefined();
+    }
+  });
+
+  it("falls through to the next example for the same choice, first one winning", () => {
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"a"' },
+      { call: 'parseStamp("bad", "204")', result: "null" },
+      { call: 'parseStamp("20240615143000", "204")', result: '"b"' },
+      { call: 'parseStamp("20240615143001", "204")', result: '"c"' },
+    ];
+    expect(
+      BR.buildChoiceSeeds(spec(), examples, fieldsFor(examples[0].call))!
+        .format["204"],
+    ).toEqual({ value: { seed: "20240615143000" } });
+  });
+
+  it("ignores an example the form cannot hold", () => {
+    const examples = [
+      { call: 'parseStamp("202406151430", "203")', result: '"a"' },
+      { call: 'parseStamp(someVar, "204")', result: '"b"' },
+    ];
+    expect(
+      BR.buildChoiceSeeds(spec(), examples, fieldsFor(examples[0].call)),
+    ).toBeUndefined();
+  });
+
+  it("handles an optional enum: the blank option gets no entry", () => {
+    const optSpec = spec(true);
+    const examples = [
+      { call: 'parseStamp("202406151430")', result: '"a"' },
+      { call: 'parseStamp("202406151430", "203")', result: '"b"' },
+      { call: 'parseStamp("20240615143000", "204")', result: '"c"' },
+    ];
+    const seeds = BR.buildChoiceSeeds(
+      optSpec,
+      examples,
+      fieldsFor(examples[0].call, true),
+    )!;
+    expect(Object.keys(seeds.format)).toEqual(["203", "204"]);
+    expect(seeds.format["204"].value.seed).toBe("20240615143000");
+  });
+
+  it("returns undefined for a function with no enum field", () => {
+    const plain = {
+      module: "plain/x",
+      fn: "f",
+      returnType: "string" as const,
+      params: [{ name: "v", type: "string" as const, value: "a" }],
+    };
+    const fields = BR.buildPlaygroundFields(plain, 'f("a")')!.fields;
+    expect(
+      BR.buildChoiceSeeds(plain, [{ call: 'f("a")', result: '"x"' }], fields),
+    ).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildPlaygroundFields
 // ---------------------------------------------------------------------------
 

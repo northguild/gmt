@@ -10,11 +10,12 @@ description: >
   (scheduleDeviation, classifyPunctuality, punctualityRate, bestAvailable,
   estimateDrift over PLN/EST/REQ/ACT, nextDeparture), free time
   (freeTimeExpiry, chargeableDays, demurrageClock), billingTimeline,
-  bolTimestamp, multimodalETA, EDI timestamps (parseEdifactDtm,
-  parseX12DateTime, parseX12DateTimePeriod, x12TimeCode, parseEpcisEvent,
-  format*/isValid*), operating hours (OperatingSchedule, recurringWindows,
-  operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt, operatingTimeBetween,
-  addOperatingTime), and daylight time (isInDaylightSaving, hasDaylightSaving).
+  bolTimestamp, multimodalETA, EDI timestamps (parseEdifactDateTime,
+  parseX12DateAndTime, x12TimeCodeOffset, parseEpcisEvent,
+  classify*/format*/isValid*), operating hours (OperatingSchedule,
+  recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
+  operatingTimeBetween, addOperatingTime), and daylight time
+  (isInDaylightSaving, hasDaylightSaving).
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -318,45 +319,60 @@ converting between time zones, or doing arithmetic that must respect DST.
     they sum to the elapsed time. Every `scheduleDelivery` rule applies, so a
     missed connection is `null`. An empty array is `{ eta: "", totalLegs: 0,
     totalTransit: "PT0S", totalDwell: "PT0S" }`. Dwell is never estimated.
-21. **An EDI timestamp is read against its code, and nothing the code does not
-    state is guessed.** `parseEdifactDtm(value, formatQualifier, options?)`
-    reads a UN/EDIFACT `DTM` value (data element 2380) against its 2379
-    format code. `parseX12DateTimePeriod(value, formatQualifier, options?)`
-    reads an X12 element 1251 value against its 1250 qualifier (`DTP`,
-    `DTM-05`/`06`). Both return an `EdiDateTime` holding only the members the
-    code states: `date`, `time`, `local` (the wall clock as written), `offset`
-    and `instant` only when an offset is stated, `zone`, `dayOfYear`,
-    `yearDigit`, and `periodEnd` for a period.
-    `parseX12DateTime(date?, time?, timeCode?)` reads X12 elements 373, 337
-    and 623 as `AT7`, `G62` and `DTM-02`/`03`/`04` carry them: `""` or an
-    omitted argument means not sent, a date alone or a time alone is read,
-    and a time code needs a time. `x12TimeCode(code)` reads the time code
-    alone. `parseEpcisEvent({ eventTime, eventTimeZoneOffset })` returns
+21. **An EDI timestamp is read by the function for its kind of value, and
+    nothing the code does not state is guessed.** Each kind has a `parse…`,
+    `format…` and `isValid…` function named for it (`parseEdifactDate`,
+    `formatEdifactDate`, `isValidEdifactDate`), and `format` is typed to that
+    kind's codes. UN/EDIFACT `DTM` (value 2380 against format code 2379):
+    `EdifactDate` (`102`), `EdifactTime` (`401`, `402`), `EdifactDateTime`
+    (`203`, `204`), `EdifactOffsetDateTime` (`205`, `208`, `303`, `304`),
+    `EdifactDatePeriod` (`718`), `EdifactDateTimePeriod` (`719`). X12 (element
+    1251 against qualifier 1250, in `DTP` and `DTM-05`/`06`): `X12Date` (`D8`,
+    `DB`), `X12Time` (`TM`, `TS`), `X12DateTime` (`DT`, `RTS`), `X12DateRange`
+    (`RD8`, `RD`), `X12DateTimeRange` (`RDT`, `DTS`). `parseX12Time(value)`
+    with no `format` reads element 337, tenths and hundredths included
+    (`"14300012"` is `"14:30:00.12"`). A parser returns one value:
+    `"2024-06-15"`, `"14:30:00"`, `"2024-06-15T14:30:00"`,
+    `"2024-06-15T14:30:00+02:00"` (the string `toOffsetInstant` reads), or
+    `{ start, end }` for a period or range. The sentinel is `""`, or `null`
+    for a period, a range, a zone or a classifier. A period formatter takes
+    `(start, end, format)`. No EDI function takes options. X12 freight is
+    three calls: `parseX12DateAndTime("20240615", "1430")` is
+    `"2024-06-15T14:30:00"` (elements 373 and 337 of `AT7`, `G62` or `DTM`,
+    both required), `x12TimeCodeOffset("20")` is `"-05:00"`, and
+    `resolveLocal(local, offset)` is `"2024-06-15T19:30:00Z"`. For a code
+    held as a plain string, `classifyEdifactDtmFormat`,
+    `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode` return
+    `{ kind, format }` or `{ kind, timeCode }`, or `null` for a code no
+    function reads; testing `kind` narrows the code with no cast.
+    `parseEpcisEvent({ eventTime, eventTimeZoneOffset })` returns
     `{ instant, offset, local }`; both fields are required and need not
-    agree. Four no-guess rules. (a) An offsetless value never becomes UTC:
-    `203`, `DT`, and an X12 time with no time code or with `LT` return
-    `local` and no `instant`; pass `local` and an IANA zone to
-    `resolveLocal`. (b) A named X12 time code is a zone name, not an offset:
-    `ES` is `{ zone: "Eastern", daylight: false }` and `ET` has
-    `daylight: null`, while `01`–`29`, `UT` and `GM` return `{ offset }`, and
-    `13`–`24` count down (`13` is `-12:00`). (c) An unresolved UN/EDIFACT
-    zone is text: in `301`–`304` and `404`, `+02`, `UTC` and `GMT` are
-    offsets, and any other three upper-case letters (`CET`) come back as
-    `zone`. (d) A two-digit year needs `{ yearWindow }`: a start year such
-    as `2000` (a fixed window, for stored data) or `"rolling"` (50 years
-    before the current UTC year to 49 after). Without it `101`, `201`, `202`,
+    agree. Five no-guess rules. (a) An offsetless value never becomes UTC:
+    `203`, `204`, `DT`, `RTS` and `parseX12DateAndTime` return a local
+    date-time; pass it and an IANA zone to `resolveLocal`. (b) A named X12
+    time code is a zone name, not an offset: `x12TimeCodeZone("ES")` is
+    `{ zone: "Eastern", daylight: false }` and `ET` has `daylight: null`,
+    while `x12TimeCodeOffset` reads `01`–`29`, `UT` and `GM`, and `13`–`24`
+    count down (`13` is `-12:00`). Each returns its sentinel for the other's
+    codes. (c) The `ZZZ` of `303` and `304` is an offset only: `+02`, `UTC`
+    and `GMT` are read, and letters such as `CET` return `""`. (d) A
+    two-digit year is not read by any EDI function: `101`, `201`, `202`,
     `206`, `207`, `301`, `302`, `713`, `717`, `D6`, `TT`, `TR`, `RD6` and
-    `TU` return `null`, and a `yy` token in `parse*WithPattern` returns `""`.
-    A UN/EDIFACT period has no hyphen (`2024061520240620` under `718`) and an
-    X12 range has one (`20240615-20240620` under `RD8`). Pass
-    `parseEdifactDtm` the unescaped value (`+02`, not `?+02`). A date-only
-    code returns `date`, not `local`, and a time with no date never gives an
-    `instant`. `formatEdifactDtm`, `formatX12DateTimePeriod` and
-    `formatEpcisEvent` are the inverses: they return `""` or `null` when the
-    code cannot hold the value exactly, round nothing, and write a `ZZZ`
-    zone as `±HH`. Each parser has an `isValid*` twin, and
-    `isValidEdifactDtmFormat` and `isValidX12DateTimePeriodFormat` tell a
-    code GMT does not read apart from a bad value.
+    `TU`. Read one with `parseDateWithPattern` or `parseDateTimeWithPattern`,
+    a `yy` pattern and `{ yearWindow }`: a start year such as `2000` (a fixed
+    window, for stored data) or `"rolling"` (50 years before the current UTC
+    year to 49 after). Without `yearWindow` a `yy` pattern returns `""`. (e)
+    `209`, `404`, `406`, `TC`, `EH`, `DDT`, `DTD`, `RTM` and `UN` are not
+    read: none states one date, time or date-time. A UN/EDIFACT period has no
+    hyphen (`2024061520240620` under `718`) and an X12 range has one
+    (`20240615-20240620` under `RD8`); a reversed one returns the sentinel.
+    Pass a UN/EDIFACT parser the unescaped value (`+02`, not `?+02`). A
+    formatter cuts seconds and fractions to the code's mask and never rounds.
+    It writes `ZZZ` as `±HH`, and `+05:30` under `303` or `304` returns `""`:
+    use `205` or `208`. Each value validator is true exactly when its parser
+    returns a value, and `isValidEdifactDtmFormat`,
+    `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode` check a code
+    alone.
 22. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
@@ -451,12 +467,17 @@ converting between time zones, or doing arithmetic that must respect DST.
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`
 - **Bill of lading dates and multimodal ETA**: `bolTimestamp`, `multimodalETA`
-- **EDI and event timestamps**: `parseEdifactDtm`, `formatEdifactDtm`,
-  `parseX12DateTime`, `x12TimeCode`, `parseX12DateTimePeriod`,
-  `formatX12DateTimePeriod`, `parseEpcisEvent`, `formatEpcisEvent`,
-  `isValidEdifactDtm`, `isValidEdifactDtmFormat`, `isValidX12DateTime`,
-  `isValidX12DateTimePeriod`, `isValidX12DateTimePeriodFormat`,
-  `isValidX12TimeCode`, `isValidEpcisEvent`
+- **EDI and event timestamps**: `parseEdifactDate`, `parseEdifactTime`,
+  `parseEdifactDateTime`, `parseEdifactOffsetDateTime`,
+  `parseEdifactDatePeriod`, `parseEdifactDateTimePeriod`, `parseX12Date`,
+  `parseX12Time`, `parseX12DateTime`, `parseX12DateRange`,
+  `parseX12DateTimeRange`, `parseX12DateAndTime`, `x12TimeCodeOffset`,
+  `x12TimeCodeZone`, `classifyEdifactDtmFormat`,
+  `classifyX12DateTimePeriodFormat`, `classifyX12TimeCode`,
+  `parseEpcisEvent`; a `format…` and an `isValid…` for each `parseEdifact…`
+  kind, for `X12Date`, `X12Time`, `X12DateTime`, `X12DateRange` and
+  `X12DateTimeRange`, and for `EpcisEvent`; `isValidEdifactDtmFormat`,
+  `isValidX12DateTimePeriodFormat`, `isValidX12TimeCode`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
   `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
 

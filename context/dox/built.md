@@ -191,6 +191,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `LIVE_PLAYGROUND_TEMPLATES`. The textarea evaluates the reader's expression with
   `new Function` against the real library. `GMT_MODULES` (`src/lib/gmt-modules.ts`) holds
   module-granularity dynamic imports, so gmt chunks load only where a playground renders.
+  An enum select carries per-choice examples (`choiceSeeds` on the template, built by
+  `buildChoiceSeeds`): for each choice, the first `@example` that writes it as a quoted literal,
+  whose other arguments are literals the form can hold and whose documented result is not a
+  sentinel, supplies the other fields' values. Choosing that value loads them and runs the call
+  when every other field still holds what the form last loaded; a field the reader edited is
+  never overwritten, and a choice with no example only re-runs (`createSeedLoader` in
+  `src/lib/playground-client.ts`). A function whose examples do not vary by choice has no
+  `choiceSeeds`.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input
   renders as `⟨ NO SIGNAL ⟩` in amber, and a correct empty result is shown distinctly
   (`renderWidgetOutput` in `src/lib/widget-ui.ts`). In the playground,
@@ -346,20 +354,27 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   key), so these three print calls and results with `formatValue`/`callArgs` from
   `punctuality-widgets.ts`.
   Two more (INT-15): the DTM Decoder, a pasted UN/EDIFACT `DTM` segment, or a value and its
-  2379 format code, read by `parseEdifactDtm`, with a verdict on the offset (stated, not stated,
-  or zone text, which is not an offset), a zone table and one shared UTC timeline that read an
-  offsetless value in up to four zones through `resolveLocal` and state the widest gap from
-  `diffUtcAsDuration`, the value taken apart field by field (a format code's shape is found by
-  probing the public formatter, in `edi-shape.ts`), and the value
-  written back by `formatEdifactDtm`; and the X12 Time Reader, an X12 date, time and time code
-  (elements 373, 337 and 623) read in one `parseX12DateTime` call, with the same strip, the date
-  and time written back by `formatX12DateTimePeriod`, and a second section that reads a `DTP`
-  value (a 1250 qualifier and an element 1251 value) with `parseX12DateTimePeriod`. Both import
-  `edi-widgets.ts` and load through `edi-lib.ts`. They share the two-pane split (pictures left, values right, one seam, stacked below a derived
-  boundary), the member grid, the zone table, the timeline, the verdict plate and the holds that
-  reserve every region's height (`gmt-edi-widgets.css`, `edi-picture.ts`, `edi-render.ts`), and
-  the zone code (`widestGap`, in `edi-widgets.ts`), and they print
-  calls and results with the same `formatValue`/`callArgs`. Their rules:
+  2379 format code. It calls `classifyEdifactDtmFormat` on the code, then the parser of the kind
+  that came back (`parseEdifactDate`, `…Time`, `…DateTime`, `…OffsetDateTime`, `…DatePeriod` or
+  `…DateTimePeriod`), with a verdict on the offset (stated or not stated), a zone table and one
+  shared UTC timeline that read an offsetless local date-time, or both ends of a period of them,
+  in up to four zones through `resolveLocal` and state the widest gap from `diffUtcAsDuration`,
+  the value taken apart field by field (a code's layout is read off its kind's formatter, in
+  `edi-picture.ts`), and the value written back by the kind's formatter; and the X12 Time Reader,
+  an X12 date, time and time code (elements 373, 337 and 623) read by `parseX12DateAndTime` (or
+  `parseX12Date` or `parseX12Time` when only one is sent), `classifyX12TimeCode`, and then
+  `x12TimeCodeOffset` or `x12TimeCodeZone`, with the same strip (a code that states an offset
+  gives the instant with `resolveLocal(local, offset)`), the date and time written back by
+  `formatX12Date` and `formatX12Time`, and a second section that classifies a `DTP` qualifier
+  (1250) and reads its value (1251) with the parser of that kind. A code or value the library does
+  not read is the sentinel with one plain sentence: for a two-digit-year code, the pattern parsers
+  with a `yearWindow`; for `CET` under `303`, that the field holds a signed hour, `UTC` or `GMT`.
+  Both import `edi-widgets.ts` and load through `edi-lib.ts`. They share the two-pane split
+  (pictures left, values right, one seam, stacked below a derived boundary), the member grid, the
+  zone table, the timeline, the verdict plate and the holds that reserve every region's height
+  (`gmt-edi-widgets.css`, `edi-picture.ts`, `edi-render.ts`), and the zone code (`widestGap`, in
+  `edi-widgets.ts`), and they print every call made, one a line, with the same
+  `formatValue`/`callArgs`. Their rules:
   - **Nothing derives a zone from a place, a zone name, an abbreviation or a time code**,
     because the standards state no such mapping: typing `ET` never fills, suggests or changes a
     zone, and no site module holds a lookup from a name or code to an IANA id (a test asserts
@@ -381,15 +396,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Every zone is read with `disambiguation: "reject"`**, stated beside the result and in the
     printed call, because any other policy picks an instant for a repeated or skipped time.
     `classifyLocal` supplies the reason for a refused one.
-  - **The site holds no list of codes.** Whether the library reads a code comes from its format
-    validator, and whether a code has a two-digit year comes from probing its formatter
-    (`needsYearWindow`), so the widgets cannot drift from the library's code table. The
-    year-window controls are always rendered and are disabled when the code reads none, so a
-    code change moves nothing.
-  - **The printed call is the call made.** A blank optional element is left out of it, and a
-    blank form in either tool (nothing typed in any field of the section, `dtmBlank`,
-    `mainBlank`, `dtpBlank`) makes no call, hides the call frame and renders "nothing to read",
-    never amber. Anything typed is partial input and gets the library's sentinel with its reason.
+  - **The site holds no table of codes.** Whether the library reads a code, and its kind, come from
+    the classifier, and a code's layout comes from what its kind's formatter writes, so the widgets
+    cannot drift from the library's code table. The one list of codes is `TWO_DIGIT_YEAR_CODES`
+    (`edi-widgets.ts`), an advisory list that words the sentence under `NO SIGNAL` for a code the
+    classifier does not know; a test asserts each code in it is one the classifiers return `null`
+    for. There is no year-window control, and an old link that carries a `yearWindow` loads and
+    ignores it.
+  - **The printed call is the call made.** A blank form in either tool (nothing typed in any field
+    of the section, `dtmBlank`, `mainBlank`, `dtpBlank`) makes no call, hides the call frame and
+    renders "nothing to read", never amber. Anything typed is partial input and gets the library's
+    sentinel with its reason. A time code sent with no time reads through `parseX12DateAndTime`
+    with an empty time, which is the library's sentinel.
   - **Only a pasted segment is un-released.** `splitDtm` applies the UN/EDIFACT default service
     characters. A bare value reaches the library as typed, so a `?` left in it shows the
     library's own sentinel and its reason.
@@ -399,7 +417,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     moves what is below.
   - **The X12 time is written back with `TM` when it was typed as four characters and `TS`
     otherwise**, so the value comes back in the form it was sent. A time with tenths or
-    hundredths returns the sentinel: the library reads a fraction and does not write one.
+    hundredths is cut to the mask and the note says so: the library reads a fraction and the
+    formatter truncates it.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -441,7 +460,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Trap: a `core` page never links an industry layer's reference pages.** The test reads
     `/reference/<layer>/` or an import from `@northguild/gmt/<layer>` in a page's source as use
     of that layer, and a page that uses a layer cannot be tagged `core`. The Standards guide is
-    `core`, so it names `parseEdifactDtm` and the other EDI functions as inline code and links
+    `core`, so it names `parseEdifactDateTime` and the other EDI functions as inline code and links
     the EDI guide, never `/reference/intermodal/`.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
@@ -481,10 +500,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - the Punctuality Board: the early and second late tolerance inputs while each one is
       switched off;
     - the DTM Decoder: the format code while a pasted segment supplies it, the strip's zone
-      selects unless the value is a local time with no offset, and the year-window controls
-      when the code has no two-digit year;
-    - the X12 Time Reader: its strip's zone selects and its year-window controls, on the
-      same two conditions;
+      selects unless the value is a local date-time (or a period of them) with no offset;
+    - the X12 Time Reader: its strip's zone selects, on the same condition;
     - the Timetable Reader: a row's Offset select while the printed time has one reading and
       the row holds no offset.
 
@@ -591,10 +608,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   test checks every key survives. The three TRAN-57 tools use a preset form, `{ preset }` plus
   each scalar that differs from it (`"none"` clears an optional one), and fall back to numbered
   list keys only for a list no preset holds, so a chat-seeded list survives the rail's
-  copy-permalink. The two INT-15 tools carry flat strings: the DTM Decoder's `input`, `format`,
-  `yearWindow` and `zone1`…`zone4`, and the X12 Time Reader's `date`, `time`, `timeCode`, `zone`,
-  `zone2`…`zone4`, `format`, `value` and `yearWindow`. A year window is a string there, because
-  `seedFromLocation` keeps a number only when it is a year from 1900 to 2100.
+  copy-permalink. The two INT-15 tools carry flat strings: the DTM Decoder's `input`, `format` and
+  `zone1`…`zone4`, and the X12 Time Reader's `date`, `time`, `timeCode`, `zone`, `zone2`…`zone4`,
+  `format` and `value`. An old link that still carries a `yearWindow` loads without error and the
+  key is ignored.
   - **Trap: build a permalink written into a page with `encodeWidgetPermalink`, never
     `encodeURIComponent` and never by hand.** A `DTM` segment ends in `'`, which
     `encodeURIComponent` leaves raw. The content-permalink test matches a link with
@@ -1186,15 +1203,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     coordinate in `globe-zones`), and an optional UTC instant ending in `Z` to start from;
     without it the planner starts at now. Its permalink is `?w=planner`, on
     `/tools/zone-planner/`.
-  - `showDtmDecoder({ input, format?, yearWindow?, zone1?, zone2?, zone3?, zone4? })` (INT-15):
+  - `showDtmDecoder({ input, format?, zone1?, zone2?, zone3?, zone4? })` (INT-15):
     `input` is a whole `DTM` segment or a bare value, and `format` is needed with a bare value.
     A zone is passed only when the reader named it, never chosen from a port, a place, a
-    partner or an abbreviation, and `yearWindow` is never assumed.
-  - `showX12TimeReader({ date?, time?, timeCode?, zone?, zone2?, zone3?, zone4?, format?, value?, yearWindow? })`
+    partner or an abbreviation.
+  - `showX12TimeReader({ date?, time?, timeCode?, zone?, zone2?, zone3?, zone4?, format?, value? })`
     (INT-15): one of `date`, `time` or `value` is required. `format` and `value` are the `DTP`
     pair. A zone is passed only when the reader named it, never chosen from the time code.
-    Both schemas check a code's shape only (`ediCodeSchema`, `yearWindowSchema`): a code or a
-    window the library refuses is the widget's sentinel to show, not a failed tool call.
+    Both schemas check a code's shape only (`ediCodeSchema`): a code the library does not read is
+    the widget's sentinel to show, not a failed tool call.
 - **Count:** 20 tools — the globe, the 18 teaching tools and the Zone Planner — and 20
   `CHAT_STARTERS`, one card each. `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers;
   re-derive them from there.

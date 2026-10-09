@@ -2,11 +2,11 @@
 /**
  * X12 Time Reader widget (INT-15).
  *
- * An X12 date (373), time (337) and time code (623), read together by
- * `parseX12DateTime`: whether the offset is stated, a zone is named with no
- * offset, or nothing is stated, and the instant once a stated offset or a zone
- * you pick fixes it. A second section reads a `DTP` value with
- * `parseX12DateTimePeriod`.
+ * An X12 date (373), time (337) and time code (623), read by
+ * `parseX12DateAndTime`, `classifyX12TimeCode` and `x12TimeCodeOffset` or
+ * `x12TimeCodeZone`: whether the offset is stated or not, and the instant once a
+ * stated offset or a zone you pick fixes it. A second section classifies a `DTP`
+ * qualifier and reads its value with the parser of that kind.
  *
  * **The markup and the wiring both live in `lib/x12-time-reader-mount.ts`**,
  * so the chat rail mounts the same widget this page server-renders.

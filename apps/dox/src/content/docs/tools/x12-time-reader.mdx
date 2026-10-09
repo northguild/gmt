@@ -1,6 +1,6 @@
 ---
 title: X12 Time Reader
-description: "Type an X12 date, time and time code. parseX12DateTime reads the three together and says whether the offset is stated, a zone is named, or nothing is stated, and the instant appears once an offset or a zone you pick fixes it. A second section reads a DTP value."
+description: "Type an X12 date, time and time code. The tool reads them with parseX12DateAndTime, classifies the code, and says whether the offset is stated; the instant appears once an offset or a zone you pick fixes it. A second section reads a DTP value."
 industries: [intermodal]
 ---
 
@@ -17,7 +17,7 @@ No X12 date or time carries an offset. The time code beside them is the only thi
 
 <Fragment slot="intro">
 
-X12 sends one point in time as three elements: a date (373), a time (337) and a time code (623). Type them, and the tool takes them apart and says what they state. A second section reads a `DTP` value. The one thing to know is that the date and the time carry no offset, so the time code is the only thing that says where the clock was: [`parseX12DateTime`](/reference/intermodal/parse/parseX12DateTime/) and [`parseX12DateTimePeriod`](/reference/intermodal/parse/parseX12DateTimePeriod/) read them, and everything on the page is what they returned.
+X12 sends one point in time as three elements: a date (373), a time (337) and a time code (623). Type them, and the tool takes them apart and says what they state. A second section reads a `DTP` value. The one thing to know is that the date and the time carry no offset, so the time code is the only thing that says where the clock was: [`parseX12DateAndTime`](/reference/intermodal/parse/parseX12DateAndTime/) reads the date and the time, [`classifyX12TimeCode`](/reference/intermodal/parse/classifyX12TimeCode/) classifies the code, and everything on the page is what those calls returned.
 
 </Fragment>
 
@@ -25,29 +25,29 @@ X12 sends one point in time as three elements: a date (373), a time (337) and a 
 
 <Fragment slot="after">
 
-**The three elements.** X12 is a United States standard. The 214's `AT7`, the 204's `G62` and `DTM` carry the date, the time and the time code side by side. Any of the three may be empty, and the tool leaves an empty element out of the call.
+**The three elements.** X12 is a United States standard. The 214's `AT7`, the 204's `G62` and `DTM` carry the date, the time and the time code side by side. Any of the three may be empty. The tool reads a date and a time together with `parseX12DateAndTime`, and a date or a time sent alone with `parseX12Date` or `parseX12Time`.
 
-**What a time code states.** It states an offset, as `01` does for UTC+1 and `13` does for UTC−12. It names a zone and states no offset, as `ET` does. Or it states nothing, as a blank code and `LT` do, because the place is elsewhere in the message.
+**What a time code states.** It states an offset, as `01` does for UTC+1 and `13` does for UTC−12. It names a zone and states no offset, as `ET` does. Or it says local to the event, as `LT` does, and so does a blank code, because the place is elsewhere in the message. The verdict has two forms: the offset is stated, and the instant comes from `resolveLocal(local, offset)`; or it is not stated, and the instant comes from the zones you pick.
 
 **Why the zones are yours.** The library maps no time code, place or partner to a zone. Each preset that states no offset opens with the zones its example picked, and those are the example's choice, not something X12 or the code says. Typing a time code never fills a zone, and the tool does not check a daylight flag against the zone you pick. Each row calls `resolveLocal` with `disambiguation: "reject"`, so a time the clock shows twice or never is not resolved, and the row says why.
 
-**A DTP value.** A `DTP` carries a 1250 qualifier and an element 1251 value. It has no time code and no instant, and the qualifier decides the order of the fields, so the tool finds that order from what the formatter writes.
+**A DTP value.** A `DTP` carries a 1250 qualifier and an element 1251 value. It has no time code and no instant, and the tool classifies the qualifier with [`classifyX12DateTimePeriodFormat`](/reference/intermodal/parse/classifyX12DateTimePeriodFormat/) and calls the parser of the kind that came back. A two-digit-year qualifier such as `D6` is not read: the sentence under `NO SIGNAL` names the pattern parser and the `yearWindow` that read it.
 
 **Worth trying:** [`ET` with `America/New_York` picked](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%22ET%22%2C%22zone%22%3A%22America%2FNew_York%22%7D) —
 then change the date to January and watch the instant move an hour. Then [code `13`](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%2213%22%7D) —
 the offset is UTC−12, not UTC−1, and the instant is on the next UTC day. Type `24` to see UTC−1.
 
-Reference: [`parseX12DateTime`](/reference/intermodal/parse/parseX12DateTime/) reads the
-three elements, [`parseX12DateTimePeriod`](/reference/intermodal/parse/parseX12DateTimePeriod/)
-reads a `DTP` pair, and [`x12TimeCode`](/reference/intermodal/parse/x12TimeCode/) tells a
-code from an abbreviation when a read is refused.
-[`formatX12DateTimePeriod`](/reference/intermodal/format/formatX12DateTimePeriod/) writes the
-date and the time back. [`resolveLocal`](/reference/instant/convert/resolveLocal/),
+Reference: [`parseX12DateAndTime`](/reference/intermodal/parse/parseX12DateAndTime/) reads the
+date and the time, [`x12TimeCodeOffset`](/reference/intermodal/parse/x12TimeCodeOffset/) and
+[`x12TimeCodeZone`](/reference/intermodal/parse/x12TimeCodeZone/) say what the code states, and
+the classifiers tell a code from an abbreviation when a read is refused.
+[`formatX12Date`](/reference/intermodal/format/formatX12Date/) and
+[`formatX12Time`](/reference/intermodal/format/formatX12Time/) write the date and the time back.
+[`resolveLocal`](/reference/instant/convert/resolveLocal/),
 [`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) and
 [`fromOffsetInstant`](/reference/instant/convert/fromOffsetInstant/) turn a local time into an
-instant in a zone you name, and
-[`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) states the gap between the
-zones. The rules are in
+instant, and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) states the gap
+between the zones. The rules are in
 [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/).
 
 </Fragment>

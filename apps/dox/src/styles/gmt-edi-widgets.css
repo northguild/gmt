@@ -134,38 +134,36 @@
  * line with the others only when the line can show its LONGEST label whole.
  * Measured in Chromium (canvas measureText in the 13.6px mono face) plus the
  * select's 8px + 28px padding and 2px of border:
- *   DTM Decoder     `101: two-digit year, window from 2000`  303.0px -> 341px
+ *   DTM Decoder     `203: local time, no offset`  about 290px -> 352px reserved
  *   X12, main       `Code 24: the other end of the run`       270.2px -> 308px
- *   X12, DTP        `D6: a two-digit year, window from 2000`  311.1px -> 349px
+ *   X12, DTP        `D6: a two-digit year, not read`  about 290px -> 352px reserved
  * so the preset's column is 22rem (352px). Beside it sit the other columns, each
  * as wide as its own label and control need, and a 0.75rem gap between each:
- *   DTM Decoder  22 + 15 (segment) + 9.5 (format code) + 11.5 (year window) +
- *                8.5 (window starts in) + 4 * 0.75 = 69.5rem
+ *   DTM Decoder  22 + 15 (segment) + 9.5 (format code) + 2 * 0.75 = 48 rem
  *   X12 main     22 + 3 * 10 (a date, a time and a code, each with `optional`)
  *                + 3 * 0.75 = 54.25rem
- *   X12 DTP      22 + 9 (qualifier) + 12 (value) + 11.5 + 8.5 + 4 * 0.75 = 66rem
+ *   X12 DTP      22 + 9 (qualifier) + 12 (value) + 2 * 0.75 = 44.5rem
  * From there the line is one row. Under it the preset takes its own row and the
- * rest share the next while they hold their own minima (DTM 46.75rem, X12 main
- * 31.5rem, X12 DTP 43.25rem); under that the field grid's own 11rem tracks.
+ * rest share the next while they hold their own minima (DTM 25.25rem, X12 main
+ * 31.5rem, X12 DTP 21.75rem); under that the field grid's own 11rem tracks.
  * --------------------------------------------------------------------------- */
 
 .gmt-edi-preset {
   grid-column: 1 / -1;
 }
 
-@container gmt-edi-section (min-width: 46.75rem) and (max-width: 69.49rem) {
+@container gmt-edi-section (min-width: 25.25rem) and (max-width: 47.99rem) {
   .gmt-dtm-decoder .gmt-field-grid.gmt-edi-top {
-    grid-template-columns:
-      minmax(15rem, 2fr) minmax(9.5rem, 1fr) minmax(11.5rem, 1fr)
-      minmax(8.5rem, 1fr);
+    grid-template-columns: minmax(15rem, 2fr) minmax(9.5rem, 1fr);
   }
 }
 
-@container gmt-edi-section (min-width: 69.5rem) {
+@container gmt-edi-section (min-width: 48rem) {
   .gmt-dtm-decoder .gmt-field-grid.gmt-edi-top {
-    grid-template-columns:
-      minmax(22rem, 2fr) minmax(15rem, 2fr) minmax(9.5rem, 1fr)
-      minmax(11.5rem, 1fr) minmax(8.5rem, 1fr);
+    grid-template-columns: minmax(22rem, 2fr) minmax(15rem, 2fr) minmax(
+        9.5rem,
+        1fr
+      );
   }
 
   .gmt-dtm-decoder .gmt-edi-preset {
@@ -189,19 +187,18 @@
   }
 }
 
-@container gmt-edi-section (min-width: 43.25rem) and (max-width: 65.99rem) {
+@container gmt-edi-section (min-width: 21.75rem) and (max-width: 44.49rem) {
   .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="dtp"] {
-    grid-template-columns:
-      minmax(9rem, 1fr) minmax(12rem, 2fr) minmax(11.5rem, 1fr)
-      minmax(8.5rem, 1fr);
+    grid-template-columns: minmax(9rem, 1fr) minmax(12rem, 2fr);
   }
 }
 
-@container gmt-edi-section (min-width: 66rem) {
+@container gmt-edi-section (min-width: 44.5rem) {
   .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="dtp"] {
-    grid-template-columns:
-      minmax(22rem, 2fr) minmax(9rem, 1fr) minmax(12rem, 2fr)
-      minmax(11.5rem, 1fr) minmax(8.5rem, 1fr);
+    grid-template-columns: minmax(22rem, 2fr) minmax(9rem, 1fr) minmax(
+        12rem,
+        2fr
+      );
   }
 
   .gmt-x12-time-reader .gmt-edi-top[data-line="dtp"] .gmt-edi-preset {
@@ -505,7 +502,10 @@
 
 .gmt-edi-readouts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--edi-cell)), 1fr));
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--edi-cell)), 1fr)
+  );
   gap: var(--gmt-space-2);
   box-sizing: border-box;
   margin: 0;
@@ -629,6 +629,8 @@
 
 .gmt-widget-output.gmt-edi-out {
   box-sizing: border-box;
+  /* One result per line when a section prints several calls. */
+  white-space: pre-wrap;
 }
 
 /* Section 4: the written-back value and its call on one line, in the section's
@@ -1020,8 +1022,9 @@
    three gaps and the padding: 533px). */
 @container gmt-edi-pane (min-width: 27rem) {
   .gmt-dtm-decoder .gmt-dtm-row {
-    grid-template-columns:
-      1.75rem var(--gmt-strip-instant) 7ch var(--gmt-strip-third);
+    grid-template-columns: 1.75rem var(--gmt-strip-instant) 7ch var(
+        --gmt-strip-third
+      );
     grid-template-areas:
       "badge select select select"
       ". instant offset as205";
@@ -1030,8 +1033,9 @@
 
 @container gmt-edi-pane (min-width: 34rem) {
   .gmt-x12-time-reader .gmt-dtm-row {
-    grid-template-columns:
-      1.75rem var(--gmt-strip-instant) 7ch var(--gmt-strip-third);
+    grid-template-columns: 1.75rem var(--gmt-strip-instant) 7ch var(
+        --gmt-strip-third
+      );
     grid-template-areas:
       "badge select select select"
       ". instant offset as205";
