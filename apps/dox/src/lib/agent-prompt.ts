@@ -26,15 +26,10 @@ WHEN HELPING THE USER:
    them to the right task area (basics, arithmetic, timezone, integration).
 
 2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
-   Read the installed package's README.md and source JSDoc for API details.
+   For API details, read https://gmt-dox.northguild.workers.dev/llms.txt and the
+   JSDoc in the installed package.
 
 3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:
    npx @tanstack/intent@latest list
    npx @tanstack/intent@latest load @northguild/gmt#<skill-name>
-
-NOTE: @northguild/gmt ships consumer and contributor skills. Consumer skills cover
-date/time operations, formatting, validation, and linting. Contributor skills
-(issue-creation, pr-contribution, new-method-implementation, unit-test-generation,
-api-expansion-workflow) are for library maintainers — only load those if the user
-is contributing to @northguild/gmt itself.
 `;

@@ -1,25 +1,61 @@
 # GMT: Give Me Temporal
 
-Home of [@northguild/gmt](./packages/gmt) — **Give Me Temporal!**
+**The most tested date and time library for JavaScript.** `@northguild/gmt` is one library in place of Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date`. It is built on the TC39 Temporal standard and never touches `Date`.
 
-A monorepo for NorthGuild community libraries, focused on making JavaScript date handling reliable and predictable.
+[Docs](https://gmt-dox.northguild.workers.dev/) · [API reference](https://gmt-dox.northguild.workers.dev/reference/) · [Tools](https://gmt-dox.northguild.workers.dev/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
-Head to our [docs site](https://gmt-dox.northguild.workers.dev/) for the best way to get started.
+- **46,338 tests, run 1,390,140 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+- **42× the CI test runs** of the six libraries below, combined.
+- **632 functions, to the nanosecond**, tested in 17 locales.
+- **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
-Questions, or want to help? Join us on [Discord](https://discord.gg/TdvQdP3t5a).
+| Library                   | Tests      | CI test runs  | Built on  |
+| ------------------------- | ---------- | ------------- | --------- |
+| **`@northguild/gmt`**     | **46,338** | **1,390,140** | Temporal  |
+| Spacetime                 | 6,086      | 12,172        | `Date`    |
+| Moment.js                 | 3,901      | 11,703        | `Date`    |
+| date-fns                  | 3,213      | 3,213         | `Date`    |
+| Luxon                     | 1,222      | 4,888         | `Date`    |
+| Day.js                    | 794        | 1,034         | `Date`    |
+| `@internationalized/date` | 386        | 386           | own types |
 
-**Why GMT:**
+The other libraries were measured from 2026-08-22 to 2026-09-09, each by running its own test suite. [The full comparison and the method](https://gmt-dox.northguild.workers.dev/compare/).
 
-- **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
-- **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~69× more CI test executions than all four competitors combined**: 1,390,140 from 46,338 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~120× more test cases than `@internationalized/date`**: 46,338 vs. 386 — Adobe's own library, run at its own commit.
-- **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
-- **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
-- **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
-- **The only actively-maintained one that's Temporal-native.** Moment.js is officially in maintenance mode; Luxon, date-fns, and `@internationalized/date` are still active but all still depend on `Date` internally.
+## Install
+
+```bash
+npm install @northguild/gmt
+```
+
+To ban `Date` in your own code, add a lint plugin: [ESLint](https://github.com/northguild/gmt/tree/main/packages/gmt-eslint) · [Oxlint](https://github.com/northguild/gmt/tree/main/packages/gmt-oxlint) · [Biome](https://github.com/northguild/gmt/tree/main/packages/gmt-biome).
+
+## Use
+
+```typescript
+import { addBusinessDays, addDate, addZoned, convertUtcToZoned, diffDate, formatDate, isValidDate, resolveLocal } from "@northguild/gmt";
+
+addDate("2024-01-31", { months: 1 }); // "2024-02-29"
+diffDate("2024-01-01", "2024-03-01", "day"); // 60
+formatDate("2024-03-15", "en-GB", { dateStyle: "long" }); // "15 March 2024"
+isValidDate("2023-02-29"); // false
+addBusinessDays("2024-03-15", 1); // "2024-03-18"
+
+// Time zones, and the night the clocks change
+convertUtcToZoned("2024-06-15T12:00:00Z", "Asia/Tokyo"); // "2024-06-15T21:00:00+09:00[Asia/Tokyo]"
+addZoned("2024-03-10T01:30:00-05:00[America/New_York]", { hours: 1 }); // "2024-03-10T03:30:00-04:00[America/New_York]"
+resolveLocal("2024-03-10T02:30:00", "America/New_York", { disambiguation: "reject" }); // "" (02:30 did not happen that day)
+```
+
+Every function has a reference page with a live playground:
+[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/)
+
+By industry: [transport](https://gmt-dox.northguild.workers.dev/reference/transport/) · [intermodal](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
+
+Then the [guides](https://gmt-dox.northguild.workers.dev/guides/) show how to do each job, and the [tools](https://gmt-dox.northguild.workers.dev/tools/) let you try it on your own values.
 
 ## Agent prompt
+
+Paste this into your AI coding agent:
 
 ```
 You are a coding assistant using @northguild/gmt — a Temporal-first date/time library.
@@ -43,172 +79,14 @@ WHEN HELPING THE USER:
    them to the right task area (basics, arithmetic, timezone, integration).
 
 2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
-   Read the installed package's README.md and source JSDoc for API details.
+   For API details, read https://gmt-dox.northguild.workers.dev/llms.txt and the
+   JSDoc in the installed package.
 
 3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:
    npx @tanstack/intent@latest list
    npx @tanstack/intent@latest load @northguild/gmt#<skill-name>
-
-NOTE: @northguild/gmt ships consumer and contributor skills. Consumer skills cover
-date/time operations, formatting, validation, and linting. Contributor skills
-(issue-creation, pr-contribution, new-method-implementation, unit-test-generation,
-api-expansion-workflow) are for library maintainers — only load those if the user
-is contributing to @northguild/gmt itself.
 ```
-
-## Install
-
-Install the runtime package:
-
-| Package manager | Command                       |
-| --------------- | ----------------------------- |
-| npm             | `npm install @northguild/gmt` |
-| yarn            | `yarn add @northguild/gmt`    |
-| pnpm            | `pnpm add @northguild/gmt`    |
-| bun             | `bun add @northguild/gmt`     |
-
-Quick example:
-
-```js
-import { getNow } from "@northguild/gmt";
-console.log(getNow()); // ISO 8601 string
-```
-
-## Why not JavaScript Date objects
-
-We do not use JavaScript `Date` APIs in this monorepo.
-
-- `new Date()` introduces mutability and environment drift.
-- `Date.parse()` relies on ambiguous, engine-dependent parsing.
-- `Date.UTC()` requires awkward positional arguments.
-- `Date.now()` scatters untyped timestamps throughout code.
-
-Use GMT instead:
-
-- `getNow()`, `getUnixNow()`, and `getUtcNow()` for current time values.
-- `convertUtcToUnix()` and `convertUnixToUtc()` for explicit unix conversion.
-- `convertZonedToUtc()` and `convertUtcToZoned()` for timezone-safe conversion.
-- String-in/string-out APIs with Temporal under the hood for safer behavior.
-
-If you see a Date API in code, replace it with a GMT helper.
-
-## Packages
-
-| Package                             | npm                           | Description                                          |
-| ----------------------------------- | ----------------------------- | ---------------------------------------------------- |
-| [`@northguild/gmt`](./packages/gmt) | `npm install @northguild/gmt` | Give Me Temporal — string-in/string-out date library |
-
-`@northguild/gmt` exports every public function, type and regex as a flat named export of the package root, beside `Temporal` re-exported from `@js-temporal/polyfill`. The same exports are grouped into subpaths — `@northguild/gmt/calendar`, `duration`, `instant`, `intermodal`, `interval`, `plain`, `precision`, `regex`, `span`, `transport`, `types`, `unix`, `utc` and `zoned` — and, except for `regex` and `types`, into module subpaths such as `@northguild/gmt/plain/calculate`.
-
-### How GMT is tested, vs. the libraries it targets
-
-GMT is measured directly against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
-
-| Library                   | Version tested                          |
-| ------------------------- | --------------------------------------- |
-| GMT (`@northguild/gmt`)   | 1.14.2                                  |
-| `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
-| Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
-| date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
-| Moment.js                 | 2.30.1 (`moment/moment@cf524af`)        |
-
-| Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
-| ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 769                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **46,338**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,390,140**<br>(46,338 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
-| CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
-| CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
-| Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
-| Real-browser CI                 | not yet                                            | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
-| Maintenance                     | active                                             | active                         | active                               | active                                    | **maintenance<br>mode**          |
-
-<sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. `@internationalized/date` was run by cloning `adobe/react-spectrum` at `5d191ab`, installing dependencies, and executing `npx jest packages/@internationalized/date/tests/`, yielding 386 passing tests. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. Sources: [GMT](./.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
-
-### Testing strategy
-
-GMT's test suite balances **thoroughness** against **maintenance burden** by testing behavior, not permutations.
-
-**What we test exhaustively:**
-
-- **17-locale matrix** — every locale-aware function is exercised across all 17 `MustTestLocales` (en-US, en-GB, de-DE, fr-FR, es-ES, it-IT, pt-PT, sv-SE, zh-CN, zh-TW, ja-JP, ko-KR, ar-SA, he-IL, ru-RU, tr-TR, is-IS). This covers script direction, first-day-of-week differences, and calendar metadata.
-- **Timezone battle matrix** — every zoned function is exercised across 10 IANA timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+14:00), including DST-transition and half-hour-offset zones.
-- **Zero-length and identity cases** — every interval and arithmetic function is tested with zero-length inputs, identity operations, and boundary-adjacent values.
-- **Invalid-input sentinels** — every public function is tested for the documented fallback behavior (`""`, `null`, `false`, `[]`) on malformed strings, wrong types, leap seconds, and inverted intervals.
-
-**What we collapse:**
-
-- **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
-- **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
-
-**Result:** 46,338 tests across 769 files that exercise real behavior differences without redundant permutations. They run in CI as 1,390,140 executions — every one of them × 3 Node versions × 10 timezones.
-
-### Feature parity
-
-GMT has **full functional parity** with all four comparison libraries, capability for capability — with several areas where GMT goes further than any of them.
-
-| Capability                                                                                   | Status                       | Also has it                                                              |
-| -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
-| Duration type<br>(ISO 8601 parse/format/arithmetic)                                          | ✅ Done                      | Luxon `Duration`                                                         |
-| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops)           | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
-| DST disambiguation control<br>on construction _and_ arithmetic                               | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
-| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)                      | ✅ Done                      | `@internationalized/date`                                                |
-| Business-day arithmetic with<br>holiday calendars and roll conventions,<br>clamp/closest, time rounding    | ✅ Done                      | `temporal-kit` (arithmetic only)                                         |
-| Interval rounding-out<br>(boundary count, from-duration)                                     | ✅ Done                      | Luxon                                                                    |
-| Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
-| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
-| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(conversion + calendar-aware<br>interval/duration math)    | ✅ Done                      | `@internationalized/date`'s<br>`toCalendar`                              |
-
-### Where GMT stands alone
-
-Specific, sourced claims — not a repeat of the metrics above.
-
-| Claim                                                                                                                                         | The others                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Only GMT runs its **entire** suite in CI<br>under a real `TZ` env var across 10<br>real-world zones × 3 Node versions<br>(30 full-suite runs) | Luxon/`@internationalized/date`: no<br>CI timezone matrix. date-fns: zone<br>scope unclear. Moment.js: 6 zones,<br>partial suite only |
-| Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
-| Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
-| Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~69×                                                  | 1,390,140 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
-
-## Optional: Add Linting for Date API Bans
-
-Want to ban `Date` APIs in your own project? GMT provides three linting packages — pick the one matching your existing toolchain.
-
-**`@northguild/gmt-biome`**
-
-| Package manager | Command                                |
-| --------------- | -------------------------------------- |
-| npm             | `npm install -D @northguild/gmt-biome` |
-| yarn            | `yarn add -D @northguild/gmt-biome`    |
-| pnpm            | `pnpm add -D @northguild/gmt-biome`    |
-| bun             | `bun add -D @northguild/gmt-biome`     |
-
-**`@northguild/gmt-eslint`**
-
-| Package manager | Command                                 |
-| --------------- | --------------------------------------- |
-| npm             | `npm install -D @northguild/gmt-eslint` |
-| yarn            | `yarn add -D @northguild/gmt-eslint`    |
-| pnpm            | `pnpm add -D @northguild/gmt-eslint`    |
-| bun             | `bun add -D @northguild/gmt-eslint`     |
-
-**`@northguild/gmt-oxlint`** (requires `oxlint`)
-
-| Package manager | Command                                        |
-| --------------- | ---------------------------------------------- |
-| npm             | `npm install -D @northguild/gmt-oxlint oxlint` |
-| yarn            | `yarn add -D @northguild/gmt-oxlint oxlint`    |
-| pnpm            | `pnpm add -D @northguild/gmt-oxlint oxlint`    |
-| bun             | `bun add -D @northguild/gmt-oxlint oxlint`     |
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor setup, testing conventions, and publishing workflows.
-
----
 
 ## License
 
-MIT — See [LICENSE](./LICENSE) for details.
+MIT. See [LICENSE](https://github.com/northguild/gmt/blob/main/LICENSE).

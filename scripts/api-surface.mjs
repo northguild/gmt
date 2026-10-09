@@ -130,7 +130,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * bounded how many examples or documented results they could swallow, which is how three real doc
  * defects (a stray `*`, three stale clock examples, `mapZonedHoursInDay`'s wrong offset) stayed
  * invisible — `check` was green while they shipped wrong. This pins the total skipped in each tally
- * at the count verified correct on 2026-09-20 (Story CORE-8's review), so a silent increase — a new
+ * at a count verified by reading `show`'s list entry by entry, so a silent increase — a new
  * example that should have been checked but instead fell into a skip bucket — fails `check` instead
  * of passing quietly.
  *
@@ -146,7 +146,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * fail, so they document no failure example
  * (context/coding-standards.md § Scoped exception: the UTC clock readers).
  */
-const SKIP_BUDGET = { examples: 146, docResults: 64 };
+const SKIP_BUDGET = { examples: 146, docResults: 39 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
@@ -268,7 +268,8 @@ const readsClockCache = new Map();
  * `Temporal.Now` only in the JSDoc that says so.
  */
 function readsClock(entry) {
-  if (entry.module === "parse" || entry.name === "isValidHttpDate") return false;
+  if (entry.module === "parse" || entry.name === "isValidHttpDate")
+    return false;
   if (!readsClockCache.has(entry.sourcePath)) {
     readsClockCache.set(
       entry.sourcePath,
