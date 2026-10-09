@@ -1,0 +1,67 @@
+---
+import {
+  cellHtml,
+  compareTables,
+  notesHtml,
+  PROSE_TABLES,
+  type CompareTableId,
+} from "../lib/library-compare-tables";
+
+/**
+ * A table or list on /compare, built from `library-compare-tables.ts`, so each figure
+ * comes from `gmt-stats.json` or `library-measurements.json` and the page's `.md` twin
+ * (rendered in `mdx-jsx.ts` from the same builders) states the same ones.
+ *
+ * Static, no hydration. A table sits in the site's own `.gmt-ref-table` scroll box
+ * (`data-kind="notes"`: natural column widths), which `src/lib/ref-table.ts` makes focusable
+ * and fades at the edge that has more when the table is wider than the column. A table whose
+ * first column is a sentence gets `gmt-compare--prose`, which lets that column wrap.
+ */
+interface Props {
+  table: CompareTableId | "notes";
+}
+
+const { table } = Astro.props;
+const data = table === "notes" ? undefined : compareTables[table]();
+const notes = table === "notes" ? notesHtml() : [];
+const prose = table !== "notes" && PROSE_TABLES.includes(table);
+---
+
+{
+  data && (
+    <div class="gmt-ref-table" data-kind="notes">
+      <table class:list={["gmt-compare", prose && "gmt-compare--prose", prose && `gmt-compare--${table}`]}>
+        <thead>
+          <tr>
+            {data.head.map((label) => (
+              <th scope="col">{label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.rows.map((row) => (
+            <tr>
+              {row.map((cell, index) =>
+                index === 0 ? (
+                  <th scope="row" set:html={cellHtml(cell)} />
+                ) : (
+                  <td set:html={cellHtml(cell)} />
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+{
+  table === "notes" && (
+    <ul class="gmt-compare-notes">
+      {notes.map((html) => (
+        <li set:html={html} />
+      ))}
+    </ul>
+  )
+}

@@ -192,6 +192,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "why-gmt" },
+            { slug: "compare" },
             { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },

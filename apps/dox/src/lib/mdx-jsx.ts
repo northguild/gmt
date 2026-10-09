@@ -23,6 +23,12 @@ import {
   handledInGmt,
   unaffectingGmt,
 } from "../data/upstream-filings";
+import {
+  compareTables,
+  notesMarkdown,
+  tableMarkdown,
+  type CompareTableId,
+} from "./library-compare-tables";
 import { contributionClause, coverageClause } from "./upstream-summary";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
@@ -218,6 +224,14 @@ function renderWhyDateAlternatives(): string {
   ].join("\n");
 }
 
+/** `<LibraryCompare table="…" />` as a Markdown table, or the notes list; see /compare. */
+function renderLibraryCompare(props: Record<string, string>): string {
+  if (props.table === "notes") return notesMarkdown();
+  const build = compareTables[props.table as CompareTableId];
+  if (!build) throw new Error(`LibraryCompare: unknown table "${props.table}"`);
+  return tableMarkdown(build());
+}
+
 /**
  * `<UpstreamDefects />` as a Markdown table.
  *
@@ -307,6 +321,7 @@ export function renderMdxComponents(body: string): string {
     });
   }
 
+  out = replaceElements(out, "LibraryCompare", renderLibraryCompare);
   out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
 

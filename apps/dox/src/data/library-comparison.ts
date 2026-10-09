@@ -14,6 +14,74 @@
  */
 
 import { gmtStats } from "./gmt-stats";
+import measurementData from "./library-measurements.json";
+
+/**
+ * What was measured about one other library, and where it came from. One entry per library in
+ * `library-measurements.json`, the single place these numbers are typed. `scripts/stats.mjs`
+ * reads the same file for the READMEs.
+ */
+export interface LibraryMeasurement {
+  /** Matches `LibraryComparison.id`. */
+  id: string;
+  /**
+   * The library's name as the site and the READMEs print it. `scripts/stats.mjs` finds a
+   * library's row in the README comparison table by this name.
+   */
+  name: string;
+  /** The package version the tests were run at, where the repository records it. */
+  version?: string;
+  repository: string;
+  commit?: string;
+  /** ISO date the figures were taken. Each is a snapshot of that day. */
+  measuredOn: string;
+  /** The command that produced the test count, where the repository records it. */
+  command?: string;
+  /** The library's CI configuration, as a link or as a path inside its repository. */
+  ciConfigUrl?: string;
+  ciConfigPath?: string;
+  tests: number;
+  executions: number;
+  nodeVersions: number;
+  timezones: number;
+  /** Time-zone test files re-run under several zones rather than the whole suite. */
+  partialZoneRuns?: { testFiles: number; zones: number; unit: string };
+  /** True when a dedicated time-zone workflow exists whose scope could not be read. */
+  timeZoneWorkflowScopeUnclear?: boolean;
+  /** The dedicated locale and i18n test files the repository holds, one count for every library. */
+  locales: number;
+  /** Tests that fail on the library's own current default branch, if measured. */
+  knownFailures?: number;
+  /** Failures on the measuring machine caused by its environment; they do not change `tests`. */
+  environmentFailures?: number;
+  publicApi: { functions: number; methods: number; version: string };
+  note: string;
+}
+
+export const libraryMeasurements: readonly LibraryMeasurement[] =
+  measurementData.libraries;
+
+function measured(id: string): LibraryMeasurement {
+  const found = libraryMeasurements.find((m) => m.id === id);
+  if (!found)
+    throw new Error(`library-measurements.json has no entry for ${id}`);
+  return found;
+}
+
+/** The counts a comparison entry carries, read from its measurement. */
+function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
+  return {
+    tests: m.tests,
+    locales: m.locales,
+    timezones: m.timezones,
+    nodeVersions: m.nodeVersions,
+    executions: m.executions,
+    ...(m.knownFailures === undefined
+      ? {}
+      : { knownFailures: m.knownFailures }),
+    publicApi: m.publicApi,
+  };
+}
 
 export interface LibraryComparisonStats {
   /** Total test cases in one default run of the library's own suite. */
@@ -69,8 +137,8 @@ export interface LibraryComparison {
   /** Companion packages this library's ban also covers (footnoted, not a separate card). */
   bannedCompanions?: string[];
   stats: LibraryComparisonStats;
-  /** Where the numbers above came from, for auditability. */
-  sourceNote: string;
+  /** Where the numbers above came from; absent for @northguild/gmt, whose figures come from gmt-stats.json. */
+  measurement?: LibraryMeasurement;
 }
 
 export const libraryComparisons: LibraryComparison[] = [
@@ -93,157 +161,79 @@ export const libraryComparisons: LibraryComparison[] = [
       nodeVersions: gmtStats.nodes.length,
       executions: gmtStats.executions,
     },
-    sourceNote: "Internal CI measurement.",
   },
   {
     id: "@internationalized/date",
     timeResolution: "millisecond",
-    displayName: "@internationalized/date",
+    displayName: measured("@internationalized/date").name,
     chartLabel: "@intl/date",
     kind: "nonstandard",
     foundation: "not TC39",
     detail:
       "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
-    stats: {
-      // 386, not 20,190: that figure was the four original competitors' *combined*
-      // execution total and was never this library's own test count. Its bar has always
-      // used the correct 386, so only the hover tooltip read wrong ("386 executions
-      // (20,190 tests × 1 Node)"), and executions below tests is impossible on a 1× matrix.
-      tests: 386,
-      locales: 0,
-      timezones: 0,
-      nodeVersions: 1,
-      executions: 386,
-      // 12 methods on the Calendar interface are counted once, not again on each of its
-      // 13 implementations.
-      publicApi: { functions: 46, methods: 58, version: "3.12.4" },
-    },
-    sourceNote: "Internal CI measurement.",
+    measurement: measured("@internationalized/date"),
+    stats: statsOf(measured("@internationalized/date")),
   },
   {
     id: "luxon",
     timeResolution: "millisecond",
-    displayName: "Luxon",
+    displayName: measured("luxon").name,
     matrixLabel: "4 Node versions",
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
-    stats: {
-      // 1,222, not 4,888: 4,888 is the CI execution total, and was typed in as the test
-      // count too — the same figures as the README comparison table.
-      tests: 1222,
-      locales: 0,
-      timezones: 0,
-      nodeVersions: 4,
-      executions: 4888,
-      // Luxon ships no types; counted from @types/luxon 3.7.5, which tracks 3.7.x.
-      publicApi: { functions: 0, methods: 153, version: "3.7.2" },
-    },
-    sourceNote:
-      "Measured 2026-08-22 against moment/luxon@f427515 (3.7.2) by cloning, installing and running `jest`: 1,222 tests. " +
-      "CI (.github/workflows/test.yml) runs `npm run test` on a 4-version Node matrix (20, 22, 24, 25) under one fixed " +
-      "TZ, America/New_York — no timezone matrix: executions = 1,222 × 4 = 4,888.",
+    measurement: measured("luxon"),
+    stats: statsOf(measured("luxon")),
   },
   {
     id: "date-fns",
     timeResolution: "millisecond",
-    displayName: "date-fns",
+    displayName: measured("date-fns").name,
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
     bannedCompanions: ["date-fns-tz"],
-    stats: {
-      tests: 3213,
-      locales: 0,
-      timezones: 0,
-      nodeVersions: 1,
-      executions: 3213,
-      // `formatDate` is an alias of `format`, counted once. The 1 method is the
-      // function-typed member of the exported Localize type.
-      publicApi: { functions: 245, methods: 1, version: "4.4.0" },
-    },
-    sourceNote: "Internal CI measurement.",
+    measurement: measured("date-fns"),
+    stats: statsOf(measured("date-fns")),
   },
   {
     id: "moment",
     timeResolution: "millisecond",
-    displayName: "Moment.js",
+    displayName: measured("moment").name,
     matrixLabel: "3 Node versions",
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
     bannedCompanions: ["moment-timezone"],
-    stats: {
-      // 3,901, not 11,703: 11,703 is the CI execution total, and was typed in as the test
-      // count too — the same figures as the README comparison table.
-      tests: 3901,
-      locales: 0,
-      timezones: 0,
-      nodeVersions: 3,
-      executions: 11703,
-      publicApi: { functions: 27, methods: 142, version: "2.30.1" },
-    },
-    sourceNote:
-      "Measured 2026-08-22 against moment/moment@cf524af (2.30.1) by cloning, installing and running " +
-      "`node scripts/test.js`: 3,901 tests, 0 failed on Node 24. CI (.github/workflows/ci.yml) runs `pnpm test` " +
-      "on a 3-version Node matrix (lts/*, lts/-1, latest): executions = 3,901 × 3 = 11,703. " +
-      "timezones.yml re-runs 5 test modules (not the full suite) under 6 zones; those partial runs are not counted.",
+    measurement: measured("moment"),
+    stats: statsOf(measured("moment")),
   },
   {
     id: "dayjs",
     timeResolution: "millisecond",
-    displayName: "Day.js",
+    displayName: measured("dayjs").name,
     matrixLabel: "2 tz files × 4 extra TZ runs",
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "Wraps a real Date instance under the hood. Its timezone plugin is graded against moment's output — it can't verify itself without the library it replaces.",
-    stats: {
-      tests: 794,
-      locales: 42,
-      timezones: 6,
-      nodeVersions: 1,
-      executions: 1034,
-      // Core plus the 37 plugins shipped in the same npm package (as GMT's figure counts its
-      // whole package): core alone is 4 functions + 30 methods.
-      publicApi: { functions: 16, methods: 112, version: "1.11.23" },
-    },
-    sourceNote:
-      "Measured 2026-09-09 against iamkun/dayjs@539c4b9 (`npm test`, single default run: 93 suites / 794 tests). " +
-      "The repo's real `test` script re-runs test/timezone.test.js (6 tests) and test/plugin/timezone.test.js (54 tests) " +
-      "under 6 distinct TZ env values (Pacific/Auckland, Europe/London, America/Whitehorse, system default, Europe/Paris, America/New_York) " +
-      "before the full jest run: 4×6 + 4×54 + 794 = 1034 total executions. locales=42 counts test/locale.test.js plus the 41 files in test/locale/. " +
-      "CI (.github/workflows/lint-test.yml) runs npm test on a single Node LTS — no version matrix.",
+    measurement: measured("dayjs"),
+    stats: statsOf(measured("dayjs")),
   },
   {
     id: "spacetime",
     timeResolution: "millisecond",
-    displayName: "Spacetime",
+    displayName: measured("spacetime").name,
     matrixLabel: "2 Node versions",
     kind: "wraps",
     foundation: "leans on Date",
     detail:
       "now()/today() default through new Date(). Four DST edge-case suites are named .ignore.js and never run — and the DST tests that do run are currently failing.",
-    stats: {
-      tests: 6086,
-      locales: 2,
-      timezones: 8,
-      nodeVersions: 2,
-      executions: 12172,
-      knownFailures: 41,
-      // 32 of Spacetime's methods are declared as function-typed members, counted as methods.
-      publicApi: { functions: 0, methods: 80, version: "7.13.0" },
-    },
-    sourceNote:
-      "Measured 2026-09-09 against spencermountain/spacetime@2acdc4e (`tape ./test/**/*.test.js`): 6086 tests, 6045 pass, 41 fail " +
-      "(all `dst-off` post-transition assertions in europe/london, europe/ljubljana, atlantic/madeira). " +
-      "locales=2 counts test/i18n.test.js and test/intl.test.js. timezones=8 counts the dedicated tz/DST test files that actually run " +
-      "(dst-north, dst-south, dst-sneak, findTz, informal-tzs, kazakhstan-timezones, swapTz, timezone-name) — 4 more DST files exist but are " +
-      "disabled via the .ignore.js extension and excluded from every count above. " +
-      "CI (.github/workflows) runs a real 2-version Node matrix (20.x, 26.x): executions = 6086 × 2 = 12172.",
+    measurement: measured("spacetime"),
+    stats: statsOf(measured("spacetime")),
   },
 ];
 

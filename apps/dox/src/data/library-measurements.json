@@ -1,0 +1,143 @@
+{
+  "libraries": [
+    {
+      "id": "@internationalized/date",
+      "name": "@internationalized/date",
+      "version": "3.12.3",
+      "repository": "adobe/react-spectrum",
+      "commit": "5d191ab",
+      "measuredOn": "2026-08-22",
+      "command": "npx jest packages/@internationalized/date/tests/",
+      "ciConfigUrl": "https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml",
+      "tests": 386,
+      "executions": 386,
+      "nodeVersions": 1,
+      "timezones": 0,
+      "locales": 0,
+      "knownFailures": 0,
+      "publicApi": {
+        "functions": 46,
+        "methods": 58,
+        "version": "3.12.4"
+      },
+      "note": "All 386 tests passed. The suite runs once: CI tests React 16 to canary, not a range of Node versions. The 12 methods on the Calendar interface are counted once, not again on each of its 13 implementations."
+    },
+    {
+      "id": "luxon",
+      "name": "Luxon",
+      "version": "3.7.2",
+      "repository": "moment/luxon",
+      "commit": "f427515",
+      "measuredOn": "2026-08-22",
+      "command": "jest",
+      "ciConfigUrl": "https://github.com/moment/luxon/blob/master/.github/workflows/test.yml",
+      "tests": 1222,
+      "executions": 4888,
+      "nodeVersions": 4,
+      "timezones": 0,
+      "locales": 0,
+      "environmentFailures": 39,
+      "publicApi": {
+        "functions": 0,
+        "methods": 153,
+        "version": "3.7.2"
+      },
+      "note": "CI (.github/workflows/test.yml) runs `npm run test` on Node 20, 22, 24 and 25 under one fixed time zone, America/New_York, so executions are 1,222 × 4. The 39 local failures come from the machine: the suite assumes its CI container's local time zone is America/New_York. They do not change the test count. Luxon ships no types, so the API was counted from @types/luxon 3.7.5, which tracks 3.7.x."
+    },
+    {
+      "id": "date-fns",
+      "name": "date-fns",
+      "version": "4.4.0",
+      "repository": "date-fns/date-fns",
+      "commit": "a0a3922",
+      "measuredOn": "2026-08-22",
+      "ciConfigUrl": "https://github.com/date-fns/date-fns/tree/main/.github/workflows",
+      "tests": 3213,
+      "executions": 3213,
+      "nodeVersions": 1,
+      "timezones": 0,
+      "timeZoneWorkflowScopeUnclear": true,
+      "locales": 0,
+      "environmentFailures": 46,
+      "publicApi": {
+        "functions": 245,
+        "methods": 1,
+        "version": "4.4.0"
+      },
+      "note": "The Node version in CI is not set explicitly (`node = \"latest\"`), so the suite counts once. A dedicated time-zone workflow exists, but its scope is unclear and is not counted. The 46 local failures come from the machine: the experimental native-Temporal code path needs a global Temporal that Node does not provide. They do not change the test count. `formatDate` is an alias of `format`, counted once. The 1 method is the function-typed member of the exported Localize type."
+    },
+    {
+      "id": "moment",
+      "name": "Moment.js",
+      "version": "2.30.1",
+      "repository": "moment/moment",
+      "commit": "cf524af",
+      "measuredOn": "2026-08-22",
+      "command": "node scripts/test.js",
+      "ciConfigUrl": "https://github.com/moment/moment/tree/develop/.github/workflows",
+      "tests": 3901,
+      "executions": 11703,
+      "nodeVersions": 3,
+      "timezones": 0,
+      "partialZoneRuns": {
+        "testFiles": 5,
+        "zones": 6,
+        "unit": "modules"
+      },
+      "locales": 139,
+      "knownFailures": 0,
+      "publicApi": {
+        "functions": 27,
+        "methods": 142,
+        "version": "2.30.1"
+      },
+      "note": "0 tests failed on Node 24. CI (.github/workflows/ci.yml) runs `pnpm test` on three Node versions (lts/*, lts/-1, latest), so executions are 3,901 × 3. timezones.yml re-runs 5 test modules, not the full suite, under 6 zones; those partial runs are not counted. The repository holds 191 test files; `locales` counts the 139 of them that test a locale."
+    },
+    {
+      "id": "dayjs",
+      "name": "Day.js",
+      "repository": "iamkun/dayjs",
+      "commit": "539c4b9",
+      "measuredOn": "2026-09-09",
+      "command": "npm test",
+      "ciConfigPath": ".github/workflows/lint-test.yml",
+      "tests": 794,
+      "executions": 1034,
+      "nodeVersions": 1,
+      "timezones": 6,
+      "partialZoneRuns": {
+        "testFiles": 2,
+        "zones": 6,
+        "unit": "files"
+      },
+      "locales": 42,
+      "publicApi": {
+        "functions": 16,
+        "methods": 112,
+        "version": "1.11.23"
+      },
+      "note": "A single default run is 93 suites and 794 tests. The repository's `test` script first re-runs test/timezone.test.js (6 tests) and test/plugin/timezone.test.js (54 tests) under 6 distinct TZ values (Pacific/Auckland, Europe/London, America/Whitehorse, the system default, Europe/Paris, America/New_York), then runs the full jest suite: 4 × 6 + 4 × 54 + 794 = 1,034 executions. `locales` counts test/locale.test.js plus the 41 files in test/locale/. CI runs `npm test` on a single Node LTS. The API count covers the core and the 37 plugins shipped in the same npm package; core alone is 4 functions and 30 methods."
+    },
+    {
+      "id": "spacetime",
+      "name": "Spacetime",
+      "repository": "spencermountain/spacetime",
+      "commit": "2acdc4e",
+      "measuredOn": "2026-09-09",
+      "command": "tape ./test/**/*.test.js",
+      "ciConfigPath": ".github/workflows",
+      "tests": 6086,
+      "executions": 12172,
+      "nodeVersions": 2,
+      "timezones": 8,
+      "locales": 2,
+      "knownFailures": 41,
+      "publicApi": {
+        "functions": 0,
+        "methods": 80,
+        "version": "7.13.0"
+      },
+      "note": "6,086 tests ran: 6,045 passed and 41 failed. All 41 are `dst-off` post-transition assertions in europe/london, europe/ljubljana and atlantic/madeira. CI runs Node 20.x and 26.x, so executions are 6,086 × 2. `locales` counts test/i18n.test.js and test/intl.test.js. `timezones` counts the 8 dedicated time-zone and DST test files that run (dst-north, dst-south, dst-sneak, findTz, informal-tzs, kazakhstan-timezones, swapTz, timezone-name). Four more DST files exist but are disabled by their `.ignore.js` extension and are in no count. 32 of its methods are declared as function-typed members, counted as methods."
+    }
+  ]
+}
