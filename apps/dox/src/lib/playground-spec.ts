@@ -59,6 +59,26 @@ export interface PlaygroundField {
   pairs?: Array<[string, string]>;
 }
 
+/**
+ * What one `@example` supplies for a field other than the enum it is keyed
+ * under: the same members of `PlaygroundField` that the form loads into a
+ * control (`seed` is the amount for `units`).
+ */
+export type ChoiceSeed = Pick<
+  PlaygroundField,
+  "seed" | "unitSeed" | "items" | "pairs"
+>;
+
+/**
+ * `enum field name → choice → other field name → ChoiceSeed`. Built from the
+ * function's `@example`s: the first example per choice that is a literal the
+ * form can hold and whose documented result is a value, not a sentinel.
+ */
+export type ChoiceSeeds = Record<
+  string,
+  Record<string, Record<string, ChoiceSeed>>
+>;
+
 export interface LivePlaygroundTemplate {
   module: string;
   fn: string;
@@ -78,6 +98,12 @@ export interface LivePlaygroundTemplate {
    * the reference page shows the static code block with no interactive widget.
    */
   fields?: PlaygroundField[];
+  /**
+   * Per-choice example values for the enum fields, so picking a choice can load
+   * values that suit it (`"203"` reads a 12-digit stamp, `"204"` a 14-digit one).
+   * Present only when at least two choices of an enum have different examples.
+   */
+  choiceSeeds?: ChoiceSeeds;
   /**
    * A trailing options-object literal (`{ epochUnit: "milliseconds" }`) baked
    * into the call verbatim — the form does not make options editable.

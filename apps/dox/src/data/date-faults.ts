@@ -31,6 +31,11 @@ export const dateFaults: Fault[] = [
     why: "Months are 0-indexed. Days are 1-indexed. In the same constructor call.",
   },
   {
+    input: "Date.UTC(2025, 0, 15, 9, 30)",
+    output: "a millisecond count, not a date",
+    why: "Year, month, day, hour and minute are bare positional numbers, so a swapped pair still runs. Months count from 0, and a year from 0 to 99 is read as 1900 to 1999.",
+  },
+  {
     input: "d.setDate(d.getDate() + 1)",
     output: "mutates d in place",
     why: "A Date handed to a function can be changed underneath you. There is no read-only Date.",

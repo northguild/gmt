@@ -4,12 +4,19 @@ description: >
   Core date/time basics — get current values, parse components, read ISO week,
   ordinal, quarter and fiscal-period identifiers, format for display, format
   relative time, compare dates, and validate strings/timezones/intervals. Reads
-  the installed package README.md and source JSDoc for API details; this skill
-  is a routing pointer, not an API dump.
+  the docs site (llms.txt and each page's .md twin) and the installed package's
+  JSDoc for API details; this skill is a routing pointer, not an API dump.
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/get-current.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/parsing.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/formatting.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/relative-time.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/comparisons.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/validation.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/calendar-boundaries.mdx'
   - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
   - 'northguild/gmt:packages/gmt/src/plain/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/plain/locale/index.ts'
   - 'northguild/gmt:packages/gmt/src/plain/compare/index.ts'
@@ -17,6 +24,9 @@ sources:
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
@@ -52,26 +62,34 @@ input before you act on it.
    `false` for booleans, `[]` for arrays. Always check before using. This holds
    for a `null` or wrong-typed argument too (`addDate(x, null)` is `""`), so a
    `try`/`catch` around a GMT call is dead code.
-3. **Read the README.** This skill is a routing pointer. For full API
-   signatures, locale matrices, and code examples, read the installed package's
-   `README.md` and the source JSDoc of the function you intend to call.
+3. **Read the docs site.** This skill is a routing pointer. For full API
+   signatures, locale matrices, and code examples, read these:
+   - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+   - Each page has a `.md` twin that holds its text, for example
+     `https://gmt-dox.northguild.workers.dev/guides/core-date-operations/parsing.md`.
+   - The JSDoc of the function you intend to call ships in the installed
+     package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
 ## Key functions
 
 - **Current values**: `getNow`, `getToday`, `getUtcNow`, `getUnixNow`,
   `getSystemTimeZone`, `getTimeZones`
 - **Parsing**: `parseYearFromDate`, `parseMonthFromDate`,
-  `parseDateTimeWithPattern`, `parseRfc3339`, `parseHttp`, `parseSql`
+  `parseDateTimeWithPattern`, `parseRfc3339`, `parseRfc2822`,
+  `parseHttpDate`, `parseSqlDateTime`
 - **Calendar identifiers**: `getIsoWeekDate`, `getOrdinalDate`, `getQuarter`,
   `getFiscalPeriod`
 - **Formatting**: `formatDate`, `formatTime`, `formatDateTime`,
-  `formatRelativeDate`, `formatCalendar`, `formatRfc3339`
+  `formatRelativeDate`, `formatCalendar`, `formatRfc3339`, `formatRfc2822`,
+  `formatHttpDate`, `formatSqlDateTime`
 - **Locale names**: `getLocaleMonthNames`, `getLocaleWeekdayNames`,
   `getLocaleMeridiems`, `getLocaleEraNames`
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
   `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
+- **Interchange-format validation**: `isValidRfc3339DateTime`,
+  `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 
 ## Common pitfalls
 
@@ -82,21 +100,30 @@ input before you act on it.
   second to hour, the others second to year. Any other unit returns `""`.
   `roundingMethod` is `"floor"`, `"ceil"` or `"round"`: any other value returns `""`.
 - In a `parse*WithPattern` pattern, `''` is one literal quote, inside or outside
-  quoted text (UTS #35): `"MMM d, ''yy"` reads `"Mar 15, '24"`. It is not an empty
-  separator. Write adjacent fields with nothing between them, as in `"yyyyMMdd"`.
+  quoted text (UTS #35), and not an empty separator: `"''yyyy-MM-dd''"` reads
+  `"'2024-01-15'"`. Write adjacent fields with nothing between them, as in `"yyyyMMdd"`.
+- A `yy` token in a `parse*WithPattern` pattern needs the caller's hundred-year window:
+  `{ yearWindow: 2000 }` reads `"03/15/24"` against `"MM/dd/yy"` as `"2024-03-15"`, and
+  `"rolling"` is the hundred years around the current UTC year. A `yy` pattern with no
+  `yearWindow` returns `""`; a pattern with no `yy` never reads the option.
 - `getZonedNow` reads `smallestUnit` only, and writes milliseconds when it is
   omitted or `undefined`. The string always carries the offset and the zone.
-- `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
+- `parseDateWithPattern`, `parseRfc2822` and `parseHttpDate` return `""` on
   shape-valid-but-unreal dates such as 31 February (regex only proves shape;
   Temporal validates the real value). Parsers reject; only arithmetic clamps.
 - `parseRfc2822` reads everything RFC 5322 says a receiver must: comments,
   folding whitespace, any case, two-digit years and zone names such as `EST`
-  (an unknown name reads as `+00:00`). `parseHttp` reads all three HTTP-date
+  (an unknown name reads as `+00:00`). `parseHttpDate` reads all three HTTP-date
   forms, including `rfc850-date` and `asctime-date`. Both return `""` when the
   day name contradicts the date (`"Sat, 15 Mar 2024 …"`), so do not synthesise
   a day name; omit it. The `rfc2822DateTime` and `httpDate` regexes stay strict
   and match only what GMT writes, so do not use them to pre-filter parser input.
-- `formatRfc2822`, `formatHttp` and `formatRfc3339` return `""` for a year their
+- To check an interchange string, call its validator, not its regex.
+  `isValidRfc3339DateTime`, `isValidRfc2822DateTime`, `isValidHttpDate` and
+  `isValidSqlDateTime` are each true exactly when the parser returns a value.
+  A regex proves shape only: `rfc3339DateTime.test("2023-02-29T10:00:00Z")`
+  is `true` and `isValidRfc3339DateTime` returns `false` for it.
+- `formatRfc2822`, `formatHttpDate` and `formatRfc3339` return `""` for a year their
   grammar cannot hold (before 0000, or after 9999 for RFC 3339 and HTTP).
   `formatRfc3339` writes a sub-minute historical offset as the same instant at
   `+00:00`. Use Temporal's `toString()` when you need any year.
@@ -132,5 +159,7 @@ input before you act on it.
 
 ## References
 
-- [README — API Surface and Quick Start](README.md)
+- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [API reference](https://gmt-dox.northguild.workers.dev/reference/)
+- [Core date operations guides index](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/)
 - [Core date operations guides](/guides/core-date-operations/get-current/)

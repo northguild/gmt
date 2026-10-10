@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   firstSentence,
   renderIndexPages,
+  type IndexedIndustry,
   type IndexInput,
 } from "./index-pages";
 
@@ -129,7 +130,8 @@ describe("renderIndexPages", () => {
 
   it("lists the namespaces on the root page as bare links, with a link to Types", () => {
     expect(body(pageAt("/reference").mdx)).toEqual([
-      "## Namespaces",
+      "## For any industry",
+      "These namespaces work in any industry. Each is named for the kind of value it works on.",
       "- [`regex`](/reference/regex)",
       "- [`transport`](/reference/transport)",
       "## Types",
@@ -252,5 +254,148 @@ describe("ensure-sidebar-order.mjs on the generated form", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Industry namespaces
+// ---------------------------------------------------------------------------
+
+const TRANSPORT: IndexedIndustry = {
+  id: "transport",
+  label: "Transport",
+  definition: "Legs and dwell.",
+  icon: "industry-transport",
+  guide: "/guides/industries/transport-legs-and-dwell/",
+  guideTitle: "Transport: Legs and Dwell",
+  about: "Transport is moving goods.",
+  solves: [
+    {
+      problem: "A hold-up is hours, not days.",
+      answer: "{{dwellTime}} counts both.",
+      see: [{ label: "guide", href: "/guides/industries/x/" }],
+    },
+    {
+      problem: "A late arrival needs a stated slack.",
+      answer: "{{isLate}} takes one.",
+      see: [],
+    },
+  ],
+};
+
+/** A third industry no site file knows about: it must need no edit anywhere else. */
+const MARITIME: IndexedIndustry = {
+  id: "maritime",
+  label: "Maritime",
+  definition: "Laytime and tides.",
+  icon: "industry-maritime",
+  guideTitle: "Maritime: Laytime",
+  about: "Maritime is ships.",
+  solves: [
+    {
+      problem: "Laytime is counted.",
+      answer: "{{laytime}} counts it.",
+      see: [],
+    },
+  ],
+};
+
+const WITH_INDUSTRIES: IndexInput = {
+  ...INPUT,
+  pages: [
+    ...INPUT.pages,
+    {
+      namespace: "maritime",
+      module: "calculate",
+      name: "laytime",
+      url: "/reference/maritime/calculate/laytime",
+      description: "Count laytime.",
+    },
+  ],
+  industries: [TRANSPORT, MARITIME],
+};
+
+describe("renderIndexPages with industries", () => {
+  it("splits the root page into the general namespaces and `By industry`, with each industry's icon, label and definition", () => {
+    expect(body(pageAt("/reference", WITH_INDUSTRIES).mdx)).toEqual([
+      'import Icon from "../../../components/Icon.astro";',
+      "## For any industry",
+      "These namespaces work in any industry. Each is named for the kind of value it works on.",
+      "- [`regex`](/reference/regex)",
+      "## By industry",
+      "Each of these adds the operations of one industry, built on the namespaces above.",
+      '- <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> [Transport](/reference/transport): Legs and dwell.',
+      '- <Icon name="industry-maritime" size="1.1em" class="gmt-ref-industry-icon" /> [Maritime](/reference/maritime): Laytime and tides.',
+      "## Types",
+      "- [Types](/reference/types)",
+    ]);
+  });
+
+  it("has no `By industry` section, and no icon import, when no namespace is an industry", () => {
+    const mdx = pageAt("/reference").mdx;
+    expect(mdx).not.toContain("By industry");
+    expect(mdx).not.toContain("import");
+  });
+
+  it("leaves out an industry that has no pages", () => {
+    const only: IndexInput = { ...INPUT, industries: [MARITIME] };
+    expect(pageAt("/reference", only).mdx).not.toContain("Maritime");
+  });
+
+  it("tags the overview, the function-module indexes and nothing else with the industry", () => {
+    const tagged = renderIndexPages(WITH_INDUSTRIES)
+      .filter((p) => /^industries: \[/m.test(p.mdx))
+      .map((p) => [p.route, p.mdx.match(/^industries: \[(\w+)\]$/m)?.[1]]);
+    expect(tagged).toEqual([
+      ["/reference/maritime", "maritime"],
+      ["/reference/maritime/calculate", "maritime"],
+      ["/reference/transport", "transport"],
+      ["/reference/transport/calculate", "transport"],
+      ["/reference/transport/compare", "transport"],
+    ]);
+  });
+
+  it("puts the tag in the block frontmatter before `sidebar`, so ensure-sidebar-order leaves it alone", () => {
+    const { mdx } = pageAt("/reference/transport", WITH_INDUSTRIES);
+    expect(mdx).toContain(
+      'slug: "reference/transport"\nindustries: [transport]\nsidebar:\n  order: 0\n---\n',
+    );
+  });
+
+  it("opens an industry overview with its paragraph, the pain points and the guide, above the module lists", () => {
+    const lines = body(pageAt("/reference/transport", WITH_INDUSTRIES).mdx);
+    expect(lines.slice(0, 6)).toEqual([
+      "Transport is moving goods.",
+      "## What these functions solve",
+      "- **A hold-up is hours, not days.** [`dwellTime`](/reference/transport/calculate/dwellTime) counts both. See [guide](/guides/industries/x/).",
+      "- **A late arrival needs a stated slack.** [`isLate`](/reference/transport/compare/isLate) takes one.",
+      "Start with the guide: [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/).",
+      "## [calculate](/reference/transport/calculate)",
+    ]);
+  });
+
+  it("leaves a general namespace overview as it was", () => {
+    expect(pageAt("/reference/regex", WITH_INDUSTRIES).mdx).toBe(
+      pageAt("/reference/regex").mdx,
+    );
+  });
+
+  it("stops when an overview names a function the namespace does not export", () => {
+    const broken: IndexInput = {
+      ...WITH_INDUSTRIES,
+      industries: [
+        {
+          ...TRANSPORT,
+          solves: [
+            {
+              problem: "Nothing is there.",
+              answer: "{{missing}} is missing.",
+              see: [],
+            },
+          ],
+        },
+      ],
+    };
+    expect(() => renderIndexPages(broken)).toThrow(/names missing/);
   });
 });

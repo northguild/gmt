@@ -5,7 +5,14 @@
  */
 
 /** Top-level pages that lead, in this order; any other follows alphabetically. */
-const START_ORDER = ["index", "why-gmt", "upstream", "core-rules", "install"];
+const START_ORDER = [
+  "index",
+  "why-gmt",
+  "compare",
+  "upstream",
+  "core-rules",
+  "install",
+];
 
 /** A glob key's path relative to `content/docs/`, without its extension. */
 export function docsRelativePath(globKey: string): string {

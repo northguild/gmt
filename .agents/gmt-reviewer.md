@@ -87,7 +87,7 @@ exhaustion, `roundZoned`/`roundUnix` pass-through, validate-then-parse. These ar
 | **UTS #35 (LDML)**                     | The Unicode date-format pattern grammar                                                                                                          | `parse*WithPattern`'s tokens are a Luxon-derived subset (`internal/patternToken.ts`); a new token is justified from UTS #35, never Luxon †  |
 | **IEEE 754**                           | Binary floating point; integers exact only to 2^53                                                                                               | Why `precision/` and `span/` return `bigint` past `MAX_SAFE_INTEGER` †                                                                      |
 | **RFC 5322**                           | Internet Message Format; the email `Date:` header (replaced RFC 2822)                                                                            | `formatRfc2822`, `parseRfc2822`                                                                                                            |
-| **RFC 9110**                           | HTTP Semantics; HTTP-date (replaced RFC 7231)                                                                                                    | `formatHttp`, `parseHttp`                                                                                                                  |
+| **RFC 9110**                           | HTTP Semantics; HTTP-date (replaced RFC 7231)                                                                                                    | `formatHttpDate`, `parseHttpDate`                                                                                                                  |
 | **test262**                            | TC39's official conformance suite for JS and `Intl`                                                                                              | Where edge-case expected values come from — never another library's output. Files live under `test/built-ins/Temporal/` and `test/intl402/Temporal/`; cite the path in a finding |
 
 Source of record: [standards.mdx](../apps/dox/src/content/docs/guides/concepts/standards.mdx).
@@ -130,7 +130,7 @@ and the conventions are the thing most likely to be quietly wrong.
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Core / Precision**    | TC39 Temporal, RFC 9557/3339/ISO 8601, half-open intervals (EWD831, SQL:2011 `PERIOD`, RFC 5545 §3.6.1), ISO week and ordinal dates, NRF 4-5-4, EU Reg 1182/71 Art 3(2)(c), NTP/FILETIME/.NET ticks/Excel serial/Postgres epochs |
 | **Transport** (`TRAN`)  | Transit, dwell and ETA in zone-local time; the DCSA cut-off taxonomy                                                                                                                                                             |
-| **Intermodal** (`INT`)  | Demurrage vs detention, ISF 10+2, AMS 24-Hour Rule, EU ENS/ICS2, UN/EDIFACT DTM qualifiers 102/203/303/304, GS1 EPCIS 2.0, DCSA Track & Trace                                                                                    |
+| **Intermodal** (`INT`)  | Demurrage vs detention, ISF 10+2, AMS 24-Hour Rule, EU ENS/ICS2, UN/EDIFACT DTM format codes (data element 2379), X12 elements 373/337/623 and 1250/1251, GS1 EPCIS 2.0, DCSA Track & Trace                                                                                    |
 | **Maritime** (`MAR`)    | GPS↔UTC and week rollover, AIS `secondOfUTC`, ITU-R M.585 MMSI, ship's time and the date line, charter-party laytime (laycan, NOR, SHEX/SHINC/WWD)                                                                               |
 | **Road** (`ROAD`)       | FMCSA 49 CFR Part 395; EU Regulation (EC) No 561/2006                                                                                                                                                                            |
 | **Rail** (`RAI`)        | GTFS service days and times beyond 24:00:00, `calendar_dates.txt`, the December timetable year, UIC 406                                                                                                                          |
@@ -300,7 +300,9 @@ on several cases; and memory.
     story actually consumed (the tracker's `Blocked by` column is generated from it), and the
     changeset carries the bump the [changeset rule](../context/coding-standards.md#changesets)
     requires.
-11. **Report.**
+11. **Check the READMEs are up to date.** Every review runs the six checks in
+    [§ Reviewing the READMEs](#reviewing-the-readmes), whatever the story changed.
+12. **Report.**
 
 ## Reviewing a realm you have not seen before
 
@@ -341,6 +343,33 @@ the rulebook; a new or changed workaround passes only when all of this holds:
 
 Run `pnpm compat` and read its output before concluding a workaround is unnecessary; run
 `pnpm compat:oracle` before concluding one is correct.
+
+## Reviewing the READMEs
+
+`README.md` is the GitHub landing page and `packages/gmt/README.md` is the npm landing page.
+They are one page, kept as two identical files: four fact lines, one comparison table, the
+install command, a sample, the namespace links and the agent prompt. npm and GitHub serve the
+committed bytes, so a wrong line stays wrong for every reader until someone fixes the file.
+Check all six on every review.
+
+| Check                           | It passes when                                                                                                                                                                          | How you check it                                                                                                                                                                                                                                                                      |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Figures**                     | Every figure in both READMEs matches the generated stats, and the comparison table has one row per library in `apps/dox/src/data/library-measurements.json`                             | `node scripts/stats.mjs check` passes. Then read the four fact lines and the comparison table, number by number, against `apps/dox/src/data/gmt-stats.json` and `library-measurements.json`. Count the rows: GMT's first, then one for each library in the JSON, by tests, most first |
+| **Sample**                      | Every result in the sample block is what the function returns                                                                                                                           | `node scripts/api-surface.mjs check` passes; it needs the built library. Then run one sampled call yourself against `packages/gmt/dist` and compare the result with the line                                                                                                          |
+| **Namespace links**             | There is one `/reference/<namespace>/` link for every namespace that exports functions and for no other, the industry namespaces sit on the "By industry:" line, and each link resolves | `stats check` guards the set and the line each link is on. Confirm each link names a page the docs site serves                                                                                                                                                                        |
+| **Agent prompt**                | The fenced block in both READMEs and in `CONTRIBUTING.md` equals `AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts`                                                                   | Read each block against the constant. The Dox test `apps/dox/src/lib/agent-prompt.test.ts` guards the same thing                                                                                                                                                                      |
+| **The two files are identical** | `README.md` and `packages/gmt/README.md` are the same, byte for byte                                                                                                                    | `cmp README.md packages/gmt/README.md` prints nothing. `stats check` fails when they differ                                                                                                                                                                                           |
+| **No per-function section**     | Neither README holds a section for one function or one feature                                                                                                                          | Read the headings. That content belongs in a docs guide under `apps/dox/src/content/docs/guides/` and in the generated reference                                                                                                                                                      |
+
+A stale figure, a wrong sample result or a missing namespace is a finding, not a note. So is a
+missing or extra table row, a prompt that differs, two files that differ, or a per-function
+section. `tdd-dev` does not edit READMEs, so a README finding goes to
+[`finalizer`](./finalizer.md) through `driver`.
+
+**Report the age of the other libraries' snapshot.** Their figures are a dated snapshot. Each
+has a `measuredOn` date in `library-measurements.json`, and nothing measures them again
+automatically. Give each date and how long ago it was. Age alone is not a finding. The owner
+decides when to re-measure.
 
 ## Output
 

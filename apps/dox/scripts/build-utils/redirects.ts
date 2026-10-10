@@ -1,18 +1,20 @@
 /**
- * The `_redirects` file: a 301 from the old URL of every public type to where it is
- * documented now.
+ * The `_redirects` file: a 301 from the old URL of every public type, and of every renamed
+ * function, to where it is documented now.
  *
  * A type's page used to sit beside its source file, at `/reference/<ns>/<mod>/<Name>`. A
  * shared type is now at `/reference/types/<Name>`, and a single-use type is a heading on its
  * function's page. The old URL is a pure function of the source path, so the map is derived
- * on every generation and no list of old URLs is kept.
+ * on every generation and no list of old URLs is kept. A renamed function cannot be derived,
+ * so `renamed-functions.ts` keeps a short hand-written list of them.
  *
- * Pure: types and the usage graph in, the file's text out. The format is Cloudflare's
+ * Pure: types, renames and the usage graph in, the file's text out. The format is Cloudflare's
  * `_redirects` for Workers static assets: one `source destination status` rule per line. A
  * source with and without its trailing slash are separate rules, so both are written, and so
  * is the page's `.md` twin. Static rules are matched exactly, case included.
  */
 
+import type { RenamedFunction } from "./renamed-functions";
 import { functionUrl, legacyTypeUrl, typePageUrl } from "./reference-urls";
 import type { TypeUsage } from "./type-usage";
 
@@ -35,11 +37,13 @@ const STATUS = 301;
  * Throws, rather than write a file Cloudflare would reject or a rule that would misdirect:
  * a rule whose source is its own target, two rules with one source, a source that is a page
  * of the site (the redirect would hide the page), a rule over 1,000 characters, or more than
- * 2,000 rules.
+ * 2,000 rules. A rename also throws when its target is not a live function page, so a typo
+ * or a second rename fails here instead of redirecting to a 404.
  */
 export function buildRedirects(
   types: readonly RedirectedType[],
   usage: TypeUsage,
+  renames: readonly RenamedFunction[] = [],
 ): string {
   const rules: Array<{ source: string; target: string }> = [];
   for (const type of types) {
@@ -67,6 +71,22 @@ export function buildRedirects(
       { source: `${old}.md`, target: markdown },
     );
   }
+  const problems: string[] = [];
+  for (const { from, to } of renames) {
+    const old = functionUrl(from);
+    const url = functionUrl(to);
+    if (!usage.reach.has(to)) {
+      problems.push(
+        `${old} is renamed to ${url}, which is not a function page`,
+      );
+    }
+    // The same three rules a type gets: bare, trailing slash and the `.md` twin.
+    rules.push(
+      { source: old, target: `${url}/` },
+      { source: `${old}/`, target: `${url}/` },
+      { source: `${old}.md`, target: `${url}.md` },
+    );
+  }
   rules.sort((a, b) => a.source.localeCompare(b.source));
 
   // The pages the graph knows: each function's, each shared type's, and their `.md` twins.
@@ -76,7 +96,6 @@ export function buildRedirects(
     if (node.placement.kind === "page") live.add(typePageUrl(node.name));
   }
 
-  const problems: string[] = [];
   const seen = new Set<string>();
   for (const { source, target } of rules) {
     const line = `${source} ${target} ${STATUS}`;
@@ -103,7 +122,7 @@ export function buildRedirects(
   return [
     "# GENERATED FILE — do not edit by hand.",
     "# Produced by apps/dox/scripts/build-reference.ts (`pnpm dox:generate`).",
-    "# The old URL of every public type, redirected to where it is documented now.",
+    "# The old URL of every public type and renamed function, redirected to where it is documented now.",
     ...rules.map((r) => `${r.source} ${r.target} ${STATUS}`),
     "",
   ].join("\n");

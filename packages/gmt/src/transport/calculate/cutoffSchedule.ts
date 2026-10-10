@@ -28,7 +28,10 @@ export interface CutoffTime {
 
 /** Options for `cutoffSchedule`: `cutoffAt`'s, with `atLocalTime` read from each entry instead. */
 export interface CutoffScheduleOptions {
-  /** The time zone every cut-off is read in: an IANA name or a UTC offset. */
+  /**
+   * The time zone every cut-off is read in: an IANA name or a UTC offset to the minute (what
+   * `isValidTimeZone` accepts).
+   */
   timeZone: string;
   /**
    * The working week and holidays every cut-off's local date is rolled against. Requires `roll`.
@@ -62,6 +65,8 @@ export interface CutoffScheduleOptions {
  * - Every entry must succeed: one invalid entry, or one cut-off in a skipped local hour,
  *   returns `[]` rather than a stack with a deadline silently missing. An empty `cutoffs` array
  *   returns `[]`.
+ * - An offset with seconds (`-00:44:30`) returns `[]`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name.
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadlines count back from
  * @param cutoffs the named deadlines, each with an offset and an optional local time of day

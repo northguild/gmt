@@ -1,8 +1,8 @@
-import { isValidTimeZone } from "../validate";
 import {
   zonedDateTimeFrom,
   zonedNextTransition,
   zonedStartOfDay,
+  zoneFrame,
 } from "../../internal";
 
 const MAX_TRANSITIONS_PER_YEAR = 20;
@@ -47,10 +47,11 @@ export interface DstTransition {
  * - Returns `[]` for an invalid timeZone, a non-integer year, or a valid zone
  *   with zero transitions in that year (not an error case), and when the scan
  *   exhausts its internal bound — never a partial list.
- * - A UTC offset such as `"+05:30"` is a valid zone whose offset never changes,
- *   so it has no transitions and returns `[]` for every year.
+ * - A UTC offset, with or without seconds (`"+05:30"`, `"-00:44:30"`), never changes, so it has no
+ *   transitions and returns `[]` for every year.
  *
- * @param timeZone IANA name or UTC offset
+ * @param timeZone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a
+ *   stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @param year calendar year to scan (must be an integer)
  * @returns array of `{ instant, offsetBefore, offsetAfter }`, in chronological order
  *
@@ -64,12 +65,20 @@ export interface DstTransition {
  * @example getDstTransitions("Asia/Tokyo", 2024) // []
  * @example getDstTransitions("+05:30", 2024) // [] (a fixed offset has no transitions)
  * @example getDstTransitions("Invalid/Zone", 2024) // []
+ * @example getDstTransitions("-00:44:30", 1970) // [] (a fixed offset)
  */
 export function getDstTransitions(
   timeZone: string,
   year: number,
 ): DstTransition[] {
-  if (!isValidTimeZone(timeZone) || !Number.isInteger(year)) {
+  const frame = zoneFrame(timeZone);
+
+  // A stored offset with seconds is a fixed offset: it has no transitions, as "-00:45" has none.
+  if (
+    frame === null ||
+    frame.shiftNanoseconds !== 0n ||
+    !Number.isInteger(year)
+  ) {
     return [];
   }
 
@@ -77,7 +86,7 @@ export function getDstTransitions(
     // getTimeZoneTransition("next") is strictly after its receiver, so start 1ns before the
     // year opens to catch a transition landing exactly on local January 1 00:00.
     let cur = zonedStartOfDay(
-      zonedDateTimeFrom({ year, month: 1, day: 1, timeZone }),
+      zonedDateTimeFrom({ year, month: 1, day: 1, timeZone: frame.timeZone }),
     ).subtract({ nanoseconds: 1 });
 
     // A calendar year is at most 366 days and an offset is under a day, so no search needs to

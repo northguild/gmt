@@ -51,7 +51,13 @@ intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
 //   { start: "2024-01-03", end: "2024-01-07" },
 //   { start: "2024-01-07", end: "2024-01-10" }
 // ]
+
+intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-01", "2024-01-10", "2023-12-01"]);
+// [{ start: "2024-01-01", end: "2024-01-10" }] — every point dropped, so the interval stays whole
 ```
+
+Each piece's `end` is the next piece's `start`, so the pieces partition the interval. An empty
+`points` array, or one whose points are all dropped, returns `[{ start, end }]` unsplit.
 
 `splitIntervalByUnit*` cuts pieces of `amount × unit`, and the final piece is trimmed to
 the original `end`:
@@ -82,7 +88,53 @@ splitIntervalByUnitDate("2024-01-31", "2024-05-01", "month", 1);
 // ]
 ```
 
-A yearly split from February 29 returns to February 29 in leap years.
+A yearly split from February 29 returns to February 29 in leap years. An exact unit (hour and
+smaller) steps from the previous boundary instead, because adding an exact unit never clamps,
+so the two ways give the same boundaries.
+
+The other variants take the same arguments. The `Unix` variant takes epoch numbers:
+
+```typescript
+import { splitIntervalByUnitUnix, splitIntervalByUnitUtc } from "@northguild/gmt";
+
+splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 6);
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" }, { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, { start: "2024-01-01T18:00:00Z", end: "2024-01-02T00:00:00Z" }]
+
+splitIntervalByUnitUnix(0, 86400000, "hour", 6);
+// [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
+```
+
+`splitIntervalByUnit*` returns `[]` on invalid input: a wrong type, a malformed string, a leap
+second, an inverted interval, a non-positive `amount`, an unsupported unit, or a unit that
+has no effect on the target type. A zero-length interval returns itself as the one piece
+(`[{ start, end }]`) for a supported unit, and `[]` for an unsupported one:
+
+```typescript
+import { splitIntervalByUnitDate } from "@northguild/gmt";
+
+splitIntervalByUnitDate("2024-01-01", "2024-01-01", "day", 1);
+// [{ start: "2024-01-01", end: "2024-01-01" }]
+
+splitIntervalByUnitDate("2024-01-01", "2024-01-01", "hour", 1); // [] — a date has no hour
+```
+
+### Limit the number of pieces
+
+`splitIntervalByUnit*`, `intervalDivideEqually*`, `mapDatesInRange` and `mapZonedDatesInRange`
+build one array element per piece. Each takes an optional `{ maxPieces }` (a positive safe
+integer, default `1_000_000`) and returns `[]` when the result would be longer. A split stops
+as soon as the piece past the limit is due, so a huge range answers in bounded time instead of
+exhausting the heap. Pass a larger `maxPieces` when a long range legitimately needs it:
+
+```typescript
+import { mapDatesInRange, splitIntervalByUnitDate } from "@northguild/gmt";
+
+splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2, { maxPieces: 4 });
+// [] — 5 slices exceed the limit
+
+mapDatesInRange("0001-01-01", "9999-12-31", 1);
+// [] — 3,652,059 dates exceed the default
+```
 
 `intervalDivideEqually*` cuts the interval into `n` equal parts:
 
@@ -101,8 +153,27 @@ intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
 `n` must be a positive integer. Each internal boundary is `start + round((end − start) · i / n)`,
 an exact half rounding up, so the split is exact when the span divides evenly by `n` and within
 half a unit of the exact cut otherwise. The unit is a whole day for `PlainDate`, a nanosecond for
-the other string variants, and the arguments' own epoch unit for `intervalDivideEquallyUnix`. All
-split functions return `[]` on invalid input.
+the other string variants, and the arguments' own epoch unit for `intervalDivideEquallyUnix`. The
+pieces tile the range with no gap or overshoot. All split functions return `[]` on invalid input.
+
+A few edge cases:
+
+```typescript
+import { intervalDivideEquallyDate } from "@northguild/gmt";
+
+intervalDivideEquallyDate("2024-01-01", "2024-01-05", 1);
+// [{ start: "2024-01-01", end: "2024-01-05" }] — n of 1 returns the original interval
+
+intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4, { maxPieces: 3 });
+// [] — n above maxPieces
+
+intervalDivideEquallyDate("2024-01-01", "2024-01-01", 3);
+// [{ start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }]
+```
+
+A zero-length interval returns `n` identical zero-length pieces. `intervalDivideEquallyZoned`
+divides a DST-crossing interval by real elapsed time, not local clock time: the New York day
+that skips an hour, divided by 23, gives 23 one-hour pieces.
 
 ## Count unit boundaries crossed
 
@@ -122,8 +193,41 @@ intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
 
 A zero-length interval counts `0` in every unit: the empty `[start, start)` holds no instant, so
 it touches no unit. `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `0`, the same
-answer `intervalOverlappingDays*` gives for an empty intersection. All count functions return
-`null` on invalid input.
+answer `intervalOverlappingDays*` gives for an empty intersection.
+
+Weeks start on Monday (ISO 8601), and singular and plural units are interchangeable (`"day"`
+and `"days"`). `intervalCountUnix` counts calendar boundaries in `options.timeZone`, UTC by
+default (`"local"` for the system zone), like `addUnix`. Here are the remaining variants:
+
+```typescript
+import {
+  intervalCountTime,
+  intervalCountUnix,
+  intervalCountUtc,
+  intervalCountZoned,
+} from "@northguild/gmt";
+
+intervalCountTime("12:30:00", "13:00:00", "hour"); // 1
+intervalCountUnix(0, 86400000, "hour"); // 24
+intervalCountUtc("2024-01-01T23:59:00Z", "2024-01-02T00:01:00Z", "day"); // 2
+intervalCountZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour"); // 23 — the spring-forward local day is 23 hours long
+```
+
+`intervalCountZoned`, `intervalCountUnix` and `intervalCountUtc` count the same local buckets
+that [`bucketRange`](/reference/calendar/calculate/bucketRange) returns. A bucket shorter than
+its unit still counts once, and a day the zone deleted counts not at all:
+
+```typescript
+intervalCountZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "2024-09-29T04:10:00+13:45[Pacific/Chatham]", "hour");
+// 2 — a 20-minute range straddling 04:00 on Chatham's spring-forward day; its 03:00 hour lasts only 15 minutes
+
+intervalCountZoned("2011-12-29T00:00:00-10:00[Pacific/Apia]", "2011-12-31T12:00:00+14:00[Pacific/Apia]", "day");
+// 2 — Apia skipped 30 December 2011
+```
+
+All count functions return `null` on invalid input: a wrong type, a malformed string, a leap
+second, an inverted interval, an unsupported unit, or a unit that has no effect on the target
+type.
 
 ## Exact interval length
 
@@ -141,7 +245,26 @@ intervalLengthDate("2024-01-01", "2024-01-16", "month");
 ```
 
 Calendar units resolve against the interval's own `start`, and the zoned, unix and utc
-variants are DST-aware. For the covered time of a whole list of instant intervals, as an
+variants are DST-aware, the same way `intervalCount*` is. The rest of the family:
+
+```typescript
+import {
+  intervalLengthTime,
+  intervalLengthUnix,
+  intervalLengthUtc,
+  intervalLengthZoned,
+} from "@northguild/gmt";
+
+intervalLengthTime("09:00:00", "17:30:00", "hour"); // 8.5
+intervalLengthUtc("2024-01-01T00:00:00Z", "2024-01-02T12:00:00Z", "day"); // 1.5
+intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour"); // 23 — the spring-forward local day is 23 real hours
+intervalLengthUnix(0, 86400, "day", { epochUnit: "seconds" }); // 1
+```
+
+A zero-length interval has length `0`, and invalid input (a wrong type, a malformed string, a
+leap second, an inverted interval or an unsupported unit) returns `null`. `intervalLengthUnix`
+and `splitIntervalByUnitUnix` take `{ epochUnit, timeZone }` like `intervalCountUnix`: epoch
+milliseconds and UTC by default. For the covered time of a whole list of instant intervals, as an
 ISO duration, use [`sumIntervals`](/reference/interval/calculate/sumIntervals).
 
 ## Count shared days between two intervals
@@ -157,10 +280,82 @@ intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-0
 
 intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
 // 0 — touching intervals share no date (a well-defined answer, not invalid input)
+
+intervalOverlappingDaysDate("2024-01-01", "2024-01-02", "2024-01-01", "2024-01-02");
+// 1 — one day, 1 January
 ```
 
-It returns `null` on invalid input. There is no `Time` variant, because `PlainTime` has no
-calendar and a day count is undefined for it.
+It returns `0` when the intervals do not overlap, which is an answer and not invalid input,
+and `null` on invalid input, including an inverted interval. There is no `Time` variant,
+because `PlainTime` has no calendar and a day count is undefined for it. The other variants:
+
+```typescript
+import {
+  intervalOverlappingDaysDateTime,
+  intervalOverlappingDaysUnix,
+  intervalOverlappingDaysUtc,
+  intervalOverlappingDaysZoned,
+} from "@northguild/gmt";
+
+intervalOverlappingDaysDateTime("2024-01-01T12:00:00", "2024-01-03T00:00:00", "2024-01-02T00:00:00", "2024-01-05T00:00:00");
+// 1 — the overlap is all of 2 January
+
+intervalOverlappingDaysUtc("2024-01-17T12:00:00Z", "2024-01-19T00:00:00Z", "2024-01-10T00:00:00Z", "2024-01-18T06:00:00Z");
+// 2 — 18 hours of overlap touch 17 and 18 January
+
+intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000);
+// 1 — the intersection [86400000, 172800000) is 1970-01-02 in UTC
+
+intervalOverlappingDaysZoned("2011-12-29T00:00:00-10:00[Pacific/Apia]", "2011-12-31T12:00:00+14:00[Pacific/Apia]", "2011-12-29T00:00:00-10:00[Pacific/Apia]", "2011-12-31T12:00:00+14:00[Pacific/Apia]");
+// 2 — Apia skipped 30 December 2011, so that date is not counted
+```
+
+### Which time zone counts the days
+
+`intervalOverlappingDaysZoned` and `intervalOverlappingDaysUnix` count days in `aStart`'s time
+zone. `intervalOverlappingDaysUnix` defaults to UTC; pass `{ timeZone }`, or `"local"` for the
+system zone. This is the rule `intervalCountZoned` and `intervalCountUnix` use. Both count the
+distinct local dates the overlap touches, so a date the zone skipped is not counted, and a
+fall-back that sends the clock back into the previous date counts that date too.
+
+It follows that `intervalOverlappingDaysZoned` is **not commutative** when the two intervals
+carry different zones. Swapping the arguments can change the answer:
+
+```typescript
+intervalOverlappingDaysZoned(
+  "2024-01-01T20:00:00-05:00[America/New_York]",
+  "2024-01-02T06:00:00-05:00[America/New_York]",
+  "2024-01-02T01:00:00Z[UTC]",
+  "2024-01-02T10:00:00Z[UTC]",
+);
+// 2 — counted in New York, the overlap touches 1 and 2 January
+
+intervalOverlappingDaysZoned(
+  "2024-01-02T01:00:00Z[UTC]",
+  "2024-01-02T10:00:00Z[UTC]",
+  "2024-01-01T20:00:00-05:00[America/New_York]",
+  "2024-01-02T06:00:00-05:00[America/New_York]",
+);
+// 1 — the same two intervals, counted in UTC, touch only 2 January
+```
+
+### Calendar dates, not elapsed days
+
+The function counts calendar dates, not elapsed days: the 18-hour overlap above touches two
+dates. For the elapsed length of the overlap, compose `intervalIntersection*` with
+`intervalLength*`:
+
+```typescript
+import { intervalIntersectionUtc, intervalLengthUtc } from "@northguild/gmt";
+
+const span = intervalIntersectionUtc(
+  "2024-01-17T12:00:00Z",
+  "2024-01-19T00:00:00Z",
+  "2024-01-10T00:00:00Z",
+  "2024-01-18T06:00:00Z",
+);
+span ? intervalLengthUtc(span.start, span.end, "day") : 0; // 0.75
+```
 
 ## See also
 

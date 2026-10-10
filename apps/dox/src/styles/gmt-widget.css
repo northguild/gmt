@@ -222,7 +222,10 @@
    chart or ledger that a third of the width would crush, and the
    "What <fn> returns" code frame, whose call signatures wrap to mush in a
    20rem column. */
-.gmt-widget-section--wide {
+/* Written as a child of the card with both classes, so it ties the card's
+   `:first-child` and `:nth-child(2)` span rules from 80rem and wins on order;
+   a bare class loses to them. */
+.gmt-widget-card > .gmt-widget-section.gmt-widget-section--wide {
   grid-column: 1 / -1;
 }
 

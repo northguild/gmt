@@ -1,15 +1,25 @@
 ---
 title: Intermodal
-description: Common mistakes with free time, demurrage and detention, billing deadlines, bill of lading dates and multimodal ETAs in GMT's intermodal layer.
+description: Common mistakes with free time, demurrage and detention, billing deadlines, bill of lading dates, multimodal ETAs and EDI timestamps in GMT's intermodal layer.
 industries: [intermodal]
 ---
 
-The intermodal layer is six functions, `freeTimeExpiry`, `chargeableDays`, `demurrageClock`,
-`billingTimeline`, `bolTimestamp` and `multimodalETA`, and the mistakes around them are the ones
-that turn into disputed invoices and documents: a defaulted start day, a free-time table keyed by
-port, a clock counted from the wrong event, a day count taken from elapsed hours, a deadline
-window hard-coded or counted from the wrong date, a B/L dated in UTC, and an ETA that forgets
-the schedule. Every output shown here is what the function returns.
+The intermodal layer's functions fall into four groups. Free time and demurrage:
+`freeTimeExpiry`, `chargeableDays` and `demurrageClock`. Billing deadlines: `billingTimeline`.
+B/L dates and multimodal ETA: `bolTimestamp` and `multimodalETA`. EDI timestamps: a parser,
+a formatter and a validator for each kind of UN/EDIFACT and X12 value (`parseEdifactDateTime`,
+`parseEdifactOffsetDateTime`, `parseX12DateAndTime`, `parseX12DateRange` and the rest), the
+classifiers `classifyEdifactDtmFormat`, `classifyX12DateTimePeriodFormat` and
+`classifyX12TimeCode`, `x12TimeCodeOffset` and `x12TimeCodeZone`, and `parseEpcisEvent`,
+`formatEpcisEvent` and `isValidEpcisEvent`.
+
+The mistakes around them are the ones that turn into disputed invoices and documents: a defaulted
+start day, a free-time table keyed by port, a clock counted from the wrong event, a day count
+taken from elapsed hours, a deadline window hard-coded or counted from the wrong date, a B/L
+dated in UTC, an ETA that forgets the schedule, an offsetless code read as UTC, a named time code
+treated as an offset, an X12 date and time joined by hand, and a two-digit year given a century by
+a pivot fixed in code. Every output shown
+here is what the function returns.
 
 ## Free time and demurrage
 
@@ -347,4 +357,188 @@ multimodalETA([
 ]);
 // { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }`}
   rightSpecId="multimodalETA"
+/>
+
+## EDI timestamps
+
+<Mistake
+  severity="high"
+  title="Reading an offsetless code as UTC"
+  description="UN/EDIFACT code 203 is CCYYMMDDHHMM with no offset: a local time at a place the value does not name. Appending Z invents the place. parseEdifactDateTime returns a local date-time and no instant, and resolveLocal turns it into an instant once you name the zone."
+  wrongCode={`const value = "202406151430"; // DTM+137:202406151430:203'
+const iso = value.slice(0, 4) + "-" + value.slice(4, 6) + "-" + value.slice(6, 8) + "T" + value.slice(8, 10) + ":" + value.slice(10, 12) + ":00Z";
+new Date(iso).toISOString();
+// "2024-06-15T14:30:00.000Z" — an instant the message never stated`}
+  rightCode={`import { parseEdifactDateTime } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+parseEdifactDateTime("202406151430", "203");
+// "2024-06-15T14:30:00"
+resolveLocal("2024-06-15T14:30:00", "Asia/Shanghai");
+// "2024-06-15T06:30:00Z"`}
+  rightSpecId="parseEdifactDateTime"
+/>
+
+<Mistake
+  severity="high"
+  title="Treating a named time code as an offset"
+  description="X12 data element 623 names a zone for codes such as ET, ES and ED and states no offset for them. The offset depends on the date and on which IANA zone the sender means, so a lookup table is an hour out for half the year. x12TimeCodeZone returns the name and the daylight flag, and resolveLocal reads the local time in the zone you pick."
+  wrongCode={`const OFFSETS = { ET: "-05:00", CT: "-06:00", MT: "-07:00", PT: "-08:00" };
+new Date("2024-06-15T14:30:00" + OFFSETS.ET).toISOString();
+// "2024-06-15T19:30:00.000Z" — an hour late: in June the Eastern zone is on daylight time`}
+  rightCode={`import { x12TimeCodeZone } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+x12TimeCodeZone("ES");
+// { zone: "Eastern", daylight: false }
+x12TimeCodeZone("ED");
+// { zone: "Eastern", daylight: true }
+x12TimeCodeZone("ET");
+// { zone: "Eastern", daylight: null }
+resolveLocal("2024-06-15T14:30:00", "America/New_York");
+// "2024-06-15T18:30:00Z"`}
+  rightSpecId="x12TimeCodeZone"
+/>
+
+<Mistake
+  severity="high"
+  title="Joining an X12 date and time by hand"
+  description="An X12 status carries a date (373), a time (337) and a time code (623) as three elements. A hand-built string assumes a four-digit time and reads the time code as an offset. The time has four forms, a blank time code means local to the event, and ET names a zone and states no offset. parseX12DateAndTime reads the date and the time, and the time code is read on its own by x12TimeCodeOffset or x12TimeCodeZone."
+  wrongCode={`const date = "20240615"; // AT7-05
+const time = "14300012"; // AT7-06, HHMMSSDD
+// AT7-07 is ET, read as an offset of -05:00
+const iso = date.slice(0, 4) + "-" + date.slice(4, 6) + "-" + date.slice(6, 8) + "T" + time.slice(0, 2) + ":" + time.slice(2) + "-05:00";
+new Date(iso).toISOString();
+// RangeError: Invalid time value`}
+  rightCode={`import { parseX12DateAndTime, x12TimeCodeOffset } from "@northguild/gmt/intermodal/parse";
+
+parseX12DateAndTime("20240615", "14300012");
+// "2024-06-15T14:30:00.12"
+parseX12DateAndTime("20240615", "1430");
+// "2024-06-15T14:30:00"
+x12TimeCodeOffset("UT");
+// "+00:00"
+x12TimeCodeOffset("ET");
+// "" — a named zone states no offset`}
+  rightSpecId="parseX12DateAndTime"
+/>
+
+<Mistake
+  severity="high"
+  title="Reading time codes 13 to 24 in ascending order"
+  description="X12 time codes 13 to 24 run downward: 13 is UTC-12 and 24 is UTC-1. Counting up from 13 turns a code for twelve hours behind UTC into one hour behind."
+  wrongCode={`const code = 13;
+const hours = code <= 12 ? code : -(code - 12);
+// -1 — code 13 is UTC-12`}
+  rightCode={`import { x12TimeCodeOffset } from "@northguild/gmt/intermodal/parse";
+
+x12TimeCodeOffset("13");
+// "-12:00"
+x12TimeCodeOffset("24");
+// "-01:00"`}
+  rightSpecId="x12TimeCodeOffset"
+/>
+
+<Mistake
+  severity="high"
+  title="A two-digit year given a century by a pivot fixed in code"
+  description="Neither UN/EDIFACT nor X12 says which century a two-digit year belongs to. A pivot fixed in code is right today and wrong later, so no EDI function reads a two-digit year, and its classifier returns null. The pattern parsers read the digits with a window you state. A two-digit year is a legacy form; ask a partner for a four-digit code."
+  wrongCode={`// A pivot fixed in code: 00-49 are 20xx, 50-99 are 19xx
+const century = (yy) => (yy < 50 ? 2000 + yy : 1900 + yy);
+century(99); // 1999
+century(49); // 2049 — the pivot chose the century, not the data`}
+  rightCode={`import { classifyEdifactDtmFormat } from "@northguild/gmt/intermodal/parse";
+import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+classifyEdifactDtmFormat("101");
+// null — no EDI function reads a two-digit year
+parseDateWithPattern("240615", "yyMMdd");
+// "" — no window, no century
+parseDateWithPattern("240615", "yyMMdd", undefined, { yearWindow: 2000 });
+// "2024-06-15"
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 1950 });
+// "1999-06-15"`}
+  rightSpecId="parseDateWithPattern"
+/>
+
+<Mistake
+  severity="medium"
+  title="Passing the value with its release character"
+  description="+ is the UN/EDIFACT data element separator, so an interchange transmits +02 as ?+02. The functions take the value after the interchange has been unescaped, and the escaped form returns the sentinel."
+  wrongCode={`parseEdifactOffsetDateTime("202406151430?+02", "303");
+// "" — the release character is still in the value`}
+  rightCode={`import { parseEdifactOffsetDateTime } from "@northguild/gmt/intermodal/parse";
+
+parseEdifactOffsetDateTime("202406151430+02", "303");
+// "2024-06-15T14:30:00+02:00"`}
+  rightSpecId="parseEdifactOffsetDateTime"
+/>
+
+<Mistake
+  severity="medium"
+  title="Deciding what a zone abbreviation means"
+  description="No UN/EDIFACT text defines the abbreviations a ZZZ field may hold, and code 303 holds a signed hour, UTC or GMT, so parseEdifactOffsetDateTime returns the sentinel for CET. A table that maps it to a fixed offset is wrong for part of the year. Resolve the local time in the IANA zone you know the sender is in."
+  wrongCode={`const ZONES = { CET: "+01:00" };
+new Date("2024-06-15T14:30:00" + ZONES.CET).toISOString();
+// "2024-06-15T13:30:00.000Z" — an hour late if the sender is in Berlin, which is on +02:00 in June`}
+  rightCode={`import { parseEdifactOffsetDateTime } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+parseEdifactOffsetDateTime("202406151430CET", "303");
+// "" — an abbreviation is not an offset
+resolveLocal("2024-06-15T14:30:00", "Europe/Berlin");
+// "2024-06-15T12:30:00Z"`}
+  rightSpecId="parseEdifactOffsetDateTime"
+/>
+
+<Mistake
+  severity="medium"
+  title="Splitting a period on a hyphen"
+  description="UN/EDIFACT transmits a period as consecutive characters with no hyphen, and X12 transmits a range with its hyphen. A split on - finds nothing in the first and works only for the second. Pass the value and its code to the parser for the standard: parseEdifactDatePeriod refuses a hyphen, and parseX12DateRange refuses a range without one."
+  wrongCode={`"2024061520240620".split("-");
+// ["2024061520240620"] — no hyphen, so no period was found`}
+  rightCode={`import { parseEdifactDatePeriod, parseX12DateRange } from "@northguild/gmt/intermodal/parse";
+
+parseEdifactDatePeriod("2024061520240620", "718");
+// { start: "2024-06-15", end: "2024-06-20" }
+parseEdifactDatePeriod("20240615-20240620", "718");
+// null
+parseX12DateRange("20240615-20240620", "RD8");
+// { start: "2024-06-15", end: "2024-06-20" }
+parseX12DateRange("2024061520240620", "RD8");
+// null`}
+  rightSpecId="parseEdifactDatePeriod"
+/>
+
+<Mistake
+  severity="high"
+  title="Dropping eventTimeZoneOffset"
+  description="EPCIS requires both eventTime and eventTimeZoneOffset because neither derives from the other. Store the instant alone and the local date and time at the site cannot be shown again. parseEpcisEvent keeps both and returns the sentinel when the offset is missing."
+  wrongCode={`const event = { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" };
+new Date(event.eventTime).toISOString().slice(0, 10);
+// "2024-06-15" — on the dock it was already 16 June`}
+  rightCode={`import { parseEpcisEvent, isValidEpcisEvent } from "@northguild/gmt/intermodal";
+
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" });
+// { instant: "2024-06-15T23:30:00Z", offset: "+02:00", local: "2024-06-16T01:30:00" }
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" });
+// null
+isValidEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" });
+// false`}
+  rightSpecId="parseEpcisEvent"
+/>
+
+<Mistake
+  severity="medium"
+  title="Writing Z or +0200 as the EPCIS offset"
+  description="GS1's eventTimeZoneOffset grammar is ±HH:MM from -14:00 to +14:00. Z is a designator, not an offset, and +0200 has no colon, so both fail the pattern. formatEpcisEvent writes the offset in the form the schema accepts."
+  wrongCode={`parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "Z" });
+// null
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+0200" });
+// null`}
+  rightCode={`import { formatEpcisEvent } from "@northguild/gmt/intermodal";
+
+formatEpcisEvent({ local: "2024-06-15T23:30:00", offset: "+02:00", instant: "2024-06-15T23:30:00Z" });
+// { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }`}
+  rightSpecId="parseEpcisEvent"
 />

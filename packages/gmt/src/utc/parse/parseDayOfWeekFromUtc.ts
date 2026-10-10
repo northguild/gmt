@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { isValidUtc } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -22,8 +22,10 @@ export function parseDayOfWeekFromUtc(
   value: string,
   options?: {
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -37,12 +39,11 @@ export function parseDayOfWeekFromUtc(
 
     if (!isValidUtc(value)) return null;
 
-    const timeZone = normalizeTimeZone(options?.timeZone);
-    if (timeZone === "") return null;
+    const frame = normalizeZoneFrame(options?.timeZone);
+    if (frame === null) return null;
 
     try {
-      const dateTime =
-        Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+      const dateTime = frameWallClock(Temporal.Instant.from(value), frame);
       return dateTime.dayOfWeek;
     } catch {
       return null;

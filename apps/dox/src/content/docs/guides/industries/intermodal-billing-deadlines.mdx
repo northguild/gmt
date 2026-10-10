@@ -102,7 +102,30 @@ billingTimeline({ anchorOn: "2026-03-01", requestReceivedOn: "2026-04-19" }, { i
 ```
 
 An invoice dated before the anchor is allowed — an invoice may be issued while charges still
-accrue. `agreedResolutionOn` must be on or after the request. Every emitted date is bare ISO.
+accrue. `agreedResolutionOn` must be a valid date on or after the request, else the result is
+`null`. It is validated even when no request exists, but it cannot act without one:
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30, agreedResolutionOn: "2026-06-01" });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: true, disputeDeadline: "2026-04-19",
+//   requestedByDeadline: null, resolutionDeadline: null } — no request, so no resolution deadline
+
+billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30, agreedResolutionOn: "nope" });
+// null — validated even though no request exists
+```
+
+Every emitted date is bare ISO, so an input annotation such as `[u-ca=iso8601]` does not reach
+the output:
+
+```typescript
+import { billingTimeline } from "@northguild/gmt/intermodal";
+
+billingTimeline({ anchorOn: "2026-03-01[u-ca=iso8601]" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
+// { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null,
+//   requestedByDeadline: null, resolutionDeadline: null }
+```
 
 `issuedByDeadline` and `requestedByDeadline` compare dates and say nothing else. What follows
 from a date after a deadline is yours: GMT computes dates, not liability.

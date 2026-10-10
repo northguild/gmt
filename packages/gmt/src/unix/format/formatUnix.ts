@@ -23,8 +23,9 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
    */
   epochUnit?: UnixUnit;
   /**
-   * The time zone the value is rendered in: an IANA name, a UTC offset, or `"local"` for the system
-   * time zone. An unknown zone returns `""`, as ECMA-402 throws RangeError for it.
+   * The time zone the value is rendered in: an IANA name, a UTC offset to the minute (what
+   * `isValidTimeZone` accepts), or `"local"` for the system time zone. An unknown zone returns
+   * `""`, as ECMA-402 throws RangeError for it.
    *
    * @defaultValue `"UTC"`
    */
@@ -53,6 +54,10 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  *   the `dateStyle` width, `era` alone dropped the time, and `timeZoneName` alone without
  *   `includeTimeZoneName` returned `""`. Pass the fields the old text showed to keep it.
  * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it.
+ * - An offset with seconds (`-00:44:30`) returns `""`. `Intl.DateTimeFormat` takes a time zone
+ *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
+ *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
+ *   Node, throw a RangeError exception"). Pass the IANA name.
  *
  * @param value unix epoch value to format (string or number, per `epochUnit`)
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)

@@ -12,6 +12,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   takes neither. Those ignored options were removed in 1.16.0.
  * - Returns null for invalid input.
  * - `value` is a safe integer or a digit string (`"1706659200000"`); anything else returns null.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param options optional: how `value` is read and the zone the quarter is found in
@@ -34,8 +40,10 @@ export function startOfQuarterForUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */

@@ -1,11 +1,13 @@
 import type { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeUnit } from "../../plain";
 import {
+  frameInstant,
+  frameZoned,
   isObject,
+  normalizeZoneFrame,
   resolveDateTimeUnit,
   roundZonedDateTime,
 } from "../../internal";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import {
   resolveUnixEpochUnit,
   toUnixEpoch,
@@ -42,6 +44,12 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   Use `floorToZone` for a boundary that never exceeds the instant.
  * - `value` is a safe integer or a digit string (`"1706661000000"`); anything else returns null.
  * - Returns null for invalid input.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param options rounding settings: the unit to round to, how to round, and how `value` is read
@@ -97,8 +105,10 @@ export function roundUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall clock is rounded in: an IANA name, a UTC offset, or `"local"` for the
-     * system time zone. An unknown zone returns `null`.
+     * The time zone the wall clock is rounded in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -110,13 +120,17 @@ export function roundUnix(
 
     const { roundingIncrement, roundingMode } = options;
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
-    const timeZone = normalizeTimeZone(options.timeZone);
+    const frame = normalizeZoneFrame(options.timeZone);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,
     );
 
-    if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
+    if (
+      frame === null ||
+      epochUnit === null ||
+      !isValidDateTimeUnit(smallestUnit)
+    ) {
       return null;
     }
 
@@ -132,13 +146,13 @@ export function roundUnix(
     }
 
     try {
-      const result = roundZonedDateTime(instant.toZonedDateTimeISO(timeZone), {
+      const result = roundZonedDateTime(frameZoned(instant, frame), {
         smallestUnit,
         roundingIncrement,
         roundingMode,
       });
 
-      return toUnixEpoch(result, epochUnit);
+      return toUnixEpoch(frameInstant(result, frame), epochUnit);
     } catch {
       return null;
     }

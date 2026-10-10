@@ -60,6 +60,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import { blockOffSite } from "./gate-checks.mjs";
 
 const DOX = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(DOX, "dist");
@@ -220,6 +221,7 @@ async function launch() {
     }
     const page = await browser.newPage();
     const { server, base } = await serve(DIST);
+    await blockOffSite(page, base);
     let adapter = null;
     try {
       await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
@@ -265,6 +267,7 @@ async function open(
     viewport: { width, height },
     ...emulate,
   });
+  await blockOffSite(page, base);
   const problems = [];
   const imagery = { requests: 0, statuses: [] };
   const requests = [];
@@ -733,6 +736,7 @@ async function main() {
     const page = await browser.newPage({
       viewport: { width: 1440, height: 900 },
     });
+    await blockOffSite(page, base);
     const problems = [];
     let imageryRequests = 0;
     page.on("console", (m) => {

@@ -55,6 +55,15 @@ export {
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
+// The EDI readers (./ediDateTimeFields) and writers (./ediDateTimeWriter) are deliberately not
+// re-exported here: they import `instant/convert/toOffsetInstant`, which reads this barrel at
+// module top level, so a barrel entry would close a cycle. Import each from its own file
+// ("../../internal/ediDateTimeFields", "../../internal/ediDateTimeWriter").
+export {
+  EDIFACT_DTM_FORMATS,
+  X12_DATE_TIME_PERIOD_FORMATS,
+  X12_TIME_CODES,
+} from "./ediGrammar";
 export {
   exactDurationNanoseconds,
   nonNegativeExactDurationNanoseconds,
@@ -162,3 +171,12 @@ export {
   zonedStartOfDay,
 } from "./zonedWallClockOperations";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";
+export {
+  frameInstant,
+  frameOffset,
+  frameWallClock,
+  frameZoned,
+  instantOfWallClock,
+  normalizeZoneFrame,
+  zoneFrame,
+} from "./zoneFrame";

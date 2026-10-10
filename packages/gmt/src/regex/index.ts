@@ -4,6 +4,7 @@ export * from "./calendar-date";
 export * from "./calendar-zoned-date-time";
 export * from "./date";
 export * from "./date-time";
+export * from "./epcis";
 export * from "./http-date";
 export * from "./leap-second";
 export * from "./nanoseconds";

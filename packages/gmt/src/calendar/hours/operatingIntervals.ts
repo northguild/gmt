@@ -25,6 +25,11 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  *   for one date), when `range` is not a valid `Interval`, when `disambiguation` is not one of
  *   the four values, and when the range spans more than 10,000 local dates (about 27 years)
  *   counted from the date `range.start` falls on.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the first instant Temporal supports
+ *   (`-271821-04-20T00:00:00Z`), for an offset west of UTC, this returns `[]`. An offset to the
+ *   minute has no such limit.
  *
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the schedule inside

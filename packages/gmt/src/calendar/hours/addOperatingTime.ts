@@ -27,6 +27,12 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Returns `""` on invalid input: an invalid instant, duration or `OperatingSchedule`, a
  *   negative `duration`, a `within` that is not a non-negative ISO duration, a `disambiguation`
  *   that is not one of the four values, and a search that would go more than 10,000 local dates past the input's date.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `""`. An offset to the minute has no
+ *   such limit.
  *
  * @param start ISO 8601 instant string where the clock starts
  * @param duration ISO 8601 duration of open time, hours and smaller units (e.g. "PT8H")
@@ -84,7 +90,7 @@ export function addOperatingTime(
     const horizon = parseSearchHorizon(
       from,
       optionsArg?.within,
-      resolved.timeZone,
+      resolved.frame,
     );
 
     if (horizon === null) {

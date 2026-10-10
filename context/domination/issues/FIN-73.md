@@ -19,10 +19,10 @@ None of these formats is parseable by a general date library, all of them are si
   - `parseFixTzTimestamp(value: string): { instant: string, offset: string, precision } | null` — `YYYYMMDD-HH:MM[:SS[.fff…]][Z | [+-]hh[:mm]]`.
   - `parseFixMonthYear(value: string): { year: number, month: number, day?: number, weekOfMonth?: 1 | 2 | 3 | 4 | 5 } | null` — `YYYYMM`, `YYYYMMDD`, `YYYYMMw1`…`w5`.
 - `packages/gmt/src/finance/parse/swiftDate.ts`:
-  - `parseSwiftDate(value: string, options: { centuryPivot: number }): string | null` — `YYMMDD`; the pivot is required.
-  - `formatSwiftDate(isoDate: string): string`
+  - `parseSwiftDate(value: string, options: TwoDigitYearOptions): string | null` — `YYMMDD`. Without `options.yearWindow` the result is the sentinel.
+  - `formatSwiftDate(isoDate: string, options: TwoDigitYearOptions): string` — Returns the sentinel for a year outside the window, so a round trip never changes a century.
   - `parseSwiftTimeIndication(value: string): { code: string, time: string, offset: string } | null` — Field 13C `/8c/HHMM±HHMM`, offset hours 00–13.
-  - `parseSwiftDateTimeIndication(value: string, options: { centuryPivot: number }): { date: string, time: string, offset: string } | null` — Field 13D `YYMMDDHHMM±HHMM`.
+  - `parseSwiftDateTimeIndication(value: string, options: TwoDigitYearOptions): { date: string, time: string, offset: string } | null` — Field 13D `YYMMDDHHMM±HHMM`. Without `options.yearWindow` the result is the sentinel.
 - `packages/gmt/src/finance/validate/timestampGranularity.ts`:
   - `meetsGranularity(precision: Precision, required: Precision): boolean` — Whether a detected precision is at least as fine as a required one, for any policy the caller states. `Precision` is the parsers' union: `'second' | 'millisecond' | 'microsecond' | 'nanosecond' | 'picosecond'`.
 
@@ -31,7 +31,7 @@ None of these formats is parseable by a general date library, all of them are si
 - **Precision is detected from the digit count and reported, never widened.** A FIX engine that emits milliseconds must not be read back as nanoseconds with zeros; downstream latency analysis depends on knowing what was measured. The same rule as HLTH-34's FHIR precision.
 - **The leap second is validated, not pattern-matched.** `60` is well-formed on any date and valid on 27 of them; SPA-48's table decides, exactly as SPA-52 does for CCSDS ASCII codes.
 - **Local market dates and times are not instants**, and the return types say so. Resolving them needs the market's zone, which the message does not carry; the caller supplies it through CORE-4.
-- **SWIFT's century pivot is required**, as in MAR-59's NMEA dates. Value dates are near the present so any pivot works in practice, which is exactly why a hidden default would go unnoticed until it did not.
+- **SWIFT's two-digit year needs the caller's `yearWindow`**, as in MAR-59's NMEA dates and AV-26's SSIM dates. It is the option INT-15 defines, `TwoDigitYearOptions`: `"rolling"`, the 100 years around the current UTC year, or the first year of a fixed 100-year window. The library holds no cut-off of its own. Value dates are near the present so any window works in practice, which is exactly why a hidden default would go unnoticed until it did not.
 - **Granularity requirements are the caller's.** The function compares two precisions; the numbers a policy demands appear nowhere in GMT.
 - FIX session-level fields (`SendingTime`, `TransactTime`) and application-level fields all use these types; which field carries what is the FIX dictionary's concern and out of scope.
 
@@ -45,6 +45,7 @@ None of these formats is parseable by a general date library, all of them are si
 - `isLeapSecond` from SPA-48 — validating a `60` seconds field
 - `toOffsetInstant` / `resolveLocal` from CORE-4 — `TZTimestamp` and local market values
 - `regex/` — pattern matchers
+- `TwoDigitYearOptions` and `internal/twoDigitYear.ts` from INT-15 — the caller-stated 100-year window a two-digit year is read and written in
 
 ## Verification
 
@@ -54,7 +55,7 @@ None of these formats is parseable by a general date library, all of them are si
 - `parseFixTzTimestamp('20240615-09:30:00+05:30')` returns the instant and `'+05:30'`; `'20240615-09:30Z'` returns UTC at minute precision
 - `parseFixMonthYear('202406w3')` returns `weekOfMonth: 3`; `'20240615'` returns `day: 15`; `'202413'` returns the sentinel
 - `parseFixLocalMktDate('20240615')` returns a date and no instant
-- `parseSwiftDate('240615', { centuryPivot: 50 })` returns `'2024-06-15'`; `formatSwiftDate` round-trips; `parseSwiftTimeIndication('/CLSTIME/0915+0100')` (SWIFT's own example) returns the code, `09:15` and `+01:00`; an offset of `+1400` returns the sentinel (hours are 00–13); `parseSwiftDateTimeIndication('2406151230+0100', { centuryPivot: 50 })` returns date, time and offset
+- `parseSwiftDate('240615', { yearWindow: 2000 })` returns `'2024-06-15'`, and the sentinel with no `yearWindow`; `formatSwiftDate` round-trips with the same window and returns the sentinel for `'1969-01-01'`; `parseSwiftTimeIndication('/CLSTIME/0915+0100')` (SWIFT's own example) returns the code, `09:15` and `+01:00`; an offset of `+1400` returns the sentinel (hours are 00–13); `parseSwiftDateTimeIndication('2406151230+0100', { yearWindow: 2000 })` returns date, time and offset
 - `meetsGranularity('millisecond', 'microsecond')` is `false`; `('microsecond', 'millisecond')` is `true`; `('second', 'second')` is `true`
 - Malformed separators and out-of-range fields return the sentinel
 - `pnpm run validate` stays green

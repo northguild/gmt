@@ -16,6 +16,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   takes neither. Those ignored options were removed in 1.16.0.
  * - Returns null for invalid input.
  * - `value` is a safe integer or a digit string (`"1706659200000"`); anything else returns null.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the end
@@ -30,6 +36,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example endOfUnix(1706780800, "days", { epochUnit: "second" }) // 1706831999 (plural unit, singular epochUnit, UTC by default)
  * @example endOfUnix(1706659200000, "quarter") // null (use endOfQuarterForUnix)
  * @example endOfUnix(NaN, "day") // null
+ * @example endOfUnix(45870000, "day", { timeZone: "-00:44:30" }) // 89069999 (a stored offset with seconds)
  */
 export function endOfUnix(
   value: number | string,
@@ -43,8 +50,10 @@ export function endOfUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */

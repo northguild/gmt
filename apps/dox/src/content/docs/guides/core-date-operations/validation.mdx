@@ -34,6 +34,21 @@ isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
 isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
 ```
 
+`isValidZonedDateTime` accepts `[u-ca=iso8601]` and rejects any other calendar annotation,
+so a function that has not opted in to calendars fails closed. To check a value that carries
+a calendar, use `isValidCalendarZonedDateTime`. The calendar annotation must follow the zone:
+
+```typescript
+import { isValidCalendarZonedDateTime, isValidUtc } from "@northguild/gmt";
+
+isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"); // true
+isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]"); // false — the zone comes first
+
+isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]"); // true — a UTC string's calendar annotation is ignored
+```
+
+See [Calendar Systems](../calendar-systems/) for the rules on calendar annotations.
+
 ## Daylight saving time
 
 ```typescript
@@ -49,7 +64,45 @@ getDstTransitions("America/New_York", 2024);
 // ]
 
 getDstTransitions("Asia/Tokyo", 2024); // [] — no transitions
+getDstTransitions("Invalid/Zone", 2024); // [] — invalid input
 ```
+
+`hasDaylightSaving` is `true` when the zone is in daylight time at `at`, or a daylight period
+begins less than 365 days after it. An invalid zone, an invalid `at` and a fixed offset
+return `false`:
+
+```typescript
+import { hasDaylightSaving } from "@northguild/gmt/zoned";
+
+hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }); // false
+```
+
+`at` is an ISO 8601 instant string. With it, the answer does not depend on the day the code
+runs. Without it, the reference is the current instant. See
+[Zoned Operations](/guides/zoned-date-operations/zoned-operations/#daylight-saving-four-questions-four-functions)
+for the rule behind both functions.
+
+## Named machine format validators
+
+Each fixed interchange format has a validator that is `true` exactly when its parser returns
+a value. A pattern proves the shape alone:
+
+```typescript
+import {
+  isValidHttpDate,
+  isValidRfc2822DateTime,
+  isValidRfc3339DateTime,
+  isValidSqlDateTime,
+} from "@northguild/gmt";
+
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false — 2023 has no 29 February
+isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false — a Friday
+isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true — asctime-date
+isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false — hour 24
+isValidSqlDateTime("2024-03-15 14:30:00"); // true
+```
+
+See [Parsing](../parsing/) for the formats themselves.
 
 ## Duration-unit validation
 
@@ -77,7 +130,19 @@ isValidDateTimeInterval("2024-01-01T10:00:00", "2024-12-31T23:59:59"); // true
 ```
 
 There are `isValidUtcInterval`, `isValidUnixInterval`, and `isValidZonedInterval`
-siblings. All return `false` on invalid input.
+siblings. `isValidZonedInterval` takes two zoned datetimes:
+
+```typescript
+import { isValidZonedInterval } from "@northguild/gmt";
+
+isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]"); // true
+isValidZonedInterval("2024-12-31T10:00:00+00:00[UTC]", "2024-01-01T10:00:00+00:00[UTC]"); // false — start > end
+```
+
+All return `false` on invalid input: a wrong type, a malformed string, a leap second, an
+inverted interval, mixed kinds for the plain interval validators, or an epoch outside the
+`unix/` grammar (not a safe integer or a digit string). An interval whose `start` equals its
+`end` is valid: it is empty.
 
 ## Range validation (object params)
 
@@ -85,14 +150,26 @@ Range validators take `{ value1, value2, options? }` — a different shape from 
 interval validators above:
 
 ```typescript
-import { isValidDateRange, isValidZonedRange } from "@northguild/gmt";
+import { isValidDateRange, isValidTimeRange, isValidZonedRange } from "@northguild/gmt";
 
 isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" }); // true
+isValidTimeRange({ value1: "09:00:00", value2: "17:00:00" }); // true
 isValidZonedRange({
   value1: "2024-01-01T10:00:00+00:00[UTC]",
   value2: "2024-12-31T23:59:59+00:00[UTC]",
 }); // true
 ```
+
+A range requires `value1` strictly before `value2`. Pass `options: { allowEqual: true }` to
+accept two equal values:
+
+```typescript
+isValidTimeRange({ value1: "12:00:00", value2: "12:00:00" }); // false — equal values are not a range
+isValidTimeRange({ value1: "12:00:00", value2: "12:00:00", options: { allowEqual: true } }); // true
+```
+
+The other range validators (`isValidDateTimeRange`, `isValidUtcRange`, `isValidUnixRange`)
+take the same object, and `isValidDateRange` and `isValidZonedRange` accept `allowEqual` too.
 
 Don't confuse the two: `isValidDateInterval` takes positional `(start, end)` args;
 `isValidDateRange` takes an object `{ value1, value2 }`.

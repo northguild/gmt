@@ -42,18 +42,29 @@ It is also a Dox chat tool, because the chat can only offer a widget it can moun
 - a starter pill in `CHAT_STARTERS` (`lib/chat-constants.ts`).
 
 `widget-registry.test.ts`, `chat-starters.test.ts`, `widget-permalink.test.ts` and
-`client-graph.test.ts` fail if any of these is missing. Two lists are kept by hand and fail
-nothing when forgotten: add the mount to `MOUNTS` in `lib/widget-load-error.test.tsx`, and add
-its heavy modules to the `heavy` list in `components/ask/widget-graph.test.ts`. Add the tool page to
-`scripts/html-diff.mjs` and `scripts/visual-snapshot.mjs`. Every preset shows the function's
-real output, asserted in the mount test.
+`client-graph.test.ts` fail if any of these is missing. Several lists are kept by hand and fail
+nothing when forgotten:
+
+- the mount in `MOUNTS` in `lib/widget-load-error.test.tsx`;
+- its heavy modules in the `heavy` list in `components/ask/widget-graph.test.ts`;
+- the tool page in `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs` and
+  `scripts/grow-measure.mjs`;
+- its forced-colours rules in `styles/gmt-a11y.css`;
+- for a tool with a draggable handle, its entry in `TOOLS` in `scripts/readout-still.mjs`.
+
+One more fails only after a build: the component's name in the dropped-components list in
+`lib/mdx-jsx.ts`, which `scripts/llms.test.ts` checks. Every preset shows the function's real
+output, asserted in the mount test.
 
 ## Rules
 
-- **Ported, not rewritten.** The guide ports the section the story added to
-  `packages/gmt/README.md`. Prose may be tightened; examples and results are the README's.
-- **Every result shown is the function's real output.** `api-surface.mjs` checks the README and
-  JSDoc, not these MDX pages. Before publishing, run each page's examples against
+- **The guide is the feature's home.** A story writes its explanation and examples in the
+  guide, and nowhere else: `README.md` and `packages/gmt/README.md` are landing pages that
+  hold no section for a function or a feature. Signatures and options come from the JSDoc,
+  through the generated reference.
+- **Every result shown is the function's real output.** `api-surface.mjs` scans every MDX page
+  outside `reference/` for imports, links and each import-bound `call // result`, but it cannot
+  check a result shown any other way. Before publishing, run each page's examples against
   `packages/gmt/dist` with a throwaway script and paste the returned values. Elide nothing:
   `{ …, calendarDays: 1 }` is a result nobody can check.
 - **Unreleased functions are badged for you.** The reference marks every export missing from

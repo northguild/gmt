@@ -23,10 +23,11 @@ export type BusinessCalendar = {
    */
   holidays: string[];
   /**
-   * The time zone recording which locality the calendar describes, an IANA name or a UTC offset. It
-   * must be a valid zone, but the business-day functions never use it: they take and return local
-   * dates, so the answer is the same whatever it says. A caller holding an instant uses it to
-   * reduce that instant to a local date first, with `floorToZone` or `getZonedDateTimeFields`.
+   * The time zone recording which locality the calendar describes, an IANA name or a UTC offset to
+   * the minute (what `isValidTimeZone` accepts). It must be a valid zone, but the business-day
+   * functions never use it: they take and return local dates, so the answer is the same whatever it
+   * says. A caller holding an instant uses it to reduce that instant to a local date first, with
+   * `floorToZone` or `getZonedDateTimeFields`.
    */
   timeZone: string;
 };

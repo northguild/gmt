@@ -1,4 +1,4 @@
-import { unixZonedDateTime } from "../../internal/unixZonedDateTime";
+import { unixWallClock } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -17,6 +17,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example parseTimeFromUnix(-86400, { epochUnit: "seconds", timeZone: "UTC" }) // "00:00:00"
  * @example parseTimeFromUnix("1700000000", { epochUnit: "second" }) // "22:13:20" (digit string, UTC by default)
  * @example parseTimeFromUnix(1.5) // "" (not an integer epoch)
+ * @example parseTimeFromUnix(45870000, { timeZone: "-00:44:30" }) // "12:00:00" (a stored offset with seconds)
  */
 export function parseTimeFromUnix(
   value: number | string,
@@ -29,8 +30,10 @@ export function parseTimeFromUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -42,9 +45,9 @@ export function parseTimeFromUnix(
       return "";
     }
 
-    const zdt = unixZonedDateTime(value, options);
+    const wallClock = unixWallClock(value, options);
 
-    return zdt === null ? "" : zdt.toPlainTime().toString();
+    return wallClock === null ? "" : wallClock.toPlainTime().toString();
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

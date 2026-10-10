@@ -11,7 +11,7 @@
  * Both instants these presets render are already UTC ISO strings: the resets
  * `/api/brains` sends, and "now" from gmt's `getUtcNow()`. So every preset is a
  * direct call on that string — `formatCalendarUtc`, `formatRelativeUtc`,
- * `formatUtc`, `formatHttp`, `convertUtcToZoned`, `convertUtcToUnix` — with no
+ * `formatUtc`, `formatHttpDate`, `convertUtcToZoned`, `convertUtcToUnix` — with no
  * conversion first. A unix base needed a round trip for half the presets; a
  * zoned base would fix a zone into the value itself. UTC keeps one value type
  * and leaves the zone a rendering choice.
@@ -29,7 +29,7 @@ import {
 } from "@northguild/gmt/utc/convert";
 import {
   formatCalendarUtc,
-  formatHttp,
+  formatHttpDate,
   formatRelativeUtc,
   formatUtc,
 } from "@northguild/gmt/utc/format";
@@ -164,11 +164,11 @@ export const RESET_FORMATS: readonly ResetFormat[] = [
   {
     id: "http",
     label: "HTTP date",
-    fnName: "formatHttp",
-    route: "/reference/utc/format/formatHttp",
+    fnName: "formatHttpDate",
+    route: "/reference/utc/format/formatHttpDate",
     zoned: false,
-    format: (value) => formatHttp(value),
-    call: () => "formatHttp(resetsAt)",
+    format: (value) => formatHttpDate(value),
+    call: () => "formatHttpDate(resetsAt)",
   },
   unix("milliseconds", "Unix milliseconds"),
   unix("seconds", "Unix seconds"),

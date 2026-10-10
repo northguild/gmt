@@ -21,6 +21,15 @@ export type LlmsSection = {
 };
 
 /**
+ * A description as plain text: `[text](url)` becomes `text`. A list entry in `llms.txt` is
+ * itself a link, and a source citation inside its description would be a second, nested link
+ * to a page that is not on this site.
+ */
+export function withoutLinks(description: string): string {
+  return description.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+}
+
+/**
  * The reference sections of `llms.txt`: a link to the reference index, then one section per
  * namespace, each entry linked to the `.md` twin of its page.
  *
@@ -57,7 +66,7 @@ export function referenceSections(
       links: entries.map((e) => ({
         title: e.name,
         url: `${base}${e.page}.md`,
-        description: e.description,
+        description: withoutLinks(e.description),
       })),
     });
   }

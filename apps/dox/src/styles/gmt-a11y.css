@@ -111,6 +111,17 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* The industry icon in the sidebar is a mask over a background colour, which
+     forced-colors would repaint as the canvas and hide. Keep the mask and paint
+     it in the text colour. */
+  .sidebar-pane
+    details:has(> ul > li > a[data-gmt-industry])
+    > summary
+    > .group-label::before {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
   /* A canvas is not repainted in the system palette, so the globe's colours
      stay its own. Drop the photograph from behind them at least: the flat
      globe is the plainer of the two, and it never downloads the image. */
@@ -234,6 +245,13 @@
     background: Highlight;
   }
 
+  /* A disabled field is GrayText on a dashed GrayText border. */
+  .gmt-input:disabled,
+  .gmt-select:disabled {
+    color: GrayText;
+    border-color: GrayText;
+  }
+
   .gmt-handle {
     forced-color-adjust: none;
     border-color: ButtonText;
@@ -314,6 +332,35 @@
     outline-offset: -3px;
   }
 
+  /* The EDI pictures tell their fields and zones apart by text (the mask letters,
+     the bracket labels, the numbers on the pins), and the colours that also mark
+     them are edges and fills that forced colours drops. The edges keep a system
+     colour, and the pins keep a system fill. The panels and plates hold text and
+     never opt out. */
+  .gmt-edi-box,
+  .gmt-edi-bracket::before,
+  .gmt-edi-tl-pin,
+  .gmt-edi-tl-bracket,
+  .gmt-dtm-badge {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-edi-tl-axis,
+  .gmt-edi-tl-tick::before,
+  .gmt-edi-tl-mark::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-edi-panel,
+  .gmt-edi-readouts > .gmt-edi-row,
+  .gmt-edi-verdict {
+    border-color: CanvasText;
+  }
+
   /* The Billing Deadlines strip's answer is the three lanes and their
      deadlines: gradients drop under forced colours, so the border style is
      what keeps them apart, and the badges keep their own outline. */
@@ -373,10 +420,6 @@
     background: Canvas;
   }
 
-  .gmt-delivery-leg-fieldset {
-    border-left-color: CanvasText;
-  }
-
   .gmt-transport-badge {
     forced-color-adjust: none;
     color: CanvasText;
@@ -425,7 +468,8 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-timetable
     )
     :is(
       .gmt-cutoff-chip,
@@ -443,7 +487,8 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-timetable
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;
@@ -547,7 +592,8 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-timetable
     )
     .gmt-cutoff-series-swatch {
     forced-color-adjust: none;
@@ -580,11 +626,135 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-timetable
     )
     .gmt-cutoff-axis-tick::before {
     forced-color-adjust: none;
     background: CanvasText;
+  }
+}
+
+/* =======================================================================
+ * Timetable Reader, forced-colors
+ *
+ * The chips and swatches are restated by the cut-off block above (it lists the
+ * seven roots). This block restates the rest: the shaded hour keeps its two
+ * edges (double for a repeated hour, dashed for a skipped one) and drops the
+ * wash and the hatch; the lanes keep a CanvasText rule; wedges, connectors,
+ * squares and bars are CanvasText marks, dashed where they are dashed in
+ * colour. Text sits on plates and never opts out.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-timetable-band,
+  .gmt-timetable-wband,
+  .gmt-timetable-swatch--twice,
+  .gmt-timetable-swatch--skipped {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    background-image: none;
+  }
+
+  .gmt-timetable-band[data-kind="twice"],
+  .gmt-timetable-wband[data-kind="twice"],
+  .gmt-timetable-swatch--twice {
+    border-inline: 3px double CanvasText;
+  }
+
+  .gmt-timetable-band[data-kind="skipped"],
+  .gmt-timetable-wband[data-kind="skipped"],
+  .gmt-timetable-swatch--skipped {
+    border-inline: 1px dashed CanvasText;
+  }
+
+  .gmt-timetable-lane {
+    border-bottom-color: CanvasText;
+  }
+
+  .gmt-timetable-lane::before {
+    display: none;
+  }
+
+  .gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-kind="twice"] {
+    border: 3px double CanvasText;
+  }
+
+  .gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-kind="skipped"],
+  .gmt-timetable
+    .gmt-timetable-day-status
+    .gmt-cutoff-chip[data-kind="skipped"] {
+    border: 1px dashed CanvasText;
+  }
+
+  .gmt-timetable .gmt-timetable-day-status .gmt-cutoff-chip[data-kind="twice"] {
+    border: 3px double CanvasText;
+  }
+
+  .gmt-timetable-fan,
+  .gmt-timetable-fan * {
+    forced-color-adjust: none;
+  }
+
+  .gmt-timetable-wedge {
+    fill: none;
+    stroke: CanvasText;
+  }
+
+  .gmt-timetable-wedge[data-kind="skipped"] {
+    stroke-dasharray: 4 3;
+  }
+
+  .gmt-timetable-link {
+    stroke: CanvasText;
+  }
+
+  .gmt-timetable-axisline,
+  .gmt-timetable-eline,
+  .gmt-timetable-swatch--solid,
+  .gmt-timetable-swatch--dashed {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-timetable-swatch--dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      CanvasText 0 5px,
+      Canvas 5px 9px
+    );
+    height: 2px;
+  }
+
+  .gmt-timetable-swatch--solid {
+    height: 2px;
+  }
+
+  .gmt-timetable-etick[data-kind="twice"] {
+    forced-color-adjust: none;
+    border-inline-end-color: CanvasText;
+  }
+
+  .gmt-timetable-etick[data-kind="skipped"] {
+    forced-color-adjust: none;
+    border-inline-end-color: CanvasText;
+  }
+
+  .gmt-timetable-sq,
+  .gmt-timetable-bar,
+  .gmt-timetable-bar::after,
+  .gmt-timetable-swatch--bar {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-timetable-sq--hollow {
+    background: Canvas;
+    border: 2px dashed CanvasText;
+  }
+
+  .gmt-timetable-bar--open::after {
+    background: none;
+    border-right-color: CanvasText;
   }
 }
 

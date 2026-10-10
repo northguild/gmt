@@ -5,7 +5,7 @@ describe("parseYearFromDate", () => {
   it.each`
     value           | expected
     ${"2024-03-15"} | ${"2024"}
-    ${"0001-01-01"} | ${"1"}
+    ${"0001-01-01"} | ${"0001"}
   `("returns $expected for $value", ({ value, expected }) => {
     expect(parseYearFromDate(value)).toBe(expected);
   });

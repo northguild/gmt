@@ -23,6 +23,7 @@ const mdxExists = existsSync(refDir);
 import {
   isReferenceIndex,
   referenceSections,
+  withoutLinks,
   renderLlmsFull,
   renderLlmsTxt,
   type LlmsSection,
@@ -110,6 +111,15 @@ describe("llms.txt surface", () => {
       "- [absDuration](/reference/duration/calculate/absDuration.md): Absolute value of a duration",
     );
     expect(output).toContain("- [Install](/install.md)");
+  });
+
+  it("withoutLinks keeps a description's words and drops its links", () => {
+    expect(
+      withoutLinks(
+        "Read from [UNECE's D.21B page](http://web.archive.org/web/x/tred2379.htm); see `x`.",
+      ),
+    ).toBe("Read from UNECE's D.21B page; see `x`.");
+    expect(withoutLinks("No link here.")).toBe("No link here.");
   });
 
   it("renderLlmsFull includes page markdown bodies", () => {
@@ -406,6 +416,17 @@ Note about installation.
       expect(result).not.toMatch(/<Aside/);
       expect(result).toContain("Install the package with npm.");
       expect(result).toContain("Note about installation.");
+    });
+
+    it("drops the icon the API Reference root puts beside an industry, keeping the line", () => {
+      const input = `import Icon from "../../../components/Icon.astro";
+
+- <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> [Transport](/reference/transport): Legs and dwell.`;
+      const result = stripMdx(input, { gmtVersion: "1.0.0" }).trim();
+      expect(result).not.toMatch(/<Icon|import/);
+      expect(result.replace(/\s+/g, " ")).toBe(
+        "- [Transport](/reference/transport): Legs and dwell.",
+      );
     });
 
     it("renders a tool page's layout to prose, its key point named and its widget gone", () => {

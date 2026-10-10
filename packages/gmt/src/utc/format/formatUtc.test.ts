@@ -53,6 +53,32 @@ describe("formatUtc", () => {
     spy.mockRestore();
   });
 
+  // Intl.DateTimeFormat takes a time zone identifier, and constructing one with an offset that
+  // has seconds throws RangeError (ECMA-402). So an offset with seconds is the sentinel in either
+  // spelling, and the minute offset formats as the zone that stands at it: Asia/Kolkata, +05:30.
+  it.each`
+    timeZone
+    ${"-00:44:30"}
+    ${"+05:30:00"}
+  `("returns '' for the offset with seconds $timeZone", ({ timeZone }) => {
+    expect(
+      formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, { timeZone }),
+    ).toBe("");
+  });
+
+  it("formats the minute offset +05:30 as it formats Asia/Kolkata", () => {
+    const atOffset = formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
+      timeZone: "+05:30",
+    });
+
+    expect(atOffset).not.toBe("");
+    expect(atOffset).toBe(
+      formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
+        timeZone: "Asia/Kolkata",
+      }),
+    );
+  });
+
   // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
   it.each`
     timeZone

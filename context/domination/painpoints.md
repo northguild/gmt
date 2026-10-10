@@ -104,10 +104,10 @@ local time are both load-bearing, and neither can be derived from the other.
 - **GS1 EPCIS 2.0** requires `eventTime` (UTC) plus `eventTimeZoneOffset`, precisely so
   the event can be displayed in the local time where it occurred.
   ([OpenEPCIS](https://openepcis.io/docs/epcis/))
-- **UN/EDIFACT DTM** format qualifier `303` is `CCYYMMDDHHMMZZZ` and `304` is
-  `CCYYMMDDHHMMSSZZZ` — both carry the offset. Qualifiers `102` and `203` do not, and
-  the industry uses all four.
-  ([UNECE D.03A DTM](https://service.unece.org/trade/untdid/d03a/trsd/trsddtm.htm))
+- **UN/EDIFACT DTM** format codes `205`–`208` carry a `±HHMM` offset. `303` and `304` end in
+  three zone characters the directory does not define, an offset only when written `±HH`,
+  `UTC` or `GMT`. `102` and `203` carry none, and the industry uses all of them.
+  ([UNTDID data element 2379, D.21B](http://web.archive.org/web/20240303123657/https://service.unece.org/trade/untdid/d21b/tred/tred2379.htm))
 - **DCSA Track & Trace** carries `eventDateTime` with an `eventClassifierCode` marking
   it planned, estimated or actual — three different meanings on one field.
   ([DCSA](https://dcsa.org/standards/track-and-trace/standard-documentation-track-and-trace))

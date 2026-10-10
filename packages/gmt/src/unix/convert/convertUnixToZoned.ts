@@ -13,9 +13,13 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  *   instant outside the Temporal range, returns "".
  * - An explicit `undefined` `options` is the same as omitted; a non-object `options` (such as a
  *   bare `"seconds"` string) returns "".
+ * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call
+ *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
+ *   bracket.
  *
  * @param value epoch value: a safe integer or a digit string
- * @param timeZone IANA name or UTC offset
+ * @param timeZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @param options optional: how `value` is read
  * @returns zoned ISO 8601 string or "" on invalid
  *

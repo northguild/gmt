@@ -31,6 +31,34 @@ formatDate("2024-03-15", "en-US", { year: "numeric", month: "long", day: "numeri
 // "March 15, 2024"
 ```
 
+## Locale-elided ranges
+
+`formatDateRange` and `formatDateTimeRange` are the plain counterparts of
+`formatZonedRange`. They take the same parameter order and option shape, and write a
+locale-elided range between two timezone-free values:
+
+```typescript
+import { formatDateRange, formatDateTimeRange } from "@northguild/gmt";
+import { formatZonedRange } from "@northguild/gmt/zoned";
+
+formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
+// "February 3 - 5, 2024"
+
+formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", {
+  dateStyle: "long",
+  timeStyle: "short",
+});
+// "February 3, 2024, 9:00 AM - 5:00 PM"
+
+formatZonedRange(
+  "2024-02-03T09:00:00-05:00[America/New_York]",
+  "2024-02-03T17:00:00-05:00[America/New_York]",
+  "en-US",
+  { dateStyle: "long", timeStyle: "short" },
+);
+// "February 3, 2024, 9:00 AM - 5:00 PM"
+```
+
 ## Locale-ordered parts instead of a finished string
 
 `formatDateToParts`/`formatDateTimeToParts`/`formatZonedToParts` return the
@@ -41,10 +69,50 @@ token formatter:
 import { formatDateToParts } from "@northguild/gmt";
 
 formatDateToParts("2024-03-15", "en-US");
-// [{ type: "month", value: "3" }, { type: "literal", value: "/" }, ...]
+// [
+//   { type: "month", value: "3" },
+//   { type: "literal", value: "/" },
+//   { type: "day", value: "15" },
+//   { type: "literal", value: "/" },
+//   { type: "year", value: "2024" },
+// ]
 
 formatDateToParts("2024-03-15", "fr-FR");
-// day comes before month — same locale-order guarantee, as parts
+// [
+//   { type: "day", value: "15" },
+//   { type: "literal", value: "/" },
+//   { type: "month", value: "03" },
+//   { type: "literal", value: "/" },
+//   { type: "year", value: "2024" },
+// ] — day comes before month — same locale-order guarantee, as parts
+```
+
+`formatZonedToParts` takes the same `Intl.DateTimeFormatOptions`, so it can return the zone
+as a part too:
+
+```typescript
+import { formatZonedToParts } from "@northguild/gmt";
+
+formatZonedToParts("2024-03-15T14:30:00-04:00[America/New_York]", "en-US", {
+  timeZoneName: "longOffset",
+});
+// [
+//   { type: "month", value: "3" },
+//   { type: "literal", value: "/" },
+//   { type: "day", value: "15" },
+//   { type: "literal", value: "/" },
+//   { type: "year", value: "2024" },
+//   { type: "literal", value: ", " },
+//   { type: "hour", value: "2" },
+//   { type: "literal", value: ":" },
+//   { type: "minute", value: "30" },
+//   { type: "literal", value: ":" },
+//   { type: "second", value: "00" },
+//   { type: "literal", value: " " },
+//   { type: "dayPeriod", value: "PM" },
+//   { type: "literal", value: " " },
+//   { type: "timeZoneName", value: "GMT-04:00" },
+// ]
 ```
 
 **Iterate the array as returned.** Do not pick out `.find(p => p.type === "month")`
@@ -91,8 +159,24 @@ formatCalendar("2026-03-08T14:30:00", "en-US", { reference: ref });
 // "March 8, 2026 at 2:30 PM" — beyond ±6 days, falls back to absolute
 ```
 
+Within ±6 days of now (or of an explicit `reference`) the label stays relative. Beyond
+that it falls back to an absolute date plus time, with no relative wording.
+
 Distinct from `formatRelativeDateTime` (which always renders an elapsed-time phrase
-like "in 1 day" and never includes a clock time).
+like "in 1 day" and never includes a clock time). This is Moment's `.calendar()`: use it
+for user-facing schedules, not for elapsed-time displays.
+
+`formatCalendarZoned` does the same for a zoned value, and takes the locale's own
+connector too:
+
+```typescript
+import { formatCalendarZoned } from "@northguild/gmt";
+
+formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "de-DE", {
+  reference: "2026-03-15T09:00:00-04:00[America/New_York]",
+});
+// "morgen um 14:30" — the locale's own connector, not "at"
+```
 
 ## Standalone locale calendar names (no date value needed)
 
@@ -105,35 +189,70 @@ import {
 } from "@northguild/gmt";
 
 getLocaleEraNames("en-US"); // ["Before Christ", "Anno Domini"]
-getLocaleMonthNames("en-US"); // ["January", "February", ...]
-getLocaleWeekdayNames("en-US"); // ["Sunday", "Monday", ...] (locale-first-day order)
+getLocaleMonthNames("en-US");
+// ["January", "February", "March", "April", "May", "June",
+//  "July", "August", "September", "October", "November", "December"]
+getLocaleWeekdayNames("en-US");
+// ["Sunday", "Monday", "Tuesday", "Wednesday",
+//  "Thursday", "Friday", "Saturday"] (locale-first-day order)
 getLocaleMeridiems("en-US"); // ["AM", "PM"]
+
+getLocaleEraNames("ja-JP", "short"); // ["紀元前", "西暦"]
+getLocaleMonthNames("de-DE", "short");
+// ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
+getLocaleWeekdayNames("fr-FR");
+// ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+getLocaleMeridiems("zh-CN"); // ["上午", "下午"]
 ```
 
-These are the GMT equivalent of Luxon's `Info` class. All four return `[]` for an
-invalid BCP 47 locale tag.
+These are the GMT equivalent of Luxon's `Info.eras`/`Info.months`/`Info.weekdays`/`Info.meridiems`.
+All four return `[]` for an invalid BCP 47 locale tag. The era, month and weekday names take an
+optional second argument, the style, such as `"short"`. `getLocaleWeekdayNames` returns names
+in the locale's first-day order, consistent with `getLocaleDayOfWeek`: index 0 is the locale's
+first day of the week. All four delegate to the host runtime's `Intl` data, so their output
+depends on the runtime's ICU build.
 
 ## Named machine formats (email, HTTP, SQL, RFC 3339)
 
-Fixed, non-locale-adaptive grammars — none of these take a `locale` argument:
+Fixed, non-locale-adaptive grammars for interchange with email, HTTP, SQL and RFC 3339
+consumers. None of these take a `locale` argument, since the grammar itself is constant
+(English weekday and month names where the format mandates them):
 
 ```typescript
-import { formatRfc2822, formatHttp, formatSql, formatRfc3339 } from "@northguild/gmt";
+import { formatRfc2822, formatHttpDate, formatSqlDateTime, formatRfc3339 } from "@northguild/gmt";
 
 formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
 // "Fri, 15 Mar 2024 14:30:00 -0400"
 
-formatHttp("2024-03-15T14:30:00Z");
+formatHttpDate("2024-03-15T14:30:00Z");
 // "Fri, 15 Mar 2024 14:30:00 GMT"
 
-formatSql("2024-03-15T14:30:00");
+formatSqlDateTime("2024-03-15T14:30:00");
 // "2024-03-15 14:30:00"
 
 formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
-// "2024-03-15T14:30:00-04:00"
+// "2024-03-15T14:30:00-04:00" — strips the bracketed zone, which RFC 3339 does not permit
 ```
 
-Each has a `parse*` counterpart in the [Parsing](../parsing/) guide.
+The formatters return `""` for a value their grammar cannot express, rather than writing
+a string no conforming parser accepts. That means a year outside `0000`–`9999` for RFC 3339
+and HTTP-date, or outside `0001`–`9999` for SQL:
+
+```typescript
+import { formatRfc3339, formatSqlDateTime } from "@northguild/gmt";
+
+formatRfc3339("10000-01-01T00:00:00Z"); // ""
+formatSqlDateTime("0000-01-01T00:00:00"); // ""
+```
+
+Use Temporal's own `toString()` when you need any year.
+
+Each has a `parse*` counterpart in the [Parsing](../parsing/) guide, and a validator that
+agrees with that parser: `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime` and
+`isValidRfc3339DateTime`. Check a value with the validator, not with the `rfc3339DateTime`,
+`rfc2822DateTime`, `httpDate` or `sqlDateTime` pattern. A pattern matches a day that does not
+exist, such as 29 February 2023, and the `rfc2822DateTime` and `httpDate` patterns do not match
+the obsolete forms the parsers read.
 
 ## See also
 

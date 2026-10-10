@@ -1,0 +1,190 @@
+---
+/**
+ * Starlight's `SidebarSublist`, with one addition: the "By industry" divider.
+ *
+ * Starlight's sidebar holds only links and groups, so the generated API Reference sidebar
+ * (`scripts/build-reference.ts`) marks the divider as a link entry with `data-gmt-divider`.
+ * Here it is not drawn as a link. It is a label, and the entries after it are their own list
+ * named by it (`aria-labelledby`), so it is plain text for everyone: nothing to open, click or
+ * focus, and a screen reader hears "By industry, list" before the industry groups. Everything
+ * else is Starlight's own markup, so current-page highlighting, a page opening only its
+ * ancestors, the `sl-sidebar-state` persistence and the mobile menu behave as they do there.
+ * Keep it in step with `@astrojs/starlight/components/SidebarSublist.astro` on a Starlight
+ * upgrade.
+ */
+import { Badge, Icon } from '@astrojs/starlight/components';
+import type { StarlightRouteData } from '@astrojs/starlight/route-data';
+import SidebarRestorePoint from '@astrojs/starlight/components/SidebarRestorePoint.astro';
+
+type SidebarEntry = StarlightRouteData['sidebar'][number];
+
+/** Every link under `entries`, groups flattened (Starlight's `flattenSidebar`). */
+function flattenSidebar(entries: SidebarEntry[]): Extract<SidebarEntry, { type: 'link' }>[] {
+	return entries.flatMap((entry) => (entry.type === 'group' ? flattenSidebar(entry.entries) : entry));
+}
+
+interface Props {
+	sublist: SidebarEntry[];
+	nested?: boolean;
+	/** The id of the divider that names this list. */
+	labelledby?: string;
+}
+
+const { sublist, nested, labelledby } = Astro.props;
+
+const isDivider = (entry: SidebarEntry) =>
+	entry.type === 'link' && entry.attrs['data-gmt-divider'] !== undefined;
+const dividerAt = sublist.findIndex(isDivider);
+const before = dividerAt < 0 ? sublist : sublist.slice(0, dividerAt);
+const divider = dividerAt < 0 ? undefined : sublist[dividerAt];
+const after = dividerAt < 0 ? [] : sublist.slice(dividerAt + 1);
+const dividerId = 'gmt-sidebar-divider';
+---
+
+<ul class:list={{ 'top-level': !nested, 'gmt-sidebar-named-list': labelledby }} aria-labelledby={labelledby}>
+	{
+		before.map((entry) => (
+			<li>
+				{entry.type === 'link' ? (
+					<a
+						href={entry.href}
+						aria-current={entry.isCurrent ? 'page' : undefined}
+						class:list={[{ large: !nested }, entry.attrs.class]}
+						{...entry.attrs}
+					>
+						<span>{entry.label}</span>
+						{entry.badge && (
+							<Badge
+								variant={entry.badge.variant}
+								class={entry.badge.class}
+								text={entry.badge.text}
+							/>
+						)}
+					</a>
+				) : (
+					<details
+						open={flattenSidebar(entry.entries).some((i) => i.isCurrent) || !entry.collapsed}
+					>
+						<summary>
+							<span class="group-label">
+								<span class="large">{entry.label}</span>
+								{entry.badge && (
+									<Badge
+										variant={entry.badge.variant}
+										class={entry.badge.class}
+										text={entry.badge.text}
+									/>
+								)}
+							</span>
+							<Icon name="right-caret" class="caret" size="1.25rem" />
+						</summary>
+						<SidebarRestorePoint />
+						<Astro.self sublist={entry.entries} nested />
+					</details>
+				)}
+			</li>
+		))
+	}
+	{
+		divider && (
+			<li class="gmt-sidebar-divider-item">
+				<span id={dividerId} class="gmt-sidebar-divider">{divider.label}</span>
+				<Astro.self sublist={after} nested labelledby={dividerId} />
+			</li>
+		)
+	}
+</ul>
+
+<style>
+	@layer starlight.core {
+		ul {
+			--sl-sidebar-item-padding-inline: 0.5rem;
+			list-style: none;
+			padding: 0;
+		}
+
+		li {
+			overflow-wrap: anywhere;
+		}
+
+		ul ul li {
+			margin-inline-start: var(--sl-sidebar-item-padding-inline);
+			border-inline-start: 1px solid var(--sl-color-hairline-light);
+			padding-inline-start: var(--sl-sidebar-item-padding-inline);
+		}
+
+		.large {
+			font-size: var(--sl-text-lg);
+			font-weight: 600;
+			color: var(--sl-color-white);
+		}
+
+		.top-level > li + li {
+			margin-top: 0.75rem;
+		}
+
+		summary {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0.2em var(--sl-sidebar-item-padding-inline);
+			line-height: 1.4;
+			cursor: pointer;
+			user-select: none;
+		}
+		summary::marker,
+		summary::-webkit-details-marker {
+			display: none;
+		}
+
+		.caret {
+			transition: transform 0.2s ease-in-out;
+			flex-shrink: 0;
+		}
+		:global([dir='rtl']) .caret {
+			transform: rotateZ(180deg);
+		}
+		[open] > summary .caret {
+			transform: rotateZ(90deg);
+		}
+
+		a {
+			display: block;
+			border-radius: 0.25rem;
+			text-decoration: none;
+			color: var(--sl-color-gray-2);
+			padding: 0.3em var(--sl-sidebar-item-padding-inline);
+			line-height: 1.4;
+		}
+
+		a:hover,
+		a:focus {
+			color: var(--sl-color-white);
+		}
+
+		[aria-current='page'],
+		[aria-current='page']:hover,
+		[aria-current='page']:focus {
+			font-weight: 600;
+			color: var(--sl-color-text-invert);
+			background-color: var(--sl-color-text-accent);
+		}
+
+		a > *:not(:last-child),
+		.group-label > *:not(:last-child) {
+			margin-inline-end: 0.25em;
+		}
+
+		@media (min-width: 50rem) {
+			.top-level > li + li {
+				margin-top: 0.5rem;
+			}
+			.large {
+				font-size: var(--sl-text-base);
+			}
+			a {
+				font-size: var(--sl-text-sm);
+			}
+		}
+	}
+</style>

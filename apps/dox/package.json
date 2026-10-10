@@ -22,6 +22,7 @@
     "favicons": "node scripts/build-favicons.mjs",
     "globe:smoke": "node scripts/globe-smoke.mjs",
     "grow:measure": "node scripts/grow-measure.mjs",
+    "contrast:measure": "node scripts/contrast-measure.mjs",
     "readout:still": "node scripts/readout-still.mjs",
     "visual:before": "node scripts/visual-snapshot.mjs before",
     "visual:after": "node scripts/visual-snapshot.mjs after",

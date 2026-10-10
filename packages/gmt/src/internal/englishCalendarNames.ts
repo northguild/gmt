@@ -37,7 +37,9 @@ export const ENGLISH_MONTH_NAMES = [
  * The `Mon, 15 Jul 2024 12:00:00` stem RFC 5322 date-time and RFC 9110 IMF-fixdate share: English
  * day and month names, zero-padded fields, read from the date-time's own wall clock.
  *
- * @param zdt the date-time; the caller has already rejected a year outside 0-9999
+ * @param zdt the date-time; the caller has already rejected a year its grammar cannot hold: a
+ *   negative one for RFC 5322 (`year = 4*DIGIT`, so five digits are written in full), and any
+ *   outside 0000–9999 for RFC 9110 (`year = 4DIGIT`)
  * @returns the stem, without a zone or `GMT` suffix
  * @example englishDateTimeStem(Temporal.ZonedDateTime.from("2024-07-15T12:00:05+00:00[UTC]")) // "Mon, 15 Jul 2024 12:00:05"
  * @example englishDateTimeStem(Temporal.ZonedDateTime.from("0099-01-03T04:05:06+00:00[UTC]")) // "Sat, 03 Jan 0099 04:05:06"

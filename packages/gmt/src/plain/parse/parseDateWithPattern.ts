@@ -1,5 +1,11 @@
+// fallow-ignore-file code-duplication -- sibling of parseDateTimeWithPattern; each keeps its own guard, options check and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
+import {
+  DATE_PATTERN_FIELDS,
+  isOptionsArgument,
+  parseValueWithPattern,
+} from "../../internal";
+import type { TwoDigitYearOptions } from "../../types/two-digit-year";
 
 /**
  * Parse a date string against a caller-supplied token pattern (e.g.
@@ -20,7 +26,7 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  * | Token | Field | Width | Range | Notes |
  * |---|---|---|---|---|
  * | `yyyy` | year | 4 digits | 0000–9999 | |
- * | `yy` | year | 2 digits | 00–99 | Pivot: 00–68 → 2000–2068, 69–99 → 1969–1999 (fixed rule) |
+ * | `yy` | year | 2 digits | 00–99 | Needs `options.yearWindow`; returns `""` without it |
  * | `MM` | month | 2 digits | 01–12 | |
  * | `M` | month | 1-2 digits | 1–12 | |
  * | `MMMM` | month name (long) | locale | — | `getLocaleMonthNames(locale, "long")` |
@@ -59,15 +65,28 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  *   overflow: "reject" })`, so `"02/31/2024"` against `"MM/dd/yyyy"`
  *   still returns `""` — the regex only proves the shape, Temporal
  *   proves the date is real.
+ * - A `yy` token needs the caller's hundred-year window,
+ *   `options.yearWindow`: no standard says which century a two-digit
+ *   year belongs to, and a cut-off built into a library is right today
+ *   and wrong later. Without a valid window a `yy` pattern returns `""`.
+ *   A pattern with no `yy` never reads the option, so a `"rolling"`
+ *   window reads no clock for it. A two-digit year is a legacy form; a
+ *   four-digit year is the one to ask a data source for.
  *
  * @param value The string to decode (e.g. "03/15/2024")
  * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy")
  * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
+ * @param options The hundred-year window a `yy` token resolves in
  * @returns ISO `PlainDate` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy") // "2024-03-15"
  * @example parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy") // "2024-03-15"
- * @example parseDateWithPattern("Mar 15, '24", "MMM d, ''yy") // "2024-03-15" ('' is one literal quote)
+ * @example parseDateWithPattern("Mar 15, '24", "MMM d, ''yy", undefined, { yearWindow: 2000 }) // "2024-03-15" ('' is one literal quote)
+ * @example parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: 1950 }) // "2024-03-15" (1950–2049 window)
+ * @example parseDateWithPattern("03/15/99", "MM/dd/yy", undefined, { yearWindow: 1950 }) // "1999-03-15"
+ * @example parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: "rolling" }) // "2024-03-15" (while the current UTC year is 1975–2074)
+ * @example parseDateWithPattern("03/15/24", "MM/dd/yy") // "" (yy with no window)
+ * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy", undefined, { yearWindow: 2000 }) // "2024-03-15" (yyyy ignores the window)
  * @example parseDateWithPattern("02/31/2024", "MM/dd/yyyy") // "" (shape-valid, not a real date)
  * @example parseDateWithPattern("14:30", "HH:mm") // "" (time token in a date-only pattern)
  * @example parseDateWithPattern("19 mai 2024", "d MMMM yyyy", ["fr-FR", "en-US"]) // "2024-05-19"
@@ -76,16 +95,19 @@ export function parseDateWithPattern(
   value: string,
   pattern: string,
   locale?: string | string[],
+  options?: TwoDigitYearOptions,
 ): string {
   try {
     if (typeof value !== "string") return "";
     if (typeof pattern !== "string") return "";
+    if (!isOptionsArgument(options)) return "";
 
     const fields = parseValueWithPattern(
       value,
       pattern,
       locale,
       DATE_PATTERN_FIELDS,
+      options,
     );
     if (fields === null) return "";
 

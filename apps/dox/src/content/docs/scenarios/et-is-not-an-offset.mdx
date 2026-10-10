@@ -1,0 +1,62 @@
+---
+title: "ET Is Not an Offset"
+description: An X12 status time with time code ET, given a fixed offset from a lookup table and an hour out for most of the year.
+industries: [intermodal]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="ET Is Not an Offset"
+  description="An X12 status carries the date 20240615, the time 1430 and the time code ET. The receiving system looks ET up in a table of offsets."
+  naiveCode={`// The naive approach: a time code looked up as a fixed offset
+const OFFSETS = { ET: "-05:00", CT: "-06:00", MT: "-07:00", PT: "-08:00" };
+new Date("2024-06-15T14:30:00" + OFFSETS.ET).toISOString();
+// "2024-06-15T19:30:00.000Z" — an hour late: in June the Eastern zone is on daylight time`}
+  explanation={`ET names a zone and says neither standard nor daylight. X12 states no offset for it. The offset depends on the date and on which IANA zone "Eastern" means for this sender. parseX12DateAndTime reads the date and the time as a local date-time, and x12TimeCodeZone returns the zone name and the daylight flag for the code, with no offset and no instant. resolveLocal then reads the local time in the zone you pick. The same wall time in January lands an hour later in UTC, because the offset changed.`}
+  gmtCode={`import { parseX12DateAndTime, x12TimeCodeOffset, x12TimeCodeZone } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+parseX12DateAndTime("20240615", "1430");
+// "2024-06-15T14:30:00"
+
+// The code names a zone and states no offset.
+x12TimeCodeZone("ET");
+// { zone: "Eastern", daylight: null }
+x12TimeCodeOffset("ET");
+// ""
+
+// You pick the zone. In June it is on daylight time, so the offset is -04:00.
+resolveLocal("2024-06-15T14:30:00", "America/New_York");
+// "2024-06-15T18:30:00Z"
+
+// The same wall time in January.
+resolveLocal("2024-01-15T14:30:00", "America/New_York");
+// "2024-01-15T19:30:00Z"
+
+// Codes that say standard or daylight name the zone and the flag.
+x12TimeCodeZone("ES");
+// { zone: "Eastern", daylight: false }
+x12TimeCodeZone("ED");
+// { zone: "Eastern", daylight: true }
+
+// A numbered code does state its offset, so resolveLocal takes it in place of a zone.
+x12TimeCodeOffset("13");
+// "-12:00"
+resolveLocal("2024-06-15T14:30:00", "-12:00");
+// "2024-06-16T02:30:00Z"`}
+  fixedSpecId="x12TimeCodeZone"
+/>
+
+Choose `ET` in the widget above. The result holds a zone name and no offset, and `ED` and `ES`
+add a daylight flag. A numbered code such as `13` is not a zone: it states an offset, and
+[`x12TimeCodeOffset`](/reference/intermodal/parse/x12TimeCodeOffset/) returns it. With no time
+code at all the time is local to the event.
+
+In the X12 Time Reader, [ET read in New York and Atikokan](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%22ET%22%2C%22zone%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22America%2FAtikokan%22%7D)
+shows one wall clock as two instants an hour apart, so the name alone does not fix the offset.
+Both zones are the example's picks, not something `ET` says: change them to the zone your message
+means. [ED read in New York](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%22ED%22%2C%22zone%22%3A%22America%2FNew_York%22%7D)
+names the same zone and says daylight. For contrast, [time code `13`](/tools/x12-time-reader/?w=xtime&wa=%7B%22date%22%3A%2220240615%22%2C%22time%22%3A%221430%22%2C%22timeCode%22%3A%2213%22%7D)
+states its offset and needs no zone. The full rules are in [Intermodal: EDI
+Timestamps](/guides/industries/intermodal-edi-timestamps/).

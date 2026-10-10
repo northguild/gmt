@@ -36,10 +36,18 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 - [ ] JSDoc on all new public functions with `@example` for valid, invalid, and edge-case inputs
 - [ ] Every public type, member of a public object type and option property has its own JSDoc description, and every optional input property has `@defaultValue` ([jsdoc standards § Options and members](./jsdoc-standards.md#options-and-members)); `pnpm dox:docs-check` reports no gaps
 - [ ] Every new public type is reached by a public function; a type used only by private code is not exported
-- [ ] Relevant namespace README updated (`packages/gmt/src/<namespace>/README.md`)
-- [ ] `packages/gmt/README.md` quick-start updated if new concept-level functions were added
+- [ ] Each namespace README (`packages/gmt/src/<namespace>/README.md`) is still a one-line stub that points at the docs site; a new namespace has one
+- [ ] The READMEs are up to date. `README.md` and `packages/gmt/README.md` are one short landing page, kept as two identical files. Check each of these:
+  - [ ] `node scripts/stats.mjs check` passes, and every figure in the four fact lines and the comparison table matches `apps/dox/src/data/gmt-stats.json` and `apps/dox/src/data/library-measurements.json`
+  - [ ] The comparison table has GMT's row first, then one row per library in `library-measurements.json`, by tests, most first
+  - [ ] `node scripts/api-surface.mjs check` passes, and one sampled call run by hand returns the result its line shows
+  - [ ] The namespace links name every namespace that exports functions and no other, the industry namespaces sit on the "By industry:" line, and each link resolves to `/reference/<namespace>/` on the docs site
+  - [ ] The agent prompt equals `AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts` in both READMEs and in `CONTRIBUTING.md`
+  - [ ] The two files are identical: `cmp README.md packages/gmt/README.md` prints nothing
+  - [ ] Neither README holds a section for one function or one feature; that content is in a docs guide and the generated reference
+  - [ ] The review reports the `measuredOn` date of each other library's figures in `library-measurements.json`
 - [ ] TanStack Intent skills in `packages/gmt/skills/` updated if a public function was added, renamed, removed, or gained/changed an option (see `/tanstack-intent` skill, `CONTRIBUTING.md` § Keeping agent skills current) — check the relevant `SKILL.md`'s code examples and `_artifacts/domain_map.yaml`'s `covers:` list actually name the new/changed function
-- [ ] Published figures still true — the test counts, CI execution totals and per-namespace function counts are derived from `packages/gmt` only, not typed. `pnpm stats:sync` rewrites them in both READMEs and regenerates `apps/dox/src/data/gmt-stats.json`, and `pnpm run validate` fails on drift. In `apps/dox`, flag any GMT figure typed into copy instead of imported from `src/data/gmt-stats.ts`. Otherwise this needs a reviewer's eye only when `stats check` reports something it cannot fix itself: a new namespace that the api-surface sentence does not name yet, or a README rule that "matched nothing" because guarded prose was reworded
+- [ ] Published figures are derived, not typed. GMT's figures count `packages/gmt` only. `pnpm stats:sync` writes them into both READMEs with the other libraries' rows, and regenerates `apps/dox/src/data/gmt-stats.json`, which also holds the function count of each namespace. `pnpm run validate` fails on drift. In `apps/dox`, flag any GMT figure typed into copy instead of imported from `src/data/gmt-stats.ts`. `sync` rewrites digits and the comparison table's padding only. `stats check` also reports what `sync` cannot fix: a comparison-table row to add, delete or move, a count word that is wrong, a namespace link that is missing, extra or on the wrong line, and a guarded README line that was reworded so its figure is no longer checked. Each needs a hand edit
 - [ ] Changeset present with the bump the [changeset rule](./coding-standards.md#changesets) requires
 
 ## Intentional — do not flag

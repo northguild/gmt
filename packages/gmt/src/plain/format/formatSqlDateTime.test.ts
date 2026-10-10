@@ -1,0 +1,44 @@
+import { sqlDateTime } from "../../regex";
+import { formatSqlDateTime } from "./formatSqlDateTime";
+
+describe("formatSqlDateTime", () => {
+  it.each`
+    value                              | expected
+    ${"2024-03-15T14:30:00"}           | ${"2024-03-15 14:30:00"}
+    ${"2024-03-05T09:00:00"}           | ${"2024-03-05 09:00:00"}
+    ${"2024-03-15T14:30:00.5"}         | ${"2024-03-15 14:30:00.5"}
+    ${"2024-03-15T14:30:00.123456789"} | ${"2024-03-15 14:30:00.123456789"}
+    ${"2024-03-15T14:30"}              | ${"2024-03-15 14:30:00"}
+    ${"0001-01-01T00:00"}              | ${"0001-01-01 00:00:00"}
+    ${"9999-12-31T23:59:59.999999999"} | ${"9999-12-31 23:59:59.999999999"}
+  `(
+    "formats $value as $expected",
+    ({ value, expected }: { value: string; expected: string }) => {
+      expect(formatSqlDateTime(value)).toBe(expected);
+    },
+  );
+
+  it("zero-pads a single-digit day/month to 2 digits", () => {
+    expect(formatSqlDateTime("2024-03-05T09:00:00")).toBe(
+      "2024-03-05 09:00:00",
+    );
+  });
+
+  it.each`
+    value
+    ${"invalid"}
+    ${""}
+    ${"2024-03-15 14:30:00"}
+    ${"2024-02-30T14:30:00"}
+    ${"0000-01-01T00:00:00"}
+    ${"-000001-01-01T00:00:00"}
+    ${"+010000-01-01T00:00:00"}
+  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+    expect(formatSqlDateTime(value)).toBe("");
+  });
+
+  it("output shape is locale-invariant (no locale argument, no Intl call)", () => {
+    const result = formatSqlDateTime("2024-03-15T14:30:00");
+    expect(sqlDateTime.test(result)).toBe(true);
+  });
+});

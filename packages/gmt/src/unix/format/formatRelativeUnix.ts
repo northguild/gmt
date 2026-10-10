@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameZoned, normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
@@ -63,9 +63,10 @@ export interface FormatRelativeUnixOptions {
    */
   reference?: string | number;
   /**
-   * The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset,
-   * or `"local"` for the system time zone. An unknown zone returns `""` whatever the unit, as
-   * ECMA-402 throws RangeError for it.
+   * The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset (a
+   * time zone identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+   * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+   * `""` whatever the unit.
    *
    * @defaultValue `"UTC"`
    */
@@ -87,6 +88,12 @@ export interface FormatRelativeUnixOptions {
  *   digits; `largestUnit` and `epochUnit` accept singular or plural names.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
+ * - **Limit at an offset with seconds.** A month or a year is measured from `reference`, placed in
+ *   the offset's whole-minute zone and moved by its seconds, and the moved instant must be inside
+ *   Temporal's range. So when one is measured and `reference` is within the offset's seconds (under
+ *   a minute) of the last instant Temporal supports (`+275760-09-13T00:00:00Z`) for an offset east
+ *   of UTC, or of the first (`-271821-04-20T00:00:00Z`) for one west, this returns `""`. An offset
+ *   to the minute has no such limit.
  *
  * @param value unix epoch (string or number, per `epochUnit`) to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -101,6 +108,7 @@ export interface FormatRelativeUnixOptions {
  * @example formatRelativeUnix(0, "en-US", null as never) // ""
  * @example formatRelativeUnix("not-a-number") // ""
  * @example formatRelativeUnix(1709163000000, ["fr-FR", "en-US"], { reference: 1709164800000 }) // "il y a 30 minutes"
+ * @example formatRelativeUnix(218670000, "en-US", { reference: 45870000, timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
  */
 export function formatRelativeUnix(
   value: string | number,
@@ -113,8 +121,8 @@ export function formatRelativeUnix(
     if (!isObject(options)) return "";
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     if (epochUnit === null) return "";
-    const tz = normalizeTimeZone(options.timeZone);
-    if (!tz) return "";
+    const frame = normalizeZoneFrame(options.timeZone);
+    if (frame === null) return "";
 
     const target = unixEpochToInstant(value, epochUnit);
     if (target === null) return "";
@@ -126,7 +134,7 @@ export function formatRelativeUnix(
       const diff = target.since(reference);
       // month/year are calendrical and need a relativeTo anchor.
       return formatRelativeDuration(diff, locale, options, (unit) =>
-        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
+        durationTotal(diff, unit, frameZoned(reference, frame)),
       );
     } catch {
       return "";

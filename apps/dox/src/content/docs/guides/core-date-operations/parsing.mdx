@@ -34,6 +34,19 @@ These return zero-padded **strings** (sentinel `""`), not numbers. Months are
 1-indexed (matching the Temporal spec): `"03"` is March, so convert with `Number` and
 subtract 1 before using it as an array index.
 
+A year is written as Temporal writes it: four digits from 0000 to 9999, and a sign and six
+digits outside that range. Every function that returns a year does this, the `"year"` unit
+of `parseUnitFromDate` and its siblings included:
+
+```typescript
+import { parseUnitFromDate, parseYearFromDate } from "@northguild/gmt";
+
+parseYearFromDate("0005-06-01"); // "0005"
+parseYearFromDate("+010000-01-01"); // "+010000"
+parseYearFromDate("-000005-01-01"); // "-000005"
+parseUnitFromDate("0005-06-01", "year"); // "0005"
+```
+
 There are `parse*FromDateTime` siblings for datetime strings, plus
 `parseDayOfWeekFromDate` and `parseWeekFromDate`, which return numbers (sentinel `null`).
 
@@ -64,7 +77,9 @@ getWeeksInMonth("2024-02-15", "en-US"); // 5 — calendar-grid rows
 
 `parseDateWithPattern`/`parseDateTimeWithPattern`/`parseTimeWithPattern` decode a
 known, fixed non-ISO producer format — a CSV column, a legacy API field, a
-partially-typed form value — against a caller-supplied token pattern:
+partially-typed form value — against a caller-supplied token pattern. This is for
+**decoding**, not display: the pattern hard-codes the field order, so `formatDate` and
+`formatDateToParts` remain the right choice for locale-correct output:
 
 ```typescript
 import {
@@ -83,30 +98,117 @@ The regex only proves shape; `Temporal.*.from(..., { overflow: "reject" })` prov
 the value is real. All three return `""` on no match, a malformed pattern, or a
 shape-valid-but-unreal date/time.
 
+### Tokens
+
+| Tokens | Reads |
+| --- | --- |
+| `yyyy` `MM` `dd` `HH` `mm` `ss` `SSS` | fixed-width fields |
+| `M` `d` `H` `h` `m` `s` | variable-width fields |
+| `MMMM` `MMM` `EEEE` `EEE` `a` `GGGG` `GG` | locale-aware names |
+| `'single quotes'` | literal text |
+
+Two single quotes in a row are one literal quote, inside or outside quoted text, as UTS #35
+reads them:
+
+```typescript
+import { parseDateWithPattern } from "@northguild/gmt";
+
+parseDateWithPattern("'2024-01-15'", "''yyyy-MM-dd''");
+// "2024-01-15" — the pattern's '' is a literal ' on each side
+```
+
+A `locale` parameter (default `"en-US"`) controls name-token matching:
+
+```typescript
+parseDateWithPattern("15. März 2024", "dd. MMMM yyyy", "de-DE");
+// "2024-03-15"
+```
+
+### Two-digit years
+
+A `yy` token needs your own hundred-year window, `options.yearWindow`. No standard says
+which century a two-digit year belongs to, so without a window a `yy` pattern returns `""`.
+A number is the first year of a fixed window. `"rolling"` is the hundred years around the
+current UTC year:
+
+```typescript
+parseDateWithPattern("24-03-15", "yy-MM-dd", "en-US", { yearWindow: 2000 });
+// "2024-03-15" — a window starting in 2000 reads 24 as 2024
+
+parseDateWithPattern("99-03-15", "yy-MM-dd", "en-US", { yearWindow: 1950 });
+// "1999-03-15" — a window starting in 1950 reads 99 as 1999 ...
+
+parseDateWithPattern("24-03-15", "yy-MM-dd", "en-US", { yearWindow: 1950 });
+// "2024-03-15" — ... and 24 as 2024
+
+parseDateWithPattern("24-03-15", "yy-MM-dd");
+// "" — no window, no answer
+```
+
 ## Parse a named machine format (email, HTTP, SQL, RFC 3339)
 
 These four return `""` on invalid input (they produce a whole datetime string, not
 a number), matching the sentinel convention of their `format*` counterparts:
 
 ```typescript
-import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@northguild/gmt";
+import { parseRfc2822, parseHttpDate, parseSqlDateTime, parseRfc3339 } from "@northguild/gmt";
 
 parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
 // "2024-03-15T14:30:00-04:00[-04:00]"
 
-parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT");
 // "2024-03-15T14:30:00Z"
 
-parseSql("2024-03-15 14:30:00");
+parseHttpDate("Sun Nov  6 08:49:37 1994");
+// "1994-11-06T08:49:37Z" — also reads the obsolete rfc850-date and asctime-date forms
+
+parseSqlDateTime("2024-03-15 14:30:00");
 // "2024-03-15T14:30:00"
-parseSql("2024-03-15 14:30");
+parseSqlDateTime("2024-03-15 14:30");
 // "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
 parseRfc3339("2024-03-15T14:30:00-04:00");
 // "2024-03-15T14:30:00-04:00[-04:00]"
 ```
 
+A receiver reads RFC 5322's full and obsolete syntax: comments, any letter case, two-digit
+years and zone names. A day name that contradicts the date returns `""`:
+
+```typescript
+parseRfc2822("fri,15 Mar 24 14:30 -0400 (EDT)");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+
+parseRfc2822("Sat, 15 Mar 2024 14:30:00 -0400");
+// "" — 15 March 2024 was a Friday
+```
+
 Each has a `format*` counterpart in the [Formatting](../formatting/) guide.
+
+Each also has a validator that is `true` exactly when the parser returns a value:
+`isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime` and `isValidRfc3339DateTime`.
+Use it to check a string, not the `regex` pattern for the format. A pattern proves the shape
+alone, so it matches a day that does not exist:
+
+```typescript
+import {
+  isValidHttpDate,
+  isValidRfc2822DateTime,
+  isValidRfc3339DateTime,
+  isValidSqlDateTime,
+  rfc3339DateTime,
+} from "@northguild/gmt";
+
+rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false — 2023 has no 29 February
+isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false — a Friday
+isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true — asctime-date
+isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false — hour 24
+isValidSqlDateTime("2024-02-30 14:30:00"); // false — February has no 30th
+isValidSqlDateTime("2024-03-15 14:30:00"); // true
+```
+
+The `rfc2822DateTime` and `httpDate` patterns also do not match the obsolete forms the
+parsers read, so a pattern can reject a string its parser accepts.
 
 ## See also
 
@@ -115,3 +217,4 @@ Each has a `format*` counterpart in the [Formatting](../formatting/) guide.
 - [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
 - [`parseDateWithPattern` reference](/reference/plain/parse/parseDateWithPattern)
 - [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)
+- [`isValidRfc3339DateTime` reference](/reference/zoned/validate/isValidRfc3339DateTime)

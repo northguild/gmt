@@ -58,6 +58,7 @@ import { chromium, webkit } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  blockOffSite,
   crashProblem,
   dragProblem,
   emptyRunProblem,
@@ -130,7 +131,7 @@ const PAGES = [
     slug: "timetable-reader",
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
-    drag: null,
+    drag: '[data-role="handle-1"]',
   },
   {
     slug: "crossing-clock",
@@ -173,6 +174,18 @@ const PAGES = [
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
     drag: '[data-role="handle-after"]',
+  },
+  {
+    slug: "dtm-decoder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "x12-time-reader",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
   },
   {
     slug: "zone-planner",
@@ -534,6 +547,9 @@ async function runOneUnguarded(
       await route.fulfill({ response, body });
     });
   }
+  /* After the route above: Playwright asks the newest route first, and that one
+     continues every request it does not rewrite. */
+  await blockOffSite(context, o.base);
   const page = await context.newPage();
   await context.addInitScript(samplerInit, {
     rootSelector: def.root,

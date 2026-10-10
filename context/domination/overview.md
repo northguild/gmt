@@ -249,7 +249,7 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - CCSDS 502.0-B-3 — Orbit Data Messages
 - ITU-R M.585 — Assignment and use of maritime mobile service identities
 - IEEE 1588 / 802.1AS — Precision Time Protocol
-- UN/EDIFACT DTM — date/time/period segment, format qualifiers 102 / 203 / 303 / 304
+- UN/EDIFACT DTM — date/time/period segment, format codes 102 / 203 (no offset), 205–208 (a numeric offset) and 303 / 304 (a zone field)
 - GS1 EPCIS 2.0 — `eventTime` + `eventTimeZoneOffset`
 - DCSA Track & Trace — `eventDateTime`, `eventClassifierCode`
 - GTFS — `stop_times`, service days, "noon minus 12h"
@@ -264,7 +264,7 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - BIMCO Laytime Definitions for Charter Parties 2013; Gencon 1994 cl. 6(c)
 - Bowditch, *The American Practical Navigator* (2019) ch. 16 §1607; ACP 121(G) para 317c
 - IS-GPS-200N; Galileo OS SIS ICD 2.0; BDS-SIS-ICD 2.0; GLONASS ICD 5.1; IS-QZSS-PNT-003
-- X12 data elements 623 and 1250; UN/EDIFACT data element 2379
+- X12 data elements 373, 337, 623, 1250 and 1251 (a United States standard, licensed; read through an X12-licensed dictionary); UN/EDIFACT data element 2379; UN/ECE Recommendation 7
 - railML `operatingPeriod` / `bitmaskValidity`
 - RFC 5905 (NTP); RFC 9562 (UUID); Kulkarni et al. 2014 (HLC); Corbett et al. 2012 (Spanner); Akidau et al. 2015 (Dataflow)
 - HL7 v2.5.1 ch. 2A; FHIRPath N1 / v3.0.0; CQL v2.0.0 Appendix B; FHIR R4 `Timing`

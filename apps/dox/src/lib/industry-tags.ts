@@ -47,7 +47,8 @@ const DETAILS: Readonly<Record<string, Omit<IndustryTag, "id">>> = {
   },
   intermodal: {
     label: "Intermodal",
-    definition: "Container free time, demurrage and billing deadlines.",
+    definition:
+      "Container free time, demurrage, billing deadlines, bill of lading dates and EDI timestamps.",
     icon: "industry-intermodal",
     guide: "/guides/industries/intermodal-free-time-and-demurrage/",
   },
@@ -59,6 +60,12 @@ export const INDUSTRY_TAG_IDS: readonly string[] = [
   CORE_INDUSTRY,
   ...gmtStats.industries,
 ];
+
+/** The industry layers alone, without core, in the order the stats list them:
+ *  the namespaces the API Reference groups under "By industry". */
+export const INDUSTRY_LAYER_IDS: readonly string[] = INDUSTRY_TAG_IDS.filter(
+  (id) => id !== CORE_INDUSTRY,
+);
 
 export function isIndustryTagId(id: string): boolean {
   return INDUSTRY_TAG_IDS.includes(id) && Object.hasOwn(DETAILS, id);
@@ -95,3 +102,25 @@ export const INDUSTRY_ICON_PATHS: Readonly<Record<string, string>> = {
   "industry-transport": `<g ${STROKE}><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h7a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h7"/></g>`,
   "industry-intermodal": `<g ${STROKE}><rect x="2" y="7" width="20" height="11" rx="1"/><path d="M6.5 10v5M10.2 10v5M13.8 10v5M17.5 10v5"/></g>`,
 };
+
+/**
+ * The CSS that puts an industry's icon beside its group's label in the sidebar.
+ *
+ * Starlight's sidebar takes no icon for a group, so the generated sidebar marks
+ * the group's Overview link with `data-gmt-industry` and this rule reaches the
+ * group's `<summary>` from there with `:has()`. The glyph is the same stroke
+ * path as the tag's, drawn as a mask over the label's own colour, so it has the
+ * label's contrast in every theme. One rule per layer, from the same list as
+ * everything else: a new layer needs no edit here.
+ */
+export function industrySidebarCss(): string {
+  return INDUSTRY_LAYER_IDS.flatMap((id) => {
+    const icon = DETAILS[id]?.icon;
+    const paths = icon ? INDUSTRY_ICON_PATHS[icon] : undefined;
+    if (!paths) return [];
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${paths}</svg>`;
+    return [
+      `details:has(> ul > li > a[data-gmt-industry="${id}"]) > summary{--gmt-industry-icon:url("data:image/svg+xml,${encodeURIComponent(svg)}")}`,
+    ];
+  }).join("\n");
+}

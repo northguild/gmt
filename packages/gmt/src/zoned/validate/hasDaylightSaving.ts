@@ -3,8 +3,8 @@ import {
   isOptionsArgument,
   observesDaylightTime,
   parseInstantNanoseconds,
+  zoneFrame,
 } from "../../internal";
-import { isValidTimeZone } from "./isValidTimeZone";
 
 /**
  * Check whether a timeZone observes daylight saving time at a reference instant.
@@ -25,9 +25,10 @@ import { isValidTimeZone } from "./isValidTimeZone";
  *   2016 on, although its clocks went forward in March 2016.
  * - Read from the runtime's time zone data, so the answer can change when that data does.
  * - Returns false for an invalid timeZone, an invalid `at`, an options argument that is not an
- *   object, and a fixed offset.
+ *   object, and a fixed UTC offset, with or without seconds (`"+05:30"`, `"-00:44:30"`).
  *
- * @param timeZone timeZone identifier to check
+ * @param timeZone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a
+ *   stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @param options optional setting for the reference instant
  * @returns boolean indicating whether the timeZone observes DST, or false on invalid input
  *
@@ -42,6 +43,7 @@ import { isValidTimeZone } from "./isValidTimeZone";
  * @example hasDaylightSaving("+05:00", { at: "2024-01-15T12:00:00Z" }) // false
  * @example hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }) // false
  * @example hasDaylightSaving("America/New_York", { at: "2024-01-15" }) // false (not an instant)
+ * @example hasDaylightSaving("-00:44:30", { at: "1970-01-01T12:00:00Z" }) // false (a fixed offset)
  */
 export function hasDaylightSaving(
   timeZone: string,
@@ -57,14 +59,24 @@ export function hasDaylightSaving(
     at?: string;
   },
 ): boolean {
-  if (!isValidTimeZone(timeZone) || !isOptionsArgument(options)) {
+  const frame = zoneFrame(timeZone);
+
+  // A stored offset with seconds is a fixed offset: it observes no daylight time, as "-00:45"
+  // observes none.
+  if (
+    frame === null ||
+    frame.shiftNanoseconds !== 0n ||
+    !isOptionsArgument(options)
+  ) {
     return false;
   }
 
   try {
     const at = options?.at;
     if (at === undefined) {
-      return observesDaylightTime(Temporal.Now.zonedDateTimeISO(timeZone));
+      return observesDaylightTime(
+        Temporal.Now.zonedDateTimeISO(frame.timeZone),
+      );
     }
 
     const epochNanoseconds = parseInstantNanoseconds(at);
@@ -75,7 +87,7 @@ export function hasDaylightSaving(
     return observesDaylightTime(
       Temporal.Instant.fromEpochNanoseconds(
         epochNanoseconds,
-      ).toZonedDateTimeISO(timeZone),
+      ).toZonedDateTimeISO(frame.timeZone),
     );
   } catch {
     return false;

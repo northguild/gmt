@@ -3,6 +3,7 @@ import { isValidDate } from "../plain/validate/isValidDate";
 import type { BusinessCalendar } from "../types";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import { isObject } from "./isObject";
+import { isoYearString } from "./isoYearString";
 
 const ISO_WEEKDAYS = 7;
 
@@ -146,8 +147,6 @@ const EPOCH_WEEKDAY_OFFSET = 3;
 const DAYS_PER_400_YEARS = 146_097;
 /** Days from 0000-03-01, the start of a March-based year, to 1970-01-01. */
 const DAYS_FROM_MARCH_0000_TO_EPOCH = 719_468;
-/** TC39 `PadISOYear`: years 0–9999 print with four digits, any other with a sign and six. */
-const MAX_FOUR_DIGIT_YEAR = 9999;
 
 /**
  * Days from 1970-01-01 to an ISO date, in the proleptic Gregorian calendar of ECMA-262 §21.4.1
@@ -198,12 +197,7 @@ function isoFieldsOf(epochDay: number): [number, number, number] {
 /** `Temporal.PlainDate#toString` for an ISO date, which is how `holidays` stores its dates. */
 function isoDateString(epochDay: number): string {
   const [year, month, day] = isoFieldsOf(epochDay);
-  const yearText =
-    year < 0 || year > MAX_FOUR_DIGIT_YEAR
-      ? `${year < 0 ? "-" : "+"}${String(Math.abs(year)).padStart(6, "0")}`
-      : String(year).padStart(4, "0");
-
-  return `${yearText}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return `${isoYearString(year)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /**

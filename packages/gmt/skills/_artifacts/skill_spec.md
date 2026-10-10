@@ -50,7 +50,7 @@ consumers.
 - **Consumer skills** (shipped in the npm tarball): `skills/gmt-basics/`,
   `skills/gmt-arithmetic/`, `skills/gmt-timezone/`, `skills/gmt-integration/`
   — lightweight routing pointers (~30-60 lines each) that point agents to the
-  README and source JSDoc for full API details.
+  docs site and the JSDoc in the installed package for full API details.
 - **Contributor skills** (excluded from the npm tarball via `.npmignore`):
   `skills/contributor/<slug>/SKILL.md` — maintainer workflows.
 
@@ -62,7 +62,11 @@ consumers.
 ## Notes
 
 Consumer-facing skills are deliberately slim routing pointers. They carry core
-rules and point agents to `README.md` and source JSDoc for API signatures,
-locale matrices, and code examples. Contributor skills are kept separate and
-excluded from the published tarball so they do not pollute consumer
-`intent list` output.
+rules and point agents to two places for API signatures, locale matrices, and
+code examples. The first is the docs site: `https://gmt-dox.northguild.workers.dev/llms.txt`
+is the map, and the `.md` twin of a page holds its text. The second is the
+JSDoc in the installed package (`node_modules/@northguild/gmt/dist/**/*.d.ts`).
+The package README is a landing page and holds no API detail. Each skill lists
+the docs guides it summarises under `sources`, beside its source files.
+Contributor skills are kept separate and excluded from the published tarball
+so they do not pollute consumer `intent list` output.

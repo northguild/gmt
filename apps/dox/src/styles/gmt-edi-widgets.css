@@ -1,0 +1,1093 @@
+/*
+ * The EDI timestamp widgets, shared (INT-15): the DTM Decoder and the X12 Time
+ * Reader.
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css and the
+ * control primitives in gmt-form-controls.css; this sheet adds no control CSS.
+ * It places them and holds what both tools share: the controls line, the
+ * two-pane split, the value taken apart, the member grid, the verdict plate, the
+ * shared UTC timeline and the zone table.
+ *
+ * One principle, the Timetable Reader's: pictures on the left, values on the
+ * right, one seam through the sections. Sections 2 and 3 of both tools each hold
+ * one `.gmt-edi-split` of two `.gmt-edi-pane`s, in reading order. Stacked, a split
+ * is a column; from the two-column band (derived below) it is a grid whose
+ * template is one custom property on the widget root, so the seam of section 2
+ * and the seam of section 3 are one vertical line.
+ *
+ * Every region is present in every state. A region that does not apply shows its
+ * empty state in the same box at the same size, and every height that depends on
+ * a value is reserved for the longest value the tool reads, tier by tier, in the
+ * unit of the pane it sits in. Nothing appears, disappears or changes height when
+ * the reader changes preset or types.
+ *
+ * Queries are by name. `gmt-edi-section` is a section's content box (the controls
+ * line and the band); `gmt-edi-pane` is a pane (everything inside a pane). Both
+ * are named because the field grids inside are containers too, and an unnamed
+ * query on a control would resolve to its grid.
+ *
+ * Rules these obey (context/dox/reference/design-system.md):
+ *  - No accent edge. A plate, cell, box or pane has a full bevelled border; a
+ *    group's mark is a bottom edge, and a bracket is three sides.
+ *  - Tokens only; no colour literal. Series colours go on marks and edges, never
+ *    on text. Amber is the sentinel's alone.
+ *  - No `transition` or `animation` on a value or a mark.
+ *  - Text is at least 12px (`--gmt-text-xs`).
+ */
+
+.gmt-dtm-decoder,
+.gmt-x12-time-reader {
+  container-type: inline-size;
+}
+
+.gmt-dtm-decoder > .gmt-widget-card > .gmt-widget-section,
+.gmt-x12-time-reader > .gmt-widget-card > .gmt-widget-section {
+  container-name: gmt-edi-section;
+}
+
+/* ---------------------------------------------------------------------------
+ * The split: pictures on the left, values on the right
+ *
+ * What each column must hold (rem of 16px; the mono face at 12.8px has a 7.7px
+ * character, at 13.6px 8.2px):
+ *
+ *   Right, DTM Decoder  38.75rem (620px): the zone table's wide row on one line.
+ *          1.75rem badge, a 12.5rem zone select, a 20-character instant
+ *          (`2024-06-15T18:30:00Z`, 154px), a 6-character offset (46px) and a
+ *          17-character `205` value (131px), four 8px gaps and the table's 12px
+ *          padding and 1px border: 28 + 200 + 154 + 46 + 131 + 32 + 26 = 617px.
+ *          The member grid needs less: three 11.5rem cells and two 8px gaps are
+ *          568px.
+ *   Right, X12 Time Reader  45.5rem (728px): the same row with the time reader's
+ *          23-character instant (177px, with hundredths) and 28-character local
+ *          time with its offset (216px, `2024-06-15T14:30:00.12-04:00`):
+ *          28 + 200 + 177 + 46 + 216 + 32 + 26 = 725px.
+ *   Left   28rem (448px): the value taken apart. Its widest single value, a
+ *          UN/EDIFACT 208, is 280px; the segment's parts row is 413px, and wraps
+ *          under 30rem. The floor is legibility, not width.
+ *   Gap    1rem.
+ *
+ * Where there is room for more than both minima the columns are equal:
+ * `minmax(28rem, 1fr) minmax(R, 1fr)` gives the right column its R until half the
+ * row is wider, and the left column the rest.
+ *
+ * The band starts at the narrowest section that holds both minima and the gap:
+ *   DTM Decoder      28 + 1 + 38.75 = 67.75rem (1084px): the 1800px viewport
+ *                    (a 1100px section) and every wider one.
+ *   X12 Time Reader  28 + 1 + 45.5  = 74.5rem (1192px): the 1920px viewport
+ *                    (a 1228px section) and every wider one.
+ * Under it a pane is the section's width, so the stacked layout reads as one
+ * column at every width down to the 390px viewport (a 320px section).
+ * --------------------------------------------------------------------------- */
+
+.gmt-dtm-decoder {
+  --edi-cols: minmax(28rem, 1fr) minmax(38.75rem, 1fr);
+  --edi-seam: 1rem;
+}
+
+.gmt-x12-time-reader {
+  --edi-cols: minmax(28rem, 1fr) minmax(45.5rem, 1fr);
+  --edi-seam: 1rem;
+}
+
+.gmt-edi-split,
+.gmt-edi-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-width: 0;
+}
+
+.gmt-edi-pane {
+  container: gmt-edi-pane / inline-size;
+}
+
+/* In the band the panes are as tall as the taller one, and the picture's box
+   takes the difference, so the two bottoms are one line. The taller pane's
+   height is fixed by what it reserves, so the stretch moves nothing. */
+.gmt-edi-pane > .gmt-edi-panel {
+  flex: 1 1 auto;
+}
+
+@container gmt-edi-section (min-width: 67.75rem) {
+  .gmt-dtm-decoder .gmt-edi-split {
+    display: grid;
+    grid-template-columns: var(--edi-cols);
+    column-gap: var(--edi-seam);
+    align-items: stretch;
+  }
+}
+
+@container gmt-edi-section (min-width: 74.5rem) {
+  .gmt-x12-time-reader .gmt-edi-split {
+    display: grid;
+    grid-template-columns: var(--edi-cols);
+    column-gap: var(--edi-seam);
+    align-items: stretch;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The controls line
+ *
+ * The preset is the main control and its select cannot wrap, so it shares the
+ * line with the others only when the line can show its LONGEST label whole.
+ * Measured in Chromium (canvas measureText in the 13.6px mono face) plus the
+ * select's 8px + 28px padding and 2px of border:
+ *   DTM Decoder     `203: local time, no offset`  about 290px -> 352px reserved
+ *   X12, main       `Code 24: the other end of the run`       270.2px -> 308px
+ *   X12, DTP        `D6: a two-digit year, not read`  about 290px -> 352px reserved
+ * so the preset's column is 22rem (352px). Beside it sit the other columns, each
+ * as wide as its own label and control need, and a 0.75rem gap between each:
+ *   DTM Decoder  22 + 15 (segment) + 9.5 (format code) + 2 * 0.75 = 48 rem
+ *   X12 main     22 + 3 * 10 (a date, a time and a code, each with `optional`)
+ *                + 3 * 0.75 = 54.25rem
+ *   X12 DTP      22 + 9 (qualifier) + 12 (value) + 2 * 0.75 = 44.5rem
+ * From there the line is one row. Under it the preset takes its own row and the
+ * rest share the next while they hold their own minima (DTM 25.25rem, X12 main
+ * 31.5rem, X12 DTP 21.75rem); under that the field grid's own 11rem tracks.
+ * --------------------------------------------------------------------------- */
+
+.gmt-edi-preset {
+  grid-column: 1 / -1;
+}
+
+@container gmt-edi-section (min-width: 25.25rem) and (max-width: 47.99rem) {
+  .gmt-dtm-decoder .gmt-field-grid.gmt-edi-top {
+    grid-template-columns: minmax(15rem, 2fr) minmax(9.5rem, 1fr);
+  }
+}
+
+@container gmt-edi-section (min-width: 48rem) {
+  .gmt-dtm-decoder .gmt-field-grid.gmt-edi-top {
+    grid-template-columns: minmax(22rem, 2fr) minmax(15rem, 2fr) minmax(
+        9.5rem,
+        1fr
+      );
+  }
+
+  .gmt-dtm-decoder .gmt-edi-preset {
+    grid-column: auto;
+  }
+}
+
+@container gmt-edi-section (min-width: 31.5rem) and (max-width: 54.24rem) {
+  .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="main"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container gmt-edi-section (min-width: 54.25rem) {
+  .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="main"] {
+    grid-template-columns: minmax(22rem, 2fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .gmt-x12-time-reader .gmt-edi-top[data-line="main"] .gmt-edi-preset {
+    grid-column: auto;
+  }
+}
+
+@container gmt-edi-section (min-width: 21.75rem) and (max-width: 44.49rem) {
+  .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="dtp"] {
+    grid-template-columns: minmax(9rem, 1fr) minmax(12rem, 2fr);
+  }
+}
+
+@container gmt-edi-section (min-width: 44.5rem) {
+  .gmt-x12-time-reader .gmt-field-grid.gmt-edi-top[data-line="dtp"] {
+    grid-template-columns: minmax(22rem, 2fr) minmax(9rem, 1fr) minmax(
+        12rem,
+        2fr
+      );
+  }
+
+  .gmt-x12-time-reader .gmt-edi-top[data-line="dtp"] .gmt-edi-preset {
+    grid-column: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The value taken apart
+ *
+ * A region of one box: the parts the value arrived in (a segment's tag,
+ * qualifier, value and code, with the service characters as sent), then the
+ * value cut into its fields, each field's characters in a box with the
+ * standard's mask letters beneath, bracketed into date, time and offset or zone.
+ *
+ * A field's box is `n` characters wide, where `n` is the longer of its text and
+ * its mask, in the mono face, plus the box's own padding. The marks are
+ * `--gmt-series-1` (date), `-2` (time) and `-3` (offset or zone), drawn as the
+ * box's bottom edge and the bracket beneath; no text takes a series colour. A
+ * refused value is neutral: the same boxes in the border colour.
+ * --------------------------------------------------------------------------- */
+
+/* The box a picture sits in: the picture, then the words about it and, for a
+   refused value, the reason. */
+.gmt-edi-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  min-width: 0;
+}
+
+/* The picture is the pane's main content, so its boxes are drawn larger than the
+   table's text: a 0.9375rem (15px) face, a 12px mask (1.375rem and 15px for a single value). `ch` in a field's
+   width is this face's. */
+/* The picture sits in the middle of the box it has reserved, so the room round it
+   frames it. */
+.gmt-edi-hold > .gmt-edi-figure:not(.gmt-edi-sizer) {
+  align-self: center;
+}
+
+.gmt-edi-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.9375rem;
+}
+
+/* A single value has the pane to itself, so it is drawn larger than a period's two
+   halves, which share a row. */
+.gmt-edi-figure[data-scale="lg"] {
+  font-size: 1.375rem;
+}
+
+.gmt-edi-figure[data-scale="lg"] .gmt-edi-caption,
+.gmt-edi-figure[data-scale="lg"] .gmt-edi-mask,
+.gmt-edi-figure[data-scale="lg"] .gmt-edi-bracket-label {
+  font-size: 0.9375rem;
+}
+
+/* The reason a value was refused, as a compact aside in the picture's box: the
+   title is aria-hidden already, and the aside's own label names it. */
+.gmt-edi-panel .starlight-aside {
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+}
+
+.gmt-edi-panel .starlight-aside__title {
+  display: none;
+}
+
+.gmt-edi-pane > .gmt-edi-hold .starlight-aside {
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+}
+
+.gmt-edi-pane > .gmt-edi-hold .starlight-aside__title {
+  display: none;
+}
+
+.gmt-edi-hold .starlight-aside__content > * {
+  margin: 0;
+}
+
+.gmt-edi-hold .starlight-aside__content > * + * {
+  margin-top: var(--gmt-space-2);
+}
+
+.gmt-edi-fig-empty {
+  margin: 0;
+  align-self: center;
+  margin-block: auto;
+  max-inline-size: 36ch;
+  text-align: center;
+  font-family: var(--gmt-font-body, inherit);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-parts,
+.gmt-edi-taken {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.gmt-edi-parts {
+  column-gap: 4px;
+  row-gap: var(--gmt-space-2);
+}
+
+.gmt-edi-taken {
+  column-gap: var(--gmt-space-4);
+  row-gap: var(--gmt-space-3);
+}
+
+.gmt-edi-part {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* A caption is centred under its box and may be wider than it: it never widens
+   the part, so the service characters stay beside their boxes. */
+.gmt-edi-part > .gmt-edi-caption {
+  inline-size: 0;
+  min-inline-size: 100%;
+  text-align: center;
+  overflow: visible;
+}
+
+.gmt-edi-box {
+  box-sizing: border-box;
+  display: block;
+  padding: 4px 8px;
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end-width: 3px;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-size: inherit;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The segment tag and the function qualifier are shown as sent: a dashed edge
+   says they are not read. */
+.gmt-edi-part[data-kind="tag"] .gmt-edi-box,
+.gmt-edi-part[data-kind="plain"] .gmt-edi-box {
+  border-style: dashed;
+}
+
+.gmt-edi-part[data-kind="tag"] .gmt-edi-box {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-punct {
+  padding: 4px 6px;
+  color: var(--gmt-ice);
+  line-height: 1.4;
+  white-space: pre;
+}
+
+.gmt-edi-caption,
+.gmt-edi-mask,
+.gmt-edi-bracket-label,
+.gmt-edi-half-label {
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  line-height: 1.3;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-edi-half {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gmt-edi-sep {
+  align-self: flex-start;
+  padding-block: calc(0.75rem * 1.3 + 2px + 4px);
+  color: var(--gmt-ice);
+}
+
+.gmt-edi-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-edi-group,
+.gmt-edi-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gmt-edi-fields {
+  display: flex;
+  gap: 3px;
+}
+
+.gmt-edi-field {
+  box-sizing: border-box;
+  inline-size: calc(var(--n) * 1ch + 18px);
+  align-items: stretch;
+  text-align: center;
+}
+
+.gmt-edi-field .gmt-edi-box {
+  inline-size: 100%;
+}
+
+.gmt-edi-group[data-group="date"],
+.gmt-edi-field[data-group="date"] {
+  --mark: var(--gmt-series-1);
+}
+
+.gmt-edi-group[data-group="time"],
+.gmt-edi-field[data-group="time"] {
+  --mark: var(--gmt-series-2);
+}
+
+.gmt-edi-group[data-group="offset"],
+.gmt-edi-field[data-group="offset"] {
+  --mark: var(--gmt-series-3);
+}
+
+.gmt-edi-group[data-group="neutral"],
+.gmt-edi-field[data-group="neutral"],
+.gmt-edi-group--none,
+.gmt-edi-field[data-group="none"] {
+  --mark: var(--gmt-border-strong);
+}
+
+.gmt-edi-field .gmt-edi-box {
+  border-block-end-color: var(--mark);
+}
+
+/* A code that carries no offset says so in words, in a box with a dashed edge. */
+.gmt-edi-box--none {
+  border-style: dashed;
+  background: none;
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+}
+
+/* The bracket: the sides and the bottom, drawn by a pseudo-element, in the
+   group's mark; the label under it is text. */
+.gmt-edi-bracket {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.gmt-edi-bracket::before {
+  content: "";
+  align-self: stretch;
+  block-size: 7px;
+  border: 2px solid var(--mark);
+  border-block-start-width: 0;
+  border-radius: 0 0 var(--gmt-radius-sm) var(--gmt-radius-sm);
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------------------
+ * The verdict plate, the detail line and the member grid
+ *
+ * Seven members, always the same seven in the same places: a stated member shows
+ * its value and an unstated one a quiet `not stated`, so the block never changes
+ * size. The columns follow the pane's width alone: a cell holds the longest value
+ * without breaking it (the DTM Decoder's `2024-06-15T12:30:00Z`, 20 characters,
+ * 154px; the X12 Time Reader's `2024-06-15T18:30:00.12Z`, 23 characters, 177px)
+ * and its own 12px padding and 1px border.
+ * --------------------------------------------------------------------------- */
+
+.gmt-dtm-decoder {
+  --edi-cell: 11.5rem;
+}
+
+.gmt-x12-time-reader {
+  --edi-cell: 13.5rem;
+}
+
+.gmt-edi-readouts {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--edi-cell)), 1fr)
+  );
+  gap: var(--gmt-space-2);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.gmt-edi-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-edi-row > dt {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-row > dd {
+  box-sizing: border-box;
+  min-block-size: 1.4em;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+}
+
+.gmt-edi-row > dd[data-state="absent"],
+.gmt-edi-row > dd[data-state="none"] {
+  color: var(--gmt-ice-dim);
+}
+
+/* A sentinel inside a member cell keeps the cell's box: amber text, no plate. */
+.gmt-edi-row > dd.gmt-playground-sentinel {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+}
+
+.gmt-edi-verdict {
+  box-sizing: content-box;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-base);
+  line-height: 1.5;
+  min-block-size: 1lh;
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+}
+
+/* The detail line under a verdict: its height is the longest sentence's, from the
+   hold. */
+.gmt-edi-detail {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-detail:empty::before {
+  content: "\200b";
+}
+
+/* One line of a hint that holds more than one (the split line and the note that
+   the window is not read). */
+.gmt-edi-line {
+  display: block;
+}
+
+/* ---------------------------------------------------------------------------
+ * Holds. A region whose text changes draws every text it can show, hidden, in the
+ * one grid cell it sits in (`holdHtml`), so its height is the tallest text's at
+ * whatever width it has. A call frame that has no call keeps its box (`hidden`
+ * hides it from assistive technology and takes it out of the tab order; the box
+ * stays), so nothing below it moves.
+ * --------------------------------------------------------------------------- */
+
+.gmt-edi-hold {
+  display: grid;
+  min-width: 0;
+}
+
+.gmt-edi-hold > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.gmt-edi-sizer {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.gmt-edi-call[hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+.gmt-widget-output.gmt-edi-out {
+  box-sizing: border-box;
+  /* One result per line when a section prints several calls. */
+  white-space: pre-wrap;
+}
+
+/* Section 4: the written-back value and its call on one line, in the section's
+   own width. */
+.gmt-edi-written {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  align-items: stretch;
+}
+
+.gmt-edi-pairs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+}
+
+@container gmt-edi-section (min-width: 74.5rem) {
+  .gmt-edi-pairs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.gmt-edi-pairs > .gmt-edi-written,
+.gmt-edi-pairs > .gmt-edi-written:is(*) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gmt-edi-written-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-width: 0;
+}
+
+@container gmt-edi-section (min-width: 52rem) {
+  .gmt-edi-written {
+    grid-template-columns: minmax(16rem, 2fr) minmax(0, 3fr);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The shared UTC timeline
+ *
+ * One axis in UTC with a tick on every whole hour and a label on every n-th, a
+ * numbered mark per chosen zone in that row's series colour (a bevelled pin on a
+ * stem, with the number as text in the ink colour and the series on the pin's
+ * edge), and the widest gap as a bracket between the outermost marks with its
+ * label. Marks that fall close share a lane, four lanes in all, so none hides
+ * another. When the value states its offset the same axis shows the one stated
+ * instant, a pin with no number. With no instant to place the box keeps its size
+ * and says so in words.
+ *
+ * Heights (px): four lanes of a 22px pin and a 2px gap, 96; the axis at 100; a
+ * tick of 5px (8px when labelled); a label 110 to 126 and a day label under it to
+ * 140; the bracket at 146 with its label under it, to 172.
+ * --------------------------------------------------------------------------- */
+
+.gmt-edi-timeline {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  /* The plot (12rem), its caption (two lines) and the padding and gap. */
+  min-block-size: 16.75rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+/* The plot fills the box: the pins hang from the top, the axis sits a fixed 72px
+   above the plot's bottom, and the labels, the bracket and its label take those
+   72px. The pins' stems run from each pin down to the axis, so a taller box has
+   taller stems and no dead band. */
+.gmt-edi-tl-plot {
+  position: relative;
+  flex: 1 1 auto;
+  min-block-size: 12rem;
+  margin-inline: 14px;
+}
+
+.gmt-edi-tl-axis {
+  position: absolute;
+  inset-inline: -14px;
+  inset-block-end: 72px;
+  block-size: 2px;
+  background: var(--gmt-border-strong);
+}
+
+.gmt-edi-tl-ticks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 72px;
+}
+
+.gmt-edi-tl-marks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block: 0 72px;
+}
+
+.gmt-edi-tl-tick {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--x);
+  inline-size: 0;
+}
+
+.gmt-edi-tl-tick::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inline-size: 1px;
+  block-size: 5px;
+  translate: -0.5px 0;
+  background: var(--gmt-border-strong);
+}
+
+.gmt-edi-tl-tick[data-major="1"]::before {
+  block-size: 8px;
+  background: var(--gmt-ice-dim);
+}
+
+.gmt-edi-tl-label {
+  position: absolute;
+  inset-block-start: 8px;
+  translate: -50% 0;
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-tl-day {
+  display: block;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-tl-mark {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--x);
+  inline-size: 0;
+}
+
+.gmt-edi-tl-mark[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+.gmt-edi-tl-mark[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+.gmt-edi-tl-mark[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+.gmt-edi-tl-mark[data-series="4"] {
+  --series: var(--gmt-series-4);
+}
+.gmt-edi-tl-mark[data-stated] {
+  --series: var(--gmt-series-3);
+}
+
+.gmt-edi-tl-pin {
+  position: absolute;
+  inset-block-start: calc(var(--lane) * 30px);
+  translate: -50% 0;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 2px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1;
+}
+
+/* The stem from a pin down to the axis. */
+.gmt-edi-tl-mark::after {
+  content: "";
+  position: absolute;
+  inset-block-start: calc(var(--lane) * 30px + 28px);
+  inset-block-end: 0;
+  inline-size: 2px;
+  translate: -1px 0;
+  background: var(--series);
+}
+
+.gmt-edi-tl-bracket {
+  position: absolute;
+  inset-block-end: 26px;
+  inset-inline-start: var(--from);
+  inset-inline-end: calc(100% - var(--to));
+  block-size: 8px;
+  box-sizing: border-box;
+  border: 2px solid var(--gmt-ice-dim);
+  border-block-start-width: 0;
+  border-radius: 0 0 var(--gmt-radius-sm) var(--gmt-radius-sm);
+}
+
+.gmt-edi-tl-gap {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 50%;
+  translate: -50% 1px;
+  white-space: nowrap;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.gmt-edi-tl-caption {
+  margin: 0;
+  /* The stated instant's caption is two lines in a narrow pane. */
+  min-block-size: 2lh;
+  text-align: center;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-edi-tl-value {
+  color: var(--gmt-ice);
+}
+
+/* An empty state: words in the same box, in the box's own colour. */
+.gmt-edi-timeline[data-state="empty"] {
+  justify-content: center;
+}
+
+.gmt-edi-tl-empty {
+  margin: 0;
+  align-self: center;
+  max-inline-size: 36ch;
+  text-align: center;
+  font-family: var(--gmt-font-body, inherit);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * The zone table: the four chosen zones as compact rows, in the pane's width.
+ * Shared by both tools; the DTM Decoder's third column is 17 characters for a
+ * `205` value, and the X12 Time Reader's is 28 for a local time with its offset.
+ *
+ * Rules these obey:
+ *  - A zone change moves nothing. Each value cell is mono, tabular, `nowrap` and
+ *    has a reserved width, every row is always rendered, and a blank cell keeps
+ *    its line.
+ *  - The row's number badge carries the series colour on its bottom edge, the
+ *    same colour as that zone's pin on the timeline; the number and the zone
+ *    name carry the identity.
+ * --------------------------------------------------------------------------- */
+
+.gmt-x12-time-reader {
+  /* `2024-06-15T14:30:00.12-04:00` is 28 characters. */
+  --gmt-strip-third: 28ch;
+  /* `2024-06-15T18:30:00.12Z` is 23 characters. */
+  --gmt-strip-instant: 23ch;
+}
+
+.gmt-dtm-decoder {
+  /* `2024-06-15T18:30:00Z` is 20 characters. */
+  --gmt-strip-instant: 20ch;
+  /* `202406151430-0400` is 17 characters. */
+  --gmt-strip-third: 17ch;
+}
+
+.gmt-dtm-strip {
+  display: grid;
+  gap: var(--gmt-space-3);
+  box-sizing: border-box;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-dtm-row,
+.gmt-dtm-head {
+  display: grid;
+  align-items: center;
+  column-gap: var(--gmt-space-3);
+  row-gap: var(--gmt-space-1);
+  min-width: 0;
+  /* The reserved widths below are in ch, so they are measured in the cells' own
+     font. */
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+}
+
+/* Narrow (the default): badge and select, then the three values stacked. */
+.gmt-dtm-row {
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  grid-template-areas:
+    "badge select"
+    "instant instant"
+    "offset offset"
+    "as205 as205";
+}
+
+.gmt-dtm-head {
+  display: none;
+}
+
+.gmt-dtm-badge {
+  grid-area: badge;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end: 3px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+}
+
+.gmt-dtm-row > .gmt-select {
+  grid-area: select;
+  min-width: 0;
+  inline-size: 100%;
+}
+
+.gmt-dtm-row[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+.gmt-dtm-row[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+.gmt-dtm-row[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+.gmt-dtm-row[data-series="4"] {
+  --series: var(--gmt-series-4);
+}
+
+/* The three values: mono, tabular, `nowrap`, each in a reserved width. In the
+   narrow layouts each carries its own small label. */
+.gmt-dtm-cell {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+}
+
+.gmt-dtm-cell[data-role^="instant-"] {
+  grid-area: instant;
+}
+.gmt-dtm-cell[data-role^="offset-"] {
+  grid-area: offset;
+}
+.gmt-dtm-cell[data-role^="as205-"],
+.gmt-dtm-cell[data-role^="withoffset-"] {
+  grid-area: as205;
+}
+
+.gmt-dtm-cell::before {
+  content: attr(data-label);
+  display: block;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  color: var(--gmt-ice-dim);
+}
+
+/* A cell with no text still holds its line. */
+.gmt-dtm-cell:empty::after {
+  content: "\200b";
+}
+
+.gmt-dtm-cell.gmt-playground-sentinel {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+}
+
+/* Medium: the three values share one line under the badge and the select. The
+   DTM Decoder holds it from 27rem (1.75rem + 21ch + 7ch + 17ch, three gaps and the
+   table's padding: 406px); the X12 Time Reader from 34rem (28 + 23ch + 7ch + 28ch,
+   three gaps and the padding: 533px). */
+@container gmt-edi-pane (min-width: 27rem) {
+  .gmt-dtm-decoder .gmt-dtm-row {
+    grid-template-columns: 1.75rem var(--gmt-strip-instant) 7ch var(
+        --gmt-strip-third
+      );
+    grid-template-areas:
+      "badge select select select"
+      ". instant offset as205";
+  }
+}
+
+@container gmt-edi-pane (min-width: 34rem) {
+  .gmt-x12-time-reader .gmt-dtm-row {
+    grid-template-columns: 1.75rem var(--gmt-strip-instant) 7ch var(
+        --gmt-strip-third
+      );
+    grid-template-areas:
+      "badge select select select"
+      ". instant offset as205";
+  }
+}
+
+/* Wide: one line a row, and the labels move to a header. The DTM Decoder's
+   starts at 38.5rem (617px) and the X12 Time Reader's at 45.5rem (725px); the
+   zone select takes 12.5rem, the width of `America/Los_Angeles` in the select's
+   face with its padding. */
+@container gmt-edi-pane (min-width: 38.5rem) {
+  .gmt-dtm-decoder .gmt-dtm-row,
+  .gmt-dtm-decoder .gmt-dtm-head {
+    grid-template-columns:
+      1.75rem minmax(12.5rem, 1fr) var(--gmt-strip-instant) 7ch
+      var(--gmt-strip-third);
+  }
+
+  .gmt-dtm-decoder .gmt-dtm-row {
+    grid-template-areas: "badge select instant offset as205";
+  }
+
+  .gmt-dtm-decoder .gmt-dtm-head {
+    display: grid;
+    letter-spacing: var(--gmt-tracking-wide);
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-dtm-decoder .gmt-dtm-cell::before {
+    display: none;
+  }
+}
+
+@container gmt-edi-pane (min-width: 45.5rem) {
+  .gmt-x12-time-reader .gmt-dtm-row,
+  .gmt-x12-time-reader .gmt-dtm-head {
+    grid-template-columns:
+      1.75rem minmax(12.5rem, 1fr) var(--gmt-strip-instant) 7ch
+      var(--gmt-strip-third);
+  }
+
+  .gmt-x12-time-reader .gmt-dtm-row {
+    grid-template-areas: "badge select instant offset as205";
+  }
+
+  .gmt-x12-time-reader .gmt-dtm-head {
+    display: grid;
+    letter-spacing: var(--gmt-tracking-wide);
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-x12-time-reader .gmt-dtm-cell::before {
+    display: none;
+  }
+}
