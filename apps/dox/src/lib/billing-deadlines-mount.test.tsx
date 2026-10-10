@@ -7,7 +7,6 @@
  * draw, and the strip's deadline cells against the library's own dates, so a
  * drift in the library or the widget fails here.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { BILLING_PRESETS, NULL_REASON_TEXT } from "./billing-deadlines";

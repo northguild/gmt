@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import rehypeExternalLinks from "./rehype-external-links";
 
 function link(href: string, rel?: string[] | string) {

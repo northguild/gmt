@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import {
   BILLING_PRESETS,
   CUSTOM_PRESET_ID,

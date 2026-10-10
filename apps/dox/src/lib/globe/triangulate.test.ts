@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Triangulation, checked against every polygon the site ships.
  *
@@ -12,7 +10,6 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import { fillRing, preparePolygon, type PreparedPolygon } from "./geometry";
 import { landPolygons } from "./land";
 import {

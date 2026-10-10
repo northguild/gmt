@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The 7:1 body-text target for the text colours a widget reads from tokens.
  *

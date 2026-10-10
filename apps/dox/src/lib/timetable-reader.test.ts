@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { formatSchedule } from "./transport-widgets";
 import {
   crossingTime,

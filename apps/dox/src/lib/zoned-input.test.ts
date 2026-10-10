@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * These assertions are checked against the real `isValidZonedDateTime`, not
  * against a remembered rule — the offset case in particular is unobvious, and

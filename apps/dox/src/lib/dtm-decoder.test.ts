@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `dtm-decoder.ts`'s pure helpers, against the real gmt modules. Every expected
  * library result is a JSDoc example of the function that returns it.

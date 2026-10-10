@@ -7,7 +7,6 @@
  * a way for a reader to discover it, and that no starter points at a widget
  * that is not enabled.
  */
-import { describe, expect, it } from "vitest";
 import {
   CHAT_STARTERS,
   EXAMPLE_AREAS,

@@ -16,7 +16,6 @@
  * *before* it reads `part.input` — otherwise a schema parse runs on undefined
  * and the panel takes the transcript down with it.
  */
-/// <reference types="vitest/globals" />
 import type { ToolUIPart } from "ai";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { installJsdomShims } from "~/test/jsdom-shims";

@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { buildRetrievalCorpus } from "./corpus";
 import { indexFor, searchChunks } from "./search";
 import type { RetrievalChunk } from "./types";

@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `departure-board.ts`'s pure helpers, against the real gmt modules. Every
  * expected library result is an appendix Z row (DB1 to DB4, DBR1 to DBR7).

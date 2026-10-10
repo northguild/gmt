@@ -1,5 +1,4 @@
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
 import * as BR from "../build-reference";
 import type { FnDoc, PropertyDoc, TypeDoc, RegexDoc } from "../build-reference";
 import { findGaps } from "./doc-gate";

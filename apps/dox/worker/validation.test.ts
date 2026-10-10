@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { validateChatRequest } from "./validation";
 import { MAX_MESSAGES, MAX_MESSAGE_LENGTH } from "../src/lib/chat-constants";
 import {

@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The industry tags on the tool, scenario, guide and mistake pages: every layer has a
  * tag, every page has a tag, and a page's tags agree with the functions it uses.

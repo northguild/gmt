@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import {
   VALUE_PRESETS,
   buildValuePreset,

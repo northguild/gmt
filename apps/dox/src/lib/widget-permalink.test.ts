@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,

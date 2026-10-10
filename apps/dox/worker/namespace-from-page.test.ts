@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { namespaceFromPageContext } from "./namespace-from-page";
 
 describe("namespaceFromPageContext", () => {

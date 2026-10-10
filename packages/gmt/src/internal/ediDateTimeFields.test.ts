@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { vi } from "vitest";
 import {
   mockTemporalInstantFromThrow,
   mockTemporalPlainDateFromThrow,

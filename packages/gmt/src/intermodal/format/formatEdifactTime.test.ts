@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import { parseEdifactTime } from "../parse/parseEdifactTime";

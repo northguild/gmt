@@ -6,7 +6,6 @@
  * reader is actually offered, and in particular that `retryable` — computed on
  * all seven of those branches and, until now, read by nothing — reaches the DOM.
  */
-/// <reference types="vitest/globals" />
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ChatWarning } from "./chat-warning";
 import { installJsdomShims } from "~/test/jsdom-shims";

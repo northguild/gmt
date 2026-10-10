@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { vi } from "vitest";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { formatHttpDate } from "../format/formatHttpDate";
 import { parseHttpDate } from "./parseHttpDate";

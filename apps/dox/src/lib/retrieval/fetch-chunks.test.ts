@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { fetchChunks, resetChunksMemo } from "./fetch-chunks";
 import type { RetrievalChunk } from "./types";
 

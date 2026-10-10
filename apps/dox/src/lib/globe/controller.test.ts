@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The controller takes every timestamp as an argument, so these run on a plain
  * counter rather than fake timers — no clock to install, and a test can jump
@@ -10,7 +8,6 @@
  * wheel that reports when it has hit a zoom limit so the page can scroll.
  */
 
-import { describe, expect, it } from "vitest";
 import { createController } from "./controller";
 
 const RADIUS = 300;

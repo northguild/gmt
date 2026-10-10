@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { MAX_SEEDED_ZONES, permalinkOf, seededZones } from "./zone-planner";
 import {
   decodeWidgetPermalink,

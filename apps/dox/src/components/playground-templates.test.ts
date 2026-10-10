@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import { GMT_MODULES } from "../lib/gmt-modules";
 import {
   classifyPlaygroundResult,

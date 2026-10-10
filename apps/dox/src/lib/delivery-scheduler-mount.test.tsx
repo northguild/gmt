@@ -5,7 +5,6 @@
  * assert, against the real `@northguild/gmt`. Every preset's printed call and
  * result are section 9 rows, verified against a build of the final library.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { DELIVERY_PRESETS } from "./delivery-scheduler";

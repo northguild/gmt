@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Site-wide a11y floor: no rendered text may compute smaller than 12px
  * (0.75rem).

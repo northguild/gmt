@@ -8,9 +8,7 @@
  * class landing after the server-rendered section was already painted) needs a
  * browser.
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   CARD_STAGGER_MS,

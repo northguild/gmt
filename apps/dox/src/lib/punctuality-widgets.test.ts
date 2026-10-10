@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `punctuality-widgets.ts`'s pure helpers. Every expected literal that a
  * library call produces is an appendix Z row or a JSDoc example.

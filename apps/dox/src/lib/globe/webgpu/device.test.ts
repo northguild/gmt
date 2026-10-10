@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The error-scope helpers never hold a scope open across an `await`.
  *
@@ -12,7 +10,6 @@
  * and only the popped promises are awaited.
  */
 
-import { describe, expect, it } from "vitest";
 import { createCheckedShaderModule, withValidation } from "./device";
 
 /** A device that records the order of scope and creation calls. */

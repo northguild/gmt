@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Proves `no-network.mjs` is live in every test worker. Without this, a guard that
  * silently stopped loading would leave every other test "passing" while nothing

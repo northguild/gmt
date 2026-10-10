@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Two things are pinned here:
  *

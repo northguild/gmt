@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import type { GuideSource } from "./guide-sources";
 import { buildGuideChunks } from "./guide-chunks";
 

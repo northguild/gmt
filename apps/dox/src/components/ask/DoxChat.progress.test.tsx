@@ -9,7 +9,6 @@
  * progress line in the waiting card, the refusal as the usual warning, and no
  * empty answer turn left behind.
  */
-/// <reference types="vitest/globals" />
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import userEvent from "@testing-library/user-event";

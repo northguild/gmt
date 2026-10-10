@@ -15,7 +15,6 @@
  *     the teardown releases it, because a capture left set routes later pointer
  *     events at a node that is no longer in the document.
  */
-/// <reference types="vitest/globals" />
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { mountDstInspector, renderDstTemplate } from "./dst-inspector-mount";

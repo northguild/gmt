@@ -12,7 +12,6 @@
  * highlighting is one, and it loads when the first answer renders — so it
  * fails mid-conversation, not on page load.
  */
-/// <reference types="vitest/globals" />
 import { render, screen } from "@testing-library/react";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
