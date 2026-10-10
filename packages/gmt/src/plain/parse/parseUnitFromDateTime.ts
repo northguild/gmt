@@ -5,6 +5,7 @@ import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../calculate/getWeekNumber";
 import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Return a specific unit extracted from a PlainDateTime string.
@@ -18,6 +19,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `optionsArg` must be an object or omitted: `null` or any other primitive returns "", as
  *   Temporal's GetOptionsObject rejects it.
  * - Returns "" for invalid input.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param value ISO PlainDateTime string
  * @param unit unit to extract from the datetime
@@ -25,6 +28,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns string representation of the requested unit or "" on invalid input
  *
  * @example parseUnitFromDateTime("2024-03-15T14:30:45.123", "year") // "2024"
+ * @example parseUnitFromDateTime("0005-06-01T12:30:00", "year") // "0005"
  * @example parseUnitFromDateTime("2024-03-15T14:30:45.123", "week") // "11"
  * @example parseUnitFromDateTime("2024-03-15T14:30:45.123", "hour") // "14"
  * @example parseUnitFromDateTime("2024-03-15T14:30:45.123", "millisecond") // "123"
@@ -76,7 +80,7 @@ export function parseUnitFromDateTime(
 
       switch (resolveDateTimeUnit(unit)) {
         case "year":
-          return dateTime.year.toString();
+          return isoYearString(dateTime.year);
         case "month":
           return dateTime.month.toString().padStart(2, "0");
         case "day":

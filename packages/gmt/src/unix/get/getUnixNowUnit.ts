@@ -20,6 +20,8 @@ function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
  * - `microsecond` and `nanosecond` are Temporal's 0–999 fields, zero-padded to 3 digits.
  * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns "" on invalid unit or failure.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param unit unit to extract from current unix timestamp
  * @returns string representation of the requested unit or "" on invalid

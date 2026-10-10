@@ -36,7 +36,9 @@ describe("no-throw harness coverage", () => {
     for (const namespace of namespaces) {
       expect(noThrowCases(namespace).length, namespace).toBeGreaterThan(0);
     }
-  });
+    // The first call builds the cases for every public function: about 2 seconds alone, and past
+    // the default 5 when the whole suite shares the machine.
+  }, 60_000);
 
   it("covers every exported function (each has a corpus @example baseline)", () => {
     const corpus = new Set(corpusFunctionNames());

@@ -9,7 +9,8 @@
  *   2. src/generated/reference/route-manifest.ts — ReadonlySet<string>
  *   3. content/docs/reference MDX            - one page per function, regex and shared
  *                                              type, plus the index pages
- *   4. public/_redirects                     - the old URL of every type that moved
+ *   4. public/_redirects                     - the old URL of every type that moved and of
+ *                                              every renamed function
  *
  * Which public function uses which public type comes from `build-utils/type-usage.ts`. A
  * type two or more functions reach gets a page at `/reference/types/<Name>`; a type one
@@ -28,10 +29,14 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import type {
+  ChoiceSeed,
+  ChoiceSeeds,
   LivePlaygroundTemplate,
   PlaygroundField,
 } from "../src/lib/playground-spec";
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
+import { INDUSTRY_LAYER_IDS, industryTag } from "../src/lib/industry-tags";
+import { INDUSTRY_OVERVIEWS } from "../src/lib/industry-overview";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
 import { NULL_IS_EMPTY } from "./build-utils/null-is-empty";
@@ -56,6 +61,7 @@ import {
 } from "./build-utils/doc-gate";
 import {
   renderIndexPages,
+  type IndexedIndustry,
   type IndexedInlineType,
   type IndexedPage,
   type IndexedType,
@@ -74,6 +80,7 @@ import {
   type TableContext,
 } from "./build-utils/render-table";
 import { buildRedirects } from "./build-utils/redirects";
+import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
   functionUrl,
   indexRoutes,
@@ -1480,6 +1487,106 @@ export function buildPlaygroundFields(
   return optionsSuffix ? { fields, optionsSuffix } : { fields };
 }
 
+/** A documented result that means "invalid input", not an answer. */
+function isSentinelResult(result: string): boolean {
+  const t = result.replace(/^\s*\/\/\s*/, "").trim();
+  // The literal may be followed by a note: `[] (start after end)`.
+  return t === "" || /^(""|''|null|false|\[\])(\s|\(|$)/.test(t);
+}
+
+/** `spec` with each positional param's value taken from `call` instead of the first example. */
+function specForCall(spec: PlaygroundSpec, call: string): PlaygroundSpec {
+  const raw = parseCallArgs(call).map((a) => a.trim());
+  return {
+    ...spec,
+    params: spec.params.map((p, i) => {
+      const r = raw[i];
+      if (r === undefined || (r.startsWith("{") && p.type !== "units"))
+        return p;
+      if (p.type === "units") {
+        const { unit, amount } = BU.parseUnitsArg(r);
+        return {
+          ...p,
+          value: amount,
+          unitValue: p.options?.includes(unit) ? unit : p.unitValue,
+        };
+      }
+      return { ...p, value: argToValue(r) };
+    }),
+  };
+}
+
+/** The ChoiceSeed a field carries when loaded from an example. */
+function seedOfField(f: PlaygroundField): ChoiceSeed {
+  const out: ChoiceSeed = { seed: f.seed };
+  if (f.kind === "units") out.unitSeed = f.unitSeed;
+  if (f.kind === "list") out.items = f.items ?? [];
+  if (f.kind === "intervals") out.pairs = f.pairs ?? [];
+  return out;
+}
+
+/**
+ * Per-choice example values for each enum field of a playground.
+ *
+ * For every choice of an enum field, the first `@example` (JSDoc order) that
+ * writes that choice as a quoted literal at the field's position, whose other
+ * arguments are all literals the form can hold, and whose documented result is
+ * not a sentinel. Its other fields' values are stored. A choice with no such
+ * example has no entry; a field whose entries are fewer than two or all equal
+ * contributes nothing, so a function whose examples do not vary by choice gets
+ * no `choiceSeeds`.
+ */
+export function buildChoiceSeeds(
+  spec: PlaygroundSpec,
+  examples: Array<{ call: string; result: string }>,
+  baseFields: PlaygroundField[],
+): ChoiceSeeds | undefined {
+  const enumFields = baseFields.filter(
+    (f) => f.kind === "enum" && f.choices?.length,
+  );
+  if (!enumFields.length) return undefined;
+
+  const out: ChoiceSeeds = {};
+  for (const ef of enumFields) {
+    const entries: Record<string, Record<string, ChoiceSeed>> = {};
+    for (const ex of examples) {
+      if (isSentinelResult(ex.result)) continue;
+      const res = buildPlaygroundFields(specForCall(spec, ex.call), ex.call);
+      if (!res || res.fields.length !== baseFields.length) continue;
+      const idx = baseFields.indexOf(ef);
+      // A field the example fills with another kind (a locale list where the
+      // form holds a locale string) cannot be loaded into the form's control.
+      if (res.fields.some((f, i) => f.kind !== baseFields[i].kind)) continue;
+      const exField = res.fields[idx];
+      if (exField?.name !== ef.name || exField.kind !== "enum") continue;
+
+      // The choice as the example wrote it — `fieldForParam` falls back to the
+      // first choice for a value outside the list, which is not this choice.
+      const rawArgs = parseCallArgs(ex.call).map((a) => a.trim());
+      const raw = res.objectArg
+        ? BU.parseObjectArgEntries(rawArgs[0]).find(([k]) => k === ef.name)?.[1]
+        : rawArgs[idx];
+      if (raw === undefined || !QUOTED_ARG.test(raw)) continue;
+      const choice = argToValue(raw);
+      if (!ef.choices!.includes(choice) || entries[choice]) continue;
+
+      const others: Record<string, ChoiceSeed> = {};
+      res.fields.forEach((f, i) => {
+        if (i !== idx) others[f.name] = seedOfField(f);
+      });
+      entries[choice] = others;
+    }
+    const seeds = Object.values(entries);
+    if (
+      seeds.length >= 2 &&
+      seeds.some((s) => JSON.stringify(s) !== JSON.stringify(seeds[0]))
+    ) {
+      out[ef.name] = entries;
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function buildLivePlaygroundTemplate(
   checker: ts.TypeChecker,
   sig: ts.Signature | undefined,
@@ -1512,6 +1619,11 @@ function buildLivePlaygroundTemplate(
     ? buildPlaygroundFields(doc.playgroundSpec, template)
     : undefined;
 
+  const choiceSeeds =
+    formFields && doc.playgroundSpec
+      ? buildChoiceSeeds(doc.playgroundSpec, doc.examples, formFields.fields)
+      : undefined;
+
   return {
     module,
     fn: doc.name,
@@ -1526,6 +1638,7 @@ function buildLivePlaygroundTemplate(
             ? { optionsSuffix: formFields.optionsSuffix }
             : {}),
           ...(formFields.objectArg ? { objectArg: true } : {}),
+          ...(choiceSeeds ? { choiceSeeds } : {}),
         }
       : {}),
   };
@@ -2485,24 +2598,37 @@ interface SymbolEntry {
   unreleased?: boolean;
 }
 
+/** The text of the divider that separates the industry namespaces from the general ones. */
+export const INDUSTRY_DIVIDER_LABEL = "By industry";
+/** The attribute that marks the divider entry for `SidebarSublist.astro`. */
+export const INDUSTRY_DIVIDER_ATTR = "data-gmt-divider";
+
 /**
  * Build a Starlight sidebar array from symbol entries grouped by namespace.
  *
  * Rules:
  * - An `Overview` link to `/reference/` comes first.
- * - One top-level group per namespace, `collapsed: true`, opening with an `Overview` link to
- *   the namespace's index page. Module groups get no such link.
+ * - One top-level group per general namespace, `collapsed: true`, opening with an `Overview`
+ *   link to the namespace's index page. Module groups get no such link.
  * - One flat `types` group: `Overview`, then every shared type, alphabetical. A type
  *   documented on its function's page is not in the sidebar.
+ * - Then a divider entry reading `By industry` (a link entry with `data-gmt-divider`, drawn as
+ *   a label by the `SidebarSublist` override, not a link), followed by the namespace group of
+ *   each industry in `industries`, in the order given, as siblings of the general groups.
+ *   Each industry's Overview link carries `data-gmt-industry`, which the stylesheet reads to
+ *   draw the industry's icon beside the group's label (Starlight's groups take no icon).
  * - Modules with ≥ 2 symbols → nested collapsible group.
  * - Modules with exactly 1 symbol → hoisted directly into the namespace
  *   group (no module-wrapper accordion).
  * - Ordering inside a namespace: multi-symbol module groups first (alpha),
  *   then hoisted single-symbol items (alpha by symbol name).
+ *
+ * `industries` is the namespaces that are industries; one with no symbols is left out.
  */
 export function buildSidebar(
   moduleSymbols: Map<string, SymbolEntry[]>,
   sharedTypes: readonly SymbolEntry[] = [],
+  industries: readonly string[] = [],
 ): string {
   const item = (sym: SymbolEntry) =>
     sym.unreleased
@@ -2535,31 +2661,13 @@ export function buildSidebar(
   );
   lines.push("");
   lines.push("export const referenceSidebar: SidebarItem[] = [");
-  const overview = (slug: string) => `{ label: "Overview", slug: "${slug}" }`;
+  const overview = (slug: string, attrs = "") =>
+    `{ label: "Overview", slug: "${slug}"${attrs} }`;
   lines.push(`  ${overview("reference")},`);
 
-  // The shared types are one flat group, sorted among the namespaces. `runGeneration`
-  // refuses a function or regex in a `types` namespace, so the name is free.
-  const sortedTypes = [...sharedTypes].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-  const groups = new Set(byNs.keys());
-  if (sortedTypes.length > 0) groups.add(TYPES_SECTION);
-
-  for (const ns of [...groups].sort()) {
-    if (ns === TYPES_SECTION && sortedTypes.length > 0) {
-      lines.push("  {");
-      lines.push(`    label: ${JSON.stringify(TYPES_SECTION)},`);
-      const typesBadge = groupBadge(sortedTypes);
-      if (typesBadge) lines.push(`    ${typesBadge.trim()}`);
-      lines.push("    collapsed: true,");
-      lines.push("    items: [");
-      lines.push(`      ${overview(`reference/${TYPES_SECTION}`)},`);
-      for (const sym of sortedTypes) lines.push(`      ${item(sym)},`);
-      lines.push("    ],");
-      lines.push("  },");
-      continue;
-    }
+  /** One namespace's group, `depth` levels in (a top-level group is 1). */
+  const namespaceGroup = (ns: string, depth: number, industry: boolean) => {
+    const pad = (n: number) => "  ".repeat(depth + n);
     const mods = byNs.get(ns)!;
     // Split into multi-symbol modules and single-symbol hoisted items
     const multiMod: Array<{ mod: string; syms: SymbolEntry[] }> = [];
@@ -2576,41 +2684,140 @@ export function buildSidebar(
     multiMod.sort((a, b) => a.mod.localeCompare(b.mod));
     singleSyms.sort((a, b) => a.name.localeCompare(b.name));
 
-    lines.push("  {");
-    lines.push(`    label: ${JSON.stringify(ns)},`);
+    lines.push(`${pad(0)}{`);
+    lines.push(`${pad(1)}label: ${JSON.stringify(ns)},`);
     const nsBadge = groupBadge([...mods.values()].flat());
-    if (nsBadge) lines.push(`    ${nsBadge.trim()}`);
-    lines.push("    collapsed: true,");
-    lines.push("    items: [");
-    lines.push(`      ${overview(`reference/${ns}`)},`);
+    if (nsBadge) lines.push(`${pad(1)}${nsBadge.trim()}`);
+    lines.push(`${pad(1)}collapsed: true,`);
+    lines.push(`${pad(1)}items: [`);
+    lines.push(
+      `${pad(2)}${overview(
+        `reference/${ns}`,
+        industry
+          ? `, attrs: { "data-gmt-industry": ${JSON.stringify(ns)} }`
+          : "",
+      )},`,
+    );
 
     // Multi-symbol module groups first
     for (const { mod, syms } of multiMod) {
       const sortedSyms = [...syms].sort((a, b) => a.name.localeCompare(b.name));
-      lines.push("      {");
-      lines.push(`        label: ${JSON.stringify(mod)},`);
+      lines.push(`${pad(2)}{`);
+      lines.push(`${pad(3)}label: ${JSON.stringify(mod)},`);
       const modBadge = groupBadge(syms);
-      if (modBadge) lines.push(`        ${modBadge.trim()}`);
-      lines.push("        collapsed: true,");
-      lines.push("        items: [");
+      if (modBadge) lines.push(`${pad(3)}${modBadge.trim()}`);
+      lines.push(`${pad(3)}collapsed: true,`);
+      lines.push(`${pad(3)}items: [`);
       for (const sym of sortedSyms) {
-        lines.push(`          ${item(sym)},`);
+        lines.push(`${pad(4)}${item(sym)},`);
       }
-      lines.push("        ],");
-      lines.push("      },");
+      lines.push(`${pad(3)}],`);
+      lines.push(`${pad(2)}},`);
     }
 
     // Then hoisted single-symbol items
     for (const sym of singleSyms) {
-      lines.push(`      ${item(sym)},`);
+      lines.push(`${pad(2)}${item(sym)},`);
     }
 
-    lines.push("    ],");
-    lines.push("  },");
+    lines.push(`${pad(1)}],`);
+    lines.push(`${pad(0)}},`);
+  };
+
+  // The shared types are one flat group, sorted among the general namespaces.
+  // `runGeneration` refuses a function or regex in a `types` namespace, so the name is free.
+  const sortedTypes = [...sharedTypes].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  const industryNs = industries.filter((ns) => byNs.has(ns));
+  const groups = new Set(
+    [...byNs.keys()].filter((ns) => !industryNs.includes(ns)),
+  );
+  if (sortedTypes.length > 0) groups.add(TYPES_SECTION);
+
+  for (const ns of [...groups].sort()) {
+    if (ns === TYPES_SECTION && sortedTypes.length > 0) {
+      lines.push("  {");
+      lines.push(`    label: ${JSON.stringify(TYPES_SECTION)},`);
+      const typesBadge = groupBadge(sortedTypes);
+      if (typesBadge) lines.push(`    ${typesBadge.trim()}`);
+      lines.push("    collapsed: true,");
+      lines.push("    items: [");
+      lines.push(`      ${overview(`reference/${TYPES_SECTION}`)},`);
+      for (const sym of sortedTypes) lines.push(`      ${item(sym)},`);
+      lines.push("    ],");
+      lines.push("  },");
+      continue;
+    }
+    namespaceGroup(ns, 1, false);
+  }
+
+  if (industryNs.length > 0) {
+    // A divider, not a group: nothing to open. Starlight's sidebar knows only links and
+    // groups, so it is a link entry the `SidebarSublist` override draws as a labelled
+    // list (src/components/SidebarSublist.astro). The industries follow as siblings.
+    lines.push(
+      `  { label: ${JSON.stringify(INDUSTRY_DIVIDER_LABEL)}, link: "#by-industry", attrs: { "${INDUSTRY_DIVIDER_ATTR}": "true" } },`,
+    );
+    for (const ns of industryNs) namespaceGroup(ns, 1, true);
   }
 
   lines.push("];\n");
   return lines.join("\n");
+}
+
+/**
+ * Add `industries: [<id>]` to a page's frontmatter, which `PageTitle.astro` shows as the
+ * industry tag under the title. No industry: the page is returned unchanged.
+ */
+export function withIndustry(
+  mdx: string,
+  industry: string | undefined,
+): string {
+  if (!industry) return mdx;
+  const close = mdx.indexOf("\n---\n", 4);
+  if (!mdx.startsWith("---\n") || close < 0) {
+    throw new Error("[reference] a page has no frontmatter to tag.");
+  }
+  return `${mdx.slice(0, close)}\nindustries: [${industry}]${mdx.slice(close)}`;
+}
+
+/**
+ * The industry a shared type's page is tagged with: the namespace every public function
+ * that reaches the type belongs to, when that is one industry namespace. A type any general
+ * function reaches, or two industries share, is general and has no tag.
+ */
+export function typeIndustry(
+  usedBy: readonly string[],
+  industries: readonly string[],
+): string | undefined {
+  const namespaces = new Set(usedBy.map((key) => key.split("/")[0]!));
+  if (namespaces.size !== 1) return undefined;
+  const [ns] = [...namespaces];
+  return industries.includes(ns!) ? ns : undefined;
+}
+
+/** What the root page and an industry's overview say about each industry. */
+function industryIndex(): IndexedIndustry[] {
+  return INDUSTRY_LAYER_IDS.map((id) => {
+    const tag = industryTag(id);
+    const overview = INDUSTRY_OVERVIEWS[id];
+    if (!tag || !overview) {
+      throw new Error(
+        `[reference] the industry layer ${id} has no tag or no overview text. Add it to src/lib/industry-tags.ts and src/lib/industry-overview.ts.`,
+      );
+    }
+    return {
+      id,
+      label: tag.label,
+      definition: tag.definition,
+      icon: tag.icon,
+      guide: tag.guide,
+      guideTitle: overview.guideTitle,
+      about: overview.about,
+      solves: overview.solves,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2677,11 +2884,16 @@ function referenceInputs(): string[] {
     resolve(appRoot, "scripts", "build-utils", "index-pages.ts"),
     resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
     resolve(appRoot, "scripts", "build-utils", "redirects.ts"),
+    resolve(appRoot, "scripts", "build-utils", "renamed-functions.ts"),
     resolve(appRoot, "scripts", "build-utils", "reference-urls.ts"),
     resolve(appRoot, "scripts", "build-utils", "released-exports.ts"),
     resolve(appRoot, "scripts", "build-utils", "render-table.ts"),
     resolve(appRoot, "scripts", "build-utils", "type-usage.ts"),
     resolve(appRoot, "src", "lib", "playground-parsers.ts"),
+    // The industry namespaces, their tags and the text of their overview pages.
+    resolve(appRoot, "src", "lib", "industry-tags.ts"),
+    resolve(appRoot, "src", "lib", "industry-overview.ts"),
+    resolve(appRoot, "src", "data", "gmt-stats.json"),
   ];
 }
 
@@ -2915,6 +3127,10 @@ function runGeneration(baseline: ReleasedBaseline) {
 
   const moduleSymbols = new Map<string, SymbolEntry[]>();
   const sharedTypes: SymbolEntry[] = [];
+  /** The industry namespaces, whose pages carry the industry tag. */
+  const industryLayers = INDUSTRY_LAYER_IDS;
+  const industryOf = (namespace: string) =>
+    industryLayers.includes(namespace) ? namespace : undefined;
 
   for (const doc of dedupedDocs) {
     const unreleased = isUnreleased(baseline, doc.name);
@@ -2926,9 +3142,14 @@ function runGeneration(baseline: ReleasedBaseline) {
     if (doc.kind === "type") {
       // A single-use type has no page: its function's page documents it.
       if (usage.types.get(doc.name)?.placement.kind !== "page") continue;
+      // Tagged only when every function that reaches the type is in one industry namespace.
+      const typeTag = typeIndustry(
+        usage.types.get(doc.name)?.usedBy ?? [],
+        industryLayers,
+      );
       pages.set(
         join(TYPES_SECTION, `${doc.name}.mdx`),
-        withNote(renderType(doc, page)),
+        withIndustry(withNote(renderType(doc, page)), typeTag),
       );
       pageRoutes.push(typePageUrl(doc.name));
       sharedTypes.push({
@@ -2971,7 +3192,7 @@ function runGeneration(baseline: ReleasedBaseline) {
 
     pages.set(
       join(doc.namespace, doc.module, `${doc.name}.mdx`),
-      withNote(mdx),
+      withIndustry(withNote(mdx), industryOf(doc.namespace)),
     );
     pageRoutes.push(pageUrl(doc.namespace, doc.module, doc.name));
 
@@ -2994,6 +3215,7 @@ function runGeneration(baseline: ReleasedBaseline) {
     pages: [] as IndexedPage[],
     sharedTypes: [] as IndexedType[],
     inlineTypes: [] as IndexedInlineType[],
+    industries: industryIndex(),
   } satisfies IndexInput;
   for (const d of dedupedDocs) {
     if (d.kind !== "type") {
@@ -3041,7 +3263,7 @@ function runGeneration(baseline: ReleasedBaseline) {
   const pageChanges = syncTree(outMdx, pages);
 
   // Write generated sidebar
-  const sidebarMd = buildSidebar(moduleSymbols, sharedTypes);
+  const sidebarMd = buildSidebar(moduleSymbols, sharedTypes, industryLayers);
   writeIfChanged(join(outGen, "sidebar.ts"), sidebarMd);
 
   // Write artifacts
@@ -3100,12 +3322,14 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 `;
   writeIfChanged(join(outGen, "route-manifest.ts"), manifestTs);
 
-  // 3. redirects: the old URL of every type, to its page or to its anchor.
+  // 3. redirects: the old URL of every type, to its page or to its anchor, and of every
+  // renamed function.
   writeIfChanged(
     outRedirects,
     buildRedirects(
       dedupedDocs.filter((d) => d.kind === "type"),
       usage,
+      RENAMED_FUNCTIONS,
     ),
   );
 

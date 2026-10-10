@@ -55,6 +55,11 @@ import {
   mountDepartureBoard,
   renderDepartureBoardTemplate,
 } from "./departure-board-mount";
+import { mountDtmDecoder, renderDtmDecoderTemplate } from "./dtm-decoder-mount";
+import {
+  mountX12TimeReader,
+  renderX12TimeReaderTemplate,
+} from "./x12-time-reader-mount";
 import {
   mountDwellLedger,
   renderDwellLedgerTemplate,
@@ -156,6 +161,16 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "departure board",
     () => renderDepartureBoardTemplate(),
     mountDepartureBoard as MountFn<never>,
+  ],
+  [
+    "dtm decoder",
+    () => renderDtmDecoderTemplate(),
+    mountDtmDecoder as MountFn<never>,
+  ],
+  [
+    "x12 time reader",
+    () => renderX12TimeReaderTemplate(),
+    mountX12TimeReader as MountFn<never>,
   ],
 ];
 

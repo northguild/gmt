@@ -57,6 +57,26 @@
   min-width: 70px;
 }
 
+/* Not available. A disabled field reads as one at a glance: the quiet text
+   tier, a dashed border and no fill, and a not-allowed pointer. No opacity, so
+   the text stays readable. The border changes style as well as tone, so the
+   state is never only a shade, and it is two thirds of the text tier rather
+   than the widget hairline: an empty disabled field has nothing else to show
+   where it is, and the hairline measured 1.2 to 1.4:1 against its surface.
+   The reason is said in words beside the field. The chevron of a select keeps
+   its own tint. */
+.gmt-input:disabled,
+.gmt-select:disabled {
+  background-color: transparent;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent);
+  color: var(--gmt-ice-dim);
+  cursor: not-allowed;
+  /* Chromium's own `select:disabled` fades the whole control to 0.7, which put
+     the text at 3.8:1 in the light theme. The text is information ("None"). */
+  opacity: 1;
+}
+
 .gmt-label-required {
   color: var(--gmt-signal-ink);
   margin-left: 2px;
@@ -144,11 +164,14 @@
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  padding: 0 var(--gmt-space-1);
-  /* Its 1px borders must not make a chipped label's text row taller than a
-     plain one's, or the label tops in a field-grid row drift by 2px. */
+  /* The font's glyph box is taller than a line-height of 1, so a chip with no
+     vertical padding draws its descenders (the "p" of "optional") over its own
+     border. Two pixels above and below keep every glyph inside the border. */
+  padding: 2px var(--gmt-space-1);
+  /* Its borders and padding must not make a chipped label's text row taller
+     than a plain one's, or the label tops in a field-grid row drift. */
   line-height: 1;
-  margin-block: -2px;
+  margin-block: -4px;
 }
 
 /* ---------------------------------------------------------------------------

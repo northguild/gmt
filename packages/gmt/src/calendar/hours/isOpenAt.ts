@@ -20,6 +20,11 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - Returns `false` on invalid input: an invalid instant or `OperatingSchedule`, or a
  *   `disambiguation` that is not one of the four values. Check the schedule with
  *   `operatingIntervals` when "closed" and "invalid" must be told apart.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the first instant Temporal supports
+ *   (`-271821-04-20T00:00:00Z`), for an offset west of UTC, this returns `false`. There `false` is
+ *   the sentinel, not a reading of the schedule. An offset to the minute has no such limit.
  *
  * @param isoString ISO 8601 instant string to test
  * @param schedule `{ timeZone, weekly, holidays?, overrides? }` operating schedule
@@ -31,6 +36,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @example isOpenAt("2024-06-15T01:00:00Z", { timeZone: "UTC", weekly: { 5: [{ from: "23:00", to: "06:00" }] } }) // true — Friday's night window, on Saturday morning
  * @example isOpenAt("2024-07-04T14:00:00Z", { timeZone: "America/New_York", weekly: { 4: [{ from: "09:00", to: "17:00" }] }, holidays: ["2024-07-04"] }) // false — a holiday
  * @example isOpenAt("2024-06-17T14:00:00", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // false — no offset, not an instant
+ * @example isOpenAt("1970-01-01T08:44:30Z", { timeZone: "-00:44:30", weekly: { 4: [{ from: "08:00", to: "17:00" }] } }) // true (08:00 at a stored offset with seconds)
  */
 export function isOpenAt(
   isoString: string,

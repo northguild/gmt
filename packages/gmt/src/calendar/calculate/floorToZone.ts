@@ -1,8 +1,13 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { instantFrom, zonedUnitStart } from "../../internal";
+import {
+  frameInstant,
+  frameZoned,
+  instantFrom,
+  zonedUnitStart,
+  zoneFrame,
+} from "../../internal";
 import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
-import { isValidTimeZone } from "../../zoned/validate";
 import { isValidZoneBucketUnit } from "../validate";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
@@ -30,10 +35,17 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  * - Returns a UTC instant string ending in `"Z"`, exactly — no rounding.
  * - Returns `""` on invalid input, and where the boundary itself is not representable — the
  *   week or month containing the first instant Temporal supports began before it.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `""`. An offset to the minute has no
+ *   such limit.
  *
  * @param value ISO 8601 instant string (e.g. "2024-06-15T03:00:00Z")
  * @param unit boundary unit ("hour" | "day" | "week" | "month", or its plural)
- * @param timeZone IANA name or UTC offset the boundary is computed in
+ * @param timeZone IANA name or UTC offset the boundary is computed in: a time zone identifier
+ *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns UTC instant string ending in "Z", or "" on invalid input
  *
  * @example floorToZone("2024-06-15T03:00:00Z", "day", "America/New_York") // "2024-06-14T04:00:00Z" (the 14 June local midnight — the instant is already 14 June there)
@@ -46,6 +58,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  * @example floorToZone("2024-06-15T03:00:00", "day", "UTC") // "" (zoneless, so it names no instant)
  * @example floorToZone("-271821-04-20T00:00:00Z", "month", "UTC") // "" (that month began before Temporal's range does)
  * @example floorToZone("2024-06-15T03:00:00Z", "day", "Invalid/Zone") // ""
+ * @example floorToZone("1970-01-01T13:00:00Z", "day", "-00:44:30") // "1970-01-01T00:44:30Z" (local midnight at a stored offset with seconds)
  */
 export function floorToZone(
   value: string,
@@ -55,19 +68,21 @@ export function floorToZone(
   // The singular name; the guard below rejects anything outside the four units.
   const resolvedUnit = resolveDateTimeUnit(unit) as ZoneBucketUnit;
 
+  const frame = zoneFrame(timeZone);
+
   if (
     !isValidInstant(value) ||
     !isValidZoneBucketUnit(resolvedUnit) ||
-    !isValidTimeZone(timeZone)
+    frame === null
   ) {
     return "";
   }
 
   try {
-    const zoned = instantFrom(value).toZonedDateTimeISO(timeZone);
+    const zoned = frameZoned(instantFrom(value), frame);
     const start = zonedUnitStart(zoned, resolvedUnit);
 
-    return start ? start.toInstant().toString() : "";
+    return start ? frameInstant(start, frame).toString() : "";
   } catch {
     return "";
   }

@@ -36,6 +36,7 @@ export const GMT_MODULES: Record<
 
   // --- instant ---
   "instant/convert": () => import("@northguild/gmt/instant/convert"),
+  "instant/validate": () => import("@northguild/gmt/instant/validate"),
 
   // --- calendar ---
   "calendar/business": () => import("@northguild/gmt/calendar/business"),
@@ -56,6 +57,8 @@ export const GMT_MODULES: Record<
   // --- intermodal ---
   "intermodal/calculate": () => import("@northguild/gmt/intermodal/calculate"),
   "intermodal/format": () => import("@northguild/gmt/intermodal/format"),
+  "intermodal/parse": () => import("@northguild/gmt/intermodal/parse"),
+  "intermodal/validate": () => import("@northguild/gmt/intermodal/validate"),
 
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),

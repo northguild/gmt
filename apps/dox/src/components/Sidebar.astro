@@ -1,0 +1,36 @@
+---
+// Override of Starlight's Sidebar: the same tree, drawn by our SidebarSublist so the
+// API Reference can carry the "By industry" divider (a label, not a group or a link).
+// The divider is a link entry in Starlight's data, so it would also be a stop in the
+// previous/next links under a page; those are recomputed here without it.
+import MobileMenuFooter from '@astrojs/starlight/components/MobileMenuFooter.astro';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from './SidebarSublist.astro';
+
+const route = Astro.locals.starlightRoute;
+const { sidebar, pagination } = route;
+
+type Link = { type: 'link'; href: string; isCurrent: boolean; attrs: Record<string, unknown> };
+const links = (entries: typeof sidebar): Link[] =>
+	entries.flatMap((entry) => (entry.type === 'group' ? links(entry.entries) : [entry as Link]));
+const all = links(sidebar);
+const isDivider = (link: Link) => link.attrs['data-gmt-divider'] !== undefined;
+const real = all.filter((link) => !isDivider(link));
+const at = real.findIndex((link) => link.isCurrent);
+const onDivider = (href: string | undefined) =>
+	all.some((link) => isDivider(link) && link.href === href);
+if (onDivider(pagination.prev?.href)) {
+	pagination.prev = at > 0 ? (real[at - 1] as typeof pagination.prev) : undefined;
+}
+if (onDivider(pagination.next?.href)) {
+	pagination.next = at >= 0 ? (real[at + 1] as typeof pagination.next) : undefined;
+}
+---
+
+<SidebarPersister>
+	<SidebarSublist sublist={sidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+	<MobileMenuFooter />
+</div>

@@ -13,6 +13,8 @@
  *   `parseRfc2822` reads the full receiver grammar — use it to decode a header, and this
  *   pattern only to check that a string has the strict shape.
  * - The day-of-week is not checked against the date; `parseRfc2822` does check it.
+ * - To check that a string is a real RFC 5322 date-time, use `isValidRfc2822DateTime`: this
+ *   pattern also matches a day that does not exist and an hour or zone out of range.
  *
  * Capture groups: 1 day-of-week (optional, for weekday-prefixed form), 2 day, 3 month,
  * 4 year, 5 hour, 6 minute, 7 second (optional), 8 zone.

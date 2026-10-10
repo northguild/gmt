@@ -20,6 +20,8 @@ function isValidPlainNowUnit(unit: string): unit is NowUnit {
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
  * - Returns "" when unit is invalid or system timezone is unavailable.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param unit unit to extract from current local time
  * @returns string representation of the requested unit or "" on invalid

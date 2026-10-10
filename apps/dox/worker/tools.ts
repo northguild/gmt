@@ -52,6 +52,8 @@ import {
   showCutoffStackInput,
   showDeliverySchedulerInput,
   showDepartureBoardInput,
+  showDtmDecoderInput,
+  showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -325,6 +327,40 @@ export function buildWorkerTools(
               `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
             )
           : accept("departure-board");
+      },
+    }),
+
+    // The zones are the ones the reader named, to read an offsetless value in.
+    showDtmDecoder: tool({
+      description: docFor("showDtmDecoder"),
+      inputSchema: showDtmDecoderInput,
+      execute: ({ zone1, zone2, zone3, zone4 }) => {
+        const unknown = unknownZones(
+          [zone1, zone2, zone3, zone4].filter((z): z is string => Boolean(z)),
+        );
+        return unknown.length > 0
+          ? reject(
+              "dtm-decoder",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("dtm-decoder");
+      },
+    }),
+
+    // The zones are the ones the reader named, to read a local time in.
+    showX12TimeReader: tool({
+      description: docFor("showX12TimeReader"),
+      inputSchema: showX12TimeReaderInput,
+      execute: ({ zone, zone2, zone3, zone4 }) => {
+        const unknown = unknownZones(
+          [zone, zone2, zone3, zone4].filter((z): z is string => Boolean(z)),
+        );
+        return unknown.length > 0
+          ? reject(
+              "x12-time-reader",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("x12-time-reader");
       },
     }),
   };

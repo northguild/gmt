@@ -123,7 +123,7 @@ function dropMapBlocks(body: string): string {
  * - The `<div class="gmt-ref-table">` wrapper round a generated table (the table stays)
  * - The `<span class="gmt-nobreak">` round a quoted, hyphenated literal (the text stays)
  * - Starlight component tags (`<Card>`, `<CardGrid>`, `<Tabs>`, `<TabItem>`, `<Aside>`,
- *   `<Steps>`, `<Playground>`) — keeps inner text
+ *   `<Steps>`, `<Playground>`, `<Icon>`) — keeps inner text
  *
  * Renders the components that carry prose of their own (`<Mistake>`, `<Scenario>`) to Markdown,
  * and substitutes `{gmtVersion}` plus any `values` given, so a figure stated as an expression
@@ -156,7 +156,7 @@ export function stripMdx(
       .replace(/<span class="gmt-nobreak">([^<]*)<\/span>/g, "$1")
       // Remove Starlight + playground component tags (keep inner text)
       .replace(
-        /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground)\b[^>]*>/g,
+        /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground|Icon)\b[^>]*>/g,
         "",
       ),
   );

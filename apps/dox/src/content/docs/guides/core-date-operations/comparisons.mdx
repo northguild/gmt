@@ -12,11 +12,17 @@ Use these functions when you need to order dates, test equality, or ask
 ## Ordering
 
 ```typescript
-import { isAfterDate, isBeforeDate, areDatesEqual } from "@northguild/gmt";
+import { isAfterDate, isBeforeDate, isBeforeDateTime, areDatesEqual } from "@northguild/gmt";
 
 isAfterDate("2024-03-20", "2024-03-15"); // true
 isBeforeDate("2024-03-10", "2024-03-15"); // true
 areDatesEqual("2024-03-15", "2024-03-15"); // true
+
+isBeforeDateTime("2026-03-17T09:00:00", "2026-03-17T10:00:00");
+// true
+
+areDatesEqual("2026-03-17", "2026-03-17T09:00:00");
+// true — a datetime argument is compared by its date
 ```
 
 Each has `DateTime`, `Time`, `Zoned`, `Unix`, and `Utc` siblings —
@@ -59,31 +65,43 @@ isBetweenDate("2024-03-15", "2024-03-10", "2024-03-20"); // true
 ## Locale-aware weekend checks
 
 `isWeekend`/`isZonedWeekend` resolve weekend days per locale via `Intl.Locale`'s
-`weekInfo` — most locales use Saturday/Sunday, but `he-IL`/`ar-SA` use
-Friday/Saturday:
+`weekInfo` (`Intl.Locale#getWeekInfo()`, falling back to the `weekInfo` property) —
+most locales use Saturday/Sunday, but `he-IL`/`ar-SA` use Friday/Saturday. They do not
+assume a Saturday/Sunday weekend:
 
 ```typescript
 import { isWeekend, isZonedWeekend } from "@northguild/gmt";
 
 isWeekend("2024-02-03", "en-US"); // true (Saturday)
 isWeekend("2024-02-02", "he-IL"); // true (Friday is part of he-IL's weekend)
+isWeekend("2024-02-03", "he-IL"); // true (Saturday is also part of it)
 
 isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
 // false — Sunday isn't part of he-IL's weekend
 ```
 
-## Business-day check (fixed Mon–Fri)
+## Business-day check
 
 ```typescript
 import { isBusinessDay } from "@northguild/gmt";
 
 isBusinessDay("2024-02-05"); // true (Monday)
 isBusinessDay("2024-02-10"); // false (Saturday)
+
+isBusinessDay("2024-07-04", {
+  weekend: [6, 7],
+  holidays: ["2024-07-04"],
+  timeZone: "America/New_York",
+});
+// false — a holiday, though it is a Thursday
 ```
 
-`isBusinessDay` uses a fixed ISO Monday–Friday boundary — locale-agnostic, no
-holiday calendar. It matches the boundary that `addBusinessDays` uses, and is the
-complement to locale-aware `isWeekend`.
+With one argument, `isBusinessDay` uses a fixed ISO Monday–Friday week (Mon=1 … Fri=5),
+locale-agnostic and with no holidays. It shares that rule with
+`addBusinessDays`/`subtractBusinessDays`, and is the complement to locale-aware
+`isWeekend`. Pass a `BusinessCalendar` as the second argument to state the weekend and
+the holidays yourself. See [Business Calendars and Roll Conventions](../business-calendars/)
+for the calendar's shape and the rest of the family.
 
 ## Locale-relative day-of-week index
 
@@ -93,6 +111,8 @@ import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@northguild/gmt";
 getLocaleDayOfWeek("2024-02-25", "en-US"); // 0 (Sunday = first day of en-US week)
 getLocaleDayOfWeek("2024-02-26", "fr-FR"); // 0 (Monday = first day of fr-FR week)
 getLocaleDayOfWeek("2024-02-24", "ar-EG"); // 0 (Saturday = first day of ar-EG week)
+
+getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US"); // 0
 ```
 
 Index 0 is the locale's first day of the week, consistent with
@@ -110,10 +130,24 @@ isPast("2024-03-14"); // strictly before today
 isFuture("2024-03-16"); // strictly after today
 ```
 
+`isRelativeDay` subsumes `isToday`/`isYesterday`/`isTomorrow`, and `isThisUnit`
+subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. `isPast` and `isFuture` are strict:
+a value on today's date is neither, so they are not "on or before" and "on or after".
+
 These compare against `getToday()`, so they depend on the **system clock and system
 timezone**. For deterministic results in servers and tests, use the zoned variants
-(`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) with an
-explicit timezone.
+(`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`). They resolve
+"today" and "now" in the value's own timezone, whatever the host machine's timezone is:
+
+```typescript
+import { isZonedRelativeDay, isZonedPast } from "@northguild/gmt";
+
+isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0);
+// "today" resolved in America/New_York, not the host's system timezone
+
+isZonedPast("2020-01-01T00:00:00Z[UTC]");
+// true — compares the exact instant, not just the calendar day
+```
 
 ## Next/previous occurrence of a weekday
 
@@ -123,10 +157,15 @@ import { nextWeekday, previousWeekday } from "@northguild/gmt";
 nextWeekday("2024-03-13", 5); // "2024-03-15" (Wednesday -> next Friday)
 nextWeekday("2024-03-15", 5); // "2024-03-22" (already Friday -> advances a week)
 nextWeekday("2024-03-15", 5, { inclusive: true }); // "2024-03-15" (returned as-is)
+
+previousWeekday("2024-03-13", 5); // "2024-03-08" (Wednesday -> previous Friday)
 ```
 
-`dayOfWeek` uses ISO numbering (1 = Monday … 7 = Sunday). These replace date-fns's
-sixteen `next*`/`previous*` functions with two parameterized calls.
+`dayOfWeek` uses ISO numbering (1 = Monday … 7 = Sunday, matching `getDayOfWeek`). These
+replace date-fns's sixteen `next*`/`previous*` functions with two parameterized calls.
+`options.inclusive` is `false` by default. When the input already falls on the target day,
+the function then moves a full week forward or back, as date-fns does. With `inclusive: true`
+it returns the input.
 
 ## See also
 

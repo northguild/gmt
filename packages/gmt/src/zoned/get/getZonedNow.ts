@@ -11,8 +11,12 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * - `smallestUnit` is the only option read. Any other key on `optionsArg` is ignored, so the
  *   string always carries the offset and the bracketed time zone, and smaller units are always
  *   truncated.
+ * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call
+ *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
+ *   bracket.
  *
- * @param ianaTimezone IANA timeZone identifier
+ * @param ianaTimezone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @param optionsArg optional setting for the precision of the output string
  * @returns zoned ISO 8601 datetime string or "" on invalid input
  *

@@ -1,0 +1,625 @@
+---
+title: "Intermodal: EDI Timestamps"
+description: One small function for each kind of value a UN/EDIFACT DTM segment or an X12 date, time or DTP element carries — read and write it, and know whether its offset is stated.
+sidebar:
+  order: 7
+industries: [intermodal]
+---
+
+Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, the date and time
+elements of X12, a United States standard, and GS1 EPCIS events. The same defect recurs in all
+three: some formats carry a UTC offset and some do not, and the only signal is a code. A reader
+who takes an offsetless value for UTC has invented a place, and the error is the offset of the
+real one.
+
+Trading-partner maps vary. The data elements underneath them do not: UN/EDIFACT data element 2379
+lists the format codes of a `DTM` value, and X12 data elements 373, 337, 623 and 1250 list the
+date, time, time code and date-period formats. The library reads and writes against those lists,
+so a value is checked against its code and not against a partner's habit.
+
+There is one small function for each kind of value, and each takes only the codes of its kind. A
+parser returns one house value and a formatter takes it back. A call the types accept returns a
+value, except when the value itself is wrong: a digit run that does not fit its mask, a day that
+does not exist, or a period that ends before it starts. Those return the sentinel.
+
+```typescript
+import { classifyEdifactDtmFormat, parseEdifactOffsetDateTime } from "@northguild/gmt/intermodal/parse";
+import { formatEdifactOffsetDateTime } from "@northguild/gmt/intermodal/format";
+import { isValidEdifactOffsetDateTime } from "@northguild/gmt/intermodal/validate";
+```
+
+The parsers live under `@northguild/gmt/intermodal/parse`, the formatters under
+`@northguild/gmt/intermodal/format` and the validators under `@northguild/gmt/intermodal/validate`.
+No EDI function takes an options argument. Each function has a page in the
+[intermodal reference](/reference/intermodal/parse/), with a playground that runs it.
+
+## UN/EDIFACT: data element 2379
+
+| Kind                  | Functions (`parse`, `format`, `isValid` plus) | Codes                    | House value                  |
+| --------------------- | --------------------------------------------- | ------------------------ | ---------------------------- |
+| Date                  | `EdifactDate`                                 | `102`                    | `2024-06-15`                 |
+| Time                  | `EdifactTime`                                 | `401` `402`              | `14:30:00`                   |
+| Local date-time       | `EdifactDateTime`                             | `203` `204`              | `2024-06-15T14:30:00`        |
+| Date-time with offset | `EdifactOffsetDateTime`                       | `205` `208` `303` `304`  | `2024-06-15T14:30:00+02:00`  |
+| Date period           | `EdifactDatePeriod`                           | `718`                    | `{ start, end }`             |
+| Date-time period      | `EdifactDateTimePeriod`                       | `719`                    | `{ start, end }`             |
+
+The masks come from UNECE's own
+[D.21B page for 2379, archived](http://web.archive.org/web/20240303123657/https://service.unece.org/trade/untdid/d21b/tred/tred2379.htm),
+and the [D.04B](https://www.stylusstudio.com/edifact/D04B/2379.htm) and
+[D.13B](https://www.edifactory.de/edifact/directory/D13B/data-element/2379) mirrors agree with it.
+The live UNECE host refuses automated requests, which is why two of these links are mirrors and
+one is an archive.
+
+### A date, a time and a local date-time
+
+A parser returns the same house value for every code of its kind. A date is `YYYY-MM-DD`, and
+a time and a local date-time always carry seconds, even when the code holds only minutes. A
+formatter takes that value back and cuts it to the code's mask:
+
+```typescript
+import {
+  parseEdifactDateTime,
+  parseEdifactTime,
+} from "@northguild/gmt/intermodal/parse";
+import {
+  formatEdifactDate,
+  formatEdifactDateTime,
+  formatEdifactDateTimePeriod,
+  formatEdifactTime,
+} from "@northguild/gmt/intermodal/format";
+
+parseEdifactTime("1430", "401"); // "14:30:00"
+parseEdifactTime("143045", "402"); // "14:30:45"
+parseEdifactTime("143045", "401"); // "" — a 401 value holds minutes
+
+formatEdifactDate("2024-06-15", "102"); // "20240615"
+formatEdifactTime("14:30:45", "401"); // "1430" — 401 holds minutes
+formatEdifactDateTime("2024-06-15T14:30:00", "203"); // "202406151430"
+formatEdifactDateTime("2024-06-15T14:30:45.9", "204"); // "20240615143045" — cut, not rounded
+formatEdifactDateTimePeriod("2024-06-15T08:00:00", "2024-06-20T17:00:00", "719"); // "202406150800202406201700"
+```
+
+A formatter cuts a time to the mask and never rounds it. A fraction of a second is always
+dropped, and a minute-precision code drops the seconds too.
+
+### Which codes carry an offset
+
+Only the four codes of the date-time with offset kind do. The other kinds state none, so the
+value names no instant until you name the zone.
+
+| Code  | Mask                  | Offset                                                        |
+| ----- | --------------------- | ------------------------------------------------------------- |
+| `205` | `CCYYMMDDHHMMZHHMM`   | a signed `HHMM`                                               |
+| `208` | `CCYYMMDDHHMMSSZHHMM` | a signed `HHMM`, with seconds                                 |
+| `303` | `CCYYMMDDHHMMZZZ`     | `ZZZ`: a signed hour, `UTC` or `GMT`                          |
+| `304` | `CCYYMMDDHHMMSSZZZ`   | `ZZZ`: a signed hour, `UTC` or `GMT`, with seconds            |
+
+For `205` the directory says "ZHHMM = time zone given as offset from Coordinated Universal Time
+(UTC)". When a partner can send seconds plus an offset, ask for `208`: it has a four-digit year,
+seconds and an offset. The parser returns the value in the form `fromOffsetInstant` writes and
+`toOffsetInstant` reads, so it drops into the instant functions:
+
+```typescript
+import { parseEdifactDateTime, parseEdifactOffsetDateTime } from "@northguild/gmt/intermodal/parse";
+
+parseEdifactDateTime("202406151430", "203"); // "2024-06-15T14:30:00" — local, not UTC
+parseEdifactOffsetDateTime("202406151430+0200", "205"); // "2024-06-15T14:30:00+02:00"
+parseEdifactOffsetDateTime("20240615143045+0200", "208"); // "2024-06-15T14:30:45+02:00"
+parseEdifactOffsetDateTime("202406151430+0530", "205"); // "2024-06-15T14:30:00+05:30"
+```
+
+### What `ZZZ` is
+
+The `ZZZ` in `303` and `304` is three characters that the directory does not define. It says only
+"Z = Time zone".
+
+[UN/ECE Recommendation 7](http://web.archive.org/web/20201020110807/http://www.unece.org/fileadmin/DAM/cefact/recommendations/rec07/rec07_1988_inf108.pdf)
+¶12 allows a UTC difference "in hours and minutes, or hours only, with a leading + or −
+sign". Hours only is exactly three characters. The
+[SMDG IFTSAI 2.0 (draft)](https://smdg.org/wp-content/uploads/MIGs/Schedules/Draft-IFTSAI20.pdf)
+schedule guide applies that recommendation to code `303`. It and the
+[SMDG BAPLIE 3.1.1](https://smdg.org/wp-content/uploads/MIGs/BAPLIE/BAPLIE3.1.1-02.pdf) guide
+use `UTC` in a `303` value. Recommendation 7 ¶12 calls UTC "formerly known as Greenwich Mean
+Time". So the field holds a signed hour, `UTC` or `GMT`, and nothing else. A zone abbreviation
+such as `CET` is not an offset and no standard maps it to one, so it returns the sentinel:
+
+```typescript
+parseEdifactOffsetDateTime("202406151430+01", "303"); // "2024-06-15T14:30:00+01:00"
+parseEdifactOffsetDateTime("202406151430UTC", "303"); // "2024-06-15T14:30:00+00:00"
+parseEdifactOffsetDateTime("202406151430GMT", "303"); // "2024-06-15T14:30:00+00:00"
+parseEdifactOffsetDateTime("202406151430CET", "303"); // "" — an abbreviation is not an offset
+parseEdifactOffsetDateTime("202406151430+24", "303"); // "" — +24 is not an hour
+parseEdifactOffsetDateTime("202406151430+0530", "303"); // "" — the field holds whole hours: use 205 or 208
+```
+
+Where a partner sends letters such as `CET`, remove the letters, read the rest with
+`parseEdifactDateTime` under `203` or `204`, and resolve it in the zone you map the letters to.
+
+A formatter writes the offset as a signed hour and never as `UTC` or `GMT`:
+
+```typescript
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "205"); // "202406151430+0200"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "303"); // "202406151430+02"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00Z", "303"); // "202406151430+00"
+```
+
+An offset is never cut. A formatter returns `""` when the code cannot hold the value it was
+given: `+05:30` under `303` or `304`, because the field holds whole hours, and a local
+date-time under `205`, because it has no offset to write. A year outside 0000–9999 returns
+`""` as well. Write the half-hour offset under `205` or `208` instead:
+
+```typescript
+import { formatEdifactDate, formatEdifactOffsetDateTime } from "@northguild/gmt/intermodal/format";
+
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "303"); // "" — the field holds whole hours
+formatEdifactOffsetDateTime("2024-06-15T14:30:00+05:30", "205"); // "202406151430+0530"
+formatEdifactOffsetDateTime("2024-06-15T14:30:00", "205"); // "" — a local date-time has no offset to write
+formatEdifactDate("+010000-01-01", "102"); // "" — the year is outside 0000–9999
+```
+
+### A period has no hyphen on the wire
+
+The hyphen in a period mask is notation. The wire form has none, and a parser returns the two
+ends as `{ start, end }`. A formatter takes the start and the end as two arguments, then the
+code:
+
+```typescript
+import { parseEdifactDatePeriod, parseEdifactDateTimePeriod } from "@northguild/gmt/intermodal/parse";
+import { formatEdifactDatePeriod } from "@northguild/gmt/intermodal/format";
+
+parseEdifactDatePeriod("2024061520240620", "718"); // { start: "2024-06-15", end: "2024-06-20" }
+parseEdifactDatePeriod("20240615-20240620", "718"); // null — UN/EDIFACT sends no hyphen
+parseEdifactDateTimePeriod("202406151430202406201600", "719"); // { start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }
+formatEdifactDatePeriod("2024-06-15", "2024-06-20", "718"); // "2024061520240620"
+```
+
+Neither standard says whether the end is inside the period, so both ends come back as
+transmitted. The interval functions read an `end` as outside the interval, so
+`intervalLengthDate("2024-06-15", "2024-06-20", "days")` is `5`. Whether your partner counts
+the end day is for you to decide.
+
+### The release character is yours
+
+`+` is the UN/EDIFACT data element separator, so an interchange transmits the value `+02` as
+`?+02`. The `?` is the release character. The
+[UN/EDIFACT syntax rules](http://web.archive.org/web/20151228090930/http://www.unece.org/trade/untdid/texts/d422_d.htm)
+(UNTDID Part 4, Chapter 2.2) say: "? immediately preceding one of the characters ' + : ? restores
+their normal meaning." These functions take the value after the interchange has been unescaped.
+Pass the escaped form and the value no longer fits its code:
+
+```typescript
+parseEdifactOffsetDateTime("202406151430?+0200", "205"); // "" — the release character is yours to remove
+parseEdifactOffsetDateTime("202406151430+0200", "205"); // "2024-06-15T14:30:00+02:00"
+```
+
+A formatter truncates seconds and fractions to the mask rather than refusing them:
+`formatEdifactDateTime("2024-06-15T14:30:45", "203")` is `"202406151430"`.
+
+## X12: elements 373, 337, 623 and 1250
+
+X12 carries a moment in three side-by-side elements: a date (373), a time (337) and an optional
+time code (623). The time code is where an offset travels. X12 is a United States standard, read
+here through an X12-licensed dictionary. A `DTP` segment carries a 1250 format qualifier and an
+element 1251 value instead, and it has no time code.
+
+| Kind              | Functions (`parse`, `format`, `isValid` plus) | Codes        | House value                                    |
+| ----------------- | --------------------------------------------- | ------------ | ---------------------------------------------- |
+| Date              | `X12Date`                                     | `D8` `DB`    | `2024-06-15`                                   |
+| Time              | `X12Time`                                     | `TM` `TS`    | `14:30:00`, `14:30:00.12`                      |
+| Local date-time   | `X12DateTime`                                 | `DT` `RTS`   | `2024-06-15T14:30:00`                          |
+| Date range        | `X12DateRange`                                | `RD8` `RD`   | `{ start, end }`                               |
+| Date-time range   | `X12DateTimeRange`                            | `RDT` `DTS`  | `{ start, end }`                               |
+
+`parseX12Time(value)` reads every form element 337 takes (`HHMM`, `HHMMSS`, `HHMMSSD` and
+`HHMMSSDD`). `formatX12TimeElement(value, form)` writes an element 337 time in the form you name
+(`"HHMM"`, `"HHMMSS"`, `"HHMMSSD"` or `"HHMMSSDD"`). `formatX12Time(value, "TM" | "TS")` writes a
+time that travels with a 1250 qualifier. No 1250 code states an offset.
+
+A time of day, a local date-time and the rest of the formatters, one call each. `RTS` is one
+date-time, despite the R:
+
+```typescript
+import {
+  parseX12DateTime,
+  parseX12Time,
+} from "@northguild/gmt/intermodal/parse";
+import {
+  formatX12Date,
+  formatX12DateTime,
+  formatX12DateTimeRange,
+  formatX12Time,
+  formatX12TimeElement,
+} from "@northguild/gmt/intermodal/format";
+
+parseX12DateTime("202406151430", "DT"); // "2024-06-15T14:30:00"
+parseX12DateTime("20240615143045", "RTS"); // "2024-06-15T14:30:45" — one date-time, despite the R
+parseX12Time("1430"); // "14:30:00"
+parseX12Time("14300012"); // "14:30:00.12"
+parseX12Time("143045", "TS"); // "14:30:45"
+parseX12Time("143045", "TM"); // "" — six digits is a TS value
+
+formatX12Date("2024-06-15", "D8"); // "20240615"
+formatX12Date("2024-06-15", "DB"); // "06152024"
+formatX12TimeElement("14:30:00.12", "HHMMSSDD"); // "14300012"
+formatX12TimeElement("14:30", "HHMM"); // "1430"
+formatX12Time("14:30:00", "TM"); // "1430" — a time with a 1250 qualifier
+formatX12DateTime("2024-06-15T14:30:45", "DT"); // "202406151430"
+formatX12DateTime("2024-06-15T14:30:00Z", "DT"); // "" — no 1250 code carries an offset
+formatX12DateTimeRange("2024-06-15T08:00:00", "2024-06-20T17:00:00", "RDT"); // "202406150800-202406201700"
+```
+
+A formatter returns `""` for a year outside 0000–9999, as the UN/EDIFACT formatters do.
+
+### The freight read: three calls
+
+`AT7` in a 214, `G62` in a 204 and `DTM-02`/`03`/`04` send the date, the time and the time code
+side by side. Read them with `parseX12DateAndTime`, ask the code what it states with
+`x12TimeCodeOffset`, and join them with `resolveLocal`:
+
+```typescript
+import { parseX12DateAndTime, x12TimeCodeOffset } from "@northguild/gmt/intermodal/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+const local = parseX12DateAndTime("20240615", "1430"); // "2024-06-15T14:30:00"
+const offset = x12TimeCodeOffset("20"); // "-05:00"
+resolveLocal(local, offset); // "2024-06-15T19:30:00Z"
+```
+
+`parseX12DateAndTime("20240615", "143045")` is `"2024-06-15T14:30:45"` and
+`parseX12DateAndTime("20240615", "14300012")` is `"2024-06-15T14:30:00.12"`.
+
+### The time code
+
+The 623 list is release 008010, which has 56 codes.
+[Release 005010](https://www.stedi.com/edi/x12-005010/element/623) has 51: the codes `25` to `29`
+first appear in release 006010, so they are not valid in an earlier interchange. The functions
+take no release, so they read all 56 codes of
+[release 008010](https://www.stedi.com/edi/x12-008010/element/623). Thirty-one codes state an
+offset and `x12TimeCodeOffset` returns it; twenty-five name a zone and `x12TimeCodeZone` returns
+the name and a daylight flag.
+
+| 623 code                                                                               | What it says                                                                                                                                                         |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01`–`12`                                                                              | UTC+1 to UTC+12. The offset is stated.                                                                                                                               |
+| `13`–`24`                                                                              | UTC−12 to UTC−1, in **descending** order: `13` is −12 and `24` is −1. The offset is stated.                                                                          |
+| `25`–`29`                                                                              | The half-hour offsets: −02:30, −03:30, +05:30, +09:30 and +10:30. The offset is stated.                                                                              |
+| `UT`                                                                                   | UTC. The offset is stated: `+00:00`.                                                                                                                                 |
+| `GM`                                                                                   | X12 defines it only by the name "Greenwich Mean Time". The library returns `+00:00`, a rule that rests on UN/ECE Recommendation 7 ¶12 (see above).                    |
+| `AD`/`AS`, `CD`/`CS`, `ED`/`ES`, `HD`/`HS`, `MD`/`MS`, `ND`/`NS`, `PD`/`PS`, `TD`/`TS` | A zone name with a daylight or standard flag. No offset is stated.                                                                                                   |
+| `AT`, `CT`, `ET`, `HT`, `MT`, `NT`, `PT`, `TT`                                         | A zone name, neither standard nor daylight. No offset is stated.                                                                                                     |
+| `LT`                                                                                   | Local time at the event. The place is not stated.                                                                                                                    |
+
+```typescript
+import { x12TimeCodeOffset, x12TimeCodeZone } from "@northguild/gmt/intermodal/parse";
+
+x12TimeCodeOffset("13"); // "-12:00"
+x12TimeCodeOffset("27"); // "+05:30"
+x12TimeCodeOffset("ET"); // "" — a named zone states no offset
+x12TimeCodeZone("ET"); // { zone: "Eastern", daylight: null }
+x12TimeCodeZone("ED"); // { zone: "Eastern", daylight: true }
+x12TimeCodeZone("ES"); // { zone: "Eastern", daylight: false }
+x12TimeCodeZone("LT"); // { zone: "Local", daylight: null }
+x12TimeCodeZone("20"); // null — an offset code names no zone
+```
+
+A named zone is a zone name and not an offset. `ET` does not say whether the clock was on
+standard or daylight time, and the library maps no name to an IANA zone. The next two sections
+say what to do with it.
+
+### A DTP value
+
+A `DTP` value is read against its 1250 qualifier by the function of its kind:
+
+```typescript
+import { parseX12Date, parseX12DateRange, parseX12DateTimeRange } from "@northguild/gmt/intermodal/parse";
+import { formatX12DateRange } from "@northguild/gmt/intermodal/format";
+
+parseX12Date("06152024", "DB"); // "2024-06-15"
+parseX12DateRange("20240615-20240620", "RD8"); // { start: "2024-06-15", end: "2024-06-20" }
+parseX12DateTimeRange("20240615143000-20240620160000", "DTS"); // { start: "2024-06-15T14:30:00", end: "2024-06-20T16:00:00" }
+formatX12DateRange("2024-06-15", "2024-06-20", "RD8"); // "20240615-20240620"
+```
+
+Healthcare uses the same pair: 837 and 834 `DTP` segments carry `D8` and `RD8`. An X12 range
+writes its hyphen, and a UN/EDIFACT period does not, so each parser reads only its own wire
+form. As with UN/EDIFACT, X12 does not say whether the end is inside the range, and both ends
+come back as transmitted.
+
+Tenths and hundredths of a second in an element 337 time are read by `parseX12Time` and written
+by `formatX12TimeElement` with `"HHMMSSD"` or `"HHMMSSDD"`. The two 1250 masks `TM` and `TS`
+have no field for them, so `formatX12Time` cuts them: `formatX12Time("14:30:00.12", "TS")` is
+`"143000"`.
+
+## A code that arrives as data
+
+A generic segment reader holds the code as a plain string. Each standard has a classifier that
+names the kind and narrows the code to it, so the call needs no cast. It returns `null` for a
+code no function reads.
+
+```typescript
+import {
+  classifyEdifactDtmFormat,
+  classifyX12DateTimePeriodFormat,
+  classifyX12TimeCode,
+  parseEdifactDate,
+  parseEdifactDateTime,
+} from "@northguild/gmt/intermodal/parse";
+
+classifyEdifactDtmFormat("203"); // { kind: "dateTime", format: "203" }
+classifyEdifactDtmFormat("101"); // null
+classifyX12DateTimePeriodFormat("RD8"); // { kind: "dateRange", format: "RD8" }
+classifyX12TimeCode("20"); // { kind: "offset", timeCode: "20" }
+classifyX12TimeCode("ET"); // { kind: "zone", timeCode: "ET" }
+
+const classified = classifyEdifactDtmFormat(code);
+if (classified?.kind === "dateTime") parseEdifactDateTime(value, classified.format);
+if (classified?.kind === "date") parseEdifactDate(value, classified.format);
+```
+
+The [DTM Decoder](/tools/dtm-decoder/) does exactly this: it classifies the code, then calls the
+parser of the kind that came back.
+
+## A two-digit year: use the pattern parsers
+
+The two-digit-year codes are not read by any EDI function, because no standard says which
+century `24` belongs to: the UN/EDIFACT codes `101`, `201`, `202`, `206`, `207`, `301`, `302`,
+`713` and `717`, and the X12 qualifiers `D6`, `TT`, `TR`, `RD6` and `TU`. Their classifiers
+return `null`. Modern guides send four-digit years, and X12 has since release 004010. When a
+partner still sends one, read it with the pattern parsers and state the century yourself with
+`yearWindow`:
+
+| Code          | Mask           | Pattern          | Parser                   | Example                                                          |
+| ------------- | -------------- | ---------------- | ------------------------ | ---------------------------------------------------------------- |
+| `101`, `D6`   | `YYMMDD`       | `yyMMdd`         | `parseDateWithPattern`   | `"240615"` reads as `"2024-06-15"`                               |
+| `TT`          | `MMDDYY`       | `MMddyy`         | `parseDateWithPattern`   | `"061524"` reads as `"2024-06-15"`                               |
+| `201`         | `YYMMDDHHMM`   | `yyMMddHHmm`     | `parseDateTimeWithPattern` | `"2406151430"` reads as `"2024-06-15T14:30:00"`                |
+| `202`         | `YYMMDDHHMMSS` | `yyMMddHHmmss`   | `parseDateTimeWithPattern` | `"240615143045"` reads as `"2024-06-15T14:30:45"`              |
+| `TR`          | `DDMMYYHHMM`   | `ddMMyyHHmm`     | `parseDateTimeWithPattern` | `"1506241430"` reads as `"2024-06-15T14:30:00"`                |
+
+```typescript
+import { parseDateWithPattern, parseDateTimeWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("240615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2024-06-15"
+parseDateWithPattern("240615", "yyMMdd"); // "" — no window, so no century
+parseDateTimeWithPattern("2406151430", "yyMMddHHmm", undefined, { yearWindow: 2000 }); // "2024-06-15T14:30:00"
+```
+
+The two-digit-year period codes (`713`, `717` and `RD6`) have no reader. Split the period and
+read each half with a pattern parser. No function writes a two-digit year.
+
+`yearWindow` is the caller's, and it takes two forms. A number is the first year of a fixed
+hundred-year window: `2000` reads `00`–`99` as 2000–2099, and `1950` reads `50`–`99` as
+1950–1999 and `00`–`49` as 2000–2049. It gives the same answer in any year, so it is the form
+for stored data. `"rolling"` is the hundred years around the current UTC year, from 50 years
+before it to 49 after. It suits live messages, and it reads the same stored value differently
+as years pass. Without a window, a `yy` token returns `""`:
+
+```typescript
+import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 1950 }); // "1999-06-15"
+parseDateWithPattern("990615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2099-06-15"
+parseDateWithPattern("490615", "yyMMdd", undefined, { yearWindow: 1950 }); // "2049-06-15"
+```
+
+## What is not read
+
+- The two-digit-year codes above.
+- The odd codes that fit none of the kinds: `209` and `404` (a time with an offset and no date),
+  `406` (an offset alone), `TC` and `EH` (a day of the year with no year), `DDT` and `DTD` (a range
+  with a date on one side and a date-time on the other), `RTM` (a time window that may cross
+  midnight) and `UN` (unstructured). Their classifiers return `null`.
+- Every code outside the lists above. GMT reads 11 UN/EDIFACT format codes, 10 X12 format
+  qualifiers and all 56 X12 time codes, and every other code returns the sentinel.
+- Every other 2379 and 1250 code. That covers partial values such as a year, a month or a week,
+  the weekday periods (`720`), the quantities (`801` and up), the day-first and month-first dates,
+  the week date `103`, the ordinal date `105` and the time spans (`501` to `503`). This guide lists
+  what the library reads. It does not claim to list every code the directory defines.
+- A `ZZZ` abbreviation. `CET` returns the sentinel.
+
+## Check before reading: the validators
+
+Each function has an `isValid` twin that takes the same arguments and returns `true` exactly when
+the parser returns a value. `isValidX12DateAndTime(date, time)` is the twin of
+`parseX12DateAndTime`. The three code guards, `isValidEdifactDtmFormat`,
+`isValidX12DateTimePeriodFormat` and `isValidX12TimeCode`, are true exactly when the classifier
+returns a result.
+
+```typescript
+import {
+  isValidEdifactDtmFormat,
+  isValidEdifactOffsetDateTime,
+  isValidX12DateAndTime,
+} from "@northguild/gmt/intermodal/validate";
+
+isValidEdifactOffsetDateTime("202406151430+0200", "205"); // true
+isValidX12DateAndTime("20240615", "1430"); // true
+isValidX12DateAndTime("20230229", "1430"); // false — 2023 has no 29 February
+isValidX12DateAndTime("20240615", ""); // false — both elements are required
+isValidEdifactDtmFormat("203"); // true
+isValidEdifactDtmFormat("101"); // false
+```
+
+The validators of the other kinds follow the same rule. A value validator agrees with its
+parser, and a code validator checks the code alone:
+
+```typescript
+import {
+  isValidEdifactDateTime,
+  isValidX12DateRange,
+  isValidX12DateTimePeriodFormat,
+  isValidX12Time,
+  isValidX12TimeCode,
+} from "@northguild/gmt/intermodal/validate";
+
+isValidEdifactDateTime("202406151430", "203"); // true
+isValidEdifactDateTime("202406151430", "204"); // false — a 204 value carries seconds
+isValidX12DateRange("20240615-20240620", "RD8"); // true
+isValidX12DateRange("2024061520240620", "RD8"); // false — X12 writes the hyphen
+isValidX12Time("1430"); // true
+isValidX12Time("1430", "TS"); // false — four digits is a TM value
+isValidX12DateTimePeriodFormat("D8"); // true
+isValidX12DateTimePeriodFormat("UN"); // false — unstructured
+isValidX12TimeCode("ET"); // true
+isValidX12TimeCode("EST"); // false
+```
+
+## EPCIS: two facts, both required
+
+GS1 EPCIS 2.0 (ISO/IEC 19987) is GS1's event standard for supply-chain visibility. Every event
+carries two time fields, and both are required. `eventTime` is the instant. `eventTimeZoneOffset`
+is the offset in force where the event happened. Neither derives from the other. The instant
+puts events from every site on one timeline. The offset lets you show the event on the clock
+at the site.
+
+GS1 publishes the grammar of each field in its
+[JSON schema](https://ref.gs1.org/standards/epcis/epcis-json-schema.json) and its
+[XSD](https://ref.gs1.org/standards/epcis/epcglobal-epcis-2_0.xsd). `parseEpcisEvent` reads an
+event against them and returns `instant`, `offset` and `local`.
+
+```typescript
+import { parseEpcisEvent } from "@northguild/gmt/intermodal/parse";
+
+parseEpcisEvent({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" });
+// { instant: "2024-06-15T14:30:00Z", offset: "-05:00", local: "2024-06-15T09:30:00" }
+
+// The local date is the day after the UTC date.
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" });
+// { instant: "2024-06-15T23:30:00Z", offset: "+02:00", local: "2024-06-16T01:30:00" }
+
+// The offset inside eventTime is not the offset field. Only the instant is read from eventTime.
+parseEpcisEvent({ eventTime: "2024-06-15T10:00:00+02:00", eventTimeZoneOffset: "-05:00" });
+// { instant: "2024-06-15T08:00:00Z", offset: "-05:00", local: "2024-06-15T03:00:00" }
+```
+
+The third call shows two offsets that disagree. The library accepts that, because neither grammar ties
+the two together. GS1 explains why in a part of
+[EPCIS Standard 2.0](https://ref.gs1.org/standards/epcis/) (§7.4.1.1) that the standard marks
+non-normative: "there is no requirement that the time zone specifier in the XML representation of
+eventTime be the local time zone offset where the event was captured". Read it as GS1's
+explanation, not as a rule.
+
+The offset field must match GS1's grammar: `±HH:MM` from `-14:00` to `+14:00`. EPCIS Standard
+2.0 §7.4.1 gives the hour as "within the range 00 through 14 (inclusive) … except that if the
+value of the first two digits is 14, the value of the second two digits must be 00". A missing
+offset, a `Z` and a `+0200` all return the sentinel.
+
+```typescript
+import { parseEpcisEvent } from "@northguild/gmt/intermodal/parse";
+
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" }); // null — no eventTimeZoneOffset
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "Z" }); // null — a designator, not an offset
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+0200" }); // null — GS1 writes the colon
+```
+
+`formatEpcisEvent` writes the pair back, with `eventTime` in UTC:
+
+```typescript
+import { formatEpcisEvent } from "@northguild/gmt/intermodal/format";
+
+formatEpcisEvent({ local: "2024-06-15T23:30:00", offset: "+02:00", instant: "2024-06-15T23:30:00Z" });
+// { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
+
+formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "Z" }); // null — a designator, not an offset
+```
+
+The two grammars are GS1's, exported as the `epcisEventTime` and `epcisTimeZoneOffset` patterns
+from `@northguild/gmt/regex`. `isValidEpcisEvent` checks the pair. It is two field validators together:
+`isValidEpcisEventTime` checks `eventTime` and `isValidEpcisTimeZoneOffset` checks
+`eventTimeZoneOffset`. Use one of them to say which field is wrong. The `epcisEventTime` pattern
+proves the shape alone, so it matches a day that does not exist. `isValidEpcisEventTime`
+also returns `false` for a fraction of more than nine digits:
+
+```typescript
+import {
+  isValidEpcisEvent,
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+} from "@northguild/gmt/intermodal/validate";
+import { epcisEventTime } from "@northguild/gmt/regex";
+
+epcisEventTime.test("2024-02-30T14:30:00Z"); // true
+isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false — February has no 30th
+isValidEpcisTimeZoneOffset("+02:00"); // true
+isValidEpcisTimeZoneOffset("+0200"); // false — GS1 writes the colon
+isValidEpcisEventTime("2024-06-15T23:30:00.1234567890Z"); // false — ten digits of fraction
+isValidEpcisEvent({ eventTime: "2024-02-30T14:30:00Z", eventTimeZoneOffset: "+02:00" }); // false
+```
+
+## From a local time to an instant
+
+An offsetless value becomes an instant only when you name the zone, and the library holds no
+registry of places. `resolveLocal` takes the local date-time a parser returned and the IANA zone
+you chose. The instant depends on the date, because the zone's offset does:
+
+```typescript
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+resolveLocal("2024-06-15T14:30:00", "America/New_York"); // "2024-06-15T18:30:00Z"
+resolveLocal("2024-01-15T14:30:00", "America/New_York"); // "2024-01-15T19:30:00Z"
+resolveLocal("2024-06-15T14:30:00", "America/Atikokan"); // "2024-06-15T19:30:00Z"
+resolveLocal("2024-06-15T14:30:00", "Asia/Shanghai"); // "2024-06-15T06:30:00Z"
+resolveLocal("2024-06-15T14:30:00", "Europe/Berlin"); // "2024-06-15T12:30:00Z"
+```
+
+The same wall time is five different instants. The first call is the local date-time of an `ET`
+status once you decide that Eastern means `America/New_York`; `America/Atikokan` is also Eastern
+time and keeps standard time all year, an hour apart in June. A time that repeats in a fall-back hour or does
+not exist in a spring-forward gap needs your decision; see
+[`resolveLocal`](/reference/instant/convert/resolveLocal/) for the `disambiguation` option.
+
+When a code does state an offset, `resolveLocal` takes the offset in place of a zone (the freight
+read above), and `toOffsetInstant` turns a date-time with that offset into the instant and the
+offset together:
+
+```typescript
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
+
+toOffsetInstant("2024-06-15T14:30:00+01:00"); // { instant: "2024-06-15T13:30:00Z", offset: "+01:00" }
+```
+
+## What is not done
+
+- An offsetless value never becomes UTC. A `203` value, an X12 time with no time code and an `LT`
+  time stay a local date-time. You name the zone.
+- A named X12 time code is a zone name and not an offset. The library maps no name to a zone.
+- A time alone names no instant, and neither does a date alone.
+- A two-digit year gets no century from an EDI function. Use the pattern parsers and state
+  `yearWindow`.
+- EPCIS `eventTime` and `eventTimeZoneOffset` are independent facts. The library keeps both.
+
+## The exported types
+
+Each kind has a type for its codes, so a call with a code of the wrong kind does not compile:
+[`EdifactDateFormat`](/reference/types/EdifactDateFormat),
+[`EdifactTimeFormat`](/reference/types/EdifactTimeFormat),
+[`EdifactDateTimeFormat`](/reference/types/EdifactDateTimeFormat),
+[`EdifactOffsetDateTimeFormat`](/reference/types/EdifactOffsetDateTimeFormat),
+[`EdifactDatePeriodFormat`](/reference/types/EdifactDatePeriodFormat),
+[`EdifactDateTimePeriodFormat`](/reference/types/EdifactDateTimePeriodFormat),
+[`X12DateFormat`](/reference/types/X12DateFormat),
+[`X12TimeFormat`](/reference/types/X12TimeFormat),
+[`X12DateTimeFormat`](/reference/types/X12DateTimeFormat),
+[`X12DateRangeFormat`](/reference/types/X12DateRangeFormat),
+[`X12DateTimeRangeFormat`](/reference/types/X12DateTimeRangeFormat),
+[`X12OffsetTimeCode`](/reference/types/X12OffsetTimeCode) and
+[`X12ZoneTimeCode`](/reference/types/X12ZoneTimeCode).
+
+The unions of those are `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`. The
+classifiers return `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass` and `X12TimeCodeClass`,
+and `x12TimeCodeZone` returns an `X12NamedZone`. The period parsers return
+[`EdiDatePeriod`](/reference/types/EdiDatePeriod) and
+[`EdiDateTimePeriod`](/reference/types/EdiDateTimePeriod). `parseEpcisEvent` and
+`formatEpcisEvent` use [`EpcisEventTime`](/reference/types/EpcisEventTime) and `EpcisInstant`.
+[`TwoDigitYearOptions`](/reference/types/TwoDigitYearOptions) is the options type of the pattern
+parsers.
+
+## See it break, then work
+
+- [DTM Decoder: paste a segment and see what it states](/tools/dtm-decoder/)
+- [X12 Time Reader: a date, a time and a time code](/tools/x12-time-reader/)
+- [A 203 Read as UTC](/scenarios/a-203-read-as-utc/)
+- [ET Is Not an Offset](/scenarios/et-is-not-an-offset/)
+- [The EPCIS Offset Nobody Kept](/scenarios/the-epcis-offset-nobody-kept/)
+- [Intermodal mistakes](/mistakes/intermodal/#edi-timestamps)

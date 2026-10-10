@@ -1,5 +1,6 @@
 ---
 import Default from '@astrojs/starlight/components/Head.astro';
+import { industrySidebarCss } from '~/lib/industry-tags';
 
 // Cloudflare Web Analytics. The site is registered in the NorthGuild Cloudflare account
 // under its hostname, and this token only names that site entry: it is public by design
@@ -9,6 +10,9 @@ const CF_BEACON = JSON.stringify({ token: '94af68f89d8c4c8eac46ce6c17609d5f' });
 ---
 
 <Default />
+
+{/* The sidebar icon of each industry group: one custom property per layer, read by the rule in gmt-shell.css. */}
+<style is:inline set:html={industrySidebarCss()} />
 
 <script is:inline>
 	// Hold the numbered tool cards invisible from the first paint, so a server-rendered card is

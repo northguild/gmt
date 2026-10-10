@@ -5,6 +5,8 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyPlaygroundResult,
+  createSeedLoader,
+  type SeedControl,
   evaluateArg,
   renderResult,
   sentinelFor,
@@ -391,5 +393,86 @@ describe("PlaygroundForm run() flow", () => {
     renderResult(outputEl, "", "sentinel");
     expect(outputEl.textContent).toBe("NO SIGNAL");
     expect(outputEl.classList.contains("gmt-playground-sentinel")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSeedLoader — choosing an enum value loads that choice's examples
+// ---------------------------------------------------------------------------
+
+describe("createSeedLoader", () => {
+  const choiceSeeds = {
+    format: {
+      "203": { value: { seed: "202406151430" } },
+      "204": { value: { seed: "20240615143000" } },
+    },
+  };
+  // Two text-like controls, as the form builds them: a value and a format.
+  function make(initial = { value: "202406151430", format: "203" }) {
+    const state = { ...initial };
+    const control = (name: "value" | "format"): SeedControl => ({
+      name,
+      read: () => ({
+        name,
+        kind: name === "format" ? "enum" : "string",
+        value: state[name],
+      }),
+      write: (seed) => {
+        state[name] = seed.seed;
+      },
+    });
+    const controls = [control("value"), control("format")];
+    const loader = createSeedLoader(controls, choiceSeeds);
+    loader.markLoaded();
+    return { state, loader };
+  }
+
+  it("loads the choice's seeds while the other fields are pristine", () => {
+    const { state, loader } = make();
+    state.format = "204";
+    expect(loader.onEnumChange("format")).toBe(true);
+    expect(state.value).toBe("20240615143000");
+    // The loaded values are the new baseline: switching back loads again.
+    state.format = "203";
+    expect(loader.onEnumChange("format")).toBe(true);
+    expect(state.value).toBe("202406151430");
+  });
+
+  it("keeps what the reader typed", () => {
+    const { state, loader } = make();
+    state.value = "202401010000";
+    state.format = "204";
+    expect(loader.onEnumChange("format")).toBe(false);
+    expect(state.value).toBe("202401010000");
+  });
+
+  it("counts a typed value that was put back as pristine", () => {
+    const { state, loader } = make();
+    state.value = "x";
+    state.value = "202406151430";
+    state.format = "204";
+    expect(loader.onEnumChange("format")).toBe(true);
+    expect(state.value).toBe("20240615143000");
+  });
+
+  it("keeps values for a choice without seeds", () => {
+    const { state, loader } = make();
+    state.format = "205";
+    expect(loader.onEnumChange("format")).toBe(false);
+    expect(state.value).toBe("202406151430");
+  });
+
+  it("does nothing for a template without choiceSeeds", () => {
+    const state = { v: "a" };
+    const controls: SeedControl[] = [
+      {
+        name: "v",
+        read: () => ({ name: "v", kind: "string", value: state.v }),
+        write: () => {},
+      },
+    ];
+    const loader = createSeedLoader(controls, undefined);
+    loader.markLoaded();
+    expect(loader.onEnumChange("v")).toBe(false);
   });
 });

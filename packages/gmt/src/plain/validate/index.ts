@@ -12,6 +12,7 @@ export * from "./isValidDateTimeRange";
 export * from "./isValidDateTimeUnit";
 export * from "./isValidDateUnit";
 export * from "./isValidIsoDateLike";
+export * from "./isValidSqlDateTime";
 export * from "./isValidTime";
 export * from "./isValidTimeCycleField";
 export * from "./isValidTimeDurationUnit";

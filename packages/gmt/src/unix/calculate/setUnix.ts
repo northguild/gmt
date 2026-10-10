@@ -1,6 +1,11 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { resolveOverflow, withZonedFields } from "../../internal";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import {
+  frameInstant,
+  frameZoned,
+  normalizeZoneFrame,
+  resolveOverflow,
+  withZonedFields,
+} from "../../internal";
 import {
   resolveUnixEpochUnit,
   toUnixEpoch,
@@ -24,6 +29,12 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   their current value. An empty object is a no-op.
  * - `value` is a safe integer or a digit string (`"1710072000000"`); anything else returns null.
  * - Returns null for invalid input.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
  * @param fields Partial<Temporal.ZonedDateTimeLike> object (excluding calendar/timeZone/offset) specifying fields to set
@@ -49,8 +60,9 @@ export function setUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the fields are set in: an IANA name, a UTC offset, or `"local"` for the system
-     * time zone. An unknown zone returns `null`.
+     * The time zone the fields are set in: an IANA name, a UTC offset (a time zone identifier such
+     * as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what `getTimeZoneOffset`
+     * returns), or `"local"` for the system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -88,9 +100,9 @@ export function setUnix(
     }
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
 
-    if (!timeZone || epochUnit === null) return null;
+    if (frame === null || epochUnit === null) return null;
 
     const instant = unixEpochToInstant(value, epochUnit);
     if (instant === null) return null;
@@ -104,7 +116,7 @@ export function setUnix(
     const offset = optionOrDefault(options?.offset, "prefer");
 
     try {
-      const zoned = instant.toZonedDateTimeISO(timeZone);
+      const zoned = frameZoned(instant, frame);
       // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
       // properties found") rather than treating it as a no-op, so short-circuit here.
       const result =
@@ -116,7 +128,7 @@ export function setUnix(
               offset,
             });
 
-      return toUnixEpoch(result, epochUnit);
+      return toUnixEpoch(frameInstant(result, frame), epochUnit);
     } catch {
       return null;
     }

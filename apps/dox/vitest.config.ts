@@ -7,7 +7,7 @@ import { defineConfig, type Plugin } from "vitest/config";
  * Mirrors `wrangler.jsonc`'s `{ "type": "Text", "globs": ["**\/*.md"] }` rule.
  *
  * The Worker prompt is assembled from real Markdown — `worker/core-rules.ts`
- * imports the package README, `worker/vocabulary.ts` imports the SKILL.md
+ * imports `worker/core-rules.md`, `worker/vocabulary.ts` imports the SKILL.md
  * files — and Wrangler turns those into plain strings at bundle time. Vitest
  * has no such rule, so importing `worker/index.ts` (which reaches both) failed
  * at transform time with "content contains invalid JS syntax". That is why the

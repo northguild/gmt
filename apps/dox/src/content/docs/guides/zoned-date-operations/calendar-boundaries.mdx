@@ -1,0 +1,124 @@
+---
+title: Calendar Boundaries and Zone-Aware Buckets
+description: ISO week and ordinal dates, quarters, fiscal periods, flooring an instant to a zone's calendar boundary, and bucket ranges whose members are deliberately not the same length.
+sidebar:
+  order: 2
+industries: [core]
+---
+
+Two absences with outsized consequences turn out to be the same absence twice. A calendar
+boundary is not a fixed number of hours, and it is not in UTC.
+
+## Week and period identifiers
+
+Vessel schedules are published by week number, and retail runs on 52/53-week fiscal
+calendars. Both come back as whole identifiers, not as fields to combine by hand. A week
+number without its week-numbering year is ambiguous at both ends of a year.
+
+The functions are [`getIsoWeekDate`](/reference/calendar/calculate/getIsoWeekDate),
+[`getOrdinalDate`](/reference/calendar/calculate/getOrdinalDate),
+[`getQuarter`](/reference/calendar/calculate/getQuarter) and
+[`getFiscalPeriod`](/reference/calendar/calculate/getFiscalPeriod).
+
+```typescript
+import { getFiscalPeriod, getIsoWeekDate, getOrdinalDate, getQuarter } from "@northguild/gmt";
+
+getIsoWeekDate("2027-01-01"); // { year: 2026, week: 53, weekday: 5 } — week-year 2026, not 2027
+getOrdinalDate("2024-12-31"); // { year: 2024, dayOfYear: 366 }
+getQuarter("2024-03-31", { fiscalYearStartMonth: 4 }); // { year: 2023, quarter: 4 }
+
+// The NRF retail calendar, stated as its published rule: "the Saturday nearest to January 31".
+const nrf = { pattern: "4-5-4", yearEndsOn: "2026-01-31" } as const;
+
+getFiscalPeriod("2024-06-15", nrf); // { year: 2024, period: 5, week: 19 }
+getFiscalPeriod("2024-01-28", nrf); // { year: 2023, period: 12, week: 53 } — a 53-week year
+```
+
+A 52-week year is 52 × 7 = 364 days, so a 53rd week is inserted every five or six years and
+lands in the final period.
+
+`yearEndsOn` states the *rule*, by example, not one year's end. Years end on that date's
+weekday, nearest that date's month and day. The library bundles no fiscal calendar, because
+there is no single correct retail calendar to bundle.
+
+## Zone-aware bucketing
+
+"Group by day in `America/New_York`" over UTC timestamps is the most common observability
+bug there is. The same operation decides how many chargeable days a container accrued,
+because free time is counted in terminal-local calendar days.
+
+[`floorToZone`](/reference/calendar/calculate/floorToZone) floors an instant to the start of
+its calendar unit in a zone:
+
+```typescript
+import { bucketRange, floorToZone } from "@northguild/gmt";
+
+floorToZone("2024-06-15T03:00:00Z", "day", "America/New_York"); // "2024-06-14T04:00:00Z"
+floorToZone("2024-06-15T03:00:00Z", "day", "UTC");              // "2024-06-15T00:00:00Z"
+```
+
+It is the same instant on a different calendar day. 03:00 UTC on 15 June is still 14 June
+in New York, and flooring it to the UTC day is wrong for most of the world for most of the
+day.
+
+The zone is an argument because the library has no ambient one and must not acquire one.
+
+## Buckets are deliberately not uniform
+
+[`bucketRange`](/reference/calendar/calculate/bucketRange) returns the boundaries spanning a
+range, and **the buckets are deliberately not uniform in length**:
+
+```typescript
+bucketRange("2024-03-09T05:00:00Z", "2024-03-12T04:00:00Z", "day", "America/New_York");
+// ["2024-03-09T05:00:00Z", "2024-03-10T05:00:00Z", "2024-03-11T04:00:00Z"]
+// 24h, then 23h — the middle day springs forward
+
+bucketRange("2024-11-02T04:00:00Z", "2024-11-05T05:00:00Z", "day", "America/New_York");
+// ["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"]
+// 24h, then 25h — the middle day falls back
+```
+
+Forcing 24 hours here is what makes a daily aggregate drift an hour twice a year.
+
+The same honesty applies to boundaries that do not exist:
+
+- The calendar day Samoa deleted crossing the date line is absent from the list.
+- A local day whose midnight is skipped by a spring-forward starts at 01:00.
+- In a zone that falls back by half an hour (`Australia/Lord_Howe`), the local 01:00 hour
+  bucket is genuinely 90 minutes long.
+
+## Flooring a zoned or epoch value
+
+For a zoned or epoch value, [`startOfZoned`](/reference/zoned/calculate/startOfZoned) and
+[`startOfUnix`](/reference/unix/calculate/startOfUnix) with no options return the same real
+boundary.
+
+Do not floor with [`roundZoned`](/reference/zoned/calculate/roundZoned) or
+[`roundUnix`](/reference/unix/calculate/roundUnix) and `roundingMode: "trunc"`. They follow
+TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the zone. So
+`"2024-09-29T03:50:00+13:45[Pacific/Chatham]"` truncated to the hour gives 04:00, which is
+after the input.
+
+## Narrow a pattern or unit that arrived as a string
+
+A pattern or a bucket unit the namespace does not recognise returns the same sentinel an
+unusable date or instant does. Both unions have a type guard, to narrow one that arrived as
+a bare string from config, an env var or a form:
+[`isValidFiscalPattern`](/reference/calendar/validate/isValidFiscalPattern) and
+[`isValidZoneBucketUnit`](/reference/calendar/validate/isValidZoneBucketUnit).
+
+```typescript
+import { isValidFiscalPattern, isValidZoneBucketUnit } from "@northguild/gmt";
+
+isValidFiscalPattern("4-5-4"); // true  — the NRF retail calendar
+isValidFiscalPattern("4-5-5"); // false — the shape a 53-week year's last quarter takes
+isValidZoneBucketUnit("day");  // true
+isValidZoneBucketUnit("days"); // true  — singular or plural, as floorToZone accepts
+isValidZoneBucketUnit("year"); // false — the year question is getQuarter's
+```
+
+## See also
+
+- [Zoned Operations](../zoned-operations/): start, end and round of a zoned value
+- [DST Disambiguation](/guides/concepts/dst-disambiguation/): why a day is sometimes 23 or 25 hours
+- [Splitting and Counting](/guides/intervals/splitting-and-counting/): counting the same local buckets in an interval

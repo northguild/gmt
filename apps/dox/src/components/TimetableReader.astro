@@ -20,11 +20,11 @@ import { renderTimetableReaderTemplate } from "../lib/timetable-reader-mount";
  * `.sl-container` inside `main`. That is all the marker does: how the prose
  * around the widget is laid out is ToolLayout.astro's job, not this one's.
  *
- * Default `false`, which is the safe direction: this widget is embedded on
- * `reference/**` prose pages as well as its own `/tools/` page, and those pages
- * must keep their 50rem column. Only the tools page opts in. On a reference
- * page the section grid simply fits fewer columns, which is what `auto-fit` is
- * for. The marker goes on a wrapper here rather than inside `renderTemplate()`
+ * Default `false`, which is the safe direction: a prose page that embedded this
+ * widget would keep its 50rem column unless it opted in. The widget is mounted
+ * in two places only: its own `/tools/` page, which opts in, and the `/dox`
+ * rail, which mounts the template without this shell. No `reference/**` page
+ * embeds it. The marker goes on a wrapper here rather than inside `renderTemplate()`
  * so the mount's markup stays byte-identical and `scripts/html-diff.mjs` sees
  * the widget itself as unchanged.
  */

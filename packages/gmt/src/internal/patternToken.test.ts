@@ -182,4 +182,79 @@ describe("parseValueWithPattern", () => {
       }
     });
   });
+
+  describe("a yy token resolves only in the caller's window", () => {
+    // The window names a hundred consecutive years; exactly one ends in yy.
+    it.each`
+      value         | options                 | expected
+      ${"24-03-15"} | ${{ yearWindow: 2000 }} | ${{ year: 2024, month: 3, day: 15 }}
+      ${"99-03-15"} | ${{ yearWindow: 1950 }} | ${{ year: 1999, month: 3, day: 15 }}
+      ${"49-03-15"} | ${{ yearWindow: 1950 }} | ${{ year: 2049, month: 3, day: 15 }}
+      ${"24-03-15"} | ${{}}                   | ${null}
+      ${"24-03-15"} | ${undefined}            | ${null}
+    `(
+      "resolves $value against yy-MM-dd with options $options to $expected",
+      ({ value, options, expected }) => {
+        expect(
+          parseValueWithPattern(
+            value,
+            "yy-MM-dd",
+            undefined,
+            DATE_PATTERN_FIELDS,
+            options,
+          ),
+        ).toEqual(expected);
+      },
+    );
+
+    it("reads yearWindow once for a yy pattern and never for a yyyy pattern", () => {
+      let reads = 0;
+      const options = {
+        get yearWindow(): number {
+          reads += 1;
+          return 2000;
+        },
+      };
+      expect(
+        parseValueWithPattern(
+          "2024-03-15",
+          "yyyy-MM-dd",
+          undefined,
+          DATE_PATTERN_FIELDS,
+          options,
+        ),
+      ).toEqual({ year: 2024, month: 3, day: 15 });
+      expect(reads).toBe(0);
+      expect(
+        parseValueWithPattern(
+          "24-03-15",
+          "yy-MM-dd",
+          undefined,
+          DATE_PATTERN_FIELDS,
+          options,
+        ),
+      ).toEqual({ year: 2024, month: 3, day: 15 });
+      expect(reads).toBe(1);
+    });
+
+    it("does not read yearWindow when the value does not match the pattern", () => {
+      let reads = 0;
+      const options = {
+        get yearWindow(): number {
+          reads += 1;
+          return 2000;
+        },
+      };
+      expect(
+        parseValueWithPattern(
+          "not a date",
+          "yy-MM-dd",
+          undefined,
+          DATE_PATTERN_FIELDS,
+          options,
+        ),
+      ).toBeNull();
+      expect(reads).toBe(0);
+    });
+  });
 });

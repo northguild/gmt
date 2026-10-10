@@ -1,6 +1,6 @@
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { unixZonedDateTime } from "../../internal/unixZonedDateTime";
+import { unixWallClock } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -33,8 +33,9 @@ export function parseWeekFromUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the date is read in: an IANA name, a UTC offset, or `"local"` for the system
-     * time zone. An unknown zone returns `null`.
+     * The time zone the date is read in: an IANA name, a UTC offset (a time zone identifier such as
+     * `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what `getTimeZoneOffset`
+     * returns), or `"local"` for the system time zone. An unknown zone returns `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -55,13 +56,13 @@ export function parseWeekFromUnix(
     if (!isOptionsArgument(options)) {
       return null;
     }
-    const zdt = unixZonedDateTime(value, options);
+    const wallClock = unixWallClock(value, options);
     const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
 
-    if (zdt === null || weekStartsOn === null) return null;
+    if (wallClock === null || weekStartsOn === null) return null;
 
     try {
-      return getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn);
+      return getWeekNumber(wallClock.toPlainDate().toString(), weekStartsOn);
     } catch {
       return null;
     }

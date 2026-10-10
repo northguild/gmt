@@ -90,6 +90,20 @@ export function renderCallLine(
   if (copyBtn) copyBtn.dataset.copyText = `${fnName}(${argsPlain})`;
 }
 
+/**
+ * Empty a call line and its copy text. A block that hides must not keep the
+ * last call it showed: a copy button or assistive technology can still reach it.
+ */
+export function clearCallLine(codeEl: HTMLElement | null): void {
+  if (!codeEl) return;
+  codeEl.textContent = "";
+  const frame = codeEl.closest(".gmt-codeframe");
+  const copyBtn = frame?.querySelector(
+    '[data-role^="copy-"]',
+  ) as HTMLButtonElement | null;
+  if (copyBtn) delete copyBtn.dataset.copyText;
+}
+
 // ---------------------------------------------------------------------------
 // Copy buttons
 // ---------------------------------------------------------------------------

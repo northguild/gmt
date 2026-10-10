@@ -16,7 +16,13 @@ description: >
   correct-at-the-edges guarantees at the first and last representable instant. A
   routing pointer, not an API dump.
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/spans.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/business-calendars.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/calendar-systems.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/intervals/*.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/correct-at-the-edges.mdx'
   - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/duration/index.ts'
   - 'northguild/gmt:packages/gmt/src/interval/index.ts'
@@ -213,9 +219,13 @@ and full interval set operations.
     survives only if it is a working day in every input, and returns `null` for an
     empty list. Narrow inputs with `isValidBusinessCalendar` /
     `isValidRollConvention`.
-13. **Read the README.** This skill is a routing pointer. For full option shapes,
-   locale matrices, and code examples, read the installed package's `README.md`
-   and the source JSDoc of the function you intend to call.
+13. **Read the docs site.** This skill is a routing pointer. For full option
+    shapes, locale matrices, and code examples, read these:
+    - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+    - Each page has a `.md` twin that holds its text, for example
+      `https://gmt-dox.northguild.workers.dev/guides/core-date-operations/plain-arithmetic.md`.
+    - The JSDoc of the function you intend to call ships in the installed
+      package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
 ## Key functions
 
@@ -259,6 +269,10 @@ and full interval set operations.
 
 ## References
 
-- [README — Quick Start](README.md)
+- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [Plain arithmetic guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/plain-arithmetic/)
+- [Durations guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/durations/)
+- [Spans guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/spans/)
+- [Business calendars guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/business-calendars/)
 - [Interval algebra reference](/reference/interval/calculate/intersectIntervals)
 - [Interval guides](/guides/intervals/interval-basics/)

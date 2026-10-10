@@ -16,7 +16,8 @@
  * - SECOND `60`–`61` does not match, although Table 10 allows them: GMT rejects leap seconds
  *   because Temporal would read one as `:59`.
  * - Shape-only validation; the calendar date is checked by `Temporal.PlainDateTime.from` in
- *   `parseSql`.
+ *   `parseSqlDateTime`. To check that a string is a real SQL timestamp literal, use
+ *   `isValidSqlDateTime`: this pattern also matches a day that does not exist, such as 30 February.
  *
  * Capture groups: 1 month, 2 day, 3 hour. The year, minute, second and fraction are not
  * captured.

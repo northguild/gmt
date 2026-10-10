@@ -61,6 +61,8 @@ import type { CutoffCountdownArgs } from "~/lib/cutoff-countdown-mount";
 import type { PunctualityBoardArgs } from "~/lib/punctuality-board-mount";
 import type { EtaDriftArgs } from "~/lib/eta-drift-mount";
 import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
+import type { DtmDecoderArgs } from "~/lib/dtm-decoder-mount";
+import type { X12TimeReaderArgs } from "~/lib/x12-time-reader-mount";
 import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import {
   showBillingDeadlinesInput,
@@ -73,6 +75,7 @@ import {
   showDeliverySchedulerInput,
   showDepartureBoardInput,
   showDstInspectorInput,
+  showDtmDecoderInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -80,6 +83,7 @@ import {
   showIntervalVisualizerInput,
   showPunctualityBoardInput,
   showTimetableReaderInput,
+  showX12TimeReaderInput,
   showZonePlannerInput,
 } from "~/lib/dox-tools";
 import type { MountFn } from "~/lib/widget-mount";
@@ -551,6 +555,54 @@ const departureEntry = defineWidget<DepartureBoardArgs>({
     onwardZone ? checkZones([onwardZone]) : Promise.resolve(null),
 });
 
+const dtmEntry = defineWidget<DtmDecoderArgs>({
+  title: "DTM decoder",
+  kind: "dtm",
+  parse: (input) => {
+    const result = showDtmDecoderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the four zones are checked here; a code or window the library
+     does not read is the widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/dtm-decoder-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderDtmDecoderTemplate(args),
+      mount: m.mountDtmDecoder,
+    })),
+  validate: ({ zone1, zone2, zone3, zone4 }) =>
+    checkZones([zone1, zone2, zone3, zone4].filter((z): z is string => !!z)),
+});
+
+const x12TimeEntry = defineWidget<X12TimeReaderArgs>({
+  title: "X12 time reader",
+  kind: "xtime",
+  parse: (input) => {
+    const result = showX12TimeReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the zones are checked here; a code or window the library does
+     not read is the widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/x12-time-reader-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderX12TimeReaderTemplate(args),
+      mount: m.mountX12TimeReader,
+    })),
+  validate: ({ zone, zone2, zone3, zone4 }) =>
+    checkZones([zone, zone2, zone3, zone4].filter((z): z is string => !!z)),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -615,6 +667,8 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showEtaDrift: etaDriftEntry,
   showDepartureBoard: departureEntry,
   showZonePlanner: plannerEntry,
+  showDtmDecoder: dtmEntry,
+  showX12TimeReader: x12TimeEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

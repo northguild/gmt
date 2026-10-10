@@ -14,7 +14,10 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
 /** Options for `cutoffAt`. */
 export interface CutoffOptions {
-  /** The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset. */
+  /**
+   * The time zone the cut-off is read in, the terminal's clock: an IANA name or a UTC offset to the
+   * minute (what `isValidTimeZone` accepts).
+   */
   timeZone: string;
   /**
    * The local time of day the cut-off is pinned to (`"17:00"`), as `isValidTime` accepts.
@@ -200,6 +203,8 @@ function rolledDate(
  *   **nonexistent** one (a skipped hour, a deleted day) returns `""` rather than being
  *   shifted. An exact result that is not re-resolved stays as it is.
  * - Returns the cut-off as a zoned string in `timeZone`, or `""` on invalid input.
+ * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name.
  *
  * @param anchor ISO 8601 instant or zoned datetime string of the event the deadline counts back from
  * @param offset ISO 8601 duration before the anchor

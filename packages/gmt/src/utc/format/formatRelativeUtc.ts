@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameZoned, normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
   toInstantFromUtc,
   toReferenceInstantFromUtc,
@@ -31,9 +31,10 @@ export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
    */
   reference?: string;
   /**
-   * The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset,
-   * or `"local"` for the system time zone. An unknown zone returns `""` whatever the unit, as
-   * ECMA-402 throws RangeError for it.
+   * The time zone that anchors a calendar unit (week, month or year): an IANA name, a UTC offset (a
+   * time zone identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+   * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+   * `""` whatever the unit.
    *
    * @defaultValue `"UTC"`
    */
@@ -51,6 +52,12 @@ export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
  *   other value returns `""`.
  * - `options` must be an object or omitted: `null` returns `""`, as Temporal's GetOptionsObject
  *   rejects it.
+ * - **Limit at an offset with seconds.** A month or a year is measured from `reference`, placed in
+ *   the offset's whole-minute zone and moved by its seconds, and the moved instant must be inside
+ *   Temporal's range. So when one is measured and `reference` is within the offset's seconds (under
+ *   a minute) of the last instant Temporal supports (`+275760-09-13T00:00:00Z`) for an offset east
+ *   of UTC, or of the first (`-271821-04-20T00:00:00Z`) for one west, this returns `""`. An offset
+ *   to the minute has no such limit.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -63,6 +70,7 @@ export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
  * @example formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", null as never) // ""
  * @example formatRelativeUtc("not-a-date") // ""
  * @example formatRelativeUtc("2024-03-15T11:30:00Z", ["fr-FR", "en-US"], { reference: "2024-03-15T12:00:00Z" }) // "il y a 30 minutes"
+ * @example formatRelativeUtc("1970-01-03T12:00:00Z", "en-US", { reference: "1970-01-01T12:00:00Z", timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
  */
 export function formatRelativeUtc(
   value: string,
@@ -74,8 +82,8 @@ export function formatRelativeUtc(
     // not an object, including null, is a TypeError.
     if (!isObject(options)) return "";
     if (!isValidUtc(value)) return "";
-    const tz = normalizeTimeZone(options.timeZone);
-    if (!tz) return "";
+    const frame = normalizeZoneFrame(options.timeZone);
+    if (frame === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
     if (referenceOption !== undefined && !isValidUtc(referenceOption))
@@ -91,7 +99,7 @@ export function formatRelativeUtc(
       const diff = target.since(reference);
       // Only a calendrical unit (month, year) reads the anchor, so the zone is applied lazily.
       return formatRelativeDuration(diff, locale, options, (unit) =>
-        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
+        durationTotal(diff, unit, frameZoned(reference, frame)),
       );
     } catch {
       return "";

@@ -192,6 +192,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "why-gmt" },
+            { slug: "compare" },
             { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },
@@ -229,6 +230,7 @@ export default defineConfig({
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
         PageTitle: "./src/components/PageTitle.astro",
+        Sidebar: "./src/components/Sidebar.astro",
         SocialIcons: "./src/components/SocialIcons.astro",
       },
       customCss: [
@@ -261,6 +263,7 @@ export default defineConfig({
         "./src/styles/gmt-punctuality-board.css", // Punctuality Board widget (TRAN-57)
         "./src/styles/gmt-eta-drift.css", // ETA Drift Chart widget (TRAN-57)
         "./src/styles/gmt-departure-board.css", // Departure Board widget (TRAN-57)
+        "./src/styles/gmt-edi-widgets.css", // EDI timestamp widgets, shared (INT-15)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

@@ -1,12 +1,12 @@
 import { timeZoneLike } from "../../regex";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
 
 /**
  * Validate whether a string is a valid time zone identifier: an IANA name or a UTC offset.
  *
  * - Uses Temporal.ZonedDateTime.from to test timezone validity.
  * - Uses the `timeZoneLike` regex to check the identifier's shape: Temporal's
- *   `TimeZoneIdentifier` grammar (§14.6.2).
+ *   `TimeZoneIdentifier` grammar (§13.31).
  * - Accepts every IANA Zone and Link name the runtime accepts, including single-component names
  *   (`UTC`, `Japan`, `Zulu`, `EST5EDT`, `GMT+0`), in any letter case (ECMA-402 matches
  *   identifiers ASCII-case-insensitively, so `utc` is as valid as `america/new_york`).
@@ -15,6 +15,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * - Returns false for invalid timezone formats.
  * - Compatibility: earlier releases required a `/` in every name except `UTC` and `GMT`. To keep
  *   that narrower rule, also require `timeZone.includes("/")` or `"UTC"`/`"GMT"`.
+ * - A stored offset with seconds (`-00:44:30`) is false here and true for `isValidUtcOffset`. To
+ *   check what a function with a zoneless result accepts, use
+ *   `isValidTimeZone(x) || isValidUtcOffset(x)`.
  *
  * @param timeZone timeZone identifier to validate
  * @returns boolean indicating validity
@@ -26,6 +29,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isValidTimeZone("utc") // true (case-insensitive)
  * @example isValidTimeZone("+05:00") // true (an offset identifier)
  * @example isValidTimeZone("+05:00:00") // false (no seconds in an offset identifier)
+ * @example isValidTimeZone("-00:44:30") // false (a stored offset with seconds; `isValidUtcOffset` accepts it)
  * @example "Japan".includes("/") // false (the earlier slash-only rule)
  */
 export function isValidTimeZone(timeZone: string): boolean {

@@ -1,0 +1,143 @@
+---
+title: Operating Hours and Open-Time SLAs
+description: Ask whether a gate, desk or office is open, count open hours, and find when an SLA measured in open hours falls due, from one weekly schedule with holidays and overrides.
+sidebar:
+  order: 11
+industries: [core]
+---
+
+A business day answers "is Thursday a working day". A terminal gate, a support desk, a
+customs office and a night curfew ask a finer question. Is it open right now? How many open
+hours have passed? When does an SLA measured in open hours fall due?
+
+The `calendar/hours` functions answer all three from one `OperatingSchedule`. It holds a
+zone, windows of local wall time for each ISO weekday, holiday dates, and dated overrides.
+For whole working days, see
+[Business Calendars and Roll Conventions](../business-calendars/).
+
+The seven functions are
+[`operatingIntervals`](/reference/calendar/hours/operatingIntervals),
+[`isOpenAt`](/reference/calendar/hours/isOpenAt),
+[`nextOpenAt`](/reference/calendar/hours/nextOpenAt),
+[`nextCloseAt`](/reference/calendar/hours/nextCloseAt),
+[`operatingTimeBetween`](/reference/calendar/hours/operatingTimeBetween),
+[`addOperatingTime`](/reference/calendar/hours/addOperatingTime) and
+[`recurringWindows`](/reference/calendar/hours/recurringWindows).
+
+```typescript
+import {
+  addOperatingTime,
+  isOpenAt,
+  nextCloseAt,
+  nextOpenAt,
+  operatingIntervals,
+  operatingTimeBetween,
+  recurringWindows,
+} from "@northguild/gmt";
+import type { OperatingSchedule } from "@northguild/gmt/types";
+
+const nineToFive = [{ from: "09:00", to: "17:00" }];
+const desk: OperatingSchedule = {
+  timeZone: "America/New_York",
+  weekly: { 1: nineToFive, 2: nineToFive, 3: nineToFive, 4: nineToFive, 5: nineToFive },
+  holidays: ["2024-07-04"],
+  overrides: [{ date: "2024-07-05", windows: [{ from: "10:00", to: "12:00" }] }],
+};
+
+operatingIntervals(desk, { start: "2024-07-04T04:00:00Z", end: "2024-07-06T04:00:00Z" });
+// [{ start: "2024-07-05T14:00:00Z", end: "2024-07-05T16:00:00Z" }] — the holiday is closed, the override replaces Friday
+
+isOpenAt("2024-06-17T14:00:00Z", desk); // true — Monday 10:00 local
+nextOpenAt("2024-06-15T16:00:00Z", desk); // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
+nextCloseAt("2024-06-17T14:00:00Z", desk); // "2024-06-17T21:00:00Z" — 17:00 local
+
+operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", desk); // "PT2H" — Friday 16:00 to Monday 10:00
+addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk); // "2024-06-17T20:00:00Z" — an 8-hour SLA from Friday 16:00: Monday 16:00
+addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk, { within: "P1D" }); // "" — not due within a day
+
+// A curfew wraps midnight and belongs to the night it starts on.
+recurringWindows(
+  { 6: [{ from: "23:00", to: "06:00" }] },
+  { start: "2024-11-02T00:00:00Z", end: "2024-11-04T00:00:00Z" },
+  "America/New_York",
+);
+// [{ start: "2024-11-03T03:00:00Z", end: "2024-11-03T11:00:00Z" }] — 8 hours across the fall-back night
+```
+
+## The rules
+
+### Windows are half-open local wall time
+
+`{ from: "09:00", to: "17:00" }` is open at 09:00 and closed at 17:00.
+
+A `to` at or before its `from` wraps past midnight. `23:00` to `06:00` is a night, and
+`00:00` to `00:00` is a whole day.
+
+A window belongs to the date it starts on. A holiday or override on Friday removes or
+replaces a Friday-night window, and one on Saturday does not. Windows that overlap or touch
+merge, so a run of whole days is one interval.
+
+### Every edge goes through `resolveLocal`
+
+The default `disambiguation` is `"compatible"`. An edge in a repeated fall-back hour takes
+the earlier instant, and one in a skipped spring-forward hour moves forward by the gap. So a
+`23:00` to `06:00` window is 8 real hours across New York's fall-back night and 6 across its
+spring-forward night.
+
+Under `"earlier"`, a skipped midnight can move a date's first window onto the previous
+date. `"earlier"` and `"later"` pick the other instant.
+
+`"reject"` guesses nothing. It returns the sentinel when a window with an ambiguous or
+nonexistent edge could change the answer, and ignores one that cannot. See
+[DST Disambiguation](/guides/concepts/dst-disambiguation/) for the four strategies.
+
+### Dates are the zone's real local dates
+
+Holidays and overrides are ISO dates in the schedule's zone.
+
+A `BusinessCalendar` can be passed as `holidays`. Its `holidays` are read and its `weekend`
+is not, because `weekly` already says which weekdays open.
+
+A date the zone deleted (`Pacific/Apia`, 2011-12-30) has no windows. An override wins over a
+holiday on the same date, and `windows: []` closes a date.
+
+### Open time is elapsed time
+
+`operatingTimeBetween` is the length of the open intervals inside `[start, end)`, with hours
+as the largest unit. It is the same number that
+[`sumIntervals`](/reference/interval/calculate/sumIntervals) gives for their intersections
+with the range.
+
+`addOperatingTime` is its inverse: the earliest instant at which that much open time has
+passed. A deadline that lands on a closing time is that closing time.
+
+Its duration is hours and smaller units. `P1D` of open time could mean 24 open hours or one
+working day, so it returns `""`.
+
+### Searches stop at a horizon
+
+`nextOpenAt`, `nextCloseAt` and `addOperatingTime` search up to `within` after the input.
+The default is `"P1Y"`. It is added in the schedule's zone, so `"P1D"` is one local day.
+
+An answer exactly at the horizon counts. One past it returns `""`. A 24/7 schedule never
+closes, so `nextCloseAt` returns `""` for it.
+
+### Walks are bounded
+
+A range spanning more than 10,000 local dates (about 27 years), counted from its start's
+date, returns the sentinel rather than a truncated answer. So does a search that would go
+that far past its input.
+
+A search answers as soon as the answer is certain, so a long `within` costs nothing when
+the answer is near. A horizon past Temporal's last instant stops there.
+
+### Not a recurrence engine
+
+A weekly pattern with dated exceptions covers gate hours, office hours, trading sessions
+and curfews. Monthly and yearly RFC 5545 rules are out of scope.
+
+## See also
+
+- [Business Calendars and Roll Conventions](../business-calendars/): whole working days and holidays
+- [DST Disambiguation](/guides/concepts/dst-disambiguation/): the four strategies behind every window edge
+- [Interval Basics](/guides/intervals/interval-basics/): the intervals `operatingIntervals` returns

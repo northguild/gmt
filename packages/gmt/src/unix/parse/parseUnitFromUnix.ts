@@ -1,10 +1,11 @@
 import type { Temporal } from "@js-temporal/polyfill";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { unixZonedDateTime } from "../../internal/unixZonedDateTime";
+import { unixWallClock } from "../../internal/unixWallClock";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Units extractable from a unix epoch value via `parseUnitFromUnix`. Covers the
@@ -14,7 +15,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * | Member | Description |
  * | --- | --- |
- * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `year` | Four digits (e.g. `2024`, `0005`); a sign and six digits outside 0000–9999 (e.g. `+010000`). |
  * | `month` | Zero-padded 2 (e.g. `03`). |
  * | `week` | Week-of-year, 1–53: ISO 8601 for `weekStartsOn: "monday"`, UTS #35 (minimal days 1) for `"sunday"`, so late-December days can be week 1. |
  * | `day` | Zero-padded 2. |
@@ -51,6 +52,8 @@ export type PlainNowUnit =
  * - `microsecond` and `nanosecond` are the 0–999 Temporal fields, zero-padded to 3 digits.
  * - Converts to ZonedDateTime then extracts the unit.
  * - Returns "" for invalid input.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param value unix epoch in milliseconds or seconds: a safe integer, or a string of optionally negative ASCII digits
  * @param unit unit to extract (e.g. "year", "month", "hour")
@@ -58,6 +61,7 @@ export type PlainNowUnit =
  * @returns extracted unit value as string, or "" on invalid input
  *
  * @example parseUnitFromUnix(1700000000000, "year") // "2023"
+ * @example parseUnitFromUnix(-61996320000000, "year") // "0005" (1 June of year 5)
  * @example parseUnitFromUnix(1700000000, "hour", { epochUnit: "seconds", timeZone: "UTC" }) // "22"
  * @example parseUnitFromUnix(1704067200000, "week", { timeZone: "UTC" }) // "1"
  * @example parseUnitFromUnix(1704067200000, "week", { weekStartsOn: "sunday", timeZone: "UTC" }) // "1"
@@ -65,6 +69,7 @@ export type PlainNowUnit =
  * @example parseUnitFromUnix("1709217045123", "hours") // "14" (digit string, plural unit, UTC by default)
  * @example parseUnitFromUnix(1709217045123, "nanosecond") // "000"
  * @example parseUnitFromUnix("", "year") // "" (a blank string is not epoch 0)
+ * @example parseUnitFromUnix(45870000, "minute", { timeZone: "-00:44:30" }) // "00" (a stored offset with seconds)
  */
 export function parseUnitFromUnix(
   value: number | string,
@@ -78,8 +83,10 @@ export function parseUnitFromUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -100,40 +107,44 @@ export function parseUnitFromUnix(
     if (!isOptionsArgument(options)) {
       return "";
     }
-    const zdt = unixZonedDateTime(value, options);
+    const wallClock = unixWallClock(value, options);
     const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
 
-    if (zdt === null || typeof unit !== "string" || weekStartsOn === null) {
+    if (
+      wallClock === null ||
+      typeof unit !== "string" ||
+      weekStartsOn === null
+    ) {
       return "";
     }
 
     try {
       switch (resolveDateTimeUnit(unit)) {
         case "year":
-          return zdt.year.toString();
+          return isoYearString(wallClock.year);
         case "month":
-          return zdt.month.toString().padStart(2, "0");
+          return wallClock.month.toString().padStart(2, "0");
         case "week": {
           return (
-            getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn) ?? 0
+            getWeekNumber(wallClock.toPlainDate().toString(), weekStartsOn) ?? 0
           ).toString();
         }
         case "day":
-          return zdt.day.toString().padStart(2, "0");
+          return wallClock.day.toString().padStart(2, "0");
         case "dayOfWeek":
-          return zdt.dayOfWeek.toString();
+          return wallClock.dayOfWeek.toString();
         case "hour":
-          return zdt.hour.toString().padStart(2, "0");
+          return wallClock.hour.toString().padStart(2, "0");
         case "minute":
-          return zdt.minute.toString().padStart(2, "0");
+          return wallClock.minute.toString().padStart(2, "0");
         case "second":
-          return zdt.second.toString().padStart(2, "0");
+          return wallClock.second.toString().padStart(2, "0");
         case "millisecond":
-          return zdt.millisecond.toString().padStart(3, "0");
+          return wallClock.millisecond.toString().padStart(3, "0");
         case "microsecond":
-          return zdt.microsecond.toString().padStart(3, "0");
+          return wallClock.microsecond.toString().padStart(3, "0");
         case "nanosecond":
-          return zdt.nanosecond.toString().padStart(3, "0");
+          return wallClock.nanosecond.toString().padStart(3, "0");
         default:
           return "";
       }

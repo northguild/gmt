@@ -5,6 +5,7 @@ import { zonedDateTimeFrom } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { isOptionsArgument } from "../../internal/isObject";
+import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Units supported by `parseUnitFromZoned` when extracting a value from a zoned
@@ -15,7 +16,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * | Member | Description |
  * | --- | --- |
- * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `year` | Four digits (e.g. `2024`, `0005`); a sign and six digits outside 0000–9999 (e.g. `+010000`). |
  * | `month` | Zero-padded 2 (e.g. `03`). |
  * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
  * | `day` | Zero-padded 2. |
@@ -73,6 +74,8 @@ function isValidZonedUnit(unit: string): boolean {
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
  * - Returns "" for invalid input.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param value zoned ISO 8601 datetime string
  * @param unit unit to extract
@@ -80,6 +83,7 @@ function isValidZonedUnit(unit: string): boolean {
  * @returns string representation of the requested unit or "" when invalid
  *
  * @example parseUnitFromZoned("2024-02-29T12:34:56.789+00:00[UTC]", "year") // "2024"
+ * @example parseUnitFromZoned("0005-06-01T12:30:00+00:00[UTC]", "year") // "0005"
  * @example parseUnitFromZoned("2024-02-29T12:34:56.789+00:00[UTC]", "milliseconds") // "789"
  * @example parseUnitFromZoned("2024-12-31T12:00:00+00:00[UTC]", "week", { weekStartsOn: "sunday" }) // "1"
  * @example parseUnitFromZoned("invalid", "year") // ""
@@ -120,7 +124,7 @@ export function parseUnitFromZoned(
 
       switch (resolvedUnit) {
         case "year":
-          return zonedDateTime.year.toString();
+          return isoYearString(zonedDateTime.year);
         case "month":
           return zonedDateTime.month.toString().padStart(2, "0");
         case "week":

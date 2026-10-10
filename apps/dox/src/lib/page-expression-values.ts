@@ -12,6 +12,7 @@
  */
 import {
   combinedCompetitorExecutions,
+  competitorComparisons,
   competitorExecutionRange,
   competitorPublicApiRange,
   competitorStatRange,
@@ -28,6 +29,7 @@ import {
   industryNamespaces,
   runsPerTest,
 } from "../data/gmt-stats";
+import { measurementDateRange } from "./library-compare-tables";
 import { familyCounts, formatFamilyCounts } from "./locale-families";
 import { formatOffset, zoneOffsetRange } from "./timezone-offset-range";
 
@@ -48,7 +50,14 @@ export function pageExpressionValues(): Record<string, string> {
     .filter((row) => row.namespace === "plain" || row.namespace === "zoned")
     .reduce((sum, row) => sum + row.count, 0);
 
+  const measuredOn = measurementDateRange();
+
   return {
+    "competitorComparisons.length": String(competitorComparisons.length),
+    "formatCount(gmtStats.files)": formatCount(gmtStats.files),
+    'gmtStats.localeList.join(", ")': gmtStats.localeList.join(", "),
+    "measurementDates.oldest": measuredOn.oldest,
+    "measurementDates.newest": measuredOn.newest,
     "gmtStats.tests": String(gmtStats.tests),
     "gmtStats.timezones": String(gmtStats.timezones),
     "gmtStats.locales": String(gmtStats.locales),

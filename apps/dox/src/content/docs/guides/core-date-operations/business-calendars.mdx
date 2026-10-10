@@ -1,0 +1,134 @@
+---
+title: Business Calendars and Roll Conventions
+description: The BusinessCalendar shape, business-day counting and stepping, roll conventions, and merging calendars across jurisdictions.
+sidebar:
+  order: 10
+industries: [core]
+---
+
+A business day answers "is this a working day here". The answer depends on the weekend and
+on the holidays of one place, so every function in this family takes a `BusinessCalendar`
+that states both. This guide covers the calendar, the day counting and stepping functions,
+the roll conventions, and how to merge calendars when a date has to work in two places at
+once. For the first look at weekdays and business-day arithmetic, see
+[Comparisons](../comparisons/) and
+[Plain Arithmetic](../plain-arithmetic/).
+
+## The calendar
+
+A `BusinessCalendar` is `{ weekend: number[], holidays: string[], timeZone: string }`.
+
+- **The weekend is explicit.** It is a list of ISO weekday numbers, because Saturday and
+  Sunday are not universal. Much of the Middle East is Friday and Saturday, and some
+  markets keep a one-day weekend.
+- **Holidays are yours to supply.** The default entry point of the library bundles no
+  holiday table. Holiday data belongs to a jurisdiction and changes every year, sometimes
+  with days of notice.
+- **`timeZone` records which locality the calendar describes.** The business-day functions
+  take and return local dates and never read it. If you hold an instant, reduce it to a
+  local date with [`floorToZone`](/reference/calendar/calculate/floorToZone) first.
+
+## Count and step
+
+[`isBusinessDay`](/reference/plain/compare/isBusinessDay),
+[`addBusinessDays`](/reference/plain/calculate/addBusinessDays) and
+[`subtractBusinessDays`](/reference/plain/calculate/subtractBusinessDays) all take a
+calendar as an optional trailing argument. The rest of the family requires one, because
+there is no default weekend to fall back on:
+[`businessDaysBetween`](/reference/calendar/business/businessDaysBetween),
+[`nextBusinessDay`](/reference/calendar/business/nextBusinessDay),
+[`previousBusinessDay`](/reference/calendar/business/previousBusinessDay),
+[`rollDate`](/reference/calendar/business/rollDate) and
+[`mergeCalendars`](/reference/calendar/business/mergeCalendars).
+
+`businessDaysBetween` counts with the start exclusive and the end inclusive.
+`nextBusinessDay` and `previousBusinessDay` are strict: they never return the date you
+gave them.
+
+```typescript
+import {
+  businessDaysBetween,
+  nextBusinessDay,
+  previousBusinessDay,
+  rollDate,
+  mergeCalendars,
+  isValidBusinessCalendar,
+  isBusinessDay,
+} from "@northguild/gmt";
+
+const nyse = {
+  weekend: [6, 7],
+  holidays: ["2024-05-31", "2024-07-04"],
+  timeZone: "America/New_York",
+};
+
+businessDaysBetween("2024-07-01", "2024-07-05", nyse);
+// 3 — start exclusive, end inclusive, and 4 July is a holiday
+
+nextBusinessDay("2024-07-03", nyse);
+// "2024-07-05" — strictly after, skipping the holiday
+
+previousBusinessDay("2024-07-05", nyse);
+// "2024-07-03"
+```
+
+## Roll a date onto a working day
+
+[`rollDate`](/reference/calendar/business/rollDate) moves a date onto a working day by an
+explicit convention. The six conventions are `following`, `modifiedFollowing`,
+`preceding`, `modifiedPreceding`, `endOfMonth` and `none`.
+
+`following` and `preceding` mean on-or-after and on-or-before, so they leave a working day
+alone. `nextBusinessDay` and `previousBusinessDay` are the strict neighbours.
+
+```typescript
+rollDate("2024-05-31", "following", nyse);
+// "2024-06-03" — forward past the weekend
+
+rollDate("2024-05-31", "modifiedFollowing", nyse);
+// "2024-05-30" — backward instead, because forward leaves May
+
+rollDate("2024-03-15", "endOfMonth", nyse);
+// "2024-03-29" — March's last working day; March ends on a Sunday
+
+rollDate("2024-06-01", "none", nyse);
+// "2024-06-01" — unadjusted, Saturday or not
+```
+
+## Merge calendars across jurisdictions
+
+[`mergeCalendars`](/reference/calendar/business/mergeCalendars) composes jurisdictions.
+Weekend rules and holidays union, so a date survives only if it is a working day in
+**every** input. That is the two-currency intersection that FX settlement needs, and the
+two-port one that an intermodal move needs.
+
+The merged `timeZone` is the first calendar's, because the merged set spans localities
+that may disagree. An empty list has no calendar to return, so `mergeCalendars([])` is
+`null`.
+
+```typescript
+const london = { weekend: [6, 7], holidays: ["2024-05-06"], timeZone: "Europe/London" };
+
+const both = mergeCalendars([nyse, london]);
+// { weekend: [6, 7], holidays: ["2024-05-06", "2024-05-31", "2024-07-04"], timeZone: "America/New_York" }
+// timeZone is the first calendar's; the merged set spans localities that may disagree
+
+isBusinessDay("2024-05-06", both);
+// false — a UK holiday closes the merged calendar too
+
+mergeCalendars([]);
+// null
+```
+
+## Tell a bad calendar from bad input
+
+[`isValidBusinessCalendar`](/reference/calendar/validate/isValidBusinessCalendar) and
+[`isValidRollConvention`](/reference/calendar/validate/isValidRollConvention) narrow a
+candidate. When a function returns its sentinel, they let you tell a misconfigured
+calendar or contract term apart from bad date input.
+
+## See also
+
+- [Comparisons](../comparisons/): weekends, business days and now-relative predicates
+- [Plain Arithmetic](../plain-arithmetic/): adding and subtracting business days
+- [Operating Hours and Open-Time SLAs](../operating-hours/): hours of the day, not only days

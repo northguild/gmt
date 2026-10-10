@@ -1,5 +1,4 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { normalizeTimeZone } from "./normalizeTimeZone";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
 import {
   resolveUnixEpochUnit,
@@ -7,6 +6,7 @@ import {
   unixEpochToInstant,
 } from "./unixEpochValue";
 import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";
+import { frameInstant, frameZoned, normalizeZoneFrame } from "./zoneFrame";
 
 /**
  * Internal shared implementation for `startOfUnix` / `endOfUnix` and the quarter functions.
@@ -17,7 +17,8 @@ import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";
  *   or `"quarter"` from `startOfQuarterForUnix` / `endOfQuarterForUnix` only.
  * - `value` follows the one epoch grammar (`parseUnixEpochValue`); `epochUnit` accepts singular
  *   and plural names and defaults to `"milliseconds"`.
- * - `timeZone` defaults to `"UTC"`; `"local"` is the system zone; an unknown zone returns null.
+ * - `timeZone` defaults to `"UTC"`; `"local"` is the system zone; a time zone identifier or a
+ *   stored UTC offset (`±HH:MM[:SS]`) is read as written; anything else returns null.
  * - `weekStartsOn` other than `"monday"` or `"sunday"` returns null.
  * - The boundary is always the real local bucket from `internal/zonedBucket.ts` — a start never
  *   after `value`, an end never before it.
@@ -39,10 +40,10 @@ export function startOrEndOfUnix(
   isEnd: boolean,
 ): number | null {
   const epochUnit = resolveUnixEpochUnit(options.epochUnit);
-  const timeZone = normalizeTimeZone(options.timeZone);
+  const frame = normalizeZoneFrame(options.timeZone);
   const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
 
-  if (!timeZone || epochUnit === null || weekStartsOn === null) {
+  if (frame === null || epochUnit === null || weekStartsOn === null) {
     return null;
   }
 
@@ -55,13 +56,15 @@ export function startOrEndOfUnix(
   const weekStartDay = weekStartsOn === "monday" ? 1 : 7;
 
   try {
-    const source = instant.toZonedDateTimeISO(timeZone);
+    const source = frameZoned(instant, frame);
 
     const boundary = isEnd
       ? zonedUnitEnd(source, unit, weekStartDay)
       : zonedUnitStart(source, unit, weekStartDay);
 
-    return boundary ? toUnixEpoch(boundary, epochUnit) : null;
+    return boundary
+      ? toUnixEpoch(frameInstant(boundary, frame), epochUnit)
+      : null;
   } catch {
     return null;
   }

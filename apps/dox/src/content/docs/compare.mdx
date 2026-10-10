@@ -1,0 +1,127 @@
+---
+title: GMT and the other libraries
+description: How GMT's test suite, CI and capabilities compare with six other date libraries, with the version, commit, date and command behind every figure.
+---
+
+import LibraryCompare from "../../components/LibraryCompare.astro";
+import {
+  combinedCompetitorExecutions,
+  competitorComparisons,
+  executionRatio,
+} from "../../data/library-comparison";
+import {
+  formatCount,
+  gmtStats,
+  runsPerTest,
+} from "../../data/gmt-stats";
+import { measurementDateRange } from "../../lib/library-compare-tables";
+import {
+  formatOffset,
+  zoneOffsetRange,
+} from "../../lib/timezone-offset-range";
+
+{/* Every figure on this page comes from gmt-stats.json (GMT) or library-measurements.json (the other libraries), through the tables in lib/library-compare-tables.ts. Never type one in. */}
+
+export const measurementDates = measurementDateRange();
+export const zoneOffsets = zoneOffsetRange(gmtStats.timezoneList);
+
+This page sets GMT beside {competitorComparisons.length} other date libraries: what each
+one's own test suite and CI run, what each is built on, and what each covers. Every figure
+can be checked. The second section names the version, commit, date and command behind it.
+
+The summary on [Why GMT?](/why-gmt/) draws charts from the same data.
+
+## The full table
+
+<LibraryCompare table="overview" />
+
+How to read the columns:
+
+- **Test cases** is the number of tests in one run of the library's own suite.
+- **CI test executions** is the test cases multiplied by every Node version and time-zone
+  run the library's own CI applies.
+- **Time zones**: for GMT, the zones the whole suite runs in. For the others, the zones
+  their dedicated time-zone and DST test files cover. A 0 means none was found.
+- **Locales**: for GMT, the locales every locale-aware function is tested in. For the
+  others, the locale test files their repository holds.
+- **Known failing tests** counts tests that fail on the library's own default branch.
+  "Not measured" means the figure was not taken. Failures caused by the measuring machine
+  are not counted here; see the notes below.
+
+## How these were measured
+
+Each figure for the other libraries is a snapshot taken on the date in the table, between
+{measurementDates.oldest} and {measurementDates.newest}. Libraries change their tests and
+CI, so check the date before you cite a figure. GMT's own figures are not a snapshot:
+`scripts/stats.mjs` regenerates them from this repository on every change, and the build
+fails if a published figure drifts from the repository.
+
+<LibraryCompare table="measured" />
+
+Test cases for each library were obtained by cloning its repository at the commit shown,
+installing its dependencies, running the project's own test command, and reading that
+runner's final summary. They were not counted from the source. CI test executions come from
+each project's public CI configuration, linked in the last column: the test count
+multiplied by the Node versions and time-zone runs that configuration applies.
+
+The notes below record how each library's figures were reached, and what a reader needs to
+read them correctly.
+
+<LibraryCompare table="notes" />
+
+## What each library covers
+
+GMT is compared with `@internationalized/date`, Luxon, date-fns and Moment.js
+capability by capability. Day.js and Spacetime have not been compared this way, so the
+last column names only those four (and `temporal-kit`, a package for business-day
+arithmetic). Where it says "None of the others", it means none of those four.
+
+<LibraryCompare table="covers" />
+
+## Where GMT differs
+
+Each row says what GMT does and what each other library's measurement shows. The rows name
+every library instead of saying "only GMT", because a claim of that kind must hold against
+all {competitorComparisons.length} libraries in the data.
+
+<LibraryCompare table="differs" />
+
+Executions are test cases multiplied by the Node versions and time-zone runs CI applies. A
+library with a larger suite but a single run can still execute fewer tests than GMT does.
+The multiple is GMT's {formatCount(gmtStats.executions)} divided by {formatCount(combinedCompetitorExecutions())},
+the executions of all {competitorComparisons.length} other libraries added together:
+about {executionRatio(combinedCompetitorExecutions())} times.
+
+## How GMT's own suite is designed
+
+GMT's suite balances thoroughness against maintenance by testing behavior, not
+permutations.
+
+**What it tests exhaustively**
+
+- **The locale matrix.** Every locale-aware function runs in all {gmtStats.locales} locales of the
+  matrix: {gmtStats.localeList.join(", ")}. The set covers script direction,
+  first-day-of-week differences and calendar metadata.
+- **The time-zone matrix.** Every zoned function runs in {gmtStats.timezones} IANA time zones that span every UTC
+  offset band, from {zoneOffsets.min.zoneId} ({formatOffset(zoneOffsets.min.minutes)}) to {zoneOffsets.max.zoneId} ({formatOffset(zoneOffsets.max.minutes)}).
+  The set includes zones with DST transitions and zones at half-hour offsets.
+- **Zero-length and identity cases.** Every interval and arithmetic function is tested with
+  zero-length inputs, identity operations and values next to a boundary.
+- **Invalid-input sentinels.** Every public function is tested for its documented fallback
+  (`""`, `null`, `false` or `[]`) on malformed strings, wrong types, leap seconds and
+  inverted intervals.
+
+**What it collapses**
+
+- **Non-string input tables.** A function that guards with `typeof x !== "string"` returns
+  the same sentinel for `null`, `undefined`, `123`, `true`, `[]` and `{}`. The suite tests
+  one representative non-string per argument position, not every type at every position.
+  That is safe because every non-string type reaches the same early return.
+- **Repeated permutations.** Adjacent, disjoint and reversed interval cases that give
+  identical results are not repeated for every function variant. The `plain`, `zoned`,
+  `utc` and `unix` families share the same mathematical behavior, so each family gets the
+  fewest cases that prove it.
+
+**The result.** {formatCount(gmtStats.tests)} tests in {formatCount(gmtStats.files)} files. CI runs them as
+{formatCount(gmtStats.executions)} executions: every test, in {gmtStats.nodes.length} Node versions and {gmtStats.timezones} time zones,
+which is {runsPerTest} runs of each test.

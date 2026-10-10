@@ -8,13 +8,13 @@ import { stripMdx } from "./page-markdown";
 /**
  * The values table and the pages it serves, kept from drifting apart.
  *
- * `index.mdx` and `why-gmt.mdx` write their figures as expressions, and the text surfaces need
+ * `index.mdx`, `why-gmt.mdx` and `compare.mdx` write their figures as expressions, and the text surfaces need
  * those expressions evaluated. If a page grows an expression the table doesn't know, the figure
  * would ship as source text again — silently, since the page's own HTML would still be right.
  * This test reads the pages and fails on any expression that `stripMdx` cannot resolve.
  */
 
-const PAGES = ["index.mdx", "why-gmt.mdx"] as const;
+const PAGES = ["index.mdx", "why-gmt.mdx", "compare.mdx"] as const;
 
 const sourceOf = (page: string): string =>
   readFileSync(

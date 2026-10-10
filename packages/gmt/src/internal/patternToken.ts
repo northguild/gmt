@@ -1,4 +1,6 @@
 import { type LocalesArgument, resolveLocale } from "./resolveLocale";
+import { twoDigitYear } from "./twoDigitYear";
+import { readYearWindowStart } from "./yearWindowStart";
 import { getLocaleEraNames } from "../plain/locale/getLocaleEraNames";
 import { getLocaleMeridiems } from "../plain/locale/getLocaleMeridiems";
 import { getLocaleMonthNames } from "../plain/locale/getLocaleMonthNames";
@@ -393,18 +395,28 @@ function compilePattern(
 
 /**
  * Resolve a successful regex match's captures back into date/time field
- * values, applying the two-digit-year pivot, 12-hour-to-24-hour
- * conversion (via a matched meridiem), and BCE/CE year adjustment.
+ * values, resolving a two-digit year in the caller's window, converting
+ * 12-hour to 24-hour (via a matched meridiem), and adjusting a BCE year.
  *
  * This step only ever produces a *candidate* fields object — it does not
  * itself prove the fields form a real date/time. The caller is
  * responsible for handing the result to `Temporal.*.from(fields, {
  * overflow: "reject" })`, which is what actually validates it.
+ *
+ * `options` is the caller's `TwoDigitYearOptions` bag, unread. It is read
+ * only when a `yy` token matched, once (`readYearWindowStart`): a pattern
+ * with no `yy` never reads `yearWindow`, and so never reads the clock a
+ * `"rolling"` window needs. Returns `null` when a `yy` token matched and
+ * the bag names no valid window: no standard says which century a
+ * two-digit year belongs to, so without the caller's window the value
+ * cannot be read. Reading a hostile bag throws; the public function's
+ * `try` turns that into its sentinel.
  */
 function resolvePatternFields(
   match: RegExpMatchArray,
   tokens: CompiledToken[],
-): ParsedPatternFields {
+  options: unknown,
+): ParsedPatternFields | null {
   const groups = (match.groups ?? {}) as Record<string, string | undefined>;
   const fields: ParsedPatternFields = {};
 
@@ -421,11 +433,11 @@ function resolvePatternFields(
         fields.year = Number.parseInt(raw, 10);
         break;
       case "yearShort": {
-        // Two-digit year pivot: 00-68 -> 2000-2068, 69-99 -> 1969-1999.
-        // Fixed rule (mirrors common strptime %y behavior) — not a
-        // configurable/global setting.
-        const numeric = Number.parseInt(raw, 10);
-        fields.year = numeric <= 68 ? 2000 + numeric : 1900 + numeric;
+        // A pattern holds one year token at most (`compilePattern` rejects
+        // a repeated field), so this is the call's only read of the option.
+        const yearWindowStart = readYearWindowStart(options);
+        if (yearWindowStart === null) return null;
+        fields.year = twoDigitYear(Number.parseInt(raw, 10), yearWindowStart);
         break;
       }
       case "monthNumber":
@@ -504,14 +516,22 @@ function resolvePatternFields(
  * fields, or `null` on malformed pattern / no match / invalid input.
  *
  * `null` here always means "return the sentinel" to the caller — it
- * never distinguishes malformed-pattern from no-match from invalid-input,
- * matching the shared never-throw / sentinel-return contract.
+ * never distinguishes malformed-pattern from no-match from invalid-input
+ * from a `yy` token with no window, matching the shared never-throw /
+ * sentinel-return contract.
+ *
+ * `options` is the caller's `TwoDigitYearOptions` bag, already accepted
+ * by `isOptionsArgument`. It is read lazily: only a matched `yy` token
+ * reads `yearWindow`, once, so a pattern without `yy` reads neither the
+ * option nor the clock. A bag that throws when read makes this function
+ * throw; every caller runs it inside `try`.
  */
 export function parseValueWithPattern(
   value: string,
   pattern: string,
   locale: LocalesArgument | undefined,
   allowedFields: ReadonlySet<PatternField>,
+  options?: unknown,
 ): ParsedPatternFields | null {
   if (typeof value !== "string" || value.length === 0) return null;
   if (typeof pattern !== "string" || pattern.length === 0) return null;
@@ -536,5 +556,5 @@ export function parseValueWithPattern(
   const match = value.match(compiled.regex);
   if (match === null) return null;
 
-  return resolvePatternFields(match, compiled.tokens);
+  return resolvePatternFields(match, compiled.tokens, options);
 }

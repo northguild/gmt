@@ -15,7 +15,7 @@ describe("regex/timeZoneLike", () => {
     expect(timeZoneLike.test(value)).toBe(expected);
   });
 
-  // Temporal §14.6.2 TimeZoneIANAName: one or more `/`-separated components, each a
+  // Temporal §13.31 TimeZoneIANAName: one or more `/`-separated components, each a
   // TZLeadingChar (Alpha . _) followed by TZChars (TZLeadingChar, DecimalDigit, - +).
   it.each(ianaSingleComponentTimeZones.map((value) => ({ value })))(
     "matches the single-component IANA name $value",

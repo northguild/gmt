@@ -392,3 +392,53 @@ describe("toOffsetInstant", () => {
     },
   );
 });
+
+// A stored UTC offset in the `timeZone` position sets the pair's offset, canonicalised, and names
+// no place: there is no `timeZone` field, as for the identifier "-05:00".
+describe("toOffsetInstant with a stored UTC offset as timeZone", () => {
+  it.each`
+    value                                            | timeZone       | instant                      | offset
+    ${"1970-01-01T12:44:30Z"}                        | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}    | ${"-00:44:30"}
+    ${"1970-01-01T12:44:30Z"}                        | ${"+05:30:00"} | ${"1970-01-01T12:44:30Z"}    | ${"+05:30"}
+    ${"1970-01-01T12:44:30Z"}                        | ${"+00:00:00"} | ${"1970-01-01T12:44:30Z"}    | ${"+00:00"}
+    ${"1970-01-01T12:44:30Z"}                        | ${"-00:00:00"} | ${"1970-01-01T12:44:30Z"}    | ${"+00:00"}
+    ${"1970-01-01T12:44:30Z"}                        | ${"+23:59:59"} | ${"1970-01-01T12:44:30Z"}    | ${"+23:59:59"}
+    ${"2024-07-15T12:00:00-04:00"}                   | ${"+02:10:08"} | ${"2024-07-15T16:00:00Z"}    | ${"+02:10:08"}
+    ${"2024-07-15T12:00:00-04:00[America/New_York]"} | ${"-00:44:30"} | ${"2024-07-15T16:00:00Z"}    | ${"-00:44:30"}
+    ${"+275760-09-13T00:00:00Z"}                     | ${"+00:00:30"} | ${"+275760-09-13T00:00:00Z"} | ${"+00:00:30"}
+  `(
+    "reads $value at $timeZone as the pair $instant, $offset with no timeZone field",
+    ({ value, timeZone, instant, offset }) => {
+      expect(toOffsetInstant(value, timeZone)).toEqual({ instant, offset });
+    },
+  );
+
+  it.each`
+    timeZone         | reason
+    ${"Z"}           | ${"a designator, not an offset"}
+    ${"+05:30:00.5"} | ${"a fraction of a second"}
+    ${"+24:00:00"}   | ${"hour out of range"}
+    ${"-0400:30"}    | ${"basic format with seconds"}
+  `("returns null for timeZone $timeZone ($reason)", ({ timeZone }) => {
+    expect(toOffsetInstant("1970-01-01T12:44:30Z", timeZone)).toBeNull();
+  });
+
+  // The string's own bracket is still checked when an offset overrides it.
+  it("returns null for a self-contradictory bracketed string, whatever offset overrides it", () => {
+    expect(
+      toOffsetInstant(
+        "2024-07-15T12:00:00-05:00[America/New_York]",
+        "-00:44:30",
+      ),
+    ).toBeNull();
+  });
+
+  it("round-trips the pair through fromOffsetInstant", () => {
+    const pair = toOffsetInstant("1970-01-01T12:44:30Z", "-00:44:30");
+
+    expect(pair).not.toBeNull();
+    // 12:44:30Z less 44 min 30 s is 12:00:00 local.
+    expect(fromOffsetInstant(pair!)).toBe("1970-01-01T12:00:00-00:44:30");
+    expect(toOffsetInstant(fromOffsetInstant(pair!))).toEqual(pair);
+  });
+});

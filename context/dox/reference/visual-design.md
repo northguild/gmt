@@ -35,6 +35,12 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
 - **Amber is reserved for GMT's sentinel contract.** An invalid-input result (`""` / `null` /
   `false` / `[]`) renders as `⟨ NO SIGNAL — invalid input ⟩`, never as a blank field. Its rarity
   is what makes it communicate.
+- **A clock change has two colours.** The DST purple marks a repeated hour (a fall-back
+  overlap) and the DST gold a skipped hour (a spring-forward gap), in the DST Inspector, the
+  Cut-off Ruler and the Timetable Reader. The two also differ in pattern and in words, never
+  in colour alone: a double edge is a repeated hour and a dashed edge a skipped one. A new
+  chart follows the pair. The Crossing Clock uses the edges but purple for both, and the two
+  ledgers flag a short or long day in gold (built.md § Tier 2, "The DST colours").
 - **Role colours in the transcript** resolve from one `--gmt-hive-role` per turn, so recolouring
   a role is one declaration.
 - **The Dox mark** — the faceted crystal — is one geometry module (`src/lib/dox-mark.ts`) shared
@@ -55,7 +61,22 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
   11–16:1); do not raise dark above 1.0.
 - A low-alpha tinted fill (the contrast floor where `backdrop-filter` is unavailable), a
   hairline gradient border on one or two edges, and a 1px inset top highlight.
-- No corner brackets on surfaces and no grain overlay — both read as noise.
+- **Corner brackets mark a frame. They do not decorate a panel.** A bracket frame carries two
+  L-shaped corners, top left and bottom right. The site has them in two places:
+  - **Landmark sections**, in cyan (`.gmt-brackets`): the home page's hero stage, where they sit
+    inside the hero's edges, and each `GridSection` cell of the section grids on the home page
+    and `/why-gmt`.
+  - **A framed group of controls that the reader repeats or compares**: each leg of the
+    Delivery Scheduler and each row of the Timetable Reader. Every frame in the set holds the
+    same fields for one numbered item, and its brackets take that item's series colour, so the
+    frame matches the item's marks in the chart.
+
+  A bracket frame is right for a new tool only in the second case: several frames of the same
+  fields that the reader moves between. A single group of fields, a chart surface, a result
+  block, a callout and an ordinary panel carry none, because brackets on every panel read as
+  noise. In a tool, the brackets sit on a frame that already has its full bevelled border;
+  they are never the frame's only edge, and never a one-sided accent.
+- No grain overlay: it reads as noise.
 - One layer of glass, never glass within glass. Under `prefers-reduced-transparency`, a
   near-opaque fill and no blur.
 
@@ -151,6 +172,9 @@ them must not jump.
   moves or resizes itself or a neighbour. Pin paired cards to opposite edges
   (`justify-content: space-between`), reserve the width of the longest value with tabular figures
   and no wrap, and test that the bounding boxes do not change across the handle's range.
+- **A cell whose content comes and goes keeps its size with a hidden sizer.** The sizer has the
+  shape of the largest thing the cell can hold and shares one grid cell with the live content,
+  so the cell needs no measured height (design-system.md § Drawn charts).
 
 ## Performance
 

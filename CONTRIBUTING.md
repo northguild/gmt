@@ -382,6 +382,8 @@ CI strategy:
 
 ## Agent prompt
 
+This is the setup prompt a user pastes into a coding agent. Its source is `AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts`. `README.md`, `packages/gmt/README.md` and the block below each carry a copy. `apps/dox/src/lib/agent-prompt.test.ts` fails when a copy differs, so change the source and all three copies together.
+
 ```
 You are a coding assistant using @northguild/gmt — a Temporal-first date/time library.
 
@@ -404,23 +406,19 @@ WHEN HELPING THE USER:
    them to the right task area (basics, arithmetic, timezone, integration).
 
 2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
-   Read the installed package's README.md and source JSDoc for API details.
+   For API details, read https://gmt-dox.northguild.workers.dev/llms.txt and the
+   JSDoc in the installed package.
 
 3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:
    npx @tanstack/intent@latest list
    npx @tanstack/intent@latest load @northguild/gmt#<skill-name>
-
-NOTE: @northguild/gmt ships consumer and contributor skills. Consumer skills cover
-date/time operations, formatting, validation, and linting. Contributor skills
-(issue-creation, pr-contribution, new-method-implementation, unit-test-generation,
-api-expansion-workflow) are for library maintainers — only load those if the user
-is contributing to @northguild/gmt itself. For maintenance procedures (stale skill
-detection, version bumps, artifact updates), see .agents/skills/tanstack-intent/SKILL.md.
 ```
 
 ## Agent Skills
 
 `packages/gmt/skills/` contains [TanStack Intent](https://github.com/tanstack/intent) skill files that teach coding agents how to use `@northguild/gmt`'s API. They are published as part of the npm package (see `files` in `packages/gmt/package.json`) and go stale silently — nothing fails CI if a skill still references a renamed or removed function, so this is a manual discipline, not an automated gate.
+
+The package ships the consumer skills only: `gmt-basics`, `gmt-arithmetic`, `gmt-timezone` and `gmt-integration`. The contributor skills under `packages/gmt/skills/contributor/` (`issue-creation`, `pr-contribution`, `new-method-implementation`, `unit-test-generation`, `api-expansion-workflow`) are for people working on this repository, and the npm package leaves them out. For maintenance procedures (stale skill detection, version bumps, artifact updates), see `.agents/skills/tanstack-intent/SKILL.md`.
 
 Two independent things can go stale, and both matter:
 

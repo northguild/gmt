@@ -70,6 +70,7 @@ export function parseTimeWithPattern(
     if (typeof value !== "string") return "";
     if (typeof pattern !== "string") return "";
 
+    // A time pattern has no year token, so no two-digit-year window applies.
     const fields = parseValueWithPattern(
       value,
       pattern,

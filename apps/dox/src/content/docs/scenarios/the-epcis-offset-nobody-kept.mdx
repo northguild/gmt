@@ -1,0 +1,36 @@
+---
+title: "The EPCIS Offset Nobody Kept"
+description: An EPCIS event stored as its instant alone, and shown a day early at the site where it happened.
+industries: [intermodal]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="The EPCIS Offset Nobody Kept"
+  description="A site two hours east of Greenwich reports an event at 23:30 UTC on 15 June. The receiving system stores the instant and drops the offset."
+  naiveCode={`// The naive approach: keep the instant, drop the offset
+const event = { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" };
+const stored = new Date(event.eventTime).toISOString();
+stored.slice(0, 10);
+// "2024-06-15" — on the dock it was already 16 June`}
+  explanation={`EPCIS requires both fields because neither derives from the other. eventTime orders events from every site on one timeline. eventTimeZoneOffset is what the local clock read where the event happened. Drop it and the local date and time cannot be shown again. parseEpcisEvent keeps both, and returns the local time beside the instant.`}
+  gmtCode={`import { parseEpcisEvent, formatEpcisEvent } from "@northguild/gmt/intermodal";
+
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" });
+// { instant: "2024-06-15T23:30:00Z", offset: "+02:00", local: "2024-06-16T01:30:00" }
+
+// Written back, both fields survive.
+formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "+02:00" });
+// { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
+
+// Without the offset there is no event to read.
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" });
+// null`}
+  fixedSpecId="parseEpcisEvent"
+/>
+
+Change `eventTimeZoneOffset` in the widget above to `-05:00`, and `local` moves to
+`2024-06-15T18:30:00` while `instant` stays the same. The two fields are independent facts. The
+reasoning is in the EPCIS section of [Intermodal: EDI
+Timestamps](/guides/industries/intermodal-edi-timestamps/#epcis-two-facts-both-required).

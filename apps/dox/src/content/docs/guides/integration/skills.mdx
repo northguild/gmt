@@ -99,30 +99,30 @@ npx @tanstack/intent@latest stale
 
 ## Consumer-facing skills
 
-These are the skills a consumer reaches for day to day. Each is a lightweight
-routing pointer (~30–60 lines) that carries the core rules and points the agent
-to the installed package's `README.md` and source JSDoc for full API signatures,
-locale matrices, and code examples — not an API dump:
+These are the skills a consumer reaches for day to day. Each is a short routing
+pointer (about 30 to 60 lines). It carries the core rules and the common pitfalls,
+then points the agent to the documentation site and to the JSDoc in the installed
+package for signatures, locale matrices and code examples. It is not an API dump:
 
 ### `@northguild/gmt`
 
-| Slug | Task area | Points to |
+| Slug | Task area | Source folders it points to |
 | --- | --- | --- |
-| `gmt-basics` | Current values, parse, format, relative time, compare, validate | `README.md`, `src/plain/`, `src/zoned/` |
-| `gmt-arithmetic` | Add/subtract, diff, durations, interval range math | `README.md`, `src/plain/`, `src/duration/`, `src/plain/interval/` |
-| `gmt-timezone` | Zoned get/format/convert, DST disambiguation | `README.md`, `src/zoned/`, `src/unix/`, `src/utc/` |
-| `gmt-integration` | Cache keys, router/query params, lint package selection | `README.md`, lint package READMEs |
+| `gmt-basics` | Current values, parse, format, relative time, compare, validate | `src/plain/`, `src/zoned/` |
+| `gmt-arithmetic` | Add/subtract, diff, durations, interval range math | `src/plain/`, `src/duration/`, `src/plain/interval/` |
+| `gmt-timezone` | Zoned get/format/convert, DST disambiguation | `src/zoned/`, `src/unix/`, `src/utc/` |
+| `gmt-integration` | Cache keys, router/query params, lint package selection | the lint package READMEs |
 
-> **Skills are routing pointers, not API documentation.** When a skill is loaded,
-> the agent should read the installed package's `README.md` and the JSDoc of the
-> specific function it intends to call for full signatures, locale matrices, and
-> code examples. The skill files carry the core rules and common pitfalls; the
-> README carries the details.
+> **Skills are routing pointers, not API documentation.** The skill files carry the
+> core rules and common pitfalls. For a signature, a locale matrix or an example,
+> the agent should read this site (`https://gmt-dox.northguild.workers.dev/llms.txt`
+> lists every page, and each page has a `.md` twin) and the JSDoc of the specific
+> function it intends to call in the installed package.
 
 ### `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome`
 
 | Slug | Guide | Description |
-| --- --- | --- | --- |
+| --- | --- | --- |
 | `first-time-setup` | [Lint Package Selection](/guides/integration/linting/) | Install and wire the lint package; verify Date-ban rules active |
 | `migration-refactor` | — | Migrate existing code off `Date` APIs |
 | `ci-enforcement` | — | Set up CI enforcement of lint rules |

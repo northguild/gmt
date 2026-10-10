@@ -94,6 +94,14 @@ const PAGES = [
     path: "tools/departure-board",
     widget: "gmt-departure-board gmt-widget",
   },
+  {
+    path: "tools/dtm-decoder",
+    widget: "gmt-dtm-decoder gmt-widget",
+  },
+  {
+    path: "tools/x12-time-reader",
+    widget: "gmt-x12-time-reader gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

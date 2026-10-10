@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
@@ -24,6 +24,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example convertUnixToPlainDateTime(-1, { timeZone: "UTC" }) // "1969-12-31T23:59:59.999"
  * @example convertUnixToPlainDateTime("1709164800000", { timeZone: "Asia/Tokyo" }) // "2024-02-29T09:00:00"
  * @example convertUnixToPlainDateTime(NaN) // ""
+ * @example convertUnixToPlainDateTime(45870000, { timeZone: "-00:44:30" }) // "1970-01-01T12:00:00" (a stored offset with seconds)
  */
 
 export function convertUnixToPlainDateTime(
@@ -37,8 +38,10 @@ export function convertUnixToPlainDateTime(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -51,16 +54,16 @@ export function convertUnixToPlainDateTime(
     }
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
 
-    if (epochUnit === null || !timeZone) return "";
+    if (epochUnit === null || frame === null) return "";
 
     const instant = unixEpochToInstant(unix, epochUnit);
 
     if (instant === null) return "";
 
     try {
-      return instant.toZonedDateTimeISO(timeZone).toPlainDateTime().toString();
+      return frameWallClock(instant, frame).toString();
     } catch {
       return "";
     }

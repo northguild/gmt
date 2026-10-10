@@ -277,6 +277,12 @@ export function classifyType(
   if (!type) return { type: "string" };
   type = nonNullable(_checker, type);
 
+  // A parameter typed with exactly one string literal (`format: "102"`) is not a union to
+  // TypeScript, but the reader still has to pick from the codes the function takes: one choice.
+  if (type.flags & ts.TypeFlags.StringLiteral) {
+    return { type: "enum", options: [(type as ts.StringLiteralType).value] };
+  }
+
   if (type.flags & ts.TypeFlags.Union) {
     const members = (type as ts.UnionType).types;
 

@@ -1,5 +1,4 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { normalizeTimeZone } from "./normalizeTimeZone";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import {
   parseUnixEpochInterval,
@@ -8,12 +7,15 @@ import {
   type UnixEpochUnit,
 } from "./unixEpochValue";
 import { isValidDateTimeUnit } from "../plain/validate";
+import { frameZoned, normalizeZoneFrame, type ZoneFrame } from "./zoneFrame";
 
 export interface ResolvedUnixInterval {
   startVal: Temporal.ZonedDateTime;
   endVal: Temporal.ZonedDateTime;
   resolvedUnit: Temporal.DateTimeUnit;
   epochUnit: UnixEpochUnit;
+  /** The frame both ends were placed on; `frameInstant` turns a result back into an instant. */
+  frame: ZoneFrame;
 }
 
 /**
@@ -23,13 +25,16 @@ export interface ResolvedUnixInterval {
  *
  * - Epochs follow the one `unix/` grammar (`parseUnixEpochValue`) and must name Temporal instants.
  * - `epochUnit` defaults to `"milliseconds"`; `timeZone` defaults to `"UTC"` (`"local"` is the
- *   system zone, an unknown zone is invalid).
+ *   system zone; a time zone identifier or a stored UTC offset `±HH:MM[:SS]` is read as written;
+ *   anything else is invalid).
+ * - The ends are placed with `frameZoned`: for a seconds offset they sit in the offset's
+ *   whole-minute zone, moved by its seconds, to compute with and never to write.
  *
  * @param start interval start epoch
  * @param end interval end epoch
  * @param unit unit name, singular or plural
  * @param options optional `{ epochUnit, timeZone }`
- * @returns the zoned ends, singular unit and epoch unit, or null on invalid input
+ * @returns the zoned ends, singular unit, epoch unit and frame, or null on invalid input
  *
  * @example resolveUnixIntervalPair(0, 86400, "days", { epochUnit: "seconds" })?.resolvedUnit // "day"
  * @example resolveUnixIntervalPair(10, 0, "day") // null (reversed)
@@ -42,12 +47,12 @@ export function resolveUnixIntervalPair(
 ): ResolvedUnixInterval | null {
   const interval = parseUnixEpochInterval(start, end);
   const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
+  const frame = normalizeZoneFrame(options?.timeZone);
 
   if (
     interval === null ||
     epochUnit === null ||
-    !timeZone ||
+    frame === null ||
     typeof unit !== "string"
   ) {
     return null;
@@ -68,10 +73,11 @@ export function resolveUnixIntervalPair(
 
   try {
     return {
-      startVal: startInstant.toZonedDateTimeISO(timeZone),
-      endVal: endInstant.toZonedDateTimeISO(timeZone),
+      startVal: frameZoned(startInstant, frame),
+      endVal: frameZoned(endInstant, frame),
       resolvedUnit,
       epochUnit,
+      frame,
     };
   } catch {
     return null;

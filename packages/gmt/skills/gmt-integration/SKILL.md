@@ -4,11 +4,16 @@ description: >
   Application integration patterns — stable cache keys, router/query params,
   table-sort keys, nanosecond timestamps across JSON and storage boundaries,
   foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), and lint
-  package selection (ESLint, Biome, Oxlint). Reads the installed package
-  README.md and lint-package READMEs for API details; this skill is a routing
-  pointer, not an API dump.
+  package selection (ESLint, Biome, Oxlint). Reads the docs site (llms.txt and
+  each page's .md twin) and the installed package's JSDoc for API details, and
+  the lint-package READMEs for lint setup; this skill is a routing pointer, not
+  an API dump.
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx'
   - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
@@ -84,9 +89,15 @@ which lint package to install for Date-ban enforcement.
      names the instant the zone gives.
 6. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
-7. **Read the READMEs.** This skill is a routing pointer. For full integration
-   guidance, read the installed package's `README.md` and the matching
-   `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` README.
+7. **Read the docs site and the lint README.** This skill is a routing pointer.
+   For full integration guidance, read these:
+   - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+   - Each page has a `.md` twin that holds its text, for example
+     `https://gmt-dox.northguild.workers.dev/guides/integration/app-integration.md`.
+   - The JSDoc ships in the installed package:
+     `node_modules/@northguild/gmt/dist/**/*.d.ts`.
+   - For lint setup, read the matching `@northguild/gmt-eslint` / `gmt-oxlint` /
+     `gmt-biome` README.
 
 ## Lint package selection
 
@@ -119,6 +130,10 @@ the pattern.
 
 ## References
 
-- [README — Install and Design Philosophy](README.md)
+- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [Install](https://gmt-dox.northguild.workers.dev/install/)
+- [App integration guide](https://gmt-dox.northguild.workers.dev/guides/integration/app-integration/)
+- [Nanosecond precision guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/nanosecond-precision/)
+- [Foreign epoch bridges guide](https://gmt-dox.northguild.workers.dev/guides/conversion/foreign-epoch-bridges/)
 - [Lint Package Selection guide](/guides/integration/linting/)
 - [Core Rules](/core-rules/)

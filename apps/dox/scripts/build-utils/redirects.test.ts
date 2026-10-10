@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildRedirects, type RedirectedType } from "./redirects";
+import { RENAMED_FUNCTIONS } from "./renamed-functions";
 import type { TypeNode, TypeUsage } from "./type-usage";
 import type { CorpusEntry } from "../../src/reference-types";
 
@@ -168,6 +169,74 @@ describe("buildRedirects", () => {
   });
 });
 
+describe("buildRedirects, renamed functions", () => {
+  const RENAME = [
+    { from: "plain/parse/parseSql", to: "plain/parse/parseSqlDateTime" },
+  ];
+  const LIVE = usageOf([], ["plain/parse/parseSqlDateTime"]);
+
+  it("writes the bare, trailing-slash and .md rules of a rename, with a 301", () => {
+    expect(rules(buildRedirects([], LIVE, RENAME))).toEqual([
+      [
+        "/reference/plain/parse/parseSql",
+        "/reference/plain/parse/parseSqlDateTime/",
+        "301",
+      ],
+      [
+        "/reference/plain/parse/parseSql.md",
+        "/reference/plain/parse/parseSqlDateTime.md",
+        "301",
+      ],
+      [
+        "/reference/plain/parse/parseSql/",
+        "/reference/plain/parse/parseSqlDateTime/",
+        "301",
+      ],
+    ]);
+  });
+
+  it("refuses a rename whose target is not a function page", () => {
+    expect(() => buildRedirects([], usageOf([]), RENAME)).toThrow(
+      /\/reference\/plain\/parse\/parseSql is renamed to \/reference\/plain\/parse\/parseSqlDateTime, which is not a function page/,
+    );
+  });
+
+  it("refuses a rename whose source is a page of the site", () => {
+    expect(() =>
+      buildRedirects(
+        [],
+        usageOf([], ["plain/parse/parseSqlDateTime", "plain/parse/parseSql"]),
+        RENAME,
+      ),
+    ).toThrow(/\/reference\/plain\/parse\/parseSql is a page of the site/);
+  });
+
+  it("refuses a rename and a type with one source", () => {
+    expect(() =>
+      buildRedirects(
+        [{ name: "parseSql", namespace: "plain", module: "parse" }],
+        usageOf([shared("parseSql")], ["plain/parse/parseSqlDateTime"]),
+        RENAME,
+      ),
+    ).toThrow(/\/reference\/plain\/parse\/parseSql has two rules/);
+  });
+
+  it("refuses a rename to itself", () => {
+    expect(() =>
+      buildRedirects([], usageOf([], ["a/b/c"]), [
+        { from: "a/b/c", to: "a/b/c" },
+      ]),
+    ).toThrow(/is a page of the site/);
+  });
+
+  it("lists renames that all land on a function page", () => {
+    const reach = RENAMED_FUNCTIONS.map((r) => r.to);
+    expect(
+      rules(buildRedirects([], usageOf([], reach), RENAMED_FUNCTIONS)),
+    ).toHaveLength(RENAMED_FUNCTIONS.length * 3);
+  });
+});
+
 describe("the generated _redirects", () => {
   const file = resolve(import.meta.dirname, "..", "..", "public", "_redirects");
   const corpusFile = resolve(
@@ -187,8 +256,8 @@ describe("the generated _redirects", () => {
     ) as CorpusEntry[];
     const types = corpus.filter((e) => e.kind === "type");
     const out = rules(readFileSync(file, "utf8"));
-    // Both slash forms and the .md twin of each type.
-    expect(out).toHaveLength(types.length * 3);
+    // Both slash forms and the .md twin of each type and of each renamed function.
+    expect(out).toHaveLength((types.length + RENAMED_FUNCTIONS.length) * 3);
 
     const targetOf = new Map(out.map(([source, target]) => [source, target]));
     expect(targetOf.size).toBe(out.length);

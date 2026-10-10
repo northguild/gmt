@@ -45,10 +45,15 @@ export interface Crossing {
  * - Returns `null` when either instant is invalid, when `exit` is before `entry` (an inverted
  *   crossing is a data error, not a negative transit), or when the zone is invalid. A zero-length
  *   crossing is `PT0S`.
+ * - An offset with seconds (`-00:44:30`) returns `null`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call
+ *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
+ *   bracket.
  *
  * @param entry ISO 8601 zoned datetime or instant string of entering the crossing
  * @param exit ISO 8601 zoned datetime or instant string of leaving it
- * @param targetZone IANA timeZone identifier or fixed offset the crossing is read in
+ * @param targetZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts) the
+ *   crossing is read in
  * @returns exact duration and zone-local entry and exit, or null on invalid input
  *
  * @example crossingTime("2024-06-15T08:00:00Z", "2024-06-15T17:30:00Z", "Europe/Berlin") // { duration: "PT9H30M", enter: "2024-06-15T10:00:00+02:00[Europe/Berlin]", exit: "2024-06-15T19:30:00+02:00[Europe/Berlin]" }

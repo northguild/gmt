@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
@@ -26,6 +26,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example convertUnixToPlainDate("1709164800", { epochUnit: "second", timeZone: "Asia/Tokyo" }) // "2024-02-29"
  * @example convertUnixToPlainDate(1709164800000, { timeZone: "Asia/Tokio" }) // "" (unknown zone)
  * @example convertUnixToPlainDate(NaN) // ""
+ * @example convertUnixToPlainDate(1800000, { timeZone: "-00:44:30" }) // "1969-12-31" (a stored offset with seconds)
  */
 
 export function convertUnixToPlainDate(
@@ -39,8 +40,10 @@ export function convertUnixToPlainDate(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -53,16 +56,16 @@ export function convertUnixToPlainDate(
     }
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
 
-    if (epochUnit === null || !timeZone) return "";
+    if (epochUnit === null || frame === null) return "";
 
     const instant = unixEpochToInstant(unix, epochUnit);
 
     if (instant === null) return "";
 
     try {
-      return instant.toZonedDateTimeISO(timeZone).toPlainDate().toString();
+      return frameWallClock(instant, frame).toPlainDate().toString();
     } catch {
       return "";
     }

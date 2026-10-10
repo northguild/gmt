@@ -88,10 +88,18 @@ the globe above is computed live in your browser and recomputed every second.
   defines them, across Temporal's whole date range.
 </Card>
 
+<Card title="The formats freight actually sends" icon="random">
+  Freight mostly does not send ISO 8601. GMT reads and writes UN/EDIFACT `DTM` values, ANSI X12
+  dates and time codes, and GS1 EPCIS 2.0 event times, each against the standard's own code
+  list. A code either carries an offset or it does not, and GMT never invents one: an
+  offsetless value stays a local time until you name the zone.
+  [Read the guide](/guides/industries/intermodal-edi-timestamps/).
+</Card>
+
 <Card title="Every standard, in one place" icon="open-book">
   TC39 and ECMA-402, Temporal, the Intl proposals, ISO 8601, RFC 3339, RFC 9557, the IANA
-  Time Zone Database, BCP 47, CLDR, RFC 5322, RFC 9110 and test262: what each one is, and what
-  GMT uses it for. [Read The Standards](/guides/concepts/standards/).
+  Time Zone Database, BCP 47, CLDR, RFC 5322, RFC 9110, UN/EDIFACT, ANSI X12, GS1 EPCIS, SQL-92
+  and test262: what each one is, and what GMT uses it for. [Read The Standards](/guides/concepts/standards/).
 </Card>
 </CardGrid>
 </div>

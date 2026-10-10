@@ -9,6 +9,10 @@
  * takes what the browser observed and returns the problems, as strings; an
  * empty array is a pass. They import nothing, so they are tested in
  * `gate-checks.test.ts`.
+ *
+ * `blockOffSite` is the one function here that every browser gate calls: a
+ * gate measures a local build, so its result must not depend on a host
+ * outside it.
  */
 
 /** Fewest animation frames a measurement may hold before it counts as taken. */
@@ -145,4 +149,41 @@ export function pointerMoveProblems({ start, far }) {
   return start === far
     ? [`the pointer drag never moved the value off ${start}`]
     : [];
+}
+
+/**
+ * True when `url` is an `http:` or `https:` request to an origin other than
+ * `base`'s. A `data:`, `blob:` or `about:` URL makes no request and is never
+ * off-site. `url` is a string or a URL object, as Playwright hands a route
+ * predicate.
+ */
+export function isOffSite(url, base) {
+  const target = new URL(url);
+  if (target.protocol !== "http:" && target.protocol !== "https:") return false;
+  return target.origin !== new URL(base).origin;
+}
+
+/**
+ * Keep a gate's pages on the site under test. `target` is a Playwright
+ * context or page; `base` is the URL the gate loads from.
+ *
+ * The production build carries an analytics script from another host, and
+ * that script posts back to it. A gate that waits for `networkidle` then
+ * settles only as fast as that host answers, and never where it does not, so
+ * the same build passes on one machine and times out on another. Every
+ * off-site request is answered here instead, with an empty script: nothing
+ * leaves the machine. It is answered, not aborted, because an aborted request
+ * logs a console error and `globe-smoke.mjs` counts every console error as a
+ * failure.
+ *
+ * The rule is "not the base's origin", never a list of hosts, so a tag added
+ * later cannot bring the fault back. Only off-site requests are routed; a
+ * same-site request is never intercepted.
+ */
+export async function blockOffSite(target, base) {
+  await target.route(
+    (url) => isOffSite(url, base),
+    (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
+  );
 }

@@ -12,7 +12,9 @@ import { gmtStats } from "../data/gmt-stats";
 import {
   CORE_INDUSTRY,
   INDUSTRY_ICON_PATHS,
+  INDUSTRY_LAYER_IDS,
   INDUSTRY_TAG_IDS,
+  industrySidebarCss,
   industryTag,
 } from "./industry-tags";
 
@@ -113,5 +115,61 @@ describe("IndustryTags.astro", () => {
     // A `title` on a non-focusable span shows only on a mouse hover.
     expect(source).not.toMatch(/title=\{/);
     expect(source).toMatch(/<button[\s\S]*?aria-describedby=/);
+  });
+});
+
+describe("the sidebar icon of an industry group", () => {
+  it("lists the industry layers without core", () => {
+    expect(INDUSTRY_LAYER_IDS).toEqual(gmtStats.industries);
+    expect(INDUSTRY_LAYER_IDS).not.toContain(CORE_INDUSTRY);
+  });
+
+  it("sets one icon per layer on the group that holds its marked Overview link, and none for core", () => {
+    const css = industrySidebarCss().split("\n");
+    expect(css).toHaveLength(INDUSTRY_LAYER_IDS.length);
+    for (const id of INDUSTRY_LAYER_IDS) {
+      const rule = css.find((line) =>
+        line.includes(`a[data-gmt-industry="${id}"]`),
+      );
+      expect(rule, id).toMatch(
+        /^details:has\(> ul > li > a\[data-gmt-industry="\w+"\]\) > summary\{--gmt-industry-icon:url\("data:image\/svg\+xml,/,
+      );
+    }
+    expect(industrySidebarCss()).not.toContain('"core"');
+  });
+
+  it("draws the same glyph the tag shows, in no colour of its own", () => {
+    const css = industrySidebarCss();
+    for (const id of INDUSTRY_LAYER_IDS) {
+      const glyph = INDUSTRY_ICON_PATHS[industryTag(id)!.icon]!;
+      expect(css).toContain(encodeURIComponent(glyph));
+    }
+    expect(decodeURIComponent(css)).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+  });
+});
+
+describe("the sidebar divider", () => {
+  const read = (file: string) =>
+    readFileSync(
+      path.resolve(import.meta.dirname, "..", "components", file),
+      "utf8",
+    );
+
+  it("is text that names the list after it, not a link, a group or a stop", () => {
+    const sublist = read("SidebarSublist.astro");
+    const divider = sublist.slice(sublist.indexOf("divider && ("));
+    const row = divider.slice(0, divider.indexOf(")\n\t}"));
+    expect(row).toMatch(/<span id=\{dividerId\} class="gmt-sidebar-divider">/);
+    expect(row).toMatch(/labelledby=\{dividerId\}/);
+    expect(row).not.toMatch(/<a\b|<details|<summary|tabindex|<button/);
+    expect(sublist).toMatch(/aria-labelledby=\{labelledby\}/);
+  });
+
+  it("is registered as the one Sidebar override", () => {
+    const config = readFileSync(
+      path.resolve(import.meta.dirname, "..", "..", "astro.config.mjs"),
+      "utf8",
+    );
+    expect(config).toMatch(/Sidebar: "\.\/src\/components\/Sidebar\.astro"/);
   });
 });

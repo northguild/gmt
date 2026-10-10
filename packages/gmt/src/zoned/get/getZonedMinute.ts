@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isValidTimeZone } from "../validate";
+import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 
 /**
  * Return the current minute for the specified IANA timeZone.
@@ -7,19 +6,20 @@ import { isValidTimeZone } from "../validate";
  * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
  * - Validation is performed on the timezone.
  *
- * @param ianaTimezone IANA timeZone identifier
+ * @param ianaTimezone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or
+ *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns current minute string (zero-padded to 2 digits) or "" on invalid input
  *
  * @example getZonedMinute("America/New_York") // "00"
  * @example getZonedMinute("invalid") // ""
  */
 export function getZonedMinute(ianaTimezone: string): string {
-  if (!isValidTimeZone(ianaTimezone)) return "";
+  const frame = zoneFrame(ianaTimezone);
+
+  if (frame === null) return "";
 
   try {
-    return Temporal.Now.zonedDateTimeISO(ianaTimezone)
-      .minute.toString()
-      .padStart(2, "0");
+    return frameNowWallClock(frame).minute.toString().padStart(2, "0");
   } catch {
     return "";
   }

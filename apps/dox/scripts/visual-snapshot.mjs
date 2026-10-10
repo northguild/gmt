@@ -37,6 +37,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import { blockOffSite } from "./gate-checks.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -118,6 +119,8 @@ const PAGES = [
   { slug: "tool-punctuality-board", path: "/tools/punctuality-board/" },
   { slug: "tool-eta-drift", path: "/tools/eta-drift/" },
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
+  { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
+  { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   /* Added last, deliberately. Through DOX-C3b this was the page being changed
      on almost every step, so covering it earlier would have meant a gate that
      failed by design and got ignored. It is stable now, and it is the only page
@@ -357,6 +360,7 @@ async function newThemedContext(browser, viewport, theme) {
     viewport: { width: viewport.width, height: viewport.height },
     reducedMotion: "reduce",
   });
+  await blockOffSite(context, BASE_URL);
   await context.addInitScript((t) => {
     localStorage.setItem("starlight-theme", t);
   }, theme);

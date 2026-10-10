@@ -94,10 +94,15 @@ function dwellZone(
  *   more than 10,000 transitions (about 5,000 years of twice-yearly DST) returns `null`.
  * - Returns `null` when either instant is invalid, when `exit` is before `entry` (an inverted
  *   dwell is a data error, not a negative stay), or when no zone can be determined.
+ * - An offset with seconds (`-00:44:30`) returns `null`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call
+ *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
+ *   bracket.
  *
  * @param entry ISO 8601 zoned datetime or instant string of the gate-in, arrival or admission
  * @param exit ISO 8601 zoned datetime or instant string of the gate-out, departure or discharge
- * @param targetZone IANA timeZone identifier or fixed offset the days are counted in; defaults to `entry`'s bracketed zone
+ * @param targetZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts) the
+ *   days are counted in; defaults to `entry`'s bracketed zone
  * @returns exact duration, zone-local entry and exit, and the local calendar days touched, or null on invalid input
  *
  * @example dwellTime("2024-06-15T23:00:00-04:00[America/New_York]", "2024-06-16T01:00:00-04:00[America/New_York]") // { duration: "PT2H", enter: "2024-06-15T23:00:00-04:00[America/New_York]", exit: "2024-06-16T01:00:00-04:00[America/New_York]", calendarDays: 2 }

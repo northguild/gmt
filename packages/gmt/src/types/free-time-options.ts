@@ -26,9 +26,10 @@ export type FreeTimeOptions = {
    */
   basis: FreeTimeBasis;
   /**
-   * The time zone of the terminal, depot or yard whose local midnight ends a day: an IANA name or a
-   * UTC offset. GMT does not resolve a port or terminal code to a zone. A UTC offset such as
-   * `"+02:00"` observes no DST.
+   * The time zone of the terminal, depot or yard whose local midnight ends a day, an IANA name or
+   * UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset
+   * (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). GMT does not resolve a port or terminal code
+   * to a zone. A UTC offset such as `"+02:00"` observes no DST.
    */
   timeZone: string;
   /**

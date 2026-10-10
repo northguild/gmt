@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
@@ -42,8 +42,9 @@ export function isBetweenUnix(
     epochUnit?: UnixUnit;
     /**
      * A time zone that is validated only: the comparison is on exact instants, so the zone never
-     * changes the result. It is an IANA name, a UTC offset, or `"local"` for the system time zone.
-     * An unknown zone returns `false`.
+     * changes the result. It is an IANA name, a UTC offset (a time zone identifier such as
+     * `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what `getTimeZoneOffset`
+     * returns), or `"local"` for the system time zone. An unknown zone returns `false`.
      *
      * @defaultValue `"UTC"`
      */
@@ -70,7 +71,7 @@ export function isBetweenUnix(
     }
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
     // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
@@ -78,7 +79,7 @@ export function isBetweenUnix(
     const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
     const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
-    if (!timeZone || epochUnit === null) return false;
+    if (frame === null || epochUnit === null) return false;
 
     const instant = unixEpochToInstant(value, epochUnit);
     const startInstant = unixEpochToInstant(start, epochUnit);

@@ -15,9 +15,12 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * - **Output is cut to milliseconds by default**, so microseconds and nanoseconds in `value` are
  *   dropped. Pass `{ smallestUnit: "nanoseconds" }` to keep every digit.
  * - Returns "" for invalid input.
+ * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
+ *   9557 §4.1), so the result could not name it. Pass the IANA name, or call `resolveLocal` for the
+ *   instant the wall time names at that offset.
  *
  * @param value plain datetime string (e.g. "2024-02-29T14:30:45")
- * @param timeZone IANA name or UTC offset
+ * @param timeZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @param optionsArg optional settings for the precision of the output string and for resolving a DST gap or overlap
  * @returns zoned ISO 8601 datetime string or "" when invalid
  *

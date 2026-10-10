@@ -11,7 +11,9 @@
  *   `:59`), and the fraction is capped at 9 digits (`time-secfrac` is `1*DIGIT`; Temporal keeps
  *   nanoseconds).
  * - Shape-only validation; real calendar validation is delegated to
- *   `Temporal.PlainDateTime.from(...).toZonedDateTime(offset)` in `parseRfc3339`.
+ *   `Temporal.PlainDateTime.from(...).toZonedDateTime(offset)` in `parseRfc3339`. To check that a
+ *   string is a real RFC 3339 date-time, use `isValidRfc3339DateTime`: this pattern also matches
+ *   a day that does not exist, such as 29 February 2023.
  * - Capture groups: 1 year, 2 month, 3 day, 4 hour, 5 minute, 6 second,
  *   7 fractional (optional), 8 offset.
  *

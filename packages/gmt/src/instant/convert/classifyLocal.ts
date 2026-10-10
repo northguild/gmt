@@ -1,7 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../../plain/validate";
-import { isValidTimeZone } from "../../zoned/validate";
-import { plainToZoned } from "../../internal";
+import {
+  instantOfWallClock,
+  isoStringBody,
+  plainToZoned,
+  zoneFrame,
+} from "../../internal";
 
 /**
  * What a zoneless wall time turns out to be once a zone is attached to it.
@@ -38,9 +42,12 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  *   annotations are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
  *   is ignored and `timeZone` alone is the zone.
  * - Returns null on invalid input — never `"unique"`, which would read as a verdict.
+ * - `timeZone` may be a UTC offset, including one `getTimeZoneOffset` returned with seconds. A
+ *   fixed offset names one instant for every wall time, so the classification is always `"unique"`.
  *
  * @param localDateTime zoneless ISO 8601 local datetime string (e.g. "2024-11-03T01:30:00")
- * @param timeZone IANA name or UTC offset the wall time is read in
+ * @param timeZone IANA name or UTC offset the wall time is read in: a time zone identifier
+ *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns "unique" | "ambiguous" | "nonexistent", or null on invalid input
  *
  * @example classifyLocal("2024-07-15T12:00:00", "America/New_York") // "unique"
@@ -50,6 +57,7 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  * @example classifyLocal("2024-09-29T03:15:00", "Pacific/Chatham") // "nonexistent" (a 45-minute-offset zone's gap)
  * @example classifyLocal("2011-12-30T12:00:00", "Pacific/Apia") // "nonexistent" (the day Samoa skipped crossing the date line)
  * @example classifyLocal("2024-11-03T01:30:00", "UTC") // "unique" (UTC has no transitions)
+ * @example classifyLocal("1970-01-01T12:00:00", "-00:44:30") // "unique" (a fixed offset has no transitions)
  * @example classifyLocal("2024-11-03T01:30:00-04:00", "America/New_York") // null (not a zoneless wall time)
  * @example classifyLocal("2024-11-03T01:30:00", "Invalid/Zone") // null
  */
@@ -57,14 +65,23 @@ export function classifyLocal(
   localDateTime: string,
   timeZone: string,
 ): LocalTimeClassification | null {
-  if (!isValidDateTime(localDateTime) || !isValidTimeZone(timeZone)) {
+  const frame = zoneFrame(timeZone);
+
+  if (!isValidDateTime(localDateTime) || frame === null) {
     return null;
   }
 
   try {
+    // A fixed offset has no transition: a wall time it can place is one instant, and one it
+    // cannot (past the instant range) throws.
+    if (frame.shiftNanoseconds !== 0n) {
+      instantOfWallClock(isoStringBody(localDateTime), frame);
+      return "unique";
+    }
+
     const wallClock = Temporal.PlainDateTime.from(localDateTime);
-    const earliest = plainToZoned(wallClock, timeZone, "earlier");
-    const latest = plainToZoned(wallClock, timeZone, "later");
+    const earliest = plainToZoned(wallClock, frame.timeZone, "earlier");
+    const latest = plainToZoned(wallClock, frame.timeZone, "later");
 
     if (earliest.epochNanoseconds === latest.epochNanoseconds) {
       return "unique";

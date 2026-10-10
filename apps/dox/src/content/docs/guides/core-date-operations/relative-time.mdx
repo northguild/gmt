@@ -46,6 +46,22 @@ formatRelativeUtc("2024-03-15T11:00:00Z", "en-US", { reference: "2024-03-15T12:0
 // "1 hour ago"
 ```
 
+Style and numeric wording change the phrase, not the distance:
+
+```typescript
+import { formatRelativeTime, formatRelativeDateTime } from "@northguild/gmt";
+
+formatRelativeTime("11:30:00", "en-US", { reference: "14:30:00", style: "short" });
+// "3 hr. ago"
+
+formatRelativeDateTime("2024-03-15T15:00:00", "en-GB", {
+  reference: "2024-03-15T12:00:00",
+  style: "long",
+  numeric: "always",
+});
+// "in 3 hours"
+```
+
 ## Shared options
 
 All relative formatters accept the same option shape (besides their type-specific
@@ -61,9 +77,52 @@ All relative formatters accept the same option shape (besides their type-specifi
   `formatRelativeZoned`, `formatRelativeUnix` and `formatRelativeUtc` second through
   year, with the same week, month and year thresholds as `formatRelativeDate`
   (since 1.16.0; earlier releases stopped at day). Pass `largestUnit: "day"` to keep
-  a 3-year distance as "1,096 days ago".
+  a 3-year distance as "1,096 days ago". It takes a singular or plural name, `"day"` or
+  `"days"`. Each function accepts only the units its values have: `formatRelativeDate`
+  day to year, `formatRelativeTime` second to hour, the others second to year. Any other
+  unit returns `""`.
 - `roundingMethod: "floor" | "ceil" | "round"` — default `"round"`. Applies to the
-  signed value, so it respects past vs. future.
+  signed value, so it respects past vs. future. Every relative formatter accepts it, and
+  any other value returns `""`.
+
+`largestUnit` caps the auto-picked unit:
+
+```typescript
+import { formatRelativeUtc } from "@northguild/gmt";
+
+formatRelativeUtc("2024-03-17T14:30:45Z", "en-US", { reference: "2026-03-17T14:30:45Z" });
+// "2 years ago"
+
+formatRelativeUtc("2024-03-17T14:30:45Z", "en-US", {
+  reference: "2026-03-17T14:30:45Z",
+  largestUnit: "day",
+});
+// "730 days ago"
+```
+
+A unix epoch takes its unit through `epochUnit`, and `reference` is in the same unit:
+
+```typescript
+import { formatRelativeUnix } from "@northguild/gmt";
+
+formatRelativeUnix(1710685845000, "en-US", {
+  epochUnit: "milliseconds",
+  reference: 1805358645000,
+});
+// "3 years ago"
+```
+
+An unsupported unit or rounding method gives the sentinel, not a guess:
+
+```typescript
+import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate("2024-03-12", "en-US", { reference: "2024-03-15", largestUnit: "hour" });
+// "" — a date has no hours
+
+formatRelativeDate("2024-03-12", "en-US", { reference: "2024-03-15", roundingMethod: "trunc" });
+// "" — not one of floor, ceil or round
+```
 
 ## Runtime ICU data
 

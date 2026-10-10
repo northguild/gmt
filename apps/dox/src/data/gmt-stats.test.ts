@@ -107,13 +107,14 @@ describe("competitor comparisons", () => {
     });
   });
 
-  // Expected ranges come from each library's measured sourceNote: locales 0 (most) to 42 (Day.js),
-  // tz/DST test files 0 (most) to 8 (Spacetime), Node versions 1 (date-fns, Day.js,
-  // @internationalized/date) to 4 (Luxon). A new or re-measured library that moves a range must
-  // fail here, so the why-gmt table is re-checked rather than silently changing.
+  // Expected ranges come from each library's entry in library-measurements.json: locale test
+  // files 0 (@internationalized/date, Luxon, date-fns) to 139 (Moment.js), tz/DST test files
+  // 0 (most) to 8 (Spacetime), Node versions 1 (date-fns, Day.js, @internationalized/date) to
+  // 4 (Luxon). A new or re-measured library that moves a range must fail here, so the why-gmt
+  // table is re-checked rather than silently changing.
   it.each`
     stat              | min  | max
-    ${"locales"}      | ${0} | ${42}
+    ${"locales"}      | ${0} | ${139}
     ${"timezones"}    | ${0} | ${8}
     ${"nodeVersions"} | ${1} | ${4}
   `(

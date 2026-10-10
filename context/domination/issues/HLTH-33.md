@@ -36,7 +36,7 @@ The draft also assumed one data type. Interfaces in production are overwhelmingl
 
 ## Design notes
 
-- **Offset-absent must not become UTC.** The union return type makes it impossible to use an offset-absent value as an instant without acknowledging it, which is the entire point. This mirrors the EDIFACT DTM qualifier handling in INT-15 — the same defect in a different industry.
+- **Offset-absent must not become UTC.** The union return type makes it impossible to use an offset-absent value as an instant without acknowledging it, which is the entire point. This mirrors the EDIFACT DTM format-code handling in INT-15 — the same defect in a different industry.
 - **Truncated precision is normal in HL7**, not an error. A birth date of `1965` is valid and must survive parsing; comparison of truncated values is HLTH-35's job.
 - **The `TS` degree-of-precision component may lower precision, never raise it.** HL7 2.A.77.2 says it "is either the same as or overrides the precision indicated by the first component. It may not indicate greater". So `20240615103000^D` reports day precision (the sender is telling you the time digits are not meaningful), while `20240615^S` is malformed and returns the sentinel. Accepting `TS` is what makes the parser usable on live v2.3.1 feeds; ignoring the component would silently promote a date to a timestamp.
 - **`0000` is the preceding midnight.** HL7 2.A.22: a DTM or TS "with the HHMM part set to \"0000\" represents midnight of the night extending from the previous day". The parser returns it as 00:00 on the stated date, which is the same instant, and the JSDoc records the clause so nobody "corrects" it to 24:00 of the day before.

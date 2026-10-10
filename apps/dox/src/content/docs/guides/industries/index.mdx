@@ -50,6 +50,9 @@ Three things hold across every industry layer:
   lading's issue, receipt and shipped-on-board dates on the local calendar of the place each
   happened, and an end-to-end ETA with transit and dwell reported apart. Built on the multi-leg
   scheduling layer.
+- [Intermodal: EDI timestamps](./intermodal-edi-timestamps/) — read and write the dates and
+  times in UN/EDIFACT `DTM` segments, X12 elements and EPCIS events, and know for each one
+  whether its offset is stated. An offsetless value stays a local time until you name the zone.
 
 ## Scenarios
 
@@ -72,6 +75,9 @@ GMT approach working, on the same live widget:
 - [A Dispute Window from a Contract](/scenarios/dispute-window-from-a-contract/)
 - [A B/L Dated a Day Late](/scenarios/bill-of-lading-dated-a-day-late/)
 - [An ETA That Forgot the Sailing](/scenarios/eta-that-forgot-the-sailing/)
+- [A 203 Read as UTC](/scenarios/a-203-read-as-utc/)
+- [ET Is Not an Offset](/scenarios/et-is-not-an-offset/)
+- [The EPCIS Offset Nobody Kept](/scenarios/the-epcis-offset-nobody-kept/)
 
 The mistakes that have hurt people in these layers are collected under
 [Transport mistakes](/mistakes/transport/) and [Intermodal mistakes](/mistakes/intermodal/).

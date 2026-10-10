@@ -5,6 +5,7 @@ import {
   localDstEdgeBattleCases,
 } from "../../test";
 import {
+  mockTemporalInstantFromThrow,
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../../test/mocks";
@@ -352,4 +353,136 @@ describe("resolveLocal across the 1844 date-line crossings (zoned.E)", () => {
       );
     },
   );
+});
+
+// A stored UTC offset (`±HH:MM:SS`, what `getTimeZoneOffset` returns) is not a time zone
+// identifier, but it is a complete rule for local time: instant = local time − offset. For an
+// offset identifier, which stops at minutes, that subtraction is TC39 Temporal
+// `GetPossibleEpochNanoseconds`, §11.1.13. A date-time string whose offset has seconds is read by
+// `InterpretISODateTimeOffset`, §6.5.1, which subtracts the same way. Each expected value is that
+// subtraction.
+describe("resolveLocal with a stored UTC offset", () => {
+  it.each`
+    localDateTime                      | timeZone       | expected                            | reason
+    ${"1970-01-01T12:00:00"}           | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}           | ${"12:00:00 + 00:44:30"}
+    ${"1970-01-01T12:00:00"}           | ${"+00:00:00"} | ${"1970-01-01T12:00:00Z"}           | ${"zero written with seconds"}
+    ${"1970-01-01T12:00:00"}           | ${"-00:00:00"} | ${"1970-01-01T12:00:00Z"}           | ${"negative zero is zero"}
+    ${"1970-01-01T12:00:00"}           | ${"+05:30:00"} | ${"1970-01-01T06:30:00Z"}           | ${"whole minutes: 12:00 − 05:30"}
+    ${"1970-01-01T12:00:00"}           | ${"+23:59:59"} | ${"1969-12-31T12:00:01Z"}           | ${"a second short of a day earlier"}
+    ${"1970-01-01T12:00:00"}           | ${"-23:59:59"} | ${"1970-01-02T11:59:59Z"}           | ${"a second short of a day later"}
+    ${"1970-01-01T12:00"}              | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}           | ${"a wall time with no seconds"}
+    ${"1970-01-01T12:00:00.123456789"} | ${"-00:44:30"} | ${"1970-01-01T12:44:30.123456789Z"} | ${"nanoseconds survive"}
+    ${"1970-01-01T12:00:00[foo=bar]"}  | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}           | ${"an elective annotation is ignored"}
+  `(
+    "resolves $localDateTime at $timeZone → $expected ($reason)",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+
+  // Existing spellings of a whole-minute offset keep their result.
+  it.each`
+    timeZone    | expected
+    ${"-00:00"} | ${"1970-01-01T12:00:00Z"}
+    ${"+0530"}  | ${"1970-01-01T06:30:00Z"}
+    ${"+05:30"} | ${"1970-01-01T06:30:00Z"}
+  `(
+    "still resolves 1970-01-01T12:00:00 at the identifier $timeZone → $expected",
+    ({ timeZone, expected }) => {
+      expect(resolveLocal("1970-01-01T12:00:00", timeZone)).toBe(expected);
+    },
+  );
+
+  // Outside years 0000 to 9999 the instant is written with an expanded year, as the minute path
+  // writes it: 0000-01-01T00:00:00 at +23:59 is -000001-12-31T00:01:00Z.
+  it.each`
+    localDateTime            | timeZone       | expected
+    ${"0000-01-01T00:00:00"} | ${"+23:59:59"} | ${"-000001-12-31T00:00:01Z"}
+    ${"9999-12-31T23:59:59"} | ${"-23:59:59"} | ${"+010000-01-01T23:59:58Z"}
+    ${"0000-01-01T00:00:00"} | ${"+23:59"}    | ${"-000001-12-31T00:01:00Z"}
+  `(
+    "resolves $localDateTime at $timeZone to the expanded-year instant $expected",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+
+  // A fixed offset has no transition, so no wall time is repeated or skipped and no policy has
+  // anything to decide: "reject" does not reject.
+  it.each(disambiguations.map((disambiguation) => ({ disambiguation })))(
+    "resolves 1970-01-01T12:00:00 at -00:44:30 to the same instant with disambiguation $disambiguation",
+    ({ disambiguation }) => {
+      expect(
+        resolveLocal("1970-01-01T12:00:00", "-00:44:30", { disambiguation }),
+      ).toBe("1970-01-01T12:44:30Z");
+    },
+  );
+
+  // 02:30 on 10 March 2024 is skipped in America/New_York and 01:30 on 3 November is repeated
+  // there. At a fixed offset neither is: -04:56:02 is New York's local mean time, so the instant
+  // is the wall time plus 4 h 56 min 2 s, and +05:30:00 is the wall time less 5 h 30 min. The
+  // whole-minute row goes through Temporal's zone path, where "reject" is really applied.
+  it.each`
+    localDateTime            | timeZone       | disambiguation  | expected
+    ${"2024-03-10T02:30:00"} | ${"-04:56:02"} | ${"compatible"} | ${"2024-03-10T07:26:02Z"}
+    ${"2024-03-10T02:30:00"} | ${"-04:56:02"} | ${"earlier"}    | ${"2024-03-10T07:26:02Z"}
+    ${"2024-03-10T02:30:00"} | ${"-04:56:02"} | ${"later"}      | ${"2024-03-10T07:26:02Z"}
+    ${"2024-03-10T02:30:00"} | ${"-04:56:02"} | ${"reject"}     | ${"2024-03-10T07:26:02Z"}
+    ${"2024-11-03T01:30:00"} | ${"-04:56:02"} | ${"earlier"}    | ${"2024-11-03T06:26:02Z"}
+    ${"2024-11-03T01:30:00"} | ${"-04:56:02"} | ${"later"}      | ${"2024-11-03T06:26:02Z"}
+    ${"2024-11-03T01:30:00"} | ${"-04:56:02"} | ${"reject"}     | ${"2024-11-03T06:26:02Z"}
+    ${"2024-03-10T02:30:00"} | ${"+05:30:00"} | ${"reject"}     | ${"2024-03-09T21:00:00Z"}
+    ${"2024-11-03T01:30:00"} | ${"+05:30:00"} | ${"earlier"}    | ${"2024-11-02T20:00:00Z"}
+    ${"2024-11-03T01:30:00"} | ${"+05:30:00"} | ${"later"}      | ${"2024-11-02T20:00:00Z"}
+  `(
+    "resolves $localDateTime at $timeZone with disambiguation $disambiguation → $expected, a wall time New York skips or repeats",
+    ({ localDateTime, timeZone, disambiguation, expected }) => {
+      expect(resolveLocal(localDateTime, timeZone, { disambiguation })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it('returns "" for an invalid disambiguation with a stored offset', () => {
+    expect(
+      resolveLocal("1970-01-01T12:00:00", "-00:44:30", {
+        disambiguation: "x" as never,
+      }),
+    ).toBe("");
+  });
+
+  it.each`
+    timeZone         | reason
+    ${"Z"}           | ${"a designator, not an offset"}
+    ${"+05:30:00.5"} | ${"a fraction of a second"}
+    ${"+24:00"}      | ${"hour out of range"}
+    ${"+24:00:00"}   | ${"hour out of range, with seconds"}
+    ${"-0400:30"}    | ${"basic format with seconds"}
+    ${"-00:44:60"}   | ${"second out of range"}
+  `('returns "" for $timeZone ($reason)', ({ timeZone }) => {
+    expect(resolveLocal("1970-01-01T12:00:00", timeZone)).toBe("");
+  });
+
+  // Temporal's last instant is +275760-09-13T00:00:00Z and its first -271821-04-20T00:00:00Z. A
+  // wall clock reaches past both, so the local time of each limit resolves and a nanosecond
+  // beyond does not.
+  it.each`
+    localDateTime                         | timeZone       | expected
+    ${"+275760-09-13T00:00:30"}           | ${"+00:00:30"} | ${"+275760-09-13T00:00:00Z"}
+    ${"+275760-09-13T00:00:30.000000001"} | ${"+00:00:30"} | ${""}
+    ${"+275760-09-12T23:15:30"}           | ${"-00:44:30"} | ${"+275760-09-13T00:00:00Z"}
+    ${"-271821-04-19T23:59:30"}           | ${"-00:00:30"} | ${"-271821-04-20T00:00:00Z"}
+    ${"-271821-04-20T00:44:30"}           | ${"+00:44:30"} | ${"-271821-04-20T00:00:00Z"}
+    ${"-271821-04-20T00:44:29.999999999"} | ${"+00:44:30"} | ${""}
+  `(
+    "resolves $localDateTime at $timeZone at the limit of the instant range → $expected",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+
+  it('returns "" when Temporal.Instant.from throws for a stored offset', () => {
+    mockTemporalInstantFromThrow();
+    expect(resolveLocal("1970-01-01T12:00:00", "-00:44:30")).toBe("");
+  });
 });

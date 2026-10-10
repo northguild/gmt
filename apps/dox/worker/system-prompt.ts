@@ -8,7 +8,7 @@ export interface PromptSections {
   chunks: RetrievalChunk[];
   /** packages/gmt/skills/*\/SKILL.md content (consumer-facing skills only) — see worker/vocabulary.ts. */
   vocabulary: string;
-  /** packages/gmt/README.md's "Core Rules" section, verbatim — see worker/core-rules.ts. */
+  /** the four core rules and the sentinel fallbacks, verbatim from worker/core-rules.md (see worker/core-rules.ts). */
   coreRules: string;
   /** DOX-C3b's widget tools. Omitted or empty keeps the "no tools" wording, so
    *  this stays a pure function with one shape whether or not tools exist. */

@@ -1,8 +1,14 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
-import { addToZoned, resolveOverflow, subtractFromZoned } from "../../internal";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import {
+  addToZoned,
+  frameInstant,
+  frameZoned,
+  normalizeZoneFrame,
+  resolveOverflow,
+  subtractFromZoned,
+} from "../../internal";
 import {
   resolveUnixEpochUnit,
   toUnixEpoch,
@@ -30,6 +36,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns null on invalid input (a `value` that is not a safe integer or numeric string of one —
  *   fractions, empty strings and values beyond ±(2^53 − 1) are invalid — invalid `duration`, an
  *   `anchor` other than `"start"`/`"end"`, or an invalid/unavailable timeZone).
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param value Unix epoch value (seconds or milliseconds): a safe integer or a digit string
  * @param duration ISO 8601 duration string
@@ -57,8 +69,10 @@ export function intervalFromDurationUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the calendar arithmetic runs in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */
@@ -98,9 +112,9 @@ export function intervalFromDurationUnix(
     }
 
     const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-    const timeZone = normalizeTimeZone(options?.timeZone);
+    const frame = normalizeZoneFrame(options?.timeZone);
 
-    if (!timeZone || epochUnit === null) {
+    if (frame === null || epochUnit === null) {
       return null;
     }
 
@@ -111,7 +125,7 @@ export function intervalFromDurationUnix(
     }
 
     try {
-      const point = instant.toZonedDateTimeISO(timeZone);
+      const point = frameZoned(instant, frame);
       const dur = Temporal.Duration.from(duration);
       const overflow = resolveOverflow(options?.overflow);
 
@@ -128,8 +142,8 @@ export function intervalFromDurationUnix(
       }
 
       return {
-        start: toUnixEpoch(start, epochUnit),
-        end: toUnixEpoch(end, epochUnit),
+        start: toUnixEpoch(frameInstant(start, frame), epochUnit),
+        end: toUnixEpoch(frameInstant(end, frame), epochUnit),
       };
     } catch {
       return null;

@@ -1,4 +1,4 @@
 export * from "./formatCalendarUtc";
-export * from "./formatHttp";
+export * from "./formatHttpDate";
 export * from "./formatRelativeUtc";
 export * from "./formatUtc";

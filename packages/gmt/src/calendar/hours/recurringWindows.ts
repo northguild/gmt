@@ -1,11 +1,10 @@
-import { parseIntervalNanoseconds } from "../../internal";
+import { parseIntervalNanoseconds, zoneFrame } from "../../internal";
 import {
   parseScheduleDisambiguation,
   parseWeeklyPattern,
   scheduleRunsWithin,
 } from "../../internal/operatingSchedule";
 import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
-import { isValidTimeZone } from "../../zoned/validate";
 
 /**
  * Return the instants a weekly pattern of local windows is open inside `range`, read in
@@ -39,10 +38,16 @@ import { isValidTimeZone } from "../../zoned/validate";
  *   `range` is not a valid `Interval`, when `timeZone` is invalid, when `disambiguation` is not
  *   one of the four values, and when the range spans more than 10,000 local dates (about 27
  *   years) counted from the date `range.start` falls on, rather than a truncated list.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the first instant Temporal supports
+ *   (`-271821-04-20T00:00:00Z`), for an offset west of UTC, this returns `[]`. An offset to the
+ *   minute has no such limit.
  *
  * @param weekly windows by ISO weekday, `{ 1: [{ from: "09:00", to: "17:00" }], … }`
  * @param range `{ start, end }` record of ISO 8601 instant strings to expand the pattern inside
- * @param timeZone IANA name or UTC offset the windows are read in
+ * @param timeZone IANA name or UTC offset the windows are read in: a time zone identifier
+ *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @param optionsArg How a window edge on a clock change is resolved
  * @returns sorted, merged `{ start, end }` records of the open instants, or [] on invalid input
  *
@@ -55,6 +60,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * @example recurringWindows({ 8: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "UTC") // [] — not an ISO weekday
  * @example recurringWindows({ 1: [{ from: "9am", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "UTC") // [] — malformed window
  * @example recurringWindows({ 1: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "Invalid/Zone") // []
+ * @example recurringWindows({ 4: [{ from: "08:00", to: "17:00" }] }, { start: "1970-01-01T00:00:00Z", end: "1970-01-02T00:00:00Z" }, "-00:44:30") // [{ start: "1970-01-01T08:44:30Z", end: "1970-01-01T17:44:30Z" }]
  */
 export function recurringWindows(
   weekly: OperatingSchedule["weekly"],
@@ -76,13 +82,14 @@ export function recurringWindows(
     const disambiguation = parseScheduleDisambiguation(optionsArg);
     const weeklyWindows = parseWeeklyPattern(weekly);
     const bounds = parseIntervalNanoseconds(range);
+    const frame = zoneFrame(timeZone);
 
     if (
       disambiguation === null ||
       weeklyWindows === null ||
       bounds === null ||
       typeof timeZone !== "string" ||
-      !isValidTimeZone(timeZone)
+      frame === null
     ) {
       return [];
     }
@@ -90,6 +97,7 @@ export function recurringWindows(
     const runs = scheduleRunsWithin(
       {
         timeZone,
+        frame,
         weekly: weeklyWindows,
         holidays: new Set(),
         overrides: new Map(),

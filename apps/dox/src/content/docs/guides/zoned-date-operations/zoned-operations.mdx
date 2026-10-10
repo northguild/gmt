@@ -31,6 +31,12 @@ import {
 formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "en-US");
 // "3/15/2024, 2:30:45 PM EDT"
 
+formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
+  dateStyle: "full",
+  timeStyle: "short",
+});
+// "Sunday, March 17, 2024 at 2:30 PM" — the wording comes from the runtime's CLDR data
+
 isValidTimeZone("America/New_York"); // true
 ```
 
@@ -51,7 +57,15 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 ```
 
 `disambiguation` is `"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`.
-See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the full table.
+Twice a year, DST creates local times that do not exist (a spring-forward gap) or happen
+twice (a fall-back overlap). Every function that attaches a timezone to a plain or local
+value accepts `disambiguation`, so it can choose how to resolve those times instead of
+silently guessing. See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the
+full table.
+
+`convertPlainDateTimeToZoned`, `addZoned`, `subtractZoned` and `intervalFromDurationZoned`
+take no `offset` option: they resolve a plain date-time that has no UTC offset for it to
+act on.
 
 ## Add/subtract a duration
 
@@ -60,12 +74,22 @@ import { addZoned, subtractZoned } from "@northguild/gmt/zoned";
 
 addZoned("2024-03-15T14:30:45[America/New_York]", { days: 1 });
 // "2024-03-16T14:30:45-04:00[America/New_York]"
+
+addZoned("2026-03-07T23:00:00-05:00[America/New_York]", { hours: 2 });
+// "2026-03-08T01:00:00-05:00[America/New_York]"
 ```
 
-The date part of the duration (years to days) moves the wall clock and the time part
-(hours and smaller) is added in exact time, as in TC39's AddZonedDateTime.
-`disambiguation` resolves the date part's landing when it falls in a spring-forward gap
-or a fall-back overlap; a time-only duration ignores it.
+`addZoned`, `subtractZoned` and `intervalFromDurationZoned` follow TC39's AddZonedDateTime.
+The date part of the duration (years to days) moves the wall clock, and the time part
+(hours and smaller) is added in exact time. `disambiguation` resolves the wall clock the
+date part lands on:
+
+- In a spring-forward gap, `"compatible"` and `"later"` move it forward, `"earlier"` moves
+  it back, and `"reject"` returns the sentinel.
+- In a fall-back overlap, it picks the occurrence.
+
+It never re-resolves the time part, so adding 10 minutes is always 10 real minutes. A
+time-only duration ignores it. Before 1.16.0 a gap landing always moved forward.
 
 ```typescript
 addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
@@ -73,6 +97,54 @@ addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambigu
 
 addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" });
 // ""
+
+addZoned("2024-03-10T01:55:00-05:00[America/New_York]", { minutes: 10 });
+// "2024-03-10T03:05:00-04:00[America/New_York]" — ten real minutes, across the gap
+```
+
+## Difference between two zoned values
+
+`diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` follow TC39's
+DifferenceZonedDateTime. Days, weeks, months and years are counted on the zone's wall clock.
+Hours and smaller are counted in exact time:
+
+```typescript
+import { diffZoned } from "@northguild/gmt/zoned";
+
+diffZoned(
+  "2024-03-09T12:00:00-05:00[America/New_York]",
+  "2024-03-10T12:00:00-04:00[America/New_York]",
+  "days",
+);
+// 1 — noon to noon, though the day had 23 hours
+
+diffZoned(
+  "2024-03-09T12:00:00-05:00[America/New_York]",
+  "2024-03-10T12:00:00-04:00[America/New_York]",
+  "hours",
+);
+// 23
+```
+
+Two values in different zones share no wall clock, so a calendar unit across two zones
+returns the sentinel. Convert one end with `convertZonedToZoned` first:
+
+```typescript
+import { convertZonedToZoned, diffZoned } from "@northguild/gmt/zoned";
+
+diffZoned(
+  "2024-01-01T00:00:00-05:00[America/New_York]",
+  "2024-01-03T00:00:00+01:00[Europe/Paris]",
+  "days",
+);
+// null — calendar unit across two time zones
+
+diffZoned(
+  "2024-01-01T00:00:00-05:00[America/New_York]",
+  convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "America/New_York"),
+  "days",
+);
+// 1 — both ends now read on New York's wall clock
 ```
 
 ## Boundaries (start/end of unit, quarter, hours-in-day)
@@ -87,7 +159,9 @@ endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
 // "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
 ```
 
-These always return the real start and end of the unit that contains the input: the
+`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
+`getLocaleZonedStartOfWeek` and `getLocaleZonedEndOfWeek` (and their `unix/` counterparts)
+always return the real start and end of the unit that contains the input, in its zone: the
 start is never after the input, and the end is the last nanosecond before the next
 start — even when the wall-clock boundary was skipped or repeated:
 
@@ -99,8 +173,21 @@ startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
 // "2024-11-03T01:00:00-05:00[America/New_York]" — the repeated 1 a.m. is its own hour
 ```
 
-They take no `disambiguation` or `offset` options: a boundary is a real instant, exactly as
-TC39's `startOfDay()` takes no such options. Resolution
+A midnight repeated on the same date stays one 25-hour day. America/Havana repeats its
+midnight on 2024-11-03:
+
+```typescript
+import { startOfZoned, endOfZoned } from "@northguild/gmt/zoned";
+
+startOfZoned("2024-11-03T12:00:00-05:00[America/Havana]", "day");
+// "2024-11-03T00:00:00-04:00[America/Havana]"
+
+endOfZoned("2024-11-03T12:00:00-05:00[America/Havana]", "day");
+// "2024-11-03T23:59:59.999999999-05:00[America/Havana]" — 25 hours after the start
+```
+
+They take no `disambiguation` or `offset` options, and neither does `mapZonedHoursInDay`:
+a boundary is a real instant, exactly as TC39's `startOfDay()` takes no such options. Resolution
 options belong on functions that set wall-clock fields (`convertPlainDateTimeToZoned`,
 `addZoned`, `setZoned`). Don't floor with `roundZoned` and `roundingMode: "trunc"`:
 it rounds the wall clock and re-resolves it, which can land after the input. Use
@@ -156,28 +243,191 @@ getHoursInZonedDay("2024-09-08T12:00:00-03:00[America/Santiago]"); // 23 — mid
 ```
 
 This is Temporal's `hoursInDay`: the span from the day's real start to the next day's.
+`getHoursInZonedDay` and `mapZonedHoursInDay` measure the input's calendar date exactly as
+`hoursInDay` does. That differs from `startOfZoned(…, "day")` only where a fall-back
+re-enters the previous date (America/Goose_Bay, 2010-11-07).
 
 ## Read a zoned value's UTC offset
+
+`getZonedOffset` reads a zoned value's UTC offset as a `±HH:MM` string, or `±HH:MM:SS` where
+the zone was not on a whole minute. `getZonedOffsetAs` reads it as a number, in minutes or
+nanoseconds. `getTimeZoneOffset` looks up a timezone's offset at a given instant without a
+zoned value in hand:
 
 ```typescript
 import { getZonedOffset, getZonedOffsetAs, getTimeZoneOffset } from "@northguild/gmt/zoned";
 
 getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]"); // "-04:00"
 getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes"); // -240
+getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "nanoseconds"); // -14400000000000
+getZonedOffsetAs("2024-05-15T12:00:00+05:45[Asia/Kathmandu]", "minutes");
+// 345 — GMT has half- and quarter-hour offsets too, not just whole hours
+
 getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z"); // "-04:00"
+getTimeZoneOffset("America/New_York", "2024-01-15T12:00:00Z"); // "-05:00"
+getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z"); // ""
+getZonedOffset("invalid"); // ""
+
+getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"); // "-00:44:30"
 ```
 
-## Check whether an instant is in DST
+The offset these functions return can go straight into the time zone position of any function
+whose result has no zone in it, seconds included. A function that returns a zoned string, or
+formats with `Intl`, takes a time zone identifier only, and an offset with seconds is not one.
+See [Pass a stored offset where a time zone goes](/guides/zoned-date-operations/offset-instants-and-local-resolution/#pass-a-stored-offset-where-a-time-zone-goes).
+
+```typescript
+import { getTimeZoneOffset, resolveLocal } from "@northguild/gmt";
+
+resolveLocal("1970-01-01T12:00:00", getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"));
+// "1970-01-01T12:44:30Z"
+```
+
+## Daylight saving: four questions, four functions
+
+The names are close enough to be misread, so here is the map:
+
+| Question | Function | Scope |
+| --- | --- | --- |
+| Does this zone observe DST at this instant, or now? | `hasDaylightSaving(timeZone, { at })` | Zone-level, judged from a reference instant |
+| Where do this zone's transitions fall? | `getDstTransitions(timeZone, year)` | Enumerates instants |
+| Is _this particular instant_ currently in DST? | `isInDaylightSaving(value)` | A single zoned value |
+| What should happen when construction lands on an ambiguous or nonexistent instant? | `disambiguation` / `offset` options | Orthogonal: a construction-time choice, not a query |
+
+### Does a zone observe DST
+
+`hasDaylightSaving(timeZone, { at })` is `true` when the zone is in daylight time at `at`,
+or a daylight period begins less than 365 days after it. So a zone in its winter is `true`,
+and a zone that has stopped changing its clocks is `false`. `at` is an ISO 8601 instant
+string. With it, the answer does not depend on the day the code runs. Without it, the
+reference is the current instant. An invalid zone, an invalid `at` and a fixed offset return
+`false`:
+
+```typescript
+import { hasDaylightSaving } from "@northguild/gmt/zoned";
+
+hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }); // true
+hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }); // false
+hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }); // false
+```
+
+### Where do the transitions fall
+
+`getDstTransitions` enumerates the exact transition instants for a timezone in a given year.
+Each object's `instant` is a UTC ISO 8601 string, and `offsetBefore`/`offsetAfter` are
+`±HH:MM` offset strings (`±HH:MM:SS` where the zone was not on a whole minute). It returns
+`[]` for a zone with no transitions in the year, and on invalid input:
+
+```typescript
+import { getDstTransitions } from "@northguild/gmt/zoned";
+
+getDstTransitions("America/New_York", 2024);
+// [
+//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+// ]
+
+getDstTransitions("Asia/Tokyo", 2024);
+// []
+
+getDstTransitions("Invalid/Zone", 2024);
+// []
+```
+
+### Is this instant in DST
+
+`isInDaylightSaving` answers the third question. It and `hasDaylightSaving` apply one rule,
+read from the zone's own clock changes in the runtime's time zone data. The rule is GMT's own
+definition, not the tz database's daylight flag: no JavaScript API exposes that flag, and it
+cannot be worked out from offsets.
+
+- **The rule.** Daylight time runs from a forward change of the zone's clocks to the
+  backward change of the same size that undoes it, less than 365 days later.
+- **A forward change never undone, or undone 365 days or more later, is a change of
+  standard time.** `Europe/Istanbul` has been on standard time since its last advance in
+  March 2016.
+- **The higher of two alternating offsets is the daylight one.** `Europe/Dublin` is in
+  daylight time in summer, and `Africa/Casablanca` at `+01:00`.
+
+The full list of what the rule reads as standard time is in
+[DST Disambiguation](/guides/concepts/dst-disambiguation/) and in the function's JSDoc.
 
 ```typescript
 import { isInDaylightSaving } from "@northguild/gmt/zoned";
 
-isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]"); // true
-isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]"); // false
+isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
+// true
+
+isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]");
+// false
+
+// Southern-hemisphere DST spans the new year.
+isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]");
+// true
+
+isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
+// false — Asia/Tokyo has had no DST since 1951
+
+isInDaylightSaving("2015-07-01T12:00:00+03:00[Europe/Istanbul]");
+// true — the clocks went back on 2015-11-08
+
+isInDaylightSaving("2016-12-01T12:00:00+03:00[Europe/Istanbul]");
+// false — the advance of March 2016 was never undone
+
+isInDaylightSaving("invalid");
+// false
 ```
 
-This is a per-instant query — distinct from `hasDaylightSaving(zone, { at })` (whether the zone observes DST around a reference instant)
-and `getDstTransitions(zone, year)` (enumerates transitions).
+## Timezone display names
+
+`formatTimeZoneName` returns a timezone's localized display name. `options.style` covers
+every `Intl.DateTimeFormatOptions` `timeZoneName` value:
+
+```typescript
+import { formatTimeZoneName } from "@northguild/gmt/zoned";
+
+formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" });
+// "ET" — season-independent
+
+formatTimeZoneName("America/New_York", "en-US", { style: "longGeneric" });
+// "Eastern Time" — season-independent
+
+formatTimeZoneName("America/New_York", "en-US", { style: "long" });
+// "Eastern Standard Time" or "Eastern Daylight Time", depending on the current date
+
+formatTimeZoneName("Invalid/Zone", "en-US");
+// ""
+```
+
+The `"short"`, `"long"`, `"shortOffset"` and `"longOffset"` styles name the zone's _current_
+offset. For a DST-observing zone the label flips between standard and daylight names
+depending on when you call it, because there is no instant parameter to pin it to. This
+matches how `Intl.DateTimeFormat.prototype.format()` itself defaults to "now" with no
+argument. The `"shortGeneric"` and `"longGeneric"` styles are season-independent and do
+not have this issue. Prefer them for a name that will not change twice a year.
+
+## Clamp to a range, or find the nearest
+
+`clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest
+candidate by temporal distance:
+
+```typescript
+import { clampZoned, closestZonedTo } from "@northguild/gmt/zoned";
+
+clampZoned(
+  "2024-02-01T12:00:00[America/New_York]",
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-31T23:59:59[America/New_York]",
+);
+// "2024-03-01T00:00:00-05:00[America/New_York]"
+
+closestZonedTo("2024-03-15T12:00:00[America/New_York]", [
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-20T00:00:00[America/New_York]",
+  "2024-03-18T00:00:00[America/New_York]",
+]);
+// "2024-03-18T00:00:00-04:00[America/New_York]"
+```
 
 ## See also
 

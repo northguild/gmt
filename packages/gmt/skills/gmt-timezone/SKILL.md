@@ -1,22 +1,26 @@
 ---
 name: gmt-timezone
 description: >
-  Timezone-aware operations — zoned now, formatting zoned values/ranges,
-  plain↔zoned↔UTC↔Unix conversion, DST disambiguation on construction and
-  arithmetic, the instant-plus-offset pair, classifyLocal/resolveLocal, real
-  unit boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
-  local day, floorToZone/bucketRange, calendar-annotated zoned strings, range
-  limits, transport legs (transitTime, etaAtZone, dwellTime, crossingTime,
-  scheduleDelivery), cut-offs (cutoffAt, cutoffSchedule, isPastCutoff,
-  timeToCutoff), planned versus actual (scheduleDeviation, classifyPunctuality,
-  punctualityRate, bestAvailable and estimateDrift over PLN/EST/REQ/ACT,
-  nextDeparture), intermodal free time (freeTimeExpiry, chargeableDays,
-  demurrageClock), billingTimeline, B/L dates (bolTimestamp), multimodalETA,
-  operating hours (OperatingSchedule, recurringWindows, operatingIntervals,
-  isOpenAt, nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime),
-  and daylight time (isInDaylightSaving, hasDaylightSaving).
+  Timezone-aware operations — zoned now, zoned formatting, plain↔zoned↔UTC↔Unix
+  conversion, DST disambiguation, toOffsetInstant, classifyLocal/resolveLocal,
+  real boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
+  local day, floorToZone/bucketRange, calendar-annotated strings, transport
+  legs (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery),
+  cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), punctuality
+  (scheduleDeviation, classifyPunctuality, punctualityRate, bestAvailable,
+  estimateDrift over PLN/EST/REQ/ACT, nextDeparture), free time
+  (freeTimeExpiry, chargeableDays, demurrageClock), billingTimeline,
+  bolTimestamp, multimodalETA, EDI timestamps (parseEdifactDateTime,
+  parseX12DateAndTime, x12TimeCodeOffset, parseEpcisEvent,
+  classify*/format*/isValid*), operating hours (OperatingSchedule,
+  recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
+  operatingTimeBetween, addOperatingTime), and daylight time
+  (isInDaylightSaving, hasDaylightSaving).
 sources:
-  - 'northguild/gmt:README.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/operating-hours.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/*.mdx'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -31,6 +35,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/instant/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
@@ -41,6 +46,11 @@ sources:
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/intermodal/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/intermodal/format/index.ts'
+  - 'northguild/gmt:packages/gmt/src/intermodal/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/intermodal/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/edi.ts'
+  - 'northguild/gmt:packages/gmt/src/types/epcis.ts'
+  - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -70,6 +80,9 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user is working out when a container's free time ends, how many days of
   demurrage or detention are chargeable and for which dates, or which events a
   charge's clock runs between.
+- The user is reading or writing a UN/EDIFACT `DTM` value, an X12 date, time,
+  time code or date time period, or a GS1 EPCIS event time, and must know
+  whether its offset was stated.
 - The user is asking whether a gate, desk, office or venue is open at an
   instant, when it next opens or closes, how many working hours passed between
   two instants, or when an SLA measured in open hours falls due — or is
@@ -116,11 +129,11 @@ converting between time zones, or doing arithmetic that must respect DST.
    on a spring-forward one. `resolveLocal(local, zone, { disambiguation })` then
    returns the instant, exact to the nanosecond, or `""` under `"reject"`. Reach
    for `convertPlainDateTimeToZoned` instead when you want the zoned string.
-6. **An offset is not a zone.** `-05:00` does not identify `America/New_York`.
-   `toOffsetInstant` splits a timestamp into `{ instant, offset, timeZone? }` —
-   the shape EPCIS 2.0, EDIFACT DTM and DICOM all exchange, because the instant
-   orders events and the offset renders them where they happened, and neither
-   derives from the other. Keep the zone for what is still to be scheduled.
+6. **An offset is not a zone, but a stored one is a rule for local time.**
+   `toOffsetInstant` gives `{ instant, offset, timeZone? }`, the pair EPCIS 2.0,
+   EDIFACT DTM and DICOM exchange. Its `±HH:MM[:SS]` offset is a valid `timeZone`
+   for `resolveLocal` and every function whose result has no zone in it. One
+   that returns a zoned string or formats with `Intl` takes none with seconds.
 7. **Bucket in the zone, not in UTC.** `floorToZone(instant, unit, zone)` and
    `bucketRange(start, end, unit, zone)` floor on the zone's own calendar
    boundaries. Flooring a UTC instant to a UTC day and calling it a local day is
@@ -310,7 +323,65 @@ converting between time zones, or doing arithmetic that must respect DST.
     they sum to the elapsed time. Every `scheduleDelivery` rule applies, so a
     missed connection is `null`. An empty array is `{ eta: "", totalLegs: 0,
     totalTransit: "PT0S", totalDwell: "PT0S" }`. Dwell is never estimated.
-21. **Operating hours are local windows resolved in the schedule's zone.** An
+21. **An EDI timestamp is read by the function for its kind of value, and
+    nothing the code does not state is guessed.** Each kind has a `parse…`,
+    `format…` and `isValid…` function named for it (`parseEdifactDate`,
+    `formatEdifactDate`, `isValidEdifactDate`), and `format` is typed to that
+    kind's codes. UN/EDIFACT `DTM` (value 2380 against format code 2379):
+    `EdifactDate` (`102`), `EdifactTime` (`401`, `402`), `EdifactDateTime`
+    (`203`, `204`), `EdifactOffsetDateTime` (`205`, `208`, `303`, `304`),
+    `EdifactDatePeriod` (`718`), `EdifactDateTimePeriod` (`719`). X12 (element
+    1251 against qualifier 1250, in `DTP` and `DTM-05`/`06`): `X12Date` (`D8`,
+    `DB`), `X12Time` (`TM`, `TS`), `X12DateTime` (`DT`, `RTS`), `X12DateRange`
+    (`RD8`, `RD`), `X12DateTimeRange` (`RDT`, `DTS`). `parseX12Time(value)`
+    with no `format` reads element 337, tenths and hundredths included
+    (`"14300012"` is `"14:30:00.12"`), and `formatX12TimeElement(value, form)`
+    writes it in the mask named: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`
+    (`"14:30:00"` under `HHMMSSDD` is `"14300000"`). A parser returns one value:
+    `"2024-06-15"`, `"14:30:00"`, `"2024-06-15T14:30:00"`,
+    `"2024-06-15T14:30:00+02:00"` (the string `toOffsetInstant` reads), or
+    `{ start, end }` for a period or range. The sentinel is `""`, or `null`
+    for a period, a range, a zone or a classifier. A period formatter takes
+    `(start, end, format)`. No EDI function takes options. X12 freight is
+    three calls: `parseX12DateAndTime("20240615", "1430")` is
+    `"2024-06-15T14:30:00"` (elements 373 and 337 of `AT7`, `G62` or `DTM`,
+    both required), `x12TimeCodeOffset("20")` is `"-05:00"`, and
+    `resolveLocal(local, offset)` is `"2024-06-15T19:30:00Z"`. For a code
+    held as a plain string, `classifyEdifactDtmFormat`,
+    `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode` return
+    `{ kind, format }` or `{ kind, timeCode }`, or `null` for a code no
+    function reads; testing `kind` narrows the code with no cast.
+    `parseEpcisEvent({ eventTime, eventTimeZoneOffset })` returns
+    `{ instant, offset, local }`; both fields are required and need not
+    agree. Five no-guess rules. (a) An offsetless value never becomes UTC:
+    `203`, `204`, `DT`, `RTS` and `parseX12DateAndTime` return a local
+    date-time; pass it and an IANA zone to `resolveLocal`. (b) A named X12
+    time code is a zone name, not an offset: `x12TimeCodeZone("ES")` is
+    `{ zone: "Eastern", daylight: false }` and `ET` has `daylight: null`,
+    while `x12TimeCodeOffset` reads `01`–`29`, `UT` and `GM`, and `13`–`24`
+    count down (`13` is `-12:00`). Each returns its sentinel for the other's
+    codes. (c) The `ZZZ` of `303` and `304` is an offset only: `+02`, `UTC`
+    and `GMT` are read, and letters such as `CET` return `""`. (d) A
+    two-digit year is not read by any EDI function: `101`, `201`, `202`,
+    `206`, `207`, `301`, `302`, `713`, `717`, `D6`, `TT`, `TR`, `RD6` and
+    `TU`. Read one with `parseDateWithPattern` or `parseDateTimeWithPattern`,
+    a `yy` pattern and `{ yearWindow }`: a start year such as `2000` (a fixed
+    window, for stored data) or `"rolling"` (50 years before the current UTC
+    year to 49 after). Without `yearWindow` a `yy` pattern returns `""`. (e)
+    `209`, `404`, `406`, `TC`, `EH`, `DDT`, `DTD`, `RTM` and `UN` are not
+    read: none states one date, time or date-time. A UN/EDIFACT period has no
+    hyphen (`2024061520240620` under `718`) and an X12 range has one
+    (`20240615-20240620` under `RD8`); a reversed one returns the sentinel.
+    Pass a UN/EDIFACT parser the unescaped value (`+02`, not `?+02`). A
+    formatter cuts seconds and fractions to its mask and never rounds.
+    It writes `ZZZ` as `±HH`, and `+05:30` under `303` or `304` returns `""`:
+    use `205` or `208`. Each value validator is true exactly when its parser
+    returns a value (`isValidX12DateAndTime(date, time)` for the freight
+    pair), and `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat`
+    and `isValidX12TimeCode` check a code alone. `isValidEpcisEvent` is
+    `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset` together: the
+    `epcisEventTime` regex matches `2024-02-30`, the validator does not.
+22. **Operating hours are local windows resolved in the schedule's zone.** An
     `OperatingSchedule` is `{ timeZone, weekly, holidays?, overrides? }`:
     `weekly` maps ISO weekdays `1`–`7` to half-open `LocalWindow`s
     (`{ from: "09:00", to: "17:00" }`); a `to` at or before `from` wraps past
@@ -326,7 +397,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-22. **A zoned string names one instant in every reader.** Temporal writes a
+23. **A zoned string names one instant in every reader.** Temporal writes a
     zone's offset rounded to the minute, so a zone with a sub-minute offset
     (`Africa/Monrovia` stood at −00:44:30 until 1972) is written `-00:45`.
     Every function that reads a moment (`toNanoseconds`, `spanNs`, `Interval`
@@ -348,7 +419,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     (`1952-10-15T23:59:59-11:20[Pacific/Niue]`); write the offset with seconds
     to name the second. A zoned read refuses a local date of −271821-04-19,
     which an instant reader accepts; pass that instant in `Z` form.
-23. **Daylight time is read from the zone's clock changes.**
+24. **Daylight time is read from the zone's clock changes.**
     `isInDaylightSaving(zoned)` and `hasDaylightSaving(timeZone, { at })`
     apply one rule, GMT's own definition and not the tz database's daylight
     flag (no JavaScript API exposes it): daylight time runs from a forward
@@ -367,9 +438,10 @@ converting between time zones, or doing arithmetic that must respect DST.
     read the runtime's time zone data, so an answer can change when that data
     does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
     standard time.
-24. **Read the README.** This skill is a routing pointer. For the full DST
-    disambiguation walkthrough, code examples, and locale ICU notes, read the
-    installed package's `README.md` and the source JSDoc.
+25. **Read the docs site.** This skill is a routing pointer. The map of the
+    docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+    has a `.md` twin that holds its text. The JSDoc ships in the installed
+    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
 ## Key functions
 
@@ -389,7 +461,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `endOfUnix`, `mapZonedHoursInDay`, `getHoursInZonedDay`
 - **Offset/DST reads**: `getZonedOffset`, `getZonedOffsetAs`,
   `getTimeZoneOffset`, `parseTimeZoneFromZoned`
-- **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`
+- **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`,
+  `isValidUtcOffset` (the pair's `±HH:MM[:SS]` offset; not `Z`, not `+0530`)
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
@@ -404,10 +477,23 @@ converting between time zones, or doing arithmetic that must respect DST.
   `demurrageClock`
 - **Billing deadlines**: `billingTimeline`
 - **Bill of lading dates and multimodal ETA**: `bolTimestamp`, `multimodalETA`
+- **EDI and event timestamps**: `parseEdifactDate`, `parseEdifactTime`,
+  `parseEdifactDateTime`, `parseEdifactOffsetDateTime`,
+  `parseEdifactDatePeriod`, `parseEdifactDateTimePeriod`, `parseX12Date`,
+  `parseX12Time`, `parseX12DateTime`, `parseX12DateRange`,
+  `parseX12DateTimeRange`, `parseX12DateAndTime`, `x12TimeCodeOffset`,
+  `x12TimeCodeZone`, `classifyEdifactDtmFormat`,
+  `classifyX12DateTimePeriodFormat`, `classifyX12TimeCode`,
+  `parseEpcisEvent`; a `format…` and an `isValid…` for each `parseEdifact…`
+  kind, for `X12Date`, `X12Time`, `X12DateTime`, `X12DateRange` and
+  `X12DateTimeRange`, and for `EpcisEvent`; `formatX12TimeElement`,
+  `isValidX12DateAndTime`, `isValidEpcisEventTime`,
+  `isValidEpcisTimeZoneOffset`, `isValidEdifactDtmFormat`,
+  `isValidX12DateTimePeriodFormat`, `isValidX12TimeCode`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
   `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
 
 ## References
 
-- [README — Timezone and Calendar examples](README.md)
+- [Zoned operations guide](https://gmt-dox.northguild.workers.dev/guides/zoned-date-operations/zoned-operations/)
 - [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/guides/concepts/dst-disambiguation/)

@@ -142,9 +142,9 @@ The skill tree is the canonical registry that downstream tooling reads.
 4. For each new skill, append a new entry under `skills:` mirroring the existing shape (`name`, `slug`, `domain`, `description`, `type`, `packages`, `covers`, `tasks`).
 5. Add `cross_references` entries when the new skill is logically reached from an existing one (e.g. `format-date-time → format-relative-time`).
 
-### 7. Update inner package READMEs (when relevant)
+### 7. Check the namespace READMEs (when a namespace is added, removed or renamed)
 
-If the change affects user-facing formatter behavior or adds a new module-level concept, also update the relevant `packages/gmt/src/<namespace>/README.md` so consumers reading the source-tree docs see it too. Match the existing structure (lists of functions per module).
+Each `packages/gmt/src/<namespace>/README.md` is a one-line stub that points at the namespace's section of the docs site. Never add a function list or an explanation to one: the generated reference lists the functions, and a docs guide explains them. Give a new namespace its stub, delete the stub of a removed one, and change a stub only when its reference path changes.
 
 ### 8. Validate
 

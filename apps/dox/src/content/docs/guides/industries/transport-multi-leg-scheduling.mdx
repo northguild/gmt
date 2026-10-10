@@ -117,8 +117,9 @@ scheduleDelivery([
 // { eta: "2024-06-15T13:00:00+00:00[UTC]", … } — scheduled exactly when the dwell ends: equal passes
 ```
 
-The last leg's dwell is validated and echoed, but moves nothing, because no leg follows it to
-move.
+`dwellAfter` is echoed as written: `"PT90M"` stays `"PT90M"`, and it reads `"PT0S"` when you
+omit it. The last leg's dwell is validated and echoed, but moves nothing, because no leg
+follows it to move.
 
 ```typescript
 scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC", dwellAfter: "PT5H" }]);
@@ -304,6 +305,12 @@ crossingTime("2024-06-15T22:30:00", "2024-06-16T01:00:00Z", "Europe/London"); //
 `crossingTime` counts no calendar days — a crossing that needs a day count is a dwell; see
 [`dwellTime`](/reference/transport/calculate/dwellTime/). Open a crossing in the
 [Crossing Clock](/tools/crossing-clock/).
+
+## The exported types
+
+`Crossing`, [`Leg`](/reference/types/Leg), `LegTime`,
+[`ScheduleDeliveryOptions`](/reference/types/ScheduleDeliveryOptions) and `DeliverySchedule` are
+exported as types, for the legs you pass in and the schedule you get back.
 
 ## See it break, then work
 

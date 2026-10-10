@@ -61,8 +61,12 @@ export interface FormatTimeZoneNameOptions {
  *   issue — prefer them for a name that won't change twice a year.
  * - Output depends on runtime ICU data.
  * - Returns "" for an invalid timeZone or locale.
+ * - An offset with seconds (`-00:44:30`) returns `""`. `Intl.DateTimeFormat` takes a time zone
+ *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
+ *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
+ *   Node, throw a RangeError exception"). Pass the IANA name.
  *
- * @param timeZone IANA name or UTC offset
+ * @param timeZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @param locale BCP 47 locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
  * @param options optional setting for the form of the name
  * @returns localized zone name, or "" on invalid input

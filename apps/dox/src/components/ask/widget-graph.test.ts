@@ -150,6 +150,10 @@ describe("the chat island's static import graph", () => {
       "lib/punctuality-board.ts",
       "lib/eta-drift.ts",
       "lib/departure-board.ts",
+      "lib/edi-widgets.ts",
+      "lib/edi-lib.ts",
+      "lib/dtm-decoder.ts",
+      "lib/x12-time-reader.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

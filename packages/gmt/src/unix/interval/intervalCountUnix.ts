@@ -26,6 +26,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Returns `null` on invalid input (`start`/`end` that is not a safe integer or numeric string of
  *   one, or lies outside the Temporal instant range, `start > end`, an unsupported unit, an invalid
  *   `epochUnit` or an unknown `timeZone`).
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `null`. An offset to the minute has no
+ *   such limit.
  *
  * @param start Unix epoch in `epochUnit` — interval start
  * @param end Unix epoch in `epochUnit` — interval end
@@ -40,6 +46,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example intervalCountUnix(1704151800000, 1704155400000, "day", { timeZone: "Asia/Tokyo" }) // 1 (08:30 to 09:30 on one Tokyo day)
  * @example intervalCountUnix("1704151800", "1704155400", "days", { epochUnit: "second" }) // 2
  * @example intervalCountUnix(NaN, 86400000, "hour") // null
+ * @example intervalCountUnix(2669999, 2670001, "day", { timeZone: "-00:44:30" }) // 2 (the local day turns at 00:44:30Z)
  */
 export function intervalCountUnix(
   start: number | string,
@@ -54,8 +61,10 @@ export function intervalCountUnix(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `null`.
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `null`.
      *
      * @defaultValue `"UTC"`
      */

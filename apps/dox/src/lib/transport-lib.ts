@@ -8,6 +8,7 @@
  * import becomes a `WidgetLoadError` rather than a dead control.
  */
 import { GMT_MODULES } from "./gmt-modules";
+import type { TimetableLib } from "./timetable-reader";
 import type { TransportLib } from "./transport-widgets";
 
 export async function loadTransportLib(): Promise<TransportLib> {
@@ -45,5 +46,29 @@ export async function loadTransportLib(): Promise<TransportLib> {
     resolveLocal: instantConvert[
       "resolveLocal"
     ] as TransportLib["resolveLocal"],
+  };
+}
+
+/**
+ * `loadTransportLib` plus the two calls the Timetable Reader draws its day
+ * with: `getDstTransitions` (the clock changes on the track's date) and
+ * `classifyLocal` (whether a printed time happens once, twice or never).
+ * `loadTransportLib` and `TransportLib` are unchanged, so the other multi-leg
+ * widgets do not load these two modules.
+ */
+export async function loadTimetableLib(): Promise<TimetableLib> {
+  const [transport, zonedGet, instantConvert] = await Promise.all([
+    loadTransportLib(),
+    GMT_MODULES["zoned/get"](),
+    GMT_MODULES["instant/convert"](),
+  ]);
+  return {
+    ...transport,
+    getDstTransitions: zonedGet[
+      "getDstTransitions"
+    ] as TimetableLib["getDstTransitions"],
+    classifyLocal: instantConvert[
+      "classifyLocal"
+    ] as TimetableLib["classifyLocal"],
   };
 }

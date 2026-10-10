@@ -4,7 +4,7 @@
 
 ## Checks that apply to any Dox change
 
-- `pnpm run validate` (root) is green, **including the CI timezone matrix (10 zones × Node 22/24/26 — see README)** — Dox must
+- `pnpm run validate` (root) is green, **including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`)** — Dox must
   not perturb `packages/gmt`. From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
 - **Generator:** the generated `startOfZoned` page matches
   `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line (options table, and its first
@@ -16,6 +16,8 @@
   not run in dev).
 - **Keyboard-only pass** with the mouse unplugged, on pages and on every widget touched.
 - **Contrast** measured on real rendered pages, widget surfaces included: body text ≥ 7:1.
+  `pnpm run contrast:measure` (against a served build) gates every `--gmt-ice-dim` text use at
+  7:1 and every disabled field's border at 3:1, in both themes.
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
   `scripts/html-diff.mjs` (see [design-system.md](design-system.md)).
 - **Chat:**

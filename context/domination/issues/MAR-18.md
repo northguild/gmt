@@ -26,7 +26,7 @@ GMT can represent IANA zones. It cannot represent a captain-declared offset, a z
   - `nauticalZone(longitudeDegrees: number): { zoneDescription: number, letter: string, offset: string, zoneMeridian: number } | null` — Bowditch §1607: ZD is the nearest multiple of 15° divided by 15, positive west; the letter from Table 1607a; `offset` is the ISO form (`ZD +5` → `-05:00`). Longitude 180 is ambiguous between M (−12) and Y (+12) and returns both letters' data with the ambiguity flagged.
   - `zoneLetterToOffset(letter: string): string | null` and `offsetToZoneLetter(offset: string): string | null` — The A–Z table both ways; `J` is not a zone; N is also used for ZD −13 (ACP 121 Annex A footnote) and that alias is documented.
 - `packages/gmt/src/maritime/parse/dateTimeGroup.ts`:
-  - `parseDtg(value: string, options: { referenceInstant?: string }): { instant: string, letter: string } | null` — `DDHHMMZ`, `DDHHMMZ MON YY` or `DDHHMMZ MON YYYY`; the short form needs a reference instant to fix month and year.
+  - `parseDtg(value: string, options: { referenceInstant?: string } & TwoDigitYearOptions): { instant: string, letter: string } | null` — `DDHHMMZ`, `DDHHMMZ MON YY` or `DDHHMMZ MON YYYY`; the short form needs a reference instant to fix month and year. The `YY` form needs `yearWindow` and returns the sentinel without it: GMT never picks a century for a two-digit year (`TwoDigitYearOptions` and `internal/twoDigitYear.ts`, from INT-15).
   - `formatDtg(isoString: string, options?: { letter?: string, withDate?: boolean }): string` — `Z` by default, in ACP 121's six-figures-plus-letter, three-letter-month, two-digit-year form.
 
 ## Design notes
@@ -59,6 +59,6 @@ GMT can represent IANA zones. It cannot represent a captain-declared offset, a z
 - A crossing with no clock change leaves the offset unchanged
 - `nauticalZone(-77)` (Washington, DC) returns `zoneDescription: 5, letter: 'R', offset: '-05:00', zoneMeridian: -75`; `nauticalZone(139.7)` (Tokyo) returns `zoneDescription: -9, letter: 'I', offset: '+09:00'`; `nauticalZone(7.4)` returns `Z` and `nauticalZone(7.6)` returns `A`, asserting the ±7.5° boundary
 - `nauticalZone(180)` flags the M/Y ambiguity; `zoneLetterToOffset('J')` returns the sentinel; `zoneLetterToOffset('Y')` returns `'-12:00'`, not the misprinted bound
-- `parseDtg('271630Z JUN 03')` returns 2003-06-27T16:30:00Z with `letter: 'Z'`; `parseDtg('271630R JUN 03')` returns 21:30Z; `parseDtg('271630Z', { referenceInstant })` picks the nearest month; without a reference the short form returns the sentinel
+- `parseDtg('271630Z JUN 03', { yearWindow: 2000 })` returns 2003-06-27T16:30:00Z with `letter: 'Z'`; `parseDtg('271630R JUN 03', { yearWindow: 2000 })` returns 21:30Z; `parseDtg('271630Z JUN 03')` returns the sentinel; `parseDtg('271630Z JUN 2003')` needs no window; `parseDtg('271630Z', { referenceInstant })` picks the nearest month; without a reference the short form returns the sentinel
 - `formatDtg(parseDtg(x).instant)` round-trips the long form
 - `pnpm run validate` stays green

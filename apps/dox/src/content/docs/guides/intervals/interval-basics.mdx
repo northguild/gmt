@@ -45,6 +45,14 @@ exact time only, so the two endpoints may name different zones. Leap seconds are
 rejected, and a `[u-ca=…]` calendar annotation is ignored, as `Temporal.Instant.from`
 ignores it.
 
+The offset fixes the instant. Some zones had an offset with seconds in their history, and an
+offset written to the minute may be that offset rounded: `-00:45[Africa/Monrovia]` stands for
+−00:44:30. GMT reads it as the instant the zone gives, so a zoned string GMT wrote reads back
+as the same moment, from the first instant of the range to the last. The one exception comes
+from Temporal itself. A wall time repeated inside a sub-minute offset change, written with a
+minute-rounded offset, reads as its first pass; `1952-10-15T23:59:59-11:20[Pacific/Niue]` is
+one example, and several zones have such a change in their history.
+
 A plain date or a zoneless datetime has no position on the timeline until you name a
 zone. Resolve it to an instant first. For local-calendar edges such as a local day or a
 trading session, build them with [`floorToZone`](/reference/calendar/calculate/floorToZone)
@@ -86,6 +94,11 @@ array sentinel. When the difference matters, check the inputs with `isValidInter
 | `intervalDifference*`, `intervalXor*`, `intervalXorAll*`, `mergeIntervals*`, `splitIntervalByUnit*`, `intervalDivideEqually*`, `intervalSplitAt*` | `Array<{ start, end }>` | `[]` |
 | `intervalCount*`, `intervalLength*`, `intervalOverlappingDays*` | `number \| null` | `null` |
 
+Every positional function returns its sentinel for the same causes: a wrong type, a malformed
+string, a leap second, an inverted interval (`start > end`), or an epoch outside the `unix/`
+grammar (not a safe integer or a digit string). The plain interval validators also reject
+mixed kinds, such as a date paired with a time.
+
 ## The positional functions
 
 The positional functions read an interval as half-open too (since 1.16.0; most families were
@@ -94,14 +107,30 @@ closed before). For a `Date` interval, `end` is the first day after the period:
 and require `start <= end`:
 
 ```typescript
-import { isValidDateInterval, isValidDateRange } from "@northguild/gmt";
+import {
+  isValidDateInterval,
+  isValidDateRange,
+  isValidTimeInterval,
+  isValidTimeRange,
+  isValidZonedInterval,
+  isValidZonedRange,
+} from "@northguild/gmt";
 
 isValidDateInterval("2024-01-01", "2024-12-31"); // true
 isValidDateInterval("2024-12-31", "2024-01-01"); // false — inverted
+isValidTimeInterval("09:00:00", "17:00:00"); // true
+isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]"); // true
 
 // Range validators are a different shape: an object with value1 / value2
 isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" }); // true
+isValidTimeRange({ value1: "09:00:00", value2: "17:00:00" }); // true
+isValidZonedRange({ value1: "2024-01-01T10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }); // true
 ```
+
+The interval validators accept `start === end`, an empty interval. The range validators
+require `value1` strictly before `value2` unless you pass `options: { allowEqual: true }`.
+The full set of twelve, with `Utc` and `Unix` variants, is on the
+[Validation](/guides/core-date-operations/validation/) page.
 
 `intervalFromDuration*` builds a positional interval from one point and an ISO 8601
 duration, anchored at either end. Calendar units resolve against the point itself:
@@ -120,7 +149,50 @@ intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", 
 // — the spring-forward day is 23 hours long
 ```
 
-A negative duration returns `null`.
+Each variant is shown once below. The time-of-day variant has no calendar, so it takes a duration
+in exact units only:
+
+```typescript
+import {
+  intervalFromDurationDateTime,
+  intervalFromDurationTime,
+  intervalFromDurationUnix,
+  intervalFromDurationUtc,
+} from "@northguild/gmt";
+
+intervalFromDurationDateTime("2024-01-01T09:00:00", "PT90M", "start");
+// { start: "2024-01-01T09:00:00", end: "2024-01-01T10:30:00" }
+
+intervalFromDurationUtc("2024-01-01T09:00:00Z", "PT8H", "end");
+// { start: "2024-01-01T01:00:00Z", end: "2024-01-01T09:00:00Z" }
+
+intervalFromDurationUnix(0, "PT1H", "start");
+// { start: 0, end: 3600000 }
+
+intervalFromDurationUnix(0, "PT1H", "start", { epochUnit: "seconds" });
+// { start: 0, end: 3600 }
+
+intervalFromDurationTime("09:00:00", "PT8H", "start");
+// { start: "09:00:00", end: "17:00:00" }
+
+intervalFromDurationTime("12:00:00", "P1D", "start");
+// null — PlainTime has no calendar, so a day cannot be resolved
+```
+
+`intervalFromDurationTime` returns `null` for a duration with a nonzero years, months, weeks or
+days part. It takes no options argument, as `addTime` takes none. `intervalFromDurationZoned`
+accepts the same `disambiguation` and `overflow` options as `addZoned`, and
+`intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`, `timeZone` and `overflow` options.
+Calendar units (years, months, weeks) resolve against the point itself, so no separate
+`relativeTo` is needed.
+
+A negative duration that inverts the span returns `null`, and so does an `overflow: "reject"`
+result:
+
+```typescript
+intervalFromDurationDate("2024-01-01", "-P1M", "start"); // null — inverted
+intervalFromDurationDate("2024-01-31", "P1M", "start", { overflow: "reject" }); // null — 31 February does not exist
+```
 
 Both families agree at every boundary, so a positional result and an `interval/` result can
 be combined. For instant-typed values, `intervalsOverlapUtc`, `intervalIntersectionUtc`,

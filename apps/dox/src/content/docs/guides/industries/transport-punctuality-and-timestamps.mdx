@@ -37,8 +37,12 @@ All six live in `@northguild/gmt/transport/compare` (`scheduleDeviation`,
 negative when early, and `"PT0S"` on the plan. Hours are the largest unit, so two days late is
 `PT48H`, never `P2D`.
 
-Both times are exact moments. The zone each one is written in does not matter. A zoneless wall
-time is not a moment, so the answer is `""`. To show a schedule's local time, use
+Both times are exact moments. The zone each one is written in does not matter. The offset fixes
+the instant, and a bracketed zone resolves only a rounded one: an offset written to the minute
+that is the zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names
+the instant the zone gives, so a zoned string GMT wrote is read back as the same moment. The
+exception is a wall time repeated inside a sub-minute offset change, which reads as its first
+pass. A zoneless wall time is not a moment, so the answer is `""`. To show a schedule's local time, use
 [`etaAtZone`](/reference/transport/convert/etaAtZone/).
 
 ```typescript
@@ -153,7 +157,13 @@ bestAvailable([{ classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "202
 bestAvailable([{ classifier: "PLN", at: "2024-06-15T12:00:00Z", recordedAt: "2024-06-01T00:00:00Z" }, { classifier: "PLN", at: "2024-06-15T13:00:00Z", recordedAt: "2024-06-10T00:00:00Z" }]); // { at: "2024-06-15T13:00:00Z", classifier: "PLN" }
 bestAvailable([{ classifier: "EST", at: "2024-06-15T12:40:00Z", recordedAt: "2024-06-14T00:00:00Z" }, { classifier: "REQ", at: "2024-06-15T12:30:00Z", recordedAt: "2024-06-12T00:00:00Z" }]); // { at: "2024-06-15T12:30:00Z", classifier: "REQ" }
 bestAvailable([]); // null
+bestAvailable([
+  { classifier: "ACT", at: "2024-06-15T12:52:00Z", recordedAt: "2024-06-15T12:53:00Z" },
+  { classifier: "XXX", at: "2024-06-15T13:05:00Z", recordedAt: "2024-06-15T14:00:00Z" },
+]); // null — one invalid event spoils the list
 ```
+
+An empty list or any invalid event returns `null`. `at` is echoed exactly as written.
 
 Open [an estimate recorded after the actual](/tools/eta-drift/?w=etadrift&wa=%7B%22preset%22%3A%22est-after-act%22%7D) in the ETA Drift Chart.
 
@@ -251,6 +261,13 @@ above. See the [Multi-leg Scheduling guide](/guides/industries/transport-multi-l
 The [Departure Board](/tools/departure-board/) draws the timetable on a rail. Drag the arrival
 and watch the connection bar push it to the next departure, then send the result to the
 [Delivery Scheduler](/tools/delivery-scheduler/).
+
+## The exported types
+
+[`TimestampClass`](/reference/types/TimestampClass), [`TimestampEvent`](/reference/types/TimestampEvent),
+[`PunctualityTolerance`](/reference/types/PunctualityTolerance), `Punctuality`, `PlannedActual`,
+`OnTimeRate`, `ClassifiedTimestamp`, `EstimateDriftOptions`, `DriftReport`, `Headway` and
+`NextDepartureOptions` are exported as types.
 
 ## See it break, then work
 

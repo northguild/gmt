@@ -1,8 +1,9 @@
 /*
  * The transport charts' recipe sheet: the three cut-off widgets (TRAN-10), the
- * Cut-off Stack, the Cut-off Ruler and the Cut-off Countdown, and the three
+ * Cut-off Stack, the Cut-off Ruler and the Cut-off Countdown, the three
  * punctuality widgets (TRAN-57), the Punctuality Board, the ETA Drift Chart and
- * the Departure Board. Six roots, one family look.
+ * the Departure Board, and the Timetable Reader's day track and two-clocks
+ * chart. Seven roots, one family look.
  *
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
  * labels/inputs/selects in gmt-form-controls.css; the leg fieldset grid, the
@@ -20,13 +21,14 @@
  *   borders. Never on text.
  * - Closed, late, open and moved are words and patterns, never a verdict
  *   colour. Amber is reserved for the sentinel state alone; nothing here uses
- *   it. `--gmt-dst-gold` marks a spring-forward gap only.
+ *   it. `--gmt-dst-gold` marks a spring-forward gap only; the DST purple marks a
+ *   repeated hour.
  * - No `backdrop-filter` (the chart already sits inside a glass card), and
  *   nothing animates except the Stack's dashed arc.
  *
  * The punctuality widgets' drawn frame (`.gmt-punct-frame`) joins the chart
  * surface, their tick row (`.gmt-punct-ticks`) takes the rule marks, and every
- * recipe below that lists the six roots applies to both families. The DST chips
+ * recipe below that lists the seven roots applies to every family. The DST chips
  * and the Stack's own rules stay scoped to the three cut-off roots.
  *
  * Tokens only; no colour literal. One-off gradient stops are written as
@@ -58,7 +60,9 @@
   .gmt-cutoff-stack-timeline,
   .gmt-cutoff-ruler-overview,
   .gmt-cutoff-ruler-closeup,
-  .gmt-cutoff-countdown-axis
+  .gmt-cutoff-countdown-axis,
+  .gmt-timetable-day,
+  .gmt-timetable-chart
 ) {
   display: flex;
   flex-direction: column;
@@ -100,7 +104,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   [data-series="1"] {
   --series: var(--gmt-series-1);
@@ -112,7 +117,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   [data-series="2"] {
   --series: var(--gmt-series-2);
@@ -124,7 +130,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   [data-series="3"] {
   --series: var(--gmt-series-3);
@@ -136,7 +143,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   [data-series="4"] {
   --series: var(--gmt-series-4);
@@ -151,7 +159,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-series-swatch {
   display: inline-block;
@@ -175,7 +184,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-chip {
   display: inline-flex;
@@ -201,7 +211,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-chip[hidden] {
   display: none;
@@ -213,7 +224,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-chip--dim {
   color: var(--gmt-ice-dim);
@@ -376,7 +388,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-axis-tick {
   padding-top: 9px;
@@ -388,7 +401,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-axis-tick::before {
   content: "";
@@ -406,7 +420,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-axis-tick--day {
   color: var(--gmt-ice);
@@ -418,7 +433,8 @@
     .gmt-cutoff-countdown,
     .gmt-punctuality-board,
     .gmt-eta-drift,
-    .gmt-departure-board
+    .gmt-departure-board,
+    .gmt-timetable
   )
   .gmt-cutoff-axis-tick--day::before {
   width: 2px;

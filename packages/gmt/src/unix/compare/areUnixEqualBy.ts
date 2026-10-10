@@ -20,6 +20,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `isSameDay(a, b)` → `areUnixEqualBy(a, b, "day")`
  * - `isSameMonth(a, b)` → `areUnixEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areUnixEqualBy(a, b, "year")`
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `false`. There `false` is the sentinel,
+ *   not a comparison. An offset to the minute has no such limit.
  *
  * @param value1 first Unix epoch: a safe integer or a digit string
  * @param value2 second Unix epoch, in the same unit
@@ -31,6 +37,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example areUnixEqualBy(1704067200000, 1735689600000, "year", { timeZone: "UTC" }) // false (2024-01-01 vs 2025-01-01)
  * @example areUnixEqualBy("1710498000000", 1710503000000, "days") // true (digit string, plural unit, UTC by default)
  * @example areUnixEqualBy(Number.NaN, 1710498000000, "day") // false
+ * @example areUnixEqualBy(2669999, 2670000, "day", { timeZone: "-00:44:30" }) // false (the local day turns at 00:44:30Z)
  */
 export function areUnixEqualBy(
   value1: number | string,
@@ -45,8 +52,10 @@ export function areUnixEqualBy(
      */
     epochUnit?: UnixUnit;
     /**
-     * The time zone the unit boundaries are found in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `false`.
+     * The time zone the unit boundaries are found in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `false`.
      *
      * @defaultValue `"UTC"`
      */

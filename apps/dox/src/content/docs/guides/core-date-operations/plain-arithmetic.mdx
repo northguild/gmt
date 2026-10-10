@@ -33,9 +33,33 @@ subtractDateTime("2024-03-15T14:30:45", { hours: 2 });
 // "2024-03-15T12:30:45"
 ```
 
-`addBusinessDays`/`subtractBusinessDays` use a fixed ISO Monday–Friday boundary with
-no locale parameter and no holiday calendar. They match the boundary that
-`isBusinessDay` checks.
+With one argument, `addBusinessDays`/`subtractBusinessDays` use a fixed ISO
+Monday–Friday week, with no locale parameter and no holidays. They match the boundary
+that `isBusinessDay` checks. Pass a `BusinessCalendar` as the last argument to state
+the weekend and the holidays yourself:
+
+```typescript
+import { addBusinessDays, subtractBusinessDays } from "@northguild/gmt";
+
+const nyse = {
+  weekend: [6, 7],
+  holidays: ["2024-05-31", "2024-07-04"],
+  timeZone: "America/New_York",
+};
+
+addBusinessDays("2024-07-03", 1);
+// "2024-07-04" — no calendar, so the Thursday counts
+
+addBusinessDays("2024-07-03", 1, nyse);
+// "2024-07-05" — 4 July is a holiday, so the count skips it
+
+subtractBusinessDays("2024-07-05", 1, nyse);
+// "2024-07-03"
+```
+
+The rest of the business-day family (counting days between two dates, rolling a date
+onto a working day, merging calendars) is in
+[Business Calendars and Roll Conventions](../business-calendars/).
 
 ## Control out-of-range results with `overflow`
 
@@ -51,6 +75,9 @@ addDate("2024-01-31", { months: 1 });
 
 addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
 // "" — Feb 31 doesn't exist and "reject" refuses to clamp it
+
+addDate("2024-02-29", { years: 1 });
+// "2025-02-28" — "constrain" (the default) clamps to the last valid day, as Temporal does
 ```
 
 ## Diff (difference between two values)
@@ -126,7 +153,7 @@ closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
 
 ## Set one or more fields directly
 
-`setDate`/`setDateTime`/`setTime` set fields atomically via `.with()` — the safe
+`setDate`/`setDateTime`/`setTime`/`setZoned`/`setUnix`/`setUtc` set fields atomically via `.with()` — the safe
 alternative to composing `add*` calls field-by-field, which resolves each field's
 overflow independently and can silently diverge on multi-field updates:
 
@@ -141,9 +168,14 @@ setDateTime("2024-03-10T12:00:00", { hour: 9 }); // "2024-03-10T09:00:00"
 setTime("12:00:00", { hour: 25 }); // "23:00:00" — constrain clamps
 ```
 
+`setZoned` and `setUnix` also accept `disambiguation` and `offset` for DST gap and overlap
+control. `setUtc` takes only `overflow`, because a UTC wall clock is never ambiguous. See
+[Zoned Operations](/guides/zoned-date-operations/zoned-operations/) and
+[DST Disambiguation](/guides/concepts/dst-disambiguation/).
+
 ## Cycle a single field (wrap, don't carry)
 
-`cycleDate`/`cycleDateTime`/`cycleTime` adjust one field and **wrap** at that
+`cycleDate`/`cycleDateTime`/`cycleTime`/`cycleZoned` adjust one field and **wrap** at that
 field's own min/max instead of carrying into the next larger field — the
 datepicker-segment-editing primitive `add*` can't express:
 
@@ -157,6 +189,22 @@ addDate("2024-12-15", { months: 1 });
 // "2025-01-15" — addDate correctly overflows into the next year
 ```
 
+`options.round` on any of the four steps to the next multiple of `amount`, rather than
+moving by exactly `amount`. It matches `@internationalized/date`'s `CycleOptions.round`:
+
+```typescript
+import { cycleDateTime } from "@northguild/gmt";
+
+cycleDateTime("2024-03-15T10:07:00", "minute", 10);
+// "2024-03-15T10:17:00" — exactly ten minutes on
+
+cycleDateTime("2024-03-15T10:07:00", "minute", 10, { round: true });
+// "2024-03-15T10:10:00" — the next multiple of ten
+```
+
+`cycleZoned` also accepts `disambiguation` and `offset` (default `offset: "prefer"`) for
+the same DST control as `setZoned`.
+
 ## Locale-aware week boundaries
 
 ```typescript
@@ -168,12 +216,14 @@ getLocaleEndOfWeek("2024-02-29", "en-US"); // "2024-03-02" (Saturday)
 ```
 
 Unlike `startOfDate(value, "week", { weekStartsOn })`, these derive the week's
-first day from the locale via `Intl.Locale.prototype.weekInfo`.
+first day from the locale via `Intl.Locale.prototype.weekInfo`. The zoned equivalents are
+`getLocaleZonedStartOfWeek` and `getLocaleZonedEndOfWeek`.
 
 ## See also
 
 - [Durations](../durations/) — ISO 8601 duration strings and the `*AsDuration` bridge
 - [Comparisons](../comparisons/) — ordering, equality, weekend/business-day checks
+- [Business Calendars and Roll Conventions](../business-calendars/) — holidays, weekends and rolling onto a working day
 - [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — timezone-aware arithmetic
 - [`addDate` reference](/reference/plain/calculate/addDate)
 - [`diffDate` reference](/reference/plain/calculate/diffDate)

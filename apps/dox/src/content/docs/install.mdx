@@ -43,8 +43,8 @@ bun add @northguild/gmt
 ## What you get
 
 Every public function, type and regex is a flat named export of the package root, and
-`Temporal` is re-exported from `@js-temporal/polyfill` beside them. There are no namespace
-objects to import — a namespace is a subpath:
+`Temporal`, `Intl` and `toTemporalInstant` are re-exported from `@js-temporal/polyfill` beside
+them. There are no namespace objects to import — a namespace is a subpath:
 
 ```typescript
 // Everything is available from the package root
@@ -57,32 +57,46 @@ import { addUnix, getUnixNow } from "@northguild/gmt/unix";
 
 // A module subpath narrows further, to one namespace's module
 import { addDateTime, diffDate } from "@northguild/gmt/plain/calculate";
+
+// Types come from the `types` subpath
+import type { BusinessCalendar } from "@northguild/gmt/types";
 ```
+
+Every namespace subpath except `types` also re-exports `Temporal`, `Intl` and
+`toTemporalInstant`, so `import { Temporal, addZoned } from "@northguild/gmt/zoned"` needs no
+second import.
 
 Module subpaths (`@northguild/gmt/<namespace>/<module>`) exist for every namespace except
 `regex` and `types`, which you import whole. The reference lists each export under its
 namespace and module.
 
-| Subpath     | What it covers                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------------ |
-| `calendar`  | ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars |
-| `duration`  | ISO 8601 duration string parsing, validation, and arithmetic                                     |
-| `instant`   | The instant-plus-offset pair, and explicit resolution of zoneless local wall times               |
-| `interval`  | Half-open `[start, end)` interval algebra over instants                                          |
-| `plain`     | Timezone-free helpers                                                                            |
-| `precision` | Nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges |
-| `regex`     | Low-level regex building blocks                                                                  |
-| `span`      | Elapsed and wall-clock durations between two timestamps, as raw numbers                          |
-| `types`     | The shared option and unit types                                                                 |
-| `unix`      | Unix epoch (seconds or milliseconds) helpers                                                     |
-| `utc`       | UTC instant helpers                                                                              |
-| `zoned`     | Timezone-aware helpers                                                                           |
+There are fourteen namespace subpaths:
+
+| Subpath        | What it covers                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `calendar`     | ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars with holiday sets and roll conventions, and operating hours with open-time SLA arithmetic                                                                                                                                                                                      |
+| `duration`     | ISO 8601 duration string parsing, validation, and arithmetic                                                                                                                                                                                                                                                                                                                   |
+| `instant`      | The instant-plus-offset pair, and explicit resolution of zoneless local wall times                                                                                                                                                                                                                                                                                             |
+| `intermodal`   | Free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count; the invoice, dispute and resolution deadline chain, with every window a caller parameter; bill of lading dates on the local calendar of the place each event happened; an end-to-end multimodal ETA; and the UN/EDIFACT, X12 and GS1 EPCIS timestamps freight exchanges |
+| `interval`     | Half-open `[start, end)` interval algebra over instants: overlap, intersect, clamp, merge, subtract, split and sum                                                                                                                                                                                                                                                               |
+| `plain`        | Timezone-free helpers                                                                                                                                                                                                                                                                                                                                                          |
+| `precision`    | Nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges                                                                                                                                                                                                                                                                               |
+| `regex`        | Low-level regex building blocks                                                                                                                                                                                                                                                                                                                                                |
+| `span`         | Elapsed and wall-clock durations between two timestamps, as raw numbers                                                                                                                                                                                                                                                                                                        |
+| `transport`    | Transit legs as exact elapsed time, arrivals rendered where they land, dwell measured in local calendar days, crossings read in the zone that administers them, multi-leg schedules with missed connections flagged, cut-offs counted back from an anchor event, punctuality against a stated tolerance, and the next departure a connection can make                           |
+| `types`        | The shared option and unit types                                                                                                                                                                                                                                                                                                                                               |
+| `unix`         | Unix epoch (seconds or milliseconds) helpers                                                                                                                                                                                                                                                                                                                                   |
+| `utc`          | UTC instant helpers                                                                                                                                                                                                                                                                                                                                                            |
+| `zoned`        | Timezone-aware helpers                                                                                                                                                                                                                                                                                                                                                         |
 
 ## AI Agent Skills
 
 Every `@northguild/*` package ships [TanStack Intent](https://intent.tanstack.com)
 skill files inside the npm tarball — versioned, task-routed guidance that you can
-hand to a coding agent so it works with the right GMT API for each job.
+hand to a coding agent so it works with the right GMT API for each job. A skill
+carries the core rules and the common pitfalls, and points the agent to this site
+(`https://gmt-dox.northguild.workers.dev/llms.txt`, plus the `.md` twin of any page) and
+to the JSDoc in the installed package for signatures and examples.
 
 Discover and load them with the Intent CLI:
 

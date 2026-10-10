@@ -136,6 +136,58 @@ h1[data-page-title] {
   background: var(--gmt-accent-wash);
 }
 
+/* The "By industry" divider in the API Reference: a small label under a thin rule,
+ * in the quiet text tier (`--gmt-ice-dim`, 7:1 in both themes). Plain text: not a link,
+ * not a <details>, not focusable. The industry groups after it are their own list,
+ * named by it (`aria-labelledby`), and sit at the same level as the general groups, so
+ * the list drops the nested indent its own items would otherwise get twice. */
+.sidebar-pane .gmt-sidebar-divider {
+  display: block;
+  margin-block-start: 0.5rem;
+  padding: 0.5rem var(--sl-sidebar-item-padding-inline) 0.25rem;
+  border-block-start: 1px solid var(--gmt-hairline);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+  user-select: none;
+}
+
+.sidebar-pane .gmt-sidebar-named-list > li {
+  margin-inline-start: 0;
+  border-inline-start: 0;
+  padding-inline-start: 0;
+}
+
+/* An industry group's icon in the API Reference. The generated sidebar marks the
+ * group's Overview link with `data-gmt-industry`; `Head.astro` sets
+ * `--gmt-industry-icon` on the group's <summary> from the layer's tag icon
+ * (`industrySidebarCss`). The glyph is a mask over the label's own colour, so it
+ * has the label's contrast. It is one line tall and never wraps, so the label
+ * does not move and the row does not grow. */
+.sidebar-pane
+  details:has(> ul > li > a[data-gmt-industry])
+  > summary
+  > .group-label {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.sidebar-pane
+  details:has(> ul > li > a[data-gmt-industry])
+  > summary
+  > .group-label::before {
+  content: "";
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  margin-inline-end: 0.4em;
+  background-color: var(--sl-color-white);
+  mask: var(--gmt-industry-icon) center / contain no-repeat;
+}
+
 header {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */
   border-bottom: 1px solid var(--gmt-hairline);

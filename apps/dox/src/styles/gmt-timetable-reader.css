@@ -2,19 +2,837 @@
  * Timetable Reader widget (TRAN-9).
  *
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css;
- * labels/inputs/selects in gmt-form-controls.css; the leg fieldset, verdict
- * line and reason-aside spacing in gmt-transport-widgets.css. This sheet
- * draws the rows table.
+ * labels/inputs/selects/handles in gmt-form-controls.css; the bevelled row
+ * frame and its corner brackets in gmt-transport-widgets.css; the chart
+ * surface, series, chip, swatch and axis ticks in gmt-cutoff-widgets.css
+ * (`.gmt-timetable` is one of its roots). This sheet places them: the controls
+ * line, the day track, the four row frames, the two-clocks chart and the
+ * table.
  *
- * Badges are text with an outline, never colour alone, and never amber —
- * "twice" and "skipped" are readings of a real instant, not invalid input.
+ * Layout bands are `@container` queries by name. Two kinds of container: the
+ * SECTION (`gmt-timetable-section`) for the controls line and the two-column
+ * band, and each PANE (`gmt-timetable-pane`, see "The split") for everything
+ * inside a pane. Both are named because the field grids inside are containers
+ * too, and an unnamed query on a control would resolve to its grid. `w` below
+ * is a section's content width. From 76.25rem the section is the two-column band
+ * (2560, 2000 and 1920 viewports); under it a pane is the section's width, so the
+ * stacked layout reads as it always did: 1536 is "wide" (52rem and up), 1440 is
+ * "compact four" (45.5rem to under 52rem), 1024 and 768 are "two by two" (26rem
+ * to under 45.5rem), 390 and the /dox rail are "stacked". The controls line
+ * (64.25rem) and the table (47.25rem, 52rem) have their own breakpoints, each
+ * derived from a measured width and written out beside its rule.
+ *
+ * Nothing here moves while a handle moves: every height is fixed, every
+ * column width is fixed, and a cell whose content comes and goes holds its
+ * size with a hidden sizer stacked in the same grid cell (`.gmt-timetable-hold`).
+ *
+ * Trap: this sheet loads before gmt-cutoff-widgets.css, so a rule that changes
+ * a family recipe (a chip, a tick, the chart surface) carries one more class
+ * than the family's `:is(root) .recipe`.
+ *
+ * Tokens only; no colour literal. Series colour goes on marks, never on text.
+ * Amber is the sentinel's alone. The two kinds of band follow the site's
+ * family rule: the DST purple marks a repeated hour, gold a skipped one. Row 3
+ * is also purple, so a band is told from a row by form (a translucent region
+ * with its own edges and a text label, against a solid numbered mark).
  */
 
-/* The row fields are field grids (gmt-form-controls.css): the printed
-   departure is `gmt-field-wide`, so a written offset such as -05:00 never
-   crowds it. */
+.gmt-timetable > .gmt-widget-card > .gmt-widget-section {
+  container-name: gmt-timetable-section;
+}
 
-/* The rows table — same recipe as the DST Inspector's transition table. */
+/* ---------------------------------------------------------------------------
+ * The split: pictures on the left, values on the right
+ *
+ * Sections 1 and 2 each hold one `.gmt-timetable-split` of `.gmt-timetable-pane`s,
+ * in reading order: section 1 is the controls line and the preset's description
+ * (both the whole row), then the day track with its hint, then the four row
+ * frames; section 2 is the two-clocks chart, then the table with its pointer to
+ * the DST Inspector. Stacked, a split is a column with the section's own gap,
+ * so the sections lay out exactly as they did before the panes existed. From
+ * the two-column band (below) it is a two-column grid, the track above the chart
+ * and the frames above the table.
+ *
+ * Each pane is a container named `gmt-timetable-pane`, and every rule about the
+ * track, the frames, the chart and the table queries it, not the section: a
+ * pane is the section's width when stacked and a column's width in the band, so
+ * the same breakpoints (the table's 47.25rem, the frames' bands, the chart's
+ * narrow form) hold in both. The section stays the container for the controls
+ * line and for the band itself.
+ *
+ * One seam in both sections. They are separate cards, so a subgrid cannot span
+ * them; the column template is a custom property on the widget root and both
+ * splits use it. The two sections have the same width, border and padding, and
+ * every track has a fixed minimum, so the template resolves to the same two
+ * columns in both and the gap between them is one vertical line.
+ *
+ * What each column must hold (rem of 16px):
+ *
+ *   Right  47.25rem (756px): the table's four columns without a broken value
+ *          (derived under "The table"). The 2 x 2 frames need less. A frame
+ *          holds two fields side by side when its field grid is two 10rem
+ *          tracks and a 12px gap, 332px, inside the frame's 8px padding and 1px
+ *          borders: 350px a frame, 2 x 350 + the 8px gap = 708px. 756 clears it.
+ *   Left   28rem (448px): the track and the chart. Both work at 324px (the
+ *          390 viewport); the floor is legibility. At 448px the day track's
+ *          lanes are 396px, so a track hour is 16.5px (a repeated hour is
+ *          16.5px wide) and the tick labels fit every third hour; the chart's
+ *          6-hour window is 374px, 62px an hour, a tick label every hour. The
+ *          chart's caption row and the day's status line take their two-line
+ *          forms under 30rem and 34.75rem of pane (below).
+ *   Gap    1rem.
+ *
+ * Where there is room for more than both minima the columns are equal:
+ * `minmax(28rem, 1fr) minmax(47.25rem, 1fr)` gives the right column its 47.25rem
+ * until half the row is wider than that, and the left column the rest.
+ *
+ * The band starts at the narrowest section that holds both minima and the gap:
+ * 28rem + 1rem + 47.25rem = 76.25rem (1220px). That is a 1920px viewport
+ * (section 1238px) with 18px to spare, and every wider one.
+ * --------------------------------------------------------------------------- */
+
+.gmt-timetable {
+  --tt-cols: minmax(28rem, 1fr) minmax(47.25rem, 1fr);
+  --tt-seam: 1rem;
+}
+
+.gmt-timetable-split,
+.gmt-timetable-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-width: 0;
+}
+
+.gmt-timetable-pane {
+  container: gmt-timetable-pane / inline-size;
+}
+
+@container gmt-timetable-section (min-width: 76.25rem) {
+  .gmt-timetable-split {
+    display: grid;
+    grid-template-columns: var(--tt-cols);
+    column-gap: var(--tt-seam);
+    row-gap: var(--gmt-space-3);
+    align-items: start;
+  }
+
+  /* The controls line and the preset's description span both columns. */
+  .gmt-timetable-split > :not(.gmt-timetable-pane) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The controls line
+ * --------------------------------------------------------------------------- */
+
+/* The preset is the main control and its select cannot wrap, so it shares the
+   line with the other three only when the line can show its LONGEST label whole.
+   That label is "New York's spring-forward night: 01:30, 02:30, 03:30", 52
+   characters: 425.8px in the 13.6px mono face (canvas measureText in Chromium),
+   plus the select's 8px + 28px padding and 2px of border = 463.8px, so the
+   preset's column is `minmax(29rem, 2fr)` (464px). Beside it sit three columns
+   of at least 11rem (the field grid's own floor) and three 12px gaps:
+   29rem + 3 * 11rem + 3 * 0.75rem = 64.25rem. From there the line is one row;
+   under it the preset takes its own row and the other three share the next,
+   in three equal columns while that row holds three 11rem tracks (34.5rem). */
+.gmt-timetable-preset {
+  grid-column: 1 / -1;
+}
+
+@container gmt-timetable-section (min-width: 34.5rem) and (max-width: 64.24rem) {
+  .gmt-field-grid.gmt-timetable-top {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container gmt-timetable-section (min-width: 64.25rem) {
+  .gmt-field-grid.gmt-timetable-top {
+    grid-template-columns: minmax(29rem, 2fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .gmt-timetable-preset {
+    grid-column: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The day track
+ * --------------------------------------------------------------------------- */
+
+.gmt-timetable .gmt-timetable-day {
+  padding-inline: calc(var(--gmt-space-3) + 4px);
+}
+
+.gmt-timetable-day-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  min-block-size: 1.6rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-timetable .gmt-timetable-day-status .gmt-cutoff-chip {
+  white-space: normal;
+  text-align: end;
+}
+
+@container gmt-timetable-pane (max-width: 34.74rem) {
+  .gmt-timetable-day-status {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-block-size: 3.4rem;
+  }
+
+  .gmt-timetable .gmt-timetable-day-status .gmt-cutoff-chip {
+    text-align: start;
+  }
+}
+
+/* The lanes are inset by half a handle (and 2px) so a handle at 00:00 or 23:55
+   is whole. Their 28px hit squares tile lane to lane and never overlap. */
+.gmt-timetable-lanes {
+  --gmt-handle-hit: 1.75rem;
+  position: relative;
+  margin-inline: calc(var(--gmt-handle-w) / 2 + 2px);
+  user-select: none;
+}
+
+.gmt-timetable-lane {
+  position: relative;
+  z-index: 1;
+  block-size: 1.75rem;
+  border-bottom: 1px solid var(--gmt-hairline-faint);
+}
+
+.gmt-timetable-lane::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 1px;
+  background: color(from var(--series) srgb r g b / 0.35);
+}
+
+.gmt-timetable-lane > .gmt-handle {
+  color: var(--series);
+  z-index: 2;
+}
+
+/* The shaded hour. A repeated hour is a purple wash between two double edges;
+   a skipped hour is the DST Inspector's gold hatch between two dashed edges.
+   It holds no text: the chip above names it. */
+.gmt-timetable-bands {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.gmt-timetable-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+}
+
+.gmt-timetable-band[data-kind="twice"] {
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  border-inline: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-timetable-band[data-kind="skipped"] {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+  );
+  border-inline: 1px dashed var(--gmt-dst-gold);
+}
+
+/* Tags ride their handle on an opaque plate. */
+.gmt-timetable .gmt-timetable-lane .gmt-timetable-tag {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  translate: 14px -50%;
+}
+
+.gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-side="end"] {
+  translate: calc(-100% - 14px) -50%;
+}
+
+.gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-pinned] {
+  left: 0;
+  translate: 0 -50%;
+}
+
+.gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-kind="twice"] {
+  border: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-kind="skipped"] {
+  border: 1px dashed var(--gmt-dst-gold);
+}
+
+.gmt-timetable .gmt-timetable-day-status .gmt-cutoff-chip[data-kind="twice"] {
+  border: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-timetable .gmt-timetable-day-status .gmt-cutoff-chip[data-kind="skipped"] {
+  border: 1px dashed var(--gmt-dst-gold);
+}
+
+.gmt-timetable-day-ticks {
+  position: relative;
+  block-size: 1.9rem;
+  margin-inline: calc(var(--gmt-handle-w) / 2 + 2px);
+}
+
+/* ---------------------------------------------------------------------------
+ * The four row frames
+ * --------------------------------------------------------------------------- */
+
+.gmt-timetable-rowset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+}
+
+@container gmt-timetable-pane (min-width: 26rem) {
+  .gmt-timetable-rowset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container gmt-timetable-pane (min-width: 45.5rem) {
+  .gmt-timetable-rowset {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.gmt-timetable-row {
+  margin: 0;
+  min-width: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-3) var(--gmt-space-3);
+}
+
+/* The one control-size rule. A 758px section gives each of four frames 183px,
+   and the 19-character printed value needs 173px at the control's own 13.6px
+   and 155px at 12px, which is the floor. */
+@container gmt-timetable-section (max-width: 76.24rem) {
+  @container gmt-timetable-pane (min-width: 45.5rem) and (max-width: 51.99rem) {
+    .gmt-timetable-row {
+      padding-inline: var(--gmt-space-2);
+    }
+
+    .gmt-timetable-row :is(.gmt-input, .gmt-select) {
+      font-size: var(--gmt-text-xs);
+    }
+  }
+}
+
+/* In the two-column band the frames are two by two in a pane of 47.25rem and
+   up, and each holds its two fields side by side. The compact size (8px padding,
+   12px controls, the size the 183px four-across frames use) holds until a frame
+   can take the full size: 11rem tracks need 2 x 176 + 12 + 26 = 390px a frame,
+   2 x 390 + 8 = 788px of pane (49.25rem). Under that, a 756px pane gives a frame
+   374px and each field 172px, over the 155px the longest Offset label and a
+   19-character printed value need at 12px. The field grid's floor is 10rem
+   (160px) here so two tracks fit at the compact size; at the full size a field
+   is never under 176px. */
+@container gmt-timetable-section (min-width: 76.25rem) {
+  .gmt-timetable-rowset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gmt-field-grid.gmt-timetable-fields {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  }
+
+  @container gmt-timetable-pane (max-width: 49.24rem) {
+    .gmt-timetable-row {
+      padding-inline: var(--gmt-space-2);
+    }
+
+    .gmt-timetable-row :is(.gmt-input, .gmt-select) {
+      font-size: var(--gmt-text-xs);
+    }
+  }
+}
+
+/* The reason an Offset select is, or is not, available. Its slot is held at the
+   height of the longest reason at any width by a hidden sizer (below), so the
+   line changing as a handle enters or leaves a repeated hour moves nothing.
+   Informational text: the full-strength ink, 12px. */
+.gmt-timetable-why-slot {
+  margin-top: var(--gmt-space-1);
+}
+
+.gmt-timetable .gmt-timetable-why {
+  display: block;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------------
+ * Holding still: a hidden sizer takes the space of the tallest thing the
+ * cell can hold, and the live content sits over it in the same grid cell.
+ * The sizer's text is in `data-t` attributes drawn by `::before`, so it is
+ * never in `textContent`, never copied and never read out.
+ * --------------------------------------------------------------------------- */
+
+.gmt-timetable-hold {
+  display: grid;
+}
+
+.gmt-timetable-hold > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.gmt-timetable-sizer {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.gmt-timetable-sizer[data-t]::before,
+.gmt-timetable-sizer [data-t]::before {
+  content: attr(data-t);
+}
+
+/* ---------------------------------------------------------------------------
+ * The two-clocks chart
+ * --------------------------------------------------------------------------- */
+
+.gmt-timetable-chart {
+  --tt-gutter: 1.75rem;
+  --tt-axis: 1rem;
+  --tt-ticks: 1.9rem;
+  --tt-fan: 5.5rem;
+  --tt-cap: 1.75rem;
+  --tt-journey: 1.75rem;
+}
+
+@container gmt-timetable-pane (max-width: 29.99rem) {
+  .gmt-timetable-chart {
+    --tt-fan: 4rem;
+    --tt-cap: 3.5rem;
+  }
+}
+
+.gmt-timetable-plot {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  padding-inline: 10px;
+  /* The frame holds its height with no row drawn: caption, two tick rows, two
+     axis rows, the fan and the offset strip. */
+  min-block-size: calc(
+    var(--tt-cap) + 2 * var(--tt-ticks) + 2 * var(--tt-axis) + var(--tt-fan) +
+      var(--tt-cap)
+  );
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-timetable-plot-empty {
+  align-self: center;
+  margin-block: auto;
+}
+
+.gmt-timetable-pcap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  block-size: var(--tt-cap);
+  flex: none;
+}
+
+@container gmt-timetable-pane (max-width: 29.99rem) {
+  .gmt-timetable-pcap {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+  }
+}
+
+.gmt-timetable-prow {
+  display: grid;
+  grid-template-columns: var(--tt-gutter) minmax(0, 1fr);
+  flex: none;
+}
+
+.gmt-timetable-px {
+  position: relative;
+  min-width: 0;
+}
+
+.gmt-timetable-pgutter {
+  display: flex;
+  align-items: center;
+}
+
+.gmt-timetable-pticks .gmt-timetable-px {
+  block-size: var(--tt-ticks);
+}
+
+/* The printed clock's ticks sit above its axis, the exact clock's below its
+   own, so the two read as one pair of rulers with the fan between them. */
+.gmt-timetable [data-role="wall-ticks"] .gmt-cutoff-axis-tick {
+  top: auto;
+  bottom: 0;
+  padding-top: 0;
+  padding-bottom: 9px;
+}
+
+.gmt-timetable [data-role="wall-ticks"] .gmt-cutoff-axis-tick::before {
+  top: auto;
+  bottom: 0;
+}
+
+.gmt-timetable-paxis .gmt-timetable-px {
+  block-size: var(--tt-axis);
+}
+
+.gmt-timetable-axisline {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  background: var(--gmt-border-strong);
+}
+
+.gmt-timetable-paxis--exact .gmt-timetable-axisline {
+  top: -1px;
+  bottom: auto;
+}
+
+/* The printed and exact marks: a bevelled square in the series colour with a
+   surface ring, centred on its axis. */
+.gmt-timetable-sq {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  corner-shape: bevel;
+  background: var(--series);
+  box-shadow:
+    0 0 0 2px var(--gmt-surface),
+    inset 0 1px 0 var(--gmt-highlight);
+}
+
+.gmt-timetable [data-role="wall-axis"] .gmt-timetable-sq {
+  bottom: 0;
+  translate: -50% 50%;
+}
+
+.gmt-timetable [data-role="exact-axis"] .gmt-timetable-sq {
+  top: 0;
+  translate: -50% -50%;
+}
+
+/* A row that names no instant: hollow, dashed. */
+.gmt-timetable-sq--hollow {
+  background: var(--gmt-surface);
+  border: 2px dashed var(--series);
+  box-shadow: none;
+}
+
+.gmt-timetable-wband {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+}
+
+.gmt-timetable-wband[data-kind="twice"] {
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  border-inline: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-timetable-wband[data-kind="skipped"] {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+  );
+  border-inline: 1px dashed var(--gmt-dst-gold);
+}
+
+/* The repeated stretch on the exact axis: an underline from the earlier pass's
+   start to the later pass's end, and a tick at the change. A skipped hour has
+   no exact stretch, only the point where the clock jumps. */
+.gmt-timetable-eline {
+  position: absolute;
+  top: 2px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.gmt-timetable-eline[data-kind="twice"] {
+  background: var(--gmt-dst-purple);
+}
+
+.gmt-timetable-etick {
+  position: absolute;
+  top: 0;
+  height: 0.6rem;
+  width: 0;
+}
+
+.gmt-timetable-etick[data-kind="twice"] {
+  border-inline-end: 2px solid var(--gmt-dst-purple);
+}
+
+.gmt-timetable-etick[data-kind="skipped"] {
+  border-inline-end: 2px dashed var(--gmt-dst-gold);
+}
+
+.gmt-timetable-fan {
+  display: block;
+  width: 100%;
+  height: var(--tt-fan);
+  overflow: visible;
+}
+
+.gmt-timetable-wedge[data-kind="twice"] {
+  fill: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  stroke: var(--gmt-dst-purple);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-timetable-wedge[data-kind="skipped"] {
+  fill: color(from var(--gmt-dst-gold) srgb r g b / 0.14);
+  stroke: var(--gmt-dst-gold);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-timetable-link {
+  stroke: var(--series);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-timetable-link--dashed {
+  stroke-dasharray: 5 4;
+}
+
+.gmt-timetable-poffsets {
+  position: relative;
+  block-size: var(--tt-cap);
+}
+
+.gmt-timetable-poffsets .gmt-timetable-px {
+  block-size: 100%;
+}
+
+@container gmt-timetable-pane (max-width: 29.99rem) {
+  .gmt-timetable-poffsets {
+    block-size: 1.75rem;
+  }
+}
+
+.gmt-timetable-pcap-text {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+
+.gmt-timetable-offset {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.gmt-timetable-pjourney .gmt-timetable-px {
+  block-size: var(--tt-journey);
+}
+
+.gmt-timetable-pjourney .gmt-cutoff-chip {
+  justify-content: center;
+}
+
+.gmt-timetable-bar {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  box-sizing: border-box;
+  height: 0.6rem;
+  min-width: 2px;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: linear-gradient(
+    color(from var(--series) srgb r g b / 0.9),
+    color(from var(--series) srgb r g b / 0.5)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+/* The bevelled cap at the arrival end. An open bar has none and ends in a
+   dashed line instead. */
+.gmt-timetable-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+  corner-shape: bevel;
+  background: var(--series);
+}
+
+.gmt-timetable-bar--open::after {
+  width: 0;
+  border-radius: 0;
+  background: none;
+  border-right: 2px dashed var(--series);
+}
+
+.gmt-timetable-arrival,
+.gmt-timetable-noinstant {
+  position: absolute;
+  top: 50%;
+  translate: 8px -50%;
+}
+
+.gmt-timetable-arrival[data-side="end"] {
+  translate: calc(-100% - 8px) -50%;
+}
+
+/* Neither side of the bar fits: the chip sits flush with the track's far edge,
+   over the bar's tail, rather than reach the row number in the gutter. */
+.gmt-timetable-arrival[data-side="clamp"] {
+  translate: 0 -50%;
+}
+
+.gmt-timetable-noinstant {
+  left: 0;
+  translate: 0 -50%;
+}
+
+.gmt-timetable-chart-caption {
+  margin: 0;
+  min-block-size: 1lh;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice-dim);
+}
+
+@container gmt-timetable-pane (max-width: 29.99rem) {
+  .gmt-timetable-chart-caption {
+    min-block-size: 2lh;
+  }
+}
+
+.gmt-timetable-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* `.sl-markdown-content ul li` (gmt-content.css) draws a bullet and indents every
+   list on the page, widgets included; a legend is not a bulleted list. */
+.gmt-timetable .gmt-timetable-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.gmt-timetable .gmt-timetable-legend > li::before {
+  content: none;
+}
+
+.gmt-timetable-swatch {
+  flex: none;
+  box-sizing: border-box;
+  width: 1.5rem;
+  height: 0.6rem;
+}
+
+.gmt-timetable-swatch--solid {
+  background: linear-gradient(var(--gmt-ice-dim), var(--gmt-ice-dim)) center /
+    100% 2px no-repeat;
+}
+
+.gmt-timetable-swatch--dashed {
+  background: repeating-linear-gradient(
+      90deg,
+      var(--gmt-ice-dim) 0 5px,
+      transparent 5px 9px
+    )
+    center / 100% 2px no-repeat;
+}
+
+.gmt-timetable-swatch--bar {
+  height: 0.5rem;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: linear-gradient(
+    color(from var(--gmt-ice-dim) srgb r g b / 0.9),
+    color(from var(--gmt-ice-dim) srgb r g b / 0.5)
+  );
+}
+
+.gmt-timetable-swatch--twice {
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  border-inline: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-timetable-swatch--skipped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+  );
+  border-inline: 1px dashed var(--gmt-dst-gold);
+}
+
+/* ---------------------------------------------------------------------------
+ * The table
+ *
+ * Badges are text with an outline, never colour alone, and never amber:
+ * "twice" and "skipped" are readings of a real instant, not invalid input.
+ *
+ * A widget makes every table `display: block` (gmt-widget.css), and a block box
+ * is not a table box, so `width: 100%` sizes the box while the rows inside size
+ * to their content. From 47.25rem the table is a real table again with fixed
+ * column widths, which is also what holds its columns still; under 47.25rem it is
+ * the stacked form further down.
+ * --------------------------------------------------------------------------- */
+
 .gmt-timetable-rows {
   width: 100%;
   border-collapse: collapse;
@@ -23,14 +841,11 @@
 }
 
 /* `.sl-markdown-content th:first-child, .sl-markdown-content td:first-child`
-   (gmt-content.css) is the site's "keep the first column of a parameter
-   table compact" rule — `white-space: nowrap; width: 1%`. This table lives
-   inside the MDX flow, so it inherited that rule too, collapsing the
-   Printed column to a sliver a few px wide (measured 3px at 390px) and
-   forcing every value onto one character per line regardless of viewport —
-   this, not `overflow-wrap: anywhere` alone, is why the wrap broke
-   mid-token even at 1440px. Same specificity, loaded after
-   gmt-content.css in astro.config.mjs, so this wins on source order. */
+   (gmt-content.css) is the site's "keep the first column of a parameter table
+   compact" rule: `white-space: nowrap; width: 1%`. This table lives inside the
+   MDX flow, so it inherited that rule too, collapsing the Printed column to a
+   sliver. Same specificity, loaded after gmt-content.css, so this wins on
+   source order. */
 .gmt-timetable-rows th:first-child,
 .gmt-timetable-rows td:first-child {
   white-space: normal;
@@ -56,20 +871,118 @@
   vertical-align: middle;
   font-family: var(--gmt-font-mono);
   font-size: 0.75rem;
-  /* No `overflow-wrap: anywhere` here: that broke an ISO value mid-token
-     (`…01:30:00-` / `05:00[America/New_York]`). A long zoned string instead
-     carries its own `<wbr>` before the offset sign and before `[` — see
-     wbrBeforeOffsetAndBracket() (timetable-reader-mount.ts) and
-     .gmt-timetable-time-full below — so it only ever breaks at one of those
-     two natural boundaries. */
+  font-variant-numeric: tabular-nums;
 }
 
-/* Leaves (exact) and Local arrival: the readable local HH:MM at normal
-   size, the full zoned value beneath it in smaller, muted text — exact and
-   never dropped, but never the long wrapped ISO prose the table would be
-   if that were the only size shown. */
+/* An ISO date-time never breaks inside itself: each part of a value is a
+   `nowrap` token, because the browser also breaks after a hyphen
+   (`2024-11-` / `03T00:30:00`). The only break in a zoned string is the `<wbr>`
+   before `[`, and inside a zone id after a `/`. */
+.gmt-timetable-tok {
+  white-space: nowrap;
+}
+
+/* The bracketed zone moves to the next line whole when it does not fit beside
+   the date-time, so a value reads `…-04:00` then `[America/New_York]`, never
+   `…-04:00[America/` then `New_York]`. A zone too long for a line of its own
+   still breaks after a slash. */
+.gmt-timetable-zone {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+/* The widest value is "2024-11-03T01:30:00-04:00", 25 characters, 180px in the
+   12px mono face (0.45rem a character). The Printed cell adds its swatch
+   (0.7rem), number (one character) and two 8px gaps; the Leaves and Local
+   arrival cells add only their padding. So a column holds its value on one
+   line, with the bracketed zone on the second, only when it is at least:
+
+     Printed          180 + 50.4 + 2 * padding
+     Leaves, Arrival  180 + 2 * padding
+
+   and the Note column keeps the rest, where the longest note ("Never shows on
+   the clock: the later instant", 43 characters) wraps to three lines at 125px.
+   The four-column table therefore needs 233.6 + 2 * 198.4 + 125 = 755.6px, which
+   is 47.25rem of section; under it the table is the stacked form (further
+   down). At 52rem and up the columns are percentages (29 / 25 / 21 / 25),
+   which at 52rem give 241 / 208 / 175 / 208px, each over its minimum with the
+   section's 12px cell padding (238.4 and 204). */
+@container gmt-timetable-pane (min-width: 47.25rem) {
+  .gmt-timetable-rows {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .gmt-timetable-rows th,
+  .gmt-timetable-rows td {
+    padding-inline: var(--gmt-space-2);
+  }
+
+  .gmt-timetable-rows th:nth-child(1) {
+    width: 14.6rem;
+  }
+
+  .gmt-timetable-rows th:nth-child(2),
+  .gmt-timetable-rows th:nth-child(4) {
+    width: 12.4rem;
+  }
+}
+
+@container gmt-timetable-pane (min-width: 52rem) {
+  .gmt-timetable-rows th,
+  .gmt-timetable-rows td {
+    padding-inline: var(--gmt-space-3);
+  }
+
+  .gmt-timetable-rows th:nth-child(1) {
+    width: 29%;
+  }
+
+  .gmt-timetable-rows th:nth-child(2),
+  .gmt-timetable-rows th:nth-child(4) {
+    width: 25%;
+  }
+
+  .gmt-timetable-rows th:nth-child(3) {
+    width: 21%;
+  }
+}
+
+/* The printed cell: the row's swatch and number, then the value. One wrapper,
+   because the stacked form lays each child of a cell on its own grid row. */
+.gmt-timetable-printed {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-timetable .gmt-timetable-printed .gmt-cutoff-series-swatch {
+  margin-right: 0;
+  align-self: center;
+}
+
+.gmt-timetable-rownum {
+  color: var(--gmt-ice);
+  font-weight: 700;
+}
+
+.gmt-timetable-printed-text {
+  min-width: 0;
+}
+
+/* Leaves (exact) and Local arrival: the readable local HH:MM at normal size,
+   the full zoned value beneath it in smaller, muted text — exact and never
+   dropped, but never the long wrapped ISO prose the table would be if that
+   were the only size shown. */
 .gmt-timetable-time {
   display: block;
+  white-space: nowrap;
+}
+
+.gmt-timetable-time:not(.gmt-playground-sentinel) {
   color: var(--gmt-ice);
 }
 
@@ -80,7 +993,7 @@
   color: var(--gmt-ice-dim);
 }
 
-@container (max-width: 30rem) {
+@container gmt-timetable-pane (max-width: 47.24rem) {
   .gmt-timetable-rows {
     font-size: var(--gmt-text-xs);
   }
@@ -92,16 +1005,15 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Below the narrow container breakpoint, a 4-column row no longer has room
- * for its cells side by side without forcing a mid-token break. Each row
- * becomes its own labelled card instead: real `<table>`/`<tr>`/`<td>`
- * markup throughout (kept a table — with explicit roles — for assistive
- * tech, per the responsive-table pattern), restyled to `display: block` and
- * given a `data-label` per cell so `td::before` draws "Printed", "Leaves
- * (exact)", "Badge" and "Local arrival" as its line label. The header row is
- * visually hidden rather than removed, since the labels now live per-cell.
+ * Under 47.25rem a 4-column row no longer has room for its cells side by side
+ * without a mid-token break. Each row becomes its own labelled card instead:
+ * real `<table>`/`<tr>`/`<td>` markup throughout (a table with explicit roles,
+ * for assistive tech), restyled to `display: block` with a `data-label` per
+ * cell, so `td::before` draws "Printed", "Leaves (exact)", "Note" and "Local
+ * arrival" as its line label. The header row is visually hidden rather than
+ * removed.
  * --------------------------------------------------------------------------- */
-@container (max-width: 30rem) {
+@container gmt-timetable-pane (max-width: 47.24rem) {
   .gmt-timetable-rows thead {
     position: absolute;
     width: 1px;
@@ -132,7 +1044,7 @@
      in the second, so the short time never splits from its offset. */
   .gmt-timetable-rows td {
     display: grid;
-    grid-template-columns: 5.5rem minmax(0, 1fr);
+    grid-template-columns: 5rem minmax(0, 1fr);
     column-gap: var(--gmt-space-2);
     align-items: baseline;
     padding: var(--gmt-space-1) 0;
@@ -141,15 +1053,6 @@
 
   .gmt-timetable-rows td > * {
     grid-column: 2;
-  }
-
-  /* A row with no badge has nothing to say in that cell. */
-  .gmt-timetable-rows td:empty {
-    display: none;
-  }
-
-  .gmt-timetable-time {
-    white-space: nowrap;
   }
 
   .gmt-timetable-rows td:not(:last-child) {
@@ -171,5 +1074,61 @@
   .gmt-timetable-time,
   .gmt-timetable-time-full {
     min-width: 0;
+  }
+}
+
+/* A value never breaks. The widest, the Printed cell with a written offset, is
+   the swatch (11.2px), its gap (8), one character (7.2), a gap (8) and 25
+   characters (180) = 214.4px; beside a 5rem label (80) and its 8px gap, inside a
+   row card's 18px of padding and border, that is 320px of section. Under 20rem
+   (the /dox rail at 300px is 266px) the label sits above its value instead. */
+@container gmt-timetable-pane (max-width: 19.99rem) {
+  .gmt-timetable-rows td {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmt-timetable-rows td > *,
+  .gmt-timetable-rows td::before {
+    grid-column: 1;
+  }
+
+  .gmt-timetable-rows td::before {
+    grid-row: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The two-column band: tops and reservations
+ *
+ * The two panes of a split start on one line. A row frame is a fieldset, whose
+ * border is drawn through the middle of its legend: the legend is 25px high
+ * (21px of text and 4px under it), so the frame's visible top edge is 10.5px
+ * below its box. The frames' pane is pulled up by that much, so their top edge
+ * meets the day track's. The table's own 8px of top margin is dropped for the
+ * same reason: its header then starts where the chart's frame does.
+ *
+ * Nothing is stretched. The shorter pane keeps its own height, and the section
+ * is as tall as the taller one.
+ *
+ * The chart's caption names the arrival zone and, when it differs, the printed
+ * one: "Arrival times are in Australia/Adelaide. The timetable is printed in
+ * America/Los_Angeles." is 89 characters, 641px in the 12px face, so a pane
+ * under 41.5rem (664px, with the plot's 20px of padding) reserves a second line
+ * for it and a zone change never moves the legend. Wider panes hold it on one.
+ * --------------------------------------------------------------------------- */
+
+@container gmt-timetable-section (min-width: 76.25rem) {
+  .gmt-timetable-rowset {
+    margin-top: -10.5px;
+  }
+
+  .gmt-timetable-rows {
+    margin-top: 0;
+  }
+
+  @container gmt-timetable-pane (max-width: 41.49rem) {
+    .gmt-timetable-chart-caption {
+      min-block-size: 2lh;
+    }
   }
 }

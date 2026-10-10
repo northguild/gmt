@@ -15,7 +15,7 @@ import Mistake from "../../../components/Mistake.astro";
 <Mistake
   severity="high"
   title="Not handling the empty string on invalid input"
-  description="parseRfc2822, parseHttp, and parseSql return an empty string for invalid input and never throw. Passing the result on unchecked turns bad input into an empty value somewhere downstream."
+  description="parseRfc2822, parseHttpDate, and parseSqlDateTime return an empty string for invalid input and never throw. Passing the result on unchecked turns bad input into an empty value somewhere downstream."
   wrongCode={`const result = parseRfc2822(invalidInput); // ""
 save({ sentAt: result }); // stores an empty timestamp`}
   rightCode={`import { parseRfc2822 } from "@northguild/gmt/zoned";
@@ -24,6 +24,17 @@ const result = parseRfc2822(invalidInput);
 if (result === "") {
   // invalid RFC 2822 input
 }`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Checking a wire format with its regex"
+  description="A pattern such as rfc3339DateTime proves the shape of a string, not that its date exists. It matches 29 February in a year that has none. The validator for the format is true exactly when the parser returns a value."
+  wrongCode={`rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true — but 2023 has no 29 February`}
+  rightCode={`import { isValidRfc3339DateTime } from "@northguild/gmt/zoned";
+
+isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false
+isValidRfc3339DateTime("2024-03-15T14:30:00-04:00"); // true`}
 />
 
 <Mistake
@@ -77,7 +88,7 @@ const { year: weekYear, week } = getIsoWeekDate(startDate);
 
 <Mistake
   severity="medium"
-  title="Checking for null on parseRfc2822/parseHttp/parseSql/parseRfc3339"
+  title="Checking for null on parseRfc2822/parseHttpDate/parseSqlDateTime/parseRfc3339"
   description="These functions return an empty string for invalid input, never null. A null check never fires, so invalid input passes straight through it. Check for the empty string."
   wrongCode={`const r = parseRfc3339(input);
 if (r === null) { /* never true — invalid input returns "" */ }`}
@@ -94,6 +105,7 @@ if (r === "") {
 - [Parsing guide](/guides/core-date-operations/parsing/)
 - [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)
 - [`parseRfc3339` reference](/reference/zoned/parse/parseRfc3339)
+- [`isValidRfc3339DateTime` reference](/reference/zoned/validate/isValidRfc3339DateTime)
 - [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
 - [`parseWeekFromDate` reference](/reference/plain/parse/parseWeekFromDate)
 - [`getIsoWeekDate` reference](/reference/calendar/calculate/getIsoWeekDate)

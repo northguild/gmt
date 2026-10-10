@@ -1,13 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
+  frameInstant,
+  frameZoned,
   instantFrom,
   nextZonedBucketStart,
   zonedNextTransition,
   zonedUnitStart,
+  zoneFrame,
 } from "../../internal";
 import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
-import { isValidTimeZone } from "../../zoned/validate";
 import { isValidZoneBucketUnit } from "../validate";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
@@ -128,11 +130,18 @@ function nextBucketStartWithinRange(
  *   if a zone ever presented more transitions inside one bucket than the stepper walks — no
  *   IANA zone does, and the whole table was swept to confirm it. A truncated list would be
  *   worse than the sentinel, so none is returned in any of those cases.
+ * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
+ *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
+ *   offset's seconds (under a minute) of the last instant Temporal supports
+ *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
+ *   (`-271821-04-20T00:00:00Z`) for one west, this returns `[]`. An offset to the minute has no
+ *   such limit.
  *
  * @param start ISO 8601 instant string for the range start (inclusive)
  * @param end ISO 8601 instant string for the range end (exclusive)
  * @param unit bucket unit ("hour" | "day" | "week" | "month", or its plural)
- * @param timeZone IANA name or UTC offset the buckets are computed in
+ * @param timeZone IANA name or UTC offset the buckets are computed in: a time zone identifier
+ *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns array of UTC instant strings ending in "Z", or [] on invalid input
  *
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "day", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"]
@@ -144,6 +153,7 @@ function nextBucketStartWithinRange(
  * @example bucketRange("2024-06-16T00:00:00Z", "2024-06-15T00:00:00Z", "day", "UTC") // [] (start after end)
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "days", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"] (plural unit name)
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "year", "UTC") // [] (not a bucketing unit)
+ * @example bucketRange("1970-01-01T00:00:00Z", "1970-01-02T01:00:00Z", "day", "-00:44:30") // ["1969-12-31T00:44:30Z", "1970-01-01T00:44:30Z", "1970-01-02T00:44:30Z"]
  */
 export function bucketRange(
   start: string,
@@ -154,18 +164,20 @@ export function bucketRange(
   // The singular name; the guard below rejects anything outside the four units.
   const resolvedUnit = resolveDateTimeUnit(unit) as ZoneBucketUnit;
 
+  const frame = zoneFrame(timeZone);
+
   if (
     !isValidInstant(start) ||
     !isValidInstant(end) ||
     !isValidZoneBucketUnit(resolvedUnit) ||
-    !isValidTimeZone(timeZone)
+    frame === null
   ) {
     return [];
   }
 
   try {
-    const startZoned = instantFrom(start).toZonedDateTimeISO(timeZone);
-    const endZoned = instantFrom(end).toZonedDateTimeISO(timeZone);
+    const startZoned = frameZoned(instantFrom(start), frame);
+    const endZoned = frameZoned(instantFrom(end), frame);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
     if (certainlyExceedsBucketCap(startZoned, endZoned, resolvedUnit))
@@ -182,7 +194,7 @@ export function bucketRange(
         return boundaries;
       }
 
-      boundaries.push(current.toInstant().toString());
+      boundaries.push(frameInstant(current, frame).toString());
 
       const next = nextBucketStartWithinRange(current, resolvedUnit);
       // Past the last representable instant, so after `end`: every touched bucket is collected.

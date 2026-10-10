@@ -64,6 +64,7 @@ const isWide = (kind: string) =>
   data-null-is-empty={nullIsEmpty ? "true" : ""}
   data-options-suffix={optionsSuffix}
   data-object-arg={objectArg ? "true" : ""}
+  data-choice-seeds={template.choiceSeeds ? JSON.stringify(template.choiceSeeds) : undefined}
 >
   <div class="gmt-widget-card">
     <div class="gmt-widget-section">
@@ -242,14 +243,17 @@ const isWide = (kind: string) =>
   import { GMT_MODULES } from "../lib/gmt-modules";
   import {
     classifyPlaygroundResult,
+    createSeedLoader,
     evaluateArg,
     renderResult,
+    type SeedControl,
   } from "../lib/playground-client";
   import {
     buildCall,
     parseCallArgs,
     type CallField,
   } from "../lib/playground-parsers";
+  import type { ChoiceSeed, ChoiceSeeds } from "../lib/playground-spec";
   import { codeSpan, escapeHtml, renderCallLine, wireCopyButtons } from "../lib/widget-ui";
 
   const DEBOUNCE_MS = 150;
@@ -265,7 +269,10 @@ const isWide = (kind: string) =>
   type Kind = CallField["kind"];
 
   interface FieldControl {
+    name: string;
     read: () => CallField;
+    /** Overwrite the control with a choice's example value. */
+    write: (seed: ChoiceSeed) => void;
     wire: (rerun: () => void) => void;
   }
 
@@ -325,7 +332,12 @@ const isWide = (kind: string) =>
       const amount = label.querySelector<HTMLInputElement>('[data-role="amount"]')!;
       const unit = label.querySelector<HTMLSelectElement>('[data-role="unit"]')!;
       return {
+        name,
         read: () => ({ name, kind, value: amount.value, unit: unit.value, optional }),
+        write: (seed) => {
+          amount.value = seed.seed;
+          if (seed.unitSeed) unit.value = seed.unitSeed;
+        },
         wire: (rerun) => {
           amount.addEventListener("input", rerun);
           unit.addEventListener("change", rerun);
@@ -337,7 +349,11 @@ const isWide = (kind: string) =>
       '[data-role="value"]',
     )!;
     return {
+      name,
       read: () => ({ name, kind, value: el.value, optional }),
+      write: (seed) => {
+        el.value = seed.seed;
+      },
       wire: (rerun) => {
         el.addEventListener(el.tagName === "SELECT" ? "change" : "input", rerun);
       },
@@ -371,18 +387,37 @@ const isWide = (kind: string) =>
       return { name, kind, items, element: element as CallField["element"], optional };
     }
 
-    function wire(rerun: () => void) {
-      const wireRow = (row: HTMLElement) => {
-        row.querySelectorAll<HTMLElement>("input,select").forEach((c) => {
-          c.addEventListener(c.tagName === "SELECT" ? "change" : "input", rerun);
-        });
+    let rerunHook: () => void = () => {};
+    const wireRow = (row: HTMLElement) => {
+      row.querySelectorAll<HTMLElement>("input,select").forEach((c) => {
+        c.addEventListener(c.tagName === "SELECT" ? "change" : "input", () => rerunHook());
+      });
+      row.querySelector('[data-role="remove"]')?.addEventListener("click", () => {
+        row.remove();
+        rerunHook();
+      });
+    };
+
+    function write(seed: ChoiceSeed) {
+      rows.replaceChildren();
+      const fill = (row: HTMLElement, values: string[]) => {
         row
-          .querySelector('[data-role="remove"]')
-          ?.addEventListener("click", () => {
-            row.remove();
-            rerun();
+          .querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select")
+          .forEach((c, i) => {
+            c.value = values[i] ?? "";
           });
+        rows.appendChild(row);
+        wireRow(row);
       };
+      if (kind === "intervals") {
+        for (const pair of seed.pairs ?? []) fill(makeRow(kind, element, choices), pair);
+      } else {
+        for (const item of seed.items ?? []) fill(makeRow(kind, element, choices), [item]);
+      }
+    }
+
+    function wire(rerun: () => void) {
+      rerunHook = rerun;
       rows.querySelectorAll<HTMLElement>(".gmt-pf-row").forEach(wireRow);
       addBtn.addEventListener("click", () => {
         const row = makeRow(kind, element, choices);
@@ -391,8 +426,7 @@ const isWide = (kind: string) =>
         rerun();
       });
     }
-
-    return { read, wire };
+    return { name, read, write, wire };
   }
 
   async function run(
@@ -457,7 +491,30 @@ const isWide = (kind: string) =>
         timer = setTimeout(() => void run(container, controls, outputEl), DEBOUNCE_MS);
       };
 
+      // Choosing an enum value loads that choice's example values over fields
+      // the reader has not edited (see `createSeedLoader`). The select's own
+      // `rerun` listener then runs the call, so the result and the call line
+      // update the way any edit does.
+      let choiceSeeds: ChoiceSeeds | undefined;
+      try {
+        choiceSeeds = container.dataset.choiceSeeds
+          ? (JSON.parse(container.dataset.choiceSeeds) as ChoiceSeeds)
+          : undefined;
+      } catch {
+        choiceSeeds = undefined;
+      }
+      const loader = createSeedLoader(controls as SeedControl[], choiceSeeds);
+      loader.markLoaded();
+
       controls.forEach((c) => c.wire(rerun));
+      if (choiceSeeds) {
+        for (const name of Object.keys(choiceSeeds)) {
+          const sel = container.querySelector<HTMLSelectElement>(
+            `.gmt-pf-fields > [data-field="${CSS.escape(name)}"] select[data-role="value"]`,
+          );
+          sel?.addEventListener("change", () => loader.onEnumChange(name));
+        }
+      }
       wireCopyButtons(container);
       void run(container, controls, outputEl);
     });

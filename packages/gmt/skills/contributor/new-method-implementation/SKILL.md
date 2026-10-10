@@ -63,7 +63,10 @@ Follow existing patterns for method names:
 6. Update exports and docs
 - Add to relevant `index.ts` file in the module.
 - Add to package.json exports if new subpath needed.
-- Update README.md API Surface section.
+- Write the JSDoc with `@example` lines. The docs build generates the function's reference page from it.
+- Add or update a docs guide under `apps/dox/src/content/docs/guides/` for the new behavior.
+- Do not add a README section. `README.md` and `packages/gmt/README.md` are landing pages and hold no per-function content. The two files are identical: edit one and copy it to the other. Edit by hand in four cases only: the change adds or removes a namespace that exports functions (add or remove its `/reference/<namespace>/` link, on the "By industry:" line for an industry namespace), it changes a function shown in the sample block (paste the result from a real call), it changes the agent prompt (`AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts` and its three copies), or it adds, removes or re-orders a library in the comparison table (`apps/dox/src/data/library-measurements.json`).
+- Run `pnpm stats:sync` so the published figures match the repository.
 
 ## Prompter guidance when method does not exist
 

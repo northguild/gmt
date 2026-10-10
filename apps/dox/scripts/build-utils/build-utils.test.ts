@@ -385,6 +385,8 @@ describe("classifyType", () => {
       b: boolean,
       u: "x" | "y" | "z",
       obj: { a: number },
+      one: "102",
+      optOne?: "718",
     ): void {}
   `;
   const { checker, sourceFile } = compile(src);
@@ -399,6 +401,18 @@ describe("classifyType", () => {
     expect(classifyType(checker, types[3])).toEqual({
       type: "enum",
       options: ["x", "y", "z"],
+    });
+  });
+  it("classifies a single string literal as an enum with that one choice", () => {
+    expect(classifyType(checker, types[5])).toEqual({
+      type: "enum",
+      options: ["102"],
+    });
+  });
+  it("classifies an optional single string literal as an enum with that one choice", () => {
+    expect(classifyType(checker, types[6])).toEqual({
+      type: "enum",
+      options: ["718"],
     });
   });
   it("falls back to string for objects", () => {

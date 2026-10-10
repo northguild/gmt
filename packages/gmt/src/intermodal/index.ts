@@ -2,3 +2,5 @@
 export * from "@js-temporal/polyfill";
 export * from "./calculate";
 export * from "./format";
+export * from "./parse";
+export * from "./validate";

@@ -41,6 +41,8 @@ import {
   isBetweenUnix,
   isBetweenUtc,
   isBetweenZoned,
+  parseDateTimeWithPattern,
+  parseDateWithPattern,
 } from "../index";
 import { type OptionsCase, optionsCases } from "./noThrow";
 
@@ -164,6 +166,42 @@ describe("an options bag that is a function is read as the object it is", () => 
       expect(isDeepStrictEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
         isDeepStrictEqual(callWith(testCase, object), testCase.sentinel),
       );
+    },
+  );
+});
+
+describe("GetOptionsObject on the pattern parsers' TwoDigitYearOptions bag", () => {
+  // The corpus-driven tables above cover these two as well; this table states the contract by
+  // hand on a `yyyy` pattern, which never reads the bag, so the sentinel for null | "x" | 1
+  // comes from the options argument alone.
+  it.each`
+    name                          | parse                       | value                 | pattern               | expected
+    ${"parseDateWithPattern"}     | ${parseDateWithPattern}     | ${"2024-03-15"}       | ${"yyyy-MM-dd"}       | ${"2024-03-15"}
+    ${"parseDateTimeWithPattern"} | ${parseDateTimeWithPattern} | ${"2024-03-15 14:30"} | ${"yyyy-MM-dd HH:mm"} | ${"2024-03-15T14:30:00"}
+  `(
+    '$name($value, $pattern, undefined, options = null | "x" | 1) returns "" (omitted, {} or a function: $expected)',
+    ({ parse, value, pattern, expected }) => {
+      const call = parse as (
+        v: string,
+        p: string,
+        l: undefined,
+        o: unknown,
+      ) => string;
+      expect({
+        omitted: call(value, pattern, undefined, undefined),
+        empty: call(value, pattern, undefined, {}),
+        function: call(value, pattern, undefined, () => undefined),
+        null: call(value, pattern, undefined, null),
+        string: call(value, pattern, undefined, "x"),
+        number: call(value, pattern, undefined, 1),
+      }).toEqual({
+        omitted: expected,
+        empty: expected,
+        function: expected,
+        null: "",
+        string: "",
+        number: "",
+      });
     },
   );
 });

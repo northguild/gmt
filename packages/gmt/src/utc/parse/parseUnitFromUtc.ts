@@ -1,11 +1,12 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidUtc } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Units supported by `parseUnitFromUtc` when extracting a value from a UTC ISO
@@ -16,7 +17,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * | Member | Description |
  * | --- | --- |
- * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `year` | Four digits (e.g. `2024`, `0005`); a sign and six digits outside 0000–9999 (e.g. `+010000`). |
  * | `month` | Zero-padded 2 (e.g. `03`). |
  * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
  * | `day` | Zero-padded 2. |
@@ -56,6 +57,8 @@ export type UtcUnit =
  * - A `"week"` in late December can be week 1 of the next year, under either week numbering.
  * - `optionsArg` must be an object or omitted: a non-object value (such as `null`) returns "".
  * - Returns "" for invalid input.
+ * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
+ *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
  *
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45Z")
  * @param unit unit to extract from the datetime
@@ -64,10 +67,13 @@ export type UtcUnit =
  *
  * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "month") // "03"
  * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "hours") // "14"
+ * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "year") // "2024"
+ * @example parseUnitFromUtc("0005-06-01T12:30:00Z", "year") // "0005"
  * @example parseUnitFromUtc("2024-03-17T02:30:45Z", "day", { timeZone: "America/New_York" }) // "16"
  * @example parseUnitFromUtc("2024-01-01T00:00:00Z", "week") // "1"
  * @example parseUnitFromUtc("2024-12-31T12:00:00Z", "week", { weekStartsOn: "sunday" }) // "1"
  * @example parseUnitFromUtc("invalid", "month") // ""
+ * @example parseUnitFromUtc("1970-01-01T12:44:30Z", "minute", { timeZone: "-00:44:30" }) // "00" (a stored offset with seconds)
  */
 export function parseUnitFromUtc(
   value: string,
@@ -83,8 +89,10 @@ export function parseUnitFromUtc(
      */
     weekStartsOn?: "monday" | "sunday";
     /**
-     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset, or `"local"` for
-     * the system time zone. An unknown zone returns `""`.
+     * The time zone the wall-clock fields are read in: an IANA name, a UTC offset (a time zone
+     * identifier such as `+05:30`, `+0530` or `-08`, or a stored offset `±HH:MM[:SS]`, what
+     * `getTimeZoneOffset` returns), or `"local"` for the system time zone. An unknown zone returns
+     * `""`.
      *
      * @defaultValue `"UTC"`
      */
@@ -97,19 +105,18 @@ export function parseUnitFromUtc(
       return "";
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const timeZone = normalizeTimeZone(optionsArg?.timeZone);
+    const frame = normalizeZoneFrame(optionsArg?.timeZone);
 
-    if (!isValidUtc(value) || weekStartsOn === null || timeZone === "") {
+    if (!isValidUtc(value) || weekStartsOn === null || frame === null) {
       return "";
     }
 
     try {
-      const dateTime =
-        Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+      const dateTime = frameWallClock(Temporal.Instant.from(value), frame);
 
       switch (resolveDateTimeUnit(unit)) {
         case "year":
-          return dateTime.year.toString();
+          return isoYearString(dateTime.year);
         case "month":
           return dateTime.month.toString().padStart(2, "0");
         case "week":

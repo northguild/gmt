@@ -1,9 +1,11 @@
 import { localDstEdgeBattleCases } from "../../test";
 import {
+  mockTemporalInstantFromThrow,
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../../test/mocks";
 import { classifyLocal } from "./classifyLocal";
+import { resolveLocal } from "./resolveLocal";
 
 const zonesWithTransitions = localDstEdgeBattleCases.filter(
   ({ nonexistent }) => nonexistent !== null,
@@ -191,6 +193,115 @@ describe("classifyLocal at the maximum instant", () => {
     "classifies 2024-11-03T01:30:00 in the offset zone $timeZone as $expected (a fixed offset has no transitions)",
     ({ timeZone, expected }) => {
       expect(classifyLocal("2024-11-03T01:30:00", timeZone)).toBe(expected);
+    },
+  );
+});
+
+// A fixed offset has no transition, so every wall time it can place is one instant. The verdict
+// is "unique" exactly when `resolveLocal` returns a value, and null otherwise.
+describe("classifyLocal with a stored UTC offset", () => {
+  it.each`
+    localDateTime                         | timeZone       | expected
+    ${"1970-01-01T12:00:00"}              | ${"-00:44:30"} | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"+05:30:00"} | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"-00:00:00"} | ${"unique"}
+    ${"2024-11-03T01:30:00"}              | ${"-04:56:02"} | ${"unique"}
+    ${"2024-03-10T02:30:00"}              | ${"-04:56:02"} | ${"unique"}
+    ${"1970-01-01T12:00:00.123456789"}    | ${"+23:59:59"} | ${"unique"}
+    ${"+275760-09-13T00:00:30"}           | ${"+00:00:30"} | ${"unique"}
+    ${"-271821-04-19T23:59:30"}           | ${"-00:00:30"} | ${"unique"}
+    ${"+275760-09-13T00:00:30.000000001"} | ${"+00:00:30"} | ${null}
+    ${"-271821-04-20T00:44:29.999999999"} | ${"+00:44:30"} | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"Z"}         | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"+24:00:00"} | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"-0400:30"}  | ${null}
+    ${"1970-01-01T12:00:00-00:44:30"}     | ${"-00:44:30"} | ${null}
+  `(
+    "classifies $localDateTime at $timeZone as $expected",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(classifyLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+
+  it("returns null when Temporal.Instant.from throws for a stored offset", () => {
+    mockTemporalInstantFromThrow();
+    expect(classifyLocal("1970-01-01T12:00:00", "-00:44:30")).toBeNull();
+  });
+});
+
+// The two functions read one wall time in one zone, so their answers have to fit together:
+// - "unique": every disambiguation gives the same instant, and "reject" does not reject.
+// - "ambiguous" or "nonexistent": "reject" rejects, and "earlier" and "later" give two instants.
+// - null: `resolveLocal` returns "" whatever the disambiguation.
+// A fixed offset, to the minute or with seconds, is only ever "unique" or null.
+describe("classifyLocal agrees with resolveLocal", () => {
+  it.each`
+    localDateTime                         | timeZone              | expected
+    ${"1970-01-01T12:00:00"}              | ${"-00:44:30"}        | ${"unique"}
+    ${"2024-03-10T02:30:00"}              | ${"-04:56:02"}        | ${"unique"}
+    ${"2024-11-03T01:30:00"}              | ${"-04:56:02"}        | ${"unique"}
+    ${"2024-03-10T02:30:00"}              | ${"+05:30:00"}        | ${"unique"}
+    ${"2024-03-10T02:30:00"}              | ${"-05:00"}           | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"+23:59:59"}        | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"-23:59:59"}        | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"-00:00"}           | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"-00:00:00"}        | ${"unique"}
+    ${"1970-01-01T12:00:00"}              | ${"+00:00:00"}        | ${"unique"}
+    ${"+275760-09-13T00:00:30"}           | ${"+00:00:30"}        | ${"unique"}
+    ${"2024-07-15T12:00:00"}              | ${"America/New_York"} | ${"unique"}
+    ${"2024-03-10T02:30:00"}              | ${"America/New_York"} | ${"nonexistent"}
+    ${"2024-11-03T01:30:00"}              | ${"America/New_York"} | ${"ambiguous"}
+    ${"+275760-09-13T00:00:30.000000001"} | ${"+00:00:30"}        | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"+24:00:00"}        | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"+05:30:60"}        | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"+05:30:00.5"}      | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"Z"}                | ${null}
+    ${"1970-01-01T12:00:00"}              | ${"Invalid/Zone"}     | ${null}
+  `(
+    "$localDateTime at $timeZone is $expected, and resolveLocal answers to match",
+    ({ localDateTime, timeZone, expected }) => {
+      const resolve = (disambiguation: "earlier" | "later" | "reject") =>
+        resolveLocal(localDateTime, timeZone, { disambiguation });
+      const compatible = resolveLocal(localDateTime, timeZone);
+
+      expect(classifyLocal(localDateTime, timeZone)).toBe(expected);
+
+      if (expected === null) {
+        expect([
+          compatible,
+          resolve("earlier"),
+          resolve("later"),
+          resolve("reject"),
+        ]).toEqual(["", "", "", ""]);
+      } else if (expected === "unique") {
+        expect(compatible).not.toBe("");
+        expect([
+          resolve("earlier"),
+          resolve("later"),
+          resolve("reject"),
+        ]).toEqual([compatible, compatible, compatible]);
+      } else {
+        expect(resolve("reject")).toBe("");
+        expect(resolve("earlier")).not.toBe("");
+        expect(resolve("later")).not.toBe(resolve("earlier"));
+      }
+    },
+  );
+
+  it.each`
+    timeZone      | kind
+    ${5}          | ${"a number"}
+    ${null}       | ${"null"}
+    ${undefined}  | ${"undefined"}
+    ${{}}         | ${"an object"}
+    ${["UTC"]}    | ${"an array holding a zone name"}
+    ${["+05:30"]} | ${"an array holding an offset"}
+    ${true}       | ${"a boolean"}
+  `(
+    'returns null, and resolveLocal returns "", for $kind as the time zone',
+    ({ timeZone }) => {
+      expect(classifyLocal("1970-01-01T12:00:00", timeZone)).toBeNull();
+      expect(resolveLocal("1970-01-01T12:00:00", timeZone)).toBe("");
     },
   );
 });
