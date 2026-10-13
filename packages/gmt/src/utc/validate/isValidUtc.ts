@@ -11,6 +11,10 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * - Reads RFC 9557 annotations as `Temporal.Instant.from` does: elective ones (`[foo=bar]`), a
  *   time zone annotation and a calendar annotation are ignored (an instant has neither), and an
  *   unknown critical one (`[!foo=bar]`) is rejected.
+ * - Accepts four forms beyond the timestamp shape `YYYY-MM-DDTHH:MM:SS[.f]Z`: a time without
+ *   seconds, a comma before the fraction, an expanded `±YYYYYY` year and RFC 9557 annotations.
+ *   For the plain RFC 3339 spelling that readers other than Temporal expect, use
+ *   `isValidUtcTimestamp`, which is false for all four.
  * - Rejects leap seconds (e.g., "2024-12-31T23:59:60Z").
  * - Uses Temporal.Instant.from for validation.
  * - Requires a time component — date-only strings ("2024-01-01Z") are rejected.
