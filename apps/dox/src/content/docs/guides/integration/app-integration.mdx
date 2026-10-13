@@ -31,6 +31,17 @@ import { isValidTimeZone } from "@northguild/gmt/zoned";
 if (!isValidTimeZone(tzParam)) throw new Error("Invalid timezone");
 ```
 
+Do the same for a UTC timestamp from a request:
+
+```js
+import { isValidUtcTimestamp } from "@northguild/gmt";
+
+if (!isValidUtcTimestamp(body.createdAt)) throw new Error("Invalid timestamp");
+```
+
+It accepts only the plain RFC 3339 spelling, such as `2026-10-06T12:00:00Z`, with an optional
+fraction. See [UTC timestamps for other readers](/guides/core-date-operations/validation/#utc-timestamps-for-other-readers).
+
 For Unix epoch times, pick one canonical unit (milliseconds recommended) and stick to
 it. Convert explicitly when needed with `convertUtcToUnix` / `convertUnixToUtc`, which
 use milliseconds unless you pass `{ epochUnit: "seconds" }`.

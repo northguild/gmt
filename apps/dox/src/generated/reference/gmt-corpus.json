@@ -21694,6 +21694,67 @@
     ]
   },
   {
+    "url": "/reference/utc/validate/isValidUtcTimestamp",
+    "page": "/reference/utc/validate/isValidUtcTimestamp",
+    "name": "isValidUtcTimestamp",
+    "namespace": "utc",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidUtcTimestamp(value: string): boolean",
+    "description": "Return true when `value` is a real UTC instant written as `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else: a narrower check than `isValidUtc`.",
+    "sourcePath": "packages/gmt/src/utc/validate/isValidUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00:00.123456789Z\")",
+        "result": "true (nine fraction digits)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"0000-01-01T00:00:00Z\")",
+        "result": "true (year 0000)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00:00Z[Europe/Paris]\")",
+        "result": "false (RFC 9557 annotation; isValidUtc accepts it)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00:00,5Z\")",
+        "result": "false (comma before the fraction; isValidUtc accepts it)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"-005000-01-01T00:00:00Z\")",
+        "result": "false (expanded year; isValidUtc accepts it)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00Z\")",
+        "result": "false (no seconds; isValidUtc accepts it)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06t12:00:00z\")",
+        "result": "false (lower-case t and z)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-10-06T12:00:00+00:00\")",
+        "result": "false (a numeric offset, not Z)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2026-02-30T00:00:00Z\")",
+        "result": "false (February has no 30th; the rfc3339DateTime pattern matches it)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"2016-12-31T23:59:60Z\")",
+        "result": "false (leap second)"
+      },
+      {
+        "call": "isValidUtcTimestamp(\"not a date\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/zoned/calculate/addZoned",
     "page": "/reference/zoned/calculate/addZoned",
     "name": "addZoned",

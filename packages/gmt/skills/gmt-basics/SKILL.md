@@ -90,6 +90,8 @@ input before you act on it.
   `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
 - **Interchange-format validation**: `isValidRfc3339DateTime`,
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
+- **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
+  `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else; it has no parser)
 
 ## Common pitfalls
 
@@ -123,6 +125,17 @@ input before you act on it.
   `isValidSqlDateTime` are each true exactly when the parser returns a value.
   A regex proves shape only: `rfc3339DateTime.test("2023-02-29T10:00:00Z")`
   is `true` and `isValidRfc3339DateTime` returns `false` for it.
+- `isValidUtcTimestamp` matches no parser: it is a narrower `isValidUtc`. It is true
+  only for a real UTC instant written `YYYY-MM-DDTHH:MM:SS[.f]Z`: a four-digit year
+  `0000` to `9999`, upper-case `T` and `Z`, seconds, an optional dot fraction of one to
+  nine digits, and nothing after the `Z`. Use it for a string headed for storage or for
+  a reader that is not Temporal. `isValidUtc` also accepts a time without seconds, a
+  comma before the fraction, an expanded `±YYYYYY` year and RFC 9557 annotations
+  (`"2026-10-06T12:00:00Z[Europe/Paris]"`); all four are `false` here. A numeric offset,
+  `+00:00` included, is `false` too: `isValidRfc3339DateTime` checks the whole RFC 3339
+  grammar, with the same two GMT limits (no second `60`, at most nine fraction digits).
+  The check is on the spelling and the instant. A reader's own range and precision
+  still apply.
 - `formatRfc2822`, `formatHttpDate` and `formatRfc3339` return `""` for a year their
   grammar cannot hold (before 0000, or after 9999 for RFC 3339 and HTTP).
   `formatRfc3339` writes a sub-minute historical offset as the same instant at

@@ -121,7 +121,7 @@ pnpm run lint
 │   │   │   │   ├── format/     # formatUtc, formatRelativeUtc
 │   │   │   │   ├── get/        # getUtcNow, getUtcYear, ...
 │   │   │   │   ├── parse/      # parseDateFromUtc, parseTimeFromUtc, ...
-│   │   │   │   └── validate/   # isValidUtc
+│   │   │   │   └── validate/   # isValidUtc, isValidUtcTimestamp, isValidUtcRange, isValidHttpDate
 │   │   │   ├── regex/          # Composable regex patterns for date/time strings
 │   │   │   └── package.json
 │   ├── gmt-biome/              # @northguild/gmt-biome — published Biome config for consumers
