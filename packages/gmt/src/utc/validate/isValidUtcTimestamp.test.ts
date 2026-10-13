@@ -30,10 +30,12 @@ describe("isValidUtcTimestamp", () => {
     ${"2000-02-29T00:00:00Z"}               | ${true}  | ${"Appendix C: 2000 divides by 400"}
     ${"2026-10-06T12:00:00Z[Europe/Paris]"} | ${false} | ${"RFC 9557 time zone annotation after Z"}
     ${"2026-10-06T12:00:00Z[u-ca=gregory]"} | ${false} | ${"RFC 9557 calendar annotation after Z"}
+    ${"2026-10-06T12:00:00Z[foo=bar]"}      | ${false} | ${"RFC 9557 elective annotation after Z"}
     ${"2026-10-06T12:00:00,5Z"}             | ${false} | ${"comma: time-secfrac starts with a dot"}
     ${"2026-10-06T12:00:00.Z"}              | ${false} | ${"time-secfrac: a dot needs a digit"}
     ${"-005000-01-01T00:00:00Z"}            | ${false} | ${"expanded year before 0000"}
     ${"+010000-01-01T00:00:00Z"}            | ${false} | ${"expanded year after 9999"}
+    ${"+002026-10-06T12:00:00Z"}            | ${false} | ${"expanded year inside 0000-9999"}
     ${"2026-10-06T12:00:00.1234567890Z"}    | ${false} | ${"ten fraction digits: GMT keeps nine"}
     ${"2026-10-06T12:00:00+00:00"}          | ${false} | ${"UTC as a numeric offset, not Z"}
     ${"2026-10-06T12:00:00-00:00"}          | ${false} | ${"§4.3 -00:00: a numeric offset, not Z"}
