@@ -689,6 +689,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/utc/validate/isValidHttpDate",
   "/reference/utc/validate/isValidUtc",
   "/reference/utc/validate/isValidUtcRange",
+  "/reference/utc/validate/isValidUtcTimestamp",
   "/reference/zoned",
   "/reference/zoned/calculate",
   "/reference/zoned/calculate/addZoned",

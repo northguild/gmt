@@ -50,7 +50,8 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   8601 strings everywhere.
 - [**RFC 3339**](https://www.rfc-editor.org/rfc/rfc3339) is the IETF's internet profile of ISO
   8601: a stricter subset for timestamps with a UTC offset. **GMT** emits it with `formatRfc3339`
-  and checks it with `isValidRfc3339DateTime`.
+  and checks it with `isValidRfc3339DateTime`. **GMT** also checks the UTC spelling, with an
+  upper-case `T` and `Z`, with `isValidUtcTimestamp`.
 - [**RFC 9557**](https://www.rfc-editor.org/rfc/rfc9557) extends RFC 3339 with bracketed
   annotations, such as a time zone (`[Europe/Paris]`) and the calendar key `u-ca`. **GMT**'s zoned
   values carry their time zone this way.
