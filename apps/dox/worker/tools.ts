@@ -44,6 +44,7 @@ import {
   DOX_TOOL_DOCS,
   ENABLED_TOOL_NAMES,
   showBillingDeadlinesInput,
+  showBlDateStampInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -51,8 +52,10 @@ import {
   showCutoffRulerInput,
   showCutoffStackInput,
   showDeliverySchedulerInput,
+  showDemurrageClockInput,
   showDepartureBoardInput,
   showDtmDecoderInput,
+  showEpcisEventReaderInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -60,6 +63,7 @@ import {
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showJourneySplitInput,
   showPunctualityBoardInput,
   showTimetableReaderInput,
   showZonePlannerInput,
@@ -361,6 +365,61 @@ export function buildWorkerTools(
               `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
             )
           : accept("x12-time-reader");
+      },
+    }),
+
+    // The terminal's zone is a display zone the reader named; the events and the
+    // options are the widget's to read, and a value the library refuses is its
+    // sentinel to show.
+    showDemurrageClock: tool({
+      description: docFor("showDemurrageClock"),
+      inputSchema: showDemurrageClockInput,
+      execute: ({ zone }) => {
+        const unknown = unknownZones(zone ? [zone] : []);
+        return unknown.length > 0
+          ? reject(
+              "demurrage-clock",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("demurrage-clock");
+      },
+    }),
+
+    // The place is a zone id or a UTC offset, and a place the library does not
+    // read is the widget's own NO SIGNAL, with its reason. Nothing is refused
+    // here for a zone: this tool shows what an unreadable one does.
+    showBlDateStamp: tool({
+      description: docFor("showBlDateStamp"),
+      inputSchema: showBlDateStampInput,
+      execute: () => accept("bl-date-stamp"),
+    }),
+
+    // A value the library does not read is the widget's own NO SIGNAL, with its
+    // reason. Nothing is refused here: this tool shows what a missing offset,
+    // a `Z` and a time with no seconds do.
+    showEpcisEventReader: tool({
+      description: docFor("showEpcisEventReader"),
+      inputSchema: showEpcisEventReaderInput,
+      execute: () => accept("epcis-event-reader"),
+    }),
+
+    // The Delivery Scheduler's legs, so the same zone check: a zone that is not
+    // a real one is refused here, and any other value the library does not read
+    // is the widget's own NO SIGNAL, with its reason.
+    showJourneySplit: tool({
+      description: docFor("showJourneySplit"),
+      inputSchema: showJourneySplitInput,
+      execute: ({ legs, startTimeZone }) => {
+        const unknown = unknownZones([
+          ...(Array.isArray(legs) ? legs.map((l) => l.timeZone) : []),
+          ...(startTimeZone ? [startTimeZone] : []),
+        ]);
+        return unknown.length > 0
+          ? reject(
+              "journey-split",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("journey-split");
       },
     }),
   };

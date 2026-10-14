@@ -4,9 +4,10 @@
  * and context/dox/specs/timetable-reader.md § F9).
  *
  * Dragging a handle must move nothing except the values themselves. For each of
- * the six tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
- * Timetable Reader, Free Time Ledger, Dwell Ledger), every preset, and each of
- * these widths, the script takes every control the reader drags:
+ * the seven tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
+ * Timetable Reader, Free Time Ledger, Dwell Ledger, B/L Date Stamp), every
+ * preset, and each of these widths, the script takes every control the reader
+ * drags:
  *
  *   Departure Board     handle-after
  *   Punctuality Board   handle-late, handle-early, handle-compare (the ones the
@@ -15,6 +16,7 @@
  *   Timetable Reader    handle-1 to handle-4 (the ones the preset shows)
  *   Free Time Ledger    handle-start, handle-end
  *   Dwell Ledger        handle-entry, handle-exit
+ *   B/L Date Stamp      moment-slider (a native range)
  *
  * and does two things with it:
  *
@@ -256,6 +258,25 @@ const TOOLS = [
     frame: ".gmt-ledger-frame",
     drawn: LEDGER_DRAWN,
     maxKeys: 60,
+  },
+  {
+    slug: "bl-date-stamp",
+    root: ".gmt-bl-date-stamp",
+    // "no-zone" returns no date, so it is left out; every other preset returns
+    // a value.
+    presets: [
+      "new-york-evening",
+      "shanghai-morning",
+      "rotterdam-fall-back",
+      "apia-deleted-day",
+      "fixed-offset",
+    ],
+    controls: [{ sel: '[data-role="moment-slider"]' }],
+    track: null,
+    frame: ".gmt-ledger-frame",
+    // The lanes' day columns and the gate move with the moment by design; the
+    // plot is measured, and so is every plate above it.
+    drawn: '[data-role="plot"]',
   },
 ];
 

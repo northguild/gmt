@@ -1,6 +1,6 @@
 /*
- * The EDI timestamp widgets, shared (INT-15): the DTM Decoder and the X12 Time
- * Reader.
+ * The EDI timestamp widgets, shared (INT-15): the DTM Decoder, the X12 Time
+ * Reader and the EPCIS Event Reader (INT-14).
  *
  * Card/section/controls/codeframe/output chrome lives in gmt-widget.css and the
  * control primitives in gmt-form-controls.css; this sheet adds no control CSS.
@@ -36,12 +36,14 @@
  */
 
 .gmt-dtm-decoder,
-.gmt-x12-time-reader {
+.gmt-x12-time-reader,
+.gmt-epcis-event-reader {
   container-type: inline-size;
 }
 
 .gmt-dtm-decoder > .gmt-widget-card > .gmt-widget-section,
-.gmt-x12-time-reader > .gmt-widget-card > .gmt-widget-section {
+.gmt-x12-time-reader > .gmt-widget-card > .gmt-widget-section,
+.gmt-epcis-event-reader > .gmt-widget-card > .gmt-widget-section {
   container-name: gmt-edi-section;
 }
 
@@ -62,6 +64,18 @@
  *          23-character instant (177px, with hundredths) and 28-character local
  *          time with its offset (216px, `2024-06-15T14:30:00.12-04:00`):
  *          28 + 200 + 177 + 46 + 216 + 32 + 26 = 725px.
+ *   Right, EPCIS Event Reader  17.5rem (280px): one member cell holding the
+ *          widest value on one line. The widest instant a result can hold is
+ *          33 characters, `+010000-01-01T04:30:00.123456789Z`: an `eventTime`
+ *          just inside year 9999 whose own offset carries it past the end of
+ *          the four-digit years, with a nine-digit fraction. The widest
+ *          instant of a four-digit year is 30 characters,
+ *          `2024-06-15T14:30:00.123456789Z`. The cell is 33 characters of 7.7px
+ *          (254px) and its 12px padding and 1px border on each side:
+ *          254 + 24 + 2 = 280px. The two date cells share one row and hold a
+ *          13-character date at 7.7px (100px) plus the same 26px: two of
+ *          126px and an 8px gap, 260px, which the 280px holds. The members
+ *          stack in one column, so nothing else sets the width.
  *   Left   28rem (448px): the value taken apart. Its widest single value, a
  *          UN/EDIFACT 208, is 280px; the segment's parts row is 413px, and wraps
  *          under 30rem. The floor is legibility, not width.
@@ -76,6 +90,8 @@
  *                    (a 1100px section) and every wider one.
  *   X12 Time Reader  28 + 1 + 45.5  = 74.5rem (1192px): the 1920px viewport
  *                    (a 1228px section) and every wider one.
+ *   EPCIS Event Reader  28 + 1 + 17.5 = 46.5rem (744px): the 1100px section of
+ *                    a 1440px viewport, and every one from 744px up.
  * Under it a pane is the section's width, so the stacked layout reads as one
  * column at every width down to the 390px viewport (a 320px section).
  * --------------------------------------------------------------------------- */
@@ -87,6 +103,11 @@
 
 .gmt-x12-time-reader {
   --edi-cols: minmax(28rem, 1fr) minmax(45.5rem, 1fr);
+  --edi-seam: 1rem;
+}
+
+.gmt-epcis-event-reader {
+  --edi-cols: minmax(28rem, 1fr) minmax(17.5rem, 1fr);
   --edi-seam: 1rem;
 }
 
@@ -127,6 +148,15 @@
   }
 }
 
+@container gmt-edi-section (min-width: 46.5rem) {
+  .gmt-epcis-event-reader .gmt-edi-split {
+    display: grid;
+    grid-template-columns: var(--edi-cols);
+    column-gap: var(--edi-seam);
+    align-items: stretch;
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * The controls line
  *
@@ -137,19 +167,45 @@
  *   DTM Decoder     `203: local time, no offset`  about 290px -> 352px reserved
  *   X12, main       `Code 24: the other end of the run`       270.2px -> 308px
  *   X12, DTP        `D6: a two-digit year, not read`  about 290px -> 352px reserved
+ *   EPCIS           `-00:00 comes back as +00:00`, 27 characters in the same face
+ *                   as the DTM label above (about 290px) -> 352px reserved
  * so the preset's column is 22rem (352px). Beside it sit the other columns, each
  * as wide as its own label and control need, and a 0.75rem gap between each:
  *   DTM Decoder  22 + 15 (segment) + 9.5 (format code) + 2 * 0.75 = 48 rem
  *   X12 main     22 + 3 * 10 (a date, a time and a code, each with `optional`)
  *                + 3 * 0.75 = 54.25rem
  *   X12 DTP      22 + 9 (qualifier) + 12 (value) + 2 * 0.75 = 44.5rem
+ *   EPCIS        22 + 17 (eventTime: a 30-character value at 8.2px is 246px,
+ *                plus 26px of padding and border, 272px) + 11
+ *                (eventTimeZoneOffset: its 19-character label at 7.2px is
+ *                137px, and a 16-character value at 8.2px is 131px plus 26px)
+ *                + 2 * 0.75 = 51.5rem
  * From there the line is one row. Under it the preset takes its own row and the
  * rest share the next while they hold their own minima (DTM 25.25rem, X12 main
- * 31.5rem, X12 DTP 21.75rem); under that the field grid's own 11rem tracks.
+ * 31.5rem, X12 DTP 21.75rem, EPCIS 28.75rem: 17 + 11 + 0.75); under that the field grid's own 11rem tracks.
  * --------------------------------------------------------------------------- */
 
 .gmt-edi-preset {
   grid-column: 1 / -1;
+}
+
+@container gmt-edi-section (min-width: 28.75rem) and (max-width: 51.49rem) {
+  .gmt-epcis-event-reader .gmt-field-grid.gmt-edi-top {
+    grid-template-columns: minmax(17rem, 2fr) minmax(11rem, 1fr);
+  }
+}
+
+@container gmt-edi-section (min-width: 51.5rem) {
+  .gmt-epcis-event-reader .gmt-field-grid.gmt-edi-top {
+    grid-template-columns: minmax(22rem, 2fr) minmax(17rem, 2fr) minmax(
+        11rem,
+        1fr
+      );
+  }
+
+  .gmt-epcis-event-reader .gmt-edi-preset {
+    grid-column: auto;
+  }
 }
 
 @container gmt-edi-section (min-width: 25.25rem) and (max-width: 47.99rem) {
@@ -498,6 +554,10 @@
 
 .gmt-x12-time-reader {
   --edi-cell: 13.5rem;
+}
+
+.gmt-epcis-event-reader {
+  --edi-cell: 17.5rem;
 }
 
 .gmt-edi-readouts {
@@ -1090,4 +1150,205 @@
   .gmt-x12-time-reader .gmt-dtm-cell::before {
     display: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * The EPCIS Event Reader (INT-14)
+ *
+ * The members stack in one column, each cell the full width of the pane (its
+ * minimum is the 280px derived above). The two dates share one row. A value
+ * wider than its cell scrolls inside the cell and never wraps, so nothing below
+ * it moves; only an instant at the very end of the year range with a nine-digit
+ * fraction can be that wide in a pane as narrow as the chat rail's.
+ * --------------------------------------------------------------------------- */
+
+.gmt-epcis-event-reader .gmt-epcis-members {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gmt-epcis-event-reader .gmt-epcis-dates {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gmt-epcis-event-reader .gmt-edi-row > dd {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* A refused field is one neutral box of at most 24 characters (the picture cuts
+   longer text with an ellipsis), so the box fits the narrowest pane: 24 * 9px
+   plus the field's 18px is 234px. */
+.gmt-epcis-event-reader .gmt-edi-field {
+  max-inline-size: 100%;
+}
+
+/* The hand-off link is a button without an address until a result gives it one.
+   The dimming is not the only cue: the link has no hover or focus state. */
+.gmt-epcis-event-reader .gmt-button[aria-disabled="true"] {
+  color: var(--gmt-ice-dim);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.gmt-epcis-event-reader .gmt-button[aria-disabled="true"]:hover {
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-fill-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+ * The two day rails
+ *
+ * Each rail draws the same 72 hours, centred on the instant, so the pin sits at
+ * the same x on both. A day is a span between that clock's own midnights; the
+ * day holding the instant is lit in the rail's series colour (the date's series
+ * 1 for UTC, the offset's series 3 for the local clock) with a bottom edge, and
+ * every midnight is a hairline with its time at the foot. Positions are drawing.
+ * The dates and the words come from the library.
+ *
+ * The head pins the clock's name to the left and its date to the right. Both
+ * reserve the width of the longest text they show and never wrap:
+ *   name  `Local clock +14:00`  18 characters at 7.2px (the 12px face) = 130px
+ *   date  `+010000-01-01`       13 characters at 7.7px (12.8px) = 100px
+ * and a 12px gap between them, 242px, which the narrowest pane holds.
+ * --------------------------------------------------------------------------- */
+
+.gmt-epcis-rails {
+  gap: var(--gmt-space-4);
+}
+
+.gmt-epcis-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-epcis-rail--utc {
+  --series: var(--gmt-series-1);
+}
+
+.gmt-epcis-rail--local {
+  --series: var(--gmt-series-3);
+}
+
+.gmt-epcis-rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+  white-space: nowrap;
+}
+
+.gmt-epcis-rail-name {
+  min-inline-size: 18ch;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-epcis-rail-date {
+  min-inline-size: 13ch;
+  text-align: end;
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice);
+}
+
+.gmt-epcis-track {
+  position: relative;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-block-size: 3.5rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  overflow: hidden;
+}
+
+.gmt-epcis-day {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--from);
+  inset-inline-end: calc(100% - var(--to));
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.05);
+}
+
+.gmt-epcis-day[data-lit="1"] {
+  background-image: linear-gradient(
+    180deg,
+    color(from var(--series) srgb r g b / 0.34),
+    color(from var(--series) srgb r g b / 0.12)
+  );
+  box-shadow: inset 0 -3px 0 var(--series);
+}
+
+/* A midnight: a hairline across the track, and the time under it. */
+.gmt-epcis-tick {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--x);
+  inline-size: 1px;
+  background: var(--gmt-ice-dim);
+}
+
+.gmt-epcis-tick-label {
+  position: absolute;
+  inset-block-end: 6px;
+  inset-inline-start: 4px;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+}
+
+.gmt-epcis-tick[data-end="1"] > .gmt-epcis-tick-label {
+  inset-inline-start: auto;
+  inset-inline-end: 4px;
+}
+
+/* The instant: one pin, a line the full height of the track, with a bevelled
+   head. The same x on both rails. */
+.gmt-epcis-pin {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--x);
+  inline-size: 3px;
+  translate: -1.5px 0;
+  background: var(--gmt-ice);
+}
+
+.gmt-epcis-pin::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  box-sizing: border-box;
+  inline-size: 12px;
+  block-size: 12px;
+  border: 2px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+/* With nothing to draw the track keeps its box and says why, in words. */
+.gmt-epcis-track--empty {
+  display: grid;
+  place-items: center;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-style: dashed;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-epcis-rail-empty {
+  margin: 0;
+  max-inline-size: 36ch;
+  text-align: center;
+  font-family: var(--gmt-font-body, inherit);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.4;
+  color: var(--gmt-ice-dim);
 }

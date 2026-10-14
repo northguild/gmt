@@ -512,10 +512,41 @@ export function scheduleNullText(
     case "invalid-zone":
       return `Leg ${n}'s arrival zone is not a time zone this browser knows.`;
     case "invalid-dwell":
-      return `Leg ${n}'s dwell is not a duration of time units, or it is negative.`;
+      return `Leg ${n}'s handling time is not a duration of time units, or it is negative.`;
     case "out-of-range":
       return "The schedule leaves the range of instants Temporal can represent.";
   }
+}
+
+/**
+ * The sentence for a failed journey: `scheduleNullText` for the diagnosed
+ * reason. A missed connection also names the leg's scheduled departure, the
+ * arrival before it and the time the cargo is ready, each on the handoff zone's
+ * clock, when the facts hold all three.
+ */
+export function failureText(
+  failure: Diagnosis,
+  facts: JourneyFacts,
+  legs: readonly ScheduleLeg[],
+  lib: Pick<TransportLib, "etaAtZone">,
+): string {
+  const n = failure.leg + 1;
+  if (failure.reason !== "missed-connection") {
+    return scheduleNullText(failure.reason, n);
+  }
+  const k = failure.leg;
+  const zone = legs[k - 1]?.timeZone ?? "";
+  const dep = facts.departures[k];
+  const arr = facts.arrivals[k - 1];
+  const ready = facts.readies[k - 1];
+  return dep && arr && ready
+    ? scheduleNullText("missed-connection", n, {
+        dep: lib.etaAtZone(dep, zone),
+        arr: lib.etaAtZone(arr, zone),
+        dwell: legs[k - 1]?.dwellAfter ?? "PT0S",
+        ready: lib.etaAtZone(ready, zone),
+      })
+    : scheduleNullText("missed-connection", n);
 }
 
 // ---------------------------------------------------------------------------

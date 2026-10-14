@@ -64,6 +64,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
             href: "/guides/industries/intermodal-free-time-and-demurrage/",
           },
           { label: "Free Time Ledger", href: "/tools/free-time-ledger/" },
+          { label: "Demurrage Clock", href: "/tools/demurrage-clock/" },
           { label: "mistakes", href: "/mistakes/intermodal/" },
         ],
       },
@@ -104,6 +105,11 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
             href: "/guides/industries/intermodal-bill-of-lading-and-eta/",
           },
           {
+            label: "EPCIS Event Reader",
+            href: "/tools/epcis-event-reader/",
+          },
+          { label: "B/L Date Stamp", href: "/tools/bl-date-stamp/" },
+          {
             label: "scenario",
             href: "/scenarios/the-epcis-offset-nobody-kept/",
           },
@@ -119,6 +125,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
             label: "guide",
             href: "/guides/industries/intermodal-bill-of-lading-and-eta/",
           },
+          { label: "Journey Split", href: "/tools/journey-split/" },
           {
             label: "scenario",
             href: "/scenarios/eta-that-forgot-the-sailing/",

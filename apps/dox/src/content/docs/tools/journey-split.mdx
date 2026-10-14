@@ -1,0 +1,64 @@
+---
+title: Journey Split
+description: Chain the legs of a multimodal move and see its hours sorted two ways, in the order they happen and gathered into moving and waiting. multimodalETA gives the totals, and the tool draws both on one scale.
+industries: [intermodal]
+---
+
+import JourneySplit from "../../../components/JourneySplit.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="multimodal ETAs">
+
+<Fragment slot="keypoint">
+
+The same hours, sorted two ways. Moving is the time the legs take. Waiting is the time the cargo sits at a hand-off, and it grows when the next leg leaves on a schedule.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A truck, a ship and a train carry cargo from Shanghai to Chicago. One total, 484 hours, hides where the time went. Part of it is cargo moving. The rest is cargo waiting, and the two fail in different ways: a schedule forecasts the moving time, and a terminal's queue moves the waiting.
+
+Set the legs, or pick a preset. The tool calls [`multimodalETA`](/reference/intermodal/calculate/multimodalETA/) for the ETA and the two totals, and [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) for the instant each leg leaves and arrives. [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) measures each wait. The top ribbon puts the legs in order, with each wait where it falls. The bottom ribbon gathers the same segments: moving at the left, waiting at the right. A table under them lists each hand-off.
+
+</Fragment>
+
+<JourneySplit fullbleed />
+
+<Fragment slot="after">
+
+**The words.** On screen, _handling_ is the time you state for a hand-off, the `dwellAfter` of a leg. It is how long the cargo needs there before the next leg may leave. _Waiting_ is the time the cargo is actually at the hand-off, which the library calls `totalDwell`: each leg's departure minus the previous leg's arrival. Waiting is handling plus any wait for a scheduled departure. _Moving_ is every leg's `duration` added up, which the library calls `totalTransit`. The printed calls keep the library's names.
+
+**A scheduled departure is waiting that handling does not explain.** A leg that names its own `departure` leaves then, not when the handling ends. If the time is before the handling ends, the cargo is not ready, and the library returns `null`. If it is after, the cargo waits for it. The chip under a wait names both parts, and the two ribbons draw them with different hatches.
+
+**The ribbons are drawing.** The library gives every time. The tool places a segment where its two instants fall, and a test checks that the moving segments add up to `totalTransit` and the waiting ones to `totalDwell` for every preset. The tool has no drag handle: it is a form and presets.
+
+```ts
+const legs = [
+  { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H", timeZone: "Asia/Shanghai", dwellAfter: "PT6H", mode: "truck" },
+  { departure: "2024-06-12T14:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
+  { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+];
+
+multimodalETA(legs); // { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }
+
+diffUtcAsDuration("2024-06-10T06:00:00Z", "2024-06-10T12:00:00Z", "hours"); // "PT6H"
+diffUtcAsDuration("2024-06-10T06:00:00Z", "2024-06-12T06:00:00Z", "hours"); // "PT48H"
+diffUtcAsDuration("2024-06-10T12:00:00Z", "2024-06-12T06:00:00Z", "hours"); // "PT42H"
+diffUtcAsDuration("2024-06-10T00:00:00Z", "2024-06-30T04:00:00Z", "hours"); // "PT484H"
+```
+
+The truck arrives at `2024-06-10T06:00:00Z` and the ship sails at `2024-06-12T06:00:00Z`, so the first wait is `PT48H`. The cargo is ready at `2024-06-10T12:00:00Z`, so `PT6H` of those hours are handling and `PT42H` are the wait for the sailing. Leave the ship leg without a `departure` and `totalDwell` falls to `PT42H`: the 6 hours and the 36 hours of handling, and nothing else.
+
+**Across a clock change.** `totalTransit` is exact time. A train that leaves New York at 20:00 on the night before the clocks spring forward and runs for 10 hours arrives at 07:00, when the wall clock has moved 11 hours. The tool counts the 10 hours that passed. The preset adds two hours of handling and three hours by truck: `totalTransit` is `PT13H`, `totalDwell` is `PT2H`, and the ETA is `2024-03-10T12:00:00-04:00[America/New_York]`.
+
+**Worth trying:** [the ship's sailing moved a week later](/tools/journey-split/?w=journeysplit&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-06-10T08%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration1%22%3A%22PT6H%22%2C%22timeZone1%22%3A%22Asia%2FShanghai%22%2C%22dwellAfter1%22%3A%22PT6H%22%2C%22mode1%22%3A%22truck%22%2C%22departure2%22%3A%222024-06-17T14%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration2%22%3A%22P14DT6H%22%2C%22timeZone2%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter2%22%3A%22PT36H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT52H%22%2C%22timeZone3%22%3A%22America%2FChicago%22%2C%22mode3%22%3A%22rail%22%7D) —
+`totalTransit` stays `PT400H` and `totalDwell` grows to `PT204H`, because the cargo waits seven days for the ship. Then [the same ship sailing at 10:00 on the first day](/tools/journey-split/?w=journeysplit&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-06-10T08%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration1%22%3A%22PT6H%22%2C%22timeZone1%22%3A%22Asia%2FShanghai%22%2C%22dwellAfter1%22%3A%22PT6H%22%2C%22mode1%22%3A%22truck%22%2C%22departure2%22%3A%222024-06-10T10%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration2%22%3A%22P14DT6H%22%2C%22timeZone2%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter2%22%3A%22PT36H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT52H%22%2C%22timeZone3%22%3A%22America%2FChicago%22%2C%22mode3%22%3A%22rail%22%7D) —
+it leaves before the truck's handling ends, so the result is `NO SIGNAL`. And [two days of handling instead of a sailing](/tools/journey-split/?w=journeysplit&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-06-10T08%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration1%22%3A%22PT6H%22%2C%22timeZone1%22%3A%22Asia%2FShanghai%22%2C%22dwellAfter1%22%3A%22P2D%22%2C%22mode1%22%3A%22truck%22%2C%22duration2%22%3A%22P14DT6H%22%2C%22timeZone2%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter2%22%3A%22PT36H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT52H%22%2C%22timeZone3%22%3A%22America%2FChicago%22%2C%22mode3%22%3A%22rail%22%7D) —
+the totals match the scheduled sailing's, `PT400H` and `PT84H`, but the chip under the first wait now names handling alone. The Delivery Scheduler shows the same legs [leg by leg](/tools/delivery-scheduler/?w=delivery&wa=%7B%22legCount%22%3A%223%22%2C%22departure1%22%3A%222024-06-10T08%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration1%22%3A%22PT6H%22%2C%22timeZone1%22%3A%22Asia%2FShanghai%22%2C%22dwellAfter1%22%3A%22PT6H%22%2C%22mode1%22%3A%22truck%22%2C%22departure2%22%3A%222024-06-12T14%3A00%3A00%2B08%3A00%5BAsia%2FShanghai%5D%22%2C%22duration2%22%3A%22P14DT6H%22%2C%22timeZone2%22%3A%22America%2FLos_Angeles%22%2C%22dwellAfter2%22%3A%22PT36H%22%2C%22mode2%22%3A%22ship%22%2C%22duration3%22%3A%22PT52H%22%2C%22timeZone3%22%3A%22America%2FChicago%22%2C%22mode3%22%3A%22rail%22%7D), and the link under the table opens them there.
+
+**Reference:** [`multimodalETA`](/reference/intermodal/calculate/multimodalETA/) gives the ETA and the two totals, [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/) gives every leg's time, and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) measures between two `Z` instants. The rules are in [Intermodal: B/L Dates and Multimodal ETA](/guides/industries/intermodal-bill-of-lading-and-eta/) and [Transport: Multi-leg Scheduling](/guides/industries/transport-multi-leg-scheduling/).
+
+</Fragment>
+
+</ToolLayout>

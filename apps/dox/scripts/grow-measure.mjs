@@ -3,8 +3,8 @@
  * Smooth-growth gate (context/dox/specs/dox-smooth-growth.md § 5).
  *
  * Measures how a tool page's height changes frame by frame, so "result regions
- * ease instead of popping" is a number and not an impression. For each of the
- * 18 tool pages it samples the page root's height on every animation frame, in
+ * ease instead of popping" is a number and not an impression. For each tool
+ * page in `PAGES` it samples the page root's height on every animation frame, in
  * two passes:
  *
  *   load         4 s from DOMContentLoaded, while the async mount fills the
@@ -183,6 +183,30 @@ const PAGES = [
   },
   {
     slug: "x12-time-reader",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "demurrage-clock",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "bl-date-stamp",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="moment-slider"]',
+  },
+  {
+    slug: "epcis-event-reader",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "journey-split",
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
     drag: null,

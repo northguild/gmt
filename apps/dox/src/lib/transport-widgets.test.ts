@@ -429,6 +429,26 @@ describe("diagnose", () => {
     });
   });
 
+  it("scheduleNullText words the handling time as handling, never as dwell", () => {
+    expect(scheduleNullText("invalid-dwell", 2)).toBe(
+      "Leg 2's handling time is not a duration of time units, or it is negative.",
+    );
+    for (const reason of [
+      "invalid-start-zone",
+      "no-departure",
+      "zoneless-first",
+      "invalid-departure",
+      "missed-connection",
+      "invalid-duration",
+      "negative-duration",
+      "invalid-zone",
+      "invalid-dwell",
+      "out-of-range",
+    ] as const) {
+      expect(scheduleNullText(reason, 2), reason).not.toMatch(/\bdwell\b/i);
+    }
+  });
+
   it("scheduleNullText gives a reason string for every reason", () => {
     for (const reason of [
       "invalid-start-zone",

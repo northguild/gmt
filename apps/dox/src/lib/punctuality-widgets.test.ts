@@ -241,6 +241,12 @@ describe("formatValue", () => {
     );
   });
 
+  it("prints a container event as it is written, type first", () => {
+    expect(formatValue({ type: "gatedOut", at: "2024-06-20T14:30:00Z" })).toBe(
+      '{ type: "gatedOut", at: "2024-06-20T14:30:00Z" }',
+    );
+  });
+
   it("prints null, a string and a list", () => {
     expect(formatValue(null)).toBe("null");
     expect(formatValue("PT15M")).toBe('"PT15M"');
