@@ -851,9 +851,9 @@ export function extractProperties(
 
     // A literal union prints its literals, not the alias that names them: the reader needs
     // the values, and the alias is linked beside them.
-    let printed = checker.typeToString(
+    let printed = printType(
+      checker,
       propType,
-      undefined,
       ts.TypeFormatFlags.NoTruncation |
         (isLiteralUnion(propType) ? ts.TypeFormatFlags.InTypeAlias : 0),
     );
@@ -1027,11 +1027,7 @@ function splitParams(
       const doc = spare[i];
       docOf.set(slot, doc);
       if (!doc.type) {
-        doc.type = checker.typeToString(
-          slot.type,
-          undefined,
-          ts.TypeFormatFlags.NoTruncation,
-        );
+        doc.type = printType(checker, slot.type);
       }
     });
   }
@@ -1570,6 +1566,21 @@ export function buildChoiceSeeds(
       const choice = argToValue(raw);
       if (!ef.choices!.includes(choice) || entries[choice]) continue;
 
+      // The unit control holds one unit: an object with two keys, or a key the
+      // control does not list, is not a literal the form can hold.
+      const holdsOneUnit = res.fields.every((f, i) => {
+        if (f.kind !== "units") return true;
+        const arg = res.objectArg
+          ? BU.parseObjectArgEntries(rawArgs[0]).find(
+              ([k]) => k === f.name,
+            )?.[1]
+          : rawArgs[i];
+        if (arg === undefined) return true;
+        const { unit } = BU.parseUnitsArg(arg);
+        return unit !== "" && (f.unitKeys ?? []).includes(unit);
+      });
+      if (!holdsOneUnit) continue;
+
       const others: Record<string, ChoiceSeed> = {};
       res.fields.forEach((f, i) => {
         if (i !== idx) others[f.name] = seedOfField(f);
@@ -1919,7 +1930,9 @@ export function extractFnBody(
       sigStr = sigStr.replace(`${sp.name}?: ${full}`, `${sp.name}?: ${shown}`);
     }
   }
-  const signature = `${name}${sigStr}`;
+  // `full` above stays the raw print, so the replace finds it in `signatureToString`'s text;
+  // the finished signature is ordered once.
+  const signature = BU.orderUnitUnions(`${name}${sigStr}`);
 
   const jsDoc = parseJsDoc(checker, node);
   const description = jsDoc?.description ?? "";
@@ -2040,9 +2053,9 @@ export function extractType(
     members: hasMembers ? extractProperties(checker, type, node, ctx) : [],
     ...(isLiteralUnion(type)
       ? {
-          literals: checker.typeToString(
+          literals: printType(
+            checker,
             type,
-            undefined,
             ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias,
           ),
         }
@@ -2939,7 +2952,19 @@ function declaresOptional(decl: ts.Declaration): boolean {
 }
 
 /**
- * `typeToString` for a declared parameter or property, without the `| undefined` the checker adds
+ * `typeToString` with each union of unit names largest first (`orderUnitUnions`). The printer
+ * lists a union in the checker's internal order, which changes with what else the program holds.
+ */
+export function printType(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  flags: ts.TypeFormatFlags = ts.TypeFormatFlags.NoTruncation,
+): string {
+  return BU.orderUnitUnions(checker.typeToString(type, undefined, flags));
+}
+
+/**
+ * `printType` for a declared parameter or property, without the `| undefined` the checker adds
  * to an optional one (`x?: string` reads `string | undefined` under `strictNullChecks`). The `?`
  * already says it, and the source never wrote it. An `undefined` written in the declared type is
  * kept.
@@ -2949,11 +2974,7 @@ export function declaredTypeString(
   type: ts.Type,
   decl: ts.Declaration | undefined,
 ): string {
-  const text = checker.typeToString(
-    type,
-    undefined,
-    ts.TypeFormatFlags.NoTruncation,
-  );
+  const text = printType(checker, type);
   if (!decl || !declaresOptional(decl)) return text;
   const typeNode = (decl as ts.ParameterDeclaration | ts.PropertySignature)
     .type;

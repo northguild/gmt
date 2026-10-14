@@ -11,9 +11,8 @@
  */
 
 /**
- * One editable positional argument, rendered as a form control instead of a
- * slice of a textarea. Derived by `scripts/build-reference.ts` from the same
- * `PlaygroundSpec` the textarea template is built from.
+ * One editable positional argument, rendered as a form control. Derived by
+ * `scripts/build-reference.ts` from the same `PlaygroundSpec` the template call is built from.
  */
 /**
  * `"expr"` is the fallback for an argument no scalar control models — an object

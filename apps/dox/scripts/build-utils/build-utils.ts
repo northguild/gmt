@@ -109,14 +109,10 @@ export interface PlaygroundSpecDeps {
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve the GMT_MODULES key a function's playground should import from.
- *
- * The `duration` barrel is a single top-level module that re-exports every
- * sub-module, so all duration functions resolve to the one key. Every other
- * namespace maps 1:1 to its GMT_MODULES key (`<ns>/<mod>`).
+ * Resolve the GMT_MODULES key a function's playground imports from: its own
+ * module subpath (`<ns>/<mod>`), never a namespace barrel.
  */
 export function playgroundModule(namespace: string, mod: string): string {
-  if (namespace === "duration") return "duration";
   return `${namespace}/${mod}`;
 }
 
@@ -209,6 +205,220 @@ export const TIME_UNITS = [
   "nanoseconds",
 ] as const;
 
+/**
+ * The units with an exact length: a day, which is 24 hours when nothing anchors it (as
+ * `Temporal.Duration.prototype.total` reads one without `relativeTo`), and the time units.
+ * The keys of `ExactDurationUnit`, which `totalUnits` takes.
+ */
+export const EXACT_UNITS = ["days", ...TIME_UNITS] as const;
+
+/**
+ * The rank of each unit name, by descending magnitude, as the Temporal specification's table of
+ * units orders them: the plural names `years` … `nanoseconds` (their index in `ALL_DT_UNITS`),
+ * then the singular names `year` … `nanosecond`, each 10 places after its plural. The empty
+ * string, the sentinel a function returns for invalid input (`DateDurationUnit | ""`), ranks
+ * last, as the source writes it.
+ */
+const UNIT_ORDER: ReadonlyMap<string, number> = new Map([
+  ...ALL_DT_UNITS.flatMap((plural, i) => [
+    [plural, i] as const,
+    [plural.slice(0, -1), i + ALL_DT_UNITS.length] as const,
+  ]),
+  ["", 2 * ALL_DT_UNITS.length],
+]);
+
+/**
+ * `names` in `UNIT_ORDER` when there are two or more, at least one is a unit name, and every
+ * one is a unit name or `""`; otherwise `names` unchanged.
+ */
+export function orderUnitNames(names: readonly string[]): string[] {
+  if (
+    names.length < 2 ||
+    !names.every((n) => UNIT_ORDER.has(n)) ||
+    names.every((n) => n === "")
+  )
+    return [...names];
+  return [...names].sort((a, b) => UNIT_ORDER.get(a)! - UNIT_ORDER.get(b)!);
+}
+
+const OPEN = "([{<";
+const CLOSE = ")]}>";
+const QUOTED = /^"[^"]*"$/;
+
+/** The end index of the string literal that opens at `i`, or the text's end. */
+function stringEnd(text: string, i: number): number {
+  const j = text.indexOf(text[i], i + 1);
+  return j === -1 ? text.length - 1 : j;
+}
+
+/**
+ * The aliases the printer gives a type of unit names, in a union beside quoted unit names or the
+ * `""` sentinel. They count as unit members when the sentinel rule decides where `""` goes.
+ */
+const UNIT_TYPE_TOKENS: ReadonlySet<string> = new Set([
+  "keyof DurationLike",
+  "DateUnit",
+  "TimeUnit",
+  "DateTimeUnit",
+]);
+
+/** One union's members, with the quoted unit names sorted into the quoted slots. */
+function orderQuoted(members: string[]): string[] {
+  const quoted = members
+    .filter((m) => QUOTED.test(m))
+    .map((m) => m.slice(1, -1));
+  const sorted = orderUnitNames(quoted);
+  let next = 0;
+  return members.map((m) => (QUOTED.test(m) ? `"${sorted[next++]}"` : m));
+}
+
+/**
+ * One union's members in unit order. A union holding the `""` sentinel is reordered only when
+ * every other member is a quoted unit name or a `UNIT_TYPE_TOKENS` alias: its unit names sort
+ * into their quoted slots, the aliases keep their places among them, and `""` goes last. Any
+ * other member (`null`, `"reject"`, `DateUnit[]`) leaves such a union as printed.
+ */
+function orderMembers(members: string[]): string[] {
+  const sentinel = '""';
+  if (!members.includes(sentinel)) return orderQuoted(members);
+  const rest = members.filter((m) => m !== sentinel);
+  const isUnit = (m: string) =>
+    UNIT_TYPE_TOKENS.has(m) ||
+    (QUOTED.test(m) && UNIT_ORDER.has(m.slice(1, -1)));
+  if (rest.length === 0 || !rest.every(isUnit)) return members;
+  return [...orderQuoted(rest), ...members.filter((m) => m === sentinel)];
+}
+
+/** Every bracket group inside one member, processed. */
+function orderInside(member: string): string {
+  let out = "";
+  for (let i = 0; i < member.length; i++) {
+    const c = member[i];
+    if (c === '"' || c === "'" || c === "`") {
+      const j = stringEnd(member, i);
+      out += member.slice(i, j + 1);
+      i = j;
+    } else if (c === "=" && member[i + 1] === ">") {
+      out += "=>";
+      i++;
+    } else if (OPEN.includes(c)) {
+      let depth = 0;
+      let j = i;
+      for (; j < member.length; j++) {
+        const x = member[j];
+        if (x === '"' || x === "'" || x === "`") j = stringEnd(member, j);
+        else if (x === "=" && member[j + 1] === ">") j++;
+        else if (OPEN.includes(x)) depth++;
+        else if (CLOSE.includes(x) && --depth === 0) break;
+      }
+      out += c + orderUnitUnions(member.slice(i + 1, j)) + (member[j] ?? "");
+      i = j;
+    } else out += c;
+  }
+  return out;
+}
+
+/**
+ * Printed type text with each union of unit names in `UNIT_ORDER`. The TypeScript printer lists
+ * a union in the checker's internal order, which changes with what else the program holds.
+ *
+ * Only a union whose quoted members are all unit names (two or more) is reordered, and only its
+ * quoted slots move: an alias (`TimeUnit`), a `keyof` type, `null` or a bracketed member keeps
+ * its place. A union with any other quoted member (`"dayOfWeek" | "days"`) stays as printed,
+ * though the brackets inside it are still walked. The `""` sentinel goes last when every other
+ * member is a unit name or a unit alias (`orderMembers`).
+ */
+export function orderUnitUnions(text: string): string {
+  let out = "";
+  let segment: string[] = [];
+  let current = "";
+  let depth = 0;
+  const endMember = () => {
+    segment.push(current);
+    current = "";
+  };
+  const endSegment = () => {
+    endMember();
+    if (segment.length > 1) {
+      const trimmed = segment.map((m) => m.trim());
+      const ordered = orderMembers(trimmed.map(orderInside));
+      out += segment.map((m, i) => m.replace(trimmed[i], ordered[i])).join("|");
+    } else out += orderInside(segment[0]);
+    segment = [];
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"' || c === "'" || c === "`") {
+      const j = stringEnd(text, i);
+      current += text.slice(i, j + 1);
+      i = j;
+      continue;
+    }
+    if (c === "=" && text[i + 1] === ">") {
+      if (depth === 0) {
+        endSegment();
+        out += "=>";
+      } else current += "=>";
+      i++;
+      continue;
+    }
+    if (OPEN.includes(c)) depth++;
+    if (CLOSE.includes(c)) depth--;
+    if (depth === 0 && c === "|") {
+      endMember();
+      continue;
+    }
+    if (depth === 0 && (c === "," || c === ";" || c === ":")) {
+      endSegment();
+      out += c;
+      continue;
+    }
+    current += c;
+    // A type predicate's subject (`unit is …`, `asserts unit is …`) is not a union member.
+    if (
+      depth === 0 &&
+      segment.length === 0 &&
+      /^\s*(?:asserts\s+)?[A-Za-z_$][\w$]*\s+is\s+$/.test(current)
+    ) {
+      out += current;
+      current = "";
+    }
+  }
+  endSegment();
+  return out;
+}
+
+/**
+ * A select's choices with the unit names first, largest first (`UNIT_ORDER`), then every other
+ * choice in the order it had (`"dayOfWeek"`, `"timeZone"`), then `""`. The source writes these
+ * types the same way (`DateTimeUnit | "dayOfWeek"`). A list with no unit name is unchanged.
+ * Selects only: a printed union with another quoted member stays as printed (`orderMembers`).
+ */
+export function orderUnitChoices(choices: readonly string[]): string[] {
+  const isUnit = (c: string) => c !== "" && UNIT_ORDER.has(c);
+  if (!choices.some(isUnit)) return [...choices];
+  return [
+    ...orderUnitNames(choices.filter(isUnit)),
+    ...choices.filter((c) => !isUnit(c) && c !== ""),
+    ...choices.filter((c) => c === ""),
+  ];
+}
+
+/** `info` with an enum's or a list's choices in `orderUnitChoices` order. */
+function withUnitOrder(info: ClassifiedType): ClassifiedType {
+  return (info.type === "enum" || info.type === "array") && info.options
+    ? { ...info, options: orderUnitChoices(info.options) }
+    : info;
+}
+
+/** The key sets a unit object control recognises, each in display order. */
+const UNIT_KEY_SETS: readonly (readonly string[])[] = [
+  ALL_DT_UNITS,
+  DATE_UNITS,
+  EXACT_UNITS,
+  TIME_UNITS,
+];
+
 const TEMPORAL_NUMBER_FIELDS = [
   "year",
   "month",
@@ -267,9 +477,19 @@ function nonNullable(checker: ts.TypeChecker, type: ts.Type): ts.Type {
 
 /**
  * Classify a TS type into a `ParamType`, resolving string-literal unions into
- * enums with their option lists.
+ * enums with their option lists. Unit names among the choices read largest
+ * first (`orderUnitChoices`), never in the checker's order.
  */
 export function classifyType(
+  checker: ts.TypeChecker,
+  type: ts.Type | undefined,
+  paramName?: string,
+): ClassifiedType {
+  return withUnitOrder(classifyTypeAsPrinted(checker, type, paramName));
+}
+
+/** `classifyType`, with any choices in the order the checker holds them. */
+function classifyTypeAsPrinted(
   _checker: ts.TypeChecker,
   type: ts.Type | undefined,
   _paramName?: string,
@@ -421,32 +641,34 @@ export function classifyType(
         );
 
       const propNamesSet = new Set(propNames);
-      const allDtSet = new Set(ALL_DT_UNITS);
-      const dateSet = new Set(DATE_UNITS);
-      const timeSet = new Set(TIME_UNITS);
+      const keySet = UNIT_KEY_SETS.find((k) =>
+        setEquals(propNamesSet, new Set(k)),
+      );
 
-      if (
-        propNames.length > 0 &&
-        (setEquals(propNamesSet, allDtSet) ||
-          setEquals(propNamesSet, dateSet) ||
-          setEquals(propNamesSet, timeSet))
-      ) {
+      if (propNames.length > 0 && keySet) {
         let allNumber = true;
         for (const p of props) {
+          // A mapped type (`Partial<Record<Unit, number>>`) has no declarations.
           const decl = p.declarations?.[0] as ts.Node | undefined;
-          if (decl) {
-            const pt = nonNullable(
-              _checker,
-              _checker.getTypeOfSymbolAtLocation(p, decl),
-            );
-            if (!(pt.flags & ts.TypeFlags.NumberLike)) {
-              allNumber = false;
-              break;
-            }
+          let raw: ts.Type | undefined;
+          if (
+            decl &&
+            typeof _checker.getTypeOfSymbolAtLocation === "function"
+          ) {
+            raw = _checker.getTypeOfSymbolAtLocation(p, decl);
+          } else if (typeof _checker.getTypeOfSymbol === "function") {
+            raw = _checker.getTypeOfSymbol(p);
+          }
+          if (!raw) continue;
+          const pt = nonNullable(_checker, raw);
+          if (!(pt.flags & ts.TypeFlags.NumberLike)) {
+            allNumber = false;
+            break;
           }
         }
         if (allNumber) {
-          return { type: "units", options: propNames };
+          // The constant's order, never the checker's: it changes with the program.
+          return { type: "units", options: [...keySet] };
         }
       }
 
@@ -458,7 +680,10 @@ export function classifyType(
       );
       const numberFields = propNames.filter((n) => temporalNumSet.has(n));
       if (allRecognized && numberFields.length > 0) {
-        return { type: "units", options: numberFields };
+        return {
+          type: "units",
+          options: TEMPORAL_NUMBER_FIELDS.filter((n) => propNamesSet.has(n)),
+        };
       }
     }
   }
@@ -466,8 +691,16 @@ export function classifyType(
   return { type: "string" };
 }
 
-/** Classify a type from its string form (used for rest-tuple inner types). */
+/**
+ * Classify a type from its string form (used for rest-tuple inner types).
+ * Unit names among the choices read largest first (`orderUnitChoices`).
+ */
 export function classifyTypeFromString(s: string): ClassifiedType {
+  return withUnitOrder(classifyTypeFromStringAsWritten(s));
+}
+
+/** `classifyTypeFromString`, with any choices in the order the text lists them. */
+function classifyTypeFromStringAsWritten(s: string): ClassifiedType {
   const t = s.trim();
   if (/^bigint$/.test(t)) return { type: "bigint" };
   if (/^(number|Number)$/.test(t)) return { type: "number" };
