@@ -6,7 +6,7 @@
  * the literal `dwellTime` JSDoc example it draws, so a drift in the library or
  * the widget fails here.
  */
-/// <reference types="vitest/globals" />
+import { Temporal } from "@js-temporal/polyfill";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { DWELL_PRESETS } from "./dwell-ledger";
 import {
@@ -21,6 +21,10 @@ const REQUIRED_ROLES = [
   "preset-description",
   "zone",
   "compare-zone",
+  "frame",
+  "heroes",
+  "hero-elapsed",
+  "hero-days",
   "timeline",
   "row-dwell",
   "label-dwell",
@@ -97,8 +101,9 @@ async function mount(args = {}, templateArgs = args) {
   return { root, handle, controller };
 }
 
+/** The columns the dwell lit: the days it touched. */
 const touchedDates = (root: HTMLElement, role: string) =>
-  [...q(root, role).querySelectorAll<HTMLElement>('[data-touched="true"]')].map(
+  [...q(root, role).querySelectorAll<HTMLElement>('[data-state="lit"]')].map(
     (c) => c.dataset.date,
   );
 
@@ -213,7 +218,7 @@ describe("mountDwellLedger", () => {
       '[data-date="2024-03-10"]',
     )!;
     expect(cell.dataset.hours).toBe("23");
-    expect(cell.dataset.touched).toBe("true");
+    expect(cell.dataset.state).toBe("lit");
     expect(q(root, "reason-aside").textContent).toContain("had 23 hours");
   });
 
@@ -329,6 +334,96 @@ describe("mountDwellLedger", () => {
       q<HTMLInputElement>(root, "entry").value,
     );
     expect(handle.getAttribute("aria-valuetext")).toBe("15 Jun 23:00");
+  });
+
+  it("lights the first row in series 1 and the comparison row in series 2, with the word counted", async () => {
+    const { root } = await mount();
+    choosePreset(root, "london-vs-amsterdam");
+    const lit = (role: string) =>
+      q(root, role).querySelector<HTMLElement>('[data-state="lit"]')!;
+    expect(q(root, "row-dwell").dataset.series).toBe("1");
+    expect(q(root, "row-compare").dataset.series).toBe("2");
+    expect(lit("cells-dwell").dataset.series).toBe("1");
+    expect(lit("cells-compare").dataset.series).toBe("2");
+    expect(
+      lit("cells-dwell").querySelector(".gmt-ledger-chip")!.textContent,
+    ).toBe("counted");
+    expect(lit("cells-dwell").getAttribute("aria-label")).toContain("counted");
+  });
+
+  it("shows the elapsed time and the local days on two plates inside the frame", async () => {
+    const { root } = await mount();
+    const value = (role: string) =>
+      q(root, role).querySelector(".gmt-punct-hero-value")!.textContent;
+    const lines = (role: string) =>
+      [...q(root, role).querySelectorAll(".gmt-punct-hero-line")].map(
+        (l) => l.textContent,
+      );
+    expect(q(root, "frame").classList).toContain("gmt-ledger-frame");
+    expect(q(root, "frame").contains(q(root, "heroes"))).toBe(true);
+    expect(q(root, "frame").contains(q(root, "track-dwell"))).toBe(true);
+    expect(value("hero-elapsed")).toBe("2 h");
+    expect(lines("hero-elapsed")).toEqual(["PT2H"]);
+    expect(value("hero-days")).toBe("2");
+    // The second line is always there; it is blank without a second zone.
+    expect(lines("hero-days")).toEqual(["in America/New_York", ""]);
+    choosePreset(root, "london-vs-amsterdam");
+    expect(value("hero-elapsed")).toBe("2 h 30 min");
+    expect(lines("hero-days")).toEqual([
+      "in Europe/London",
+      "1 in Europe/Amsterdam",
+    ]);
+    choosePreset(root, "no-zone");
+    expect(value("hero-elapsed")).toBe("no result");
+    expect(q(root, "hero-days").hasAttribute("data-empty")).toBe(true);
+    expect(lines("hero-days")).toEqual(["", ""]);
+  });
+
+  it("flags the 23-hour day with the dashed short chip", async () => {
+    const { root } = await mount();
+    choosePreset(root, "spring-forward");
+    const odd = q(root, "cells-dwell").querySelector<HTMLElement>(
+      '[data-date="2024-03-10"] .gmt-ledger-odd',
+    )!;
+    expect(odd.textContent).toBe("23 h");
+    expect(odd.dataset.dst).toBe("short");
+  });
+
+  it("hides the summary visually and keeps it live", async () => {
+    const { root } = await mount();
+    expect(q(root, "summary").classList).toContain("gmt-ledger-sr");
+    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("moves a handle twelve snap units on PageUp and PageDown", async () => {
+    const { root } = await mount();
+    const exit = q<HTMLInputElement>(root, "exit");
+    const press = (key: string) =>
+      q(root, "handle-exit").dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+    const ms = () =>
+      Temporal.Instant.from(exit.value.replace(/\[.*\]$/, ""))
+        .epochMilliseconds;
+    const before = ms();
+    press("PageUp");
+    expect(ms() - before).toBe(12 * 15 * 60_000);
+    press("PageDown");
+    expect(ms()).toBe(before);
+  });
+
+  it("keeps the height of the preset description when a drag makes the state custom", async () => {
+    const { root } = await mount();
+    const desc = q(root, "preset-description");
+    desc.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
+    q(root, "handle-exit").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    expect(desc.textContent).toBe("");
+    expect(desc.style.minBlockSize).toBe("48px");
+    choosePreset(root, "spring-forward");
+    expect(desc.style.minBlockSize).toBe("");
   });
 
   it("counts days in the chosen zone when the zone changes", async () => {

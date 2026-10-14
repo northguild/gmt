@@ -1,7 +1,9 @@
 # Spec: EDI timestamps on the docs site (INT-15)
 
-What `apps/dox` ships for INT-15: two tools, one guide, three scenarios and the pages around
-them. `dox-builder` changes them against this spec, and `dox-tester` verifies them against
+What `apps/dox` ships for INT-15: the DTM Decoder and the X12 Time Reader, one guide, three
+scenarios and the pages around them. The EDI family has a third tool, the EPCIS Event Reader. It
+shares the modules and the sheet described here, and its own rules are in
+[int-14-intermodal-tools.md](int-14-intermodal-tools.md) § B4. `dox-builder` changes them against this spec, and `dox-tester` verifies them against
 section G. This is not `packages/gmt` work. Nothing here edits library source, tests, the
 READMEs, `packages/gmt/skills/`, `.changeset/` or `context/domination/`. A library problem found
 while working on the site is reported to the main session and never built around.
@@ -65,10 +67,13 @@ an anchor says where to look, not what is there.
 
 ## 0. Binding rules
 
-- **Two tools only.** The **DTM Decoder** (`/tools/dtm-decoder/`, kind `dtm`, chat tool
-  `showDtmDecoder`) and the **X12 Time Reader** (`/tools/x12-time-reader/`, kind `xtime`, chat tool
-  `showX12TimeReader`). There is no EPCIS tool and no cross-format tool. MCP UI widgets are out
-  of scope.
+- **Three EDI tools, two of them specified here.** The **DTM Decoder** (`/tools/dtm-decoder/`,
+  kind `dtm`, chat tool `showDtmDecoder`) and the **X12 Time Reader** (`/tools/x12-time-reader/`,
+  kind `xtime`, chat tool `showX12TimeReader`). The **EPCIS Event Reader**
+  (`/tools/epcis-event-reader/`, kind `epcis`, chat tool `showEpcisEventReader`) reads
+  `parseEpcisEvent` and `formatEpcisEvent` on the same modules; it is specified in
+  [int-14-intermodal-tools.md](int-14-intermodal-tools.md) § B4. There is no cross-format tool.
+  MCP UI widgets are out of scope.
 - `apps/dox` does not perturb `packages/gmt`. No changeset. **No git operation that changes
   state**: no `add`, `commit`, `stash`, `checkout`, `restore`, `rm`. Leave every change unstaged.
 - **Toolchain.** This machine has `fnm`. Prefix every Node command with
@@ -120,9 +125,7 @@ an anchor says where to look, not what is there.
   text.
 - **Docs rules** (`context/domination/docs-site.md`): every result shown is the function's real
   output, pasted unelided; justify with standards only, and name no peer library; a two-digit
-  year is presented as a legacy form, read with the pattern parsers; no line names
-  `bolTimestamp` or `multimodalETA` beyond the one list of the layer's functions in
-  `mistakes/intermodal.mdx`.
+  year is presented as a legacy form, read with the pattern parsers.
 - **React stays inside `/dox`.** Each tool page is Astro plus a plain-DOM module.
 - **The tier stays droppable.** A tool page imports no `dox-tools.ts`, `zod` or `ai`. Deleting the
   chat leaves both pages working.
@@ -142,7 +145,8 @@ definition and the chat area label; `context/dox/built.md`.
 
 **Not in scope:**
 
-- An EPCIS tool, a cross-format converter, or any tool that reads a whole interchange.
+- A cross-format converter, or any tool that reads a whole interchange. The EPCIS Event Reader
+  is specified in [int-14-intermodal-tools.md](int-14-intermodal-tools.md) § B4.
 - A custom `UNA` service string. The splitter reads the default service characters only and
   says so.
 - Any segment other than `DTM`, and any part of a `DTM` beyond the three components of its

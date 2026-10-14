@@ -247,8 +247,6 @@ export default defineConfig({
         "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
-        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
-        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
         "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)
         "./src/styles/gmt-transport-widgets.css", // Transport widgets, shared (TRAN-9)
         "./src/styles/gmt-delivery-scheduler.css", // Delivery Scheduler widget (TRAN-9)
@@ -263,6 +261,9 @@ export default defineConfig({
         "./src/styles/gmt-punctuality-board.css", // Punctuality Board widget (TRAN-57)
         "./src/styles/gmt-eta-drift.css", // ETA Drift Chart widget (TRAN-57)
         "./src/styles/gmt-departure-board.css", // Departure Board widget (TRAN-57)
+        "./src/styles/gmt-ledger-widgets.css", // Ledger family, shared: the tools that draw time on local days (after the departure board it reuses)
+        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
+        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
         "./src/styles/gmt-edi-widgets.css", // EDI timestamp widgets, shared (INT-15)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)

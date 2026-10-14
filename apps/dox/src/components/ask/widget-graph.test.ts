@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * The chat's first download must not carry the widgets.
  *
@@ -128,6 +127,7 @@ describe("the chat island's static import graph", () => {
     const heavy = [
       "lib/gmt-modules.ts",
       "lib/dwell-ledger.ts",
+      "lib/ledger-widgets.ts",
       "lib/free-time-ledger.ts",
       "lib/billing-deadlines.ts",
       "lib/dst-inspector.ts",

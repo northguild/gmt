@@ -4,8 +4,9 @@
  *
  * A dwell drawn on a zone's real local-day grid. The reader drags an entry and
  * an exit (or types them) and watches two numbers disagree: the elapsed bar,
- * which is hours, and the shaded cells, which are the local calendar days the
- * half-open dwell touched. The printed result is always the real `dwellTime`
+ * which is hours, and the lit day columns, which are the local calendar days the
+ * half-open dwell touched. Both sit in the ledger family's frame
+ * (`gmt-ledger-widgets.css`) under two result plates. The printed result is always the real `dwellTime`
  * call's; the shading is a picture of it, and `dwell-ledger.test.ts` asserts
  * the two agree for every preset.
  *
@@ -25,6 +26,8 @@ import {
   createLedgerCanvas,
   dayCells,
   dayCountText,
+  dwellMarks,
+  dwellPlates,
   explainNull,
   fitLedgerCanvas,
   formatDayLabel,
@@ -41,6 +44,16 @@ import {
   type LedgerCanvas,
 } from "./dwell-ledger";
 import { GMT_MODULES } from "./gmt-modules";
+import {
+  dayColumnFit,
+  dayColumnsHtml,
+  hourDurationText,
+  PAGE_STEP_UNITS,
+  plateHtml,
+  platesHtml,
+} from "./ledger-widgets";
+import { fitDayColumns, onWidthChange } from "./label-fit";
+import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   codeSpan,
@@ -55,12 +68,10 @@ import {
 
 export type { DwellLedgerArgs } from "./dwell-ledger";
 
-/** Arrow keys move one snap step; with Shift, four (an hour on a short canvas). */
+/** Arrow keys move one snap step; with Shift, four (an hour on a short canvas).
+ *  PageUp and PageDown move `PAGE_STEP_UNITS`. */
 const STEP_UNITS = 1;
 const BIG_STEP_UNITS = 4;
-
-/** A cell narrower than this shows no date label; its `aria-label` still names it. */
-const MIN_LABEL_PERCENT = 9;
 
 function zoneOptions(
   zones: readonly string[],
@@ -110,11 +121,11 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
 
   const row = (id: "dwell" | "compare", withHandles: boolean) =>
-    `<div class="gmt-dwell-row" data-role="row-${id}"${id === "compare" && compareZone === NO_ZONE ? " hidden" : ""}>` +
-    `<span class="gmt-dwell-row-label" data-role="label-${id}"></span>` +
-    `<div class="gmt-dwell-track" data-role="track-${id}">` +
-    `<div class="gmt-dwell-cells" data-role="cells-${id}" role="list"></div>` +
-    `<div class="gmt-dwell-bar" data-role="${id === "dwell" ? "bar" : "bar-compare"}">` +
+    `<div class="gmt-ledger-lane gmt-dwell-row" data-role="row-${id}" data-series="${id === "dwell" ? 1 : 2}"${id === "compare" && compareZone === NO_ZONE ? " hidden" : ""}>` +
+    `<span class="gmt-ledger-lane-label gmt-dwell-row-label" data-role="label-${id}"></span>` +
+    `<div class="gmt-ledger-lane-track gmt-dwell-track" data-role="track-${id}">` +
+    `<div class="gmt-ledger-days gmt-dwell-cells" data-role="cells-${id}" role="list"></div>` +
+    `<div class="gmt-ledger-bar gmt-dwell-bar" data-role="${id === "dwell" ? "bar" : "bar-compare"}">` +
     (withHandles
       ? handle("handle-entry", "Entry") + handle("handle-exit", "Exit")
       : "") +
@@ -139,10 +150,19 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<select class="gmt-select" data-role="compare-zone">${zoneOptions(LEDGER_ZONES, compareZone, "(no comparison)")}</select>` +
     `</label>` +
     `</div>` +
+    `<div class="gmt-ledger-frame" data-role="frame">` +
+    platesHtml(
+      "heroes",
+      dwellPlates(
+        { result: null, compare: null, zone: "", compareZone: "" },
+        hourDurationText,
+      ),
+    ) +
     `<div class="gmt-dwell-timeline" data-role="timeline">` +
     row("dwell", true) +
     row("compare", false) +
-    `<div class="gmt-dwell-axis" data-role="axis"><span></span><span></span><span></span></div>` +
+    `<div class="gmt-ledger-axis gmt-dwell-axis" data-role="axis"><span></span><span></span><span></span></div>` +
+    `</div>` +
     `</div>` +
     `<!-- Typed-input equivalent to dragging. -->` +
     `<div class="gmt-field-grid">` +
@@ -151,7 +171,7 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("Exit")}` +
     `<input class="gmt-input" data-role="exit" type="text" spellcheck="false" value="${escapeAttr(exit)}"></label>` +
     `</div>` +
-    `<p class="gmt-dwell-summary" data-role="summary" data-grow="slot" aria-live="polite"></p>` +
+    `<p class="gmt-ledger-sr gmt-dwell-summary" data-role="summary" aria-live="polite"></p>` +
     `<div data-role="reason-aside"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
@@ -201,41 +221,21 @@ async function loadModules(): Promise<Modules> {
 // Drawing
 // ---------------------------------------------------------------------------
 
-function renderCells(
+function renderDays(
   el: HTMLElement | null,
   cells: readonly DayCell[],
   canvas: LedgerCanvas,
+  series: 1 | 2,
   shade: boolean,
+  trackPx: number,
 ): void {
   if (!el) return;
-  el.innerHTML = cells
-    .map((cell) => {
-      const left = canvas.toPercent(cell.startMs);
-      const right = canvas.toPercent(cell.endMs);
-      const width = Math.max(0, right - left);
-      if (width <= 0) return "";
-      const touched = shade && cell.touched;
-      const label = formatDayLabel(cell.date);
-      const odd = cell.hours !== 24;
-      const aria = `${label}${odd ? `, ${cell.hours} hours` : ""}${touched ? ", counted" : ""}`;
-      const classes = [
-        "gmt-dwell-cell",
-        touched ? "gmt-dwell-cell--touched" : "",
-        width < MIN_LABEL_PERCENT ? "gmt-dwell-cell--narrow" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return (
-        `<div class="${classes}" role="listitem" data-date="${escapeAttr(cell.date)}" data-hours="${cell.hours}" data-touched="${touched}"` +
-        ` style="left:${left}%;width:${width}%" aria-label="${escapeAttr(aria)}" title="${escapeAttr(aria)}">` +
-        `<span class="gmt-dwell-cell-label" aria-hidden="true">${escapeHtml(label)}</span>` +
-        (odd
-          ? `<span class="gmt-dwell-cell-hours" aria-hidden="true">${cell.hours} h</span>`
-          : "") +
-        `</div>`
-      );
-    })
-    .join("");
+  el.innerHTML = dayColumnsHtml(
+    cells,
+    canvas,
+    dwellMarks(cells, series, shade),
+  );
+  fitDayColumns(el, trackPx, dayColumnFit);
 }
 
 function placeBar(
@@ -256,6 +256,7 @@ function placeBar(
   bar.style.left = `${left}%`;
   bar.style.width = `${Math.max(0, right - left)}%`;
   bar.classList.toggle("gmt-dwell-bar--invalid", invalid);
+  bar.classList.toggle("gmt-ledger-bar--invalid", invalid);
 }
 
 function callArgs(entry: string, exit: string, zone: string): [string, string] {
@@ -272,7 +273,8 @@ function callArgs(entry: string, exit: string, zone: string): [string, string] {
 
 interface Controller {
   refit(): void;
-  /** Release a pointer capture held mid-drag, which outlives the subtree. */
+  /** Release what outlives the subtree: a pointer capture held mid-drag and
+   *  the track's width observer. */
   release(): void;
 }
 
@@ -321,8 +323,10 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     presetEl!.value = matchPreset(s.entry, s.exit, s.zone, s.compareZone);
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
-        DWELL_PRESETS.find((p) => p.id === presetEl!.value)?.description ?? "";
+      setPresetDescription(
+        desc,
+        DWELL_PRESETS.find((p) => p.id === presetEl!.value)?.description ?? "",
+      );
     }
   }
 
@@ -339,11 +343,14 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     // Primary row.
     const label = q("label-dwell");
     if (label) label.textContent = s.grid ?? "no zone";
-    renderCells(
+    const trackPx = q("track-dwell")?.clientWidth ?? 0;
+    renderDays(
       q("cells-dwell"),
       s.grid ? dayCells(canvas, s.grid, s.entryMs, s.exitMs) : [],
       canvas,
+      1,
       result !== null,
+      trackPx,
     );
     placeBar(q("bar"), s.entryMs, s.exitMs, canvas, reason === "inverted");
     for (const [role, ms] of [
@@ -393,11 +400,13 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       const compareLabel = q("label-compare");
       if (compareLabel) compareLabel.textContent = s.compareZone;
       const compareGrid = gridZone("", s.compareZone);
-      renderCells(
+      renderDays(
         q("cells-compare"),
         compareGrid ? dayCells(canvas, compareGrid, s.entryMs, s.exitMs) : [],
         canvas,
+        2,
         compareResult !== null,
+        trackPx,
       );
       placeBar(
         q("bar-compare"),
@@ -414,6 +423,21 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
           renderWidgetOutput(cOut, "NO SIGNAL", "sentinel");
         else renderWidgetOutput(cOut, formatDwell(compareResult), "live");
       }
+    }
+
+    const heroes = q("heroes");
+    if (heroes) {
+      heroes.innerHTML = dwellPlates(
+        {
+          result,
+          compare: compareResult,
+          zone: s.grid ?? "",
+          compareZone: compareOn ? s.compareZone : "",
+        },
+        hourDurationText,
+      )
+        .map(plateHtml)
+        .join("");
     }
 
     // Summary: the library's numbers, never the drawing's.
@@ -562,6 +586,12 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       case "ArrowUp":
         next = canvas.step(current, units);
         break;
+      case "PageUp":
+        next = canvas.step(current, PAGE_STEP_UNITS);
+        break;
+      case "PageDown":
+        next = canvas.step(current, -PAGE_STEP_UNITS);
+        break;
       case "Home":
         next = canvas.startMs;
         break;
@@ -597,9 +627,16 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
   wireCopyButtons(container);
 
+  /* The day columns drop their weekday, then their label, against the track's
+     measured width, so a width change (rotation, the chat rail opening) re-fits
+     them. */
+  const trackEl = q<HTMLElement>("track-dwell");
+  const disposeWidth = trackEl ? onWidthChange(trackEl, render) : () => {};
+
   return {
     refit,
     release() {
+      disposeWidth();
       if (!captured) return;
       try {
         captured.el.releasePointerCapture(captured.id);
@@ -646,8 +683,10 @@ function applyArgs(root: HTMLElement, args: DwellLedgerArgs): void {
     );
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
-        DWELL_PRESETS.find((p) => p.id === presetEl.value)?.description ?? "";
+      setPresetDescription(
+        desc,
+        DWELL_PRESETS.find((p) => p.id === presetEl.value)?.description ?? "",
+      );
     }
   }
 }

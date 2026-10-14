@@ -130,6 +130,28 @@ export function thinTickLabels(
 }
 
 /**
+ * Sets the fit class on each day column of a ledger row from the column's
+ * measured width. `classify` is the tool's rule (`dayColumnFit`); a column
+ * `short` loses its weekday and a column `narrow` loses its label and chips.
+ * A column's width is its inline `width` in percent of `trackPx`, so the pass
+ * needs no layout of its own. With `trackPx` 0 (jsdom, a hidden widget) every
+ * column keeps everything.
+ */
+export function fitDayColumns(
+  days: HTMLElement,
+  trackPx: number,
+  classify: (widthPx: number) => "full" | "short" | "narrow",
+  base = "gmt-ledger-day",
+): void {
+  for (const day of days.querySelectorAll<HTMLElement>(`.${base}`)) {
+    const widthPx = (parseFloat(day.style.width) / 100) * trackPx;
+    const fit = classify(widthPx);
+    day.classList.toggle(`${base}--short`, fit === "short");
+    day.classList.toggle(`${base}--narrow`, fit === "narrow");
+  }
+}
+
+/**
  * Call `fn` when `el`'s width changes; stops once `el` leaves the document.
  * Returns a disposer, which a mount calls from its `destroy` so the observer
  * does not outlive the widget while the element is still attached (a rail that

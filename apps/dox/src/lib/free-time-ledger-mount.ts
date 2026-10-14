@@ -3,7 +3,9 @@
  * chat rail.
  *
  * A container's clock drawn on a terminal's real local-day grid, each day
- * coloured the way the tariff reads it. The reader drags the clock start and
+ * drawn the way the tariff reads it: glass for a free day, a hatch for a
+ * charged one, the closed hatch for a closed one. Each state is a pattern and a
+ * chip with a word, in the ledger family's look (`gmt-ledger-widgets.css`). The reader drags the clock start and
  * the gate-out, flips the start-day convention and the basis, adds a holiday,
  * and watches the free window and the charged dates move. The printed results
  * are always the real `freeTimeExpiry` and `chargeableDays` calls'; the
@@ -20,7 +22,6 @@ import {
   createLedgerCanvas,
   dayCells,
   fitLedgerCanvas,
-  formatDayLabel,
   formatHandleValue,
   formatLocal,
   resolveWallTime,
@@ -33,19 +34,19 @@ import {
   FREE_TIME_PRESETS,
   LEDGER_ZONES,
   NULL_REASON_TEXT,
-  cellState,
+  dayMarks,
   explainExpiryNull,
   explainNull,
   formatCharges,
   formatFreeTime,
   freeDaysOf,
+  freeTimePlates,
   matchPreset,
   normaliseWeekend,
   readArgs,
   summaryText,
   chargeTermsOf,
   termsOf,
-  tierEnds,
   tiersOf,
   type ChargesResult,
   type FreeTimeLedgerArgs,
@@ -55,7 +56,20 @@ import {
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
-import { layoutWidth, onWidthChange, placeLabel } from "./label-fit";
+import {
+  dayColumnFit,
+  dayColumnsHtml,
+  PAGE_STEP_UNITS,
+  plateHtml,
+  platesHtml,
+} from "./ledger-widgets";
+import {
+  fitDayColumns,
+  layoutWidth,
+  onWidthChange,
+  placeLabel,
+} from "./label-fit";
+import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   chipToggleHtml,
@@ -72,22 +86,12 @@ import {
 
 export type { FreeTimeLedgerArgs } from "./free-time-ledger";
 
-/** Arrow keys move one snap step; with Shift, four. */
+/** Arrow keys move one snap step; with Shift, four. PageUp and PageDown move
+ *  `PAGE_STEP_UNITS`. */
 const STEP_UNITS = 1;
 const BIG_STEP_UNITS = 4;
 
-/** A cell narrower than this shows no date label; its `aria-label` still names it. */
-const MIN_LABEL_PERCENT = 9;
-
 const WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const CELL_STATE_TEXT = {
-  event: "event day, not counted",
-  free: "free",
-  closed: "closed, not counted",
-  chargeable: "chargeable",
-  none: "",
-} as const;
 
 function options(
   values: readonly string[],
@@ -188,25 +192,37 @@ export function renderFreeTimeLedgerTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. Free days and charged days</h4>` +
+    `<div class="gmt-ledger-frame" data-role="frame">` +
+    platesHtml(
+      "heroes",
+      freeTimePlates({
+        freeTime: null,
+        charges: null,
+        freeDays: state.freeDays,
+        zone: state.zone,
+        zoneOk: false,
+      }),
+    ) +
     `<div class="gmt-freetime-timeline" data-role="timeline">` +
-    `<div class="gmt-freetime-row" data-role="row">` +
-    `<span class="gmt-freetime-row-label" data-role="label"></span>` +
-    `<div class="gmt-freetime-track" data-role="track">` +
-    `<div class="gmt-freetime-cells" data-role="cells" role="list"></div>` +
-    `<div class="gmt-freetime-expiry" data-role="expiry-marker" hidden><span>expires</span></div>` +
-    `<div class="gmt-freetime-bar" data-role="bar">` +
+    `<div class="gmt-ledger-lane gmt-freetime-row" data-role="row" data-series="1">` +
+    `<span class="gmt-ledger-lane-label gmt-freetime-row-label" data-role="label"></span>` +
+    `<div class="gmt-ledger-lane-track gmt-freetime-track" data-role="track">` +
+    `<div class="gmt-ledger-days gmt-freetime-cells" data-role="cells" role="list"></div>` +
+    `<div class="gmt-cutoff-gate gmt-freetime-expiry" data-role="expiry-marker" hidden><span class="gmt-cutoff-chip gmt-ledger-gate-chip">expires</span></div>` +
+    `<div class="gmt-ledger-bar gmt-freetime-bar" data-role="bar">` +
     handle("handle-start", "Clock start") +
     handle("handle-end", "Clock end") +
     `</div></div></div>` +
-    `<div class="gmt-freetime-axis" data-role="axis"><span></span><span></span><span></span></div>` +
-    `<ul class="gmt-freetime-legend" aria-label="Legend">` +
-    `<li><i class="gmt-freetime-swatch gmt-freetime-cell--free"></i>free</li>` +
-    `<li><i class="gmt-freetime-swatch gmt-freetime-cell--chargeable"></i>chargeable</li>` +
-    `<li><i class="gmt-freetime-swatch gmt-freetime-cell--closed"></i>closed</li>` +
-    `<li><i class="gmt-freetime-swatch gmt-freetime-cell--event"></i>event day, not counted</li>` +
+    `<div class="gmt-ledger-axis gmt-freetime-axis" data-role="axis"><span></span><span></span><span></span></div>` +
+    `<ul class="gmt-ledger-legend gmt-freetime-legend" aria-label="Legend">` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch" data-state="lit" data-series="1"></i>free</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch gmt-punct-hatch" data-series="1"></i>charged</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch gmt-cutoff-closed"></i>closed</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch" data-state="plain"></i>event day, not counted</li>` +
     `</ul>` +
     `</div>` +
-    `<p class="gmt-freetime-summary" data-role="summary" data-grow="slot" aria-live="polite"></p>` +
+    `</div>` +
+    `<p class="gmt-ledger-sr gmt-freetime-summary" data-role="summary" aria-live="polite"></p>` +
     `<div data-role="reason-aside" data-grow="slot"></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
@@ -266,47 +282,22 @@ async function loadModules(): Promise<Modules> {
 // Drawing
 // ---------------------------------------------------------------------------
 
-function renderCells(
+function renderDays(
   el: HTMLElement | null,
   cells: readonly DayCell[],
   canvas: LedgerCanvas,
   state: LedgerState,
   freeTime: FreeTimeResult | null,
   charges: ChargesResult | null,
+  trackPx: number,
 ): void {
   if (!el) return;
-  const ends = tierEnds(charges);
-  el.innerHTML = cells
-    .map((cell) => {
-      const left = canvas.toPercent(cell.startMs);
-      const right = canvas.toPercent(cell.endMs);
-      const width = Math.max(0, right - left);
-      if (width <= 0) return "";
-      const kind = cellState(cell, state, freeTime, charges);
-      const label = formatDayLabel(cell.date);
-      const odd = cell.hours !== 24;
-      const aria =
-        `${label}${odd ? `, ${cell.hours} hours` : ""}` +
-        (kind === "none" ? "" : `, ${CELL_STATE_TEXT[kind]}`);
-      const classes = [
-        "gmt-freetime-cell",
-        kind === "none" ? "" : `gmt-freetime-cell--${kind}`,
-        ends.has(cell.date) ? "gmt-freetime-cell--tier-end" : "",
-        width < MIN_LABEL_PERCENT ? "gmt-freetime-cell--narrow" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return (
-        `<div class="${classes}" role="listitem" data-date="${escapeAttr(cell.date)}" data-hours="${cell.hours}" data-state="${kind}"` +
-        ` style="left:${left}%;width:${width}%" aria-label="${escapeAttr(aria)}" title="${escapeAttr(aria)}">` +
-        `<span class="gmt-freetime-cell-label" aria-hidden="true">${escapeHtml(label)}</span>` +
-        (odd
-          ? `<span class="gmt-freetime-cell-hours" aria-hidden="true">${cell.hours} h</span>`
-          : "") +
-        `</div>`
-      );
-    })
-    .join("");
+  el.innerHTML = dayColumnsHtml(
+    cells,
+    canvas,
+    dayMarks(cells, state, freeTime, charges),
+  );
+  fitDayColumns(el, trackPx, dayColumnFit);
 }
 
 function placeBar(
@@ -327,12 +318,14 @@ function placeBar(
   bar.style.left = `${left}%`;
   bar.style.width = `${Math.max(0, right - left)}%`;
   bar.classList.toggle("gmt-freetime-bar--invalid", invalid);
+  bar.classList.toggle("gmt-ledger-bar--invalid", invalid);
 }
 
 function placeExpiry(
   marker: HTMLElement | null,
   expiresAt: string | null,
   canvas: LedgerCanvas,
+  zone: string | null,
 ): void {
   if (!marker) return;
   const ms = expiresAt === null ? Number.NaN : toEpochMs(expiresAt);
@@ -343,19 +336,24 @@ function placeExpiry(
   marker.hidden = false;
   const pct = canvas.toPercent(ms);
   marker.style.left = `${pct}%`;
-  // Its "expires" label sits to the right of the line; near the right edge it
-  // would run past the track (and, on a phone, widen the page), so it flips.
+  // The chip says "expires" and the time on the terminal's clock.
   const label = marker.querySelector<HTMLElement>("span");
+  if (label) {
+    const local = zone === null ? "" : formatLocal(ms, zone);
+    label.textContent = local === "" ? "expires" : `expires ${local}`;
+  }
+  // The chip sits to the right of the line; near the right edge it would run
+  // past the track (and, on a phone, widen the page), so it flips.
   const track = marker.parentElement;
-  marker.classList.remove("gmt-freetime-expiry--end");
+  label?.classList.remove("gmt-ledger-gate-chip--end");
   if (label && track && track.clientWidth > 0) {
     const side = placeLabel({
       atPx: (pct / 100) * track.clientWidth,
       labelPx: layoutWidth(label),
       trackPx: track.clientWidth,
-      offsetPx: 3,
+      offsetPx: 10,
     });
-    marker.classList.toggle("gmt-freetime-expiry--end", side === "end");
+    label.classList.toggle("gmt-ledger-gate-chip--end", side === "end");
   }
 }
 
@@ -466,9 +464,11 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     presetEl!.value = matchPreset(state());
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
+      setPresetDescription(
+        desc,
         FREE_TIME_PRESETS.find((p) => p.id === presetEl!.value)?.description ??
-        "";
+          "",
+      );
     }
     const working = q("working-terms");
     if (working)
@@ -496,20 +496,34 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
     const label = q("label");
     if (label) label.textContent = zoneOk ? s.zone : "no zone";
-    renderCells(
+    renderDays(
       q("cells"),
       zoneOk ? dayCells(canvas, s.zone, startMs, endMs) : [],
       canvas,
       s,
       freeTime,
       charges,
+      q("track")?.clientWidth ?? 0,
     );
     placeBar(q("bar"), startMs, endMs, canvas, reason === "inverted");
     placeExpiry(
       q("expiry-marker"),
       charges?.expiresAt ?? freeTime?.expiresAt ?? null,
       canvas,
+      zoneOk ? s.zone : null,
     );
+    const heroes = q("heroes");
+    if (heroes) {
+      heroes.innerHTML = freeTimePlates({
+        freeTime,
+        charges,
+        freeDays: s.freeDays,
+        zone: s.zone,
+        zoneOk,
+      })
+        .map(plateHtml)
+        .join("");
+    }
     for (const [role, ms] of [
       ["handle-start", startMs],
       ["handle-end", endMs],
@@ -710,6 +724,12 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       case "ArrowUp":
         next = canvas.step(current, units);
         break;
+      case "PageUp":
+        next = canvas.step(current, PAGE_STEP_UNITS);
+        break;
+      case "PageDown":
+        next = canvas.step(current, -PAGE_STEP_UNITS);
+        break;
       case "Home":
         next = canvas.startMs;
         break;
@@ -824,9 +844,11 @@ function applyArgs(root: HTMLElement, args: FreeTimeLedgerArgs): void {
     });
     const desc = q("preset-description");
     if (desc) {
-      desc.textContent =
+      setPresetDescription(
+        desc,
         FREE_TIME_PRESETS.find((p) => p.id === presetEl.value)?.description ??
-        "";
+          "",
+      );
     }
   }
 }

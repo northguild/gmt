@@ -7,7 +7,7 @@
  * examples they draw, and the coloured cells against the library's own counts,
  * so a drift in the library or the widget fails here.
  */
-/// <reference types="vitest/globals" />
+import { Temporal } from "@js-temporal/polyfill";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { FREE_TIME_PRESETS } from "./free-time-ledger";
@@ -30,6 +30,11 @@ const REQUIRED_ROLES = [
   "working-terms",
   "weekend",
   "holidays",
+  "frame",
+  "heroes",
+  "hero-free",
+  "hero-charged",
+  "hero-expires",
   "timeline",
   "row",
   "label",
@@ -119,11 +124,10 @@ async function mount(args = {}, templateArgs = args) {
   return { root, handle, controller };
 }
 
-const datesIn = (root: HTMLElement, state: string) =>
+/** The dates the tariff reads as `kind` (free, chargeable, closed, event). */
+const datesIn = (root: HTMLElement, kind: string) =>
   [
-    ...q(root, "cells").querySelectorAll<HTMLElement>(
-      `[data-state="${state}"]`,
-    ),
+    ...q(root, "cells").querySelectorAll<HTMLElement>(`[data-kind="${kind}"]`),
   ].map((c) => c.dataset.date);
 
 function choosePreset(root: HTMLElement, id: string) {
@@ -354,16 +358,119 @@ describe("mountFreeTimeLedger", () => {
     expect(q(root, "call-charges").textContent).toContain("calendar: {");
   });
 
-  it("draws a tier boundary after the fifth and tenth charged days", async () => {
+  it("tells the tiers apart by a numbered chip and a denser hatch, with the boundaries after the fifth and tenth charged days", async () => {
     const { root } = await mount();
     choosePreset(root, "tiers");
-    const ends = [
+    const charged = [
       ...q(root, "cells").querySelectorAll<HTMLElement>(
-        ".gmt-freetime-cell--tier-end",
+        '[data-kind="chargeable"]',
       ),
-    ].map((c) => c.dataset.date);
-    expect(ends).toEqual(["2024-06-21", "2024-06-26"]);
+    ];
+    const lastOf = (tier: number) =>
+      charged.filter((c) => c.dataset.tier === String(tier)).at(-1)?.dataset
+        .date;
+    expect(lastOf(1)).toBe("2024-06-21");
+    expect(lastOf(2)).toBe("2024-06-26");
+    expect(charged.map((c) => c.dataset.tier).filter(Boolean)).toHaveLength(12);
+    const chips = [...charged[0]!.querySelectorAll(".gmt-cutoff-chip")].map(
+      (c) => c.textContent,
+    );
+    expect(chips).toContain("tier 1");
     expect(q(root, "call-charges").textContent).toContain("tiers: [5, 10]");
+  });
+
+  it("gives a day the family's states: glass, a hatch, the closed hatch or bare", async () => {
+    const { root } = await mount();
+    choosePreset(root, "terminal-holiday");
+    const state = (date: string) =>
+      q(root, "cells").querySelector<HTMLElement>(`[data-date="${date}"]`)!;
+    expect(state("2024-06-14").dataset.state).toBe("lit");
+    expect(state("2024-06-20").dataset.state).toBe("hatched");
+    expect(state("2024-06-20").classList).toContain("gmt-punct-hatch");
+    expect(state("2024-06-15").dataset.state).toBe("closed");
+    expect(state("2024-06-15").classList).toContain("gmt-cutoff-closed");
+    // The word on each chip is the tariff's: free, charged, closed.
+    const chipOf = (date: string) =>
+      state(date).querySelector(".gmt-ledger-chip")?.textContent;
+    expect(chipOf("2024-06-14")).toBe("free");
+    expect(chipOf("2024-06-20")).toBe("charged");
+    expect(chipOf("2024-06-15")).toBe("closed");
+  });
+
+  it("says charged, never chargeable or a dollar sign, on a charged day", async () => {
+    const { root } = await mount();
+    const day = q(root, "cells").querySelector<HTMLElement>(
+      '[data-kind="chargeable"]',
+    )!;
+    expect(day.getAttribute("aria-label")).toContain("charged");
+    expect(day.getAttribute("aria-label")).not.toContain("chargeable");
+    expect(day.textContent).not.toContain("$");
+    expect(root.querySelector(".gmt-freetime-legend")!.textContent).toContain(
+      "charged",
+    );
+  });
+
+  it("flags a 23-hour day with the dashed short chip", async () => {
+    const { root } = await mount({
+      clockStart: "2024-03-09T20:00:00-05:00[America/New_York]",
+      clockEnd: "2024-03-11T04:00:00-04:00[America/New_York]",
+      freeDays: 3,
+      zone: "America/New_York",
+    });
+    const odd = q(root, "cells").querySelector<HTMLElement>(
+      '[data-date="2024-03-10"] .gmt-ledger-odd',
+    )!;
+    expect(odd.textContent).toBe("23 h");
+    expect(odd.dataset.dst).toBe("short");
+  });
+
+  it("shows the three plates and keeps them when a result is null", async () => {
+    const { root } = await mount();
+    const plate = (role: string) => q(root, role);
+    expect(
+      plate("hero-free").querySelector(".gmt-punct-hero-value")!.textContent,
+    ).toBe("3");
+    expect(plate("hero-free").textContent).toContain("of 3 free");
+    expect(
+      plate("hero-charged").querySelector(".gmt-punct-hero-value")!.textContent,
+    ).toBe("1");
+    expect(
+      plate("hero-expires").querySelector(".gmt-punct-hero-value")!.textContent,
+    ).toBe("17 Jun 00:00");
+    expect(plate("hero-expires").textContent).toContain("America/New_York");
+    expect(q(root, "heroes").getAttribute("aria-hidden")).toBe("true");
+    type(root, "clock-start", "2024-06-18T19:00:00Z");
+    expect(plate("hero-charged").hasAttribute("data-empty")).toBe(true);
+    expect(
+      plate("hero-charged").querySelector(".gmt-punct-hero-value")!.textContent,
+    ).toBe("no result");
+    // freeTimeExpiry still answers, so the expiry plate falls back to it.
+    expect(plate("hero-expires").hasAttribute("data-empty")).toBe(false);
+    type(root, "clock-start", "soon");
+    expect(plate("hero-expires").hasAttribute("data-empty")).toBe(true);
+  });
+
+  it("hides the summary visually and keeps it live", async () => {
+    const { root } = await mount();
+    expect(q(root, "summary").classList).toContain("gmt-ledger-sr");
+    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("puts the plates, the lane and the axis in one frame", async () => {
+    const { root } = await mount();
+    expect(q(root, "frame").classList).toContain("gmt-ledger-frame");
+    expect(q(root, "frame").contains(q(root, "heroes"))).toBe(true);
+    expect(q(root, "frame").contains(q(root, "track"))).toBe(true);
+    expect(q(root, "frame").contains(q(root, "axis"))).toBe(true);
+  });
+
+  it("writes the expiry's time on the terminal's clock into the gate's chip", async () => {
+    const { root } = await mount();
+    const marker = q(root, "expiry-marker");
+    expect(marker.classList).toContain("gmt-cutoff-gate");
+    expect(marker.querySelector("span")!.textContent).toBe(
+      "expires 17 Jun 00:00",
+    );
   });
 
   it("renders the expiry sentinel with a note, not a caution, for zero free days", async () => {
@@ -470,6 +577,40 @@ describe("mountFreeTimeLedger", () => {
     const after = q<HTMLInputElement>(root, "clock-end").value;
     expect(after).not.toBe(before);
     expect(after).toContain("[America/New_York]");
+  });
+
+  it("moves a handle twelve snap units on PageUp and PageDown", async () => {
+    const { root } = await mount();
+    const ms = (iso: string) => Temporal.Instant.from(iso).epochMilliseconds;
+    const end = q<HTMLInputElement>(root, "clock-end");
+    const before = ms(end.value.replace(/\[.*\]$/, ""));
+    const press = (key: string) =>
+      q(root, "handle-end").dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+    press("PageUp");
+    const up = ms(end.value.replace(/\[.*\]$/, ""));
+    // The track is 1000px for the canvas and a unit is 15 minutes here, so a
+    // page is three hours past the snapped start.
+    expect(up - before).toBeGreaterThanOrEqual(11 * 15 * 60_000);
+    press("PageDown");
+    const down = ms(end.value.replace(/\[.*\]$/, ""));
+    expect(up - down).toBe(12 * 15 * 60_000);
+  });
+
+  it("keeps the height of the preset description when a drag makes the state custom", async () => {
+    const { root } = await mount();
+    const desc = q(root, "preset-description");
+    desc.getBoundingClientRect = () => ({ height: 66 }) as DOMRect;
+    q(root, "handle-end").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    expect(desc.textContent).toBe("");
+    expect(desc.style.minBlockSize).toBe("66px");
+    choosePreset(root, "tiers");
+    expect(desc.style.minBlockSize).toBe("");
+    expect(desc.textContent).not.toBe("");
   });
 
   it("reads a zoneless wall time from the chat in the named zone", async () => {
