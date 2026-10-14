@@ -7,6 +7,7 @@ import {
 import { isObject } from "./isObject";
 import { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
 import { zoneFrame } from "./zoneFrame";
+import { certainlyTouchesMoreBuckets } from "./zoneBucketCap";
 
 /**
  * Local days a free-time walk may visit before giving up: the same cap as `bucketRange`. A
@@ -299,6 +300,17 @@ export function walkFreeTime(
   let expiresAt: Temporal.ZonedDateTime | null = null;
   let expiryPending = false;
   let skipEventDay = terms.firstDay === "nextDay";
+
+  // A dwell that certainly touches more local days than the walk may visit ends it with the
+  // sentinel anyway: the walk needs one visit for every day the dwell touches, and one more to
+  // pass it. Deciding that from the span skips a 10,000-day walk. When it is not certain, the walk
+  // runs as before, so no answer changes.
+  if (
+    clockEnd !== undefined &&
+    certainlyTouchesMoreBuckets(clockStart, clockEnd, "day", MAX_WALKED_DAYS)
+  ) {
+    return null;
+  }
 
   let day = localDayOf(clockStart);
   if (day === null) {
