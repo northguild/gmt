@@ -71,23 +71,33 @@ describe("calendarScale jump", () => {
     },
   );
 
+  // A zone that never changes its clock starts each period at local midnight at one offset, so the
+  // period k units on starts at midnight on the date k units on, worked out here with Temporal's own
+  // date arithmetic instead of a walk through every period between.
   it.each`
-    timeZone       | unit
-    ${"UTC"}       | ${"week"}
-    ${"UTC"}       | ${"month"}
-    ${"UTC"}       | ${"year"}
-    ${"+05:30"}    | ${"year"}
-    ${"-00:44:30"} | ${"month"}
+    timeZone       | unit       | offsetSeconds | first
+    ${"UTC"}       | ${"week"}  | ${0}          | ${"2024-02-26"}
+    ${"UTC"}       | ${"month"} | ${0}          | ${"2024-02-01"}
+    ${"UTC"}       | ${"year"}  | ${0}          | ${"2024-01-01"}
+    ${"+05:30"}    | ${"year"}  | ${19_800}     | ${"2024-01-01"}
+    ${"-00:44:30"} | ${"month"} | ${-2_670}     | ${"2024-02-01"}
   `(
     "jumps $unit periods in $timeZone, which never changes its clock",
-    ({ timeZone, unit }) => {
+    ({ timeZone, unit, offsetSeconds, first }) => {
       const scale = calendarScale(zoneFrame(timeZone) as ZoneFrame, unit);
       const here = scale.containing(ns("2024-02-29T12:00:00Z")) as UnitSpan;
+      const field = `${unit}s` as "weeks" | "months" | "years";
+      const midnight = (units: number) =>
+        ns(
+          `${Temporal.PlainDate.from(first).add({ [field]: units })}T00:00:00Z`,
+        ) -
+        BigInt(offsetSeconds) * 1_000_000_000n;
 
       for (const periods of [-9_999, -1, 1, 9_999]) {
-        expect(scale.jump?.(here, periods)).toEqual(
-          walked(scale, ns("2024-02-29T12:00:00Z"), periods),
-        );
+        expect(scale.jump?.(here, periods), `${periods}`).toEqual({
+          start: midnight(periods),
+          end: midnight(periods + 1),
+        });
       }
     },
   );
