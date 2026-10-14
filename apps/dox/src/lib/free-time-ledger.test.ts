@@ -373,7 +373,10 @@ describe("freeTimePlates", () => {
     expect(by(plates, "hero-expires")).toMatchObject({
       value: "17 Jun 00:00",
       lines: ["America/New_York"],
+      quiet: true,
     });
+    expect(by(plates, "hero-free").quiet).toBeUndefined();
+    expect(by(plates, "hero-charged").quiet).toBeUndefined();
   });
 
   it("falls back to freeTimeExpiry's expiry when chargeableDays returned null", () => {

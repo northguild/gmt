@@ -45,6 +45,7 @@ import {
 } from "./dwell-ledger";
 import { GMT_MODULES } from "./gmt-modules";
 import {
+  descriptionHoldHtml,
   dayColumnFit,
   dayColumnsHtml,
   hourDurationText,
@@ -52,7 +53,7 @@ import {
   plateHtml,
   platesHtml,
 } from "./ledger-widgets";
-import { fitDayColumns, onWidthChange } from "./label-fit";
+import { fitDayColumns, onWidthChange, thinTickLabels } from "./label-fit";
 import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
@@ -141,7 +142,10 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    descriptionHoldHtml(
+      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
+      DWELL_PRESETS.map((p) => p.description),
+    ) +
     `<div class="gmt-field-grid">` +
     `<label class="gmt-label">${labelTextHtml("Count days in")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptions(LEDGER_ZONES, zone, "(the entry's zone)")}</select>` +
@@ -373,11 +377,14 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     }
 
     // Axis.
-    const spans = q("axis")?.querySelectorAll("span") ?? [];
+    const axisEl = q("axis");
+    const spans = axisEl?.querySelectorAll("span") ?? [];
     const labels = axisLabels(canvas, s.grid);
     spans.forEach((span, i) => {
       span.textContent = labels[i] ?? "";
     });
+    // On a narrow track the three dates would touch: drop the ones that do.
+    if (axisEl) thinTickLabels(axisEl, "span");
 
     // Primary result.
     const [argsHtml, argsPlain] = callArgs(s.entry, s.exit, s.zone);

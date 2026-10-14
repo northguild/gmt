@@ -57,6 +57,7 @@ import {
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
 import {
+  descriptionHoldHtml,
   dayColumnFit,
   dayColumnsHtml,
   PAGE_STEP_UNITS,
@@ -68,6 +69,7 @@ import {
   layoutWidth,
   onWidthChange,
   placeLabel,
+  thinTickLabels,
 } from "./label-fit";
 import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
@@ -158,7 +160,10 @@ export function renderFreeTimeLedgerTemplate(
     `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    descriptionHoldHtml(
+      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
+      FREE_TIME_PRESETS.map((p) => p.description),
+    ) +
     `<div class="gmt-field-grid">` +
     `<label class="gmt-label">${labelTextHtml("Terminal zone")}` +
     `<select class="gmt-select" data-role="zone">${zoneOptions(state.zone)}</select>` +
@@ -545,11 +550,14 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       );
     }
 
-    const spans = q("axis")?.querySelectorAll("span") ?? [];
+    const axisEl = q("axis");
+    const spans = axisEl?.querySelectorAll("span") ?? [];
     const labels = axisLabels(canvas, zoneOk ? s.zone : null);
     spans.forEach((span, i) => {
       span.textContent = labels[i] ?? "";
     });
+    // On a narrow track the three dates would touch: drop the ones that do.
+    if (axisEl) thinTickLabels(axisEl, "span");
 
     // The two calls, exactly as the library was called.
     const [optHtml, optPlain] = optionsSource(terms, undefined);

@@ -577,6 +577,9 @@ export function freeTimePlates(args: {
       caption: "Free time expires",
       value: expiresText === "" ? null : expiresText,
       lines: [zone],
+      // The gate's chip on the lane says the same time, so this plate is the
+      // quiet one and the counts keep the large type.
+      quiet: true,
     },
   ];
 }

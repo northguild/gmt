@@ -182,7 +182,8 @@
    whole label and its chips (its `aria-label` still names the day). The mount
    measures each column against `dayColumnFit`. */
 .gmt-ledger-day--short .gmt-ledger-day-weekday,
-.gmt-ledger-day--narrow > * {
+.gmt-ledger-day--narrow > *,
+.gmt-ledger-day--bare .gmt-ledger-day-chips {
   display: none;
 }
 
@@ -427,6 +428,21 @@ ul.gmt-ledger-legend > li::before {
   color: var(--gmt-ice-dim);
 }
 
+/* The words "no result" are set small, in the mono face, inside a value that
+   keeps its full size and height. Set at the value's size they were wider than
+   the width a plate reserves, so a plate drawn before its first result (the
+   server-rendered one) was wider than the plate that replaced it, and the row
+   of plates wrapped, then unwrapped, as the page loaded. */
+.gmt-punct-hero-value {
+  min-block-size: 1lh;
+}
+
+.gmt-punct-hero-none {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------------------------
  * The hold: a one-cell grid that stacks a live element and hidden sizers, for a
  * region whose text comes and goes (`holdHtml`, with this class passed in). The
@@ -445,6 +461,15 @@ ul.gmt-ledger-legend > li::before {
   grid-area: 1 / 1;
   align-self: stretch;
   min-width: 0;
+}
+
+/* The live text fills the cell, so the element itself is as tall as the tallest
+   text it can show and the same at every preset (the hold's wrapper already is).
+   Smooth growth wraps a `data-grow="slot"` element in a flex column, so the
+   element has to grow into it. A plain hint shows no box, so nothing is drawn
+   taller; only its measured height is held. */
+:is(.gmt-ledger-hold, .gmt-edi-hold) > .gmt-grow-slot > .gmt-widget-hint {
+  flex: 1 1 auto;
 }
 
 /* ---------------------------------------------------------------------------

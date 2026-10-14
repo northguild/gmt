@@ -23,6 +23,7 @@ import {
   type DayCell,
   type LedgerCanvas,
 } from "./dwell-ledger";
+import { holdHtml, textSizers } from "./edi-picture";
 import { heroLinesHtml } from "./punctuality-widgets";
 import { FIXED_OFFSET_ZONES, TRANSPORT_ZONES } from "./transport-widgets";
 import { escapeAttr, escapeHtml } from "./widget-ui";
@@ -190,6 +191,14 @@ export interface PlateSpec {
   /** Sub lines, one `<span>` each. A plate keeps these lines when it is empty. */
   lines: readonly string[];
   series?: SeriesNumber;
+  /** A secondary result beside the main ones: the value at the smaller size of
+   *  `.gmt-punct-hero--quiet`, so the row holds all of a tool's plates. */
+  quiet?: boolean;
+  /** Every caption this plate can show, when the caption changes with a choice
+   *  (an event picks its own). The caption sits in a hold sized by the longest,
+   *  so a long caption that wraps on a narrow plate wraps for every preset and
+   *  never makes the plate taller or wider than the others. */
+  captions?: readonly string[];
 }
 
 /**
@@ -200,14 +209,43 @@ export interface PlateSpec {
 export function plateHtml(p: PlateSpec): string {
   const empty = p.value === null;
   return (
-    `<div class="gmt-punct-hero" data-role="${escapeAttr(p.role)}"` +
+    `<div class="gmt-punct-hero${p.quiet === true ? " gmt-punct-hero--quiet" : ""}" data-role="${escapeAttr(p.role)}"` +
     (p.series === undefined ? "" : ` data-series="${p.series}"`) +
     (empty ? " data-empty" : "") +
     `>` +
-    `<span class="gmt-punct-hero-cap">${escapeHtml(p.caption)}</span>` +
-    `<span class="gmt-punct-hero-value">${escapeHtml(empty ? NO_RESULT : p.value!)}</span>` +
+    captionHtml(p) +
+    `<span class="gmt-punct-hero-value">${empty ? `<span class="gmt-punct-hero-none">${escapeHtml(NO_RESULT)}</span>` : escapeHtml(p.value!)}</span>` +
     heroLinesHtml(p.lines.map((text) => ({ text: empty ? "" : text }))) +
     `</div>`
+  );
+}
+
+/** The caption: one `<span>`, or that span in a hold with a hidden sizer for each
+ *  caption the plate can show. */
+function captionHtml(p: PlateSpec): string {
+  const live = `<span class="gmt-punct-hero-cap">${escapeHtml(p.caption)}</span>`;
+  if (p.captions === undefined) return live;
+  const sizers = [...new Set([p.caption, ...p.captions])].map(
+    (text) =>
+      `<span class="gmt-punct-hero-cap gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore>${escapeHtml(text)}</span>`,
+  );
+  return holdHtml(live, sizers, "gmt-ledger-hold");
+}
+
+/**
+ * A tool's preset description, held to the tallest description it can show at
+ * whatever width it is laid out (`holdHtml`), so choosing another preset never
+ * moves the controls and plates below it. The live paragraph is the only one a
+ * reader reaches; the sizers are hidden.
+ */
+export function descriptionHoldHtml(
+  live: string,
+  descriptions: readonly string[],
+): string {
+  return holdHtml(
+    live,
+    textSizers("p", "gmt-widget-hint", descriptions),
+    "gmt-ledger-hold",
   );
 }
 

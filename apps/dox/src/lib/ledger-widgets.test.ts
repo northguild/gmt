@@ -18,6 +18,7 @@ import {
   dayColumnFit,
   dayColumnsHtml,
   dayLabelParts,
+  descriptionHoldHtml,
   hourDurationText,
   localText,
   NO_RESULT,
@@ -338,6 +339,36 @@ describe("plateHtml", () => {
     return root.firstElementChild as HTMLElement;
   };
 
+  it("holds a caption that changes with a choice to the longest one it can show", () => {
+    const plate = html({
+      role: "hero-bl",
+      caption: "Issue date",
+      captions: ["Issue date", "Received for shipment date"],
+      value: "3",
+      lines: [""],
+    });
+    const hold = plate.querySelector(".gmt-ledger-hold")!;
+    const caps = [...hold.querySelectorAll(".gmt-punct-hero-cap")];
+    expect(caps.map((c) => c.textContent)).toEqual([
+      "Issue date",
+      "Issue date",
+      "Received for shipment date",
+    ]);
+    // Only the live caption is read; the sizers are hidden from assistive technology.
+    expect(caps[0]!.hasAttribute("aria-hidden")).toBe(false);
+    expect(
+      caps.slice(1).every((c) => c.getAttribute("aria-hidden") === "true"),
+    ).toBe(true);
+    // A plate whose caption never changes has no hold.
+    const plain = html({
+      role: "x",
+      caption: "Ran for",
+      value: "3",
+      lines: [""],
+    });
+    expect(plain.querySelector(".gmt-ledger-hold")).toBeNull();
+  });
+
   it("draws a caption, a value and one span for each sub line", () => {
     const plate = html({
       role: "hero-free",
@@ -359,6 +390,19 @@ describe("plateHtml", () => {
         (l) => l.textContent,
       ),
     ).toEqual(["of 3 free"]);
+  });
+
+  it("takes the quiet look only when asked", () => {
+    const base = {
+      role: "hero-expires",
+      caption: "Free time expires",
+      value: "17 Jun 00:00",
+      lines: [],
+    };
+    expect(html({ ...base, quiet: true }).classList).toContain(
+      "gmt-punct-hero--quiet",
+    );
+    expect(html(base).classList).not.toContain("gmt-punct-hero--quiet");
   });
 
   it("keeps its box and its lines when there is no result", () => {
@@ -399,5 +443,27 @@ describe("plateHtml", () => {
     expect(row.classList).toContain("gmt-punct-heroes");
     expect(row.getAttribute("aria-hidden")).toBe("true");
     expect(row.querySelectorAll(".gmt-punct-hero")).toHaveLength(2);
+  });
+});
+
+describe("descriptionHoldHtml", () => {
+  it("draws the live paragraph once and a hidden sizer for each description", () => {
+    const root = document.createElement("div");
+    root.innerHTML = descriptionHoldHtml(
+      `<p class="gmt-widget-hint" data-role="preset-description">One.</p>`,
+      ["One.", "A longer description.", "A longer description."],
+    );
+    const hold = root.querySelector(".gmt-ledger-hold")!;
+    expect(
+      hold.querySelectorAll("[data-role='preset-description']"),
+    ).toHaveLength(1);
+    const sizers = [...hold.querySelectorAll(".gmt-edi-sizer")];
+    expect(sizers.map((s) => s.textContent)).toEqual([
+      "One.",
+      "A longer description.",
+    ]);
+    expect(sizers.every((s) => s.getAttribute("aria-hidden") === "true")).toBe(
+      true,
+    );
   });
 });

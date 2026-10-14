@@ -51,9 +51,12 @@
 }
 
 /* "DD Mon HH:MM" at its widest: six digits at 1.0002em, two spaces at 0.2844em,
-   "May" at 2.8988em and a colon at 0.2189em make 9.69em (Michroma, measured). */
+   "May" at 2.8988em and a colon at 0.2189em make 9.69em (Michroma, measured).
+   The plate is the quiet one, and `em` follows its smaller size. The quiet look
+   lets a value wrap; this one has a fixed shape, so it keeps to one line. */
 [data-role="hero-expires"] .gmt-punct-hero-value {
   min-inline-size: 9.8em;
+  white-space: nowrap;
 }
 
 [data-role="hero-expires"] .gmt-punct-hero-sub {
