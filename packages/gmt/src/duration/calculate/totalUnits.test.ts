@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { expectTypeOf } from "vitest";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import type { ExactDurationUnit } from "../../types";
 import { addUtc } from "../../utc/calculate/addUtc";

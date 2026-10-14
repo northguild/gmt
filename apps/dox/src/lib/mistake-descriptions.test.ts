@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * A `<Mistake>` card's `title` and `description` are plain strings.
  * `Mistake.astro` renders them as text, so a backtick in either prints as a

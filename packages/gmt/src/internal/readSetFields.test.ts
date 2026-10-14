@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { afterEach, vi } from "vitest";
 import {
   DATE_FIELDS,
   DATE_TIME_FIELDS,
