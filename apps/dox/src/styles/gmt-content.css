@@ -60,14 +60,16 @@
 /* inline code (--gmt-code-bg / --gmt-code-border flip for light mode).
    `overflow-wrap: anywhere` lets a long unbroken value (a path, an ISO
    string) break mid-token in flowing prose rather than push the page wide —
-   a code *block* never needs this, since it already scrolls itself above. */
+   a code *block* never needs this, since it already scrolls itself above.
+   The `max()` holds inline code at the 12px floor inside small text: a widget
+   hint is 12.8px, and 0.9em of that is 11.5px. */
 .sl-markdown-content :not(pre) > code {
   background: var(--gmt-code-bg);
   color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
-  font-size: 0.9em;
+  font-size: max(0.9em, var(--gmt-text-xs));
   overflow-wrap: anywhere;
 }
 

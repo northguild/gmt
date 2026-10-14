@@ -168,6 +168,18 @@ function findDeclarations(text: string): Array<{ line: number; raw: string }> {
   return found;
 }
 
+/**
+ * True when `raw` is an `em` size under 1em with nothing holding it at the
+ * floor. An `em` size is relative to the parent, so a small parent drags it
+ * under 12px even though the literal looks harmless. `max(<em>, var(--gmt-text-xs))`
+ * (or a `clamp()` whose minimum is a token) is the floor; the scan above cannot
+ * see a parent's size, so it requires the floor wherever the size shrinks.
+ */
+function shrinksWithoutFloor(raw: string): boolean {
+  const match = /^([0-9]*\.?[0-9]+)em$/.exec(raw.trim());
+  return match !== null && Number.parseFloat(match[1]) < 1;
+}
+
 describe("Font floor (12px / 0.75rem)", () => {
   it("scans the site source and every build script that emits rendered text", () => {
     expect(FILES.length).toBeGreaterThan(30);
@@ -196,6 +208,21 @@ describe("Font floor (12px / 0.75rem)", () => {
     expect(findDeclarations(`ctx.font = "monospace";`)).toEqual([]);
     expect(violation(small)).toMatch(/under the 12px floor/);
     expect(violation("12px")).toBeNull();
+  });
+
+  it("flags a font-size in em under 1em that has no floor", () => {
+    /* The miss this guards: inline code was `0.9em`, which the scan passed
+       (it allows anything from 0.75em up), but inside a 12.8px widget hint it
+       computed to 11.5px. A size below 1em scales its parent down, so it needs
+       a `max()` that holds the 12px token. */
+    const shrink = "0.9em";
+    expect(shrinksWithoutFloor(shrink)).toBe(true);
+    expect(shrinksWithoutFloor(`max(${shrink}, var(--gmt-text-xs))`)).toBe(
+      false,
+    );
+    expect(shrinksWithoutFloor("1em")).toBe(false);
+    expect(shrinksWithoutFloor("1.1em")).toBe(false);
+    expect(shrinksWithoutFloor("0.8rem")).toBe(false);
   });
 
   it("the --gmt-text-* scale itself resolves to >= 12px", () => {
@@ -231,6 +258,15 @@ describe("Font floor (12px / 0.75rem)", () => {
         .map(({ line, message }) => `${rel}:${line}: ${message}`);
 
       expect(offending).toEqual([]);
+    });
+
+    it(`${rel} sets no em size under 1em without a floor`, () => {
+      const text = readFileSync(full, "utf8");
+      const bare = findDeclarations(text)
+        .filter(({ raw }) => shrinksWithoutFloor(raw))
+        .map(({ line, raw }) => `${rel}:${line}: ${raw} has no max() floor`);
+
+      expect(bare).toEqual([]);
     });
   }
 });
