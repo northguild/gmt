@@ -225,6 +225,20 @@ What the five tools share beyond the grid helpers of `dwell-ledger.ts`:
   "Fri 14 Jun 15:00" on that zone's clock, and `""` when the zone or the instant cannot be read.
 - `zoneWithOffsets`: the zone list for a control that also takes offsets:
   `[...TRANSPORT_ZONES, "+08:00", ...FIXED_OFFSET_ZONES]`, de-duplicated.
+- `PlateSpec`, `plateHtml` and `platesHtml`: a plate with `role`, `caption`, `value` (`null`
+  reads `NO_RESULT`, "no result", and blanks its lines), fixed sub `lines`, an optional `series`
+  and `quiet` (the smaller value of `.gmt-punct-hero--quiet`, for a secondary plate in the same
+  row). `platesHtml(role, plates)` is the pinned, `aria-hidden` row. Every new tool builds its
+  plates with these.
+- `DayMark` (`state`, `chip?`, `series?`, `tier?`, `kind?`, `aria?`), `dayColumnFit` and
+  `PAGE_STEP_UNITS` (twelve snap units for PageUp and PageDown).
+
+`label-fit.ts` holds the measuring passes a mount runs after layout: `fitDayColumns(days, trackPx,
+dayColumnFit)` sets `--short` and `--narrow` from each column's width, then measures each column
+that keeps its chips and sets `--bare` (chips hidden) when they would overflow it;
+`thinTickLabels(row)` hides axis tick labels that would collide; `placeLabel` and `pickLabelLeft`
+flip and place a chip; `onWidthChange` re-runs a pass on a width change and returns its disposer.
+A tool with day columns or an axis runs these passes on paint and on a width change.
 
 The call recorder is `runCall` in `edi-widgets.ts`, widened so any tool can use it:
 `runCall<L extends object>(lib: L, fn: keyof L & string, ...args)` returns `{ fn, args, result }`,
@@ -266,8 +280,10 @@ One moment has a different calendar date in each place. A bill of lading carries
   is added. "No zone" on the place leaves `options` out of the call.
 - **Latest date allowed** is a native `<input type="date">` with the `optional` chip.
 - **The slider** is a native range (`rangeFieldHtml`, `data-role="moment-slider"`) under the
-  chart. It moves the moment in 15-minute steps across a 72-hour window: 36 hours each side of
-  the local midnight nearest the moment, in the place zone (UTC when there is none). The window
+  chart. It moves the moment in 15-minute steps across a half-open 72-hour window that starts
+  36 hours before the local midnight nearest the moment, in the place zone (UTC when there is
+  none): 288 positions, the last 35 h 45 min after that midnight. The window's end is left out
+  because it is the start of a day the lanes do not draw. The window
   is set when a preset, a typed value or a zone settles, and never while the slider moves. The
   slider writes the moment into the typed field in the form it was typed (`writeLike`).
 
@@ -571,7 +587,9 @@ The member cells, the verdict, the detail line, the rails, the asides, the outpu
 frames are held (`holdHtml`, with the text list built by running the pure text functions over a
 result of each shape). The two-pane band and the right column's minimum are derived as the other
 two tools derive theirs, and the arithmetic is written in the sheet beside the rule: the widest
-member is a 30-character instant with a nine-digit fraction.
+member is a 33-character instant with a nine-digit fraction and a six-digit year
+(`+010000-01-01T04:30:00.123456789Z`, which `parseEpcisEvent` returns for
+`9999-12-31T23:30:00.123456789-05:00` at `+14:00`).
 
 **Hand-off.** A link reads "Read this moment as a shipped on board date in the B/L Date Stamp"
 and is `encodeWidgetPermalink("bldate", { value: instant, event: "shippedOnBoard", timeZone:
@@ -704,26 +722,28 @@ Each item names the test that guards it, or says that nothing does.
 | C4 | same | `DOX_TOOL_DOCS` (442) | the four, **appended** after `showX12TimeReader`: indices 20 to 23 | see the trap below |
 | C5 | same | `DOX_TOOLS` (595) | the four, in the docs' order, each with its own `DOX_TOOL_DOCS[n].purpose` | `chat-handler.test.ts` |
 | C6 | same | `ENABLED_TOOL_NAMES` (698) | the four | `widget-registry.test.ts`, `chat-starters.test.ts` |
-| C7 | `worker/tools.ts` | imports (55); tools (334 onward) | the four tools with a trivial `execute` | `tools.test.ts` |
-| C8 | `src/components/ask/widget-registry.ts` | type imports (64); schema imports (78); entries after `x12TimeEntry` (582); `WIDGET_REGISTRY` (651) | `import type` only, never a value import; each entry has a literal `import("~/lib/…-mount")` | `widget-registry.test.ts`, `widget-graph.test.ts` |
+| C7 | `worker/tools.ts` | imports (56); tools (351 onward) | the four tools with a trivial `execute` | `tools.test.ts` |
+| C8 | `src/components/ask/widget-registry.ts` | type imports (65); schema imports (67); entries after `x12TimeEntry` (582); `WIDGET_REGISTRY` (651) | `import type` only, never a value import; each entry has a literal `import("~/lib/…-mount")` | `widget-registry.test.ts`, `widget-graph.test.ts` |
 | C9 | `src/lib/widget-permalink.ts` | `WidgetKind` (35); `WIDGET_PAGE_PATHS` (71) | `"bldate"`, `"journeysplit"`, `"demclock"`, `"epcis"` and their paths | `widget-permalink.test.ts` |
 | C10 | `src/lib/chat-constants.ts` | `CHAT_STARTERS` (396) | four cards, area `intermodal`: the Demurrage Clock's after the Free Time Ledger's, the B/L Date Stamp's and the Journey Split's after Billing Deadlines', the EPCIS Event Reader's after the X12 Time Reader's | `chat-starters.test.ts` (21 to 109 characters, a digit or a known place, no tool name; the seed passes its schema and `validate`) |
 | C11 | `src/lib/widget-load-error.test.tsx` | imports; `MOUNTS` | one row for each new mount | **manual: nothing fails if forgotten** |
-| C12 | `src/components/ask/widget-graph.test.ts` | `heavy` (128) | `lib/ledger-widgets.ts`, `lib/ledger-lib.ts`, `lib/bl-date-stamp.ts`, `lib/journey-split.ts`, `lib/demurrage-clock.ts`, `lib/epcis-event-reader.ts` | **manual** |
-| C13 | `astro.config.mjs` | `customCss` (234) | `gmt-ledger-widgets.css`, then the two ledger sheets, `gmt-bl-date-stamp.css`, `gmt-journey-split.css`, `gmt-demurrage-clock.css`, all after `gmt-departure-board.css` | **manual**; an unregistered sheet shows as an unstyled widget in the browser pass |
+| C12 | `src/components/ask/widget-graph.test.ts` | `heavy` (127) | `lib/ledger-widgets.ts`, `lib/ledger-lib.ts`, `lib/bl-date-stamp.ts`, `lib/journey-split.ts`, `lib/demurrage-clock.ts`, `lib/epcis-event-reader.ts` | **manual** |
+| C13 | `astro.config.mjs` | `customCss` (236) | `gmt-ledger-widgets.css` and the two ledger sheets are registered after `gmt-departure-board.css` (264 to 266); `gmt-bl-date-stamp.css`, `gmt-journey-split.css` and `gmt-demurrage-clock.css` follow them | **manual**; an unregistered sheet shows as an unstyled widget in the browser pass |
 | C14 | `src/lib/mdx-jsx.ts` | the dropped-components list (near 365) | `"BlDateStamp"`, `"JourneySplit"`, `"DemurrageClock"`, `"EpcisEventReader"` | `scripts/llms.test.ts`, **only after a build** |
 | C15 | `scripts/html-diff.mjs` | `PAGES` (32) | the four pages, each with its root class string | **manual** |
-| C16 | `scripts/visual-snapshot.mjs` | `PAGES` (near 109) | `tool-bl-date-stamp`, `tool-journey-split`, `tool-demurrage-clock`, `tool-epcis-event-reader` | **manual** |
-| C17 | `scripts/grow-measure.mjs` | `PAGES` (79) | the four: `root: ".gmt-widget"`, `preset: '[data-role="preset"]'`; `drag: '[data-role="moment-slider"]'` for the B/L Date Stamp and `null` for the rest. The header comment names no page count | **manual** |
-| C18 | `scripts/readout-still.mjs` | `TOOLS` (132) | the B/L Date Stamp, the Free Time Ledger and the Dwell Ledger (below) | **manual** |
-| C19 | `src/styles/gmt-a11y.css` | the `@media (forced-colors: active)` block (113) | the day columns, gates, bars, hatches, rail marks and pins keep a system colour; frames, plates and chips take `border-color: CanvasText` | **manual**; checked in the browser pass |
+| C16 | `scripts/visual-snapshot.mjs` | `PAGES` (87) | `tool-bl-date-stamp`, `tool-journey-split`, `tool-demurrage-clock`, `tool-epcis-event-reader` | **manual** |
+| C17 | `scripts/grow-measure.mjs` | `PAGES` (80) | the four: `root: ".gmt-widget"`, `preset: '[data-role="preset"]'`; `drag: '[data-role="moment-slider"]'` for the B/L Date Stamp and `null` for the rest. The header comment names no page count | **manual** |
+| C18 | `scripts/readout-still.mjs` | `TOOLS` (145) | the B/L Date Stamp, after the Free Time Ledger and the Dwell Ledger, which are in place (below) | **manual** |
+| C19 | `src/styles/gmt-a11y.css` | the ledger family's `@media (forced-colors: active)` block (1057) | the day columns, gates, bars, hatches, rail marks and pins keep a system colour; frames, plates and chips take `border-color: CanvasText` | **manual**; checked in the browser pass |
 | C20 | `src/lib/industry-tags.ts` | the intermodal `definition` | names demurrage and detention clocks, bill of lading dates, multimodal journeys and EPCIS events beside what it names now | `industry-tags.test.ts` |
 | C21 | `src/lib/chat-constants.ts` | `EXAMPLE_AREAS` (360) | the intermodal label still fits its eight cards; change it only if it no longer does | `chat-starters.test.ts` |
 
 **Trap: `DOX_TOOLS` reads `DOX_TOOL_DOCS` by position.** Each `DOX_TOOLS` entry's description is
 `DOX_TOOL_DOCS[n].purpose` with a literal `n`. **Append**, never insert, and after editing
-confirm `DOX_TOOL_DOCS[n].name` equals the key for every entry. A test in `dox-tools.test.ts`
-(or the nearest existing test of that file) asserts it for every entry, so the trap is guarded.
+confirm `DOX_TOOL_DOCS[n].name` equals the key for every entry. No test guards this today, so
+this work adds one to `chat-starters.test.ts` (it already imports `DOX_TOOL_DOCS`): for every key
+of `DOX_TOOLS`, its `description` equals the `purpose` of the `DOX_TOOL_DOCS` entry whose `name`
+is that key.
 
 **The `readout:still` entries.** A `TOOLS` entry may name, per control, the field whose value
 the handle edits (`value`), and may cap the keyboard sweep (`maxKeys`), because a ledger handle
@@ -771,9 +791,10 @@ the built library. Every permalink is built with `encodeWidgetPermalink`, never
   - `scenarios/eta-that-forgot-the-sailing.mdx`: the Journey Split, seeded with its legs;
   - `scenarios/detention-is-not-demurrage.mdx`: the Demurrage Clock, seeded with its events;
   - `scenarios/the-epcis-offset-nobody-kept.mdx`: the EPCIS Event Reader, seeded with its event.
-- A page tagged `intermodal` may link `/reference/transport/` only if `industry-tags.test.ts`
-  allows it; where it does not, name `scheduleDelivery` as inline code and link the multi-leg
-  guide.
+- `industry-tags.test.ts` requires a page's declared tags to be a subset of the layers it links
+  under `/reference/<layer>/` or imports from. A page tagged `intermodal` may link
+  `/reference/transport/` (the Journey Split links `scheduleDelivery`), as long as it also links
+  an intermodal reference page, which every new tool page does.
 
 ---
 
@@ -895,8 +916,12 @@ the `rsync` and the site build of `$SP/after` after any builder change.
    - no `li` inside a `.gmt-widget` on any tool page draws the prose dash (B9);
    - **stillness with no handle:** for the Journey Split, the Demurrage Clock, the EPCIS Event
      Reader and Billing Deadlines, record the bounding box of every plate, the frame and every
-     held region for every preset; they do not move or resize from one preset to the next at a
-     given width.
+     held region for every preset. At a given width each plate keeps its size and each held region
+     its height from one preset to the next. A result region may grow through `.gmt-grow`, which
+     `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or
+     a chart that moves down because section 1 shows more fields. Every preset description is held to the tallest description at that width. The
+     Journey Split's leg form has one fieldset for each leg, so a preset with fewer legs makes
+     section 1 shorter: its boxes are measured relative to the top of section 2.
 10. **Values.** A script in `$SP` runs every preset of the four new tools against
     `$SP/after`'s built library and prints each call and result. For every preset, the output a
     built page shows equals the script's value, and every `call // result` on the four tool pages
