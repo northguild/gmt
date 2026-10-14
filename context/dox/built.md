@@ -181,6 +181,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         `industrySidebarCss()` (the tag's own glyph as a mask), and a `:has()` rule in
         `gmt-shell.css` draws it before the group's label as a mask over the label colour, with
         `white-space: nowrap`. Forced colours repaint it in `CanvasText` (`gmt-a11y.css`).
+      - **Tools, Scenarios and Mistakes use the same dividers, one per industry.**
+        `scripts/build-industry-sidebars.ts`, a `generate` step, reads each page's title and
+        `industries` and writes `src/generated/{tools,scenarios,mistakes}-sidebar.ts`
+        (`build-utils/industry-sidebar.ts`): the section's index page, then a divider for each
+        industry with pages, in `INDUSTRY_TAG_IDS` order (core, then the layers), with its pages
+        by title. That is the tools index's grouping, so the menu and the index agree. A page
+        with no `industries` stops the step. A list may hold any number of dividers: each one
+        names the list up to the next, and its id comes from its link (`#tools-intermodal`), so
+        no two collide. A divider with `data-gmt-industry` shows the tag's glyph as an inline
+        `aria-hidden` SVG in the label's own colour, so forced colours repaint it with the text.
     - **Root page.** `/reference/` lists the general namespaces under "For any industry",
       then "By industry": each industry's icon (`Icon.astro`, imported by the generated MDX;
       `stripMdx` drops the import and the tag), its label as a link to its overview, and its

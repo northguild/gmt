@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
+import { toolsSidebar } from "./src/generated/tools-sidebar.ts";
+import { scenariosSidebar } from "./src/generated/scenarios-sidebar.ts";
+import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 
@@ -207,19 +210,17 @@ export default defineConfig({
         {
           label: "Tools",
           collapsed: true,
-          items: [{ autogenerate: { directory: "tools", collapsed: true } }],
+          items: toolsSidebar,
         },
         {
           label: "Scenarios",
           collapsed: true,
-          items: [
-            { autogenerate: { directory: "scenarios", collapsed: true } },
-          ],
+          items: scenariosSidebar,
         },
         {
           label: "Mistakes",
           collapsed: true,
-          items: [{ autogenerate: { directory: "mistakes", collapsed: true } }],
+          items: mistakesSidebar,
         },
       ],
       components: {

@@ -1,12 +1,15 @@
 ---
 /**
- * Starlight's `SidebarSublist`, with one addition: the "By industry" divider.
+ * Starlight's `SidebarSublist`, with one addition: dividers.
  *
- * Starlight's sidebar holds only links and groups, so the generated API Reference sidebar
- * (`scripts/build-reference.ts`) marks the divider as a link entry with `data-gmt-divider`.
- * Here it is not drawn as a link. It is a label, and the entries after it are their own list
- * named by it (`aria-labelledby`), so it is plain text for everyone: nothing to open, click or
- * focus, and a screen reader hears "By industry, list" before the industry groups. Everything
+ * Starlight's sidebar holds only links and groups, so a generated sidebar marks a divider as
+ * a link entry with `data-gmt-divider`: the API Reference's "By industry"
+ * (`scripts/build-reference.ts`) and the Tools section's one divider per industry
+ * (`scripts/build-utils/tools-sidebar.ts`). Here a divider is not drawn as a link. It is a
+ * label, and the entries up to the next divider are their own list named by it
+ * (`aria-labelledby`), so it is plain text for everyone: nothing to open, click or focus, and
+ * a screen reader hears "Intermodal, list" before that industry's tools. A divider that also
+ * carries `data-gmt-industry` shows that industry's tag icon before its label. Everything
  * else is Starlight's own markup, so current-page highlighting, a page opening only its
  * ancestors, the `sl-sidebar-state` persistence and the mobile menu behave as they do there.
  * Keep it in step with `@astrojs/starlight/components/SidebarSublist.astro` on a Starlight
@@ -15,6 +18,7 @@
 import { Badge, Icon } from '@astrojs/starlight/components';
 import type { StarlightRouteData } from '@astrojs/starlight/route-data';
 import SidebarRestorePoint from '@astrojs/starlight/components/SidebarRestorePoint.astro';
+import { INDUSTRY_ICON_PATHS, industryTag } from '~/lib/industry-tags';
 
 type SidebarEntry = StarlightRouteData['sidebar'][number];
 
@@ -32,13 +36,29 @@ interface Props {
 
 const { sublist, nested, labelledby } = Astro.props;
 
-const isDivider = (entry: SidebarEntry) =>
+type LinkEntry = Extract<SidebarEntry, { type: 'link' }>;
+const isDivider = (entry: SidebarEntry): entry is LinkEntry =>
 	entry.type === 'link' && entry.attrs['data-gmt-divider'] !== undefined;
-const dividerAt = sublist.findIndex(isDivider);
-const before = dividerAt < 0 ? sublist : sublist.slice(0, dividerAt);
-const divider = dividerAt < 0 ? undefined : sublist[dividerAt];
-const after = dividerAt < 0 ? [] : sublist.slice(dividerAt + 1);
-const dividerId = 'gmt-sidebar-divider';
+
+/** The entries before the first divider, then each divider with the entries up to the next. */
+const firstAt = sublist.findIndex(isDivider);
+const before = firstAt < 0 ? sublist : sublist.slice(0, firstAt);
+const sections: { divider: LinkEntry; entries: SidebarEntry[] }[] = [];
+for (const entry of firstAt < 0 ? [] : sublist.slice(firstAt)) {
+	if (isDivider(entry)) sections.push({ divider: entry, entries: [] });
+	else sections.at(-1)!.entries.push(entry);
+}
+
+/** A page-unique id from the divider's link (`#tools-intermodal` → `gmt-sidebar-divider-tools-intermodal`). */
+const dividerId = (divider: LinkEntry) =>
+	`gmt-sidebar-divider-${divider.href.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()}`;
+
+/** The divider's industry icon, as SVG inner markup, or undefined for a plain divider. */
+const dividerIcon = (divider: LinkEntry): string | undefined => {
+	const id = divider.attrs['data-gmt-industry'];
+	const icon = typeof id === 'string' ? industryTag(id)?.icon : undefined;
+	return icon ? INDUSTRY_ICON_PATHS[icon] : undefined;
+};
 ---
 
 <ul class:list={{ 'top-level': !nested, 'gmt-sidebar-named-list': labelledby }} aria-labelledby={labelledby}>
@@ -86,12 +106,23 @@ const dividerId = 'gmt-sidebar-divider';
 		))
 	}
 	{
-		divider && (
+		sections.map(({ divider, entries }) => (
 			<li class="gmt-sidebar-divider-item">
-				<span id={dividerId} class="gmt-sidebar-divider">{divider.label}</span>
-				<Astro.self sublist={after} nested labelledby={dividerId} />
+				<span id={dividerId(divider)} class="gmt-sidebar-divider">
+					{dividerIcon(divider) && (
+						<svg
+							class="gmt-sidebar-divider-icon"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+							focusable="false"
+							set:html={dividerIcon(divider)}
+						/>
+					)}
+					{divider.label}
+				</span>
+				<Astro.self sublist={entries} nested labelledby={dividerId(divider)} />
 			</li>
-		)
+		))
 	}
 </ul>
 
