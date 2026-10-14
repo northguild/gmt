@@ -103,7 +103,9 @@ describe("readDurationUnits", () => {
     },
   );
 
-  it("reads each of the ten unit names once, and nothing else", () => {
+  // ToTemporalPartialDurationRecord (7.5.18) gets the ten names in alphabetical order, which a
+  // getter with a side effect can see.
+  it("reads each of the ten unit names once, in Temporal's order, and nothing else", () => {
     const reads: PropertyKey[] = [];
     const units = new Proxy(
       { minutes: 15 },
@@ -118,7 +120,7 @@ describe("readDurationUnits", () => {
     expect(readDurationUnits(units, isValidDateTimeDurationUnit)).toEqual({
       minutes: 15,
     });
-    expect([...reads].sort()).toEqual([
+    expect(reads).toEqual([
       "days",
       "hours",
       "microseconds",

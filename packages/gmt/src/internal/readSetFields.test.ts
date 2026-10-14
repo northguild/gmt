@@ -15,9 +15,14 @@ const inheriting = (inherited: object, own: object = {}): object =>
 const hidden = (key: string, value: unknown): object =>
   Object.defineProperty({}, key, { value, enumerable: false });
 
-/** Every property Temporal's `with` methods read, sorted. */
+/**
+ * Every property Temporal's `with` methods read, in the order they read them: `calendar` and
+ * `timeZone` (IsPartialTemporalObject), then the fields in code-unit order (PrepareCalendarFields),
+ * with the era fields GMT reads only to refuse them.
+ */
 const WITH_NAMES = [
   "calendar",
+  "timeZone",
   "day",
   "era",
   "eraYear",
@@ -30,7 +35,6 @@ const WITH_NAMES = [
   "nanosecond",
   "offset",
   "second",
-  "timeZone",
   "year",
 ];
 
@@ -237,7 +241,7 @@ describe("readSetFields", () => {
     });
   });
 
-  it("reads each with property once and nothing else", () => {
+  it("reads each with property once, in the order with reads them, and nothing else", () => {
     const reads: PropertyKey[] = [];
     const fields = new Proxy(
       { year: 2025 },
@@ -250,7 +254,7 @@ describe("readSetFields", () => {
     );
 
     expect(readSetFields(fields, DATE_FIELDS)).toEqual({ year: 2025 });
-    expect([...reads].sort()).toEqual(WITH_NAMES);
+    expect(reads).toEqual(WITH_NAMES);
   });
 
   it("lets a throwing getter through, for the caller's catch to turn into its sentinel", () => {

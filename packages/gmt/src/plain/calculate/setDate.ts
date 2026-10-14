@@ -15,9 +15,10 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `fields` may set `year`, `month`, `monthCode` and/or `day`; omitted fields keep their current
  *   value. An object with no field set, such as `{}` or `{ year: undefined }`, is a no-op.
  * - Values are not converted: `year`, `month` and `day` must be integer numbers and `monthCode` a
- *   string. `null`, a numeric string, a boolean, a bigint, `NaN`, an infinity or a fraction returns
- *   "", where Temporal would convert it. A number too large for its field follows `overflow`. A
- *   month or day below 1, or a date outside Temporal's range, returns "".
+ *   string. `null`, a numeric string, a boolean or a fraction returns "", where Temporal would
+ *   convert or truncate it. A bigint, `NaN` or an infinity returns "" too. A number too large for
+ *   its field follows `overflow`. A month or day below 1, or a date outside Temporal's range,
+ *   returns "".
  * - An own key that is not one of these fields, such as a misspelt `yaer`, returns "". So does a
  *   field this function does not take, such as `hour`, or a `calendar` or `timeZone` property,
  *   whether own, inherited or a getter. A field is read with a property get, as Temporal reads it,

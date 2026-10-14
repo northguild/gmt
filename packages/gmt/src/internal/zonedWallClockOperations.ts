@@ -25,9 +25,9 @@ import {
   NEXT_TRANSITION_HORIZON_NANOSECONDS,
   startOfDayEpochNanoseconds,
   timeZoneIdOf,
-  utcOffsetStringNanoseconds,
 } from "./zonedWallClock";
 import { optionOrDefault } from "./optionOrDefault";
+import type { DATE_TIME_FIELDS, SetFields } from "./readSetFields";
 
 /*
  * Polyfill-first wrappers for the Temporal operations that resolve a wall clock or a start of day
@@ -747,32 +747,28 @@ interface ZonedWithOptions {
   offset?: Offset;
 }
 
+/** The date and time fields a `set*` function passes, as `readSetFields` checked them. */
+type ZonedWithFields = SetFields<(typeof DATE_TIME_FIELDS)[number]>;
+
 /** TC39 `ZonedDateTime#with` at the range limits. */
 function withAtEdge(
   zoned: Temporal.ZonedDateTime,
-  fields: Temporal.ZonedDateTimeLike,
+  fields: ZonedWithFields,
   options: ZonedWithOptions | undefined,
 ): Temporal.ZonedDateTime | null {
   let wall: Temporal.PlainDateTime;
-  let offset: CarriedOffset;
   try {
     Temporal.ZonedDateTime.from(zoned, options);
-    // `fields` goes to `with` as it is, so each field is read with a property get, as
-    // ZonedDateTime#with reads it: a rest spread would copy own enumerable fields only and lose an
-    // inherited or non-enumerable one. PlainDateTime#with does not read `offset`.
-    const offsetString = fields.offset;
     wall = zoned
       .toPlainDateTime()
       .with(fields, { overflow: options?.overflow });
-    offset = {
-      nanoseconds:
-        offsetString === undefined
-          ? BigInt(zoned.offsetNanoseconds)
-          : utcOffsetStringNanoseconds(offsetString),
-    };
   } catch {
     return null;
   }
+  // `fields` holds no offset, so the merged wall clock keeps the receiver's (ZonedDateTime#with).
+  const offset: CarriedOffset = {
+    nanoseconds: BigInt(zoned.offsetNanoseconds),
+  };
 
   if (!isAtRangeEdge(zoned.timeZoneId, wall.toPlainDate())) {
     return null;
@@ -793,13 +789,13 @@ function withAtEdge(
  * `ZonedDateTime#with`, correct at the range limits.
  *
  * @param zoned the value to change
- * @param fields the date/time (and optional offset) fields to set
+ * @param fields the date and time fields to set
  * @param options Temporal `overflow` / `disambiguation` / `offset` (default `"prefer"`)
  * @returns the changed value; throws where TC39 Temporal throws
  */
 export function withZonedFields(
   zoned: Temporal.ZonedDateTime,
-  fields: Temporal.ZonedDateTimeLike,
+  fields: ZonedWithFields,
   options?: ZonedWithOptions,
 ): Temporal.ZonedDateTime {
   try {

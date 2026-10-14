@@ -3,20 +3,20 @@ import { isObject } from "./isObject";
 import { isValidAmount } from "./isValidAmount";
 
 /**
- * The ten fields TC39 Temporal reads from a duration-like object
- * (ToTemporalPartialDurationRecord), largest first.
+ * The ten fields TC39 Temporal reads from a duration-like object, in the order it reads them:
+ * ToTemporalPartialDurationRecord (7.5.18) gets them in alphabetical order.
  */
 const DURATION_UNIT_NAMES = [
-  "years",
-  "months",
-  "weeks",
   "days",
   "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
   "microseconds",
+  "milliseconds",
+  "minutes",
+  "months",
   "nanoseconds",
+  "seconds",
+  "weeks",
+  "years",
 ] as const satisfies readonly DateTimeDurationUnit[];
 
 /**
@@ -29,8 +29,8 @@ const DURATION_UNIT_NAMES = [
  * - An own enumerable string key that `isAllowed` refuses returns `null`, whatever its value.
  *   This is the guard against a misspelt key, which Temporal on its own ignores. A symbol key and
  *   a non-enumerable key that is no unit name are not entries and are ignored.
- * - Each of the ten unit names is read once with an ordinary property get, as Temporal's
- *   ToTemporalPartialDurationRecord reads it, so an inherited or non-enumerable unit applies.
+ * - Each of the ten unit names is read once with an ordinary property get, in the order Temporal's
+ *   ToTemporalPartialDurationRecord reads them, so an inherited or non-enumerable unit applies.
  *   `undefined` means the unit is absent. Any other value must be a finite number; nothing is
  *   converted to one.
  * - A unit `isAllowed` refuses returns `null` when its amount is not zero. Zero is no amount:

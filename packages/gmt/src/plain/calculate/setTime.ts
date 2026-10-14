@@ -14,8 +14,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `nanosecond`; omitted fields keep their current value. An object with no field set, such as
  *   `{}` or `{ hour: undefined }`, is a no-op.
  * - Values are not converted: all six fields must be integer numbers. `null`, a numeric string, a
- *   boolean, a bigint, `NaN`, an infinity or a fraction returns "", where Temporal would convert
- *   it. An out-of-range number follows `overflow`.
+ *   boolean or a fraction returns "", where Temporal would convert or truncate it. A bigint, `NaN`
+ *   or an infinity returns "" too. An out-of-range number follows `overflow`.
  * - An own key that is not one of these fields, such as a misspelt `huor`, returns "". So does a
  *   date field, such as `year`, or a `calendar` or `timeZone` property, whether own, inherited or a
  *   getter. A field is read with a property get, as Temporal reads it, so an inherited or getter

@@ -18,26 +18,31 @@ export const TIME_FIELDS = [
 export const DATE_TIME_FIELDS = [...DATE_FIELDS, ...TIME_FIELDS] as const;
 
 /**
- * Every property TC39 Temporal's `with` methods read from their argument: `calendar` and
- * `timeZone`, which IsPartialTemporalObject refuses, the date and time fields, the era fields, and
- * the `offset` that `ZonedDateTime.prototype.with` reads.
+ * Every property TC39 Temporal's `with` methods read from their argument, in the order they read
+ * them: `calendar` and `timeZone` first, which IsPartialTemporalObject (13.24) refuses, then the
+ * date and time fields and the `offset` that `ZonedDateTime.prototype.with` reads, in code-unit
+ * order. PrepareCalendarFields (12.3.3) sorts them so for every `with` that takes a date, and
+ * ToTemporalTimeRecord (4.5.12), which `PlainTime.prototype.with` uses, reads its six fields in
+ * the same order. The list adds the era fields,
+ * which `with` never reads for the ISO 8601 calendar (CalendarExtraFields returns none) and which
+ * GMT reads only to refuse them.
  */
 const WITH_PROPERTY_NAMES = [
   "calendar",
   "timeZone",
+  "day",
   "era",
   "eraYear",
-  "year",
+  "hour",
+  "microsecond",
+  "millisecond",
+  "minute",
   "month",
   "monthCode",
-  "day",
-  "hour",
-  "minute",
-  "second",
-  "millisecond",
-  "microsecond",
   "nanosecond",
   "offset",
+  "second",
+  "year",
 ] as const;
 
 /** The one field whose value is a string; every other field a `set*` function takes is a number. */
@@ -153,13 +158,14 @@ function isFieldValue(name: string, value: unknown): boolean {
  *   holds a date or a time (TC39 IsPartialTemporalObject).
  * - An own enumerable string key outside `allowedFields` returns `null`, whatever its value: the guard
  *   against a misspelt key. A symbol key is ignored.
- * - Each property `with` reads is read once with an ordinary property get, so an inherited,
- *   non-enumerable or getter field applies. `undefined` means absent. A defined property outside
- *   `allowedFields` (another type's field, an era, an offset, a `calendar` or a `timeZone`) returns
- *   `null`.
+ * - Each property `with` reads is read once with an ordinary property get, in the order `with`
+ *   reads them, so an inherited, non-enumerable or getter field applies. `undefined` means absent.
+ *   A defined property outside `allowedFields` (another type's field, an era, an offset, a
+ *   `calendar` or a `timeZone`) returns `null`.
  * - A value is not converted: `monthCode` must be a string, and every other field a number that is
- *   an integer. `null`, a numeric string, a boolean, a bigint, `NaN`, an infinity and a fraction
- *   return `null`, where Temporal would convert or truncate them.
+ *   an integer. `null`, a numeric string, a boolean and a fraction return `null`, where Temporal
+ *   would convert or truncate them. A bigint, `NaN` and an infinity return `null` too; Temporal
+ *   throws for them (ToIntegerWithTruncation).
  *
  * Range and overflow are left to Temporal. An empty result means nothing is set: the function
  * returns its value unchanged, where Temporal's `with` would throw. A getter that throws is not

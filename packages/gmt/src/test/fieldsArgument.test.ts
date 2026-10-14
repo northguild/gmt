@@ -379,7 +379,8 @@ class NineOClock {
 // The last instant Temporal supports is +275760-09-13T00:00:00Z, which is 8.64e15 ms and 10:00 on
 // that date in Sydney (+10:00). 08:00 there is two hours before it and 09:00 is one hour before:
 // 8.64e15 - 3600000 = 8639999996400000. Setting a field this close to the limit takes the
-// range-limit path of `withZonedFields`, which must read `fields` the way `with` does.
+// range-limit path of `withZonedFields`. `readSetFields` reads `fields` the way `with` does and
+// hands both paths the same fresh object, so an inherited or getter field must still be set.
 describe("fields: a field read with a get at the limit of the instant range", () => {
   const SYDNEY_NEAR_MAX = "+275760-09-13T08:00:00+10:00[Australia/Sydney]";
   const UNIX_NEAR_MAX = 8.64e15 - 7200000;
