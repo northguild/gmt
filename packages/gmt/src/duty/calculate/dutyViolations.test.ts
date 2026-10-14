@@ -346,6 +346,7 @@ describe("dutyViolations", () => {
     );
   });
 
+  // Worst CI run 4.6 s walking 10,000 days before refusing; the timeout is three times that and more.
   it.each`
     range                                                             | rules                                                                                                   | options                         | reason
     ${{ start: "2024-02-01T00:00:00Z", end: START }}                  | ${[elevenDriving]}                                                                                      | ${UTC}                          | ${"an inverted range"}
@@ -354,11 +355,15 @@ describe("dutyViolations", () => {
     ${{ start: START, end: "2024-02-01T00:00:00Z" }}                  | ${[elevenDriving]}                                                                                      | ${{ timeZone: "Mars/Olympus" }} | ${"an invalid zone"}
     ${{ start: START, end: "2024-02-01T00:00:00Z" }}                  | ${[{ label: "d", kind: "rollingCap", statuses: ["d"], cap: "PT60H", window: { operatorDays: 7 } }]}     | ${UTC}                          | ${"operator days without dayStartTime"}
     ${{ start: "2000-01-01T00:00:00Z", end: "2040-01-01T00:00:00Z" }} | ${[{ label: "d", kind: "fixedPeriodCap", statuses: ["d"], cap: "PT12H", period: { calendarDays: 1 } }]} | ${UTC}                          | ${"more than 10,000 days in the range"}
-  `("returns null for $reason", ({ range, rules, options }) => {
-    expect(
-      dutyViolations(dutySequence(START, week1), range, rules, options),
-    ).toBeNull();
-  });
+  `(
+    "returns null for $reason",
+    ({ range, rules, options }) => {
+      expect(
+        dutyViolations(dutySequence(START, week1), range, rules, options),
+      ).toBeNull();
+    },
+    15_000,
+  );
 
   it("returns null when Temporal.Instant.from throws", () => {
     const log = dutySequence(START, week1);
