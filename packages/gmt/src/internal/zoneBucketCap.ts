@@ -35,6 +35,10 @@ const MAX_PRECOUNT_TRANSITIONS = 4_096;
  * one stretch more than there are transitions, and each stretch of wall clock holds at least
  * `floor(length / LONGEST_UNIT_NANOSECONDS)` distinct unit starts, each the start of its own
  * bucket before `end`. The count subtracts two per stretch for the partial units at its ends.
+ * The bound also holds for a count of distinct local dates, which the free-time walk keeps by
+ * folding a day that re-enters an earlier date: a date can re-enter only at an offset transition,
+ * where the two units dropped per stretch already sit, and the starts counted inside one stretch
+ * fall on strictly increasing dates.
  * `false` means "not certain": the walk decides, exactly as before.
  */
 export function certainlyTouchesMoreBuckets(
