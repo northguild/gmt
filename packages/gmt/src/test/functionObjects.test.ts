@@ -9,7 +9,7 @@ import {
   billingTimeline,
   compareDurations,
   cutoffSchedule,
-  durationAs,
+  durationFromUnits,
   formatEpcisEvent,
   fromOffsetInstant,
   intervalXorAllDate,
@@ -40,6 +40,8 @@ import {
   subtractUnix,
   subtractUtc,
   subtractZoned,
+  totalDuration,
+  totalUnits,
 } from "../index";
 
 /**
@@ -94,48 +96,50 @@ const leg = {
 
 describe("an Object argument that is a function is read as the object it is", () => {
   it.each`
-    name                                                     | call
-    ${"addDate units"}                                       | ${(w: Wrap) => addDate("2024-01-31", w({ months: 1 }))}
-    ${"subtractDate units"}                                  | ${(w: Wrap) => subtractDate("2024-03-31", w({ months: 1 }))}
-    ${"addDateTime units"}                                   | ${(w: Wrap) => addDateTime("2024-01-31T10:00:00", w({ hours: 1 }))}
-    ${"subtractDateTime units"}                              | ${(w: Wrap) => subtractDateTime("2024-01-31T10:00:00", w({ hours: 1 }))}
-    ${"addTime units"}                                       | ${(w: Wrap) => addTime("14:30:00", w({ hours: 1 }))}
-    ${"subtractTime units"}                                  | ${(w: Wrap) => subtractTime("14:30:00", w({ hours: 1 }))}
-    ${"addUnix units"}                                       | ${(w: Wrap) => addUnix(1706659200000, w({ days: 1 }))}
-    ${"subtractUnix units"}                                  | ${(w: Wrap) => subtractUnix(1706659200000, w({ days: 1 }))}
-    ${"addUtc units"}                                        | ${(w: Wrap) => addUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
-    ${"subtractUtc units"}                                   | ${(w: Wrap) => subtractUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
-    ${"addZoned units"}                                      | ${(w: Wrap) => addZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
-    ${"subtractZoned units"}                                 | ${(w: Wrap) => subtractZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
-    ${"mergeIntervalsDate"}                                  | ${(w: Wrap) => mergeIntervalsDate([w(date), w(dateLater)])}
-    ${"mergeIntervalsTime"}                                  | ${(w: Wrap) => mergeIntervalsTime([w(time), w(timeLater)])}
-    ${"mergeIntervalsDateTime"}                              | ${(w: Wrap) => mergeIntervalsDateTime([w(dateTime), w(dateTimeLater)])}
-    ${"mergeIntervalsUtc"}                                   | ${(w: Wrap) => mergeIntervalsUtc([w(utc), w(utcLater)])}
-    ${"mergeIntervalsZoned"}                                 | ${(w: Wrap) => mergeIntervalsZoned([w(zoned), w(zonedLater)])}
-    ${"intervalXorAllDate"}                                  | ${(w: Wrap) => intervalXorAllDate([w(date), w(dateLater)])}
-    ${"intervalXorAllTime"}                                  | ${(w: Wrap) => intervalXorAllTime([w(time), w(timeLater)])}
-    ${"intervalXorAllDateTime"}                              | ${(w: Wrap) => intervalXorAllDateTime([w(dateTime), w(dateTimeLater)])}
-    ${"intervalXorAllUtc"}                                   | ${(w: Wrap) => intervalXorAllUtc([w(utc), w(utcLater)])}
-    ${"intervalXorAllZoned"}                                 | ${(w: Wrap) => intervalXorAllZoned([w(zoned), w(zonedLater)])}
-    ${"intervalsOverlap"}                                    | ${(w: Wrap) => intervalsOverlap(w(utc), w(utcLater))}
-    ${"isValidDateRange props"}                              | ${(w: Wrap) => isValidDateRange(w({ value1: "2024-01-01", value2: "2024-01-02" }))}
-    ${"fromOffsetInstant"}                                   | ${(w: Wrap) => fromOffsetInstant(w({ instant: "2024-06-15T12:00:00Z", offset: "+02:00" }))}
-    ${"parseEpcisEvent event"}                               | ${(w: Wrap) => parseEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
-    ${"formatEpcisEvent pair"}                               | ${(w: Wrap) => formatEpcisEvent(w({ instant: "2024-06-15T14:30:00Z", offset: "-05:00" }))}
-    ${"isValidEpcisEvent event"}                             | ${(w: Wrap) => isValidEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
-    ${"nextBusinessDay"}                                     | ${(w: Wrap) => nextBusinessDay("2024-07-05", w({ weekend: [6, 7], holidays: [], timeZone: "UTC" }))}
-    ${"operatingIntervals"}                                  | ${(w: Wrap) => operatingIntervals(w({ timeZone: "UTC", weekly: w({ 1: [w({ from: "09:00", to: "17:00" })] }) }), w({ start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }))}
-    ${"punctualityRate"}                                     | ${(w: Wrap) => punctualityRate([w({ planned: "2024-06-15T12:00:00Z", actual: "2024-06-15T12:05:00Z" })], w({ late: "PT15M" }))}
-    ${"billingTimeline"}                                     | ${(w: Wrap) => billingTimeline(w({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }), w({ issueDays: 30, disputeDays: 30, resolutionDays: 30 }))}
-    ${"scheduleDelivery leg"}                                | ${(w: Wrap) => scheduleDelivery([w(leg)])}
-    ${"multimodalETA leg"}                                   | ${(w: Wrap) => multimodalETA([w(leg)])}
-    ${"durationAs relativeTo (polyfill nudge workaround)"}   | ${(w: Wrap) => durationAs("P29DT12H", "months", { relativeTo: w(relativeBag) })}
-    ${"normalizeDuration relativeTo (floor)"}                | ${(w: Wrap) => normalizeDuration("P29DT12H", { largestUnit: "months", smallestUnit: "months", roundingMode: "floor", relativeTo: w(relativeBag) })}
-    ${"durationAs zoned relativeTo"}                         | ${(w: Wrap) => durationAs("P29DT12H", "months", { relativeTo: w(zonedRelativeBag) })}
-    ${"normalizeDuration relativeTo near the range maximum"} | ${(w: Wrap) => normalizeDuration("PT73H", { largestUnit: "day", relativeTo: w(sydneyNearMax) })}
-    ${"compareDurations relativeTo near the range maximum"}  | ${(w: Wrap) => compareDurations("P3D", "PT73H", { relativeTo: w(sydneyNearMax) })}
-    ${"parseDateWithPattern yearWindow"}                     | ${(w: Wrap) => parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, w({ yearWindow: 2000 }))}
-    ${"parseDateTimeWithPattern yearWindow"}                 | ${(w: Wrap) => parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm", undefined, w({ yearWindow: 2000 }))}
+    name                                                      | call
+    ${"addDate units"}                                        | ${(w: Wrap) => addDate("2024-01-31", w({ months: 1 }))}
+    ${"subtractDate units"}                                   | ${(w: Wrap) => subtractDate("2024-03-31", w({ months: 1 }))}
+    ${"addDateTime units"}                                    | ${(w: Wrap) => addDateTime("2024-01-31T10:00:00", w({ hours: 1 }))}
+    ${"subtractDateTime units"}                               | ${(w: Wrap) => subtractDateTime("2024-01-31T10:00:00", w({ hours: 1 }))}
+    ${"addTime units"}                                        | ${(w: Wrap) => addTime("14:30:00", w({ hours: 1 }))}
+    ${"subtractTime units"}                                   | ${(w: Wrap) => subtractTime("14:30:00", w({ hours: 1 }))}
+    ${"addUnix units"}                                        | ${(w: Wrap) => addUnix(1706659200000, w({ days: 1 }))}
+    ${"subtractUnix units"}                                   | ${(w: Wrap) => subtractUnix(1706659200000, w({ days: 1 }))}
+    ${"addUtc units"}                                         | ${(w: Wrap) => addUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
+    ${"subtractUtc units"}                                    | ${(w: Wrap) => subtractUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
+    ${"addZoned units"}                                       | ${(w: Wrap) => addZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
+    ${"subtractZoned units"}                                  | ${(w: Wrap) => subtractZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
+    ${"totalUnits units"}                                     | ${(w: Wrap) => totalUnits(w({ minutes: 15 }), "seconds")}
+    ${"durationFromUnits units"}                              | ${(w: Wrap) => durationFromUnits(w({ minutes: 15 }))}
+    ${"mergeIntervalsDate"}                                   | ${(w: Wrap) => mergeIntervalsDate([w(date), w(dateLater)])}
+    ${"mergeIntervalsTime"}                                   | ${(w: Wrap) => mergeIntervalsTime([w(time), w(timeLater)])}
+    ${"mergeIntervalsDateTime"}                               | ${(w: Wrap) => mergeIntervalsDateTime([w(dateTime), w(dateTimeLater)])}
+    ${"mergeIntervalsUtc"}                                    | ${(w: Wrap) => mergeIntervalsUtc([w(utc), w(utcLater)])}
+    ${"mergeIntervalsZoned"}                                  | ${(w: Wrap) => mergeIntervalsZoned([w(zoned), w(zonedLater)])}
+    ${"intervalXorAllDate"}                                   | ${(w: Wrap) => intervalXorAllDate([w(date), w(dateLater)])}
+    ${"intervalXorAllTime"}                                   | ${(w: Wrap) => intervalXorAllTime([w(time), w(timeLater)])}
+    ${"intervalXorAllDateTime"}                               | ${(w: Wrap) => intervalXorAllDateTime([w(dateTime), w(dateTimeLater)])}
+    ${"intervalXorAllUtc"}                                    | ${(w: Wrap) => intervalXorAllUtc([w(utc), w(utcLater)])}
+    ${"intervalXorAllZoned"}                                  | ${(w: Wrap) => intervalXorAllZoned([w(zoned), w(zonedLater)])}
+    ${"intervalsOverlap"}                                     | ${(w: Wrap) => intervalsOverlap(w(utc), w(utcLater))}
+    ${"isValidDateRange props"}                               | ${(w: Wrap) => isValidDateRange(w({ value1: "2024-01-01", value2: "2024-01-02" }))}
+    ${"fromOffsetInstant"}                                    | ${(w: Wrap) => fromOffsetInstant(w({ instant: "2024-06-15T12:00:00Z", offset: "+02:00" }))}
+    ${"parseEpcisEvent event"}                                | ${(w: Wrap) => parseEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
+    ${"formatEpcisEvent pair"}                                | ${(w: Wrap) => formatEpcisEvent(w({ instant: "2024-06-15T14:30:00Z", offset: "-05:00" }))}
+    ${"isValidEpcisEvent event"}                              | ${(w: Wrap) => isValidEpcisEvent(w({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }))}
+    ${"nextBusinessDay"}                                      | ${(w: Wrap) => nextBusinessDay("2024-07-05", w({ weekend: [6, 7], holidays: [], timeZone: "UTC" }))}
+    ${"operatingIntervals"}                                   | ${(w: Wrap) => operatingIntervals(w({ timeZone: "UTC", weekly: w({ 1: [w({ from: "09:00", to: "17:00" })] }) }), w({ start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }))}
+    ${"punctualityRate"}                                      | ${(w: Wrap) => punctualityRate([w({ planned: "2024-06-15T12:00:00Z", actual: "2024-06-15T12:05:00Z" })], w({ late: "PT15M" }))}
+    ${"billingTimeline"}                                      | ${(w: Wrap) => billingTimeline(w({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }), w({ issueDays: 30, disputeDays: 30, resolutionDays: 30 }))}
+    ${"scheduleDelivery leg"}                                 | ${(w: Wrap) => scheduleDelivery([w(leg)])}
+    ${"multimodalETA leg"}                                    | ${(w: Wrap) => multimodalETA([w(leg)])}
+    ${"totalDuration relativeTo (polyfill nudge workaround)"} | ${(w: Wrap) => totalDuration("P29DT12H", "months", { relativeTo: w(relativeBag) })}
+    ${"normalizeDuration relativeTo (floor)"}                 | ${(w: Wrap) => normalizeDuration("P29DT12H", { largestUnit: "months", smallestUnit: "months", roundingMode: "floor", relativeTo: w(relativeBag) })}
+    ${"totalDuration zoned relativeTo"}                       | ${(w: Wrap) => totalDuration("P29DT12H", "months", { relativeTo: w(zonedRelativeBag) })}
+    ${"normalizeDuration relativeTo near the range maximum"}  | ${(w: Wrap) => normalizeDuration("PT73H", { largestUnit: "day", relativeTo: w(sydneyNearMax) })}
+    ${"compareDurations relativeTo near the range maximum"}   | ${(w: Wrap) => compareDurations("P3D", "PT73H", { relativeTo: w(sydneyNearMax) })}
+    ${"parseDateWithPattern yearWindow"}                      | ${(w: Wrap) => parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, w({ yearWindow: 2000 }))}
+    ${"parseDateTimeWithPattern yearWindow"}                  | ${(w: Wrap) => parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm", undefined, w({ yearWindow: 2000 }))}
   `("$name reads a function as the object", ({ call }) => {
     const plain = (call as (w: Wrap) => unknown)(asIs);
     expect(

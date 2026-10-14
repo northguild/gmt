@@ -57,7 +57,7 @@ export const SampledCalendars = {
  * - `tishri1_5784` (5784-01-01, ISO 2023-09-16) / `tishri1_5785` (5785-01-01, ISO 2024-10-03):
  *   the leap year's own start/end boundary — spans 13 month boundaries, not 12.
  * - `tevet15_5785` (5785-04-15, ISO 2025-01-15): a 29-day month in the following, non-leap year
- *   5785 — used where a non-30-day month matters (e.g. `compareDurations`/`durationAs` goldens).
+ *   5785 — used where a non-30-day month matters (e.g. `compareDurations`/`totalDuration` goldens).
  */
 export const hebrewLeapYear5784 = {
   adarI15: "2024-02-24[u-ca=hebrew]",

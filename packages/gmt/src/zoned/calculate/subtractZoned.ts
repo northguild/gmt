@@ -3,8 +3,8 @@ import {
   addToZonedDisambiguated,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
-  isValidAmount,
   parseCalendarZonedValue,
+  readDurationUnits,
   resolveOverflow,
 } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
@@ -14,7 +14,7 @@ import type {
   Overflow,
 } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
@@ -95,12 +95,9 @@ export function subtractZoned(
     }
 
     const validZonedDateTime = isValidCalendarZonedDateTime(value);
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
 
-    if (!validZonedDateTime || !validUnits || !validAmounts) {
+    if (!validZonedDateTime || amounts === null) {
       return "";
     }
 
@@ -116,7 +113,7 @@ export function subtractZoned(
         return "";
       }
       const zoned = parseCalendarZonedValue(value);
-      const subtracted = addToZonedDisambiguated(zoned, units, -1, {
+      const subtracted = addToZonedDisambiguated(zoned, amounts, -1, {
         overflow,
         disambiguation,
       });

@@ -13,7 +13,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   Temporal checks identity first. Note the asymmetry with `addDuration`/`subtractDuration`
  *   (A2): Temporal.Duration.compare *does* accept `relativeTo`, while .add/.subtract do not,
  *   so calendar-unit durations are comparable here even though they cannot be combined there.
- *   `durationAs` and `normalizeDuration` (A3) carry the same relativeTo rule as this function.
+ *   `totalDuration` and `normalizeDuration` (A3) carry the same relativeTo rule as this function.
  * - The anchor genuinely decides the answer rather than merely unblocking it: "P1M" is longer
  *   than "P30D" relative to January (31 days) and shorter relative to February 2024 (29).
  * - A zoned `relativeTo` string resolves its wall time with disambiguation "compatible" and

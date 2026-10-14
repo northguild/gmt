@@ -14,7 +14,7 @@ import Mistake from "../../../components/Mistake.astro";
 <Mistake
   severity="high"
   title="Using Intl.DateTimeFormat directly"
-  description="Intl.DateTimeFormat does not cover GMT's extended format set (Rfc2822, HTTP, SQL, Rfc3339, relative), and its `formatToParts` output order varies by locale. GMT's format functions are consistent across locales and formats."
+  description="Intl.DateTimeFormat does not cover GMT's extended format set (Rfc2822, HTTP, SQL, Rfc3339, relative), and the order of its formatToParts output varies by locale. GMT's format functions are consistent across locales and formats."
   wrongCode={`const f = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
 f.format(new Date("2024-03-15")); // "Thursday, March 14, 2024" in New York — the Date is UTC midnight`}
   rightCode={`import { formatDate } from "@northguild/gmt";
@@ -53,7 +53,7 @@ getLocaleMonthNames("not-a-locale-!!"); // [] — only a malformed tag is reject
 <Mistake
   severity="medium"
   title="Looking for a token-pattern formatter (there isn't one, deliberately)"
-  description="GMT deliberately omits a `format(pattern, value)` function. Token-pattern formatters either silently ignore unknown tokens or produce garbled output on bad input. GMT's dedicated format functions are safer."
+  description="GMT deliberately omits a format(pattern, value) function. Token-pattern formatters either silently ignore unknown tokens or produce garbled output on bad input. GMT's dedicated format functions are safer."
   wrongCode={`// no equivalent of format("{yyyy}-{MM}-{dd}", date)`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
@@ -63,7 +63,7 @@ formatDate("2024-03-15", "en-US", { dateStyle: "long" }); // "March 15, 2024" �
 <Mistake
   severity="medium"
   title="Reassembling formatToParts output in a fixed order"
-  description="`Intl.DateTimeFormat.formatToParts()` returns parts in locale-specific order. Concatenating them in a hardcoded sequence (e.g. month before day) produces wrong output for `ja-JP`, `zh-CN`, and others."
+  description="Intl.DateTimeFormat.formatToParts() returns parts in locale-specific order. Joining them in a fixed sequence (month before day, for example) gives wrong output for ja-JP, zh-CN and other locales."
   wrongCode={`const parts = new Intl.DateTimeFormat("ja-JP").formatToParts(new Date());
 // parts[0] is the year, not the month — hardcoding en-US order breaks here`}
   rightCode={`import { formatDate } from "@northguild/gmt";

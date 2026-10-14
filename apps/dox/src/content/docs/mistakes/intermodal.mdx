@@ -252,7 +252,7 @@ billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }, { iss
 <Mistake
   severity="medium"
   title="Treating the deadline day as late"
-  description="Comparing dates with strict less-than instead of on-or-before excludes the deadline day itself. billingTimeline compares with `<=`: the deadline day is on or before the deadline."
+  description="Comparing dates with strict less-than instead of on-or-before excludes the deadline day itself. billingTimeline compares on or before, so the deadline day itself is in time."
   wrongCode={`"2026-03-31" < "2026-03-31";
 // false — used as "on time", this reads the deadline day itself as late`}
   rightCode={`import { billingTimeline } from "@northguild/gmt/intermodal";

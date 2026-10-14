@@ -129,9 +129,15 @@ export { plainDateAdd } from "./plainDateAdd";
 export { parsePunctualityTolerance, punctualityOf } from "./punctuality";
 export { plainDateUntil } from "./plainDateUntil";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
+export { readDurationUnits } from "./readDurationUnits";
+export {
+  DATE_FIELDS,
+  DATE_TIME_FIELDS,
+  readSetFields,
+  TIME_FIELDS,
+} from "./readSetFields";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
-export { resolveRelativeRounding } from "./resolveRelativeRounding";
 export {
   parseUnixEpochInterval,
   parseUnixEpochIntervalList,
@@ -167,7 +173,6 @@ export {
   withZonedFields,
   zonedHoursInDay,
   zonedNextTransition,
-  zonedPreviousTransition,
   zonedStartOfDay,
 } from "./zonedWallClockOperations";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

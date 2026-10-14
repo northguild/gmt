@@ -1,10 +1,10 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount, resolveOverflow } from "../../internal";
+import { readDurationUnits, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Add a temporal amount to a UTC datetime string and return a new UTC Instant string.
@@ -41,19 +41,16 @@ export function addUtc(
     }
 
     const validUtc = isValidUtc(value);
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
 
-    if (!validUtc || !validUnits || !validAmounts) {
+    if (!validUtc || amounts === null) {
       return "";
     }
 
     try {
       const instant = Temporal.Instant.from(value);
       const zoned = instant.toZonedDateTimeISO("UTC");
-      const result = zoned.add(units, {
+      const result = zoned.add(amounts, {
         overflow: resolveOverflow(options?.overflow),
       });
       return result.toInstant().toString();

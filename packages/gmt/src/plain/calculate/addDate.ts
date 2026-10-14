@@ -2,14 +2,14 @@
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
-  isValidAmount,
   parseCalendarDateValue,
   plainDateAdd,
+  readDurationUnits,
   resolveOverflow,
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `amount` added according to `units`.
@@ -59,12 +59,9 @@ export function addDate(
     }
 
     const validDate = isValidCalendarDate(value);
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateDurationUnit);
 
-    if (!validDate || !validUnits || !validAmounts) {
+    if (!validDate || amounts === null) {
       return "";
     }
 
@@ -76,7 +73,7 @@ export function addDate(
       const date = parseCalendarDateValue(value);
       const result = plainDateAdd(
         date,
-        units,
+        amounts,
         resolveOverflow(options?.overflow),
       );
       return formatDateInCalendar(result, calendar);

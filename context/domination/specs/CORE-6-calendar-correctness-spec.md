@@ -842,8 +842,8 @@ before the minimum instant.
 | `diffDate("5784-06-02[u-ca=hebrew]", "5785-06-01[u-ca=hebrew]", "years")` | `0` | `null` | D7 |
 | test262 `wrapping-at-end-of-month-hebrew.js` rows (§2.6) via `diffDateAsDuration` with GMT strings `5783-07-30`→`5783-08-29` (5783 common: M07 = month 7) | `"P29D"` | tester verifies current | D6 |
 | `normalizeDuration("P40D", {largestUnit: "months", relativeTo: "279517-08-15[u-ca=hebrew]"})` | `"P1M10D"` | `""` | D1-Δ |
-| `durationAs("P40D", "months", {relativeTo: "279517-08-15[u-ca=hebrew]"})` | `null` (CR throws: the 1-month window passes max) | `null` | guard: must not start answering |
-| `durationAs("P1M", "days", {relativeTo: "279517-08-01[u-ca=hebrew]"})` | `30` | `30` | control |
+| `totalDuration("P40D", "months", {relativeTo: "279517-08-15[u-ca=hebrew]"})` | `null` (CR throws: the 1-month window passes max) | `null` | guard: must not start answering |
+| `totalDuration("P1M", "days", {relativeTo: "279517-08-01[u-ca=hebrew]"})` | `30` | `30` | control |
 | `compareDurations("P1M", "P29D", {relativeTo: "279517-08-01[u-ca=hebrew]"})` | `1` | `1` | control |
 
 `subtractDate(<… read of …>)` rows: tester fills the calendar string from the CR read in
@@ -943,7 +943,7 @@ These inherit the defects through the entry points in §3.7. Each gets at least 
     `intervalFromDurationDate`, `intervalIntersectionDate`, `intervalLengthDate`,
     `intervalOverlappingDaysDate`, `intervalSplitAtDate`, `intervalUnionDate`, `intervalXorAllDate`,
     `intervalXorDate`, `intervalsOverlapDate`, `mergeIntervalsDate`, `splitIntervalByUnitDate`);
-  - duration: `durationAs`, `normalizeDuration`, `compareDurations` (calendar `relativeTo`);
+  - duration: `totalDuration`, `normalizeDuration`, `compareDurations` (calendar `relativeTo`);
   - zoned: `isValidCalendarZonedDateTime`, `isValidCalendarZonedInterval`, `convertZonedToCalendar`,
     `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, and the `zoned/interval/*Zoned`
     twins of the list above.
@@ -953,7 +953,7 @@ These inherit the defects through the entry points in §3.7. Each gets at least 
 - **D1-U, D6, D7** (until): `diffDate`, `diffDateAsDuration`, `diffZoned`, `diffZonedAsDuration`,
   `intervalLength{Date,Zoned}`, `intervalCount{Date,Zoned}`, `splitIntervalByUnit{Date,Zoned}`,
   `intervalOverlappingDays{Date,Zoned}` (ISO days: D1 only through parse).
-- **D1-Δ:** `durationAs`, `normalizeDuration`, `compareDurations`.
+- **D1-Δ:** `totalDuration`, `normalizeDuration`, `compareDurations`.
 - **D2, D4, D8, G1** (reads/format): everything that formats a calendar string,
   i.e. the `formatDateInCalendar` / `formatZonedInCalendar` users listed in §3.7.
 
@@ -1114,7 +1114,7 @@ the §9 decisions or other work it waits on. Slices without a gate can start imm
 | **S4** | add fallback; rewire `addDate`, `subtractDate`, `getStartOfNextDateUnit`, `intervalFromDurationDate`, `splitIntervalByUnitDate` | `addDate("276302-09-13[u-ca=buddhist]", {years: 1}) === "276303-09-13[u-ca=buddhist]"` | — |
 | **S5** | zoned: `addToZoned` date part and `zonedUntil` seams → compat | `convertZonedToCalendar("279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]", "gregorian") === "+275760-09-13T00:00:00+00:00[UTC]"`, then zoned D6 row | concurrent zoned-difference/UTC tdd-dev work landed |
 | **S6** | plain rounding context in `zonedWallClockDifference.ts` (§3.6.3); `diffDate*` with `smallestUnit`/`roundingMode` | D6 row with `{smallestUnit: "month", roundingMode: "halfExpand"}`; tester takes the value from CR | S5 |
-| **S7** | `Duration` dispatch (`durationAs`, `normalizeDuration`, `compareDurations`) | `normalizeDuration("P40D", {largestUnit: "months", relativeTo: "279517-08-15[u-ca=hebrew]"}) === "P1M10D"` | S6 |
+| **S7** | `Duration` dispatch (`totalDuration`, `normalizeDuration`, `compareDurations`) | `normalizeDuration("P40D", {largestUnit: "months", relativeTo: "279517-08-15[u-ca=hebrew]"}) === "P1M10D"` | S6 |
 | **S8** | §9 decisions that choose a GMT-side change: D-BUD / D-IND / D-HEB / D-ERA emission | their §4.2 rows | the respective decision |
 | **S9** | `scripts/temporal-compat.mjs` (`check`, `oracle`), `temporal-oracle.yml`, root scripts, `packages/gmt/README.md` calendar section (G1 grammar, era codes, far-past notes), `coding-standards.md` E1 grammar update, changeset (`fix`: D6/D7 change existing outputs) | `node scripts/temporal-compat.mjs check` prints D1 STILL NEEDED on 0.5.1 and exits 0 | S1–S7 |
 

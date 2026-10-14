@@ -1,6 +1,6 @@
-import { durationAs } from "./durationAs";
+import { totalDuration } from "./totalDuration";
 
-describe("durationAs", () => {
+describe("totalDuration", () => {
   // The three calendar units are absent here: they require relativeTo even on this
   // day/time-only input, and are covered by their own table below.
   it.each`
@@ -15,7 +15,7 @@ describe("durationAs", () => {
   `(
     "totals P1DT2H30M as $expected in $unit without a relativeTo anchor",
     ({ unit, expected }) => {
-      expect(durationAs("P1DT2H30M", unit)).toBe(expected);
+      expect(totalDuration("P1DT2H30M", unit)).toBe(expected);
     },
   );
 
@@ -35,7 +35,7 @@ describe("durationAs", () => {
     "totals P1Y2M3W4DT5H as $expected in $unit relativeTo 2024-01-01",
     ({ unit, expected }) => {
       expect(
-        durationAs("P1Y2M3W4DT5H", unit, { relativeTo: "2024-01-01" }),
+        totalDuration("P1Y2M3W4DT5H", unit, { relativeTo: "2024-01-01" }),
       ).toBe(expected);
     },
   );
@@ -52,7 +52,7 @@ describe("durationAs", () => {
   `(
     "returns null totalling day/time-only $value into the calendar unit $unit without relativeTo",
     ({ value, unit }) => {
-      expect(durationAs(value, unit)).toBeNull();
+      expect(totalDuration(value, unit)).toBeNull();
     },
   );
 
@@ -69,7 +69,7 @@ describe("durationAs", () => {
   `(
     "returns null totalling calendar-unit $value into $unit without relativeTo",
     ({ value, unit }) => {
-      expect(durationAs(value, unit)).toBeNull();
+      expect(totalDuration(value, unit)).toBeNull();
     },
   );
 
@@ -86,7 +86,7 @@ describe("durationAs", () => {
   `(
     "totals $value as $expected in $unit relativeTo $relativeTo",
     ({ value, unit, relativeTo, expected }) => {
-      expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+      expect(totalDuration(value, unit, { relativeTo })).toBe(expected);
     },
   );
 
@@ -108,7 +108,7 @@ describe("durationAs", () => {
   `(
     "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
     ({ value, unit, relativeTo, expected }) => {
-      expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+      expect(totalDuration(value, unit, { relativeTo })).toBe(expected);
     },
   );
 
@@ -129,7 +129,7 @@ describe("durationAs", () => {
   `(
     "returns null when relativeTo $relativeTo is rejected ($reason)",
     ({ relativeTo }) => {
-      expect(durationAs("P1M", "days", { relativeTo })).toBeNull();
+      expect(totalDuration("P1M", "days", { relativeTo })).toBeNull();
     },
   );
 
@@ -145,7 +145,7 @@ describe("durationAs", () => {
   `(
     "returns null for a leap-second relativeTo $relativeTo ($reason)",
     ({ relativeTo }) => {
-      expect(durationAs("PT1H", "seconds", { relativeTo })).toBeNull();
+      expect(totalDuration("PT1H", "seconds", { relativeTo })).toBeNull();
     },
   );
 
@@ -156,13 +156,13 @@ describe("durationAs", () => {
   `(
     "totals P1D as $expected hours relativeTo $relativeTo ($reason)",
     ({ relativeTo, expected }) => {
-      expect(durationAs("P1D", "hours", { relativeTo })).toBe(expected);
+      expect(totalDuration("P1D", "hours", { relativeTo })).toBe(expected);
     },
   );
 
   it("returns null when a calendar-annotated relativeTo is malformed", () => {
     expect(
-      durationAs("P1M", "days", { relativeTo: "2024-14-01[u-ca=hebrew]" }),
+      totalDuration("P1M", "days", { relativeTo: "2024-14-01[u-ca=hebrew]" }),
     ).toBeNull();
   });
 
@@ -177,7 +177,7 @@ describe("durationAs", () => {
   `(
     "totals P1D as $expected hours relativeTo $relativeTo ($note)",
     ({ relativeTo, expected }) => {
-      expect(durationAs("P1D", "hours", { relativeTo })).toBe(expected);
+      expect(totalDuration("P1D", "hours", { relativeTo })).toBe(expected);
     },
   );
 
@@ -193,7 +193,7 @@ describe("durationAs", () => {
   `(
     "totals P1D as $expected hours relativeTo $relativeTo ($note)",
     ({ relativeTo, expected }) => {
-      expect(durationAs("P1D", "hours", { relativeTo })).toBe(expected);
+      expect(totalDuration("P1D", "hours", { relativeTo })).toBe(expected);
     },
   );
 
@@ -208,7 +208,7 @@ describe("durationAs", () => {
   `(
     "totals fractional $value as $expected in $unit",
     ({ value, unit, expected }) => {
-      expect(durationAs(value, unit)).toBe(expected);
+      expect(totalDuration(value, unit)).toBe(expected);
     },
   );
 
@@ -221,7 +221,7 @@ describe("durationAs", () => {
   `(
     "totals negative $value as $expected in $unit",
     ({ value, unit, expected }) => {
-      expect(durationAs(value, unit)).toBe(expected);
+      expect(totalDuration(value, unit)).toBe(expected);
     },
   );
 
@@ -234,15 +234,15 @@ describe("durationAs", () => {
   `(
     "totals the zero-length duration $value as 0 in $unit",
     ({ value, unit, expected }) => {
-      expect(durationAs(value, unit)).toBe(expected);
+      expect(totalDuration(value, unit)).toBe(expected);
     },
   );
 
   it("returns the same total whether relativeTo is omitted or irrelevant to the unit", () => {
-    expect(durationAs("P1DT2H30M", "minutes")).toBe(1590);
-    expect(durationAs("P1DT2H30M", "minutes", {})).toBe(1590);
+    expect(totalDuration("P1DT2H30M", "minutes")).toBe(1590);
+    expect(totalDuration("P1DT2H30M", "minutes", {})).toBe(1590);
     expect(
-      durationAs("P1DT2H30M", "minutes", { relativeTo: "2024-01-01" }),
+      totalDuration("P1DT2H30M", "minutes", { relativeTo: "2024-01-01" }),
     ).toBe(1590);
   });
 
@@ -261,7 +261,7 @@ describe("durationAs", () => {
   `(
     "returns null when value $value is not a valid duration string",
     ({ value }) => {
-      expect(durationAs(value, "hours")).toBeNull();
+      expect(totalDuration(value, "hours")).toBeNull();
     },
   );
 
@@ -278,7 +278,7 @@ describe("durationAs", () => {
   `(
     "returns null when unit $unit is not a valid DateTimeDurationUnit",
     ({ unit }) => {
-      expect(durationAs("P1DT2H30M", unit)).toBeNull();
+      expect(totalDuration("P1DT2H30M", unit)).toBeNull();
     },
   );
 
@@ -291,19 +291,19 @@ describe("durationAs", () => {
     ${true}
     ${[]}
   `("returns null when relativeTo $relativeTo is invalid", ({ relativeTo }) => {
-    expect(durationAs("P1M", "days", { relativeTo })).toBeNull();
+    expect(totalDuration("P1M", "days", { relativeTo })).toBeNull();
   });
 
   it("never throws on invalid input", () => {
     expect(() =>
-      durationAs("not a duration", "nope" as never, {
+      totalDuration("not a duration", "nope" as never, {
         relativeTo: "not a date",
       }),
     ).not.toThrow();
   });
 });
 
-describe("durationAs relative to the last days of the range", () => {
+describe("totalDuration relative to the last days of the range", () => {
   // Both anchors are max - 3d5h. TC39 NudgeToCalendarUnit totals PT49H over the day from
   // +275760-09-12 local, 2 + 1/24 days; P3D is 72 exact hours. The window's end wall clock is past
   // +275760-09-13T00:00 in a zone ahead of UTC, but its exact time is in range.
@@ -315,7 +315,7 @@ describe("durationAs relative to the last days of the range", () => {
   `(
     "totals $value as $expected $unit relative to $relativeTo",
     ({ value, unit, relativeTo, expected }) => {
-      expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+      expect(totalDuration(value, unit, { relativeTo })).toBe(expected);
     },
   );
 
@@ -329,12 +329,12 @@ describe("durationAs relative to the last days of the range", () => {
   `(
     "returns null totalling PT49H in days relative to $relativeTo",
     ({ relativeTo }) => {
-      expect(durationAs("PT49H", "days", { relativeTo })).toBeNull();
+      expect(totalDuration("PT49H", "days", { relativeTo })).toBeNull();
     },
   );
 });
 
-describe("durationAs relative to the first days of the range", () => {
+describe("totalDuration relative to the first days of the range", () => {
   // Both anchors are min + 3d. TC39 NudgeToCalendarUnit totals -PT49H over the day back to
   // -271821-04-20 local, -(2 + 1/24) days; that window reaches the minimum's local date
   // -271821-04-19 in a zone behind UTC, whose exact times are in range.
@@ -345,7 +345,7 @@ describe("durationAs relative to the first days of the range", () => {
   `(
     "totals -PT49H as -2.0416666666666665 days relative to $relativeTo",
     ({ relativeTo }) => {
-      expect(durationAs("-PT49H", "days", { relativeTo })).toBe(
+      expect(totalDuration("-PT49H", "days", { relativeTo })).toBe(
         -2.0416666666666665,
       );
     },
@@ -355,7 +355,7 @@ describe("durationAs relative to the first days of the range", () => {
 // CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration#total with a plain relativeTo.
 // Values: Chromium 153 native `Duration.from(d).total({ unit, relativeTo: PlainDate })`; null
 // where Chromium throws.
-describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
+describe("totalDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     duration  | unit        | relativeTo                      | expected | reason
     ${"P40D"} | ${"months"} | ${"+275760-07-20[u-ca=hebrew]"} | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
@@ -370,7 +370,7 @@ describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
   `(
     "returns $expected for $duration in $unit relative to $relativeTo ($reason)",
     ({ duration, unit, relativeTo, expected }) => {
-      expect(durationAs(duration, unit, { relativeTo })).toBe(expected);
+      expect(totalDuration(duration, unit, { relativeTo })).toBe(expected);
     },
   );
 
@@ -386,7 +386,7 @@ describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
   `(
     "totals P1DT2H30M as $expected in singular unit $unit",
     ({ unit, expected }) => {
-      expect(durationAs("P1DT2H30M", unit)).toBe(expected);
+      expect(totalDuration("P1DT2H30M", unit)).toBe(expected);
     },
   );
 });

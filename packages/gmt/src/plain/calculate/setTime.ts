@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveOverflow } from "../../internal";
+import { TIME_FIELDS, readSetFields, resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -11,7 +11,18 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   single atomic overflow pass — see `setDate`'s doc for why that matters over composing
  *   `addTime()` calls field-by-field.
  * - `fields` may set any of `hour`, `minute`, `second`, `millisecond`, `microsecond`, and/or
- *   `nanosecond`; omitted fields keep their current value. An empty object is a no-op.
+ *   `nanosecond`; omitted fields keep their current value. An object with no field set, such as
+ *   `{}` or `{ hour: undefined }`, is a no-op.
+ * - Values are not converted: all six fields must be integer numbers. `null`, a numeric string, a
+ *   boolean or a fraction returns "", where Temporal would convert or truncate it. A bigint, `NaN`
+ *   or an infinity returns "" too. An out-of-range number follows `overflow`.
+ * - An own key that is not one of these fields, such as a misspelt `huor`, returns "". So does a
+ *   date field, such as `year`, or a `calendar` or `timeZone` property, whether own, inherited or a
+ *   getter. A field is read with a property get, as Temporal reads it, so an inherited or getter
+ *   field is set.
+ * - A Temporal date or time object returns "", as Temporal's `with` refuses one. One whose
+ *   prototype has been replaced with `Object.prototype`, `null` or `Function.prototype` sets
+ *   nothing instead.
  * - Unlike `addTime`, which takes no `overflow` because addition always wraps around the clock,
  *   `overflow` has an effect here: `.with()` assigns fixed field values rather than adding a
  *   delta.
@@ -26,6 +37,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example setTime("12:00:00", { hour: 25 }) // "23:00:00" (constrain clamps to the max valid hour)
  * @example setTime("12:00:00", { hour: 25 }, { overflow: "reject" }) // ""
  * @example setTime("12:00:00", {}) // "12:00:00" (empty fields object is a no-op)
+ * @example setTime("12:00:00", { hour: 9.5 }) // "" (not truncated)
  * @example setTime("invalid", { hour: 9 }) // ""
  */
 export function setTime(
@@ -49,12 +61,14 @@ export function setTime(
 
   try {
     const time = Temporal.PlainTime.from(value);
-    // Temporal.PlainTime.prototype.with() throws on an empty fields object ("invalid time-like")
-    // rather than treating it as a no-op, so short-circuit here.
-    if (Object.keys(fields).length === 0) return time.toString();
+    const set = readSetFields(fields, TIME_FIELDS);
+    if (set === null) return "";
+    // Only the values readSetFields checked reach Temporal. An empty result sets nothing: a
+    // no-op here, where Temporal's with() would throw.
+    if (Object.keys(set).length === 0) return time.toString();
 
     return time
-      .with(fields, { overflow: resolveOverflow(options?.overflow) })
+      .with(set, { overflow: resolveOverflow(options?.overflow) })
       .toString();
   } catch {
     return "";

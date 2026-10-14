@@ -19,8 +19,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   Never re-derive pages, corpus, manifest or playground seeds by re-walking source or
   re-parsing MDX.
 - **Import `@northguild/gmt` at module granularity only** (`@northguild/gmt/plain/calculate`).
-  Per-function paths are forbidden by the exports map, and namespace barrels re-export the
-  2.98 MB Temporal polyfill.
+  Per-function paths are forbidden by the exports map. A namespace barrel loads every module of
+  its namespace and the root barrel loads every namespace, so neither is used. The Temporal
+  polyfill loads with any module, because every module imports it. `regex` has no module
+  subpaths, so its namespace barrel is its narrowest import.
 - **Counts drift.** Derive them from source and assert them in tests; never hardcode them.
 - **Tests never touch the network, and never spend AI budget.** `src/test/no-network.mjs`,
   preloaded into every test worker through Vitest's `execArgv`, blocks every non-loopback
@@ -114,6 +116,24 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `()`, `[]`, `{}` or a string. A double-quoted, hyphenated token with no space in prose
     (`"4-5-4"`) is wrapped in `<span class="gmt-nobreak">` so it cannot wrap at the hyphen;
     `stripMdx` removes the span for the text surfaces.
+  - **Unit names print largest first.** The TypeScript printer lists a union in the checker's
+    internal order, which changes with what else the program holds. `orderUnitUnions`
+    (`build-utils.ts`) rewrites every type the generator prints: the signature, the
+    Parameters, Options and Members types, and an inline type's values. In each union whose
+    quoted members are unit names, those members read by descending magnitude, as the
+    Temporal specification's table of units orders them: `years` to `nanoseconds` in the plural,
+    then `year` to `nanosecond` in the singular. A union with two or more unit names reorders
+    only its quoted slots: the unit names first, then any other quoted literal (`"dayOfWeek"`)
+    in its printed order. An alias (`TimeUnit`), `DateUnit[]`, `null` and `""` keep their
+    places, except that `""` goes last when every other member is a unit name or a unit alias
+    (`DateUnit`, `TimeUnit`, `DateTimeUnit`, `keyof DurationLike`). A shared type page shows its
+    declaration as the source writes it, so its order is the source's.
+    `classifyType` gives an enum select the same order (`orderUnitChoices`): unit names first,
+    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. The
+    unit control's constants are declared in it, so a page's signature and its playground agree.
+    `reference-unit-order.test.ts` scans every generated page, code blocks and table cells, and
+    fails on a union of unit names out of this order. A `@param` description that lists unit
+    names as a union is held to it too.
   - **The doc gate** (`build-utils/doc-gate.ts`, `pnpm dox:docs-check`) lists every public
     type, member and option without a description, every optional input property without
     `@defaultValue`, `@default` used in its place, a list inside a property description,
@@ -271,17 +291,33 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 - **Playground on every example.** The generator renders the first `@example` as a static
   block — for no-JS and Pagefind — plus one `PlaygroundForm.astro` seeded from
-  `LIVE_PLAYGROUND_TEMPLATES`. The textarea evaluates the reader's expression with
-  `new Function` against the real library. `GMT_MODULES` (`src/lib/gmt-modules.ts`) holds
-  module-granularity dynamic imports, so gmt chunks load only where a playground renders.
+  `LIVE_PLAYGROUND_TEMPLATES`. The form holds one control per argument. It assembles the call
+  from them, shows it in the call line, and evaluates each argument with `new Function`
+  (`evaluateArg` in `src/lib/playground-client.ts`) before it calls the real library.
+  `GMT_MODULES` (`src/lib/gmt-modules.ts`) holds one dynamic import per module subpath, and
+  `playgroundModule` gives each function its own module's key, so a page loads gmt only where a
+  playground renders, and only the module that playground calls. `gmt-modules.test.ts` keeps the
+  keys equal to the exports map's module subpaths.
+  An object parameter gets the one-unit control, an amount field beside a unit select, when
+  every property is a number and its property names are exactly one of the key sets in
+  `scripts/build-utils/build-utils.ts`: all ten duration units (`ALL_DT_UNITS`), the date units
+  (`DATE_UNITS`), the time units (`TIME_UNITS`), or the exact units, days plus the time units
+  (`EXACT_UNITS`, the keys `totalUnits` takes). A Temporal field object (`setDate`) gets the
+  same control over its number fields. The select lists the units in the order the constant
+  declares, because the checker's order changes with what else the program holds. An enum
+  select lists its unit-name choices in the same order (`orderUnitChoices`), then its other
+  choices as they were, then `""`. Any other object parameter is a field of source text.
   An enum select carries per-choice examples (`choiceSeeds` on the template, built by
   `buildChoiceSeeds`): for each choice, the first `@example` that writes it as a quoted literal,
   whose other arguments are literals the form can hold and whose documented result is not a
-  sentinel, supplies the other fields' values. Choosing that value loads them and runs the call
+  sentinel, supplies the other fields' values. The unit control holds one unit, so a unit object
+  with two keys is not such a literal. Choosing that value loads them and runs the call
   when every other field still holds what the form last loaded; a field the reader edited is
   never overwritten, and a choice with no example only re-runs (`createSeedLoader` in
   `src/lib/playground-client.ts`). A function whose examples do not vary by choice has no
   `choiceSeeds`.
+  - **Trap: the first `@example` of a function that takes a unit object writes one key.** The
+    playground seeds from it, and a two-key object seeds amount `1` in the first listed unit.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input
   renders as `⟨ NO SIGNAL ⟩` in amber, and a correct empty result is shown distinctly
   (`renderWidgetOutput` in `src/lib/widget-ui.ts`). In the playground,
@@ -1108,7 +1144,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/build-scenario-index.mjs` during `generate`, and is untracked; never edit it.
 - **Mistakes** (`src/content/docs/mistakes/`): the domain `SKILL.md` Common Mistakes, ported
   with severity and live proof.
-- **A task-first "start here" index** driven by `packages/gmt/skills/_artifacts/domain_map.yaml`.
+- **A task-first index of the guides**, `guides/index.mdx`: the guide groups by task, then three
+  guides to read first. It is written by hand. Three of its groups share a name with a domain in
+  `packages/gmt/skills/_artifacts/domain_map.yaml`, but no script reads that file, so a new guide
+  or group is added to the page by hand.
 
 ---
 
@@ -1557,7 +1596,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - Nextra;
   - a custom domain;
   - per-page OG images;
-  - a second discovery page beside the mentor index;
+  - a second discovery page beside the guides index;
   - a feedback loop (it would need its own privacy and hosting decisions).
 - **Motion and 3D:**
   - a boot sequence, scanlines, grain;

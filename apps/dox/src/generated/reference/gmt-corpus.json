@@ -996,71 +996,75 @@
     ]
   },
   {
-    "url": "/reference/duration/calculate/durationAs",
-    "page": "/reference/duration/calculate/durationAs",
-    "name": "durationAs",
+    "url": "/reference/duration/calculate/durationFromUnits",
+    "page": "/reference/duration/calculate/durationFromUnits",
+    "name": "durationFromUnits",
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "durationAs(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
-    "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
-    "sourcePath": "packages/gmt/src/duration/calculate/durationAs.ts",
+    "signature": "durationFromUnits(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Write an amount given as a unit object, such as `{ minutes: 15 }`, as an ISO 8601 duration string.",
+    "sourcePath": "packages/gmt/src/duration/calculate/durationFromUnits.ts",
     "examples": [
       {
-        "call": "durationAs(\"P1DT2H30M\", \"hours\")",
-        "result": "26.5"
+        "call": "durationFromUnits({ minutes: 15 })",
+        "result": "\"PT15M\""
       },
       {
-        "call": "durationAs(\"P1DT2H30M\", \"minutes\")",
-        "result": "1590"
+        "call": "durationFromUnits({ days: 1, hours: 12 })",
+        "result": "\"P1DT12H\""
       },
       {
-        "call": "durationAs(\"PT36H\", \"days\")",
-        "result": "1.5"
+        "call": "durationFromUnits({ minutes: 90 })",
+        "result": "\"PT90M\" (not carried into hours)"
       },
       {
-        "call": "durationAs(\"-PT90M\", \"hours\")",
-        "result": "-1.5"
+        "call": "durationFromUnits({ years: 1, months: 2 })",
+        "result": "\"P1Y2M\""
       },
       {
-        "call": "durationAs(\"P1M\", \"days\")",
-        "result": "null (calendar unit needs relativeTo)"
+        "call": "durationFromUnits({ weeks: 1 })",
+        "result": "\"P1W\""
       },
       {
-        "call": "durationAs(\"P1M\", \"days\", { relativeTo: \"2024-02-01\" })",
-        "result": "29"
+        "call": "durationFromUnits({ milliseconds: 1500 })",
+        "result": "\"PT1.5S\""
       },
       {
-        "call": "durationAs(\"P1M\", \"days\", { relativeTo: \"20240201\" })",
-        "result": "null (basic format)"
+        "call": "durationFromUnits({ seconds: 59, milliseconds: 1500 })",
+        "result": "\"PT60.5S\" (one decimal number of seconds)"
       },
       {
-        "call": "durationAs(\"P1D\", \"hours\", { relativeTo: \"2024-03-10T00:00:00-05:00[America/New_York]\" })",
-        "result": "23 (spring-forward)"
+        "call": "durationFromUnits({ minutes: 15, hours: undefined })",
+        "result": "\"PT15M\" (an undefined unit is absent)"
       },
       {
-        "call": "durationAs(\"P1D\", \"hours\", { relativeTo: \"2024-11-03T01:30[America/New_York]\" })",
-        "result": "25"
+        "call": "durationFromUnits({ minutes: -15 })",
+        "result": "\"-PT15M\""
       },
       {
-        "call": "durationAs(\"P1DT2H30M\", \"minute\")",
-        "result": "1590 (singular unit name)"
+        "call": "durationFromUnits({ minutes: 0 })",
+        "result": "\"PT0S\""
       },
       {
-        "call": "durationAs(\"not a duration\", \"hours\")",
-        "result": "null"
+        "call": "durationFromUnits({ minutes: 15, hour: 1 })",
+        "result": "\"\" (unknown key \"hour\")"
       },
       {
-        "call": "durationAs(\"P1Y\", \"days\", { relativeTo: \"2024-02-24[u-ca=hebrew]\" })",
-        "result": "385 (Hebrew leap year 5784)"
+        "call": "durationFromUnits({ minutes: 1.5 })",
+        "result": "\"\" (fractional amount)"
       },
       {
-        "call": "durationAs(\"P1M\", \"days\", { relativeTo: \"2024-02-10[!u-ca=hebrew]\" })",
-        "result": "30 (1 Adar I 5784; the critical flag is accepted)"
+        "call": "durationFromUnits({ hours: 1, minutes: -30 })",
+        "result": "\"\" (mixed signs)"
       },
       {
-        "call": "durationAs(\"P1M\", \"days\", { relativeTo: \"2024-02-10T00:00:00[u-ca=hebrew]\" })",
-        "result": "30 (a date-time without a zone reads as its date, as Temporal reads relativeTo)"
+        "call": "durationFromUnits({})",
+        "result": "\"\""
+      },
+      {
+        "call": "durationFromUnits(\"PT15M\")",
+        "result": "\"\" (already a duration string)"
       }
     ]
   },
@@ -1209,6 +1213,148 @@
       {
         "call": "subtractDuration(\"P1D\", \"not a duration\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/calculate/totalDuration",
+    "page": "/reference/duration/calculate/totalDuration",
+    "name": "totalDuration",
+    "namespace": "duration",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
+    "sourcePath": "packages/gmt/src/duration/calculate/totalDuration.ts",
+    "examples": [
+      {
+        "call": "totalDuration(\"P1DT2H30M\", \"hours\")",
+        "result": "26.5"
+      },
+      {
+        "call": "totalDuration(\"P1DT2H30M\", \"minutes\")",
+        "result": "1590"
+      },
+      {
+        "call": "totalDuration(\"PT36H\", \"days\")",
+        "result": "1.5"
+      },
+      {
+        "call": "totalDuration(\"-PT90M\", \"hours\")",
+        "result": "-1.5"
+      },
+      {
+        "call": "totalDuration(\"P1M\", \"days\")",
+        "result": "null (calendar unit needs relativeTo)"
+      },
+      {
+        "call": "totalDuration(\"P1M\", \"days\", { relativeTo: \"2024-02-01\" })",
+        "result": "29"
+      },
+      {
+        "call": "totalDuration(\"P1M\", \"days\", { relativeTo: \"20240201\" })",
+        "result": "null (basic format)"
+      },
+      {
+        "call": "totalDuration(\"P1D\", \"hours\", { relativeTo: \"2024-03-10T00:00:00-05:00[America/New_York]\" })",
+        "result": "23 (spring-forward)"
+      },
+      {
+        "call": "totalDuration(\"P1D\", \"hours\", { relativeTo: \"2024-11-03T01:30[America/New_York]\" })",
+        "result": "25"
+      },
+      {
+        "call": "totalDuration(\"P1DT2H30M\", \"minute\")",
+        "result": "1590 (singular unit name)"
+      },
+      {
+        "call": "totalDuration(\"not a duration\", \"hours\")",
+        "result": "null"
+      },
+      {
+        "call": "totalDuration(\"P1Y\", \"days\", { relativeTo: \"2024-02-24[u-ca=hebrew]\" })",
+        "result": "385 (Hebrew leap year 5784)"
+      },
+      {
+        "call": "totalDuration(\"P1M\", \"days\", { relativeTo: \"2024-02-10[!u-ca=hebrew]\" })",
+        "result": "30 (1 Adar I 5784; the critical flag is accepted)"
+      },
+      {
+        "call": "totalDuration(\"P1M\", \"days\", { relativeTo: \"2024-02-10T00:00:00[u-ca=hebrew]\" })",
+        "result": "30 (a date-time without a zone reads as its date, as Temporal reads relativeTo)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/calculate/totalUnits",
+    "page": "/reference/duration/calculate/totalUnits",
+    "name": "totalUnits",
+    "namespace": "duration",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "totalUnits(units: Partial<Record<\"days\" | \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\", number>>, unit: \"days\" | \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\" | \"day\" | TimeUnit): number | null",
+    "description": "Express an amount written as a unit object, such as `{ minutes: 15 }`, as a single fractional total in one unit.",
+    "sourcePath": "packages/gmt/src/duration/calculate/totalUnits.ts",
+    "examples": [
+      {
+        "call": "totalUnits({ minutes: 15 }, \"seconds\")",
+        "result": "900"
+      },
+      {
+        "call": "totalUnits({ days: 30 }, \"seconds\")",
+        "result": "2592000"
+      },
+      {
+        "call": "totalUnits({ days: 1, hours: 12 }, \"seconds\")",
+        "result": "129600"
+      },
+      {
+        "call": "totalUnits({ hours: 36 }, \"days\")",
+        "result": "1.5"
+      },
+      {
+        "call": "totalUnits({ minutes: -90 }, \"hours\")",
+        "result": "-1.5"
+      },
+      {
+        "call": "totalUnits({ seconds: 10 }, \"millisecond\")",
+        "result": "10000 (singular unit name)"
+      },
+      {
+        "call": "totalUnits({ minutes: 0 }, \"seconds\")",
+        "result": "0"
+      },
+      {
+        "call": "totalUnits({ minutes: 15, hours: undefined }, \"seconds\")",
+        "result": "900 (an undefined unit is absent)"
+      },
+      {
+        "call": "totalUnits({ weeks: 1 }, \"days\")",
+        "result": "null (a week has no exact length; write { days: 7 })"
+      },
+      {
+        "call": "totalUnits({ days: 7 }, \"weeks\")",
+        "result": "null (a week has no exact length)"
+      },
+      {
+        "call": "totalUnits({ minutes: 15, hour: 1 }, \"seconds\")",
+        "result": "null (unknown key \"hour\")"
+      },
+      {
+        "call": "totalUnits({ minutes: 1.5 }, \"seconds\")",
+        "result": "null (fractional amount)"
+      },
+      {
+        "call": "totalUnits({ hours: 1, minutes: -30 }, \"seconds\")",
+        "result": "null (mixed signs)"
+      },
+      {
+        "call": "totalUnits({}, \"seconds\")",
+        "result": "null"
+      },
+      {
+        "call": "totalUnits(\"PT15M\", \"seconds\")",
+        "result": "null (a duration string goes to totalDuration)"
       }
     ]
   },
@@ -4961,7 +5107,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addDate(value: string, units: Partial<Record<\"days\" | \"weeks\" | \"months\" | \"years\", number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "addDate(value: string, units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDate ISO string with `amount` added according to `units`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addDate.ts",
     "examples": [
@@ -5229,7 +5375,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDate(date1: string, date2: string, unitArg: \"days\" | \"weeks\" | \"months\" | \"years\" | DateUnit | (\"days\" | \"weeks\" | \"months\" | \"years\" | DateUnit)[], options?: RoundingOptions<DateUnit>): number | Record<\"days\" | \"weeks\" | \"months\" | \"years\", number> | null",
+    "signature": "diffDate(date1: string, date2: string, unitArg: \"years\" | \"months\" | \"weeks\" | \"days\" | DateUnit | (\"years\" | \"months\" | \"weeks\" | \"days\" | DateUnit)[], options?: RoundingOptions<DateUnit>): number | Record<\"years\" | \"months\" | \"weeks\" | \"days\", number> | null",
     "description": "Return the difference between two PlainDate values using the provided `unit`.",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDate.ts",
     "examples": [
@@ -5274,7 +5420,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateAsDuration(date1: string, date2: string, unit: \"days\" | \"weeks\" | \"months\" | \"years\" | DateUnit, options?: (RoundingOptions<DateUnit> & DurationStringOptions)): string",
+    "signature": "diffDateAsDuration(date1: string, date2: string, unit: \"years\" | \"months\" | \"weeks\" | \"days\" | DateUnit, options?: (RoundingOptions<DateUnit> & DurationStringOptions)): string",
     "description": "Return the difference between two PlainDate values as an ISO 8601 duration string, bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateAsDuration.ts",
     "examples": [
@@ -5663,7 +5809,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestDateDurationUnit(units: (\"days\" | \"weeks\" | \"months\" | \"years\" | DateUnit)[]): \"\" | \"days\" | \"weeks\" | \"months\" | \"years\"",
+    "signature": "getLargestDateDurationUnit(units: (\"years\" | \"months\" | \"weeks\" | \"days\" | DateUnit)[]): \"years\" | \"months\" | \"weeks\" | \"days\" | \"\"",
     "description": "Return the largest DateDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestDateDurationUnit.ts",
     "examples": [
@@ -5700,7 +5846,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestDateTimeDurationUnit(units: (keyof DurationLike | DateTimeUnit)[]): \"\" | keyof DurationLike",
+    "signature": "getLargestDateTimeDurationUnit(units: (keyof DurationLike | DateTimeUnit)[]): keyof DurationLike | \"\"",
     "description": "Return the largest DateTimeDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestDateTimeDurationUnit.ts",
     "examples": [
@@ -5733,7 +5879,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestTimeDurationUnit(units: (\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\" | TimeUnit)[]): \"\" | \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
+    "signature": "getLargestTimeDurationUnit(units: (\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\" | TimeUnit)[]): \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\" | \"\"",
     "description": "Return the largest TimeDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestTimeDurationUnit.ts",
     "examples": [
@@ -6569,7 +6715,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDate(value: string, fields: Omit<PlainDateLike, \"calendar\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setDate(value: string, fields: Omit<PlainDateLike, \"calendar\" | \"era\" | \"eraYear\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDate ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDate.ts",
     "examples": [
@@ -6586,8 +6732,28 @@
         "result": "\"\""
       },
       {
+        "call": "setDate(\"2024-01-31\", { month: 13 })",
+        "result": "\"2024-12-31\" (too large: constrain clamps it)"
+      },
+      {
+        "call": "setDate(\"2024-01-31\", { month: 0 })",
+        "result": "\"\" (below 1, under either overflow)"
+      },
+      {
         "call": "setDate(\"2024-03-10\", {})",
         "result": "\"2024-03-10\" (empty fields object is a no-op)"
+      },
+      {
+        "call": "setDate(\"2024-01-31\", { year: \"2025\" })",
+        "result": "\"\" (not converted)"
+      },
+      {
+        "call": "setDate(\"2024-01-31\", { year: 2025, yaer: 1 })",
+        "result": "\"\" (misspelt key)"
+      },
+      {
+        "call": "setDate(\"2024-03-10\", { year: 2025, hour: 5 })",
+        "result": "\"\" (setDate takes no hour)"
       },
       {
         "call": "setDate(\"invalid\", { year: 2025 })",
@@ -6602,7 +6768,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDateTime(value: string, fields: Omit<PlainDateTimeLike, \"calendar\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setDateTime(value: string, fields: Omit<PlainDateTimeLike, \"calendar\" | \"era\" | \"eraYear\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDateTime ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDateTime.ts",
     "examples": [
@@ -6621,6 +6787,10 @@
       {
         "call": "setDateTime(\"2024-03-10T12:00:00\", {})",
         "result": "\"2024-03-10T12:00:00\" (empty fields object is a no-op)"
+      },
+      {
+        "call": "setDateTime(\"2024-03-10T12:00:00\", { hour: \"9\" })",
+        "result": "\"\" (not converted)"
       },
       {
         "call": "setDateTime(\"invalid\", { hour: 9 })",
@@ -6654,6 +6824,10 @@
       {
         "call": "setTime(\"12:00:00\", {})",
         "result": "\"12:00:00\" (empty fields object is a no-op)"
+      },
+      {
+        "call": "setTime(\"12:00:00\", { hour: 9.5 })",
+        "result": "\"\" (not truncated)"
       },
       {
         "call": "setTime(\"invalid\", { hour: 9 })",
@@ -6934,7 +7108,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractDate(value: string, units: Partial<Record<\"days\" | \"weeks\" | \"months\" | \"years\", number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "subtractDate(value: string, units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDate ISO string with `units` subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractDate.ts",
     "examples": [
@@ -11523,7 +11697,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDate(value: string, unit: \"dayOfWeek\" | SmallestUnit<\"day\" | \"week\" | \"month\" | \"year\">, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDate(value: string, unit: \"dayOfWeek\" | SmallestUnit<\"year\" | \"month\" | \"week\" | \"day\">, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific date unit extracted from a PlainDate string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDate.ts",
     "examples": [
@@ -11576,7 +11750,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDateTime(value: string, unit: \"dayOfWeek\" | SmallestUnit<\"hour\" | \"day\" | \"week\" | \"month\" | \"year\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDateTime(value: string, unit: \"dayOfWeek\" | SmallestUnit<\"year\" | \"month\" | \"week\" | \"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific unit extracted from a PlainDateTime string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDateTime.ts",
     "examples": [
@@ -12031,7 +12205,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateDurationUnit(unit: string): unit is \"days\" | \"weeks\" | \"months\" | \"years\"",
+    "signature": "isValidDateDurationUnit(unit: string): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
     "description": "Return true when `unit` is a valid DateDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateDurationUnit.ts",
     "examples": [
@@ -16239,6 +16413,19 @@
     ]
   },
   {
+    "url": "/reference/duration/calculate/totalUnits#exactdurationunit",
+    "page": "/reference/duration/calculate/totalUnits",
+    "name": "ExactDurationUnit",
+    "namespace": "types",
+    "module": "exact-duration-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The plural name of a duration field that has an exact length: `\"days\"`, or a time field from `\"hours\"` down to `\"nanoseconds\"`. A day is 24 hours when nothing anchors it, as TC39 Temporal's `Duration.prototype.total` reads one without `relativeTo`. Years, months and weeks are left out: Temporal gives them no length without a date to measure from.",
+    "sourcePath": "packages/gmt/src/types/exact-duration-unit.ts",
+    "examples": [],
+    "inlineOn": "totalUnits"
+  },
+  {
     "url": "/reference/types/FiscalPattern",
     "page": "/reference/types/FiscalPattern",
     "name": "FiscalPattern",
@@ -16644,8 +16831,8 @@
     "examples": []
   },
   {
-    "url": "/reference/plain/validate/isValidTimeUnit#timeunit",
-    "page": "/reference/plain/validate/isValidTimeUnit",
+    "url": "/reference/types/TimeUnit",
+    "page": "/reference/types/TimeUnit",
     "name": "TimeUnit",
     "namespace": "types",
     "module": "time-unit",
@@ -16653,8 +16840,7 @@
     "signature": "",
     "description": "A time unit in the singular, from `\"hour\"` down to `\"nanosecond\"`, as Temporal's rounding and difference options name units.",
     "sourcePath": "packages/gmt/src/types/time-unit.ts",
-    "examples": [],
-    "inlineOn": "isValidTimeUnit"
+    "examples": []
   },
   {
     "url": "/reference/types/TimestampClass",
@@ -17072,7 +17258,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundUnix(value: string | number, options: { smallestUnit: SmallestUnit<\"hour\" | \"day\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; epochUnit?: UnixUnit; timeZone?: string; }): number | null",
+    "signature": "roundUnix(value: string | number, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; epochUnit?: UnixUnit; timeZone?: string; }): number | null",
     "description": "Round a Unix timestamp to the specified unit.",
     "sourcePath": "packages/gmt/src/unix/calculate/roundUnix.ts",
     "examples": [
@@ -17121,7 +17307,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUnix(value: string | number, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): number | null",
+    "signature": "setUnix(value: string | number, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): number | null",
     "description": "Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.",
     "sourcePath": "packages/gmt/src/unix/calculate/setUnix.ts",
     "examples": [
@@ -17144,6 +17330,10 @@
       {
         "call": "setUnix(1730615400000, { minute: 45 }, { timeZone: \"America/New_York\", offset: \"ignore\" })",
         "result": "1730612700000 (re-resolved: the earlier 01:45)"
+      },
+      {
+        "call": "setUnix(1710072000000, { hour: \"9\" }, { timeZone: \"UTC\" })",
+        "result": "null (not converted)"
       },
       {
         "call": "setUnix(NaN, { hour: 9 })",
@@ -19664,7 +19854,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUtc(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setUtc(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a UTC Instant string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/utc/calculate/setUtc.ts",
     "examples": [
@@ -19683,6 +19873,10 @@
       {
         "call": "setUtc(\"2024-03-10T12:00:00Z\", {})",
         "result": "\"2024-03-10T12:00:00Z\" (empty fields object is a no-op)"
+      },
+      {
+        "call": "setUtc(\"2024-03-10T12:00:00Z\", { hour: \"9\" })",
+        "result": "\"\" (not converted)"
       },
       {
         "call": "setUtc(\"invalid\", { hour: 9 })",
@@ -22377,7 +22571,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundZoned(value: string, options: { smallestUnit: SmallestUnit<\"hour\" | \"day\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
+    "signature": "roundZoned(value: string, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 zoned datetime string to the specified unit.",
     "sourcePath": "packages/gmt/src/zoned/calculate/roundZoned.ts",
     "examples": [
@@ -22414,7 +22608,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "setZoned(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): string",
+    "signature": "setZoned(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): string",
     "description": "Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/zoned/calculate/setZoned.ts",
     "examples": [
@@ -22441,6 +22635,10 @@
       {
         "call": "setZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", { minute: 0 }, { disambiguation: \"reject\", offset: \"ignore\" })",
         "result": "\"\" (offset \"ignore\" re-resolves the repeated 01:00, and \"reject\" throws)"
+      },
+      {
+        "call": "setZoned(\"2024-03-10T12:00:00-04:00[America/New_York]\", { hour: \"9\" })",
+        "result": "\"\" (not converted)"
       },
       {
         "call": "setZoned(\"invalid\", { hour: 9 })",

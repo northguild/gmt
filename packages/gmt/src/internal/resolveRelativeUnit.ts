@@ -15,7 +15,7 @@ import type { RelativeUnit } from "../types";
  *   stricter than Temporal: GetOption converts any value with ToString, so Temporal accepts
  *   `["day"]` and an object whose `toString` returns `"day"` (test262
  *   `largestunit-wrong-type.js`). GMT takes string inputs, and its other unit readers
- *   (`roundDate`, `roundDateTime`, `roundUtc`, `roundZoned`, `startOfDate`, `durationAs`,
+ *   (`roundDate`, `roundDateTime`, `roundUtc`, `roundZoned`, `startOfDate`, `totalDuration`,
  *   `areDatesEqualBy`) reject a non-string the same way, so this one does not convert either.
  *
  * @param largestUnit the option as read from the caller's object, `undefined` when absent

@@ -74,7 +74,7 @@ isBusinessDay("2024-03-15", { weekend: [5, 6], holidays: [], timeZone: "Asia/Jer
 <Mistake
   severity="medium"
   title="Assuming 'same month' ignores the year"
-  description="'Same month' means same month and same year. March 2024 and March 2025 are different months. areDatesEqualBy with `month` compares both the month and the year."
+  description="'Same month' means same month and same year. March 2024 and March 2025 are different months. areDatesEqualBy with 'month' compares both the month and the year."
   wrongCode={`areDatesEqualBy("2024-03-15", "2025-03-15", "month"); // false — different years`}
   rightCode={`import { areDatesEqualBy } from "@northguild/gmt";
 
