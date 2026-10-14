@@ -47,7 +47,7 @@ report.outcomes[1].dueBy; // "2024-01-02T00:00:00Z" (the 14-hour window closes t
 
 The rule kinds are `cumulativeCap`, `elapsedWindow`, `requiredInterruption`, `rollingCap`, `fixedPeriodCap`, `restRequirement`, `freePeriod`, `restBeforeDuty`, `quota`, `dueBy`, `pattern`, `occurrenceCap` and `usageLookback`. Each type's documentation states exactly what it measures.
 
-- **A duration slides; a count of local periods does not.** `{ elapsed: "PT24H" }` is every 24-hour window ending at the instant evaluated. `{ operatorDays: 7 }`, `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }` and `{ calendarYears: 1 }` are whole periods in the reference zone. A calendar day with a clock change is 23 or 25 hours long, so 28 calendar days across a fall-back are 673 hours. Each outcome names its `periodBasis`.
+- **A duration slides; a count of local periods does not.** `{ elapsed: "PT24H" }` is every 24-hour window ending at the instant evaluated. `{ operatorDays: 7 }`, `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }` and `{ calendarYears: 1 }` are whole periods in the reference zone. A calendar day across a one-hour clock change is 23 or 25 hours long, so 28 calendar days across a fall-back are 673 hours. Each outcome names its `periodBasis`.
 - **The log is read as it stands at `at`.** Later entries are ignored, and an entry that crosses `at` is cut there. Time no entry covers is neither work nor rest. To check a planned roster, append the plan and set `at` to its end.
 - **A shift that crosses a period boundary is split there**, and each part counts in its own day, week or month.
 - **A paired rest is three floors, not two numbers.** With 2 hours each, 7 for the longer and 10 together, 7.5 + 2.5 qualifies and 6 + 4 does not.

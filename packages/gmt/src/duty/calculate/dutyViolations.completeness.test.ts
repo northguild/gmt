@@ -87,6 +87,61 @@ describe("dutyViolations — every failed window is found", () => {
     ).toBeGreaterThan(0);
   });
 
+  // Off 10 h, driving 8, off 7:45, driving 10:15, sleeper 0:30, driving 8:30, sleeper 10. The 7:45
+  // and the last sleeper pair up once the sleeper reaches 2:15, at 23:15 on the 2nd: the 30 minutes
+  // between them are too short to be half of a pair. The window counted again from 01:45 closes at
+  // 15:45, before that sleeper starts, so the driving to 21:00 is late. That window is found first
+  // at 23:15, whether or not the sleeper entry is cut at midnight.
+  it("finds the moment a pair qualifies across a break too short to be half of one", () => {
+    const rule: DutyRule = {
+      label: "14 window",
+      kind: "elapsedWindow",
+      startStatuses: ["driving"],
+      length: "PT14H",
+      restrictedStatuses: ["driving"],
+      since: { statuses: ["off", "sleeper"], consecutive: "PT10H" },
+      exclude: {
+        eachAtLeast: "PT2H",
+        oneAtLeast: "PT7H",
+        combinedAtLeast: "PT10H",
+      },
+    };
+    const log = dutySequence(START, [
+      ["off", "PT10H"],
+      ["driving", "PT8H"],
+      ["off", "PT7H45M"],
+      ["driving", "PT10H15M"],
+      ["sleeper", "PT30M"],
+      ["driving", "PT8H30M"],
+      ["sleeper", "PT10H"],
+    ]);
+    const record = dutyViolations(log, range(0, 55), [rule], UTC);
+
+    expect(
+      evaluateDutyLog(log, hour(48), [rule], UTC)?.outcomes[0],
+    ).toMatchObject({
+      satisfied: false,
+      window: { start: hour(25.75), end: hour(39.75) },
+    });
+    expect(record).toEqual([
+      {
+        label: "14 window",
+        window: { start: hour(10), end: hour(24) },
+        used: "PT35H",
+        limit: "PT14H",
+      },
+      {
+        label: "14 window",
+        window: { start: hour(25.75), end: hour(39.75) },
+        used: "PT21H30M",
+        limit: "PT14H",
+      },
+    ]);
+    expect(
+      dutyViolations(splitAt(log, hour(48)), range(0, 55), [rule], UTC),
+    ).toEqual(record);
+  });
+
   // Off 0–5 h, work 5–40 h, off 40–60 h. Every window ending before 50 h holds under 10 hours of
   // rest, from the log's first instant: one violation, which began at the log's start. Its worst
   // window holds none at all, first at 29 h, [5 h, 29 h). A range opening at 45 h finds it still
@@ -223,15 +278,38 @@ describe("dutyViolations — the record does not depend on how a status is split
   }
 
   const statuses = ["off", "off", "driving", "onDuty", "sleeper"];
-  /** About twelve days of entries, each 15 minutes to 14 hours, in 15-minute steps. */
+  /** A length in 15-minute steps, from `low` to `high` steps. */
+  const quarters = (next: () => number, low: number, high: number) =>
+    15 * (low + Math.floor(next() * (high - low + 1)));
+  /**
+   * About twelve days of entries, each 15 minutes to 14 hours, in 15-minute steps. One time in
+   * five the next steps are a split rest with a break between its halves: a rest of 2 to 10 hours,
+   * driving, a sleeper break under 2 hours, driving, and a sleeper rest of 2 to 10 hours.
+   */
   function randomLog(next: () => number): DutyStep[] {
     const steps: DutyStep[] = [];
     let total = 0;
     let previous = "";
     for (let index = 0; total < 288 * 60; index++) {
+      if (previous !== "off" && next() < 0.2) {
+        const motif: DutyStep[] = [
+          ["off", `PT${quarters(next, 8, 40)}M`],
+          ["driving", `PT${quarters(next, 4, 40)}M`],
+          ["sleeper", `PT${quarters(next, 1, 7)}M`],
+          ["driving", `PT${quarters(next, 4, 40)}M`],
+          ["sleeper", `PT${quarters(next, 8, 40)}M`],
+        ];
+        steps.push(...motif);
+        total += motif.reduce(
+          (sum, [, length]) => sum + Number(length.slice(2, -1)),
+          0,
+        );
+        previous = "sleeper";
+        continue;
+      }
       const status = statuses[Math.floor(next() * statuses.length)] as string;
       if (status === previous) continue;
-      const minutes = 15 * (1 + Math.floor(next() * 56));
+      const minutes = quarters(next, 1, 56);
       steps.push([status, `PT${minutes}M`]);
       total += minutes;
       previous = status;
@@ -428,6 +506,59 @@ describe("dutyViolations — the record does not depend on how a status is split
           60_000 * Math.max(1, Math.floor((next() * (to - from)) / 60_000)),
       ).toString();
       const split = splitAt(log, cut);
+
+      for (const rule of rules) {
+        expect(
+          dutyViolations(split, span, [rule], options),
+          rule.label,
+        ).toEqual(dutyViolations(log, span, [rule], options));
+      }
+    },
+  );
+
+  // One cut finds a missed instant only when it lands near it. Over four days, every entry is cut
+  // at a random quarter-hour inside it, so a failure that starts part-way through an entry is
+  // checked from both sides. Seeds 214, 248 and 273 each found a paired rest whose qualifying
+  // instant was not checked, when the partner was taken to be the run just before.
+  it.each(
+    [...Array.from({ length: 40 }, (_, seed) => seed), 214, 248, 273].map(
+      (seed) => ({ seed }),
+    ),
+  )(
+    "gives the same record with every entry of a short log split, seed $seed",
+    ({ seed }) => {
+      const next = random(1000 + seed);
+      const steps = randomLog(next);
+      const log: DutyEntry[] = [];
+      let total = 0;
+
+      for (const step of dutySequence(START, steps)) {
+        if (total >= 96 * 60) {
+          break;
+        }
+        log.push(step);
+        total +=
+          (Temporal.Instant.from(step.end).epochMilliseconds -
+            Temporal.Instant.from(step.start).epochMilliseconds) /
+          60_000;
+      }
+
+      const split = log.flatMap((entry) => {
+        const from = Temporal.Instant.from(entry.start).epochMilliseconds;
+        const quartersInside =
+          (Temporal.Instant.from(entry.end).epochMilliseconds - from) / 900_000;
+        if (quartersInside < 2) {
+          return [entry];
+        }
+        const cut = Temporal.Instant.fromEpochMilliseconds(
+          from + 900_000 * (1 + Math.floor(next() * (quartersInside - 1))),
+        ).toString();
+        return splitAt([entry], cut);
+      });
+      const span = {
+        start: log[0]?.start as string,
+        end: log.at(-1)?.end as string,
+      };
 
       for (const rule of rules) {
         expect(

@@ -520,6 +520,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/types/IsoWeekday",
   "/reference/types/IsoWeeksPeriod",
   "/reference/types/Leg",
+  "/reference/types/LocalPeriod",
   "/reference/types/LocalWindow",
   "/reference/types/LocaleNameStyle",
   "/reference/types/OccurrenceCapRule",

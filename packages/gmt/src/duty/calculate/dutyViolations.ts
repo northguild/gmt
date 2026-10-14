@@ -26,15 +26,25 @@ import type {
  *   to the range before; one still failing at `range.end` is followed to its worst window, which
  *   may end after the range, but never past the log's last entry. So two adjacent ranges list
  *   every violation once.
+ * - Each check reads the log as it stood then, so a failure stays listed when later entries would
+ *   have excused it, such as a rest that completes a pair after the window it would have moved
+ *   had closed. The record lists what a check at that moment would have said, so it only grows as
+ *   the log does.
  * - Only logged time is judged. Nothing after the log's last entry is checked, so a range running
  *   past the log reads as one ending with it, and a period still open there is judged as not yet
- *   over. A rest rule (`restRequirement`, `freePeriod`, `pattern`, `restBeforeDuty`) is not judged
- *   on a window that starts before the log's first entry: the log cannot say what happened then. A
- *   cap is, since time no entry covers never counts towards one.
+ *   over. Nothing before the log's first entry (and, for `usageLookback`, its first use) is
+ *   checked either, so a range of any length is read as the part of it the log covers.
+ * - Time before the log is read two ways. `evaluateDutyLog` reads it strictly, for a check before
+ *   dispatch: it is neither work nor rest, so a rest rule whose window reaches back before the log
+ *   fails for want of logged rest. The record does not invent a violation there: a rest rule
+ *   (`restRequirement`, `freePeriod`, `pattern`, `restBeforeDuty`) is not judged on a window that
+ *   starts before the log's first entry. A cap is, since time no entry covers never counts towards
+ *   one. Both read the log's first entry as the start of a stretch without rest for `maxGap`.
  * - Rules with `severity: "advisory"` are not listed: an advisory is not a violation.
  * - Entries are ordered by window start, then by the order of `rules`.
  * - Returns `null` for anything `evaluateDutyLog` refuses, for a `range` that is not a valid
- *   `Interval`, and when a rule's local periods inside `range` number more than 10,000.
+ *   `Interval`, when more than 10,000 of a rule's local periods end in the part of `range` the log
+ *   covers, and when one rule would need more than 1,000,000 instants checked there.
  *
  * @param log the duty log, ordered and non-overlapping
  * @param range `{ start, end }` record of ISO 8601 instant strings to report on

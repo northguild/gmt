@@ -16346,7 +16346,7 @@
     "module": "duty",
     "kind": "type",
     "signature": "",
-    "description": "The operator-designated day: a 24-hour period that starts at `dayStartTime` in `timeZone`, wherever the person is. Neither field has a default, and local midnight is never assumed. A day with a clock change inside it is 23 or 25 hours long.",
+    "description": "The operator-designated day: a 24-hour period that starts at `dayStartTime` in `timeZone`, wherever the person is. Neither field has a default, and local midnight is never assumed. A day with a clock change inside it is shorter or longer by the change: 23 or 25 hours across a one-hour change.",
     "sourcePath": "packages/gmt/src/types/duty.ts",
     "examples": [],
     "inlineOn": "dutyDayFor",
@@ -16397,7 +16397,7 @@
     "members": [
       {
         "name": "operatorDays",
-        "description": "How many operator days, a positive integer. The days come from `dayStartTime` in the reference zone, so the call needs `dayStartTime`."
+        "description": "How many operator days, an integer from 1 to 10,000. The days come from `dayStartTime` in the reference zone, so the call needs `dayStartTime`."
       }
     ]
   },
@@ -16415,7 +16415,7 @@
     "members": [
       {
         "name": "calendarDays",
-        "description": "How many local calendar days, a positive integer. A day with a clock change is 23 or 25 hours long, so 28 days across one are 671 or 673 hours."
+        "description": "How many local calendar days, an integer from 1 to 10,000. A day across a one-hour clock change is 23 or 25 hours long, so 28 days across one are 671 or 673 hours."
       }
     ]
   },
@@ -16433,7 +16433,7 @@
     "members": [
       {
         "name": "isoWeeks",
-        "description": "How many ISO weeks, a positive integer. Each starts at local midnight on Monday."
+        "description": "How many ISO weeks, an integer from 1 to 10,000. Each starts at local midnight on Monday."
       }
     ]
   },
@@ -16451,7 +16451,7 @@
     "members": [
       {
         "name": "calendarMonths",
-        "description": "How many calendar months, a positive integer. Each starts at local midnight on the 1st."
+        "description": "How many calendar months, an integer from 1 to 10,000. Each starts at local midnight on the 1st."
       }
     ]
   },
@@ -16469,7 +16469,7 @@
     "members": [
       {
         "name": "calendarYears",
-        "description": "How many calendar years, a positive integer. Each starts at local midnight on 1 January."
+        "description": "How many calendar years, an integer from 1 to 10,000. Each starts at local midnight on 1 January."
       }
     ]
   },
@@ -16482,6 +16482,18 @@
     "kind": "type",
     "signature": "",
     "description": "The span a rule looks back over: an exact elapsed duration, or a count of local periods in the reference zone. Give exactly one key.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/LocalPeriod",
+    "page": "/reference/types/LocalPeriod",
+    "name": "LocalPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of local periods in the reference zone: a `Period` that is not an elapsed duration.",
     "sourcePath": "packages/gmt/src/types/duty.ts",
     "examples": []
   },
@@ -16591,7 +16603,7 @@
     "module": "duty",
     "kind": "type",
     "signature": "",
-    "description": "A window that opens when work starts after a reset and closes `length` later, whatever rest falls inside it: \"no driving after the 14th hour\".",
+    "description": "A window that opens when work starts after a reset and closes `length` later, whatever rest falls inside it: \"no driving more than 14 hours after work began\".",
     "sourcePath": "packages/gmt/src/types/duty.ts",
     "examples": [],
     "members": [
@@ -16729,7 +16741,7 @@
       },
       {
         "name": "reset",
-        "description": "A rest that starts the count again, as a 34-hour restart does."
+        "description": "A rest that starts the count again, as a long rest that restarts a cycle does."
       },
       {
         "name": "precondition",
@@ -16783,11 +16795,11 @@
       },
       {
         "name": "period",
-        "description": "The period, a count of local periods; an `elapsed` period is refused."
+        "description": "The period, a count of local periods."
       },
       {
         "name": "adjacent",
-        "description": "How many adjacent periods the cap covers, a positive integer."
+        "description": "How many adjacent periods the cap covers, an integer from 1 to 10,000. Times the period's count, it is 10,000 at most."
       },
       {
         "name": "average",
@@ -16865,7 +16877,7 @@
       },
       {
         "name": "maxGap",
-        "description": "The most time allowed from the end of one run of rest to the start of the next, a positive ISO 8601 duration of exact time."
+        "description": "The most time allowed from the end of one run of rest, or from the log's first entry, to the start of the next run of rest, a positive ISO 8601 duration of exact time."
       }
     ]
   },
@@ -16965,7 +16977,7 @@
       },
       {
         "name": "orFactor.k",
-        "description": "The multiple of the previous duty's length, a positive finite number. The product is rounded up to the nanosecond."
+        "description": "The multiple of the previous duty's length, a positive finite number, read as the decimal it is written as: `1.1` is exactly eleven tenths. The product is rounded up to the nanosecond."
       },
       {
         "name": "orFactor.floor",
@@ -17069,7 +17081,7 @@
       },
       {
         "name": "within.periods",
-        "description": "How many periods, a positive integer."
+        "description": "How many periods, an integer from 1 to 10,000. Times a count `period`, it is 10,000 at most."
       },
       {
         "name": "within.period",
@@ -17111,7 +17123,7 @@
       },
       {
         "name": "lookback",
-        "description": "How many periods the window covers, a positive integer."
+        "description": "How many periods the window covers, an integer from 1 to 10,000. Times a count `period`, it is 10,000 at most."
       },
       {
         "name": "classes",
@@ -17173,11 +17185,11 @@
       },
       {
         "name": "per",
-        "description": "The local period occurrences are counted by; an `elapsed` period is refused."
+        "description": "The local period occurrences are counted by."
       },
       {
         "name": "lookback",
-        "description": "How many periods the window covers, a positive integer."
+        "description": "How many periods the window covers, an integer from 1 to 10,000. Times the count in `per`, it is 10,000 at most."
       },
       {
         "name": "maximum",

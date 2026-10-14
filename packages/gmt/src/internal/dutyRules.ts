@@ -110,7 +110,7 @@ type ResolvedRuleBody =
       restStatuses: StatusSet;
       minimum: bigint;
       within: bigint;
-      orFactor: { k: number; floor: bigint } | null;
+      orFactor: { k: DecimalRatio; floor: bigint } | null;
     }
   | {
       kind: "quota";
@@ -188,6 +188,33 @@ function statusSet(value: unknown): StatusSet {
 function positiveDuration(value: unknown): bigint {
   const nanoseconds = exactDurationNanoseconds(value);
   return nanoseconds !== null && nanoseconds > 0n ? nanoseconds : fail();
+}
+
+/** A positive number as the exact fraction its decimal digits name. */
+export type DecimalRatio = { numerator: bigint; denominator: bigint };
+
+/**
+ * A positive finite number read as the decimal it prints as, exactly: `1.1` is 11/10, never the
+ * binary double nearest it, and `1e-7` is 1/10,000,000.
+ */
+function decimalRatio(value: unknown): DecimalRatio {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return fail();
+  }
+
+  const parts = /^(\d+)(?:\.(\d+))?(?:e([+-]\d+))?$/.exec(String(value));
+
+  if (parts === null) {
+    return fail();
+  }
+
+  const [, whole, fraction = "", exponent = "0"] = parts;
+  const shift = Number(exponent) - fraction.length;
+  const digits = BigInt(`${whole}${fraction}`);
+
+  return shift >= 0
+    ? { numerator: digits * 10n ** BigInt(shift), denominator: 1n }
+    : { numerator: digits, denominator: 10n ** BigInt(-shift) };
 }
 
 function optional<T>(value: unknown, read: (value: unknown) => T): T | null {
@@ -461,10 +488,8 @@ function resolveKind(bag: object, kind: unknown): ResolvedRuleBody {
         within: positiveDuration(field(bag, "within")),
         orFactor: optional(field(bag, "orFactor"), (value) => {
           const factor = object(value);
-          const k = field(factor, "k");
           return {
-            k:
-              typeof k === "number" && Number.isFinite(k) && k > 0 ? k : fail(),
+            k: decimalRatio(field(factor, "k")),
             floor: positiveDuration(field(factor, "floor")),
           };
         }),

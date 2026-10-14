@@ -18,8 +18,9 @@ import type { DutyDay, Interval } from "../../types";
  * - A `dayStartTime` that a clock change skips or repeats is resolved under `day.disambiguation`,
  *   the CORE-4 policy in `resolveLocal`. The default, `"compatible"`, reads a skipped time after
  *   the gap (02:30 on New York's spring-forward day is 03:30) and a repeated one at its first
- *   pass. The day that holds the change is then 23 or 25 hours long, or by the change's own size
- *   elsewhere (24.5 hours across Lord Howe's 30-minute fall-back). `"reject"` returns `null` for
+ *   pass. The day that holds the change is then shorter or longer by the change: 23 or 25 hours
+ *   across a one-hour change, 24.5 across Lord Howe's 30-minute fall-back, 21 across Casey's
+ *   three-hour jump. `"reject"` returns `null` for
  *   a day that starts or ends at such a time.
  * - The instant is read in `timeZone` whatever offset or zone it is written with, so a log whose
  *   entries cross zones still falls into the reference zone's days.

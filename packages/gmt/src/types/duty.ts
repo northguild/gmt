@@ -27,7 +27,8 @@ export type DutyEntry<S extends string = string> = {
 /**
  * The operator-designated day: a 24-hour period that starts at `dayStartTime` in `timeZone`,
  * wherever the person is. Neither field has a default, and local midnight is never assumed. A
- * day with a clock change inside it is 23 or 25 hours long.
+ * day with a clock change inside it is shorter or longer by the change: 23 or 25 hours across a
+ * one-hour change.
  */
 export type DutyDay = {
   /**
@@ -65,8 +66,8 @@ export type ElapsedPeriod = {
 /** A count of operator-designated days, the last of them the day the instant falls in. */
 export type OperatorDaysPeriod = {
   /**
-   * How many operator days, a positive integer. The days come from `dayStartTime` in the
-   * reference zone, so the call needs `dayStartTime`.
+   * How many operator days, an integer from 1 to 10,000. The days come from `dayStartTime` in
+   * the reference zone, so the call needs `dayStartTime`.
    */
   operatorDays: number;
 };
@@ -74,27 +75,33 @@ export type OperatorDaysPeriod = {
 /** A count of local calendar days in the reference zone, the last the day the instant falls in. */
 export type CalendarDaysPeriod = {
   /**
-   * How many local calendar days, a positive integer. A day with a clock change is 23 or 25
-   * hours long, so 28 days across one are 671 or 673 hours.
+   * How many local calendar days, an integer from 1 to 10,000. A day across a one-hour clock
+   * change is 23 or 25 hours long, so 28 days across one are 671 or 673 hours.
    */
   calendarDays: number;
 };
 
 /** A count of ISO weeks (Monday to Sunday) in the reference zone, the last the current one. */
 export type IsoWeeksPeriod = {
-  /** How many ISO weeks, a positive integer. Each starts at local midnight on Monday. */
+  /** How many ISO weeks, an integer from 1 to 10,000. Each starts at local midnight on Monday. */
   isoWeeks: number;
 };
 
 /** A count of local calendar months in the reference zone, the last the current one. */
 export type CalendarMonthsPeriod = {
-  /** How many calendar months, a positive integer. Each starts at local midnight on the 1st. */
+  /**
+   * How many calendar months, an integer from 1 to 10,000. Each starts at local midnight on the
+   * 1st.
+   */
   calendarMonths: number;
 };
 
 /** A count of local calendar years in the reference zone, the last the current one. */
 export type CalendarYearsPeriod = {
-  /** How many calendar years, a positive integer. Each starts at local midnight on 1 January. */
+  /**
+   * How many calendar years, an integer from 1 to 10,000. Each starts at local midnight on
+   * 1 January.
+   */
   calendarYears: number;
 };
 
@@ -105,6 +112,8 @@ export type CalendarYearsPeriod = {
  * - `elapsed` is sliding: every window of that length, the one evaluated ending at the instant.
  * - The counts are whole local periods ending with the one the instant falls in, so their window
  *   runs to the end of the current period. A count of `operatorDays` reads `dayStartTime`.
+ * - A count is 10,000 at most, and so is a count times the rule's `adjacent`, `lookback` or
+ *   `periods`: `{ isoWeeks: 2 }` with `adjacent: 5001` names 10,002 weeks, and is refused.
  */
 export type Period =
   | ElapsedPeriod
@@ -113,6 +122,9 @@ export type Period =
   | IsoWeeksPeriod
   | CalendarMonthsPeriod
   | CalendarYearsPeriod;
+
+/** A count of local periods in the reference zone: a `Period` that is not an elapsed duration. */
+export type LocalPeriod = Exclude<Period, ElapsedPeriod>;
 
 /**
  * A rest that resets a counter: a run of at least `consecutive` in any of `statuses`. The
@@ -170,13 +182,15 @@ export type CumulativeCapRule<S extends string = string> = {
 
 /**
  * A window that opens when work starts after a reset and closes `length` later, whatever rest
- * falls inside it: "no driving after the 14th hour".
+ * falls inside it: "no driving more than 14 hours after work began".
  *
  * - The window opens at the first entry in `startStatuses` after the last `since` run, and the
  *   rule fails once time in `restrictedStatuses` falls at or after its close. `dueBy` is the close.
  * - With `exclude`, two consecutive runs of `since.statuses` that satisfy the `PairSpec` (each
  *   shorter than `since.consecutive`) move the window: it is counted again from the end of the
- *   first, and the second does not count against it.
+ *   first, and its time stops while the second lasts, so the close moves by the second's whole
+ *   length. A second run that starts after the close moves nothing: the window had closed. A run
+ *   shorter than `eachAtLeast` between the two is neither half of the pair nor a break in it.
  * - With `extension`, a window open at the instant `from` closes `by` later. Any other window is
  *   unchanged.
  */
@@ -289,7 +303,7 @@ export type RollingCapRule<S extends string = string> = {
   /** The span the cap is counted over. */
   window: Period;
   /**
-   * A rest that starts the count again, as a 34-hour restart does.
+   * A rest that starts the count again, as a long rest that restarts a cycle does.
    *
    * @defaultValue None. Only the window limits the count.
    */
@@ -333,10 +347,11 @@ export type FixedPeriodCapRule<S extends string = string> = {
   statuses: S[];
   /** The most time allowed, per period with `average`, a positive ISO 8601 duration. */
   cap: string;
-  /** The period, a count of local periods; an `elapsed` period is refused. */
-  period: Period;
+  /** The period, a count of local periods. */
+  period: LocalPeriod;
   /**
-   * How many adjacent periods the cap covers, a positive integer.
+   * How many adjacent periods the cap covers, an integer from 1 to 10,000. Times the period's
+   * count, it is 10,000 at most.
    *
    * @defaultValue `1`.
    */
@@ -356,7 +371,8 @@ export type FixedPeriodCapRule<S extends string = string> = {
  * - Rest is time in `restStatuses` inside the window; only the part of a run inside it counts.
  * - `composition` limits the periods the rest is counted from; `composite` asks for a long run
  *   plus shorter blocks; `maxGap` caps the time between the end of one run and the start of the
- *   next.
+ *   next. The log's first entry starts such a stretch as the end of a rest would, so the work
+ *   logged before the first rest is held to `maxGap` too.
  * - A window that runs past the instant evaluated has not failed while it could still be met with
  *   rest from that instant to its end.
  */
@@ -411,8 +427,8 @@ export type RestRequirementRule<S extends string = string> = {
     blockMinimum: string;
   };
   /**
-   * The most time allowed from the end of one run of rest to the start of the next, a positive
-   * ISO 8601 duration of exact time.
+   * The most time allowed from the end of one run of rest, or from the log's first entry, to the
+   * start of the next run of rest, a positive ISO 8601 duration of exact time.
    *
    * @defaultValue None. The time between rests is not limited.
    */
@@ -478,7 +494,8 @@ export type FreePeriodRule<S extends string = string> = {
  *   measured from where it starts: log a break inside a duty in a status outside `restStatuses`.
  * - The rest must be at least `minimum`. With `orFactor` it must also be `k` × the duty that rest
  *   ends and at least `floor`; that duty runs from the end of the last rest of at least
- *   `minimum` before it to the rest's start, breaks included.
+ *   `minimum` before it to where the rest starts, breaks included, even when the rest starts
+ *   before `within`.
  * - Evaluated during rest, the rule holds and `remaining` is the rest still needed before a duty
  *   may start.
  */
@@ -506,8 +523,9 @@ export type RestBeforeDutyRule<S extends string = string> = {
    */
   orFactor?: {
     /**
-     * The multiple of the previous duty's length, a positive finite number. The product is
-     * rounded up to the nanosecond.
+     * The multiple of the previous duty's length, a positive finite number, read as the decimal
+     * it is written as: `1.1` is exactly eleven tenths. The product is rounded up to the
+     * nanosecond.
      */
     k: number;
     /** The least the requirement can be, a positive ISO 8601 duration of exact time. */
@@ -584,7 +602,10 @@ export type DueByRule<S extends string = string> = {
   };
   /** How soon the rest is due. */
   within: {
-    /** How many periods, a positive integer. */
+    /**
+     * How many periods, an integer from 1 to 10,000. Times a count `period`, it is 10,000 at
+     * most.
+     */
     periods: number;
     /** The period counted: an `elapsed` length, or one local period (`{ operatorDays: 1 }`). */
     period: Period;
@@ -621,7 +642,10 @@ export type PatternRule<S extends string = string> = {
   kind: "pattern";
   /** The unit the window is counted in. */
   period: Period;
-  /** How many periods the window covers, a positive integer. */
+  /**
+   * How many periods the window covers, an integer from 1 to 10,000. Times a count `period`, it is
+   * 10,000 at most.
+   */
   lookback: number;
   /** The classes of rest, each named for `require`. */
   classes: {
@@ -661,9 +685,12 @@ export type OccurrenceCapRule<S extends string = string> = {
   kind: "occurrenceCap";
   /** The statuses that occur. */
   statuses: S[];
-  /** The local period occurrences are counted by; an `elapsed` period is refused. */
-  per: Period;
-  /** How many periods the window covers, a positive integer. */
+  /** The local period occurrences are counted by. */
+  per: LocalPeriod;
+  /**
+   * How many periods the window covers, an integer from 1 to 10,000. Times the count in `per`, it
+   * is 10,000 at most.
+   */
   lookback: number;
   /** The most periods allowed to hold an occurrence, a non-negative integer. */
   maximum: number;
@@ -683,8 +710,9 @@ export type OccurrenceCapRule<S extends string = string> = {
  * - `uses` are the instants the caller used it. `used` counts the uses at or before the instant
  *   evaluated, inside `notWithin`, after the last `reset` run; the rule holds while that is at
  *   most 1, and `remaining` is 1 when the allowance is free to use.
- * - A use at the instant evaluated counts in an `elapsed` window. A window of local periods holds
- *   only its own uses, so one exactly on its end is the next window's.
+ * - Each window holds a use once. An `elapsed` window holds the uses after its start, up to and
+ *   including the instant evaluated, so a use exactly its length before is outside it. A window
+ *   of local periods holds only its own uses, so one exactly on its end is the next window's.
  */
 export type UsageLookbackRule<S extends string = string> = {
   /** The caller's name for the rule. The report is keyed by it; labels must be unique. */

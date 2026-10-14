@@ -56,7 +56,8 @@ dutyDayFor("2024-01-01T12:00:00Z", { timeZone: "UTC" }); // null — no dayStart
 
 When a clock change skips or repeats the start time, it is resolved `"compatible"`, the policy
 of [`resolveLocal`](/reference/instant/convert/resolveLocal): a skipped time is read after the
-gap, a repeated one at its first pass. The day that holds the change is then 23 or 25 hours long:
+gap, a repeated one at its first pass. The day that holds the change is then shorter or longer
+by the change, 23 or 25 hours across a one-hour change:
 
 ```typescript
 import { dutyDayFor } from "@northguild/gmt";
@@ -92,7 +93,7 @@ A rule looks back over a `Period`. There are two kinds, and they are different a
 | --- | --- | --- |
 | `{ elapsed: "PT24H" }` | Every sliding window of that length, the one evaluated ending at `at`. Clock changes do not change it. | `"elapsed"` |
 | `{ operatorDays: 7 }` | Whole operator days from `dutyDayFor`, the last one holding the instant before `at`. | `"operatorDay"` |
-| `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }`, `{ calendarYears: 1 }` | Whole local periods in the reference zone, the last one holding the instant before `at`. A day across a clock change is 23 or 25 hours. | `"calendar"` |
+| `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }`, `{ calendarYears: 1 }` | Whole local periods in the reference zone, the last one holding the instant before `at`. A day across a one-hour clock change is 23 or 25 hours. | `"calendar"` |
 
 A rule written as "in any 24 hours" means every sliding window. A check that groups by
 calendar day passes logs that a sliding window fails. If you mean a fixed day, say
@@ -186,8 +187,9 @@ evaluateDutyLog(
 
 `evaluateDutyLog` returns `null` for invalid input: a log that fails `isValidDutyLog`, a
 malformed rule (an unknown kind, an empty status list, a cap of zero, a malformed period, two
-rules with one label), an invalid zone, and a rule that counts operator days without
-`dayStartTime`.
+rules with one label, more than 10,000 periods), an invalid zone, a rule that counts operator
+days without `dayStartTime`, and a requirement too long for any duration. A count of periods is
+10,000 at most, and so is a count times `adjacent`, `lookback` or `periods`.
 
 The examples below build their logs with a small helper, so that a week of shifts fits on a
 line. It is ordinary Temporal; copy it or write your own:
@@ -268,7 +270,9 @@ The 2-hour break at 14:00 did not move the close. Two things can:
 
 - **`exclude`, a paired rest.** Two rests in a row that meet a `PairSpec` count against the
   window as if they were not there: the window is counted again from the end of the first, and
-  the second does not count. 7.5 + 2.5 hours meets `{ eachAtLeast: "PT2H", oneAtLeast: "PT7H",
+  its time stops while the second lasts. A second rest that starts after the window has closed
+  moves nothing, and a rest shorter than `eachAtLeast` between the two is neither half of the
+  pair nor a break in it. 7.5 + 2.5 hours meets `{ eachAtLeast: "PT2H", oneAtLeast: "PT7H",
   combinedAtLeast: "PT10H" }`, so the window closes at 21:30 + 14 h + 2.5 h:
 
   ```typescript
@@ -365,7 +369,7 @@ evaluateDutyLog(log, "2024-01-08T16:00:00Z", [sixty], { timeZone: "UTC", dayStar
 //   periodBasis: "operatorDay", dueBy: null, resetAt: null }
 ```
 
-`reset` starts the count again, as a 34-hour restart does: the window then begins where the
+`reset` starts the count again, as a long rest that restarts a cycle does: the window then begins where the
 reset ended. `precondition: { restStatuses, minimum, beforeHours }` applies the cap only once
 the window holds a rest of `minimum`; before that rest, the limit is `beforeHours`.
 
@@ -456,8 +460,9 @@ Two more options:
   `consecutive`, and other blocks of at least `blockMinimum` must make up `additional` more. With
   8 + 2 in 30-minute blocks, 8 hours plus four 30-minute blocks passes; 8 plus six 20-minute
   blocks does not, because no block counts.
-- **`maxGap`.** The most time from the end of one rest to the start of the next. While working,
-  `dueBy` is when the next rest must start:
+- **`maxGap`.** The most time from the end of one rest to the start of the next. The log's
+  first entry starts a stretch as the end of a rest would, so work logged before the first rest
+  counts too. While working, `dueBy` is when the next rest must start:
 
   ```typescript
   const gap = { label: "14 between rests", kind: "restRequirement", restStatuses: ["rest"], per: { elapsed: "PT24H" }, minimum: "PT10H", maxGap: "PT14H" };
@@ -506,8 +511,9 @@ logged time outside `restStatuses` begins. The rest before it is the longest res
 stint after any rest is a new duty, so log a break inside a duty in its own status, outside
 `restStatuses`.
 `orFactor: { k, floor }` raises the requirement to the larger of `k` × the duty that rest ends
-and `floor`. That duty runs from the end of the last rest of at least `minimum` before it, breaks
-included, so after a 13-hour duty the requirement is 13 hours:
+and `floor`. That duty runs from the end of the last rest of at least `minimum` before it to where
+the rest starts, breaks included, so after a 13-hour duty the requirement is 13 hours, however
+long the rest. `k` is read as the decimal you write: `1.1` is exactly eleven tenths.
 
 ```typescript
 const before = {
@@ -692,7 +698,9 @@ evaluateDutyLog(log, "2024-01-06T12:00:00Z", [allowance], { timeZone: "UTC" }).o
 ```
 
 With a 34-hour rest between the two uses the rule holds, and `resetAt` is where that rest
-ended. `remaining` is 1 while the allowance is free to use.
+ended. `remaining` is 1 while the allowance is free to use. Each window holds a use once: a window
+of local periods holds a use on its end in the next window, and an `elapsed` window runs up to
+and including the instant evaluated, so a use exactly its length before is outside it.
 
 ## Totals, runs and paired rests
 
@@ -768,10 +776,17 @@ window that failed worst:
 - A violation is listed in the range it began in. One already failing when the range opens
   belongs to the range before; one still failing when it closes is shown by its worst window,
   even if that ends later. So two adjacent months list each violation once.
+- Each check reads the log as it stood then. A failure stays listed when later entries would
+  have excused it, such as a rest that completes a pair after the window it would have moved had
+  closed, so a record only grows as the log does.
 - Only logged time is judged. Nothing after the log's last entry is checked, so a month-to-date
   range reads as one ending with the log, and a day still open there is judged as not yet over.
-  A rest rule is not judged on a window that starts before the log's first entry, since the log
-  cannot say what happened then. Start the log one window length before the range.
+  Nothing before the log's first entry is checked either, so a range of years over a week of log
+  reads as that week.
+- Time before the log is read two ways. `evaluateDutyLog` is strict: that time is neither work
+  nor rest, so a rest rule whose window reaches back before the log fails. The record does not
+  invent a violation there: a rest rule is not judged on a window that starts before the log's
+  first entry. Start the log one window length before the range.
 - A fixed period, such as one day, is shown by its last check, which judges the period complete.
 
 ```typescript
@@ -796,7 +811,9 @@ dutyViolations(
 ```
 
 Advisories are not listed, and an empty list means no violation. Invalid input returns `null`,
-never `[]`, so a malformed rule can never read as a clean record.
+never `[]`, so a malformed rule can never read as a clean record. So does a record too large to
+check: more than 10,000 of a rule's local periods ending in the time the log covers, or more than
+1,000,000 instants to check for one rule.
 
 ## Five example regimes
 

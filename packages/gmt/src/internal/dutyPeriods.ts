@@ -10,6 +10,7 @@ import {
   type ZoneFrame,
 } from "./zoneFrame";
 import { zonedDateTimeFrom } from "./zonedWallClock";
+import { zonedNextTransition } from "./zonedWallClockOperations";
 
 /** One local period, `[start, end)`, as epoch nanoseconds. */
 export type UnitSpan = { start: bigint; end: bigint };
@@ -27,6 +28,14 @@ export type CalendarUnit = "day" | "week" | "month" | "year";
 export type UnitScale = {
   basis: "operatorDay" | "calendar";
   containing: (x: bigint) => UnitSpan | null;
+  /**
+   * The period `periods` after the one `span` is (before it when negative), found without
+   * stepping through the periods between: `undefined` where it cannot be, and the periods must be
+   * walked. Null when that period cannot be represented.
+   */
+  jump?: (span: UnitSpan, periods: number) => UnitSpan | null | undefined;
+  /** The starts `periodsEndingAt` has found, by count and last period, so each is walked once. */
+  windowStarts: Map<string, bigint>;
 };
 
 /**
@@ -163,6 +172,7 @@ function cachedScale(
 
   return {
     basis,
+    windowStarts: new Map(),
     containing: (x) => {
       const index = find(x);
       const cached = spans[index];
@@ -236,13 +246,20 @@ export function operatorDayScale(
 
       for (let ahead = 1; ahead <= OPERATOR_DAY_REACH + 1; ahead++) {
         const next = datePlusDays(date, ahead);
-        const end = next === null ? null : startOf(next);
+        const resolved = next === null ? null : startOf(next);
 
-        if (end === null) {
+        if (next === null || resolved === null) {
           return null;
         }
 
-        if (end.at > x) {
+        if (resolved.at > x) {
+          // A deleted date's start resolves onto the next date's, and opens no day: the day ends
+          // where the next date that opens one starts, which "reject" judges by that date's wall time.
+          const following = datePlusDays(next, 1);
+          const after = following === null ? null : startOf(following);
+          const end =
+            after !== null && after.at === resolved.at ? after : resolved;
+
           if (start.rejected || end.rejected) {
             throw new WallClockRejected(
               "a day boundary the zone repeats or skips",
@@ -271,7 +288,7 @@ export function operatorDayScale(
  * @example calendarScale(zoneFrame("UTC"), "day").containing(1n) // { start: 0n, end: 86400000000000n }
  */
 export function calendarScale(frame: ZoneFrame, unit: CalendarUnit): UnitScale {
-  return cachedScale("calendar", (x) => {
+  const scale = cachedScale("calendar", (x) => {
     try {
       const zoned = frameZoned(Temporal.Instant.fromEpochNanoseconds(x), frame);
       const start = zonedUnitStart(zoned, unit);
@@ -289,7 +306,64 @@ export function calendarScale(frame: ZoneFrame, unit: CalendarUnit): UnitScale {
       return null;
     }
   });
+  const step = CALENDAR_JUMPS[unit];
+
+  if (step === undefined) {
+    return scale;
+  }
+
+  return {
+    ...scale,
+    // With no clock change between two periods, every week, month or year between them is one
+    // period, so the period k after another holds the wall clock k units after its middle (days
+    // from either edge, so a clock change within two days cannot move it to a neighbour). A clock
+    // change can open a period of its own (Goose Bay's fall-back into 6 November opens a 59-minute
+    // one), so across one the periods are walked.
+    jump: (span, periods) => {
+      try {
+        const middle = frameZoned(
+          Temporal.Instant.fromEpochNanoseconds(
+            span.start + (span.end - span.start) / 2n,
+          ),
+          frame,
+        );
+        const target = scale.containing(
+          frameEpochNanoseconds(middle.add({ [step]: periods }), frame),
+        );
+
+        if (target === null) {
+          return null;
+        }
+
+        const low = target.start < span.start ? target : span;
+        const high = target.end > span.end ? target : span;
+        const change = zonedNextTransition(
+          frameZoned(
+            Temporal.Instant.fromEpochNanoseconds(low.start - 1n),
+            frame,
+          ),
+          high.end + frame.shiftNanoseconds,
+        );
+
+        return change === null ? target : undefined;
+      } catch {
+        return null;
+      }
+    },
+  };
 }
+
+/**
+ * The calendar units a scale can jump across, by the duration field that moves the wall clock by
+ * one. A day cannot: a date a zone deleted has no period, so k dates on is not k days on.
+ */
+const CALENDAR_JUMPS: Partial<
+  Record<CalendarUnit, "weeks" | "months" | "years">
+> = {
+  week: "weeks",
+  month: "months",
+  year: "years",
+};
 
 /**
  * The `count` periods of a scale that end with the one `anchor` falls in.
@@ -313,17 +387,34 @@ export function periodsEndingAt(
     return null;
   }
 
-  let start = last.start;
+  const key = `${count}:${last.start}`;
+  const known = scale.windowStarts.get(key);
 
-  for (let step = 1; step < count; step++) {
-    const previous = scale.containing(start - 1n);
-
-    if (previous === null) {
-      return null;
-    }
-
-    start = previous.start;
+  if (known !== undefined) {
+    return { start: known, end: last.end };
   }
 
+  const jumped = count > 1 ? scale.jump?.(last, 1 - count) : undefined;
+  let start = last.start;
+
+  if (jumped === null) {
+    return null;
+  }
+
+  if (jumped !== undefined) {
+    start = jumped.start;
+  } else {
+    for (let step = 1; step < count; step++) {
+      const previous = scale.containing(start - 1n);
+
+      if (previous === null) {
+        return null;
+      }
+
+      start = previous.start;
+    }
+  }
+
+  scale.windowStarts.set(key, start);
   return { start, end: last.end };
 }

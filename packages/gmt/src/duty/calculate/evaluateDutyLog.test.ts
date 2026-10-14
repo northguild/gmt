@@ -152,6 +152,7 @@ describe("evaluateDutyLog", () => {
     ${"Antarctica/Casey"}    | ${"2020-10-03T16:00:00Z"} | ${"2020-10-04T13:00:00Z"} | ${"PT21H"}    | ${"a three-hour jump"}
     ${"Pacific/Apia"}        | ${"2011-12-29T10:00:00Z"} | ${"2011-12-30T10:00:00Z"} | ${"PT24H"}    | ${"the day before the deleted date"}
     ${"Pacific/Apia"}        | ${"2011-12-30T10:00:00Z"} | ${"2011-12-31T10:00:00Z"} | ${"PT24H"}    | ${"the day after it: the deleted date has no day"}
+    ${"America/Goose_Bay"}   | ${"2010-11-07T03:01:00Z"} | ${"2010-11-07T04:00:00Z"} | ${"PT59M"}    | ${"the fall-back reopens 6 November for 59 minutes, a day of its own"}
   `(
     "counts a $used calendar day in $timeZone ($reason)",
     ({ timeZone, start, end, used }) => {
@@ -350,6 +351,40 @@ describe("evaluateDutyLog", () => {
     },
   );
 
+  // Apia deleted 30 December 2011, and its skipped 00:00 resolves onto 31 December's start. The
+  // day of the 29th ends there, a wall time the zone has, so "reject" answers it.
+  it("answers the operator day before Apia's deleted date under reject", () => {
+    expect(
+      evaluateDutyLog(
+        [
+          {
+            status: "onDuty",
+            start: "2011-12-29T20:00:00Z",
+            end: "2011-12-30T02:00:00Z",
+          },
+        ],
+        "2011-12-30T02:00:00Z",
+        [
+          {
+            label: "operator day",
+            kind: "rollingCap",
+            statuses: ["onDuty"],
+            cap: "PT12H",
+            window: { operatorDays: 1 },
+          },
+        ],
+        {
+          timeZone: "Pacific/Apia",
+          dayStartTime: "00:00",
+          disambiguation: "reject",
+        },
+      )?.outcomes[0],
+    ).toMatchObject({
+      used: "PT6H",
+      window: { start: "2011-12-29T10:00:00Z", end: "2011-12-30T10:00:00Z" },
+    });
+  });
+
   // Off from 00:00 EDT to 07:00 EST on 2024-11-03 holds the window from the repeated 01:30
   // (first pass, 05:30Z) to 06:00 EST (11:00Z); "reject" refuses a window edge the clock repeats.
   it.each`
@@ -533,9 +568,62 @@ describe("evaluateDutyLog", () => {
       ).not.toBeNull();
     });
 
+    // An hour of work, 10 off and a new duty: 10^21 × that hour is past any duration Temporal holds.
+    it("for a rest requirement too long for any duration", () => {
+      const shifts = dutySequence(START, [
+        ["work", "PT1H"],
+        ["off", "PT10H"],
+        ["work", "PT1H"],
+      ]);
+      expect(
+        evaluateDutyLog(
+          shifts,
+          shifts[2]?.end as string,
+          [
+            {
+              label: "b",
+              kind: "restBeforeDuty",
+              restStatuses: ["off"],
+              minimum: "PT10H",
+              within: "PT24H",
+              orFactor: { k: 1e21, floor: "PT12H" },
+            },
+          ],
+          UTC,
+        ),
+      ).toBeNull();
+    });
+
     it("when Temporal.Instant.from throws", () => {
       mockTemporalInstantFromThrow();
       expect(evaluateDutyLog(log, at, [elevenDriving], UTC)).toBeNull();
     });
+  });
+
+  it("types a fixed period and an occurrence period as local periods only", () => {
+    const fixed: DutyRule = {
+      label: "f",
+      kind: "fixedPeriodCap",
+      statuses: ["onDuty"],
+      cap: "PT56H",
+      // @ts-expect-error — an elapsed period is refused at runtime, so the type refuses it too.
+      period: { elapsed: "PT168H" },
+    };
+    const occurrence: DutyRule = {
+      label: "o",
+      kind: "occurrenceCap",
+      statuses: ["night"],
+      // @ts-expect-error — an elapsed period is refused at runtime, so the type refuses it too.
+      per: { elapsed: "PT24H" },
+      lookback: 3,
+      maximum: 1,
+    };
+
+    expect(
+      evaluateDutyLog(log, "2024-01-01T20:00:00Z", [fixed], UTC),
+    ).toBeNull();
+    expect(
+      evaluateDutyLog(log, "2024-01-01T20:00:00Z", [occurrence], UTC),
+    ).toBeNull();
   });
 });

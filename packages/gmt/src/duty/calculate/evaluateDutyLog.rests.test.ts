@@ -163,6 +163,35 @@ describe("evaluateDutyLog — restRequirement", () => {
       dueBy,
     });
   });
+
+  // An hour of rest in each 7 calendar days, and no more than 14 hours without one. The work
+  // before the log's first rest is a stretch without rest like any other, measured from the log's
+  // first entry: 30 hours of it fail with or without an hour of rest before it.
+  it.each`
+    steps                                    | at                        | dueBy                     | reason
+    ${[["work", "PT30H"]]}                   | ${"2024-01-02T06:00:00Z"} | ${"2024-01-01T14:00:00Z"} | ${"30 hours of work and no rest at all"}
+    ${[["rest", "PT1H"], ["work", "PT30H"]]} | ${"2024-01-02T07:00:00Z"} | ${"2024-01-01T15:00:00Z"} | ${"an hour of rest, then the same 30 hours"}
+  `(
+    "maxGap PT14H measures the work before the first rest: $reason",
+    ({ steps, at, dueBy }) => {
+      expect(
+        outcome(
+          steps,
+          at,
+          tenInTwentyFour({
+            per: { calendarDays: 7 },
+            minimum: "PT1H",
+            maxGap: "PT14H",
+          }),
+        ),
+      ).toMatchObject({
+        satisfied: false,
+        used: "PT30H",
+        limit: "PT14H",
+        dueBy,
+      });
+    },
+  );
 });
 
 describe("evaluateDutyLog — freePeriod", () => {
@@ -403,6 +432,71 @@ describe("evaluateDutyLog — restBeforeDuty", () => {
       } as DutyRule),
     ).toMatchObject({ satisfied: false, used: "PT12H30M", limit: "PT13H" });
   });
+
+  // Off 12 hours, a 10-hour duty, then a rest and a new duty. The duty that rest ends is the 10
+  // hours before it, however far back the 24-hour lookback cuts the rest, so 12 hours are due
+  // after 12 hours off and after 48.
+  it.each`
+    rest       | at                        | used
+    ${"PT12H"} | ${"2024-01-02T10:30:00Z"} | ${"PT12H"}
+    ${"PT48H"} | ${"2024-01-03T22:30:00Z"} | ${"PT24H"}
+  `(
+    "requires 12 hours after a 10-hour duty and $rest off",
+    ({ rest, at, used }) => {
+      expect(
+        outcome(
+          [
+            ["off", "PT12H"],
+            ["onDuty", "PT10H"],
+            ["off", rest],
+            ["onDuty", "PT8H"],
+          ],
+          at,
+          {
+            ...tenBefore,
+            minimum: "PT12H",
+            orFactor: { k: 1, floor: "PT12H" },
+          } as DutyRule,
+        ),
+      ).toMatchObject({ satisfied: true, used, limit: "PT12H" });
+    },
+  );
+
+  // 1.1 × the previous duty, read as the decimal 1.1: exactly 11 tenths, so a rest of exactly that
+  // long is enough. Floating point would put each limit a nanosecond higher. The lookback is the
+  // rest itself, so the 12 hours off before the duty are not the rest read.
+  it.each`
+    duty       | rest
+    ${"PT1H"}  | ${"PT1H6M"}
+    ${"PT2H"}  | ${"PT2H12M"}
+    ${"PT4H"}  | ${"PT4H24M"}
+    ${"PT7H"}  | ${"PT7H42M"}
+    ${"PT8H"}  | ${"PT8H48M"}
+    ${"PT13H"} | ${"PT14H18M"}
+    ${"PT16H"} | ${"PT17H36M"}
+  `(
+    "requires exactly $rest after a $duty duty with k = 1.1",
+    ({ duty, rest }) => {
+      const steps: DutyStep[] = [
+        ["off", "PT12H"],
+        ["work", duty],
+        ["off", rest],
+        ["work", "PT1H"],
+      ];
+      expect(
+        outcome(
+          steps,
+          dutySequence(START, steps)[3]?.end as string,
+          {
+            ...tenBefore,
+            minimum: "PT1H",
+            within: rest,
+            orFactor: { k: 1.1, floor: "PT1H" },
+          } as DutyRule,
+        ),
+      ).toMatchObject({ satisfied: true, used: rest, limit: rest });
+    },
+  );
 
   // The larger of 1 × the previous duty and 12 hours: 12 after a 10-hour duty, 13 after 13.
   it.each`

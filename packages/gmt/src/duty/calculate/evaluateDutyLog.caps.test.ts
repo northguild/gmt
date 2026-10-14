@@ -177,6 +177,27 @@ describe("evaluateDutyLog — elapsedWindow", () => {
     },
   );
 
+  // After 10 hours off the window opens at 10:00. The 8 hours off from 15:00 and a 3-hour sleeper
+  // break pair up, so the window is counted again from 23:00, the end of the first, and its 14
+  // hours end at 13:00 the next day. The break does not count against the window only if it starts
+  // inside it. From 11:00 it does, so the window closes 3 hours later, at 16:00. From 15:00 it does
+  // not, so the window closed at 13:00, and the driving from 13:00 to 15:00 came after the close.
+  it.each`
+    steps                                                                                                                       | at                        | satisfied | used       | window                                                            | reason
+    ${[["off", "PT10H"], ["driving", "PT5H"], ["off", "PT8H"], ["driving", "PT12H"], ["sleeper", "PT3H"], ["driving", "PT2H"]]} | ${"2024-01-02T16:00:00Z"} | ${true}   | ${"PT14H"} | ${{ start: "2024-01-01T23:00:00Z", end: "2024-01-02T16:00:00Z" }} | ${"a break that starts inside the window"}
+    ${[["off", "PT10H"], ["driving", "PT5H"], ["off", "PT8H"], ["driving", "PT16H"], ["sleeper", "PT3H"]]}                      | ${"2024-01-02T18:00:00Z"} | ${false}  | ${"PT19H"} | ${{ start: "2024-01-01T23:00:00Z", end: "2024-01-02T13:00:00Z" }} | ${"a break that starts after it closed"}
+  `(
+    "excludes the second rest of a pair only if it starts in the window: $reason",
+    ({ steps, at, satisfied, used, window }) => {
+      expect(outcome(steps, at, rule({ exclude: pair }))).toMatchObject({
+        satisfied,
+        used,
+        window,
+        dueBy: window.end,
+      });
+    },
+  );
+
   it("does not move the window for a qualifying pair when the rule has no exclude", () => {
     expect(
       outcome(
@@ -393,7 +414,7 @@ describe("evaluateDutyLog — rollingCap", () => {
     },
   );
 
-  // Canada-style cycle: 120 h in 14 days, but 70 h at most before a 24-hour rest inside the cycle.
+  // A cycle of 120 h in 14 days, with 70 h at most before a 24-hour rest inside it.
   const preconditioned: DutyRule = {
     label: "120 in 14",
     kind: "rollingCap",

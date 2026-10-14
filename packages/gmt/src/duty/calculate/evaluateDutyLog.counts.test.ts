@@ -453,12 +453,13 @@ describe("evaluateDutyLog — usageLookback", () => {
   });
 
   // At 00:00 on the 8th the 7 days judged are the 1st to the 7th, which hold only the first use; a
-  // use at the instant the window ends belongs to the next window. Over 7 elapsed days, a use at
-  // `at` itself counts, as the window runs up to and including the use being made.
+  // use at the instant the window ends belongs to the next window. Over 7 elapsed days, the window
+  // is the 7 days up to and including `at`: a use at `at` counts, and one exactly 7 days earlier is
+  // outside it, so each use is in one window only.
   it.each`
     notWithin              | used | satisfied | reason
     ${{ calendarDays: 7 }} | ${1} | ${true}   | ${"the second use falls on the 8th day, outside the 7"}
-    ${{ elapsed: "P7D" }}  | ${2} | ${false}  | ${"exactly 7 days apart: the first is at the window's start"}
+    ${{ elapsed: "P7D" }}  | ${1} | ${true}   | ${"exactly 7 days apart: the first is just outside the window"}
   `(
     "counts a use on a boundary in one window only: $reason",
     ({ notWithin, used, satisfied }) => {

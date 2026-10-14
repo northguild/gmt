@@ -21,12 +21,16 @@ import type {
  *   time before the log's first entry: give a log that reaches back as far as the longest rule
  *   looks, or a rest rule fails for want of logged rest. A planned roster is the same call with
  *   the plan appended and `at` set to its end.
+ * - This is the strict reading, for a check before dispatch. `dutyViolations` reads a record the
+ *   other way: it does not judge a rest rule on a window that starts before the log's first
+ *   entry, since the log cannot say what happened then. Both read the log's first entry as the
+ *   start of a stretch without rest for `maxGap`, as the end of a rest would be.
  * - Every outcome carries `used`, `limit`, `remaining`, `window`, `dueBy` and `resetAt`, so the
  *   second-tightest limit is visible before it binds. Failed rules are listed again under
  *   `violations` or, with `severity: "advisory"`, under `advisories` only.
  * - A duration in a `Period` is a sliding window ending at `at`; `operatorDays` are the days of
  *   `dutyDayFor`; calendar days, ISO weeks, months and years are local periods in `timeZone`,
- *   23 or 25 hours long across a clock change. Each outcome names its `periodBasis`.
+ *   23 or 25 hours long across a one-hour clock change. Each outcome names its `periodBasis`.
  * - The local periods are the ones holding the last instant before `at`, so at a boundary the
  *   period just ended is judged: a roster ending at midnight is checked through its last day.
  * - A window that runs past `at` (the rest of today, this week) has not failed a minimum while
@@ -37,8 +41,10 @@ import type {
  * - Returns `null` when the log fails `isValidDutyLog`, when `at` is not an ISO 8601 instant
  *   string, when a rule is malformed (an unknown kind, a status list that is empty or holds a
  *   non-string, a duration that is not positive exact time, a malformed period, a duplicate
- *   label), when `options.timeZone` is invalid, when a rule counts `operatorDays` without
- *   `options.dayStartTime`, and when a window falls outside Temporal's range.
+ *   label, a count of periods past 10,000 alone or times `adjacent`, `lookback` or `periods`),
+ *   when `options.timeZone` is invalid, when a rule counts `operatorDays` without
+ *   `options.dayStartTime`, and when a window, or a requirement `orFactor` scales, falls outside
+ *   Temporal's range.
  *
  * @param log the duty log, ordered and non-overlapping
  * @param at ISO 8601 instant string to evaluate at

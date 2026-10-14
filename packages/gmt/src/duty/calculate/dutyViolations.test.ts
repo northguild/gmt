@@ -3,6 +3,7 @@ import { battleTestTimeZones, type DutyStep, dutySequence } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { DutyRule } from "../../types";
 import { dutyViolations } from "./dutyViolations";
+import { evaluateDutyLog } from "./evaluateDutyLog";
 
 // Fixtures start on 2024-01-01 (dateYearStart2024Jan01, a Monday); times of day are the scenario
 // under test. Every expected value is worked out from the rule's own numbers in the row's reason.
@@ -200,6 +201,102 @@ describe("dutyViolations", () => {
     ).toEqual([]);
   });
 
+  // 20 hours in any 3 calendar days. Days 1 to 3 hold 8 hours each, 24 in all; day 4 none, so the
+  // windows ending on it hold 16 and pass; day 5 holds 14, so days 3 to 5 hold 22. A count of
+  // local days moves with the instant, and a window that fails again after one that passed is a
+  // new violation, as any moving window is.
+  it("lists a rolling count of days again when it fails again after a pass", () => {
+    const steps: DutyStep[] = [
+      ...repeat(3, [
+        ["work", "PT8H"],
+        ["off", "PT16H"],
+      ]),
+      ["off", "PT24H"],
+      ["work", "PT14H"],
+      ["off", "PT10H"],
+    ];
+
+    expect(
+      dutyViolations(
+        dutySequence(START, steps),
+        { start: START, end: "2024-01-06T00:00:00Z" },
+        [
+          {
+            label: "20 in 3 days",
+            kind: "rollingCap",
+            statuses: ["work"],
+            cap: "PT20H",
+            window: { calendarDays: 3 },
+          },
+        ],
+        UTC,
+      ),
+    ).toEqual([
+      {
+        label: "20 in 3 days",
+        window: { start: START, end: "2024-01-04T00:00:00Z" },
+        used: "PT24H",
+        limit: "PT20H",
+      },
+      {
+        label: "20 in 3 days",
+        window: { start: "2024-01-03T00:00:00Z", end: "2024-01-06T00:00:00Z" },
+        used: "PT22H",
+        limit: "PT20H",
+      },
+    ]);
+  });
+
+  // Off 10 hours, driving 4, sleeper 7, driving 4, off 3. The window opens at 10:00 and closes at
+  // 24:00, so the driving from 24:00 to 01:00 is late. At 04:00 the 3 hours off complete a pair
+  // with the 7 in the sleeper, and the window counted again from 21:00 holds all of it. The record
+  // keeps the earlier failure: it lists what a check at each moment would have said, so a record
+  // only grows as the log does.
+  it("keeps a failure that a rest pair completed later would have excused", () => {
+    const log = dutySequence(START, [
+      ["off", "PT10H"],
+      ["driving", "PT4H"],
+      ["sleeper", "PT7H"],
+      ["driving", "PT4H"],
+      ["off", "PT3H"],
+    ]);
+    const rule: DutyRule = {
+      label: "14 window",
+      kind: "elapsedWindow",
+      startStatuses: ["driving"],
+      length: "PT14H",
+      restrictedStatuses: ["driving"],
+      since: { statuses: ["off", "sleeper"], consecutive: "PT10H" },
+      exclude: {
+        eachAtLeast: "PT2H",
+        oneAtLeast: "PT7H",
+        combinedAtLeast: "PT10H",
+      },
+    };
+
+    expect(
+      evaluateDutyLog(log, "2024-01-02T04:00:00Z", [rule], UTC)?.outcomes[0],
+    ).toMatchObject({
+      satisfied: true,
+      window: { start: "2024-01-01T21:00:00Z", end: "2024-01-02T14:00:00Z" },
+    });
+    expect(
+      dutyViolations(
+        log,
+        { start: START, end: "2024-01-02T04:00:00Z" },
+        [rule],
+        UTC,
+      ),
+    ).toEqual([
+      {
+        label: "14 window",
+        window: { start: "2024-01-01T10:00:00Z", end: "2024-01-02T00:00:00Z" },
+        used: "PT15H",
+        limit: "PT14H",
+      },
+    ]);
+  });
+
   // A tour from 20:00 on 31 January to 04:00 on 1 February in New York: 4 hours in each month,
   // and a cap of 3 a month fails both, once each.
   it("splits a tour at the month boundary and fails each month on its own", () => {
@@ -308,14 +405,22 @@ describe("dutyViolations", () => {
     },
   );
 
-  // On duty for whole local days across a clock change, under a cap of 24 hours a day: the
-  // 25-hour fall-back day fails, a 23-hour or 24-hour day does not, and the date Samoa deleted is
-  // no day at all (expected days from Temporal's `startOfDay`).
+  // On duty for whole local days across a clock change, under a cap of 24 hours a day: a day
+  // longer than 24 hours fails (New York's and Havana's 25, Lord Howe's 24.5), a shorter one does
+  // not (Chatham's and Santiago's 23, Casey's 21), the date Samoa deleted is no day at all, and
+  // Goose Bay's 59 minutes back in 6 November are a day of their own (expected days from
+  // Temporal's `startOfDay` and the zone walker `bucketRange` uses).
   it.each`
-    timeZone              | start                     | end                       | failed
-    ${"America/New_York"} | ${"2024-11-02T04:00:00Z"} | ${"2024-11-05T05:00:00Z"} | ${[["2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z", "PT25H"]]}
-    ${"America/New_York"} | ${"2024-03-09T05:00:00Z"} | ${"2024-03-12T04:00:00Z"} | ${[]}
-    ${"Pacific/Apia"}     | ${"2011-12-28T10:00:00Z"} | ${"2012-01-01T10:00:00Z"} | ${[]}
+    timeZone                 | start                     | end                       | failed
+    ${"America/New_York"}    | ${"2024-11-02T04:00:00Z"} | ${"2024-11-05T05:00:00Z"} | ${[["2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z", "PT25H"]]}
+    ${"America/New_York"}    | ${"2024-03-09T05:00:00Z"} | ${"2024-03-12T04:00:00Z"} | ${[]}
+    ${"America/Havana"}      | ${"2024-11-02T04:00:00Z"} | ${"2024-11-05T05:00:00Z"} | ${[["2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z", "PT25H"]]}
+    ${"Australia/Lord_Howe"} | ${"2024-04-05T13:00:00Z"} | ${"2024-04-08T13:30:00Z"} | ${[["2024-04-06T13:00:00Z", "2024-04-07T13:30:00Z", "PT24H30M"]]}
+    ${"Pacific/Chatham"}     | ${"2024-09-27T11:15:00Z"} | ${"2024-09-30T10:15:00Z"} | ${[]}
+    ${"America/Santiago"}    | ${"2024-09-07T04:00:00Z"} | ${"2024-09-10T03:00:00Z"} | ${[]}
+    ${"Antarctica/Casey"}    | ${"2020-10-02T16:00:00Z"} | ${"2020-10-05T13:00:00Z"} | ${[]}
+    ${"Pacific/Apia"}        | ${"2011-12-28T10:00:00Z"} | ${"2012-01-01T10:00:00Z"} | ${[]}
+    ${"America/Goose_Bay"}   | ${"2010-11-06T03:00:00Z"} | ${"2010-11-08T04:00:00Z"} | ${[]}
   `(
     "fails only a day longer than 24 hours in $timeZone from $start",
     ({ timeZone, start, end, failed }) => {
@@ -346,24 +451,66 @@ describe("dutyViolations", () => {
     );
   });
 
-  // Worst CI run 4.6 s walking 10,000 days before refusing; the timeout is three times that and more.
   it.each`
-    range                                                             | rules                                                                                                   | options                         | reason
-    ${{ start: "2024-02-01T00:00:00Z", end: START }}                  | ${[elevenDriving]}                                                                                      | ${UTC}                          | ${"an inverted range"}
-    ${"January"}                                                      | ${[elevenDriving]}                                                                                      | ${UTC}                          | ${"a range that is not an Interval"}
-    ${{ start: START, end: "2024-02-01T00:00:00Z" }}                  | ${[{ ...elevenDriving, cap: "PT0S" }]}                                                                  | ${UTC}                          | ${"a zero cap"}
-    ${{ start: START, end: "2024-02-01T00:00:00Z" }}                  | ${[elevenDriving]}                                                                                      | ${{ timeZone: "Mars/Olympus" }} | ${"an invalid zone"}
-    ${{ start: START, end: "2024-02-01T00:00:00Z" }}                  | ${[{ label: "d", kind: "rollingCap", statuses: ["d"], cap: "PT60H", window: { operatorDays: 7 } }]}     | ${UTC}                          | ${"operator days without dayStartTime"}
-    ${{ start: "2000-01-01T00:00:00Z", end: "2040-01-01T00:00:00Z" }} | ${[{ label: "d", kind: "fixedPeriodCap", statuses: ["d"], cap: "PT12H", period: { calendarDays: 1 } }]} | ${UTC}                          | ${"more than 10,000 days in the range"}
-  `(
-    "returns null for $reason",
-    ({ range, rules, options }) => {
-      expect(
-        dutyViolations(dutySequence(START, week1), range, rules, options),
-      ).toBeNull();
-    },
-    15_000,
-  );
+    range                                            | rules                                                                                               | options                         | reason
+    ${{ start: "2024-02-01T00:00:00Z", end: START }} | ${[elevenDriving]}                                                                                  | ${UTC}                          | ${"an inverted range"}
+    ${"January"}                                     | ${[elevenDriving]}                                                                                  | ${UTC}                          | ${"a range that is not an Interval"}
+    ${{ start: START, end: "2024-02-01T00:00:00Z" }} | ${[{ ...elevenDriving, cap: "PT0S" }]}                                                              | ${UTC}                          | ${"a zero cap"}
+    ${{ start: START, end: "2024-02-01T00:00:00Z" }} | ${[elevenDriving]}                                                                                  | ${{ timeZone: "Mars/Olympus" }} | ${"an invalid zone"}
+    ${{ start: START, end: "2024-02-01T00:00:00Z" }} | ${[{ label: "d", kind: "rollingCap", statuses: ["d"], cap: "PT60H", window: { operatorDays: 7 } }]} | ${UTC}                          | ${"operator days without dayStartTime"}
+  `("returns null for $reason", ({ range, rules, options }) => {
+    expect(
+      dutyViolations(dutySequence(START, week1), range, rules, options),
+    ).toBeNull();
+  });
+
+  const daily: DutyRule = {
+    label: "12 a day",
+    kind: "fixedPeriodCap",
+    statuses: ["driving"],
+    cap: "PT12H",
+    period: { calendarDays: 1 },
+  };
+
+  // The log covers one week. A 40-year range reads as that week: the 14,610 days around it are not
+  // walked, so the walk stays under 10,000 days and the record is the week's alone.
+  it("reads a range far longer than the log as the time the log covers", () => {
+    const log = dutySequence(START, week1);
+
+    expect(
+      dutyViolations(
+        log,
+        { start: "2000-01-01T00:00:00Z", end: "2040-01-01T00:00:00Z" },
+        [daily],
+        UTC,
+      ),
+    ).toEqual(
+      dutyViolations(
+        log,
+        { start: START, end: log.at(-1)?.end as string },
+        [daily],
+        UTC,
+      ),
+    );
+  });
+
+  // One entry from 1800 to 2040 covers 87,658 local days, more than the 10,000 a walk may visit.
+  it("returns null for a log covering more than 10,000 local days", () => {
+    expect(
+      dutyViolations(
+        [
+          {
+            status: "driving",
+            start: "1800-01-01T00:00:00Z",
+            end: "2040-01-01T00:00:00Z",
+          },
+        ],
+        { start: "1800-01-01T00:00:00Z", end: "2040-01-01T00:00:00Z" },
+        [daily],
+        UTC,
+      ),
+    ).toBeNull();
+  });
 
   it("returns null when Temporal.Instant.from throws", () => {
     const log = dutySequence(START, week1);

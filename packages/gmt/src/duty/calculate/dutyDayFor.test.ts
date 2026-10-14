@@ -55,7 +55,8 @@ describe("dutyDayFor", () => {
 
   // A day start a clock change skips or repeats resolves "compatible" (CORE-4): a skipped time
   // is read after the gap, a repeated one at its first pass. The period that holds the change is
-  // then 23 or 25 hours long (expected values from Temporal's own "compatible" resolution).
+  // then shorter or longer by the change (expected values from Temporal's own "compatible"
+  // resolution).
   it.each`
     timeZone                 | dayStartTime | instant                   | start                     | end                       | hours   | reason
     ${"America/New_York"}    | ${"02:30"}   | ${"2024-03-10T12:00:00Z"} | ${"2024-03-10T07:30:00Z"} | ${"2024-03-11T06:30:00Z"} | ${23}   | ${"02:30 is skipped on the spring-forward day and read as 03:30"}
@@ -106,6 +107,26 @@ describe("dutyDayFor", () => {
           disambiguation,
         }),
       ).toEqual(expected);
+    },
+  );
+
+  // Apia deleted 30 December 2011: its 00:00 is skipped and resolves onto 31 December's 00:00
+  // (10:00Z on the 30th), a wall time the zone has. The deleted date opens no day, so the 29th's
+  // day ends where the 31st's starts, and "reject" has no skipped boundary to refuse.
+  it.each`
+    instant                   | start                     | end
+    ${"2011-12-30T09:59:59Z"} | ${"2011-12-29T10:00:00Z"} | ${"2011-12-30T10:00:00Z"}
+    ${"2011-12-30T10:00:00Z"} | ${"2011-12-30T10:00:00Z"} | ${"2011-12-31T10:00:00Z"}
+  `(
+    "accepts the day holding $instant in Pacific/Apia under reject",
+    ({ instant, start, end }) => {
+      expect(
+        dutyDayFor(instant, {
+          timeZone: "Pacific/Apia",
+          dayStartTime: "00:00",
+          disambiguation: "reject",
+        }),
+      ).toEqual({ start, end });
     },
   );
 

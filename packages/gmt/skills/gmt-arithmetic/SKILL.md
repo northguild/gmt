@@ -276,6 +276,11 @@ and full interval set operations.
       check a roster, append the plan and set `at` to its end.
     - A paired rest is three floors (`PairSpec`), not two integers:
       `qualifyingRestPairs`.
+    - A count of periods is 10,000 at most, alone or times `adjacent`,
+      `lookback` or `periods`. `fixedPeriodCap.period` and `occurrenceCap.per`
+      are a `LocalPeriod`: a count, never `elapsed`.
+    - `dutyViolations` reads only the time the log covers, and each check reads
+      the log as it stood then, so a record only grows as the log does.
     - Nested caps are separate rules, reported separately.
 14. **Read the docs site.** This skill is a routing pointer. For full option
     shapes, locale matrices, and code examples, read these:
@@ -320,7 +325,8 @@ and full interval set operations.
 
 - **Hours of work**: `evaluateDutyLog`, `dutyViolations`, `dutyDayFor`,
   `dutyTotals`, `longestRun`, `qualifyingRests`, `qualifyingRestPairs`,
-  `isValidDutyLog`, types `DutyEntry`, `DutyRule`, `Period`, `DutyReport`
+  `isValidDutyLog`, types `DutyEntry`, `DutyRule`, `Period`, `LocalPeriod`,
+  `DutyReport`
 
 ## Namespace selection
 
