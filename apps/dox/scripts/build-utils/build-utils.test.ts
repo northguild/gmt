@@ -430,6 +430,32 @@ describe("classifyType", () => {
   });
 });
 
+describe("classifyType — interval-object lists", () => {
+  const src = `
+    function f(
+      intervals: { start: string; end: string }[],
+      labelled: { start: string; end: string; label?: string }[],
+      entries: { status: string; start: string; end: string }[],
+    ): void {}
+  `;
+  const { checker, sourceFile } = compile(src);
+  const types = paramTypes(checker, sourceFile, "f");
+
+  it.each`
+    index | intervalShape | reason
+    ${0}  | ${true}       | ${"start and end alone"}
+    ${1}  | ${true}       | ${"an optional third member"}
+    ${2}  | ${undefined}  | ${"a required third member, which the interval editor would drop"}
+  `(
+    "reads parameter $index as intervals: $intervalShape ($reason)",
+    ({ index, intervalShape }) => {
+      expect(classifyType(checker, types[index]).intervalShape).toBe(
+        intervalShape,
+      );
+    },
+  );
+});
+
 // ---------------------------------------------------------------------------
 // classifyReturnType (checker-backed)
 // ---------------------------------------------------------------------------

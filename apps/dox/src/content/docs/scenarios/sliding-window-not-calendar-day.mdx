@@ -1,0 +1,47 @@
+---
+title: "A Sliding Window Is Not a Calendar Day"
+description: A rule asks for 10 hours of rest in any 24. Each calendar day of the log holds 10, so a per-day check passes, but the 24 hours ending at 06:00 hold 4.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Sliding Window Is Not a Calendar Day"
+  description="A rule asks for at least 10 hours of rest in any 24-hour period. The log rests from 00:00 to 10:00 on 1 January, works 20 hours to 06:00 on the 2nd, rests to 16:00, then works to midnight. Is the rule met?"
+  naiveCode={`// The naive approach: total the rest on each calendar day
+const restByDay = { "2024-01-01": 10, "2024-01-02": 10 }; // hours
+Object.values(restByDay).every((hours) => hours >= 10); // true
+// Twenty hours of work in a row, and the check says every 24 hours held 10 of rest.`}
+  explanation={`"Any 24-hour period" is every sliding window of 24 hours, not each calendar day. The windows that matter here are the ones that hold the 20-hour stretch: the 24 hours ending at 06:00 on the 2nd, when the second rest begins, hold only the 4 hours from 06:00 to 10:00 on the 1st. Grouping by calendar day passes logs a sliding window fails, because a day boundary can fall in the middle of the long stretch. In a \`Period\`, \`{ elapsed: "PT24H" }\` is the sliding reading and \`{ calendarDays: 1 }\` is the fixed one, and each outcome names which it used in \`periodBasis\`. \`dutyViolations\` lists the run of failed sliding windows once, by the worst.`}
+  gmtCode={`import { dutyViolations, evaluateDutyLog } from "@northguild/gmt";
+
+const log = [
+  { status: "rest", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "work", start: "2024-01-01T10:00:00Z", end: "2024-01-02T06:00:00Z" },
+  { status: "rest", start: "2024-01-02T06:00:00Z", end: "2024-01-02T16:00:00Z" },
+  { status: "work", start: "2024-01-02T16:00:00Z", end: "2024-01-03T00:00:00Z" },
+];
+const sliding = { label: "10 in any 24", kind: "restRequirement", restStatuses: ["rest"], per: { elapsed: "PT24H" }, minimum: "PT10H" };
+const daily = { label: "10 a calendar day", kind: "restRequirement", restStatuses: ["rest"], per: { calendarDays: 1 }, minimum: "PT10H" };
+
+evaluateDutyLog(log, "2024-01-02T06:00:00Z", [sliding], { timeZone: "UTC" }).outcomes[0];
+// { label: "10 in any 24", kind: "restRequirement", severity: "violation", satisfied: false,
+//   used: "PT4H", limit: "PT10H", remaining: "PT6H",
+//   window: { start: "2024-01-01T06:00:00Z", end: "2024-01-02T06:00:00Z" },
+//   periodBasis: "elapsed", dueBy: null, resetAt: null }
+
+const range = { start: "2024-01-01T00:00:00Z", end: "2024-01-03T00:00:00Z" };
+
+dutyViolations(log, range, [sliding], { timeZone: "UTC" }); // [{ label: "10 in any 24", window: { start: "2024-01-01T06:00:00Z", end: "2024-01-02T06:00:00Z" }, used: "PT4H", limit: "PT10H" }]
+dutyViolations(log, range, [daily], { timeZone: "UTC" }); // [] — every calendar day holds 10`}
+  fixedSpecId="evaluateDutyLog"
+/>
+
+The playground opens on an 11-hour driving cap. Swap its rule for
+`{ label: "10 in any 24", kind: "restRequirement", restStatuses: ["off"], per: { elapsed: "PT24H" }, minimum: "PT10H" }`
+and the 10 hours off before the drive meet it. Move `at` to `"2024-01-02T06:00:00Z"`, past the
+end of the log: the window then holds only the 4 hours from 06:00 to 10:00, and the rule fails.
+Change `per` to `{ calendarDays: 1 }`: the window is now the 2nd, which has only just begun, so
+the rule has not failed yet. The rules are in [Hours of
+Work](/guides/intervals/hours-of-work/#sliding-and-fixed-periods).

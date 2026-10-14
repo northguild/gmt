@@ -11,6 +11,7 @@ export * from "./datetime-format-options";
 export * from "./disambiguation";
 export * from "./duration-relative-to";
 export * from "./duration-string-options";
+export * from "./duty";
 export * from "./edi";
 export * from "./epcis";
 export * from "./exact-duration-unit";
