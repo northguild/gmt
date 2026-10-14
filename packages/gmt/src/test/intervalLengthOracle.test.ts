@@ -89,6 +89,7 @@ describe("intervalLength in calendar units matches a longhand oracle", () => {
         );
       });
 
+      // Worst CI run 2.5 s for 54 years of New York days; the timeout is three times that and more.
       it(`${unit} from ${start} to ${end} (Zoned, ${NEW_YORK})`, () => {
         const from =
           Temporal.PlainDateTime.from(start).toZonedDateTime(NEW_YORK);
@@ -97,7 +98,7 @@ describe("intervalLength in calendar units matches a longhand oracle", () => {
         expect(
           intervalLengthZoned(from.toString(), to.toString(), unit),
         ).toBeCloseTo(lengthOracle(from, to, unit), 10);
-      });
+      }, 30_000);
     }
   }
 });

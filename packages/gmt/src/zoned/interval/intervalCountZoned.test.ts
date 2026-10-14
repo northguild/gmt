@@ -361,6 +361,7 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
 // transition steps, past the 10,000 the count walks. The 10-hour row proves the stub alone does
 // not produce null.
 describe("intervalCountZoned transition cap", () => {
+  // Worst CI run 4 s for the 10,080-step row on the slowest runner; the timeout is three times that and more.
   it.each`
     start                               | end                                 | unit      | expected
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T10:00:00+00:00[UTC]"} | ${"hour"} | ${10}
@@ -386,6 +387,7 @@ describe("intervalCountZoned transition cap", () => {
 
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
+    30_000,
   );
 });
 

@@ -384,6 +384,7 @@ describe("readX12Time", () => {
   // the 24 × 60 minutes of a day and `HHMMSS` each of its 86,400 seconds. Plain Temporal counts
   // them from midnight and writes each one; the reader takes every one of them, and of all the
   // strings of that many digits it takes exactly that many, so it takes no other.
+  // Worst CI run 5 s for 86,400 values on the slowest runner; the timeout is three times that and more.
   it.each`
     form        | digits | unit        | count
     ${"HHMM"}   | ${4}   | ${"minute"} | ${1440}
@@ -418,6 +419,7 @@ describe("readX12Time", () => {
       }
       expect(read).toBe(count);
     },
+    30_000,
   );
 
   // The element has no form of 1, 2, 3 or 5 digits: all 101,110 such strings are refused.
