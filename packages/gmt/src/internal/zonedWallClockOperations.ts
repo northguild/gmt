@@ -757,10 +757,13 @@ function withAtEdge(
   let offset: CarriedOffset;
   try {
     Temporal.ZonedDateTime.from(zoned, options);
-    const { offset: offsetString, ...dateTimeFields } = fields;
+    // `fields` goes to `with` as it is, so each field is read with a property get, as
+    // ZonedDateTime#with reads it: a rest spread would copy own enumerable fields only and lose an
+    // inherited or non-enumerable one. PlainDateTime#with does not read `offset`.
+    const offsetString = fields.offset;
     wall = zoned
       .toPlainDateTime()
-      .with(dateTimeFields, { overflow: options?.overflow });
+      .with(fields, { overflow: options?.overflow });
     offset = {
       nanoseconds:
         offsetString === undefined

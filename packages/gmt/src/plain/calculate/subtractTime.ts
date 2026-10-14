@@ -1,9 +1,8 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount } from "../../internal";
+import { readDurationUnits } from "../../internal";
 import type { TimeDurationUnit } from "../../types";
 import { isValidTime, isValidTimeDurationUnit } from "../validate";
-import { isObject } from "../../internal/isObject";
 
 /**
  * Return a PlainTime ISO string with `units` subtracted from `value`.
@@ -28,18 +27,15 @@ export function subtractTime(
 ): string {
   try {
     const validTime = isValidTime(value);
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidTimeDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidTimeDurationUnit);
 
-    if (!validTime || !validUnits || !validAmounts) {
+    if (!validTime || amounts === null) {
       return "";
     }
 
     try {
       const time = Temporal.PlainTime.from(value);
-      return time.subtract(units).toString();
+      return time.subtract(amounts).toString();
     } catch {
       return "";
     }

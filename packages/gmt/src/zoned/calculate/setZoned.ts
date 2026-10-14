@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
+  DATE_TIME_FIELDS,
+  readSetFields,
   resolveOverflow,
   withZonedFields,
   zonedDateTimeFrom,
@@ -19,10 +21,22 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   equivalent to `.with()`'s, because Temporal's `ZonedDateTime.prototype.add()` doesn't accept
  *   `disambiguation`/`offset` at all.
  * - `fields` may set any of `year`, `month`, `monthCode`, `day`, `hour`, `minute`, `second`,
- *   `millisecond`, `microsecond`, `nanosecond`, `era`, and/or `eraYear`; omitted fields keep
- *   their current value. An empty object is a no-op. `calendar`, `timeZone`, and `offset` are
- *   deliberately excluded from `fields` — this function only sets date/time components, never
- *   the zone or calendar identity, and `offset` is controlled separately via `options.offset`.
+ *   `millisecond`, `microsecond` and/or `nanosecond`; omitted fields keep their current value. An
+ *   object with no field set, such as `{}` or `{ year: undefined }`, is a no-op.
+ * - Values are not converted: `monthCode` must be a string and every other field an integer number.
+ *   `null`, a numeric string, a boolean, a bigint, `NaN`, an infinity or a fraction returns "",
+ *   where Temporal would convert it. A number too large for its field follows `overflow`. A month
+ *   or day below 1, or a date outside Temporal's range, returns "".
+ * - An own key that is not one of these fields, such as a misspelt `yaer`, returns "". So does an
+ *   era, an `offset`, or a `calendar` or `timeZone` property, whether own, inherited or a getter. A
+ *   field is read with a property get, as Temporal reads it, so an inherited or getter field is
+ *   set.
+ * - A Temporal date or time object returns "", as Temporal's `with` refuses one. One whose
+ *   prototype has been replaced with `Object.prototype`, `null` or `Function.prototype` sets
+ *   nothing instead.
+ * - `calendar`, `timeZone`, and `offset` are deliberately excluded from `fields` — this function
+ *   only sets date/time components, never the zone or calendar identity, and `offset` is
+ *   controlled separately via `options.offset`.
  * - **Compatibility:** before 1.16.0 `offset` defaulted to `"ignore"`. Pass `{ offset: "ignore" }`
  *   to keep that resolution.
  * - Returns "" for invalid input.
@@ -38,11 +52,15 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", {}) // "2024-03-10T12:00:00-04:00[America/New_York]" (empty fields object is a no-op)
  * @example setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, { disambiguation: "reject" }) // "2024-11-03T01:00:00-05:00[America/New_York]" (offset defaults to "prefer": the source's -05:00 is still valid, so it is kept and "reject" never fires)
  * @example setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, { disambiguation: "reject", offset: "ignore" }) // "" (offset "ignore" re-resolves the repeated 01:00, and "reject" throws)
+ * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", { hour: "9" }) // "" (not converted)
  * @example setZoned("invalid", { hour: 9 }) // ""
  */
 export function setZoned(
   value: string,
-  fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
+  fields: Omit<
+    Temporal.ZonedDateTimeLike,
+    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
+  >,
   options?: {
     /**
      * What happens when the result names a day its month does not have, such as setting `month: 2`
@@ -90,11 +108,13 @@ export function setZoned(
 
     try {
       const zoned = zonedDateTimeFrom(value);
-      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-      // properties found") rather than treating it as a no-op, so short-circuit here.
-      if (Object.keys(fields).length === 0) return zoned.toString();
+      const set = readSetFields(fields, DATE_TIME_FIELDS);
+      if (set === null) return "";
+      // Only the values readSetFields checked reach Temporal, on both paths of withZonedFields. An
+      // empty result sets nothing: a no-op here, where Temporal's with() would throw.
+      if (Object.keys(set).length === 0) return zoned.toString();
 
-      return withZonedFields(zoned, fields, {
+      return withZonedFields(zoned, set, {
         overflow,
         disambiguation,
         offset,

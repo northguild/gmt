@@ -3,14 +3,14 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
-  isValidAmount,
   parseCalendarDateValue,
   plainDateAdd,
+  readDurationUnits,
   resolveOverflow,
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `units` subtracted from `value`.
@@ -52,12 +52,9 @@ export function subtractDate(
     }
 
     const validDate = isValidCalendarDate(value);
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateDurationUnit);
 
-    if (!validDate || !validUnits || !validAmounts) {
+    if (!validDate || amounts === null) {
       return "";
     }
 
@@ -69,7 +66,7 @@ export function subtractDate(
       const date = parseCalendarDateValue(value);
       const result = plainDateAdd(
         date,
-        Temporal.Duration.from(units).negated(),
+        Temporal.Duration.from(amounts).negated(),
         resolveOverflow(options?.overflow),
       );
       return formatDateInCalendar(result, calendar);
