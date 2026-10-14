@@ -11,8 +11,7 @@ An amount of time has two shapes in GMT:
 - A **unit object**, such as `{ minutes: 15 }` or `{ days: 1, hours: 12 }`. The date arithmetic
   functions take one: `addDate`, `subtractZoned` and their siblings.
 - An **ISO 8601 duration string**, such as `"PT15M"` or `"P1DT12H"`. The duration functions take
-  one, and so does any other function that needs a length of time, such as
-  `intervalFromDurationUtc`.
+  one, and so do the other functions that take a duration, such as `intervalFromDurationUtc`.
 
 `durationFromUnits` writes a unit object as a duration string, so an amount you hold as an object
 works with every function that takes a string. `totalUnits` totals a unit object in one call. Both
@@ -155,8 +154,8 @@ totalDuration(durationFromUnits({ months: 1 }), "days", { relativeTo: "2024-02-0
 
 TypeScript reports `{ weeks: 1 }` as an error where the call is written. A value that only exists
 at run time, such as an object parsed from JSON, gets `null`. Check for `null` before you use the
-result: `totalUnits(config.ttl, "seconds") ?? 0` turns a misspelt key into a lifetime of zero
-seconds.
+result. Do not default it away: `totalUnits(config.ttl, "seconds") ?? 0` would turn a misspelt
+key into a lifetime of zero seconds.
 
 ### Which function to use
 
