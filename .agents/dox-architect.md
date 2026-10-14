@@ -44,7 +44,8 @@ work is scoped against what is already built.
   `packages/gmt/src` by the library pipeline. Never fill it with a fallback string, a dash or
   site-side copy. `pnpm dox:docs-check` lists the gaps.
 - **The exports map is a hard constraint.** Module barrels only
-  (`@northguild/gmt/plain/calculate`); namespace barrels drag the 2.98 MB polyfill.
+  (`@northguild/gmt/plain/calculate`); a namespace barrel loads every module of its namespace
+  (`regex`, which has no module subpaths, is the one exception).
 - **Counts drift.** Derive them from source; never trust a number in the docs.
 - **React stays inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Maximal chrome, disciplined content surface.** Judge UI by reading a long page, never by a

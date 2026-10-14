@@ -44,7 +44,7 @@ citation boundary: a link the model emits that is not a real page renders as pla
 | Search           | Pagefind, built into the Starlight build                                                                                        |
 | Reference        | Generated from JSDoc with the TypeScript compiler API. Not TypeDoc: `@example` is an inline `fn() // result` line, and the source has no tag graph |
 | Pages            | One per function — exact-match search titles and a stable URL to cite. A type gets a page at `/reference/types/<Name>` only when two or more functions reach it; otherwise it is documented on its one function's page |
-| Imports          | Module barrels only (`@northguild/gmt/plain/calculate`). The exports map forbids per-function paths; namespace barrels re-export the 2.98 MB polyfill |
+| Imports          | Module barrels only (`@northguild/gmt/plain/calculate`). The exports map forbids per-function paths, and a namespace barrel loads its whole namespace |
 | Hosting          | Cloudflare Workers static assets plus `/api/*`, one Worker                                                                      |
 | AI surface       | `llms.txt`, `llms-full.txt` and per-page raw `.md`, emitted from the corpus                                                     |
 | Widgets          | A playground on every example, running the real library, plus purpose-built teaching widgets                                    |
@@ -72,7 +72,7 @@ code, tables and plotted widget values stay high-contrast and plain. Spec:
 | 2    | `DOX-B1a`, `B2a`–`d`   | A playground on every example, DST inspector, interval visualizer, converter bench |
 | 3    | `DOX-D1`, `D2`         | Glass chrome, focus motion                                                       |
 | 4    | `DOX-E1a`–`E1d`        | Interactive globe on the GPU with Earth imagery, multi-zone scrubber             |
-| 5    | `DOX-A4b`–`d`          | Scenarios, ported pitfalls, mentor index                                         |
+| 5    | `DOX-A4b`–`d`          | Scenarios, ported pitfalls, guides index                                         |
 | 6    | `DOX-C0`–`C4`          | Dox, the chat that mounts widgets                                                |
 
 Every tier is done; statuses and issue numbers are in [tracker.md](tracker.md). `apps/dox` is
