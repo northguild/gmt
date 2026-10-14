@@ -1,6 +1,6 @@
 ---
 title: Core Date Operations
-description: Getting the current time, arithmetic, comparison, durations, parsing, formatting, validation, calendar systems, business calendars, operating hours, nanosecond precision, and spans.
+description: Getting the current time, arithmetic, comparison, durations, parsing, formatting, relative time, validation, calendar systems, business calendars, operating hours, nanosecond precision, and spans.
 sidebar:
   order: 0
 ---
@@ -9,9 +9,10 @@ Everything you do with plain dates and datetimes in GMT.
 
 - [Getting the Current Date and Time](./get-current/) — read "now" as ISO strings in plain, zoned, UTC, and Unix shapes.
 - [Plain Arithmetic](./plain-arithmetic/) — add, subtract, and diff dates and datetimes with overflow control and rounding.
-- [Durations](./durations/) — parse, validate, combine, rebalance, and format ISO 8601 duration strings.
+- [Durations](./durations/) — parse, validate, combine, rebalance, total and format ISO 8601 duration strings, and write one from a unit object.
 - [Comparisons](./comparisons/) — order, equality, weekends, business days, and now-relative predicates.
 - [Formatting](./formatting/) — locale-aware display, relative labels, calendar-day labels, and fixed machine formats.
+- [Relative Time](./relative-time/) — human-friendly relative strings such as "yesterday" and "in 2 hours", for plain, zoned, Unix and UTC values.
 - [Parsing](./parsing/) — extract components from ISO strings and decode interchange grammars.
 - [Validation](./validation/) — validate date/time strings, timezone identifiers, intervals, and ranges.
 - [Calendar Systems](./calendar-systems/) — express dates in non-Gregorian calendars with native arithmetic.

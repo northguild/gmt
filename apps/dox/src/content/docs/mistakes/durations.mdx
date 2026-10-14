@@ -4,8 +4,10 @@ description: Common mistakes when working with durations in GMT.
 industries: [core]
 ---
 
-The `duration/` functions take ISO 8601 duration strings; the `add*`/`subtract*`
-functions take unit objects. Confusing the two representations is the most common
+An amount of time has two shapes: an ISO 8601 duration string (`"PT15M"`) and a unit object
+(`{ minutes: 15 }`). The `duration/` functions take the string, except `totalUnits` and
+`durationFromUnits`, which take the object. The date arithmetic functions (`addDate`,
+`subtractZoned` and their siblings) take the object. Passing the wrong shape is the most common
 source of duration bugs.
 
 ## Mistakes
@@ -15,12 +17,13 @@ import Mistake from "../../../components/Mistake.astro";
 <Mistake
   severity="high"
   title="Confusing duration strings with unit objects"
-  description="'P1Y2M' and `{ years: 1, months: 2 }` are not interchangeable. Duration functions take an ISO 8601 duration string; add and subtract functions take a unit object. Passing the other shape returns the invalid-input sentinel."
-  wrongCode={`normalizeDuration({ years: 1, months: 2 }); // "" — a unit object, not a duration string
+  description="'P1Y2M' and { years: 1, months: 2 } are one amount in two shapes, and a function takes only one of them. The other shape returns the invalid-input sentinel. When you hold a unit object and the function takes a duration string, write the string with durationFromUnits."
+  wrongCode={`formatDuration({ years: 1, months: 2 }, "en-US"); // "" — a unit object, not a duration string
 addDate("2024-01-15", "P1Y2M"); // "" — a duration string, not a unit object`}
-  rightCode={`import { addDate, formatDuration } from "@northguild/gmt";
+  rightCode={`import { addDate, durationFromUnits, formatDuration } from "@northguild/gmt";
 
-formatDuration("P1Y2M", "en-US"); // "1 year and 2 months"
+durationFromUnits({ years: 1, months: 2 }); // "P1Y2M"
+formatDuration(durationFromUnits({ years: 1, months: 2 }), "en-US"); // "1 year and 2 months"
 addDate("2024-01-15", { years: 1, months: 2 }); // "2025-03-15"`}
 />
 
@@ -39,29 +42,41 @@ if (isValidDuration(userInput)) {
 <Mistake
   severity="medium"
   title="Expecting a best-effort answer for calendar units without relativeTo"
-  description="Converting a calendar-unit duration (years, months) to days requires a reference date. Without `relativeTo`, the conversion is ambiguous — different months have different lengths."
-  wrongCode={`durationAs("P1M", "days"); // null — 28, 29, 30 or 31 days: without relativeTo, which month?`}
-  rightCode={`import { durationAs } from "@northguild/gmt";
+  description="Converting a calendar-unit duration (years, months) to days requires a reference date. Without relativeTo, the conversion is ambiguous — different months have different lengths."
+  wrongCode={`totalDuration("P1M", "days"); // null — 28, 29, 30 or 31 days: without relativeTo, which month?`}
+  rightCode={`import { totalDuration } from "@northguild/gmt";
 
-durationAs("P1M", "days", { relativeTo: "2024-02-01" }); // 29 — February 2024 is a leap month`}
+totalDuration("P1M", "days", { relativeTo: "2024-02-01" }); // 29 — February 2024 has 29 days`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Giving totalUnits a week"
+  description="totalUnits takes exact units only: days, hours, minutes, seconds, milliseconds, microseconds and nanoseconds. A week, a month or a year returns null, as a key or as the unit to total into, because TC39 Temporal gives those units no length without a date to measure from. Write a week as seven days. For a calendar amount, use totalDuration with relativeTo."
+  wrongCode={`totalUnits({ weeks: 1 }, "days"); // null — a week is not an exact unit
+totalUnits({ days: 7 }, "weeks"); // null — the same rule for the unit to total into`}
+  rightCode={`import { totalDuration, totalUnits } from "@northguild/gmt";
+
+totalUnits({ days: 7 }, "hours"); // 168 — a day counts as 24 hours
+totalDuration("P1W", "days", { relativeTo: "2024-02-01" }); // 7 — a week measured from a date`}
 />
 
 <Mistake
   severity="high"
   title="Reading a component with getDurationUnit when you wanted a total"
-  description="getDurationUnit returns one component of a normalized duration (e.g. just the hours). If you need the total duration in a specific unit, use durationAs instead."
+  description="getDurationUnit returns one component of a normalized duration (e.g. just the hours). If you need the total duration in a specific unit, use totalDuration instead."
   wrongCode={`const d = normalizeDuration("P1DT2H3M");
 const hours = getDurationUnit(d, "hours"); // 2 — just the hours component, not the total`}
-  rightCode={`import { normalizeDuration, durationAs } from "@northguild/gmt";
+  rightCode={`import { normalizeDuration, totalDuration } from "@northguild/gmt";
 
 const d = normalizeDuration("P1DT2H3M");
-const totalHours = durationAs(d, "hours"); // 26.05 — full duration converted, 3 minutes included`}
+const totalHours = totalDuration(d, "hours"); // 26.05 — full duration converted, 3 minutes included`}
 />
 
 <Mistake
   severity="medium"
   title="Expecting normalizeDuration to resolve calendar units against today"
-  description="normalizeDuration has no implicit relativeTo. Whenever a calendar unit (years, months, weeks) is involved, in the duration or as largestUnit, it needs an explicit `relativeTo`; without one it returns the empty-string sentinel, never a conversion against today's date."
+  description="normalizeDuration has no implicit relativeTo. Whenever a calendar unit (years, months, weeks) is involved, in the duration or as largestUnit, it needs an explicit relativeTo; without one it returns the empty-string sentinel, never a conversion against today's date."
   wrongCode={`normalizeDuration("P1M", { largestUnit: "day" }); // "" — no relativeTo, so no answer`}
   rightCode={`import { normalizeDuration } from "@northguild/gmt";
 
@@ -80,13 +95,13 @@ formatDuration("PT1H30M", "en-US"); // "1 hour and 30 minutes" — joined as a l
 
 <Mistake
   severity="medium"
-  title="Passing an array of units to durationAs"
-  description="durationAs takes a single unit name, not an array. Passing a list of unit names returns null."
-  wrongCode={`durationAs("P1DT2H3M", ["hours", "minutes"]); // null — expects a single unit string`}
-  rightCode={`import { durationAs } from "@northguild/gmt";
+  title="Passing an array of units to totalDuration"
+  description="totalDuration takes a single unit name, not an array. Passing a list of unit names returns null."
+  wrongCode={`totalDuration("P1DT2H3M", ["hours", "minutes"]); // null — expects a single unit string`}
+  rightCode={`import { totalDuration } from "@northguild/gmt";
 
-durationAs("P1DT2H3M", "hours"); // 26.05
-durationAs("P1DT2H3M", "minutes"); // 1563 — one call per unit`}
+totalDuration("P1DT2H3M", "hours"); // 26.05
+totalDuration("P1DT2H3M", "minutes"); // 1563 — one call per unit`}
 />
 
 ## See also
@@ -96,5 +111,7 @@ durationAs("P1DT2H3M", "minutes"); // 1563 — one call per unit`}
 - [`parseDuration` reference](/reference/duration/parse/parseDuration)
 - [`normalizeDuration` reference](/reference/duration/normalize/normalizeDuration)
 - [`formatDuration` reference](/reference/duration/format/formatDuration)
-- [`durationAs` reference](/reference/duration/calculate/durationAs)
+- [`totalDuration` reference](/reference/duration/calculate/totalDuration)
+- [`totalUnits` reference](/reference/duration/calculate/totalUnits)
+- [`durationFromUnits` reference](/reference/duration/calculate/durationFromUnits)
 - [`getDurationUnit` reference](/reference/duration/calculate/getDurationUnit)

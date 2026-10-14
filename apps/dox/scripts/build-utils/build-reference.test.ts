@@ -207,7 +207,7 @@ describe("extractFunction", () => {
     });
     expect(result).toBeDefined();
     expect(result!.playgroundSpec).toBeDefined();
-    expect(result!.playgroundSpec!.module).toBe("duration");
+    expect(result!.playgroundSpec!.module).toBe("duration/format");
     expect(result!.playgroundSpec!.fn).toBe("formatDuration");
     expect(result!.livePlaygroundTemplate).toBeDefined();
     expect(result!.livePlaygroundTemplate!.template).toBe("formatDuration()");
@@ -1261,8 +1261,8 @@ describe("synthesizeTemplate", () => {
 
   it("handles options objects", () => {
     const template = BR.synthesizeTemplate({
-      module: "duration",
-      fn: "durationAs",
+      module: "duration/calculate",
+      fn: "totalDuration",
       returnType: "number",
       params: [
         { name: "value", type: "string", value: "P1M" },
@@ -1271,7 +1271,7 @@ describe("synthesizeTemplate", () => {
       options: [{ name: "relativeTo", type: "string", value: "2024-02-01" }],
     });
     expect(template).toBe(
-      'durationAs("P1M", "days", { relativeTo: "2024-02-01" })',
+      'totalDuration("P1M", "days", { relativeTo: "2024-02-01" })',
     );
   });
 
@@ -1465,6 +1465,46 @@ describe("buildChoiceSeeds", () => {
       BR.buildChoiceSeeds(plain, [{ call: 'f("a")', result: '"x"' }], fields),
     ).toBeUndefined();
   });
+
+  it("skips an example whose unit object holds more than one unit", () => {
+    const unitsSpec = {
+      module: "duration/calculate",
+      fn: "totalUnits",
+      returnType: "number" as const,
+      params: [
+        {
+          name: "units",
+          type: "units" as const,
+          value: "15",
+          unitValue: "minutes",
+          options: ["days", "hours", "minutes", "seconds"],
+        },
+        {
+          name: "unit",
+          type: "enum" as const,
+          value: "seconds",
+          options: ["seconds", "days", "hours"],
+        },
+      ],
+    };
+    const examples = [
+      { call: 'totalUnits({ minutes: 15 }, "seconds")', result: "900" },
+      { call: 'totalUnits({ days: 1, hours: 12 }, "hours")', result: "36" },
+      { call: 'totalUnits({ hours: 36 }, "days")', result: "1.5" },
+      { call: 'totalUnits({ minutes: -90 }, "hours")', result: "-1.5" },
+    ];
+    const fields = BR.buildPlaygroundFields(
+      unitsSpec,
+      examples[0].call,
+    )!.fields;
+    expect(BR.buildChoiceSeeds(unitsSpec, examples, fields)).toEqual({
+      unit: {
+        seconds: { units: { seed: "15", unitSeed: "minutes" } },
+        days: { units: { seed: "36", unitSeed: "hours" } },
+        hours: { units: { seed: "-90", unitSeed: "minutes" } },
+      },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1525,8 +1565,8 @@ describe("buildPlaygroundFields", () => {
   it("maps clean positional params to fields", () => {
     const res = BR.buildPlaygroundFields(
       {
-        module: "duration",
-        fn: "durationAs",
+        module: "duration/calculate",
+        fn: "totalDuration",
         returnType: "number",
         params: [
           { name: "value", type: "string", value: "P1DT2H30M" },
@@ -1539,7 +1579,7 @@ describe("buildPlaygroundFields", () => {
         ],
         options: [{ name: "relativeTo", type: "string", value: "" }],
       },
-      'durationAs("P1DT2H30M", "hours")',
+      'totalDuration("P1DT2H30M", "hours")',
     );
     expect(res).toEqual({
       fields: [
@@ -1574,7 +1614,7 @@ describe("buildPlaygroundFields", () => {
   it("carries a trailing options object through as optionsSuffix", () => {
     const res = BR.buildPlaygroundFields(
       {
-        module: "duration",
+        module: "duration/calculate",
         fn: "normalizeDuration",
         returnType: "string",
         params: [{ name: "value", type: "string", value: "PT90M" }],
@@ -1608,6 +1648,74 @@ describe("buildPlaygroundFields", () => {
       kind: "units",
       seed: "5",
       unitSeed: "days",
+    });
+  });
+
+  it("builds a units control and a target unit from a two-argument call", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "duration/calculate",
+        fn: "totalUnits",
+        returnType: "number",
+        params: [
+          {
+            name: "units",
+            type: "units",
+            value: "15",
+            unitValue: "minutes",
+            options: ["days", "hours", "minutes", "seconds"],
+          },
+          {
+            name: "unit",
+            type: "enum",
+            value: "seconds",
+            options: ["seconds", "days", "hours"],
+          },
+        ],
+      },
+      'totalUnits({ minutes: 15 }, "seconds")',
+    );
+    expect(res?.objectArg).toBeUndefined();
+    expect(res?.fields).toEqual([
+      {
+        name: "units",
+        kind: "units",
+        seed: "15",
+        unitKeys: ["days", "hours", "minutes", "seconds"],
+        unitSeed: "minutes",
+      },
+      {
+        name: "unit",
+        kind: "enum",
+        seed: "seconds",
+        choices: ["seconds", "days", "hours"],
+      },
+    ]);
+  });
+
+  it("keeps a single { unit: n } argument positional for a units control", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "duration/calculate",
+        fn: "durationFromUnits",
+        returnType: "string",
+        params: [
+          {
+            name: "units",
+            type: "units",
+            value: "15",
+            unitValue: "minutes",
+            options: ["days", "hours", "minutes"],
+          },
+        ],
+      },
+      "durationFromUnits({ minutes: 15 })",
+    );
+    expect(res?.objectArg).toBeUndefined();
+    expect(res?.fields).toHaveLength(1);
+    expect(res?.fields[0]).toMatchObject({
+      kind: "units",
+      unitSeed: "minutes",
     });
   });
 
@@ -1693,7 +1801,7 @@ describe("buildPlaygroundFields", () => {
   it("still bails on a required missing param or a non-literal arg", () => {
     const missingRequired = BR.buildPlaygroundFields(
       {
-        module: "duration",
+        module: "duration/calculate",
         fn: "formatDuration",
         returnType: "string",
         params: [
@@ -2715,5 +2823,31 @@ describe("industry tag on a page", () => {
     ).toBeUndefined();
     expect(BR.typeIndustry(["plain/calculate/a"], layers)).toBeUndefined();
     expect(BR.typeIndustry([], layers)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit order in printed types
+// ---------------------------------------------------------------------------
+
+describe("unit names in printed types", () => {
+  // The source writes the literals out of order, so the checker meets them out of order. The
+  // union is inline in the parameter: an alias would print as its name.
+  const SOURCE = [
+    'interface Opts { /** The unit. @defaultValue `"days"` */ unit?: "minute" | "day" | "hour" }',
+    "/**\n * @param unit The unit.\n * @param units The amounts.\n * @param options The options.\n */",
+    'function f(unit: "hour" | "days" | "day" | "hours", units: Partial<Record<"days" | "years", number>>, options?: Opts): string { return unit; }',
+  ].join("\n");
+
+  it("prints every union of unit names largest first", () => {
+    const doc = extractFn(SOURCE, "f");
+    expect(doc.signature).toContain('unit: "days" | "hours" | "day" | "hour"');
+    expect(doc.signature).toContain('Record<"years" | "days", number>');
+    expect(doc.params.find((p) => p.name === "unit")?.type).toBe(
+      '"days" | "hours" | "day" | "hour"',
+    );
+    expect(doc.options[0].rows.find((r) => r.name === "unit")?.type).toBe(
+      '"day" | "hour" | "minute"',
+    );
   });
 });

@@ -43,7 +43,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  *   such limit.
  *
  * @param value ISO 8601 instant string (e.g. "2024-06-15T03:00:00Z")
- * @param unit boundary unit ("hour" | "day" | "week" | "month", or its plural)
+ * @param unit boundary unit ("month" | "week" | "day" | "hour", or its plural)
  * @param timeZone IANA name or UTC offset the boundary is computed in: a time zone identifier
  *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns UTC instant string ending in "Z", or "" on invalid input

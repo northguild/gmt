@@ -139,7 +139,7 @@ function nextBucketStartWithinRange(
  *
  * @param start ISO 8601 instant string for the range start (inclusive)
  * @param end ISO 8601 instant string for the range end (exclusive)
- * @param unit bucket unit ("hour" | "day" | "week" | "month", or its plural)
+ * @param unit bucket unit ("month" | "week" | "day" | "hour", or its plural)
  * @param timeZone IANA name or UTC offset the buckets are computed in: a time zone identifier
  *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns array of UTC instant strings ending in "Z", or [] on invalid input

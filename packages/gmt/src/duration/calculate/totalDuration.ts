@@ -10,14 +10,20 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Express an ISO 8601 duration as a single fractional total in one unit.
  *
  * - Uses Temporal.Duration.from and .total — the whole duration is converted, so
- *   durationAs("P1DT2H30M", "hours") is 26.5, not the 2 that `getDurationUnit` reads.
- * - The result is fractional, not rounded: durationAs("P1DT2H30M", "days") is
- *   1.1041666666666667. Round it yourself, or reach for `normalizeDuration` instead.
+ *   totalDuration("P1DT2H30M", "hours") is 26.5, not the 2 that `getDurationUnit` reads.
+ * - Which function to use: `totalDuration` takes an ISO 8601 duration string. `totalUnits` takes
+ *   a unit object of exact units, such as `{ minutes: 15 }`. `durationFromUnits` turns a unit
+ *   object into the duration string this function takes. To total a calendar amount written as a
+ *   unit object, such as `{ months: 1 }`, pass the result of `durationFromUnits` here with
+ *   `relativeTo`.
+ * - The result is fractional, not rounded: totalDuration("P1DT2H30M", "days") is
+ *   1.1041666666666667. Round it yourself, or reach for `normalizeDuration` instead. It is a
+ *   JavaScript number, so a total past 2^53 is the nearest double.
  * - The calendar-unit rule of `relativeTo` is the same one `normalizeDuration` (A3) carries;
  *   `addDuration`/`subtractDuration` (A2) have it worse still, since Temporal gives them no
  *   `relativeTo` option at all.
  * - The requested-unit half of that rule bites even on day/time-only input: "P1DT2H30M" has
- *   no calendar component, yet durationAs("P1DT2H30M", "weeks") is still null — a week is a
+ *   no calendar component, yet totalDuration("P1DT2H30M", "weeks") is still null — a week is a
  *   calendar quantity to Temporal regardless of what it is being measured from.
  * - A zoned `relativeTo` string resolves its wall time with disambiguation "compatible" and
  *   offset "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a
@@ -44,22 +50,22 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param options The anchor calendar units are measured from
  * @returns the fractional total in `unit`, or null on invalid input
  *
- * @example durationAs("P1DT2H30M", "hours") // 26.5
- * @example durationAs("P1DT2H30M", "minutes") // 1590
- * @example durationAs("PT36H", "days") // 1.5
- * @example durationAs("-PT90M", "hours") // -1.5
- * @example durationAs("P1M", "days") // null (calendar unit needs relativeTo)
- * @example durationAs("P1M", "days", { relativeTo: "2024-02-01" }) // 29
- * @example durationAs("P1M", "days", { relativeTo: "20240201" }) // null (basic format)
- * @example durationAs("P1D", "hours", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // 23 (spring-forward)
- * @example durationAs("P1D", "hours", { relativeTo: "2024-11-03T01:30[America/New_York]" }) // 25
- * @example durationAs("P1DT2H30M", "minute") // 1590 (singular unit name)
- * @example durationAs("not a duration", "hours") // null
- * @example durationAs("P1Y", "days", { relativeTo: "2024-02-24[u-ca=hebrew]" }) // 385 (Hebrew leap year 5784)
- * @example durationAs("P1M", "days", { relativeTo: "2024-02-10[!u-ca=hebrew]" }) // 30 (1 Adar I 5784; the critical flag is accepted)
- * @example durationAs("P1M", "days", { relativeTo: "2024-02-10T00:00:00[u-ca=hebrew]" }) // 30 (a date-time without a zone reads as its date, as Temporal reads relativeTo)
+ * @example totalDuration("P1DT2H30M", "hours") // 26.5
+ * @example totalDuration("P1DT2H30M", "minutes") // 1590
+ * @example totalDuration("PT36H", "days") // 1.5
+ * @example totalDuration("-PT90M", "hours") // -1.5
+ * @example totalDuration("P1M", "days") // null (calendar unit needs relativeTo)
+ * @example totalDuration("P1M", "days", { relativeTo: "2024-02-01" }) // 29
+ * @example totalDuration("P1M", "days", { relativeTo: "20240201" }) // null (basic format)
+ * @example totalDuration("P1D", "hours", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // 23 (spring-forward)
+ * @example totalDuration("P1D", "hours", { relativeTo: "2024-11-03T01:30[America/New_York]" }) // 25
+ * @example totalDuration("P1DT2H30M", "minute") // 1590 (singular unit name)
+ * @example totalDuration("not a duration", "hours") // null
+ * @example totalDuration("P1Y", "days", { relativeTo: "2024-02-24[u-ca=hebrew]" }) // 385 (Hebrew leap year 5784)
+ * @example totalDuration("P1M", "days", { relativeTo: "2024-02-10[!u-ca=hebrew]" }) // 30 (1 Adar I 5784; the critical flag is accepted)
+ * @example totalDuration("P1M", "days", { relativeTo: "2024-02-10T00:00:00[u-ca=hebrew]" }) // 30 (a date-time without a zone reads as its date, as Temporal reads relativeTo)
  */
-export function durationAs(
+export function totalDuration(
   value: string,
   unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: {

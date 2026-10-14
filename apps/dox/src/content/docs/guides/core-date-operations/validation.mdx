@@ -49,6 +49,34 @@ isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]"); // true — a UTC string's cale
 
 See [Calendar Systems](../calendar-systems/) for the rules on calendar annotations.
 
+## UTC timestamps for other readers
+
+`isValidUtc` is true for a UTC instant in ISO 8601 extended form with an upper-case `T` and
+`Z`. That includes four forms outside RFC 3339, which other readers do not all take: a time
+without seconds, a comma before the fraction, an expanded `±YYYYYY` year and an RFC 9557
+annotation. When the string goes on to a database, a JSON client or any reader that is not
+Temporal, check it with `isValidUtcTimestamp`:
+
+```typescript
+import { isValidUtc, isValidUtcTimestamp } from "@northguild/gmt";
+
+isValidUtcTimestamp("2026-10-06T12:00:00Z"); // true
+isValidUtcTimestamp("2026-10-06T12:00:00.123456789Z"); // true
+
+isValidUtc("2026-10-06T12:00:00Z[Europe/Paris]"); // true
+isValidUtcTimestamp("2026-10-06T12:00:00Z[Europe/Paris]"); // false — the annotation
+isValidUtcTimestamp("2026-10-06T12:00:00,5Z"); // false — comma before the fraction
+isValidUtcTimestamp("-005000-01-01T00:00:00Z"); // false — expanded year
+isValidUtcTimestamp("2026-10-06T12:00Z"); // false — no seconds
+isValidUtcTimestamp("2026-02-30T00:00:00Z"); // false — February has no 30th
+```
+
+It accepts one spelling of the RFC 3339 `date-time`: a four-digit year, an upper-case `T`,
+seconds, an optional fraction of one to nine digits, and an upper-case `Z` with nothing after
+it. A reader may still refuse or round a string that is true here: PostgreSQL has no year
+`0000` and keeps microseconds. See [Nanosecond Precision](../nanosecond-precision/). To accept
+the other RFC 3339 spellings, numeric offsets included, use `isValidRfc3339DateTime`.
+
 ## Daylight saving time
 
 ```typescript
@@ -180,4 +208,5 @@ Don't confuse the two: `isValidDateInterval` takes positional `(start, end)` arg
 - [Intervals](/guides/intervals/containment-and-overlap/) — containment, overlap, and set operations on validated ranges
 - [`isValidDate` reference](/reference/plain/validate/isValidDate)
 - [`isValidTimeZone` reference](/reference/zoned/validate/isValidTimeZone)
+- [`isValidUtcTimestamp` reference](/reference/utc/validate/isValidUtcTimestamp)
 - [`hasDaylightSaving` reference](/reference/zoned/validate/hasDaylightSaving)

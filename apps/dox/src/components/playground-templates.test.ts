@@ -73,6 +73,20 @@ describe("live playground templates", () => {
 
       expect(parseCallArgs(call).length).toBeGreaterThanOrEqual(0);
       expect(call.startsWith(`${t.fn}(`)).toBe(true);
+
+      // A unit object field holds one key. The first `@example` must write
+      // exactly that, or the form seeds a smaller object than the page shows
+      // (a two-key `{ years: 1, months: 2 }` seeds `{ years: 1 }`).
+      if (t.objectArg) return;
+      const squash = (a: string) => a.replace(/\s+/g, "");
+      const written = parseCallArgs(t.template);
+      const rebuilt = parseCallArgs(call);
+      (t.fields ?? []).forEach((field, i) => {
+        if (field.kind !== "units") return;
+        expect(squash(rebuilt[i] ?? ""), `${t.fn} ${field.name}`).toBe(
+          squash(written[i] ?? ""),
+        );
+      });
     },
   );
 
@@ -107,4 +121,117 @@ describe("live playground templates", () => {
       ).not.toBe("sentinel");
     },
   );
+});
+
+// The two functions that take a unit object. Every unit the control lists must answer, for
+// every target unit the select offers: a listed unit that returns the sentinel (a week given
+// to `totalUnits`) would be a dead choice in the form.
+describe("unit-object playgrounds", () => {
+  async function callWith(
+    id: string,
+    over: Record<string, Partial<CallField>>,
+  ): Promise<{ call: string; result: unknown }> {
+    const t = LIVE_PLAYGROUND_TEMPLATES[id];
+    const mod = await GMT_MODULES[t.module]?.();
+    const fields = (t.fields ?? []).map((f) => ({
+      ...seededField(f),
+      ...over[f.name],
+    }));
+    const call = buildCall(t.fn, fields, {
+      optionsSuffix: t.optionsSuffix,
+      objectArg: t.objectArg,
+    });
+    const args = parseCallArgs(call)
+      .map((a) => a.trim())
+      .map(evaluateArg);
+    const fn = mod?.[t.fn] as (...a: unknown[]) => unknown;
+    return { call, result: fn(...args) };
+  }
+
+  it("totalUnits returns a number for every unit and target unit it offers", async () => {
+    const t = LIVE_PLAYGROUND_TEMPLATES.totalUnits;
+    const units = t.fields?.find((f) => f.kind === "units");
+    const target = t.fields?.find((f) => f.kind === "enum");
+    expect(units?.unitKeys?.length).toBeGreaterThan(0);
+    expect(target?.choices?.length).toBeGreaterThan(0);
+    for (const unit of units?.unitKeys ?? []) {
+      for (const choice of target?.choices ?? []) {
+        const { call, result } = await callWith("totalUnits", {
+          [units!.name]: { value: "15", unit },
+          [target!.name]: { value: choice },
+        });
+        expect(typeof result, call).toBe("number");
+      }
+    }
+  });
+
+  it("durationFromUnits writes a duration string for every unit it offers", async () => {
+    const t = LIVE_PLAYGROUND_TEMPLATES.durationFromUnits;
+    const units = t.fields?.find((f) => f.kind === "units");
+    expect(units?.unitKeys?.length).toBeGreaterThan(0);
+    for (const unit of units?.unitKeys ?? []) {
+      const { call, result } = await callWith("durationFromUnits", {
+        [units!.name]: { value: "15", unit },
+      });
+      expect(result, call).toMatch(/^P/);
+    }
+  });
+});
+
+describe("unit name order in selects", () => {
+  const PLURAL = [
+    "years",
+    "months",
+    "weeks",
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+    "nanoseconds",
+  ];
+  const UNITS = [...PLURAL, ...PLURAL.map((u) => u.slice(0, -1))];
+  const rank = (c: string) => UNITS.indexOf(c);
+
+  /** Unit names largest first, then every other choice in its order, then `""`. */
+  const expected = (choices: readonly string[]) => [
+    ...choices.filter((c) => rank(c) >= 0).sort((a, b) => rank(a) - rank(b)),
+    ...choices.filter((c) => rank(c) < 0 && c !== ""),
+    ...choices.filter((c) => c === ""),
+  ];
+
+  it("lists unit names largest first in every select that offers one", () => {
+    const wrong: string[] = [];
+    for (const [id, t] of templates) {
+      for (const f of t.fields ?? []) {
+        const choices = (f as { choices?: string[] }).choices;
+        if (!choices?.some((c) => rank(c) >= 0)) continue;
+        if (JSON.stringify(choices) !== JSON.stringify(expected(choices))) {
+          wrong.push(`${id}.${f.name}`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it.each([
+    "getNowUnit",
+    "getUnixNowUnit",
+    "getUtcNowUnit",
+    "getZonedNowUnit",
+    "parseUnitFromDate",
+    "parseUnitFromDateTime",
+    "parseUnitFromUnix",
+    "parseUnitFromUtc",
+    "parseUnitFromZoned",
+  ])("%s lists its units largest first, then dayOfWeek", (id) => {
+    const unit = LIVE_PLAYGROUND_TEMPLATES[id]?.fields?.find(
+      (f) => f.name === "unit",
+    ) as { choices?: string[] } | undefined;
+    const choices = unit?.choices ?? [];
+    expect(choices).toContain("dayOfWeek");
+    expect(choices).toEqual(expected(choices));
+    expect(rank(choices[0])).toBe(0);
+  });
 });

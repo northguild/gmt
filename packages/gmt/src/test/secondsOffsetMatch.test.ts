@@ -1,4 +1,4 @@
-import { durationAs } from "../duration/calculate/durationAs";
+import { totalDuration } from "../duration/calculate/totalDuration";
 import { compareDurations } from "../duration/compare/compareDurations";
 import { normalizeDuration } from "../duration/normalize/normalizeDuration";
 import { zonedDateTimeFrom } from "../internal/zonedWallClock";
@@ -98,7 +98,7 @@ describe("a zoned offset written with seconds matches exactly (D12)", () => {
   `(
     "duration functions read relativeTo $relativeTo: $days days ($why)",
     ({ relativeTo, days, normalized, comparison }) => {
-      expect(durationAs("P1M", "days", { relativeTo })).toBe(days);
+      expect(totalDuration("P1M", "days", { relativeTo })).toBe(days);
       expect(
         normalizeDuration("P45D", { largestUnit: "month", relativeTo }),
       ).toBe(normalized);

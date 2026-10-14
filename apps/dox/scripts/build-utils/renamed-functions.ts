@@ -24,4 +24,8 @@ export const RENAMED_FUNCTIONS: readonly RenamedFunction[] = [
   { from: "plain/format/formatSql", to: "plain/format/formatSqlDateTime" },
   { from: "utc/parse/parseHttp", to: "utc/parse/parseHttpDate" },
   { from: "utc/format/formatHttp", to: "utc/format/formatHttpDate" },
+  {
+    from: "duration/calculate/durationAs",
+    to: "duration/calculate/totalDuration",
+  },
 ];

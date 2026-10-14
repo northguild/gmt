@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveOverflow } from "../../internal";
+import {
+  DATE_TIME_FIELDS,
+  readSetFields,
+  resolveOverflow,
+} from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -13,8 +17,20 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `addUtc()` calls field-by-field — see `setDate`'s doc for why order-independent field
  *   resolution matters.
  * - `fields` may set any of `year`, `month`, `monthCode`, `day`, `hour`, `minute`, `second`,
- *   `millisecond`, `microsecond`, `nanosecond`, `era`, and/or `eraYear`; omitted fields keep
- *   their current value. An empty object is a no-op.
+ *   `millisecond`, `microsecond` and/or `nanosecond`; omitted fields keep their current value. An
+ *   object with no field set, such as `{}` or `{ year: undefined }`, is a no-op.
+ * - Values are not converted: `monthCode` must be a string and every other field an integer number.
+ *   `null`, a numeric string, a boolean or a fraction returns "", where Temporal would convert or
+ *   truncate it. A bigint, `NaN` or an infinity returns "" too. A number too large for its
+ *   field follows `overflow`. A month or day below 1, or a date outside Temporal's range, returns
+ *   "".
+ * - An own key that is not one of these fields, such as a misspelt `yaer`, returns "". So does an
+ *   era, an `offset`, or a `calendar` or `timeZone` property, whether own, inherited or a getter. A
+ *   field is read with a property get, as Temporal reads it, so an inherited or getter field is
+ *   set.
+ * - A Temporal date or time object returns "", as Temporal's `with` refuses one. One whose
+ *   prototype has been replaced with `Object.prototype`, `null` or `Function.prototype` sets
+ *   nothing instead.
  * - There are no `disambiguation` or `offset` options (removed in 1.16.0): a UTC instant's wall
  *   clock is never ambiguous and its offset is always +00:00, so neither had anything to act on.
  * - Returns "" for invalid input.
@@ -28,11 +44,15 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example setUtc("2024-01-31T12:00:00Z", { month: 2 }) // "2024-02-29T12:00:00Z" (constrain clamps to the last valid day)
  * @example setUtc("2024-01-31T12:00:00Z", { month: 2 }, { overflow: "reject" }) // ""
  * @example setUtc("2024-03-10T12:00:00Z", {}) // "2024-03-10T12:00:00Z" (empty fields object is a no-op)
+ * @example setUtc("2024-03-10T12:00:00Z", { hour: "9" }) // "" (not converted)
  * @example setUtc("invalid", { hour: 9 }) // ""
  */
 export function setUtc(
   value: string,
-  fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
+  fields: Omit<
+    Temporal.ZonedDateTimeLike,
+    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
+  >,
   options?: {
     /**
      * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,
@@ -55,12 +75,12 @@ export function setUtc(
     try {
       const instant = Temporal.Instant.from(value);
       const zoned = instant.toZonedDateTimeISO("UTC");
-      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-      // properties found") rather than treating it as a no-op, so short-circuit here.
+      const set = readSetFields(fields, DATE_TIME_FIELDS);
+      if (set === null) return "";
+      // Only the values readSetFields checked reach Temporal. An empty result sets nothing: a
+      // no-op here, where Temporal's with() would throw.
       const result =
-        Object.keys(fields).length === 0
-          ? zoned
-          : zoned.with(fields, { overflow });
+        Object.keys(set).length === 0 ? zoned : zoned.with(set, { overflow });
       return result.toInstant().toString();
     } catch {
       return "";

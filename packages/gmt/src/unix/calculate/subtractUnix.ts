@@ -3,8 +3,8 @@ import type { Temporal } from "@js-temporal/polyfill";
 import {
   frameInstant,
   frameZoned,
-  isValidAmount,
   normalizeZoneFrame,
+  readDurationUnits,
   resolveOverflow,
   subtractFromZoned,
 } from "../../internal";
@@ -16,7 +16,7 @@ import {
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Subtract a temporal amount from a Unix epoch value and return the resulting epoch.
@@ -84,12 +84,9 @@ export function subtractUnix(
 
     if (frame === null || epochUnit === null) return null;
 
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
 
-    if (!validUnits || !validAmounts) {
+    if (amounts === null) {
       return null;
     }
 
@@ -102,7 +99,7 @@ export function subtractUnix(
     try {
       const zdt: Temporal.ZonedDateTime = frameZoned(instant, frame);
       return toUnixEpoch(
-        frameInstant(subtractFromZoned(zdt, units, { overflow }), frame),
+        frameInstant(subtractFromZoned(zdt, amounts, { overflow }), frame),
         epochUnit,
       );
     } catch {

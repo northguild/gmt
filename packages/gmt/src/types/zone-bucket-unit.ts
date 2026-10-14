@@ -8,4 +8,4 @@
  *
  * Narrow a candidate unit with `isValidZoneBucketUnit`.
  */
-export type ZoneBucketUnit = "hour" | "day" | "week" | "month";
+export type ZoneBucketUnit = "month" | "week" | "day" | "hour";

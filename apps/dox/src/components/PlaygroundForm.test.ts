@@ -166,8 +166,18 @@ describe("buildCall", () => {
       { name: "value", kind: "string", value: "P1DT2H30M" },
       { name: "unit", kind: "enum", value: "hours" },
     ];
-    expect(buildCall("durationAs", fields)).toBe(
-      'durationAs("P1DT2H30M", "hours")',
+    expect(buildCall("totalDuration", fields)).toBe(
+      'totalDuration("P1DT2H30M", "hours")',
+    );
+  });
+
+  it("assembles a unit object and a target unit", () => {
+    const fields: CallField[] = [
+      { name: "units", kind: "units", value: "15", unit: "minutes" },
+      { name: "unit", kind: "enum", value: "seconds" },
+    ];
+    expect(buildCall("totalUnits", fields)).toBe(
+      'totalUnits({ minutes: 15 }, "seconds")',
     );
   });
 
@@ -368,12 +378,12 @@ describe("PlaygroundForm run() flow", () => {
       { name: "value", kind: "string", value: "P1DT2H30M" },
       { name: "unit", kind: "enum", value: "hours" },
     ];
-    const call = buildCall("durationAs", fields);
-    const mockMod = { durationAs: (_v: string, _u: string) => 26.5 };
+    const call = buildCall("totalDuration", fields);
+    const mockMod = { totalDuration: (_v: string, _u: string) => 26.5 };
     const args = parseCallArgs(call)
       .map((a) => a.trim())
       .map(evaluateArg);
-    const result = mockMod.durationAs(...(args as [string, string]));
+    const result = mockMod.totalDuration(...(args as [string, string]));
 
     const outputEl = document.createElement("output");
     renderResult(

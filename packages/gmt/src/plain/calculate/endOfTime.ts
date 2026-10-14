@@ -13,7 +13,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * import { EndOfTimeUnit } from "@northguild/gmt/plain";
  * const unit: EndOfTimeUnit = "minutes";
  */
-export type EndOfTimeUnit = Temporal.SmallestUnit<Temporal.TimeUnit | "day">;
+export type EndOfTimeUnit = Temporal.SmallestUnit<"day" | Temporal.TimeUnit>;
 
 const supported: readonly string[] = [
   "day",

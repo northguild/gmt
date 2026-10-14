@@ -49,7 +49,7 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
   not argue for `NaN` over `null`, and `null` is equally distinguishable from `0`. Four
   things decide it the other way:
   `context/coding-standards.md` makes `null` the sentinel for every number-returning
-  function in the library, and `diffZoned`, `getHoursInZonedDay`, `durationAs` and
+  function in the library, and `diffZoned`, `getHoursInZonedDay`, `totalDuration` and
   `intervalCountDate` all honour it; `number | null` is enforced by `strictNullChecks`
   while a `NaN` types as plain `number` and gives a caller no signal the call can fail;
   `spanNs` and `spanWallClock` already return `null`, so `NaN` would have put two

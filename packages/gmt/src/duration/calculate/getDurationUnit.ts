@@ -9,10 +9,10 @@ import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
  *
  * - Uses Temporal.Duration.from and reads the named field directly — this is the value as
  *   *stored*, not a converted total: getDurationUnit("PT90M", "hours") is 0, because "PT90M"
- *   holds 90 in its minutes field and nothing in its hours field. Use `durationAs` for a
+ *   holds 90 in its minutes field and nothing in its hours field. Use `totalDuration` for a
  *   converted total.
  * - Never needs `relativeTo`: reading a field is not a unit conversion, so calendar units
- *   (years/months/weeks) work here even though they require an anchor in `durationAs`.
+ *   (years/months/weeks) work here even though they require an anchor in `totalDuration`.
  * - Temporal balances fractional units at parse time, so getDurationUnit("PT1.5H", "minutes")
  *   is 30 — the input's own precision, not the caller's spelling of it, decides the fields.
  * - A negative duration stores *every* field as negative, so this returns a negative number
