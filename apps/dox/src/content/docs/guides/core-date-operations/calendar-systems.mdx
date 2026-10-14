@@ -132,8 +132,8 @@ import {
   addDate,
   diffDate,
   diffDateAsDuration,
-  durationAs,
   intervalCountDate,
+  totalDuration,
 } from "@northguild/gmt";
 
 addDate("2024-02-24[u-ca=hebrew]", { months: 1 });
@@ -148,7 +148,7 @@ diffDate("2024-03-11[u-ca=hebrew]", "2024-04-10[u-ca=hebrew]", "months");
 diffDateAsDuration("2024-08-31[u-ca=buddhist]", "2024-09-30[u-ca=buddhist]", "months");
 // "P30D" — not "P1M": a month counts only once the end reaches the same day of the next month
 
-durationAs("P1Y", "days", { relativeTo: "2023-09-16[u-ca=hebrew]" });
+totalDuration("P1Y", "days", { relativeTo: "2023-09-16[u-ca=hebrew]" });
 // 383 — Hebrew leap year 5784; relativeTo "2023-09-16" gives 366
 ```
 
