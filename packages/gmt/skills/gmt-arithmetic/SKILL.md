@@ -65,6 +65,32 @@ and full interval set operations.
 1. **`add*` takes a `{ unit: number }` object, not an ISO duration string.**
    `addDate("2024-03-15", { days: 5 })` works; `addDate("2024-03-15", "P5D")`
    returns `""`. Use `diffDateAsDuration` / `addDuration` for duration strings.
+   An amount has those two shapes, and each function takes one of them:
+   - **A unit object is checked the same way everywhere.** A unit outside the
+     function's set returns the sentinel: `addDate` takes years to days,
+     `addTime` hours to nanoseconds. So does an own key that is no unit name,
+     and an amount that is not a whole finite number. A unit set to `undefined`
+     is absent, as Temporal reads it.
+   - **`durationFromUnits` is the bridge from the object to the string.** It
+     takes all ten units and carries nothing into a larger unit. Seconds and
+     smaller are written as one decimal number of seconds. Pass its result to
+     any function that takes a duration string.
+   - **`totalUnits` totals the object in one call.** It takes exact units only:
+     days down to nanoseconds, a day being 24 hours. A year, a month or a week
+     returns `null`, as a key and as the unit asked for.
+   - **`totalDuration` totals a duration string**, and takes `relativeTo` for a
+     calendar amount. To total `{ months: 1 }`, build the string with
+     `durationFromUnits` and pass it here.
+
+   ```typescript
+   durationFromUnits({ minutes: 15 }); // "PT15M"
+   durationFromUnits({ minutes: 90 }); // "PT90M" — not carried into hours
+   totalUnits({ minutes: 15 }, "seconds"); // 900
+   totalUnits({ weeks: 1 }, "days"); // null — write { days: 7 }
+   totalUnits("PT15M", "seconds"); // null — a duration string goes to totalDuration
+   totalDuration("PT36H", "days"); // 1.5
+   totalDuration(durationFromUnits({ months: 1 }), "days", { relativeTo: "2024-02-01" }); // 29
+   ```
 2. **Arithmetic clamps; parsers reject.** `overflow` defaults to `"constrain"`,
    Temporal's default: January 31 plus one month is February 29, and
    `addDate("2024-02-29", { years: 1 })` is `"2025-02-28"`. Pass
@@ -102,9 +128,10 @@ and full interval set operations.
    hour on its spring-forward counts 2 hours, and a range over `Pacific/Apia`'s
    deleted 30 December 2011 does not count that day. `intervalCountUnix` counts
    in `options.timeZone`, UTC by default (`"local"` for the system zone).
-5. **Calendar units need `relativeTo`.** `durationAs`, `normalizeDuration`, and
+5. **Calendar units need `relativeTo`.** `totalDuration`, `normalizeDuration`, and
    `compareDurations` return `null`/`""` for year/month/week arithmetic without
-   a `relativeTo` anchor — a month is not a fixed length. A calendar-annotated
+   a `relativeTo` anchor — a month is not a fixed length. `totalUnits` takes no
+   `relativeTo`, so it always returns `null` for those units. A calendar-annotated
    `relativeTo` is read as Temporal reads it: zoned when it has a time zone
    annotation, otherwise a date, and its calendar must be a `CalendarSystem`.
    - `round*` accept singular or plural `smallestUnit` names (`"hour"` or
@@ -241,9 +268,12 @@ and full interval set operations.
   `startOfQuarterForDate`, `getLocaleStartOfWeek` (zoned boundaries: see the
   `gmt-timezone` skill)
 - **Durations (ISO 8601)**: `isValidDuration`, `parseDuration`, `addDuration`,
-  `subtractDuration`, `normalizeDuration`, `durationAs`, `formatDuration`,
+  `subtractDuration`, `normalizeDuration`, `totalDuration`, `formatDuration`,
   `negateDuration`, `absDuration`, `compareDurations`, `getDurationUnit`,
   `getDurationSign`
+- **Unit objects (`{ unit: number }`)**: `durationFromUnits` (object to
+  duration string), `totalUnits` (object to one total), type
+  `ExactDurationUnit`
 - **Diff-to-duration bridge**: `diffDateAsDuration`,
   `diffZonedAsDuration`, `diffUnixAsDuration`, `diffUtcAsDuration`
 - **Interval algebra (half-open, instants)**: `isValidInterval`,
