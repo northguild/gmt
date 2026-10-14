@@ -120,16 +120,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     internal order, which changes with what else the program holds. `orderUnitUnions`
     (`build-utils.ts`) rewrites every type the generator prints: the signature, the
     Parameters, Options and Members types, and an inline type's values. In each union whose
-    quoted members are all unit names, those members read by descending magnitude, as the
+    quoted members are unit names, those members read by descending magnitude, as the
     Temporal specification's table of units orders them: `years` to `nanoseconds` in the plural,
-    then `year` to `nanosecond` in the singular. The `""` sentinel goes last when every other
-    member is a unit name or a unit alias (`DateUnit`, `TimeUnit`, `DateTimeUnit`,
-    `keyof DurationLike`). A member that is not a quoted literal (`TimeUnit`, `DateUnit[]`)
-    keeps its place, and a union with any other quoted member (`"dayOfWeek" | "days"`) stays as
-    printed. A shared type page shows its declaration as the source writes it, so its order is
-    the source's.
-    `classifyType` gives an enum select the same order (`orderUnitNames`), and the unit
-    control's constants are declared in it, so a page's signature and its playground agree.
+    then `year` to `nanosecond` in the singular. A union with two or more unit names reorders
+    only its quoted slots: the unit names first, then any other quoted literal (`"dayOfWeek"`)
+    in its printed order. An alias (`TimeUnit`), `DateUnit[]`, `null` and `""` keep their
+    places, except that `""` goes last when every other member is a unit name or a unit alias
+    (`DateUnit`, `TimeUnit`, `DateTimeUnit`, `keyof DurationLike`). A shared type page shows its
+    declaration as the source writes it, so its order is the source's.
+    `classifyType` gives an enum select the same order (`orderUnitChoices`): unit names first,
+    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. The
+    unit control's constants are declared in it, so a page's signature and its playground agree.
+    `reference-unit-order.test.ts` scans every generated page, code blocks and table cells, and
+    fails on a union of unit names out of this order. A `@param` description that lists unit
+    names as a union is held to it too.
   - **The doc gate** (`build-utils/doc-gate.ts`, `pnpm dox:docs-check`) lists every public
     type, member and option without a description, every optional input property without
     `@defaultValue`, `@default` used in its place, a list inside a property description,
@@ -301,8 +305,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   (`EXACT_UNITS`, the keys `totalUnits` takes). A Temporal field object (`setDate`) gets the
   same control over its number fields. The select lists the units in the order the constant
   declares, because the checker's order changes with what else the program holds. An enum
-  select whose choices are all unit names lists them in the same order. Any other object
-  parameter is a field of source text.
+  select lists its unit-name choices in the same order (`orderUnitChoices`), then its other
+  choices as they were, then `""`. Any other object parameter is a field of source text.
   An enum select carries per-choice examples (`choiceSeeds` on the template, built by
   `buildChoiceSeeds`): for each choice, the first `@example` that writes it as a quoted literal,
   whose other arguments are literals the form can hold and whose documented result is not a

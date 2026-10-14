@@ -219,7 +219,7 @@ export const EXACT_UNITS = ["days", ...TIME_UNITS] as const;
  * string, the sentinel a function returns for invalid input (`DateDurationUnit | ""`), ranks
  * last, as the source writes it.
  */
-const UNIT_ORDER: ReadonlyMap<string, number> = new Map([
+export const UNIT_ORDER: ReadonlyMap<string, number> = new Map([
   ...ALL_DT_UNITS.flatMap((plural, i) => [
     [plural, i] as const,
     [plural.slice(0, -1), i + ALL_DT_UNITS.length] as const,
@@ -262,30 +262,49 @@ const UNIT_TYPE_TOKENS: ReadonlySet<string> = new Set([
   "DateTimeUnit",
 ]);
 
-/** One union's members, with the quoted unit names sorted into the quoted slots. */
-function orderQuoted(members: string[]): string[] {
-  const quoted = members
-    .filter((m) => QUOTED.test(m))
-    .map((m) => m.slice(1, -1));
-  const sorted = orderUnitNames(quoted);
-  let next = 0;
-  return members.map((m) => (QUOTED.test(m) ? `"${sorted[next++]}"` : m));
+/** A quoted member that names a unit (`"days"`), not the `""` sentinel or another literal. */
+function isQuotedUnit(m: string): boolean {
+  return QUOTED.test(m) && m !== '""' && UNIT_ORDER.has(m.slice(1, -1));
+}
+
+/** A quoted member other than the `""` sentinel. */
+function isQuotedLiteral(m: string): boolean {
+  return QUOTED.test(m) && m !== '""';
 }
 
 /**
- * One union's members in unit order. A union holding the `""` sentinel is reordered only when
- * every other member is a quoted unit name or a `UNIT_TYPE_TOKENS` alias: its unit names sort
- * into their quoted slots, the aliases keep their places among them, and `""` goes last. Any
- * other member (`null`, `"reject"`, `DateUnit[]`) leaves such a union as printed.
+ * One union's members with its quoted literals in `orderUnitChoices` order: the unit names first,
+ * by `UNIT_ORDER`, then every other quoted literal (`"dayOfWeek"`) in the order it had. They fill
+ * the quoted slots, so `""`, an alias, `null` and a bracketed type keep their places. Fewer than
+ * two unit names leave the union unchanged.
+ */
+function orderQuoted(members: string[]): string[] {
+  const units = members.filter(isQuotedUnit);
+  if (units.length < 2) return members;
+  const ordered = [
+    ...[...units].sort(
+      (a, b) =>
+        UNIT_ORDER.get(a.slice(1, -1))! - UNIT_ORDER.get(b.slice(1, -1))!,
+    ),
+    ...members.filter((m) => isQuotedLiteral(m) && !isQuotedUnit(m)),
+  ];
+  let next = 0;
+  return members.map((m) => (isQuotedLiteral(m) ? ordered[next++] : m));
+}
+
+/**
+ * One union's members in unit order. A union holding the `""` sentinel whose every other member
+ * is a quoted unit name or a `UNIT_TYPE_TOKENS` alias sorts its unit names into their quoted
+ * slots, keeps the aliases in place, and puts `""` last. A union with any other member
+ * (`null`, `"reject"`, `DateUnit[]`) is treated like one without `""`: the unit slots sort, and
+ * `""` and the rest stay where they were printed.
  */
 function orderMembers(members: string[]): string[] {
   const sentinel = '""';
   if (!members.includes(sentinel)) return orderQuoted(members);
   const rest = members.filter((m) => m !== sentinel);
-  const isUnit = (m: string) =>
-    UNIT_TYPE_TOKENS.has(m) ||
-    (QUOTED.test(m) && UNIT_ORDER.has(m.slice(1, -1)));
-  if (rest.length === 0 || !rest.every(isUnit)) return members;
+  const isUnit = (m: string) => UNIT_TYPE_TOKENS.has(m) || isQuotedUnit(m);
+  if (rest.length === 0 || !rest.every(isUnit)) return orderQuoted(members);
   return [...orderQuoted(rest), ...members.filter((m) => m === sentinel)];
 }
 
@@ -322,11 +341,11 @@ function orderInside(member: string): string {
  * Printed type text with each union of unit names in `UNIT_ORDER`. The TypeScript printer lists
  * a union in the checker's internal order, which changes with what else the program holds.
  *
- * Only a union whose quoted members are all unit names (two or more) is reordered, and only its
- * quoted slots move: an alias (`TimeUnit`), a `keyof` type, `null` or a bracketed member keeps
- * its place. A union with any other quoted member (`"dayOfWeek" | "days"`) stays as printed,
- * though the brackets inside it are still walked. The `""` sentinel goes last when every other
- * member is a unit name or a unit alias (`orderMembers`).
+ * Only a union with two or more quoted unit names is reordered, and only its quoted slots move:
+ * the unit names first, then any other quoted literal (`"dayOfWeek"`), the order a select lists
+ * them in (`orderUnitChoices`). An alias (`TimeUnit`), a `keyof` type, `null` or a bracketed
+ * member keeps its place, and the brackets inside every member are still walked. The `""`
+ * sentinel goes last when every other member is a unit name or a unit alias (`orderMembers`).
  */
 export function orderUnitUnions(text: string): string {
   let out = "";
@@ -392,7 +411,7 @@ export function orderUnitUnions(text: string): string {
  * A select's choices with the unit names first, largest first (`UNIT_ORDER`), then every other
  * choice in the order it had (`"dayOfWeek"`, `"timeZone"`), then `""`. The source writes these
  * types the same way (`DateTimeUnit | "dayOfWeek"`). A list with no unit name is unchanged.
- * Selects only: a printed union with another quoted member stays as printed (`orderMembers`).
+ * A printed union gets the same order in its quoted slots (`orderQuoted`).
  */
 export function orderUnitChoices(choices: readonly string[]): string[] {
   const isUnit = (c: string) => c !== "" && UNIT_ORDER.has(c);

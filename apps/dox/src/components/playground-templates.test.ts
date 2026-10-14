@@ -76,6 +76,20 @@ describe("live playground templates", () => {
 
       expect(parseCallArgs(call).length).toBeGreaterThanOrEqual(0);
       expect(call.startsWith(`${t.fn}(`)).toBe(true);
+
+      // A unit object field holds one key. The first `@example` must write
+      // exactly that, or the form seeds a smaller object than the page shows
+      // (a two-key `{ years: 1, months: 2 }` seeds `{ years: 1 }`).
+      if (t.objectArg) return;
+      const squash = (a: string) => a.replace(/\s+/g, "");
+      const written = parseCallArgs(t.template);
+      const rebuilt = parseCallArgs(call);
+      (t.fields ?? []).forEach((field, i) => {
+        if (field.kind !== "units") return;
+        expect(squash(rebuilt[i] ?? ""), `${t.fn} ${field.name}`).toBe(
+          squash(written[i] ?? ""),
+        );
+      });
     },
   );
 

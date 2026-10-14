@@ -1231,6 +1231,15 @@ describe("orderUnitUnions", () => {
     ['"a|b" | "day"', '"a|b" | "day"'],
     ['Record<"x" | "y", number>', 'Record<"x" | "y", number>'],
     ['"reject" | "constrain"', '"reject" | "constrain"'],
+    [
+      '"month" | "day" | "year" | "dayOfWeek"',
+      '"year" | "month" | "day" | "dayOfWeek"',
+    ],
+    [
+      '"dayOfWeek" | "hour" | "day" | "year"',
+      '"year" | "day" | "hour" | "dayOfWeek"',
+    ],
+    ['"" | "hour" | "days" | null', '"" | "days" | "hour" | null'],
   ];
 
   it.each(cases)("orders %s", (input, expected) => {
@@ -1338,12 +1347,15 @@ describe("orderUnitChoices (select choices)", () => {
       expect(orderUnitChoices(once)).toEqual(once);
     }
   });
-  it("leaves printed type unions with another quoted member as printed", () => {
+  it("lists a printed union's unit names first and its other quoted literals after them, as a select does", () => {
     expect(orderUnitUnions('"dayOfWeek" | "hour" | "day"')).toBe(
-      '"dayOfWeek" | "hour" | "day"',
+      '"day" | "hour" | "dayOfWeek"',
     );
     expect(orderUnitUnions('"hour" | "dayOfWeek" | "days"')).toBe(
-      '"hour" | "dayOfWeek" | "days"',
+      '"days" | "hour" | "dayOfWeek"',
+    );
+    expect(orderUnitUnions('"hour" | null | "dayOfWeek" | "days"')).toBe(
+      '"days" | null | "hour" | "dayOfWeek"',
     );
   });
   it("orders an enum select with a non-unit choice", () => {
