@@ -244,7 +244,7 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    `plain/interval/{intervalLengthDate,intervalCountDate,intervalFromDurationDate,splitIntervalByUnitDate}`,
    `zoned/calculate/{addZoned,subtractZoned,diffZoned,diffZonedAsDuration}`,
    `zoned/interval/{intervalLengthZoned,intervalCountZoned,splitIntervalByUnitZoned}`,
-   `duration/{normalize/normalizeDuration,calculate/durationAs,compare/compareDurations}`,
+   `duration/{normalize/normalizeDuration,calculate/totalDuration,compare/compareDurations}`,
    `internal/zonedWallClock*`, `internal/calendarDateString`, `internal/temporalCompat`). No
    expected value changes. When nothing
    is left, `calendarFieldsOf` is `date.withCalendar(calendarId)`'s fields. Keeping `index.ts` as a

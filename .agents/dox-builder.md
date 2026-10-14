@@ -44,8 +44,9 @@ These bind every change.
    per-function — `packages/gmt/package.json` `exports` declares only the root, namespace and
    category barrels, so it is
    impossible, not merely discouraged. **Never** namespace-level
-   (`@northguild/gmt/plain`) — the namespace barrels open with
-   `export * from "@js-temporal/polyfill"` and drag 2.98 MB.
+   (`@northguild/gmt/plain`) — a namespace barrel loads every module of
+   its namespace. `regex` has no module subpaths, so its namespace barrel
+   is its narrowest import.
 
 2. **`apps/dox` must never extend `tsconfig.base.json`.** The base sets `composite`,
    `emitDeclarationOnly`, `module: nodenext`, and `customConditions:

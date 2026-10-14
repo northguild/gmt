@@ -1,8 +1,11 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import type { Temporal } from "@js-temporal/polyfill";
 import {
+  DATE_TIME_FIELDS,
   frameInstant,
   frameZoned,
   normalizeZoneFrame,
+  readSetFields,
   resolveOverflow,
   withZonedFields,
 } from "../../internal";
@@ -25,8 +28,20 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   why order-independent field resolution matters, and why `disambiguation`/`offset` require
  *   `.with()` rather than arithmetic.
  * - `fields` may set any of `year`, `month`, `monthCode`, `day`, `hour`, `minute`, `second`,
- *   `millisecond`, `microsecond`, `nanosecond`, `era`, and/or `eraYear`; omitted fields keep
- *   their current value. An empty object is a no-op.
+ *   `millisecond`, `microsecond` and/or `nanosecond`; omitted fields keep their current value. An
+ *   object with no field set, such as `{}` or `{ year: undefined }`, is a no-op.
+ * - Values are not converted: `monthCode` must be a string and every other field an integer number.
+ *   `null`, a numeric string, a boolean or a fraction returns null, where Temporal would convert or
+ *   truncate it. A bigint, `NaN` or an infinity returns null too. A number too large for its
+ *   field follows `overflow`. A month or day below 1, or a date outside Temporal's range, returns
+ *   null.
+ * - An own key that is not one of these fields, such as a misspelt `yaer`, returns null. So does an
+ *   era, an `offset`, or a `calendar` or `timeZone` property, whether own, inherited or a getter. A
+ *   field is read with a property get, as Temporal reads it, so an inherited or getter field is
+ *   set.
+ * - A Temporal date or time object returns null, as Temporal's `with` refuses one. One whose
+ *   prototype has been replaced with `Object.prototype`, `null` or `Function.prototype` sets
+ *   nothing instead.
  * - `value` is a safe integer or a digit string (`"1710072000000"`); anything else returns null.
  * - Returns null for invalid input.
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
@@ -46,11 +61,15 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @example setUnix(1706659200000, {}, { timeZone: "UTC" }) // 1706659200000 (empty fields object is a no-op)
  * @example setUnix(1730615400000, { minute: 45 }, { timeZone: "America/New_York" }) // 1730616300000 (the second 01:30 keeps -05:00)
  * @example setUnix(1730615400000, { minute: 45 }, { timeZone: "America/New_York", offset: "ignore" }) // 1730612700000 (re-resolved: the earlier 01:45)
+ * @example setUnix(1710072000000, { hour: "9" }, { timeZone: "UTC" }) // null (not converted)
  * @example setUnix(NaN, { hour: 9 }) // null
  */
 export function setUnix(
   value: number | string,
-  fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
+  fields: Omit<
+    Temporal.ZonedDateTimeLike,
+    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
+  >,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
@@ -117,12 +136,14 @@ export function setUnix(
 
     try {
       const zoned = frameZoned(instant, frame);
-      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-      // properties found") rather than treating it as a no-op, so short-circuit here.
+      const set = readSetFields(fields, DATE_TIME_FIELDS);
+      if (set === null) return null;
+      // Only the values readSetFields checked reach Temporal, on both paths of withZonedFields. An
+      // empty result sets nothing: a no-op here, where Temporal's with() would throw.
       const result =
-        Object.keys(fields).length === 0
+        Object.keys(set).length === 0
           ? zoned
-          : withZonedFields(zoned, fields, {
+          : withZonedFields(zoned, set, {
               overflow,
               disambiguation,
               offset,

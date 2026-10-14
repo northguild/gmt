@@ -35,8 +35,10 @@
 ## Live risks
 
 - **The exports map.** Import `@northguild/gmt` at module granularity only. Per-function paths
-  are forbidden, and namespace barrels re-export the 2.98 MB polyfill.
-- **Merging to `main` deploys.** `deploy-dox.yml` has no path filter and no manual trigger.
+  are forbidden, and a namespace barrel loads every module of its namespace.
+- **Merging to `main` deploys.** `deploy-dox.yml` runs when the Release workflow completes on
+  `main`, which Release does on every push. It also runs daily at 06:00 UTC and from a manual
+  `workflow_dispatch`. It has no path filter.
 - **Free-tier quotas move.** Gemini withdraws models from new keys without notice, and Workers
   AI's allocation is per account. Re-probe brains after provider releases (runbook in
   `built.md`).

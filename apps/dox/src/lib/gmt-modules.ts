@@ -61,7 +61,12 @@ export const GMT_MODULES: Record<
   "intermodal/validate": () => import("@northguild/gmt/intermodal/validate"),
 
   // --- duration ---
-  duration: () => import("@northguild/gmt/duration"),
+  "duration/calculate": () => import("@northguild/gmt/duration/calculate"),
+  "duration/compare": () => import("@northguild/gmt/duration/compare"),
+  "duration/format": () => import("@northguild/gmt/duration/format"),
+  "duration/normalize": () => import("@northguild/gmt/duration/normalize"),
+  "duration/parse": () => import("@northguild/gmt/duration/parse"),
+  "duration/validate": () => import("@northguild/gmt/duration/validate"),
 
   // --- zoned ---
   "zoned/calculate": () => import("@northguild/gmt/zoned/calculate"),

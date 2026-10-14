@@ -111,13 +111,13 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
 ### 5.3 Zoned differences near the maximum
 
 - **Without a `smallestUnit`, the spec returns a value.** `DifferenceZonedDateTime` resolves one wall-clock time that is never later than the later operand. `total`, `round` and duration `compare` resolve the end of a one-unit window that stays in range. Chromium 152 returns every value. Polyfill 0.5.1 throws in zones ahead of UTC because of the clamp bug in §5.1, and `05ce7a3` fixes it.
-- **Affected GMT functions:** `diffUnix`, `diffUnixAsDuration`, `intervalLengthZoned`, `intervalLengthUnix`, `durationAs`, `normalizeDuration`, `compareDurations`, and `formatRelative*`.
+- **Affected GMT functions:** `diffUnix`, `diffUnixAsDuration`, `intervalLengthZoned`, `intervalLengthUnix`, `totalDuration`, `normalizeDuration`, `compareDurations`, and `formatRelative*`.
 - **Examples:**
-  - `durationAs("PT49H", "days", { relativeTo: "+275760-09-10T05:00:00+10:00[Australia/Sydney]" })` is `2.0416666666666665`.
+  - `totalDuration("PT49H", "days", { relativeTo: "+275760-09-10T05:00:00+10:00[Australia/Sydney]" })` is `2.0416666666666665`.
   - `compareDurations("P3D", "PT73H", same)` is `-1`.
 - **GMT fix (done):** `internal/zonedWallClockDifference.ts` rebuilds the spec steps and runs only when the polyfill throws near a limit.
   - **Spec steps rebuilt:** `DifferenceZonedDateTime`, `DifferenceZonedDateTimeWithRounding`, `RoundRelativeDuration`, `ComputeNudgeWindow`, `NudgeToCalendarUnit`, `NudgeToZonedTime`, `BubbleRelativeDuration`.
-  - **Routed functions:** `diffUnix`, `diffUtc`, `diffZoned` and their `*AsDuration` forms, `intervalLength{Zoned,Unix,Utc}`, `durationAs`, `normalizeDuration`, `compareDurations`, and `formatRelative{Zoned,Utc,Unix}`.
+  - **Routed functions:** `diffUnix`, `diffUtc`, `diffZoned` and their `*AsDuration` forms, `intervalLength{Zoned,Unix,Utc}`, `totalDuration`, `normalizeDuration`, `compareDurations`, and `formatRelative{Zoned,Utc,Unix}`.
   - **Coverage:** rows at both the maximum (Sydney, Kiritimati) and the minimum (New York, Honolulu), each checked against Chromium 152 and Chrome for Testing 153.
 - **The minimum edge is a separate upstream defect.** `05ce7a3` fixes the maximum side only. With it applied, the polyfill still throws on every minimum-edge row.
 - **Node 24's `--harmony-temporal` build is not a usable oracle.** It throws on several of these cases, and it returns `-2` where `NudgeToCalendarUnit` gives `-2.0416666666666665`.

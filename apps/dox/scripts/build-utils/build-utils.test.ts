@@ -1,6 +1,7 @@
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  ALL_DT_UNITS,
   buildPlaygroundSpec,
   classifyReturnType,
   classifyReturnTypeFromString,
@@ -10,15 +11,21 @@ import {
   CURATED_LOCALES,
   CURATED_NUMBERING_SYSTEMS,
   CURATED_TIMEZONES,
+  DATE_UNITS,
   defaultValue,
+  EXACT_UNITS,
   optionPropertyType,
   optionValueFromCall,
+  orderUnitChoices,
+  orderUnitNames,
+  orderUnitUnions,
   parseArrayArg,
   parseUnitsArg,
   playgroundModule,
   resolveRestParam,
   seedForOption,
   seedForParam,
+  TIME_UNITS,
   type ClassifiedType,
   type ExampleLike,
   type ParamTypeResolver,
@@ -91,10 +98,10 @@ function paramTypes(
 // ---------------------------------------------------------------------------
 
 describe("playgroundModule", () => {
-  it("collapses duration to its top-level barrel", () => {
-    expect(playgroundModule("duration", "calculate")).toBe("duration");
-  });
-  it("maps every other namespace 1:1 to <ns>/<mod>", () => {
+  it("maps every namespace 1:1 to <ns>/<mod>", () => {
+    expect(playgroundModule("duration", "calculate")).toBe(
+      "duration/calculate",
+    );
     expect(playgroundModule("plain", "calculate")).toBe("plain/calculate");
     expect(playgroundModule("zoned", "map")).toBe("zoned/map");
     expect(playgroundModule("unix", "parse")).toBe("unix/parse");
@@ -205,7 +212,7 @@ describe("splitTopLevel (shared)", () => {
 
 describe("parseCallArgs (shared)", () => {
   it("extracts positional args from a call", () => {
-    expect(sharedParseCallArgs(`durationAs("P1DT2H30M", "hours")`)).toEqual([
+    expect(sharedParseCallArgs(`totalDuration("P1DT2H30M", "hours")`)).toEqual([
       `"P1DT2H30M"`,
       `"hours"`,
     ]);
@@ -245,12 +252,12 @@ describe("argToValue (shared)", () => {
 
 describe("optionValueFromCall", () => {
   it("pulls a property value from a trailing options object", () => {
-    const call = `durationAs("P1M", "days", { relativeTo: "2024-02-01" })`;
+    const call = `totalDuration("P1M", "days", { relativeTo: "2024-02-01" })`;
     expect(optionValueFromCall(call, "relativeTo")).toBe(`"2024-02-01"`);
   });
   it("returns undefined when the options object is absent", () => {
     expect(
-      optionValueFromCall(`durationAs("P1M", "days")`, "relativeTo"),
+      optionValueFromCall(`totalDuration("P1M", "days")`, "relativeTo"),
     ).toBeUndefined();
   });
   it("matches the last (options) object when several are present", () => {
@@ -587,21 +594,21 @@ describe("buildPlaygroundSpec", () => {
     expect(spec.allowEmptyArray).toBe(true);
   });
 
-  it("derives enum params + an options object (durationAs)", () => {
+  it("derives enum params + an options object (totalDuration)", () => {
     const spec = buildPlaygroundSpec(
       {
         namespace: "duration",
         module: "calculate",
-        name: "durationAs",
+        name: "totalDuration",
         params: [
           { name: "value", type: "string" },
           { name: "unit", type: "DateTimeDurationUnit" },
         ],
         options: [{ name: "relativeTo?" }],
         examples: [
-          { call: `durationAs("P1DT2H30M", "hours")`, result: `26.5` },
+          { call: `totalDuration("P1DT2H30M", "hours")`, result: `26.5` },
           {
-            call: `durationAs("P1M", "days", { relativeTo: "2024-02-01" })`,
+            call: `totalDuration("P1M", "days", { relativeTo: "2024-02-01" })`,
             result: `29`,
           },
         ],
@@ -621,7 +628,7 @@ describe("buildPlaygroundSpec", () => {
       },
     );
 
-    expect(spec.module).toBe("duration");
+    expect(spec.module).toBe("duration/calculate");
     expect(spec.params).toEqual([
       { name: "value", type: "string", value: "P1DT2H30M" },
       {
@@ -1017,6 +1024,53 @@ describe("classifyTypeFromString (timezone)", () => {
   });
 });
 
+describe("classifyType (checker-backed — unit objects)", () => {
+  const opts = { strictNullChecks: true, exactOptionalPropertyTypes: true };
+  const classify = (src: string, fn: string, index = 0) => {
+    const { checker, sourceFile } = compile(src, opts);
+    return classifyType(checker, paramTypes(checker, sourceFile, fn)[index]);
+  };
+
+  it("treats the exact set as a units control", () => {
+    expect(
+      classify(
+        `type ExactDurationUnit = "days" | "hours" | "minutes" | "seconds" | "milliseconds" | "microseconds" | "nanoseconds";
+         function totalUnits(units: Partial<Record<ExactDurationUnit, number>>, unit: string): void {}`,
+        "totalUnits",
+      ),
+    ).toEqual({ type: "units", options: [...EXACT_UNITS] });
+  });
+
+  it("lists the units in the constant's order, not the checker's", () => {
+    expect(
+      classify(
+        `type U = "nanoseconds" | "seconds" | "hours" | "days" | "microseconds" | "minutes" | "milliseconds";
+         function first(a: "nanoseconds" | "hours"): void {}
+         function totalUnits(units: Partial<Record<U, number>>, unit: string): void {}`,
+        "totalUnits",
+      ),
+    ).toEqual({ type: "units", options: [...EXACT_UNITS] });
+  });
+
+  it("does not treat a record of strings as a units control", () => {
+    expect(
+      classify(
+        `function f(units: Partial<Record<"years" | "months" | "weeks" | "days", string>>): void {}`,
+        "f",
+      ),
+    ).toEqual({ type: "string" });
+  });
+
+  it("does not treat a subset that is no key set as a units control", () => {
+    expect(
+      classify(
+        `function f(units: { days: number; hours: number }): void {}`,
+        "f",
+      ),
+    ).toEqual({ type: "string" });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // classifyType (checker-backed) — pure number-literal unions
 // ---------------------------------------------------------------------------
@@ -1090,6 +1144,229 @@ describe("classifyType (checker-backed — calendar/numberingSystem)", () => {
     const types = paramTypes(checker, sourceFile, "f");
     expect(classifyType(checker, types[0], "pattern")).toEqual({
       type: "string",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit order: largest first, as the Temporal specification's table of units
+// ---------------------------------------------------------------------------
+
+describe("orderUnitNames", () => {
+  it("sorts plural names largest first, then singular names", () => {
+    expect(orderUnitNames(["hour", "day", "hours", "days"])).toEqual([
+      "days",
+      "hours",
+      "day",
+      "hour",
+    ]);
+  });
+  it("leaves a list with any other name unchanged", () => {
+    expect(orderUnitNames(["day", "dayOfWeek"])).toEqual(["day", "dayOfWeek"]);
+  });
+  it("leaves a single name unchanged", () => {
+    expect(orderUnitNames(["minutes"])).toEqual(["minutes"]);
+  });
+  it("puts the empty-string sentinel last, after the units", () => {
+    expect(orderUnitNames(["", "hour", "days", "hours"])).toEqual([
+      "days",
+      "hours",
+      "hour",
+      "",
+    ]);
+  });
+  it("leaves a list with the sentinel and any other name unchanged", () => {
+    expect(orderUnitNames(["", "days", "dayOfWeek"])).toEqual([
+      "",
+      "days",
+      "dayOfWeek",
+    ]);
+  });
+  it("agrees with the order the unit constants are declared in", () => {
+    for (const c of [ALL_DT_UNITS, DATE_UNITS, TIME_UNITS, EXACT_UNITS]) {
+      expect(orderUnitNames([...c].reverse())).toEqual([...c]);
+    }
+  });
+});
+
+describe("orderUnitUnions", () => {
+  const cases: Array<[string, string]> = [
+    [
+      'totalUnits(units: Partial<Record<"hours" | "days" | "minutes", number>>, unit: "day" | "hours" | "days" | TimeUnit): number | null',
+      'totalUnits(units: Partial<Record<"days" | "hours" | "minutes", number>>, unit: "days" | "hours" | "day" | TimeUnit): number | null',
+    ],
+    [
+      'u: "days" | "weeks" | DateUnit | ("days" | "years" | DateUnit)[]',
+      'u: "weeks" | "days" | DateUnit | ("years" | "days" | DateUnit)[]',
+    ],
+    ['"" | "days" | "weeks"', '"weeks" | "days" | ""'],
+    ['"" | "days"', '"days" | ""'],
+    [
+      'getLargestDateDurationUnit(units: ("days" | "years" | DateUnit)[]): "" | "months" | "weeks" | "days" | "years"',
+      'getLargestDateDurationUnit(units: ("years" | "days" | DateUnit)[]): "years" | "months" | "weeks" | "days" | ""',
+    ],
+    ['"" | "day" | DateUnit', '"day" | DateUnit | ""'],
+    [
+      'getLargestDateTimeDurationUnit(units: (keyof DurationLike | DateTimeUnit)[]): "" | keyof DurationLike',
+      'getLargestDateTimeDurationUnit(units: (keyof DurationLike | DateTimeUnit)[]): keyof DurationLike | ""',
+    ],
+    ['"" | TimeUnit | "hours" | "days"', 'TimeUnit | "days" | "hours" | ""'],
+    ['"" | DateTimeUnit', 'DateTimeUnit | ""'],
+    ['"" | DateUnit[]', '"" | DateUnit[]'],
+    ['"" | null | "days"', '"" | null | "days"'],
+    ['"" | "days" | "dayOfWeek"', '"" | "days" | "dayOfWeek"'],
+    ['"" | "reject"', '"" | "reject"'],
+    [
+      '"dayOfWeek" | SmallestUnit<"hour" | "day" | "week">',
+      '"dayOfWeek" | SmallestUnit<"week" | "day" | "hour">',
+    ],
+    [
+      '(a: "hour" | "day") => "minute" | "hour"',
+      '(a: "day" | "hour") => "hour" | "minute"',
+    ],
+    [
+      '(unit: string): unit is "days" | "years"',
+      '(unit: string): unit is "years" | "days"',
+    ],
+    ['"a|b" | "day"', '"a|b" | "day"'],
+    ['Record<"x" | "y", number>', 'Record<"x" | "y", number>'],
+    ['"reject" | "constrain"', '"reject" | "constrain"'],
+    [
+      '"month" | "day" | "year" | "dayOfWeek"',
+      '"year" | "month" | "day" | "dayOfWeek"',
+    ],
+    [
+      '"dayOfWeek" | "hour" | "day" | "year"',
+      '"year" | "day" | "hour" | "dayOfWeek"',
+    ],
+    ['"" | "hour" | "days" | null', '"" | "days" | "hour" | null'],
+  ];
+
+  it.each(cases)("orders %s", (input, expected) => {
+    expect(orderUnitUnions(input)).toBe(expected);
+  });
+
+  it.each(cases)("is idempotent on %s", (input) => {
+    const once = orderUnitUnions(input);
+    expect(orderUnitUnions(once)).toBe(once);
+  });
+});
+
+describe("classifyType (checker-backed — unit name order)", () => {
+  const src = `
+    function f(
+      scrambled: "hour" | "days" | "day" | "hours",
+      list: ("hour" | "days" | "day" | "hours")[],
+    ): void {}
+  `;
+  const { checker, sourceFile } = compile(src);
+  const types = paramTypes(checker, sourceFile, "f");
+
+  it("lists an enum of unit names largest first", () => {
+    expect(classifyType(checker, types[0])).toEqual({
+      type: "enum",
+      options: ["days", "hours", "day", "hour"],
+    });
+  });
+  it("lists an array of unit names largest first", () => {
+    expect(classifyType(checker, types[1])).toMatchObject({
+      type: "array",
+      options: ["days", "hours", "day", "hour"],
+    });
+  });
+  it("orders a union read from its string form", () => {
+    expect(classifyTypeFromString('"hour" | "day"')).toEqual({
+      type: "enum",
+      options: ["day", "hour"],
+    });
+  });
+});
+
+describe("orderUnitChoices (select choices)", () => {
+  // The order the checker gave parseUnitFromDateTime's select before the rule.
+  const SCRAMBLED = [
+    "month",
+    "week",
+    "day",
+    "hour",
+    "months",
+    "weeks",
+    "days",
+    "hours",
+    "years",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+    "nanoseconds",
+    "year",
+    "minute",
+    "second",
+    "millisecond",
+    "microsecond",
+    "nanosecond",
+    "dayOfWeek",
+  ];
+  const UNITS = [...ALL_DT_UNITS, ...ALL_DT_UNITS.map((u) => u.slice(0, -1))];
+
+  it("lists unit names largest first, then the other choices in their order", () => {
+    expect(orderUnitChoices(SCRAMBLED)).toEqual([...UNITS, "dayOfWeek"]);
+    expect(orderUnitChoices([...SCRAMBLED, "timeZone"])).toEqual([
+      ...UNITS,
+      "dayOfWeek",
+      "timeZone",
+    ]);
+    expect(orderUnitChoices(["timeZone", "day", "dayOfWeek", "years"])).toEqual(
+      ["years", "day", "timeZone", "dayOfWeek"],
+    );
+  });
+  it("puts the empty string last", () => {
+    expect(orderUnitChoices(["", "dayOfWeek", "hour", "days"])).toEqual([
+      "days",
+      "hour",
+      "dayOfWeek",
+      "",
+    ]);
+  });
+  it("leaves a list with no unit name unchanged", () => {
+    expect(orderUnitChoices(["reject", "constrain"])).toEqual([
+      "reject",
+      "constrain",
+    ]);
+    expect(orderUnitChoices([...CURATED_TIMEZONES])).toEqual([
+      ...CURATED_TIMEZONES,
+    ]);
+  });
+  it("is idempotent", () => {
+    for (const list of [
+      SCRAMBLED,
+      [...SCRAMBLED, "timeZone"],
+      ["", "day", "x"],
+    ]) {
+      const once = orderUnitChoices(list);
+      expect(orderUnitChoices(once)).toEqual(once);
+    }
+  });
+  it("lists a printed union's unit names first and its other quoted literals after them, as a select does", () => {
+    expect(orderUnitUnions('"dayOfWeek" | "hour" | "day"')).toBe(
+      '"day" | "hour" | "dayOfWeek"',
+    );
+    expect(orderUnitUnions('"hour" | "dayOfWeek" | "days"')).toBe(
+      '"days" | "hour" | "dayOfWeek"',
+    );
+    expect(orderUnitUnions('"hour" | null | "dayOfWeek" | "days"')).toBe(
+      '"days" | null | "hour" | "dayOfWeek"',
+    );
+  });
+  it("orders an enum select with a non-unit choice", () => {
+    const { checker, sourceFile } = compile(
+      'function f(unit: "hour" | "dayOfWeek" | "day" | "hours"): void {}',
+    );
+    expect(
+      classifyType(checker, paramTypes(checker, sourceFile, "f")[0]),
+    ).toEqual({
+      type: "enum",
+      options: ["hours", "day", "hour", "dayOfWeek"],
     });
   });
 });

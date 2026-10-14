@@ -13,7 +13,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * import { StartOfTimeUnit } from "@northguild/gmt/plain";
  * const unit: StartOfTimeUnit = "hours";
  */
-export type StartOfTimeUnit = Temporal.SmallestUnit<Temporal.TimeUnit | "day">;
+export type StartOfTimeUnit = Temporal.SmallestUnit<"day" | Temporal.TimeUnit>;
 
 const supported: readonly string[] = [
   "day",

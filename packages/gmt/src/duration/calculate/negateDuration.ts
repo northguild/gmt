@@ -6,7 +6,7 @@ import { isValidDuration } from "../validate/isValidDuration";
  *
  * - Uses Temporal.Duration.from and .negated, then .toString() to re-emit.
  * - Negating is a pure sign flip on every component, so it never needs `relativeTo` —
- *   calendar-unit durations round-trip through it fine, unlike `addDuration`/`durationAs`.
+ *   calendar-unit durations round-trip through it fine, unlike `addDuration`/`totalDuration`.
  * - A zero-length duration has no sign to flip and comes back as "PT0S", the canonical
  *   spelling Temporal emits for every zero duration (so "P0D" also renders "PT0S").
  * - Returns "" when `value` is not a valid ISO 8601 duration string.

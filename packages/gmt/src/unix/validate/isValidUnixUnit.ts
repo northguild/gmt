@@ -17,7 +17,7 @@ import { resolveUnixEpochUnit } from "../../internal/unixEpochValue";
  * import { isValidUnixUnit } from "@northguild/gmt/unix";
  * isValidUnixUnit("milliseconds"); // true
  */
-export type UnixUnit = "seconds" | "second" | "milliseconds" | "millisecond";
+export type UnixUnit = "seconds" | "milliseconds" | "second" | "millisecond";
 
 /**
  * Return true when `unit` is a valid UnixUnit.

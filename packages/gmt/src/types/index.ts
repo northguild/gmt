@@ -13,6 +13,7 @@ export * from "./duration-relative-to";
 export * from "./duration-string-options";
 export * from "./edi";
 export * from "./epcis";
+export * from "./exact-duration-unit";
 export * from "./fiscal-calendar";
 export * from "./fractional-digit";
 export * from "./free-time-options";

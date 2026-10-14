@@ -4,8 +4,8 @@ import {
   addToZoned,
   frameInstant,
   frameZoned,
-  isValidAmount,
   normalizeZoneFrame,
+  readDurationUnits,
   resolveOverflow,
 } from "../../internal";
 import {
@@ -16,7 +16,7 @@ import {
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
-import { isObject, isOptionsArgument } from "../../internal/isObject";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Add a temporal amount to a Unix epoch value and return the resulting epoch.
@@ -85,12 +85,9 @@ export function addUnix(
 
     if (frame === null || epochUnit === null) return null;
 
-    const validUnits =
-      isObject(units) && Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts =
-      validUnits && Object.values(units).every(isValidAmount);
+    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
 
-    if (!validUnits || !validAmounts) {
+    if (amounts === null) {
       return null;
     }
 
@@ -103,7 +100,7 @@ export function addUnix(
     try {
       const zdt: Temporal.ZonedDateTime = frameZoned(instant, frame);
       return toUnixEpoch(
-        frameInstant(addToZoned(zdt, units, { overflow }), frame),
+        frameInstant(addToZoned(zdt, amounts, { overflow }), frame),
         epochUnit,
       );
     } catch {
