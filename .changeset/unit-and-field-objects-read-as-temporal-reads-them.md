@@ -2,13 +2,17 @@
 "@northguild/gmt": patch
 ---
 
-Check the `units` object of the 12 `add*` and `subtract*` functions, and the `fields` object of the six `set*` functions, before TC39 Temporal reads them. Each property is now read once, with an ordinary property get as Temporal reads it, and every value read is checked. Three things change:
+Check the `units` object of the 12 `add*` and `subtract*` functions, and the `fields` object of the six `set*` functions, before TC39 Temporal reads them. Each property is now read once, with an ordinary property get and in the order Temporal reads them, and every value read is checked. Three things change:
 
 - **An `add*` or `subtract*` function no longer applies a unit it does not take, or an amount that is not a number, when the object inherits it.**
 - **A `set*` function no longer returns its value unchanged** for an object that does set a field, or for an argument Temporal's `with` refuses.
 - **A `set*` function now refuses what Temporal would quietly accept**: a value Temporal would convert, such as `"2025"` or `null`; a key that is no field of the function, even beside one that is; and an `offset`. The `add*` functions already held their `units` to this rule. A plain object of own fields with the right types gives the same result as before.
 
-Temporal reads a duration-like object by getting each of the ten unit names from it (ToTemporalPartialDurationRecord). Its `with` methods get each field name the same way. A property get finds an own property, an inherited one, a non-enumerable one and a getter alike. GMT checked the object's own enumerable keys only. So a value the check never saw still reached Temporal, and Temporal applied it. A `Temporal.Duration` and a `Temporal.PlainDate` are such objects: every field of one is a getter on its prototype.
+Some of these changes make a call that compiles return the sentinel where it returned a value. **Breaking changes** in the entry that adds `totalUnits` lists them, with a migration for each.
+
+Temporal reads a duration-like object by getting each of the ten unit names from it (ToTemporalPartialDurationRecord). Its `with` methods get each field name the same way. A property get finds an own property, an inherited one, a non-enumerable one and a getter alike. GMT checked the object's own enumerable keys only. In an `add*` function, a value that check never saw still reached Temporal, and Temporal applied it. In a `set*` function, an object with no own field was read as setting nothing, and the value came back unchanged.
+
+A Temporal object has no own keys, so it passed the check too. Temporal reads a `Temporal.Duration` from its internal slots, not from its getters (ToTemporalDuration), so all its units reached Temporal unchecked. Temporal's `with` refuses a `Temporal.PlainDate` (IsPartialTemporalObject), but GMT read it as setting nothing and returned the value unchanged.
 
 ### The `units` of `add*` and `subtract*`
 
@@ -26,7 +30,7 @@ The functions are `addDate`, `subtractDate`, `addTime`, `subtractTime`, `addDate
 
 - **A unit outside the function's set is refused wherever it is read from.** `addDate` and `subtractDate` take years, months, weeks and days. `addTime` and `subtractTime` take hours down to nanoseconds. `addDate("2024-01-31", { hours: 36 })` has always returned `""`. The same 36 hours, inherited or carried by a `Temporal.Duration`, added one day. `addTime` and `subtractTime` dropped the day of a `Temporal.Duration` and applied the rest.
 - **An amount that is not a number is refused wherever it is read from.** `{ days: "5" }` has always returned the sentinel. An inherited `"5"` reached Temporal, which converts a string to a number, and five days were added. This applies to all 12 functions.
-- **A unit set to `undefined` is absent**, as Temporal reads it. `{ days: 5, hours: undefined }` now reads as `{ days: 5 }` in all 12 functions. It returned the sentinel.
+- **A unit the function takes, set to `undefined`, is absent**, as Temporal reads it. This holds in all 12 functions: `addDate("2024-01-31", { days: 5, years: undefined })` is `"2024-02-05"`, and `{ days: 5, hours: undefined }` reads as `{ days: 5 }` in the eight functions that take all ten units. Both returned the sentinel. An own key outside the function's set still returns the sentinel, whatever its value.
 - **An object with no unit present still returns the sentinel**: `{}`, and `{ days: undefined }`.
 - **A `Temporal.Duration` still works when its nonzero fields are units the function takes.** `addDate("2024-01-31", Temporal.Duration.from("P1D"))` is `"2024-02-01"`. The eight functions that take all ten units accept any `Temporal.Duration`, as before.
 - **Unchanged:** every call with a plain object written out, such as `{ days: 5 }`. An own key that is misspelt, or that names a unit the function does not take, still returns the sentinel, whatever its value: `addDate("2024-01-31", { days: 1, hours: undefined })` is `""`.
@@ -63,15 +67,15 @@ Fields GMT now reads as Temporal does:
 
 What GMT now refuses where Temporal would accept it, the same rule the `units` of `add*` follow:
 
-- **A value is not converted.** `monthCode` must be a string, and every other field an integer number. `null`, a numeric string, a boolean, a bigint, `NaN`, an infinity and a fraction return the sentinel. Temporal would read `null` as 0, `"2025"` as 2025, and cut 2025.5 to 2025.
+- **A value is not converted.** `monthCode` must be a string, and every other field an integer number. `null`, a numeric string, a boolean and a fraction return the sentinel. Temporal would read `null` as 0, `"2025"` as 2025 and `true` as 1, and cut 2025.5 to 2025. A bigint, `NaN` and an infinity return the sentinel too, as they did in 1.18, because Temporal throws for them.
 - **An own key that is no field of the function returns the sentinel, even beside a field.** A misspelt key used to return the sentinel only when no field was beside it. Beside a real field, Temporal ignored it, so `{ year: 2025, yaer: 1 }` set the year and the typo went unnoticed.
 - **A field the function does not take returns the sentinel, alone or beside a field it does take, and wherever it is read from.** That is an `hour` in `setDate`, a `year` in `setTime`, and an `era` or `eraYear` in any of the six. Temporal ignores such a field beside one it reads, and an inherited one used to be a no-op.
-- **An `offset` in `fields` returns the sentinel in `setUtc`, `setUnix` and `setZoned`.** Their `fields` type has never had one. `setZoned` and `setUnix` take it as `options.offset`, and a UTC instant's offset is always `+00:00`. `setZoned` used to apply an `offset` passed in `fields`.
+- **An `offset` in `fields` returns the sentinel in `setUtc`, `setUnix` and `setZoned`.** Their `fields` type has never had one. In `setZoned` and `setUnix`, `options.offset` says how the value's own offset is treated, and `options.disambiguation` picks between the two instants of a repeated wall-clock time. A UTC instant's offset is always `+00:00`. `setZoned` used to apply an `offset` passed in `fields`.
 
 Unchanged:
 
-- **Every plain object with own fields of the right type gives the result it gave in 1.18**: integer numbers, and a string `monthCode`. A comparison of 9,960 such calls, across every combination of options, found no difference.
+- **Every plain object with own fields of the right type gives the result it gave in 1.18**: integer numbers, and a string `monthCode`.
 - **A number too large for its field still follows `overflow`.** `setDate("2024-01-31", { month: 13 })` is `"2024-12-31"`, and `""` with `{ overflow: "reject" }`. A month or a day below 1, and a date outside Temporal's range, return the sentinel under either setting, as before.
 - **`{}` is a no-op**, and so is an object whose only key is a symbol.
 - The sentinel is `""`, and `null` for `setUnix`.
-- `era` and `eraYear` also leave the `fields` type of five of these functions. No call could ever set them. See **Breaking changes** in the entry that adds `totalUnits`.
+- `era` and `eraYear` also leave the `fields` type of five of these functions. No call could ever set them. See breaking change 2 in the entry that adds `totalUnits`.
