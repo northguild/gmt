@@ -1,6 +1,7 @@
 export * from "@js-temporal/polyfill";
 export * from "./calendar";
 export * from "./duration";
+export * from "./duty";
 export * from "./instant";
 export * from "./intermodal";
 export * from "./interval";

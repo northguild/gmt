@@ -1,0 +1,53 @@
+---
+title: "A Paired Rest That Does Not Qualify"
+description: Two rests may count as one when each is at least 2 hours, one at least 7 and both together at least 10. Checking two whole numbers passes 6 + 4 and fails 7.5 + 2.5 — both wrong.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Paired Rest That Does Not Qualify"
+  description="A rule lets two shorter rests count as one full rest when each is at least 2 hours, the longer at least 7 and both together at least 10. A driver rests 6 hours, drives 4, then rests 4. Another rests 7.5, drives 4, then rests 2.5. Which pair counts?"
+  naiveCode={`// The naive approach: the two splits everyone remembers
+const counts = (a, b) => (a === 7 && b === 3) || (a === 8 && b === 2);
+counts(7.5, 2.5); // false — but it meets every floor
+
+// …or only the total
+const totalCounts = (a, b) => a + b >= 10;
+totalCounts(6, 4); // true — but neither rest is 7 hours`}
+  explanation={`A paired rest is three constraints, not two whole numbers: each rest at least 2 hours, the longer at least 7, the two together at least 10. "7 + 3" and "8 + 2" are only the whole-hour pairs that happen to meet them. 7.5 + 2.5 meets all three; 6 + 4 meets the total and fails "one at least 7". A check written as a list of splits refuses real pairs, and a check of the total accepts false ones. \`qualifyingRestPairs\` takes the three floors as a \`PairSpec\` and returns each pair that meets them. A rest that is already a full rest on its own pairs with nothing.`}
+  gmtCode={`import { qualifyingRestPairs } from "@northguild/gmt";
+
+const spec = {
+  statuses: ["off", "sleeper"],
+  minimum: "PT10H",
+  pair: { eachAtLeast: "PT2H", oneAtLeast: "PT7H", combinedAtLeast: "PT10H" },
+};
+
+qualifyingRestPairs(
+  [
+    { status: "sleeper", start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" },
+    { status: "driving", start: "2024-01-01T06:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "off", start: "2024-01-01T10:00:00Z", end: "2024-01-01T14:00:00Z" },
+  ],
+  spec,
+); // [] — 6 + 4: neither rest is 7
+
+qualifyingRestPairs(
+  [
+    { status: "sleeper", start: "2024-01-01T00:00:00Z", end: "2024-01-01T07:30:00Z" },
+    { status: "driving", start: "2024-01-01T07:30:00Z", end: "2024-01-01T11:30:00Z" },
+    { status: "off", start: "2024-01-01T11:30:00Z", end: "2024-01-01T14:00:00Z" },
+  ],
+  spec,
+); // [{ first: { start: "2024-01-01T00:00:00Z", end: "2024-01-01T07:30:00Z" }, second: { start: "2024-01-01T11:30:00Z", end: "2024-01-01T14:00:00Z" } }]`}
+  fixedSpecId="qualifyingRestPairs"
+/>
+
+The playground opens on the 7.5 + 2.5 pair. Change the first rest's `end` to
+`"2024-01-01T06:00:00Z"`, and the `work` entry's `start` with it: the pair is 6 + 2.5 now,
+and the result is `[]`. Lower `oneAtLeast` to `"PT6H"` and `combinedAtLeast` to `"PT8H"` and
+the same rests qualify, because the floors are yours. An `elapsedWindow` rule takes the same
+`PairSpec` as `exclude`, so a qualifying pair moves its close. The rules are in [Hours of
+Work](/guides/intervals/hours-of-work/#totals-runs-and-paired-rests).

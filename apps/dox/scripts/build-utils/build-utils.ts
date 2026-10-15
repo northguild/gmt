@@ -584,10 +584,24 @@ function classifyTypeAsPrinted(
       isBracketArray ? typeStr.slice(0, -2) : _checker.typeToString(elemType!)
     ).toLowerCase();
 
-    // `{ start, end }[]` — interval-object lists
+    // `{ start, end }[]` — interval-object lists. A third member is allowed only when it is
+    // optional: the interval editor keeps `start` and `end` alone, so a required member such
+    // as a duty entry's `status` would be dropped and every seeded call would fail.
     if (elemType && elemType.flags & ts.TypeFlags.Object) {
-      const props = new Set(elemType.getProperties().map((p) => p.name));
-      if (props.has("start") && props.has("end") && props.size <= 3) {
+      const members = elemType.getProperties();
+      const props = new Set(members.map((p) => p.name));
+      const othersOptional = members.every(
+        (p) =>
+          p.name === "start" ||
+          p.name === "end" ||
+          (p.flags & ts.SymbolFlags.Optional) !== 0,
+      );
+      if (
+        props.has("start") &&
+        props.has("end") &&
+        props.size <= 3 &&
+        othersOptional
+      ) {
         return { type: "array", arrayType: "string", intervalShape: true };
       }
     }

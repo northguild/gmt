@@ -1,0 +1,957 @@
+---
+title: Hours of Work
+description: Evaluate hours-of-work rules over a duty log with the duty/ module — caps, windows, breaks, rests, quotas and patterns, every number yours — and read the day the operator designates, not local midnight.
+sidebar:
+  order: 5
+industries: [core]
+---
+
+Use the `duty/` functions to check a status log against hours-of-work rules: caps on time
+worked, windows that close, breaks that are due, rests that must be long enough. A driver, a
+crew member and a resident all keep this kind of log, and their rules come in about a dozen
+shapes. GMT builds each shape once.
+
+GMT implements no regulation. A rule is a shape, every number in it is yours, and a regime is
+the array of rules you assemble and label. GMT reports what each rule measured, what is left
+and what failed. It does not decide dispatch, fitness or eligibility.
+
+## A duty log
+
+A duty log is an array of entries. Each entry is a status held over a half-open span,
+`[start, end)`. The statuses are your own strings: `"off"`, `"driving"`, `"sleeper"`,
+`"homeCall"`. GMT reads no meaning into them; each rule names the statuses it counts.
+
+```typescript
+import { isValidDutyLog } from "@northguild/gmt";
+
+isValidDutyLog([
+  { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T15:00:00Z" },
+]); // true
+
+isValidDutyLog([{ status: "on", start: "2024-01-01T02:00:00Z", end: "2024-01-01T01:00:00Z" }]); // false — inverted
+isValidDutyLog([]); // true — an empty log
+```
+
+Entries must be in order and must not overlap. One may start where the last one ended, or
+later. Time no entry covers is in no status: it is neither work nor rest. So an unlogged gap
+ends a run of rest, and it never resets a counter.
+
+## The operator-designated day
+
+A day in an hours-of-work rule is usually not local midnight. It is a 24-hour period that
+starts at a time the operator chose, in a reference zone, wherever the person is.
+`dutyDayFor` returns that day. Neither the zone nor the start time has a default.
+
+```typescript
+import { dutyDayFor } from "@northguild/gmt";
+
+const day = { timeZone: "America/New_York", dayStartTime: "04:00" };
+
+dutyDayFor("2024-01-01T08:59:00Z", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — 03:59 local
+dutyDayFor("2024-01-01T09:00:00Z", day); // { start: "2024-01-01T09:00:00Z", end: "2024-01-02T09:00:00Z" } — 04:00 local
+dutyDayFor("2024-01-01T12:00:00+09:00[Asia/Tokyo]", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — read in New York
+dutyDayFor("2024-01-01T12:00:00Z", { timeZone: "UTC" }); // null — no dayStartTime
+```
+
+When a clock change skips or repeats the start time, it is resolved `"compatible"`, the policy
+of [`resolveLocal`](/reference/instant/convert/resolveLocal): a skipped time is read after the
+gap, a repeated one at its first pass. The day that holds the change is then shorter or longer
+by the change, 23 or 25 hours across a one-hour change:
+
+```typescript
+import { dutyDayFor } from "@northguild/gmt";
+
+dutyDayFor("2024-03-10T12:00:00Z", { timeZone: "America/New_York", dayStartTime: "02:30" });
+// { start: "2024-03-10T07:30:00Z", end: "2024-03-11T06:30:00Z" } — 02:30 is skipped and read as 03:30; 23 hours
+
+dutyDayFor("2024-11-03T12:00:00Z", { timeZone: "America/New_York", dayStartTime: "01:30" });
+// { start: "2024-11-03T05:30:00Z", end: "2024-11-04T06:30:00Z" } — 01:30 happens twice; 25 hours
+```
+
+To read a repeated or skipped start time another way, pass `disambiguation` (`"earlier"`,
+`"later"` or `"reject"`), as `resolveLocal` takes it. `"reject"` returns `null` for a day that
+starts or ends at such a time, rather than guess:
+
+```typescript
+import { dutyDayFor } from "@northguild/gmt";
+
+dutyDayFor("2024-11-03T12:00:00Z", { timeZone: "America/New_York", dayStartTime: "01:30", disambiguation: "later" });
+// { start: "2024-11-03T06:30:00Z", end: "2024-11-04T06:30:00Z" } — the second 01:30 starts it; 24 hours
+
+dutyDayFor("2024-11-03T12:00:00Z", { timeZone: "America/New_York", dayStartTime: "01:30", disambiguation: "reject" }); // null
+```
+
+Every rule that counts `operatorDays` uses these days, so `evaluateDutyLog` and
+`dutyViolations` need `dayStartTime` whenever one does.
+
+## Sliding and fixed periods
+
+A rule looks back over a `Period`. There are two kinds, and they are different arithmetic.
+
+| `Period` | What it covers | `periodBasis` |
+| --- | --- | --- |
+| `{ elapsed: "PT24H" }` | Every sliding window of that length, the one evaluated ending at `at`. Clock changes do not change it. | `"elapsed"` |
+| `{ operatorDays: 7 }` | Whole operator days from `dutyDayFor`, the last one holding the instant before `at`. | `"operatorDay"` |
+| `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }`, `{ calendarYears: 1 }` | Whole local periods in the reference zone, the last one holding the instant before `at`. A day across a one-hour clock change is 23 or 25 hours. | `"calendar"` |
+
+A rule written as "in any 24 hours" means every sliding window. A check that groups by
+calendar day passes logs that a sliding window fails. If you mean a fixed day, say
+`{ operatorDays: 1 }`.
+
+The two kinds part company across a clock change. Over New York's fall-back, 672 elapsed hours
+are 672 hours, and 28 calendar days are 673:
+
+```typescript
+import { evaluateDutyLog } from "@northguild/gmt";
+
+const report = evaluateDutyLog(
+  [],
+  "2024-11-10T12:00:00Z",
+  [
+    { label: "672 hours", kind: "rollingCap", statuses: ["flight"], cap: "PT100H", window: { elapsed: "PT672H" } },
+    { label: "28 days", kind: "rollingCap", statuses: ["flight"], cap: "PT100H", window: { calendarDays: 28 } },
+  ],
+  { timeZone: "America/New_York" },
+);
+
+report.outcomes.map(({ label, window, periodBasis }) => ({ label, window, periodBasis }));
+// [{ label: "672 hours", window: { start: "2024-10-13T12:00:00Z", end: "2024-11-10T12:00:00Z" }, periodBasis: "elapsed" },
+//  { label: "28 days", window: { start: "2024-10-14T04:00:00Z", end: "2024-11-11T05:00:00Z" }, periodBasis: "calendar" }]
+```
+
+The 28 days ending on 15 March hold the spring-forward day instead, and are 671 hours long.
+
+## Reading a report
+
+`evaluateDutyLog(log, at, rules, options)` evaluates every rule at one instant. It reports each
+rule whether or not it binds, so you can see the second-tightest limit before it binds:
+
+```typescript
+import { evaluateDutyLog } from "@northguild/gmt";
+
+evaluateDutyLog(
+  [
+    { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T21:00:00Z" },
+  ],
+  "2024-01-01T21:00:00Z",
+  [{ label: "11 driving", kind: "cumulativeCap", statuses: ["driving"], cap: "PT11H", since: { statuses: ["off"], consecutive: "PT10H" } }],
+  { timeZone: "UTC" },
+);
+// { at: "2024-01-01T21:00:00Z", outcomes: [{ label: "11 driving", kind: "cumulativeCap", severity: "violation", satisfied: true, used: "PT11H", limit: "PT11H", remaining: "PT0S", window: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T21:00:00Z" }, periodBasis: null, dueBy: null, resetAt: "2024-01-01T10:00:00Z" }], violations: [], advisories: [] }
+```
+
+Each outcome carries the same fields:
+
+| Field | What it holds |
+| --- | --- |
+| `satisfied` | Whether the rule holds at `at`. |
+| `used`, `limit` | What the rule measured, and the figure it is held to: a duration, or a count. |
+| `remaining` | What is left before a cap binds, or what is still needed to meet a minimum. Never negative. |
+| `window` | The span measured. A window of local periods runs to the end of the current period. |
+| `periodBasis` | `"elapsed"`, `"operatorDay"` or `"calendar"`; `null` for a count since a reset. |
+| `dueBy` | The instant something is due by: a window's close, a rest's deadline. |
+| `resetAt` | Where the last reset ended. |
+
+Durations are ISO 8601 with hours as the largest unit, and instants are UTC.
+
+Three rules for reading the log:
+
+- **It is read as it stands at `at`.** Entries after `at` are ignored, and one that straddles
+  `at` is cut there. To check a planned roster, append the plan to the log and set `at` to its
+  end.
+- **Local periods hold the instant before `at`.** At a period boundary, the period that just
+  ended is judged, so a roster ending at midnight is checked through its last day.
+- **A minimum is not failed early.** A window that runs past `at` (the rest of today, the rest
+  of this week) fails a minimum only once rest from `at` to its end could no longer meet it. A
+  cap fails as soon as it is passed.
+
+A failed rule is listed again under `violations`. A rule with `severity: "advisory"` is listed
+under `advisories` instead, and never under `violations`:
+
+```typescript
+import { evaluateDutyLog } from "@northguild/gmt";
+
+evaluateDutyLog(
+  [
+    { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" },
+  ],
+  "2024-01-01T22:00:00Z",
+  [{ label: "11 driving", kind: "cumulativeCap", statuses: ["driving"], cap: "PT11H", since: { statuses: ["off"], consecutive: "PT10H" }, severity: "advisory" }],
+  { timeZone: "UTC" },
+);
+// { at: "2024-01-01T22:00:00Z", outcomes: [{ label: "11 driving", kind: "cumulativeCap", severity: "advisory", satisfied: false, used: "PT12H", limit: "PT11H", remaining: "PT0S", window: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" }, periodBasis: null, dueBy: null, resetAt: "2024-01-01T10:00:00Z" }], violations: [], advisories: [{ label: "11 driving", kind: "cumulativeCap", severity: "advisory", satisfied: false, used: "PT12H", limit: "PT11H", remaining: "PT0S", window: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" }, periodBasis: null, dueBy: null, resetAt: "2024-01-01T10:00:00Z" }] }
+```
+
+`evaluateDutyLog` returns `null` for invalid input: a log that fails `isValidDutyLog`, a
+malformed rule (an unknown kind, an empty status list, a cap of zero, a malformed period, two
+rules with one label, more than 10,000 periods), an invalid zone, a rule that counts operator
+days without `dayStartTime`, a requirement too long for any duration, and a count of free
+periods past `Number.MAX_SAFE_INTEGER`. A count of periods is 10,000 at most, and so is a count
+times `adjacent`, `lookback` or `periods`, and `containing.count`. One run of rest may hold at
+most 20,000 of a free period's `containing` windows, about 54 years of a nightly window.
+
+The examples below build their logs with a small helper, so that a week of shifts fits on a
+line. It is ordinary Temporal; copy it or write your own:
+
+```typescript
+import { Temporal } from "@northguild/gmt";
+import type { DutyEntry } from "@northguild/gmt";
+
+/** A log laid end to end from `start`: each step a status and an ISO 8601 duration. */
+function shifts(start: string, ...steps: [string, string][]): DutyEntry[] {
+  const log: DutyEntry[] = [];
+  let at = Temporal.Instant.from(start);
+  for (const [status, length] of steps) {
+    const end = at.add(length);
+    log.push({ status, start: at.toString(), end: end.toString() });
+    at = end;
+  }
+  return log;
+}
+```
+
+## `cumulativeCap`: a cap since a reset
+
+A cap on time in some statuses since the last reset: "11 hours of driving since 10 hours off".
+A reset is a run of at least `consecutive` in any of its statuses, and the count starts again
+where the run ends. With no reset in the log, the count starts at the first entry.
+
+```typescript
+const eleven = {
+  label: "11 driving",
+  kind: "cumulativeCap",
+  statuses: ["driving"],
+  cap: "PT11H",
+  since: { statuses: ["off"], consecutive: "PT10H" },
+};
+
+const log = [
+  { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" },
+];
+
+evaluateDutyLog(log, "2024-01-01T22:00:00Z", [eleven], { timeZone: "UTC" }).outcomes[0];
+// { label: "11 driving", kind: "cumulativeCap", severity: "violation", satisfied: false,
+//   used: "PT12H", limit: "PT11H", remaining: "PT0S",
+//   window: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" },
+//   periodBasis: null, dueBy: null, resetAt: "2024-01-01T10:00:00Z" }
+```
+
+At exactly 11 hours the rule holds with `remaining: "PT0S"`. A rest of 9 hours 59 minutes does
+not reset it; 10 hours does.
+
+## `elapsedWindow`: a window that rest does not extend
+
+A window that opens with the first work after a reset and closes `length` later, whatever rest
+falls inside it. Time in `restrictedStatuses` at or after the close fails the rule. `dueBy` is
+the close:
+
+```typescript
+const window14 = {
+  label: "14 window",
+  kind: "elapsedWindow",
+  startStatuses: ["driving", "onDuty"],
+  length: "PT14H",
+  restrictedStatuses: ["driving"],
+  since: { statuses: ["off", "sleeper"], consecutive: "PT10H" },
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["off", "PT10H"], ["driving", "PT4H"], ["off", "PT2H"], ["driving", "PT8H30M"]);
+
+evaluateDutyLog(log, "2024-01-02T00:30:00Z", [window14], { timeZone: "UTC" }).outcomes[0];
+// { label: "14 window", kind: "elapsedWindow", severity: "violation", satisfied: false,
+//   used: "PT14H30M", limit: "PT14H", remaining: "PT0S",
+//   window: { start: "2024-01-01T10:00:00Z", end: "2024-01-02T00:00:00Z" },
+//   periodBasis: "elapsed", dueBy: "2024-01-02T00:00:00Z", resetAt: "2024-01-01T10:00:00Z" }
+```
+
+The 2-hour break at 14:00 did not move the close. Two things can:
+
+- **`exclude`, a paired rest.** Two rests in a row that meet a `PairSpec` count against the
+  window as if they were not there: the window is counted again from the end of the first, and
+  its time stops while the second lasts. A second rest that starts after the window has closed
+  moves nothing, and a rest shorter than `eachAtLeast` between the two is neither half of the
+  pair nor a break in it. 7.5 + 2.5 hours meets `{ eachAtLeast: "PT2H", oneAtLeast: "PT7H",
+  combinedAtLeast: "PT10H" }`, so the window closes at 21:30 + 14 h + 2.5 h:
+
+  ```typescript
+  const log = shifts(
+    "2024-01-01T00:00:00Z",
+    ["off", "PT10H"], ["driving", "PT4H"], ["sleeper", "PT7H30M"],
+    ["driving", "PT3H"], ["off", "PT2H30M"], ["driving", "PT5H"],
+  );
+  const exclude = { eachAtLeast: "PT2H", oneAtLeast: "PT7H", combinedAtLeast: "PT10H" };
+
+  evaluateDutyLog(log, "2024-01-02T08:00:00Z", [{ ...window14, exclude }], { timeZone: "UTC" }).outcomes[0];
+  // { label: "14 window", kind: "elapsedWindow", severity: "violation", satisfied: true,
+  //   used: "PT8H", limit: "PT14H", remaining: "PT6H",
+  //   window: { start: "2024-01-01T21:30:00Z", end: "2024-01-02T14:00:00Z" },
+  //   periodBasis: "elapsed", dueBy: "2024-01-02T14:00:00Z", resetAt: "2024-01-01T10:00:00Z" }
+  ```
+
+  Without `exclude`, the same log closes at 24:00 and the driving after it fails the rule.
+- **`extension: { by, from }`, one you declare.** The window open at the instant `from` closes
+  `by` later. A window not open at `from` is unchanged.
+
+## `requiredInterruption`: a break after counted time
+
+A break due after a stretch of counted time: "30 minutes after 8 hours of driving". `used` is
+the counted time since the last qualifying break. A break is a run of logged time outside
+`countedStatuses` (or inside `outsideStatuses`, when you give it) of at least `minimum`:
+
+```typescript
+const breakRule = {
+  label: "30 after 8",
+  kind: "requiredInterruption",
+  countedStatuses: ["driving"],
+  after: "PT8H",
+  interruption: { minimum: "PT30M" },
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["driving", "PT8H"], ["onDuty", "PT30M"], ["driving", "PT3H"]);
+
+evaluateDutyLog(log, "2024-01-01T11:30:00Z", [breakRule], { timeZone: "UTC" }).outcomes[0];
+// { label: "30 after 8", kind: "requiredInterruption", severity: "violation", satisfied: true,
+//   used: "PT3H", limit: "PT8H", remaining: "PT5H",
+//   window: { start: "2024-01-01T08:30:00Z", end: "2024-01-01T11:30:00Z" },
+//   periodBasis: null, dueBy: null, resetAt: "2024-01-01T08:30:00Z" }
+```
+
+`orderedSplit` lets shorter breaks count together, in order. With `["PT15M", "PT30M"]`, a
+15-minute break and then a 30-minute one complete the break; 30 then 15 does not:
+
+```typescript
+const split = {
+  label: "45 after 4.5",
+  kind: "requiredInterruption",
+  countedStatuses: ["driving"],
+  after: "PT4H30M",
+  interruption: { minimum: "PT45M", orderedSplit: ["PT15M", "PT30M"] },
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["driving", "PT2H"], ["break", "PT30M"], ["driving", "PT2H"], ["break", "PT15M"], ["driving", "PT1H"]);
+
+evaluateDutyLog(log, "2024-01-01T05:45:00Z", [split], { timeZone: "UTC" }).outcomes[0];
+// { label: "45 after 4.5", kind: "requiredInterruption", severity: "violation", satisfied: false,
+//   used: "PT5H", limit: "PT4H30M", remaining: "PT0S",
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-01T05:45:00Z" },
+//   periodBasis: null, dueBy: null, resetAt: null }
+```
+
+## `rollingCap`: a cap inside a window
+
+A cap on time inside a `Period` that ends at `at`: "60 hours in 7 operator days", "100 hours
+in 672". Here four 10-hour duties fall on 1, 3, 5 and 8 January, and the 7 operator days
+ending on the 8th no longer hold the 1st:
+
+```typescript
+const sixty = {
+  label: "60 in 7",
+  kind: "rollingCap",
+  statuses: ["onDuty"],
+  cap: "PT60H",
+  window: { operatorDays: 7 },
+  reset: { statuses: ["off"], consecutive: "PT34H" },
+};
+
+const log = [
+  { status: "onDuty", start: "2024-01-01T06:00:00Z", end: "2024-01-01T16:00:00Z" },
+  { status: "onDuty", start: "2024-01-03T06:00:00Z", end: "2024-01-03T16:00:00Z" },
+  { status: "onDuty", start: "2024-01-05T06:00:00Z", end: "2024-01-05T16:00:00Z" },
+  { status: "onDuty", start: "2024-01-08T06:00:00Z", end: "2024-01-08T16:00:00Z" },
+];
+
+evaluateDutyLog(log, "2024-01-08T16:00:00Z", [sixty], { timeZone: "UTC", dayStartTime: "04:00" }).outcomes[0];
+// { label: "60 in 7", kind: "rollingCap", severity: "violation", satisfied: true,
+//   used: "PT30H", limit: "PT60H", remaining: "PT30H",
+//   window: { start: "2024-01-02T04:00:00Z", end: "2024-01-09T04:00:00Z" },
+//   periodBasis: "operatorDay", dueBy: null, resetAt: null }
+```
+
+`reset` starts the count again, as a long rest that restarts a cycle does: the window then begins where the
+reset ended. `precondition: { restStatuses, minimum, beforeHours }` applies the cap only once
+the window holds a rest of `minimum`; before that rest, the limit is `beforeHours`.
+
+## `fixedPeriodCap`: a cap over whole periods
+
+A cap over whole local periods: "56 hours in an ISO week", "90 in two adjacent weeks". A shift
+that crosses a period boundary is cut there, and each part counts in its own period. Here week
+one holds 45 hours of driving and week two 46: each week is under 56, the pair holds 91:
+
+```typescript
+const weekly = { label: "56 a week", kind: "fixedPeriodCap", statuses: ["driving"], cap: "PT56H", period: { isoWeeks: 1 } };
+const fortnight = { ...weekly, label: "90 a fortnight", cap: "PT90H", adjacent: 2 };
+
+// Five shifts a week, Monday to Friday, then the weekend off.
+const fiveShifts = (shift: string, rest: string): [string, string][] => [
+  ["driving", shift], ["off", rest], ["driving", shift], ["off", rest], ["driving", shift], ["off", rest],
+  ["driving", shift], ["off", rest], ["driving", shift], ["off", rest], ["off", "PT48H"],
+];
+const log = shifts("2024-01-01T00:00:00Z", ...fiveShifts("PT9H", "PT15H"), ...fiveShifts("PT9H12M", "PT14H48M"));
+
+evaluateDutyLog(log, "2024-01-15T00:00:00Z", [weekly, fortnight], { timeZone: "UTC" })
+  .outcomes.map(({ label, satisfied, used, window }) => ({ label, satisfied, used, window }));
+// [{ label: "56 a week", satisfied: true, used: "PT46H", window: { start: "2024-01-08T00:00:00Z", end: "2024-01-15T00:00:00Z" } },
+//  { label: "90 a fortnight", satisfied: false, used: "PT91H", window: { start: "2024-01-01T00:00:00Z", end: "2024-01-15T00:00:00Z" } }]
+```
+
+With `average: true`, `cap` limits the mean over the `adjacent` periods. Weeks of 100, 60, 80
+and 80 hours average exactly 80, so an 80-hour average passes. The 100-hour week counts in
+full:
+
+```typescript
+const averaged = {
+  label: "80 averaged over 4",
+  kind: "fixedPeriodCap",
+  statuses: ["onDuty"],
+  cap: "PT80H",
+  period: { isoWeeks: 1 },
+  adjacent: 4,
+  average: true,
+};
+
+const log = [
+  { status: "onDuty", start: "2024-01-01T00:00:00Z", end: "2024-01-05T04:00:00Z" },
+  { status: "onDuty", start: "2024-01-08T00:00:00Z", end: "2024-01-10T12:00:00Z" },
+  { status: "onDuty", start: "2024-01-15T00:00:00Z", end: "2024-01-18T08:00:00Z" },
+  { status: "onDuty", start: "2024-01-22T00:00:00Z", end: "2024-01-25T08:00:00Z" },
+];
+
+evaluateDutyLog(log, "2024-01-29T00:00:00Z", [averaged], { timeZone: "UTC" }).outcomes[0];
+// { label: "80 averaged over 4", kind: "fixedPeriodCap", severity: "violation", satisfied: true,
+//   used: "PT80H", limit: "PT80H", remaining: "PT0S",
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-29T00:00:00Z" },
+//   periodBasis: "calendar", dueBy: null, resetAt: null }
+```
+
+The `period` must be a count of local periods; an `elapsed` period has no fixed boundaries and
+makes the call invalid.
+
+## `restRequirement`: a minimum of rest in every window
+
+A minimum of rest inside every window: "10 hours of rest in every 24". Only the part of a rest
+inside the window counts. `composition` limits the rests it is counted from: with
+`{ maxPeriods: 2, longestAtLeast: "PT6H" }`, 6 + 4 passes and 5 + 5 fails:
+
+```typescript
+const tenIn24 = {
+  label: "10 in 24",
+  kind: "restRequirement",
+  restStatuses: ["rest"],
+  per: { elapsed: "PT24H" },
+  minimum: "PT10H",
+  composition: { maxPeriods: 2, longestAtLeast: "PT6H" },
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["rest", "PT5H"], ["work", "PT7H"], ["rest", "PT5H"], ["work", "PT7H"]);
+
+evaluateDutyLog(log, "2024-01-02T00:00:00Z", [tenIn24], { timeZone: "UTC" }).outcomes[0];
+// { label: "10 in 24", kind: "restRequirement", severity: "violation", satisfied: false,
+//   used: "PT5H", limit: "PT6H", remaining: "PT1H",
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" },
+//   periodBasis: "elapsed", dueBy: null, resetAt: null }
+```
+
+A failed rule shows the floor it failed: here the longest rest, 5 hours of the 6 required.
+Two more options:
+
+- **`composite: { consecutive, additional, blockMinimum }`.** The longest rest must be at least
+  `consecutive`, and other blocks of at least `blockMinimum` must make up `additional` more. With
+  8 + 2 in 30-minute blocks, 8 hours plus four 30-minute blocks passes; 8 plus six 20-minute
+  blocks does not, because no block counts.
+- **`maxGap`.** The most time from the end of one rest to the start of the next. The log's
+  first entry starts a stretch as the end of a rest would, so work logged before the first rest
+  counts too. While working, `dueBy` is when the next rest must start:
+
+  ```typescript
+  const gap = { label: "14 between rests", kind: "restRequirement", restStatuses: ["rest"], per: { elapsed: "PT24H" }, minimum: "PT10H", maxGap: "PT14H" };
+
+  evaluateDutyLog(shifts("2024-01-01T00:00:00Z", ["rest", "PT10H"], ["work", "PT5H"]), "2024-01-01T15:00:00Z", [gap], { timeZone: "UTC" }).outcomes[0];
+  // { label: "14 between rests", kind: "restRequirement", severity: "violation", satisfied: true,
+  //   used: "PT10H", limit: "PT10H", remaining: "PT0S",
+  //   window: { start: "2023-12-31T15:00:00Z", end: "2024-01-01T15:00:00Z" },
+  //   periodBasis: "elapsed", dueBy: "2024-01-02T00:00:00Z", resetAt: null }
+  ```
+
+## `freePeriod`: a long rest inside every window
+
+A free period of at least `minimum` consecutive rest inside every window: "30 consecutive hours
+off in every 168". `used` counts how many separate free periods the window holds, and `dueBy`
+is the instant the next one must be complete by if no more rest is taken:
+
+```typescript
+const thirty = { label: "30 in 168", kind: "freePeriod", restStatuses: ["off"], minimum: "PT30H", within: { elapsed: "PT168H" } };
+
+const log = shifts("2024-01-01T00:00:00Z", ["off", "PT30H"], ["onDuty", "PT18H"]);
+
+evaluateDutyLog(log, "2024-01-03T00:00:00Z", [thirty], { timeZone: "UTC" }).outcomes[0];
+// { label: "30 in 168", kind: "freePeriod", severity: "violation", satisfied: true,
+//   used: 1, limit: 1, remaining: 0,
+//   window: { start: "2023-12-27T00:00:00Z", end: "2024-01-03T00:00:00Z" },
+//   periodBasis: "elapsed", dueBy: "2024-01-08T00:00:00Z", resetAt: null }
+```
+
+The rest ended at 06:00 on the 2nd. A 168-hour window holds 30 hours of it until its start
+passes 00:00 on the 1st, so the window closes at 00:00 on the 8th.
+
+- **`containing: { window, count }`.** Each free period must also hold `count` whole local
+  windows, such as nights from 22:00 to 08:00 in the reference zone. 36 hours off from 20:00 on
+  the 1st to 08:00 on the 3rd holds two nights; from 10:00 on the 1st to 22:00 on the 2nd it
+  holds one.
+- **`atLeast`.** How many free periods the window must hold: one 24-hour free period in seven
+  days over 28 is `{ minimum: "PT24H", within: { calendarDays: 28 }, atLeast: 4 }`. A run twice
+  `minimum` long holds two.
+
+## `restBeforeDuty`: rest before each duty
+
+A rest required before each duty: "10 hours off in the 24 before a duty". A duty starts where
+logged time outside `restStatuses` begins. The rest before it is the longest rest inside
+`within` before that start, so a short break between two stints does not stand in for it. A
+stint after any rest is a new duty, so log a break inside a duty in its own status, outside
+`restStatuses`.
+
+`orFactor: { k, floor }` judges each duty by the rest right before it instead, measured whole,
+however far back `within` reaches. That rest must be at least `minimum`, `floor` and `k` × the
+duty it ends. That duty runs from the end of the last rest of at least `minimum` before it to
+where the rest starts, breaks included, so after a 13-hour duty 13 hours are due. `k` is read as
+the shortest decimal `String(k)` prints: `1.1` is exactly eleven tenths, and `0.1 + 0.2` is
+0.30000000000000004. The `window` is the duty before the rest and the rest itself.
+
+```typescript
+const before = {
+  label: "rest before duty",
+  kind: "restBeforeDuty",
+  restStatuses: ["off"],
+  minimum: "PT10H",
+  within: "PT24H",
+  orFactor: { k: 1, floor: "PT12H" },
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["onDuty", "PT13H"], ["off", "PT12H"], ["onDuty", "PT1H"]);
+
+evaluateDutyLog(log, "2024-01-02T02:00:00Z", [before], { timeZone: "UTC" }).outcomes[0];
+// { label: "rest before duty", kind: "restBeforeDuty", severity: "violation", satisfied: false,
+//   used: "PT12H", limit: "PT13H", remaining: "PT1H",
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-02T01:00:00Z" },
+//   periodBasis: "elapsed", dueBy: null, resetAt: null }
+```
+
+Evaluated during a rest, the rule holds, and `remaining` is the rest still needed before a duty
+may start.
+
+## `quota`: how often a short rest is taken
+
+A cap on how many short rests are taken: "at most 3 reduced rests between two full rests". An
+event is a run of at least `minimum` and shorter than `maximum`, counted where it starts. The
+count runs since the last `reset` run, or inside an `every` window:
+
+```typescript
+const reduced = {
+  label: "3 reduced",
+  kind: "quota",
+  event: { statuses: ["off"], minimum: "PT9H", maximum: "PT11H" },
+  count: 3,
+  reset: { statuses: ["off"], consecutive: "PT24H" },
+};
+
+const log = shifts(
+  "2024-01-01T00:00:00Z",
+  ["off", "PT24H"],
+  ["driving", "PT13H"], ["off", "PT9H"], ["driving", "PT13H"], ["off", "PT9H"],
+  ["driving", "PT13H"], ["off", "PT9H"], ["driving", "PT13H"], ["off", "PT9H"],
+  ["driving", "PT1H"],
+);
+
+evaluateDutyLog(log, "2024-01-05T17:00:00Z", [reduced], { timeZone: "UTC" }).outcomes[0];
+// { label: "3 reduced", kind: "quota", severity: "violation", satisfied: false,
+//   used: 4, limit: 3, remaining: 0,
+//   window: { start: "2024-01-02T00:00:00Z", end: "2024-01-05T17:00:00Z" },
+//   periodBasis: null, dueBy: null, resetAt: "2024-01-02T00:00:00Z" }
+```
+
+After the third reduced rest the rule holds with `remaining: 0`; the fourth fails it. A rest the
+log carries on past `at` may still grow past `maximum`, so it is not counted until it ends.
+
+## `dueBy`: a rest due within a number of periods
+
+A rest that must start within a number of periods of the last one: "a weekly rest by the end of
+six operator days". The period the last rest ended in counts as the first. Here the last rest
+ended at 10:00 on Monday the 1st, inside the operator day that began at 04:00, so the sixth day
+ends at 04:00 on Sunday the 7th:
+
+```typescript
+const weeklyRest = {
+  label: "weekly rest",
+  kind: "dueBy",
+  event: { statuses: ["off"], minimum: "PT45H" },
+  within: { periods: 6, period: { operatorDays: 1 } },
+};
+
+const log = [
+  { status: "off", start: "2023-12-30T13:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T20:00:00Z" },
+];
+
+evaluateDutyLog(log, "2024-01-01T20:00:00Z", [weeklyRest], { timeZone: "UTC", dayStartTime: "04:00" }).outcomes[0];
+// { label: "weekly rest", kind: "dueBy", severity: "violation", satisfied: true,
+//   used: "PT10H", limit: "PT138H", remaining: "PT128H",
+//   window: { start: "2024-01-01T10:00:00Z", end: "2024-01-07T04:00:00Z" },
+//   periodBasis: "operatorDay", dueBy: "2024-01-07T04:00:00Z", resetAt: "2024-01-01T10:00:00Z" }
+```
+
+With `dayStartTime: "00:00"` the same rest is due at `"2024-01-07T00:00:00Z"`: the deadline
+follows the operator's day, not midnight. The rule holds after `dueBy` only while a rest that
+began by then is still going.
+
+## `pattern`: rests by class in a window
+
+A count of rests by class: "at least 4 weekly rests in any 4 weeks, at least 2 of them
+regular". A run counts once in each class whose statuses and minimum it meets, in the window it
+starts in. `used` and `limit` are the tightest requirement's, the first on a tie:
+
+```typescript
+const pattern = {
+  label: "4 rests, 2 regular",
+  kind: "pattern",
+  period: { isoWeeks: 1 },
+  lookback: 4,
+  classes: [
+    { label: "weekly", statuses: ["off"], minimum: "PT24H" },
+    { label: "regular", statuses: ["off"], minimum: "PT45H" },
+  ],
+  require: [
+    { label: "weekly", atLeast: 4 },
+    { label: "regular", atLeast: 2 },
+  ],
+};
+
+const log = [
+  { status: "off", start: "2024-01-06T00:00:00Z", end: "2024-01-07T21:00:00Z" },
+  { status: "off", start: "2024-01-13T00:00:00Z", end: "2024-01-14T00:00:00Z" },
+  { status: "off", start: "2024-01-20T00:00:00Z", end: "2024-01-21T00:00:00Z" },
+  { status: "off", start: "2024-01-27T00:00:00Z", end: "2024-01-28T00:00:00Z" },
+];
+
+evaluateDutyLog(log, "2024-01-29T00:00:00Z", [pattern], { timeZone: "UTC" }).outcomes[0];
+// { label: "4 rests, 2 regular", kind: "pattern", severity: "violation", satisfied: false,
+//   used: 1, limit: 2, remaining: 1,
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-29T00:00:00Z" },
+//   periodBasis: "calendar", dueBy: null, resetAt: null }
+```
+
+Four rests, but only the first is 45 hours or more.
+
+## `occurrenceCap`: how many periods hold a status
+
+A cap on how many local periods hold a status: "night duty no more often than every third
+night", "duty started on at most 6 of any 7 days". With `byInitiationDate`, a run counts only in
+the period it starts in, so two tours starting on one date count once:
+
+```typescript
+const sixOfSeven = {
+  label: "6 of 7",
+  kind: "occurrenceCap",
+  statuses: ["onDuty"],
+  per: { calendarDays: 1 },
+  lookback: 7,
+  maximum: 6,
+  byInitiationDate: true,
+};
+
+const log = shifts("2024-01-01T00:00:00Z", ["onDuty", "PT6H"], ["off", "PT4H"], ["onDuty", "PT6H"], ["off", "PT8H"]);
+
+evaluateDutyLog(log, "2024-01-02T00:00:00Z", [sixOfSeven], { timeZone: "UTC" }).outcomes[0];
+// { label: "6 of 7", kind: "occurrenceCap", severity: "violation", satisfied: true,
+//   used: 1, limit: 6, remaining: 5,
+//   window: { start: "2023-12-26T00:00:00Z", end: "2024-01-02T00:00:00Z" },
+//   periodBasis: "calendar", dueBy: null, resetAt: null }
+```
+
+Without `byInitiationDate`, a run counts in every period it touches: a night from 22:00 to
+07:00 counts on both dates.
+
+## `usageLookback`: an allowance used once in a window
+
+An allowance used at most once in a window, restored by a rest: "not used within the previous
+7 days unless 34 hours off came between". `uses` are the instants you used it. The rule fails
+when the window holds two uses after the last reset:
+
+```typescript
+const allowance = {
+  label: "allowance",
+  kind: "usageLookback",
+  uses: ["2024-01-01T10:00:00Z", "2024-01-06T10:00:00Z"],
+  notWithin: { calendarDays: 7 },
+  reset: { statuses: ["off"], consecutive: "PT34H" },
+};
+
+const log = shifts(
+  "2024-01-01T00:00:00Z",
+  ["onDuty", "PT12H"], ["off", "PT12H"], ["onDuty", "PT12H"], ["off", "PT12H"],
+  ["onDuty", "PT12H"], ["off", "PT12H"], ["onDuty", "PT12H"], ["off", "PT12H"],
+  ["onDuty", "PT12H"], ["off", "PT12H"], ["onDuty", "PT12H"],
+);
+
+evaluateDutyLog(log, "2024-01-06T12:00:00Z", [allowance], { timeZone: "UTC" }).outcomes[0];
+// { label: "allowance", kind: "usageLookback", severity: "violation", satisfied: false,
+//   used: 2, limit: 1, remaining: 0,
+//   window: { start: "2023-12-31T00:00:00Z", end: "2024-01-07T00:00:00Z" },
+//   periodBasis: "calendar", dueBy: null, resetAt: null }
+```
+
+With a 34-hour rest between the two uses the rule holds, and `resetAt` is where that rest
+ended. `remaining` is 1 while the allowance is free to use. Each window holds a use once: a window
+of local periods holds a use on its end in the next window, and an `elapsed` window runs up to
+and including the instant evaluated, so a use exactly its length before is outside it.
+
+## Totals, runs and paired rests
+
+Four helpers answer the questions underneath the rules. `dutyTotals` merges the entries in some
+statuses, cuts them to a window and sums them, the interval algebra of
+[Set Operations](/guides/intervals/set-operations/). `longestRun` returns the longest unbroken
+stretch:
+
+```typescript
+import { dutyTotals, longestRun } from "@northguild/gmt";
+
+const log = [
+  { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T15:00:00Z" },
+  { status: "onDuty", start: "2024-01-01T15:00:00Z", end: "2024-01-01T17:00:00Z" },
+  { status: "driving", start: "2024-01-01T17:00:00Z", end: "2024-01-01T20:00:00Z" },
+  { status: "off", start: "2024-01-01T20:00:00Z", end: "2024-01-02T00:00:00Z" },
+];
+const day = { start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" };
+
+dutyTotals(log, day, ["driving"]); // "PT8H"
+dutyTotals(log, day, ["driving", "onDuty"]); // "PT10H"
+dutyTotals(log, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, ["driving"]); // "PT4H"
+longestRun(log, day, ["driving"]); // { interval: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T15:00:00Z" }, duration: "PT5H" }
+longestRun(log, day, ["driving", "onDuty"]); // { interval: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T20:00:00Z" }, duration: "PT10H" }
+longestRun(log, day, ["sleeper"]); // null
+```
+
+`qualifyingRests` returns every rest of at least `minimum`. `qualifyingRestPairs` returns the
+paired rests: two rests in a row, each shorter than a full rest, that meet all three floors of a
+`PairSpec`. A pair is three constraints, not two whole numbers:
+
+```typescript
+import { qualifyingRestPairs } from "@northguild/gmt";
+
+const spec = {
+  statuses: ["off", "sleeper"],
+  minimum: "PT10H",
+  pair: { eachAtLeast: "PT2H", oneAtLeast: "PT7H", combinedAtLeast: "PT10H" },
+};
+
+qualifyingRestPairs(
+  [
+    { status: "sleeper", start: "2024-01-01T00:00:00Z", end: "2024-01-01T07:30:00Z" },
+    { status: "driving", start: "2024-01-01T07:30:00Z", end: "2024-01-01T11:30:00Z" },
+    { status: "off", start: "2024-01-01T11:30:00Z", end: "2024-01-01T14:00:00Z" },
+  ],
+  spec,
+); // [{ first: { start: "2024-01-01T00:00:00Z", end: "2024-01-01T07:30:00Z" }, second: { start: "2024-01-01T11:30:00Z", end: "2024-01-01T14:00:00Z" } }]
+
+qualifyingRestPairs(
+  [
+    { status: "sleeper", start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" },
+    { status: "driving", start: "2024-01-01T06:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "off", start: "2024-01-01T10:00:00Z", end: "2024-01-01T14:00:00Z" },
+  ],
+  spec,
+); // [] — 6 + 4: neither is 7
+```
+
+## The record over a range
+
+`dutyViolations(log, range, rules, options)` lists every violation inside a range: the record
+over a month, not the check before dispatch. It checks each rule at every instant where its
+answer can change, so it finds a failed window even between entry bounds, and splitting one
+status into two entries never changes the record. It lists one entry per violation, shown by the
+window that failed worst:
+
+- A window that moves (an `elapsed` duration, or several periods such as 7 calendar days) is one
+  violation for as long as it keeps failing. When it passes and fails again, that is a new one.
+- A count since a reset is one violation per stretch between resets, and a fixed period, such as
+  one week or one day, is one per period.
+- A violation is listed in the range it began in. One already failing when the range opens
+  belongs to the range before; one still failing when it closes is shown by its worst window,
+  even if that ends later. So two adjacent months list each violation once.
+- Each check reads the log as it stood then. A failure stays listed when later entries would
+  have excused it, such as a rest that completes a pair after the window it would have moved had
+  closed, so a record only grows as the log does.
+- Only logged time is judged. Nothing after the log's last entry is checked, so a month-to-date
+  range reads as one ending with the log, and a day still open there is judged as not yet over.
+  Nothing before the log's first entry is checked either, so a range of years over a week of log
+  reads as that week.
+- Time before the log is read two ways. `evaluateDutyLog` is strict: that time is neither work
+  nor rest, so a rest rule whose window reaches back before the log fails. The record does not
+  invent a violation there: a rest rule is not judged on a window that starts before the log's
+  first entry. Start the log one window length before the range.
+- A fixed period, such as one day, is shown by its last check, which judges the period complete.
+
+```typescript
+import { dutyViolations } from "@northguild/gmt";
+
+const week = [
+  { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" },
+  { status: "off", start: "2024-01-01T22:00:00Z", end: "2024-01-02T10:00:00Z" },
+  { status: "driving", start: "2024-01-02T10:00:00Z", end: "2024-01-02T20:00:00Z" },
+  { status: "off", start: "2024-01-02T20:00:00Z", end: "2024-01-03T10:00:00Z" },
+  { status: "driving", start: "2024-01-03T10:00:00Z", end: "2024-01-03T23:00:00Z" },
+];
+
+dutyViolations(
+  week,
+  { start: "2024-01-01T00:00:00Z", end: "2024-01-04T00:00:00Z" },
+  [{ label: "11 driving", kind: "cumulativeCap", statuses: ["driving"], cap: "PT11H", since: { statuses: ["off"], consecutive: "PT10H" } }],
+  { timeZone: "UTC" },
+);
+// [{ label: "11 driving", window: { start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" }, used: "PT12H", limit: "PT11H" }, { label: "11 driving", window: { start: "2024-01-03T10:00:00Z", end: "2024-01-03T23:00:00Z" }, used: "PT13H", limit: "PT11H" }]
+```
+
+Advisories are not listed, and an empty list means no violation. Invalid input returns `null`,
+never `[]`, so a malformed rule can never read as a clean record. So does a record too large to
+check: more than 10,000 of a rule's local periods ending in the time the log covers, or more than
+1,000,000 instants to check for one rule.
+
+## Five example regimes
+
+Each regime below is an array of rules labelled by its numbers only. The numbers are examples;
+yours come from whatever governs your work. Every result shown is the real output.
+
+### An 11-hour cap inside a 14-hour window, with 60 hours in 7 operator days
+
+```typescript
+const rules = [
+  { label: "11 driving", kind: "cumulativeCap", statuses: ["driving"], cap: "PT11H", since: { statuses: ["off"], consecutive: "PT10H" } },
+  { label: "14 window", kind: "elapsedWindow", startStatuses: ["driving", "onDuty"], length: "PT14H", restrictedStatuses: ["driving"], since: { statuses: ["off"], consecutive: "PT10H" } },
+  { label: "60 in 7", kind: "rollingCap", statuses: ["driving", "onDuty"], cap: "PT60H", window: { operatorDays: 7 }, reset: { statuses: ["off"], consecutive: "PT34H" } },
+];
+const log = shifts("2024-01-01T00:00:00Z", ["off", "PT10H"], ["driving", "PT5H"], ["off", "PT30M"], ["driving", "PT4H"], ["onDuty", "PT1H"], ["driving", "PT2H30M"]);
+const options = { timeZone: "UTC", dayStartTime: "04:00" };
+const summary = (at: string) =>
+  evaluateDutyLog(log, at, rules, options).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+
+summary("2024-01-01T22:00:00Z");
+// [{ label: "11 driving", satisfied: true, used: "PT10H30M", remaining: "PT30M" },
+//  { label: "14 window", satisfied: true, used: "PT12H", remaining: "PT2H" },
+//  { label: "60 in 7", satisfied: true, used: "PT11H30M", remaining: "PT48H30M" }]
+
+summary("2024-01-01T23:00:00Z");
+// [{ label: "11 driving", satisfied: false, used: "PT11H30M", remaining: "PT0S" },
+//  { label: "14 window", satisfied: true, used: "PT13H", remaining: "PT1H" },
+//  { label: "60 in 7", satisfied: true, used: "PT12H30M", remaining: "PT47H30M" }]
+```
+
+At 22:00 the tightest limit is the 11-hour cap, with 30 minutes left. An hour later it has failed,
+while the window still has an hour.
+
+### 10 hours of rest in every 24, in at most two periods
+
+A day of 4-on, 8-off watches, then a 12-hour working day:
+
+```typescript
+const rules = [
+  { label: "10 in 24", kind: "restRequirement", restStatuses: ["rest"], per: { elapsed: "PT24H" }, minimum: "PT10H", composition: { maxPeriods: 2, longestAtLeast: "PT6H" } },
+];
+const log = shifts(
+  "2024-01-01T00:00:00Z",
+  ["work", "PT4H"], ["rest", "PT8H"], ["work", "PT4H"], ["rest", "PT8H"],
+  ["work", "PT12H"], ["rest", "PT4H"],
+);
+
+evaluateDutyLog(log, "2024-01-02T00:00:00Z", rules, { timeZone: "UTC" }).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+// [{ label: "10 in 24", satisfied: true, used: "PT16H", remaining: "PT0S" }]
+
+evaluateDutyLog(log, "2024-01-02T12:00:00Z", rules, { timeZone: "UTC" }).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+// [{ label: "10 in 24", satisfied: false, used: "PT8H", remaining: "PT2H" }]
+```
+
+The 24 hours ending at noon on the 2nd hold only the 8-hour rest from 16:00 the day before.
+
+### A 12-hour cap, with 10 hours of rest before duty
+
+```typescript
+const rules = [
+  { label: "12 on duty", kind: "cumulativeCap", statuses: ["onDuty"], cap: "PT12H", since: { statuses: ["off"], consecutive: "PT10H" } },
+  { label: "10 before duty", kind: "restBeforeDuty", restStatuses: ["off"], minimum: "PT10H", within: "PT24H" },
+];
+const log = shifts("2024-01-01T08:00:00Z", ["onDuty", "PT11H"], ["off", "PT9H30M"], ["onDuty", "PT2H"]);
+
+evaluateDutyLog(log, "2024-01-02T06:30:00Z", rules, { timeZone: "UTC" }).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+// [{ label: "12 on duty", satisfied: false, used: "PT13H", remaining: "PT0S" },
+//  { label: "10 before duty", satisfied: false, used: "PT9H30M", remaining: "PT30M" }]
+```
+
+A 9.5-hour rest fails both rules: it is too short to come before a duty, and too short to reset
+the 12-hour count.
+
+### A 100-hour cap over 672 hours, and 1,000 over a year
+
+Four weeks of five 5-hour flights:
+
+```typescript
+const rules = [
+  { label: "100 in 672", kind: "rollingCap", statuses: ["flight"], cap: "PT100H", window: { elapsed: "PT672H" } },
+  { label: "1000 in 365", kind: "rollingCap", statuses: ["flight"], cap: "PT1000H", window: { calendarDays: 365 } },
+];
+const week: [string, string][] = [
+  ["flight", "PT5H"], ["onDuty", "PT3H"], ["off", "PT16H"],
+  ["flight", "PT5H"], ["onDuty", "PT3H"], ["off", "PT16H"],
+  ["flight", "PT5H"], ["onDuty", "PT3H"], ["off", "PT16H"],
+  ["flight", "PT5H"], ["onDuty", "PT3H"], ["off", "PT16H"],
+  ["flight", "PT5H"], ["onDuty", "PT3H"], ["off", "PT16H"],
+  ["off", "PT48H"],
+];
+const log = shifts("2024-01-01T00:00:00Z", ...week, ...week, ...week, ...week);
+
+evaluateDutyLog(log, "2024-01-29T00:00:00Z", rules, { timeZone: "UTC" }).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+// [{ label: "100 in 672", satisfied: true, used: "PT100H", remaining: "PT0S" },
+//  { label: "1000 in 365", satisfied: true, used: "PT100H", remaining: "PT900H" }]
+```
+
+One more flight hour inside those four weeks makes 101 and fails the 672-hour cap. A flight in a
+fifth week would not: the first week's flights slide out of the window as fast as new ones come
+in.
+
+### An 80-hour average over four weeks, with one 24-hour free period in seven
+
+Four weeks of six 13-hour shifts and a free day:
+
+```typescript
+const rules = [
+  { label: "80 averaged over 4", kind: "fixedPeriodCap", statuses: ["onDuty"], cap: "PT80H", period: { isoWeeks: 1 }, adjacent: 4, average: true },
+  { label: "1 in 7 over 28", kind: "freePeriod", restStatuses: ["off"], minimum: "PT24H", within: { calendarDays: 28 }, atLeast: 4 },
+];
+const week: [string, string][] = [
+  ["onDuty", "PT13H"], ["off", "PT11H"], ["onDuty", "PT13H"], ["off", "PT11H"],
+  ["onDuty", "PT13H"], ["off", "PT11H"], ["onDuty", "PT13H"], ["off", "PT11H"],
+  ["onDuty", "PT13H"], ["off", "PT11H"], ["onDuty", "PT13H"], ["off", "PT11H"],
+  ["off", "PT24H"],
+];
+const log = shifts("2024-01-01T00:00:00Z", ...week, ...week, ...week, ...week);
+
+evaluateDutyLog(log, "2024-01-29T00:00:00Z", rules, { timeZone: "UTC" }).outcomes.map(({ label, satisfied, used, remaining }) => ({ label, satisfied, used, remaining }));
+// [{ label: "80 averaged over 4", satisfied: true, used: "PT78H", remaining: "PT8H" },
+//  { label: "1 in 7 over 28", satisfied: true, used: 4, remaining: 0 }]
+```
+
+Work the free day in the fourth week and both fail: the mean rises to 81 hours 15 minutes, and
+the 28 days hold three free periods.
+
+## See it break, then work
+
+- [The Duty Day Is Not Midnight](/scenarios/duty-day-is-not-midnight/) — a day that starts at
+  04:00 in a reference zone, not at local midnight.
+- [A Sliding Window Is Not a Calendar Day](/scenarios/sliding-window-not-calendar-day/) — rest
+  that passes every calendar day and fails a sliding 24 hours.
+- [A Paired Rest That Does Not Qualify](/scenarios/paired-rest-that-does-not-qualify/) — 6 + 4
+  hours checked as three constraints.
+
+The mistakes these prevent are collected on [Hours of Work Mistakes](/mistakes/duty/).
