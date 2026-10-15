@@ -15,7 +15,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
 - [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
-- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `instant/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `duty/`, `gnss/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
 - [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
 - [ ] Repeated calendar steps are computed from the anchor (`start.add(amount × k)`), not by compounding the previous result
@@ -48,6 +48,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
   - [ ] The review reports the `measuredOn` date of each other library's figures in `library-measurements.json`
 - [ ] TanStack Intent skills in `packages/gmt/skills/` updated if a public function was added, renamed, removed, or gained/changed an option (see `/tanstack-intent` skill, `CONTRIBUTING.md` § Keeping agent skills current) — check the relevant `SKILL.md`'s code examples and `_artifacts/domain_map.yaml`'s `covers:` list actually name the new/changed function
 - [ ] Published figures are derived, not typed. GMT's figures count `packages/gmt` only. `pnpm stats:sync` writes them into both READMEs with the other libraries' rows, and regenerates `apps/dox/src/data/gmt-stats.json`, which also holds the function count of each namespace. `pnpm run validate` fails on drift. In `apps/dox`, flag any GMT figure typed into copy instead of imported from `src/data/gmt-stats.ts`. `sync` rewrites digits and the comparison table's padding only. `stats check` also reports what `sync` cannot fix: a comparison-table row to add, delete or move, a count word that is wrong, a namespace link that is missing, extra or on the wrong line, and a guarded README line that was reworded so its figure is no longer checked. Each needs a hand edit
+- [ ] International authority first ([coding-standards § International authority first](./coding-standards.md#international-authority-first)): every rule cites an international body before any national one, no national system, agency or convention is a default, the only authority or the subject of its own named function, and new examples do not default to one country's zone, locale, holiday or date order
 - [ ] Changeset present with the bump the [changeset rule](./coding-standards.md#changesets) requires
 
 ## Intentional — do not flag

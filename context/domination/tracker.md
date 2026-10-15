@@ -100,7 +100,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 22 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                      | #198  | —       | Not started |
 | 23 | MAR-18  | Maritime   | Ship's time, clock changes, zone<br>descriptions, DTG, date line<br>crossing        | —                      | #199  | —       | Not started |
 | 24 | MAR-19  | Maritime   | Laytime, laycan, NOR, BIMCO 2013<br>definitions, laytime statement                  | —                      | #200  | —       | Not started |
-| 25 | MAR-59  | Maritime   | NMEA 0183 time and date fields (RMC,<br>ZDA, GGA)                                   | MAR-16                 | #261  | Cut     | Not started |
+| 25 | MAR-59  | Maritime   | IEC 61162-1 (NMEA 0183) time and date<br>fields (RMC, ZDA, GGA)                     | MAR-16                 | #261  | Cut     | Not started |
 | 26 | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                      | #256  | —       | Not started |
 | 27 | AV-25   | Aviation   | `flightLeg` + `dayOffset` +<br>`blockTime` + `airTime` +<br>`oooiTimes`             | —                      | #206  | —       | Not started |
 | 28 | AV-26   | Aviation   | IATA seasons + SSIM dates,<br>variations, days of operation + MCT                   | CORE-54, AV-25         | #207  | —       | Not started |
@@ -134,7 +134,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 56 | FIN-71  | Finance    | Calculation period schedules (FpML<br>`CalculationPeriodDates`)                     | CORE-54, FIN-44        | #273  | —       | Not started |
 | 57 | FIN-72  | Finance    | RFR compounding conventions:<br>lookback, shift, lockout, payment<br>delay          | FIN-42, FIN-71         | #274  | —       | Not started |
 | 58 | FIN-73  | Finance    | FIX and SWIFT MT timestamps;<br>precision checks                                    | (SPA-48)               | #275  | Cut     | Not started |
-| 59 | SPA-46  | Space      | `toTAI` + `toGPS` scale conversion +<br>TAI64 labels                                | (SPA-48)               | #227  | —       | Not started |
+| 59 | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA labels                                                     | (SPA-48)               | #227  | —       | Not started |
 | 60 | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | SPA-46                 | #228  | —       | Not started |
 | 61 | SPA-48  | Space      | Leap second table and queries                                                       | —                      | #229  | —       | Not started |
 | 62 | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47, SPA-48         | #230  | —       | Not started |
@@ -253,7 +253,7 @@ Highest commercial value and the thinnest coverage in the original plan.
   when Phase 6 starts.
 - **SPA-46 → SPA-47 → SPA-49 → SPA-74 → SPA-50, SPA-53, SPA-75** is the scale-conversion
   chain, now acyclic.
-- **SPA-51** needs `MAR-16` (GPS), not `SPA-49`. **SPA-52** needs `SPA-46` and `SPA-48`.
+- **SPA-51** needs `MAR-16` (the GNSS week functions, `gnssWeekToUtc` / `utcToGnssWeek`), not `SPA-49`. **SPA-52** needs `SPA-46` and `SPA-48`.
 
 ---
 
@@ -283,6 +283,25 @@ Highest commercial value and the thinnest coverage in the original plan.
   by an operator such as an exchange or a payment system. No national holiday tables, no
   regulator tables, no dealer-convention tables. It lives behind a `…/data` subpath, never on
   the default import path, and each record carries its source, revision and validity window.
+  **Exemption: a table its standards body has closed.** Data that will receive no further
+  entries is a fixed historical record, not data that goes stale, so it ships on the default
+  path as an internal constant, with its source and final revision cited beside it. The IERS
+  leap-second table is such a table: CGPM 2026 Resolution 5 makes UTC continuous from
+  20 May 2027, and IERS Bulletin C 72 announces no leap second at the end of December 2026 and
+  states that leap seconds are introduced "at the end of the months of December or June". A
+  weekly canary against the IERS file stays in place until continuous UTC takes effect.
+- **International authority first.** A rule's authority is, in order: (1) an
+  international treaty or standards body — ISO, IEC, ITU, BIPM, IERS, IAU, IMO, ICAO, WMO, WHO,
+  UN/CEFACT, CCSDS, IGS/RINEX, IETF, Unicode/CLDR, IANA, ECMA; (2) a multinational industry body —
+  ISDA, IATA, BIMCO, DCSA, GS1, HL7 International, FIX, SWIFT; (3) a national source, only as one peer
+  among others and labelled with its country. A national system, agency or convention is never a
+  default, never the only authority and never gets its own named function. Where no international
+  source exists, the rule is a GMT rule backed by sources from at least two countries. Example zones,
+  locales, holidays and date orders are spread across regions; none is "the" example. An
+  international convention that is law (a maritime labour or watchkeeping convention, a road-transport
+  agreement, an aviation-operations annex) may shape an example's numbers, but it is never named in
+  code or docs: GMT tracks no law. Evidence records — `painpoints.md` and `research/*.md` — may still
+  cite national sources as proof that a painpoint exists.
 - **Every local-to-instant conversion states its disambiguation policy** in JSDoc, using the
   vocabulary in [LOCAL_TIME_RESOLUTION.md](../reference/LOCAL_TIME_RESOLUTION.md). Ambiguous
   and nonexistent wall times are never resolved silently.

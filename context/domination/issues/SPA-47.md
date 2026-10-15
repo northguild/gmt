@@ -45,7 +45,7 @@ The first draft's `tdbMinusTt`, `toTDB` and `fromTDB` moved to SPA-74 together w
 
 ## What gmt provides (do not re-implement)
 
-- `toTAI` / `fromTAI` from SPA-46 — TT is a constant offset from TAI
+- `toTAI` / `fromTAI` from MAR-16 — TT is a constant offset from TAI
 - `toNanoseconds` / `fromNanoseconds` from CORE-1 — exact elapsed time since the 1977 epoch for the TCG rate
 
 ## Verification

@@ -30,7 +30,8 @@ deliverable.
 every regulated window, limit or table are parameters with no defaults — GMT tracks no law, and
 treats a professional body's numbers and a treaty's numbers the same way. GMT bundles no place
 registries; the only reference data it ships is standards-body data and operator-published
-calendars, behind opt-in `…/data` subpaths with recorded provenance.
+calendars, behind opt-in `…/data` subpaths with recorded provenance. A table its standards body
+has closed, such as the IERS leap-second table, is a built-in constant instead.
 
 **No invented quantities.** If a value cannot be derived from the inputs, the function does
 not return it. This rule exists because the first draft of this epic returned several that

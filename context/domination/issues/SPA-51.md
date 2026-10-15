@@ -1,6 +1,6 @@
 # SPA-51 — Space: Mission clocks, orbital epochs and light time
 
-**Scope:** Spacecraft clocks, mission elapsed time, TLE epochs, GPS week decomposition, and the light-time relations between ground and spacecraft event times.
+**Scope:** Spacecraft clocks, mission elapsed time, TLE epochs, GNSS week decomposition, and the light-time relations between ground and spacecraft event times.
 
 ## Gap
 
@@ -9,7 +9,7 @@ Operational spacecraft do not timestamp in UTC. They count in their own clock un
 - **Spacecraft clock (SCLK)** is a free-running counter. Converting it to spacecraft event time (SCET) needs a correlation coefficient set — SPICE models this as an SCLK kernel.
 - **Mission elapsed time (MET)** counts from launch, and is what mission timelines are written against.
 - **TLE epochs** use `YYDDD.DDDDDDDD`: a two-digit year and a fractional day of year, in columns 19–32 of line 1. Every published element set is dated this way.
-- **GPS week plus time-of-week** is how GNSS receivers actually report, before any conversion.
+- **GNSS week plus time-of-week** is how satellite navigation receivers actually report, for every system that has a week counter, before any conversion.
 - **Light time.** NAIF's CHRONOS defines the frames: SCET "is the time of an event on-board a spacecraft"; ERT "is the time of an event measured on the ground, such as the time when a signal about an event on-board of a spacecraft was received on the Earth"; ETT "is the time when a signal received on-board a spacecraft, was transmitted from the Earth"; LT "is the one-way light time between the Earth center of mass and a spacecraft", "computed using only Newtonian assumptions about the propagation of light". NASA's mission glossary gives the arithmetic — "Spacecraft Event Time, equal to ERT minus OWLT", "Round-Trip Light Time, elapsed time roughly equal to 2 x OWLT" — and calls the uplink time TRM where NAIF says ETT. Every DSN pass log carries all of these, and confusing them misplaces an event by minutes to hours.
   ([NAIF CHRONOS User's Guide, UTC time types](https://naif.jpl.nasa.gov/pub/naif/MER/misc/chronos/ver2/Sun_Solaris/chronos.ug), [NASA, *Basics of Space Flight*, glossary](https://science.nasa.gov/learn/basics-of-space-flight/glossary/), [NAIF SPICE `sclk.req`](https://naif.jpl.nasa.gov/naif/tutorials.html))
 
@@ -30,7 +30,7 @@ Operational spacecraft do not timestamp in UTC. They count in their own clock un
   - `spacecraftReceiveTime(earthTransmitTime: string, oneWayLightTimeSeconds: number): string` — When a command sent at ETT (NAIF) / TRM (DSN usage) arrives on board; both names appear in the JSDoc.
   - `roundTripLightTime(oneWayLightTimeSeconds: number): number` — `2 × OWLT`, the "roughly" in NASA's definition being the up- and down-leg difference the caller supplies separately if it matters.
   - `oneWayLightTime(rangeMetres: number): number` — Range divided by the defined speed of light, 299 792 458 m/s, Newtonian as CHRONOS states. Range is the caller's fact; GMT does not compute it.
-- `packages/gmt/src/space/convert/gpsWeek.ts` — re-exported from MAR-16; not reimplemented.
+- The GNSS week functions, `gnssWeekToUtc` / `utcToGnssWeek` and `rinexWeekToUtc` / `utcToRinexWeek`, come from MAR-16 (`gnss/convert/`); they are not reimplemented here.
 
 ## TLE epoch format
 
@@ -57,7 +57,7 @@ So `24001.50000000` is 2024-01-01 12:00 UTC.
 
 - `getOrdinalDate` from CORE-5 — day-of-year arithmetic
 - `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
-- `gpsWeekToUtc` / `utcToGpsWeek` from MAR-16 — GPS week decomposition
+- `gnssWeekToUtc` / `utcToGnssWeek` from MAR-16 — GNSS week decomposition, every system with a week counter
 - `spanMs` from CORE-2 — MET calculation
 - `addDuration` / `subtractDuration` — light-time shifts
 

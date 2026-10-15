@@ -28,7 +28,9 @@ This is the least commercially urgent story in the epic and the most differentia
 - The prime meridian passes through the crater **Airy-0**; mean solar time there is **Airy Mean Time**, the Martian analogue of GMT.
 - Local mean solar time adds east longitude divided by 15, in Mars hours.
 
-([NASA GISS Mars24 technical notes](https://www.giss.nasa.gov/tools/mars24/help/notes.html))
+The authorities are the IAU Working Group on Cartographic Coordinates and Rotational Elements (Archinal et al. 2018, for the Mars prime meridian through Airy-0 and the rotation model) and Allison & McEwen 2000 (*Planetary and Space Science* 48, for the Mars Sol Date and Airy Mean Time definitions); both not reached — marked, not asserted. The constants above are quoted from them at implementation. NASA GISS's Mars24 (United States) implements the same algorithm and is used as a test oracle only.
+
+([NASA GISS Mars24 technical notes](https://www.giss.nasa.gov/tools/mars24/help/notes.html) — test oracle)
 
 ## Design notes
 

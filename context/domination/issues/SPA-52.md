@@ -44,8 +44,8 @@ CCSDS 301.0-B-4 is cited in the epic's references and no story implements it. It
 ## What gmt provides (do not re-implement)
 
 - `getOrdinalDate` from CORE-5 — day-of-year handling for Code B
-- `toTAI` / `fromTAI` from SPA-46 — the 1958 TAI epoch
-- `isLeapSecond` from SPA-48 — validating a `60` seconds field
+- `toTAI` / `fromTAI` from MAR-16 — the 1958 TAI epoch
+- `isLeapSecond` from SPA-48 (`timescale/validate/`) — checking a `60` seconds field against the leap-second table
 - `toNanoseconds` from CORE-1 — precision conversion
 
 ## Verification

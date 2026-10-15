@@ -28,7 +28,7 @@ Two constraints make it non-trivial. The shift must be **identical within a pati
 
 ## Corrections
 
-- `capAge` defaulted its threshold to one scheme's number; the threshold is required and the function returns the sentinel without it.
+- `capAge` defaulted its threshold to one scheme's number; the threshold is required and the function returns the sentinel without it. De-identification techniques are described internationally in ISO/IEC 20889 (not reached — marked, not asserted); the example thresholds are arbitrary numbers, not any scheme's.
 
 ## What gmt provides (do not re-implement)
 
@@ -43,7 +43,7 @@ Two constraints make it non-trivial. The shift must be **identical within a pati
 - `shiftInterval` preserves interval length exactly
 - Two events 30 days apart remain 30 days apart after an identical shift
 - A shift spanning a DST transition preserves the calendar-day interval, and the elapsed-time difference is asserted rather than hidden
-- `capAge` with `threshold: 89` returns `capped: true` for 92 and `false` for 89; with `threshold: 85` age 86 is capped; a missing threshold returns the sentinel
+- `capAge` with `threshold: 85` returns `capped: true` for 92 and `false` for 85; with `threshold: 90` age 91 is capped; a missing threshold returns the sentinel
 - `intervalsPreserved` returns `false` when one interval in a set received a different shift
 - Negative shifts work symmetrically
 - `pnpm run validate` stays green

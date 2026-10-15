@@ -245,6 +245,11 @@ Source used: Stedi's X12 dictionary (X12-licensed; acceptable per the brief). x1
 
 ## 10. NMEA 0183 — RMC, ZDA, GGA time fields
 
+> **Annotation (international-standards audit).** The international authority for these sentences is
+> IEC 61162-1 (maritime navigation and radiocommunication equipment — digital interfaces); NMEA 0183 is
+> named in plans as its national (US association) origin. The IEC 61162-1 text was not reached here —
+> marked, not asserted. MAR-59 cites IEC 61162-1 first.
+
 - Source: gpsd "NMEA Revealed", https://gpsd.gitlab.io/gpsd/NMEA.html (REPRODUCTION — the NMEA 0183 standard itself is paywalled; gpsd is the de-facto public reference).
 - RMC field 1: "UTC of position fix, hh is hours, mm is minutes, ss.ss is seconds."; field 9: "Date, ddmmyy".
 - ZDA fields: 1 "UTC time (hours, minutes, seconds, may have fractional subseconds)"; 2 "Day, 01 to 31"; 3 "Month, 01 to 12"; 4 "Year (4 digits)"; 5 "Local zone description, 00 to +- 13 hours"; 6 "Local zone minutes description, 00 to 59, apply same sign as local hours".
@@ -256,6 +261,14 @@ Source used: Stedi's X12 dictionary (X12-licensed; acceptable per the brief). x1
 ---
 
 ## 11. GNSS time scales from the ICDs
+
+> **Annotation (international-standards audit).** The six systems are peers. The international
+> footing is IMO Resolution A.1046(27) (World-Wide Radionavigation System) with the recognitions under
+> it, the IEC 61108 shipborne-receiver series, RINEX 4.02 (IGS/RTCM) for the time tokens and BIPM for
+> the integer offsets; see `research/mar-16-gnss-icd-clauses.md`. The IMO texts other than BeiDou's
+> SN.1/Circ.329 and the IEC 61108 part list were not reached — marked, not asserted. The ICD extracts
+> below are signal facts only. The GLONASS three-hour offset is **not used — MAR-16 D10**: GMT's `GLO`
+> is RINEX/BIPM UTC hours.
 
 ### Galileo — OS SIS ICD Issue 2.0 (January 2021), §5.1.2 "Galileo System Time (GST)"
 - Epoch: "GST was equal to 13 seconds at 22nd August 1999 00:00:00 UTC" (i.e. start epoch 13 s before that midnight; GST was 13 s ahead of UTC at the epoch).
@@ -278,8 +291,8 @@ Source used: Stedi's X12 dictionary (X12-licensed; acceptable per the brief). x1
 ### GLONASS — ICD L1, L2 GLONASS, Edition 5.1 (2008), §3.3.3 "GLONASS time"
 - Leap seconds applied: "The GLONASS time scale is periodically corrected to integer number of seconds simultaneously with UTC corrections"
 - Timing of the step: "at midnight 00 hours 00 minutes 00 seconds UTC from December 31 to January 1" (or end of any quarter), with users "notified in advance (at least three months before)".
-- Three-hour offset (§4.4, word tb): "index of a time interval within current day according to UTC(SU) + 03 hours 00 min"; §5.2 also writes "MT (UTC + 03 hours 00 minutes 00 seconds)".
-- Almanac word τc (§4.5): "GLONASS time scale correction to UTC(SU) time"; N4 "four-year interval number starting from 1996".
+- Three-hour offset (§4.4, word tb): "index of a time interval within current day according to UTC(SU) + 03 hours 00 min"; §5.2 also writes "MT (UTC + 03 hours 00 minutes 00 seconds)". **Not used — MAR-16 D10.**
+- Almanac word τc (§4.5): "GLONASS time scale correction to UTC(SU) time"; N4 "four-year interval number starting from 1996". **Not used — MAR-16 D10.**
 - Source: https://www.unavco.org/help/glossary/docs/ICD_GLONASS_5.1_(2008)_en.pdf (MIRROR of the Russian Institute of Space Device Engineering document; glonass-iac.ru not attempted). Extracted text: the extracted text (not kept).
 
 ### QZSS — IS-QZSS-PNT-003

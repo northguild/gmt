@@ -90,7 +90,7 @@ while building it, binding on CORE-2 and CORE-3 unless a later story overrides t
 - **`toNanoseconds` rejects leap seconds and `[u-ca=...]` calendar annotations**, matching
   `utc/` and `unix/`. Temporal would clamp `23:59:60` silently; GMT's convention is a
   sentinel. This is separate from the story's "no leap-second time scales" note.
-- **The leap-second check needed its own regex.** `plain/validate`'s shared `isLeapSecond`
+- **The leap-second check needed its own regex.** `plain/validate`'s shared `hasSecond60`
   matches only an uppercase `T` with extended-format digits — enough for `utc/`, which is
   already gated to `<date>T<time>Z`. `Temporal.Instant.from` also accepts `t`, a space, and
   basic format, so `"2016-12-31 23:59:60Z"` and `"20161231T235960Z"` slipped past the shared

@@ -6,11 +6,11 @@
 
 Julian Date is the standard argument for ephemerides and CCSDS orbit data, and the obvious implementation is quietly lossy.
 
-**A Julian Date stored as a single IEEE double resolves to only about 100 µs.** JD values near the present are around 2 460 000, which consumes most of the mantissa; the fractional day has little left. ERFA and astropy both carry JD as a **pair** of doubles — one holding integer days, the other the fraction — precisely for this reason, and ERFA documents the single-value form as acceptable only where losing several digits of resolution is tolerable.
+**A Julian Date stored as a single IEEE double resolves to only about 100 µs.** JD values near the present are around 2 460 000, which consumes most of the mantissa; the fractional day has little left. The IAU's SOFA library (and ERFA, its open port) carries JD as a **pair** of doubles — one holding integer days, the other the fraction — precisely for this reason, and ERFA documents the single-value form as acceptable only where losing several digits of resolution is tolerable.
 
 The original spec's `instantToJulianDate(isoString): number` bakes that loss in at the signature, in a realm whose entire purpose is precision.
 
-([USNO AA TN2011-02](https://aa.usno.navy.mil/downloads/novas/USNOAA-TN2011-02.pdf), [astropy time](https://docs.astropy.org/en/stable/time/index.html))
+(IAU SOFA, *Time Scale and Calendar Tools* — the two-part JD convention, not reached — marked, not asserted; [USNO AA TN2011-02](https://aa.usno.navy.mil/downloads/novas/USNOAA-TN2011-02.pdf) (US) and [astropy time](https://docs.astropy.org/en/stable/time/index.html) as corroboration)
 
 ## Scope
 
@@ -23,7 +23,7 @@ The original spec's `instantToJulianDate(isoString): number` bakes that loss in 
   - `toModifiedJulianDate(isoString: string, scale?: TimeScale): number | null` — MJD = JD − 2400000.5.
   - `fromModifiedJulianDate(mjd: number, scale?: TimeScale): string`
 - `packages/gmt/src/space/convert/j2000.ts`:
-  - `toJ2000Seconds(isoString: string, scale?: TimeScale): number | null` — Seconds since the J2000 epoch. Defaults to TDB, the SPICE ephemeris-time convention.
+  - `toJ2000Seconds(isoString: string, scale?: TimeScale): number | null` — Seconds since the J2000 epoch. Defaults to TDB, the coordinate time IAU 2006 Resolution B3 defines for barycentric ephemerides.
 
 ## Key epochs
 
@@ -37,7 +37,7 @@ The original spec's `instantToJulianDate(isoString): number` bakes that loss in 
 
 - **The two-part form is primary; the single-value form is a convenience.** Both are provided because callers integrating with systems that accept only one number need it, but the lossy one carries its error bound in its JSDoc so the choice is informed.
 - **MJD is materially more precise than JD as a single double**, because subtracting 2 400 000.5 frees several digits of mantissa. Worth stating, since it is a cheap mitigation for callers stuck with one number.
-- **The time scale matters and defaults differ by function.** J2000 seconds default to TDB because that is SPICE's ephemeris time; JD conversions default to UTC. Divergent defaults are justified by convention but must be explicit in every signature and JSDoc, or callers will assume one applies to all.
+- **The time scale matters and defaults differ by function.** J2000 seconds default to TDB because IAU 2006 Resolution B3 defines TDB as the time argument of barycentric ephemerides, and SOFA implements it (not reached — marked, not asserted); NASA/NAIF SPICE's ephemeris time is the same scale and is cited as corroboration only. JD conversions default to UTC. Divergent defaults are justified by convention but must be explicit in every signature and JSDoc, or callers will assume one applies to all.
 - **TDB is not this story's to compute.** `toTDB` lives in SPA-74, which depends on this story's two-part JD, so this story cannot depend on it back. Until SPA-74 lands, `toJ2000Seconds` supports `'UTC'`, `'TAI'` and `'TT'` and returns the sentinel for `'TDB'` rather than approximating the correction; SPA-74 then registers the TDB scale. The default stays documented as TDB so the signature does not change when it arrives.
 - JD begins at **noon**, not midnight — a half-day offset that is a classic source of off-by-12-hours errors.
 

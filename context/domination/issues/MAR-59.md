@@ -1,12 +1,14 @@
-# MAR-59 — Maritime: NMEA 0183 time and date fields
+# MAR-59 — Maritime: IEC 61162-1 (NMEA 0183) time and date fields
 
-**Scope:** The time and date fields of the NMEA 0183 sentences every GNSS receiver on a bridge emits — RMC, ZDA, GGA and GLL — and the offsets ZDA carries.
+**Scope:** The time and date fields of the IEC 61162-1 sentences (NMEA 0183 in its national form) every GNSS receiver on a bridge emits — RMC, ZDA, GGA and GLL — and the offsets ZDA carries.
 
 ## Gap
 
 AIS (MAR-17) is what a ship transmits; NMEA 0183 is what its own receiver says. RMC carries the fix time as `hhmmss.ss` and the date as `ddmmyy`; GGA and GLL carry time only; ZDA carries the full UTC date and time plus a local zone description in hours and minutes. Three defects recur in code that reads them: the two-digit year needs a century rule, the time-only sentences need a date from somewhere else, and the ZDA zone fields have a sign convention that has to come from the standard, not from intuition.
 
-([gpsd, *NMEA Revealed*](https://gpsd.gitlab.io/gpsd/NMEA.html) — the public reference for the sentence formats; the NMEA 0183 standard itself is paywalled and is cited by sentence)
+The authority is IEC 61162-1 (maritime navigation and radiocommunication equipment and systems — digital interfaces, single talker and multiple listeners); NMEA 0183 is its national origin, published by a US association. The IEC text was not reached — marked, not asserted; each sentence field is quoted from it at implementation, and the JSDoc names IEC 61162-1 first.
+
+([gpsd, *NMEA Revealed*](https://gpsd.gitlab.io/gpsd/NMEA.html) — a public reproduction of the sentence formats, used as corroboration; both IEC 61162-1 and NMEA 0183 are paywalled)
 
 ## Scope
 
@@ -22,7 +24,7 @@ AIS (MAR-17) is what a ship transmits; NMEA 0183 is what its own receiver says. 
 ## Design notes
 
 - **No century is inferred.** Unlike TLE epochs (SPA-51), which have a documented Sputnik pivot, NMEA has no century rule; the caller states the 100-year window with `yearWindow`, the option INT-15 defines as `TwoDigitYearOptions` (`"rolling"`, or the first year of a fixed window), and the JSDoc explains the GPS week-rollover failure that produces 1999- and 2019-dated fixes from old receivers, which MAR-16 handles at the week level.
-- **The ZDA sign convention is quoted from the standard, not assumed.** The zone fields are a "local zone description"; whether local time is UTC plus or minus the field is a fact to cite in the JSDoc verbatim at implementation, because receivers in the field have been wired both ways and the parser has to say which reading it applies.
+- **The ZDA sign convention is quoted from IEC 61162-1, not assumed.** The zone fields are a "local zone description"; whether local time is UTC plus or minus the field is a fact to cite in the JSDoc verbatim at implementation, because receivers in the field have been wired both ways and the parser has to say which reading it applies.
 - **Time-only sentences need a reference date and can still be wrong**, exactly as METAR times need a reference month (AV-28). The nearest-candidate rule is the same and is shared.
 - **NMEA is UTC.** Ship's time (MAR-18) and port-local time are separate concerns; nothing here consults a zone except ZDA's own offset field.
 - Talker IDs (`$GP`, `$GN`, `$GL`, …) identify the constellation of the fix; they are passed through so MAR-16's system parameter can be set from them, not interpreted here.

@@ -28,7 +28,7 @@ Medical imaging is a large share of all clinical timestamps, and DICOM uses its 
 | `DT` | `YYYYMMDDHHMMSS.FFFFFF&ZZXX` | All components after the year optional; `&` is `+` or `-`, `ZZ` hours, `XX` minutes |
 
 The offset suffix uses the same `&ZZXX` encoding as the *Timezone Offset From UTC* attribute.
-([DICOM PS3.5 §6.2](https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html))
+([DICOM PS3.5 §6.2](https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html); DICOM is also published internationally as ISO 12052, not reached — marked, not asserted)
 
 ## Design notes
 
