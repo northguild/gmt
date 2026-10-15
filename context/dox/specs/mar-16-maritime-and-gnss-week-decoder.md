@@ -41,7 +41,9 @@ Four pieces:
    `GpsNavMessage` are removed from the library. Every tool and page uses `gnssToUtc`,
    `utcToGnss`, `gnssWeekToUtc`, `utcToGnssWeek`, `rinexWeekToUtc` and `utcToRinexWeek`, with the
    system or counter named.
-10. **The six constellations are peers.** No tool, preset, chat starter or page opens on one
+10. **The six constellations are peers** in the sense research §9a.5 supports: IMO recognises
+    each as a component of the Worldwide Radionavigation System, though the scope of each
+    recognition differs (section 0, "Why they are peers"). No tool, preset, chat starter or page opens on one
     system's example, on `America/New_York` or on `en-US`. Defaults are UTC instants and neutral
     or rotated systems; where a zone is needed, rotate through `Europe/London`, `Asia/Tokyo`,
     `Australia/Sydney`, `America/Sao_Paulo`, `Africa/Johannesburg` and `Asia/Kolkata`; a locale is
@@ -164,9 +166,26 @@ says where to look, not what is there.
   numbers only.
 - **International authority first.** Every citation follows decision 11: ISO, IEC, ITU, BIPM, IERS,
   IAU, IMO, CGPM and IGS/RINEX first; multinational industry bodies next; a national source only
-  as one labelled peer. The six satellite systems are peers, defined by RINEX and the BIPM, and
-  recognised together by IMO A.1046(27) and IEC 61108. A system's own interface document is cited
-  only for a signal fact no international body restates, labelled with its system.
+  as one labelled peer. The six satellite systems' scales are defined by RINEX and the BIPM. **Why
+  they are peers** (research §9a):
+  - The short form, used in the Maritime guide and tool copy: "IMO recognises GPS, GLONASS,
+    BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation
+    System." Its one primary page naming all six is IMO's Maritime Safety Committee 104th session
+    summary (October 2021).
+  - The full citation, where a page gives one: recognition under the policy of IMO resolution
+    A.1046(27) (2011), whose annex MSC.599(111) (2026) revised; GPS and GLONASS by A.860(20)
+    (1997); BeiDou by SN.1/Circ.329 (2014); Galileo by SN.1/Circ.334 (2016); IRNSS by
+    SN.1/Circ.340 (2020); QZSS by SN.1/Circ.341 (2021). **A.1046(27) itself names no system**, so
+    it is never cited alone for the six.
+  - **The scope caveat, said once wherever a page or tool says "peers":** recognition is not
+    equal everywhere. BeiDou and IRNSS are recognised for ocean waters, and IRNSS only within
+    55°E–110°E, 50°N–5°S.
+  - **IEC 61108** is cited per system only (part 1 GPS, 2 GLONASS, 3 Galileo, 5 BeiDou, 6
+    NavIC/IRNSS), never as a six-system authority: it has no QZSS part.
+  - **IEC 61162-1:2024 (Edition 6.0)** is cited for the sentence format shipboard equipment uses,
+    not for peer status.
+  A system's own interface document is cited only for a signal fact no international body
+  restates, labelled with its system.
 - **No US lead.** No tool, preset, starter or page opens on `America/New_York`, on `en-US` or on a
   US-only example. Rotate zones through `Europe/London`, `Asia/Tokyo`, `Australia/Sydney`,
   `America/Sao_Paulo`, `Africa/Johannesburg` and `Asia/Kolkata`, keeping a zone only where the
@@ -1248,9 +1267,12 @@ nothing is elided. Only merged functions are named: every L§1.1 function except
 forms, never SPA-46's TAI64 functions. `scripts/api-surface.mjs check` checks each import-bound
 `call // result`.
 
-**Authorities, in the order of decision 11.** The Maritime guide rests on IMO Resolution
-A.1046(27) (the six systems recognised as peers), IEC 61108 (one receiver standard per system) and
-IEC 61162-1 (how shipboard equipment carries time), with RINEX 4.02 and the BIPM for the scales.
+**Authorities, in the order of decision 11.** The Maritime guide rests on IMO's recognition of
+each system as a component of the Worldwide Radionavigation System, in section 0's short form,
+with the scope caveat once (BeiDou and IRNSS for ocean waters, IRNSS only within its region) and
+the full citation chain in a sources list; on IEC 61162-1:2024 (Edition 6.0) for the sentence
+format; and on RINEX 4.02 and the BIPM for the scales. IEC 61108 appears, if at all, per system
+(part 1 GPS, 2 GLONASS, 3 Galileo, 5 BeiDou, 6 NavIC/IRNSS), never for "the six".
 The Core guide rests on IERS (`Leap_Second.dat`, Bulletin C 72), ITU-R TF.460-6, the BIPM and the
 CGPM. A system's own interface document is named only for a signal fact no international body
 restates (a counter's bit width), labelled with its system, and never as the only source for a
@@ -1382,7 +1404,7 @@ library, and section 0's rules hold on every page.
 
 ## I. Definition of done (`dox-tester`: run each line literally)
 
-**I0. The two private trees.** Nothing in I6 to I15 uses port 4321, `apps/dox/dist` or this
+**I0. The two private trees.** Nothing in I6 to I16 uses port 4321, `apps/dox/dist` or this
 worktree's `packages/gmt/dist` in place. `$SP` is the session scratchpad and `$W` is this worktree.
 
 ```bash
@@ -1514,11 +1536,16 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
     - `CURATED_TIMEZONES` is in UTC-offset order (its test);
     - the per-visitor cap resets at 00:00 UTC, and each brain's quota still at Google's Pacific
       midnight (`pt-day` tests).
-14. **Duty under Transport (section M):** `/industries/transport/` lists the eight duty functions;
+14. **Citations (section 0, F1):** on the Maritime guide, the five tool pages and the chat copy,
+    `grep` finds no sentence that cites A.1046(27) or IEC 61108 as naming or recognising the six
+    systems; every page that calls the systems "peers" carries the IMO recognition sentence and
+    states the scope caveat once; IEC 61108 is cited only by part and system; IEC 61162 is cited as
+    IEC 61162-1:2024, Edition 6.0. Each citation links or names its primary page from research §9a.
+15. **Duty under Transport (section M):** `/industries/transport/` lists the eight duty functions;
     `hours-of-work.mdx`, `mistakes/duty.mdx` and the three duty scenarios carry the Transport tag
     and sit under Transport in their sidebars; the API Reference still shows `duty` in the general
     list and its links work; no page names a regime, a regulator or a statute.
-15. Firefox does not launch on this machine. Record it as blocked. Do not bypass the sandbox.
+16. Firefox does not launch on this machine. Record it as blocked. Do not bypass the sandbox.
 
 `pnpm run validate` is not run here: it rebuilds the library under the dev server. The main
 session runs it once at the end (section K).
