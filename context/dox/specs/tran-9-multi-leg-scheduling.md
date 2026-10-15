@@ -1334,7 +1334,7 @@ Prefix every shell with `eval "$(fnm env)" && fnm use`. `$WT` is
    over the built pages listed there. It prints nothing and exits 0. Check these anchors by
    hand as `id=` in the target HTML: `#multi-leg-scheduling`,
    `#a-scheduled-departure-is-a-connection-and-dwell-is-the-minimum-connect-time`.
-7. **Structural and pixel gates against a clean `main` baseline.** `main` is `5afd68a`, the
+7. **Structural and pixel gates against a clean `main` baseline.** `main` is `3d8bef4`, the
    branch's base. The branch's work is uncommitted, so a detached worktree at `main` is clean.
 
    ```sh

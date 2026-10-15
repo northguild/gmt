@@ -9,7 +9,7 @@ Sources, in order of precedence: the PR #290 reviewer's specification of three t
 JSDoc of `packages/gmt/src/transport/calculate/cutoffAt.ts` and `cutoffSchedule.ts` and
 `packages/gmt/src/transport/compare/isPastCutoff.ts` and `timeToCutoff.ts`,
 `context/domination/docs-site.md` (§ Purpose-built widgets), then `context/dox/built.md`. The
-shape follows `context/dox/specs/tran-9-multi-leg-scheduling.md` (TRAN-9, commit `33b21d5`),
+shape follows `context/dox/specs/tran-9-multi-leg-scheduling.md` (TRAN-9, commit `511b394`),
 whose four tools are the template: read their `*.ts`, `*-mount.ts`, tests, `.astro` shells,
 tool pages and CSS before writing anything.
 

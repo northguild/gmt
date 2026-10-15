@@ -613,7 +613,7 @@ and `$SP` is the session scratchpad.
    Check the anchors by hand: `#the-dates-an-invoice-can-list`, `#billing-deadlines` and
    `#which-day-is-day-one-firstday` exist as `id=` in the target HTML.
 7. **Structural and pixel gates against a clean `main` baseline** (built.md: "both need a
-   baseline captured from a clean `main` build"). `main` is `d896085`, the branch's base. The
+   baseline captured from a clean `main` build"). `main` is `7d8a26d`, the branch's base. The
    branch's work is all uncommitted, so a detached worktree at `main` is clean. It can be
    captured at any time.
 

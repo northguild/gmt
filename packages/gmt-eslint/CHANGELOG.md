@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- 729e0f1: Point the `Date.now()` and `Date.UTC()` diagnostics at `@northguild/gmt` calls that exist (Story CORE-8).
+- 727a3f4: Point the `Date.now()` and `Date.UTC()` diagnostics at `@northguild/gmt` calls that exist (Story CORE-8).
   
   The `Date.UTC()` message and README row recommended `convertUtcDateTimeToUnix`, which `@northguild/gmt` has never exported. They now name `convertUtcToUnix`, with the `Z` the UTC string needs. The `Date.now()` and `Date` messages recommended `getUnixNow('milliseconds' | 'seconds')`, a positional form that `@northguild/gmt` 1.16.0 replaces with an options object.
   
@@ -35,13 +35,13 @@
 
 ### Patch Changes
 
-- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+- eea82a0: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
 
 ## 1.0.3
 
 ### Patch Changes
 
-- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt-eslint` under the [northguild](https://github.com/northguild) GitHub organization. `@northguild/gmt-eslint` will receive no further updates after this release.
+- e2f28fb: Add deprecation notice: this package is moving to `@northguild/gmt-eslint` under the [northguild](https://github.com/northguild) GitHub organization. `@northguild/gmt-eslint` will receive no further updates after this release.
 
 ## 1.0.2
 
@@ -53,13 +53,13 @@
 
 ### Patch Changes
 
-- c064e99: Rewrite lint rule messages to remove informal "Aint nobody got time for..." phrasing in favor of direct, professional wording. No rule behavior changes — only the emitted message text.
+- 8bb95a2: Rewrite lint rule messages to remove informal "Aint nobody got time for..." phrasing in favor of direct, professional wording. No rule behavior changes — only the emitted message text.
 
 ## 1.0.0
 
 ### Major Changes
 
-- fa5a465: Initial public release of the gmt suite.
+- 01fe827: Initial public release of the gmt suite.
 
   ## @northguild/gmt
 

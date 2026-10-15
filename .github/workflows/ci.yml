@@ -38,10 +38,11 @@ jobs:
             BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
           else
             BASE="${{ github.event.before }}"
-            case "$BASE" in
-              0000000000000000000000000000000000000000 | "")
-                BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD) ;;
-            esac
+            # A force-push leaves `before` naming a commit the checkout does not have.
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+              BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+            fi
           fi
           HEAD_SHA=$(git rev-parse HEAD)
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
@@ -71,6 +72,49 @@ jobs:
           else
             echo "any_changed=true" >> $GITHUB_OUTPUT
           fi
+
+  # John Conner termination of false attribution
+  trailers:
+    name: No machine trailers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No commit or PR description names an AI co-author or session
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          PATTERN='^(co-authored-by:.*(claude|copilot|anthropic)|claude-session:)'
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            RANGE="origin/$BASE_REF..HEAD"
+          else
+            BASE="$BEFORE"
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+              BASE=$(git rev-parse HEAD~1)
+            fi
+            RANGE="$BASE..HEAD"
+          fi
+          FOUND=0
+          for C in $(git rev-list "$RANGE"); do
+            MSG=$(git log -1 --format=%B "$C")
+            if grep -qiE "$PATTERN" <<< "$MSG"; then
+              echo "::error::$(git log -1 --format='%h %s' "$C") carries a machine co-author or session trailer."
+              FOUND=1
+            fi
+          done
+          if grep -qiE "$PATTERN" <<< "${PR_BODY:-}"; then
+            echo "::error::The PR description carries a machine co-author or session trailer, and a squash merge would copy it into main."
+            FOUND=1
+          fi
+          exit "$FOUND"
 
   consistency:
     name: Story consistency

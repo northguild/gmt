@@ -169,7 +169,7 @@ function doxIssueDeps(rows) {
  *
  * Everything below addresses cells by numeric index, so a renamed, reordered or removed
  * column does not fail — it silently reads and writes the wrong one. That is not
- * hypothetical: 1c22cb1 dropped `Blocked by` from the dox tracker, which left index 2
+ * hypothetical: a19ff13 dropped `Blocked by` from the dox tracker, which left index 2
  * pointing at `GitHub Issue`, and `sync` would have rewritten all 15 rows' issue links to
  * `—` without complaint. Asserting the layout at parse time is what turns that into an
  * error instead of a diff nobody reads.

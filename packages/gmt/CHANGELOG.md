@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- c365ad3: Add `bolTimestamp` and `multimodalETA` to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/format` subpath (Story INT-14).
+- a25e281: Add `bolTimestamp` and `multimodalETA` to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/format` subpath (Story INT-14).
   
   A bill of lading carries dates, not timestamps: the date it was issued, the date the cargo was received, and the date it was loaded on board, each on the local calendar of the place it happened. A system that records the loading as an instant has to turn it back into that date, and the UTC date is wrong for part of every day. An end-to-end ETA has the opposite problem: it is one instant, but the time behind it is spent two ways, moving and waiting at handoffs, and the two are forecast differently.
   
@@ -44,7 +44,7 @@
   - **Transit and dwell are reported apart, and add up to the elapsed time.** `totalTransit` is every leg's `duration` added up, as exact time. `totalDwell` is the time actually spent at the handoffs, so a wait for a scheduled departure counts; when every leg chains from the one before, it is the sum of the `dwellAfter` values. The last leg's `dwellAfter` is not dwell, because no handoff follows it. Both totals have hours as the largest unit.
   - **Dwell is never estimated.** It is the caller's `dwellAfter` and schedule.
   - Also exported: the `BillOfLadingEvent`, `BolTimestampOptions` and `MultimodalJourney` types.
-- ac0425f: Add 46 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
+- ae8a528: Add 46 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
   
   Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, X12 date and time elements, and GS1 EPCIS events. Some of those formats carry a UTC offset and some do not, and the only signal is a format code or a time code. So the functions are split by the kind of value a code states: a date, a time, a local date-time, a date-time with an offset, or a period. Each function takes only the codes of its kind, and each parser returns one value the rest of the library takes. A value with no offset comes back as a local time, never as UTC.
   
@@ -304,7 +304,7 @@
   - **`options` is the fourth parameter.** The third is `locale`; pass `undefined` there to keep the default, `"en-US"`.
   - **With a `yy` pattern, any other `yearWindow` returns `""`**: a value that is neither `"rolling"` nor an integer from 0 to 9900.
   - **Where the source can send a four-digit year, ask for it.** A `yyyy` pattern needs no window.
-- c39c7e6: Add the `duty` namespace: hours-of-work rules evaluated over a duty log (Story CORE-76). A log is a list of `{ status, start, end }` entries in your own status words. A rule is one of 13 shapes, and every number in it is yours: GMT names no regulation and has no default limit. A regime is the array of rules you assemble and label.
+- 144227f: Add the `duty` namespace: hours-of-work rules evaluated over a duty log (Story CORE-76). A log is a list of `{ status, start, end }` entries in your own status words. A rule is one of 13 shapes, and every number in it is yours: GMT names no regulation and has no default limit. A regime is the array of rules you assemble and label.
   
   - `evaluateDutyLog(log, at, rules, options)` reports every rule at one instant, whether or not it binds: `used`, `limit`, `remaining`, the `window` measured, `dueBy` and `resetAt`. A failed rule is listed again under `violations`, or under `advisories` when its `severity` is `"advisory"`.
   - `dutyViolations(log, range, rules, options)` lists every violation in a range, for a monthly record. Each is listed once, by the window that failed worst, in the range it began in, so two adjacent months never list one twice.
@@ -355,7 +355,7 @@
   - **A paired rest is three floors, not two numbers.** With 2 hours each, 7 for the longer and 10 together, 7.5 + 2.5 qualifies and 6 + 4 does not.
   - **A day start that a clock change repeats or skips** resolves as `resolveLocal` resolves it, `"compatible"` unless you pass `disambiguation`. `"reject"` returns the sentinel rather than guess.
   - Invalid input returns the sentinel: `null` for `evaluateDutyLog`, `dutyViolations`, `dutyDayFor` and `longestRun`, `""` for `dutyTotals`, `[]` for `qualifyingRests` and `qualifyingRestPairs`, and `false` for `isValidDutyLog`.
-- 7d234be: Add `totalUnits` and `durationFromUnits` to the `duration/` namespace. Both take an amount written as a unit object, such as `{ minutes: 15 }`: `totalUnits` returns it as one number in the unit you name, and `durationFromUnits` writes it as an ISO 8601 duration string. Three changes break existing code, and **Breaking changes** covers each: `durationAs` is renamed `totalDuration`, the `fields` type of five `set*` functions no longer has `era` and `eraYear`, and some calls to the `add*`, `subtract*` and `set*` functions that compile now return the sentinel.
+- ebc53cc: Add `totalUnits` and `durationFromUnits` to the `duration/` namespace. Both take an amount written as a unit object, such as `{ minutes: 15 }`: `totalUnits` returns it as one number in the unit you name, and `durationFromUnits` writes it as an ISO 8601 duration string. Three changes break existing code, and **Breaking changes** covers each: `durationAs` is renamed `totalDuration`, the `fields` type of five `set*` functions no longer has `era` and `eraYear`, and some calls to the `add*`, `subtract*` and `set*` functions that compile now return the sentinel.
   
   The library writes an amount of time in two shapes. Functions such as `addDate` and `addUtc` take a unit object, `{ minutes: 15 }`. The `duration/` functions take an ISO 8601 duration string, `"PT15M"`. Each function takes one shape. These two functions start from the object, so a caller who holds one does not have to write the string by hand.
   
@@ -461,7 +461,7 @@
   - **A Temporal object as `fields`:** pass a plain object of the fields to set. `setDate("2024-03-10", { year: 2025, month: 6, day: 1 })` is `"2025-06-01"`. The 1.18 call set nothing.
   - **An amount or a field value that is not a number**, such as `"5"` or `null` read from JSON: convert it to an integer number first. `addUtc("2024-03-10T12:00:00Z", { days: 5 })` is `"2024-03-15T12:00:00Z"`.
   - **A `Temporal.Duration`, or any object whose units are getters or inherited, as `units`:** pass a plain object of the units the function takes. `addDate("2024-01-31", { days: 1 })` is `"2024-02-01"`, and `addTime("14:30:00", { hours: 1 })` is `"15:30:00"`. A duration whose nonzero units the function takes still works: `addDate("2024-01-31", Temporal.Duration.from("P1D"))` is `"2024-02-01"`.
-- 89eb29b: The 19 UTC and Unix clock readers that take no argument now always return a value. Their documentation no longer lists `""` as a result on failure, and they no longer contain a try/catch.
+- f15fb75: The 19 UTC and Unix clock readers that take no argument now always return a value. Their documentation no longer lists `""` as a result on failure, and they no longer contain a try/catch.
   
   Reading the UTC clock cannot fail on a conformant clock, so the documented `""` was a result no caller could receive. ECMA-262 defines `Date.now()` as a whole number of milliseconds within the range of a time value (±8.64e15 ms). TC39 Temporal builds `Temporal.Now.instant()` from that reading and keeps it inside the `Instant` range. None of these functions reads the time zone of the machine: `getUtcNow` formats the instant as it is, and the others convert it with an explicit `"UTC"`, which is always a valid time zone.
   
@@ -489,7 +489,7 @@
   You do not need to change any code.
   
   Unchanged: the readers that take an argument (`getUtcNowUnit`, `getUnixNowUnit`, `getUnixNow` and the `getZoned*` readers) and the readers of the system time zone (`getNow`, `getToday` and the other `plain` readers, and `getSystemTimeZone`) keep their empty result (`""` or `null`).
-- f9d5e51: Add `isValidUtcTimestamp`, a check that a string is a real UTC instant written `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else (Story CORE-78). That is the plain RFC 3339 spelling, the one readers other than Temporal expect. Use it for a timestamp from a request, or for one headed for storage.
+- f4c90fa: Add `isValidUtcTimestamp`, a check that a string is a real UTC instant written `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else (Story CORE-78). That is the plain RFC 3339 spelling, the one readers other than Temporal expect. Use it for a timestamp from a request, or for one headed for storage.
   
   `isValidUtc` answers a wider question: can Temporal read this string as a UTC instant? It is also true for four forms outside RFC 3339 §5.6: a time without seconds, a comma before the fraction, an expanded `±YYYYYY` year and an RFC 9557 annotation. `isValidUtcTimestamp` is false for all four. `isValidUtc` does not change.
   
@@ -523,7 +523,7 @@
 
 ### Patch Changes
 
-- c365ad3: Accept a function as an options bag or an object argument, as Temporal and `Intl` do.
+- a25e281: Accept a function as an options bag or an object argument, as Temporal and `Intl` do.
   
   ECMA-262's GetOptionsObject accepts any Object, and a function is an Object: Temporal reads `Object.assign(() => 0, { largestUnit: "hours" })` as `{ largestUnit: "hours" }`. GMT checked `typeof options === "object"`, so every function that takes options returned its sentinel for one. The same narrow check refused a function as a property bag or record: the `units` of `addDate` and its siblings, a `relativeTo` property bag, an interval, a leg, a business calendar, an operating schedule, a punctuality pair.
   
@@ -539,7 +539,7 @@
   - Every options bag, property bag and record argument is checked by one helper that accepts any Object, functions included. `null`, strings, numbers, booleans, symbols and bigints are still refused with the function's sentinel.
   - An operating schedule's `weekly` record reads each weekday `"1"`–`"7"` with an ordinary property get, as Temporal reads a field list, and refuses an unknown key only when it is an own enumerable one. So a function's built-in `length` and `name` are not read as unknown weekdays, and a non-enumerable weekday still applies. An inherited weekday now applies too; it used to be ignored.
   - A member is read with an ordinary property get, as Temporal's GetOption reads one. A `cutoffSchedule` entry written as a function is therefore labelled with the function's own `name` (`""` for an anonymous one), as `{ name: "", offset }` is.
-- ac0425f: Fix three defects. A UTC offset with seconds, which the library itself returns, is now accepted where a time zone is read and the result has no zone in it. Every function that returns a year now writes it the way Temporal does, which changes the result for a year below 1000 or above 9999. The operating-hours functions now see a night window at the very start of the range of instants Temporal supports.
+- ae8a528: Fix three defects. A UTC offset with seconds, which the library itself returns, is now accepted where a time zone is read and the result has no zone in it. Every function that returns a year now writes it the way Temporal does, which changes the result for a year below 1000 or above 9999. The operating-hours functions now see a night window at the very start of the range of instants Temporal supports.
   
   ### A stored offset is accepted where a time zone is
   
@@ -632,7 +632,7 @@
   ```
   
   Only a schedule read on the first local date of that range, in the year -271821, is affected.
-- 89eb29b: `getSystemTimeZone()` now returns `""` when the host reports a time zone that is not usable, as its documentation says. It used to pass ICU's placeholder `"Etc/Unknown"` through.
+- f15fb75: `getSystemTimeZone()` now returns `""` when the host reports a time zone that is not usable, as its documentation says. It used to pass ICU's placeholder `"Etc/Unknown"` through.
   
   Node reports `"Etc/Unknown"` when the `TZ` environment variable is set but empty, for example `TZ: ${TZ}` in a compose file where the variable is not defined. `"Etc/Unknown"` is not an IANA time zone, so Temporal and `Intl.DateTimeFormat` both throw a `RangeError` when it is passed to them.
   
@@ -644,7 +644,7 @@
   ```
   
   `getSystemTimeZone()` now returns a zone only when `isValidTimeZone` accepts it. Every other function is unchanged: `getNow`, `getToday` and the other readers of the system time zone already returned `""` or `null` on such a host.
-- 7d234be: Check the `units` object of the 12 `add*` and `subtract*` functions, and the `fields` object of the six `set*` functions, before TC39 Temporal reads them. Each property is now read once, with an ordinary property get and in the order Temporal reads them, and every value read is checked. Three things change:
+- ebc53cc: Check the `units` object of the 12 `add*` and `subtract*` functions, and the `fields` object of the six `set*` functions, before TC39 Temporal reads them. Each property is now read once, with an ordinary property get and in the order Temporal reads them, and every value read is checked. Three things change:
   
   - **An `add*` or `subtract*` function no longer applies a unit it does not take, or an amount that is not a number, when the object inherits it.**
   - **A `set*` function no longer returns its value unchanged** for an object that does set a field, or for an argument Temporal's `with` refuses.
@@ -726,7 +726,7 @@
 
 ### Minor Changes
 
-- 083b4f8: `isInDaylightSaving` and `hasDaylightSaving` now read daylight time from a zone's own clock changes, and `hasDaylightSaving` takes a reference instant in `options.at` (Story CORE-77). `getDstTransitions`, `startOfZoned` and `getHoursInZonedDay` now find two clock changes that fall less than 14 days apart.
+- 5a79155: `isInDaylightSaving` and `hasDaylightSaving` now read daylight time from a zone's own clock changes, and `hasDaylightSaving` takes a reference instant in `options.at` (Story CORE-77). `getDstTransitions`, `startOfZoned` and `getHoursInZonedDay` now find two clock changes that fall less than 14 days apart.
   
   Before, both functions compared a zone's 15 January and 15 July offsets, and `hasDaylightSaving` did so for the year 2024 only. A zone that moved its standard time during a year then read as being in daylight time afterwards: `Europe/Istanbul` has stayed at `+03:00` since 2016, and December 2016 read as daylight time.
   
@@ -803,7 +803,7 @@
   - **`hasDaylightSaving(timeZone)` now answers for the current instant, not for 2024.** Pass `{ at }` wherever the result is stored, compared or tested. To ask about 2024, pass an instant in 2024.
   - **A stored `isInDaylightSaving` result** for a zone that moved its standard time can be wrong under the new rule. Recompute it.
   - **For where a zone's offset changes, use `getDstTransitions(timeZone, year)`.** It lists every change and classifies none of them. For the offset itself, use `getZonedOffset`.
-- 8110235: Add `cutoffAt`, `cutoffSchedule`, `isPastCutoff` and `timeToCutoff` to the `transport/` namespace, and the `@northguild/gmt/transport/compare` subpath (Story TRAN-10).
+- 96d3372: Add `cutoffAt`, `cutoffSchedule`, `isPastCutoff` and `timeToCutoff` to the `transport/` namespace, and the `@northguild/gmt/transport/compare` subpath (Story TRAN-10).
   
   A logistics deadline is not a fixed timestamp. It counts back from an event — a vessel's departure, a container's loading, an arrival — in the local time of the place that enforces it, and it moves when that event moves. An ocean booking carries a stack of them: documentation, VGM, gate-in, customs.
   
@@ -838,7 +838,7 @@
   - **`cutoffSchedule` is all or nothing.** It sorts the stack by instant, keeps the given order for ties, and returns `[]` if any entry fails.
   - **The window closes at the cut-off.** `isPastCutoff` is `true` from the cut-off instant on. `timeToCutoff` is exact hours, `PT0S` at the cut-off and negative after it. Both return their sentinel for `cutoffAt`'s `""`.
   - Also exported: the `CutoffOptions`, `Cutoff`, `CutoffTime` and `CutoffScheduleOptions` types.
-- 083b4f8: Add `scheduleDeviation`, `classifyPunctuality`, `punctualityRate`, `bestAvailable`, `estimateDrift` and `nextDeparture` to the `transport/` namespace (Story TRAN-57). Every function that reads a moment now reads a zoned string for a zone with a sub-minute offset as the instant Temporal wrote it for, and an offset written with seconds must match its zone exactly.
+- 5a79155: Add `scheduleDeviation`, `classifyPunctuality`, `punctualityRate`, `bestAvailable`, `estimateDrift` and `nextDeparture` to the `transport/` namespace (Story TRAN-57). Every function that reads a moment now reads a zoned string for a zone with a sub-minute offset as the instant Temporal wrote it for, and an offset written with seconds must match its zone exactly.
   
   Every mode publishes a plan and records what happened, and measures the gap the same way. Only the tolerance differs, and the tolerance is the caller's. The other shared problem is that one field often holds four kinds of time — planned, estimated, requested and actual — and an estimate shown as an actual is the standard tracking-dashboard error.
   
@@ -941,7 +941,7 @@
   
   - **A stored instant computed from a zoned string in a sub-minute-offset zone** moves by up to 30 seconds, to the instant Temporal wrote the string for. Recompute it. To keep the old reading, drop the bracket: `toNanoseconds("1960-01-01T00:20:00-00:45")` reads the offset as written.
   - **A zoned string whose offset has seconds that are not the zone's** is now invalid. Write the zone's exact offset (`-00:44:30[Africa/Monrovia]`) or the minute-rounded one Temporal writes (`-00:45[Africa/Monrovia]`).
-- bc054ee: Read two adjacent single quotes in a parse pattern as one literal quote, wherever they appear.
+- 9067590: Read two adjacent single quotes in a parse pattern as one literal quote, wherever they appear.
   
   `parseDateWithPattern`, `parseTimeWithPattern` and `parseDateTimeWithPattern` follow the Unicode UTS #35 date format pattern rules for literal text. UTS #35 gives `''` one meaning, a literal `'`, inside and outside quoted text. These functions applied it only inside quoted text such as `'o''clock'`, and read `''` anywhere else as nothing at all. A pattern such as `"MMM d, ''yy"` now reads `"Mar 15, '24"`.
   
@@ -963,7 +963,7 @@
   Four quotes in a row are two literal quotes, not one. Quoted text is unchanged: `'at'` still reads `at`, `'o''clock'` still reads `o'clock`, and a quote that never closes still makes the pattern malformed.
   
   To keep fields adjacent with nothing between them, remove the `''` from the pattern: `"yyyyMMdd"` reads `"20240115"`.
-- bc054ee: Accept `timeZone: "local"` for the system time zone in the `utc` readers and converters, as the `utc` formatters and every `unix` function already do.
+- 9067590: Accept `timeZone: "local"` for the system time zone in the `utc` readers and converters, as the `utc` formatters and every `unix` function already do.
   
   Before, `"local"` returned the empty result (`""` or `null`) from these functions, while `formatUtc`, `formatCalendarUtc`, `formatRelativeUtc` and the matching `unix` functions read it as the system zone. Every `utc` function that takes a `timeZone` option now reads it the same way: omitted is UTC, `"local"` is the system time zone, and an IANA name or a UTC offset is that zone.
   
@@ -980,7 +980,7 @@
   ```
   
   Unchanged: an omitted `timeZone` still reads UTC, never the system zone, and an unknown zone still returns the empty result. `convertUtcToZoned` takes its zone as a required argument and still accepts only an IANA name or a UTC offset, as `convertUnixToZoned` does.
-- 69b2d6a: Add operating hours to `calendar/`: `recurringWindows`, `operatingIntervals`, `isOpenAt`, `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween` and `addOperatingTime` (Story CORE-55).
+- 2c069f5: Add operating hours to `calendar/`: `recurringWindows`, `operatingIntervals`, `isOpenAt`, `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween` and `addOperatingTime` (Story CORE-55).
   
   A business day answers "is Thursday a working day". A terminal gate, a support desk, a customs office or a night curfew asks more: is it open now, how many open hours have passed, and when does an SLA measured in open hours fall due. One `OperatingSchedule` answers all of them: a zone, windows of local wall time for each ISO weekday, holiday dates, and dated overrides.
   
@@ -1017,7 +1017,7 @@
   - **Searches have a stated horizon.** `nextOpenAt`, `nextCloseAt` and `addOperatingTime` search up to `within` after the input (default `"P1Y"`, added in the schedule's zone). An answer exactly at the horizon counts; past it they return `""`. `nextOpenAt` returns the input when it is already open, and `nextCloseAt` returns the input when it is already closed.
   - **Walks are bounded.** A range spanning more than 10,000 local dates (about 27 years) from its start's date, or a search that would go that far past its input, returns the sentinel, never a truncated answer. A search answers as soon as its answer is certain, and a horizon past Temporal's last instant stops there.
   - Also exported: the `OperatingSchedule`, `LocalWindow`, `OperatingOverride` and `IsoWeekday` types under `/types`. The subpath `@northguild/gmt/calendar/hours` joins the package exports.
-- bc054ee: Read each option once per call, convert it once, and read inherited options in every formatter that passes its options to `Intl.DateTimeFormat`.
+- 9067590: Read each option once per call, convert it once, and read inherited options in every formatter that passes its options to `Intl.DateTimeFormat`.
   
   **One read per option.** 56 functions read an option twice or more: once to check it or to choose its default, and again to use it. An options object whose property is a getter could answer a different value each time, so the value that was checked was not the value that was used. ECMA-402 and the Temporal specification read an option with one `Get` (`GetOption`), and every function that takes an `options` object now does the same.
   
@@ -1072,7 +1072,7 @@
   | `intervalFromDurationZoned("2024-11-02T01:30:00-04:00[America/New_York]", "P1D", "start", { disambiguation: later })` | An `end` of `"2024-11-03T01:30:00-04:00[America/New_York]"` | An `end` of `"2024-11-03T01:30:00-05:00[America/New_York]"` |
   
   TypeScript rejects an object where each of these options expects a string, so only untyped callers and casts are affected. Pass the string itself and the result is the same in both versions.
-- bc054ee: Return `""` from the `formatRelative*` functions for a `largestUnit` their type does not list.
+- 9067590: Return `""` from the `formatRelative*` functions for a `largestUnit` their type does not list.
   
   Each function lists the units its values have: `formatRelativeDate` the date units, `formatRelativeTime` the time units, and the other four all seven. The type already rejected any other unit, but at run time `formatRelativeDate` wrote a date distance in hours and `formatRelativeTime` accepted `"day"`. Temporal throws `RangeError` for a unit outside the units of the type: `Temporal.PlainDate.prototype.until` rejects `largestUnit: "hour"`, and `Temporal.PlainTime.prototype.until` rejects `"day"`. The functions now follow that rule and return `""`.
   
@@ -1108,7 +1108,7 @@
     largestUnit: "hour",
   }); // "in 48 hours"
   ```
-- 33b21d5: Add `crossingTime` and `scheduleDelivery` to the `transport/` namespace (Story TRAN-9).
+- 511b394: Add `crossingTime` and `scheduleDelivery` to the `transport/` namespace (Story TRAN-9).
   
   A crossing — a canal transit, a strait passage, a border queue — is logged as two instants and read on the clock of whoever runs it. A multi-leg move — truck, ship, rail — is one departure, a duration per leg and a handling time at each handoff, and the handoffs are where a naive ETA loses an hour. Every leg boundary here is an exact instant; local time is rendered only at the edges.
   
@@ -1141,7 +1141,7 @@
   - **Durations follow `transitTime`.** Time units are elapsed time, a day is 24 hours, and years, months and weeks return `null`. A negative leg returns `null`: a leg cannot arrive before it departs. A single-leg schedule is exactly `transitTime` composed with `etaAtZone`.
   - **Tags are opaque.** `mode`, `origin` and `destination` are echoed onto each `LegTime`, and absent when not supplied, so a caller can join results to its own records. GMT never resolves a code to a zone; `timeZone` is the caller's fact. An empty legs array returns `{ eta: "", legTimes: [] }`.
   - Also exported: the `Crossing`, `Leg`, `LegTime`, `ScheduleDeliveryOptions` and `DeliverySchedule` types.
-- bc054ee: Remove the `DurationUnit` type from the public exports.
+- 9067590: Remove the `DurationUnit` type from the public exports.
   
   No public function takes or returns `DurationUnit`. It only typed two private lookup tables inside `formatDuration`, so it now lives there.
   
@@ -1155,7 +1155,7 @@
 
 ### Patch Changes
 
-- bc054ee: Keep the millisecond default of `getZonedNow` when `smallestUnit` is passed as `undefined`, and read no option but `smallestUnit`.
+- 9067590: Keep the millisecond default of `getZonedNow` when `smallestUnit` is passed as `undefined`, and read no option but `smallestUnit`.
   
   Before, `{ smallestUnit: undefined }` replaced the default, and the string was written with as many fractional digits as the clock reading needed: none on a whole second. An option whose value is `undefined` is now read as absent, as `GetOption` reads it in ECMA-402 and in the Temporal specification, so the documented default applies.
   
@@ -1180,7 +1180,7 @@
   ```
   
   Unchanged: a call with no options, with `{}`, or with any `smallestUnit` from `"minute"` to `"nanosecond"`. A `smallestUnit` outside that range still returns `""`.
-- bc054ee: Accept `timeStyle: "long"` in the type of `formatCalendarUtc`, `formatCalendarUnix` and `formatCalendarZoned`, not only at run time.
+- 9067590: Accept `timeStyle: "long"` in the type of `formatCalendarUtc`, `formatCalendarUnix` and `formatCalendarZoned`, not only at run time.
   
   `timeStyle` is the `timeStyle` of `Intl.DateTimeFormat`, which takes `"short"`, `"medium"`, `"long"` and `"full"`. The three functions formatted `"long"` when called from JavaScript but rejected it in TypeScript.
   
@@ -1194,7 +1194,7 @@
   ```
   
   No output changes. `formatCalendar` is unchanged: a plain date-time has no time zone, so its type offers `"short"` and `"medium"` only.
-- bc054ee: Stop `splitIntervalByUnitUnix` returning empty or repeated pieces when the step is finer than the epoch unit, and always end the last piece of `splitIntervalByUnitZoned` at the `end` you passed.
+- 9067590: Stop `splitIntervalByUnitUnix` returning empty or repeated pieces when the step is finer than the epoch unit, and always end the last piece of `splitIntervalByUnitZoned` at the `end` you passed.
   
   **A step finer than the epoch unit.** Boundaries are floored to whole seconds or milliseconds, so several finer steps used to floor to the same value and come back as empty pieces. Such a split now returns one piece per epoch unit, and `maxPieces` counts those pieces rather than the finer steps.
   
@@ -1242,7 +1242,7 @@
   // was "2024-01-01T06:00:00+00:00[UTC]"
   // now "2024-01-01T06:00:00+00:00[+00:00]"
   ```
-- bc054ee: Accept plural unit names in the type of the `largestUnit` option of the `formatRelative*` functions, not only at run time.
+- 9067590: Accept plural unit names in the type of the `largestUnit` option of the `formatRelative*` functions, not only at run time.
   
   `formatRelativeUnix` already typed `largestUnit` as singular or plural. The other five functions accepted `"hours"` when called from JavaScript but rejected it in TypeScript. Their types now accept the plural of every unit they already listed:
   
@@ -1262,7 +1262,7 @@
   ```
   
   No output changes: a plural names the same unit as its singular, as it does in `Intl.RelativeTimeFormat` and Temporal.
-- bc054ee: Return `""` from the `formatRelative*` functions for a `roundingMethod` that is not `"floor"`, `"ceil"` or `"round"`.
+- 9067590: Return `""` from the `formatRelative*` functions for a `roundingMethod` that is not `"floor"`, `"ceil"` or `"round"`.
   
   Before, the value was used as the name of a `Math` function. Any name `Math` has was accepted, so `"abs"`, `"trunc"`, `"sign"`, `"random"` and inherited keys such as `"constructor"` produced a wrong phrase instead of the empty string that invalid input returns. The method is now matched against the three listed values only.
   
@@ -1291,7 +1291,7 @@
 
 ### Minor Changes
 
-- d896085: Add the `intermodal/` namespace: `freeTimeExpiry`, `chargeableDays` and `demurrageClock` (Story INT-12).
+- 7d8a26d: Add the `intermodal/` namespace: `freeTimeExpiry`, `chargeableDays` and `demurrageClock` (Story INT-12).
   
   Free time is the money calculation in container logistics, and none of its terms is a fact about the port or fixed by a world standard. How many days are free, whether the day of discharge is free day one, how free days and charged days are counted, and which clock a charge runs on are set by the carrier's tariff and the service contract. DCSA defines what demurrage, detention and storage are, but not how their days are counted. So every term is a parameter, no counting term has a default, and what comes back is the free-time window and the specific dates charged.
   
@@ -1337,7 +1337,7 @@
   - **`freeDays: 0`** is a tariff with no free time: `chargeableDays` charges every counted day from day one, and `freeTimeExpiry` returns `null` because there is no last free day to name.
   - **`demurrageClock` selects the pair for a leg.** Import demurrage and storage run from `startEvent` (`"discharged"` by default, or `"available"`) to `gatedOut`, detention from `gatedOut` to `emptyReturned`, and the combined clock from `startEvent` to `emptyReturned`. Export demurrage and storage run from `gatedIn` to `loaded`, detention from `emptyReleased` to `gatedIn`, and the combined clock from `emptyReleased` to `loaded`. `direction` has no default. The event names follow DCSA's Track & Trace equipment events. A required event that is missing or present twice, or an end before its start, returns `null`; the result is an `Interval` in the caller's own strings.
   - Also exported: the `FreeTime`, `FreeTimeCharges`, `FreeTimeChargeOptions`, `TierBand`, `ClockEvent`, `ClockEventType`, `ClockScope`, `ClockDirection`, `ClockStartEvent` and `ClockOptions` result and argument types, and `FreeTimeOptions`, `FreeTimeBasis` and `FreeTimeFirstDay` under `/types`. Subpaths `@northguild/gmt/intermodal` and `…/intermodal/calculate` join the package exports.
-- df33b58: Add the `transport/` namespace: `transitTime`, `etaAtZone` and `dwellTime` (Story TRAN-8).
+- 19c8cb5: Add the `transport/` namespace: `transitTime`, `etaAtZone` and `dwellTime` (Story TRAN-8).
   
   Every transport mode shares three operations — add a leg's duration to a departure, show the arrival where it lands, and measure how long something sat somewhere — and every mode gets the same two things wrong: a leg across a DST transition is a fixed number of *elapsed* hours, and dwell is charged in *local calendar days*, not hours.
   
@@ -1365,7 +1365,7 @@
   - **A day count needs a place.** `dwellTime` takes the zone from `targetZone`, or from the entry's bracketed IANA zone. Bare instants (`Z` or an offset) with no `targetZone` return `null`: an offset is not a zone, and a day count in an unstated locality would be a guess.
   - **All three never throw.** A non-string, a throwing `toString`, a symbol or a hostile Proxy returns the sentinel (`""` or `null`), as every GMT function does.
   - Also exported: the `Dwell` result type. Subpaths `@northguild/gmt/transport`, `…/transport/calculate` and `…/transport/convert` join the package exports.
-- c05dcf9: Add `billingTimeline` to the `intermodal/` namespace: the invoice, dispute and resolution deadlines around a demurrage or detention invoice, with every window a caller parameter (Story INT-58).
+- 0a7e529: Add `billingTimeline` to the `intermodal/` namespace: the invoice, dispute and resolution deadlines around a demurrage or detention invoice, with every window a caller parameter (Story INT-58).
   
   A billing regime or service contract can set up to three windows around an invoice: one to issue it, counted from an anchor date; one to dispute it, counted from issuance; and one to resolve the dispute, counted from the request, unless the parties agree a date instead. The number of days in each is the caller's fact; GMT carries none of them. The arithmetic is the function's: each deadline is a date, counted in calendar days from a date, with the anchor as day zero and the deadline day itself inside the window.
   
@@ -1409,7 +1409,7 @@
 
 ### Minor Changes
 
-- 26caa18: Add the `calendar/` namespace: ISO week and ordinal dates, quarter and fiscal periods, and zone-aware bucketing (Story CORE-5).
+- a845422: Add the `calendar/` namespace: ISO week and ordinal dates, quarter and fiscal periods, and zone-aware bucketing (Story CORE-5).
   
   Two absences with outsized consequences, and they turn out to be the same absence twice: a calendar boundary is not a fixed number of hours, and it is not in UTC.
   
@@ -1461,7 +1461,7 @@
   - **`bucketRange` is half-open, `[start, end)`**, so an `end` landing exactly on a boundary does not open that bucket; a zero-length range mid-bucket still returns the one bucket holding it. It returns at most 10,000 boundaries and `[]` past that, since an unbounded hour walk over Temporal's ±273,790-year range would exhaust memory.
   - Weeks start on Monday (ISO 8601) in both `floorToZone` and `bucketRange`, matching `startOfZoned` and `intervalCountZoned`.
   - Also exported: the `FiscalCalendar`, `FiscalPattern` and `ZoneBucketUnit` types, and the type guards that narrow the two unions — `isValidFiscalPattern` and `isValidZoneBucketUnit`. Both `getFiscalPeriod` and `floorToZone`/`bucketRange` return their sentinel for an unrecognised pattern or unit, which is the same sentinel a date or instant they cannot use returns; a pattern or unit read from config, an env var or a form is a bare string until one of these narrows it.
-- 7846ecf: Add the business calendar engine: holiday calendars, calendar composition and roll conventions (Story CORE-7).
+- 3b39fdd: Add the business calendar engine: holiday calendars, calendar composition and roll conventions (Story CORE-7).
   
   `BusinessCalendar` is `{ weekend: number[], holidays: string[], timeZone: string }`. The weekend is explicit ISO weekday numbers because Saturday–Sunday is not universal — much of the Middle East is Friday–Saturday, and some markets keep a one-day weekend. Holidays are caller-supplied: GMT bundles no holiday table on the default import path, because holiday data is jurisdictional and changes annually, sometimes with days of notice.
   
@@ -1482,7 +1482,7 @@
   `isValidBusinessCalendar` and `isValidRollConvention` narrow a candidate, telling a misconfigured calendar or contract term apart from bad date input when a function returns its sentinel.
   
   Fixes a defect in `addBusinessDays` / `subtractBusinessDays` / `addZonedBusinessDays` / `subtractZonedBusinessDays`: the shared walker recursed once per calendar day, so an amount above roughly 6,000 business days overflowed the stack and returned the invalid-input sentinel for a valid request — `addBusinessDays("2024-01-01", 10000)` returned `""` instead of `"2062-05-01"`. The walk is now a bounded loop, capped at 200,000 calendar days (about 547 years), returning the sentinel only when that cap is reached.
-- b414f44: Add foreign epoch bridges to `precision/convert/`: NTP, Windows `FILETIME`, .NET ticks, Excel day serials, and PostgreSQL's internal microseconds (Story CORE-3).
+- 8ecc54c: Add foreign epoch bridges to `precision/convert/`: NTP, Windows `FILETIME`, .NET ticks, Excel day serials, and PostgreSQL's internal microseconds (Story CORE-3).
   
   Nothing else counts from 1970. NTP counts from 1900 and rolls over in 2036; `FILETIME` counts 100-nanosecond intervals from 1601; .NET ticks count the same interval from year 1; Excel uses a day serial carrying a deliberate 1900 leap-year bug; PostgreSQL stores microseconds from 2000-01-01. None of it was in gmt, so every integration hardcoded the constants — usually wrongly.
   
@@ -1521,7 +1521,7 @@
   - These are plain instant conversions; no leap seconds are involved in any of them.
   
   `toNanoseconds` now delegates to a shared internal instant parser, so all six functions in the namespace that take an instant string apply one leap-second and calendar-annotation gate. Its behaviour is unchanged.
-- 729e0f1: Make a `diff*` units array return the whole difference, number Sunday-first weeks by UTS #35, and read microseconds and nanoseconds in every `parseUnitFrom*` function (Story CORE-8).
+- 727a3f4: Make a `diff*` units array return the whole difference, number Sunday-first weeks by UTS #35, and read microseconds and nanoseconds in every `parseUnitFrom*` function (Story CORE-8).
   
   **A units array accounts for the whole difference.** `diffDate`, `diffDateTime`, `diffTime`, `diffUtc`, `diffZoned` and `diffUnix` used the largest listed unit as Temporal's `largestUnit` and returned only the listed fields. The amount in any unit not listed was dropped: `["years", "days"]` across 1 year and 2 months returned `{ years: 1, days: 0 }`. Weeks were dropped too, because Temporal fills weeks only when they are the largest unit. Unlisted amounts now fold into the next smaller listed unit, measured from the start moved by the larger listed amounts, so the record adds back up to the difference. A contiguous list keeps Temporal's own fields and rounding.
   
@@ -1577,10 +1577,10 @@
   | `getWeekNumber("2000-12-31", "sunday")` | `54` | `1` |
   
   Migration: to get only the listed fields of Temporal's own difference, list every unit between the largest and the smallest you need, and ignore the ones you do not. For a calendar-year count of Sunday weeks, count from the year's first Sunday yourself.
-- 82380f8: Export the `nanosecondDecimal` pattern from `@northguild/gmt/regex` and the package root.
+- 358e91e: Export the `nanosecondDecimal` pattern from `@northguild/gmt/regex` and the package root.
   
   `isValidNanoPattern` documented it as a `regex/` pattern, but the `regex` barrel never re-exported its file, so it could not be imported. It now can.
-- 729e0f1: Make the positional interval functions in `plain/`, `utc/`, `zoned/` and `unix/` half-open `[start, end)`, the rule the `interval/` namespace already follows (Story CORE-8).
+- 727a3f4: Make the positional interval functions in `plain/`, `utc/`, `zoned/` and `unix/` half-open `[start, end)`, the rule the `interval/` namespace already follows (Story CORE-8).
   
   Earlier releases read most of these functions' intervals as closed `[start, end]`, with both endpoints inside, and stepped one unit in from every cut to make that work: one nanosecond, one day, or one epoch unit. A result from `intervalsOverlapUtc` could then disagree with `intervalsOverlap` on the same instants. Every positional family now uses `start ≤ t < end`, as SQL:2011's closed-open `PERIOD`, RFC 5545's non-inclusive `DTEND` and EWD831 do, and the one-unit steps are gone.
   
@@ -1657,7 +1657,7 @@
     ```
   
     The same `start`/`end` pair therefore yields `n + 1` from the `map*` functions and `n` from the `interval*` ones. To read one set of bounds both ways, pass `addDate(end, { days: 1 })` to the `interval*` call, or `subtractDate(end, { days: 1 })` to the `map*` call.
-- 729e0f1: Read options, unit names and locales the way Temporal and ECMA-402 read them, and remove the options no function reads (Story CORE-8).
+- 727a3f4: Read options, unit names and locales the way Temporal and ECMA-402 read them, and remove the options no function reads (Story CORE-8).
   
   **Singular and plural unit names are the same unit everywhere.** Temporal §13.17 `GetTemporalUnitValuedOption` accepts `"day"` and `"days"` alike. Many GMT functions accepted only one spelling. Every unit-taking function now accepts both: the `startOf*`, `endOf*` and `are*EqualBy` functions, `diffDate`, `diffDateTime`, `diffTime`, `diffUtc`, `diffZoned`, `diffUnix` and their `*AsDuration` forms, the `getLargest*DurationUnit` functions, the `parseUnitFrom*` functions, `durationAs`, `getDurationUnit`, `getZonedOffsetAs`, `spanWallClock`, `floorToZone`, `bucketRange`, `isValidZoneBucketUnit` and the `get*NowUnit` functions.
   
@@ -1781,7 +1781,7 @@
   | `addTime(v, d, { overflow })`, `subtractTime(v, d, { overflow })` | accepted, no effect | `addTime(v, d)`, `subtractTime(v, d)` |
   | `intervalFromDurationTime(v, duration, anchor, { overflow })` | accepted, no effect | `intervalFromDurationTime(v, duration, anchor)` |
   | `cycleTime(v, field, amount, { round, overflow })` | `overflow` accepted, no effect | `cycleTime(v, field, amount, { round })` |
-- 729e0f1: List every import path explicitly, mark the package side-effect free, and state the Node versions it supports (Story CORE-8).
+- 727a3f4: List every import path explicitly, mark the package side-effect free, and state the Node versions it supports (Story CORE-8).
   
   **The `exports` map names each subpath.** It used wildcard patterns, which also resolved folders nobody documented, such as `@northguild/gmt/plain/interval/validate`, and a `./regex/*` pattern that matched nothing. It now lists the root, the twelve namespace paths (`calendar`, `duration`, `instant`, `interval`, `plain`, `precision`, `regex`, `span`, `types`, `unix`, `utc`, `zoned`) and each namespace's category subpaths, such as `@northguild/gmt/plain/interval` or `@northguild/gmt/unix/convert`: 71 entries in all. Any other path fails with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
   
@@ -1808,7 +1808,7 @@
   | `import { … } from "@northguild/gmt/plain/interval/validate"` and other nested folders | `ERR_PACKAGE_PATH_NOT_EXPORTED`; import from `@northguild/gmt/plain/interval` or `@northguild/gmt/plain` |
   | `import { chopUtc } from "@northguild/gmt/plain"` | not exported there; `import { chopUtc } from "@northguild/gmt/utc"` |
   | Node below 22.16.0 | outside `engines`; upgrade Node |
-- 729e0f1: Add a `maxPieces` option to the functions that build one array element per piece, so a large range returns `[]` instead of exhausting the heap (Story CORE-8).
+- 727a3f4: Add a `maxPieces` option to the functions that build one array element per piece, so a large range returns `[]` instead of exhausting the heap (Story CORE-8).
   
   **Which functions.** `splitIntervalByUnitDate`, `splitIntervalByUnitDateTime`, `splitIntervalByUnitTime`, `splitIntervalByUnitUtc`, `splitIntervalByUnitUnix`, `splitIntervalByUnitZoned`, the six matching `intervalDivideEqually*` functions, `mapDatesInRange` and `mapZonedDatesInRange`. Before, each built an array as long as the range asked for. Ten thousand years of days, or a divide into billions of pieces, ran out of memory or threw a `RangeError` from inside the engine.
   
@@ -1858,7 +1858,7 @@
   - **Code that treated `[]` as “the range is empty”** must now also read it as “the range is too large”. These functions have one sentinel, so distinguish the two by checking the range yourself — `intervalCountDate(start, end, "day")` counts the pieces without building them.
   - **Nothing became slower.** A split stops as soon as piece `maxPieces + 1` is due, so an over-cap call returns in bounded time instead of exhausting the heap.
   - **The engine's own array limit, 2^32 − 1 elements, still applies** above any `maxPieces` you set.
-- 17ddf84: Add the `instant/` namespace: the instant-plus-offset pair, and explicit resolution of zoneless local wall times (Story CORE-4).
+- e8c148a: Add the `instant/` namespace: the instant-plus-offset pair, and explicit resolution of zoneless local wall times (Story CORE-4).
   
   GMT could represent an instant, and it could represent a zoned datetime. It had no primitive for the shape the world actually exchanges: an absolute instant **plus** the local UTC offset that was in force where the event happened. Neither field derives from the other — the instant orders events globally, the offset renders them as the human on the ground saw them — which is why GS1 EPCIS 2.0 requires both (`eventTime` and `eventTimeZoneOffset`), UN/EDIFACT DTM has qualifiers `303`/`304` for the pair, and DICOM appends `&ZZXX` to a `DT` value.
   
@@ -1895,7 +1895,7 @@
   - **`offset` is `±HH:MM`, except where the zone was not on a whole minute.** `Africa/Monrovia` ran at `-00:44:30` until 1972, and `toOffsetInstant` reports it as `±HH:MM:SS` rather than rounding the pair thirty seconds away from the event it describes. Sub-second offsets are rejected — ISO 8601 permits them and Temporal parses them, but no zone and no standard that stores this pair has used one.
   - **Annotations are read as RFC 9557 §3.3 and Temporal read them.** An elective `[key=value]` annotation, including `[u-ca=...]`, is ignored, and an unknown critical `[!key=value]` annotation returns `null`, exactly as `isValidInstant` decides. A string whose offset contradicts its bracketed zone still returns `null`.
   - Also exported: the `OffsetInstant` and `LocalTimeClassification` types, and the `utcOffset` regex pattern from `regex/`.
-- 729e0f1: Write calendar strings in the standard RFC 9557 form, the ISO date followed by `[u-ca=<id>]`, and name calendars by their CLDR and Temporal ids (Story CORE-8).
+- 727a3f4: Write calendar strings in the standard RFC 9557 form, the ISO date followed by `[u-ca=<id>]`, and name calendars by their CLDR and Temporal ids (Story CORE-8).
   
   GMT's calendar strings carried the calendar's own year, month and day digits: the Hebrew New Year 5785 was `"5785-01-01[u-ca=hebrew]"`. No standard defines that form. Temporal's `PlainDate#toString()` always writes the ISO date, and RFC 9557 §3.3 says `u-ca` names the calendar a date is preferably shown in, not the calendar of its digits. Every standard parser, Temporal included, therefore read GMT's strings as a different date without an error. `;era=` was not RFC 9557 syntax, and the zoned form put `[u-ca=…]` before the time zone, the reverse of RFC 9557 §4.1.
   
@@ -1958,7 +1958,7 @@
   - **`;era=` is gone**, including the `;era=japanese` input alias. `convertDateToCalendar("1800-01-01[u-ca=japanese;era=ce]", "iso8601")` is `""`.
   - **Replace the renamed ids** in calls and stored annotations. `gregorian`, `taiwan` and `islamic-tabular` return the sentinel.
   - **Difference two dates in one calendar.** Convert one side first with `convertDateToCalendar`, then call `diffDate`.
-- 82380f8: Add the `interval/` namespace: half-open `[start, end)` interval algebra over instants: overlap, containment, intersect, clamp, merge, subtract, split and sum (Story CORE-6).
+- 358e91e: Add the `interval/` namespace: half-open `[start, end)` interval algebra over instants: overlap, containment, intersect, clamp, merge, subtract, split and sum (Story CORE-6).
   
   Four realms need the same operation and none of them could express it: sum the parts of an interval that fall inside a set of allowed windows. Laytime counts only the hours a charter clause allows, driver hours split a duty period around mandatory rest, demurrage free time counts only working days, and a trading window counts only continuous-session time. Without one shared primitive, each realm reimplements intersection and they disagree at every boundary.
   
@@ -1998,7 +1998,7 @@
   - **Also exported:** the `Interval` type (`{ start: string; end: string }`) and `isValidInterval`. `mergeIntervals`, `subtractIntervals` and `splitIntervalAt` return `[]` both as a legitimate result (a fully covered subtraction) and as the invalid-input sentinel, and `isValidInterval` tells the two apart.
   
   The older positional functions in `plain/`, `utc/`, `zoned/` and `unix/` `interval/` move to the same half-open rule in this release, and the `Utc` variants call these functions; that change and its migration are listed in their own entry.
-- d298c49: Add the `precision/` namespace: nanosecond instants as `bigint`, their JSON bridge, and explicit storage truncation (Story CORE-1).
+- 5f32094: Add the `precision/` namespace: nanosecond instants as `bigint`, their JSON bridge, and explicit storage truncation (Story CORE-1).
   
   `convertZonedToUnix` and the rest of `unix/` return `number` milliseconds, which cannot carry nanosecond timestamps — a `number` holds integers exactly only to `2^53 − 1` ≈ 9.0 × 10^15, and nanoseconds since the epoch passed that in April 1970. The new namespace works in `bigint` throughout:
   
@@ -2035,7 +2035,7 @@
   - Leap-second-aware time scales (TAI, GPS) are deliberately out of scope — these are plain instant conversions.
   
   Importable from the package root or from `@northguild/gmt/precision`, `@northguild/gmt/precision/convert`, `/precision/format`, `/precision/parse`, and `/precision/calculate`.
-- fd2b96f: Fix zone-aware boundaries, counts and splits that went wrong around DST transitions and month ends.
+- f9fb4f5: Fix zone-aware boundaries, counts and splits that went wrong around DST transitions and month ends.
   
   Every fix follows TC39 Temporal. A boundary is a real instant in the zone, never a wall-clock time re-resolved after truncation. Repeated calendar steps are measured from the original anchor.
   
@@ -2065,7 +2065,7 @@
   | `startOfUnix(v, unit, { epochUnit, timeZone, weekStartsOn, disambiguation, offset })`, likewise `endOfUnix` | `startOfUnix(v, unit, { epochUnit, timeZone, weekStartsOn })` |
   | `startOfQuarterForUnix(v, { epochUnit, timeZone, disambiguation, offset })`, likewise `endOfQuarterForUnix` | `startOfQuarterForUnix(v, { epochUnit, timeZone })` |
   | `mapZonedHoursInDay(anchor, { disambiguation, offset })` | `mapZonedHoursInDay(anchor)` |
-- 729e0f1: Read annotations, time zone ids, SQL literals and leap seconds by their standards, and accept only the written shape each validator documents (Story CORE-8).
+- 727a3f4: Read annotations, time zone ids, SQL literals and leap seconds by their standards, and accept only the written shape each validator documents (Story CORE-8).
   
   **Elective annotations are accepted everywhere a Temporal string is.** RFC 9557 §3.3 lets a receiver ignore an elective `[key=value]` annotation and requires it to reject an unknown critical `[!key=value]` one, and Temporal's ISO grammar does exactly that. GMT refused every annotation in some namespaces and read them loosely in others. Now:
   
@@ -2170,7 +2170,7 @@
   | `isValidTimeInterval("10:00:00.000000002", "10:00:00.000000001")` | `true` | `false` |
   
   Migration: write strings in GMT's extended form (`T`, `Z`, full `HH:MM:SS`). Pass SQL values with seconds. Check `isValidTimeZone(zone) && !zone.startsWith("+") && !zone.startsWith("-")` where only IANA zones are allowed.
-- 59831ff: Add the `span/` namespace: exact elapsed and wall-clock durations between two timestamps, as raw numbers (Story CORE-2).
+- fb7a860: Add the `span/` namespace: exact elapsed and wall-clock durations between two timestamps, as raw numbers (Story CORE-2).
   
   `diffZoned` and `diffUnix` measure in calendar units and hand back a Temporal `Duration`. Profiling, tracing and telemetry want a number:
   
@@ -2233,7 +2233,7 @@
   `regex/` gains `instantLeapSecond` (the wider leap-second grammar the full instant parser needs, alongside the existing `leapSecond`) and `nanosecondDecimal`.
   
   Importable from the package root or from `@northguild/gmt/span`, `@northguild/gmt/span/calculate`, `@northguild/gmt/span/validate` and `@northguild/gmt/precision/validate`.
-- 729e0f1: Export `parseMillisecondFromUnix` and `parseMinuteFromUnix` and three types their functions' signatures already named, and add a `minimalDays` option to `getLocaleWeekYear` and `getWeeksInLocaleWeekYear` (Story CORE-8).
+- 727a3f4: Export `parseMillisecondFromUnix` and `parseMinuteFromUnix` and three types their functions' signatures already named, and add a `minimalDays` option to `getLocaleWeekYear` and `getWeeksInLocaleWeekYear` (Story CORE-8).
   
   **Two functions that shipped unreachable.** Both were implemented, documented and tested, but `unix/parse` never re-exported them, and the package's `exports` map blocks deep imports, so no path could reach them. Their `utc/` and `zoned/` equivalents were always exported.
   
@@ -2264,7 +2264,7 @@
   ```
   
   In CLDR 48's `weekData` the world default is `1`, as in `US`, `CA`, `MX`, `JP` and `CN`. `4` is set for a list of mostly European regions such as `GB`, `DE` and `FR`, where it matches GMT's default.
-- 729e0f1: Give every `unix/` function one epoch grammar, one `{ epochUnit }` option and a UTC default time zone (Story CORE-8).
+- 727a3f4: Give every `unix/` function one epoch grammar, one `{ epochUnit }` option and a UTC default time zone (Story CORE-8).
   
   **UTC is the default time zone everywhere in `unix/`.** About twenty functions read an omitted `timeZone` as the host's zone, so the same call gave a different answer on another machine: `addUnix`, `subtractUnix`, `setUnix`, `roundUnix`, `diffUnix`, `diffUnixAsDuration`, `isBetweenUnix`, `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix`, `areUnixEqualBy`, the `convertUnixToPlain*` functions, `parseDateFromUnix`, `parseTimeFromUnix`, `parseDayOfWeekFromUnix`, `parseUnitFromUnix` and `parseWeekFromUnix`. They now use UTC, as `formatUnix` and `formatRelativeUnix` already did. Pass `timeZone: "local"` to the formatters, or a zone id to any function, for another zone.
   
@@ -2334,7 +2334,7 @@
   | Epoch strings such as `"+1"`, `"1e3"` or `" 1"` | accepted by some functions | the sentinel |
   
   A positional unit passed to the new signatures returns the sentinel rather than a wrong instant: `convertUnixToUtc(1709164800, "seconds" as never)` is `""`.
-- 729e0f1: Validate `unix/` epoch arguments and read rounding and comparison options the way Temporal reads them (Story CORE-8).
+- 727a3f4: Validate `unix/` epoch arguments and read rounding and comparison options the way Temporal reads them (Story CORE-8).
   
   **`epochUnit` is validated.** Fourteen `unix/` functions read any `epochUnit` they did not recognise, including a misspelling, as milliseconds. They are `addUnix`, `subtractUnix`, `diffUnix`, `diffUnixAsDuration`, `isBetweenUnix`, `roundUnix`, `setUnix`, `areUnixEqual`, `isAfterUnix`, `isBeforeUnix`, `intervalFromDurationUnix`, `intervalOverlappingDaysUnix`, `formatCalendarUnix` and `formatRelativeUnix`. They now return their sentinel.
   
@@ -2405,7 +2405,7 @@
 
 ### Patch Changes
 
-- 729e0f1: Fix three defaults that returned the wrong value (Story CORE-8). Each one has a documented option that restores the previous output.
+- 727a3f4: Fix three defaults that returned the wrong value (Story CORE-8). Each one has a documented option that restores the previous output.
   
   **`endOf*` printed a moment earlier than the end.** An end is the next start minus one nanosecond, but `endOfTime`, `endOfDateTime`, `endOfUtc`, `endOfZoned` and `endOfQuarterForZoned` printed only the digits the unit names, so `endOfTime("12:34:56", "hour")` returned `"12:59:59"`: 999,999,999 nanoseconds before the real end. They now default to nanosecond precision, which `endOfQuarterForUtc` already used.
   
@@ -2426,7 +2426,7 @@
   ```
   
   **`getLocaleWeekYear` and `getWeeksInLocaleWeekYear` answered differently by Node version.** They read a locale's `minimalDays` from the runtime. Node 22 still reported it, while Node 24 and later do not, so `getLocaleWeekYear("2022-01-01", "en-US")` returned `2022` on one runtime and `2021` on another. The default is now the ISO 8601 value `4` on every runtime. Pass `{ minimalDays: 1 }` to keep the Node 22 result for `en-US` and other locales whose rule is `1`.
-- 82380f8: Fix non-ISO calendar arithmetic, differences and range limits that were wrong, empty or unparseable, so every supported calendar follows TC39 Temporal and the Intl Era and Month Code proposal across the whole representable range.
+- 358e91e: Fix non-ISO calendar arithmetic, differences and range limits that were wrong, empty or unparseable, so every supported calendar follows TC39 Temporal and the Intl Era and Month Code proposal across the whole representable range.
   
   Several of these fixes change outputs that shipped. Each earlier output was wrong under the specification, so each change is a bug fix, not a new behaviour. The examples use this release's RFC 9557 calendar strings, described in their own entry.
   
@@ -2439,7 +2439,7 @@
   - **A calendar-annotated `relativeTo` works near the range limits** in `durationAs`, `normalizeDuration` and `compareDurations`.
   
   Each correction checks the installed Temporal polyfill and ICU once and stays inactive where they are already right, so no output changes when the upstream fixes ship.
-- 729e0f1: The 1844 date-line crossings are found. `Asia/Manila`, `Pacific/Guam`, `Pacific/Saipan`, `Pacific/Kosrae` and `Pacific/Palau` moved to the Asian side of the date line by skipping 1844-12-31, but the Temporal polyfill only searches for time zone transitions from 1847-01-01 on, so GMT missed that change. Every fix returns what native Temporal (Chrome 153) returns.
+- 727a3f4: The 1844 date-line crossings are found. `Asia/Manila`, `Pacific/Guam`, `Pacific/Saipan`, `Pacific/Kosrae` and `Pacific/Palau` moved to the Asian side of the date line by skipping 1844-12-31, but the Temporal polyfill only searches for time zone transitions from 1847-01-01 on, so GMT missed that change. Every fix returns what native Temporal (Chrome 153) returns.
   
   - **`getDstTransitions(zone, 1845)` lists the crossing.** It used to return `[]`. `getDstTransitions("Asia/Manila", 1845)` is `[{ instant: "1844-12-31T15:56:08Z", offsetBefore: "-15:56:08", offsetAfter: "+08:03:52" }]`. 1844 stays `[]`: the crossing is local 1845-01-01 00:00, so it belongs to 1845.
   - **Weeks across the crossing start on Monday 1844-12-30.** `startOfZoned`, `endOfZoned`, `floorToZone` and `areZonedEqualBy` by week were a day off. `floorToZone("1845-01-02T03:56:08Z", "week", "Asia/Manila")` is `"1844-12-30T15:56:08Z"`, not `"1844-12-29T15:56:08Z"`, and 1844-12-30 and 1845-01-02 are now in the same week. `startOfUnix`, `areUnixEqualBy` and `getLocaleZonedStartOfWeek` are corrected with them.
@@ -2448,7 +2448,7 @@
   - **Business days skip it.** `addZonedBusinessDays("1844-12-27T12:00:00-15:56[Asia/Manila]", 2)` is `"1845-01-01T12:00:00+08:04[Asia/Manila]"`, not a date in 1899.
   
   The correction runs only for instants before 1847-01-01 (and local dates on or before it) in a named zone; every later value takes the same path as before. It is removed once a polyfill release containing js-temporal/temporal-polyfill#372 is the dependency floor.
-- 729e0f1: Correct about 70 JSDoc `@example` results that disagreed with what the function returns (Story CORE-8).
+- 727a3f4: Correct about 70 JSDoc `@example` results that disagreed with what the function returns (Story CORE-8).
   
   Every public function's examples were executed against the build and compared with their documented result. They also feed the reference site and the playground's default inputs. The wrong ones fell into a few classes:
   
@@ -2465,7 +2465,7 @@
   - **Sources.** Wrong section numbers for Temporal, ECMA-402 and the RFCs, and documented behaviour the docs had not stated: RFC 5905's all-zero NTP timestamp also means an unknown time, only .NET ticks of `Kind == Utc` name an instant, and a bracketed zone on an instant string is not checked.
   
   No function's behaviour changed in this entry.
-- 82380f8: Fix results that were wrong, empty or thrown at the edges of the representable range: the last nanosecond of a day, the first and last instant, and zones ahead of or behind UTC there.
+- 358e91e: Fix results that were wrong, empty or thrown at the edges of the representable range: the last nanosecond of a day, the first and last instant, and zones ahead of or behind UTC there.
   
   Temporal represents instants from `-271821-04-20T00:00:00Z` to `+275760-09-13T00:00:00Z`. Every fix returns what the TC39 specification returns for the same input.
   
@@ -2481,7 +2481,7 @@
   - **The critical calendar flag is read like the plain one.** `[!u-ca=hebrew]` used to pass a gate that refused `[u-ca=hebrew]`, and the value was read in the wrong calendar. `spanNs`, `spanMs`, `toNanoseconds`, `isValidInstant` and `isValidInterval` now ignore both spellings, since an instant has no calendar, and the zoned validators refuse both.
   
   The zoned corrections run only when the installed Temporal polyfill throws near a limit, so no other input changes. They are removed once a polyfill release fixes those limits.
-- 729e0f1: Return the sentinel for arguments that are hostile to inspection, not just hostile to `ToString` (Story CORE-8).
+- 727a3f4: Return the sentinel for arguments that are hostile to inspection, not just hostile to `ToString` (Story CORE-8).
   
   **What was wrong.** 221 of the 551 exports threw when an argument resisted being looked at. A revoked `Proxy` throws on `get`, `ownKeys` and `Array.isArray`; an object with a throwing getter throws when a rest-spread enumerates it. Those operations sat in the guards *above* each function's `try`, so the guard meant to reject invalid input raised instead.
   
@@ -2501,7 +2501,7 @@
   Every affected export now evaluates its whole body inside the `try` whose `catch` already returned its sentinel, so a guard cannot raise. Valid input is unaffected: all 36,348 tests pass unchanged.
   
   **Why it was invisible.** The no-throw harness fed each export a list of eleven hostile values, and a list only finds what someone thought to put on it. It now also passes a proxy that throws on every trap, a revoked proxy, and an object with a throwing getter — values hostile to *any* access rather than to one named operation.
-- 729e0f1: Make the RFC 5322, HTTP-date and RFC 3339 parsers and formatters follow their grammars exactly (Story CORE-8).
+- 727a3f4: Make the RFC 5322, HTTP-date and RFC 3339 parsers and formatters follow their grammars exactly (Story CORE-8).
   
   **`parseRfc2822` accepts what a receiver must accept.** It took only the strict form GMT's own formatter writes. RFC 5322 §3.3 also allows folding whitespace, comments, any letter case and a 4-or-more-digit year. §4 says a receiver MUST accept the obsolete syntax too: two- and three-digit years, and the military and North American zone names. Unknown zone names read as `-0000`, meaning no offset information.
   
@@ -2566,7 +2566,7 @@
   
   rfc3339DateTime.test("2024-03-15T14:30:00+24:00"); // false
   ```
-- 729e0f1: Format dates and times the way ECMA-402, as amended by Temporal, formats Temporal values (Story CORE-8).
+- 727a3f4: Format dates and times the way ECMA-402, as amended by Temporal, formats Temporal values (Story CORE-8).
   
   The text formatters took their options through the polyfill's `toLocaleString`, which rebuilds them from `resolvedOptions()` and loses some on the way. They now apply Temporal's `GetDateTimeFormat` and `AdjustDateTimeStyleFormat` over the runtime's own `Intl.DateTimeFormat`, so each text result equals its `…ToParts` result joined. The affected functions are `formatDate`, `formatTime`, `formatDateTime`, `formatDateRange`, `formatDateTimeRange`, `formatUtc`, `formatUnix`, `formatZonedDateTime`, `formatZonedRange` and the three `…ToParts` functions. The implementation was checked against a native-Temporal browser in 55,080 comparisons.
   
@@ -2605,7 +2605,7 @@
   ```
   
   Compatibility: each function's JSDoc names the call that keeps its earlier text. Pass the fields the old text showed, such as the numeric fields for `"R6/2"` or `dateStyle` alone for the styled date. To render an instant in another zone, use `formatUtc` with its `timeZone` option. For the parts a plain date used to leak, call `formatZonedToParts` on the value at midnight UTC.
-- 729e0f1: Stop 62 functions throwing on a missing or wrong-typed argument (Story CORE-8). Each now returns its documented invalid-input result.
+- 727a3f4: Stop 62 functions throwing on a missing or wrong-typed argument (Story CORE-8). Each now returns its documented invalid-input result.
   
   GMT's contract is that invalid input returns `""`, `null`, `false` or `[]` and never throws. These functions broke it with a `TypeError` or `RangeError` from inside the function:
   
@@ -2640,7 +2640,7 @@
   ```
   
   A new test feeds invalid values to every exported function in every argument position and checks that it returns its declared sentinel. No valid input changes output in this entry.
-- 729e0f1: Tighten input checks for leap seconds, time zone names, calendar annotations and date shapes, so every function accepts the same strings its validator accepts (Story CORE-8).
+- 727a3f4: Tighten input checks for leap seconds, time zone names, calendar annotations and date shapes, so every function accepts the same strings its validator accepts (Story CORE-8).
   
   **Leap seconds are rejected in every spelling.** GMT rejects `:60`, as Temporal does not represent it, but the check matched only an uppercase `T` with extended digits. A lowercase `t`, a space separator or the basic format (`20161231 235960Z`) got through, and every `zoned/` function silently read the second as `:59`. `getTimeZoneOffset` looked up the offset at the clamped instant, and a `relativeTo` string was never checked at all. All of them now return their sentinel, and `isLeapSecond` and the `leapSecond` regex recognise every spelling.
   
@@ -2703,14 +2703,14 @@
   
   year.test("-000000"); // false
   ```
-- 82380f8: Fix locale week data on Node 26.
+- 358e91e: Fix locale week data on Node 26.
   
   Node 26 (V8 14) removed the `Intl.Locale#weekInfo` accessor in favour of the Intl Locale Info proposal's `getWeekInfo()` method. GMT read only the accessor, so on Node 26 every locale silently fell back to ISO defaults: weeks started on Monday, weekends were Saturday and Sunday, and week-year rules used ISO's minimal days.
   
   The functions affected on Node 26 were `getLocaleStartOfWeek`, `getLocaleEndOfWeek`, `getLocaleDayOfWeek`, `getLocaleWeekYear`, `getWeeksInLocaleWeekYear`, `getWeekOfMonth`, `getWeeksInMonth`, `getLocaleWeekdayNames`, `isWeekend`, `isThisUnit` and their zoned twins. For example, `en-US` weeks started on Monday instead of Sunday, and `ar-SA` weekends were Saturday and Sunday instead of Friday and Saturday.
   
   GMT now calls `getWeekInfo()` when the runtime has it and falls back to `weekInfo` otherwise, so results are the same on Node 22, 24 and 26.
-- 729e0f1: Fix lengths, rounding and differences in months or years measured from the 29th, 30th or 31st (Story CORE-8).
+- 727a3f4: Fix lengths, rounding and differences in months or years measured from the 29th, 30th or 31st (Story CORE-8).
   
   **Which functions.** `intervalLengthDate`, `intervalLengthDateTime`, `intervalLengthUtc`, `intervalLengthZoned`, `intervalLengthUnix`, `formatRelativeDate`, `formatRelativeDateTime`, `normalizeDuration`, and the `diff*` functions that carry a time component — `diffDateTime`, `diffUtc`, `diffUnix` and `diffZoned` — given a `smallestUnit` of months or years. `diffDate` is not affected: two dates have no time component, so the bracket always closes on a date it already reaches.
   
@@ -2734,18 +2734,18 @@
   **Rounding exactly on a boundary.** Separately, `ceil` treated a span that lands exactly on a whole month as needing another one — `P60D` from `2024-01-31` rounded to `P3M` instead of `P2M`. A span that is already a whole number of months now stays as it is, in every calendar.
   
   **How it is fixed.** GMT already owns the TC39 algorithm, for the non-ISO calendars the polyfill also gets wrong; these operations now take that path. Every one of 24,916 scanned cases matches the Temporal built into Chrome 153 exactly. The workaround is behind a probe (compat defect `D11`) and stops running by itself once a polyfill release carries the upstream fix — the answers do not change when it does.
-- 729e0f1: Stop routing ISO `PlainDate` differences through the D11 nudge-window workaround (Story CORE-8).
+- 727a3f4: Stop routing ISO `PlainDate` differences through the D11 nudge-window workaround (Story CORE-8).
   
   `diffDate` and `diffDateAsDuration` with a `smallestUnit` of months or years took GMT's own spec path when the start day was the 29th or later. That path exists for a polyfill defect the operation cannot reach: the nudge window only misses its target when the target sits strictly between the window bounds by a sub-day amount, and two `PlainDate`s have no time component, so the bound always lands on a date the window already reaches. Measured over about 1.96 million rows against the raw polyfill, in both directions and across every rounding mode and increment, the two paths never disagreed.
   
   Answers are unchanged. What goes away is exposure: that path carries GMT's own exact-boundary rounding behaviour, and routing ISO through it widened a defect's reach for no corrected result. The workaround stays where the defect is real — `Duration#total`, `Duration#round`, and `until`/`since` with a time component.
-- 82380f8: Correct the positional interval documentation's cross-references and tiling notes.
+- 358e91e: Correct the positional interval documentation's cross-references and tiling notes.
   
   - `intervalSplitAtDate`, `intervalSplitAtDateTime` and `intervalSplitAtTime` named a `divideEqually` function that does not exist. They now name `intervalDivideEquallyDate`, `intervalDivideEquallyDateTime` and `intervalDivideEquallyTime`.
   - `intervalSplitAt*`, `splitIntervalByUnit*` and `intervalDivideEqually*` say that each piece's `end` is the next piece's `start`, so the pieces partition the interval under the half-open rule.
   
   The boundary behaviour of every positional interval function is described in the half-open intervals entry of this release.
-- 729e0f1: Return exact answers at Temporal's range limits and for very large or very precise values (Story CORE-8).
+- 727a3f4: Return exact answers at Temporal's range limits and for very large or very precise values (Story CORE-8).
   
   **Answers that exist at the edge of the range.** Temporal represents dates from `-271821-04-19` to `+275760-09-13`. Several functions built a boundary they did not need, such as the start of the next year or the 1st of a month before the first date, and returned their sentinel when that boundary fell outside the range. The affected functions were `roundDate`, `roundDateTime`, `bucketRange`, the `splitIntervalByUnit*` functions, `mapDatesInRange`, `mapZonedDatesInRange`, `getWeekOfMonth`, `getWeeksInMonth`, `getWeeksInYear`, `getLocaleWeekYear` and `getWeeksInLocaleWeekYear`. The `intervalCount*` functions also returned `null` at the minimum. Each now builds a boundary only when the answer needs it, and returns the answer.
   
@@ -2805,12 +2805,12 @@
   fromNanoseconds((18446744073709551615n - 116444736000000000n) * 100n); // "+060056-05-28T05:36:10.9551615Z"
   intervalFromDurationTime("10:00:00", "PT24H", "start"); // null
   ```
-- 82380f8: Document the `year`, `month` and `day` patterns, and correct a wrong `fractionalSecond` example.
+- 358e91e: Document the `year`, `month` and `day` patterns, and correct a wrong `fractionalSecond` example.
   
   `year`, `month` and `day` had no JSDoc, so editors showed nothing on hover. They now carry a description and examples like every other pattern in the regex namespace. The `millisecond` alias gains examples too.
   
   The `fractionalSecond` JSDoc said `fractionalSecond.test("0")` returns `false`. It returns `true`, since `"0"` is one digit. The example now shows a 10-digit input, which the pattern does reject.
-- 7b585cd: Name the standard behind each roll convention, and correct three wrong JSDoc examples.
+- fc97a9d: Name the standard behind each roll convention, and correct three wrong JSDoc examples.
   
   `RollConvention`, `rollDate` and `isValidRollConvention` said `modifiedFollowing` with the end-of-month rule was "the common convention for interest-rate instruments", sourced to a vendor daycount page. That sourced a market habit, not the definition. The docs now cite the text that actually governs the conventions: `following`, `modifiedFollowing` and `preceding` are [ISDA 2006 Definitions §4.12(a)(i)–(iii)](https://www.isda.org/book/2006-isda-definitions/), `modifiedPreceding` — which §4.12(a) does not define — is FpML's `BusinessDayConventionEnum` `MODPRECEDING`, and `none` is what [OpenGamma Strata](https://strata.opengamma.io/apidocs/com/opengamma/strata/basics/date/BusinessDayConventions.html) calls `NO_ADJUST`. No TC39, ECMA or RFC standard governs any of them, and the camelCase spelling is GMT's — the standard fixes the behaviour, not the identifier.
   
@@ -2827,12 +2827,12 @@
   ```
   
   The docs site runs every `@example` live, so a wrong one is visible on the reference page as well as on hover.
-- 82380f8: Fix `halfEven` in `roundDate` and `roundDateTime`, which rounded ties the wrong way.
+- 358e91e: Fix `halfEven` in `roundDate` and `roundDateTime`, which rounded ties the wrong way.
   
   Both functions aliased `halfEven` to `halfExpand` for date units, so an exact tie rounded away from the unit start instead of towards the even multiple of the increment. `roundDate("2024-06-16", { smallestUnit: "month", roundingMode: "halfEven" })` returned `"2024-07-01"`; June 16 is 15 days into a 30-day month, an exact tie, so half-even rounds to `"2024-06-01"`. The same applied to `roundDateTime` on `"year"`, `"month"` and `"week"`.
   
   The rounding grid is anchored at the unit containing the value: that unit's start is multiple 0 and the next start is multiple 1, so the even multiple at a tie is the current start. Values above and below the tie are unaffected, and every other rounding mode is unchanged. Both JSDoc blocks now state the anchor. Time units in `roundDateTime` were already correct — they round through Temporal.
-- 729e0f1: Follow Temporal's zoned arithmetic and difference algorithms across DST changes (Story CORE-8).
+- 727a3f4: Follow Temporal's zoned arithmetic and difference algorithms across DST changes (Story CORE-8).
   
   **`addZoned`, `subtractZoned` and `intervalFromDurationZoned` keep exact time exact.** TC39 Temporal §6.5.5 AddZonedDateTime adds a duration's date part on the wall clock and its time part in exact time. With a `disambiguation` other than `"compatible"`, these functions re-resolved the final wall-clock time. Adding 10 minutes in a repeated hour could then land 50 minutes earlier. `disambiguation` now applies only to the wall-clock time the date part lands on: when a fall-back repeats that time, and when a spring-forward skips it. A date step into a skipped hour used to move forward whatever `disambiguation` said. A time-only duration ignores it.
   
@@ -2888,32 +2888,32 @@
 
 ### Minor Changes
 
-- a5dbda2: Promote shared unit types to the public API: `RelativeUnit`, `DurationUnit`, `NowUnit`, `UnixNowUnit`, `UtcNowUnit`, `RelativeDateUnit`, `RelativeTimeUnit`, `RelativeDateTimeUnit`, `ZonedParseUnit`, `PlainNowUnit`, `ZonedOffsetUnit`, and `UnixUnit` are now importable from `@northguild/gmt/types` (and from their domain subpaths via the existing barrel re-exports). Add `@example` import lines and Members tables to all type JSDoc.
+- 5ee288b: Promote shared unit types to the public API: `RelativeUnit`, `DurationUnit`, `NowUnit`, `UnixNowUnit`, `UtcNowUnit`, `RelativeDateUnit`, `RelativeTimeUnit`, `RelativeDateTimeUnit`, `ZonedParseUnit`, `PlainNowUnit`, `ZonedOffsetUnit`, and `UnixUnit` are now importable from `@northguild/gmt/types` (and from their domain subpaths via the existing barrel re-exports). Add `@example` import lines and Members tables to all type JSDoc.
 
 ### Patch Changes
 
-- 7d0b18c: Add JSDoc to `formatUtc` and `formatUnix`, and to internal helpers `startOrEndOfUtc` and `startOrEndOfUnix`. Replace the six namespace `README.md` files with one-line stubs pointing at the docs site reference section.
-- 3dc6edf: Internal type consolidation: extract shared option properties into base types (`CalendarOptions`, `RelativeTimeFormatOptions`, `DateTimeFormatOptions`) to reduce duplication across plain/unix/utc/zoned formatters. Convert all remaining `//` comments in `packages/gmt/src/regex/` to JSDoc style with `@example` blocks, and add missing JSDoc to `time-zone-like.ts` and `unix.ts`.
-- a5dbda2: Fix `@example` values and prose in `intervalDifferenceZoned` and `intervalXorZoned` JSDoc: the documented interior boundaries didn't match what the functions actually compute (they're re-derived at ±1 nanosecond from the overlap edges, never copied or rounded to the second). `intervalXorZoned`'s docs also incorrectly claimed full containment returns a single `{ start, end }` — it returns two. Added regression tests asserting the exact boundary strings so this can't drift silently again.
-- 0f4bfe9: Slim the AI agent skill bundle: replace 13 verbose consumer skill files with 4 lightweight routing pointers (gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration) and relocate 5 contributor/maintainer skills under a `contributor/` subdirectory that is excluded from the published npm package. The `files` allowlist in package.json and `.npmignore` now prevent consumer installs from receiving contributor skills or `_artifacts/` build output. No TypeScript source or public API changed — the package dist output is identical.
+- d91f747: Add JSDoc to `formatUtc` and `formatUnix`, and to internal helpers `startOrEndOfUtc` and `startOrEndOfUnix`. Replace the six namespace `README.md` files with one-line stubs pointing at the docs site reference section.
+- cc8cc47: Internal type consolidation: extract shared option properties into base types (`CalendarOptions`, `RelativeTimeFormatOptions`, `DateTimeFormatOptions`) to reduce duplication across plain/unix/utc/zoned formatters. Convert all remaining `//` comments in `packages/gmt/src/regex/` to JSDoc style with `@example` blocks, and add missing JSDoc to `time-zone-like.ts` and `unix.ts`.
+- 5ee288b: Fix `@example` values and prose in `intervalDifferenceZoned` and `intervalXorZoned` JSDoc: the documented interior boundaries didn't match what the functions actually compute (they're re-derived at ±1 nanosecond from the overlap edges, never copied or rounded to the second). `intervalXorZoned`'s docs also incorrectly claimed full containment returns a single `{ start, end }` — it returns two. Added regression tests asserting the exact boundary strings so this can't drift silently again.
+- 4c2ab6e: Slim the AI agent skill bundle: replace 13 verbose consumer skill files with 4 lightweight routing pointers (gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration) and relocate 5 contributor/maintainer skills under a `contributor/` subdirectory that is excluded from the published npm package. The `files` allowlist in package.json and `.npmignore` now prevent consumer installs from receiving contributor skills or `_artifacts/` build output. No TypeScript source or public API changed — the package dist output is identical.
 
 ## 1.14.2
 
 ### Patch Changes
 
-- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+- eea82a0: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
 
 ## 1.14.1
 
 ### Patch Changes
 
-- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt` under the [northguild](https://github.com/northguild) GitHub organization. `@northguild/gmt` will receive no further updates after this release.
+- e2f28fb: Add deprecation notice: this package is moving to `@northguild/gmt` under the [northguild](https://github.com/northguild) GitHub organization. `@northguild/gmt` will receive no further updates after this release.
 
 ## 1.14.0
 
 ### Minor Changes
 
-- a7858f6: Add a GMT-native calendar-annotated `ZonedDateTime` string and make `zoned/` calendar-aware (Story E7), deliberately restoring — with a grammar, tests and docs — the capability E5's decision D2 removed.
+- abcfdd0: Add a GMT-native calendar-annotated `ZonedDateTime` string and make `zoned/` calendar-aware (Story E7), deliberately restoring — with a grammar, tests and docs — the capability E5's decision D2 removed.
 
   The new grammar adds a time, a UTC offset and an IANA zone to E1's plain calendar string:
 
@@ -2939,7 +2939,7 @@
 
   Decisions of record, the reversed `(b→a→b)` audit verdicts, and the unanticipated findings are recorded permanently in `context/roadmap/issues/E.md`'s new "E7 outcome" section. Extending `duration/`'s `relativeTo` to accept the zoned grammar was explicitly left out of scope as a follow-up.
 
-- addaeb9: Add calendar-system foundation: `CalendarSystem` type and `convertDateToCalendar` (Story E1), with Hebrew as the first supported non-Gregorian calendar.
+- 80ff404: Add calendar-system foundation: `CalendarSystem` type and `convertDateToCalendar` (Story E1), with Hebrew as the first supported non-Gregorian calendar.
 
   `convertDateToCalendar(value, calendar)` expresses a PlainDate in a different calendar system, built entirely on Temporal's native calendar support (`PlainDate.prototype.withCalendar`) — no ported leap-year tables or arithmetic, since the polyfill already implements the full Metonic 19-year Hebrew leap-year cycle (7 leap years per cycle, a 13th month inserted before Adar) correctly.
 
@@ -2947,7 +2947,7 @@
 
   New `CalendarSystem` type at `packages/gmt/src/types/calendar-system.ts` (seeded with `"gregorian" | "hebrew"`, extended by E2–E4 as they land), new `plain/convert/` module, and a new `isValidCalendarDate` validator accepting both plain and calendar-annotated PlainDate strings.
 
-- d296372: Extend `duration/` and interval functions to be calendar-system-aware (Story E5), completing the audit-and-fix pass over Story Groups A/B/G's functions promised by E1–E4's calendar-system foundation.
+- 82033aa: Extend `duration/` and interval functions to be calendar-system-aware (Story E5), completing the audit-and-fix pass over Story Groups A/B/G's functions promised by E1–E4's calendar-system foundation.
 
   `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, and the `Date`-suffixed `plain/interval/*` functions (`intervalContainsDate`, `intervalsOverlapDate`, `intervalUnionDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and 13 others) now accept GMT calendar-annotated `PlainDate` strings (e.g. `"5784-06-15[u-ca=hebrew]"`, as produced by `convertDateToCalendar`) in addition to bare ISO strings. Calendar-unit arithmetic ("add 1 month") resolves in the value's own calendar — a Hebrew leap year now correctly reports 13 month boundaries and splits into 13 month-slices, not 12, and adding a month from Hebrew Adar I lands on Adar rather than being rejected as invalid input. Ordering functions (`intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints in different calendars, since ordering and day-counting are calendar-independent; value-returning set operations (union, intersection, difference, xor, split, divide, merge) require all arguments to share one calendar and return the type's sentinel on a mismatch, since there is no principled way to pick an output calendar for a value the caller reads back as a date.
 
@@ -2958,7 +2958,7 @@
 
   Full per-function audit findings — including the "no change needed, verified why" negatives the story's definition of done requires — are recorded permanently in `context/roadmap/issues/E.md`'s new "E5 outcome" section, alongside the decisions of record this story settled (D1–D10) and a follow-up story candidate (E7) for deliberately extending `zoned/`.
 
-- 71b5b43: Add `cycleDate`, `cycleDateTime`, `cycleTime`, and `cycleZoned` (Story E6), matching
+- 818de62: Add `cycleDate`, `cycleDateTime`, `cycleTime`, and `cycleZoned` (Story E6), matching
   `@internationalized/date`'s `cycle(field, amount, options)` — the datepicker-segment-editing
   primitive GMT had no equivalent for.
 
@@ -2989,19 +2989,19 @@
 
   Purely additive — no existing function's behavior changes.
 
-- cfdee87: Add era-based solar calendar family: `"japanese"`, `"buddhist"`, `"taiwan"`, `"persian"`, `"indian"` calendar systems (Story E3), extending `CalendarSystem` and `convertDateToCalendar` from E1/E2.
+- cfb9d45: Add era-based solar calendar family: `"japanese"`, `"buddhist"`, `"taiwan"`, `"persian"`, `"indian"` calendar systems (Story E3), extending `CalendarSystem` and `convertDateToCalendar` from E1/E2.
 
   All five are built entirely on Temporal's native calendar support — no ported leap-year tables or arithmetic. Buddhist and Taiwan are fixed year-offset calendars over the same Gregorian day/month structure; Persian and Indian are distinct solar calendars with their own leap-year rules (Persian: a 33-year cycle; Indian: aligned to the Gregorian leap-year rule rather than an independent cycle), verified against `@internationalized/date`'s corresponding sources rather than assumed to be offset-only.
 
   `"japanese"` gets a different annotated-string shape than every other calendar: Temporal's `.year` for it stays proleptic across imperial era changes (it does not reset to `1` the way the calendar's own numbering does), so `convertDateToCalendar` tags it with `.eraYear` and an era name instead (`"0006-10-03[u-ca=japanese;era=reiwa]"`, not a plain proleptic year). GMT also does not replicate `@internationalized/date`'s pre-Meiji (before 1868-10-23) restriction — since the conversion is built entirely on Temporal's own calendar support, and Temporal resolves those dates correctly under a synthetic `"japanese"` era, rejecting them would mean adding validation solely to reproduce another library's gap rather than an actual GMT limitation.
 
-- ad034e5: Add Ethiopic calendar family: `"ethiopic"`, `"ethiopic-amete-alem"`, and `"coptic"` calendar systems (Story E4), extending `CalendarSystem` and `convertDateToCalendar` from E1–E3.
+- 2e36385: Add Ethiopic calendar family: `"ethiopic"`, `"ethiopic-amete-alem"`, and `"coptic"` calendar systems (Story E4), extending `CalendarSystem` and `convertDateToCalendar` from E1–E3.
 
   All three share one 13-month structure (12 months of 30 days, plus a short 5/6-day Pagume/Nasie 13th month) but differ in epoch. `"ethiopic"` resets to the Amete Mihret era at its own epoch (~AD 8) and is tagged with `.eraYear`/`;era=<name>` like `"japanese"` (`"2017-01-23[u-ca=ethiopic;era=ethiopic]"`, not a 5-digit proleptic year). `"ethiopic-amete-alem"` is the same calendar counted continuously from a much older epoch (~5493 BCE) with no era reset. `"coptic"` has its own epoch (AD 284, the Diocletian/Martyrs era) and a plain native year.
 
   Unlike every other calendar `convertDateToCalendar` supports, this family is **not** resolved through Temporal's native `"ethiopic"`/`"coptic"` calendar ids: `@js-temporal/polyfill@0.5.1` resolves those two calendars' year/era via `Intl.DateTimeFormat`-derived era-name matching, and CLDR's era-name output for them changed between the ICU versions bundled with different Node releases — every read or write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` under Node 24's ICU (confirmed directly, not a hypothetical; `"ethiopic-amete-alem"`/Temporal's `"ethioaa"` id is unaffected, since it has no era and is resolved with pure arithmetic). GMT routes around this bug rather than inheriting it: month/day are identical across the whole family (they share one annual cycle), so `convertDateToCalendar` reads/writes them through the safe `"ethioaa"` id and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic ported from the same epoch/anchor-year constants `@js-temporal/polyfill` itself uses internally (`internal/ethiopicFamilyCalendar.ts`).
 
-- a4285ae: Add Islamic calendar family: `"islamic-civil"`, `"islamic-tabular"`, and `"islamic-umalqura"` calendar systems (Story E2), extending `CalendarSystem` and `convertDateToCalendar` from E1.
+- 2c59d51: Add Islamic calendar family: `"islamic-civil"`, `"islamic-tabular"`, and `"islamic-umalqura"` calendar systems (Story E2), extending `CalendarSystem` and `convertDateToCalendar` from E1.
 
   Like Hebrew, all three are built entirely on Temporal's native calendar support — no ported leap-year tables or arithmetic. This includes `"islamic-umalqura"`, the Saudi civil calendar: rather than porting `@internationalized/date`'s bundled Umm al-Qura lookup table into GMT, `convertDateToCalendar` resolves it through the polyfill's own built-in Umm al-Qura implementation, avoiding a second, divergence-prone copy of the same data. The three variants are not interchangeable — civil and tabular use different fixed leap-year cycles (Friday vs. Thursday epoch, one day apart), and Umm al-Qura's tabulated dates diverge from both by more than a fixed offset on some dates, so GMT does not approximate one variant with another's arithmetic.
 
@@ -3011,13 +3011,13 @@
 
 ### Minor Changes
 
-- 9d341ce: Add calendar quantity getters: `getDaysInMonth`, `getDaysInYear`, `getDayOfYear`, `getWeeksInYear`, `getWeeksInMonth`, `getWeekOfMonth` (Story J3).
+- b8e13a9: Add calendar quantity getters: `getDaysInMonth`, `getDaysInYear`, `getDayOfYear`, `getWeeksInYear`, `getWeeksInMonth`, `getWeekOfMonth` (Story J3).
 
   All six take a `PlainDate` ISO string and return `number | null`. `getDaysInMonth`, `getDaysInYear`, and `getDayOfYear` wrap Temporal's own `daysInMonth`/`daysInYear`/`dayOfYear`. `getWeeksInYear` reports the ISO week-numbering year's total week count (52 or 53), resolved from `value`'s own `yearOfWeek` rather than its calendar year, since late-December/early-January dates can belong to a different ISO week-year than their calendar year.
 
   `getWeeksInMonth` and `getWeekOfMonth` are locale-aware — they size and index a month's calendar-grid rows using `locale`'s first day of week, matching date-fns's `getWeekOfMonth` convention (the row containing the 1st of the month counts as row 1, even when partial). They live in `plain/calculate/`, not `plain/get/`, per the rule J0b established: `get/` namespaces are current-moment accessors only, and these take a date value.
 
-- 6d9ed5e: Add duration introspection and comparison: `getDurationUnit`, `durationAs`, `negateDuration`, `absDuration`, `compareDurations`, `getDurationSign` (Story J8).
+- 5b9ed2b: Add duration introspection and comparison: `getDurationUnit`, `durationAs`, `negateDuration`, `absDuration`, `compareDurations`, `getDurationSign` (Story J8).
 
   `getDurationUnit` reads a single component as stored (`getDurationUnit("PT90M", "hours")` is `0` — the minutes field holds 90, not a converted total); `durationAs` totals the whole duration into one unit instead (`durationAs("PT90M", "hours")` is `1.5`). `negateDuration`/`absDuration` flip or drop the sign; `getDurationSign` reports `-1`/`0`/`1`. New `duration/compare/` module holds `compareDurations`, wrapping `Temporal.Duration.compare`.
 
@@ -3025,7 +3025,7 @@
 
   Updated `packages/gmt/README.md`, `packages/gmt/src/duration/README.md`, and the `durations` skill (new Core Patterns plus two Common Mistakes entries extending the existing `relativeTo` guidance).
 
-- 3eae84e: Add field setters: `setDate`, `setDateTime`, `setTime`, `setZoned`, `setUnix`, `setUtc` (Story J1).
+- 75ce713: Add field setters: `setDate`, `setDateTime`, `setTime`, `setZoned`, `setUnix`, `setUtc` (Story J1).
 
   Each takes a partial fields object and wraps `Temporal.*.prototype.with()`, resolving every supplied field in a single atomic overflow pass — the safe alternative to composing `add*` calls field-by-field, which resolves each field's overflow independently and can silently diverge on multi-field updates (e.g. setting month-then-day vs. day-then-month on the same target).
 
@@ -3033,7 +3033,7 @@
 
   An empty fields object is a no-op on all six.
 
-- f948e85: Add `formatCalendar`, `formatCalendarZoned`, `formatCalendarUnix`, `formatCalendarUtc` (Story J15) — Story Group J complete.
+- f8af3ec: Add `formatCalendar`, `formatCalendarZoned`, `formatCalendarUnix`, `formatCalendarUtc` (Story J15) — Story Group J complete.
 
   Moment's `.calendar()`: a relative day label plus time-of-day, e.g. `"Tomorrow at 2:30 PM"`. This is distinct from the existing `formatRelative*` family, which renders an elapsed-time phrase ("in 1 day") and never includes a clock time — Group I's notes over-generalized Luxon's `toRelativeCalendar` parity claim to Moment's `.calendar()`, which this story corrects.
 
@@ -3045,13 +3045,13 @@
 
   Updated `packages/gmt/README.md`, `plain/README.md`, `zoned/README.md`, `unix/README.md`, `utc/README.md`, and the `format-date-time` skill (new Core Pattern + a Common Mistakes entry distinguishing `formatCalendar` from `formatRelativeDateTime`).
 
-- c14db2a: Add `formatDateToParts`, `formatDateTimeToParts`, `formatZonedToParts` (Story J12).
+- de8e944: Add `formatDateToParts`, `formatDateTimeToParts`, `formatZonedToParts` (Story J12).
 
   Each returns the locale-ordered `Array<{ type, value }>` parts behind `formatDate`/`formatDateTime`/`formatZonedDateTime`'s finished strings, mirroring those functions' `(value, locale?, options?)` signature exactly. `formatZonedToParts` also emits `timeZoneName` parts when `options.timeZoneName` is set. All three return `[]` on invalid input.
 
   This is GMT's sanctioned substitute for a token formatter (Luxon `toFormat`, date-fns `format`), which remains deliberately excluded (roadmap Decision 1): a token pattern like `"MM/dd/yyyy"` hard-codes US field order and ships it to every locale. `formatToParts` gives the caller full control over presentation while the locale keeps control of field order — iterate the returned array instead of reassembling parts in a fixed order.
 
-- 7ff6484: Add interval length and partitioning: `intervalLength*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*` across `Date`/`DateTime`/`Time`/`Zoned`/`Unix`/`Utc` (Story J9).
+- 4917f26: Add interval length and partitioning: `intervalLength*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*` across `Date`/`DateTime`/`Time`/`Zoned`/`Unix`/`Utc` (Story J9).
 
   `intervalLength*` is `intervalCount*`'s exact-duration counterpart — it answers "how long is this interval" as a real, possibly fractional number via `Temporal.Duration.prototype.total`, rather than "how many `unit` boundaries does it touch". The same interval from `23:59` to `00:01` is `2` day boundaries via `intervalCountDateTime` but `~0.0014` days via `intervalLengthDateTime`. Zoned/Unix/Utc variants are DST-aware the same way `intervalCount*` is.
 
@@ -3061,7 +3061,7 @@
 
   Updated `packages/gmt/README.md`, all four namespace READMEs (`plain`/`zoned`/`unix`/`utc`), and the `interval-ops` skill (new Core Patterns plus two Common Mistakes entries, including the required `intervalLength` vs `intervalCount` distinction).
 
-- 7b391a4: Add named machine-format format/parse pairs: `formatRfc2822`/`parseRfc2822` (zoned), `formatHttp`/`parseHttp` (utc), `formatSql`/`parseSql` (plain), `formatRfc3339`/`parseRfc3339` (zoned) (Story J13).
+- 1d4f7ab: Add named machine-format format/parse pairs: `formatRfc2822`/`parseRfc2822` (zoned), `formatHttp`/`parseHttp` (utc), `formatSql`/`parseSql` (plain), `formatRfc3339`/`parseRfc3339` (zoned) (Story J13).
 
   These are **fixed, non-locale-adaptive grammars** — RFC 5322 and RFC 7231 mandate English weekday/month abbreviations regardless of locale, by specification — so none of the eight take a `locale` argument, unlike GMT's `Intl`-backed formatters. `""` on invalid input for every function.
 
@@ -3070,13 +3070,13 @@
   - `formatSql`/`parseSql` — ANSI SQL / ODBC datetime literal, e.g. `"2024-03-15 14:30:00"`, for `DATETIME`/`TIMESTAMP` columns without a time zone. SQL's offset-carrying `TIMESTAMPTZ` literal is out of scope.
   - `formatRfc3339`/`parseRfc3339` — strict RFC 3339. This is _not_ a passthrough on GMT's existing ISO output: GMT's own zoned strings always carry a bracketed IANA zone annotation (`...+00:00[UTC]`) that RFC 3339 does not permit, so `formatRfc3339` strips it. A parallel `utc`/`unix` wrapper was deliberately not added — `Temporal.Instant.prototype.toString()` is already fully RFC 3339 compliant with no bracket to strip, so a wrapper there would be a pure passthrough.
 
-- e9e8649: Add now-relative predicates: `isRelativeDay`, `isThisUnit`, `isPast`, `isFuture`, and their zoned counterparts `isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture` (Story J6).
+- 1bb2556: Add now-relative predicates: `isRelativeDay`, `isThisUnit`, `isPast`, `isFuture`, and their zoned counterparts `isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture` (Story J6).
 
   `isRelativeDay(value, offsetDays)` subsumes `isToday`/`isYesterday`/`isTomorrow` (`offsetDays: 0`/`-1`/`1`, or any other integer offset); `isThisUnit(value, unit, locale?)` subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships one parameterized function per axis rather than date-fns's eleven near-duplicate named functions. `isPast`/`isFuture` stay separate — genuinely distinct before/after-now predicates, not one more value on an enumerable axis.
 
   The plain functions compare against `getToday()` and so depend on the **system clock and system timeZone** — the same call can return a different answer on hosts in different timeZones at the same instant. The zoned variants resolve "today"/"now" in the value's own timeZone instead, making them deterministic regardless of the host machine's timeZone; `isZonedPast`/`isZonedFuture` additionally compare the exact instant rather than just the calendar day, since a `ZonedDateTime` carries a full time-of-day where a `PlainDate` does not.
 
-- 9170eb1: Add offset and DST-instant accessors: `getZonedOffset`, `getZonedOffsetAs`, `getTimeZoneOffset`, `formatTimeZoneName`, `isInDaylightSaving` (Story J10).
+- 1852f00: Add offset and DST-instant accessors: `getZonedOffset`, `getZonedOffsetAs`, `getTimeZoneOffset`, `formatTimeZoneName`, `isInDaylightSaving` (Story J10).
 
   GMT could construct and manipulate zoned values but couldn't report their UTC offset — `getZonedOffset(value)` returns it as a `±HH:MM` string; `getZonedOffsetAs(value, unit)` reads it as a number in `"minutes"` or `"nanoseconds"` (following J8's `getDurationUnit(value, unit)` precedent, replacing what would otherwise be a `getZonedOffsetMinutes`/`getZonedOffsetNanoseconds` pair). `getTimeZoneOffset(timeZone, instant)` looks up a zone's offset at an arbitrary instant without needing an existing zoned value in hand. `formatTimeZoneName(timeZone, locale, options?)` returns a zone's localized display name across all six `Intl.DateTimeFormatOptions` `timeZoneName` styles.
 
@@ -3086,13 +3086,13 @@
 
   Updated `packages/gmt/README.md`, `packages/gmt/src/zoned/README.md`, `docs/dst-disambiguation.md`, and the `zoned-date-ops` skill.
 
-- cbc8384: Add plain range formatting: `formatDateRange`, `formatDateTimeRange` (Story J14).
+- 865a2ea: Add plain range formatting: `formatDateRange`, `formatDateTimeRange` (Story J14).
 
   Plain counterparts of the existing `zoned/format/formatZonedRange` — same `(start, end, locale?, options?)` parameter order and `Intl.DateTimeFormatOptions` shape, but wrapping `Temporal.PlainDate`/`Temporal.PlainDateTime` directly since there's no timezone to reconcile between endpoints. Both use `Intl.DateTimeFormat.prototype.formatRange` under the hood, so the locale elides shared fields between `start` and `end` (`"February 3 – 5, 2024"` for same-month, `"November 3, 2024 – February 10, 2025"` once the year differs) instead of the caller having to format both ends and join them by hand. Returns `""` when either endpoint is invalid; a reversed range (`end` before `start`) still formats rather than throwing or auto-correcting.
 
   Updated `packages/gmt/README.md`, `packages/gmt/src/plain/README.md`, and the `format-date-time` skill.
 
-- bffb00c: Add same-unit comparison: `areDatesEqualBy`, `areDateTimesEqualBy`, `areZonedEqualBy`, `areUnixEqualBy`, `areUtcEqualBy` (Story J5).
+- c522327: Add same-unit comparison: `areDatesEqualBy`, `areDateTimesEqualBy`, `areZonedEqualBy`, `areUnixEqualBy`, `areUtcEqualBy` (Story J5).
 
   Each function answers "are these two values equal at a given calendar unit?" — `areDatesEqualBy(a, b, "month")` replaces the pattern of manually truncating both values before comparing. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships one parameterized function per namespace rather than date-fns's twelve `isSameX` functions; each function's JSDoc carries the full date-fns mapping table.
 
@@ -3100,7 +3100,7 @@
 
   `areZonedEqualBy` compares each value's own local calendar fields in its own time zone, not the underlying instant or time zone identifier — two zoned values representing the same instant can land on different local calendar days depending on their zone, and vice versa.
 
-- 8663839: Add token-pattern-based parsing: `parseDateWithPattern`, `parseDateTimeWithPattern`, `parseTimeWithPattern` (Story J11).
+- 82dfe27: Add token-pattern-based parsing: `parseDateWithPattern`, `parseDateTimeWithPattern`, `parseTimeWithPattern` (Story J11).
 
   Each decodes a string against a caller-supplied token pattern (e.g. `"MM/dd/yyyy"`, `"dd-MMM-yyyy h:mm a"`) and returns the matching ISO `PlainDate`/`PlainDateTime`/`PlainTime` string, or `""` on no match, a malformed pattern, or a shape-valid-but-not-real date/time (`"02/31/2024"` against `"MM/dd/yyyy"` still fails — the regex only proves shape, `Temporal.*.from(..., { overflow: "reject" })` proves it's real).
 
@@ -3108,7 +3108,7 @@
 
   Supports numeric tokens (`yyyy`/`yy`/`MM`/`M`/`dd`/`d`/`HH`/`H`/`hh`/`h`/`mm`/`m`/`ss`/`s`/`SSS`), locale-aware name tokens (`MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG`, defaulting to `"en-US"` when `locale` is omitted), and literal text via automatic literal characters or `'single quotes'`. `parseDateWithPattern`/`parseTimeWithPattern` each reject the other's tokens (returning `""`); `parseDateTimeWithPattern` accepts the full combined set.
 
-- 77e9c80: Add week-numbering year getters: `getWeekYear`, `getLocaleWeekYear`, `getWeeksInLocaleWeekYear` (Story J4).
+- 1d9b625: Add week-numbering year getters: `getWeekYear`, `getLocaleWeekYear`, `getWeeksInLocaleWeekYear` (Story J4).
 
   `getWeekYear` reports the ISO 8601 week-numbering year a date belongs to (via `Temporal.PlainDate.yearOfWeek`), which can differ from the calendar year — 2024-12-30 is a Monday in ISO week 1 of **2025**, not 2024. Pair it with the existing `weekOfYearForDate`/`getWeekNumber` whenever bucketing by week number, since a week number alone is ambiguous across a year boundary.
 
@@ -3116,7 +3116,7 @@
 
   All three take a `PlainDate` ISO string and return `number | null`. They live in `plain/calculate/`, not `plain/get/`, per the rule J0b established.
 
-- 511f2de: Add weekday navigation: `nextWeekday`, `previousWeekday` (Story J7).
+- d6a5780: Add weekday navigation: `nextWeekday`, `previousWeekday` (Story J7).
 
   Each function finds the next/previous occurrence of a given ISO day of week (1 = Monday … 7 = Sunday, matching `getDayOfWeek`/`parseDayOfWeekFromDate`) on or after/before a date. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships two parameterized functions rather than date-fns's sixteen `nextMonday`…`previousSunday` functions; each function's JSDoc carries the full date-fns mapping table.
 
@@ -3124,7 +3124,7 @@
 
   date-fns's `lastDayOfMonth` is not a gap this pair fills — it's already covered by GMT's existing `endOfDate(value, "month")`.
 
-- 3ecb5a9: Move `getLocaleDayOfWeek`, `getLocaleZonedDayOfWeek`, and `getHoursInZonedDay` from the `get/` namespace to `calculate/` (Story J0b):
+- 5a33ffd: Move `getLocaleDayOfWeek`, `getLocaleZonedDayOfWeek`, and `getHoursInZonedDay` from the `get/` namespace to `calculate/` (Story J0b):
 
   - `plain/get/getLocaleDayOfWeek.ts` → `plain/calculate/getLocaleDayOfWeek.ts`
   - `zoned/get/getLocaleZonedDayOfWeek.ts` → `zoned/calculate/getLocaleZonedDayOfWeek.ts`
@@ -3138,25 +3138,25 @@
 
 ### Minor Changes
 
-- 7d45b85: Add `intervalOverlappingDays*` — the number of distinct calendar days two intervals share (Story I1):
+- a3e7474: Add `intervalOverlappingDays*` — the number of distinct calendar days two intervals share (Story I1):
 
   - `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime`, `intervalOverlappingDaysZoned`, `intervalOverlappingDaysUnix`, `intervalOverlappingDaysUtc`
 
   Returns `0` when the intervals are disjoint and `null` on invalid input. Counting is inclusive of both endpoints, matching GMT's closed-interval model: `["2024-01-01", "2024-01-01"]` overlapping itself is `1` day, not `0`. This differs from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed 24-hour periods instead — compose `intervalCount*` over `intervalIntersection*`'s result for that behavior. There is no `Time` variant: `PlainTime` has no calendar.
 
-- a0de5fb: Add `roundingMethod` option to the `formatRelative*` family (Story I2):
+- 95ae01f: Add `roundingMethod` option to the `formatRelative*` family (Story I2):
 
   - `formatRelativeDate`, `formatRelativeDateTime`, `formatRelativeTime`, `formatRelativeZoned`, `formatRelativeUnix`, `formatRelativeUtc`
 
   `roundingMethod?: "floor" | "ceil" | "round"` controls how the computed distance rounds to the display unit — applied to the signed fractional value, matching date-fns's `formatDistanceStrict`. Defaults to `"round"`, matching existing behavior; no call-signature changes.
 
-- e4d5344: Add `getDstTransitions` — enumerate daylight-saving-time transition points for an IANA timezone in a given year (Story I3):
+- 2d589c8: Add `getDstTransitions` — enumerate daylight-saving-time transition points for an IANA timezone in a given year (Story I3):
 
   - `getDstTransitions`
 
   Returns an array of `{ instant, offsetBefore, offsetAfter }` objects representing each DST transition. Returns `[]` for zones with no transitions in the requested year or on invalid input.
 
-- 5988a93: Add `getHoursInZonedDay` — the number of hours in a specific zoned calendar day (Story I4):
+- 3da0864: Add `getHoursInZonedDay` — the number of hours in a specific zoned calendar day (Story I4):
 
   - `getHoursInZonedDay(value: string): number | null`
 
@@ -3166,7 +3166,7 @@
 
 ### Minor Changes
 
-- a9a7c17: Add standalone, locale-aware calendar-name lookups (Story H1):
+- 5ab19f9: Add standalone, locale-aware calendar-name lookups (Story H1):
 
   - `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names in calendar order
   - `getLocaleWeekdayNames(locale, style?)` — 7 weekday names in the locale's first-day order
@@ -3174,26 +3174,26 @@
 
   These are the GMT equivalents of Luxon's `Info.months` / `weekdays` / `meridiems`: they return locale-formatted calendar names without requiring a date value. All three delegate to the host runtime's `Intl` data and return `[]` for an invalid BCP 47 locale tag. `getLocaleWeekdayNames` uses locale-first-day ordering to stay consistent with `getLocaleDayOfWeek`.
 
-- 51c3f12: Add standalone, locale-aware Gregorian era-name lookup (Story H2):
+- 68c7ce4: Add standalone, locale-aware Gregorian era-name lookup (Story H2):
 
   - `getLocaleEraNames(locale, style?)` — 2-element `[BCE-label, CE-label]` array
 
   This is the GMT equivalent of Luxon's `Info.eras`: it returns locale-formatted era names without requiring a date value, delegating to the host runtime's `Intl` data. Returns `[]` for an invalid BCP 47 locale tag. If a locale has no distinct BCE/CE era names, both array elements contain the same string — the sentinel is reserved for invalid input only.
 
-- d2be1e3: Add `hasDaylightSaving` — reports whether an IANA timezone observes daylight saving time at all. Returns `false` on invalid or unresolvable timezone identifiers.
+- 3259ecc: Add `hasDaylightSaving` — reports whether an IANA timezone observes daylight saving time at all. Returns `false` on invalid or unresolvable timezone identifiers.
 
 ## 1.10.0
 
 ### Minor Changes
 
-- 816261a: Add `intervalCount`: `intervalCountDate`, `intervalCountTime`, `intervalCountDateTime`, `intervalCountUtc`, `intervalCountUnix`, `intervalCountZoned` — count how many calendar-unit boundaries the half-open interval `[start, end)` crosses, distinct from `diff*`'s exact elapsed duration. An interval from 23:59 to 00:01 is two minutes long but crosses two day boundaries. DST-aware for zoned and unix values, and `null` on invalid input.
-- 942aafb: Add `intervalFromDuration`: `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`, `intervalFromDurationUtc`, `intervalFromDurationUnix`, `intervalFromDurationZoned` — construct an interval from a single point plus an ISO 8601 duration, anchored at either `"start"` or `"end"` (Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param). Calendar units resolve against the point itself, no `relativeTo` needed — except `intervalFromDurationTime`, which returns `null` for a duration with a date-unit component, since `PlainTime` has no calendar to resolve it against. Returns `null` on invalid input, including a negative duration that inverts the computed span.
+- 227e202: Add `intervalCount`: `intervalCountDate`, `intervalCountTime`, `intervalCountDateTime`, `intervalCountUtc`, `intervalCountUnix`, `intervalCountZoned` — count how many calendar-unit boundaries the half-open interval `[start, end)` crosses, distinct from `diff*`'s exact elapsed duration. An interval from 23:59 to 00:01 is two minutes long but crosses two day boundaries. DST-aware for zoned and unix values, and `null` on invalid input.
+- 100fa2c: Add `intervalFromDuration`: `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`, `intervalFromDurationUtc`, `intervalFromDurationUnix`, `intervalFromDurationZoned` — construct an interval from a single point plus an ISO 8601 duration, anchored at either `"start"` or `"end"` (Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param). Calendar units resolve against the point itself, no `relativeTo` needed — except `intervalFromDurationTime`, which returns `null` for a duration with a date-unit component, since `PlainTime` has no calendar to resolve it against. Returns `null` on invalid input, including a negative duration that inverts the computed span.
 
 ## 1.9.0
 
 ### Minor Changes
 
-- 2f467df: Add `intervalContainsDate`, `intervalContainsTime`, `intervalContainsDateTime`
+- b41168c: Add `intervalContainsDate`, `intervalContainsTime`, `intervalContainsDateTime`
   (plain), `intervalContainsUtc` (utc), `intervalContainsUnix` (unix), and
   `intervalContainsZoned` (zoned) — interval containment checks. Each supports
   two modes via an optional fourth argument:
@@ -3202,7 +3202,7 @@
   - 4-arg: `intervalContains(start, end, innerStart, innerEnd)` — true when the
     inner interval is fully contained within the outer interval
 
-- 49aecc4: Add `intervalIntersectionDate`, `intervalIntersectionTime`, `intervalIntersectionDateTime`
+- 17b6a6b: Add `intervalIntersectionDate`, `intervalIntersectionTime`, `intervalIntersectionDateTime`
   (plain), `intervalIntersectionUtc` (utc), `intervalIntersectionUnix` (unix), and
   `intervalIntersectionZoned` (zoned) — interval intersection. Each accepts two
   intervals and returns the overlapping span, or `null` when they do not overlap:
@@ -3215,7 +3215,7 @@
   - Return shape: `{ start: string; end: string } | null` (or `{ start: number;
 end: number } | null` for Unix).
 
-- 9f702f6: Add `intervalsOverlapDate`, `intervalsOverlapTime`, `intervalsOverlapDateTime`
+- d798fcb: Add `intervalsOverlapDate`, `intervalsOverlapTime`, `intervalsOverlapDateTime`
   (plain), `intervalsOverlapUtc` (utc), `intervalsOverlapUnix` (unix), and
   `intervalsOverlapZoned` (zoned) — interval overlap detection. Each accepts two
   intervals and returns `true` when they share at least one instant:
@@ -3226,13 +3226,13 @@ end: number } | null` for Unix).
     is invalid (`start > end`).
   - Returns `false` on malformed input (never throws).
 
-- 5681f6d: Adds `intervalUnionDate`, `intervalUnionTime`, `intervalUnionDateTime` (plain), `intervalUnionUtc` (utc), `intervalUnionUnix` (unix), and `intervalUnionZoned` (zoned) — merge two intervals into their combined span when they overlap or are directly adjacent.
+- d859fd4: Adds `intervalUnionDate`, `intervalUnionTime`, `intervalUnionDateTime` (plain), `intervalUnionUtc` (utc), `intervalUnionUnix` (unix), and `intervalUnionZoned` (zoned) — merge two intervals into their combined span when they overlap or are directly adjacent.
 
   - Overlapping or adjacent intervals return `{ start, end }` with the merged span. Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
   - Returns `null` when intervals are disjoint with a gap, when either interval is invalid (`start > end`), or on malformed input (never throws).
   - Return shape: `{ start: string; end: string } | null` for plain/utc/zoned; `{ start: number; end: number } | null` for Unix.
 
-- afb1c0a: Add interval and range validators across plain, utc, unix, and zoned namespaces.
+- e6439de: Add interval and range validators across plain, utc, unix, and zoned namespaces.
 
   - `isValidDateInterval`, `isValidTimeInterval`, `isValidDateTimeInterval` (plain) — positional `(start, end)` args returning `true` when both parse and `start <= end`.
   - `isValidUtcInterval`, `isValidUnixInterval`, `isValidZonedInterval` (utc, unix, zoned) — same pattern, comparing by instant for utc/zoned.
@@ -3240,33 +3240,33 @@ end: number } | null` for Unix).
 
   All functions return `false` on invalid input (never throw).
 
-- 6dbb941: Add `splitIntervalByUnit*` functions across plain, utc, unix, and zoned namespaces.
+- ec0a337: Add `splitIntervalByUnit*` functions across plain, utc, unix, and zoned namespaces.
 
   - `splitIntervalByUnitDate`, `splitIntervalByUnitTime`, `splitIntervalByUnitDateTime` (plain) — split an interval into sub-intervals of `amount × unit`, returning an array of `{ start, end }` records.
   - `splitIntervalByUnitUtc`, `splitIntervalByUnitUnix`, `splitIntervalByUnitZoned` (utc, unix, zoned) — same pattern adapted to each Temporal environment.
 
   All functions return `[]` on invalid input (never throw). The final sub-interval is trimmed so its `end` never exceeds the original `end`.
 
-- e130f96: Add interval set operations: `intervalDifference`, `intervalXor`, `intervalAbuts`, `intervalEngulfs` across plain, zoned, unix, and utc namespaces.
+- 87af6ea: Add interval set operations: `intervalDifference`, `intervalXor`, `intervalAbuts`, `intervalEngulfs` across plain, zoned, unix, and utc namespaces.
 
 ## 1.8.0
 
 ### Minor Changes
 
-- 1785dd9: Add `addBusinessDays` and `subtractBusinessDays` for Mon–Fri business-day arithmetic that skips weekends. Also includes `addZonedBusinessDays` and `subtractZonedBusinessDays` for timezone-aware variants.
-- f9db169: Add `clampDate`, `closestDateTo`, `clampZoned`, and `closestZonedTo` for range restriction and nearest-candidate selection in both plain and zoned date spaces.
-- 63be628: Add `isBusinessDay` for fixed ISO Monday–Friday business-day checks (locale-agnostic, returns false on invalid input). Also includes `isZonedBusinessDay` for timezone-aware variants.
-- 574f6f0: Add `roundTime`, `roundDateTime`, `roundDate`, `roundZoned`, `roundUnix`, and `roundUtc` for rounding time-of-day, datetime, date, zoned datetime, Unix timestamp, and UTC instant values to the nearest multiple of a unit.
+- 35b54e8: Add `addBusinessDays` and `subtractBusinessDays` for Mon–Fri business-day arithmetic that skips weekends. Also includes `addZonedBusinessDays` and `subtractZonedBusinessDays` for timezone-aware variants.
+- 5d658d5: Add `clampDate`, `closestDateTo`, `clampZoned`, and `closestZonedTo` for range restriction and nearest-candidate selection in both plain and zoned date spaces.
+- 9307bf6: Add `isBusinessDay` for fixed ISO Monday–Friday business-day checks (locale-agnostic, returns false on invalid input). Also includes `isZonedBusinessDay` for timezone-aware variants.
+- 5d395d6: Add `roundTime`, `roundDateTime`, `roundDate`, `roundZoned`, `roundUnix`, and `roundUtc` for rounding time-of-day, datetime, date, zoned datetime, Unix timestamp, and UTC instant values to the nearest multiple of a unit.
 
 ### Patch Changes
 
-- 574f6f0: Expand CI timezone matrix to 10 zones covering global offsets and edge cases, and drop Node 20 (EOL April 2026) from the test matrix.
+- 5d395d6: Expand CI timezone matrix to 10 zones covering global offsets and edge cases, and drop Node 20 (EOL April 2026) from the test matrix.
 
 ## 1.7.0
 
 ### Minor Changes
 
-- 54d238e: Adds `isWeekend` (plain) and `isZonedWeekend` (zoned) — locale-aware weekend checks, matching react-aria's `@internationalized/date` `isWeekend(date, locale)`.
+- d0577c7: Adds `isWeekend` (plain) and `isZonedWeekend` (zoned) — locale-aware weekend checks, matching react-aria's `@internationalized/date` `isWeekend(date, locale)`.
 
   - `isWeekend(value, locale)` checks an ISO `PlainDate` string; `isZonedWeekend(value, locale)` checks an ISO `ZonedDateTime` string against its own local calendar day.
   - Uses `Intl.Locale.prototype.weekInfo` to resolve which days count as the weekend for a given locale — e.g. `en-US`/most locales use Saturday/Sunday, while `he-IL`/`ar-SA` use Friday/Saturday.
@@ -3275,7 +3275,7 @@ end: number } | null` for Unix).
 
   This starts Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
 
-- 002deea: Adds `getLocaleDayOfWeek` (plain) and `getLocaleZonedDayOfWeek` (zoned) — locale-aware day-of-week index extraction.
+- e98ad3b: Adds `getLocaleDayOfWeek` (plain) and `getLocaleZonedDayOfWeek` (zoned) — locale-aware day-of-week index extraction.
 
   - `getLocaleDayOfWeek(value, locale)` returns a 0-based index where `0` = the locale's first day of week (e.g. Sunday for en-US, Monday for fr-FR, Saturday for he-IL).
   - `getLocaleZonedDayOfWeek(value, locale)` does the same for zoned ISO datetimes, reading the local calendar day.
@@ -3285,7 +3285,7 @@ end: number } | null` for Unix).
 
   Completes Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
 
-- 317a1b8: Adds `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (plain) and `getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek` (zoned) — locale-aware week boundaries, matching react-aria's `@internationalized/date` `startOfWeek(date, locale)`/`endOfWeek(date, locale)`.
+- d726a33: Adds `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (plain) and `getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek` (zoned) — locale-aware week boundaries, matching react-aria's `@internationalized/date` `startOfWeek(date, locale)`/`endOfWeek(date, locale)`.
 
   - Derives the week's first day from the locale via `Intl.Locale.prototype.weekInfo` (e.g. `en-US` weeks start Sunday, `fr-FR` weeks start Monday), instead of the existing `startOfDate`/`endOfDate`/`startOfZoned`/`endOfZoned`'s explicit, ISO-biased `weekStartsOn` option.
   - Falls back to Monday if the runtime can't resolve `weekInfo` data for the locale.
@@ -3306,7 +3306,7 @@ end: number } | null` for Unix).
 
   This completes Story Group A (Duration) of the Luxon/react-aria parity roadmap.
 
-- 0eb2052: Adds `formatDuration` to the `duration` namespace, rendering an ISO 8601 duration string as a human-readable, locale-aware string (e.g. `"P1DT2H30M"` + `"en-US"` → `"1 day, 2 hours, and 30 minutes"`).
+- ca0aca3: Adds `formatDuration` to the `duration` namespace, rendering an ISO 8601 duration string as a human-readable, locale-aware string (e.g. `"P1DT2H30M"` + `"en-US"` → `"1 day, 2 hours, and 30 minutes"`).
 
   - Built on `Intl.NumberFormat({ style: "unit" })` for per-locale unit labels and pluralization, joined via `Intl.ListFormat` — both universally available on Node 20/22/24 with no version variance, unlike `Intl.DurationFormat`, which is absent entirely on Node 20/22 (only ships natively on Node 24+). This keeps `formatDuration` free of any new runtime dependency, at the cost of not being a byte-for-byte match to native `Intl.DurationFormat` output (e.g. no `"digital"` style).
   - Accepts an optional `locale` (system default if omitted) and `{ style?: "long" | "short" | "narrow", zero?: boolean }` options.
@@ -3314,11 +3314,11 @@ end: number } | null` for Unix).
   - Negative durations render each component with its own leading `"-"`.
   - Returns `""` on invalid input: non-string value or invalid duration string.
 
-- 5b66743: Adds `addDuration` and `subtractDuration` to the `duration` namespace, combining two ISO 8601 duration strings (e.g. `"P1D"` + `"PT2H"` → `"P1DT2H"`) via `Temporal.Duration.prototype.add`/`.subtract`.
+- 472df37: Adds `addDuration` and `subtractDuration` to the `duration` namespace, combining two ISO 8601 duration strings (e.g. `"P1D"` + `"PT2H"` → `"P1DT2H"`) via `Temporal.Duration.prototype.add`/`.subtract`.
 
   Both operate on day/time units only — combining a pair where either operand has a nonzero years/months/weeks component returns `""`, since `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option to resolve calendar-unit arithmetic.
 
-- eeee737: Adds `normalizeDuration` to the `duration` namespace, rolling an ISO 8601 duration string's small units into larger ones via `Temporal.Duration.prototype.round` (e.g. `"PT90M"` + `{ largestUnit: "hour" }` → `"PT1H30M"`).
+- b5c57aa: Adds `normalizeDuration` to the `duration` namespace, rolling an ISO 8601 duration string's small units into larger ones via `Temporal.Duration.prototype.round` (e.g. `"PT90M"` + `{ largestUnit: "hour" }` → `"PT1H30M"`).
 
   - Defaults to `{ largestUnit: "auto" }` when no options are given, which reformats a day/time-only duration without promoting units — pass an explicit `largestUnit` to promote.
   - Accepts `largestUnit`, `smallestUnit`, `roundingIncrement`, `roundingMode`, and `relativeTo` options, mirroring `Temporal.Duration.prototype.round`'s options.
@@ -3327,7 +3327,7 @@ end: number } | null` for Unix).
 
   Also expands `addDuration`/`subtractDuration`'s test coverage with additional permutations (overflow-without-borrow, negative-operand cancellation, fractional-second combination, negative-result subtraction) per `context/testing-standards/index.md`'s exhaustive `it.each` coverage bar.
 
-- 6839dca: Adds a new `duration` namespace for parsing and validating ISO 8601 duration strings:
+- a4b37f9: Adds a new `duration` namespace for parsing and validating ISO 8601 duration strings:
 
   - `isValidDuration` — validates an ISO 8601 duration string (e.g. `"P1DT2H30M"`) via `Temporal.Duration.from`.
   - `parseDuration` — parses and re-normalizes an ISO 8601 duration string, returning `""` on invalid input. Accepts `smallestUnit`, `fractionalSecondDigits`, and `roundingMode` options to control the precision/rounding of the output.
@@ -3343,14 +3343,14 @@ end: number } | null` for Unix).
 
 ### Minor Changes
 
-- e83828a: `startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, and `endOfQuarterForUnix` accept new `disambiguation` and `offset` options (`disambiguation`: `"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`; `offset`: `"prefer" | "use" | "ignore" | "reject"`, defaulting to `"ignore"`) to control how DST gaps and overlaps are resolved when the function's boundary computation lands on an ambiguous or nonexistent local time. `"reject"` returns the function's sentinel (`""`/`null`/`[]`) instead of silently picking a resolution.
+- 39a7030: `startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, and `endOfQuarterForUnix` accept new `disambiguation` and `offset` options (`disambiguation`: `"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`; `offset`: `"prefer" | "use" | "ignore" | "reject"`, defaulting to `"ignore"`) to control how DST gaps and overlaps are resolved when the function's boundary computation lands on an ambiguous or nonexistent local time. `"reject"` returns the function's sentinel (`""`/`null`/`[]`) instead of silently picking a resolution.
 
   `offset` must stay at its default (`"ignore"`) for `disambiguation` to take effect on these functions — setting it to `"prefer"` (or `"use"`) can make `disambiguation` inert, since these functions construct their boundary via `Temporal.ZonedDateTime.prototype.with()`, which otherwise prefers the source's existing UTC offset whenever it's still valid. See `docs/dst-disambiguation.md` for the full explanation.
 
   `convertPlainDateTimeToZoned`, `addZoned`, and `subtractZoned` also gain the same `offset` option for API consistency, but it is permanently inert on those three: their underlying construction path always parses a plain datetime string with no offset embedded, so there is never a stored offset for `offset` to act on.
 
-- d6da928: `convertPlainDateTimeToZoned` accepts a new `disambiguation` option (`"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`) to control how DST gaps (spring-forward) and overlaps (fall-back) are resolved when attaching a timezone to a plain datetime. `"reject"` returns `""` for any ambiguous or nonexistent local time instead of silently picking one.
-- 2186c3a: `addZoned` and `subtractZoned` accept a new `disambiguation` option (`"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`) to control how a fall-back (DST-end) overlap is resolved when the arithmetic result lands on an ambiguous local time. `"reject"` returns `""` for an ambiguous result instead of silently picking one.
+- e2cd46e: `convertPlainDateTimeToZoned` accepts a new `disambiguation` option (`"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`) to control how DST gaps (spring-forward) and overlaps (fall-back) are resolved when attaching a timezone to a plain datetime. `"reject"` returns `""` for any ambiguous or nonexistent local time instead of silently picking one.
+- 2b9d434: `addZoned` and `subtractZoned` accept a new `disambiguation` option (`"compatible" | "earlier" | "later" | "reject"`, defaulting to `"compatible"`) to control how a fall-back (DST-end) overlap is resolved when the arithmetic result lands on an ambiguous local time. `"reject"` returns `""` for an ambiguous result instead of silently picking one.
 
   This option has no effect on a spring-forward (DST-start) gap: Temporal's arithmetic always resolves a gap landing unambiguously before disambiguation is evaluated, so all four values produce the same result in that case.
 
@@ -3358,7 +3358,7 @@ end: number } | null` for Unix).
 
 ### Minor Changes
 
-- 313f052: Adds `getTimeZones` to the `zoned` namespace, returning the full list of IANA timezone identifiers supported by the runtime (via `Intl.supportedValuesOf("timeZone")`, `[]` on unsupported runtimes).
+- 2ac5d90: Adds `getTimeZones` to the `zoned` namespace, returning the full list of IANA timezone identifiers supported by the runtime (via `Intl.supportedValuesOf("timeZone")`, `[]` on unsupported runtimes).
 
   `getSystemTimeZone` moves from the `plain` namespace to `zoned` alongside it. It remains available from the package root (`@northguild/gmt`) and from `@northguild/gmt/zoned`, but is no longer exported from `@northguild/gmt/plain` — update imports accordingly if you were importing it from the `plain` subpath.
 
@@ -3366,7 +3366,7 @@ end: number } | null` for Unix).
 
 ### Minor Changes
 
-- 9868c37: Adds relative time formatters across all value types, and fills in the missing base formatters for the unix and utc namespaces.
+- e692bd7: Adds relative time formatters across all value types, and fills in the missing base formatters for the unix and utc namespaces.
 
   New relative formatters — all accept `locale`, `style` (`"long" | "short" | "narrow"`), `numeric` (`"auto" | "always"`), `largestUnit`, and an optional `reference` anchor; auto-select the largest sensible unit when `largestUnit` is omitted; return `""` for invalid input:
 
@@ -3386,7 +3386,7 @@ end: number } | null` for Unix).
 
 ### Patch Changes
 
-- 8d49857: Add missing barrel exports for unix and utc comparators, and add a new public export for `plain/validate/isLeapYear`
+- 3b79e5e: Add missing barrel exports for unix and utc comparators, and add a new public export for `plain/validate/isLeapYear`
 
 ## 1.2.0
 
@@ -3398,13 +3398,13 @@ end: number } | null` for Unix).
 
 ### Minor Changes
 
-- cc4feab: Adds more unix and utc methods. Adds min, max, sort methods.
+- 0eb56bd: Adds more unix and utc methods. Adds min, max, sort methods.
 
 ## 1.0.0
 
 ### Major Changes
 
-- fa5a465: Initial public release of the gmt suite.
+- 01fe827: Initial public release of the gmt suite.
 
   ## @northguild/gmt
 

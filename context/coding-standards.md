@@ -90,7 +90,7 @@ The exception is narrow. It does **not** cover:
 2. Extracted fields are **always** handed to `Temporal.*.from(fields, { overflow: "reject" })` for final construction and validation — a regex match only proves shape, never validity (e.g. `"02/31/2024"` matches `"MM/dd/yyyy"` but is not a real date). Parsers reject; arithmetic clamps — see [§ Calendar & zone semantics](#calendar--zone-semantics).
 3. The try-catch and sentinel-return rules above are unchanged.
 
-The full rationale is Decision 4 of the archived J roadmap file, which no longer exists in the tree: read it with `git show 9e3b22d^:context/roadmap/issues/J.md`. This prohibition stands for every other function in the library.
+The full rationale is Decision 4 of the archived J roadmap file, which no longer exists in the tree: read it with `git show c1c64e1^:context/roadmap/issues/J.md`. This prohibition stands for every other function in the library.
 
 ### Scoped exception: fixed non-ISO grammars in `parseRfc2822`/`parseHttpDate` (J13)
 
