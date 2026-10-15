@@ -1,5 +1,727 @@
 # @northguild/gmt
 
+## 1.19.0
+
+### Minor Changes
+
+- c365ad3: Add `bolTimestamp` and `multimodalETA` to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/format` subpath (Story INT-14).
+  
+  A bill of lading carries dates, not timestamps: the date it was issued, the date the cargo was received, and the date it was loaded on board, each on the local calendar of the place it happened. A system that records the loading as an instant has to turn it back into that date, and the UTC date is wrong for part of every day. An end-to-end ETA has the opposite problem: it is one instant, but the time behind it is spent two ways, moving and waiting at handoffs, and the two are forecast differently.
+  
+  ```typescript
+  import { bolTimestamp, multimodalETA } from "@northguild/gmt";
+  
+  // Loaded at 21:00 in New York, which is 01:00Z on the 16th. The B/L is dated the 15th.
+  bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" }); // "2024-06-15"
+  
+  // Loaded at 07:00 in Shanghai, which is 23:00Z on the 14th. The UTC date is a day early.
+  bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" }); // "2024-06-15"
+  
+  bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard"); // "" (every B/L date is local: the zone is required)
+  
+  // Truck, ship and rail, Shanghai to Chicago.
+  const legs = [
+    { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
+      timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" },
+    { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
+    { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+  ];
+  multimodalETA(legs);
+  // { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3,
+  //   totalTransit: "PT400H", totalDwell: "PT84H" } (484 hours door to door)
+  
+  // The ship sails at 10:00 Shanghai time on the 13th, 20 hours after the dwell ends. The wait is dwell too.
+  multimodalETA([legs[0], { ...legs[1], departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]" }, legs[2]]);
+  // { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3,
+  //   totalTransit: "PT400H", totalDwell: "PT104H" }
+  ```
+  
+  - **A B/L date is a local date.** The DCSA Bill of Lading 3.0 standard types `issueDate`, `receivedForShipmentDate` and `shippedOnBoardDate` as dates with no time and no offset. `bolTimestamp` returns `YYYY-MM-DD`, the date on the local clock in `timeZone` at the instant given.
+  - **The zone is required, and it is the place's.** There is no UTC default and no system zone. Date an `issue` in the place of issue's zone, and `received` and `shippedOnBoard` in the zone of the terminal at the port of loading, where DCSA dates receipt (the last container in the terminal, customs-cleared against the intended vessel) and shipment (the last container loaded).
+  - **`event` names the date; it does not change it.** `issue`, `received` and `shippedOnBoard`, the three dated fields of a DCSA B/L, are all local dates, so they render the same way. Anything else returns `""`.
+  - **Only the instant is read.** A bracketed zone in the value is not the zone the date is read in, and a zoneless wall time or a bare date returns `""`.
+  - **`multimodalETA` schedules with `scheduleDelivery`.** The `Leg` type, the missed-connection rule, wall-time departures and `startTimeZone` are that function's, and `eta` is its `eta`.
+  - **Transit and dwell are reported apart, and add up to the elapsed time.** `totalTransit` is every leg's `duration` added up, as exact time. `totalDwell` is the time actually spent at the handoffs, so a wait for a scheduled departure counts; when every leg chains from the one before, it is the sum of the `dwellAfter` values. The last leg's `dwellAfter` is not dwell, because no handoff follows it. Both totals have hours as the largest unit.
+  - **Dwell is never estimated.** It is the caller's `dwellAfter` and schedule.
+  - Also exported: the `BillOfLadingEvent`, `BolTimestampOptions` and `MultimodalJourney` types.
+- ac0425f: Add 46 functions that read, write and check UN/EDIFACT `DTM`, X12 and GS1 EPCIS timestamps to the `intermodal/` namespace, and the `@northguild/gmt/intermodal/parse` and `@northguild/gmt/intermodal/validate` subpaths (Story INT-15). Add eight validators for the interchange formats the library already reads: RFC 3339, RFC 5322, HTTP-date, the SQL timestamp literal, an X12 date and time, the two EPCIS event fields and a UTC offset. Two changes break existing calls, and **Breaking changes** covers both: a `yy` token in `parseDateWithPattern` and `parseDateTimeWithPattern` now needs a century window from the caller, and `parseSql`, `formatSql`, `parseHttp` and `formatHttp` have new names.
+  
+  Freight mostly does not send ISO 8601. It sends UN/EDIFACT `DTM` segments, X12 date and time elements, and GS1 EPCIS events. Some of those formats carry a UTC offset and some do not, and the only signal is a format code or a time code. So the functions are split by the kind of value a code states: a date, a time, a local date-time, a date-time with an offset, or a period. Each function takes only the codes of its kind, and each parser returns one value the rest of the library takes. A value with no offset comes back as a local time, never as UTC.
+  
+  ```typescript
+  import {
+    classifyEdifactDtmFormat,
+    classifyX12TimeCode,
+    formatEdifactDatePeriod,
+    formatEdifactOffsetDateTime,
+    formatEpcisEvent,
+    formatX12Date,
+    formatX12Time,
+    formatX12TimeElement,
+    parseDateWithPattern,
+    parseEdifactDate,
+    parseEdifactDatePeriod,
+    parseEdifactDateTime,
+    parseEdifactOffsetDateTime,
+    parseEpcisEvent,
+    parseX12DateAndTime,
+    parseX12DateRange,
+    parseX12Time,
+    resolveLocal,
+    toOffsetInstant,
+    x12TimeCodeOffset,
+    x12TimeCodeZone,
+  } from "@northguild/gmt";
+  
+  // UN/EDIFACT: a DTM value (data element 2380) and its format code (2379). One parser per kind of value.
+  parseEdifactDate("20240615", "102"); // "2024-06-15"
+  parseEdifactDateTime("202406151430", "203"); // "2024-06-15T14:30:00" (203 states no offset: a local time, not UTC)
+  parseEdifactOffsetDateTime("202406151430+0200", "205"); // "2024-06-15T14:30:00+02:00"
+  parseEdifactOffsetDateTime("202406151430+02", "303"); // "2024-06-15T14:30:00+02:00"
+  parseEdifactOffsetDateTime("202406151430UTC", "303"); // "2024-06-15T14:30:00+00:00"
+  parseEdifactOffsetDateTime("202406151430CET", "303"); // "" (an abbreviation names no offset)
+  parseEdifactDatePeriod("2024061520240620", "718"); // { start: "2024-06-15", end: "2024-06-20" }
+  toOffsetInstant("2024-06-15T14:30:00+02:00"); // { instant: "2024-06-15T12:30:00Z", offset: "+02:00" }
+  
+  // Each formatter takes the value its parser returns, and cuts it to the code's mask.
+  formatEdifactOffsetDateTime("2024-06-15T14:30:00+02:00", "205"); // "202406151430+0200"
+  formatEdifactOffsetDateTime("2024-06-15T14:30:45.9+02:00", "205"); // "202406151430+0200" (205 holds minutes)
+  formatEdifactOffsetDateTime("2024-06-15T14:30:00Z", "303"); // "202406151430+00"
+  formatEdifactDatePeriod("2024-06-15", "2024-06-20", "718"); // "2024061520240620"
+  
+  // X12 freight: the date (element 373), time (337) and time code (623) of an AT7, G62 or DTM segment, in three calls.
+  const local = parseX12DateAndTime("20240615", "1430"); // "2024-06-15T14:30:00"
+  const offset = x12TimeCodeOffset("20"); // "-05:00"
+  resolveLocal(local, offset); // "2024-06-15T19:30:00Z"
+  
+  // A lettered time code names a zone and states no offset. The caller maps the name to an IANA zone.
+  x12TimeCodeZone("ES"); // { zone: "Eastern", daylight: false }
+  x12TimeCodeZone("ET"); // { zone: "Eastern", daylight: null }
+  resolveLocal(local, "America/New_York"); // "2024-06-15T18:30:00Z"
+  
+  // X12 element 337 has four forms and no format qualifier. `parseX12Time` reads all four. `formatX12TimeElement` writes the one the caller names.
+  parseX12Time("14300012"); // "14:30:00.12"
+  formatX12TimeElement("14:30:00.12", "HHMMSSDD"); // "14300012"
+  formatX12TimeElement("14:30:00.12", "HHMMSSD"); // "1430001" (cut, not rounded)
+  formatX12TimeElement("14:30:00", "HHMMSSDD"); // "14300000" (the form fixes the width, not the value)
+  formatX12TimeElement("14:30", "HHMM"); // "1430"
+  
+  // X12: a Date Time Period (element 1251) and its format qualifier (1250), as a DTP segment carries them.
+  parseX12DateRange("20240615-20240620", "RD8"); // { start: "2024-06-15", end: "2024-06-20" }
+  parseX12Time("143045", "TS"); // "14:30:45"
+  formatX12Date("2024-06-15", "D8"); // "20240615"
+  formatX12Time("14:30:45", "TS"); // "143045"
+  formatX12Time("14:30:00.12", "TS"); // "143000" (TS is HHMMSS: no 1250 code holds a fraction)
+  
+  // A code that arrives as data is a plain string. Classify it, and testing `kind` narrows `format` with no cast.
+  const code: string = "203";
+  const classified = classifyEdifactDtmFormat(code); // { kind: "dateTime", format: "203" }
+  if (classified?.kind === "dateTime") {
+    parseEdifactDateTime("202406151430", classified.format); // "2024-06-15T14:30:00"
+  }
+  classifyX12TimeCode("20"); // { kind: "offset", timeCode: "20" }
+  classifyX12TimeCode("ET"); // { kind: "zone", timeCode: "ET" }
+  classifyEdifactDtmFormat("101"); // null (a two-digit-year code: no function reads it)
+  
+  // A two-digit year is read with the pattern parsers, in the hundred-year window the caller names.
+  parseDateWithPattern("240615", "yyMMdd", undefined, { yearWindow: 2000 }); // "2024-06-15"
+  
+  // GS1 EPCIS 2.0: eventTime is the instant, eventTimeZoneOffset the offset where it happened.
+  parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" });
+  // { instant: "2024-06-15T23:30:00Z", offset: "+02:00", local: "2024-06-16T01:30:00" }
+  parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z" }); // null (no eventTimeZoneOffset)
+  formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "+02:00" });
+  // { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
+  ```
+  
+  UN/EDIFACT: a `DTM` value (data element 2380) against its format code (data element 2379).
+  
+  | Kind of value | Parser, formatter, validator | Codes | Value |
+  | --- | --- | --- | --- |
+  | Date | `parseEdifactDate`, `formatEdifactDate`, `isValidEdifactDate` | `102` | `"2024-06-15"` |
+  | Time | `parseEdifactTime`, `formatEdifactTime`, `isValidEdifactTime` | `401` `402` | `"14:30:00"` |
+  | Local date-time | `parseEdifactDateTime`, `formatEdifactDateTime`, `isValidEdifactDateTime` | `203` `204` | `"2024-06-15T14:30:00"` |
+  | Date-time with an offset | `parseEdifactOffsetDateTime`, `formatEdifactOffsetDateTime`, `isValidEdifactOffsetDateTime` | `205` `208` `303` `304` | `"2024-06-15T14:30:00+02:00"` |
+  | Period of dates | `parseEdifactDatePeriod`, `formatEdifactDatePeriod`, `isValidEdifactDatePeriod` | `718` | `{ start: "2024-06-15", end: "2024-06-20" }` |
+  | Period of local date-times | `parseEdifactDateTimePeriod`, `formatEdifactDateTimePeriod`, `isValidEdifactDateTimePeriod` | `719` | `{ start: "2024-06-15T08:00:00", end: "2024-06-20T17:00:00" }` |
+  
+  X12: an element 1251 value against its 1250 format qualifier, the pair a `DTP` segment and `DTM-05`/`06` carry, in freight and in healthcare.
+  
+  | Kind of value | Parser, formatter, validator | Codes | Value |
+  | --- | --- | --- | --- |
+  | Date | `parseX12Date`, `formatX12Date`, `isValidX12Date` | `D8` `DB` | `"2024-06-15"` |
+  | Time | `parseX12Time`, `formatX12Time`, `formatX12TimeElement`, `isValidX12Time` | `TM` `TS`. With no format qualifier, the four forms of element 337: `HHMM` `HHMMSS` `HHMMSSD` `HHMMSSDD` | `"14:30:00"`, `"14:30:00.12"` |
+  | Local date-time | `parseX12DateTime`, `formatX12DateTime`, `isValidX12DateTime` | `DT` `RTS` | `"2024-06-15T14:30:00"` |
+  | Range of dates | `parseX12DateRange`, `formatX12DateRange`, `isValidX12DateRange` | `RD8` `RD` | `{ start: "2024-06-15", end: "2024-06-20" }` |
+  | Range of local date-times | `parseX12DateTimeRange`, `formatX12DateTimeRange`, `isValidX12DateTimeRange` | `RDT` `DTS` | `{ start: "2024-06-15T08:00:00", end: "2024-06-20T17:00:00" }` |
+  
+  Element 337 is the time of a freight segment, among others, and no format qualifier travels with it. All four of its forms are read and written: `parseX12Time(value)` and `isValidX12Time(value)` read them, and `formatX12TimeElement(value, form)` writes them.
+  
+  The other functions:
+  
+  - **`parseX12DateAndTime(date, time)`** reads X12 elements 373 and 337, the date and time that `AT7`, `G62` and `DTM-02`/`03` carry side by side, as one local date-time. Both are required.
+  - **`formatX12TimeElement(value, form)`** writes a time as an X12 element 337 value. `form` is one of the element's own four masks: `HHMM`, `HHMMSS`, `HHMMSSD` or `HHMMSSDD`, where `D` is tenths of a second and `DD` hundredths. The caller names the form, and the function never reads it off the value. So the width of the field does not depend on the data: `14:30:00` under `HHMMSSDD` is `14300000`. `parseX12Time` reads the result back when it is given no qualifier. A 1250 code is not a form: `TS` returns `""` here. `formatX12Time` writes a time that travels with a 1250 qualifier.
+  - **`x12TimeCodeOffset(timeCode)`** reads the 31 element 623 time codes that state an offset: `01` to `29`, `UT` and `GM`. The codes `13` to `24` count down: `13` is `-12:00` and `24` is `-01:00`.
+  - **`x12TimeCodeZone(timeCode)`** reads the 25 time codes that name a zone, and returns `{ zone, daylight }`. `daylight` is `true`, `false`, or `null` when the code says neither.
+  - **`classifyEdifactDtmFormat`, `classifyX12DateTimePeriodFormat` and `classifyX12TimeCode`** take a code as a plain string and return it with its kind, `{ kind, format }` or `{ kind, timeCode }`, or `null` for a code no function reads. `isValidEdifactDtmFormat`, `isValidX12DateTimePeriodFormat` and `isValidX12TimeCode` check a code alone.
+  - **`parseEpcisEvent(event)`** reads the two required time fields of a GS1 EPCIS 2.0 event, `eventTime` and `eventTimeZoneOffset`, and returns `{ instant, offset, local }`. `formatEpcisEvent` writes the pair back with `eventTime` in UTC, and `isValidEpcisEvent` checks one. The `epcisEventTime` and `epcisTimeZoneOffset` patterns are the two grammars GS1 publishes.
+  - **Each value validator** takes its parser's arguments and is true exactly when the parser returns a value.
+  
+  What the types settle, and what they cannot:
+  
+  - **A function reads every code its `format` type accepts.** `parseEdifactDate(value, "203")` does not compile: `203` is a date-time code. No EDI function takes options.
+  - **A parser returns one value, the same for every code of its kind.** A date is `YYYY-MM-DD`. A time and a local date-time always carry seconds. A date-time with an offset is the wall clock as written with its offset, the string `toOffsetInstant` reads. A period is `{ start, end }`. An invalid value returns `""`, or `null` for a period.
+  - **What still returns the sentinel is a fact about the value.** A value that does not fit its code's mask, or names a day or an hour that does not exist. Under `303` and `304`, zone characters that are not a signed hour, `UTC` or `GMT`. A period or range whose end is before its start. In a formatter, a year outside 0000–9999, or an offset the code cannot hold.
+  
+  What the functions never guess:
+  
+  - **An offsetless value never becomes UTC.** UN/EDIFACT `203` and `204`, an X12 date and time, and every X12 1250 code state no offset. The result is a local date-time. Pass it and the place's IANA zone to `resolveLocal`. GMT maps no place to a zone.
+  - **A named X12 time code is a zone name, not an offset.** `ES` returns the name `Eastern` and `daylight: false`. X12 states no offset for a named zone, so the caller maps the name to an IANA zone. `x12TimeCodeOffset` returns `""` for such a code, and `x12TimeCodeZone` returns `null` for an offset code.
+  - **A UN/EDIFACT zone abbreviation is not an offset.** The three zone characters of `303` and `304` are read when they are a signed hour (`+02`), `UTC` or `GMT`. Letters such as `CET` return `""`: no UN/EDIFACT text defines them. Where a partner sends one, remove the letters, read the rest with `parseEdifactDateTime` under `203` or `204`, and resolve it in the zone you map the letters to.
+  - **A formatter cuts a time to the mask and never rounds it.** Under a 2379 or 1250 code a fraction of a second is always dropped, and a minute-precision code drops the seconds too. Under an element 337 mask, `D` holds the whole tenths of the second and `DD` its whole hundredths: `14:30:45.999` is `1430459` under `HHMMSSD`. An offset is never cut: `+05:30` under `303` or `304` returns `""`, because the field holds whole hours. Write it under `205` or `208`.
+  
+  Codes that are not read:
+  
+  - **The two-digit-year codes**: UN/EDIFACT `101`, `201`, `202`, `206`, `207`, `301`, `302`, `713` and `717`, and X12 `D6`, `TT`, `TR`, `RD6` and `TU`. Neither standard says which century `YY` belongs to. Read one with `parseDateWithPattern` or `parseDateTimeWithPattern`, a `yy` pattern and `yearWindow`: `yyMMdd` for `101` and `D6`, `yyMMddHHmm` for `201`, `yyMMddHHmmss` for `202`, `MMddyy` for `TT`, `ddMMyyHHmm` for `TR`. Split a period (`713`, `717`, `RD6`) and read each half. No function writes a two-digit year.
+  - **The codes that state no single date, time or date-time**: UN/EDIFACT `209` and `404` (a time with an offset and no date) and `406` (an offset alone), and X12 `TC` and `EH` (a day of the year with no whole year), `DDT` and `DTD` (a date on one side of a range and a date-time on the other), `RTM` (a range of times with no date) and `UN` (unstructured).
+  - **Every other code of the two elements.** GMT reads 11 UN/EDIFACT format codes, 10 X12 format qualifiers and all 56 X12 time codes.
+  
+  Wire details:
+  
+  - **A UN/EDIFACT period has no hyphen, and an X12 range has one.** `2024061520240620` is a `718` period and `20240615-20240620` is an `RD8` range. Each parser reads only its own form.
+  - **The UN/EDIFACT release character is the caller's.** An interchange transmits `+02` as `?+02`. The parsers take the unescaped value and the formatters return it.
+  - **An X12 time with no format qualifier may carry tenths or hundredths of a second.** `parseX12Time` and `parseX12DateAndTime` read them, and `formatX12TimeElement` writes them under `HHMMSSD` and `HHMMSSDD`. No 1250 code holds them, so `formatX12Time` cuts them.
+  - **EPCIS requires both fields, and they are independent.** A missing `eventTimeZoneOffset`, `Z` and `+0200` return `null`. An offset written inside `eventTime` need not match the offset field.
+  - X12 is a United States standard. Its code lists were read through an X12-licensed dictionary.
+  - Also exported: a type for each kind's codes (`EdifactDateFormat`, `EdifactTimeFormat`, `EdifactDateTimeFormat`, `EdifactOffsetDateTimeFormat`, `EdifactDatePeriodFormat`, `EdifactDateTimePeriodFormat`, `X12DateFormat`, `X12TimeFormat`, `X12DateTimeFormat`, `X12DateRangeFormat`, `X12DateTimeRangeFormat`, `X12OffsetTimeCode`, `X12ZoneTimeCode`), `X12TimeElementForm` for the four masks of element 337, the unions `EdifactDtmFormat`, `X12DateTimePeriodFormat` and `X12TimeCode`, and the `EdifactDtmFormatClass`, `X12DateTimePeriodFormatClass`, `X12TimeCodeClass`, `X12NamedZone`, `EdiDatePeriod`, `EdiDateTimePeriod`, `EpcisEventTime`, `EpcisInstant` and `TwoDigitYearOptions` types.
+  
+  Eight validators for interchange formats. A pattern from `regex` proves shape only, so it matches a day that does not exist. Each validator is true exactly when its parser returns a value. The two offset forms have no parser: their validator is true when the library accepts the string.
+  
+  | Validator | What it checks | A value its pattern matches and it rejects |
+  | --- | --- | --- |
+  | `isValidRfc3339DateTime(value)` | An RFC 3339 date-time, the value `parseRfc3339` reads | `"2023-02-29T10:00:00Z"` (`rfc3339DateTime`): 2023 has no 29 February |
+  | `isValidRfc2822DateTime(value)` | The date of an email `Date:` header (RFC 5322), the value `parseRfc2822` reads | `"Sat, 15 Mar 2024 14:30:00 -0400"` (`rfc2822DateTime`): that day was a Friday |
+  | `isValidHttpDate(value)` | An HTTP header date (RFC 9110 `HTTP-date`), the value `parseHttpDate` reads | `"Sat, 15 Mar 2024 14:30:00 GMT"` (`httpDate`): that day was a Friday |
+  | `isValidSqlDateTime(value)` | A SQL timestamp literal, `YYYY-MM-DD HH:MM:SS[.fff]`, the value `parseSqlDateTime` reads | `"2024-02-30 14:30:00"` (`sqlDateTime`): February has no 30th |
+  | `isValidX12DateAndTime(date, time)` | X12 elements 373 and 337 together, the pair `parseX12DateAndTime` reads | No public pattern |
+  | `isValidEpcisEventTime(value)` | The `eventTime` field of a GS1 EPCIS 2.0 event | `"2024-02-30T14:30:00Z"` (`epcisEventTime`): February has no 30th |
+  | `isValidEpcisTimeZoneOffset(value)` | The `eventTimeZoneOffset` field of an EPCIS event: `±HH:MM` from `-14:00` to `+14:00` | None: `epcisTimeZoneOffset` is the whole rule |
+  | `isValidUtcOffset(value)` | A stored UTC offset, `±HH:MM` or `±HH:MM:SS`: the offset `toOffsetInstant` returns and `fromOffsetInstant` takes | None: `utcOffset` is the whole rule |
+  
+  ```typescript
+  import {
+    isValidEpcisEvent,
+    isValidEpcisEventTime,
+    isValidEpcisTimeZoneOffset,
+    isValidHttpDate,
+    isValidRfc2822DateTime,
+    isValidRfc3339DateTime,
+    isValidSqlDateTime,
+    isValidUtcOffset,
+    isValidX12DateAndTime,
+    rfc3339DateTime,
+  } from "@northguild/gmt";
+  
+  // The pattern proves the shape. The validator also checks that the day exists.
+  rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true
+  isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false
+  isValidRfc3339DateTime("2024-03-15T14:30:00-04:00"); // true
+  
+  isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false (15 March 2024 was a Friday)
+  isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false (hour 24)
+  isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true (asctime-date, which the httpDate pattern does not match)
+  isValidSqlDateTime("2024-02-30 14:30:00"); // false
+  isValidSqlDateTime("2024-03-15 14:30"); // false (seconds are required)
+  
+  isValidX12DateAndTime("20240615", "1430"); // true
+  isValidX12DateAndTime("20230229", "1430"); // false
+  isValidX12DateAndTime("20240615", ""); // false (both elements are required)
+  
+  isValidEpcisEventTime("2024-02-30T14:30:00Z"); // false
+  isValidEpcisTimeZoneOffset("+02:00"); // true
+  isValidEpcisTimeZoneOffset("+0200"); // false (no colon)
+  isValidEpcisEvent({ eventTime: "2024-02-30T14:30:00Z", eventTimeZoneOffset: "+02:00" }); // false
+  
+  isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
+  isValidUtcOffset("Z"); // false
+  isValidUtcOffset("+0530"); // false (no colon)
+  ```
+  
+  - **`isValidEpcisEvent` is the two field validators together.** It is true when `isValidEpcisEventTime` accepts `eventTime` and `isValidEpcisTimeZoneOffset` accepts `eventTimeZoneOffset`. Its results are unchanged. Use a field validator to say which field is wrong.
+  - **`isValidRfc2822DateTime` and `isValidHttpDate` also accept values their patterns do not match.** The parsers read the obsolete forms a receiver must accept, such as a two-digit year in an email date and the `asctime-date` form of an HTTP date. The patterns match only what the formatters write.
+  - **`isValidEpcisEventTime` rejects a fraction of more than nine digits**, which the `epcisEventTime` pattern matches. An instant holds nanoseconds.
+  - **`isValidUtcOffset` is not the check for a `timeZone` argument.** `isValidTimeZone` accepts `+0530` and rejects an offset with seconds. `isValidUtcOffset` does the opposite.
+  - **All eight return `false` for a value that is not a string.** The six that read a time of day return `false` for a leap second (`:60`).
+  - `isValidUtcOffset` is also exported from the new `@northguild/gmt/instant/validate` subpath.
+  
+  ### Breaking changes
+  
+  **1. Four functions are renamed.** `parseSql` reads as "parse SQL", the language. Each of these functions handles one date format, so each name now states the format. No alias is kept.
+  
+  | 1.18 | 1.19 | Format |
+  | --- | --- | --- |
+  | `parseSql` | `parseSqlDateTime` | A SQL timestamp literal, `YYYY-MM-DD HH:MM:SS[.fff]` |
+  | `formatSql` | `formatSqlDateTime` | The same |
+  | `parseHttp` | `parseHttpDate` | An HTTP header date (RFC 9110 `HTTP-date`) |
+  | `formatHttp` | `formatHttpDate` | The same |
+  
+  Migration: rename the call and its import. The arguments, the results and the subpaths are the same. `parseRfc3339`, `formatRfc3339`, `parseRfc2822` and `formatRfc2822` keep their names.
+  
+  **2. A `yy` token needs a window from the caller.**
+  
+  `parseDateWithPattern` and `parseDateTimeWithPattern` take a fourth parameter, `options?: TwoDigitYearOptions`. A pattern with a `yy` token now returns `""` unless `options.yearWindow` is given. 1.18 read `yy` in a window fixed in the library, 1969 to 2068.
+  
+  | Call | 1.18 | 1.19 |
+  | --- | --- | --- |
+  | `parseDateWithPattern("03/15/24", "MM/dd/yy")` | `"2024-03-15"` | `""` |
+  | `parseDateWithPattern("03/15/69", "MM/dd/yy")` | `"1969-03-15"` | `""` |
+  | `parseDateWithPattern("Mar 15, '24", "MMM d, ''yy")` | `"2024-03-15"` | `""` |
+  | `parseDateTimeWithPattern("03/15/24 14:30", "MM/dd/yy HH:mm")` | `"2024-03-15T14:30:00"` | `""` |
+  
+  The same calls with a window:
+  
+  ```typescript
+  import { parseDateTimeWithPattern, parseDateWithPattern } from "@northguild/gmt";
+  
+  // A year is the first year of a fixed hundred-year window. 1969 is the 1.18 window exactly.
+  parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: 1969 }); // "2024-03-15"
+  parseDateWithPattern("03/15/69", "MM/dd/yy", undefined, { yearWindow: 1969 }); // "1969-03-15"
+  parseDateWithPattern("03/15/68", "MM/dd/yy", undefined, { yearWindow: 1969 }); // "2068-03-15"
+  parseDateTimeWithPattern("03/15/24 14:30", "MM/dd/yy HH:mm", undefined, { yearWindow: 1969 }); // "2024-03-15T14:30:00"
+  
+  // "rolling" is the hundred years around today.
+  parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: "rolling" }); // "2024-03-15" (while the current UTC year is 1975–2074)
+  ```
+  
+  Why: no standard says which century a two-digit year belongs to. A cut-off built into the library is right today and wrong later, and the caller is the one who knows whether the data is live or stored. So the caller states the window.
+  
+  Unchanged: a pattern with no `yy` reads exactly as before, and never reads the option or the clock. `parseTimeWithPattern` has no year token and takes no options. `parseRfc2822` and `parseHttpDate` keep the two-digit-year rules that RFC 5322 and RFC 9110 give for their own formats.
+  
+  Migration:
+  
+  - **To keep the 1.18 result, pass `{ yearWindow: 1969 }`.** It reads `69`–`99` as 1969–1999 and `00`–`68` as 2000–2068, as 1.18 did. A fixed window gives the same answer in any year, so it is the form for stored data. Choose another start year when the data calls for one: `{ yearWindow: 2000 }` reads `00`–`99` as 2000–2099.
+  - **For live data, pass `{ yearWindow: "rolling" }`.** It runs from 50 years before the current UTC year to 49 years after: 1976 to 2075 during 2026. It never needs maintenance. It reads the same stored value differently as years pass, so do not use it for stored data.
+  - **`options` is the fourth parameter.** The third is `locale`; pass `undefined` there to keep the default, `"en-US"`.
+  - **With a `yy` pattern, any other `yearWindow` returns `""`**: a value that is neither `"rolling"` nor an integer from 0 to 9900.
+  - **Where the source can send a four-digit year, ask for it.** A `yyyy` pattern needs no window.
+- c39c7e6: Add the `duty` namespace: hours-of-work rules evaluated over a duty log (Story CORE-76). A log is a list of `{ status, start, end }` entries in your own status words. A rule is one of 13 shapes, and every number in it is yours: GMT names no regulation and has no default limit. A regime is the array of rules you assemble and label.
+  
+  - `evaluateDutyLog(log, at, rules, options)` reports every rule at one instant, whether or not it binds: `used`, `limit`, `remaining`, the `window` measured, `dueBy` and `resetAt`. A failed rule is listed again under `violations`, or under `advisories` when its `severity` is `"advisory"`.
+  - `dutyViolations(log, range, rules, options)` lists every violation in a range, for a monthly record. Each is listed once, by the window that failed worst, in the range it began in, so two adjacent months never list one twice.
+  - `dutyDayFor(instant, day)` returns the operator-designated day an instant falls in: from `dayStartTime` in the reference zone, never local midnight.
+  - `dutyTotals`, `longestRun`, `qualifyingRests` and `qualifyingRestPairs` measure a log directly. `isValidDutyLog` checks one.
+  
+  ```typescript
+  import { evaluateDutyLog } from "@northguild/gmt";
+  
+  const log = [
+    { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T21:30:00Z" },
+  ];
+  
+  const report = evaluateDutyLog(
+    log,
+    "2024-01-01T21:30:00Z",
+    [
+      {
+        label: "11 driving",
+        kind: "cumulativeCap",
+        statuses: ["driving"],
+        cap: "PT11H",
+        since: { statuses: ["off"], consecutive: "PT10H" },
+      },
+      {
+        label: "14 window",
+        kind: "elapsedWindow",
+        startStatuses: ["driving"],
+        length: "PT14H",
+        restrictedStatuses: ["driving"],
+        since: { statuses: ["off"], consecutive: "PT10H" },
+      },
+    ],
+    { timeZone: "UTC" },
+  );
+  
+  report.violations.map((rule) => [rule.label, rule.used, rule.limit]);
+  // [["11 driving", "PT11H30M", "PT11H"]]
+  report.outcomes[1].dueBy; // "2024-01-02T00:00:00Z" (the 14-hour window closes then)
+  ```
+  
+  The rule kinds are `cumulativeCap`, `elapsedWindow`, `requiredInterruption`, `rollingCap`, `fixedPeriodCap`, `restRequirement`, `freePeriod`, `restBeforeDuty`, `quota`, `dueBy`, `pattern`, `occurrenceCap` and `usageLookback`. Each type's documentation states exactly what it measures.
+  
+  - **A duration slides; a count of local periods does not.** `{ elapsed: "PT24H" }` is every 24-hour window ending at the instant evaluated. `{ operatorDays: 7 }`, `{ calendarDays: 28 }`, `{ isoWeeks: 1 }`, `{ calendarMonths: 1 }` and `{ calendarYears: 1 }` are whole periods in the reference zone. A calendar day across a one-hour clock change is 23 or 25 hours long, so 28 calendar days across a fall-back are 673 hours. Each outcome names its `periodBasis`.
+  - **The log is read as it stands at `at`.** Later entries are ignored, and an entry that crosses `at` is cut there. Time no entry covers is neither work nor rest. To check a planned roster, append the plan and set `at` to its end.
+  - **A shift that crosses a period boundary is split there**, and each part counts in its own day, week or month.
+  - **A paired rest is three floors, not two numbers.** With 2 hours each, 7 for the longer and 10 together, 7.5 + 2.5 qualifies and 6 + 4 does not.
+  - **A day start that a clock change repeats or skips** resolves as `resolveLocal` resolves it, `"compatible"` unless you pass `disambiguation`. `"reject"` returns the sentinel rather than guess.
+  - Invalid input returns the sentinel: `null` for `evaluateDutyLog`, `dutyViolations`, `dutyDayFor` and `longestRun`, `""` for `dutyTotals`, `[]` for `qualifyingRests` and `qualifyingRestPairs`, and `false` for `isValidDutyLog`.
+- 7d234be: Add `totalUnits` and `durationFromUnits` to the `duration/` namespace. Both take an amount written as a unit object, such as `{ minutes: 15 }`: `totalUnits` returns it as one number in the unit you name, and `durationFromUnits` writes it as an ISO 8601 duration string. Three changes break existing code, and **Breaking changes** covers each: `durationAs` is renamed `totalDuration`, the `fields` type of five `set*` functions no longer has `era` and `eraYear`, and some calls to the `add*`, `subtract*` and `set*` functions that compile now return the sentinel.
+  
+  The library writes an amount of time in two shapes. Functions such as `addDate` and `addUtc` take a unit object, `{ minutes: 15 }`. The `duration/` functions take an ISO 8601 duration string, `"PT15M"`. Each function takes one shape. These two functions start from the object, so a caller who holds one does not have to write the string by hand.
+  
+  ```typescript
+  import { durationFromUnits, totalDuration, totalUnits } from "@northguild/gmt";
+  
+  // A unit object as one number.
+  totalUnits({ minutes: 15 }, "seconds"); // 900
+  totalUnits({ days: 1, hours: 12 }, "seconds"); // 129600
+  totalUnits({ hours: 36 }, "days"); // 1.5
+  
+  // A unit object as the duration string the duration functions take.
+  durationFromUnits({ minutes: 15 }); // "PT15M"
+  durationFromUnits({ days: 1, hours: 12 }); // "P1DT12H"
+  durationFromUnits({ years: 1, months: 2 }); // "P1Y2M"
+  
+  // A duration string as one number.
+  totalDuration("PT36H", "days"); // 1.5
+  
+  // A calendar amount: write the string, then total it from a date.
+  totalDuration(durationFromUnits({ months: 1 }), "days", { relativeTo: "2024-02-01" }); // 29
+  ```
+  
+  Which function to use:
+  
+  - **`totalUnits(units, unit)`** when you hold a unit object of exact units and want one number, such as a lifetime in seconds.
+  - **`durationFromUnits(units)`** when you hold a unit object and the function you call takes a duration string.
+  - **`totalDuration(value, unit, options?)`** when you hold a duration string, or when the amount has a year, a month or a week in it.
+  
+  What each one takes:
+  
+  - **`totalUnits` takes exact units only**: `days`, `hours`, `minutes`, `seconds`, `milliseconds`, `microseconds` and `nanoseconds`. A day is 24 hours, as `Temporal.Duration.prototype.total` reads a day when it has no `relativeTo`. The function takes no options.
+  - **A year, a month or a week returns `null` from `totalUnits`**, as a key and as the unit asked for. TC39 Temporal gives them no length without a date to measure from. `totalUnits({ weeks: 1 }, "days")` is `null`: write `{ days: 7 }`.
+  - **`durationFromUnits` takes all ten units**, from `years` down to `nanoseconds`. Writing a year, a month or a week needs no date.
+  - **`durationFromUnits` writes years down to minutes as given.** It carries nothing into a larger unit: `{ minutes: 90 }` is `"PT90M"`. `normalizeDuration` with `largestUnit` carries it.
+  - **Seconds and the three smaller units are written together as one decimal number of seconds**, as `Temporal.Duration.prototype.toString` writes them: `{ milliseconds: 1500 }` is `"PT1.5S"`, and `{ seconds: 59, milliseconds: 1500 }` is `"PT60.5S"`.
+  - **Every key is a plural unit name and every amount is a whole number.** All nonzero amounts have the same sign, as Temporal requires of a duration. A zero amount is `"PT0S"` from `durationFromUnits` and `0` from `totalUnits`.
+  - **A unit set to `undefined` is absent**, as Temporal reads it: `totalUnits({ minutes: 15, hours: undefined }, "seconds")` is `900`.
+  - **`unit` in `totalUnits` takes the plural or the singular name**, `"seconds"` or `"second"`, as Temporal does.
+  
+  What returns the sentinel, `null` from `totalUnits` and `""` from `durationFromUnits`:
+  
+  - **An unknown key, even beside a valid one.** `{ minutes: 15, hour: 1 }` returns the sentinel. `Temporal.Duration.from` ignores a key it does not know, so on its own it would read that object as 15 minutes and lose the hour.
+  - **A fraction** (`{ minutes: 1.5 }`), **mixed signs** (`{ hours: 1, minutes: -30 }`), an object with no unit in it (`{}`), and an amount outside Temporal's duration range.
+  - **A value that is not a unit object.** A duration string is one: `totalUnits("PT15M", "seconds")` is `null`. Pass a string to `totalDuration`.
+  
+  Also exported: the `ExactDurationUnit` type, the seven unit names `totalUnits` takes.
+  
+  ### Breaking changes
+  
+  **1. `durationAs` is renamed `totalDuration`.** TC39 Temporal calls this operation `total` (`Temporal.Duration.prototype.total`), and the name now matches `totalUnits`, which does the same for a unit object. No alias is kept.
+  
+  | 1.18 | 1.19 |
+  | --- | --- |
+  | `durationAs(value, unit, options?)` | `totalDuration(value, unit, options?)` |
+  
+  Migration: rename the call and its import. The arguments, the results and the subpaths are the same: `@northguild/gmt`, `@northguild/gmt/duration` and `@northguild/gmt/duration/calculate`.
+  
+  ```typescript
+  import { totalDuration } from "@northguild/gmt/duration";
+  
+  totalDuration("P1DT2H30M", "hours"); // 26.5
+  totalDuration("P1M", "days", { relativeTo: "2024-02-01" }); // 29
+  ```
+  
+  **2. `era` and `eraYear` are no longer in the `fields` type of five `set*` functions.** The functions are `setDate`, `setDateTime`, `setUtc`, `setUnix` and `setZoned`. `setTime` never had them. A typed object literal that passes either one no longer compiles.
+  
+  No call could ever set an era. These functions refuse a value in a calendar other than ISO 8601 before they read `fields`, and the ISO 8601 calendar has no era, so Temporal's `with` finds no field in `{ era, eraYear }`. The type offered two fields that returned the sentinel alone, and that Temporal ignored beside a field the function does take. At run time, an era beside such a field now returns the sentinel too, as every field a `set*` function does not take now does: see the entry on the `fields` of `set*`.
+  
+  | Call | 1.18 | 1.19 |
+  | --- | --- | --- |
+  | `setDate("2024-01-31", { era: "ce", eraYear: 2025 })` | Compiles. Returns `""` | Does not compile. Returns `""` at run time |
+  | `setDate("2024-03-10", { year: 2025, era: "ce" })` | Compiles. Returns `"2025-03-10"` | Does not compile. Returns `""` at run time |
+  
+  Migration: delete `era` and `eraYear` from the object. To set a year, pass `year`: `setDate("2024-03-10", { year: 2025 })` is `"2025-03-10"`, the result the call with `era` beside it gave in 1.18. The documentation of the five functions no longer lists the two fields.
+  
+  **3. Some calls to the `add*`, `subtract*` and `set*` functions that compile now return the sentinel.** These functions now read their `units` or `fields` object in one pass and check every value they read: see the entries on the `units` of `add*` and the `fields` of `set*`. Each call below compiles in 1.18 and in 1.19, and each one returned a value in 1.18. They compile for one of four reasons:
+  
+  - **A fraction is a `number`**, so `{ hour: 9.5 }` fits the type.
+  - **TypeScript checks for an extra property only in an object literal**, so a variable that holds a misspelt key or an `offset` beside a real field fits the type.
+  - **An object whose units or fields are getters or inherited fits the type.** A Temporal object is one: a `Temporal.Duration`, or a `Temporal.PlainDate`. So is an instance of your own class with getters.
+  - **A value typed `any` fits every type**, such as the result of `JSON.parse` or `Object.create`.
+  
+  The functions are the 12 `add*` and `subtract*` functions and the six `set*` functions. A unit the function does not take, read from a getter or inherited, changes only `addDate`, `subtractDate`, `addTime` and `subtractTime`: the other eight take all ten units. An inherited amount that is not a number changes all 12. The sentinel is `""`, and `null` for `addUnix`, `subtractUnix` and `setUnix`.
+  
+  | Call | 1.18 | 1.19 |
+  | --- | --- | --- |
+  | `setTime("12:00:00", { hour: 9.5 })` | `"09:00:00"` | `""` |
+  | `setDate("2024-01-31", fields)`, where `const fields = { year: 2025, yaer: 1 }` | `"2025-01-31"` | `""` |
+  | `setZoned("2024-06-15T08:00:00+10:00[Australia/Sydney]", fields)`, where `const fields = { hour: 9, offset: "+10:00" }` | `"2024-06-15T09:00:00+10:00[Australia/Sydney]"` | `""` |
+  | `setDate("2024-03-10", Temporal.PlainDate.from("2025-06-01"))` | `"2024-03-10"` | `""` |
+  | `addDate("2024-01-31", Temporal.Duration.from("PT36H"))` | `"2024-02-01"` | `""` |
+  | `subtractDate("2024-01-31", Temporal.Duration.from("PT36H"))` | `"2024-01-30"` | `""` |
+  | `addTime("14:30:00", Temporal.Duration.from("P1DT1H"))` | `"15:30:00"` | `""` |
+  | `subtractTime("14:30:00", Temporal.Duration.from("P1DT1H"))` | `"13:30:00"` | `""` |
+  | `addUtc("2024-03-10T12:00:00Z", Object.create({ days: "5" }))` | `"2024-03-15T12:00:00Z"` | `""` |
+  
+  Migration:
+  
+  - **A fraction:** truncate or round it before the call. Temporal truncated it, so `Math.trunc` gives the 1.18 result: `setTime("12:00:00", { hour: Math.trunc(9.5) })` is `"09:00:00"`.
+  - **A property that is no field of the function**, such as a misspelt `yaer` beside a real field, or an inherited `calendar`: delete it. A misspelt key is usually a bug the old result hid. Spell it right.
+  - **An `offset` in `fields`:** delete it. `options.offset` says how the value's own offset is treated, and `options.disambiguation` picks between the two instants of a repeated wall-clock time: `setZoned("2024-06-15T08:00:00+10:00[Australia/Sydney]", { hour: 9 })` is `"2024-06-15T09:00:00+10:00[Australia/Sydney]"`.
+  - **A Temporal object as `fields`:** pass a plain object of the fields to set. `setDate("2024-03-10", { year: 2025, month: 6, day: 1 })` is `"2025-06-01"`. The 1.18 call set nothing.
+  - **An amount or a field value that is not a number**, such as `"5"` or `null` read from JSON: convert it to an integer number first. `addUtc("2024-03-10T12:00:00Z", { days: 5 })` is `"2024-03-15T12:00:00Z"`.
+  - **A `Temporal.Duration`, or any object whose units are getters or inherited, as `units`:** pass a plain object of the units the function takes. `addDate("2024-01-31", { days: 1 })` is `"2024-02-01"`, and `addTime("14:30:00", { hours: 1 })` is `"15:30:00"`. A duration whose nonzero units the function takes still works: `addDate("2024-01-31", Temporal.Duration.from("P1D"))` is `"2024-02-01"`.
+- 89eb29b: The 19 UTC and Unix clock readers that take no argument now always return a value. Their documentation no longer lists `""` as a result on failure, and they no longer contain a try/catch.
+  
+  Reading the UTC clock cannot fail on a conformant clock, so the documented `""` was a result no caller could receive. ECMA-262 defines `Date.now()` as a whole number of milliseconds within the range of a time value (±8.64e15 ms). TC39 Temporal builds `Temporal.Now.instant()` from that reading and keeps it inside the `Instant` range. None of these functions reads the time zone of the machine: `getUtcNow` formats the instant as it is, and the others convert it with an explicit `"UTC"`, which is always a valid time zone.
+  
+  The functions are:
+  
+  - **`utc`:** `getUtcNow`, `getUtcYear`, `getUtcMonth`, `getUtcDay`, `getUtcHour`, `getUtcMinute`, `getUtcSecond`, `getUtcMillisecond`, `getUtcMicrosecond` and `getUtcNanosecond`.
+  - **`unix`:** `getUnixYear`, `getUnixMonth`, `getUnixDay`, `getUnixHour`, `getUnixMinute`, `getUnixSecond`, `getUnixMillisecond`, `getUnixMicrosecond` and `getUnixNanosecond`.
+  
+  ```typescript
+  import { getUtcNow } from "@northguild/gmt";
+  
+  const now = getUtcNow(); // "2024-02-29T00:00:00Z"
+  
+  // Earlier releases documented "" on failure, so callers wrote a check like this one.
+  // It can never be true. Delete it.
+  if (!now) throw new Error("clock unavailable");
+  ```
+  
+  ### What this means for callers
+  
+  - **The declared return type is still `string`.** No call site stops compiling.
+  - **A check such as `if (!getUtcNow())` is now dead code.** You can delete it.
+  - **On a conformant clock the output is unchanged.** You can see a difference only if you replace `Date.now` with a function that returns a non-integer, or mock `Temporal.Now.instant` to throw in a test. These functions then throw, where they returned `""` before.
+  
+  You do not need to change any code.
+  
+  Unchanged: the readers that take an argument (`getUtcNowUnit`, `getUnixNowUnit`, `getUnixNow` and the `getZoned*` readers) and the readers of the system time zone (`getNow`, `getToday` and the other `plain` readers, and `getSystemTimeZone`) keep their empty result (`""` or `null`).
+- f9d5e51: Add `isValidUtcTimestamp`, a check that a string is a real UTC instant written `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else (Story CORE-78). That is the plain RFC 3339 spelling, the one readers other than Temporal expect. Use it for a timestamp from a request, or for one headed for storage.
+  
+  `isValidUtc` answers a wider question: can Temporal read this string as a UTC instant? It is also true for four forms outside RFC 3339 §5.6: a time without seconds, a comma before the fraction, an expanded `±YYYYYY` year and an RFC 9557 annotation. `isValidUtcTimestamp` is false for all four. `isValidUtc` does not change.
+  
+  ```typescript
+  import { isValidUtc, isValidUtcTimestamp } from "@northguild/gmt";
+  
+  isValidUtcTimestamp("2026-10-06T12:00:00Z"); // true
+  isValidUtcTimestamp("2026-10-06T12:00:00.123456789Z"); // true (nine fraction digits)
+  isValidUtcTimestamp("0000-01-01T00:00:00Z"); // true (year 0000)
+  
+  // The four forms `isValidUtc` accepts and this check does not.
+  isValidUtc("2026-10-06T12:00:00Z[Europe/Paris]"); // true
+  isValidUtcTimestamp("2026-10-06T12:00:00Z[Europe/Paris]"); // false (RFC 9557 annotation)
+  isValidUtcTimestamp("2026-10-06T12:00:00,5Z"); // false (comma before the fraction)
+  isValidUtcTimestamp("-005000-01-01T00:00:00Z"); // false (expanded year)
+  isValidUtcTimestamp("2026-10-06T12:00Z"); // false (no seconds)
+  
+  // Other spellings RFC 3339 allows, and instants that do not exist.
+  isValidUtcTimestamp("2026-10-06t12:00:00z"); // false (lower-case t and z)
+  isValidUtcTimestamp("2026-10-06T12:00:00+00:00"); // false (a numeric offset, not Z)
+  isValidUtcTimestamp("2026-02-30T00:00:00Z"); // false (February has no 30th)
+  isValidUtcTimestamp("2016-12-31T23:59:60Z"); // false (leap second)
+  ```
+  
+  - **The shape is one spelling of the RFC 3339 §5.6 `date-time`.** A four-digit year, `0000` to `9999`. An upper-case `T`. A time with seconds. An optional fraction of one to nine digits after a dot. An upper-case `Z`, with nothing after it. `Temporal.Instant.prototype.toString()`, called with no options, writes this shape for those years.
+  - **The instant is checked as well as the shape.** A day that does not exist is false. The `rfc3339DateTime` pattern alone matches 30 February. Every string that is true here is also true for `isValidUtc`.
+  - **It is not the whole RFC 3339 grammar.** A lower-case `t` or `z`, a space in place of the `T`, and a numeric offset are all false, `+00:00` included. `isValidRfc3339DateTime` checks the whole grammar, with the same two GMT limits.
+  - **A leap second is false**, as everywhere in GMT. Temporal would read `:60` as `:59`.
+  - **It does not pick one spelling of an instant.** `12:00:00Z` and `12:00:00.000Z` are the same instant, and both are true.
+  - **A reader's range and precision are its own.** A reader may still refuse or round a string that is true here: PostgreSQL has no year `0000` and keeps microseconds. See `toPgMicroseconds` and the `precision/` functions.
+
+### Patch Changes
+
+- c365ad3: Accept a function as an options bag or an object argument, as Temporal and `Intl` do.
+  
+  ECMA-262's GetOptionsObject accepts any Object, and a function is an Object: Temporal reads `Object.assign(() => 0, { largestUnit: "hours" })` as `{ largestUnit: "hours" }`. GMT checked `typeof options === "object"`, so every function that takes options returned its sentinel for one. The same narrow check refused a function as a property bag or record: the `units` of `addDate` and its siblings, a `relativeTo` property bag, an interval, a leg, a business calendar, an operating schedule, a punctuality pair.
+  
+  ```typescript
+  import { addDate, convertUtcToPlainDate } from "@northguild/gmt";
+  
+  convertUtcToPlainDate("2024-02-29T00:00:00Z", Object.assign(() => 0, { timeZone: "America/New_York" }));
+  // "2024-02-28", as with { timeZone: "America/New_York" }; it was ""
+  
+  addDate("2024-01-31", Object.assign(() => 0, { months: 1 })); // "2024-02-29"; it was ""
+  ```
+  
+  - Every options bag, property bag and record argument is checked by one helper that accepts any Object, functions included. `null`, strings, numbers, booleans, symbols and bigints are still refused with the function's sentinel.
+  - An operating schedule's `weekly` record reads each weekday `"1"`–`"7"` with an ordinary property get, as Temporal reads a field list, and refuses an unknown key only when it is an own enumerable one. So a function's built-in `length` and `name` are not read as unknown weekdays, and a non-enumerable weekday still applies. An inherited weekday now applies too; it used to be ignored.
+  - A member is read with an ordinary property get, as Temporal's GetOption reads one. A `cutoffSchedule` entry written as a function is therefore labelled with the function's own `name` (`""` for an anonymous one), as `{ name: "", offset }` is.
+- ac0425f: Fix three defects. A UTC offset with seconds, which the library itself returns, is now accepted where a time zone is read and the result has no zone in it. Every function that returns a year now writes it the way Temporal does, which changes the result for a year below 1000 or above 9999. The operating-hours functions now see a night window at the very start of the range of instants Temporal supports.
+  
+  ### A stored offset is accepted where a time zone is
+  
+  `getTimeZoneOffset`, `getZonedOffset` and `toOffsetInstant` return a zone's real offset, and that offset can carry seconds. `Africa/Monrovia` stood at `-00:44:30` until 1972, and most time zones report an offset with seconds for dates before they adopted a standard time. A caller who passed that offset back as a time zone got the empty result. So did a caller who wrote a whole-minute offset with seconds, such as `+05:30:00`.
+  
+  ```typescript
+  import {
+    classifyLocal,
+    convertUtcToPlainDateTime,
+    getTimeZoneOffset,
+    resolveLocal,
+    toOffsetInstant,
+  } from "@northguild/gmt";
+  
+  getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z"); // "-00:44:30"
+  
+  resolveLocal("1970-01-01T12:00:00", "-00:44:30"); // "1970-01-01T12:44:30Z" (was "")
+  resolveLocal("1970-01-01T12:00:00", "Africa/Monrovia"); // "1970-01-01T12:44:30Z" (the same instant, as before)
+  resolveLocal("1970-01-01T12:00:00", "+05:30:00"); // "1970-01-01T06:30:00Z" (was "")
+  classifyLocal("1970-01-01T12:00:00", "-00:44:30"); // "unique" (was null)
+  toOffsetInstant("1970-01-01T12:44:30Z", "-00:44:30"); // { instant: "1970-01-01T12:44:30Z", offset: "-00:44:30" } (was null)
+  convertUtcToPlainDateTime("1970-01-01T12:44:30Z", { timeZone: "-00:44:30" }); // "1970-01-01T12:00:00" (was "")
+  ```
+  
+  - **The 84 functions whose result has no zone in it** now accept, in the time zone position, anything `isValidTimeZone` or `isValidUtcOffset` accepts, and every input that worked before returns what it returned before. They are `resolveLocal`, `classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset`, the `getZoned*` field readers, the `utc/` and `unix/` functions that convert to a plain value, parse a field or calculate, `floorToZone`, `bucketRange`, the operating-hours functions, `freeTimeExpiry`, `chargeableDays` and `bolTimestamp`.
+  - **The 28 functions that need a time zone identifier** still return the empty result for an offset with seconds, and their documentation now says why: 23 write the zone into their result (`convertUtcToZoned` and the like, and the functions that take a business calendar), and 5 pass it to `Intl.DateTimeFormat` (`formatUtc`, `formatCalendarUtc`, `formatUnix`, `formatCalendarUnix` and `formatTimeZoneName`).
+  - **An offset with seconds is still not a time zone.** `isValidTimeZone("-00:44:30")` is `false` and `isValidUtcOffset("-00:44:30")` is `true`. To check what a function with a zoneless result accepts, use `isValidTimeZone(x) || isValidUtcOffset(x)`.
+  - **One limit.** With an offset with seconds, a function that does arithmetic returns the empty result within the offset's seconds (under a minute) of one end of the range of instants Temporal supports: the last instant for an offset east of UTC, the first for one west. A function that only reads a value has no limit, and neither have `resolveLocal`, `classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset` and `isBetweenUnix`.
+  
+  ```typescript
+  import { convertUtcToZoned, fromOffsetInstant } from "@northguild/gmt";
+  
+  convertUtcToZoned("1970-01-01T12:44:30Z", "-00:44:30"); // "" (a written zone cannot carry seconds)
+  convertUtcToZoned("1970-01-01T12:44:30Z", "Africa/Monrovia"); // "1970-01-01T12:00:00-00:45[Africa/Monrovia]"
+  fromOffsetInstant({ instant: "1970-01-01T12:44:30Z", offset: "-00:44:30" }); // "1970-01-01T12:00:00-00:44:30"
+  ```
+  
+  ### A year is written the same way everywhere
+  
+  Temporal writes a year with four digits from 0000 to 9999, and with a sign and six digits outside that range. Some functions wrote the year as a bare number, and some wrote a malformed one. All of them now write Temporal's form.
+  
+  ```typescript
+  import {
+    convertUtcToPlainDate,
+    convertUtcToPlainDateTime,
+    parseUnitFromDate,
+    parseYearFromDate,
+    parseYearFromUtc,
+  } from "@northguild/gmt";
+  
+  parseYearFromDate("0005-06-01"); // "0005" (was "5")
+  parseYearFromDate("0999-06-01"); // "0999" (was "999")
+  parseYearFromDate("+010000-01-01"); // "+010000" (was "10000")
+  parseYearFromUtc("-000005-01-01T00:00:00Z"); // "-000005" (was "-5")
+  parseUnitFromDate("0005-06-01", "year"); // "0005" (was "5")
+  parseYearFromDate("2024-03-15"); // "2024" (unchanged)
+  
+  convertUtcToPlainDate("-000005-01-01T00:00:00Z"); // "-000005-01-01" (was "00-5-01-01")
+  convertUtcToPlainDate("+010000-01-01T00:00:00Z"); // "+010000-01-01" (was "10000-01-01", which isValidDate rejects)
+  convertUtcToPlainDateTime("+010000-01-01T00:00:00Z"); // "+010000-01-01T00:00:00" (was "10000-01-01T00:00:00")
+  ```
+  
+  - **A year from 1000 to 9999 is unchanged**, in every function.
+  - **A year from 0000 to 0999 now has four digits**, and a year outside 0000–9999 has a sign and six digits, in these 14 places:
+    - `parseYearFromDate`, `parseYearFromDateTime`, `parseYearFromZoned`, `parseYearFromUtc` and `parseYearFromUnix`.
+    - The `"year"` unit of `parseUnitFromDate`, `parseUnitFromDateTime`, `parseUnitFromZoned`, `parseUnitFromUtc` and `parseUnitFromUnix`.
+    - The `"year"` unit of `getNowUnit`, `getUtcNowUnit`, `getUnixNowUnit` and `getZonedNowUnit`.
+  - **Only a year outside 0000–9999 changes** in `convertUtcToPlainDate`, `convertUtcToPlainDateTime`, `getYear`, `getUtcYear`, `getUnixYear` and `getZonedYear`. They already wrote four digits inside that range.
+  - **The other units are unchanged.** A month, a day, an hour and the rest are written as before.
+  
+  Check any code that reads a year below 1000 or above 9999 from one of these functions and compares it as text, or stores it. `Number(year)` gives the same number as before.
+  
+  ### Operating hours at the start of the range
+  
+  At the first instant Temporal supports, the seven operating-hours functions missed a window that opened on the previous local date and runs past midnight. They now see it, cut to the first instant.
+  
+  ```typescript
+  import { isOpenAt, nextCloseAt, operatingIntervals } from "@northguild/gmt";
+  
+  const night = [{ from: "22:00", to: "06:00" }];
+  const schedule = {
+    timeZone: "UTC",
+    weekly: { 1: night, 2: night, 3: night, 4: night, 5: night, 6: night, 7: night },
+  };
+  
+  isOpenAt("-271821-04-20T01:00:00Z", schedule); // true (was false)
+  nextCloseAt("-271821-04-20T01:00:00Z", schedule); // "-271821-04-20T06:00:00Z"
+  operatingIntervals(schedule, { start: "-271821-04-20T00:00:00Z", end: "-271821-04-20T12:00:00Z" });
+  // [{ start: "-271821-04-20T00:00:00Z", end: "-271821-04-20T06:00:00Z" }] (was [])
+  ```
+  
+  Only a schedule read on the first local date of that range, in the year -271821, is affected.
+- 89eb29b: `getSystemTimeZone()` now returns `""` when the host reports a time zone that is not usable, as its documentation says. It used to pass ICU's placeholder `"Etc/Unknown"` through.
+  
+  Node reports `"Etc/Unknown"` when the `TZ` environment variable is set but empty, for example `TZ: ${TZ}` in a compose file where the variable is not defined. `"Etc/Unknown"` is not an IANA time zone, so Temporal and `Intl.DateTimeFormat` both throw a `RangeError` when it is passed to them.
+  
+  ```typescript
+  import { getSystemTimeZone } from "@northguild/gmt";
+  
+  // On a host started with TZ=""
+  getSystemTimeZone(); // "" (was "Etc/Unknown")
+  ```
+  
+  `getSystemTimeZone()` now returns a zone only when `isValidTimeZone` accepts it. Every other function is unchanged: `getNow`, `getToday` and the other readers of the system time zone already returned `""` or `null` on such a host.
+- 7d234be: Check the `units` object of the 12 `add*` and `subtract*` functions, and the `fields` object of the six `set*` functions, before TC39 Temporal reads them. Each property is now read once, with an ordinary property get and in the order Temporal reads them, and every value read is checked. Three things change:
+  
+  - **An `add*` or `subtract*` function no longer applies a unit it does not take, or an amount that is not a number, when the object inherits it.**
+  - **A `set*` function no longer returns its value unchanged** for an object that does set a field, or for an argument Temporal's `with` refuses.
+  - **A `set*` function now refuses what Temporal would quietly accept**: a value Temporal would convert, such as `"2025"` or `null`; a key that is no field of the function, even beside one that is; and an `offset`. The `add*` functions already held their `units` to this rule. A plain object of own fields with the right types gives the same result as before.
+  
+  Some of these changes make a call that compiles return the sentinel where it returned a value. **Breaking changes** in the entry that adds `totalUnits` lists them, with a migration for each.
+  
+  Temporal reads a duration-like object by getting each of the ten unit names from it (ToTemporalPartialDurationRecord). Its `with` methods get each field name the same way. A property get finds an own property, an inherited one, a non-enumerable one and a getter alike. GMT checked the object's own enumerable keys only. In an `add*` function, a value that check never saw still reached Temporal, and Temporal applied it. In a `set*` function, an object with no own field was read as setting nothing, and the value came back unchanged.
+  
+  A Temporal object has no own keys, so it passed the check too. Temporal reads a `Temporal.Duration` from its internal slots, not from its getters (ToTemporalDuration), so all its units reached Temporal unchecked. Temporal's `with` refuses a `Temporal.PlainDate` (IsPartialTemporalObject), but GMT read it as setting nothing and returned the value unchanged.
+  
+  ### The `units` of `add*` and `subtract*`
+  
+  The functions are `addDate`, `subtractDate`, `addTime`, `subtractTime`, `addDateTime`, `subtractDateTime`, `addUtc`, `subtractUtc`, `addUnix`, `subtractUnix`, `addZoned` and `subtractZoned`. Each one now reads the ten unit names once, checks every value it read, and passes Temporal only those values.
+  
+  | Call | 1.18 | 1.19 |
+  | --- | --- | --- |
+  | `addDate("2024-01-31", Temporal.Duration.from("PT36H"))` | `"2024-02-01"` | `""` |
+  | `subtractDate("2024-01-31", Temporal.Duration.from("PT36H"))` | `"2024-01-30"` | `""` |
+  | `addTime("14:30:00", Temporal.Duration.from("P1DT1H"))` | `"15:30:00"` | `""` |
+  | `subtractTime("14:30:00", Temporal.Duration.from("P1DT1H"))` | `"13:30:00"` | `""` |
+  | `addDate("2024-01-31", Object.create({ hours: 36 }))` | `"2024-02-01"` | `""` |
+  | `addUtc("2024-03-10T12:00:00Z", Object.create({ days: "5" }))` | `"2024-03-15T12:00:00Z"` | `""` |
+  | `addUtc("2024-03-10T12:00:00Z", { days: 5, hours: undefined })` | `""` | `"2024-03-15T12:00:00Z"` |
+  
+  - **A unit outside the function's set is refused wherever it is read from.** `addDate` and `subtractDate` take years, months, weeks and days. `addTime` and `subtractTime` take hours down to nanoseconds. `addDate("2024-01-31", { hours: 36 })` has always returned `""`. The same 36 hours, inherited or carried by a `Temporal.Duration`, added one day. `addTime` and `subtractTime` dropped the day of a `Temporal.Duration` and applied the rest.
+  - **An amount that is not a number is refused wherever it is read from.** `{ days: "5" }` has always returned the sentinel. An inherited `"5"` reached Temporal, which converts a string to a number, and five days were added. This applies to all 12 functions.
+  - **A unit the function takes, set to `undefined`, is absent**, as Temporal reads it. This holds in all 12 functions: `addDate("2024-01-31", { days: 5, years: undefined })` is `"2024-02-05"`, and `{ days: 5, hours: undefined }` reads as `{ days: 5 }` in the eight functions that take all ten units. Both returned the sentinel. An own key outside the function's set still returns the sentinel, whatever its value.
+  - **An object with no unit present still returns the sentinel**: `{}`, and `{ days: undefined }`.
+  - **A `Temporal.Duration` still works when its nonzero fields are units the function takes.** `addDate("2024-01-31", Temporal.Duration.from("P1D"))` is `"2024-02-01"`. The eight functions that take all ten units accept any `Temporal.Duration`, as before.
+  - **Unchanged:** every call with a plain object written out, such as `{ days: 5 }`. An own key that is misspelt, or that names a unit the function does not take, still returns the sentinel, whatever its value: `addDate("2024-01-31", { days: 1, hours: undefined })` is `""`.
+  - The sentinel is `""`, and `null` for `addUnix` and `subtractUnix`.
+  
+  ### The `fields` of `set*`
+  
+  The functions are `setDate`, `setTime`, `setDateTime`, `setUtc`, `setUnix` and `setZoned`. Each one now reads every property Temporal's `with` reads, once, checks every value it read, and passes Temporal only the fields the function takes. An object that sets no field still returns the value unchanged, where Temporal's `with` throws.
+  
+  | Call | 1.18 | 1.19 |
+  | --- | --- | --- |
+  | `setDate("2024-03-10", Object.create({ year: 2025 }))` | `"2024-03-10"` | `"2025-03-10"` |
+  | `setDate("2024-03-10", Temporal.PlainDate.from("2025-06-01"))` | `"2024-03-10"` | `""` |
+  | `setDate("2024-03-10", Object.create({ calendar: "iso8601" }))` | `"2024-03-10"` | `""` |
+  | `setDate("2024-03-10", 5)` | `"2024-03-10"` | `""` |
+  | `setDate("2024-03-10", { year: undefined })` | `""` | `"2024-03-10"` |
+  | `setDate("2024-01-31", { year: null })` | `"0000-01-31"` | `""` |
+  | `setDate("2024-01-31", { year: "2025" })` | `"2025-01-31"` | `""` |
+  | `setTime("12:00:00", { hour: 9.5 })` | `"09:00:00"` | `""` |
+  | `setDate("2024-01-31", { year: 2025, yaer: 1 })` | `"2025-01-31"` | `""` |
+  | `setDate("2024-03-10", { year: 2025, hour: 5 })` | `"2025-03-10"` | `""` |
+  | `setZoned("2024-06-15T08:00:00+10:00[Australia/Sydney]", { hour: 9, offset: "+10:00" })` | `"2024-06-15T09:00:00+10:00[Australia/Sydney]"` | `""` |
+  
+  The other functions change in the same way.
+  
+  Fields GMT now reads as Temporal does:
+  
+  - **An inherited field, a non-enumerable field and a field that is a getter are set**, as Temporal's `with` sets them. The function used to ignore such a field and return the value unchanged, with no sign that nothing was set.
+  - **That holds close to the last instant Temporal supports**, in `setZoned` and `setUnix` too: `setZoned("+275760-09-13T08:00:00+10:00[Australia/Sydney]", Object.create({ hour: 9 }))` is `"+275760-09-13T09:00:00+10:00[Australia/Sydney]"`.
+  - **A field set to `undefined` is absent.** Temporal's PrepareCalendarFields counts a field only when its value is not `undefined`. So `{ year: undefined }` is a no-op, like `{}`. It returned the sentinel.
+  - **A Temporal object returns the sentinel.** Temporal's `with` refuses one (IsPartialTemporalObject). That covers `Temporal.PlainDate`, `PlainTime`, `PlainDateTime`, `PlainYearMonth`, `PlainMonthDay` and `ZonedDateTime`. It used to be a no-op.
+  - **An inherited `calendar` or `timeZone` property returns the sentinel**, as an own one always has. It used to be a no-op.
+  - **A value that is not an object returns the sentinel.** A number, a boolean, a bigint, a symbol and an empty string used to be a no-op.
+  
+  What GMT now refuses where Temporal would accept it, the same rule the `units` of `add*` follow:
+  
+  - **A value is not converted.** `monthCode` must be a string, and every other field an integer number. `null`, a numeric string, a boolean and a fraction return the sentinel. Temporal would read `null` as 0, `"2025"` as 2025 and `true` as 1, and cut 2025.5 to 2025. A bigint, `NaN` and an infinity return the sentinel too, as they did in 1.18, because Temporal throws for them.
+  - **An own key that is no field of the function returns the sentinel, even beside a field.** A misspelt key used to return the sentinel only when no field was beside it. Beside a real field, Temporal ignored it, so `{ year: 2025, yaer: 1 }` set the year and the typo went unnoticed.
+  - **A field the function does not take returns the sentinel, alone or beside a field it does take, and wherever it is read from.** That is an `hour` in `setDate`, a `year` in `setTime`, and an `era` or `eraYear` in any of the six. Temporal ignores such a field beside one it reads, and an inherited one used to be a no-op.
+  - **An `offset` in `fields` returns the sentinel in `setUtc`, `setUnix` and `setZoned`.** Their `fields` type has never had one. In `setZoned` and `setUnix`, `options.offset` says how the value's own offset is treated, and `options.disambiguation` picks between the two instants of a repeated wall-clock time. A UTC instant's offset is always `+00:00`. `setZoned` used to apply an `offset` passed in `fields`.
+  
+  Unchanged:
+  
+  - **Every plain object with own fields of the right type gives the result it gave in 1.18**: integer numbers, and a string `monthCode`.
+  - **A number too large for its field still follows `overflow`.** `setDate("2024-01-31", { month: 13 })` is `"2024-12-31"`, and `""` with `{ overflow: "reject" }`. A month or a day below 1, and a date outside Temporal's range, return the sentinel under either setting, as before.
+  - **`{}` is a no-op**, and so is an object whose only key is a symbol.
+  - The sentinel is `""`, and `null` for `setUnix`.
+  - `era` and `eraYear` also leave the `fields` type of five of these functions. No call could ever set them. See breaking change 2 in the entry that adds `totalUnits`.
+
 ## 1.18.0
 
 ### Minor Changes

@@ -4,18 +4,17 @@ description: >
   Timezone-aware operations — zoned now, zoned formatting, plain↔zoned↔UTC↔Unix
   conversion, DST disambiguation, toOffsetInstant, classifyLocal/resolveLocal,
   real boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
-  local day, floorToZone/bucketRange, calendar-annotated strings, transport
-  legs (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery),
-  cut-offs (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), punctuality
+  local day, floorToZone/bucketRange, calendar-annotated strings, transport legs
+  (transitTime, etaAtZone, dwellTime, crossingTime, scheduleDelivery), cut-offs
+  (cutoffAt, cutoffSchedule, isPastCutoff, timeToCutoff), punctuality
   (scheduleDeviation, classifyPunctuality, punctualityRate, bestAvailable,
-  estimateDrift over PLN/EST/REQ/ACT, nextDeparture), free time
-  (freeTimeExpiry, chargeableDays, demurrageClock), billingTimeline,
-  bolTimestamp, multimodalETA, EDI timestamps (parseEdifactDateTime,
-  parseX12DateAndTime, x12TimeCodeOffset, parseEpcisEvent,
-  classify*/format*/isValid*), operating hours (OperatingSchedule,
-  recurringWindows, operatingIntervals, isOpenAt, nextOpenAt, nextCloseAt,
-  operatingTimeBetween, addOperatingTime), and daylight time
-  (isInDaylightSaving, hasDaylightSaving).
+  estimateDrift over PLN/EST/REQ/ACT, nextDeparture), free time (freeTimeExpiry,
+  chargeableDays, demurrageClock), billingTimeline, bolTimestamp, multimodalETA,
+  EDI timestamps (parseEdifactDateTime, parseX12DateAndTime, x12TimeCodeOffset,
+  parseEpcisEvent, classify*/format*/isValid*), operating hours
+  (OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
+  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime), and daylight
+  time (isInDaylightSaving, hasDaylightSaving).
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'
@@ -54,7 +53,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.18.0'
+  library_version: '1.19.0'
 ---
 
 # GMT Timezone
