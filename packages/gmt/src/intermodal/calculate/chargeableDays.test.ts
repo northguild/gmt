@@ -374,6 +374,8 @@ describe("chargeableDays", () => {
     },
   );
 
+  // Worst CI run 6 s on the slowest runner: the first call lays out 7,305 dates. The second, 10,958
+  // days, is refused from its span without walking. The timeout is three times that and more.
   it("walks a decades-long dwell but gives up past 10,000 local days", () => {
     // 2000-01-01 to 2020-01-01 touches 7,305 dates: one free, the rest charged.
     expect(
@@ -388,7 +390,39 @@ describe("chargeableDays", () => {
         timeZone: "UTC",
       }),
     ).toBeNull();
-  });
+  }, 30_000);
+
+  // The early exit decides from the span, so it must never refuse a dwell the walk answers: one that
+  // touches 10,000 local days is answered and one that touches 10,001 is not. Samoa deleted
+  // 30 December 2011, so its first row spans 10,001 calendar dates but only 10,000 days the clock
+  // showed, and is answered. Goose Bay repeated part of 7 November 2010, which counts once.
+  // Worst case about 1 s a row locally, a full walk each; the timeout is far above that.
+  it.each`
+    timeZone               | clockStart                | clockEnd                  | expected
+    ${"UTC"}               | ${"2000-01-01T00:00:00Z"} | ${"2027-05-19T00:00:00Z"} | ${{ freeDaysUsed: 3, chargeableDays: 9997 }}
+    ${"UTC"}               | ${"2000-01-01T00:00:00Z"} | ${"2027-05-20T00:00:00Z"} | ${null}
+    ${"Pacific/Apia"}      | ${"1990-06-01T19:00:00Z"} | ${"2017-10-16T18:00:00Z"} | ${{ freeDaysUsed: 3, chargeableDays: 9997 }}
+    ${"Pacific/Apia"}      | ${"1990-06-01T19:00:00Z"} | ${"2017-10-17T18:00:00Z"} | ${null}
+    ${"America/Goose_Bay"} | ${"1985-01-01T04:30:00Z"} | ${"2012-05-18T03:30:00Z"} | ${{ freeDaysUsed: 3, chargeableDays: 9997 }}
+    ${"America/Goose_Bay"} | ${"1985-01-01T04:30:00Z"} | ${"2012-05-19T03:30:00Z"} | ${null}
+  `(
+    "returns $expected for $clockStart to $clockEnd in $timeZone, either side of 10,000 local days",
+    ({ timeZone, clockStart, clockEnd, expected }) => {
+      const result = chargeableDays(clockStart, clockEnd, 3, {
+        ...calendar,
+        timeZone,
+      });
+      expect(
+        result === null
+          ? null
+          : {
+              freeDaysUsed: result.freeDaysUsed,
+              chargeableDays: result.chargeableDays,
+            },
+      ).toEqual(expected);
+    },
+    30_000,
+  );
 
   it.each`
     clockStart               | clockEnd                 | freeDays   | options                                                                         | reason

@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { referenceRoutes } from "~/generated/reference/route-manifest";
 import {
   DEFAULT_RESET_FORMAT_ID,

@@ -110,7 +110,6 @@ Add comprehensive tests:
 
 ```ts
 // packages/gmt/src/plain/calculate/getHalfYear.test.ts
-import { describe, it, expect } from "vitest";
 import { getHalfYear } from "./getHalfYear";
 
 describe("getHalfYear", () => {

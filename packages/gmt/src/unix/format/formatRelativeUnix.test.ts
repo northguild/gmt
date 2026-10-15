@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";

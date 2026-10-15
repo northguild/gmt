@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { checkRateLimit, resetRateLimitState } from "./rate-limit";
 import {
   RATE_LIMIT_MAX,

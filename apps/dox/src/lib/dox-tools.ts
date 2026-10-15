@@ -380,6 +380,86 @@ export const showX12TimeReaderInput = z
   );
 
 /**
+ * The Demurrage Clock: a container's events, and the four clocks that run
+ * between them, each read by `demurrageClock`. `direction` is required here as
+ * it is in the library: the same clock runs between different events on each
+ * leg, so a model must say which the reader meant and never infer it from the
+ * events. `type` and `scope` are the library's names; a value it does not read is
+ * the widget's sentinel to show, not a reason to refuse the call. Each `at` carries
+ * its offset or `Z`. `zone` is the terminal's clock, a display zone that is not an
+ * argument of the library call, and is passed only when the reader named one.
+ */
+export const showDemurrageClockInput = z.object({
+  events: z
+    .array(
+      z.object({
+        type: z.string().min(1).max(32),
+        at: dateTimeSchema,
+      }),
+    )
+    .min(1)
+    .max(6),
+  scope: z.enum(["demurrage", "detention", "storage", "combined"]),
+  direction: z.enum(["import", "export"]),
+  startEvent: z.enum(["discharged", "available"]).optional(),
+  zone: zoneSchema.optional(),
+});
+
+/**
+ * A place for `bolTimestamp`: an IANA zone id or a UTC offset (`+08:00`). This
+ * checks shape only, as `zoneSchema` does, and it also takes an offset. A zone
+ * the library does not read is not a reason to refuse the call: the B/L Date
+ * Stamp shows its own `NO SIGNAL`, with the reason, which is the lesson.
+ */
+export const placeSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(
+    /^[A-Za-z0-9_+:-]+(\/[A-Za-z0-9_+-]+){0,2}$/,
+    "must look like an IANA zone identifier or a UTC offset, e.g. America/New_York or +08:00",
+  );
+
+/**
+ * The B/L Date Stamp: a moment, the event it stamps and the place of the event,
+ * read by `bolTimestamp`. `value` carries its offset or `Z`. `timeZone` is the
+ * place as the reader named it, a zone id or an offset, and is never guessed
+ * from a port. `zone2` to `zone4` are other calendars to set beside it. `latest`
+ * is the reader's own latest date allowed.
+ */
+export const showBlDateStampInput = z.object({
+  value: dateTimeSchema,
+  event: z.enum(["shippedOnBoard", "received", "issue"]),
+  timeZone: placeSchema,
+  zone2: placeSchema.optional(),
+  zone3: placeSchema.optional(),
+  zone4: placeSchema.optional(),
+  latest: plainDateSchema.optional(),
+});
+
+/**
+ * The EPCIS Event Reader: the two required time fields of a GS1 EPCIS event,
+ * read by `parseEpcisEvent` and written back by `formatEpcisEvent`. Both values
+ * are passed exactly as the reader gave them, and a value the library does not
+ * read is the widget's `NO SIGNAL` to show, not a reason to refuse the call.
+ * `eventTimeZoneOffset` is optional here because leaving it out is the lesson:
+ * the library does not assume UTC, and the tool is never given a default.
+ */
+export const showEpcisEventReaderInput = z.object({
+  eventTime: z.string().min(1).max(64),
+  eventTimeZoneOffset: z.string().min(1).max(16).optional(),
+});
+
+/**
+ * The Journey Split: the Delivery Scheduler's legs, with the journey's hours
+ * sorted into moving and waiting. The legs are the same, so the schema is the
+ * same one: `multimodalETA` takes the legs `scheduleDelivery` takes. `departure`
+ * is optional on every leg here, as it is there, and which leg needs one is the
+ * widget's sentinel to show.
+ */
+export const showJourneySplitInput = showDeliverySchedulerInput;
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -413,7 +493,11 @@ export type DoxToolName =
   | "showDepartureBoard"
   | "showZonePlanner"
   | "showDtmDecoder"
-  | "showX12TimeReader";
+  | "showX12TimeReader"
+  | "showDemurrageClock"
+  | "showBlDateStamp"
+  | "showEpcisEventReader"
+  | "showJourneySplit";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -436,6 +520,10 @@ export const DOX_TOOL_INPUTS = {
   showZonePlanner: showZonePlannerInput,
   showDtmDecoder: showDtmDecoderInput,
   showX12TimeReader: showX12TimeReaderInput,
+  showDemurrageClock: showDemurrageClockInput,
+  showBlDateStamp: showBlDateStampInput,
+  showEpcisEventReader: showEpcisEventReaderInput,
+  showJourneySplit: showJourneySplitInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -585,6 +673,34 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what an X12 date, time or time code means, what a 623 time code such as ET, LT, UT or 13 states, what instant the date, time and time code of an AT7, G62 or DTM name, or what a DTP value under a 1250 qualifier such as D8, RD8 or DTS means",
     args: "date (element 373 as sent, such as 20240615; leave out when only a time is sent), time (element 337 as sent, such as 1430; leave out when only a date is sent), timeCode (optional element 623 time code such as ET, LT, UT or 13, exactly as sent), zone, zone2, zone3 and zone4 (optional IANA ids to read a local time in; only zones the reader named: never choose one from the time code, a place or a partner), format and value (a DTP value: the 1250 qualifier such as RD8, and the element 1251 value such as 20240615-20240620).",
   },
+  {
+    name: "showDemurrageClock",
+    purpose:
+      "A container's events and the four clocks that run between them, each read by demurrageClock: which two events bound demurrage, detention, storage and the merged clock, drawn as half-open bars under one rail of events over the terminal's local days, and a link to count the chosen clock's days in the Free Time Ledger.",
+    when: "the reader asks which events a demurrage, detention, storage or combined clock runs between, or how detention differs from demurrage",
+    args: "events (1 to 6 of { type, at }: type is one of discharged, available, gatedOut, emptyReturned, emptyReleased, gatedIn, loaded; at is an ISO instant with Z, an offset, or an offset and a bracketed zone: never a bare local time), scope (demurrage | detention | storage | combined), direction (import | export: required, and never guessed from the events; ask if the reader did not say), startEvent (optional, discharged | available: where an import demurrage, storage or combined clock starts), zone (optional IANA id of the terminal, only when the reader named one: it sets the day columns and the local times, and is not an argument of demurrageClock)",
+  },
+  {
+    name: "showBlDateStamp",
+    purpose:
+      "A moment and the place of an event, and the calendar date bolTimestamp gives for it, the date a bill of lading carries, set against the UTC date and up to three other calendars and drawn as lanes of local days on one time axis, with a slider that moves the moment.",
+    when: "the reader asks what date goes on a bill of lading, or why a B/L date differs from a UTC timestamp",
+    args: "value (the moment: an ISO instant with Z, an offset, or an offset and a bracketed zone: never a bare local time), event (shippedOnBoard | received | issue: the DCSA fields shippedOnBoardDate, receivedForShipmentDate and issueDate), timeZone (the place of the event as the reader named it: an IANA id or a UTC offset such as +08:00; never guessed from a port or a city), zone2, zone3 and zone4 (optional other calendars to set beside it, each an IANA id or an offset), latest (optional YYYY-MM-DD, the latest date allowed, the reader's own date)",
+  },
+  {
+    name: "showEpcisEventReader",
+    purpose:
+      "The two required time fields of a GS1 EPCIS 2.0 event, eventTime and eventTimeZoneOffset, read by parseEpcisEvent: whether the offset is stated, the instant, the offset and the local time at the event, the same moment on a UTC day rail and a local day rail with the two dates compared, and the fields written back by formatEpcisEvent, with a link to read the moment as a shipped on board date.",
+    when: "the reader asks what a GS1 EPCIS eventTime and eventTimeZoneOffset mean, what local time an EPCIS event happened at, or why an event needs both fields",
+    args: "eventTime (as the reader gave it, such as 2024-06-15T23:30:00Z; at most 64 characters), eventTimeZoneOffset (as the reader gave it, such as +02:00; leave it out when the reader gave none: never fill it, and never assume UTC)",
+  },
+  {
+    name: "showJourneySplit",
+    purpose:
+      "A multi-leg journey's hours sorted two ways on one scale, in the order they happen and gathered into moving and waiting: multimodalETA gives the ETA, the moving time and the waiting time, scheduleDelivery the instant each leg leaves and arrives, and diffUtcAsDuration each wait, split into the handling the reader stated and the wait for a scheduled departure, with a link to open the same legs in the Delivery Scheduler.",
+    when: "the reader asks how much of a multi-leg journey is moving and how much is waiting, or what the total transit and dwell of a multimodal move are",
+    args: "legs (1 to 4, in travel order): departure (ISO date-time with an offset or a bracketed zone; required on the first leg; on a later leg only when it has a scheduled departure), duration (ISO 8601 time units such as PT46H or P11D; no months or years), timeZone (IANA id where the leg arrives), dwellAfter (optional handling time at the hand-off after the leg), mode (optional tag such as truck, ship or rail). startTimeZone (optional IANA id a zoneless first departure is read in). Never invent a zone: ask if the reader did not name one.",
+  },
 ];
 
 /**
@@ -673,6 +789,22 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[19].purpose,
     inputSchema: showX12TimeReaderInput,
   }),
+  showDemurrageClock: tool({
+    description: DOX_TOOL_DOCS[20].purpose,
+    inputSchema: showDemurrageClockInput,
+  }),
+  showBlDateStamp: tool({
+    description: DOX_TOOL_DOCS[21].purpose,
+    inputSchema: showBlDateStampInput,
+  }),
+  showEpcisEventReader: tool({
+    description: DOX_TOOL_DOCS[22].purpose,
+    inputSchema: showEpcisEventReaderInput,
+  }),
+  showJourneySplit: tool({
+    description: DOX_TOOL_DOCS[23].purpose,
+    inputSchema: showJourneySplitInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -716,6 +848,10 @@ export const ENABLED_TOOL_NAMES = [
   "showZonePlanner",
   "showDtmDecoder",
   "showX12TimeReader",
+  "showDemurrageClock",
+  "showBlDateStamp",
+  "showEpcisEventReader",
+  "showJourneySplit",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

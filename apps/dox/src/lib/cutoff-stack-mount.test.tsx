@@ -5,7 +5,6 @@
  * assert, against the real `@northguild/gmt`. Every preset's printed call
  * and result is an appendix Z row.
  */
-/// <reference types="vitest/globals" />
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";

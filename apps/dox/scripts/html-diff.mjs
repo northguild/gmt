@@ -102,6 +102,22 @@ const PAGES = [
     path: "tools/x12-time-reader",
     widget: "gmt-x12-time-reader gmt-widget",
   },
+  {
+    path: "tools/demurrage-clock",
+    widget: "gmt-demurrage-clock gmt-widget",
+  },
+  {
+    path: "tools/bl-date-stamp",
+    widget: "gmt-bl-date-stamp gmt-widget",
+  },
+  {
+    path: "tools/epcis-event-reader",
+    widget: "gmt-epcis-event-reader gmt-widget",
+  },
+  {
+    path: "tools/journey-split",
+    widget: "gmt-journey-split gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

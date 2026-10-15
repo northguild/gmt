@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Nothing in this repo reaches for the native `Date`.
  *
@@ -26,7 +24,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 
 // .../apps/dox/src/lib/date-ban.test.ts -> apps/dox -> the repo root.
 const DOX = dirname(dirname(dirname(fileURLToPath(import.meta.url))));

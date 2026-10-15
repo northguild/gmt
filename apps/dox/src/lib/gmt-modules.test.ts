@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * `GMT_MODULES` keys match the module subpaths of `@northguild/gmt`'s
  * exports map. A playground imports at module granularity: a namespace barrel

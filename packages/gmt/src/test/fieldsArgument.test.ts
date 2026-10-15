@@ -14,7 +14,6 @@
  * GMT hands Temporal a fresh object of the values it checked.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   setDate,
   setDateTime,

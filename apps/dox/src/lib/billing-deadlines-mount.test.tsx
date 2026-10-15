@@ -7,10 +7,14 @@
  * draw, and the strip's deadline cells against the library's own dates, so a
  * drift in the library or the widget fails here.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { BILLING_PRESETS, NULL_REASON_TEXT } from "./billing-deadlines";
+import {
+  BILLING_PRESETS,
+  NULL_REASON_TEXT,
+  type BillingDeadlines,
+} from "./billing-deadlines";
+import { dateText } from "./ledger-widgets";
 import {
   mountBillingDeadlines,
   renderBillingDeadlinesTemplate,
@@ -31,6 +35,10 @@ const REQUIRED_ROLES = [
   "verdicts",
   "verdict-issued",
   "verdict-requested",
+  "plates",
+  "hero-issue",
+  "hero-dispute",
+  "hero-resolve",
   "deadlines",
   "strip",
   "strip-summary",
@@ -646,5 +654,79 @@ describe("mountBillingDeadlines: dates the library accepts in any ISO form", () 
     expect(q(root, "reason-aside").textContent).toContain(
       NULL_REASON_TEXT["agreed-before-request"],
     );
+  });
+});
+
+describe("mountBillingDeadlines: the three plates", () => {
+  const plateTexts = (root: HTMLElement, role: string) => ({
+    cap: q(root, role).querySelector(".gmt-punct-hero-cap")!.textContent,
+    value: q(root, role).querySelector(".gmt-punct-hero-value")!.textContent,
+    sub: q(root, role).querySelector(".gmt-punct-hero-sub")!.textContent,
+  });
+
+  it("pins three aria-hidden plates numbered as the lanes are", async () => {
+    const { root } = await mount();
+    expect(q(root, "plates").getAttribute("aria-hidden")).toBe("true");
+    expect(
+      ["hero-issue", "hero-dispute", "hero-resolve"].map((r) =>
+        q(root, r).getAttribute("data-series"),
+      ),
+    ).toEqual(["1", "2", "3"]);
+  });
+
+  it("reads each deadline the library returned, on every preset", async () => {
+    const { root } = await mount();
+    const dateWords = (iso: string) => dateText(iso);
+    for (const preset of BILLING_PRESETS) {
+      choosePreset(root, preset.id);
+      const [, resultText] = EXPECTED[preset.id]!;
+      const result = JSON.parse(
+        resultText.replace(/(\w+):/g, '"$1":'),
+      ) as BillingDeadlines;
+      expect(plateTexts(root, "hero-issue")).toEqual({
+        cap: "1 Issue by",
+        value: dateWords(result.invoiceDeadline),
+        sub: `${preset.issueDays}-day window`,
+      });
+      expect(plateTexts(root, "hero-dispute").value).toBe(
+        result.disputeDeadline === null
+          ? "not set"
+          : dateWords(result.disputeDeadline),
+      );
+      expect(plateTexts(root, "hero-resolve").value).toBe(
+        result.resolutionDeadline === null
+          ? "not set"
+          : dateWords(result.resolutionDeadline),
+      );
+    }
+  });
+
+  it("reads no result when the library returns null, and keeps the plates", async () => {
+    const { root } = await mount();
+    type(root, "issue-days", "");
+    expect(q(root, "billing-output").textContent).toBe("NO SIGNAL");
+    for (const r of ["hero-issue", "hero-dispute", "hero-resolve"]) {
+      expect(plateTexts(root, r).value).toBe("no result");
+      expect(q(root, r).hasAttribute("data-empty")).toBe(true);
+    }
+  });
+
+  it("keeps the deadlines line as text, hidden from sight, and the verdicts visible", async () => {
+    const { root } = await mount();
+    const line = q(root, "deadlines");
+    expect(line.classList.contains("gmt-ledger-sr")).toBe(true);
+    expect(line.textContent).toBe(
+      "Issue by 2026-03-31 · Dispute by 2026-04-30 · Resolve by —",
+    );
+    expect(q(root, "verdict-issued").textContent).toContain("on or before");
+    expect(q(root, "verdicts").closest("[hidden]")).toBeNull();
+  });
+
+  it("sizes each verdict line with a hidden sizer per text it can show", async () => {
+    const { root } = await mount();
+    const sizers = q(root, "verdicts").querySelectorAll(".gmt-edi-sizer");
+    expect(sizers.length).toBe(6);
+    for (const el of sizers)
+      expect(el.getAttribute("aria-hidden")).toBe("true");
   });
 });

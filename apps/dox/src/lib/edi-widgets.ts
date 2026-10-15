@@ -151,15 +151,15 @@ export const REJECT = { disambiguation: "reject" } as const;
 
 /** One real library call: what was called, with what, and what came back. */
 export interface EdiCall {
-  fn: keyof EdiLib;
+  fn: string;
   args: unknown[];
   result: unknown;
 }
 
 /** Calls `lib[fn](...args)` and keeps all three, so what the widget prints is the call made. */
-export function runCall(
-  lib: EdiLib,
-  fn: keyof EdiLib,
+export function runCall<L extends object>(
+  lib: L,
+  fn: keyof L & string,
   ...args: unknown[]
 ): EdiCall {
   const f = lib[fn] as (...a: unknown[]) => unknown;

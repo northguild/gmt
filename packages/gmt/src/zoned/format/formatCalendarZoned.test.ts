@@ -1,5 +1,4 @@
 import { normalizeDateTime } from "../../internal";
-import { vi } from "vitest";
 import {
   MustTestLocales,
   battleTestTimeZones,

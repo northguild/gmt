@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The low-precision solar position (Astronomical Almanac, "Approximate Solar
  * Coordinates"), which decides where day meets night on the globe.
@@ -10,7 +8,6 @@
  */
 
 import { convertUtcToUnix } from "@northguild/gmt";
-import { describe, expect, it } from "vitest";
 import { antisolarPoint, subsolarPoint, wrapLongitude } from "./sun";
 
 /** UTC instant string -> epoch ms. No `Date`: that is banned repo-wide. */

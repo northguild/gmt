@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
-
 import { AGENT_PROMPT } from "./agent-prompt";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");

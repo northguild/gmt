@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
 import { mdxHeadings, mdxIds } from "./build-reference";
 import { indexRoutes } from "./build-utils/reference-urls";
 import { headingAnchors } from "./build-utils/type-usage";

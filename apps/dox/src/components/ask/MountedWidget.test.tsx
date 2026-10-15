@@ -11,7 +11,6 @@
  *     clock interval, on day one, in development only.
  *   - **A nonsense argument must render an error state, not crash the panel.**
  */
-/// <reference types="vitest/globals" />
 import { StrictMode } from "react";
 import {
   act,

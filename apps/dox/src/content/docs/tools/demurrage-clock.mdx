@@ -1,0 +1,61 @@
+---
+title: Demurrage Clock
+description: List a container's events and see which two events bound demurrage, detention, storage and the merged clock. demurrageClock reads each clock, and the tool draws the four intervals under one rail of events.
+industries: [intermodal]
+---
+
+import DemurrageClock from "../../../components/DemurrageClock.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="demurrage and detention clocks">
+
+<Fragment slot="keypoint">
+
+Demurrage and detention share one event and nothing else. Demurrage ends at the gate-out, and detention starts there.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A container's charges run on clocks, and each clock runs between two of its events. Demurrage runs while the container is inside the terminal. Detention runs while it is outside. Storage is the charge for the terminal's space, and the merged clock runs demurrage and detention as one period.
+
+List the events, choose the leg and the clock, and the tool calls [`demurrageClock`](/reference/intermodal/calculate/demurrageClock/) once for each of the four clocks. The chosen clock is lit and the other three are dimmed. A clock the library cannot read keeps its row and says why in words. The tool does not hold a table of which events go with which clock: it asks the library, with one event of each type, and reads the pair back.
+
+</Fragment>
+
+<DemurrageClock fullbleed />
+
+<Fragment slot="after">
+
+**The rule.** The same clock runs between different events on the import leg and the export leg, so the direction has no default. The library does not guess it from the events. An event recorded twice is a data error and not a choice, so every clock that needs it returns `null`. A clock that ends before it starts returns `null` too. The result is half-open: it starts at the first event and stops just before the second.
+
+**The terminal clock is a display zone, not an argument.** The zone you pick sets the day columns and the local times on the chips and plates. It is not passed to `demurrageClock`, which returns your own strings unchanged. Change the zone and the days move, but the intervals do not.
+
+```ts
+const events = [
+  { type: "discharged", at: "2024-06-14T19:00:00Z" },
+  { type: "available", at: "2024-06-15T12:00:00Z" },
+  { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
+  { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
+];
+
+demurrageClock(events, "demurrage", { direction: "import" }); // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
+demurrageClock(events, "detention", { direction: "import" }); // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" }
+demurrageClock(events, "storage", { direction: "import" }); // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
+demurrageClock(events, "combined", { direction: "import" }); // { start: "2024-06-14T19:00:00Z", end: "2024-06-27T09:00:00Z" }
+```
+
+**How long it ran.** `demurrageClock` returns the strings you gave it, and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) reads `Z` instants only. So the tool passes each end through [`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) first, then measures between the two. The demurrage example above ran for `PT139H30M`, which the plate shows as 5 d 19 h 30 min.
+
+**Count the days.** The link under the chart sends the chosen clock, as the library returned it, to the [Free Time Ledger](/tools/free-time-ledger/) with the terminal clock. There you set the free days and see which days are charged. The rules are in [Intermodal: Free Time and Demurrage](/guides/industries/intermodal-free-time-and-demurrage/).
+
+**Worth trying:** [the start event set to `available`](/tools/demurrage-clock/?w=demclock&wa=%7B%22eventCount%22%3A%224%22%2C%22type1%22%3A%22discharged%22%2C%22at1%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22type2%22%3A%22available%22%2C%22at2%22%3A%222024-06-15T12%3A00%3A00Z%22%2C%22type3%22%3A%22gatedOut%22%2C%22at3%22%3A%222024-06-20T14%3A30%3A00Z%22%2C%22type4%22%3A%22emptyReturned%22%2C%22at4%22%3A%222024-06-27T09%3A00%3A00Z%22%2C%22scope%22%3A%22demurrage%22%2C%22direction%22%3A%22import%22%2C%22startEvent%22%3A%22available%22%2C%22zone%22%3A%22America%2FNew_York%22%7D) —
+the demurrage clock now starts at the availability date, `2024-06-15T12:00:00Z`, and ends at the same gate-out. Then [the same four events read as an export](/tools/demurrage-clock/?w=demclock&wa=%7B%22eventCount%22%3A%224%22%2C%22type1%22%3A%22discharged%22%2C%22at1%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22type2%22%3A%22available%22%2C%22at2%22%3A%222024-06-15T12%3A00%3A00Z%22%2C%22type3%22%3A%22gatedOut%22%2C%22at3%22%3A%222024-06-20T14%3A30%3A00Z%22%2C%22type4%22%3A%22emptyReturned%22%2C%22at4%22%3A%222024-06-27T09%3A00%3A00Z%22%2C%22scope%22%3A%22demurrage%22%2C%22direction%22%3A%22export%22%2C%22zone%22%3A%22America%2FNew_York%22%7D) —
+the result is `NO SIGNAL`, because an export demurrage clock runs from the full gate-in to the loading, and neither is recorded. For a clock that returns a result on the export leg, try [the merged export clock](/tools/demurrage-clock/?w=demclock&wa=%7B%22eventCount%22%3A%223%22%2C%22type1%22%3A%22emptyReleased%22%2C%22at1%22%3A%222024-07-01T08%3A00%3A00Z%22%2C%22type2%22%3A%22gatedIn%22%2C%22at2%22%3A%222024-07-05T16%3A00%3A00Z%22%2C%22type3%22%3A%22loaded%22%2C%22at3%22%3A%222024-07-09T03%3A00%3A00Z%22%2C%22scope%22%3A%22combined%22%2C%22direction%22%3A%22export%22%2C%22zone%22%3A%22Asia%2FShanghai%22%7D) —
+it runs from the empty pick-up to the loading, `2024-07-01T08:00:00Z` to `2024-07-09T03:00:00Z`.
+
+**Reference:** [`demurrageClock`](/reference/intermodal/calculate/demurrageClock/) picks the clock, [`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) puts an instant on one clock, and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) measures between two `Z` instants.
+
+</Fragment>
+
+</ToolLayout>

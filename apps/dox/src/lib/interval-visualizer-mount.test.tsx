@@ -10,7 +10,6 @@
  * result bar that is subtly out of step with the intervals it describes still
  * renders, still looks plausible, and is wrong.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import {
   mountIntervalVisualizer,

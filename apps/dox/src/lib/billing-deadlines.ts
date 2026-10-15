@@ -26,6 +26,7 @@
  */
 
 import { Temporal } from "@js-temporal/polyfill";
+import { dateText, type PlateSpec } from "./ledger-widgets";
 import { codeSpan } from "./widget-ui";
 
 // ---------------------------------------------------------------------------
@@ -347,6 +348,82 @@ export function verdictText(
   }
   if (value === null) return "No request date yet";
   return `Request received ${isoOf(date!)}: ${value ? "on or before" : "after"} the deadline`;
+}
+
+/**
+ * Every verdict line a kind can show, for the hidden sizers that keep the line's
+ * height the same from one preset to the next. A date in the line is always ten
+ * characters, so one stand-in date sizes them all.
+ */
+export function verdictSizerTexts(kind: VerdictKind): string[] {
+  return [
+    verdictText(kind, "2026-03-31", true),
+    verdictText(kind, "2026-03-31", false),
+    verdictText(kind, undefined, null),
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// The plates
+// ---------------------------------------------------------------------------
+
+/** What a plate reads when the library holds no date for its deadline. */
+export const NOT_SET = "not set";
+
+/**
+ * The three deadline plates, numbered as the lanes are. A plate's value is the
+ * date `billingTimeline` returned, in words; a deadline the result does not hold
+ * reads "not set", and no result at all reads "no result". The sub line is the
+ * window as the reader typed it.
+ */
+export function billingPlates(
+  state: BillingState,
+  result: BillingDeadlines | null,
+): PlateSpec[] {
+  const plate = (
+    role: string,
+    caption: string,
+    series: 1 | 2 | 3,
+    window: string,
+    deadline: string | null | undefined,
+  ): PlateSpec => {
+    const days = window.trim();
+    return {
+      role,
+      caption,
+      series,
+      value:
+        result === null
+          ? null
+          : deadline === null || deadline === undefined
+            ? NOT_SET
+            : dateText(deadline),
+      lines: [days === "" ? "no window typed" : `${days}-day window`],
+    };
+  };
+  return [
+    plate(
+      "hero-issue",
+      "1 Issue by",
+      1,
+      state.issueDays,
+      result?.invoiceDeadline,
+    ),
+    plate(
+      "hero-dispute",
+      "2 Dispute by",
+      2,
+      state.disputeDays,
+      result?.disputeDeadline,
+    ),
+    plate(
+      "hero-resolve",
+      "3 Resolve by",
+      3,
+      state.resolutionDays,
+      result?.resolutionDeadline,
+    ),
+  ];
 }
 
 // ---------------------------------------------------------------------------

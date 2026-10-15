@@ -17,7 +17,6 @@
  *   exception both engines make: `"null"` is a well-formed subtag, so it is accepted and ignored.
  */
 import { isDeepStrictEqual } from "node:util";
-import { describe, expect, it } from "vitest";
 import {
   formatCalendar,
   formatCalendarUnix,

@@ -1,0 +1,62 @@
+---
+title: B/L Date Stamp
+description: Type a moment and the place of an event, and see the calendar date a bill of lading carries. bolTimestamp reads the local date, and the tool sets it against the UTC date and other calendars on lanes of local days.
+industries: [intermodal]
+---
+
+import BlDateStamp from "../../../components/BlDateStamp.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="bill of lading dates">
+
+<Fragment slot="keypoint">
+
+One moment has a different calendar date in each place. A bill of lading carries the local one, so the date is a reading of the place and not of the timestamp.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A system stamps an event with a moment: `2024-06-16T01:00:00Z`. The bill of lading needs a date. Which date depends on where the event happened, because the same moment is still the 15th in New York and already the 16th in UTC.
+
+Type the moment, choose the event and pick the place. The tool calls [`bolTimestamp`](/reference/intermodal/format/bolTimestamp/) for the place and again for UTC, and the two plates show both dates. The lanes below put each calendar on one time axis, as real local days, and one line cuts all of them at the moment. In each lane the lit day is the date the library gave. Drag the slider to move the moment through 15-minute steps, and watch the date change where a lane crosses its midnight.
+
+</Fragment>
+
+<BlDateStamp fullbleed />
+
+<Fragment slot="after">
+
+**The rule.** `bolTimestamp(value, event, { timeZone })` reads the moment on the clock of the place and returns that clock's date, as `YYYY-MM-DD`. The event is `issue`, `received` or `shippedOnBoard`, the three dates a bill of lading carries (`issueDate`, `receivedForShipmentDate` and `shippedOnBoardDate` in the DCSA standard). All three events give the same date for the same moment and place. The place is an IANA zone name or a UTC offset, and it is required: there is no UTC default, so a call with no place returns `""`.
+
+**The UTC lane is the naive read.** It is drawn hollow and dashed. Reading the timestamp as UTC is what a system does when it forgets the place, and it dates the document a day late west of Greenwich and a day early east of it. Where the two plates differ, the tool says "one day later" or "one day earlier", which are [`areDatesEqual`](/reference/plain/compare/areDatesEqual/) and [`isAfterDate`](/reference/plain/compare/isAfterDate/) at work on the two dates.
+
+**A latest date.** The optional latest date is yours. The tool does not know where it comes from. It asks `isAfterDate` whether each date falls after it, and the plates say "after the latest date" or "on or before the latest date". A latest date that is not a date makes no comparison, and the plate says so.
+
+**When there is no date.** A place the library cannot read, a value that is not a moment, an event outside the three and a missing place each return `""`, and the tool shows `NO SIGNAL` with one sentence saying which. The tool decides the sentence by asking the library about a known moment, not from a list of its own. A calendar you add in a lane that the library cannot read keeps its lane and says so.
+
+```ts
+const moment = "2024-06-16T01:00:00Z";
+
+bolTimestamp(moment, "shippedOnBoard", { timeZone: "America/New_York" }); // "2024-06-15"
+bolTimestamp(moment, "shippedOnBoard", { timeZone: "UTC" }); // "2024-06-16"
+bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" }); // "2024-06-15"
+bolTimestamp("2011-12-30T10:00:00Z", "shippedOnBoard", { timeZone: "Pacific/Apia" }); // "2011-12-31"
+bolTimestamp(moment, "shippedOnBoard"); // ""
+
+areDatesEqual("2024-06-16", "2024-06-15"); // false
+isAfterDate("2024-06-16", "2024-06-15"); // true
+```
+
+**Worth trying:** [a moment at 07:00 in Shanghai](/tools/bl-date-stamp/?w=bldate&wa=%7B%22value%22%3A%222024-06-14T23%3A00%3A00Z%22%2C%22event%22%3A%22shippedOnBoard%22%2C%22timeZone%22%3A%22Asia%2FShanghai%22%7D) —
+UTC is still on the 14th, and `bolTimestamp` returns `"2024-06-15"`. Then [the New York evening against a latest date of 15 June](/tools/bl-date-stamp/?w=bldate&wa=%7B%22value%22%3A%222024-06-16T01%3A00%3A00Z%22%2C%22event%22%3A%22shippedOnBoard%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22latest%22%3A%222024-06-15%22%7D) —
+the local date, `"2024-06-15"`, is on or before it, and the UTC date, `"2024-06-16"`, is after it. [Samoa on the day its calendar skipped](/tools/bl-date-stamp/?w=bldate&wa=%7B%22value%22%3A%222011-12-30T10%3A00%3A00Z%22%2C%22event%22%3A%22shippedOnBoard%22%2C%22timeZone%22%3A%22Pacific%2FApia%22%7D) —
+the library returns `"2011-12-31"`, and the lane has no 30 December. [The same moment with no place](/tools/bl-date-stamp/?w=bldate&wa=%7B%22value%22%3A%222024-06-16T01%3A00%3A00Z%22%2C%22event%22%3A%22shippedOnBoard%22%7D) —
+the result is `NO SIGNAL`, because the place is required. For four calendars at once, try [one moment in New York, Shanghai, Auckland and Amsterdam](/tools/bl-date-stamp/?w=bldate&wa=%7B%22value%22%3A%222024-06-16T01%3A00%3A00Z%22%2C%22event%22%3A%22issue%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22Asia%2FShanghai%22%2C%22zone3%22%3A%22Pacific%2FAuckland%22%2C%22zone4%22%3A%22Europe%2FAmsterdam%22%7D) —
+New York is the 15th and the other three are the 16th.
+
+**Reference:** [`bolTimestamp`](/reference/intermodal/format/bolTimestamp/) gives the local date, [`isAfterDate`](/reference/plain/compare/isAfterDate/) and [`areDatesEqual`](/reference/plain/compare/areDatesEqual/) compare two dates, and [`isValidDate`](/reference/plain/validate/isValidDate/) checks the latest date. The rules are in [Intermodal: B/L Dates and Multimodal ETA](/guides/industries/intermodal-bill-of-lading-and-eta/).
+
+</Fragment>
+
+</ToolLayout>

@@ -4,15 +4,19 @@
  * and context/dox/specs/timetable-reader.md § F9).
  *
  * Dragging a handle must move nothing except the values themselves. For each of
- * the four tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
- * Timetable Reader), every preset, and each of these widths, the script takes
- * every control the reader drags:
+ * the seven tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
+ * Timetable Reader, Free Time Ledger, Dwell Ledger, B/L Date Stamp), every
+ * preset, and each of these widths, the script takes every control the reader
+ * drags:
  *
  *   Departure Board     handle-after
  *   Punctuality Board   handle-late, handle-early, handle-compare (the ones the
  *                       preset shows)
  *   ETA Drift Chart     tolerance-slider
  *   Timetable Reader    handle-1 to handle-4 (the ones the preset shows)
+ *   Free Time Ledger    handle-start, handle-end
+ *   Dwell Ledger        handle-entry, handle-exit
+ *   B/L Date Stamp      moment-slider (a native range)
  *
  * and does two things with it:
  *
@@ -32,10 +36,11 @@
  *     `drawn` list), whose marks move with the value by design (their
  *     containers are still measured).
  *
- * A `TOOLS` entry may carry four optional fields; the three older entries keep
- * today's behaviour by default:
+ * A `TOOLS` entry may carry optional fields; the older entries keep today's
+ * behaviour by default:
  *
- *   frame         the chart frame to record (default `.gmt-punct-frame`);
+ *   frame         the chart frame to record (default `.gmt-punct-frame`; the
+ *                 ledger tools use `.gmt-ledger-frame`);
  *   drawn         the containers whose insides move by design (default: the
  *                 list above);
  *   scope         `"above"` (default) records what comes before the control in
@@ -46,7 +51,16 @@
  *                 sections 2 and 3;
  *   pointerSteps  steps in each pointer sweep (default 20). 48 steps are 30
  *                 minutes each on the Timetable Reader's day, so every sweep
- *                 enters a 60-minute band.
+ *                 enters a 60-minute band;
+ *   maxKeys       the most key presses in each direction of the keyboard sweep
+ *                 (default 400). A ledger handle has no far end: the canvas
+ *                 widens when a handle reaches its edge, so its value never stops
+ *                 changing and the sweep ends here;
+ *   value         per control, the `data-role` of the field the handle edits.
+ *                 A ledger handle's `aria-valuenow` is its place on a canvas that
+ *                 is refitted after each key, so the same number can mean
+ *                 different times; the value it edits is its typed field, and
+ *                 `valueOf` reads that.
  *
  * Rects are measured from the widget root's corner, so the page scrolling to
  * keep a focused handle in view is not a move. Every rect is rounded to the
@@ -124,6 +138,12 @@ const DEFAULT_DRAWN =
   ".gmt-dep-stage, .gmt-eta-plot, .gmt-punct-rows, .gmt-punct-lane";
 const MAX_KEYS = 400;
 
+/** What may move inside a ledger tool: the insides of its tracks and the live
+ *  wrapper of a hold, which is the hold's first child (`holdHtml` writes it
+ *  first). */
+const LEDGER_DRAWN =
+  '[data-role="track"], [data-role="track-dwell"], [data-role="track-compare"], .gmt-ledger-hold > :first-child';
+
 const TOOLS = [
   {
     slug: "departure-board",
@@ -197,6 +217,66 @@ const TOOLS = [
     scope: "widget",
     drawn: '[data-role="day-track"], [data-role="plot"], .gmt-timetable-live',
     pointerSteps: 48,
+  },
+  {
+    slug: "free-time-ledger",
+    root: ".gmt-freetime",
+    presets: [
+      "friday-three-days",
+      "read-as-next-day",
+      "out-at-expiry",
+      "working-days",
+      "terminal-holiday",
+      "tiers",
+      "no-free-time",
+    ],
+    controls: [
+      { sel: '[data-role="handle-start"]', value: "clock-start" },
+      { sel: '[data-role="handle-end"]', value: "clock-end" },
+    ],
+    track: '[data-role="track"]',
+    frame: ".gmt-ledger-frame",
+    drawn: LEDGER_DRAWN,
+    maxKeys: 60,
+  },
+  {
+    slug: "dwell-ledger",
+    root: ".gmt-dwell",
+    // "no-zone" returns null, so it is left out; every other preset returns a
+    // value.
+    presets: [
+      "two-hours-two-days",
+      "exit-at-midnight",
+      "spring-forward",
+      "london-vs-amsterdam",
+    ],
+    controls: [
+      { sel: '[data-role="handle-entry"]', value: "entry" },
+      { sel: '[data-role="handle-exit"]', value: "exit" },
+    ],
+    track: '[data-role="track-dwell"]',
+    frame: ".gmt-ledger-frame",
+    drawn: LEDGER_DRAWN,
+    maxKeys: 60,
+  },
+  {
+    slug: "bl-date-stamp",
+    root: ".gmt-bl-date-stamp",
+    // "no-zone" returns no date, so it is left out; every other preset returns
+    // a value.
+    presets: [
+      "new-york-evening",
+      "shanghai-morning",
+      "rotterdam-fall-back",
+      "apia-deleted-day",
+      "fixed-offset",
+    ],
+    controls: [{ sel: '[data-role="moment-slider"]' }],
+    track: null,
+    frame: ".gmt-ledger-frame",
+    // The lanes' day columns and the gate move with the moment by design; the
+    // plot is measured, and so is every plate above it.
+    drawn: '[data-role="plot"]',
   },
 ];
 
@@ -301,18 +381,28 @@ function diffSnapshots(base, now, isHandle, pressed = false) {
   return problems;
 }
 
-async function valueOf(page, sel) {
-  return page.evaluate((s) => {
-    const el = document.querySelector(s);
-    /* The Departure Board's handle reports its position on a rail that is
+async function valueOf(page, sel, field) {
+  return page.evaluate(
+    ({ s, f }) => {
+      const el = document.querySelector(s);
+      /* A control may name the field it edits (a ledger handle: its typed
+       field), because its own `aria-valuenow` is a place on a canvas that is
+       refitted after each key. */
+      if (f) {
+        const named = document.querySelector(`[data-role="${f}"]`);
+        if (named) return named.value;
+      }
+      /* The Departure Board's handle reports its position on a rail that is
        refitted after each key, so the same aria-valuenow can mean different
        arrivals; the value it edits is the arrival field. */
-    if (el.getAttribute("data-role") === "handle-after") {
-      const field = document.querySelector('[data-role="after"]');
-      if (field) return field.value;
-    }
-    return el.getAttribute("aria-valuenow") ?? el.value;
-  }, sel);
+      if (el.getAttribute("data-role") === "handle-after") {
+        const field = document.querySelector('[data-role="after"]');
+        if (field) return field.value;
+      }
+      return el.getAttribute("aria-valuenow") ?? el.value;
+    },
+    { s: sel, f: field },
+  );
 }
 
 async function run() {
@@ -379,7 +469,12 @@ async function run() {
         for (const preset of tool.presets) {
           await page.selectOption('[data-role="preset"]', preset);
           await page.waitForTimeout(1500);
-          for (const { sel, optional, requiredIn } of tool.controls) {
+          for (const {
+            sel,
+            optional,
+            requiredIn,
+            value: field,
+          } of tool.controls) {
             const visible = await page.evaluate((s) => {
               const el = document.querySelector(s);
               return (
@@ -403,17 +498,19 @@ async function run() {
               }
             };
 
+            const maxKeys = tool.maxKeys ?? MAX_KEYS;
+
             // Keyboard: the whole range, there and back.
             await page.locator(sel).focus();
             await page.keyboard.press("Home");
             const base = await snapshot(page, sel, tool);
-            const homeValue = await valueOf(page, sel);
+            const homeValue = await valueOf(page, sel, field);
             const seen = { up: [], down: [] };
             for (const key of ["PageUp", "PageDown"]) {
-              let last = await valueOf(page, sel);
-              for (let i = 0; i < MAX_KEYS; i++) {
+              let last = await valueOf(page, sel, field);
+              for (let i = 0; i < maxKeys; i++) {
                 await page.keyboard.press(key);
-                const value = await valueOf(page, sel);
+                const value = await valueOf(page, sel, field);
                 await check(`${key} #${i + 1} (value ${value})`, base);
                 result.keyboard++;
                 seen[key === "PageUp" ? "up" : "down"].push(value);
@@ -448,7 +545,7 @@ async function run() {
                 { s: sel, t: tool.track },
               );
               const startX = isHandle ? box.x : box.left + 8;
-              const pointerStart = await valueOf(page, sel);
+              const pointerStart = await valueOf(page, sel, field);
               await page.mouse.move(startX, box.y);
               await page.mouse.down();
               const far = box.right - 2;
@@ -464,7 +561,7 @@ async function run() {
               }
               for (const p of pointerMoveProblems({
                 start: pointerStart,
-                far: await valueOf(page, sel),
+                far: await valueOf(page, sel, field),
               })) {
                 result.problems.push(`pointer: ${p}`);
               }

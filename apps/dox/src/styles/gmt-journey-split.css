@@ -1,0 +1,515 @@
+/*
+ * Journey Split widget (INT-14).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. The
+ * leg fieldset's border and legend live in gmt-transport-widgets.css and its
+ * corner brackets and number in gmt-delivery-scheduler.css (both unscoped). The
+ * ledger family's frame, plates, labelled lane, chip, legend and hold live in
+ * gmt-ledger-widgets.css, the plates in gmt-punctuality-widgets.css, the chip,
+ * the series colours and the hatch in gmt-cutoff-widgets.css and
+ * gmt-punctuality-widgets.css. This sheet holds what is specific to the Journey
+ * Split: two ribbons on one scale, the chips under the waits, the brackets under
+ * the gathered ribbon, the hand-off table, and the widths its plates reserve.
+ *
+ * Both ribbons are `.gmt-ledger-lane` tracks of a fixed height, so the chart has
+ * the same box in every state. A segment is placed by percentages of the
+ * journey's length. Moving is a stem in the leg's series colour; waiting is the
+ * family hatch in a neutral ink, dense for the wait for a scheduled departure.
+ * There is no drag handle: the plates, the frame, the ribbons and the table do
+ * not move or resize from one preset to the next at a given width.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+.gmt-journey-split {
+  container: gmt-journey-split / inline-size;
+  --gmt-js-badge-h: 1.8rem;
+  --gmt-js-bar-h: 1.7rem;
+  --gmt-js-gap: 0.6rem;
+  --gmt-js-bracket-h: 0.7rem;
+  --gmt-js-chip-h: 1.9rem;
+  --gmt-js-hatch: color(from var(--gmt-ice) srgb r g b / 0.55);
+}
+
+/* Leg colour and number, as the Delivery Scheduler sets them for its own root
+   (gmt-delivery-scheduler.css scopes them to `.gmt-delivery`). */
+.gmt-journey-split [data-leg="1"] {
+  --leg-color: var(--gmt-series-1);
+  --leg-ink: var(--gmt-series-1-ink);
+}
+.gmt-journey-split [data-leg="2"] {
+  --leg-color: var(--gmt-series-2);
+  --leg-ink: var(--gmt-series-2-ink);
+}
+.gmt-journey-split [data-leg="3"] {
+  --leg-color: var(--gmt-series-3);
+  --leg-ink: var(--gmt-series-3-ink);
+}
+.gmt-journey-split [data-leg="4"] {
+  --leg-color: var(--gmt-series-4);
+  --leg-ink: var(--gmt-series-4-ink);
+}
+
+/* A narrow host trims the leg form's padding and its text size, as the
+   Delivery Scheduler does for the same fields. */
+@container gmt-journey-split (max-width: 24rem) {
+  .gmt-journey-split .gmt-widget-section,
+  .gmt-journey-split .gmt-transport-leg {
+    padding-left: var(--gmt-space-2);
+    padding-right: var(--gmt-space-2);
+  }
+
+  .gmt-journey-split input.gmt-input[type="text"] {
+    font-size: var(--gmt-text-sm);
+    padding-left: var(--gmt-space-1);
+    padding-right: var(--gmt-space-1);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The ribbons. The row of chips under the waits reserves one row for each
+ * possible hand-off (three), and a row is as tall as the chip's wrapped text:
+ * one line when the frame is wide, two when it is narrower and three when the
+ * label sits above the lane (under 30rem). The height depends on the width and
+ * never on the preset.
+ * --------------------------------------------------------------------------- */
+
+.gmt-js-lane {
+  --gmt-js-note-row-h: var(--gmt-js-chip-h);
+}
+
+.gmt-js-lane[data-lane="happens"] {
+  --gmt-ledger-lane-h: calc(
+    var(--gmt-js-badge-h) + var(--gmt-js-bar-h) + var(--gmt-js-gap) + 3 *
+      var(--gmt-js-note-row-h)
+  );
+}
+
+.gmt-js-lane[data-lane="gathered"] {
+  --gmt-js-chip-rows: 1;
+  --gmt-ledger-lane-h: calc(
+    var(--gmt-js-bar-h) + var(--gmt-js-gap) + var(--gmt-js-bracket-h) +
+      var(--gmt-js-gap) + var(--gmt-js-chip-rows) * var(--gmt-js-chip-h)
+  );
+  margin-top: var(--gmt-space-2);
+}
+
+@container gmt-ledger-frame (max-width: 56rem) {
+  .gmt-js-lane {
+    --gmt-js-note-row-h: 3.4rem;
+  }
+}
+
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-js-lane {
+    --gmt-js-note-row-h: 4.9rem;
+  }
+
+  /* Two totals of about 16 characters each do not share a line this narrow. */
+  .gmt-js-lane[data-lane="gathered"] {
+    --gmt-js-chip-rows: 2;
+  }
+}
+
+.gmt-js-badges {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--gmt-js-badge-h);
+}
+
+/* The bars hold the segments over a faint wash, so an empty ribbon still shows
+   its box. */
+.gmt-js-bars {
+  position: absolute;
+  inset: var(--gmt-js-badge-h) 0 auto 0;
+  height: var(--gmt-js-bar-h);
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-fill-subtle);
+}
+
+.gmt-js-lane[data-lane="gathered"] .gmt-js-bars {
+  inset-block-start: 0;
+}
+
+.gmt-js-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  box-sizing: border-box;
+}
+
+/* Moving: a stem in the leg's series colour, with its bottom edge in that
+   colour. Never a left-only edge. */
+.gmt-js-seg[data-kind="moving"] {
+  border-top: 1px solid var(--gmt-border-strong);
+  background: linear-gradient(
+    180deg,
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.2)
+  );
+  box-shadow:
+    inset 0 -3px 0 var(--series, var(--gmt-cyan)),
+    inset 0 1px 0 var(--gmt-highlight);
+}
+
+/* Waiting: the family hatch in a neutral ink. Handling is the open hatch; the
+   wait for a scheduled departure is the dense one. */
+.gmt-journey-split .gmt-js-seg.gmt-punct-hatch {
+  --hatch: var(--gmt-js-hatch);
+  border-top: 1px solid var(--gmt-border-strong);
+  border-bottom: 1px solid var(--gmt-border-strong);
+}
+
+.gmt-journey-split .gmt-js-seg[data-kind="scheduled"] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch) 0,
+    var(--hatch) 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+/* The number badge over a stem: a mark with the leg's series on its bottom edge
+   and the digit in the primary ink. */
+.gmt-js-badge {
+  position: absolute;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 24px;
+  block-size: calc(var(--gmt-js-badge-h) - 0.3rem);
+  border: 1px solid var(--gmt-border-strong);
+  border-bottom: 3px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1;
+  color: var(--gmt-ice);
+}
+
+/* The chips under the waits. */
+.gmt-js-notes {
+  position: absolute;
+  inset: calc(var(--gmt-js-badge-h) + var(--gmt-js-bar-h) + var(--gmt-js-gap)) 0
+    0 0;
+}
+
+.gmt-js-note {
+  position: absolute;
+  top: calc(var(--row, 0) * var(--gmt-js-note-row-h));
+  z-index: 1;
+  inline-size: max-content;
+  max-inline-size: 100%;
+  translate: -50% 0;
+  white-space: normal;
+}
+
+/* A thin line from a wait down to its chip. It passes behind the chips above it,
+   which sit on an opaque plate. */
+.gmt-js-leader {
+  position: absolute;
+  top: calc(-1 * var(--gmt-js-gap));
+  inline-size: 1px;
+  block-size: calc(
+    var(--gmt-js-gap) + var(--row, 0) * var(--gmt-js-note-row-h)
+  );
+  background: var(--gmt-border-strong);
+}
+
+/* The brackets under the gathered ribbon, with the totals on chips beneath. */
+.gmt-js-brackets {
+  position: absolute;
+  inset: calc(var(--gmt-js-bar-h) + var(--gmt-js-gap) / 2) 0 0 0;
+}
+
+.gmt-js-bracket {
+  position: absolute;
+  top: 0;
+  box-sizing: border-box;
+  block-size: var(--gmt-js-bracket-h);
+  border: 1px solid var(--gmt-ice);
+  border-top: 0;
+}
+
+/* The two totals sit in one flowing row: the moving total at the start, the
+   waiting total at the end. They flow, so they cannot overlap; when the frame
+   is too narrow for both on one line the waiting total wraps to a second line
+   (the lane reserves that line under the same width, so nothing below moves). */
+.gmt-js-bracket-chips {
+  position: absolute;
+  top: calc(var(--gmt-js-bracket-h) + var(--gmt-js-gap) / 2);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  align-items: flex-start;
+}
+
+.gmt-js-bracket-chip {
+  max-inline-size: 100%;
+}
+
+.gmt-js-bracket-chip[data-side="waiting"] {
+  margin-inline-start: auto;
+}
+
+/* What a ribbon or the table says when there is nothing to draw. It sits on the
+   ribbon's bar row, in the primary ink. */
+.gmt-js-empty {
+  position: absolute;
+  inset: 0 var(--gmt-space-2) auto;
+  margin: 0;
+  padding-top: 0.3rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: normal;
+}
+
+.gmt-js-empty[hidden] {
+  display: none;
+}
+
+.gmt-js-lane[data-lane="happens"] .gmt-js-empty {
+  inset-block-start: var(--gmt-js-badge-h);
+}
+
+/* The scale: ticks of elapsed time from the first departure. The row starts at
+   the track's x, like the legend. */
+.gmt-js-axis {
+  position: relative;
+  display: block;
+  block-size: 1.4rem;
+}
+
+.gmt-js-tick {
+  position: absolute;
+  top: 0;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.gmt-js-tick:first-child {
+  translate: 0 0;
+}
+
+.gmt-js-tick[hidden] {
+  display: none;
+}
+
+/* The swatches of the legend: the same neutral hatch the segments draw. */
+.gmt-js-swatch {
+  --hatch: var(--gmt-js-hatch);
+}
+
+.gmt-journey-split .gmt-js-swatch--dense {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch) 0,
+    var(--hatch) 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * The hand-off table: the Cut-off Stack's recipe (gmt-cutoff-stack.css), a
+ * bevelled frame, a header row on an opaque surface and hairline rows. It keeps
+ * the height of three hand-off rows in every state, so a preset never moves the
+ * link under it. The wrapper scrolls sideways when the widget is a little too
+ * narrow for the columns; it never clips them. The first and last cells keep at
+ * least 10px clear of the bevelled corners.
+ * --------------------------------------------------------------------------- */
+
+.gmt-js-table-wrap {
+  position: relative;
+  margin-top: var(--gmt-space-3);
+  overflow-x: auto;
+  border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.gmt-js-table {
+  inline-size: 100%;
+  min-inline-size: 40rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-js-table th,
+.gmt-js-table td {
+  padding: var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-js-table :is(th, td):first-child {
+  padding-left: var(--gmt-space-3);
+}
+
+.gmt-js-table :is(th, td):last-child {
+  padding-right: var(--gmt-space-3);
+}
+
+.gmt-js-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.gmt-js-table th {
+  background: var(--gmt-surface);
+  border-bottom-color: var(--gmt-border-strong);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-js-table td {
+  color: var(--gmt-ice);
+}
+
+/* A row that holds a hand-off's box and shows nothing. */
+.gmt-js-row--blank {
+  visibility: hidden;
+}
+
+/* The words for a table with no row to show sit over the reserved rows. */
+.gmt-js-empty--table {
+  inset: calc(var(--gmt-text-xs) * 2.6 + var(--gmt-space-2)) var(--gmt-space-3)
+    auto;
+  padding-top: 0;
+}
+
+/* A narrow widget stacks each row as a block of "label: value" lines, the label
+   from `data-label`. The header row stays for assistive technology, and the
+   template's explicit roles keep the table semantics that `display: block`
+   would drop. */
+@container gmt-journey-split (max-width: 34rem) {
+  .gmt-js-table,
+  .gmt-js-table tbody,
+  .gmt-js-table tr,
+  .gmt-js-table td {
+    display: block;
+  }
+
+  .gmt-js-table {
+    min-inline-size: 0;
+  }
+
+  .gmt-js-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .gmt-js-table tbody tr {
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border-bottom: 1px solid var(--gmt-border);
+  }
+
+  .gmt-js-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .gmt-js-table td,
+  .gmt-js-table :is(th, td):first-child,
+  .gmt-js-table :is(th, td):last-child {
+    padding: 2px 0;
+    border-bottom: 0;
+  }
+
+  .gmt-js-table td:first-child {
+    font-weight: 700;
+  }
+
+  .gmt-js-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--gmt-tracking-wide);
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-js-table td:first-child::before {
+    content: none;
+  }
+
+  .gmt-js-empty--table {
+    inset-block-start: var(--gmt-space-2);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Readouts hold still. The three plates share one pinned row, each at the same
+ * xl value size and the width of the longest value its tool can show, measured
+ * across every preset and both seeds the pages carry: the value in `em` (the
+ * display font has no tabular figures), the sub line in `ch` (it is mono).
+ *
+ * - ETA: a local time such as "Sun 10 Mar 12:00", 16 characters, measured
+ *   at up to 12em, so 12.5em. Its
+ *   two sub lines are always present: the zone id, and the door-to-door time
+ *   ("484 h door to door", 18 characters).
+ * - Moving and waiting: days and hours such as "16 d 16 h", 9 characters, measured at
+ *   up to 7.7em, so 8.2em, over the library's string ("PT400H", up to "PT9999H59M").
+ *
+ * The sub lines never wrap, and an ellipsis cuts a long zone name.
+ * --------------------------------------------------------------------------- */
+
+.gmt-journey-split .gmt-punct-hero-value {
+  font-size: var(--gmt-text-xl);
+}
+
+.gmt-journey-split [data-role="hero-eta"] .gmt-punct-hero-value {
+  min-inline-size: 12.5em;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.gmt-journey-split [data-role="hero-eta"] .gmt-punct-hero-sub {
+  inline-size: 20ch;
+  max-inline-size: 100%;
+}
+
+.gmt-journey-split [data-role="hero-moving"] .gmt-punct-hero-value,
+.gmt-journey-split [data-role="hero-waiting"] .gmt-punct-hero-value {
+  min-inline-size: 8.2em;
+}
+
+.gmt-journey-split [data-role="hero-moving"] .gmt-punct-hero-sub,
+.gmt-journey-split [data-role="hero-waiting"] .gmt-punct-hero-sub {
+  min-inline-size: 12ch;
+}
+
+.gmt-journey-split [data-role="hero-eta"] .gmt-punct-hero-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* In the narrowest rail the values take the lg size, so the plates wrap into
+   rows without a value running past the frame. */
+@container gmt-ledger-frame (max-width: 21rem) {
+  .gmt-journey-split .gmt-punct-hero-value {
+    font-size: var(--gmt-text-lg);
+  }
+}

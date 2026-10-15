@@ -144,7 +144,7 @@
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
-  font-size: 0.9em;
+  font-size: max(0.9em, var(--gmt-text-xs));
 }
 
 .gmt-ask-response pre {

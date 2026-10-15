@@ -300,6 +300,7 @@ describe("the tz database's closest pair of offset changes", () => {
     expect(SEARCH_STEP_SECONDS).toBe(432_000);
   });
 
+  // Worst CI run 107 s on the slowest runner; the timeout is three times that.
   it("is more than the search step plus a day apart, in every zone the runtime knows", () => {
     const closest = closestPair();
 
@@ -311,5 +312,5 @@ describe("the tz database's closest pair of offset changes", () => {
     // Boa_Vista, Noronha and Recife, 2000), so an empty reading cannot pass.
     // A tz release that changes the closest pair needs a conscious edit here and to the step.
     expect(closest.seconds).toBe(601_200);
-  }, 180_000);
+  }, 360_000);
 });

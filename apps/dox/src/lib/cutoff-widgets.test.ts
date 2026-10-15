@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `cutoff-widgets.ts`'s pure helpers, against the real gmt modules — imported
  * by module path, as `transport-widgets.test.ts` does for the TRAN-9 widgets.

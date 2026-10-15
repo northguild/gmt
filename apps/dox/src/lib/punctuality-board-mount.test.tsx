@@ -5,7 +5,6 @@
  * against the real `@northguild/gmt`. Every printed deviation, class and rate
  * is an appendix Z row (PB1 to PB4, PBP, PBR1).
  */
-/// <reference types="vitest/globals" />
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";

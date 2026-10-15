@@ -79,3 +79,56 @@ export async function loadEdiLib(): Promise<EdiLib> {
     isValidTimeZone: zonedValidate["isValidTimeZone"],
   } as unknown as EdiLib;
 }
+
+/** The members of `EpcisLib`, in the order the loader reads them. */
+export interface EpcisLib {
+  parseEpcisEvent(event: {
+    eventTime: string;
+    eventTimeZoneOffset?: string;
+  }): { instant: string; offset: string; local: string } | null;
+  formatEpcisEvent(value: {
+    instant: string;
+    offset: string;
+  }): { eventTime: string; eventTimeZoneOffset: string } | null;
+  isValidEpcisEventTime(value: string): boolean;
+  isValidEpcisTimeZoneOffset(value: string): boolean;
+  chopTime(value: string): string;
+  isAfterDate(a: string, b: string): boolean;
+  areDatesEqual(a: string, b: string): boolean;
+  convertUtcToPlainDate(value: string): string;
+}
+
+/**
+ * The EPCIS Event Reader's functions: the parser, the formatter and the two
+ * validators of `intermodal`, and the three date calls that compare the event's
+ * local date with its UTC date. `loadEdiLib` and `EdiLib` are unchanged.
+ */
+export async function loadEpcisLib(): Promise<EpcisLib> {
+  const [parse, format, validate, chop, compare, utcConvert] =
+    await Promise.all([
+      GMT_MODULES["intermodal/parse"](),
+      GMT_MODULES["intermodal/format"](),
+      GMT_MODULES["intermodal/validate"](),
+      GMT_MODULES["plain/chop"](),
+      GMT_MODULES["plain/compare"](),
+      GMT_MODULES["utc/convert"](),
+    ]);
+  return {
+    parseEpcisEvent: parse["parseEpcisEvent"] as EpcisLib["parseEpcisEvent"],
+    formatEpcisEvent: format[
+      "formatEpcisEvent"
+    ] as EpcisLib["formatEpcisEvent"],
+    isValidEpcisEventTime: validate[
+      "isValidEpcisEventTime"
+    ] as EpcisLib["isValidEpcisEventTime"],
+    isValidEpcisTimeZoneOffset: validate[
+      "isValidEpcisTimeZoneOffset"
+    ] as EpcisLib["isValidEpcisTimeZoneOffset"],
+    chopTime: chop["chopTime"] as EpcisLib["chopTime"],
+    isAfterDate: compare["isAfterDate"] as EpcisLib["isAfterDate"],
+    areDatesEqual: compare["areDatesEqual"] as EpcisLib["areDatesEqual"],
+    convertUtcToPlainDate: utcConvert[
+      "convertUtcToPlainDate"
+    ] as EpcisLib["convertUtcToPlainDate"],
+  };
+}

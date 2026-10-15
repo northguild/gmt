@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The Dox globe's zone data: the generated coordinate table, the curated set the
  * globe labels, and how the two are intersected with the runtime's own zone list.
@@ -9,7 +7,6 @@
  * fake clock, and the sun in `globe/sun.test.ts`.
  */
 
-import { describe, expect, it } from "vitest";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import {
   COORDINATES_BY_ID,

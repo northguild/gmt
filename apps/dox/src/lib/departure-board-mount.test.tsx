@@ -5,7 +5,6 @@
  * against the real `@northguild/gmt`. Every printed departure is an appendix Z
  * row (DB1 to DB4, DBR1 to DBR5).
  */
-/// <reference types="vitest/globals" />
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { CHAT_STARTERS } from "./chat-constants";

@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import type { CorpusEntry } from "~/reference-types";
 import { buildFunctionChunks } from "./function-chunks";
 

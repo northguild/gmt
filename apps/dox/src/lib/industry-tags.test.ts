@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The industry tags on the tool, scenario, guide and mistake pages: every layer has a
  * tag, every page has a tag, and a page's tags agree with the functions it uses.
@@ -157,12 +155,26 @@ describe("the sidebar divider", () => {
 
   it("is text that names the list after it, not a link, a group or a stop", () => {
     const sublist = read("SidebarSublist.astro");
-    const divider = sublist.slice(sublist.indexOf("divider && ("));
-    const row = divider.slice(0, divider.indexOf(")\n\t}"));
-    expect(row).toMatch(/<span id=\{dividerId\} class="gmt-sidebar-divider">/);
-    expect(row).toMatch(/labelledby=\{dividerId\}/);
+    const divider = sublist.slice(sublist.indexOf("sections.map(({ divider, entries }) => ("));
+    const row = divider.slice(0, divider.indexOf("))\n\t}"));
+    expect(row).toMatch(/<span id=\{dividerId\(divider\)\} class="gmt-sidebar-divider">/);
+    expect(row).toMatch(/labelledby=\{dividerId\(divider\)\}/);
     expect(row).not.toMatch(/<a\b|<details|<summary|tabindex|<button/);
     expect(sublist).toMatch(/aria-labelledby=\{labelledby\}/);
+  });
+
+  it("draws every divider in a list, each with its own id", () => {
+    const sublist = read("SidebarSublist.astro");
+    expect(sublist).toMatch(/sections\.push\(\{ divider: entry, entries: \[\] \}\)/);
+    expect(sublist).toMatch(/const dividerId = \(divider: LinkEntry\) =>/);
+  });
+
+  it("shows an industry divider's icon as decoration only", () => {
+    const sublist = read("SidebarSublist.astro");
+    const icon = sublist.slice(sublist.indexOf("<svg"), sublist.indexOf("/>", sublist.indexOf("<svg")));
+    expect(icon).toMatch(/aria-hidden="true"/);
+    expect(icon).toMatch(/focusable="false"/);
+    expect(icon).toMatch(/set:html=\{dividerIcon\(divider\)\}/);
   });
 
   it("is registered as the one Sidebar override", () => {

@@ -135,13 +135,10 @@
 /* ---------------------------------------------------------------------------
  * Legend
  *
- * `.sl-markdown-content ul li::before` (gmt-content.css) draws every markdown
- * bullet as a glowing cyan dash, absolutely positioned into the `padding-left`
- * it also sets on every `<li>` — a site-wide rule that does not know this
- * `<ul>` is a widget's own swatch key, not page prose. `list-style: none`
- * alone does not reach it (a `::before` is not a marker), and left the stray
- * dash and the misaligned swatch (sharing a line box with padding meant for
- * that dash). Reset both explicitly here, scoped to this legend alone.
+ * The prose bullet rule (`.sl-markdown-content ul`, gmt-content.css) skips any
+ * list inside a `.gmt-widget`, so this legend gets no dash. The legend still
+ * sets its own list style: a row of swatches with a gap, no padding meant for
+ * a dash and no bottom margin.
  * --------------------------------------------------------------------------- */
 
 .gmt-delivery-legend {
@@ -157,12 +154,8 @@
   color: var(--gmt-ice-dim);
 }
 
-/* `ul.gmt-delivery-legend` (not just `.gmt-delivery-legend`): the site rule
-   this overrides is `.sl-markdown-content ul li::before`, three type/pseudo
-   selectors deep, and a plain class-plus-type override loses that
-   specificity fight regardless of source order. Matching its selector depth
-   here, with one more class, wins on specificity rather than by luck of
-   load order. */
+/* `ul.gmt-delivery-legend > li` keeps its own geometry: an inline row of one
+   swatch and one word. */
 ul.gmt-delivery-legend > li {
   display: inline-flex;
   align-items: center;
@@ -277,11 +270,8 @@ ul.gmt-delivery-legend > li::before {
   color: var(--gmt-ice-dim);
 }
 
-/* Same bug, same fix as the legend (above): `.sl-markdown-content ul li` /
-   `::before` (gmt-content.css) reaches any plain `<ul><li>` in the page body,
-   including this one — a stray cyan tick or dash bleeding into the top-left
-   corner of every flag pill if left unreset. Matched at the same selector
-   depth so the override wins on specificity. */
+/* The flags are a row of pills, so each item resets the list item spacing
+   the way the legend does. */
 ul.gmt-delivery-summary-flags > li {
   padding-left: 0;
   margin-bottom: 0;

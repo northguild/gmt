@@ -60,14 +60,16 @@
 /* inline code (--gmt-code-bg / --gmt-code-border flip for light mode).
    `overflow-wrap: anywhere` lets a long unbroken value (a path, an ISO
    string) break mid-token in flowing prose rather than push the page wide —
-   a code *block* never needs this, since it already scrolls itself above. */
+   a code *block* never needs this, since it already scrolls itself above.
+   The `max()` holds inline code at the 12px floor inside small text: a widget
+   hint is 12.8px, and 0.9em of that is 11.5px. */
 .sl-markdown-content :not(pre) > code {
   background: var(--gmt-code-bg);
   color: var(--gmt-cyan-ink);
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-sm);
   padding: 0.15em 0.4em;
-  font-size: 0.9em;
+  font-size: max(0.9em, var(--gmt-text-xs));
   overflow-wrap: anywhere;
 }
 
@@ -559,18 +561,21 @@ dialog > .dialog-frame {
 }
 
 /* ---- Behavior bullets ---- */
-.sl-markdown-content ul {
+/* The dash is page prose. A list inside a `.gmt-widget` is a legend, a row of
+   verdicts or a key, so none of the three rules reaches it: `:where()` adds no
+   specificity, and the exclusion on the `ul` carries to its items. */
+.sl-markdown-content ul:not(:where(.gmt-widget *)) {
   list-style: none;
   padding-left: 0;
 }
 
-.sl-markdown-content ul li {
+.sl-markdown-content ul:not(:where(.gmt-widget *)) li {
   position: relative;
   padding-left: var(--gmt-space-6);
   margin-bottom: var(--gmt-space-2);
 }
 
-.sl-markdown-content ul li::before {
+.sl-markdown-content ul:not(:where(.gmt-widget *)) li::before {
   content: "";
   position: absolute;
   left: 0;

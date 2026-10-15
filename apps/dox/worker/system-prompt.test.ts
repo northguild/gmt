@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { assembleSystemPrompt } from "./system-prompt";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
 

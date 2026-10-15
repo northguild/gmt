@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import { dwellTime } from "@northguild/gmt/transport/calculate";
 import { isValidInstant } from "@northguild/gmt/precision/validate";
 import {
   isValidTimeZone,
   isValidZonedDateTime,
 } from "@northguild/gmt/zoned/validate";
+import { hourDurationText } from "./ledger-widgets";
 import {
   CUSTOM_PRESET_ID,
   DWELL_PRESETS,
@@ -14,6 +14,8 @@ import {
   createLedgerCanvas,
   dayCells,
   dayCountText,
+  dwellMarks,
+  dwellPlates,
   explainNull,
   fitLedgerCanvas,
   formatDwell,
@@ -335,5 +337,88 @@ describe("formatDwell", () => {
     );
     expect(dayCountText(1)).toBe("1 local day");
     expect(dayCountText(2)).toBe("2 local days");
+  });
+});
+
+describe("dwellMarks", () => {
+  const entry = ms("2024-06-15T23:00:00-04:00[America/New_York]");
+  const exit = ms("2024-06-16T01:00:00-04:00[America/New_York]");
+  const canvas = fitLedgerCanvas(entry, exit, ["America/New_York"])!;
+  const cells = dayCells(canvas, "America/New_York", entry, exit);
+
+  it("lights each touched day in the row's series with the word counted", () => {
+    const marks = dwellMarks(cells, 2, true);
+    expect(Object.keys(marks)).toEqual(["2024-06-15", "2024-06-16"]);
+    expect(marks["2024-06-15"]).toEqual({
+      state: "lit",
+      chip: "counted",
+      series: 2,
+      kind: "touched",
+    });
+  });
+
+  it("lights nothing when dwellTime returned null", () => {
+    expect(dwellMarks(cells, 1, false)).toEqual({});
+  });
+});
+
+describe("dwellPlates", () => {
+  const first = {
+    duration: "PT2H",
+    enter: "2024-06-15T23:00:00-04:00[America/New_York]",
+    exit: "2024-06-16T01:00:00-04:00[America/New_York]",
+    calendarDays: 2,
+  };
+
+  it("pairs the elapsed time with the duration as returned", () => {
+    const [elapsed] = dwellPlates(
+      {
+        result: first,
+        compare: null,
+        zone: "America/New_York",
+        compareZone: "",
+      },
+      hourDurationText,
+    );
+    expect(elapsed).toMatchObject({
+      role: "hero-elapsed",
+      value: "2 h",
+      lines: ["PT2H"],
+    });
+  });
+
+  it("reserves a second line for a second zone and fills it when there is one", () => {
+    const days = (compare: typeof first | null, compareZone: string) =>
+      dwellPlates(
+        { result: first, compare, zone: "Europe/London", compareZone },
+        hourDurationText,
+      )[1]!;
+    const alone = days(null, "");
+    expect(alone.value).toBe("2");
+    expect(alone.lines).toEqual(["in Europe/London", ""]);
+    const both = days({ ...first, calendarDays: 1 }, "Europe/Amsterdam");
+    expect(both.lines).toEqual(["in Europe/London", "1 in Europe/Amsterdam"]);
+  });
+
+  it("prints a duration it cannot show in days and hours as the library returned it", () => {
+    const [elapsed] = dwellPlates(
+      {
+        result: { ...first, duration: "PT1H30S" },
+        compare: null,
+        zone: "UTC",
+        compareZone: "",
+      },
+      hourDurationText,
+    );
+    expect(elapsed!.value).toBe("PT1H30S");
+  });
+
+  it("reads no result for both plates and keeps both lines", () => {
+    const plates = dwellPlates(
+      { result: null, compare: null, zone: "", compareZone: "" },
+      hourDurationText,
+    );
+    expect(plates.map((p) => p.value)).toEqual([null, null]);
+    expect(plates[1]!.lines).toEqual(["", ""]);
   });
 });

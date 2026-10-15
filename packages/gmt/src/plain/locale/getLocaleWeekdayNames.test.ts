@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { MustTestLocales } from "../../test";
 import { getLocaleWeekdayNames } from "./getLocaleWeekdayNames";
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";

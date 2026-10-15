@@ -332,6 +332,7 @@ describe("bucketRange", () => {
     },
   );
 
+  // Worst CI run 2.4 s laying out up to 10,000 buckets; the timeout is three times that and more.
   it.each`
     end                       | expectedLength | description
     ${"2025-02-20T16:00:00Z"} | ${10000}       | ${"exactly the maximum number of buckets"}
@@ -343,6 +344,7 @@ describe("bucketRange", () => {
         bucketRange("2024-01-01T00:00:00Z", end, "hour", "UTC"),
       ).toHaveLength(expectedLength);
     },
+    30_000,
   );
 
   it.each`
@@ -474,7 +476,9 @@ describe("bucketRange", () => {
 
 // D9#6: a range over the 10,000-bucket cap is refused from its span, before walking 10,000 buckets.
 // Stepping costs about 3 ms a bucket in fixed Etc/GMT±N zones before 1970, so the walk alone took
-// 30–70 s. Each row runs in a child process (256 MB, 20 s timeout). Expected [] because each span
+// 30–70 s. Each row runs in a child process (256 MB, 20 s timeout). The refusal takes about 0.1 s
+// locally and under 2 s on the slowest CI runner, so a 10 s budget tells the two apart on any
+// runner; a 1 s budget failed on a slow one with the refusal working. Expected [] because each span
 // holds more wall-clock units than the cap: hours 2,381 million, days 21,915, months 23,507, weeks
 // 11,687, months 12,000.
 describe("bucketRange over the cap without walking it", () => {
@@ -486,7 +490,7 @@ describe("bucketRange over the cap without walking it", () => {
     ${"1800-01-01T00:00:00Z"}    | ${"2024-01-01T00:00:00Z"} | ${"week"}  | ${"America/New_York"} | ${"224 years of weeks across LMT and DST transitions"}
     ${"1000-01-01T00:00:00Z"}    | ${"2000-01-01T00:00:00Z"} | ${"month"} | ${"America/New_York"} | ${"1,000 years of months"}
   `(
-    "returns [] for $unit buckets from $start to $end in $timeZone within a second ($why)",
+    "returns [] for $unit buckets from $start to $end in $timeZone without walking them ($why)",
     ({ start, end, unit, timeZone }) => {
       const run = runInBoundedChild([
         `gmt.bucketRange(${JSON.stringify(start)}, ${JSON.stringify(end)}, ${JSON.stringify(unit)}, ${JSON.stringify(timeZone)})`,
@@ -496,7 +500,7 @@ describe("bucketRange over the cap without walking it", () => {
         run.stderr,
       ).toEqual({ timedOut: false, crashed: false });
       expect(run.calls[0]?.value).toEqual([]);
-      expect(run.calls[0]?.ms).toBeLessThan(1_000);
+      expect(run.calls[0]?.ms).toBeLessThan(10_000);
     },
   );
 

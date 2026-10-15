@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/// <reference types="vitest/globals" />
 
 /**
  * The engine's renderer hand-over after a device loss. The backends are faked:

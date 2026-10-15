@@ -4,9 +4,7 @@
  * `enter` / `holdEntrance`: the contract is in the file header of enter.ts.
  * jsdom runs no animations, so animationend is dispatched by hand.
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enter, holdEntrance } from "./enter";
 
 function animationEnd(el: HTMLElement, animationName = "gmt-enter"): void {

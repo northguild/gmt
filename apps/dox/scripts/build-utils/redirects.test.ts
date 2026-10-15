@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
 import { buildRedirects, type RedirectedType } from "./redirects";
 import { RENAMED_FUNCTIONS } from "./renamed-functions";
 import type { TypeNode, TypeUsage } from "./type-usage";

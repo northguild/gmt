@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `edi-picture.ts`: the value taken apart, and the shared UTC timeline's layout.
  */
@@ -12,6 +11,7 @@ import {
 import {
   cutValue,
   figureAria,
+  holdHtml,
   maskOf,
   partWord,
   probeFamily,
@@ -192,5 +192,20 @@ describe("timelineLayout", () => {
     ).toBe(
       "A UTC timeline with 1 zone marked: 1, Europe/Berlin, 2024-06-15T12:30:00Z.",
     );
+  });
+});
+
+describe("holdHtml", () => {
+  it("stacks the live element and its sizers in the EDI hold by default", () => {
+    expect(holdHtml("<p>live</p>", ["<p>a</p>", "<p>b</p>"])).toBe(
+      '<div class="gmt-edi-hold"><p>live</p><p>a</p><p>b</p></div>',
+    );
+  });
+
+  it("takes another family's class and escapes it", () => {
+    expect(holdHtml("<p>live</p>", [], "gmt-ledger-hold")).toBe(
+      '<div class="gmt-ledger-hold"><p>live</p></div>',
+    );
+    expect(holdHtml("", [], '"><b>')).not.toContain("<b>");
   });
 });

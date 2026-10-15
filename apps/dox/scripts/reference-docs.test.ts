@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { extractReference, gateInput } from "./build-reference";
 import { findGaps, formatGapReport } from "./build-utils/doc-gate";
 

@@ -259,6 +259,7 @@ describe("operatingIntervals", () => {
       expect(operatingIntervals(valid, range, options)).toEqual([]);
     });
 
+    // Worst CI run 3 s walking to the 10,000th date; the timeout is three times that and more.
     it("answers a range whose last instant is on the walk's last allowed date, and refuses one a nanosecond longer", () => {
       // A range may span 10,000 local dates from its start's: 2000-01-01 to 2027-05-18, never
       // 2027-05-19.
@@ -283,7 +284,7 @@ describe("operatingIntervals", () => {
           end: "2027-05-19T00:00:00.000000001Z",
         }),
       ).toEqual([]);
-    });
+    }, 30_000);
 
     it("returns [] rather than throwing for hostile arguments", () => {
       expect(operatingIntervals(hostileProxy() as never, day)).toEqual([]);

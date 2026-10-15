@@ -761,8 +761,8 @@
   color: var(--gmt-ice-dim);
 }
 
-/* `.sl-markdown-content ul li` (gmt-content.css) draws a bullet and indents every
-   list on the page, widgets included; a legend is not a bulleted list. */
+/* The site's bullet rule (gmt-content.css) skips lists inside a widget. A legend
+   is not a bulleted list, so each entry sets its own spacing. */
 .gmt-timetable .gmt-timetable-legend > li {
   display: inline-flex;
   align-items: center;

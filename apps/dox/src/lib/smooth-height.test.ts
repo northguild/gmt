@@ -6,9 +6,7 @@
  * hand-driven fake observer delivers batches, `offsetWidth` / `offsetHeight` say
  * what layout would, and a manual clock runs the frame loop one frame at a time.
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EXPLAIN_TOLERANCE_PX,
   FOLLOW_TAU_MS,

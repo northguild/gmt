@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Nothing the browser can reach may import the TypeScript compiler.
  *

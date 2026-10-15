@@ -3,7 +3,6 @@
  * position replaced in turn by a garbage value, never throws and returns its declared type — and
  * returns the sentinel when a required argument is missing. See ./noThrow.ts.
  */
-import { describe, expect, it } from "vitest";
 import {
   corpusFunctionNames,
   corpusNamespaces,

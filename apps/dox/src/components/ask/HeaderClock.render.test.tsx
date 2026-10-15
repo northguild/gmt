@@ -4,7 +4,6 @@
  * The strip's clock: the reader's local time, in whatever format the shared
  * date display store holds — and never in the zone it holds.
  */
-/// <reference types="vitest/globals" />
 import { act, render } from "@testing-library/react";
 import {
   resetDateDisplay,

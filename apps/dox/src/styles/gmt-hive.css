@@ -795,7 +795,7 @@
   corner-shape: bevel;
   padding: 0.1em 0.35em;
   font-family: var(--gmt-font-mono);
-  font-size: 0.85em;
+  font-size: max(0.85em, var(--gmt-text-xs));
 }
 
 /* The character's own name gets the role colour it speaks in, so "Dox" here

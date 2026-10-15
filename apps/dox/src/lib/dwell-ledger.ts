@@ -14,6 +14,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 
 export interface DwellLedgerArgs {
   entry?: string;
@@ -482,4 +483,74 @@ export function formatDwell(d: DwellResult): string {
 /** `2 local days`, `1 local day`. */
 export function dayCountText(n: number): string {
   return `${n} local ${n === 1 ? "day" : "days"}`;
+}
+
+// ---------------------------------------------------------------------------
+// Marks and plates
+// ---------------------------------------------------------------------------
+
+/**
+ * The mark for each day the dwell touched: lit glass in the row's series colour
+ * with the chip "counted". A day it did not touch has no mark and is bare.
+ * `shade` is false when `dwellTime` returned `null`, and nothing is lit then.
+ */
+export function dwellMarks(
+  cells: readonly DayCell[],
+  series: SeriesNumber,
+  shade: boolean,
+): Record<string, DayMark> {
+  const marks: Record<string, DayMark> = {};
+  if (!shade) return marks;
+  for (const cell of cells) {
+    if (cell.touched) {
+      marks[cell.date] = {
+        state: "lit",
+        chip: "counted",
+        series,
+        kind: "touched",
+      };
+    }
+  }
+  return marks;
+}
+
+/**
+ * The two result plates. "Elapsed" is the library's `duration` in days, hours
+ * and minutes with the duration as returned under it. "Local days" is
+ * `calendarDays`, with the zone under it and, with a second zone, that zone's
+ * count on a second line that is always reserved. `hourText` is the text
+ * function `ledger-widgets.ts` holds, passed in so the two modules do not
+ * import each other. A duration it cannot show is printed as returned.
+ */
+export function dwellPlates(
+  args: {
+    result: DwellResult | null;
+    compare: DwellResult | null;
+    zone: string;
+    compareZone: string;
+  },
+  hourText: (iso: string) => string,
+): PlateSpec[] {
+  const { result, compare, zone, compareZone } = args;
+  return [
+    {
+      role: "hero-elapsed",
+      caption: "Elapsed",
+      series: 1,
+      value: result ? hourText(result.duration) || result.duration : null,
+      lines: [result ? result.duration : ""],
+    },
+    {
+      role: "hero-days",
+      caption: "Local days",
+      series: 1,
+      value: result ? String(result.calendarDays) : null,
+      lines: [
+        zone === "" ? "" : `in ${zone}`,
+        compare && compareZone !== ""
+          ? `${compare.calendarDays} in ${compareZone}`
+          : "",
+      ],
+    },
+  ];
 }
