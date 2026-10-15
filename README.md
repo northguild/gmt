@@ -4,14 +4,14 @@
 
 [Docs](https://gmt-dox.northguild.workers.dev/) · [API reference](https://gmt-dox.northguild.workers.dev/reference/) · [Tools](https://gmt-dox.northguild.workers.dev/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
-- **56,691 tests, run 1,700,730 times in CI.** Every test runs in 10 time zones on 3 Node versions.
-- **51× the CI test runs** of the six libraries below, combined.
-- **636 functions, to the nanosecond**, tested in 17 locales.
+- **57,562 tests, run 1,726,860 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+- **52× the CI test runs** of the six libraries below, combined.
+- **644 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 | Library                   | Tests      | CI test runs  | Built on  |
 | ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **56,691** | **1,700,730** | Temporal  |
+| **`@northguild/gmt`**     | **57,562** | **1,726,860** | Temporal  |
 | Spacetime                 | 6,086      | 12,172        | `Date`    |
 | Moment.js                 | 3,901      | 11,703        | `Date`    |
 | date-fns                  | 3,213      | 3,213         | `Date`    |
@@ -47,7 +47,7 @@ resolveLocal("2024-03-10T02:30:00", "America/New_York", { disambiguation: "rejec
 ```
 
 Every function has a reference page with a live playground:
-[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/)
+[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [duty](https://gmt-dox.northguild.workers.dev/reference/duty/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/)
 
 By industry: [transport](https://gmt-dox.northguild.workers.dev/reference/transport/) · [intermodal](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
 

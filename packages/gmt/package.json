@@ -81,6 +81,15 @@
       "duration/validate": [
         "./dist/duration/validate/index.d.ts"
       ],
+      "duty": [
+        "./dist/duty/index.d.ts"
+      ],
+      "duty/calculate": [
+        "./dist/duty/calculate/index.d.ts"
+      ],
+      "duty/validate": [
+        "./dist/duty/validate/index.d.ts"
+      ],
       "instant": [
         "./dist/instant/index.d.ts"
       ],
@@ -342,6 +351,18 @@
     "./duration/validate": {
       "types": "./dist/duration/validate/index.d.ts",
       "default": "./dist/duration/validate/index.js"
+    },
+    "./duty": {
+      "types": "./dist/duty/index.d.ts",
+      "default": "./dist/duty/index.js"
+    },
+    "./duty/calculate": {
+      "types": "./dist/duty/calculate/index.d.ts",
+      "default": "./dist/duty/calculate/index.js"
+    },
+    "./duty/validate": {
+      "types": "./dist/duty/validate/index.d.ts",
+      "default": "./dist/duty/validate/index.js"
     },
     "./instant": {
       "types": "./dist/instant/index.d.ts",

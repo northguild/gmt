@@ -1639,6 +1639,242 @@
     ]
   },
   {
+    "url": "/reference/duty/calculate/dutyDayFor",
+    "page": "/reference/duty/calculate/dutyDayFor",
+    "name": "dutyDayFor",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyDayFor(instant: string, day: DutyDay): Interval | null",
+    "description": "Return the operator-designated day an instant falls in: from the most recent `dayStartTime` in `timeZone` at or before the instant, up to (not including) the next one.",
+    "sourcePath": "packages/gmt/src/duty/calculate/dutyDayFor.ts",
+    "examples": [
+      {
+        "call": "dutyDayFor(\"2024-01-01T08:59:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
+        "result": "{ start: \"2023-12-31T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" } — 03:59 local is the previous day"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T09:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-02T09:00:00Z\" }"
+      },
+      {
+        "call": "dutyDayFor(\"2024-03-10T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"02:30\" })",
+        "result": "{ start: \"2024-03-10T07:30:00Z\", end: \"2024-03-11T06:30:00Z\" } — 02:30 is skipped, read as 03:30; 23 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\" })",
+        "result": "{ start: \"2024-11-03T05:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — 01:30 is repeated, the first pass starts it; 25 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"later\" })",
+        "result": "{ start: \"2024-11-03T06:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — the second pass; 24 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"reject\" })",
+        "result": "null — the day starts at a repeated time"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"UTC\" })",
+        "result": "null — no dayStartTime"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"Invalid/Zone\", dayStartTime: \"04:00\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/dutyTotals",
+    "page": "/reference/duty/calculate/dutyTotals",
+    "name": "dutyTotals",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyTotals(log: DutyEntry[], window: Interval, statuses: string[]): string",
+    "description": "Return the time a duty log spends in any of `statuses` inside a window, as an exact ISO 8601 duration.",
+    "sourcePath": "packages/gmt/src/duty/calculate/dutyTotals.ts",
+    "examples": [
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T20:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT8H\""
+      },
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }], { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT3H\" — cut at the window"
+      },
+      {
+        "call": "dutyTotals([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T10:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"\" — inverted entry"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/dutyViolations",
+    "page": "/reference/duty/calculate/dutyViolations",
+    "name": "dutyViolations",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyViolations(log: DutyEntry[], range: Interval, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyViolation[] | null",
+    "description": "Return every violation of a set of hours-of-work rules inside a range, each with the window that failed it: the record over a month, not the check before dispatch.",
+    "sourcePath": "packages/gmt/src/duty/calculate/dutyViolations.ts",
+    "examples": [
+      {
+        "call": "dutyViolations([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
+        "result": "[{ label: \"11 driving\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }, used: \"PT12H\", limit: \"PT11H\" }]"
+      },
+      {
+        "call": "dutyViolations([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-02-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
+        "result": "[]"
+      },
+      {
+        "call": "dutyViolations([], { start: \"2024-02-01T00:00:00Z\", end: \"2024-01-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
+        "result": "null — inverted range"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/evaluateDutyLog",
+    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "name": "evaluateDutyLog",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "evaluateDutyLog(log: DutyEntry[], at: string, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyReport | null",
+    "description": "Evaluate every hours-of-work rule over a duty log at one instant, and report each one whether or not it binds.",
+    "sourcePath": "packages/gmt/src/duty/calculate/evaluateDutyLog.ts",
+    "examples": [
+      {
+        "call": "evaluateDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
+        "result": "{ at: \"2024-01-01T21:00:00Z\", outcomes: [{ label: \"11 driving\", kind: \"cumulativeCap\", severity: \"violation\", satisfied: true, used: \"PT11H\", limit: \"PT11H\", remaining: \"PT0S\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }, periodBasis: null, dueBy: null, resetAt: \"2024-01-01T10:00:00Z\" }], violations: [], advisories: [] }"
+      },
+      {
+        "call": "evaluateDutyLog([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"60 in 7\", kind: \"rollingCap\", statuses: [\"driving\"], cap: \"PT60H\", window: { operatorDays: 7 } }], { timeZone: \"UTC\" })",
+        "result": "null — operator days without dayStartTime"
+      },
+      {
+        "call": "evaluateDutyLog([], \"2024-01-01T00:00:00Z\", [], { timeZone: \"UTC\" })",
+        "result": "{ at: \"2024-01-01T00:00:00Z\", outcomes: [], violations: [], advisories: [] }"
+      },
+      {
+        "call": "evaluateDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }], \"2024-01-01T03:00:00Z\", [], { timeZone: \"UTC\" })",
+        "result": "null — inverted entry"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/longestRun",
+    "page": "/reference/duty/calculate/longestRun",
+    "name": "longestRun",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "longestRun(log: DutyEntry[], window: Interval, statuses: string[]): { interval: Interval; duration: string; } | null",
+    "description": "Return the longest unbroken stretch a duty log spends in any of `statuses` inside a window.",
+    "sourcePath": "packages/gmt/src/duty/calculate/longestRun.ts",
+    "examples": [
+      {
+        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "{ interval: { start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }, duration: \"PT4H\" }"
+      },
+      {
+        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\", \"onDuty\"])",
+        "result": "{ interval: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, duration: \"PT4H\" } — touching entries join"
+      },
+      {
+        "call": "longestRun([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "null — none"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/qualifyingRestPairs",
+    "page": "/reference/duty/calculate/qualifyingRestPairs",
+    "name": "qualifyingRestPairs",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "qualifyingRestPairs(log: DutyEntry[], spec: { statuses: string[]; minimum: string; pair: PairSpec; }): RestPair[]",
+    "description": "Return every paired rest in a duty log: two separate rests that together count as one, because they meet all three floors of `spec.pair`.",
+    "sourcePath": "packages/gmt/src/duty/calculate/qualifyingRestPairs.ts",
+    "examples": [
+      {
+        "call": "qualifyingRestPairs([{ status: \"sleeper\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, { status: \"work\", start: \"2024-01-01T07:30:00Z\", end: \"2024-01-01T11:30:00Z\" }, { status: \"off\", start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
+        "result": "[{ first: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, second: { start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" } }]"
+      },
+      {
+        "call": "qualifyingRestPairs([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T06:00:00Z\" }, { status: \"work\", start: \"2024-01-01T06:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"off\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
+        "result": "[] — 6 + 4: neither is 7"
+      },
+      {
+        "call": "qualifyingRestPairs([], { statuses: [\"off\"], minimum: \"PT10H\" })",
+        "result": "[] — no pair"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/qualifyingRests",
+    "page": "/reference/duty/calculate/qualifyingRests",
+    "name": "qualifyingRests",
+    "namespace": "duty",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "qualifyingRests(log: DutyEntry[], spec: { statuses: string[]; minimum: string; }): Interval[]",
+    "description": "Return every rest of at least `minimum` in a duty log: the runs of touching entries in any of `spec.statuses` that last that long.",
+    "sourcePath": "packages/gmt/src/duty/calculate/qualifyingRests.ts",
+    "examples": [
+      {
+        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"work\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T16:00:00Z\" }, { status: \"off\", start: \"2024-01-01T16:00:00Z\", end: \"2024-01-01T23:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\" })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }]"
+      },
+      {
+        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T05:00:00Z\" }, { status: \"sleeper\", start: \"2024-01-01T05:00:00Z\", end: \"2024-01-01T12:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\" })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T12:00:00Z\" }] — one rest"
+      },
+      {
+        "call": "qualifyingRests([], { statuses: [\"off\"], minimum: \"PT0S\" })",
+        "result": "[] — a zero minimum"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/validate/isValidDutyLog",
+    "page": "/reference/duty/validate/isValidDutyLog",
+    "name": "isValidDutyLog",
+    "namespace": "duty",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidDutyLog(log: unknown): boolean",
+    "description": "Validate whether a value is a duty log every `duty/` function accepts.",
+    "sourcePath": "packages/gmt/src/duty/validate/isValidDutyLog.ts",
+    "examples": [
+      {
+        "call": "isValidDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }])",
+        "result": "true"
+      },
+      {
+        "call": "isValidDutyLog([])",
+        "result": "true — an empty log"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }])",
+        "result": "false — inverted"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T02:00:00Z\" }, { status: \"off\", start: \"2024-01-01T01:59:59Z\", end: \"2024-01-01T03:00:00Z\" }])",
+        "result": "false — overlapping"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00\", end: \"2024-01-01T01:00:00Z\" }])",
+        "result": "false — no offset"
+      }
+    ]
+  },
+  {
     "url": "/reference/instant/convert/classifyLocal#localtimeclassification",
     "page": "/reference/instant/convert/classifyLocal",
     "name": "LocalTimeClassification",
@@ -16073,6 +16309,1102 @@
       {
         "name": "toStringRoundingMode",
         "description": "How the duration is rounded when the precision asked for drops digits. `\"trunc\"` cuts them off; `\"halfExpand\"` rounds to the nearest value, a half going away from zero."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/DutyEntry",
+    "page": "/reference/types/DutyEntry",
+    "name": "DutyEntry",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "One status held over a half-open span of time, `[start, end)`: one line of a duty log.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "status",
+        "description": "The caller's status for the span, such as `\"driving\"`, `\"off\"` or `\"homeCall\"`. GMT reads no meaning into it: each rule names the statuses it counts, and a status no rule names is ignored."
+      },
+      {
+        "name": "start",
+        "description": "When the status begins, as an ISO 8601 instant string with an offset (`Z` or `±HH:MM`)."
+      },
+      {
+        "name": "end",
+        "description": "When the status ends, as an ISO 8601 instant string with an offset. It must be after `start`, and the entry does not include it."
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/dutyDayFor#dutyday",
+    "page": "/reference/duty/calculate/dutyDayFor",
+    "name": "DutyDay",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "The operator-designated day: a 24-hour period that starts at `dayStartTime` in `timeZone`, wherever the person is. Neither field has a default, and local midnight is never assumed. A day with a clock change inside it is shorter or longer by the change: 23 or 25 hours across a one-hour change.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "dutyDayFor",
+    "members": [
+      {
+        "name": "timeZone",
+        "description": "The reference time zone the day is read in, an IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns). A log whose entries cross zones is still read in this one."
+      },
+      {
+        "name": "dayStartTime",
+        "description": "The local wall time each day starts at, as an ISO PlainTime string (`\"04:00\"`) that `isValidTime` accepts."
+      },
+      {
+        "name": "disambiguation",
+        "description": "How a day start the clock repeats or skips becomes an instant, as `resolveLocal` resolves it. `\"compatible\"` reads a skipped time after the gap and a repeated one at its first pass, `\"earlier\"` and `\"later\"` take that side in both cases, and `\"reject\"` returns the sentinel for a day that starts or ends at such a time."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/ElapsedPeriod",
+    "page": "/reference/types/ElapsedPeriod",
+    "name": "ElapsedPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "An exact length of time, every sliding window of it ending at the instant evaluated.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "elapsed",
+        "description": "The window's length, as an ISO 8601 duration of exact time: hours, minutes, seconds and days of 24 hours (`\"PT24H\"`, `\"PT672H\"`, `\"P7D\"`). Years, months and weeks are refused. Clock changes do not lengthen or shorten it."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/OperatorDaysPeriod",
+    "page": "/reference/types/OperatorDaysPeriod",
+    "name": "OperatorDaysPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of operator-designated days, the last of them the day the instant falls in.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "operatorDays",
+        "description": "How many operator days, an integer from 1 to 10,000. The days come from `dayStartTime` in the reference zone, so the call needs `dayStartTime`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/CalendarDaysPeriod",
+    "page": "/reference/types/CalendarDaysPeriod",
+    "name": "CalendarDaysPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of local calendar days in the reference zone, the last the day the instant falls in.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "calendarDays",
+        "description": "How many local calendar days, an integer from 1 to 10,000. A day across a one-hour clock change is 23 or 25 hours long, so 28 days across one are 671 or 673 hours."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/IsoWeeksPeriod",
+    "page": "/reference/types/IsoWeeksPeriod",
+    "name": "IsoWeeksPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of ISO weeks (Monday to Sunday) in the reference zone, the last the current one.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "isoWeeks",
+        "description": "How many ISO weeks, an integer from 1 to 10,000. Each starts at local midnight on Monday."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/CalendarMonthsPeriod",
+    "page": "/reference/types/CalendarMonthsPeriod",
+    "name": "CalendarMonthsPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of local calendar months in the reference zone, the last the current one.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "calendarMonths",
+        "description": "How many calendar months, an integer from 1 to 10,000. Each starts at local midnight on the 1st."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/CalendarYearsPeriod",
+    "page": "/reference/types/CalendarYearsPeriod",
+    "name": "CalendarYearsPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of local calendar years in the reference zone, the last the current one.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "calendarYears",
+        "description": "How many calendar years, an integer from 1 to 10,000. Each starts at local midnight on 1 January."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/Period",
+    "page": "/reference/types/Period",
+    "name": "Period",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "The span a rule looks back over: an exact elapsed duration, or a count of local periods in the reference zone. Give exactly one key.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/LocalPeriod",
+    "page": "/reference/types/LocalPeriod",
+    "name": "LocalPeriod",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of local periods in the reference zone: a `Period` that is not an elapsed duration.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/Reset",
+    "page": "/reference/types/Reset",
+    "name": "Reset",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A rest that resets a counter: a run of at least `consecutive` in any of `statuses`. The counter starts again where the run ends.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "statuses",
+        "description": "The statuses the run is made of. Touching entries in any of them form one run."
+      },
+      {
+        "name": "consecutive",
+        "description": "How long the run must be, as a positive ISO 8601 duration of exact time (`\"PT10H\"`)."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/PairSpec",
+    "page": "/reference/types/PairSpec",
+    "name": "PairSpec",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A paired rest: two separate rest periods that together count as one, when all three floors hold. `{ eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" }` accepts 7.5 + 2.5 hours and 8 + 2, and refuses 6 + 4.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "eachAtLeast",
+        "description": "The floor on each of the two periods, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "oneAtLeast",
+        "description": "The floor on the longer period, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "combinedAtLeast",
+        "description": "The floor on the two periods added together, a positive ISO 8601 duration of exact time."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/DutySeverity",
+    "page": "/reference/types/DutySeverity",
+    "name": "DutySeverity",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "Whether a failed rule is a violation (a \"must\") or an advisory (a \"should\").",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/CumulativeCapRule",
+    "page": "/reference/types/CumulativeCapRule",
+    "name": "CumulativeCapRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A cap on time in `statuses` since the last reset: \"11 hours driving since 10 hours off\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "statuses",
+        "description": "The statuses whose time is capped."
+      },
+      {
+        "name": "cap",
+        "description": "The most time allowed, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "since",
+        "description": "The rest that starts the count again."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/ElapsedWindowRule",
+    "page": "/reference/types/ElapsedWindowRule",
+    "name": "ElapsedWindowRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A window that opens when work starts after a reset and closes `length` later, whatever rest falls inside it: \"no driving more than 14 hours after work began\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "startStatuses",
+        "description": "The statuses whose first entry after the reset opens the window."
+      },
+      {
+        "name": "length",
+        "description": "How long the window stays open, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "restrictedStatuses",
+        "description": "The statuses not allowed once the window has closed."
+      },
+      {
+        "name": "since",
+        "description": "The rest that closes one window, so that the next work opens a new one."
+      },
+      {
+        "name": "exclude",
+        "description": "A paired rest that does not count against the window."
+      },
+      {
+        "name": "extension",
+        "description": "A caller-declared extension: the window open at `from` closes `by` later."
+      },
+      {
+        "name": "extension.by",
+        "description": "How much later the window closes, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "extension.from",
+        "description": "The instant the extension is declared at, an ISO 8601 instant string."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RequiredInterruptionRule",
+    "page": "/reference/types/RequiredInterruptionRule",
+    "name": "RequiredInterruptionRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A required break after a stretch of counted time: \"30 minutes after 8 hours driving\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "countedStatuses",
+        "description": "The statuses that count towards the stretch."
+      },
+      {
+        "name": "after",
+        "description": "The most counted time allowed without an interruption, a positive ISO 8601 duration."
+      },
+      {
+        "name": "interruption",
+        "description": "What counts as an interruption."
+      },
+      {
+        "name": "interruption.minimum",
+        "description": "The shortest single run that interrupts, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "interruption.outsideStatuses",
+        "description": "The statuses an interruption may be made of."
+      },
+      {
+        "name": "interruption.orderedSplit",
+        "description": "Shorter runs that together interrupt when taken in this order: `[\"PT15M\", \"PT30M\"]` is a run of at least 15 minutes followed later by one of at least 30, and not the reverse."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RollingCapRule",
+    "page": "/reference/types/RollingCapRule",
+    "name": "RollingCapRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A cap on time in `statuses` inside a window: \"60 hours in 7 operator days\", \"100 hours in 672 hours\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "statuses",
+        "description": "The statuses whose time is capped."
+      },
+      {
+        "name": "cap",
+        "description": "The most time allowed in the window, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "window",
+        "description": "The span the cap is counted over."
+      },
+      {
+        "name": "reset",
+        "description": "A rest that starts the count again, as a long rest that restarts a cycle does."
+      },
+      {
+        "name": "precondition",
+        "description": "A rest the window must hold before its time passes `beforeHours`."
+      },
+      {
+        "name": "precondition.restStatuses",
+        "description": "The statuses the rest is made of."
+      },
+      {
+        "name": "precondition.minimum",
+        "description": "How long the rest must be, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "precondition.beforeHours",
+        "description": "The most time allowed before that rest, a positive ISO 8601 duration of exact time."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/FixedPeriodCapRule",
+    "page": "/reference/types/FixedPeriodCapRule",
+    "name": "FixedPeriodCapRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A cap on time in `statuses` over whole local periods: \"56 hours in an ISO week\", \"90 hours in two adjacent weeks\", \"80 hours a week averaged over four\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "statuses",
+        "description": "The statuses whose time is capped."
+      },
+      {
+        "name": "cap",
+        "description": "The most time allowed, per period with `average`, a positive ISO 8601 duration."
+      },
+      {
+        "name": "period",
+        "description": "The period, a count of local periods."
+      },
+      {
+        "name": "adjacent",
+        "description": "How many adjacent periods the cap covers, an integer from 1 to 10,000. Times the period's count, it is 10,000 at most."
+      },
+      {
+        "name": "average",
+        "description": "Whether `cap` limits the mean over the `adjacent` periods instead of their total."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RestRequirementRule",
+    "page": "/reference/types/RestRequirementRule",
+    "name": "RestRequirementRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A minimum of rest inside every window: \"10 hours of rest in every 24, in at most two periods, one at least 6 hours long\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "restStatuses",
+        "description": "The statuses that are rest."
+      },
+      {
+        "name": "per",
+        "description": "The window the rest is counted in."
+      },
+      {
+        "name": "minimum",
+        "description": "The least rest required in the window, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "composition",
+        "description": "How the rest may be divided: it is counted from the `maxPeriods` longest runs, the longest at least `longestAtLeast` and each other at least `othersAtLeast`."
+      },
+      {
+        "name": "composition.maxPeriods",
+        "description": "The most runs the rest may come from, a positive integer."
+      },
+      {
+        "name": "composition.longestAtLeast",
+        "description": "The floor on the longest run, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "composition.othersAtLeast",
+        "description": "The floor on every other run counted, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "composite",
+        "description": "A consecutive run plus additional rest in blocks: rest is the longest run, at least `consecutive`, plus the other runs of at least `blockMinimum`, which must add up to `additional`."
+      },
+      {
+        "name": "composite.consecutive",
+        "description": "The floor on the longest run, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "composite.additional",
+        "description": "The rest required beyond the longest run, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "composite.blockMinimum",
+        "description": "The shortest block that counts, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "maxGap",
+        "description": "The most time allowed from the end of one run of rest, or from the log's first entry, to the start of the next run of rest, a positive ISO 8601 duration of exact time."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/FreePeriodRule",
+    "page": "/reference/types/FreePeriodRule",
+    "name": "FreePeriodRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A free period of at least `minimum` consecutive rest inside every window: \"30 consecutive hours off in every 168\", \"36 hours off containing two local nights\", \"one day in seven free, averaged over four weeks\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "restStatuses",
+        "description": "The statuses that are free time."
+      },
+      {
+        "name": "minimum",
+        "description": "The shortest free period, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "within",
+        "description": "The window the free periods are counted in."
+      },
+      {
+        "name": "containing",
+        "description": "Local windows each free period must contain, such as nights from 22:00 to 08:00, read in the reference zone. Their edges resolve under the call's `disambiguation`."
+      },
+      {
+        "name": "containing.window",
+        "description": "The local window, as operating hours take it."
+      },
+      {
+        "name": "containing.count",
+        "description": "How many whole windows each free period must contain, an integer from 1 to 10,000."
+      },
+      {
+        "name": "atLeast",
+        "description": "How many free periods the window must hold, a non-negative integer."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RestBeforeDutyRule",
+    "page": "/reference/types/RestBeforeDutyRule",
+    "name": "RestBeforeDutyRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A rest required before each duty: \"10 hours off in the 24 before a duty\", \"rest before duty at least as long as the duty before it, and never under 12 hours\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "restStatuses",
+        "description": "The statuses that are rest."
+      },
+      {
+        "name": "minimum",
+        "description": "The least rest required, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "within",
+        "description": "How far before a duty the rest is looked for, a positive ISO 8601 duration of exact time. With `orFactor` the rest is the one right before the duty, which `within` does not cut."
+      },
+      {
+        "name": "orFactor",
+        "description": "A requirement that grows with the previous duty: the larger of `k` × its length and `floor`."
+      },
+      {
+        "name": "orFactor.k",
+        "description": "The multiple of the previous duty's length, a positive finite number. It is read as the shortest decimal `String(k)` prints, exactly: `1.1` is eleven tenths, and `0.1 + 0.2` is 0.30000000000000004. The product is rounded up to the nanosecond."
+      },
+      {
+        "name": "orFactor.floor",
+        "description": "The least the requirement can be, a positive ISO 8601 duration of exact time."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/QuotaRule",
+    "page": "/reference/types/QuotaRule",
+    "name": "QuotaRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A cap on how often a short rest is taken: \"at most 3 reduced rests between two full rests\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "event",
+        "description": "The run that counts once."
+      },
+      {
+        "name": "event.statuses",
+        "description": "The statuses the run is made of."
+      },
+      {
+        "name": "event.minimum",
+        "description": "The shortest run that counts, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "event.maximum",
+        "description": "The length a run must stay under to count, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "count",
+        "description": "The most events allowed, a non-negative integer."
+      },
+      {
+        "name": "reset",
+        "description": "What starts the count again: a full rest, or a window."
+      },
+      {
+        "name": "reset.every",
+        "description": "The window the events are counted in."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/DueByRule",
+    "page": "/reference/types/DueByRule",
+    "name": "DueByRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A rest that must start within a number of periods of the last one: \"a weekly rest by the end of six operator days after the previous one\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "event",
+        "description": "The rest that is due."
+      },
+      {
+        "name": "event.statuses",
+        "description": "The statuses the rest is made of."
+      },
+      {
+        "name": "event.minimum",
+        "description": "How long the rest must be, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "within",
+        "description": "How soon the rest is due."
+      },
+      {
+        "name": "within.periods",
+        "description": "How many periods, an integer from 1 to 10,000. Times a count `period`, it is 10,000 at most."
+      },
+      {
+        "name": "within.period",
+        "description": "The period counted: an `elapsed` length, or one local period (`{ operatorDays: 1 }`)."
+      },
+      {
+        "name": "reset",
+        "description": "Another rest that also starts the clock."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/PatternRule",
+    "page": "/reference/types/PatternRule",
+    "name": "PatternRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A count of rests by class inside a window: \"at least 4 weekly rests in any 4 weeks, at least 2 of them regular\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "period",
+        "description": "The unit the window is counted in."
+      },
+      {
+        "name": "lookback",
+        "description": "How many periods the window covers, an integer from 1 to 10,000. Times a count `period`, it is 10,000 at most."
+      },
+      {
+        "name": "classes",
+        "description": "The classes of rest, each named for `require`."
+      },
+      {
+        "name": "classes[].label",
+        "description": "The class's name, unique within the rule."
+      },
+      {
+        "name": "classes[].statuses",
+        "description": "The statuses a run of this class is made of."
+      },
+      {
+        "name": "classes[].minimum",
+        "description": "The shortest run of this class, a positive ISO 8601 duration of exact time."
+      },
+      {
+        "name": "require",
+        "description": "The count each class needs."
+      },
+      {
+        "name": "require[].label",
+        "description": "The class, one of the labels in `classes`."
+      },
+      {
+        "name": "require[].atLeast",
+        "description": "The fewest runs of that class the window must hold, a non-negative integer."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/OccurrenceCapRule",
+    "page": "/reference/types/OccurrenceCapRule",
+    "name": "OccurrenceCapRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "A cap on how many local periods hold a status: \"night duty no more often than every third night\", \"duty started on at most 6 of any 7 days\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "statuses",
+        "description": "The statuses that occur."
+      },
+      {
+        "name": "per",
+        "description": "The local period occurrences are counted by."
+      },
+      {
+        "name": "lookback",
+        "description": "How many periods the window covers, an integer from 1 to 10,000. Times the count in `per`, it is 10,000 at most."
+      },
+      {
+        "name": "maximum",
+        "description": "The most periods allowed to hold an occurrence, a non-negative integer."
+      },
+      {
+        "name": "byInitiationDate",
+        "description": "Whether a run counts only in the period it starts in, so that two tours starting on one date count once and a night shift counts on the date it began."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/UsageLookbackRule",
+    "page": "/reference/types/UsageLookbackRule",
+    "name": "UsageLookbackRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "An allowance used at most once inside a window, restored by a rest: \"not used within the previous 7 days unless 34 hours off came between\".",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "label",
+        "description": "The caller's name for the rule. The report is keyed by it; labels must be unique."
+      },
+      {
+        "name": "severity",
+        "description": "Whether a failure is a violation or an advisory."
+      },
+      {
+        "name": "kind",
+        "description": "Selects this rule kind."
+      },
+      {
+        "name": "uses",
+        "description": "The instants the allowance was used, as ISO 8601 instant strings."
+      },
+      {
+        "name": "notWithin",
+        "description": "The window no second use may fall in."
+      },
+      {
+        "name": "reset",
+        "description": "The rest that restores the allowance."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/DutyRule",
+    "page": "/reference/types/DutyRule",
+    "name": "DutyRule",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "One hours-of-work rule over a duty log, every number the caller's. A regime is an array of rules the caller assembles and labels; nested caps are separate rules, reported separately.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/duty/calculate/evaluateDutyLog#periodbasis",
+    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "name": "PeriodBasis",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "Which arithmetic a window used: exact elapsed time, operator days, or local calendar periods.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "evaluateDutyLog"
+  },
+  {
+    "url": "/reference/duty/calculate/evaluateDutyLog#ruleoutcome",
+    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "name": "RuleOutcome",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "One rule evaluated at one instant, reported whether or not it binds. Durations are ISO 8601 with hours as the largest unit; counts are numbers.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "evaluateDutyLog",
+    "members": [
+      {
+        "name": "label",
+        "description": "The rule's label."
+      },
+      {
+        "name": "kind",
+        "description": "The rule's kind."
+      },
+      {
+        "name": "severity",
+        "description": "The rule's severity, `\"violation\"` when the rule gave none."
+      },
+      {
+        "name": "satisfied",
+        "description": "Whether the rule holds at the instant evaluated."
+      },
+      {
+        "name": "used",
+        "description": "How much the rule has used, or found: a duration or a count; null when nothing is measured."
+      },
+      {
+        "name": "limit",
+        "description": "The figure `used` is held to: a cap, a minimum or a count."
+      },
+      {
+        "name": "remaining",
+        "description": "What is left before a cap binds, or still needed to meet a minimum; never negative."
+      },
+      {
+        "name": "window",
+        "description": "The span the rule measured, as UTC instants. A window of local periods runs to the end of the current period, past the instant evaluated. Null when the rule has not started: an `elapsedWindow` with no work since its reset."
+      },
+      {
+        "name": "periodBasis",
+        "description": "How `window` was counted; null when the rule has no window of its own."
+      },
+      {
+        "name": "dueBy",
+        "description": "The instant something is due by: a window's close, a rest's deadline; null when none."
+      },
+      {
+        "name": "resetAt",
+        "description": "Where the last reset ended, as a UTC instant; null when the rule has none or none occurred."
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/evaluateDutyLog#dutyreport",
+    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "name": "DutyReport",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "Every rule of a regime evaluated at one instant.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "evaluateDutyLog",
+    "members": [
+      {
+        "name": "at",
+        "description": "The instant evaluated, as a UTC instant."
+      },
+      {
+        "name": "outcomes",
+        "description": "One outcome per rule, in the order the rules were given."
+      },
+      {
+        "name": "violations",
+        "description": "The outcomes of failed rules whose severity is `\"violation\"`."
+      },
+      {
+        "name": "advisories",
+        "description": "The outcomes of failed rules whose severity is `\"advisory\"`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/dutyViolations#dutyviolation",
+    "page": "/reference/duty/calculate/dutyViolations",
+    "name": "DutyViolation",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "One failed window in a range, for the record.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "dutyViolations",
+    "members": [
+      {
+        "name": "label",
+        "description": "The label of the rule that failed."
+      },
+      {
+        "name": "window",
+        "description": "The window that failed it, as UTC instants."
+      },
+      {
+        "name": "used",
+        "description": "What the rule found in that window: a duration or a count."
+      },
+      {
+        "name": "limit",
+        "description": "The figure it was held to."
+      }
+    ]
+  },
+  {
+    "url": "/reference/duty/calculate/qualifyingRestPairs#restpair",
+    "page": "/reference/duty/calculate/qualifyingRestPairs",
+    "name": "RestPair",
+    "namespace": "types",
+    "module": "duty",
+    "kind": "type",
+    "signature": "",
+    "description": "Two rest periods that satisfy a `PairSpec`, in the order they were taken.",
+    "sourcePath": "packages/gmt/src/types/duty.ts",
+    "examples": [],
+    "inlineOn": "qualifyingRestPairs",
+    "members": [
+      {
+        "name": "first",
+        "description": "The earlier period, as UTC instants."
+      },
+      {
+        "name": "second",
+        "description": "The later period, as UTC instants."
       }
     ]
   },
