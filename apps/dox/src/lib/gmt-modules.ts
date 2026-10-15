@@ -34,6 +34,14 @@ export const GMT_MODULES: Record<
   "precision/parse": () => import("@northguild/gmt/precision/parse"),
   "precision/validate": () => import("@northguild/gmt/precision/validate"),
 
+  // --- timescale ---
+  "timescale/calculate": () => import("@northguild/gmt/timescale/calculate"),
+  "timescale/convert": () => import("@northguild/gmt/timescale/convert"),
+  "timescale/validate": () => import("@northguild/gmt/timescale/validate"),
+
+  // --- gnss ---
+  "gnss/convert": () => import("@northguild/gmt/gnss/convert"),
+
   // --- instant ---
   "instant/convert": () => import("@northguild/gmt/instant/convert"),
   "instant/validate": () => import("@northguild/gmt/instant/validate"),

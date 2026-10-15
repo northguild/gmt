@@ -1,6 +1,6 @@
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
 import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { hasSecond60 } from "../../plain/validate/hasSecond60";
 
 /**
  * Validate whether a string is a valid ISO 8601 zoned datetime string.
@@ -48,7 +48,7 @@ export function isValidZonedDateTime(value: string): boolean {
     return false;
   }
 
-  if (isLeapSecond(value) || !hasZonedDateTimeShape(value)) {
+  if (hasSecond60(value) || !hasZonedDateTimeShape(value)) {
     return false;
   }
 

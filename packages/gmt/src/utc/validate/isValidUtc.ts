@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isoStringBody } from "../../internal/isoStringBody";
-import { isLeapSecond } from "../../plain/validate";
+import { hasSecond60 } from "../../plain/validate";
 import { utcDateTime } from "../../regex/utc-date-time";
 
 /**
@@ -33,7 +33,7 @@ import { utcDateTime } from "../../regex/utc-date-time";
 export function isValidUtc(value: string): boolean {
   const body = isoStringBody(value);
 
-  if (isLeapSecond(body)) {
+  if (hasSecond60(body)) {
     return false;
   }
 

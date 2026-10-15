@@ -1875,6 +1875,248 @@
     ]
   },
   {
+    "url": "/reference/gnss/convert/gnssToUtc",
+    "page": "/reference/gnss/convert/gnssToUtc",
+    "name": "gnssToUtc",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "gnssToUtc(system: GnssSystem, value: string): string",
+    "description": "Convert a satellite system's time-scale string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/gnss/convert/gnssToUtc.ts",
+    "examples": [
+      {
+        "call": "gnssToUtc(\"GPS\", \"2017-01-01T00:00:17 GPS\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "gnssToUtc(\"GPS\", \"2038-11-21T00:00:00 GPS\")",
+        "result": "\"2038-11-20T23:59:42Z\""
+      },
+      {
+        "call": "gnssToUtc(\"BDT\", \"2024-01-01T00:00:04 BDT\")",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "gnssToUtc(\"GAL\", \"1999-08-22T00:00:00 GAL\")",
+        "result": "\"1999-08-21T23:59:47Z\""
+      },
+      {
+        "call": "gnssToUtc(\"GLO\", \"2016-12-31T23:59:60 GLO\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "gnssToUtc(\"GLO\", \"2017-12-31T23:59:60 GLO\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "gnssToUtc(\"GPS\", \"2024-01-01T00:00:18 GAL\")",
+        "result": "\"\" — wrong token"
+      }
+    ]
+  },
+  {
+    "url": "/reference/gnss/convert/gnssWeekToUtc",
+    "page": "/reference/gnss/convert/gnssWeekToUtc",
+    "name": "gnssWeekToUtc",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "gnssWeekToUtc(counter: GnssWeekCounter, week: number, timeOfWeekSeconds: number, rolloverEra: RolloverEra): string",
+    "description": "Convert a week number and time of week, as a receiver reports them, to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/gnss/convert/gnssWeekToUtc.ts",
+    "examples": [
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 100, 0, 0)",
+        "result": "\"1981-12-05T23:59:59Z\""
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 100, 0, 1)",
+        "result": "\"2001-07-21T23:59:47Z\""
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 0, 0, 3)",
+        "result": "\"2038-11-20T23:59:42Z\" — the third LNAV rollover"
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-CNAV\", 2295, 86418, 0)",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "gnssWeekToUtc(\"BDT\", 939, 86404, 0)",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 906, 17, 1)",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 0, 0, 2)",
+        "result": "\"2019-04-06T23:59:42Z\" — the second LNAV rollover"
+      },
+      {
+        "call": "gnssWeekToUtc(\"GPS-LNAV\", 1024, 0, 2)",
+        "result": "\"\" — an LNAV week stops at 1023"
+      }
+    ]
+  },
+  {
+    "url": "/reference/gnss/convert/rinexWeekToUtc",
+    "page": "/reference/gnss/convert/rinexWeekToUtc",
+    "name": "rinexWeekToUtc",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "rinexWeekToUtc(system: RinexWeekSystem, week: number, timeOfWeekSeconds: number): string",
+    "description": "Convert a week number from a RINEX navigation file, and the seconds of that week, to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/gnss/convert/rinexWeekToUtc.ts",
+    "examples": [
+      {
+        "call": "rinexWeekToUtc(\"IRN\", 2295, 86418)",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "rinexWeekToUtc(\"GPS\", 1930, 17)",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "rinexWeekToUtc(\"GPS\", 3072, 0)",
+        "result": "\"2038-11-20T23:59:42Z\""
+      },
+      {
+        "call": "rinexWeekToUtc(\"BDT\", 809, 165600)",
+        "result": "\"2021-07-05T21:59:56Z\" — RINEX Table A27's C05 record"
+      },
+      {
+        "call": "rinexWeekToUtc(\"GPS\", -1, 0)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/gnss/convert/utcToGnss",
+    "page": "/reference/gnss/convert/utcToGnss",
+    "name": "utcToGnss",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "utcToGnss(system: GnssSystem, utcString: string): string",
+    "description": "Convert a UTC instant to a satellite system's own time, as a time-scale string.",
+    "sourcePath": "packages/gmt/src/gnss/convert/utcToGnss.ts",
+    "examples": [
+      {
+        "call": "utcToGnss(\"GPS\", \"1980-01-06T00:00:00Z\")",
+        "result": "\"1980-01-06T00:00:00 GPS\" — 0 s at the GPS epoch"
+      },
+      {
+        "call": "utcToGnss(\"GPS\", \"2016-06-01T00:00:00Z\")",
+        "result": "\"2016-06-01T00:00:17 GPS\""
+      },
+      {
+        "call": "utcToGnss(\"GPS\", \"2024-01-01T00:00:00Z\")",
+        "result": "\"2024-01-01T00:00:18 GPS\""
+      },
+      {
+        "call": "utcToGnss(\"GPS\", \"2016-12-31T23:59:60Z\")",
+        "result": "\"2017-01-01T00:00:17 GPS\""
+      },
+      {
+        "call": "utcToGnss(\"GAL\", \"1999-08-22T00:00:00Z\")",
+        "result": "\"1999-08-22T00:00:13 GAL\""
+      },
+      {
+        "call": "utcToGnss(\"BDT\", \"2006-01-01T00:00:00Z\")",
+        "result": "\"2006-01-01T00:00:00 BDT\""
+      },
+      {
+        "call": "utcToGnss(\"BDT\", \"2024-01-01T00:00:00Z\")",
+        "result": "\"2024-01-01T00:00:04 BDT\""
+      },
+      {
+        "call": "utcToGnss(\"QZS\", \"2024-01-01T00:00:00Z\")",
+        "result": "\"2024-01-01T00:00:18 QZS\""
+      },
+      {
+        "call": "utcToGnss(\"GLO\", \"2024-01-01T00:00:00Z\")",
+        "result": "\"2024-01-01T00:00:00 GLO\""
+      },
+      {
+        "call": "utcToGnss(\"GLO\", \"2016-12-31T23:59:60Z\")",
+        "result": "\"2016-12-31T23:59:60 GLO\""
+      },
+      {
+        "call": "utcToGnss(\"IRN\", \"2024-01-01T00:00:00Z\")",
+        "result": "\"2024-01-01T00:00:18 IRN\""
+      },
+      {
+        "call": "utcToGnss(\"BDT\", \"2005-12-31T23:59:59Z\")",
+        "result": "\"\" — before BeiDou's epoch"
+      }
+    ]
+  },
+  {
+    "url": "/reference/gnss/convert/utcToGnssWeek",
+    "page": "/reference/gnss/convert/utcToGnssWeek",
+    "name": "utcToGnssWeek",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "utcToGnssWeek(counter: GnssWeekCounter, utcString: string): GnssWeek | null",
+    "description": "Return the week, time of week and era of a UTC instant on a satellite week counter.",
+    "sourcePath": "packages/gmt/src/gnss/convert/utcToGnssWeek.ts",
+    "examples": [
+      {
+        "call": "utcToGnssWeek(\"GPS-LNAV\", \"2019-04-07T00:00:00Z\")",
+        "result": "{ week: 0, timeOfWeekSeconds: 18, era: 2 }"
+      },
+      {
+        "call": "utcToGnssWeek(\"GPS-CNAV\", \"2019-04-07T00:00:00Z\")",
+        "result": "{ week: 2048, timeOfWeekSeconds: 18, era: 0 }"
+      },
+      {
+        "call": "utcToGnssWeek(\"GAL\", \"2019-04-07T00:00:00Z\")",
+        "result": "{ week: 1024, timeOfWeekSeconds: 18, era: 0 }"
+      },
+      {
+        "call": "utcToGnssWeek(\"BDT\", \"2024-01-01T00:00:00Z\")",
+        "result": "{ week: 939, timeOfWeekSeconds: 86404, era: 0 }"
+      },
+      {
+        "call": "utcToGnssWeek(\"GPS-LNAV\", \"2016-12-31T23:59:60Z\")",
+        "result": "{ week: 906, timeOfWeekSeconds: 17, era: 1 }"
+      },
+      {
+        "call": "utcToGnssWeek(\"GAL\", \"1999-08-21T23:59:46Z\")",
+        "result": "null — before Galileo's epoch"
+      }
+    ]
+  },
+  {
+    "url": "/reference/gnss/convert/utcToRinexWeek",
+    "page": "/reference/gnss/convert/utcToRinexWeek",
+    "name": "utcToRinexWeek",
+    "namespace": "gnss",
+    "module": "convert",
+    "kind": "function",
+    "signature": "utcToRinexWeek(system: RinexWeekSystem, utcString: string): RinexWeek | null",
+    "description": "Return the RINEX navigation-file week and seconds of week of a UTC instant.",
+    "sourcePath": "packages/gmt/src/gnss/convert/utcToRinexWeek.ts",
+    "examples": [
+      {
+        "call": "utcToRinexWeek(\"IRN\", \"2024-01-01T00:00:00Z\")",
+        "result": "{ week: 2295, timeOfWeekSeconds: 86418 }"
+      },
+      {
+        "call": "utcToRinexWeek(\"BDT\", \"2021-07-05T21:59:56Z\")",
+        "result": "{ week: 809, timeOfWeekSeconds: 165600 }"
+      },
+      {
+        "call": "utcToRinexWeek(\"GPS\", \"1980-01-05T23:59:59Z\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/instant/convert/classifyLocal#localtimeclassification",
     "page": "/reference/instant/convert/classifyLocal",
     "name": "LocalTimeClassification",
@@ -12190,54 +12432,54 @@
     ]
   },
   {
-    "url": "/reference/plain/validate/isLeapSecond",
-    "page": "/reference/plain/validate/isLeapSecond",
-    "name": "isLeapSecond",
+    "url": "/reference/plain/validate/hasSecond60",
+    "page": "/reference/plain/validate/hasSecond60",
+    "name": "hasSecond60",
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isLeapSecond(value: string): boolean",
+    "signature": "hasSecond60(value: string): boolean",
     "description": "Return true if the provided ISO 8601 date-time or time string has a second-60 field.",
-    "sourcePath": "packages/gmt/src/plain/validate/isLeapSecond.ts",
+    "sourcePath": "packages/gmt/src/plain/validate/hasSecond60.ts",
     "examples": [
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:60Z\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:60Z\")",
         "result": "true"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:60.123Z\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:60.123Z\")",
         "result": "true"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:60+00:00\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00\")",
         "result": "true"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:60.123+00:00\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:60.123+00:00\")",
         "result": "true"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31t23:59:60Z\")",
+        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
         "result": "true (lowercase t)"
       },
       {
-        "call": "isLeapSecond(\"20161231 235960Z\")",
+        "call": "hasSecond60(\"20161231 235960Z\")",
         "result": "true (space separator, basic format)"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:60\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:60\")",
         "result": "true (no designator; PlainDateTime clamps it)"
       },
       {
-        "call": "isLeapSecond(\"23:59:60\")",
+        "call": "hasSecond60(\"23:59:60\")",
         "result": "true (a time; PlainTime clamps it)"
       },
       {
-        "call": "isLeapSecond(\"2016-12-31T23:59:59Z\")",
+        "call": "hasSecond60(\"2016-12-31T23:59:59Z\")",
         "result": "false"
       },
       {
-        "call": "isLeapSecond(\"2024-06-15T12:34:60Z\")",
+        "call": "hasSecond60(\"2024-06-15T12:34:60Z\")",
         "result": "true (syntactic: no leap second can occur here)"
       },
       {
@@ -14972,6 +15214,196 @@
       {
         "call": "isValidSpan(\"2024-03-10T12:00:00[America/New_York]\", \"2024-03-11T12:00:00[America/New_York]\")",
         "result": "false — no offset designator"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/calculate/leapSecondsBetween",
+    "page": "/reference/timescale/calculate/leapSecondsBetween",
+    "name": "leapSecondsBetween",
+    "namespace": "timescale",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "leapSecondsBetween(start: string, end: string): number | null",
+    "description": "Return how many leap seconds fall between two UTC instants: the change in TAI − UTC.",
+    "sourcePath": "packages/gmt/src/timescale/calculate/leapSecondsBetween.ts",
+    "examples": [
+      {
+        "call": "leapSecondsBetween(\"2020-01-01T00:00:00Z\", \"2024-01-01T00:00:00Z\")",
+        "result": "0"
+      },
+      {
+        "call": "leapSecondsBetween(\"2000-01-01T00:00:00Z\", \"2024-01-01T00:00:00Z\")",
+        "result": "5"
+      },
+      {
+        "call": "leapSecondsBetween(\"2024-01-01T00:00:00Z\", \"2000-01-01T00:00:00Z\")",
+        "result": "-5"
+      },
+      {
+        "call": "leapSecondsBetween(\"2016-12-31T23:59:60Z\", \"2017-01-01T00:00:00Z\")",
+        "result": "1"
+      },
+      {
+        "call": "leapSecondsBetween(\"1971-01-01T00:00:00Z\", \"2024-01-01T00:00:00Z\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/calculate/nextLeapSecond",
+    "page": "/reference/timescale/calculate/nextLeapSecond",
+    "name": "nextLeapSecond",
+    "namespace": "timescale",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "nextLeapSecond(isoString: string): string",
+    "description": "Return the first leap second after a UTC instant, as its UTC label `…T23:59:60Z`.",
+    "sourcePath": "packages/gmt/src/timescale/calculate/nextLeapSecond.ts",
+    "examples": [
+      {
+        "call": "nextLeapSecond(\"2016-01-01T00:00:00Z\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "nextLeapSecond(\"1999-08-22T00:00:00Z\")",
+        "result": "\"2005-12-31T23:59:60Z\""
+      },
+      {
+        "call": "nextLeapSecond(\"2016-12-31T23:59:60Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "nextLeapSecond(\"2024-01-01T00:00:00Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/calculate/taiMinusUtc",
+    "page": "/reference/timescale/calculate/taiMinusUtc",
+    "name": "taiMinusUtc",
+    "namespace": "timescale",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "taiMinusUtc(isoString: string): number | null",
+    "description": "Return TAI − UTC, in whole seconds, at a UTC instant.",
+    "sourcePath": "packages/gmt/src/timescale/calculate/taiMinusUtc.ts",
+    "examples": [
+      {
+        "call": "taiMinusUtc(\"2024-01-01T00:00:00Z\")",
+        "result": "37"
+      },
+      {
+        "call": "taiMinusUtc(\"2016-01-01T00:00:00Z\")",
+        "result": "36"
+      },
+      {
+        "call": "taiMinusUtc(\"2016-12-31T23:59:60Z\")",
+        "result": "36 — the inserted second"
+      },
+      {
+        "call": "taiMinusUtc(\"2100-01-01T00:00:00Z\")",
+        "result": "37"
+      },
+      {
+        "call": "taiMinusUtc(\"1971-01-01T00:00:00Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromTAI",
+    "page": "/reference/timescale/convert/fromTAI",
+    "name": "fromTAI",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTAI(taiString: string): string",
+    "description": "Convert a TAI time-scale string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTAI.ts",
+    "examples": [
+      {
+        "call": "fromTAI(\"2026-01-01T00:00:37 TAI\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromTAI(\"2017-01-01T00:00:36 TAI\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromTAI(\"2017-01-01T00:00:36.5 TAI\")",
+        "result": "\"2016-12-31T23:59:60.5Z\""
+      },
+      {
+        "call": "fromTAI(\"2024-01-01T00:00:37 GPS\")",
+        "result": "\"\" — wrong token"
+      },
+      {
+        "call": "fromTAI(\"2016-12-31T23:59:60 TAI\")",
+        "result": "\"\" — TAI has no leap seconds"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTAI",
+    "page": "/reference/timescale/convert/toTAI",
+    "name": "toTAI",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTAI(isoString: string): string",
+    "description": "Convert a UTC instant to a TAI time-scale string, `YYYY-MM-DDTHH:MM:SS[.fraction] TAI`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTAI.ts",
+    "examples": [
+      {
+        "call": "toTAI(\"2026-01-01T00:00:00Z\")",
+        "result": "\"2026-01-01T00:00:37 TAI\""
+      },
+      {
+        "call": "toTAI(\"2013-06-01T00:00:00Z\")",
+        "result": "\"2013-06-01T00:00:35 TAI\""
+      },
+      {
+        "call": "toTAI(\"2016-12-31T23:59:60.5Z\")",
+        "result": "\"2017-01-01T00:00:36.5 TAI\""
+      },
+      {
+        "call": "toTAI(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTAI(\"1971-12-31T00:00:00Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/validate/isLeapSecond",
+    "page": "/reference/timescale/validate/isLeapSecond",
+    "name": "isLeapSecond",
+    "namespace": "timescale",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isLeapSecond(isoString: string): boolean",
+    "description": "Return true when a UTC instant string is one of the 27 inserted leap seconds.",
+    "sourcePath": "packages/gmt/src/timescale/validate/isLeapSecond.ts",
+    "examples": [
+      {
+        "call": "isLeapSecond(\"2016-12-31T23:59:60Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isLeapSecond(\"2009-01-01T08:59:60+09:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isLeapSecond(\"2017-12-31T23:59:60Z\")",
+        "result": "false — well-formed, no insertion that day"
+      },
+      {
+        "call": "isLeapSecond(\"2016-12-31T23:59:59Z\")",
+        "result": "false"
       }
     ]
   },
@@ -17855,6 +18287,105 @@
       {
         "name": "calendar",
         "description": "The terminal's working week and holidays. It is required when a counting basis is `\"working\"` and not read otherwise. Its own `timeZone` is not used: `timeZone` above is the counting zone."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/GnssSystem",
+    "page": "/reference/types/GnssSystem",
+    "name": "GnssSystem",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "A satellite navigation system's time scale, by its RINEX 4.02 time-system identifier: GPS time, Galileo time, BeiDou time, QZSS time, GLONASS time (in UTC hours, as RINEX and BIPM report it), NavIC time.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/GnssWeekCounter",
+    "page": "/reference/types/GnssWeekCounter",
+    "name": "GnssWeekCounter",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "A satellite week counter, named by system and, where a system broadcasts two, by navigation message: GPS and QZSS LNAV count modulo 1024, their CNAV modulo 8192, Galileo modulo 4096, BeiDou modulo 8192, NavIC LNAV (L5/S) modulo 1024 and L1NV modulo 8192. GLONASS has no week counter. A RINEX navigation-file week is not one of these: see `RinexWeekSystem`.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/gnss/convert/gnssWeekToUtc#rolloverera",
+    "page": "/reference/gnss/convert/gnssWeekToUtc",
+    "name": "RolloverEra",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "Which pass of a wrapping week counter a week number belongs to. An integer from 0 is the era itself (era 0 starts at the system's epoch). `\"rolling\"` picks the era that puts the week within half a counter period of today, for live receiver output; it reads the clock, so the same stored value can give a different answer in a later year.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": [],
+    "inlineOn": "gnssWeekToUtc"
+  },
+  {
+    "url": "/reference/gnss/convert/utcToGnssWeek#gnssweek",
+    "page": "/reference/gnss/convert/utcToGnssWeek",
+    "name": "GnssWeek",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "A week and time of week on one satellite week counter.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": [],
+    "inlineOn": "utcToGnssWeek",
+    "members": [
+      {
+        "name": "week",
+        "description": "The week number as the counter shows it, from 0 to the counter's modulus − 1."
+      },
+      {
+        "name": "timeOfWeekSeconds",
+        "description": "Seconds since the start of the week, from 0 up to but not including 604 800."
+      },
+      {
+        "name": "era",
+        "description": "How many times the counter has wrapped since the system's epoch."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RinexWeekSystem",
+    "page": "/reference/types/RinexWeekSystem",
+    "name": "RinexWeekSystem",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "The systems whose RINEX navigation records carry a week number. GLONASS records do not.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/gnss/convert/utcToRinexWeek#rinexweek",
+    "page": "/reference/gnss/convert/utcToRinexWeek",
+    "name": "RinexWeek",
+    "namespace": "types",
+    "module": "gnss",
+    "kind": "type",
+    "signature": "",
+    "description": "A week and time of week as a RINEX navigation record counts them: continuous, so no era.",
+    "sourcePath": "packages/gmt/src/types/gnss.ts",
+    "examples": [],
+    "inlineOn": "utcToRinexWeek",
+    "members": [
+      {
+        "name": "week",
+        "description": "The continuous week number, counted from the record's epoch without wrapping."
+      },
+      {
+        "name": "timeOfWeekSeconds",
+        "description": "Seconds since the start of the week, from 0 up to but not including 604 800."
       }
     ]
   },

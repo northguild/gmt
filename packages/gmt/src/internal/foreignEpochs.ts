@@ -35,6 +35,12 @@ export const NANOSECONDS_PER_TICK = 100n;
 /** Nanoseconds in one 24-hour day. */
 export const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
 
+/**
+ * Nanoseconds in one week: 604 800 s, the week every satellite week counter counts (IS-GPS-200N
+ * §3.3.4: "The largest unit used in stating GPS time is one week defined as 604,800 seconds").
+ */
+export const NANOSECONDS_PER_WEEK = 604_800_000_000_000n;
+
 /** The same value as a `number` — an Excel serial is days in a `double`. */
 export const NANOSECONDS_PER_DAY_NUMBER = 86_400_000_000_000;
 

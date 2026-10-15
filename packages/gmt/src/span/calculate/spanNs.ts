@@ -33,7 +33,8 @@ import { parseInstantNanoseconds } from "../../internal";
  * - Leap seconds are not counted. UTC repeats a second rather than numbering a 61st one, so
  *   a span across one is a second short of the physical elapsed time; against a smeared
  *   clock (Google, AWS, Meta) the error is up to a second spread over the smear window.
- *   Leap-second-exact spans need a TAI scale, which GMT does not yet ship.
+ *   For a leap-second-exact span, convert both ends with `toTAI` or add
+ *   `leapSecondsBetween(start, end)` seconds, both from `timescale/`.
  *
  * @param start ISO 8601 instant string the span is measured from
  * @param end ISO 8601 instant string the span is measured to

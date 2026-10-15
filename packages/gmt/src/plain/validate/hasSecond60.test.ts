@@ -1,6 +1,6 @@
-import { isLeapSecond } from "./isLeapSecond";
+import { hasSecond60 } from "./hasSecond60";
 
-describe("isLeapSecond", () => {
+describe("hasSecond60", () => {
   it.each`
     value
     ${"2024-12-31T23:59:60Z"}
@@ -12,7 +12,7 @@ describe("isLeapSecond", () => {
     ${"2024-12-31T235960Z"}
     ${"20241231T235960+00:00[UTC]"}
   `("returns true for valid leap second datetime $value", ({ value }) => {
-    expect(isLeapSecond(value)).toBe(true);
+    expect(hasSecond60(value)).toBe(true);
   });
 
   // Temporal parses a second of 60 without any designator too, and clamps it (native Chromium 153:
@@ -34,7 +34,7 @@ describe("isLeapSecond", () => {
     ${"23:59:60[u-ca=iso8601]"}            | ${"time with an annotation"}
     ${"2016-12-31T23:59:60[u-ca=iso8601]"} | ${"date-time with an annotation"}
   `("returns true for $value ($spelling)", ({ value }) => {
-    expect(isLeapSecond(value)).toBe(true);
+    expect(hasSecond60(value)).toBe(true);
   });
 
   it.each`
@@ -48,6 +48,6 @@ describe("isLeapSecond", () => {
     ${"2024-01-01T00:00:00Z[x=T123460Z]"}
     ${"23:59:59[x=T123460]"}
   `("returns false for non-leap second datetime $value", ({ value }) => {
-    expect(isLeapSecond(value)).toBe(false);
+    expect(hasSecond60(value)).toBe(false);
   });
 });

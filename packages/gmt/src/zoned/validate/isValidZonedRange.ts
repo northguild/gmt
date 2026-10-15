@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { hasSecond60 } from "../../plain/validate/hasSecond60";
 import { isObject, isOptionsArgument, zonedDateTimeFrom } from "../../internal";
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
 
@@ -58,8 +58,8 @@ export function isValidZonedRange(props: {
     }
 
     if (
-      isLeapSecond(value1) ||
-      isLeapSecond(value2) ||
+      hasSecond60(value1) ||
+      hasSecond60(value2) ||
       !hasZonedDateTimeShape(value1) ||
       !hasZonedDateTimeShape(value2)
     ) {

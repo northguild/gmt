@@ -15,7 +15,7 @@
  * - Rejecting a leap second is GMT's decision, not the grammar's range: Temporal's
  *   `TimeSecond` and RFC 3339's `time-second` both admit 60. GMT refuses the value because
  *   Temporal cannot represent it and would otherwise read it as `:59`.
- * - Used by `isLeapSecond`. Validators reject a second of 60 in their own patterns.
+ * - Used by `hasSecond60`. Validators reject a second of 60 in their own patterns.
  *
  * @example leapSecond.test("2024-12-31T23:59:60Z")                // true
  * @example leapSecond.test("2024-12-31T23:59:60.123+00:00")       // true

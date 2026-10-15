@@ -11,6 +11,8 @@ import {
   MAX_EXCEL_1900_SERIAL_EXCLUSIVE,
   MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
   MAX_FILE_TIME,
+  NANOSECONDS_PER_DAY as NANOSECONDS_PER_DAY_CONSTANT,
+  NANOSECONDS_PER_WEEK,
   NTP_EPOCH_OFFSET_NANOSECONDS,
   NTP_ERA_UNITS,
   NTP_UNITS_PER_SECOND,
@@ -54,6 +56,20 @@ describe("foreignEpochs", () => {
         1_000_000_000n,
     );
     expect(NTP_EPOCH_OFFSET_NANOSECONDS / 1_000_000_000n).toBe(2_208_988_800n);
+  });
+
+  // IS-GPS-200N §3.3.4: a GPS week is 604,800 seconds; every satellite week counter uses it.
+  it("counts 604 800 seconds, seven days, in NANOSECONDS_PER_WEEK", () => {
+    expect(NANOSECONDS_PER_WEEK).toBe(7n * NANOSECONDS_PER_DAY_CONSTANT);
+    expect(NANOSECONDS_PER_WEEK).toBe(
+      BigInt(
+        Temporal.Duration.from({ days: 7 }).total({
+          unit: "seconds",
+          relativeTo: "2024-01-01",
+        }),
+      ) * 1_000_000_000n,
+    );
+    expect(NANOSECONDS_PER_WEEK / 1_000_000_000n).toBe(604_800n);
   });
 
   it("counts 2^32 fractional units per NTP second and 2^64 per era", () => {

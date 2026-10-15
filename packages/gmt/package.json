@@ -90,6 +90,12 @@
       "duty/validate": [
         "./dist/duty/validate/index.d.ts"
       ],
+      "gnss": [
+        "./dist/gnss/index.d.ts"
+      ],
+      "gnss/convert": [
+        "./dist/gnss/convert/index.d.ts"
+      ],
       "instant": [
         "./dist/instant/index.d.ts"
       ],
@@ -191,6 +197,18 @@
       ],
       "span/validate": [
         "./dist/span/validate/index.d.ts"
+      ],
+      "timescale": [
+        "./dist/timescale/index.d.ts"
+      ],
+      "timescale/calculate": [
+        "./dist/timescale/calculate/index.d.ts"
+      ],
+      "timescale/convert": [
+        "./dist/timescale/convert/index.d.ts"
+      ],
+      "timescale/validate": [
+        "./dist/timescale/validate/index.d.ts"
       ],
       "transport": [
         "./dist/transport/index.d.ts"
@@ -364,6 +382,14 @@
       "types": "./dist/duty/validate/index.d.ts",
       "default": "./dist/duty/validate/index.js"
     },
+    "./gnss": {
+      "types": "./dist/gnss/index.d.ts",
+      "default": "./dist/gnss/index.js"
+    },
+    "./gnss/convert": {
+      "types": "./dist/gnss/convert/index.d.ts",
+      "default": "./dist/gnss/convert/index.js"
+    },
     "./instant": {
       "types": "./dist/instant/index.d.ts",
       "default": "./dist/instant/index.js"
@@ -499,6 +525,22 @@
     "./span/validate": {
       "types": "./dist/span/validate/index.d.ts",
       "default": "./dist/span/validate/index.js"
+    },
+    "./timescale": {
+      "types": "./dist/timescale/index.d.ts",
+      "default": "./dist/timescale/index.js"
+    },
+    "./timescale/calculate": {
+      "types": "./dist/timescale/calculate/index.d.ts",
+      "default": "./dist/timescale/calculate/index.js"
+    },
+    "./timescale/convert": {
+      "types": "./dist/timescale/convert/index.d.ts",
+      "default": "./dist/timescale/convert/index.js"
+    },
+    "./timescale/validate": {
+      "types": "./dist/timescale/validate/index.d.ts",
+      "default": "./dist/timescale/validate/index.js"
     },
     "./transport": {
       "types": "./dist/transport/index.d.ts",

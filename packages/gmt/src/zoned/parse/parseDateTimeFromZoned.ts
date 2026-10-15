@@ -1,4 +1,4 @@
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { hasSecond60 } from "../../plain/validate/hasSecond60";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
 import { zonedDateTimeFrom } from "../../internal";
 
@@ -16,7 +16,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseDateTimeFromZoned("invalid") // ""
  */
 export const parseDateTimeFromZoned = (value: string): string => {
-  if (!isValidZonedDateTime(value) || isLeapSecond(value)) {
+  if (!isValidZonedDateTime(value) || hasSecond60(value)) {
     return "";
   }
 
