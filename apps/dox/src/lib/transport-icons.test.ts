@@ -4,7 +4,6 @@
  * `DOMParser` needs jsdom, but nothing here is a widget — this stays a pure
  * markup test, no library import.
  */
-/// <reference types="vitest/globals" />
 import {
   TRANSPORT_ICON_PATHS,
   TRANSPORT_MODES,

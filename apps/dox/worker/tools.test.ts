@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Two things are pinned here:
  *
@@ -89,6 +88,20 @@ describe("worker tool execute", () => {
     });
     expect(rejected.ok).toBe(false);
     expect(rejected.note).toContain("Fake/Zone");
+  });
+
+  it("accepts a B/L date stamp for a zone the library cannot read, and for an offset", async () => {
+    // Other zone tools reject an unknown zone. This one does not: a place the
+    // library does not read is the widget's own NO SIGNAL, with its reason.
+    for (const timeZone of ["Mars/Base", "+08:00", "America/New_York"]) {
+      const result = await run("showBlDateStamp", {
+        value: "2024-06-16T01:00:00Z",
+        event: "shippedOnBoard",
+        timeZone,
+        zone2: "Fake/Zone",
+      });
+      expect(result, timeZone).toEqual({ ok: true, widget: "bl-date-stamp" });
+    }
   });
 
   it("does no I/O and no model call — execute is synchronous work only", () => {

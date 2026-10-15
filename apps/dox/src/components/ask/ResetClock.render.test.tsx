@@ -6,7 +6,6 @@
  * cover the rules as pure functions; this covers that they reach the DOM, and
  * that the reader's picks reach the shared date display store.
  */
-/// <reference types="vitest/globals" />
 import {
   act,
   fireEvent,

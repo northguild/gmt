@@ -5,7 +5,6 @@
  * assert, against the real `@northguild/gmt`. Every preset's printed call
  * and result are section 9 rows.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { CROSSING_PRESETS } from "./crossing-clock";

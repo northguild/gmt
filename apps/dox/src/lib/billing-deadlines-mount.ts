@@ -15,6 +15,7 @@
 import {
   BILLING_PRESETS,
   CUSTOM_PRESET_ID,
+  billingPlates,
   callSource,
   datesOf,
   dayStrip,
@@ -33,8 +34,15 @@ import {
   type DayStripResult,
   type DatesArg,
   type WindowsArg,
+  verdictSizerTexts,
 } from "./billing-deadlines";
 import { codeFrameHtml } from "./code-frame";
+import { holdHtml, textSizers } from "./edi-picture";
+import {
+  descriptionHoldHtml,
+  plateHtml,
+  platesHtml,
+} from "./ledger-widgets";
 import { GMT_MODULES } from "./gmt-modules";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
@@ -141,7 +149,10 @@ export function renderBillingDeadlinesTemplate(
     `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select>` +
     `</label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    descriptionHoldHtml(
+      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
+      BILLING_PRESETS.map((p) => p.description),
+    ) +
     `<fieldset class="gmt-billing-group"><legend>Dates</legend>` +
     `<div class="gmt-field-grid">` +
     dateField("anchor-on", "Anchor date (day zero)", state.anchorOn) +
@@ -177,11 +188,12 @@ export function renderBillingDeadlinesTemplate(
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>2. The chain</h4>` +
+    platesHtml("plates", billingPlates(state, null)) +
     `<ul class="gmt-billing-verdicts" data-role="verdicts" aria-live="polite">` +
-    `<li data-role="verdict-issued"></li>` +
-    `<li data-role="verdict-requested"></li>` +
+    verdictItem("verdict-issued", "issued") +
+    verdictItem("verdict-requested", "requested") +
     `</ul>` +
-    `<p class="gmt-billing-deadlines" data-role="deadlines"></p>` +
+    `<p class="gmt-ledger-sr gmt-billing-deadlines" data-role="deadlines"></p>` +
     `<div class="gmt-billing-weekdays" aria-hidden="true">${WEEKDAY_NAMES.map((w) => `<span>${w}</span>`).join("")}</div>` +
     `<div class="gmt-billing-strip" data-role="strip" role="list"></div>` +
     `<p class="gmt-billing-strip-summary" data-role="strip-summary" aria-live="polite"></p>` +
@@ -196,6 +208,23 @@ export function renderBillingDeadlinesTemplate(
     `</div>` +
     `</div>` +
     `</div>`
+  );
+}
+
+/**
+ * One verdict line. It sits in a hold with a hidden sizer for each text it can
+ * show, so the line is as tall as the tallest of them at any width and the strip
+ * below it never moves from one preset to the next.
+ */
+function verdictItem(role: string, kind: "issued" | "requested"): string {
+  return (
+    `<li>` +
+    holdHtml(
+      `<span data-role="${role}"></span>`,
+      textSizers("span", "gmt-billing-verdict", verdictSizerTexts(kind)),
+      "gmt-ledger-hold",
+    ) +
+    `</li>`
   );
 }
 
@@ -241,7 +270,7 @@ async function loadModules(): Promise<Modules> {
 // Drawing the strip
 // ---------------------------------------------------------------------------
 
-function dateText(iso: string): {
+function dayParts(iso: string): {
   weekday: string;
   day: number;
   month: string;
@@ -272,7 +301,7 @@ function dateText(iso: string): {
 }
 
 function ariaLabelFor(item: DayStripDay): string {
-  const { weekday, day, month, year } = dateText(item.date);
+  const { weekday, day, month, year } = dayParts(item.date);
   const dateLabel = `${weekday} ${day} ${month} ${year}`;
   const parts: string[] = [];
   for (const mark of item.marks) parts.push(MARK_LABEL[mark]!);
@@ -292,7 +321,7 @@ function renderDayCell(item: DayStripDay, showMonth: boolean): string {
   if (item.padding) {
     return `<div class="gmt-billing-cell gmt-billing-cell--padding" role="listitem" aria-hidden="true"></div>`;
   }
-  const { day, month } = dateText(item.date);
+  const { day, month } = dayParts(item.date);
   const dayLabel = showMonth ? `${day} ${month}` : String(day);
 
   const marks = item.marks
@@ -357,7 +386,7 @@ function renderStrip(
     .map((item) => {
       if (item.kind === "gap") return renderGapRow(item);
       if (item.padding) return renderDayCell(item, false);
-      const { day } = dateText(item.date);
+      const { day } = dayParts(item.date);
       const showMonth = firstDrawn || day === 1;
       firstDrawn = false;
       return renderDayCell(item, showMonth);
@@ -458,6 +487,11 @@ function setupWidget(container: HTMLElement, m: Modules): void {
         dates.requestReceivedOn,
         result?.requestedByDeadline ?? null,
       );
+    }
+
+    const platesEl = q("plates");
+    if (platesEl) {
+      platesEl.innerHTML = billingPlates(s, result).map(plateHtml).join("");
     }
 
     const deadlinesEl = q("deadlines");

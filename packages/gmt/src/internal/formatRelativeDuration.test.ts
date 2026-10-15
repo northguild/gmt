@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { formatRelativeAmount } from "./formatRelativeDuration";
 
 describe("formatRelativeAmount", () => {

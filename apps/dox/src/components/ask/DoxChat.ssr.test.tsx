@@ -15,7 +15,6 @@
  * Deliberately the `node` environment, with no jsdom docblock and no shims:
  * the absence of DOM globals is the whole point of the test.
  */
-/// <reference types="vitest/globals" />
 import { renderToString } from "react-dom/server";
 import { DoxChat } from "./DoxChat";
 import DoxPage from "./DoxPage";

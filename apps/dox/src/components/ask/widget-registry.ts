@@ -47,12 +47,16 @@
 import type { ConverterArgs } from "~/lib/converter-bench-mount";
 import type { GlobeArgs } from "~/lib/globe-mount";
 import type { BillingDeadlinesArgs } from "~/lib/billing-deadlines-mount";
+import type { BlDateStampArgs } from "~/lib/bl-date-stamp-mount";
 import type { ConnectionCheckerArgs } from "~/lib/connection-checker-mount";
 import type { DeliverySchedulerArgs } from "~/lib/delivery-scheduler-mount";
+import type { DemurrageClockArgs } from "~/lib/demurrage-clock-mount";
 import type { DstArgs } from "~/lib/dst-inspector-mount";
 import type { DwellLedgerArgs } from "~/lib/dwell-ledger-mount";
+import type { EpcisEventReaderArgs } from "~/lib/epcis-event-reader-mount";
 import type { FreeTimeLedgerArgs } from "~/lib/free-time-ledger-mount";
 import type { IntervalArgs } from "~/lib/interval-visualizer-mount";
+import type { JourneySplitArgs } from "~/lib/journey-split-mount";
 import type { CrossingClockArgs } from "~/lib/crossing-clock-mount";
 import type { TimetableReaderArgs } from "~/lib/timetable-reader-mount";
 import type { CutoffStackArgs } from "~/lib/cutoff-stack-mount";
@@ -66,6 +70,7 @@ import type { X12TimeReaderArgs } from "~/lib/x12-time-reader-mount";
 import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import {
   showBillingDeadlinesInput,
+  showBlDateStampInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -73,14 +78,17 @@ import {
   showCutoffRulerInput,
   showCutoffStackInput,
   showDeliverySchedulerInput,
+  showDemurrageClockInput,
   showDepartureBoardInput,
   showDstInspectorInput,
   showDtmDecoderInput,
+  showEpcisEventReaderInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
+  showJourneySplitInput,
   showPunctualityBoardInput,
   showTimetableReaderInput,
   showX12TimeReaderInput,
@@ -603,6 +611,104 @@ const x12TimeEntry = defineWidget<X12TimeReaderArgs>({
     checkZones([zone, zone2, zone3, zone4].filter((z): z is string => !!z)),
 });
 
+const demurrageEntry = defineWidget<DemurrageClockArgs>({
+  title: "Demurrage clock",
+  kind: "demclock",
+  parse: (input) => {
+    const result = showDemurrageClockInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the terminal's zone is checked here; an event the library does
+     not read is the widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/demurrage-clock-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderDemurrageClockTemplate(args),
+      mount: m.mountDemurrageClock,
+    })),
+  validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
+});
+
+const blDateEntry = defineWidget<BlDateStampArgs>({
+  title: "B/L date stamp",
+  kind: "bldate",
+  parse: (input) => {
+    const result = showBlDateStampInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. There is deliberately no `validate`. The place may be a zone id or a
+     UTC offset, and a place the library does not read is this widget's own
+     NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/bl-date-stamp-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderBlDateStampTemplate(args),
+      mount: m.mountBlDateStamp,
+    })),
+});
+
+const epcisEntry = defineWidget<EpcisEventReaderArgs>({
+  title: "EPCIS event reader",
+  kind: "epcis",
+  parse: (input) => {
+    const result = showEpcisEventReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. There is deliberately no `validate`. A time or an offset the library
+     does not read is this widget's own NO SIGNAL, with its reason, so refusing
+     it here would hide the lesson. */
+  load: () =>
+    import("~/lib/epcis-event-reader-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderEpcisEventReaderTemplate(args),
+      mount: m.mountEpcisEventReader,
+    })),
+});
+
+const journeyEntry = defineWidget<JourneySplitArgs>({
+  title: "Journey split",
+  kind: "journeysplit",
+  parse: (input) => {
+    const result = showJourneySplitInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value, as the Delivery Scheduler's legs are. Only the zones are checked
+     here; a duration or a departure the library does not read is the widget's
+     own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/journey-split-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderJourneySplitTemplate(args),
+      mount: m.mountJourneySplit,
+    })),
+  validate: (a) =>
+    checkZones([
+      ...(a.legs ?? []).map((l) => l.timeZone).filter((z): z is string => !!z),
+      ...(a.startTimeZone ? [a.startTimeZone] : []),
+    ]),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -669,6 +775,10 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showZonePlanner: plannerEntry,
   showDtmDecoder: dtmEntry,
   showX12TimeReader: x12TimeEntry,
+  showDemurrageClock: demurrageEntry,
+  showBlDateStamp: blDateEntry,
+  showEpcisEventReader: epcisEntry,
+  showJourneySplit: journeyEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { readDateTimeFormatOptions } from "./readDateTimeFormatOptions";
 
 describe("readDateTimeFormatOptions", () => {

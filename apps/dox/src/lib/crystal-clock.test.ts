@@ -5,7 +5,6 @@
  * minute, and an SVG string. No gmt import, no DOM read — `DOMParser` here
  * is only this test's own well-formedness check.
  */
-/// <reference types="vitest/globals" />
 import {
   CLOCK_OUTER,
   bindClockGlow,

@@ -1,0 +1,499 @@
+/*
+ * The ledger family's shared recipes: the tools that draw time on local days.
+ * The Free Time Ledger, the Dwell Ledger, the B/L Date Stamp, the Journey Split
+ * and the Demurrage Clock. Registered after gmt-departure-board.css, with the
+ * tool sheets after it, so a tool sheet always comes after the recipes it
+ * refines.
+ *
+ * This sheet reuses and does not copy:
+ * - the result plates (`.gmt-punct-heroes`, `.gmt-punct-hero`, `-cap`, `-value`,
+ *   `-sub`; gmt-punctuality-widgets.css), which are unscoped;
+ * - the chart recipes of gmt-cutoff-widgets.css: the chart surface, the series
+ *   mapping, the chip, the mark, the gate, the closed hatch and the axis ticks.
+ *   Every one of their root lists names the five roots, and `.gmt-ledger-frame`
+ *   joins the chart-surface list beside `.gmt-punct-frame`;
+ * - the family hatch (`.gmt-punct-hatch`), whose root list names the five.
+ *
+ * It adds only what no sheet has: the frame, the glass day columns with their
+ * header strip and chips, the odd-day chip, the labelled lane, the half-open
+ * bar, the legend, the hold and the visually hidden text.
+ *
+ * Rules for the sheet, as for every chart:
+ * - Text sits on an opaque `--gmt-surface` plate (a chip or a header strip).
+ *   Text drawn straight onto the frame takes the primary ink, because the
+ *   frame's wash is brightest toward its middle.
+ * - A series colour (`--series`) goes on a mark, an edge or a swatch, never on
+ *   text.
+ * - A day's state is a pattern and a chip with a word. Free, charged, closed and
+ *   counted are never a verdict colour. Amber is the sentinel's alone and
+ *   nothing here uses it.
+ * - Nothing animates or transitions: not a value, a mark, a day column or a
+ *   plate. No `backdrop-filter` and no `clip-path`.
+ * - Narrow rules are `@container` queries by name, because the /dox rail is
+ *   narrow on a wide viewport.
+ *
+ * Tokens only; no colour literal. One-off gradient stops are written as
+ * `color(from var(--token) srgb r g b / a)`.
+ */
+
+/* ---------------------------------------------------------------------------
+ * The roots. The label column's width is one custom property, so every lane of
+ * a tool starts at the same x. A tool that draws a gate raises
+ * `--gmt-ledger-gate-h` to the height of the chip row above its days.
+ * --------------------------------------------------------------------------- */
+
+:is(
+  .gmt-freetime,
+  .gmt-dwell,
+  .gmt-bl-date-stamp,
+  .gmt-journey-split,
+  .gmt-demurrage-clock
+) {
+  --gmt-ledger-label-w: 8.5rem;
+  --gmt-ledger-lane-h: 8.5rem;
+  --gmt-ledger-gate-h: 0rem;
+  --gmt-ledger-bar-h: 1.7rem;
+  container-type: inline-size;
+}
+
+/* ---------------------------------------------------------------------------
+ * The frame: the drawn surface that holds the plates and the chart. It is a
+ * named container, so the narrow rules read its width and not the card's. It
+ * is the `frame` the stillness gate records. The inline padding keeps the
+ * 44px hit area of a handle at either end of a lane inside the frame, as the
+ * punctuality frame does.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-frame {
+  container: gmt-ledger-frame / inline-size;
+  padding-inline: calc(var(--gmt-space-3) + 4px);
+}
+
+/* ---------------------------------------------------------------------------
+ * A lane: a mono label and, beside it, a track that holds the day columns. The
+ * label's width is the root's custom property. Under 30rem the label sits above
+ * its track.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-lane {
+  display: grid;
+  grid-template-columns: var(--gmt-ledger-label-w) minmax(0, 1fr);
+  align-items: end;
+  column-gap: var(--gmt-space-2);
+}
+
+.gmt-ledger-lane[hidden] {
+  display: none;
+}
+
+.gmt-ledger-lane-label {
+  /* Centred on the days, not on the gate's chip row above them, whatever the
+     number of lines the zone's name takes. */
+  margin-block-end: calc(var(--gmt-ledger-lane-h) / 2);
+  translate: 0 50%;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.gmt-ledger-lane-track {
+  position: relative;
+  min-width: 0;
+  height: calc(var(--gmt-ledger-gate-h) + var(--gmt-ledger-lane-h));
+}
+
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-ledger-lane {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: var(--gmt-space-1);
+  }
+
+  .gmt-ledger-lane-label {
+    margin-block-end: 0;
+    translate: none;
+    text-align: left;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Day columns. Each is placed and sized by its day's real bounds, so a 23- or
+ * 25-hour day is narrower or wider. The row sits below the gate's chip row.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-days {
+  position: absolute;
+  inset: var(--gmt-ledger-gate-h) 0 0 0;
+  overflow: hidden;
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-fill-subtle);
+}
+
+.gmt-ledger-day {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  box-sizing: border-box;
+  border-left: 1px solid var(--gmt-border);
+  /* `background-color`, never the shorthand: a hatch lives in
+     `background-image`, and the shorthand would wipe it. */
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.04);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+/* Neighbouring days alternate in strength. */
+.gmt-ledger-days > div.gmt-ledger-day:nth-of-type(even) {
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+}
+
+/* The header strip: an opaque plate holding the date. */
+.gmt-ledger-day-label {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 3px var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-border-strong);
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The chips under the strip: the state's word, a tier, an odd length. A column
+   keeps its box, so chips that do not fit are cut by it and never push the
+   bar. The lane reserves the height of three rows. */
+.gmt-ledger-day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  padding: 0 var(--gmt-space-1);
+}
+
+/* A column too narrow for "15 Jun · Sat" drops the weekday first, then the
+   whole label and its chips (its `aria-label` still names the day). The mount
+   measures each column against `dayColumnFit`. */
+.gmt-ledger-day--short .gmt-ledger-day-weekday,
+.gmt-ledger-day--narrow > *,
+.gmt-ledger-day--bare .gmt-ledger-day-chips {
+  display: none;
+}
+
+/* The states. A state is a pattern and a chip with a word. */
+
+/* Lit: glass in the column's series colour, with a bottom edge in that colour.
+   Never a left-only edge. */
+.gmt-ledger-days .gmt-ledger-day[data-state="lit"] {
+  background-image: linear-gradient(
+    180deg,
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.34),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.12)
+  );
+  box-shadow:
+    inset 0 -3px 0 var(--series, var(--gmt-cyan)),
+    inset 0 1px 0 var(--gmt-highlight);
+}
+
+/* Hatched: the family hatch (`.gmt-punct-hatch`) in the column's series colour.
+   A tier differs by the density of the hatch and by its "tier n" chip, never by
+   a coloured edge. */
+.gmt-ledger-days .gmt-ledger-day.gmt-punct-hatch {
+  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 0.55);
+}
+
+.gmt-ledger-days .gmt-ledger-day.gmt-punct-hatch[data-tier="2"] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch) 0,
+    var(--hatch) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+.gmt-ledger-days
+  .gmt-ledger-day.gmt-punct-hatch[data-tier]:not(
+    [data-tier="1"],
+    [data-tier="2"]
+  ) {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch) 0,
+    var(--hatch) 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+/* Closed is `.gmt-cutoff-closed` (gmt-cutoff-widgets.css), plain is bare. The
+   chip says the word. */
+
+/* The odd-day chip: "23 h" or "25 h", in the primary ink. Its edge follows the
+   sheet's DST pair: dashed gold for a day shorter than 24 hours, double purple
+   for a longer one. The text never takes the colour. */
+.gmt-ledger-day .gmt-cutoff-chip.gmt-ledger-odd {
+  color: var(--gmt-ice);
+}
+
+.gmt-ledger-day .gmt-cutoff-chip.gmt-ledger-odd[data-dst="short"] {
+  border: 1px dashed var(--gmt-dst-gold);
+}
+
+.gmt-ledger-day .gmt-cutoff-chip.gmt-ledger-odd[data-dst="long"] {
+  border: 3px double var(--gmt-dst-purple);
+}
+
+/* ---------------------------------------------------------------------------
+ * The half-open bar: the Departure Board's window recipe. Its start is a solid
+ * capped edge, its end a dashed open edge. The bar takes its lane's series
+ * colour through `--series`. An inverted bar is a dashed neutral outline.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-bar {
+  position: absolute;
+  bottom: 6px;
+  height: var(--gmt-ledger-bar-h);
+  min-width: 2px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--gmt-border-strong);
+  background: linear-gradient(
+    180deg,
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.4),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.14)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  /* The handles on the bar read `currentColor` for their edge. */
+  color: var(--gmt-ice);
+}
+
+/* The two edges are drawings. They sit over the handles in the paint order (a
+   pseudo-element comes after its element's children), so neither takes a
+   pointer: a press on a handle's grip must reach the handle. */
+.gmt-ledger-bar::before,
+.gmt-ledger-bar::after {
+  pointer-events: none;
+}
+
+.gmt-ledger-bar::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--series, var(--gmt-cyan-bright));
+  box-shadow: 0 0 6px var(--gmt-glow);
+}
+
+.gmt-ledger-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 0;
+  border-left: 2px dashed var(--series, var(--gmt-cyan-bright));
+}
+
+.gmt-ledger-bar[hidden] {
+  display: none;
+}
+
+.gmt-ledger-bar--invalid {
+  border: 1px dashed var(--gmt-border-strong);
+  background: var(--gmt-surface);
+  box-shadow: none;
+}
+
+.gmt-ledger-bar--invalid::before,
+.gmt-ledger-bar--invalid::after {
+  content: none;
+}
+
+.gmt-ledger-bar > .gmt-handle:first-child {
+  left: 0;
+}
+
+.gmt-ledger-bar > .gmt-handle:last-child {
+  left: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * The gate (`.gmt-cutoff-gate`): the line runs the lane's full height, and its
+ * chip sits in the row the lane reserves above the days.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-lane-track > .gmt-cutoff-gate {
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.gmt-ledger-lane-track > .gmt-cutoff-gate[hidden] {
+  display: none;
+}
+
+.gmt-ledger-gate-chip {
+  position: absolute;
+  top: 0;
+  left: 10px;
+}
+
+.gmt-ledger-gate-chip--end {
+  left: auto;
+  right: 10px;
+}
+
+/* ---------------------------------------------------------------------------
+ * The axis under a lane, and the legend. Both start at the track's x.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+/* The legend: a wrapped row of swatch and word. A swatch is a mark, so it may
+   take a series colour or a hatch. Each entry sits on a chip. */
+ul.gmt-ledger-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0 0 0 calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  padding: 0;
+  list-style: none;
+}
+
+ul.gmt-ledger-legend > li {
+  margin: 0;
+  padding: 2px var(--gmt-space-2);
+}
+
+ul.gmt-ledger-legend > li::before {
+  content: none;
+}
+
+.gmt-ledger-swatch {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: 2px;
+  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+}
+
+.gmt-ledger-swatch[data-state="lit"] {
+  background-image: linear-gradient(
+    180deg,
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.2)
+  );
+  border-bottom: 3px solid var(--series, var(--gmt-cyan));
+}
+
+.gmt-ledger-swatch.gmt-punct-hatch {
+  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 0.7);
+}
+
+.gmt-ledger-swatch[data-state="plain"] {
+  border-style: dashed;
+}
+
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-ledger-axis,
+  ul.gmt-ledger-legend {
+    margin-left: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * A plate with no result keeps its box and reads "no result" in the muted ink.
+ * --------------------------------------------------------------------------- */
+
+.gmt-punct-hero[data-empty] .gmt-punct-hero-value {
+  color: var(--gmt-ice-dim);
+}
+
+/* The words "no result" are set small, in the mono face, inside a value that
+   keeps its full size and height. Set at the value's size they were wider than
+   the width a plate reserves, so a plate drawn before its first result (the
+   server-rendered one) was wider than the plate that replaced it, and the row
+   of plates wrapped, then unwrapped, as the page loaded. */
+.gmt-punct-hero-value {
+  min-block-size: 1lh;
+}
+
+.gmt-punct-hero-none {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+ * The hold: a one-cell grid that stacks a live element and hidden sizers, for a
+ * region whose text comes and goes (`holdHtml`, with this class passed in). The
+ * region is as tall as the tallest text it can show. The live wrapper stretches:
+ * aligned to the start, its height would go from 0 to the content's each time a
+ * note appears, and the stillness gate, which measures the wrapper, would count
+ * that as a resize.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-hold {
+  display: grid;
+  min-width: 0;
+}
+
+.gmt-ledger-hold > * {
+  grid-area: 1 / 1;
+  align-self: stretch;
+  min-width: 0;
+}
+
+/* The live text fills the cell, so the element itself is as tall as the tallest
+   text it can show and the same at every preset (the hold's wrapper already is).
+   Smooth growth wraps a `data-grow="slot"` element in a flex column, so the
+   element has to grow into it. A plain hint shows no box, so nothing is drawn
+   taller; only its measured height is held. */
+:is(.gmt-ledger-hold, .gmt-edi-hold) > .gmt-grow-slot > .gmt-widget-hint {
+  flex: 1 1 auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * Visually hidden text: a sentence for a screen reader that the plates already
+ * show. Not `clip-path`, which no tool uses.
+ * --------------------------------------------------------------------------- */
+
+.gmt-ledger-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Nothing in a ledger animates or transitions. */
+.gmt-ledger-frame,
+.gmt-ledger-day,
+.gmt-ledger-bar,
+.gmt-punct-hero {
+  transition: none;
+  animation: none;
+}

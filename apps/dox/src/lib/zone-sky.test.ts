@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 import { subsolarPoint } from "./globe/sun";
 import {

@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The camera replaces `d3.geoOrthographic()` on the GPU path, so d3 *is* the
  * oracle here: the canvas-2D fallback still projects with d3, and any drift
@@ -11,7 +9,6 @@
  */
 
 import { geoDistance, geoOrthographic } from "d3-geo";
-import { describe, expect, it } from "vitest";
 import {
   cameraCentre,
   clampLat,

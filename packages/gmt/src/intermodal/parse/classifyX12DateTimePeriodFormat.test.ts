@@ -1,4 +1,3 @@
-import { expectTypeOf } from "vitest";
 import {
   CUT_X12_FORMATS,
   NOT_X12_FORMATS,

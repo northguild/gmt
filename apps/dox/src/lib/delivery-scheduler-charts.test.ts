@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import { decorative } from "./delivery-scheduler-charts";
 
 /** A stand-in mark whose scene has one label with a point and a hit-test link,

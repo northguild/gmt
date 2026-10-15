@@ -1,0 +1,70 @@
+---
+title: EPCIS Event Reader
+description: "Type the two required time fields of a GS1 EPCIS event. parseEpcisEvent reads them as an instant, an offset and a local time, and the tool draws the same moment on a UTC day rail and a local day rail."
+industries: [intermodal]
+---
+
+import EpcisEventReader from "../../../components/EpcisEventReader.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="GS1 EPCIS event times">
+
+<Fragment slot="keypoint">
+
+An EPCIS event needs two time fields, because neither one gives the other. `eventTime` is the instant. `eventTimeZoneOffset` is the clock where the event happened, and it decides the local date.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A site two hours east of Greenwich reports an event at `2024-06-15T23:30:00Z`. In UTC it is still the 15th. On the dock it is the 16th. A system that keeps the instant and drops the offset cannot show that date again.
+
+Type `eventTime` and `eventTimeZoneOffset`, or pick a preset. The tool calls [`parseEpcisEvent`](/reference/intermodal/parse/parseEpcisEvent/) with both fields as you typed them. It shows the instant, the offset and the local time that came back, and puts the same moment on two day rails. Where the two rails disagree about the date, the tool says so in words.
+
+</Fragment>
+
+<EpcisEventReader fullbleed />
+
+<Fragment slot="after">
+
+**The rule.** Both fields are required, as the EPCIS JSON schema requires them. `eventTime` is `YYYY-MM-DDTHH:MM:SS`, an optional fraction of up to nine digits, then `Z` or an offset. `eventTimeZoneOffset` is `±HH:MM` from `-14:00` to `+14:00`. `Z`, `+0200` and `+02` are not offsets in that field. The library does not assume UTC, so an event with no offset returns `null`.
+
+**The two fields need not agree.** An `eventTime` may carry an offset of its own instead of `Z`. That offset fixes the instant and nothing else. The local clock always comes from `eventTimeZoneOffset`, and a difference between the two is not an error.
+
+**The two rails.** Each rail draws the same 72 hours, centred on the instant, so the pin sits at the same place on both. A day runs between that clock's own midnights. The lit day is the one that holds the instant. The two dates come from [`convertUtcToPlainDate`](/reference/utc/convert/convertUtcToPlainDate/) for UTC and [`chopTime`](/reference/plain/chop/chopTime/) for the local clock. [`areDatesEqual`](/reference/plain/compare/areDatesEqual/) and [`isAfterDate`](/reference/plain/compare/isAfterDate/) give the words under them. Where a mark sits is drawing. Every date and every word is the library's.
+
+**When there is no result.** A missing offset, a refused offset, a refused time and a date that does not exist each return `null`. The tool shows `NO SIGNAL` with one sentence saying which. The tool asks [`isValidEpcisTimeZoneOffset`](/reference/intermodal/validate/isValidEpcisTimeZoneOffset/) and [`isValidEpcisEventTime`](/reference/intermodal/validate/isValidEpcisEventTime/) to decide, and holds no pattern of its own. The tool cuts each field only to draw its boxes. The library reads each field whole.
+
+**Written back.** [`formatEpcisEvent`](/reference/intermodal/format/formatEpcisEvent/) takes the result as it is and writes both fields again. `eventTime` is the instant in UTC, ending in `Z`. The pattern accepts `-00:00`, and the library writes it as `+00:00`.
+
+```ts
+parseEpcisEvent({ eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" });
+// { instant: "2024-06-15T23:30:00Z", offset: "+02:00", local: "2024-06-16T01:30:00" }
+
+convertUtcToPlainDate("2024-06-15T23:30:00Z"); // "2024-06-15"
+chopTime("2024-06-16T01:30:00"); // "2024-06-16"
+areDatesEqual("2024-06-15", "2024-06-16"); // false
+isAfterDate("2024-06-16", "2024-06-15"); // true
+
+formatEpcisEvent({ instant: "2024-06-15T23:30:00Z", offset: "+02:00" });
+// { eventTime: "2024-06-15T23:30:00Z", eventTimeZoneOffset: "+02:00" }
+
+parseEpcisEvent({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-00:00" });
+// { instant: "2024-06-15T14:30:00Z", offset: "+00:00", local: "2024-06-15T14:30:00" }
+
+parseEpcisEvent({ eventTime: "2024-06-15T14:30:00Z" }); // null
+parseEpcisEvent({ eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "Z" }); // null
+parseEpcisEvent({ eventTime: "2024-06-15T14:30Z", eventTimeZoneOffset: "+02:00" }); // null
+```
+
+**Worth trying:** [a late evening in UTC at +02:00](/tools/epcis-event-reader/?w=epcis&wa=%7B%22eventTime%22%3A%222024-06-15T23%3A30%3A00Z%22%2C%22eventTimeZoneOffset%22%3A%22%2B02%3A00%22%7D) —
+the local date is the 16th, one day after the UTC date. Then [two offsets that disagree](/tools/epcis-event-reader/?w=epcis&wa=%7B%22eventTime%22%3A%222024-06-15T10%3A00%3A00%2B02%3A00%22%2C%22eventTimeZoneOffset%22%3A%22-05%3A00%22%7D) —
+the time fixes the instant at 08:00 UTC, and the offset field sets the local clock to 03:00. [A `-00:00` offset](/tools/epcis-event-reader/?w=epcis&wa=%7B%22eventTime%22%3A%222024-06-15T14%3A30%3A00Z%22%2C%22eventTimeZoneOffset%22%3A%22-00%3A00%22%7D) —
+the library returns `+00:00`, and the tool says so under the written-back fields. [The same time with no offset](/tools/epcis-event-reader/?w=epcis&wa=%7B%22eventTime%22%3A%222024-06-15T14%3A30%3A00Z%22%7D) —
+the result is `NO SIGNAL`, because the offset is required. To see the local date as a bill of lading date, use the link under the written-back fields. It opens the [B/L Date Stamp](/tools/bl-date-stamp/) with the instant, the event `shippedOnBoard` and the offset as the place.
+
+**Reference:** [`parseEpcisEvent`](/reference/intermodal/parse/parseEpcisEvent/) reads the event, [`formatEpcisEvent`](/reference/intermodal/format/formatEpcisEvent/) writes it back, and the two validators tell a field the library reads from one it refuses. The rules are in [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/#epcis-two-facts-both-required).
+
+</Fragment>
+
+</ToolLayout>

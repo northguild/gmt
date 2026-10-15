@@ -6,9 +6,7 @@
  * using. The globe cannot mount under jsdom (no canvas, no WebGPU), so this is
  * the only place any of it runs.
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BucketCounts } from "./zone-filter";
 import { mountZoneFilters } from "./zone-filter-ui";
 

@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-/// <reference types="vitest/globals" />
 import type React from "react";
 import { fireEvent, render } from "@testing-library/react";
 import { BRAINS } from "~/lib/chat-constants";

@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import {
   timingSafeEqual,
   devCookieHeader,

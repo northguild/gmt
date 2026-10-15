@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Geometry preparation, exercised against the data the site actually ships —
  * `world-atlas/land-110m` and `public/timezone-boundaries-globe.json` — not
@@ -12,7 +10,6 @@
 import { geoContains } from "d3-geo";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import {
   closeAtPole,
   densifyRing,

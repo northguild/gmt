@@ -1,8 +1,9 @@
-/// <reference types="vitest/globals" />
 import {
   BILLING_PRESETS,
   CUSTOM_PRESET_ID,
   MAX_STRIP_CELLS,
+  billingPlates,
+  verdictSizerTexts,
   callSource,
   datesOf,
   dayStrip,
@@ -467,5 +468,48 @@ describe("explainNull", () => {
     )) {
       expect(forbidden.test(text)).toBe(false);
     }
+  });
+});
+
+describe("billingPlates", () => {
+  const result: BillingDeadlines = {
+    invoiceDeadline: "2026-03-31",
+    issuedByDeadline: null,
+    disputeDeadline: null,
+    requestedByDeadline: null,
+    resolutionDeadline: null,
+  };
+
+  it("numbers the plates as the lanes are and words each date", () => {
+    const plates = billingPlates({ ...base, ...W }, result);
+    expect(plates.map((p) => [p.role, p.caption, p.series])).toEqual([
+      ["hero-issue", "1 Issue by", 1],
+      ["hero-dispute", "2 Dispute by", 2],
+      ["hero-resolve", "3 Resolve by", 3],
+    ]);
+    expect(plates[0]!.value).toBe("Tue 31 Mar 2026");
+    expect(plates[0]!.lines).toEqual(["30-day window"]);
+  });
+
+  it("reads not set for a deadline the result lacks and no result for null", () => {
+    const plates = billingPlates({ ...base, ...W }, result);
+    expect(plates[1]!.value).toBe("not set");
+    expect(plates[2]!.value).toBe("not set");
+    expect(
+      billingPlates({ ...base, issueDays: "" }, null).map((p) => p.value),
+    ).toEqual([null, null, null]);
+  });
+
+  it("says when no window is typed", () => {
+    expect(billingPlates({ ...base, issueDays: " " }, null)[0]!.lines).toEqual([
+      "no window typed",
+    ]);
+  });
+});
+
+describe("verdictSizerTexts", () => {
+  it("holds the three texts each kind can show", () => {
+    expect(verdictSizerTexts("issued")).toHaveLength(3);
+    expect(verdictSizerTexts("requested")).toHaveLength(3);
   });
 });

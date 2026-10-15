@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `edi-widgets.ts`'s pure helpers, against the real gmt modules. Every expected
  * library result is a JSDoc example of the function that returns it.
@@ -30,6 +29,7 @@ import {
   widestGap,
 } from "./edi-widgets";
 import { lib } from "~/test/edi-lib";
+import { blDateLib, demurrageLib } from "~/test/ledger-lib";
 
 describe("runCall", () => {
   it("keeps the function, its arguments and its real result", () => {
@@ -43,6 +43,37 @@ describe("runCall", () => {
   it("keeps a sentinel as the library returned it", () => {
     expect(runCall(lib, "parseEdifactDate", "2024", "102").result).toBe("");
     expect(runCall(lib, "classifyEdifactDtmFormat", "101").result).toBeNull();
+  });
+});
+
+describe("runCall on another tool's library", () => {
+  it("records a call on any library object, with its function name as a string", () => {
+    expect(
+      runCall(demurrageLib, "toOffsetInstant", "2024-06-15T14:30:00Z"),
+    ).toEqual({
+      fn: "toOffsetInstant",
+      args: ["2024-06-15T14:30:00Z"],
+      result: { instant: "2024-06-15T14:30:00Z", offset: "+00:00" },
+    });
+    expect(
+      runCall(
+        blDateLib,
+        "bolTimestamp",
+        "2024-06-16T01:00:00Z",
+        "shippedOnBoard",
+        {
+          timeZone: "America/New_York",
+        },
+      ),
+    ).toEqual({
+      fn: "bolTimestamp",
+      args: [
+        "2024-06-16T01:00:00Z",
+        "shippedOnBoard",
+        { timeZone: "America/New_York" },
+      ],
+      result: "2024-06-15",
+    });
   });
 });
 

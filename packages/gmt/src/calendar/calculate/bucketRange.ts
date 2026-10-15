@@ -4,7 +4,6 @@ import {
   frameZoned,
   instantFrom,
   nextZonedBucketStart,
-  zonedNextTransition,
   zonedUnitStart,
   zoneFrame,
 } from "../../internal";
@@ -12,6 +11,7 @@ import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidZoneBucketUnit } from "../validate";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { certainlyTouchesMoreBuckets } from "../../internal/zoneBucketCap";
 
 /**
  * Buckets a single call will return before giving up.
@@ -21,69 +21,6 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  * months — past anything a caller renders or aggregates in one pass.
  */
 const MAX_BUCKETS = 10_000;
-
-const NANOSECONDS_PER_HOUR = 3_600_000_000_000n;
-
-/**
- * The longest wall-clock stretch of each unit. Any wall-clock interval this long holds a unit
- * start: an hour holds an hour start, 24 hours a midnight, 7 days a Monday, 31 days a first of
- * the month.
- */
-const LONGEST_UNIT_NANOSECONDS: Readonly<Record<ZoneBucketUnit, bigint>> = {
-  hour: NANOSECONDS_PER_HOUR,
-  day: 24n * NANOSECONDS_PER_HOUR,
-  week: 168n * NANOSECONDS_PER_HOUR,
-  month: 744n * NANOSECONDS_PER_HOUR,
-};
-
-/** Offset transitions read before the pre-count gives up and leaves the answer to the walk. */
-const MAX_PRECOUNT_TRANSITIONS = 4_096;
-
-/**
- * True when `[start, end)` certainly touches more than `MAX_BUCKETS` buckets, decided from the span
- * instead of stepping bucket by bucket (which costs milliseconds a step in some zones).
- *
- * Over a prefix of the range, the local wall clock runs continuously between offset transitions.
- * Those stretches cover at least the prefix's length less every backward offset change, in at most
- * one stretch more than there are transitions, and each stretch of wall clock holds at least
- * `floor(length / LONGEST_UNIT_NANOSECONDS)` distinct unit starts, each the start of its own
- * bucket before `end`. The count subtracts two per stretch for the partial units at its ends.
- * `false` means "not certain": the walk decides, exactly as before.
- */
-function certainlyExceedsBucketCap(
-  startZoned: Temporal.ZonedDateTime,
-  endZoned: Temporal.ZonedDateTime,
-  unit: ZoneBucketUnit,
-): boolean {
-  const unitNs = LONGEST_UNIT_NANOSECONDS[unit];
-  const startNs = startZoned.epochNanoseconds;
-  const prefixEndNs = [
-    endZoned.epochNanoseconds,
-    startNs + 2n * BigInt(MAX_BUCKETS + 1) * unitNs,
-  ].reduce((a, b) => (a < b ? a : b));
-  if (prefixEndNs - startNs <= BigInt(MAX_BUCKETS) * unitNs) {
-    return false;
-  }
-  let backwardNs = 0n;
-  let transitions = 0;
-  try {
-    for (
-      let current = startZoned, next = zonedNextTransition(current);
-      next !== null && next.epochNanoseconds < prefixEndNs;
-      current = next, next = zonedNextTransition(current)
-    ) {
-      if (++transitions > MAX_PRECOUNT_TRANSITIONS) {
-        return false;
-      }
-      const shift = BigInt(current.offsetNanoseconds - next.offsetNanoseconds);
-      backwardNs += shift > 0n ? shift : 0n;
-    }
-  } catch {
-    return false;
-  }
-  const wallStarts = (prefixEndNs - startNs - backwardNs) / unitNs;
-  return wallStarts - 2n * BigInt(transitions + 1) > BigInt(MAX_BUCKETS);
-}
 
 /**
  * The bucket start after `current`: `undefined` when it lies past Temporal's last representable
@@ -180,7 +117,9 @@ export function bucketRange(
     const endZoned = frameZoned(instantFrom(end), frame);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
-    if (certainlyExceedsBucketCap(startZoned, endZoned, resolvedUnit))
+    if (
+      certainlyTouchesMoreBuckets(startZoned, endZoned, resolvedUnit, MAX_BUCKETS)
+    )
       return [];
 
     const boundaries: string[] = [];

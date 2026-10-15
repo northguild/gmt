@@ -477,6 +477,24 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
+    text: "Import box discharged 14 June, gated out 20 June, empty back 27 June: where does detention start?",
+    widget: "showDemurrageClock",
+    area: "intermodal",
+    // Midday UTC on 14, 20 and 27 June 2024: the question gives dates and no
+    // clock time or zone, so the seed names no terminal zone and the widget
+    // draws the days in UTC. "Import" is in the question, so the direction is
+    // the reader's and not a guess; the question asks about detention.
+    args: {
+      events: [
+        { type: "discharged", at: "2024-06-14T12:00:00Z" },
+        { type: "gatedOut", at: "2024-06-20T12:00:00Z" },
+        { type: "emptyReturned", at: "2024-06-27T12:00:00Z" },
+      ],
+      scope: "detention",
+      direction: "import",
+    },
+  },
+  {
     text: "Charges last accrued 1 March 2026, every window 30 days: is an invoice dated 1 April by the deadline?",
     widget: "showBillingDeadlines",
     area: "intermodal",
@@ -487,6 +505,38 @@ export const CHAT_STARTERS: readonly {
       issueDays: 30,
       disputeDays: 30,
       resolutionDays: 30,
+    },
+  },
+  {
+    text: "Shipped on board at 01:00 UTC on 16 June 2024 in New York: what date goes on the bill of lading?",
+    widget: "showBlDateStamp",
+    area: "intermodal",
+    // The question names the event, the moment and New York, so the seed names
+    // all three and nothing else: no other calendar and no latest date.
+    args: {
+      value: "2024-06-16T01:00:00Z",
+      event: "shippedOnBoard",
+      timeZone: "America/New_York",
+    },
+  },
+  {
+    text: "Shanghai 08:00 10 June 2024: ship 14 d 6 h to Los Angeles, 36 h handling, rail 52 h to Chicago. Time waiting?",
+    widget: "showJourneySplit",
+    area: "intermodal",
+    // The question names the departure, the ship's 14 days 6 hours, the 36 hours
+    // of handling and the 52 hours of rail, and the three places. It names no
+    // scheduled sailing, so the ship leaves when the cargo is ready.
+    args: {
+      legs: [
+        {
+          departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]",
+          duration: "P14DT6H",
+          timeZone: "America/Los_Angeles",
+          dwellAfter: "PT36H",
+          mode: "ship",
+        },
+        { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+      ],
     },
   },
   {
@@ -508,6 +558,17 @@ export const CHAT_STARTERS: readonly {
       time: "1430",
       timeCode: "ET",
       zone: "America/New_York",
+    },
+  },
+  {
+    text: "An EPCIS event says eventTime 2024-06-15T23:30:00Z and offset +02:00. What local date is that?",
+    widget: "showEpcisEventReader",
+    area: "intermodal",
+    // Both fields exactly as the question gave them. The offset is the
+    // question's own; the widget never fills one in.
+    args: {
+      eventTime: "2024-06-15T23:30:00Z",
+      eventTimeZoneOffset: "+02:00",
     },
   },
   {

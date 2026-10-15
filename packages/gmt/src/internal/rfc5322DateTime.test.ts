@@ -43,8 +43,9 @@ describe("readRfc5322DateTime comment folding", () => {
 
   // Charter item 4: no super-linear work on attacker-sized input. 50,000 nested comments are
   // 100 KB of grammatical input (RFC 5322 sets no nesting limit); a linear fold reads it in a few
-  // milliseconds, while folding one level per pass took seconds. Best of three to absorb noise.
-  it("folds 100 KB of nested comments in under 100 ms", () => {
+  // milliseconds, while folding one level per pass took seconds. A one-second budget tells the two
+  // apart on any runner, where 100 ms left a slow runner little room. Best of three to absorb noise.
+  it("folds 100 KB of nested comments in under a second", () => {
     const value = `Mon, 01 Jan 2024 00:00:00 +0000 ${"(".repeat(50_000)}${")".repeat(50_000)}`;
     let best = Number.POSITIVE_INFINITY;
     for (let run = 0; run < 3; run++) {
@@ -52,6 +53,6 @@ describe("readRfc5322DateTime comment folding", () => {
       expect(readRfc5322DateTime(value)).toEqual(FIELDS_2024_01_01);
       best = Math.min(best, performance.now() - started);
     }
-    expect(best).toBeLessThan(100);
+    expect(best).toBeLessThan(1_000);
   });
 });

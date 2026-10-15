@@ -226,6 +226,7 @@ describe("addOperatingTime at the search cap", () => {
   // From Saturday 2024-06-15, the 10,000th local date is 2051-11-01: a deadline anywhere on it is
   // answered, and one on the date after is not, even at its first instant. So an hour ending at
   // that midnight is past the cap.
+  // Worst CI run 3 s for a 30-year horizon; the timeout is three times that and more.
   it.each`
     date            | windows                             | expected
     ${"2051-11-01"} | ${[{ from: "09:00", to: "17:00" }]} | ${"2051-11-01T10:00:00Z"}
@@ -244,6 +245,7 @@ describe("addOperatingTime at the search cap", () => {
         ),
       ).toBe(expected);
     },
+    30_000,
   );
 });
 

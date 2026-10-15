@@ -1,9 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initScrollReveal } from "./scroll-reveal";
 
 class FakeIntersectionObserver {

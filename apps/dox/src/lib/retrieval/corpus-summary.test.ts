@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Keeps the corpus figures shown on the empty chat screen honest.
  *

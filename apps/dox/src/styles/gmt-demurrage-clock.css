@@ -1,0 +1,185 @@
+/*
+ * Demurrage Clock widget (INT-14).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. The
+ * ledger family's frame, plates, glass day columns, chips, labelled lane,
+ * half-open bar and legend live in gmt-ledger-widgets.css, the plates in
+ * gmt-punctuality-widgets.css, and the chip, the mark and the series colours in
+ * gmt-cutoff-widgets.css. This sheet holds what is specific to the Demurrage
+ * Clock: one tall plot that stacks an event rail over four clock lanes, the
+ * events form, and the widths its plates reserve.
+ *
+ * The plot is one `.gmt-ledger-lane` track. The day columns fill it, and the
+ * rail and the lanes sit over them at fixed heights, so the chart has the same
+ * box in every state. The chosen clock's bar is lit and the other three are
+ * dimmed; a dimmed lane keeps its label at full contrast. A clock the library
+ * returned null for keeps its row and says why in words on a chip.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+.gmt-demurrage-clock {
+  /* The day labels and the odd-day chip row above the rail. */
+  --gmt-dem-head-h: 2.9rem;
+  /* The rail holds up to four rows of event chips above the diamonds. */
+  --gmt-dem-rail-h: 8rem;
+  /* A lane holds its label chip above and its bar or its reason below. */
+  --gmt-dem-lane-h: 4.6rem;
+  --gmt-ledger-gate-h: 0rem;
+  --gmt-ledger-lane-h: calc(
+    var(--gmt-dem-head-h) + var(--gmt-dem-rail-h) + 4 * var(--gmt-dem-lane-h)
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * The events form: six rows that are always present, so the section keeps its
+ * height from one preset to the next and the chart below never moves.
+ * --------------------------------------------------------------------------- */
+
+.gmt-dem-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-dem-events > legend {
+  padding: 0;
+  margin-bottom: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * The plot: day columns, then the rail, then the four lanes.
+ * --------------------------------------------------------------------------- */
+
+.gmt-dem-rail {
+  position: absolute;
+  inset: var(--gmt-dem-head-h) 0 auto 0;
+  height: var(--gmt-dem-rail-h);
+}
+
+/* An event owns no box: its diamond and its chip place themselves on the rail. */
+.gmt-dem-event {
+  height: 0;
+}
+
+.gmt-dem-diamond {
+  position: absolute;
+  bottom: 0.5rem;
+  translate: -50% 0;
+  rotate: 45deg;
+}
+
+.gmt-dem-diamond--key {
+  position: static;
+  translate: none;
+  margin-inline: 0.2rem;
+}
+
+.gmt-dem-event-chip {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  gap: 0;
+}
+
+.gmt-dem-time::before {
+  content: "\00a0·\00a0";
+}
+
+/* On a narrow plot a chip holds its word and the local time rides in the plates
+   and the screen-reader label. */
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-dem-time {
+    display: none;
+  }
+}
+
+.gmt-dem-lanes {
+  position: absolute;
+  inset: calc(var(--gmt-dem-head-h) + var(--gmt-dem-rail-h)) 0 0 0;
+  display: grid;
+  grid-auto-rows: var(--gmt-dem-lane-h);
+}
+
+.gmt-dem-lane {
+  position: relative;
+  min-width: 0;
+  border-top: 1px solid var(--gmt-border-strong);
+}
+
+.gmt-dem-lane-label {
+  position: absolute;
+  top: var(--gmt-space-1);
+  left: var(--gmt-space-1);
+  max-width: calc(100% - 2 * var(--gmt-space-1));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The bar keeps the family recipe (`.gmt-ledger-bar`). A clock that is not the
+   chosen one is a dimmed mark; its label stays at full contrast. */
+.gmt-dem-lane[data-chosen="false"] .gmt-ledger-bar {
+  opacity: 0.45;
+}
+
+/* The reason a clock is null: a chip with a short sentence in the row, which
+   may wrap on a narrow plot. */
+.gmt-dem-lane-why {
+  position: absolute;
+  bottom: var(--gmt-space-1);
+  left: var(--gmt-space-1);
+  max-width: calc(100% - 2 * var(--gmt-space-1));
+  white-space: normal;
+}
+
+.gmt-dem-empty {
+  position: absolute;
+  top: calc(var(--gmt-dem-head-h) + var(--gmt-space-2));
+  left: var(--gmt-space-1);
+  max-width: calc(100% - 2 * var(--gmt-space-1));
+  margin: 0;
+  white-space: normal;
+}
+
+.gmt-dem-swatch--dim {
+  opacity: 0.45;
+}
+
+/* ---------------------------------------------------------------------------
+ * Readouts hold still. Each plate reserves the width of the longest value its
+ * tool can show: the value in `em` (the display font has no tabular figures),
+ * the sub line in `ch` (it is mono). The start and end plates show an event in
+ * words, the longest being "empty returned"; a quiet value may wrap, so these
+ * two keep to one line. The elapsed plate shows days, hours and minutes at the
+ * xl size, so "99 d 23 h 59 min" fits its reserve.
+ * --------------------------------------------------------------------------- */
+
+.gmt-demurrage-clock [data-role="hero-start"] .gmt-punct-hero-value,
+.gmt-demurrage-clock [data-role="hero-end"] .gmt-punct-hero-value {
+  min-inline-size: 10.5em;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* "Thu 27 Jun 05:00" is 16 characters. */
+.gmt-demurrage-clock [data-role="hero-start"] .gmt-punct-hero-sub,
+.gmt-demurrage-clock [data-role="hero-end"] .gmt-punct-hero-sub {
+  min-inline-size: 16ch;
+}
+
+.gmt-demurrage-clock [data-role="hero-ran"] .gmt-punct-hero-value {
+  min-inline-size: 12.5em;
+  font-size: var(--gmt-text-xl);
+}
+
+/* "PT139H30M" up to "PT9999H59M". */
+.gmt-demurrage-clock [data-role="hero-ran"] .gmt-punct-hero-sub {
+  min-inline-size: 12ch;
+}

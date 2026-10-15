@@ -310,28 +310,6 @@
     border-color: CanvasText;
   }
 
-  /* Forced colours drop fills, and the shaded days are the Dwell Ledger's
-     answer: paint a counted day in the system highlight instead. */
-  .gmt-dwell-cell--touched {
-    forced-color-adjust: none;
-    background: Highlight;
-    color: HighlightText;
-  }
-
-  /* The Free Time Ledger's answer is which days are free and which are
-     chargeable: keep both distinguishable when fills are dropped. */
-  .gmt-freetime-cell--free,
-  .gmt-freetime-cell--chargeable {
-    forced-color-adjust: none;
-    background: Highlight;
-    color: HighlightText;
-  }
-
-  .gmt-freetime-cell--chargeable {
-    outline: 2px solid HighlightText;
-    outline-offset: -3px;
-  }
-
   /* The EDI pictures tell their fields and zones apart by text (the mask letters,
      the bracket labels, the numbers on the pins), and the colours that also mark
      them are edges and fills that forced colours drops. The edges keep a system
@@ -359,6 +337,43 @@
   .gmt-edi-readouts > .gmt-edi-row,
   .gmt-edi-verdict {
     border-color: CanvasText;
+  }
+
+  /* The EPCIS Event Reader's day rails. The date in the head and the time at
+     each midnight say what the colours also mark. The track keeps an edge, a
+     midnight and the pin keep a system fill, and the lit day keeps a system
+     edge along its foot over a plain Canvas, so the text on it stays readable. */
+  .gmt-epcis-track,
+  .gmt-epcis-pin::before {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-epcis-tick,
+  .gmt-epcis-pin {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-epcis-day {
+    forced-color-adjust: none;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .gmt-epcis-day[data-lit="1"] {
+    box-shadow: inset 0 -4px 0 Highlight;
+  }
+
+  .gmt-epcis-tick-label {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
+
+  .gmt-epcis-track--empty {
+    border-style: dashed;
   }
 
   /* The Billing Deadlines strip's answer is the three lanes and their
@@ -469,7 +484,12 @@
       .gmt-punctuality-board,
       .gmt-eta-drift,
       .gmt-departure-board,
-      .gmt-timetable
+      .gmt-timetable,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     :is(
       .gmt-cutoff-chip,
@@ -488,7 +508,12 @@
       .gmt-punctuality-board,
       .gmt-eta-drift,
       .gmt-departure-board,
-      .gmt-timetable
+      .gmt-timetable,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;
@@ -506,7 +531,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-stack-day,
   div.gmt-cutoff-stack-day:nth-of-type(even) {
@@ -519,7 +549,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-mark {
     forced-color-adjust: none;
@@ -534,7 +569,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-mark--hollow {
     background: Canvas;
@@ -548,7 +588,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-gate {
     forced-color-adjust: none;
@@ -562,7 +607,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-gate::before {
     background: Highlight;
@@ -578,7 +628,12 @@
       .gmt-cutoff-countdown,
       .gmt-punctuality-board,
       .gmt-eta-drift,
-      .gmt-departure-board
+      .gmt-departure-board,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-closed {
     forced-color-adjust: none;
@@ -593,7 +648,12 @@
       .gmt-punctuality-board,
       .gmt-eta-drift,
       .gmt-departure-board,
-      .gmt-timetable
+      .gmt-timetable,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-series-swatch {
     forced-color-adjust: none;
@@ -627,7 +687,12 @@
       .gmt-punctuality-board,
       .gmt-eta-drift,
       .gmt-departure-board,
-      .gmt-timetable
+      .gmt-timetable,
+      .gmt-freetime,
+      .gmt-dwell,
+      .gmt-bl-date-stamp,
+      .gmt-journey-split,
+      .gmt-demurrage-clock
     )
     .gmt-cutoff-axis-tick::before {
     forced-color-adjust: none;
@@ -1011,5 +1076,182 @@
       transparent 1px,
       transparent 5px
     );
+  }
+}
+
+/* =======================================================================
+ * Ledger family, forced-colors (gmt-ledger-widgets.css)
+ *
+ * The day columns, the gate, the bars and the hatches carry their meaning by
+ * pattern and by the word on a chip, and forced colours drops the fills that
+ * also tint them. Each mark keeps a system colour: a lit column is Highlight,
+ * a charged column the CanvasText hatch, a closed column the dashed box (the
+ * cut-off block above), a bar a bordered box with a CanvasText start edge and a
+ * dashed end edge, and the gate Highlight (the cut-off block above lists the
+ * ledger roots). Frames, plates, chips and header strips hold text, so they
+ * take a CanvasText border and never opt out.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-ledger-frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-ledger-day-label {
+    border-color: CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  .gmt-ledger-days {
+    border: 1px solid CanvasText;
+  }
+
+  .gmt-ledger-day {
+    forced-color-adjust: none;
+    border-left-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-ledger-days > div.gmt-ledger-day:nth-of-type(even) {
+    background-color: Canvas;
+  }
+
+  .gmt-ledger-days .gmt-ledger-day[data-state="lit"] {
+    background-image: none;
+    background-color: Highlight;
+    box-shadow: none;
+  }
+
+  .gmt-ledger-days .gmt-ledger-day.gmt-punct-hatch,
+  .gmt-ledger-swatch.gmt-punct-hatch {
+    --hatch: CanvasText;
+  }
+
+  .gmt-ledger-bar {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+    color: CanvasText;
+  }
+
+  .gmt-ledger-bar::before {
+    background: CanvasText;
+    box-shadow: none;
+  }
+
+  .gmt-ledger-bar::after {
+    border-left-color: CanvasText;
+  }
+
+  .gmt-ledger-bar--invalid {
+    border-style: dashed;
+  }
+
+  .gmt-ledger-swatch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .gmt-ledger-swatch[data-state="lit"] {
+    background-image: none;
+    background-color: Highlight;
+  }
+
+  /* The Demurrage Clock's lanes: a divider between clocks, and a dimmed clock
+     drawn with a dashed edge, because opacity alone says nothing here. */
+  .gmt-dem-lane {
+    border-top-color: CanvasText;
+  }
+
+  .gmt-dem-lane[data-chosen="false"] .gmt-ledger-bar {
+    opacity: 1;
+    border-style: dashed;
+  }
+
+  /* The B/L Date Stamp's lanes. The UTC lane is hollow: its lit day is a dashed
+     CanvasText outline over Canvas, not the filled Highlight the other lanes'
+     lit days take, so shape still tells the naive read apart. The number badge
+     takes a CanvasText edge, and the gate keeps its Highlight line (the
+     cut-off block above lists the ledger roots). */
+  .gmt-bl-lane[data-lane="0"] .gmt-ledger-days {
+    outline-color: CanvasText;
+  }
+
+  .gmt-bl-lane[data-lane="0"]
+    .gmt-ledger-days
+    .gmt-ledger-day[data-state="lit"] {
+    background-color: Canvas;
+    outline-color: CanvasText;
+  }
+
+  .gmt-bl-badge {
+    border-color: CanvasText;
+  }
+
+  .gmt-bl-gate-key {
+    forced-color-adjust: none;
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .gmt-bl-swatch--utc {
+    background-color: Canvas;
+  }
+
+  /* The Journey Split's ribbons. The bars are a bordered Canvas box, a moving
+     stem keeps the Highlight fill, and a wait keeps the CanvasText hatch, the
+     dense one for the scheduled departure. The number badge, the brackets and
+     the leader lines take a CanvasText edge, and the table keeps its edges. */
+  .gmt-js-bars {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-js-seg {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .gmt-js-seg[data-kind="moving"] {
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .gmt-journey-split .gmt-js-seg.gmt-punct-hatch {
+    --hatch: CanvasText;
+    background-color: Canvas;
+  }
+
+  .gmt-js-swatch {
+    --hatch: CanvasText;
+  }
+
+  .gmt-js-badge,
+  .gmt-js-bracket {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+
+  .gmt-js-badge {
+    background: Canvas;
+  }
+
+  .gmt-js-leader {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-js-table-wrap {
+    border-color: CanvasText;
+  }
+
+  .gmt-js-table th,
+  .gmt-js-table td {
+    border-bottom-color: CanvasText;
   }
 }

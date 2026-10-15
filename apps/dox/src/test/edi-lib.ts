@@ -2,6 +2,9 @@
  * The real gmt functions the EDI widgets' unit tests inject as an `EdiLib`,
  * loaded by module path so a test never needs the mount's dynamic imports.
  */
+import { chopTime } from "@northguild/gmt/plain/chop";
+import { areDatesEqual, isAfterDate } from "@northguild/gmt/plain/compare";
+import { convertUtcToPlainDate } from "@northguild/gmt/utc/convert";
 import {
   classifyLocal,
   fromOffsetInstant,
@@ -15,6 +18,7 @@ import {
   formatEdifactDateTimePeriod,
   formatEdifactOffsetDateTime,
   formatEdifactTime,
+  formatEpcisEvent,
   formatX12Date,
   formatX12DateRange,
   formatX12DateTime,
@@ -22,6 +26,10 @@ import {
   formatX12Time,
   formatX12TimeElement,
 } from "@northguild/gmt/intermodal/format";
+import {
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+} from "@northguild/gmt/intermodal/validate";
 import {
   classifyEdifactDtmFormat,
   classifyX12DateTimePeriodFormat,
@@ -32,6 +40,7 @@ import {
   parseEdifactDateTimePeriod,
   parseEdifactOffsetDateTime,
   parseEdifactTime,
+  parseEpcisEvent,
   parseX12Date,
   parseX12DateAndTime,
   parseX12DateRange,
@@ -47,6 +56,7 @@ import {
   minUtc,
 } from "@northguild/gmt/utc/calculate";
 import { isValidTimeZone } from "@northguild/gmt/zoned/validate";
+import type { EpcisLib } from "~/lib/edi-lib";
 import type { EdiLib } from "~/lib/edi-widgets";
 
 export const lib = {
@@ -88,3 +98,15 @@ export const lib = {
   maxUtc,
   diffUtcAsDuration,
 } as unknown as EdiLib;
+
+/** The EPCIS Event Reader's functions, typed as `loadEpcisLib` returns them. */
+export const epcisLib = {
+  parseEpcisEvent,
+  formatEpcisEvent,
+  isValidEpcisEventTime,
+  isValidEpcisTimeZoneOffset,
+  chopTime,
+  isAfterDate,
+  areDatesEqual,
+  convertUtcToPlainDate,
+} as unknown as EpcisLib;

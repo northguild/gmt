@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * What can be checked about the shaders without a GPU.
  *
@@ -13,7 +11,6 @@
  */
 
 import { geoGraticule10 } from "d3-geo";
-import { describe, expect, it } from "vitest";
 import {
   CIVIL_TWILIGHT,
   GAMMA,

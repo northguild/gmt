@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { vi } from "vitest";
 import { resolveLocal } from "../../instant/convert/resolveLocal";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import { NON_STRINGS } from "../../test/ediCodes";

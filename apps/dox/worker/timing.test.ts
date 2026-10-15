@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { convertArrayToReadableStream } from "ai/test";
 import { observeOutput, Stopwatch } from "./timing";
 

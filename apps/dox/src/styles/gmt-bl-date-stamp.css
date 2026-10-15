@@ -1,0 +1,234 @@
+/*
+ * B/L Date Stamp widget (INT-14).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. The
+ * ledger family's frame, plates, glass day columns, chips, labelled lane and
+ * legend live in gmt-ledger-widgets.css, the plates in
+ * gmt-punctuality-widgets.css, and the chip, the mark, the gate and the series
+ * colours in gmt-cutoff-widgets.css. This sheet holds what is specific to the
+ * B/L Date Stamp: five lanes of local days on one time axis, one gate line that
+ * cuts every lane, the hollow UTC lane, and the widths its two plates reserve.
+ *
+ * Each lane is a `.gmt-ledger-lane`: a mono label and, beside it, a track that
+ * holds the day columns. The gate is one element in a layer laid over the
+ * tracks, so a single line cuts every lane. The lit column is the day whose
+ * date is the library's date for the lane. The UTC lane is hollow and dashed:
+ * it is the naive read, and shape tells it apart, not colour.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+.gmt-bl-date-stamp {
+  /* The chip row above the lanes: the gate's chip sits in it. */
+  --gmt-bl-gate-row-h: 1.9rem;
+  /* A lane holds a date strip, a row of chips and a note below them. */
+  --gmt-ledger-lane-h: 4.2rem;
+  --gmt-ledger-gate-h: 0rem;
+  /* Room for "America/New_York" beside its number badge. */
+  --gmt-ledger-label-w: 11rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * The plot: five lanes in a column, and the gate layer over their tracks. The
+ * plot keeps one box whatever the lanes hold.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-plot {
+  position: relative;
+  padding-top: var(--gmt-bl-gate-row-h);
+}
+
+.gmt-bl-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  /* Above the gate layer: the gate runs behind each day's opaque date strip and
+     chips, so no glyph is drawn over the line. */
+  position: relative;
+  z-index: 1;
+}
+
+.gmt-bl-lane-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gmt-space-1);
+}
+
+/* The number badge: a mark that carries the lane's series on its bottom edge,
+   never a left-only accent, and the digit in the primary ink. */
+.gmt-bl-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.4rem;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-bottom: 3px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-style: normal;
+  line-height: 1.2;
+  color: var(--gmt-ice);
+}
+
+/* Under 30rem the label sits above its lane, where the gate line would cross
+   it. The label then sits on a chip, so no glyph is drawn over the line. */
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-bl-lane-label {
+    position: relative;
+    z-index: 2;
+    justify-self: start;
+    justify-content: flex-start;
+    padding: 2px var(--gmt-space-2);
+    border: 1px solid var(--gmt-border-strong);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    background: var(--gmt-surface);
+  }
+
+  .gmt-bl-gate-layer {
+    left: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The gate: one line at the moment, over every lane, with a chip in the row
+ * above them. The layer starts at the tracks' left edge, so a percentage of it
+ * is a percentage of a track.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-gate-layer {
+  position: absolute;
+  inset: 0 0 0 calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  z-index: 0;
+  pointer-events: none;
+}
+
+.gmt-bl-gate-layer > .gmt-cutoff-gate {
+  top: 0;
+  bottom: 0;
+}
+
+.gmt-bl-gate-layer > .gmt-cutoff-gate[hidden] {
+  display: none;
+}
+
+.gmt-bl-gate-chip {
+  position: absolute;
+  top: 0;
+}
+
+.gmt-bl-gate-key {
+  display: inline-block;
+  flex: none;
+  width: 3px;
+  height: 0.9rem;
+  margin-inline: 0.3rem;
+  background: var(--gmt-cyan-bright);
+  box-shadow: 0 0 6px var(--gmt-glow);
+}
+
+/* ---------------------------------------------------------------------------
+ * A lane's note: "no zone chosen", or "its days are not drawn". It keeps to the
+ * lane's box and may wrap on a narrow plot.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-note {
+  position: absolute;
+  bottom: var(--gmt-space-1);
+  left: var(--gmt-space-1);
+  z-index: 2;
+  max-width: calc(100% - 2 * var(--gmt-space-1));
+  white-space: normal;
+}
+
+/* ---------------------------------------------------------------------------
+ * The UTC lane is hollow and dashed. Its days have no wash, its box is a dashed
+ * outline, and its lit day is a dashed outline too, with no fill.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-lane[data-lane="0"] .gmt-ledger-days {
+  background-color: transparent;
+  outline: 1px dashed var(--gmt-border-strong);
+  outline-offset: -1px;
+}
+
+.gmt-bl-lane[data-lane="0"] .gmt-ledger-days .gmt-ledger-day,
+.gmt-bl-lane[data-lane="0"]
+  .gmt-ledger-days
+  > div.gmt-ledger-day:nth-of-type(even) {
+  background-color: transparent;
+}
+
+.gmt-bl-lane[data-lane="0"] .gmt-ledger-days .gmt-ledger-day[data-state="lit"] {
+  background-image: none;
+  box-shadow: none;
+  outline: 2px dashed var(--gmt-ice);
+  outline-offset: -3px;
+}
+
+.gmt-bl-swatch--utc {
+  background-color: transparent;
+  border-style: dashed;
+}
+
+/* ---------------------------------------------------------------------------
+ * The slider sits under the chart. The label takes the full width.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-slider {
+  margin-top: var(--gmt-space-3);
+}
+
+/* ---------------------------------------------------------------------------
+ * Readouts hold still. Each plate reserves the width of the longest value its
+ * tool can show: the value in `em` (the display font has no tabular figures and
+ * is wide: "Wed 30 Sep 2026" runs to about 12.5em), the sub line in `ch` (it is
+ * mono). The sub lines never wrap and are cut by an ellipsis, so a long zone
+ * name cannot move the plate. The sub's width is set, with a cap of the plate's
+ * own, so the plate is as wide as its reserve in every state.
+ * --------------------------------------------------------------------------- */
+
+.gmt-bl-date-stamp [data-role="hero-bl"] .gmt-punct-hero-value,
+.gmt-bl-date-stamp [data-role="hero-utc"] .gmt-punct-hero-value {
+  min-inline-size: 13em;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* "21:00 in America/New_York" and "on or before the latest date". */
+.gmt-bl-date-stamp [data-role="hero-bl"] .gmt-punct-hero-sub {
+  inline-size: 32ch;
+  max-inline-size: 100%;
+}
+
+.gmt-bl-date-stamp [data-role="hero-utc"] .gmt-punct-hero-sub {
+  inline-size: 28ch;
+  max-inline-size: 100%;
+}
+
+.gmt-bl-date-stamp [data-role="hero-bl"] .gmt-punct-hero-line,
+.gmt-bl-date-stamp [data-role="hero-utc"] .gmt-punct-hero-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* On a narrow plot the date takes a smaller size so 13 ems still fit the frame,
+   and in the narrowest /dox rail both dates take the quiet size. */
+@container gmt-ledger-frame (max-width: 30rem) {
+  .gmt-bl-date-stamp [data-role="hero-bl"] .gmt-punct-hero-value {
+    font-size: var(--gmt-text-xl);
+  }
+}
+
+@container gmt-ledger-frame (max-width: 21rem) {
+  .gmt-bl-date-stamp [data-role="hero-bl"] .gmt-punct-hero-value {
+    font-size: var(--gmt-text-lg);
+  }
+}

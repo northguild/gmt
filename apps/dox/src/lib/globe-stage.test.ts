@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The Earth imagery belongs to the dark theme.
  *
@@ -13,7 +11,6 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 
 const STYLES = path.resolve(import.meta.dirname, "../styles");
 const read = (file: string) =>

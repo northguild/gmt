@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * The Zone Planner's DST logic. Expectations come from the library's own
  * transition lists (`getDstTransitions`) and its in-DST judgement
@@ -6,7 +5,6 @@
  * in here: the point is that the planner agrees with the library at the
  * instant before, at and after every switch, for every kind of zone.
  */
-import { describe, expect, it } from "vitest";
 import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
 import { isInDaylightSaving } from "@northguild/gmt/zoned/compare";
 import { convertZonedToZoned } from "@northguild/gmt/zoned/convert";

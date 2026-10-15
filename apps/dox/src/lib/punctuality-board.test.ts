@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `punctuality-board.ts`'s pure helpers, against the real gmt modules. Every
  * expected library result is an appendix Z row (PB1 to PB4, PBR1 to PBR7).

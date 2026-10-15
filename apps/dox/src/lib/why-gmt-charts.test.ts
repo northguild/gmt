@@ -1,7 +1,4 @@
-/// <reference types="vitest/globals" />
-
 import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
-import { describe, expect, it } from "vitest";
 import {
   coreNamespaces,
   formatCount,

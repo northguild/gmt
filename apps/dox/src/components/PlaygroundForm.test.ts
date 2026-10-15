@@ -1,8 +1,6 @@
 /** @vitest-environment jsdom */
-/// <reference types="vitest/globals" />
 /// <reference types="vitest/jsdom" />
 
-import { describe, expect, it } from "vitest";
 import {
   classifyPlaygroundResult,
   createSeedLoader,

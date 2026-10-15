@@ -181,6 +181,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         `industrySidebarCss()` (the tag's own glyph as a mask), and a `:has()` rule in
         `gmt-shell.css` draws it before the group's label as a mask over the label colour, with
         `white-space: nowrap`. Forced colours repaint it in `CanvasText` (`gmt-a11y.css`).
+      - **Tools, Scenarios and Mistakes use the same dividers, one per industry.**
+        `scripts/build-industry-sidebars.ts`, a `generate` step, reads each page's title and
+        `industries` and writes `src/generated/{tools,scenarios,mistakes}-sidebar.ts`
+        (`build-utils/industry-sidebar.ts`): the section's index page, then a divider for each
+        industry with pages, in `INDUSTRY_TAG_IDS` order (core, then the layers), with its pages
+        by title. That is the tools index's grouping, so the menu and the index agree. A page
+        with no `industries` stops the step. A list may hold any number of dividers: each one
+        names the list up to the next, and its id comes from its link (`#tools-intermodal`), so
+        no two collide. A divider with `data-gmt-industry` shows the tag's glyph as an inline
+        `aria-hidden` SVG in the label's own colour, so forced colours repaint it with the text.
     - **Root page.** `/reference/` lists the general namespaces under "For any industry",
       then "By industry": each industry's icon (`Icon.astro`, imported by the generated MDX;
       `stripMdx` drops the import and the tag), its label as a link to its overview, and its
@@ -330,8 +340,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), the converter
   bench with format and regex tester (`B2d`), the Dwell Ledger (TRAN-8, the first a realm
   story shipped; its day cells come from Temporal's `startOfDay`, so a 23-hour day is drawn
-  23 hours wide), the Free Time Ledger (INT-12, the same day grid with each day coloured
-  as the tariff reads it; it imports the Dwell Ledger's grid helpers rather than copying them),
+  23 hours wide), the Free Time Ledger (INT-12, the same day grid with each day drawn
+  as the tariff reads it, a pattern and a word for each state; it imports the Dwell Ledger's grid helpers rather than copying them),
   and the Billing Deadlines widget (INT-58, a day strip wrapped by ISO week, with the three
   windows around a demurrage or detention invoice — issue, dispute, resolve — as numbered,
   patterned lanes; it draws the deadlines `billingTimeline` returns and computes none. Past
@@ -538,6 +548,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     typed**: `HHMM` for four, `HHMMSS` for six, `HHMMSSD` for seven and `HHMMSSDD` for eight. The
     value comes back in the form it was sent, tenths and hundredths of a second included, so
     nothing is cut and there is no note.
+- **The ledger family and the INT-14 tools.** The Dwell Ledger and the Free Time Ledger share
+  one sheet, `gmt-ledger-widgets.css`, and one module, `ledger-widgets.ts`: glass day columns
+  placed by each day's real bounds, pinned result plates (`platesHtml`; a `quiet` plate holds a
+  secondary result at the smaller size), the lane, the half-open bar, the gate and its chip, and
+  the legend. A column drops its weekday, then its label, as it narrows (`dayColumnFit`). It also
+  drops its chips when they would reach past its edge (`--bare`), which `fitDayColumns` measures,
+  because a chip's word sets its width. `thinTickLabels` thins the axis dates. Four tools build on
+  this and on the EDI and transport helpers:
+  - **B/L Date Stamp** (`/tools/bl-date-stamp/`): `bolTimestamp` read in the place's zone and in
+    up to three more, each on a lane of that zone's real local days under one UTC lane, with one
+    gate at the instant through every lane. One plate holds the B/L date, captioned by the event.
+    The other holds the UTC date with "one day later", "one day earlier" or "same date"
+    (`isAfterDate`, `areDatesEqual`). An optional latest date allowed adds "on or before" or
+    "after" in words. A native range moves the instant across the local midnight.
+  - **Demurrage Clock** (`/tools/demurrage-clock/`): one rail of the container's events over four
+    lanes, demurrage, detention, storage and combined. Each lane is its own `demurrageClock` call.
+    The chosen scope is lit and feeds the plates (the start event, the end event, how long the
+    clock ran) and the printed call. A bar's start is a solid edge and its end an open one. The
+    display zone sets the day columns only; it is not an argument of the call. A link opens the
+    Free Time Ledger with the interval and the zone.
+  - **EPCIS Event Reader** (`/tools/epcis-event-reader/`): the third EDI tool. `parseEpcisEvent`
+    reads the two fields, which are taken apart as the DTM Decoder takes a value apart, and the
+    same moment is drawn on a UTC rail and a local rail. `formatEpcisEvent` writes it back. A link
+    opens the B/L Date Stamp with the instant, and the offset as its zone.
+  - **Journey Split** (`/tools/journey-split/`): `multimodalETA`'s totals, with
+    `scheduleDelivery`'s per-leg times, as two ribbons on one scale. The first shows the legs as
+    they happen, moving solid and waiting hatched; the second gathers the same segments into
+    moving and waiting. Plates hold the ETA, the moving total and the waiting total. Its leg
+    fields are the Delivery Scheduler's (`leg-form.ts`, which labels `dwellAfter` "Handling
+    after"), and the two tools link to each other with the same leg keys.
+
+  `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
+  Split's loader extends `transport-lib.ts` and the EPCIS Event Reader's extends `edi-lib.ts`, so
+  no tool loads a module it does not use. Billing Deadlines holds its three deadlines in plates.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -680,11 +724,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   the grid.** The grid is a container itself (`gmt-field-grid`), so a width rule for a label
   or a control in it reads the grid's width, not the section's. Name the section and query
   it by name, as the Timetable Reader does (`gmt-timetable-section`).
-- **Trap: `.sl-markdown-content ul li` reaches a list inside a widget.** `gmt-content.css`
-  gives every list item on a content page a dash (`::before`), left padding and a bottom
-  margin. It is the site's own rule, so `not-content` does not switch it off. A `ul` in a
-  widget resets all three with one more class than that rule, as the Timetable Reader's
-  legend does (`.gmt-timetable .gmt-timetable-legend > li`).
+- **The prose list dash stays out of widgets.** `gmt-content.css` gives a list item on a content
+  page a dash (`::before`), left padding and a bottom margin, and every one of those rules skips
+  a list inside a `.gmt-widget` (`ul:not(:where(.gmt-widget *))`). A widget's legend, verdict
+  row or key draws no dash and needs no reset. `content-list-rule.test.ts` guards it.
 - **Trap: the live wrapper in a hold cell must stretch.** A cell that holds its size stacks
   a hidden sizer and a live wrapper in one grid cell (`.gmt-timetable-hold`). The wrapper
   keeps the grid's default stretch, so its box is always the sizer's size. If it is aligned
@@ -713,7 +756,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, `/tools/dtm-decoder/`,
-  `/tools/x12-time-reader/`, plus the Tier 4 `/tools/zoned-earth/`
+  `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
+  `/tools/epcis-event-reader/`, `/tools/journey-split/`, plus the Tier 4 `/tools/zoned-earth/`
   and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -730,7 +774,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   copy-permalink. The two INT-15 tools carry flat strings: the DTM Decoder's `input`, `format` and
   `zone1`…`zone4`, and the X12 Time Reader's `date`, `time`, `timeCode`, `zone`, `zone2`…`zone4`,
   `format` and `value`. An old link that still carries a `yearWindow` loads without error and the
-  key is ignored.
+  key is ignored. The B/L Date Stamp carries `value`, `event`, `timeZone`, `zone2`…`zone4` and
+  `latest`; the Demurrage Clock `eventCount`, `type1`…`at6`, `scope`, `direction`, `startEvent`
+  and `zone`; the EPCIS Event Reader `eventTime` and `eventTimeZoneOffset`; and the Journey Split
+  the Delivery Scheduler's `legCount` and numbered leg keys.
   - **Trap: build a permalink written into a page with `encodeWidgetPermalink`, never
     `encodeURIComponent` and never by hand.** A `DTM` segment ends in `'`, which
     `encodeURIComponent` leaves raw. The content-permalink test matches a link with
@@ -757,7 +804,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   parent, its lane, is as wide as the track.
   A run that measured nothing, skipped an interaction, or crashed fails. Both gates are
   diagnostics: a few px of browser difference is read, not chased. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
-  in the Departure Board, Punctuality Board, ETA Drift Chart and Timetable Reader by keyboard and pointer, in Chromium
+  in the Departure Board, Punctuality Board, ETA Drift Chart, Timetable Reader, Free Time Ledger,
+  Dwell Ledger and B/L Date Stamp (its range) by keyboard and pointer, in Chromium
   and WebKit at 1440 and 390 px viewports, plus the widget root forced to 360 and 300 px (the rail widths); these
   are the script's defaults, so `pnpm run readout:still` with no arguments is the gate. It fails if a hero
   plate, the chart frame, the dragged control or anything above it moves or resizes
@@ -770,8 +818,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   insides of the day track, the plot and a hold cell's live wrapper may move (`drawn`), and each
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
-  such as the DTM Decoder and the X12 Time Reader, is not in `readout-still`; its definition of
-  done measures the same boxes across every preset and zone instead.
+  such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
+  Journey Split and Billing Deadlines, is not in `readout-still`. Its definition of done measures
+  the same boxes across every preset instead: each plate keeps its size, and a held region keeps
+  its height. A result region may grow from one preset to the next through `.gmt-grow`, which
+  `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
+  chart that moves down because section 1 shows more fields.
   `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
@@ -1334,13 +1386,21 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     pair. A zone is passed only when the reader named it, never chosen from the time code.
     Both schemas check a code's shape only (`ediCodeSchema`): a code the library does not read is
     the widget's sentinel to show, not a failed tool call.
-- **Count:** 20 tools — the globe, the 18 teaching tools and the Zone Planner — and 20
-  `CHAT_STARTERS`, one card each. `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers;
+  - `showBlDateStamp({ value, event, timeZone, zone2?, zone3?, zone4?, latest? })` (INT-14):
+    `value` is a moment, never a bare local time, and `timeZone` is the place where the event
+    happened. A zone is passed only when the reader named it, never chosen from a port or a place.
+  - `showDemurrageClock({ events, scope, direction, startEvent? })` (INT-14): `direction` is
+    required, as the library requires it.
+  - `showEpcisEventReader({ eventTime, eventTimeZoneOffset? })` (INT-14): both values pass as the
+    reader gave them. A missing offset is left out, never filled and never read as UTC.
+  - `showJourneySplit({ legs, startTimeZone? })` (INT-14): the Delivery Scheduler's schema.
+- **Count:** 24 tools — the globe, the 22 teaching tools and the Zone Planner — and 24
+  `CHAT_STARTERS`, one card each. Eight tools and eight cards are intermodal. `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers;
   re-derive them from there.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
-- **Example cards open their widget on the click.** The 20 `CHAT_STARTERS` live in the widget
+- **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. Each entry carries an `area` from `EXAMPLE_AREAS` (Zones and DST,
   Intervals, Transport, "Intermodal, billing and EDI"), and `startersByArea()` returns the groups in

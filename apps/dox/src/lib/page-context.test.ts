@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { namespaceFromPageContext } from "../../worker/namespace-from-page";
 import { MAX_PAGE_CONTEXT_LENGTH } from "./chat-sanitize";
 import { pageContextFromReferrer } from "./page-context";

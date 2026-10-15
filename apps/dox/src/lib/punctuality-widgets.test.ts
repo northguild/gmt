@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `punctuality-widgets.ts`'s pure helpers. Every expected literal that a
  * library call produces is an appendix Z row or a JSDoc example.
@@ -239,6 +238,12 @@ describe("formatValue", () => {
   it("prints the ED2 classified pick at-first", () => {
     expect(formatValue({ classifier: "ACT", at: "2024-06-15T12:52:00Z" })).toBe(
       '{ at: "2024-06-15T12:52:00Z", classifier: "ACT" }',
+    );
+  });
+
+  it("prints a container event as it is written, type first", () => {
+    expect(formatValue({ type: "gatedOut", at: "2024-06-20T14:30:00Z" })).toBe(
+      '{ type: "gatedOut", at: "2024-06-20T14:30:00Z" }',
     );
   });
 

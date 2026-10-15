@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The text on an industry namespace's overview page: every industry layer has some, every
  * function it names exists in that layer, every link leads to a page, and the wording keeps

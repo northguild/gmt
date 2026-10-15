@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { gmtStats, formatCount } from "../data/gmt-stats";
 import {
   combinedCompetitorExecutions,

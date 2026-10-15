@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
 
 import { diffDateTime } from "../plain";
 import { diffUtc } from "../utc";

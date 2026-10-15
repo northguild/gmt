@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";

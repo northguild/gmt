@@ -3,7 +3,6 @@
  *
  * The Zone Planner mounted as a chat-rail widget: template -> mount -> read.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { seedFromLocation } from "./widget-permalink";
 import { seededZones } from "./zone-planner";

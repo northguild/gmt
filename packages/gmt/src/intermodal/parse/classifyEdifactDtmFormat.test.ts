@@ -1,4 +1,3 @@
-import { expectTypeOf } from "vitest";
 import {
   CUT_EDIFACT_FORMATS,
   EDIFACT_FORMAT_KINDS,

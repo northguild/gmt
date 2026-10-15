@@ -6,7 +6,6 @@
  * dependency the required parameter rules out, so the house rule (determinism) treats `[]` as
  * omitted → sentinel. Functions whose locale is optional keep ECMA-402's `[]` = default.
  */
-import { describe, expect, it } from "vitest";
 import {
   formatDate,
   formatTimeZoneName,

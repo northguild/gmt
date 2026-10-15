@@ -1,7 +1,4 @@
-/// <reference types="vitest/globals" />
-
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
 import {
   INTERVAL_OPERATIONS,
   RELATIONSHIP_PRESETS,

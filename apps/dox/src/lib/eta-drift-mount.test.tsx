@@ -5,7 +5,6 @@
  * against the real `@northguild/gmt`. Every printed pick and report is an
  * appendix Z row (ED1 to ED4, ED1a to ED1c, ED2r, EDR1 to EDR3).
  */
-/// <reference types="vitest/globals" />
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";

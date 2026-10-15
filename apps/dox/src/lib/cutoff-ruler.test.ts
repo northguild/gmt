@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `cutoff-ruler.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row (R1-R5, RA).

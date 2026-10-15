@@ -130,6 +130,45 @@ export function thinTickLabels(
 }
 
 /**
+ * Sets the fit class on each day column of a ledger row from the column's
+ * measured width. `classify` is the tool's rule (`dayColumnFit`); a column
+ * `short` loses its weekday and a column `narrow` loses its label and chips.
+ * A column's width is its inline `width` in percent of `trackPx`, so the pass
+ * needs no layout of its own. With `trackPx` 0 (jsdom, a hidden widget) every
+ * column keeps everything.
+ *
+ * A chip is the one part a width rule cannot judge, because its word sets its
+ * width. So a column that keeps its chips is then measured: when its chip row
+ * reaches past the column's inner edge, the column takes `--bare` and drops its
+ * chips, which the column would otherwise cut mid-word. The pattern and the
+ * `aria-label` still say the state.
+ */
+export function fitDayColumns(
+  days: HTMLElement,
+  trackPx: number,
+  classify: (widthPx: number) => "full" | "short" | "narrow",
+  base = "gmt-ledger-day",
+): void {
+  const columns = [...days.querySelectorAll<HTMLElement>(`.${base}`)];
+  for (const day of columns) {
+    const widthPx = (parseFloat(day.style.width) / 100) * trackPx;
+    const fit = classify(widthPx);
+    day.classList.toggle(`${base}--short`, fit === "short");
+    day.classList.toggle(`${base}--narrow`, fit === "narrow");
+    day.classList.remove(`${base}--bare`);
+  }
+  if (!(trackPx > 0)) return;
+  // Measured after every class is set, so the reads share one layout.
+  const cut = columns.map((day) => {
+    if (day.classList.contains(`${base}--narrow`)) return false;
+    const chips = day.querySelector<HTMLElement>(`.${base}-chips`);
+    if (chips === null) return false;
+    return chips.offsetLeft + chips.scrollWidth > day.clientWidth + 0.5;
+  });
+  columns.forEach((day, i) => day.classList.toggle(`${base}--bare`, cut[i]!));
+}
+
+/**
  * Call `fn` when `el`'s width changes; stops once `el` leaves the document.
  * Returns a disposer, which a mount calls from its `destroy` so the observer
  * does not outlive the widget while the element is still attached (a rail that

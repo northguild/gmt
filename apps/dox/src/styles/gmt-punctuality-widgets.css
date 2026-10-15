@@ -46,7 +46,15 @@
 /* 45 degrees, 2px on and 6px off, in `--hatch` (a cyan wash by default; a rail
    or a bar sets its own). It tints through `background-color`, never the
    shorthand. */
-:is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
+:is(
+    .gmt-punctuality-board,
+    .gmt-eta-drift,
+    .gmt-departure-board,
+    .gmt-freetime,
+    .gmt-dwell,
+    .gmt-bl-date-stamp,
+    .gmt-journey-split,
+    .gmt-demurrage-clock)
   .gmt-punct-hatch {
   background-image: repeating-linear-gradient(
     45deg,

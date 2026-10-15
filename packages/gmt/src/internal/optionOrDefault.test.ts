@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { optionOrDefault } from "./optionOrDefault";
 
 describe("optionOrDefault", () => {

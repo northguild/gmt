@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import {
   LABEL_HALO_CSS,
   LABEL_OFFSET_X,

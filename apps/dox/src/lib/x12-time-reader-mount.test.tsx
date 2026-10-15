@@ -6,7 +6,6 @@
  * members, instant and write-back are checked, so a drift in the library or the
  * widget fails here.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { DTP_PRESETS, X12_PRESETS } from "./x12-time-reader";

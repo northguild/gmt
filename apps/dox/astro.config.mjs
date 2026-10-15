@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
+import { toolsSidebar } from "./src/generated/tools-sidebar.ts";
+import { scenariosSidebar } from "./src/generated/scenarios-sidebar.ts";
+import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 
@@ -207,19 +210,17 @@ export default defineConfig({
         {
           label: "Tools",
           collapsed: true,
-          items: [{ autogenerate: { directory: "tools", collapsed: true } }],
+          items: toolsSidebar,
         },
         {
           label: "Scenarios",
           collapsed: true,
-          items: [
-            { autogenerate: { directory: "scenarios", collapsed: true } },
-          ],
+          items: scenariosSidebar,
         },
         {
           label: "Mistakes",
           collapsed: true,
-          items: [{ autogenerate: { directory: "mistakes", collapsed: true } }],
+          items: mistakesSidebar,
         },
       ],
       components: {
@@ -247,8 +248,6 @@ export default defineConfig({
         "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
-        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
-        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
         "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)
         "./src/styles/gmt-transport-widgets.css", // Transport widgets, shared (TRAN-9)
         "./src/styles/gmt-delivery-scheduler.css", // Delivery Scheduler widget (TRAN-9)
@@ -263,6 +262,12 @@ export default defineConfig({
         "./src/styles/gmt-punctuality-board.css", // Punctuality Board widget (TRAN-57)
         "./src/styles/gmt-eta-drift.css", // ETA Drift Chart widget (TRAN-57)
         "./src/styles/gmt-departure-board.css", // Departure Board widget (TRAN-57)
+        "./src/styles/gmt-ledger-widgets.css", // Ledger family, shared: the tools that draw time on local days (after the departure board it reuses)
+        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
+        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
+        "./src/styles/gmt-demurrage-clock.css", // Demurrage Clock widget (INT-14)
+        "./src/styles/gmt-bl-date-stamp.css", // B/L Date Stamp widget (INT-14)
+        "./src/styles/gmt-journey-split.css", // Journey Split widget (INT-14)
         "./src/styles/gmt-edi-widgets.css", // EDI timestamp widgets, shared (INT-15)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)

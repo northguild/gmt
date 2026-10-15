@@ -7,7 +7,6 @@
  * a way for a reader to discover it, and that no starter points at a widget
  * that is not enabled.
  */
-import { describe, expect, it } from "vitest";
 import {
   CHAT_STARTERS,
   EXAMPLE_AREAS,
@@ -15,7 +14,7 @@ import {
   startersByArea,
 } from "./chat-constants";
 import { resolveWidget } from "~/components/ask/widget-registry";
-import { DOX_TOOL_DOCS, ENABLED_TOOL_NAMES } from "./dox-tools";
+import { DOX_TOOLS, DOX_TOOL_DOCS, ENABLED_TOOL_NAMES } from "./dox-tools";
 
 describe("CHAT_STARTERS", () => {
   it("gives every enabled widget exactly one starter", () => {
@@ -115,5 +114,24 @@ describe("example areas", () => {
       const expected = CHAT_STARTERS.filter((s) => s.area === group.area);
       expect(group.starters).toEqual(expected);
     }
+  });
+});
+
+describe("DOX_TOOLS reads DOX_TOOL_DOCS by position", () => {
+  /* Each `DOX_TOOLS` entry's description is `DOX_TOOL_DOCS[n].purpose` with a
+     literal `n`. Inserting a doc anywhere but the end shifts every later entry
+     onto the wrong description, and nothing else fails. */
+  it("gives every tool the purpose of the doc that carries its name", () => {
+    for (const [name, definition] of Object.entries(DOX_TOOLS)) {
+      const docs = DOX_TOOL_DOCS.filter((doc) => doc.name === name);
+      expect(docs, `${name} has exactly one doc`).toHaveLength(1);
+      expect(definition.description, name).toBe(docs[0]!.purpose);
+    }
+  });
+
+  it("has a tool for every doc", () => {
+    expect(DOX_TOOL_DOCS.map((doc) => doc.name).sort()).toEqual(
+      Object.keys(DOX_TOOLS).sort(),
+    );
   });
 });
