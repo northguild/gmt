@@ -14,15 +14,17 @@ The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Eart
 
 ## Scope
 
-- `packages/gmt/src/space/get/ut1.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/get/ut1.ts`:
   - `dut1At(isoString: string): number | null` — DUT1 in seconds for a date, from bundled Bulletin A data.
   - `toUT1(isoString: string, options?: { dut1?: number }): string` — UTC to UT1. An explicit `dut1` overrides the table, for callers with fresher data.
   - `ut1Provenance(): { source: string, bulletin: string, validUntil: string }`
   - `isUt1Stale(at: string): boolean`
-- `packages/gmt/src/space/calculate/deltaT.ts`:
+- `<space-ns>/calculate/deltaT.ts`:
   - `deltaT(isoDate: string, options?: { source?: 'measured' | 'polynomial' | 'auto' }): { seconds: number, source: 'iersEop' | 'polynomial', uncertaintySeconds: number | null } | null` — TT − UT1. `'auto'` uses the IERS measured series (C04, then Bulletin A) where it covers the date and the Espenak–Meeus polynomial only before it; `uncertaintySeconds` is `4` for −500…+500 and `null` elsewhere, because the source gives no other number.
   - `deltaTPolynomial(decimalYear: number): number` — The piecewise expression alone, with `y = year + (month − 0.5) / 12` as the source defines it.
-- `packages/gmt/src/space/calculate/siderealTime.ts`:
+- `<space-ns>/calculate/siderealTime.ts`:
   - `earthRotationAngle(isoString: string, options?: { dut1?: number }): number | null` — ERA in radians.
   - `greenwichMeanSiderealTime(isoString: string, options?): number | null` — GMST in radians.
   - `greenwichApparentSiderealTime(isoString: string, options?): number | null` — GAST, GMST plus the equation of the equinoxes.

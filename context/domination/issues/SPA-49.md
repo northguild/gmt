@@ -14,15 +14,17 @@ The original spec's `instantToJulianDate(isoString): number` bakes that loss in 
 
 ## Scope
 
-- `packages/gmt/src/space/convert/julianDate.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/julianDate.ts`:
   - `toJulianDateParts(isoString: string, scale?: TimeScale): { jd1: number, jd2: number } | null` — Two-part JD; `jd1` holds integer days, `jd2` the fraction. Their sum is the JD.
   - `fromJulianDateParts(parts: { jd1: number, jd2: number }, scale?: TimeScale): string`
   - `toJulianDate(isoString: string, scale?: TimeScale): number | null` — Single-value form, **documented as lossy to roughly 100 µs**.
   - `fromJulianDate(jd: number, scale?: TimeScale): string`
-- `packages/gmt/src/space/convert/modifiedJulianDate.ts`:
+- `<space-ns>/convert/modifiedJulianDate.ts`:
   - `toModifiedJulianDate(isoString: string, scale?: TimeScale): number | null` — MJD = JD − 2400000.5.
   - `fromModifiedJulianDate(mjd: number, scale?: TimeScale): string`
-- `packages/gmt/src/space/convert/j2000.ts`:
+- `<space-ns>/convert/j2000.ts`:
   - `toJ2000Seconds(isoString: string, scale?: TimeScale): number | null` — Seconds since the J2000 epoch. Defaults to TDB, the coordinate time IAU 2006 Resolution B3 defines for barycentric ephemerides.
 
 ## Key epochs

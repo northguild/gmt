@@ -179,14 +179,24 @@ Each counter's time of week is taken in **seconds of week**, 0 up to 604 800. Wh
 broadcasts it coarser — NavIC L5/S in 12 s counts 1–50400, NavIC L1 as a two-hour index plus an
 18 s count (R§5a.2) — the caller converts to seconds first; the JSDoc says so.
 
-### D7. `rolloverEra` is required: an integer, or `"rolling"` by name
+### D7. `rolloverEra` is required: an integer, `"rolling"`, or a caller-stated pivot
 
 The house precedent is the two-digit year (coding-standards § EDI): `yearWindow` is a fixed start or
 `"rolling"`, named by the caller; "GMT never picks a century where it has a choice". So
-`rolloverEra: number | "rolling"` is a required positional argument: an integer ≥ 0 is the era
-(full week = era × modulus + week), the form for stored data; `"rolling"` is the era that puts the
-full week within half a counter period of the current week (§3.9), for live receiver output. It
-reads the clock once, and is computed, never a fixed year.
+`rolloverEra: RolloverEra` is a required positional argument, in one of three forms:
+
+- an integer ≥ 0 is the era (full week = era × modulus + week): the form for stored data whose era is
+  known;
+- `"rolling"` is the era that puts the full week within half a counter period of the current week
+  (§3.9): the form for live receiver output. It reads the clock once and is computed, never a fixed
+  year;
+- `{ notBefore: string }` (owner decision) is a caller-stated pivot: an ISO 8601 UTC instant, and the
+  week resolves to the **earliest instant at or after it** (§3.9). It models a receiver that
+  resolves the week against its firmware build date, and replays a recorded log the way that
+  receiver did. The pivot is the caller's value, never GMT's.
+
+All three are total: every call the types accept returns a value or the sentinel for invalid input.
+`utcToGnssWeek` needs nothing new: it already returns the era, and an instant has only one.
 
 ### D8. One signature order
 
@@ -400,7 +410,7 @@ tell them apart, as CORE-6 does for `[]`.
 export type GnssSystem = "GPS" | "GAL" | "BDT" | "QZS" | "GLO" | "IRN";
 export type GnssWeekCounter =
   | "GPS-LNAV" | "GPS-CNAV" | "GAL" | "BDT" | "QZS-LNAV" | "QZS-CNAV" | "IRN-LNAV" | "IRN-L1NV";
-export type RolloverEra = number | "rolling";
+export type RolloverEra = number | "rolling" | { notBefore: string };
 export interface GnssWeek { week: number; timeOfWeekSeconds: number; era: number }
 export type RinexWeekSystem = "GPS" | "GAL" | "BDT" | "QZS" | "IRN";
 export interface RinexWeek { week: number; timeOfWeekSeconds: number }
@@ -602,7 +612,6 @@ system's scale, with `week` any safe integer ≥ 0. Converting uses the same `ut
 `scaleLabelOfUtc` as every other scale. (For GAL, QZS and IRN the label is read in that system's
 scale; all three share whole seconds with GPS, so the result equals the GPS reading.)
 
-
 ---
 
 ## 2. Validation order and sentinels
@@ -722,9 +731,26 @@ BDT − UTC in 2024 is `37 − 33 = 4`; GAL − UTC at 1999-08-22 is `32 − 19 
 - `"rolling"` (exact): inside the caller's `try`, read `Temporal.Now.instant()` **once**; place it
   with `scaleLabelOfUtc`; `Fnow = (label − epochLabel) / WEEK`; `M = modulus`;
   `era = max(floor((Fnow − week + M/2) / M), 0)`. Floor explicitly: the numerator can be negative.
-- Anything else → null.
+- `{ notBefore }` (`isObject`, read `notBefore` **once**; other keys ignored, as CORE-6 reads
+  records):
+  1. `notBefore` must be a string that `parseUtcReading` accepts and `taiOfUtc` places (a listed
+     `:60` is accepted); otherwise null.
+  2. `Lp = scaleLabelOfUtc(system, reading).labelNanoseconds`. If `Lp < epochLabel` (the pivot is
+     before the counter's epoch) → null.
+  3. `period = M × WEEK` (1024, 4096 or 8192 weeks, by counter); `base = epochLabel + week × WEEK +
+     towNs`.
+  4. `era = Lp ≤ base ? 0 : ceil((Lp − base) / period)` (bigint ceiling). The result label is
+     `base + era × period`: the earliest occurrence of that week and time of week whose label is
+     `≥ Lp`. **Equal counts**: a decoded instant exactly at `notBefore` is returned.
+  5. The result then goes through `utcOfScaleLabel` and `formatUtcReading` like any other era; a
+     label outside Temporal's instant range throws inside the `try` and returns `""`.
+  Labels are compared, not UTC instants: every scale with a week counter is continuous, so label
+  order is instant order, and an inserted leap second keeps its place.
+- Anything else → null (including `null`, an array with no `notBefore`, and a non-string
+  `notBefore`).
 
-The decoded full week satisfies `Fnow − M/2 < F ≤ Fnow + M/2` unless clamped at era 0.
+The decoded full week satisfies `Fnow − M/2 < F ≤ Fnow + M/2` under `"rolling"`, unless clamped at
+era 0; under a pivot it satisfies `Lp ≤ L < Lp + period`.
 
 ### 3.10 RINEX weeks
 
@@ -760,12 +786,21 @@ export type GnssWeekCounter =
   | "GPS-LNAV" | "GPS-CNAV" | "GAL" | "BDT" | "QZS-LNAV" | "QZS-CNAV" | "IRN-LNAV" | "IRN-L1NV";
 
 /**
- * Which pass of a wrapping week counter a week number belongs to. An integer from 0 is the era
- * itself (era 0 starts at the system's epoch). `"rolling"` picks the era that puts the week within
- * half a counter period of today, for live receiver output; it reads the clock, so the same stored
- * value can give a different answer in a later year.
+ * Which pass of a wrapping week counter a week number belongs to, in one of three forms.
+ *
+ * An integer from 0 is the era itself (era 0 starts at the system's epoch). `"rolling"` picks the
+ * era that puts the week within half a counter period of today, for live receiver output; it reads
+ * the clock, so the same stored value can give a different answer in a later year. `{ notBefore }`
+ * picks the earliest occurrence at or after an instant you state — a receiver's firmware build
+ * date, or the start of a recorded log — and gives the same answer in any year.
  */
-export type RolloverEra = number | "rolling";
+export type RolloverEra = number | "rolling" | {
+  /**
+   * An ISO 8601 UTC instant. The week resolves to the earliest instant at or after it; an instant
+   * exactly equal to it counts. Before the counter's epoch, or not an instant, returns the sentinel.
+   */
+  notBefore: string;
+};
 
 /** A week and time of week on one satellite week counter. */
 export interface GnssWeek {
@@ -978,8 +1013,10 @@ insertion (2016-12-31) TAI − UTC stays 37 s."
  *   years), their CNAV every 8192, Galileo every 4096, BeiDou every 8192, NavIC LNAV every 1024
  *   and L1NV every 8192.
  * - A week number alone cannot say which pass it is, so `rolloverEra` is required: an integer (era
- *   0 starts at the system's epoch), or `"rolling"` for the pass within half a counter period of
- *   today. Receivers that report a stale week need an integer.
+ *   0 starts at the system's epoch); `"rolling"` for the pass within half a counter period of today;
+ *   or `{ notBefore }` for the earliest pass at or after an instant you state, as a receiver that
+ *   resolves weeks against its firmware build date does. Receivers that report a stale week need an
+ *   integer or a pivot.
  * - `timeOfWeekSeconds` is seconds of week and may have a fraction; it is rounded to the nearest
  *   nanosecond. Convert a coarser broadcast count first (NavIC L5/S: TOWC × 12; NavIC L1: ITOW × 7200
  *   + TOI × 18, per the NavIC ICDs).
@@ -1003,6 +1040,10 @@ insertion (2016-12-31) TAI − UTC stays 37 s."
  * @example gnssWeekToUtc("BDT", 939, 86404, 0) // "2024-01-01T00:00:00Z"
  * @example gnssWeekToUtc("GPS-LNAV", 906, 17, 1) // "2016-12-31T23:59:60Z"
  * @example gnssWeekToUtc("GPS-LNAV", 0, 0, 2) // "2019-04-06T23:59:42Z" — the second LNAV rollover
+ * @example gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" }) // "2019-03-09T23:59:42Z"
+ * @example gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" }) // "2038-10-23T23:59:42Z" — after the 2019 rollover
+ * @example gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "2019-04-06T23:59:42Z" }) // "2019-04-06T23:59:42Z" — equal counts
+ * @example gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" }) // "" — before Galileo's epoch
  * @example gnssWeekToUtc("GPS-LNAV", 1024, 0, 2) // "" — an LNAV week stops at 1023
  */
 
@@ -1543,7 +1584,37 @@ returns the input.
 | `gnssWeekToUtc("IRN-LNAV", 100, 0, "rolling")` | `"2021-03-06T23:59:42Z"` (NavIC full week 1416 now; era 1) |
 | `mockTemporalNowInstantThrow()` | `""` |
 
-The spy also proves the clock is read once per call and never for a numeric era.
+The spy also proves the clock is read once per call and never for a numeric era or a pivot.
+
+**`{ notBefore }` pivot** (§3.9; values from the reference run):
+
+| Call | Expected |
+| --- | --- |
+| `gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" })` | `"2019-03-09T23:59:42Z"` (era 1: pivot before the 2019 rollover) |
+| `gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" })` | `"2038-10-23T23:59:42Z"` (era 2: pivot after it) |
+| `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "2010-01-01T00:00:00Z" })` | `"2021-03-06T23:59:42Z"` (era 2) |
+| `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "2019-04-06T23:59:42Z" })` | `"2019-04-06T23:59:42Z"` (exactly equal: counts) |
+| `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "2019-04-06T23:59:42.000000001Z" })` | `"2038-11-20T23:59:42Z"` (1 ns after: next era) |
+| `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "2019-04-06T23:59:41.999999999Z" })` | `"2019-04-06T23:59:42Z"` |
+| `gnssWeekToUtc("GPS-CNAV", 100, 0, { notBefore: "2000-01-01T00:00:00Z" })` | `"2138-12-06T23:59:42Z"` (13-bit: era 1) |
+| `gnssWeekToUtc("GPS-CNAV", 2295, 86418, { notBefore: "2020-01-01T00:00:00Z" })` | `"2024-01-01T00:00:00Z"` (era 0) |
+| `gnssWeekToUtc("GPS-CNAV", 8191, 0, { notBefore: "2026-10-15T00:00:00Z" })` | `"2136-12-29T23:59:42Z"` |
+| `gnssWeekToUtc("BDT", 939, 86404, { notBefore: "2020-01-01T00:00:00Z" })` | `"2024-01-01T00:00:00Z"` |
+| `gnssWeekToUtc("GAL", 1271, 86418, { notBefore: "2020-01-01T00:00:00Z" })` | `"2024-01-01T00:00:00Z"` |
+| `gnssWeekToUtc("IRN-LNAV", 247, 86418, { notBefore: "2020-01-01T00:00:00Z" })` | `"2024-01-01T00:00:00Z"` (era 1) |
+| `gnssWeekToUtc("GPS-LNAV", 906, 17, { notBefore: "2016-01-01T00:00:00Z" })` | `"2016-12-31T23:59:60Z"` (an inserted second) |
+| `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "1980-01-06T00:00:00Z" })` | `"1981-12-05T23:59:59Z"` (pivot at the epoch: era 0) |
+| `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "1980-01-06T00:00:00Z" })` | `"1980-01-06T00:00:00Z"` |
+| `gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" })` | `""` (pivot before Galileo's epoch) |
+| `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "1979-12-31T00:00:00Z" })` | `""` (pivot before the GPS epoch) |
+| `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "+275760-09-01T00:00:00Z" })` | `""` (result beyond Temporal's instant range) |
+| `notBefore`: `"2019-04-07"` (date only), `"2019-04-07T00:00:00"` (no offset), `"2017-12-31T23:59:60Z"` (unlisted second 60), `123`, missing (`{}`), `null` | `""` |
+| `{ notBefore: "2019-01-01T00:00:00Z", extra: 1 }` | same as without `extra` |
+| a getter on `notBefore` | read once (spy count 1) |
+
+**Property:** for each counter and each pivot row above that returns a value, the result `r`
+satisfies `r ≥ notBefore` and `r − period < notBefore` (compared as labels with `utcToGnss`), and
+`utcToGnssWeek(counter, r)` returns the same `week`.
 
 ### 6.9a RINEX weeks (`rinexWeekToUtc`, `utcToRinexWeek`)
 
@@ -1627,6 +1698,8 @@ Barrels are created in the slice that adds their first file. Each slice is red �
    NavIC offset row of §6.10.
 6. **GLO.** Its row, branch and rows; properties 1 and 4 of §6.8 across all six systems.
 7. **Week functions.** `internal/gnssWeek.ts`; `gnssWeekToUtc`, `utcToGnssWeek`; `"rolling"`. Rows §6.9.
+7a. **Pivot era.** The `{ notBefore }` form of `RolloverEra` in `resolveRolloverEra` (§3.9), the type
+    and its JSDoc. The pivot rows and property of §6.9.
 8. **RINEX weeks.** `internal/rinexWeek.ts`; `rinexWeekToUtc`, `utcToRinexWeek`. Rows §6.9a. The
    `BDT` row pins RINEX Table A27's example.
 9. **Wiring and docs.** §5.1–5.9, §8. Then `pnpm run validate`.

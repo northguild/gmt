@@ -35,7 +35,7 @@ The types live in `packages/gmt/src/types/gnss.ts`:
 
 - `GnssSystem` is `'GPS' | 'GAL' | 'BDT' | 'QZS' | 'GLO' | 'IRN'`, the six RINEX 4.02 §5.2.8 time-system identifiers.
 - `GnssWeekCounter` is `'GPS-LNAV' | 'GPS-CNAV' | 'GAL' | 'BDT' | 'QZS-LNAV' | 'QZS-CNAV' | 'IRN-LNAV' | 'IRN-L1NV'`: each member has exactly one modulus.
-- `RolloverEra` is `number | 'rolling'`, and `rolloverEra` is required.
+- `RolloverEra` is `number | 'rolling' | { notBefore: string }`, and `rolloverEra` is required.
 - `GnssWeek` is `{ week, timeOfWeekSeconds, era }`; `RinexWeekSystem` is `'GPS' | 'GAL' | 'BDT' | 'QZS' | 'IRN'`; `RinexWeek` is `{ week, timeOfWeekSeconds }`.
 
 `toTAI` / `fromTAI` (`packages/gmt/src/timescale/convert/`) and the time-scale string grammar are built here; the TAI64 labels stay in their own story.
@@ -88,7 +88,7 @@ The original MAR-1 and the first draft of this story contained these errors, all
 - **Galileo's epoch statement is about the count, not a midnight.** The ICD fixes GST at 13 s on 1999-08-22T00:00:00 UTC; the week counter's zero is therefore 13 s before that midnight, and the JSDoc quotes the sentence so nobody "corrects" it to zero.
 - **No system has functions of its own.** Every system goes through `utcToGnss` / `gnssToUtc`, `gnssWeekToUtc` / `utcToGnssWeek` and `rinexWeekToUtc` / `utcToRinexWeek`; a national system never gets its own named function (tracker, "International authority first").
 - **Week functions take the counter by name.** GPS, QZSS and NavIC each broadcast two week counters of different widths, and a week number means nothing without its counter's width. So each `GnssWeekCounter` member has exactly one modulus. GLONASS has no week counter, so `'GLO'` is not a member.
-- **`rolloverEra` is required: an integer, or `'rolling'` by name.** A week number alone cannot say which pass of the counter it belongs to; a GPS receiver reporting LNAV week 100 is ambiguous across four decades. An integer from 0 is the era, for stored data. `'rolling'` picks the era that puts the full week within half a counter period of the current week, for live receiver output. GMT never picks the era itself.
+- **`rolloverEra` is required: an integer, `'rolling'` by name, or a caller-stated pivot `{ notBefore }`.** A week number alone cannot say which pass of the counter it belongs to; a GPS receiver reporting LNAV week 100 is ambiguous across four decades. An integer from 0 is the era, for stored data. `'rolling'` picks the era that puts the full week within half a counter period of the current week, for live receiver output. `{ notBefore }` resolves to the earliest instant at or after a caller-stated UTC instant, as a receiver that resolves weeks against its firmware build date does; an instant exactly equal to it counts. GMT never picks the era itself.
 - **RINEX navigation weeks have their own functions.** A RINEX navigation record's week is continuous from 1980 for GPS, QZSS, NavIC and Galileo (RINEX 4.02 Table A30: "Continuous number, not mod (1024), counted from 1980 (same as GPS)"), and BeiDou records count BDT weeks from 2006. It never wraps and has no era, so `rinexWeekToUtc` / `utcToRinexWeek` read it. A RINEX NavIC week read as a NavIC broadcast week is 1024 weeks off.
 - **Offsets are nominal.** The nanosecond corrections a satellite broadcasts (C0, C1, A0/A1, GGTO) are not inputs and are not applied.
 - Before each system's epoch its time is undefined. Return the sentinel rather than extrapolating.
@@ -106,6 +106,7 @@ The original MAR-1 and the first draft of this story contained these errors, all
 - Round-trip: for each of the six systems, `gnssToUtc(system, utcToGnss(system, iso))` returns an equivalent UTC string
 - A date before the 2016 leap second uses a 17-second offset, not 18
 - `gnssWeekToUtc('GPS-LNAV', 100, 0, 0)` and era 1 give GPS labels exactly 1024 weeks apart; `'GAL'` 4096 and `'BDT'` 8192; the UTC strings differ by that many weeks less the leap seconds between them
+- `gnssWeekToUtc('GPS-LNAV', 1020, 0, { notBefore: '2019-01-01T00:00:00Z' })` is `2019-03-09T23:59:42Z`; with `notBefore: '2019-04-07T00:00:00Z'` it is `2038-10-23T23:59:42Z`; a decoded instant exactly at `notBefore` is returned
 - `'GLO'` is not a week counter: the types do not accept it, and an untyped call returns the sentinel
 - `utcToGnssWeek('GPS-LNAV', '2019-04-07T00:00:00Z')` returns era 2; the same instant for `'GAL'` returns era 0
 - `utcToGnss('GAL', '1999-08-22T00:00:00Z')` returns `'1999-08-22T00:00:13 GAL'`, 13 seconds ahead of UTC, matching the ICD sentence; for any later date `utcToGnss('GAL', iso)` and `utcToGnss('GPS', iso)` show the same date-time

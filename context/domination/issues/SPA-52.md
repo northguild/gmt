@@ -8,14 +8,16 @@ CCSDS 301.0-B-4 is cited in the epic's references and no story implements it. It
 
 ## Scope
 
-- `packages/gmt/src/space/parse/ccsdsAscii.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/parse/ccsdsAscii.ts`:
   - `parseCcsdsAsciiA(value: string): string | null` — Code A, `YYYY-MM-DDThh:mm:ss.d→dZ`.
   - `parseCcsdsAsciiB(value: string): string | null` — Code B, `YYYY-DDDThh:mm:ss.d→dZ`, day-of-year form.
   - `formatCcsdsAsciiA(isoString: string, options?: { fractionDigits?: number }): string`
   - `formatCcsdsAsciiB(isoString: string, options?: { fractionDigits?: number }): string`
-- `packages/gmt/src/space/parse/ccsdsCuc.ts`:
+- `<space-ns>/parse/ccsdsCuc.ts`:
   - `parseCuc(coarse: bigint, fine: bigint, options: { epoch: string, coarseOctets: number, fineOctets: number }): string | null` — Unsegmented time code (§3.2).
-- `packages/gmt/src/space/parse/ccsdsCds.ts`:
+- `<space-ns>/parse/ccsdsCds.ts`:
   - `parseCds(days: number, msOfDay: number, subMs?: number, options?: { epoch?: string }): string | null` — Day segmented time code (§3.3).
 
 ## CCSDS time codes

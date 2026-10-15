@@ -10,10 +10,12 @@ The first draft bundled TT with TDB in one story. TDB needs the two-part Julian 
 
 ## Scope
 
-- `packages/gmt/src/space/convert/tt.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/tt.ts`:
   - `toTT(isoString: string): string` — ISO UTC to a TT scale string.
   - `fromTT(ttString: string): string` — TT to ISO UTC.
-- `packages/gmt/src/space/convert/tcg.ts`:
+- `<space-ns>/convert/tcg.ts`:
   - `toTCG(isoString: string): string` — ISO UTC to a TCG scale string.
   - `fromTCG(tcgString: string): string` — TCG to ISO UTC.
   - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed like the TDB correction so callers see the magnitude.

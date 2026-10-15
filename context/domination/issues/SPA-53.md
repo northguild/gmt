@@ -10,10 +10,12 @@ This is the least commercially urgent story in the epic and the most differentia
 
 ## Scope
 
-- `packages/gmt/src/space/convert/marsSolDate.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/marsSolDate.ts`:
   - `toMarsSolDate(isoString: string): number | null` — Mars Sol Date from a UTC instant.
   - `fromMarsSolDate(msd: number): string` — Inverse.
-- `packages/gmt/src/space/calculate/marsTime.ts`:
+- `<space-ns>/calculate/marsTime.ts`:
   - `airyMeanTime(isoString: string): { hours: number, minutes: number, seconds: number } | null` — Mean solar time at the Mars prime meridian.
   - `localMeanSolarTime(isoString: string, eastLongitudeDegrees: number): { hours: number, minutes: number, seconds: number } | null`
   - `missionSolNumber(isoString: string, landing: { at: string, eastLongitudeDegrees: number }, options?: { firstSol?: 0 | 1 }): number | null`

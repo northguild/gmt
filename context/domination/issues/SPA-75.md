@@ -14,10 +14,12 @@ The standard altitudes come from the *Explanatory Supplement to the Astronomical
 
 ## Scope
 
-- `packages/gmt/src/space/calculate/solarPosition.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/calculate/solarPosition.ts`:
   - `solarPosition(isoString: string, location: { latitude: number, longitude: number }): { elevationDegrees: number, azimuthDegrees: number, declinationDegrees: number, equationOfTimeMinutes: number } | null` — Meeus ch. 25 low-accuracy solar coordinates (0.01°), with refraction not applied.
   - `subsolarPoint(isoString: string): { latitude: number, longitude: number } | null`
-- `packages/gmt/src/space/calculate/solarEvents.ts`:
+- `<space-ns>/calculate/solarEvents.ts`:
   - `solarEvents(isoDate: string, location, options: { timeZone: string }): { sunrise: string | null, sunset: string | null, solarNoon: string, civilDawn: string | null, civilDusk: string | null, nauticalDawn: string | null, nauticalDusk: string | null, astronomicalDawn: string | null, astronomicalDusk: string | null, polar: 'day' | 'night' | 'twilightOnly' | null } | null` — Events for the local date in `timeZone`; `null` for an event that does not occur, with `polar` saying why.
   - `sunEventAt(isoDate: string, location, altitudeDegrees: number, direction: 'rising' | 'setting', options): string | null` — The general form: any altitude, so callers can implement "sun 6° below" or "upper limb" rules.
   - `nightInterval(isoDate: string, location, definition: { from: { event: SolarEventName, offset: string }, to: { event: SolarEventName, offset: string } }, options: { timeZone: string }): Interval | null` — `SolarEventName` is `'sunrise' | 'sunset' | 'civilDawn' | 'civilDusk' | 'nauticalDawn' | 'nauticalDusk' | 'astronomicalDawn' | 'astronomicalDusk'`; each `offset` is a signed ISO duration applied to the event; `to` resolves on the following local date when it precedes `from`. A `from` or `to` event that does not occur on its date returns the sentinel, with the reason available from `solarEvents`.

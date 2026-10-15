@@ -46,6 +46,11 @@ statements, with the computation shown. **NOT REACHED** = marked, not asserted.
    mention TAI. BIPM publishes no NavIC row anywhere. RINEX 4.02 Table 1 gives "GPS = IRN = UTC + ΔtLS".
    There are two week counters: 10 bits on L5/S (first wrap already happened, 2019-04-06T23:59:42Z) and
    13 bits on L1 (first wrap 2156-08-21T23:59:42Z). See §5a.
+10. **All six systems are IMO-recognized WWRNS components, but IEC 61108 covers only five.** GPS and
+    GLONASS: A.860(20) (1997). BeiDou: SN.1/Circ.329 (2014). Galileo: SN.1/Circ.334 (2016). IRNSS:
+    SN.1/Circ.340 (2020). QZSS: SN.1/Circ.341 (2021). The policy is A.1046(27), whose annex was
+    replaced by MSC.599(111) (22 May 2026); its §1.2 now says the WWRNS "includes global and regional"
+    systems. IEC 61108 parts 1–7 have no QZSS part. See §9a.
 
 ---
 
@@ -969,6 +974,207 @@ characters (G, R, E, C, J, I, S); its three-letter time tokens are `GPS GLO GAL 
 
 ---
 
+## 9a. IMO and IEC — the authority for treating the six systems as peers
+
+Retrieved 2026-10-15. IMO resolutions come from IMO's own resolution index (`wwwcdn.imo.org`),
+which is PRIMARY. The four SN.1 circulars are not on IMO's public site. Their texts come from
+imorules.com, a licensed reproduction ("Copyright … Clasifications Register Group Limited,
+International Maritime Organization …"), so they are MIRROR. IEC data comes from the IEC webstore
+catalogue pages: titles, editions, dates and abstracts. The standards themselves are paywalled and
+were not read.
+
+### 9a.1 The policy: A.1046(27) and its 2026 replacement annex
+
+**IMO Assembly resolution A.1046(27), "Worldwide Radionavigation System", adopted 30 November 2011**
+(A 27/Res.1046, 20 December 2011), PRIMARY:
+<https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/AssemblyDocuments/A.1046(27).pdf>
+
+- Operative para. 1: it "ADOPTS, as the IMO policy for the recognition and acceptance of suitable
+  radionavigation systems intended for international use, the "Revised Report on the Study of a
+  Worldwide Radionavigation System"".
+- Para. 4: it "REQUESTS the Maritime Safety Committee to recognize systems conforming with the
+  requirements set out in the Annex to this resolution, and to publish information on such systems".
+- Para. 6: it "REVOKES resolution A.953(23)".
+- Annex §2.1.1 (page 2): "The recognition by IMO of a radionavigation system would mean that the
+  Organization recognizes that the system is capable of providing adequate position information
+  within its coverage area and that the carriage of receiving equipment for use with the system
+  satisfies the relevant requirements of the 1974 SOLAS Convention, as amended."
+- §2.1.3 lists the five tests: formally declared operational, continued provision assured,
+  performance per the appendix, published characteristics, and change protection.
+
+**MSC resolution MSC.599(111), "Amendments to the Worldwide Radionavigation System (resolution
+A.1046(27))", adopted 22 May 2026** (MSC 111/22/Add.2, Annex 30), PRIMARY:
+<https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MSCResolutions/MSC.599(111).pdf>
+
+- Para. 1 (Annex 30, page 1): it "ADOPTS, as the revised IMO policy for the recognition and
+  acceptance of suitable radionavigation systems intended for international use, the revised
+  "Report on the Study of a Worldwide Radionavigation System", as set out in the annex to the
+  present resolution, which revises in its entirety the existing text of the annex to resolution
+  A.1046(27)".
+- Annex §1.2 (Annex 30, page 3): "It is understood that the worldwide radionavigation system
+  includes global and regional radionavigation systems and may include corresponding augmentation
+  systems."
+- Annex §1.5: "The Revised Maritime Policy and Requirements for a Future Global Navigation Satellite
+  System (GNSS) (resolution A.915(22)) sets out that IMO will recognize a GNSS as a system which meets
+  the carriage requirements for position-fixing equipment for a Worldwide Radionavigation System
+  (WWRNS)."
+- Annex §1.6: "Although augmentation systems do not require recognition by IMO …".
+- Annex §3.4, footnote 1 (Annex 30, page 4): "Refer to the recommendation of the International
+  Electrotechnical Commission, in particular, IEC publication 61162, Digital interface for
+  Navigational Equipment within a ship."
+
+**Neither A.1046(27) nor MSC.599(111) names any system.** Recognition of each system is a separate
+MSC decision, published as an SN.1 circular (or, for GPS and GLONASS, recorded in Assembly
+resolutions). §1.2 of the 2026 annex is the first IMO policy text that says outright that the WWRNS
+includes **regional** systems, which covers NavIC and QZSS.
+
+### 9a.2 Per-system recognition
+
+| System | Recognising instrument | Date | Recognising sentence | Rank |
+| --- | --- | --- | --- | --- |
+| GPS | A.860(20) annex §2.1.1.3, p. 3; restated in A.915(22) annex §2.1.1.3, p. 4 | 27 Nov 1997 (A.860); 29 Nov 2001 (A.915) | A.860(20): "GPS has been offered and recognized as a component of the World-Wide Radionavigation System (WWRNS) for navigation use in other waters." A.915(22): "GPS has been recognized as a component of the World Wide Radionavigation System (WWRNS) for navigational use in waters other than harbour entrances and approaches and restricted waters." | PRIMARY (Assembly resolutions) |
+| GLONASS | A.860(20) annex §2.1.2.2, p. 3; A.915(22) annex §2.1.2.2, p. 4 | 27 Nov 1997; 29 Nov 2001 | A.860(20): "GLONASS has been offered and recognized as a component of WWRNS." A.915(22): "GLONASS has been recognized as a component of the WWRNS." | PRIMARY |
+| BeiDou | **SN.1/Circ.329**, "Recognition of the BeiDou Satellite Navigation System (BDS) as a Component of the World-Wide Radionavigation System" | 21 Nov 2014 (MSC 94) | "The Maritime Safety Committee, at its ninety-fourth session (17 to 21 November 2014), pursuant to operative paragraph 4 of resolution A.1046(27) on World-Wide Radionavigation System, recognized the BeiDou Navigation Satellite System (BDS), proposed by the People's Republic of China, as a component of the World-Wide Radionavigation System." | MIRROR (imorules.com) |
+| Galileo | **SN.1/Circ.334**, "Recognition of the Galileo Global Navigation Satellite System as a Component of the Worldwide Radionavigation System" | 20 May 2016 (MSC 96) | "The Maritime Safety Committee, at its ninety-sixth session (11 to 20 May 2016), pursuant to operative paragraph 4 of resolution A.1046(27) on Worldwide Radionavigation System, recognized the Galileo Global Navigation Satellite System (Galileo GNSS), proposed by the European Commission, as a component of the Worldwide Radionavigation System." | MIRROR |
+| NavIC/IRNSS | **SN.1/Circ.340**, "Recognition of the Indian Regional Navigation Satellite System (IRNSS) as a Component of the Worldwide Radionavigation System" | 11 Nov 2020 (MSC 102) | "The Maritime Safety Committee, at its 102nd session (4 to 11 November 2020), pursuant to operative paragraph 4 of resolution A.1046(27) on Worldwide Radionavigation System, recognized the Indian Regional Navigation Satellite Systems (IRNSS), proposed by India, as a component of the Worldwide Radionavigation System." Para. 2 limits it to "ocean waters within the area covered by 55°E longitude, 50°N latitude, 110°E longitude and 5°S latitude." | MIRROR |
+| QZSS | **SN.1/Circ.341**, "Recognition of the Japanese Quasi-Zenith Satellite System (QZSS) as a Component of the Worldwide Radionavigation System" | 18 Oct 2021 (MSC 104, 4–8 Oct 2021) | Circular body **not reached** (the mirror's body page returns 404; only number, title and date are listed). IMO's own MSC 104 meeting summary, PRIMARY: "The Committee recognized the Japanese Regional Navigation Satellite System Quasi-Zenith Satellite System (QZSS) as a component of the world-wide radio navigation system (WWRNS)." | Number/title/date: MIRROR index; decision: PRIMARY (IMO meeting summary) |
+
+Sources:
+
+- IMO resolution A.860(20), "Maritime policy for a future GNSS", 27 Nov 1997:
+  <https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/AssemblyDocuments/A.860(20).pdf>
+- IMO resolution A.915(22), "Revised maritime policy and requirements for a future GNSS",
+  29 Nov 2001 (annex §2 "Present situation"):
+  <https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/AssemblyDocuments/A.915(22).pdf>
+- Circular index: <https://www.imorules.com/COLLECTION-_-_27.html>
+- Circular bodies: `GUID-C85DEB76-…` (329), `GUID-46D134E4-…` (334) and `GUID-87256CC7-…` (340) under
+  `https://www.imorules.com/`.
+- IMO MSC 104 summary:
+  <https://www.imo.org/en/MediaCentre/MeetingSummaries/Pages/MSC-104th-session.aspx>. Plain curl gets
+  HTTP 500 from imo.org; I read this page in a browser session.
+
+**The single primary IMO sentence that names all six.** The same MSC 104 summary (IMO, October
+2021) continues:
+
+> "IMO has an important role in accepting and recognizing radionavigation systems which can be used
+> by international shipping and has recognized the global positioning system (GPS), global navigation
+> satellite system (GLONASS), BeiDou navigation satellite system (BDS), Galileo global navigation
+> satellite system and Indian regional navigation satellite system (IRNSS)."
+
+Read together with the QZSS sentence just before it, this is one IMO page recording all six as
+recognized WWRNS components.
+
+**The original 1990s GPS and GLONASS circulars: not reached — marked, not asserted.** I found no
+public copy. The earliest primary statement reached is A.860(20) (1997), which says both "has been
+offered and recognized".
+
+**The receiver performance standards** (IMO resolution index, PRIMARY) also treat each system as a
+candidate component:
+
+| Resolution | Title | Adopted |
+| --- | --- | --- |
+| MSC.112(73) | Revised performance standards for shipborne GPS receiver equipment | 1 Dec 2000 |
+| MSC.113(73) | Revised performance standards for shipborne GLONASS receiver equipment | 1 Dec 2000 |
+| MSC.114(73) | Revised performance standards for shipborne DGPS and DGLONASS maritime radio beacon receiver equipment | 1 Dec 2000 |
+| MSC.115(73) | Revised performance standards for shipborne combined GPS/GLONASS receiver equipment | 1 Dec 2000 |
+| MSC.233(82) | Performance standards for shipborne Galileo receiver equipment | 5 Dec 2006 |
+| MSC.379(93) | Performance standards for shipborne BeiDou satellite navigation system (BDS) receiver equipment | 16 May 2014 |
+| MSC.401(95) | Performance standards for multi-system shipborne radionavigation receivers; amended by MSC.432(98), 16 Jun 2017 | 8 Jun 2015 |
+| MSC.449(99) | Performance standards for shipborne IRNSS receiver equipment | 24 May 2018 |
+| MSC.480(102) | Performance standards for shipborne QZSS receiver equipment | 11 Nov 2020 |
+
+Each preamble uses the form "… may be recognized as a possible component of the world-wide
+radionavigation system". MSC.480(102) annex §1.5 says "this is the regional navigation satellite
+system being recognized as a future component of the Worldwide Radionavigation System (WWRNS)".
+These standards are prerequisites, not the recognition itself.
+
+### 9a.3 IEC 61108 — receiver standards by system (IEC webstore catalogue, PRIMARY)
+
+Series title: "Maritime navigation and radiocommunication equipment and systems - Global navigation
+satellite systems (GNSS) - …", IEC TC 80.
+
+| Part | Title (after the series title) | Edition, date | Webstore | Abstract (first sentence) |
+| --- | --- | --- | --- | --- |
+| 61108-1:2003 | Part 1: Global positioning system (GPS) - Receiver equipment - Performance standards, methods of testing and required test results | Ed. 2.0, 2003-07-31; stability 2028 | <https://webstore.iec.ch/en/publication/4515> | "Specifies the minimum performance standards, methods of testing and required test results for GPS shipborne receiver equipment, based on the relevant IMO Resolution, …" |
+| 61108-2:1998 | Part 2: Global navigation satellite system (GLONASS) - Receiver equipment - Performance standards, methods of testing and required test results | Ed. 1.0, 1998-06-05; stability 2027 | <https://webstore.iec.ch/en/publication/4516> | (no abstract text extracted) |
+| 61108-3:2010 | Part 3: Galileo receiver equipment - Performance requirements, methods of testing and required test results | Ed. 1.0, 2010-05-26; stability 2027 | <https://webstore.iec.ch/en/publication/4517> | "… for Galileo shipborne receiver equipment, based on IMO resolution MSC.233(82) …" |
+| 61108-4:2004 | Part 4: Shipborne DGPS and DGLONASS maritime radio beacon receiver equipment - Performance requirements, methods of testing and required test results | Ed. 1.0, 2004-07-19; stability 2027 | <https://webstore.iec.ch/en/publication/4518> | "… conforming to performance standards not inferior to those adopted by the IMO in resolution MSC.114(73)." |
+| 61108-5:2020 | Part 5: BeiDou navigation satellite system (BDS) - Receiver equipment - Performance requirements, methods of testing and required test results | Ed. 1.0, 2020-03-11; stability 2028 | <https://webstore.iec.ch/en/publication/61159> | "… for BDS shipborne receiver equipment, based on IMO resolution MSC.379(93) …" |
+| 61108-6:2023 | Part 6: Navigation with Indian constellation (NavIC)/Indian regional navigation satellite system (IRNSS) - Receiver equipment - Performance requirements, methods of testing and required test results | Ed. 1.0, 2023-02-23; stability 2027 | <https://webstore.iec.ch/en/publication/67527> | "… for the Indian regional satellite system (IRNSS) shipborne receiver equipment, based on IMO resolution MSC.449(99) …" |
+| 61108-7:2024 | Part 7: Satellite based augmentation system (SBAS) L1 - Receiver equipment - Performance standards, methods of testing and required test results | Ed. 1.0, 2024-05-03; stability 2027 | <https://webstore.iec.ch/en/publication/68696> | "… which uses L1 signals from GPS and satellite based augmentation system (SBAS) in order to improve the estimated GPS position." |
+
+**No IEC 61108 part for QZSS was found.** The webstore search returned parts 1–7 only, and no other
+part is cross-listed on these pages. IMO has a QZSS performance standard, MSC.480(102), but IEC has
+not published a matching receiver test standard that I could find — marked, not asserted beyond the
+search. **Part 7 is an augmentation, not a GNSS**, and MSC.599(111) annex §1.6 says augmentation
+systems "do not require recognition by IMO". So IEC 61108 does not give the six systems parallel
+coverage: QZSS has no part, and DGPS/DGLONASS and SBAS have parts of their own.
+
+### 9a.4 IEC 61162-1 (IEC webstore catalogue, PRIMARY)
+
+<https://webstore.iec.ch/en/publication/72729> — **IEC 61162-1:2024, Edition 6.0, published
+2024-04-04**, International Standard, TC 80, 385 pages, stability date 2028. Title: "Maritime
+navigation and radiocommunication equipment and systems - Digital interfaces - Part 1: Single talker
+and multiple listeners". It replaces IEC 61162-1:2016 (Ed. 5.0, 2016-08-31; withdrawn 2024-04-04 per
+the search-result listing of <https://webstore.iec.ch/en/publication/25754>).
+
+Abstract:
+
+> "IEC 61162-1:2024 contains the requirements for data communication between maritime electronic
+> instruments, navigation and radiocommunication equipment when interconnected via an appropriate
+> system. This document is intended to support one-way serial data transmission from a single talker
+> to one or more listeners. These data are in printable ASCII form and can include information such
+> as position, speed, depth, frequency allocation, etc. Typical messages can be from about 11 to a
+> maximum of 79 characters in length and generally require transmission no more rapidly than one
+> message per second."
+
+It continues: "For applications where a faster transmission rate is necessary, IEC 61162-2 applies.
+For applications to shore based equipment of the automatic identification system (AIS) the IEC 62320
+series applies."
+
+**Relationship to NMEA 0183: not reached in a primary text — marked, not asserted.**
+
+- The IEC abstract does not mention NMEA.
+- IEC's preview PDFs (`webstore.iec.ch/p-preview/…` and `/preview/…`) return an HTML page, not the
+  PDF, for every edition I tried.
+- NMEA's own page (<https://www.nmea.org/nmea-0183.html>) gives "Version 4.30" ("As of December
+  2023") but does not mention IEC 61162-1.
+- Search snippets say the 2000 edition is "closely aligned with NMEA 0183 version 2.30" and the 2007
+  edition with version 3.01. These come from an IEC preview and a reseller listing I could not open,
+  so I do not rely on them.
+
+IMO itself points to IEC 61162 for the receiver's output: MSC.599(111) annex §3.4, footnote 1, quoted
+in §9a.1.
+
+### 9a.5 Citation for "six peer systems"
+
+The strongest primary chain for the Maritime guide and the `gnss` JSDoc:
+
+> IMO recognizes GPS, GLONASS, BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the
+> Worldwide Radionavigation System, under the policy of IMO resolution A.1046(27) (2011), whose annex
+> was revised by MSC.599(111) (2026). Recognition: GPS and GLONASS, resolution A.860(20) (1997);
+> BeiDou, SN.1/Circ.329 (2014); Galileo, SN.1/Circ.334 (2016); IRNSS, SN.1/Circ.340 (2020);
+> QZSS, SN.1/Circ.341 (2021).
+
+A short form that rests on a single primary page the reader can open: "IMO, Maritime Safety
+Committee 104th session summary (October 2021), which lists all six as recognized components of the
+WWRNS."
+
+What this does and does not support:
+
+- IMO **recognition** applies to all six, so "six peer systems" in the sense of *IMO-recognized WWRNS
+  components* is supported.
+- Recognition is not uniform in scope. BDS (2014) was recognized for ocean waters (100 m, 95%).
+  IRNSS was recognized for ocean waters inside 55°E–110°E, 50°N–5°S. Galileo was expected to reach
+  10 m. GPS's 1997/2001 recognition was "for navigation use in other waters" (not harbour
+  approaches). Do not write that IMO treats them as equivalent for every phase of navigation.
+- **IEC 61108 is not a basis for "six peers"**: it has no QZSS part. Cite IEC 61108 per system
+  (parts 1, 2, 3, 5, 6) only, not as a six-system authority.
+- IEC 61162-1 is the interface standard, not a recognition instrument. Cite it for the sentence
+  format, not for peer status.
+
+---
+
 ## 10. Pre-1972 UTC
 
 BIPM *Annual Report on Time Activities* vol. 15 (2020), Table 2 "Relationship between TAI and UTC",
@@ -1103,12 +1309,33 @@ with BIPM. (ITU-R TF.460-6 does not define pre-1972 UTC.)
 | Time-string labels: UTC, TDB, TT (TDT deprecated) | NAIF `str2et_c`; Time Required Reading |
 | Time-scale tokens TAI, TT, TDB, UTC, GPS | FITS 4.0 §9.2.1 Table 30, p. 38 |
 | GNSS time tokens GPS, GLO (= GLONASS UTC time), GAL, QZS, BDT, IRN | RINEX 4.02 §5.2.8, p. 25; RINEX 3.05 §5.2.8 |
+| IMO policy for recognising radionavigation systems; MSC recognises systems meeting the annex | IMO res. A.1046(27), 30 Nov 2011, operative paras 1 and 4; annex §2.1 |
+| WWRNS "includes global and regional radionavigation systems"; annex replaced in its entirety | IMO res. MSC.599(111), 22 May 2026, para. 1; annex §1.2 |
+| GPS and GLONASS "offered and recognized" as WWRNS components | IMO res. A.860(20), 27 Nov 1997, annex §2.1.1.3, §2.1.2.2 (also A.915(22) annex §2.1) |
+| BeiDou recognised as a WWRNS component (MSC 94) | IMO SN.1/Circ.329, 21 Nov 2014, para. 1 (text via imorules.com mirror) |
+| Galileo recognised as a WWRNS component (MSC 96) | IMO SN.1/Circ.334, 20 May 2016, para. 1 (mirror) |
+| IRNSS recognised as a WWRNS component (MSC 102), ocean waters 55°E–110°E, 50°N–5°S | IMO SN.1/Circ.340, 11 Nov 2020, paras 1–2 (mirror) |
+| QZSS recognised as a WWRNS component (MSC 104) | IMO SN.1/Circ.341, 18 Oct 2021 (number/title/date via mirror; body not reached); IMO MSC 104 meeting summary (primary) |
+| All six listed as recognised in one IMO text | IMO MSC 104 meeting summary, 4–8 Oct 2021 |
+| Shipborne receiver standards per system: GPS 61108-1:2003, GLONASS 61108-2:1998, Galileo 61108-3:2010, DGPS/DGLONASS 61108-4:2004, BDS 61108-5:2020, NavIC/IRNSS 61108-6:2023, SBAS L1 61108-7:2024; none for QZSS | IEC webstore catalogue pages 4515, 4516, 4517, 4518, 61159, 67527, 68696 |
+| Serial sentence interface, single talker / multiple listeners, printable ASCII, ≤ 79 characters | IEC 61162-1:2024 Ed. 6.0 (2024-04-04), webstore abstract |
+| IEC 61162-1 ↔ NMEA 0183 alignment | **Not reached in a primary text** |
 | GLONASS designator for the ICD's UTC(SU)+3 h scale | **No source — not used (MAR-16 D10: GMT implements only RINEX `GLO`)** |
 
 ---
 
 ## 13. Not reached / not asserted
 
+- IMO's original 1990s circulars recognising GPS and GLONASS. The earliest primary statement reached
+  is A.860(20) (1997).
+- The body of SN.1/Circ.341 (QZSS). The mirror's body page returns 404. The recognition decision is
+  confirmed by IMO's MSC 104 summary.
+- IMO's own copies of SN.1/Circ.329, .334 and .340. Their text was read on the imorules.com licensed
+  mirror.
+- The text of IEC 61108-x and IEC 61162-1 (paywalled). Only catalogue pages and abstracts were read.
+- A primary statement of the IEC 61162-1 ↔ NMEA 0183 relationship. The IEC previews were
+  unobtainable, and NMEA's page does not mention IEC.
+- Any IEC 61108 part for QZSS. None was found.
 - GLONASS CDMA ICDs (2016, Russian) — not fetched; not needed for the FDMA L1/L2 clauses above.
 - The issuing body's own copy of GLONASS ICD 5.1 — the UNAVCO mirror was used.
 - The issuing body's own copy of BDS-SIS-ICD-2.0 — a university mirror was used; the official
