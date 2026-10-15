@@ -6,7 +6,7 @@
 
 AIS (MAR-17) is what a ship transmits; NMEA 0183 is what its own receiver says. RMC carries the fix time as `hhmmss.ss` and the date as `ddmmyy`; GGA and GLL carry time only; ZDA carries the full UTC date and time plus a local zone description in hours and minutes. Three defects recur in code that reads them: the two-digit year needs a century rule, the time-only sentences need a date from somewhere else, and the ZDA zone fields have a sign convention that has to come from the standard, not from intuition.
 
-The authority is IEC 61162-1 (maritime navigation and radiocommunication equipment and systems — digital interfaces, single talker and multiple listeners); NMEA 0183 is its national origin, published by a US association. The IEC text was not reached — marked, not asserted; each sentence field is quoted from it at implementation, and the JSDoc names IEC 61162-1 first.
+The authority is IEC 61162-1:2024, Edition 6.0 (maritime navigation and radiocommunication equipment and systems — digital interfaces — part 1: single talker and multiple listeners), the standard IMO's WWRNS annex points to for receiver output (MSC.599(111) annex §3.4, footnote 1). NMEA 0183 is the US association's specification of the same sentences; how the two editions correspond was not reached — marked, not asserted. The IEC text itself is paywalled; each sentence field is quoted from it at implementation, and the JSDoc names IEC 61162-1 first.
 
 ([gpsd, *NMEA Revealed*](https://gpsd.gitlab.io/gpsd/NMEA.html) — a public reproduction of the sentence formats, used as corroboration; both IEC 61162-1 and NMEA 0183 are paywalled)
 

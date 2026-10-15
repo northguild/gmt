@@ -28,7 +28,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
   - `earthRotationAngle(isoString: string, options?: { dut1?: number }): number | null` — ERA in radians.
   - `greenwichMeanSiderealTime(isoString: string, options?): number | null` — GMST in radians.
   - `greenwichApparentSiderealTime(isoString: string, options?): number | null` — GAST, GMST plus the equation of the equinoxes.
-  - `localSiderealTime(isoString: string, longitudeDegrees: number, options?): number | null`
+  - `localSiderealTime(isoString: string, position: Position, options?): number | null` — uses the position's longitude.
 
 ## ΔT polynomial segments (Espenak & Meeus)
 
@@ -66,6 +66,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `toTT` from SPA-47 — GMST formulations mix UT1 and TT arguments
 - `taiMinusUtc` from SPA-48 — the TT − UTC link for dates the leap-second table covers
 - `toNanoseconds` from CORE-1 — precision conversion
+- `Position` / `isValidPosition` from CORE-79 — the observer's position
 
 ## Verification
 
@@ -79,7 +80,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `earthRotationAngle` advances by approximately 2π over one sidereal day
 - `greenwichMeanSiderealTime` at a known reference epoch matches a published value to the documented tolerance
 - GAST and GMST differ by the equation of the equinoxes, and the difference is within its expected arcsecond range
-- `localSiderealTime` at longitude 0 equals GAST
+- `localSiderealTime` at a position with longitude 0 equals GAST
 - Sidereal time computed from UTC rather than UT1 differs measurably, asserted to document why UT1 is required
 - Invalid longitude returns the sentinel
 - `pnpm run validate` stays green

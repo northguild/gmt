@@ -144,11 +144,22 @@ the same string as the `GnssSystem` member, so `gnssToUtc("GAL", "2024-01-01T00:
 ### D6. `GnssSystem` is the six RINEX identifiers; week functions take a named counter
 
 `GnssSystem = "GPS" | "GAL" | "BDT" | "QZS" | "GLO" | "IRN"`: the complete RINEX 4.02 §5.2.8 list.
-MAR-16's `'BDS'` names the constellation, not a time token, and becomes `'BDT'`. The six are the
-systems the IMO recognises as components of the World-Wide Radionavigation System under Resolution
-A.1046(27) (BeiDou by SN.1/Circ.329, 2014), each with its own receiver standard in the IEC 61108
-series; the recognition texts for the other five and the IEC 61108 part list were not reached —
-marked, not asserted.
+MAR-16's `'BDS'` names the constellation, not a time token, and becomes `'BDT'`.
+
+"Peer" means **IMO-recognised component of the World-Wide Radionavigation System (WWRNS)**. Resolution
+A.1046(27) (2011; annex revised by MSC.599(111), 2026, which states that the WWRNS includes regional
+systems) sets the policy and names no system; each system is recognised by its own instrument: GPS and
+GLONASS by A.860(20) (1997), BeiDou by SN.1/Circ.329 (2014), Galileo by SN.1/Circ.334 (2016), IRNSS
+(NavIC) by SN.1/Circ.340 (2020) and QZSS by SN.1/Circ.341 (2021). The one primary IMO page that names
+all six is the MSC 104 meeting summary (2021). Recognition scope differs: GPS's recognition is for
+"waters other than harbour entrances and approaches and restricted waters", BeiDou's and IRNSS's
+are for ocean waters, and IRNSS's is regional ("ocean waters within the area covered by 55°E
+longitude, 50°N latitude, 110°E longitude and 5°S latitude"). GMT converts each system's time
+everywhere; the scope is a navigation-use fact the JSDoc states, not a limit GMT applies. Receiver
+equipment is standardised per system in the IEC 61108 series — parts for GPS, GLONASS, Galileo, BDS
+and NavIC; no QZSS part was found — so IEC 61108 is cited per system, never as the authority for the
+six. Receiver output uses IEC 61162-1:2024 (Edition 6.0) sentences. (Research §9a; the SN.1 circular
+texts are licensed mirrors, and SN.1/Circ.341's body was not reached.)
 
 **No system-specific functions (owner decision).** Every system goes through the same functions:
 `utcToGnss` / `gnssToUtc` for scale strings, `gnssWeekToUtc` / `utcToGnssWeek` for broadcast weeks,
@@ -355,7 +366,9 @@ start; `space/` is not reserved, and nothing in this story creates it.
 | Nominal offsets only (C0, C1, A0/A1, GGTO, A0UTC not applied) | **GMT rule.** Broadcast corrections are not inputs (DoD "No invented quantities"); BIPM puts them at tens of nanoseconds |
 | Time-scale tokens | D5: FITS 4.0 Table 30; RINEX 4.02 / 3.05 §5.2.8. Arrangement: **GMT rule** |
 | `GnssSystem` names | RINEX 4.02 §5.2.8, all six identifiers |
-| The six as peers | IMO Resolution A.1046(27) (World-Wide Radionavigation System) and the recognitions under it (BeiDou: SN.1/Circ.329, 2014); IEC 61108 series. Other recognition texts and the IEC part list: not reached — marked, not asserted |
+| The six as peers = IMO-recognised WWRNS components | Policy: IMO A.1046(27) (2011), annex revised by MSC.599(111) (2026; §1.2 "includes global and regional radionavigation systems") — names no system. Recognition: GPS and GLONASS, A.860(20) annex §2.1.1.3, §2.1.2.2 (1997); BeiDou, SN.1/Circ.329 (2014); Galileo, SN.1/Circ.334 (2016); IRNSS, SN.1/Circ.340 (2020; ocean waters, 55°E–110°E, 5°S–50°N); QZSS, SN.1/Circ.341 (2021; body not reached, decision recorded in IMO's MSC 104 summary, the one primary page naming all six) (research §9a) |
+| Receiver equipment, per system | IEC 61108-1 (GPS), -2 (GLONASS), -3 (Galileo), -5 (BDS), -6 (NavIC); no QZSS part found. Cited per system, not as the authority for the six (research §9a.3) |
+| Receiver sentence format | IEC 61162-1:2024, Edition 6.0 (research §9a.4) |
 | No system-specific functions | Owner decision; tracker "International authority first" |
 | Named week counters | Message names from IS-GPS-200N and IS-QZSS-PNT-006; joined token **GMT rule** |
 | `"rolling"` era window | **GMT rule**, after coding-standards § EDI's `yearWindow: "rolling"` |
@@ -1185,10 +1198,10 @@ No `space/` and no `maritime/` directory is created (D13).
 
 `timescale` and `gnss` are building blocks, so their reference pages sit among the general
 namespaces. The **Maritime** industry layer carries the guide, the scenarios and the decoder tool,
-showing how ships use GNSS time on the international footing: the six systems recognised under IMO
-Resolution A.1046(27), shipborne receivers to the IEC 61108 series, and their output carried over
-IEC 61162-1 interfaces (the IEC parts and the recognition texts other than BeiDou's are not reached —
-the guide marks them, it does not assert them).
+showing how ships use GNSS time on the international footing: the six systems as IMO-recognised
+WWRNS components, each by its own instrument and with its own recognition scope (D6), shipborne
+receivers to the IEC 61108 part for each system that has one, and their output carried as
+IEC 61162-1:2024 sentences.
 
 **Why the tooling must change.** Today an industry layer is a namespace:
 
@@ -1926,7 +1939,7 @@ approval.
 Per [docs-site.md](../docs-site.md). The Maritime pages sit in the Maritime industry layer declared by dox-architect's tooling change (§5.5).
 
 - **Maritime guide** `maritime-gnss-time-and-week-rollover.mdx`: how ships use satellite time,
-  framed by IMO A.1046(27), IEC 61108 and IEC 61162-1 (§5.5) — one `##` per rule: why every
+  framed by the six IMO recognitions, IEC 61108 per system and IEC 61162-1:2024 (§5.5, D6) — one `##` per rule: why every
   satellite scale but `GLO` runs ahead of UTC by an amount that changed with each leap second, with
   all six side by side and no system as the lead example; the six RINEX scales and their
   epochs (Galileo's 13 s; NavIC's derived offset); `GLO` is UTC hours, and raw broadcast GLONASS

@@ -17,8 +17,8 @@ The standard altitudes come from the *Explanatory Supplement to the Astronomical
 Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
 
 - `<space-ns>/calculate/solarPosition.ts`:
-  - `solarPosition(isoString: string, location: { latitude: number, longitude: number }): { elevationDegrees: number, azimuthDegrees: number, declinationDegrees: number, equationOfTimeMinutes: number } | null` — Meeus ch. 25 low-accuracy solar coordinates (0.01°), with refraction not applied.
-  - `subsolarPoint(isoString: string): { latitude: number, longitude: number } | null`
+  - `solarPosition(isoString: string, location: Position): { elevationDegrees: number, azimuthDegrees: number, declinationDegrees: number, equationOfTimeMinutes: number } | null` — Meeus ch. 25 low-accuracy solar coordinates (0.01°), with refraction not applied.
+  - `subsolarPoint(isoString: string): Position | null` — no `height`.
 - `<space-ns>/calculate/solarEvents.ts`:
   - `solarEvents(isoDate: string, location, options: { timeZone: string }): { sunrise: string | null, sunset: string | null, solarNoon: string, civilDawn: string | null, civilDusk: string | null, nauticalDawn: string | null, nauticalDusk: string | null, astronomicalDawn: string | null, astronomicalDusk: string | null, polar: 'day' | 'night' | 'twilightOnly' | null } | null` — Events for the local date in `timeZone`; `null` for an event that does not occur, with `polar` saying why.
   - `sunEventAt(isoDate: string, location, altitudeDegrees: number, direction: 'rising' | 'setting', options): string | null` — The general form: any altitude, so callers can implement "sun 6° below" or "upper limb" rules.
@@ -53,6 +53,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `floorToZone` / `bucketRange` from CORE-5 — the local day being searched
 - `resolveLocal` from CORE-4 — local date to instant
 - `toNanoseconds` from CORE-1 — exact interpolation
+- `Position` / `isValidPosition` from CORE-79 — the `location` argument and the `subsolarPoint` result
 
 ## Verification
 

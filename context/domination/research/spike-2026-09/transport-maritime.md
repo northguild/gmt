@@ -246,9 +246,8 @@ Source used: Stedi's X12 dictionary (X12-licensed; acceptable per the brief). x1
 ## 10. NMEA 0183 — RMC, ZDA, GGA time fields
 
 > **Annotation (international-standards audit).** The international authority for these sentences is
-> IEC 61162-1 (maritime navigation and radiocommunication equipment — digital interfaces); NMEA 0183 is
-> named in plans as its national (US association) origin. The IEC 61162-1 text was not reached here —
-> marked, not asserted. MAR-59 cites IEC 61162-1 first.
+> IEC 61162-1:2024, Edition 6.0 (see `research/mar-16-gnss-icd-clauses.md` §9a.4). Its correspondence
+> to NMEA 0183 editions was not reached — marked, not asserted. MAR-59 cites IEC 61162-1 first.
 
 - Source: gpsd "NMEA Revealed", https://gpsd.gitlab.io/gpsd/NMEA.html (REPRODUCTION — the NMEA 0183 standard itself is paywalled; gpsd is the de-facto public reference).
 - RMC field 1: "UTC of position fix, hh is hours, mm is minutes, ss.ss is seconds."; field 9: "Date, ddmmyy".
@@ -263,10 +262,10 @@ Source used: Stedi's X12 dictionary (X12-licensed; acceptable per the brief). x1
 ## 11. GNSS time scales from the ICDs
 
 > **Annotation (international-standards audit).** The six systems are peers. The international
-> footing is IMO Resolution A.1046(27) (World-Wide Radionavigation System) with the recognitions under
-> it, the IEC 61108 shipborne-receiver series, RINEX 4.02 (IGS/RTCM) for the time tokens and BIPM for
-> the integer offsets; see `research/mar-16-gnss-icd-clauses.md`. The IMO texts other than BeiDou's
-> SN.1/Circ.329 and the IEC 61108 part list were not reached — marked, not asserted. The ICD extracts
+> footing is IMO's recognition of each system as a WWRNS component under A.1046(27) (GPS and GLONASS
+> A.860(20); BeiDou SN.1/Circ.329; Galileo SN.1/Circ.334; IRNSS SN.1/Circ.340; QZSS SN.1/Circ.341),
+> IEC 61108 per system (no QZSS part), RINEX 4.02 (IGS/RTCM) for the time tokens and BIPM for the
+> integer offsets; see `research/mar-16-gnss-icd-clauses.md` §9a. The ICD extracts
 > below are signal facts only. The GLONASS three-hour offset is **not used — MAR-16 D10**: GMT's `GLO`
 > is RINEX/BIPM UTC hours.
 
