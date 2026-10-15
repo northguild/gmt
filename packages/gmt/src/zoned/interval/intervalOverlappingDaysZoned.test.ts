@@ -217,13 +217,14 @@ describe("intervalOverlappingDaysZoned", () => {
     },
   );
 
+  // Worst CI run 16 s on the slowest runner; the timeout is three times that.
   it("returns null when the intersection crosses more than 10,000 zone transitions (America/New_York, 1970 to 7000)", () => {
     const start = "1970-01-01T00:00:00-05:00[America/New_York]";
     const end = "7000-01-01T00:00:00-05:00[America/New_York]";
     expect(intervalOverlappingDaysZoned(start, end, start, end)).toBeNull();
     // 10,000 transition lookups, each sampling the zone every 5 days (temporalCompat D13): about
     // 2.5 s locally and more on a CI runner, so the default 5 s is too tight.
-  }, 30_000);
+  }, 60_000);
 });
 
 // The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau

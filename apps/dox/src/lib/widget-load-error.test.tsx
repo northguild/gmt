@@ -6,7 +6,6 @@
  * and did nothing; nothing tested the path, so nothing noticed. Here each
  * library-backed mount meets a `GMT_MODULES` whose every import rejects.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { GMT_MODULES } from "./gmt-modules";
 import {
@@ -56,6 +55,22 @@ import {
   renderDepartureBoardTemplate,
 } from "./departure-board-mount";
 import { mountDtmDecoder, renderDtmDecoderTemplate } from "./dtm-decoder-mount";
+import {
+  mountBlDateStamp,
+  renderBlDateStampTemplate,
+} from "./bl-date-stamp-mount";
+import {
+  mountDemurrageClock,
+  renderDemurrageClockTemplate,
+} from "./demurrage-clock-mount";
+import {
+  mountEpcisEventReader,
+  renderEpcisEventReaderTemplate,
+} from "./epcis-event-reader-mount";
+import {
+  mountJourneySplit,
+  renderJourneySplitTemplate,
+} from "./journey-split-mount";
 import {
   mountX12TimeReader,
   renderX12TimeReaderTemplate,
@@ -171,6 +186,26 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "x12 time reader",
     () => renderX12TimeReaderTemplate(),
     mountX12TimeReader as MountFn<never>,
+  ],
+  [
+    "demurrage clock",
+    () => renderDemurrageClockTemplate(),
+    mountDemurrageClock as MountFn<never>,
+  ],
+  [
+    "b/l date stamp",
+    () => renderBlDateStampTemplate(),
+    mountBlDateStamp as MountFn<never>,
+  ],
+  [
+    "epcis event reader",
+    () => renderEpcisEventReaderTemplate(),
+    mountEpcisEventReader as MountFn<never>,
+  ],
+  [
+    "journey split",
+    () => renderJourneySplitTemplate(),
+    mountJourneySplit as MountFn<never>,
   ],
 ];
 

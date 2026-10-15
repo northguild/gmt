@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * The globe's labels and markers hold the site's contrast floors on every
  * globe: flat or with imagery, in either renderer and either theme (#293).
@@ -22,7 +20,6 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
 
 const TOKENS = readFileSync(

@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
 import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { parseX12DateTime } from "../parse/parseX12DateTime";

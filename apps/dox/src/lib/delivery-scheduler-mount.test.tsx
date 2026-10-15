@@ -5,7 +5,6 @@
  * assert, against the real `@northguild/gmt`. Every preset's printed call and
  * result are section 9 rows, verified against a build of the final library.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { DELIVERY_PRESETS } from "./delivery-scheduler";
@@ -195,6 +194,93 @@ describe("renderDeliverySchedulerTemplate", () => {
   });
 });
 
+describe("handling, in the reader's words", () => {
+  it("labels the stated dwellAfter 'Handling after' on every leg and says dwell nowhere on screen", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderDeliverySchedulerTemplate();
+    const labels = [...root.querySelectorAll("label")].map((l) =>
+      l.textContent!.replace(/\s+/g, " "),
+    );
+    expect(labels.filter((l) => l.startsWith("Handling after"))).toHaveLength(
+      4,
+    );
+    expect(labels.some((l) => /dwell/i.test(l))).toBe(false);
+    for (const p of DELIVERY_PRESETS) {
+      expect(p.description, p.id).not.toMatch(/\bdwell/i);
+    }
+  });
+
+  it("names a bad handling time in words and keeps the library's key in the printed call", async () => {
+    const { root } = await mount();
+    type(root, "dwell-1", "soon");
+    expect(q(root, "reason-aside").textContent).toContain(
+      "Leg 1's handling time is not a duration of time units, or it is negative.",
+    );
+    expect(q(root, "eta-headline").textContent).toBe(
+      "Leg 1: Invalid handling time",
+    );
+    expect(q(root, "copy-delivery").dataset.copyText).toContain(
+      'dwellAfter: "soon"',
+    );
+  });
+});
+
+describe("the hand-off to the Journey Split", () => {
+  it("is the last thing in section 3, in a controls row, and always has an href", async () => {
+    const { root } = await mount();
+    const link = q<HTMLAnchorElement>(root, "handoff");
+    expect(link.textContent).toBe("Split this journey into moving and waiting");
+    expect(link.closest(".gmt-widget-controls")).not.toBeNull();
+    const section = link.closest(".gmt-widget-section")!;
+    expect(section.querySelector("h4")!.textContent).toBe(
+      "3. What scheduleDelivery returns",
+    );
+    expect(link.closest(".gmt-widget-controls")!.nextElementSibling).toBeNull();
+    for (const p of DELIVERY_PRESETS) {
+      choosePreset(root, p.id);
+      expect(link.getAttribute("href"), p.id).toMatch(
+        /^\/tools\/journey-split\/\?w=journeysplit&wa=/,
+      );
+    }
+  });
+
+  it("carries every leg key, legCount and startTimeZone, and follows the form", async () => {
+    const { root } = await mount();
+    choosePreset(root, "ship-scheduled");
+    type(root, "dwell-2", "PT12H");
+    const href = q<HTMLAnchorElement>(root, "handoff").getAttribute("href")!;
+    const seeded = seedFromLocation(
+      "journeysplit",
+      href.slice(href.indexOf("?")),
+    );
+    expect(seeded).toEqual({
+      legCount: "3",
+      departure1: "2024-03-08T08:00:00-06:00[America/Chicago]",
+      duration1: "PT46H",
+      timeZone1: "America/Los_Angeles",
+      dwellAfter1: "PT2H",
+      mode1: "truck",
+      departure2: "2024-03-10T07:30:00[America/Los_Angeles]",
+      duration2: "P11D",
+      timeZone2: "Asia/Tokyo",
+      dwellAfter2: "PT12H",
+      mode2: "ship",
+      duration3: "PT2H30M",
+      timeZone3: "Asia/Tokyo",
+      mode3: "rail",
+    });
+    expect(href).toBe(encodeWidgetPermalink("journeysplit", seeded));
+  });
+
+  it("is present before the library has answered", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderDeliverySchedulerTemplate();
+    expect(q<HTMLAnchorElement>(root, "handoff").getAttribute("href")).toMatch(
+      /^\/tools\/journey-split\//,
+    );
+  });
+});
+
 describe("mountDeliveryScheduler", () => {
   it.each(DELIVERY_PRESETS.map((p) => [p.id]))(
     "prints the documented call and result for %s",
@@ -304,6 +390,19 @@ describe("mountDeliveryScheduler", () => {
     expect(texts.some((t) => t?.startsWith("① "))).toBe(true);
     expect(texts.some((t) => t?.startsWith("② "))).toBe(true);
     expect(texts.some((t) => t?.startsWith("③ "))).toBe(true);
+  });
+
+  it("keeps both charts out of the tab order, before and after a re-draw", async () => {
+    const { root } = await mount();
+    const tabStops = () =>
+      [...root.querySelectorAll<SVGSVGElement>("svg[role='img']")].filter(
+        (svg) => svg.tabIndex >= 0,
+      );
+    // The library writes tabindex="0" on a chart's <svg> unless told otherwise.
+    expect(root.querySelectorAll("svg[role='img']").length).toBeGreaterThan(0);
+    expect(tabStops()).toEqual([]);
+    choosePreset(root, "missed-connection");
+    expect(tabStops()).toEqual([]);
   });
 
   it("draws a broken (dashed) link on the Route chart for a missed connection", async () => {

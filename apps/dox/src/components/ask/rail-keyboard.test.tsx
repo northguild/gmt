@@ -15,7 +15,6 @@
  * Driven through `resolveWidget` rather than by importing the mount directly,
  * so the test enters by the same door a streamed tool call does.
  */
-/// <reference types="vitest/globals" />
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";

@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
 import { UNIT_ORDER } from "./build-utils";
 
 const REFERENCE = resolve(__dirname, "../../src/content/docs/reference");

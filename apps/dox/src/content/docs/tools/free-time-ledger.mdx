@@ -24,11 +24,14 @@ days. Many tariffs count both in calendar days. Where a tariff grants free time
 in working days, the days after it are mostly charged as calendar days. Some
 tariffs charge working days only.
 
-The track is one zone's local days, each cell as wide as that day really is.
-Free days are green, chargeable days amber, and on a working-day tariff the
-closed days are hatched and not counted. The bar is the dwell, half-open at the
-gate-out: leaving exactly at the expiry line charges nothing. The outputs are
-the real [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/) and
+The track is one zone's local days, each column as wide as that day really is.
+Free days are lit. Charged days are hatched and carry a "charged" chip, and a
+higher tier has a denser hatch and a numbered chip. On a working-day tariff the
+closed days carry a "closed" chip and are not counted. The event day the tariff
+does not count is plain and says "event day". Three plates above the track give
+the free days used, the chargeable days and the time free time expires. The bar
+is the dwell, half-open at the gate-out: leaving exactly at the expiry line
+charges nothing. The outputs are the real [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/) and
 [`chargeableDays`](/reference/intermodal/calculate/chargeableDays/) calls for
 what is on screen, including the charged dates.
 
@@ -45,6 +48,10 @@ is no longer charged. Then [gate out exactly at the
 expiry](/tools/free-time-ledger/?w=freetime&wa=%7B%22clockStart%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22clockEnd%22%3A%222024-06-17T04%3A00%3A00Z%22%2C%22freeDays%22%3A%223%22%2C%22firstDay%22%3A%22eventDay%22%2C%22basis%22%3A%22calendar%22%2C%22chargeBasis%22%3A%22calendar%22%2C%22zone%22%3A%22America%2FNew_York%22%7D)
 and step the end handle one notch right: the dwell is half-open, so that
 instant is free and the next is not.
+
+To find which two events bound the clock before you count its days, use the
+[Demurrage Clock](/tools/demurrage-clock/). Its link sends the clock it chose
+here, with the terminal clock.
 
 Reference: [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/)
 lays out the free window; [`chargeableDays`](/reference/intermodal/calculate/chargeableDays/)

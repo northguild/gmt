@@ -5,7 +5,6 @@
  * real `@northguild/gmt`. Every preset's printed calls, result, verdict, members
  * and write-back are checked, so a drift in the library or the widget fails here.
  */
-/// <reference types="vitest/globals" />
 import { lib } from "~/test/edi-lib";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";

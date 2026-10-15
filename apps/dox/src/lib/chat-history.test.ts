@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import type { UIMessage } from "ai";
 import { messageText, sendableHistory } from "./chat-history";
 

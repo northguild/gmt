@@ -29,7 +29,6 @@ import {
   originZoneOf,
   permalinkOf,
   readArgs,
-  shortZoneLabel,
   type ChartData,
   type DeliverySchedulerArgs,
   type DeliveryState,
@@ -39,20 +38,27 @@ import {
   legCalls,
 } from "./delivery-scheduler";
 import { codeFrameHtml } from "./code-frame";
+import { descriptionHoldHtml } from "./ledger-widgets";
 import {
   buildRouteChartDefinition,
   buildScaleChartDefinition,
   laneChartHeight,
 } from "./delivery-scheduler-charts";
+import {
+  legAccentAttr,
+  legFieldset,
+  legHeaderHtml,
+  setModeSelect,
+} from "./leg-form";
 import { loadTransportLib } from "./transport-lib";
-import { TRANSPORT_MODES, transportIcon } from "./transport-icons";
+import { transportIcon } from "./transport-icons";
 import { mountChart } from "@tanstack/charts/dom";
 import { tooltip } from "@tanstack/charts/tooltip";
 import {
   collectJourneyFacts,
+  failureText,
   formatSchedule,
   scheduleCallSource,
-  scheduleNullText,
   TRANSPORT_ZONES,
   zoneOptionsHtml,
   type JourneyFacts,
@@ -60,6 +66,7 @@ import {
   type TransportLib,
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { encodeWidgetPermalink } from "./widget-permalink";
 import {
   codeSpan,
   escapeAttr,
@@ -72,7 +79,20 @@ import {
   wireCopyButtons,
 } from "./widget-ui";
 
+/** The chart draws a picture and its summary text says the same thing: nothing
+ *  in it is a control, so the chart takes no place in the tab order. The library
+ *  writes `tabindex="0"` on the `<svg>` unless it is told otherwise. */
+export const CHART_TAB_INDEX = -1;
+
 export type { DeliverySchedulerArgs } from "./delivery-scheduler";
+
+/**
+ * The Journey Split's address for these legs. The two tools share the flat leg
+ * keys, so it is the Delivery Scheduler's own permalink under the other kind.
+ */
+function journeySplitHref(state: DeliveryState): string {
+  return encodeWidgetPermalink("journeysplit", permalinkOf(state));
+}
 
 function presetOptions(presetId: string): string {
   return (
@@ -81,121 +101,6 @@ function presetOptions(presetId: string): string {
       (p) =>
         `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
     ).join("")
-  );
-}
-
-function modeDisplayLabel(mode: string): string {
-  return mode.length === 0 ? mode : mode[0]!.toUpperCase() + mode.slice(1);
-}
-
-/** `<option>`s for a mode `<select>`, mirroring `zoneOptionsHtml`: a selected
- *  value the known list lacks (a caller's own free-text `mode` tag, which
- *  `scheduleDelivery` never validates) is appended rather than dropped. */
-function modeOptionsHtml(selected: string): string {
-  const known: readonly string[] = TRANSPORT_MODES;
-  const list =
-    selected === "" || known.includes(selected) ? known : [...known, selected];
-  return (
-    `<option value=""${selected === "" ? " selected" : ""}>(none)</option>` +
-    list
-      .map(
-        (m) =>
-          `<option value="${escapeAttr(m)}"${m === selected ? " selected" : ""}>${escapeHtml(modeDisplayLabel(m))}</option>`,
-      )
-      .join("")
-  );
-}
-
-/** Sets a mode `<select>`'s value, inserting a matching `<option>` first when
- *  `mode` is a custom tag the list does not already offer — a permalink or
- *  chat seed's mode is never silently dropped. */
-function setModeSelect(el: HTMLSelectElement | null, mode: string): void {
-  if (!el) return;
-  if (mode !== "" && ![...el.options].some((o) => o.value === mode)) {
-    const opt = document.createElement("option");
-    opt.value = mode;
-    opt.textContent = modeDisplayLabel(mode);
-    el.append(opt);
-  }
-  el.value = mode;
-}
-
-/** `①②③④` — a leg's own number badge, plain Unicode circled digits so no
- *  image or extra markup is needed; `gmt-delivery-scheduler.css` colours it
- *  per `data-leg`. */
-const LEG_NUMERALS = ["①", "②", "③", "④"];
-
-/** `data-leg="N"` (1-4, cycling past 4) — the attribute every leg-coloured
- *  element carries, matched by `[data-leg="N"]` in the stylesheet to set that
- *  element's `--leg-color`/`--leg-ink`. `legIndex` is 0-based. */
-function legAccentAttr(legIndex: number): string {
-  return ` data-leg="${(legIndex % LEG_NUMERALS.length) + 1}"`;
-}
-
-/** `① Truck · PT46H → Los Angeles` — the leg card's own header, refreshed
- *  whenever that leg's mode, duration or arrival zone changes. Mode falls
- *  back to "Leg" when blank (`scheduleDelivery` never requires it); duration
- *  and arrival city are each dropped when not yet typed, so a fresh card
- *  reads as `① Leg` rather than a row of dangling separators. */
-function legHeaderHtml(n: number, leg: LegHeaderFields): string {
-  const trimmedMode = leg.mode.trim();
-  const modeLabel = trimmedMode === "" ? "Leg" : modeDisplayLabel(trimmedMode);
-  const duration = leg.duration.trim();
-  const city = leg.timeZone.trim();
-  const tail = [
-    duration !== "" ? escapeHtml(duration) : "",
-    city !== "" ? `→ ${escapeHtml(shortZoneLabel(city))}` : "",
-  ]
-    .filter((s) => s !== "")
-    .join(" ");
-  return (
-    `<span class="gmt-delivery-leg-number"${legAccentAttr(n - 1)}>${LEG_NUMERALS[n - 1]}</span> ` +
-    transportIcon(trimmedMode, { className: "gmt-delivery-leg-icon" }) +
-    escapeHtml(modeLabel) +
-    (tail !== "" ? ` · ${tail}` : "")
-  );
-}
-
-interface LegHeaderFields {
-  mode: string;
-  duration: string;
-  timeZone: string;
-}
-
-function legFieldset(n: number, state: DeliveryState, count: number): string {
-  const leg = state.legs[n - 1]!;
-  const hidden = n > count ? " hidden" : "";
-  const departureLabel = n === 1 ? "Departs" : "Scheduled departure";
-
-  const textField = (
-    role: string,
-    wide: boolean,
-    label: string,
-    value: string,
-    optional: boolean,
-  ) =>
-    `<label class="gmt-label${wide ? " gmt-field-wide" : ""}">${labelTextHtml(label, { optional })}` +
-    `<input class="gmt-input" data-role="${role}-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
-
-  const modeField =
-    `<label class="gmt-label">${labelTextHtml("Mode", { optional: true })}` +
-    `<select class="gmt-select" data-role="mode-${n}">${modeOptionsHtml(leg.mode)}</select></label>`;
-
-  const arrivesField =
-    `<label class="gmt-label">${labelTextHtml("Arrives in")}` +
-    `<select class="gmt-select" data-role="zone-${n}">${zoneOptionsHtml(TRANSPORT_ZONES, leg.timeZone)}</select></label>`;
-
-  return (
-    `<fieldset class="gmt-transport-leg gmt-delivery-leg-fieldset" data-role="leg-${n}"${legAccentAttr(n - 1)}${hidden}>` +
-    `<legend><span data-role="leg-legend-${n}">${legHeaderHtml(n, leg)}</span></legend>` +
-    `<div class="gmt-field-grid">` +
-    modeField +
-    textField("duration", false, "Duration", leg.duration, false) +
-    arrivesField +
-    textField("departure", true, departureLabel, leg.departure, n !== 1) +
-    textField("dwell", false, "Dwell after", leg.dwellAfter, true) +
-    `</div>` +
-    `</fieldset>`
   );
 }
 
@@ -237,7 +142,10 @@ export function renderDeliverySchedulerTemplate(
     `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
     `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
     `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
+    descriptionHoldHtml(
+      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
+      DELIVERY_PRESETS.map((p) => p.description),
+    ) +
     `<div class="gmt-field-grid">` +
     `<label class="gmt-label">${labelTextHtml("Legs")}` +
     `<select class="gmt-select" data-role="leg-count">${[1, 2, 3, 4].map((n) => `<option value="${n}"${n === count ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
@@ -278,6 +186,7 @@ export function renderDeliverySchedulerTemplate(
     `<h4>3. What <code>scheduleDelivery</code> returns</h4>` +
     codeFrameHtml("delivery") +
     `<output class="gmt-widget-output" data-role="delivery-output">&nbsp;</output>` +
+    `<div class="gmt-widget-controls"><a class="gmt-button gmt-button--pad" data-role="handoff" href="${escapeAttr(journeySplitHref(state))}">Split this journey into moving and waiting</a></div>` +
     `</div>` +
     `<div class="gmt-widget-section">` +
     `<h4>4. What <code>transitTime</code> and <code>etaAtZone</code> return</h4>` +
@@ -529,12 +438,14 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
       routeChartHost.update({
         definition: routeDefinition as never,
         ariaLabel,
+        tabIndex: CHART_TAB_INDEX,
         aspectRatio: routeAspectRatio,
       });
     } else {
       routeChartHost = mountChart(routeHost, {
         definition: routeDefinition as never,
         ariaLabel,
+        tabIndex: CHART_TAB_INDEX,
         aspectRatio: routeAspectRatio,
       });
     }
@@ -546,12 +457,14 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
       scaleChartHost.update({
         definition: scaleDefinition as never,
         ariaLabel: `${ariaLabel} — to scale`,
+        tabIndex: CHART_TAB_INDEX,
         height: scaleHeight,
       });
     } else {
       scaleChartHost = mountChart(scaleHost, {
         definition: scaleDefinition as never,
         ariaLabel: `${ariaLabel} — to scale`,
+        tabIndex: CHART_TAB_INDEX,
         height: scaleHeight,
       });
     }
@@ -619,6 +532,9 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
       else renderWidgetOutput(out, formatSchedule(result), "live");
     }
 
+    const link = q<HTMLAnchorElement>("handoff");
+    if (link) link.href = journeySplitHref(state);
+
     const facts: JourneyFacts = collectJourneyFacts(legs, options, lib);
     renderLegCalls(facts, legs);
     const originZone = originZoneOf(state);
@@ -637,26 +553,7 @@ function setupWidget(root: HTMLElement, lib: TransportLib): () => void {
     const aside = q("reason-aside");
     if (aside) {
       if (facts.failure) {
-        const n = facts.failure.leg + 1;
-        let text: string;
-        if (facts.failure.reason === "missed-connection") {
-          const k = facts.failure.leg;
-          const dep = facts.departures[k];
-          const arr = facts.arrivals[k - 1];
-          const dwell = legs[k - 1]?.dwellAfter ?? "PT0S";
-          const ready = facts.readies[k - 1];
-          text =
-            dep && arr && ready
-              ? scheduleNullText("missed-connection", n, {
-                  dep: lib.etaAtZone(dep, legs[k - 1]!.timeZone),
-                  arr: lib.etaAtZone(arr, legs[k - 1]!.timeZone),
-                  dwell,
-                  ready: lib.etaAtZone(ready, legs[k - 1]!.timeZone),
-                })
-              : scheduleNullText("missed-connection", n);
-        } else {
-          text = scheduleNullText(facts.failure.reason, n);
-        }
+        const text = failureText(facts.failure, facts, legs, lib);
         renderAside(aside, "caution", "Why null", `<p>${escapeHtml(text)}</p>`);
       } else {
         aside.innerHTML = "";

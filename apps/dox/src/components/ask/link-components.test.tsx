@@ -13,7 +13,6 @@
  * entry route manifest, and an assertion about what actually reaches the DOM.
  * Everything between `resolveHref` and the reader was previously untested.
  */
-/// <reference types="vitest/globals" />
 import { render, screen } from "@testing-library/react";
 import { referenceRoutes } from "~/generated/reference/route-manifest";
 import { MessageResponse } from "../ai-elements/message";

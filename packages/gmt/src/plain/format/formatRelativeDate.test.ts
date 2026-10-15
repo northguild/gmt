@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { expectOneOfIcu, MustTestLocales, oneOfIcu } from "../../test";
 import { mockTemporalNowPlainDateISOThrow } from "../../test/mocks";
 import {

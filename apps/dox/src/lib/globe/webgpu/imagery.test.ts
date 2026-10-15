@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * What can be checked about the imagery texture without a GPU (#293).
  *
@@ -10,7 +8,6 @@
  * since it never puts two globes on one device.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireImagery,
   IMAGERY_FORMAT,

@@ -48,7 +48,7 @@ const DETAILS: Readonly<Record<string, Omit<IndustryTag, "id">>> = {
   intermodal: {
     label: "Intermodal",
     definition:
-      "Container free time, demurrage, billing deadlines, bill of lading dates and EDI timestamps.",
+      "Container free time, demurrage and detention clocks, billing deadlines, bill of lading dates, multimodal journeys, EPCIS events and EDI timestamps.",
     icon: "industry-intermodal",
     guide: "/guides/industries/intermodal-free-time-and-demurrage/",
   },

@@ -1,4 +1,3 @@
-import { expectTypeOf, vi } from "vitest";
 import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { intervalLengthDate } from "../../plain/interval/intervalLengthDate";

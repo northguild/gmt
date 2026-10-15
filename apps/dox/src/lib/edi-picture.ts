@@ -611,9 +611,16 @@ export function timelineAria(
  * (`.gmt-edi-hold`), so the cell is as tall as the tallest of them. The sizers are
  * `aria-hidden` and `visibility: hidden`, take no focus and are left out of the
  * search index; the live element is the only one a reader reaches.
+ *
+ * `className` is the hold's class. The EDI tools use the default; another family
+ * passes its own (`gmt-ledger-hold`) and keeps this helper.
  */
-export function holdHtml(live: string, sizers: readonly string[]): string {
-  return `<div class="gmt-edi-hold">${live}${sizers.join("")}</div>`;
+export function holdHtml(
+  live: string,
+  sizers: readonly string[],
+  className = "gmt-edi-hold",
+): string {
+  return `<div class="${escapeAttr(className)}">${live}${sizers.join("")}</div>`;
 }
 
 /** One hidden sizer: the same element and class as the live one, holding a text

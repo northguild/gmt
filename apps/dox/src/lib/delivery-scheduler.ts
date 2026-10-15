@@ -184,7 +184,7 @@ export const DELIVERY_PRESETS: readonly DeliveryPreset[] = [
     id: "dwell-handoff",
     label: "Two hours at a UTC terminal, then on to Tokyo",
     description:
-      "The JSDoc's two-leg case: ten hours to a UTC terminal, two hours of dwell, five hours on to Tokyo. The second leg leaves at 12:00Z.",
+      "The JSDoc's two-leg case: ten hours to a UTC terminal, two hours of handling, five hours on to Tokyo. The second leg leaves at 12:00Z.",
     startTimeZone: "",
     legs: [
       {
@@ -1150,7 +1150,7 @@ const FAILURE_HEADLINE: Record<NullReason, string> = {
   "invalid-duration": "Invalid duration",
   "negative-duration": "Negative duration",
   "invalid-zone": "Invalid zone",
-  "invalid-dwell": "Invalid dwell",
+  "invalid-dwell": "Invalid handling time",
   "out-of-range": "Out of range",
 };
 

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { docsRelativePath, topLevelPages } from "./top-level-pages";
 
 describe("docsRelativePath", () => {

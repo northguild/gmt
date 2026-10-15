@@ -4,7 +4,6 @@
  * The chat's two stall timers: a long wait for the first output, and a short
  * one for silence once the answer is streaming.
  */
-/// <reference types="vitest/globals" />
 import { renderHook } from "@testing-library/react";
 import { FIRST_OUTPUT_TIMEOUT_MS, IDLE_TIMEOUT_MS } from "~/lib/chat-constants";
 import { useIdleTimeout } from "./use-idle-timeout";

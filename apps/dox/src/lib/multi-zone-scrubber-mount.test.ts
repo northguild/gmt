@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
-/// <reference types="vitest/globals" />
 
-import { describe, expect, it, vi } from "vitest";
 import {
   decodeState,
   encodeState,

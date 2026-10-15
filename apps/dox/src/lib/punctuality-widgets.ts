@@ -321,6 +321,9 @@ const KEY_ORDERS: readonly (readonly string[])[] = [
   ["first", "last", "drift", "revisions", "exceedsTolerance"],
   ["tolerance"],
   ["minimumConnection"],
+  // A container event, `{ type, at }`: `at` is also a classified pick's key, and
+  // the two-key order wins for an event.
+  ["type", "at"],
 ];
 
 /** The key order of an object's shape: the table that shares the most keys

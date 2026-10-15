@@ -1,11 +1,8 @@
-/// <reference types="vitest/globals" />
-
 /**
  * `zone-clock.ts`: the readings every clock widget shows, where a wrong answer
  * is one the widgets cannot see.
  */
 
-import { describe, expect, it } from "vitest";
 import { readZoneAt, readZoneNow } from "./zone-clock";
 
 /* `readZoneAt` takes a zoned anchor, the shape `multi-zone-scrubber.ts`'s

@@ -288,6 +288,7 @@ describe("parseInstantNanoseconds and instantFrom: a minute-rounded offset", () 
 //   step. The closest pair it reports is days apart; the guard is for a change of rule, not a
 //   proof about sub-step blips.
 describe("zonedReading's assumption: no zone changes offset twice within a minute", () => {
+  // Worst CI run 26 s on the slowest runner; the timeout is three times that.
   it("finds every pair of consecutive transitions from 1847 to 2040 more than 60 seconds apart", () => {
     const MINUTE = 60_000_000_000n;
     const from = Temporal.Instant.from("1847-01-01T00:00:00Z");
@@ -314,5 +315,5 @@ describe("zonedReading's assumption: no zone changes offset twice within a minut
     }
 
     expect(tooClose).toEqual([]);
-  }, 60_000);
+  }, 90_000);
 });

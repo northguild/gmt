@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * Routing and configuration branches of the Worker entry point.
  *

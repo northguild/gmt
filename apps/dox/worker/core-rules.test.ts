@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { CORE_RULES_CONTENT } from "./core-rules";
 
 /**

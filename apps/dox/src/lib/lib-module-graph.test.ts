@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Nothing under `src/lib` may take part in an import cycle.
  *
@@ -29,7 +27,6 @@
  */
 
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import { importsOf, listFiles, resolveLocal, SRC } from "../test/import-graph";
 
 const LIB = path.join(SRC, "lib");

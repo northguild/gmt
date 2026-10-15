@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * `cutoff-countdown.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row (C1-C10).

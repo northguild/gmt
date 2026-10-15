@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { parseEdifactOffsetDateTime } from "../parse/parseEdifactOffsetDateTime";

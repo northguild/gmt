@@ -1,15 +1,16 @@
-/// <reference types="vitest/globals" />
 import type { DayCell } from "./dwell-ledger";
 import {
   CUSTOM_PRESET_ID,
   FREE_TIME_PRESETS,
   LEDGER_ZONES,
   cellState,
+  dayMarks,
   explainExpiryNull,
   explainNull,
   formatCharges,
   formatFreeTime,
   freeDaysOf,
+  freeTimePlates,
   isClosedDate,
   matchPreset,
   normaliseWeekend,
@@ -18,7 +19,8 @@ import {
   splitList,
   summaryText,
   termsOf,
-  tierEnds,
+  tierByDate,
+  tierCountsText,
   tiersOf,
   type ChargesResult,
   type LedgerState,
@@ -245,15 +247,182 @@ describe("cellState", () => {
     ).toBe("event");
   });
 
-  it("names the last charged date of each closed tier band", () => {
-    expect([...tierEnds(charges)]).toEqual(["2024-06-21", "2024-06-26"]);
-    expect([
-      ...tierEnds({
+  it("names the tier of each charged date, so the last date of each closed band is known", () => {
+    const tiers = tierByDate(charges);
+    const lastOf = (tier: number) =>
+      [...tiers]
+        .filter(([, t]) => t === tier)
+        .map(([date]) => date)
+        .at(-1);
+    expect(lastOf(1)).toBe("2024-06-21");
+    expect(lastOf(2)).toBe("2024-06-26");
+    expect(lastOf(3)).toBe("2024-06-28");
+    expect(tiers.size).toBe(12);
+    expect(tierByDate({ ...charges, chargedDates: [] }).size).toBe(0);
+    expect(tierByDate(null).size).toBe(0);
+  });
+
+  it("has no tiers to tell apart when the result has one band", () => {
+    expect(
+      tierByDate({
         ...charges,
-        chargedDates: charges.chargedDates.slice(0, 3),
-      }),
-    ]).toEqual([]);
-    expect(tierEnds(null).size).toBe(0);
+        chargedDates: ["2024-06-17"],
+        byTier: [{ from: 1, to: null, days: 1 }],
+      }).size,
+    ).toBe(0);
+  });
+});
+
+describe("dayMarks", () => {
+  const cells: DayCell[] = [
+    cell("2024-06-14"),
+    cell("2024-06-15"),
+    cell("2024-06-17"),
+    cell("2024-06-30", false),
+  ];
+
+  it("lights a free day, hatches a charged one and leaves an untouched one plain", () => {
+    const marks = dayMarks(cells, base, freeTime, charges);
+    expect(marks["2024-06-14"]).toMatchObject({
+      state: "lit",
+      chip: "free",
+      series: 1,
+      kind: "free",
+    });
+    expect(marks["2024-06-17"]).toMatchObject({
+      state: "hatched",
+      chip: "charged",
+      series: 1,
+      kind: "chargeable",
+      tier: 1,
+    });
+    expect(marks["2024-06-30"]).toMatchObject({ state: "plain", kind: "none" });
+    expect(marks["2024-06-30"]!.chip).toBeUndefined();
+  });
+
+  it("says the cell word is charged, and never chargeable, in the chip and the label", () => {
+    const marks = Object.values(dayMarks(cells, base, freeTime, charges));
+    for (const mark of marks) {
+      expect(`${mark.chip ?? ""} ${mark.aria ?? ""}`).not.toContain(
+        "chargeable",
+      );
+    }
+  });
+
+  it("closes a weekend day and notes the uncounted event day", () => {
+    const working: LedgerState = { ...base, basis: "working" };
+    const noCharge = { ...charges, chargedDates: [] };
+    expect(
+      dayMarks([cell("2024-06-15")], working, freeTime, noCharge)["2024-06-15"],
+    ).toMatchObject({ state: "closed", chip: "closed", kind: "closed" });
+    const nextDay: LedgerState = { ...base, firstDay: "nextDay" };
+    const window = {
+      ...freeTime,
+      freeTimeStart: "2024-06-15",
+      lastFreeDay: "2024-06-17",
+    };
+    expect(
+      dayMarks([cell("2024-06-14")], nextDay, window, noCharge)["2024-06-14"],
+    ).toMatchObject({
+      state: "plain",
+      chip: "event day",
+      aria: "event day, not counted",
+      kind: "event",
+    });
+  });
+
+  it("gives a charged day its tier only when the result has more than one band", () => {
+    const tier2 = dayMarks([cell("2024-06-24")], base, freeTime, charges);
+    expect(tier2["2024-06-24"]!.tier).toBe(2);
+    const single = dayMarks([cell("2024-06-17")], base, freeTime, {
+      ...charges,
+      chargedDates: ["2024-06-17"],
+      byTier: [{ from: 1, to: null, days: 1 }],
+    });
+    expect(single["2024-06-17"]!.tier).toBeUndefined();
+  });
+});
+
+describe("freeTimePlates", () => {
+  const args = {
+    freeTime,
+    charges,
+    freeDays: "3",
+    zone: "America/New_York",
+    zoneOk: true,
+  };
+  const by = (plates: ReturnType<typeof freeTimePlates>, role: string) =>
+    plates.find((p) => p.role === role)!;
+
+  it("shows the library's counts and the expiry on the terminal's clock", () => {
+    const plates = freeTimePlates(args);
+    expect(plates.map((p) => p.role)).toEqual([
+      "hero-free",
+      "hero-charged",
+      "hero-expires",
+    ]);
+    expect(by(plates, "hero-free")).toMatchObject({
+      value: "3",
+      lines: ["of 3 free"],
+      series: 1,
+    });
+    expect(by(plates, "hero-charged")).toMatchObject({
+      value: "12",
+      lines: ["by tier: 5 + 5 + 2"],
+    });
+    expect(by(plates, "hero-expires")).toMatchObject({
+      value: "17 Jun 00:00",
+      lines: ["America/New_York"],
+      quiet: true,
+    });
+    expect(by(plates, "hero-free").quiet).toBeUndefined();
+    expect(by(plates, "hero-charged").quiet).toBeUndefined();
+  });
+
+  it("falls back to freeTimeExpiry's expiry when chargeableDays returned null", () => {
+    const plates = freeTimePlates({ ...args, charges: null });
+    expect(by(plates, "hero-free").value).toBeNull();
+    expect(by(plates, "hero-charged").value).toBeNull();
+    expect(by(plates, "hero-expires").value).toBe("17 Jun 00:00");
+  });
+
+  it("reads no result for the expiry when both calls returned null or the zone is unknown", () => {
+    expect(
+      by(
+        freeTimePlates({ ...args, freeTime: null, charges: null }),
+        "hero-expires",
+      ).value,
+    ).toBeNull();
+    expect(
+      by(freeTimePlates({ ...args, zoneOk: false }), "hero-expires").value,
+    ).toBeNull();
+  });
+
+  it("echoes the reader's own free days, and nothing when the field is blank", () => {
+    expect(
+      by(freeTimePlates({ ...args, freeDays: " 5 " }), "hero-free").lines,
+    ).toEqual(["of 5 free"]);
+    expect(
+      by(freeTimePlates({ ...args, freeDays: "" }), "hero-free").lines,
+    ).toEqual([""]);
+  });
+});
+
+describe("tierCountsText", () => {
+  it("counts the days in each band, and stays blank for one band", () => {
+    expect(tierCountsText(charges)).toBe("by tier: 5 + 5 + 2");
+    expect(
+      tierCountsText({ ...charges, byTier: [{ from: 1, to: null, days: 12 }] }),
+    ).toBe("");
+  });
+
+  it("names the number of bands when there are more than four", () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({
+      from: i + 1,
+      to: i === 4 ? null : i + 1,
+      days: 1,
+    }));
+    expect(tierCountsText({ ...charges, byTier: many })).toBe("5 tiers");
   });
 });
 

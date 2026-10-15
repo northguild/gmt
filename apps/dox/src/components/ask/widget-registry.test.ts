@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 /**
  * DOX-C3b's dispatch DoD lines, asserted directly rather than inferred from a
  * happy path — which is what the spec asks for by name:

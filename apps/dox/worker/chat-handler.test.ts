@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { convertArrayToReadableStream, MockLanguageModelV4 } from "ai/test";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { createChatHandler, type ChatHandlerDeps } from "./chat-handler";

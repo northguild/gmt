@@ -136,7 +136,8 @@ h1[data-page-title] {
   background: var(--gmt-accent-wash);
 }
 
-/* The "By industry" divider in the API Reference: a small label under a thin rule,
+/* A sidebar divider (the API Reference's "By industry", and one per industry in Tools):
+ * a small label under a thin rule,
  * in the quiet text tier (`--gmt-ice-dim`, 7:1 in both themes). Plain text: not a link,
  * not a <details>, not focusable. The industry groups after it are their own list,
  * named by it (`aria-labelledby`), and sit at the same level as the general groups, so
@@ -152,6 +153,20 @@ h1[data-page-title] {
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
   user-select: none;
+}
+
+/* An industry divider in the Tools section carries the tag's icon: the same stroke
+ * glyph, drawn in the label's own colour, one line tall, so the row never grows. */
+.sidebar-pane .gmt-sidebar-divider:has(> .gmt-sidebar-divider-icon) {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.sidebar-pane .gmt-sidebar-divider-icon {
+  flex: none;
+  inline-size: 1.15em;
+  block-size: 1.15em;
 }
 
 .sidebar-pane .gmt-sidebar-named-list > li {

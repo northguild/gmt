@@ -9,7 +9,6 @@
  * the page were reachable by nothing. Extracting `mount(root)` is what makes
  * this possible, and this file is the pattern the two harder widgets follow.
  */
-/// <reference types="vitest/globals" />
 import { installJsdomShims } from "~/test/jsdom-shims";
 import {
   mountConverterBench,

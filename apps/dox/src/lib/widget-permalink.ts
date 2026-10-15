@@ -52,7 +52,11 @@ export type WidgetKind =
   | "departure"
   | "planner"
   | "dtm"
-  | "xtime";
+  | "xtime"
+  | "demclock"
+  | "bldate"
+  | "epcis"
+  | "journeysplit";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -89,6 +93,10 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   planner: "/tools/zone-planner/",
   dtm: "/tools/dtm-decoder/",
   xtime: "/tools/x12-time-reader/",
+  demclock: "/tools/demurrage-clock/",
+  bldate: "/tools/bl-date-stamp/",
+  epcis: "/tools/epcis-event-reader/",
+  journeysplit: "/tools/journey-split/",
 };
 
 export function encodeWidgetPermalink(

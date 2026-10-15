@@ -17,7 +17,6 @@
  * The reader is `internal/readDurationUnits.ts`.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
 import {
   addDate,
   addDateTime,

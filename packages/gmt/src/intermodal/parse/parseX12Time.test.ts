@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { vi } from "vitest";
 import {
   CUT_X12_FORMATS,
   NON_STRINGS,

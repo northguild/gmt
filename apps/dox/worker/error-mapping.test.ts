@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { APICallError, RetryError } from "ai";
 import { mapUpstreamError } from "./error-mapping";
 

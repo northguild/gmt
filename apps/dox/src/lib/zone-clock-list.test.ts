@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import { nextActiveIndex, zoneOptionId } from "./zone-clock-list";
 
 describe("nextActiveIndex", () => {

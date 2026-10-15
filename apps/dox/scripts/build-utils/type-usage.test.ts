@@ -1,5 +1,4 @@
 import ts from "typescript";
-import { beforeAll, describe, expect, it } from "vitest";
 import * as BR from "../build-reference";
 import {
   assignInlineAnchors,

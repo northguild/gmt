@@ -1,6 +1,3 @@
-/// <reference types="vitest/globals" />
-
-import { describe, expect, it } from "vitest";
 import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
 import {
   decodeState,

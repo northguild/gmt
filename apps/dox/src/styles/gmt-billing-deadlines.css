@@ -42,17 +42,45 @@
   color: var(--gmt-ice);
 }
 
-/* One line stays reserved while empty, so the text arriving later does not move
-   what is below it. */
-.gmt-billing-verdicts > li:empty::before {
-  content: "\200b";
+/* A verdict line sits in a hold (gmt-ledger-hold) with a hidden sizer for every
+   text it can show, so it is as tall as the tallest at any width. */
+.gmt-billing-verdicts > li {
+  min-width: 0;
 }
 
-.gmt-billing-deadlines {
-  margin: 0;
-  font-family: var(--gmt-font-mono);
-  font-size: 0.8rem;
-  color: var(--gmt-ice-dim);
+/* The three deadline plates. Each takes its series colour from its lane's own
+   token below, so a plate and its lane read as one. The colour is the bar along
+   the plate's bottom edge and never the text. */
+[data-role="hero-issue"] {
+  --series: var(--gmt-cyan);
+}
+
+[data-role="hero-dispute"] {
+  --series: var(--gmt-spring);
+}
+
+[data-role="hero-resolve"] {
+  --series: var(--gmt-dst-purple);
+}
+
+/* The plates hold still from one preset to the next. A value is a date such as
+   "Wed 28 May 2026", measured in the display face (Michroma): the widest weekday
+   "Wed" is 3.14em, the widest month "May" 2.90em, the widest digit 1.00em, and a
+   space 0.28em. Four 1.00em digits in the year and two in the day make
+   3.14 + 2.90 + 6.00 + 0.85 = 12.9em at most, so 13em is reserved. The em is the
+   value's own, which follows the smaller size set here. "not set" and
+   "no result" are narrower. The sub line is mono: the widest it reads over every
+   preset is "45-day window", and "no window typed" is 15 characters, so 16ch. */
+.gmt-billing .gmt-punct-hero-value {
+  min-inline-size: 13em;
+  font-size: var(--gmt-text-lg);
+  line-height: 1.3;
+}
+
+.gmt-billing .gmt-punct-hero-sub {
+  min-inline-size: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gmt-billing-liability-note {

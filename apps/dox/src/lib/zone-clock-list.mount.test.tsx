@@ -16,9 +16,7 @@
  * built is never written to. The scroll panel is therefore given a real
  * measured height, and the tests assert that rows actually appear.
  */
-/// <reference types="vitest/globals" />
 
-import { afterEach, describe, expect, it } from "vitest";
 import { installJsdomShims } from "../test/jsdom-shims";
 import { readViewerDate } from "./zone-clock";
 import { mountZoneClockList, zoneOptionId } from "./zone-clock-list";

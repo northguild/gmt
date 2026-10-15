@@ -11,6 +11,24 @@ import { GMT_MODULES } from "./gmt-modules";
 import type { TimetableLib } from "./timetable-reader";
 import type { TransportLib } from "./transport-widgets";
 
+/** What `multimodalETA` returns: the ETA and the two totals, as the library words them. */
+export interface MultimodalJourney {
+  eta: string;
+  totalLegs: number;
+  totalTransit: string;
+  totalDwell: string;
+}
+
+/**
+ * `TransportLib` plus the two calls the Journey Split splits a journey with.
+ * `loadTransportLib` and `TransportLib` are unchanged, so no other multi-leg
+ * widget loads these modules.
+ */
+export interface JourneyLib extends TransportLib {
+  multimodalETA(legs: unknown, options?: unknown): MultimodalJourney | null;
+  diffUtcAsDuration(a: string, b: string, unit: string): string;
+}
+
 export async function loadTransportLib(): Promise<TransportLib> {
   const [
     transportCalculate,
@@ -70,5 +88,23 @@ export async function loadTimetableLib(): Promise<TimetableLib> {
     classifyLocal: instantConvert[
       "classifyLocal"
     ] as TimetableLib["classifyLocal"],
+  };
+}
+
+/** `loadTransportLib` plus `multimodalETA` and `diffUtcAsDuration`. */
+export async function loadJourneyLib(): Promise<JourneyLib> {
+  const [transport, intermodalCalculate, utcCalculate] = await Promise.all([
+    loadTransportLib(),
+    GMT_MODULES["intermodal/calculate"](),
+    GMT_MODULES["utc/calculate"](),
+  ]);
+  return {
+    ...transport,
+    multimodalETA: intermodalCalculate[
+      "multimodalETA"
+    ] as JourneyLib["multimodalETA"],
+    diffUtcAsDuration: utcCalculate[
+      "diffUtcAsDuration"
+    ] as JourneyLib["diffUtcAsDuration"],
   };
 }

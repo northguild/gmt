@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 import { listResets, nextReset, type QuotaInfo } from "./quota-resets";
 
 /** Pacific midnight (07:00Z) and the UTC midnight seven hours before it. */

@@ -1,5 +1,3 @@
-/// <reference types="vitest/globals" />
-
 /**
  * Static checks for CSS mistakes the browser drops without a word.
  *

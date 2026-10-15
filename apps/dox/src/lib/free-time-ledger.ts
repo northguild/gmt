@@ -16,7 +16,8 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import type { DayCell } from "./dwell-ledger";
+import { formatLocal, toEpochMs, type DayCell } from "./dwell-ledger";
+import type { DayMark, PlateSpec } from "./ledger-widgets";
 
 export type FirstDay = "eventDay" | "nextDay";
 export type Basis = "calendar" | "working";
@@ -439,16 +440,63 @@ export function cellState(
   return "none";
 }
 
-/** Charged dates that end a tier band, so a boundary can be drawn after them. */
-export function tierEnds(charges: ChargesResult | null): Set<string> {
-  const ends = new Set<string>();
-  if (!charges) return ends;
-  for (const band of charges.byTier) {
-    if (band.to !== null && band.to <= charges.chargedDates.length) {
-      ends.add(charges.chargedDates[band.to - 1]!);
-    }
+/**
+ * The tier of each charged date, from `byTier`. The n-th charged date is the
+ * n-th chargeable day, and a band holds the ordinals `from` to `to` (open when
+ * `to` is `null`). An empty map when the result has one band: with no tier
+ * boundary there is no tier to tell apart.
+ */
+export function tierByDate(charges: ChargesResult | null): Map<string, number> {
+  const tiers = new Map<string, number>();
+  if (!charges || charges.byTier.length < 2) return tiers;
+  charges.chargedDates.forEach((date, i) => {
+    const ordinal = i + 1;
+    const band = charges.byTier.findIndex(
+      (b) => ordinal >= b.from && (b.to === null || ordinal <= b.to),
+    );
+    if (band !== -1) tiers.set(date, band + 1);
+  });
+  return tiers;
+}
+
+/** What each tariff reading says: in the chip, the legend and the aria-label. */
+const DAY_WORDS: Record<CellState, { chip?: string; aria?: string }> = {
+  event: { chip: "event day", aria: "event day, not counted" },
+  free: { chip: "free" },
+  closed: { chip: "closed", aria: "closed, not counted" },
+  chargeable: { chip: "charged" },
+  none: {},
+};
+
+/**
+ * The mark for every day cell: the tariff's reading of the day as a pattern
+ * and a word. A free day is lit in series 1, a charged day hatched (denser in a
+ * higher tier, with a "tier n" chip), a closed day carries the closed hatch,
+ * and the uncounted event day and a day the clock never touched are plain. The
+ * `kind` is the tariff's own word, for a test or a script to read.
+ */
+export function dayMarks(
+  cells: readonly DayCell[],
+  state: LedgerState,
+  freeTime: FreeTimeResult | null,
+  charges: ChargesResult | null,
+): Record<string, DayMark> {
+  const tiers = tierByDate(charges);
+  const marks: Record<string, DayMark> = {};
+  for (const cell of cells) {
+    const kind = cellState(cell, state, freeTime, charges);
+    const words = DAY_WORDS[kind];
+    const base = { chip: words.chip, aria: words.aria, kind };
+    marks[cell.date] =
+      kind === "free"
+        ? { ...base, state: "lit", series: 1 }
+        : kind === "chargeable"
+          ? { ...base, state: "hatched", series: 1, tier: tiers.get(cell.date) }
+          : kind === "closed"
+            ? { ...base, state: "closed" }
+            : { ...base, state: "plain" };
   }
-  return ends;
+  return marks;
 }
 
 /** What `freeTimeExpiry` returns, one key per line, as the guide writes it. */
@@ -480,6 +528,60 @@ export function summaryText(r: ChargesResult): string {
   const free = `${r.freeDaysUsed} free ${r.freeDaysUsed === 1 ? "day" : "days"} used`;
   const charged = `${r.chargeableDays} chargeable ${r.chargeableDays === 1 ? "day" : "days"}`;
   return `${free} · ${charged}`;
+}
+
+/** More bands than this and the plate names their number, not each count. */
+const TIER_COUNT_LIMIT = 4;
+
+/** The chargeable days in each band, "by tier: 5 + 5 + 2". Blank for one band. */
+export function tierCountsText(charges: ChargesResult): string {
+  const bands = charges.byTier;
+  if (bands.length < 2) return "";
+  if (bands.length > TIER_COUNT_LIMIT) return `${bands.length} tiers`;
+  return `by tier: ${bands.map((b) => b.days).join(" + ")}`;
+}
+
+/**
+ * The three result plates, in the library's words. `freeDays` is the reader's
+ * own number and is echoed as typed. The expiry shows on the terminal's clock,
+ * and falls back to `freeTimeExpiry`'s when `chargeableDays` returned `null`,
+ * as the marker on the lane does.
+ */
+export function freeTimePlates(args: {
+  freeTime: FreeTimeResult | null;
+  charges: ChargesResult | null;
+  freeDays: string;
+  zone: string;
+  zoneOk: boolean;
+}): PlateSpec[] {
+  const { freeTime, charges, freeDays, zone, zoneOk } = args;
+  const expiresAt = charges?.expiresAt ?? freeTime?.expiresAt ?? null;
+  const expiresText =
+    expiresAt !== null && zoneOk ? formatLocal(toEpochMs(expiresAt), zone) : "";
+  return [
+    {
+      role: "hero-free",
+      caption: "Free days used",
+      series: 1,
+      value: charges ? String(charges.freeDaysUsed) : null,
+      lines: [freeDays.trim() === "" ? "" : `of ${freeDays.trim()} free`],
+    },
+    {
+      role: "hero-charged",
+      caption: "Chargeable days",
+      value: charges ? String(charges.chargeableDays) : null,
+      lines: [charges ? tierCountsText(charges) : ""],
+    },
+    {
+      role: "hero-expires",
+      caption: "Free time expires",
+      value: expiresText === "" ? null : expiresText,
+      lines: [zone],
+      // The gate's chip on the lane says the same time, so this plate is the
+      // quiet one and the counts keep the large type.
+      quiet: true,
+    },
+  ];
 }
 
 // ---------------------------------------------------------------------------

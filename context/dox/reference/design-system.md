@@ -56,7 +56,7 @@ redefine them.
   `--gmt-signal-ink` (`gmt-light.css`): Starlight's own orange measured 6.49:1 on the tinted
   caution fill.
 - **`--gmt-ice-dim`** is the muted/secondary text tier. Every `color:` use clears 7:1 in both
-  themes, measured by the worst-pixel method below on all 20 tool pages (every preset, plus a
+  themes, measured by the worst-pixel method below on every tool page (every preset, plus a
   sentinel state), the home page, Why GMT, a guide, an industry guide, a scenario, a mistakes
   page, two reference pages, the tools index and the `/dox` page with a widget in the rail.
   The tier stays clearly quieter than `--gmt-ice`.

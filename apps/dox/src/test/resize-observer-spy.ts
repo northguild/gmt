@@ -3,7 +3,6 @@
  * watching, so a test can assert that a widget's `destroy` released every one.
  * Call `restore()` in `afterEach`.
  */
-import { vi } from "vitest";
 
 export interface ResizeObserverSpy {
   /** Observers that have called `observe` and not yet `disconnect`. */

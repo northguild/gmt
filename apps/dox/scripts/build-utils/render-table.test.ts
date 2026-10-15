@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { stripMdx } from "../../src/lib/page-markdown";
 import {
   mdCellText,

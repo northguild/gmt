@@ -1,4 +1,3 @@
-/// <reference types="vitest/globals" />
 import { resolveHref } from "./resolve-href";
 
 const SITE = "https://gmt-dox.northguild.workers.dev";
