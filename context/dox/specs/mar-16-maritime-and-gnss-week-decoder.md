@@ -51,6 +51,18 @@ Four pieces:
     one labelled peer, never the sole authority or the default. A satellite system's own interface
     document is cited only for a signal fact no international body restates, and is labelled with
     its system.
+12. **The Leap Second Timeline and Elapsed vs. Clock Difference are tagged Core**, in the chat area
+    "Leap seconds and TAI".
+13. **`RolloverEra` gains a third form, `{ notBefore: string }`**: the earliest instant at or after
+    that ISO UTC pivot. The library architect specs it and the driver builds it in this branch
+    (P1). The GNSS Rollover Checker models firmware as a build-date pivot (the default, as real
+    receivers behave) or as a fixed era, and shows when that firmware starts reporting wrong
+    dates. The decoder's era input accepts the pivot too.
+14. **`1972-01-01T00:00:00Z` and `2027-05-20` stay cited constants in the site** (D8), with their
+    primary sources: the BIPM and ITU-R TF.460-6 for whole-second UTC from 1972; CGPM 2026
+    Resolution 5 for continuous UTC. The library exports neither.
+15. **The comparison baseline** is the base branch built inside a scratch copy (I0). This
+    worktree's `packages/gmt/dist` is never rebuilt.
 
 | Tool | Page | Kind | Chat tool | Tag | Library calls |
 | --- | --- | --- | --- | --- | --- |
@@ -65,7 +77,7 @@ built JSDoc before coding; it wins over this table):
 
 | Function | Barrel | Signature and result |
 | --- | --- | --- |
-| `gnssWeekToUtc` | `gnss/convert` | `(counter, week, timeOfWeekSeconds, rolloverEra)` gives a `…Z` instant, `…T23:59:60Z` inside an inserted second, or `""` |
+| `gnssWeekToUtc` | `gnss/convert` | `(counter, week, timeOfWeekSeconds, rolloverEra)` gives a `…Z` instant, `…T23:59:60Z` inside an inserted second, or `""`. `rolloverEra` is an integer era, `"rolling"`, or `{ notBefore }` (decision 13; its exact JSDoc comes from the library spec's amendment) |
 | `utcToGnssWeek` | `gnss/convert` | `(counter, utcString)` gives `{ week, timeOfWeekSeconds, era }` or `null` |
 | `rinexWeekToUtc` | `gnss/convert` | `(system, week, timeOfWeekSeconds)` gives a `…Z` instant or `""`. The week never wraps |
 | `utcToRinexWeek` | `gnss/convert` | `(system, utcString)` gives `{ week, timeOfWeekSeconds }` or `null` |
@@ -86,7 +98,7 @@ built JSDoc before coding; it wins over this table):
 `GnssWeekCounter` is `"GPS-LNAV" | "GPS-CNAV" | "GAL" | "BDT" | "QZS-LNAV" | "QZS-CNAV" |
 "IRN-LNAV" | "IRN-L1NV"`. `RinexWeekSystem` is `"GPS" | "GAL" | "BDT" | "QZS" | "IRN"`.
 `GnssSystem` is `"GPS" | "GAL" | "BDT" | "QZS" | "GLO" | "IRN"`. `RolloverEra` is
-`number | "rolling"`. The `utc/calculate`, `utc/compare`, `span/calculate` and `precision/validate`
+`number | "rolling" | { notBefore: string }`. The `utc/calculate`, `utc/compare`, `span/calculate` and `precision/validate`
 functions are shipped; check each signature in its built JSDoc.
 
 Sources, in order of precedence: section 0, then the built JSDoc, then
@@ -500,13 +512,16 @@ scenario that uses it as `fixedSpecId` gets a textarea. No function has hit this
 
 - The mixed branch counts only `TypeFlags.NumberLiteral` members. A union of string literals and
   number literals stays an enum.
-- A union that holds the non-literal `number` (or `bigint`) beside one or more string literals
-  classifies as a new `ParamType` `"expr"`. `fieldForParam` gives it `{ kind: "expr", seed: raw }`,
-  the example's argument as written (`0`, `2`, `"rolling"`), so the reader can type either form.
-- `classifyTypeFromString` agrees: `number | "rolling"` gives `expr`.
+- A union that holds the non-literal `number` (or `bigint`), or an object type, beside one or
+  more string literals classifies as a new `ParamType` `"expr"`. `fieldForParam` gives it
+  `{ kind: "expr", seed: raw }`, the example's argument as written (`0`, `2`, `"rolling"`,
+  `{ notBefore: "2020-01-01T00:00:00Z" }`), so the reader can type any form.
+- `classifyTypeFromString` agrees: `number | "rolling"` and
+  `number | "rolling" | { notBefore: string }` give `expr`.
 - `buildChoiceSeeds` loads an `expr` field from an example as it loads any other field.
 
-**Tests** (`build-utils.test.ts`, synthetic programs): `number | "rolling"` is `expr`;
+**Tests** (`build-utils.test.ts`, synthetic programs): `number | "rolling"` and
+`number | "rolling" | { notBefore: string }` are `expr`;
 `1 | 2 | "x"` is still an enum; `string | number` is unchanged. After the library lands:
 `LIVE_PLAYGROUND_TEMPLATES.gnssWeekToUtc` has fields `counter` (enum, the eight counters), `week`
 and `timeOfWeekSeconds` (number) and `rolloverEra` (expr, seed `0`), and choosing `"BDT"` loads
@@ -569,7 +584,7 @@ template, no other attribute.
 | Week slider | `week-slider` | `rangeFieldHtml`, 0 to the counter's last week (D3 probe), step 1 | broadcast |
 | Time of week, seconds | `tow` | number input, a fraction allowed | broadcast, rinex |
 | Time-of-week slider | `tow-slider` | `rangeFieldHtml`, 0 to 604 799, step 1 | broadcast, rinex |
-| Era | `era-mode` + `era` | `<select>` "Nearest today (rolling)" / "A number", and a number input enabled for "A number" | broadcast |
+| Era | `era-mode` + `era` + `era-pivot` | `<select>` "Nearest today (rolling)" / "A number" / "Not before a date"; a number input enabled for "A number"; a text input (an ISO UTC instant) enabled for "Not before a date" | broadcast |
 | UTC instant | `utc` | text input, at most 64 characters | utc |
 | Preset | `preset` + `preset-description` | `<select>` and a held description | always |
 
@@ -629,6 +644,7 @@ Every value below is a call. The reading runs on each input, coalesced to one pe
 | broadcast | week at or past the first refused week | "This counter shows weeks below {first refused week}." |
 | broadcast, RINEX | time of week outside 0 up to 604 800 | "Time of week runs from 0 up to, not including, 604800 seconds." |
 | broadcast | era not a whole number from 0 and not rolling | "The era is a whole number from 0, or rolling." |
+| broadcast | "Not before a date" and `!isValidInstant(pivot)` | "The date the era counts from is not an ISO 8601 instant." |
 | broadcast, RINEX | every part valid and the result is `""` | "That reading falls after the year 9999." |
 | UTC | `hasSecond60(utc) && !isLeapSecond(utc)` | "No leap second was inserted at the end of that day." |
 | UTC | `!hasSecond60(utc) && !isValidInstant(utc)` | "This is not an ISO 8601 instant with an offset or Z." |
@@ -698,6 +714,7 @@ and is pasted into the tests and the page.
 | --- | --- | --- | --- |
 | `galileo-2019` (default) | broadcast | `GAL`, 1024, 18, era 0 | `2019-04-07T00:00:00Z` † (the inverse of `utcToGnssWeek("GAL", "2019-04-07T00:00:00Z")`); the era 1 lane from the run |
 | `lnav-2024` | broadcast | `GPS-LNAV`, 247, 86418, era 2 | `2024-01-01T00:00:00Z` † (L§4.3's GPS-bound example, re-pointed to `gnssWeekToUtc("GPS-LNAV", 247, 86418, 2)` by decision 9; confirm in the run); the other lanes from the run |
+| `not-before-2020` | broadcast | `QZS-LNAV`, 247, 86418, `{ notBefore: "2020-01-01T00:00:00Z" }` | from the run (the first instant at or after the pivot with that reading) |
 | `same-reading-two-dates` | broadcast | `GPS-LNAV`, 100, 0, era 0 | `1981-12-05T23:59:59Z` †; the era 1 lane `2001-07-21T23:59:47Z` † |
 | `second-rollover` | broadcast | `GPS-LNAV`, 0, 0, era 2 | `2019-04-06T23:59:42Z` † |
 | `third-rollover` | broadcast | `GPS-LNAV`, 0, 0, era 3 | `2038-11-20T23:59:42Z` † |
@@ -741,7 +758,9 @@ z.object({
 }).refine(…)
 ```
 
-The refinement: `broadcast` needs `counter`, `week`, `timeOfWeekSeconds` and `rolloverEra`;
+The schema also has `rolloverNotBefore: z.string().min(10).max(64).optional()`, the pivot, and the
+permalink carries it under the same key. The refinement: `broadcast` needs `counter`, `week`,
+`timeOfWeekSeconds` and exactly one of `rolloverEra` and `rolloverNotBefore`;
 `rinex` needs `system`, `week` and `timeOfWeekSeconds`; `utc` needs `utc`, and `counter` is
 optional. **The era is never defaulted**, because the library requires it. In UTC mode with no
 counter, section 2's lanes show the empty state "Pick a counter to see its eras", and sections 3
@@ -757,8 +776,8 @@ and 4 render.
   navigation-file week, or about the offset between UTC and a satellite system's time at an
   instant."
 - args: "`mode` is `broadcast`, `rinex` or `utc`. Pass `counter` (for example `GPS-LNAV`), `week`,
-  `timeOfWeekSeconds` and `rolloverEra` (digits or `rolling`) as the reader gave them; never pick
-  an era for them. `system` names a RINEX record's system. `utc` is an ISO 8601 instant."
+  `timeOfWeekSeconds` and either `rolloverEra` (digits or `rolling`) or `rolloverNotBefore` (the
+  date a receiver counts from) as the reader gave them; never pick an era for them. `system` names a RINEX record's system. `utc` is an ISO 8601 instant."
 
 **`CHAT_STARTERS` card**, area `maritime`:
 
@@ -807,8 +826,8 @@ and 4 render.
   - the text helpers the three GNSS tools share ("no result", the before-first-week sentence).
 - **`src/lib/timescale-widgets.ts`** (pure; takes a `TimescaleLib`):
   - `INTEGER_UTC_FROM = "1972-01-01T00:00:00Z"`, commented with its source: UTC has differed from
-    TAI by whole seconds since this instant (BIPM Annual Report on Time Activities, Table 2; IERS
-    `Leap_Second.dat`). Its test asserts `taiMinusUtc` reads it and returns `null` one second
+    TAI by whole seconds since this instant (BIPM Annual Report on Time Activities, Table 2;
+    ITU-R TF.460-6; IERS `Leap_Second.dat`). Its test asserts `taiMinusUtc` reads it and returns `null` one second
     before;
   - `CONTINUOUS_UTC_FROM = "2027-05-20"`, a date with no time of day, as CGPM 2026 Resolution 5
     states it ("continuous UTC will become effective on 20 May 2027"). No library function returns
@@ -939,10 +958,12 @@ the others from the run).
 | Control | `data-role` | Element |
 | --- | --- | --- |
 | Counter | `counter` | `<select>` of `GNSS_WEEK_COUNTERS` |
-| The era the firmware assumes | `firmware-era` | number input, a whole number from 0 |
+| Firmware model | `firmware-model` | chip group: "Build date" (default: a pivot, as real receivers count) or "Fixed era" |
+| Build date | `firmware-pivot` | text input, an ISO UTC instant; enabled for "Build date" |
+| The era the firmware assumes | `firmware-era` | number input, a whole number from 0; enabled for "Fixed era" |
 | Check at | `now-mode` | chip group: "Today" (the reader's clock, live) or "A date" |
 | Date | `date` | text input, enabled for "A date" |
-| Date slider | `date-slider` | `rangeFieldHtml` by day, from `eraStart(firmware era)` to `eraStart(firmware era + 2)`; enabled for "A date" |
+| Date slider | `date-slider` | `rangeFieldHtml` by day, from the firmware window's start to the end of the window after it (below); enabled for "A date" |
 | Preset | `preset` + `preset-description` | |
 
 The clock is read only after mount and only in "Today" mode, as the Cut-off Countdown does. A
@@ -955,58 +976,77 @@ preset or a permalink with a `date` is pinned.
    whose next wrap is the soonest (string-equal) carry the chip "next to wrap". The counter's width
    comes from `firstRefusedWeek` and is shown as "weeks below 1024".
 2. **Your receiver:** the true reading at `at`, `utcToGnssWeek(counter, at)`; what the firmware
-   reports, `gnssWeekToUtc(counter, week, tow, firmwareEra)`; the verdict, `areUtcEqual(reported,
-   at)` → "reports the right date", else `diffUtcAsDuration(at, reported, "days")` → "reports a
-   date n days early" or "late". The firmware's window: `eraStart(firmwareEra)` to
-   `eraStart(firmwareEra + 1)`. Adding one to an era is choosing which era to ask about, as the
-   decoder's lanes do.
-3. **The rolling receiver** ("Today" mode only): `gnssWeekToUtc(counter, week, tow, "rolling")`
+   reports, `gnssWeekToUtc(counter, week, tow, firmware)` with `firmware` the pivot form
+   `{ notBefore: pivot }` or the fixed era; the verdict, `areUtcEqual(reported, at)` → "reports the
+   right date", else `diffUtcAsDuration(at, reported, "days")` → "reports a date n days early" or
+   "late".
+3. **The firmware's window and the date it goes wrong:**
+   - build date: the window starts at the pivot. **It goes wrong from** the pivot's own reading
+     one era later: `r = utcToGnssWeek(counter, pivot)`, then
+     `gnssWeekToUtc(counter, r.week, r.timeOfWeekSeconds, r.era + 1)`. From that instant on, the
+     firmware decodes every reading one counter period early;
+   - fixed era: the window is `eraStart(firmwareEra)` to `eraStart(firmwareEra + 1)`; it goes wrong
+     from the second of those, and reports dates late before the first.
+   Adding one to an era is choosing which era to ask about, as the decoder's lanes do.
+4. **The rolling receiver** ("Today" mode only): `gnssWeekToUtc(counter, week, tow, "rolling")`
    with today's reading, which picks the era nearest the device's own clock. In "A date" mode the
    row reads "rolling reads the device's real clock; switch to Today to see it", in the empty
    style, because the library's `"rolling"` cannot be pinned to another date.
-4. **The countdown** ("Today" mode): `diffUtcAsDuration(now, windowEnd, "seconds")`, refreshed each
+5. **The countdown** ("Today" mode): `diffUtcAsDuration(now, wrongFrom, "seconds")`, refreshed each
    second, shown as days, hours, minutes and seconds (formatting). In "A date" mode it is the
    pinned value.
 
-**Why `NO SIGNAL`:** the era is not a whole number from 0; the date is not an instant (second 60
-included: "Pick a date outside an inserted second."); the date is before the counter's first week
-(the D3 sentence); the firmware's era runs past the year 9999.
+**Why `NO SIGNAL`:** the era is not a whole number from 0; the build date is not an instant ("The
+build date is not an ISO 8601 instant.") or is before the counter's first week; the date is not an
+instant (second 60 included: "Pick a date outside an inserted second."); the date is before the
+counter's first week (the D3 sentence); the firmware's window runs past the year 9999.
 
 **Template.** Three sections: the inputs; a `.gmt-gnss-frame` with three pinned plates
-(`hero-reports` "The receiver reports", series 1; `hero-until` "Right until", the window's end;
-`hero-left` "Time left", the countdown, or "past by n days") over **the window strip**
-(`role="img"`): the firmware's era lit in series 1, the next era hatched with the chip "reports one
-counter period early", the check date's pin, a "today" mark, each wrap a mark with its chip; then
+(`hero-reports` "The receiver reports", series 1; `hero-wrong-from` "Wrong from", the date the
+firmware starts reporting wrong dates; `hero-left` "Time left", the countdown, or "past by n
+days") over **the window strip** (`role="img"`): the firmware's window lit in series 1 (from the
+build date, or the fixed era), the window after it hatched with the chip "reports one counter
+period early", the build date's mark in pivot mode, the check date's pin, a "today" mark, each wrap
+a mark with its chip; then
 **`counters-table`** (Counter, Width, Next wrap, Time left), the rolling row, the calls and the
 links row (D13).
 
-**Presets** (each pinned with a `date` unless it says "today"):
+**Presets** (each pinned with a `date` unless it says "today"; every value from the run unless
+marked †):
 
-| Id | Counter, firmware era, date | The library returns |
+| Id | Counter, firmware, date | Expect |
 | --- | --- | --- |
-| `navic-lnav-2026` (default) | `IRN-LNAV`, 1, `2026-10-15T00:00:00Z` | right date; right until `2038-11-20T23:59:42Z` † |
-| `navic-lnav-after-2038` | `IRN-LNAV`, 1, `2039-01-01T00:00:00Z` | a date 7168 days early (from the run) |
-| `qzss-lnav-2019-firmware` | `QZS-LNAV`, 1, `2019-04-07T00:00:00Z` | a date one period early (from the run); right until `2019-04-06T23:59:42Z` (from the run) |
-| `galileo-first-wrap` | `GAL`, 0, `2078-03-01T00:00:00Z` | a date 28672 days early (from the run); window end `2078-02-19T23:59:42Z` † |
-| `beidou-13-bit` | `BDT`, 0, `2026-10-15T00:00:00Z` | right date; next wrap from the run |
-| `gps-lnav-2026` | `GPS-LNAV`, 2, `2026-10-15T00:00:00Z` | right date; right until `2038-11-20T23:59:42Z` † |
-| `firmware-ahead` | `QZS-LNAV`, 3, `2026-10-15T00:00:00Z` | a date one period late (from the run) |
-| `today` | `GAL`, 0, today | live; tests pin the clock to `2026-10-15T00:00:00Z` |
+| `navic-built-2020` (default) | `IRN-LNAV`, build date `2020-01-01T00:00:00Z`, `2026-10-15T00:00:00Z` | right date; wrong from one 10-bit period after the build date |
+| `navic-built-2020-after-wrap` | `IRN-LNAV`, build date `2020-01-01T00:00:00Z`, a date after "wrong from" | a date 7168 days early |
+| `qzss-built-2005` | `QZS-LNAV`, build date `2005-06-01T00:00:00Z`, `2026-10-15T00:00:00Z` | a date 7168 days early: the firmware went wrong one 10-bit period after its build date, before the check date |
+| `galileo-built-2024` | `GAL`, build date `2024-01-01T00:00:00Z`, `2026-10-15T00:00:00Z` | right date; wrong from one 12-bit period after the build date |
+| `beidou-built-2024` | `BDT`, build date `2024-01-01T00:00:00Z`, `2026-10-15T00:00:00Z` | right date; wrong from one 13-bit period later |
+| `navic-fixed-era` | `IRN-LNAV`, fixed era 1, `2026-10-15T00:00:00Z` | right date; wrong from `2038-11-20T23:59:42Z` † |
+| `navic-fixed-era-after-2038` | `IRN-LNAV`, fixed era 1, `2039-01-01T00:00:00Z` | a date 7168 days early |
+| `galileo-fixed-first-wrap` | `GAL`, fixed era 0, `2078-03-01T00:00:00Z` | a date 28672 days early; wrong from `2078-02-19T23:59:42Z` † |
+| `gps-lnav-fixed-era` | `GPS-LNAV`, fixed era 2, `2026-10-15T00:00:00Z` | right date; wrong from `2038-11-20T23:59:42Z` † |
+| `firmware-ahead` | `QZS-LNAV`, fixed era 3, `2026-10-15T00:00:00Z` | a date one period late |
+| `today` | `GAL`, build date `2024-01-01T00:00:00Z`, today | live; tests pin the clock to `2026-10-15T00:00:00Z` |
 
-**Permalink and chat.** Keys `counter`, `firmwareEra` (digits), `date` (left out for today).
-`showGnssRolloverCheckerInput = z.object({ counter: z.enum(GNSS_WEEK_COUNTERS), firmwareEra:
-z.string().regex(/^(?:0|[1-9]\d{0,5})$/), date: z.string().min(10).max(64).optional() })`. The
-era is never defaulted. Doc, appended: purpose "Check when a receiver whose firmware fixes the
-week-rollover era starts reporting wrong dates, for any satellite week counter, with the next wrap
-of every counter"; when "Call when the reader asks about a GNSS week rollover, whether a receiver
+**Permalink and chat.** Keys `counter`, `firmwareNotBefore` (the build date) or `firmwareEra`
+(digits), `date` (left out for today). `showGnssRolloverCheckerInput = z.object({ counter:
+z.enum(GNSS_WEEK_COUNTERS), firmwareNotBefore: z.string().min(10).max(64).optional(),
+firmwareEra: z.string().regex(/^(?:0|[1-9]\d{0,5})$/).optional(), date:
+z.string().min(10).max(64).optional() })` with a refinement: exactly one of `firmwareNotBefore` and
+`firmwareEra`. Neither is defaulted. Doc, appended: purpose "Check when a receiver whose firmware
+counts weeks from a build date, or fixes the rollover era, starts reporting wrong dates, for any
+satellite week counter, with the next wrap of every counter"; when "Call when the reader asks about a GNSS week rollover, whether a receiver
 is affected, when the next rollover is, or why a receiver reports a date about 19.6 years early";
-args "`counter` as named (for example `IRN-LNAV`), `firmwareEra` as digits, `date` only when the
-reader names one". Starter, area `maritime`: "A NavIC receiver's firmware fixes its 10-bit week
-era at the 2019 rollover: when does it start reporting wrong dates?", `args: { counter:
-"IRN-LNAV", firmwareEra: "1" }` (NavIC LNAV era 1 runs from 2019-04-06T23:59:42Z, L D11).
+args "`counter` as named (for example `IRN-LNAV`); `firmwareNotBefore` when the reader gives a
+build or release date, `firmwareEra` as digits when they give an era; `date` only when the reader
+names one". Starter, area `maritime`: "A NavIC receiver's firmware was built on 2020-01-01: when
+does it start reporting wrong dates?", `args: { counter: "IRN-LNAV", firmwareNotBefore:
+"2020-01-01T00:00:00Z" }`.
 
 **Tests.** Every preset under a pinned clock: the peer table for all eight counters (the 10-bit
-three share their next wrap; the earliest group is marked), the verdict and day count, the window,
+three share their next wrap; the earliest group is marked), both firmware models, the verdict and
+day count, the window and "wrong from" (in pivot mode it equals the pivot's reading one era later,
+and the instant before it still reports the right date),
 the rolling row in each mode, the countdown's text, every sentence, the permalink round trip; the
 mount's regions, holds and live tick (fake timers); no on-screen GPS-only wording such as "GPS
 rollover" in a heading or the starter.
@@ -1156,10 +1196,10 @@ each is tested through `seedFromLocation`.
 | From | Link text | To, seeded with |
 | --- | --- | --- |
 | Week Decoder | "Every satellite clock at this moment" | Clock Converter, `value` = the UTC result |
-| Week Decoder | "Is a receiver on this counter affected, and when?" | Rollover Checker, `counter`, `firmwareEra` = the reading's era, `date` = the UTC result |
+| Week Decoder | "Is a receiver on this counter affected, and when?" | Rollover Checker, `counter`, the decoder's era form (`firmwareNotBefore` for a pivot, `firmwareEra` for an integer; for `"rolling"`, the era it chose), `date` = the UTC result |
 | Clock Converter | "This moment as a week on every counter" | Week Decoder, `mode: "utc"`, `utc` |
 | Clock Converter | "Why these gaps grew" | Leap Second Timeline, `date` = the UTC instant |
-| Rollover Checker | "See every era of this reading" | Week Decoder, `mode: "broadcast"`, `counter`, the reading's week and time of week, `rolloverEra` = the firmware era |
+| Rollover Checker | "See every era of this reading" | Week Decoder, `mode: "broadcast"`, `counter`, the reading's week and time of week, and `rolloverNotBefore` or `rolloverEra` from the firmware |
 | Leap Second Timeline | "Count the real seconds between these dates" | Elapsed vs. Clock, `start` = `from`, `end` = `to` |
 | Leap Second Timeline | "Every clock on this date" | Clock Converter, `value` = `date` |
 | Elapsed vs. Clock | "See these dates on the timeline" | Leap Second Timeline, `from`, `to` |
@@ -1436,7 +1476,7 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
       keyboard and by pointer and record the bounding boxes of the three plates, the frame, every
       lane, bar chip and table, and the rows above the range: none moves or resizes. For the
       rollover checker in "Today" mode, record the plates for ten seconds of countdown: none
-      resizes. Across presets of one tool and mode at one width, each plate keeps its size and
+      resizes. Switching the firmware model between "Build date" and "Fixed era" moves no plate. Across presets of one tool and mode at one width, each plate keeps its size and
       each held region its height;
     - every cross-link of D13 opens its target with every key kept;
     - the hub icons in the sidebar are decoration only (`aria-hidden`).
@@ -1456,7 +1496,8 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
     - each of the five starter cards mounts its tool at once on click, and its seed passes the
       schema and the registry's `validate` (`chat-starters`);
     - an argument set a schema refuses (decoder broadcast with no `rolloverEra`, a counter
-      `"GLO"`, rollover with no `firmwareEra`) renders the registry's error state, not a crash;
+      `"GLO"`, rollover with neither or both of `firmwareNotBefore` and `firmwareEra`) renders the
+      registry's error state, not a crash;
     - every internal link on the new and changed pages resolves to a page in `$SP/after`'s build
       or a route in the manifest, and every permalink opens its tool with every key kept.
 13. **International defaults (section N):**
@@ -1522,7 +1563,7 @@ library slices are half written.
 
 | Step | What | Needs | Who |
 | --- | --- | --- | --- |
-| P1 | Library slices 0–8 green, with the GPS-only API removed (decision 9), the barrels, exports map and `gmt-modules.ts` keys (L§5.1–5.4) and the library's wiring of L§5–§8.3 | — | driver |
+| P1 | Library slices 0–8 green, with the GPS-only API removed (decision 9), the `{ notBefore }` era form (decision 13), the barrels, exports map and `gmt-modules.ts` keys (L§5.1–5.4) and the library's wiring of L§5–§8.3 | — | driver |
 | P2 | **One build of `packages/gmt/dist`**, by the main session, after warning the owner (his dev server reads `dist`). Nothing in this plan builds it again | P1 | main session |
 | D1 | Section B without Maritime (with `duty` in Transport's list), the README lines; C1; C2 | P2 | one `dox-builder` |
 | S | D8's shared modules, loaders, test helpers and `gmt-gnss-widgets.css` | D1 | one `dox-builder` |
