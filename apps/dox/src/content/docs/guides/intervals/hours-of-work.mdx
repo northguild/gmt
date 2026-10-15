@@ -188,8 +188,10 @@ evaluateDutyLog(
 `evaluateDutyLog` returns `null` for invalid input: a log that fails `isValidDutyLog`, a
 malformed rule (an unknown kind, an empty status list, a cap of zero, a malformed period, two
 rules with one label, more than 10,000 periods), an invalid zone, a rule that counts operator
-days without `dayStartTime`, and a requirement too long for any duration. A count of periods is
-10,000 at most, and so is a count times `adjacent`, `lookback` or `periods`.
+days without `dayStartTime`, a requirement too long for any duration, and a count of free
+periods past `Number.MAX_SAFE_INTEGER`. A count of periods is 10,000 at most, and so is a count
+times `adjacent`, `lookback` or `periods`, and `containing.count`. One run of rest may hold at
+most 20,000 of a free period's `containing` windows, about 54 years of a nightly window.
 
 The examples below build their logs with a small helper, so that a week of shifts fits on a
 line. It is ordinary Temporal; copy it or write your own:
@@ -510,10 +512,13 @@ logged time outside `restStatuses` begins. The rest before it is the longest res
 `within` before that start, so a short break between two stints does not stand in for it. A
 stint after any rest is a new duty, so log a break inside a duty in its own status, outside
 `restStatuses`.
-`orFactor: { k, floor }` raises the requirement to the larger of `k` × the duty that rest ends
-and `floor`. That duty runs from the end of the last rest of at least `minimum` before it to where
-the rest starts, breaks included, so after a 13-hour duty the requirement is 13 hours, however
-long the rest. `k` is read as the decimal you write: `1.1` is exactly eleven tenths.
+
+`orFactor: { k, floor }` judges each duty by the rest right before it instead, measured whole,
+however far back `within` reaches. That rest must be at least `minimum`, `floor` and `k` × the
+duty it ends. That duty runs from the end of the last rest of at least `minimum` before it to
+where the rest starts, breaks included, so after a 13-hour duty 13 hours are due. `k` is read as
+the shortest decimal `String(k)` prints: `1.1` is exactly eleven tenths, and `0.1 + 0.2` is
+0.30000000000000004. The `window` is the duty before the rest and the rest itself.
 
 ```typescript
 const before = {
@@ -530,7 +535,7 @@ const log = shifts("2024-01-01T00:00:00Z", ["onDuty", "PT13H"], ["off", "PT12H"]
 evaluateDutyLog(log, "2024-01-02T02:00:00Z", [before], { timeZone: "UTC" }).outcomes[0];
 // { label: "rest before duty", kind: "restBeforeDuty", severity: "violation", satisfied: false,
 //   used: "PT12H", limit: "PT13H", remaining: "PT1H",
-//   window: { start: "2024-01-01T01:00:00Z", end: "2024-01-02T01:00:00Z" },
+//   window: { start: "2024-01-01T00:00:00Z", end: "2024-01-02T01:00:00Z" },
 //   periodBasis: "elapsed", dueBy: null, resetAt: null }
 ```
 

@@ -34,9 +34,34 @@ export type UnitScale = {
    * walked. Null when that period cannot be represented.
    */
   jump?: (span: UnitSpan, periods: number) => UnitSpan | null | undefined;
-  /** The starts `periodsEndingAt` has found, by count and last period, so each is walked once. */
-  windowStarts: Map<string, bigint>;
+  /** The periods `periodAfter` has walked, in order, so no walk is made twice in a call. */
+  chain: PeriodChain;
 };
+
+/**
+ * Periods walked one after another, each by its place in the walk: `first` and `last` are the
+ * places of the earliest and latest kept.
+ */
+export type PeriodChain = {
+  byPlace: Map<number, UnitSpan>;
+  byStart: Map<bigint, number>;
+  first: number;
+  last: number;
+};
+
+/** A chain holding nothing yet. */
+export const emptyChain = (): PeriodChain => ({
+  byPlace: new Map(),
+  byStart: new Map(),
+  first: 0,
+  last: -1,
+});
+
+/**
+ * How many periods away `periodAfter` steps through the periods instead of jumping: stepping
+ * through a few cached periods costs less than searching for a clock change between them.
+ */
+const SHORT_WALK = 64;
 
 /**
  * How far from an instant's local date the operator-day search reaches. A day start resolves
@@ -172,7 +197,7 @@ function cachedScale(
 
   return {
     basis,
-    windowStarts: new Map(),
+    chain: emptyChain(),
     containing: (x) => {
       const index = find(x);
       const cached = spans[index];
@@ -317,8 +342,8 @@ export function calendarScale(frame: ZoneFrame, unit: CalendarUnit): UnitScale {
     // With no clock change between two periods, every week, month or year between them is one
     // period, so the period k after another holds the wall clock k units after its middle (days
     // from either edge, so a clock change within two days cannot move it to a neighbour). A clock
-    // change can open a period of its own (Goose Bay's fall-back into 6 November opens a 59-minute
-    // one), so across one the periods are walked.
+    // change can open a period of its own (Goose Bay's fall-back at 00:01 on 1 November 2009
+    // reopened 31 October for a 59-minute month), so across one the periods are walked.
     jump: (span, periods) => {
       try {
         const middle = frameZoned(
@@ -366,6 +391,118 @@ const CALENDAR_JUMPS: Partial<
 };
 
 /**
+ * The period `periods` after `span` in a scale (before it when negative), `span` itself for 0.
+ *
+ * - A few periods away, it steps through them. Further, it takes the scale's `jump` where the
+ *   scale can jump there, and otherwise walks, keeping each period walked in the scale's chain,
+ *   so a call that asks again, or asks for a neighbour, walks no period twice.
+ * - Null when a period on the way cannot be represented.
+ *
+ * @param scale the periods
+ * @param span a period of the scale
+ * @param periods how many periods on, at most `2 × MAX_PERIOD_COUNT` either way
+ * @returns the period, or null
+ *
+ * @example periodAfter(calendarScale(zoneFrame("UTC"), "day"), { start: 0n, end: 86400000000000n }, 1) // { start: 86400000000000n, end: 172800000000000n }
+ */
+export function periodAfter(
+  scale: UnitScale,
+  span: UnitSpan,
+  periods: number,
+): UnitSpan | null {
+  const steps = Math.abs(periods);
+
+  if (steps <= SHORT_WALK) {
+    let current: UnitSpan | null = span;
+
+    for (let step = 0; step < steps && current !== null; step++) {
+      current = scale.containing(
+        periods > 0 ? current.end : current.start - 1n,
+      );
+    }
+
+    return current;
+  }
+
+  // Placing the span may start a new chain, so the chain is read after it.
+  const place = placeInChain(scale, span);
+  const chain = scale.chain;
+  const known = chain.byPlace.get(place + periods);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  const jumped = scale.jump?.(span, periods);
+
+  if (jumped !== undefined) {
+    return jumped;
+  }
+
+  const target = place + periods;
+
+  for (let step = 0; chain.last < target && step <= steps; step++) {
+    const next = scale.containing(
+      (chain.byPlace.get(chain.last) as UnitSpan).end,
+    );
+
+    if (next === null) {
+      return null;
+    }
+    keep(chain, chain.last + 1, next);
+  }
+
+  for (let step = 0; chain.first > target && step <= steps; step++) {
+    const previous = scale.containing(
+      (chain.byPlace.get(chain.first) as UnitSpan).start - 1n,
+    );
+
+    if (previous === null) {
+      return null;
+    }
+    keep(chain, chain.first - 1, previous);
+  }
+
+  return chain.byPlace.get(target) ?? null;
+}
+
+/** Keep a period in a chain at a place next to its ends. */
+function keep(chain: PeriodChain, place: number, span: UnitSpan): void {
+  chain.byPlace.set(place, span);
+  chain.byStart.set(span.start, place);
+  chain.first = Math.min(chain.first, place);
+  chain.last = Math.max(chain.last, place);
+}
+
+/**
+ * A period's place in the scale's chain. A period next to either end joins the chain; any other
+ * starts a new one, since the periods between were never walked.
+ */
+function placeInChain(scale: UnitScale, span: UnitSpan): number {
+  const chain = scale.chain;
+  const known = chain.byStart.get(span.start);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  if (chain.last >= chain.first) {
+    if ((chain.byPlace.get(chain.last) as UnitSpan).end === span.start) {
+      keep(chain, chain.last + 1, span);
+      return chain.last;
+    }
+    if ((chain.byPlace.get(chain.first) as UnitSpan).start === span.end) {
+      keep(chain, chain.first - 1, span);
+      return chain.first;
+    }
+  }
+
+  scale.chain = emptyChain();
+  keep(scale.chain, 0, span);
+  return 0;
+}
+
+/**
  * The `count` periods of a scale that end with the one `anchor` falls in.
  *
  * @param scale the periods
@@ -382,39 +519,9 @@ export function periodsEndingAt(
   anchor: bigint,
 ): UnitSpan | null {
   const last = scale.containing(anchor);
+  const first = last === null ? null : periodAfter(scale, last, 1 - count);
 
-  if (last === null) {
-    return null;
-  }
-
-  const key = `${count}:${last.start}`;
-  const known = scale.windowStarts.get(key);
-
-  if (known !== undefined) {
-    return { start: known, end: last.end };
-  }
-
-  const jumped = count > 1 ? scale.jump?.(last, 1 - count) : undefined;
-  let start = last.start;
-
-  if (jumped === null) {
-    return null;
-  }
-
-  if (jumped !== undefined) {
-    start = jumped.start;
-  } else {
-    for (let step = 1; step < count; step++) {
-      const previous = scale.containing(start - 1n);
-
-      if (previous === null) {
-        return null;
-      }
-
-      start = previous.start;
-    }
-  }
-
-  scale.windowStarts.set(key, start);
-  return { start, end: last.end };
+  return last === null || first === null
+    ? null
+    : { start: first.start, end: last.end };
 }

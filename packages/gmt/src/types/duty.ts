@@ -473,7 +473,7 @@ export type FreePeriodRule<S extends string = string> = {
   containing?: {
     /** The local window, as operating hours take it. */
     window: LocalWindow;
-    /** How many whole windows each free period must contain, a positive integer. */
+    /** How many whole windows each free period must contain, an integer from 1 to 10,000. */
     count: number;
   };
   /**
@@ -488,14 +488,18 @@ export type FreePeriodRule<S extends string = string> = {
  * A rest required before each duty: "10 hours off in the 24 before a duty", "rest before duty
  * at least as long as the duty before it, and never under 12 hours".
  *
- * - A duty starts where logged time outside `restStatuses` begins. The rest before it is the
- *   longest run of rest inside `within` before that start, so a short break between two stints
- *   does not stand in for the rest before them. A stint after any rest is a new duty start,
- *   measured from where it starts: log a break inside a duty in a status outside `restStatuses`.
- * - The rest must be at least `minimum`. With `orFactor` it must also be `k` × the duty that rest
- *   ends and at least `floor`; that duty runs from the end of the last rest of at least
- *   `minimum` before it to where the rest starts, breaks included, even when the rest starts
- *   before `within`.
+ * - A duty starts where logged time outside `restStatuses` begins. A stint after any rest is a
+ *   new duty start, measured from where it starts: log a break inside a duty in a status outside
+ *   `restStatuses`.
+ * - Without `orFactor`, the rest before a duty is the longest run of rest inside `within` before
+ *   it, so a short break between two stints does not stand in for the rest before them, and it
+ *   must be at least `minimum`.
+ * - With `orFactor`, the rest is the run that ends where the duty starts, measured whole, and it
+ *   must be at least `minimum`, `floor` and `k` × the duty it ends. That duty runs from the end of
+ *   the last rest of at least `minimum` before it to where the rest starts, breaks included. A
+ *   duty that starts with no rest right before it has none. Logging more of the time before a
+ *   duty as rest never fails it, unless a whole duty becomes rest: the two rests around it are
+ *   then one, which ends the duty before.
  * - Evaluated during rest, the rule holds and `remaining` is the rest still needed before a duty
  *   may start.
  */
@@ -514,7 +518,10 @@ export type RestBeforeDutyRule<S extends string = string> = {
   restStatuses: S[];
   /** The least rest required, a positive ISO 8601 duration of exact time. */
   minimum: string;
-  /** How far before a duty the rest may be, a positive ISO 8601 duration of exact time. */
+  /**
+   * How far before a duty the rest is looked for, a positive ISO 8601 duration of exact time.
+   * With `orFactor` the rest is the one right before the duty, which `within` does not cut.
+   */
   within: string;
   /**
    * A requirement that grows with the previous duty: the larger of `k` × its length and `floor`.
@@ -523,9 +530,9 @@ export type RestBeforeDutyRule<S extends string = string> = {
    */
   orFactor?: {
     /**
-     * The multiple of the previous duty's length, a positive finite number, read as the decimal
-     * it is written as: `1.1` is exactly eleven tenths. The product is rounded up to the
-     * nanosecond.
+     * The multiple of the previous duty's length, a positive finite number. It is read as the
+     * shortest decimal `String(k)` prints, exactly: `1.1` is eleven tenths, and `0.1 + 0.2` is
+     * 0.30000000000000004. The product is rounded up to the nanosecond.
      */
     k: number;
     /** The least the requirement can be, a positive ISO 8601 duration of exact time. */

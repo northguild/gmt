@@ -512,6 +512,117 @@ describe("dutyViolations", () => {
     ).toBeNull();
   });
 
+  // A free period of 14 hours containing a night from 23:00 to 05:00, in any 3 calendar days. The
+  // log covers three days of March 2024; a range from 1969 reads as those three days, so the night
+  // windows are found only around the log, never for the 55 years before it.
+  const nights: DutyRule = {
+    label: "a night off in 3 days",
+    kind: "freePeriod",
+    restStatuses: ["off"],
+    minimum: "PT14H",
+    within: { calendarDays: 3 },
+    containing: { window: { from: "23:00", to: "05:00" }, count: 1 },
+  };
+  const march: DutyStep[] = [
+    ["driving", "PT10H"],
+    ["off", "PT14H"],
+    ["driving", "PT10H"],
+    ["off", "PT9H"],
+    ["driving", "PT10H"],
+  ];
+
+  it("reads a range from decades before the log as the time the log covers", () => {
+    const log = dutySequence("2024-03-04T08:00:00Z", march);
+    const record = dutyViolations(
+      log,
+      { start: log[0]?.start as string, end: "2024-03-07T00:00:00Z" },
+      [nights],
+      UTC,
+    );
+
+    expect(record).not.toBeNull();
+    expect(
+      dutyViolations(
+        log,
+        { start: "1969-01-01T00:00:00Z", end: "2024-03-07T00:00:00Z" },
+        [nights],
+        UTC,
+      ),
+    ).toEqual(record);
+  });
+
+  // The same three days after a night off in 1968 and 20,497 days of driving: a range of the last
+  // week finds the night windows around that week only, not along the 56 years before it.
+  it("reads the last week of a log that covers 20,500 days", () => {
+    const log = dutySequence("1968-01-01T08:00:00Z", [
+      ["off", "PT14H"],
+      ["driving", "PT491914H"],
+      ["off", "PT14H"],
+      ["driving", "PT10H"],
+      ...march,
+    ]);
+    const end = log.at(-1)?.end as string;
+    const lastWeek = {
+      start: Temporal.Instant.from(end).subtract({ hours: 168 }).toString(),
+      end,
+    };
+
+    expect(dutyViolations(log, lastWeek, [nights], UTC)).not.toBeNull();
+  });
+
+  // A night off from 20:00 once every 365 days for 60 years, and a free period containing a night
+  // in any 72 hours. Each year fails from three days after its rest to the next, 60 violations.
+  // The record finds the night windows around each rest as it reaches it, never the 21,900 nights
+  // between, so it is not refused.
+  it("reads 60 years of a night off a year", () => {
+    const year: DutyStep[] = [
+      ["off", "PT14H"],
+      ["driving", "PT8746H"],
+    ];
+    const log = dutySequence(
+      "1964-01-01T20:00:00Z",
+      Array.from({ length: 60 }, () => year).flat(),
+    );
+    const record = dutyViolations(
+      log,
+      { start: log[0]?.start as string, end: log.at(-1)?.end as string },
+      [{ ...nights, within: { elapsed: "PT72H" } } as DutyRule],
+      UTC,
+    );
+
+    expect(record).toHaveLength(60);
+  });
+
+  // A million free periods of one second in any 24 hours: each 14-hour rest holds 50,400, so a
+  // count can cross a million anywhere in it. Thirty days need more than 1,000,000 instants
+  // checked, and the record is refused rather than checked one by one.
+  // About 0.5 s here and up to five times that on a slow runner; the timeout is three times that.
+  it("returns null when one rule needs more than 1,000,000 instants checked", () => {
+    expect(
+      dutyViolations(
+        dutySequence(
+          START,
+          repeat(30, [
+            ["work", "PT10H"],
+            ["off", "PT14H"],
+          ]),
+        ),
+        { start: START, end: "2024-01-31T00:00:00Z" },
+        [
+          {
+            label: "a million seconds",
+            kind: "freePeriod",
+            restStatuses: ["off"],
+            minimum: "PT1S",
+            within: { elapsed: "PT24H" },
+            atLeast: 1_000_000,
+          },
+        ],
+        UTC,
+      ),
+    ).toBeNull();
+  }, 15_000);
+
   it("returns null when Temporal.Instant.from throws", () => {
     const log = dutySequence(START, week1);
     mockTemporalInstantFromThrow();

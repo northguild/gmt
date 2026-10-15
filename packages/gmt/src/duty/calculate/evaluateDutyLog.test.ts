@@ -594,6 +594,60 @@ describe("evaluateDutyLog", () => {
       ).toBeNull();
     });
 
+    // Counting the free periods in one run of rest needs every night window inside it. Sixty years
+    // off hold 21,915 nights, more than the 20,000 one run may hold.
+    // About 0.6 s here and up to five times that on a slow runner; the timeout is three times that.
+    it("for one run of rest that holds more than 20,000 of a free period's local windows", () => {
+      const sixtyYears = [
+        {
+          status: "off",
+          start: "1964-01-01T00:00:00Z",
+          end: "2024-01-01T00:00:00Z",
+        },
+      ];
+      const rule = (years: number): DutyRule => ({
+        label: "nights",
+        kind: "freePeriod",
+        restStatuses: ["off"],
+        minimum: "PT14H",
+        within: { calendarYears: years },
+        containing: { window: { from: "23:00", to: "05:00" }, count: 1 },
+      });
+
+      expect(
+        evaluateDutyLog(sixtyYears, "2024-01-01T00:00:00Z", [rule(60)], UTC),
+      ).toBeNull();
+      expect(
+        evaluateDutyLog(sixtyYears, "2024-01-01T00:00:00Z", [rule(50)], UTC)
+          ?.outcomes[0]?.satisfied,
+      ).toBe(true);
+    }, 15_000);
+
+    // One run of rest 2^53 + 1 nanoseconds long holds that many free periods of a nanosecond: a
+    // count past the integers a number holds exactly is refused, not rounded.
+    it("for a count of free periods past Number.MAX_SAFE_INTEGER", () => {
+      const start = Temporal.Instant.from(START);
+      const end = Temporal.Instant.fromEpochNanoseconds(
+        start.epochNanoseconds + 2n ** 53n + 1n,
+      ).toString();
+      const rule = (minimum: string): DutyRule => ({
+        label: "free",
+        kind: "freePeriod",
+        restStatuses: ["off"],
+        minimum,
+        within: { elapsed: "PT8760H" },
+      });
+      const off = [{ status: "off", start: START, end }];
+
+      expect(
+        evaluateDutyLog(off, end, [rule("PT0.000000001S")], UTC),
+      ).toBeNull();
+      expect(
+        evaluateDutyLog(off, end, [rule("PT0.000000002S")], UTC)?.outcomes[0]
+          ?.used,
+      ).toBe(4_503_599_627_370_496);
+    });
+
     it("when Temporal.Instant.from throws", () => {
       mockTemporalInstantFromThrow();
       expect(evaluateDutyLog(log, at, [elevenDriving], UTC)).toBeNull();

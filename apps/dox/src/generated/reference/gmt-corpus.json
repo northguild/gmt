@@ -16927,7 +16927,7 @@
       },
       {
         "name": "containing.count",
-        "description": "How many whole windows each free period must contain, a positive integer."
+        "description": "How many whole windows each free period must contain, an integer from 1 to 10,000."
       },
       {
         "name": "atLeast",
@@ -16969,7 +16969,7 @@
       },
       {
         "name": "within",
-        "description": "How far before a duty the rest may be, a positive ISO 8601 duration of exact time."
+        "description": "How far before a duty the rest is looked for, a positive ISO 8601 duration of exact time. With `orFactor` the rest is the one right before the duty, which `within` does not cut."
       },
       {
         "name": "orFactor",
@@ -16977,7 +16977,7 @@
       },
       {
         "name": "orFactor.k",
-        "description": "The multiple of the previous duty's length, a positive finite number, read as the decimal it is written as: `1.1` is exactly eleven tenths. The product is rounded up to the nanosecond."
+        "description": "The multiple of the previous duty's length, a positive finite number. It is read as the shortest decimal `String(k)` prints, exactly: `1.1` is eleven tenths, and `0.1 + 0.2` is 0.30000000000000004. The product is rounded up to the nanosecond."
       },
       {
         "name": "orFactor.floor",

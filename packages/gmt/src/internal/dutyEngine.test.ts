@@ -1,5 +1,5 @@
 import { MAX_PERIOD_COUNT } from "./dutyRules";
-import type { UnitScale } from "./dutyPeriods";
+import { emptyChain, type UnitScale } from "./dutyPeriods";
 import { Unrepresentable, walkBoundaries } from "./dutyEngine";
 
 const DAY = 86_400_000_000_000n;
@@ -9,7 +9,7 @@ function countedDays() {
   let lookups = 0;
   const scale: UnitScale = {
     basis: "calendar",
-    windowStarts: new Map(),
+    chain: emptyChain(),
     containing: (x) => {
       lookups++;
       const start = x - (((x % DAY) + DAY) % DAY);

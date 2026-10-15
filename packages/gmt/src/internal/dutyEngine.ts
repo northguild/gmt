@@ -12,6 +12,7 @@ import {
   datePlusDays,
   localDateOf,
   operatorDayScale,
+  periodAfter,
   periodsEndingAt,
   type ResolvedWallClock,
   resolveWallClock,
@@ -49,8 +50,13 @@ export type DutyContext = {
   scales: Map<string, UnitScale>;
   /** Local window edges already resolved, by local date-time: Temporal resolves each once. */
   wallClocks: Map<string, ResolvedWallClock | null>;
-  /** Local window instances already resolved, by window, with the span they cover. */
-  windowInstances: Map<string, WindowInstances>;
+  /**
+   * Local window instances already resolved, by window: separate stretches of local dates, each
+   * with the span it covers.
+   */
+  windowInstances: Map<string, WindowInstances[]>;
+  /** The runs of the whole log in a set of statuses, found once per call. */
+  runs: Map<StatusSet, DutyRun[]>;
 };
 
 /** A duration or a count, before it is written into an outcome. */
@@ -83,10 +89,26 @@ type Evaluation = {
    * rule says otherwise.
    */
   key?: bigint;
+  /**
+   * True when time before the log's first entry could change the answer though the window starts
+   * inside the log: a rest measured whole that starts with the log. The record does not judge it.
+   */
+  beforeLog?: boolean;
 };
 
 /** A window a call cannot place in Temporal's range. Caught by the public function. */
 export class Unrepresentable extends RangeError {}
+
+/**
+ * A count as a number, exactly. Past `Number.MAX_SAFE_INTEGER` a number would round it, so the
+ * call is refused instead.
+ */
+function exactCount(value: bigint): number {
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Unrepresentable("a count past the safe integers");
+  }
+  return Number(value);
+}
 
 const duration = (nanoseconds: bigint): Measure => ({
   duration: nanoseconds > 0n ? nanoseconds : 0n,
@@ -147,6 +169,7 @@ export function prepareDutyCall(
       scales: new Map(),
       wallClocks: new Map(),
       windowInstances: new Map(),
+      runs: new Map(),
     },
     rules: resolved,
   };
@@ -240,6 +263,56 @@ export function runsOf(
       .filter((entry) => matches(test, entry.status))
       .map(({ start, end }) => ({ start, end, startText: "", endText: "" })),
   ).map(({ start, end }) => ({ start, end }));
+}
+
+/** The runs of the whole log in a set of statuses, found once per call and kept. */
+function logRuns(context: DutyContext, statuses: StatusSet): DutyRun[] {
+  const known = context.runs.get(statuses);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  const found = runsOf(context.entries, statuses);
+  context.runs.set(statuses, found);
+  return found;
+}
+
+/**
+ * The parts of ordered, separate runs inside `[from, to)`, empty parts dropped: `clipRuns`, with
+ * the runs before `from` skipped by a binary search instead of read one by one.
+ */
+function runsBetween(
+  runs: readonly DutyRun[],
+  from: bigint,
+  to: bigint,
+): DutyRun[] {
+  let low = 0;
+  let high = runs.length;
+
+  // A binary search over at most 2^32 runs.
+  for (let step = 0; step < 33 && low < high; step++) {
+    const middle = (low + high) >> 1;
+
+    if ((runs[middle] as DutyRun).end <= from) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  const inside: DutyRun[] = [];
+
+  for (let index = low; index < runs.length; index++) {
+    const run = runs[index] as DutyRun;
+
+    if (run.start >= to) {
+      break;
+    }
+    inside.push({ start: max(run.start, from), end: min(run.end, to) });
+  }
+
+  return inside;
 }
 
 /** The parts of runs inside `[from, to)`, empty parts dropped. */
@@ -389,19 +462,17 @@ function boundaryAfter(
   }
 
   const scale = scaleFor(context, period.unit);
-  let end = from;
+  const first = scale.containing(from);
+  const last =
+    first === null
+      ? null
+      : periodAfter(scale, first, period.count * periods - 1);
 
-  for (let step = 0; step < period.count * periods; step++) {
-    const span = scale.containing(end);
-
-    if (span === null) {
-      throw new Unrepresentable("period outside the instant range");
-    }
-
-    end = span.end;
+  if (last === null) {
+    throw new Unrepresentable("period outside the instant range");
   }
 
-  return end;
+  return last.end;
 }
 
 const basisOf = (window: ResolvedWindow): PeriodBasis => window.basis;
@@ -648,10 +719,18 @@ function instancesOn(
   return instances;
 }
 
+/** How close a request must be to a stretch already resolved to extend it: thirty days. */
+const WINDOW_JOIN = 2_592_000_000_000_000n;
+
 /**
  * Every instance of a local window on the local dates around `[from, to)`, resolved once per call
- * and kept, so each later evaluation only filters them. A request past the dates kept resolves
- * only the dates it adds, so a scan that moves along the log resolves each date once.
+ * and kept, so each later evaluation only filters them.
+ *
+ * - A request near a stretch of dates already kept resolves only the dates it adds, so a scan
+ *   that moves along the log resolves each date once. A request far from every stretch starts a
+ *   stretch of its own: the dates between two far-apart rests are never resolved.
+ * - One request may need at most `2 × MAX_PERIOD_COUNT` dates; past that it throws
+ *   `Unrepresentable`. What is kept from earlier requests does not count against it.
  */
 function windowInstances(
   context: DutyContext,
@@ -660,25 +739,35 @@ function windowInstances(
   to: bigint,
 ): WindowInstance[] {
   const key = `${window.from.toString()}-${window.to.toString()}`;
-  const known = context.windowInstances.get(key);
+  const stretches = context.windowInstances.get(key) ?? [];
+  const covering = stretches.find(
+    (stretch) => stretch.from <= from && stretch.to >= to,
+  );
 
-  if (known !== undefined && known.from <= from && known.to >= to) {
-    return known.instances;
+  if (covering !== undefined) {
+    return covering.instances;
   }
 
+  const wantedFrom = from - WINDOW_MARGIN;
+  const wantedTo = to + WINDOW_MARGIN;
+  const wanted = datePlusDays(localDateOf(context.frame, wantedFrom), -1);
+  const until = localDateOf(context.frame, wantedTo - 1n);
+
+  if (
+    wanted === null ||
+    wanted.until(until, { largestUnit: "day" }).days > 2 * MAX_PERIOD_COUNT
+  ) {
+    throw new Unrepresentable("too many local windows");
+  }
+
+  const known = stretches.find(
+    (stretch) =>
+      stretch.from - WINDOW_JOIN <= wantedTo &&
+      stretch.to + WINDOW_JOIN >= wantedFrom,
+  );
   const spanFrom =
-    known !== undefined && known.from <= from
-      ? known.from
-      : from - WINDOW_MARGIN;
-  const spanTo =
-    known !== undefined && known.to >= to ? known.to : to + WINDOW_MARGIN;
-  const wanted = datePlusDays(localDateOf(context.frame, spanFrom), -1);
-  const until = localDateOf(context.frame, spanTo - 1n);
-
-  if (wanted === null) {
-    throw new Unrepresentable("local date outside the range");
-  }
-
+    known === undefined ? wantedFrom : min(known.from, wantedFrom);
+  const spanTo = known === undefined ? wantedTo : max(known.to, wantedTo);
   // A fall-back can put an earlier instant on a later local date, so the dates kept stay a
   // superset of the dates wanted.
   const first =
@@ -707,17 +796,11 @@ function windowInstances(
     ];
   }
 
-  if (instances.length > 2 * MAX_PERIOD_COUNT) {
-    throw new Unrepresentable("too many local windows");
-  }
-
-  context.windowInstances.set(key, {
-    from: spanFrom,
-    to: spanTo,
-    first,
-    last,
-    instances,
-  });
+  const stretch = { from: spanFrom, to: spanTo, first, last, instances };
+  context.windowInstances.set(key, [
+    ...stretches.filter((other) => other !== known),
+    stretch,
+  ]);
   return instances;
 }
 
@@ -727,9 +810,9 @@ function freePeriodsIn(
   rule: Extract<ResolvedRule, { kind: "freePeriod" }>,
   run: DutyRun,
   strict: boolean,
-): number {
+): bigint {
   if (rule.containing === null) {
-    return Number(length(run) / rule.minimum);
+    return length(run) / rule.minimum;
   }
 
   // Greedy, earliest end first: each free period ends as soon as it is long enough and holds
@@ -761,36 +844,39 @@ function freePeriodsIn(
     cursor = end;
   }
 
-  return found;
+  return BigInt(found);
 }
 
 function evaluateFreePeriod(
   context: DutyContext,
   rule: Extract<ResolvedRule, { kind: "freePeriod" }>,
-  log: readonly DutyLogEntry[],
   at: bigint,
   anchor: bigint,
 ): Evaluation {
   const window = windowOf(context, rule.within, at, anchor);
-  const rests = runsOf(log, rule.restStatuses);
+  // Every count below ends at or before `at`, so the runs of the whole log, cut to the count's
+  // span, are the runs of the log as it stands at `at`.
+  const rests = logRuns(context, rule.restStatuses);
   const countIn = (from: bigint, to: bigint, extendTo?: bigint) => {
-    const inside = clipRuns(rests, from, to);
+    const inside = runsBetween(rests, from, to);
     const runs =
       extendTo === undefined ? inside : withRestUntil(inside, at, extendTo);
     // Rest supposed from `at` is not the log, so "reject" does not refuse its windows.
     const strict = extendTo === undefined;
     return runs.reduce(
       (sum, run) => sum + freePeriodsIn(context, rule, run, strict),
-      0,
+      0n,
     );
   };
+  // `atLeast` is a safe integer, so a count capped there compares with it as the count does.
+  const enough = (count: bigint) => count >= BigInt(rule.atLeast);
 
   const { span } = window;
-  const found = countIn(span.start, min(span.end, at));
+  const found = exactCount(countIn(span.start, min(span.end, at)));
   const unfinished = span.end > at;
   const met =
     found >= rule.atLeast ||
-    (unfinished && countIn(span.start, at, span.end) >= rule.atLeast);
+    (unfinished && enough(countIn(span.start, at, span.end)));
   let dueBy: bigint | null = null;
 
   if (found >= rule.atLeast && rule.atLeast > 0) {
@@ -805,7 +891,7 @@ function evaluateFreePeriod(
       // always settle it.
       for (let step = 0; step < 90 && high - low > 1n; step++) {
         const middle = (low + high) / 2n;
-        if (countIn(middle - windowLength, at) >= rule.atLeast) {
+        if (enough(countIn(middle - windowLength, at))) {
           low = middle;
         } else {
           high = middle;
@@ -818,40 +904,15 @@ function evaluateFreePeriod(
       // Its count only falls as k grows, and k = count holds none, so search for the first short.
       const scale = scaleFor(context, rule.within.unit);
       const count = rule.within.count;
-      const units: UnitSpan[] = [];
-      let walking = scale.jump === undefined;
+      const first = scale.containing(span.start);
       const unitAt = (index: number): UnitSpan => {
-        const first = units[0] ?? scale.containing(span.start);
+        // The scale keeps the periods it walks, so the search below walks each one once.
+        const found = first === null ? null : periodAfter(scale, first, index);
 
-        if (first === null) {
+        if (found === null) {
           throw new Unrepresentable("period outside the instant range");
         }
-        units[0] = first;
-
-        // A period the scale can jump to is found at once. Once a jump would cross a clock
-        // change, the periods are walked to instead, each once.
-        if (!walking && index > 0) {
-          const jumped = scale.jump?.(first, index);
-
-          if (jumped === null) {
-            throw new Unrepresentable("period outside the instant range");
-          }
-          if (jumped !== undefined) {
-            return jumped;
-          }
-          walking = true;
-        }
-
-        for (let step = units.length; step <= index; step++) {
-          const next = scale.containing((units[step - 1] as UnitSpan).end);
-
-          if (next === null) {
-            throw new Unrepresentable("period outside the instant range");
-          }
-          units.push(next);
-        }
-
-        return units[index] as UnitSpan;
+        return found;
       };
 
       let low = 1;
@@ -859,7 +920,7 @@ function evaluateFreePeriod(
 
       for (let step = 0; step < 32 && low < high; step++) {
         const middle = (low + high) >> 1;
-        if (countIn(unitAt(middle).start, at) < rule.atLeast) {
+        if (!enough(countIn(unitAt(middle).start, at))) {
           high = middle;
         } else {
           low = middle + 1;
@@ -982,6 +1043,41 @@ function evaluateRestBeforeDuty(
   const dutyStart = onDuty
     ? (runsOf(log, (status) => !isRest(status)).at(-1) as DutyRun).start
     : at;
+  const logStart = log[0]?.start ?? at;
+
+  if (rule.orFactor !== null) {
+    // The rest judged is the one right before the duty, measured whole, against the duty it
+    // ends: from the end of the last rest of at least `minimum` before it, breaks included, to
+    // where it starts. A duty between an earlier rest and this one is never skipped, and more
+    // rest before the duty only lengthens the rest or shortens the duty before it.
+    const rest = rests.find((run) => run.end === dutyStart);
+    const restStart = rest?.start ?? dutyStart;
+    const fullRest = rests
+      .filter((run) => run.end <= restStart && length(run) >= rule.minimum)
+      .at(-1);
+    const dutyFrom = fullRest?.end ?? min(logStart, restStart);
+    const previousDuty = restStart - dutyFrom;
+    const { numerator, denominator } = rule.orFactor.k;
+    // k × the duty, rounded up to the nanosecond, exactly.
+    const scaled = (previousDuty * numerator + denominator - 1n) / denominator;
+    const limit = max(rule.minimum, max(scaled, rule.orFactor.floor));
+    const used = rest === undefined ? 0n : length(rest);
+
+    return {
+      ...floored(used, limit, !onDuty || used >= limit, {
+        window: { start: dutyFrom, end: dutyStart },
+        periodBasis: "elapsed",
+        dueBy: null,
+        resetAt: null,
+        grouping: "start",
+      }),
+      // A rest that starts with the log, or a duty with none logged before it, may have more
+      // rest before the log: the record does not judge it.
+      beforeLog: restStart <= logStart,
+      key: restStart,
+    };
+  }
+
   const windowStart = max(dutyStart - rule.within, MIN_INSTANT_NANOSECONDS);
 
   // The rest before the duty: the longest run of rest inside the window, the latest on a tie.
@@ -995,27 +1091,10 @@ function evaluateRestBeforeDuty(
     }
   }
 
-  let limit = rule.minimum;
-
-  if (rule.orFactor !== null) {
-    // The duty that rest ends runs from the end of the last full rest before it (at least
-    // `minimum`), breaks included, to where the rest really starts, inside `within` or not.
-    const restStart = rest === undefined ? dutyStart : rest.run.start;
-    const fullRest = rests
-      .filter((run) => run.end <= restStart && length(run) >= rule.minimum)
-      .at(-1);
-    const dutyFrom = fullRest?.end ?? log[0]?.start ?? restStart;
-    const previousDuty = max(restStart - dutyFrom, 0n);
-    const { numerator, denominator } = rule.orFactor.k;
-    // k × the duty, rounded up to the nanosecond, exactly.
-    const scaled = (previousDuty * numerator + denominator - 1n) / denominator;
-    limit = max(rule.minimum, max(scaled, rule.orFactor.floor));
-  }
-
   const used = rest?.inside ?? 0n;
 
   return {
-    ...floored(used, limit, !onDuty || used >= limit, {
+    ...floored(used, rule.minimum, !onDuty || used >= rule.minimum, {
       window: { start: windowStart, end: dutyStart },
       periodBasis: "elapsed",
       dueBy: null,
@@ -1033,6 +1112,11 @@ function evaluateRule(
   at: bigint,
   anchor: bigint,
 ): Evaluation {
+  // A free period reads only runs of rest, kept for the whole call, not the log cut at `at`.
+  if (rule.kind === "freePeriod") {
+    return evaluateFreePeriod(context, rule, at, anchor);
+  }
+
   const log = clip(context.entries, at);
   const first = log[0]?.start ?? at;
 
@@ -1271,9 +1355,6 @@ function evaluateRule(
     case "restRequirement":
       return evaluateRestRequirement(context, rule, log, at, anchor);
 
-    case "freePeriod":
-      return evaluateFreePeriod(context, rule, log, at, anchor);
-
     case "restBeforeDuty":
       return evaluateRestBeforeDuty(rule, log, at);
 
@@ -1406,7 +1487,14 @@ function evaluateRule(
 
           if (firstStart < span.end) {
             const room = span.end - firstStart;
-            best += Number((room + named.minimum - 1n) / named.minimum);
+            // `best` is only held to `atLeast`, a safe integer, so a count past the safe
+            // integers is capped there without changing an answer.
+            best += Number(
+              min(
+                (room + named.minimum - 1n) / named.minimum,
+                BigInt(Number.MAX_SAFE_INTEGER),
+              ),
+            );
           }
         }
 
@@ -1984,8 +2072,15 @@ function candidateInstants(
   }
 
   if (rule.kind === "freePeriod") {
-    const rests = runsOf(context.entries, rule.restStatuses);
     const minimum = rule.minimum;
+    // A run's points lie at most `atLeast + 1` free periods and a window length past its end, so
+    // a run further than that before the range, or after it, adds none inside it.
+    const farthest =
+      (BigInt(rule.atLeast) + 1n) * minimum +
+      shifts.reduce((longest, shift) => max(longest, shift), 0n);
+    const rests = runsOf(context.entries, rule.restStatuses).filter(
+      (run) => run.end + farthest >= range.start && run.start <= until + 1n,
+    );
     // A window fails only while it holds fewer than `atLeast` free periods, so a run's count
     // changing above `atLeast` changes no answer: each run's first `atLeast + 1` multiples are
     // the ones that matter. Of those, only the ones that land in the range are taken.
@@ -2060,11 +2155,7 @@ function candidateInstants(
 
   // Before the log's first entry and the first use, no rule has anything to fail on, so the
   // period boundaries walked are the ones from there to `until`, however long `range` is.
-  const firstEvidence = [
-    (context.entries[0] as DutyLogEntry).start,
-    ...(rule.kind === "usageLookback" ? rule.uses : []),
-  ].reduce(min);
-  const from = max(range.start, firstEvidence);
+  const from = max(range.start, firstEvidence(context, rule) as bigint);
 
   for (const unit of unitsOf(rule)) {
     walkBoundaries(scaleFor(context, unit), unit, from, until, around);
@@ -2136,6 +2227,21 @@ const MAX_CANDIDATE_INSTANTS = 1_000_000;
 const FORWARD_CHUNK = 2_592_000_000_000_000n;
 
 /**
+ * The earliest instant a rule has anything to fail on: the log's first entry, or for
+ * `usageLookback` its first use when that is earlier. Undefined for an empty log.
+ */
+function firstEvidence(
+  context: DutyContext,
+  rule: ResolvedRule,
+): bigint | undefined {
+  const first = context.entries[0]?.start;
+
+  return first === undefined
+    ? undefined
+    : [first, ...(rule.kind === "usageLookback" ? rule.uses : [])].reduce(min);
+}
+
+/**
  * The violations of one rule, each listed in the range it began in and reported by its worst
  * window, which may end after the range.
  *
@@ -2148,8 +2254,17 @@ const FORWARD_CHUNK = 2_592_000_000_000_000n;
 function ruleViolations(
   context: DutyContext,
   rule: ResolvedRule,
-  range: UnitSpan,
+  asked: UnitSpan,
 ): Failure[] {
+  const evidence = firstEvidence(context, rule);
+
+  if (evidence === undefined) {
+    return [];
+  }
+
+  // Nothing fails before the rule's first evidence, so a range opening earlier opens just
+  // before it: no check is made, and no local window resolved, decades before the log.
+  const range = { start: max(asked.start, evidence - 1n), end: asked.end };
   // A floor on rest is not judged on a window that starts before the log: the log cannot say
   // what happened then. A cap is, since time no entry covers never counts towards one.
   const logStart = context.entries[0]?.start;
@@ -2161,7 +2276,7 @@ function ruleViolations(
       !(
         judgesRest &&
         logStart !== undefined &&
-        evaluation.window.start < logStart
+        (evaluation.window.start < logStart || evaluation.beforeLog === true)
       );
     const failure: Failure | null =
       judged && !evaluation.satisfied ? { evaluation, at } : null;

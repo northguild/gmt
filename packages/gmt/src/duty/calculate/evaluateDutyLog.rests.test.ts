@@ -434,12 +434,12 @@ describe("evaluateDutyLog — restBeforeDuty", () => {
   });
 
   // Off 12 hours, a 10-hour duty, then a rest and a new duty. The duty that rest ends is the 10
-  // hours before it, however far back the 24-hour lookback cuts the rest, so 12 hours are due
-  // after 12 hours off and after 48.
+  // hours before it, and the rest is measured whole, so 12 hours are due after 12 hours off and
+  // after 48.
   it.each`
     rest       | at                        | used
     ${"PT12H"} | ${"2024-01-02T10:30:00Z"} | ${"PT12H"}
-    ${"PT48H"} | ${"2024-01-03T22:30:00Z"} | ${"PT24H"}
+    ${"PT48H"} | ${"2024-01-03T22:30:00Z"} | ${"PT48H"}
   `(
     "requires 12 hours after a 10-hour duty and $rest off",
     ({ rest, at, used }) => {
@@ -526,4 +526,187 @@ describe("evaluateDutyLog — restBeforeDuty", () => {
       ).toMatchObject({ satisfied, used: rest, limit });
     },
   );
+  // 1.5 × the duty before the rest, never under 8 hours. A duty that follows 11 hours of driving
+  // and 7 hours off fails: the 13 hours off before that driving end a different duty. Logging an
+  // hour of the driving as rest leaves 10 hours of driving and 8 off, which fails too.
+  it.each`
+    driving    | off       | used      | limit
+    ${"PT11H"} | ${"PT7H"} | ${"PT7H"} | ${"PT16H30M"}
+    ${"PT10H"} | ${"PT8H"} | ${"PT8H"} | ${"PT15H"}
+  `(
+    "judges the rest right before the duty against the $driving duty it ends",
+    ({ driving, off, used, limit }) => {
+      expect(
+        outcome(
+          [
+            ["driving", "PT5H"],
+            ["off", "PT13H"],
+            ["driving", driving],
+            ["off", off],
+            ["driving", "PT1H"],
+          ],
+          "2024-01-02T13:00:00Z",
+          {
+            label: "1.5 before duty",
+            kind: "restBeforeDuty",
+            restStatuses: ["off"],
+            minimum: "PT8H",
+            within: "PT26H",
+            orFactor: { k: 1.5, floor: "PT1H" },
+          },
+        ),
+      ).toMatchObject({ satisfied: false, used, limit });
+    },
+  );
+
+  // Twice a 14-hour duty is 28 hours, longer than the 24 hours `within` looks back. The rest is
+  // measured whole, as the duty is, so 28 hours of rest or more meet it.
+  it.each`
+    rest        | satisfied
+    ${"PT27H"}  | ${false}
+    ${"PT28H"}  | ${true}
+    ${"PT40H"}  | ${true}
+    ${"PT100H"} | ${true}
+  `(
+    "meets twice a 14-hour duty with $rest off: $satisfied",
+    ({ rest, satisfied }) => {
+      const steps: DutyStep[] = [
+        ["off", "PT10H"],
+        ["driving", "PT14H"],
+        ["off", rest],
+        ["driving", "PT2H"],
+      ];
+      expect(
+        outcome(steps, dutySequence(START, steps)[3]?.end as string, {
+          label: "twice the duty",
+          kind: "restBeforeDuty",
+          restStatuses: ["off"],
+          minimum: "PT8H",
+          within: "PT24H",
+          orFactor: { k: 2, floor: "PT9H" },
+        }),
+      ).toMatchObject({ satisfied, used: rest, limit: "PT28H" });
+    },
+  );
+});
+
+describe("evaluateDutyLog — restBeforeDuty with more rest", () => {
+  /** A small deterministic generator (mulberry32), so the property runs the same every time. */
+  function random(seed: number) {
+    let state = seed >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const statuses = ["off", "driving", "onDuty"];
+  const rules: DutyRule[] = [
+    {
+      label: "10 in 24",
+      kind: "restBeforeDuty",
+      restStatuses: ["off"],
+      minimum: "PT10H",
+      within: "PT24H",
+    },
+    {
+      label: "as long as the duty",
+      kind: "restBeforeDuty",
+      restStatuses: ["off"],
+      minimum: "PT10H",
+      within: "PT24H",
+      orFactor: { k: 1, floor: "PT11H" },
+    },
+    {
+      label: "1.5 × the duty",
+      kind: "restBeforeDuty",
+      restStatuses: ["off"],
+      minimum: "PT8H",
+      within: "PT26H",
+      orFactor: { k: 1.5, floor: "PT1H" },
+    },
+  ];
+  const quarters = (hours: number) => hours * 4;
+  const minutes = (n: number) => `PT${15 * n}M`;
+
+  // Logging more of the time before the duty being judged as rest, without removing a duty, never
+  // turns a pass into a fail. Each seed builds about four days of entries ending in a duty, and
+  // logs part of one earlier entry outside rest as off instead. Logging a whole duty as rest can
+  // rightly fail the next duty: the two rests around it become one, which ends the duty before.
+  // Seeds 1382, 6260, 6943, 8786 and 9853 each failed when the rest judged was the longest one
+  // inside `within`, whatever duty came after it.
+  it.each(
+    [
+      ...Array.from({ length: 200 }, (_, seed) => seed),
+      1382,
+      6260,
+      6943,
+      8786,
+      9853,
+    ].map((seed) => ({ seed })),
+  )("never fails a duty for more rest before it, seed $seed", ({ seed }) => {
+    const next = random(seed + 1);
+    const lengths: [string, number][] = [];
+    let previous = "";
+    for (let index = 0; lengths.length < 12 && index < 100; index++) {
+      const status = statuses[Math.floor(next() * statuses.length)] as string;
+      if (status === previous) continue;
+      lengths.push([status, 1 + Math.floor(next() * quarters(14))]);
+      previous = status;
+    }
+    if (previous === "off") {
+      lengths.push(["driving", 1 + Math.floor(next() * quarters(4))]);
+    }
+
+    // The duty judged is the run outside rest at the end; only entries before it change.
+    let dutyIndex = lengths.length - 1;
+    for (; dutyIndex > 0; dutyIndex--) {
+      if ((lengths[dutyIndex - 1] as [string, number])[0] === "off") break;
+    }
+    const choices = lengths
+      .map((entry, index) => ({ entry, index }))
+      .filter(
+        ({ entry, index }) =>
+          entry[0] !== "off" && entry[1] > 1 && index < dutyIndex,
+      );
+    const chosen = choices[Math.floor(next() * choices.length)];
+    const steps: DutyStep[] = lengths.map(([status, n]) => [
+      status,
+      minutes(n),
+    ]);
+
+    if (chosen === undefined) {
+      return;
+    }
+
+    // Two times in three the part logged as off touches an end of the entry, so it lengthens
+    // the rest beside it, as logging the last hour of a duty as rest does.
+    const [status, n] = chosen.entry;
+    const side = next();
+    const span = 1 + Math.floor(next() * (n - 1));
+    const from =
+      side < 1 / 3
+        ? 0
+        : side < 2 / 3
+          ? n - span
+          : Math.floor(next() * (n - span + 1));
+    const to = from + span;
+    const rested: DutyStep[] = [
+      ...steps.slice(0, chosen.index),
+      ...(from > 0 ? [[status, minutes(from)] as DutyStep] : []),
+      ["off", minutes(to - from)],
+      ...(to < n ? [[status, minutes(n - to)] as DutyStep] : []),
+      ...steps.slice(chosen.index + 1),
+    ];
+    const at = dutySequence(START, steps).at(-1)?.end as string;
+
+    for (const rule of rules) {
+      if (outcome(steps, at, rule).satisfied) {
+        expect(outcome(rested, at, rule).satisfied, rule.label).toBe(true);
+      }
+    }
+  });
 });

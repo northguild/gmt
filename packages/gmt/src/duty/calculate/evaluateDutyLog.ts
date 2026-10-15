@@ -41,10 +41,12 @@ import type {
  * - Returns `null` when the log fails `isValidDutyLog`, when `at` is not an ISO 8601 instant
  *   string, when a rule is malformed (an unknown kind, a status list that is empty or holds a
  *   non-string, a duration that is not positive exact time, a malformed period, a duplicate
- *   label, a count of periods past 10,000 alone or times `adjacent`, `lookback` or `periods`),
- *   when `options.timeZone` is invalid, when a rule counts `operatorDays` without
- *   `options.dayStartTime`, and when a window, or a requirement `orFactor` scales, falls outside
- *   Temporal's range.
+ *   label, a count of periods past 10,000 alone or times `adjacent`, `lookback` or `periods`, a
+ *   `containing.count` past 10,000), when `options.timeZone` is invalid, when a rule counts
+ *   `operatorDays` without `options.dayStartTime`, when a window, or a requirement `orFactor`
+ *   scales, falls outside Temporal's range, when a count of free periods passes
+ *   `Number.MAX_SAFE_INTEGER`, and when one run of rest in a `freePeriod` window holds more than
+ *   20,000 of its `containing` windows (about 54 years of a daily window).
  *
  * @param log the duty log, ordered and non-overlapping
  * @param at ISO 8601 instant string to evaluate at
