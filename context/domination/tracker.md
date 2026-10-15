@@ -92,10 +92,10 @@ npm. A Core primitive ships with the realm that first uses it.
 | 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | 1.18.0  | Done        |
 | 15 | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | 1.18.0  | Done        |
 | 16 | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | 1.18.0  | Done        |
-| 17 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | —       | Done        |
-| 18 | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                      | #307  | —       | Done        |
-| 19 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                      | #195  | —       | Done        |
-| 20 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | Cut     | Done        |
+| 17 | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | 1.19.0  | Done        |
+| 18 | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                      | #307  | 1.19.0  | Done        |
+| 19 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                      | #195  | 1.19.0  | Done        |
+| 20 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | 1.19.0  | Done        |
 | 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | (SPA-46), (SPA-48)     | #197  | —       | Not started |
 | 22 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                      | #198  | —       | Not started |
 | 23 | MAR-18  | Maritime   | Ship's time, clock changes, zone<br>descriptions, DTG, date line<br>crossing        | —                      | #199  | —       | Not started |
