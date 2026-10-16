@@ -50,15 +50,15 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns "unique" | "ambiguous" | "nonexistent", or null on invalid input
  *
- * @example classifyLocal("2024-07-15T12:00:00", "America/New_York") // "unique"
- * @example classifyLocal("2024-11-03T01:30:00", "America/New_York") // "ambiguous" (fall-back overlap)
- * @example classifyLocal("2024-03-10T02:30:00", "America/New_York") // "nonexistent" (spring-forward gap)
+ * @example classifyLocal("2024-07-15T12:00:00", "Asia/Tokyo") // "unique"
+ * @example classifyLocal("2024-10-27T01:30:00", "Europe/London") // "ambiguous" (fall-back overlap)
+ * @example classifyLocal("2024-10-06T02:30:00", "Australia/Sydney") // "nonexistent" (spring-forward gap)
  * @example classifyLocal("2024-04-07T01:45:00", "Australia/Lord_Howe") // "ambiguous" (a 30-minute overlap)
  * @example classifyLocal("2024-09-29T03:15:00", "Pacific/Chatham") // "nonexistent" (a 45-minute-offset zone's gap)
  * @example classifyLocal("2011-12-30T12:00:00", "Pacific/Apia") // "nonexistent" (the day Samoa skipped crossing the date line)
  * @example classifyLocal("2024-11-03T01:30:00", "UTC") // "unique" (UTC has no transitions)
  * @example classifyLocal("1970-01-01T12:00:00", "-00:44:30") // "unique" (a fixed offset has no transitions)
- * @example classifyLocal("2024-11-03T01:30:00-04:00", "America/New_York") // null (not a zoneless wall time)
+ * @example classifyLocal("2024-11-03T01:30:00+00:00", "Europe/London") // null (not a zoneless wall time)
  * @example classifyLocal("2024-11-03T01:30:00", "Invalid/Zone") // null
  */
 export function classifyLocal(

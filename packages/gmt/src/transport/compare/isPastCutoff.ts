@@ -30,7 +30,7 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  * @example isPastCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // true
  * @example isPastCutoff("2024-06-12T14:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // false
  * @example isPastCutoff("2024-06-12T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // true (at the cut-off, the window has closed)
- * @example isPastCutoff("2024-11-03T01:30:00-05:00[America/New_York]", "2024-11-03T01:30:00-04:00[America/New_York]") // true (the second 01:30 is an hour after the first)
+ * @example isPastCutoff("2024-04-07T02:30:00+10:00[Australia/Sydney]", "2024-04-07T02:30:00+11:00[Australia/Sydney]") // true (the second 02:30 is an hour after the first)
  * @example isPastCutoff("2024-06-12T16:00:00", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // false (a zoneless now is not a moment)
  * @example isPastCutoff("2024-06-12T16:00:00Z", "") // false
  */

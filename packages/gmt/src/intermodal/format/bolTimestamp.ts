@@ -47,7 +47,7 @@ const BILL_OF_LADING_EVENTS: ReadonlySet<unknown> = new Set<BillOfLadingEvent>([
  * (`TransportDocument`) types `issueDate` ("Local date when the transport document has been
  * issued"), `receivedForShipmentDate` and `shippedOnBoardDate` as `format: date`: a date with no
  * time and no offset. A system that records the loading as an instant has to turn it back into
- * that local date, and taking the UTC date gets it wrong in both directions: 21:00 in New York is
+ * that local date, and taking the UTC date gets it wrong in both directions: 22:00 in São Paulo is
  * 01:00Z the next day, and 07:00 in Shanghai is 23:00Z the day before.
  *
  * - **The result is a date with no time component**, `YYYY-MM-DD`, as
@@ -78,15 +78,15 @@ const BILL_OF_LADING_EVENTS: ReadonlySet<unknown> = new Set<BillOfLadingEvent>([
  * @param options The zone of the place the event happened
  * @returns the local calendar date as "YYYY-MM-DD", or "" on invalid input
  *
- * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" }) // "2024-06-15" (loaded at 21:00 local; the UTC date is the 16th)
+ * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/Sao_Paulo" }) // "2024-06-15" (loaded at 22:00 local; the UTC date is the 16th)
  * @example bolTimestamp("2024-06-14T23:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" }) // "2024-06-15" (loaded at 07:00 local; the UTC date is the 14th)
- * @example bolTimestamp("2024-06-15T21:00:00-04:00", "received", { timeZone: "America/New_York" }) // "2024-06-15"
- * @example bolTimestamp("2024-06-16T09:00:00+08:00[Asia/Shanghai]", "issue", { timeZone: "America/New_York" }) // "2024-06-15" (the bracketed zone is not the zone the date is read in)
+ * @example bolTimestamp("2024-06-15T21:00:00+02:00", "received", { timeZone: "Africa/Johannesburg" }) // "2024-06-15"
+ * @example bolTimestamp("2024-06-16T09:00:00+08:00[Asia/Shanghai]", "issue", { timeZone: "America/Sao_Paulo" }) // "2024-06-15" (the bracketed zone is not the zone the date is read in)
  * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "+08:00" }) // "2024-06-16" (a fixed offset)
  * @example bolTimestamp("2011-12-30T10:00:00Z", "shippedOnBoard", { timeZone: "Pacific/Apia" }) // "2011-12-31" (Samoa deleted 30 December)
  * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard") // "" (every B/L date is local: the zone is required)
- * @example bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }) // "" (not a B/L event)
- * @example bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_York" }) // "" (no offset: not a moment)
+ * @example bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "Europe/London" }) // "" (not a B/L event)
+ * @example bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "Asia/Kolkata" }) // "" (no offset: not a moment)
  * @example bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/Nowhere" }) // ""
  * @example bolTimestamp("1970-01-01T00:30:00Z", "issue", { timeZone: "-00:44:30" }) // "1969-12-31" (23:45:30 the day before, at a stored offset with seconds)
  */

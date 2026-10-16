@@ -39,12 +39,12 @@ import { isValidCalendarZonedInterval } from "./validate";
  * @param unit unit string — any `DateTimeUnit`
  * @returns exact length of the interval expressed in `unit`, or null on invalid input
  *
- * @example intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour") // 23 (spring forward)
- * @example intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "day") // 1
+ * @example intervalLengthZoned("2024-03-31T00:00:00+00:00[Europe/London]", "2024-04-01T00:00:00+01:00[Europe/London]", "hour") // 23 (spring forward)
+ * @example intervalLengthZoned("2024-03-31T00:00:00+00:00[Europe/London]", "2024-04-01T00:00:00+01:00[Europe/London]", "day") // 1
  * @example intervalLengthZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "day") // 0
- * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "hour") // 42
- * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "day") // null (calendar unit across two time zones)
- * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "America/New_York"), "day") // 1.75 (both ends in one zone first)
+ * @example intervalLengthZoned("2024-01-01T00:00:00+05:30[Asia/Kolkata]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "hour") // 52.5
+ * @example intervalLengthZoned("2024-01-01T00:00:00+05:30[Asia/Kolkata]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "day") // null (calendar unit across two time zones)
+ * @example intervalLengthZoned("2024-01-01T00:00:00+05:30[Asia/Kolkata]", convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "Asia/Kolkata"), "day") // 2.1875 (both ends in one zone first)
  * @example intervalLengthZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "day") // null
  */
 export function intervalLengthZoned(

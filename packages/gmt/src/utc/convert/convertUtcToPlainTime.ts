@@ -15,7 +15,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns plain time string in "HH:mm:ss" format or "" on invalid input
  *
  * @example convertUtcToPlainTime("2024-02-29T00:00:00Z") // "00:00:00"
- * @example convertUtcToPlainTime("2024-02-29T00:00:00Z", { timeZone: "America/New_York" }) // "19:00:00"
+ * @example convertUtcToPlainTime("2024-02-29T00:00:00Z", { timeZone: "Asia/Tokyo" }) // "09:00:00"
  * @example convertUtcToPlainTime("invalid") // ""
  * @example convertUtcToPlainTime("1970-01-01T12:44:30Z", { timeZone: "-00:44:30" }) // "12:00:00" (a stored offset with seconds)
  */

@@ -2,8 +2,8 @@ import { parseCalendarZonedValue } from "../../internal";
 
 /**
  * Return true if `value` is a valid GMT ZonedDateTime string: a bare ISO zoned datetime
- * ("2024-10-03T14:30:45-04:00[America/New_York]") or an RFC 9557 calendar-annotated one
- * ("2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"), as
+ * ("2024-10-03T14:30:45+02:00[Africa/Johannesburg]") or an RFC 9557 calendar-annotated one
+ * ("2024-10-03T14:30:45+02:00[Africa/Johannesburg][u-ca=hebrew]"), as
  * `Temporal.ZonedDateTime#toString()` and `convertZonedToCalendar` write it.
  *
  * - Parallel to `isValidZonedDateTime`, which accepts `[u-ca=iso8601]` and rejects every other
@@ -34,14 +34,14 @@ import { parseCalendarZonedValue } from "../../internal";
  * @param value candidate zoned datetime string, optionally calendar-annotated
  * @returns boolean indicating validity
  *
- * @example isValidCalendarZonedDateTime("2024-10-03T14:30:45-04:00[America/New_York]") // true
- * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]") // true
- * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[America/New_York][foo=bar][u-ca=hebrew]") // true (elective annotation ignored)
- * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]") // false (calendar before zone)
+ * @example isValidCalendarZonedDateTime("2024-10-03T14:30:45+02:00[Africa/Johannesburg]") // true
+ * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Africa/Johannesburg][u-ca=hebrew]") // true
+ * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Africa/Johannesburg][foo=bar][u-ca=hebrew]") // true (elective annotation ignored)
+ * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[u-ca=hebrew][Africa/Johannesburg]") // false (calendar before zone)
  * @example isValidCalendarZonedDateTime("2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese;era=heisei]") // false (not RFC 9557)
- * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+03:00[America/New_York][u-ca=hebrew]") // false (offset wrong for the zone)
+ * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+03:00[Africa/Johannesburg][u-ca=hebrew]") // false (offset wrong for the zone)
  * @example isValidCalendarZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
- * @example isValidCalendarZonedDateTime("2024-02-24 14:30:00-05:00[America/New_York][u-ca=hebrew]") // false (space separator)
+ * @example isValidCalendarZonedDateTime("2024-02-24 14:30:00+02:00[Africa/Johannesburg][u-ca=hebrew]") // false (space separator)
  * @example isValidCalendarZonedDateTime("invalid") // false
  */
 export function isValidCalendarZonedDateTime(value: string): boolean {

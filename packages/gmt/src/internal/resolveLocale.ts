@@ -7,7 +7,7 @@ export type LocalesArgument = string | string[];
  * Resolve a `locale` argument to the single BCP 47 tag a locale-aware function reads.
  *
  * - Follows ECMA-402 CanonicalizeLocaleList: a string is a one-tag list, every tag is
- *   canonicalized (`"EN-us"` → `"en-US"`) and duplicates are dropped.
+ *   canonicalized (`"EN-gb"` → `"en-GB"`) and duplicates are dropped.
  * - The first tag with available locale data wins (`Intl.DateTimeFormat.supportedLocalesOf`), as
  *   ECMA-402's locale negotiation picks; a list with no available tag keeps its first tag, exactly
  *   as that tag passed alone would be read.
@@ -58,7 +58,7 @@ export function resolveLocale(locales: unknown): string | null {
  * @param locales raw locale argument from caller input
  * @returns the resolved BCP 47 tag, or `null` when the argument is omitted, empty or invalid
  *
- * @example resolveRequiredLocale("EN-us") // "en-US"
+ * @example resolveRequiredLocale("EN-gb") // "en-GB"
  * @example resolveRequiredLocale(undefined) // null
  * @example resolveRequiredLocale([]) // null
  */

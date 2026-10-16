@@ -28,17 +28,17 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `{ minimalDays: 1 }` to keep the Node 22 result for such a locale on every runtime.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @param options The minimal-days-in-first-week rule
  * @returns 52 or 53, or null on invalid input
  *
- * @example getWeeksInLocaleWeekYear("2024-06-15", "en-US") // 52
- * @example getWeeksInLocaleWeekYear("2022-06-15", "en-US", { minimalDays: 1 }) // 53 — Dec 26, 2021 to Jan 1, 2023
- * @example getWeeksInLocaleWeekYear("2022-06-15", "en-US") // 52 — ISO default: Jan 2, 2022 to Jan 1, 2023
+ * @example getWeeksInLocaleWeekYear("2024-06-15", "pt-BR") // 52
+ * @example getWeeksInLocaleWeekYear("2022-06-15", "ja-JP", { minimalDays: 1 }) // 53 — Dec 26, 2021 to Jan 1, 2023
+ * @example getWeeksInLocaleWeekYear("2022-06-15", "ja-JP") // 52 — ISO default: Jan 2, 2022 to Jan 1, 2023
  * @example getWeeksInLocaleWeekYear("2020-06-15", "de-DE") // 53
- * @example getWeeksInLocaleWeekYear("2024-06-15", "en-US", { minimalDays: 8 }) // null
- * @example getWeeksInLocaleWeekYear("+275760-09-13", "en-US") // 53 (its end, the week 1 of +275761, lies past the range)
- * @example getWeeksInLocaleWeekYear("invalid", "en-US") // null
+ * @example getWeeksInLocaleWeekYear("2024-06-15", "hi-IN", { minimalDays: 8 }) // null
+ * @example getWeeksInLocaleWeekYear("+275760-09-13", "pt-BR") // 53 (its end, the week 1 of +275761, lies past the range)
+ * @example getWeeksInLocaleWeekYear("invalid", "ar-EG") // null
  * @example getWeeksInLocaleWeekYear("2024-12-29", ["fr-FR", "en-US"]) // 52
  */
 export function getWeeksInLocaleWeekYear(

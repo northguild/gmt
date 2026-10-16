@@ -25,7 +25,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
  *   from 03:45 to 04:00.
  * - Two values in the same time zone are equal only when their bucket starts are the same
- *   instant, as in `areUnixEqualBy`: both passes of New York's repeated 01:00 on its 2024
+ *   instant, as in `areUnixEqualBy`: both passes of London's repeated 01:00 on its 2024
  *   fall-back read the same wall clock but are different hours. Values in different zones are
  *   compared by their buckets' local labels, since their instants never line up.
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
@@ -43,11 +43,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param optionsArg optional setting for the week's first day
  * @returns true if both values share the same local start-of-unit boundary, false on an unsupported unit or invalid input
  *
- * @example areZonedEqualBy("2024-03-15T10:00:00-04:00[America/New_York]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "day") // true (both are local March 15 in their own zone)
- * @example areZonedEqualBy("2024-03-15T10:00:00-04:00[America/New_York]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "days") // true (plural unit)
- * @example areZonedEqualBy("2024-03-15T23:30:00-04:00[America/New_York]", "2024-03-16T04:30:00+00:00[UTC]", "day") // false (same instant, different local calendar day per zone)
- * @example areZonedEqualBy("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]", "hour") // false (both read 01:30, but they sit in the two different real 01:00 hours)
- * @example areZonedEqualBy("invalid", "2024-03-15T10:00:00-04:00[America/New_York]", "day") // false
+ * @example areZonedEqualBy("2024-03-15T10:00:00+09:00[Asia/Tokyo]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "day") // true (both are local March 15 in their own zone)
+ * @example areZonedEqualBy("2024-03-15T10:00:00+09:00[Asia/Tokyo]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "days") // true (plural unit)
+ * @example areZonedEqualBy("2024-03-15T23:30:00-03:00[America/Sao_Paulo]", "2024-03-16T02:30:00+00:00[UTC]", "day") // false (same instant, different local calendar day per zone)
+ * @example areZonedEqualBy("2024-10-27T01:30:00+01:00[Europe/London]", "2024-10-27T01:30:00+00:00[Europe/London]", "hour") // false (both read 01:30, but they sit in the two different real 01:00 hours)
+ * @example areZonedEqualBy("invalid", "2024-03-15T10:00:00+02:00[Africa/Johannesburg]", "day") // false
  */
 export function areZonedEqualBy(
   value1: string,

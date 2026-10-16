@@ -10,7 +10,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
  *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns current millisecond string (zero-padded to 3 digits) or "" on invalid input
  *
- * @example getZonedMillisecond("America/New_York") // "000"
+ * @example getZonedMillisecond("America/Sao_Paulo") // "123"
  * @example getZonedMillisecond("invalid") // ""
  */
 export function getZonedMillisecond(ianaTimezone: string): string {

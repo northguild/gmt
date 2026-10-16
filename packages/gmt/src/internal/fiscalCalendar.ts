@@ -92,8 +92,8 @@ export function fiscalYearOf(
 /**
  * Return the 1-based period holding `week` of a `weeks`-long fiscal year under `pattern`.
  *
- * The 53rd week, when the year has one, is appended to the final period — the NRF adds it
- * "to the end of the calendar", which turns a 4-5-4 year's last quarter into 4-5-5.
+ * GMT rule: the 53rd week, when the year has one, is appended to the final period, which
+ * turns a 4-5-4 year's last quarter into 4-5-5. The NRF example (US) places it the same way.
  */
 export function fiscalPeriodOfWeek(
   week: number,

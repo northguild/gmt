@@ -20,7 +20,7 @@ import { isValidZonedDateTime } from "../../validate/isValidZonedDateTime";
  * @returns true if start and end form a valid zoned interval, or false on invalid input
  *
  * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
- * @example isValidZonedInterval("2024-06-15T12:00:00-04:00[America/New_York]", "2024-06-15T12:00:00-04:00[America/New_York]") // true
+ * @example isValidZonedInterval("2024-06-15T12:00:00+02:00[Africa/Johannesburg]", "2024-06-15T12:00:00+02:00[Africa/Johannesburg]") // true
  * @example isValidZonedInterval("2024-12-31T23:59:59+00:00[UTC]", "2024-01-01T10:00:00+00:00[UTC]") // false
  * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]", "2024-12-31T23:59:59+00:00[UTC][foo=bar]") // true (ISO calendar and elective annotations)
  * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // false (non-ISO calendar: use isValidCalendarZonedInterval)

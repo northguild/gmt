@@ -30,10 +30,10 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
- * @example formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" }) // "February 3 - 5, 2024"
- * @example formatDateRange("2024-02-03", "2024-06-10", "en-US", { dateStyle: "long" }) // "February 3 - June 10, 2024"
- * @example formatDateRange("2024-02-03", "2024-02-05", "en-US", { timeZoneName: "short" }) // "2/3/2024 - 2/5/2024"
- * @example formatDateRange("invalid", "2024-02-05", "en-US") // "" (invalid input)
+ * @example formatDateRange("2024-02-03", "2024-02-05", "en-GB", { dateStyle: "long" }) // "3 - 5 February 2024"
+ * @example formatDateRange("2024-02-03", "2024-06-10", "pt-BR", { dateStyle: "long" }) // "3 de fevereiro - 10 de junho de 2024"
+ * @example formatDateRange("2024-02-03", "2024-02-05", "hi-IN", { timeZoneName: "short" }) // "3/2/2024 - 5/2/2024"
+ * @example formatDateRange("invalid", "2024-02-05", "ja-JP") // "" (invalid input)
  * @example formatDateRange("2024-02-03", "2024-02-05", ["fr-FR", "en-US"], { dateStyle: "long" }) // "3-5 février 2024" (GMT writes range dashes as ASCII hyphens)
  */
 export function formatDateRange(

@@ -9,7 +9,7 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
 
 /**
  * Parse a datetime string against a caller-supplied token pattern (e.g.
- * `"MM/dd/yyyy HH:mm:ss"`, `"dd-MMM-yyyy h:mm a"`) and return it as an
+ * `"dd/MM/yyyy HH:mm:ss"`, `"dd-MMM-yyyy h:mm a"`) and return it as an
  * ISO `PlainDateTime` string.
  *
  * - **Decoding, not display.** This is for consuming a *known, fixed*
@@ -56,9 +56,10 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   (`""`). Any other character that is not a letter (`/ - , space :`,
  *   digits and so on) is a literal with no quoting.
  * - `MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG` are locale-aware. If
- *   `locale` is omitted and the pattern uses any of them, GMT defaults
- *   to `"en-US"` rather than returning `""` for every caller who didn't
- *   have another locale in mind.
+ *   `locale` is omitted (or an empty list) and the pattern uses any of
+ *   them, GMT reads English names in `"en"`, the language with no
+ *   region, rather than returning `""`. CLDR gives `"en"` the same names
+ *   as `"en-US"`. Pass `locale` for any other language.
  * - `EEEE`/`EEE` are matched against the locale's weekday names but the
  *   result is **not** cross-checked against the constructed date — e.g.
  *   `"Monday, 2024-03-15 14:00"` parses successfully against
@@ -71,7 +72,7 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   pattern is still valid but the hour stays ambiguous — GMT resolves
  *   it as if AM had matched (12 → 0, otherwise unchanged).
  * - Adjacent variable-width numeric tokens with no literal separator
- *   (e.g. `"Mdyyyy"`) are inherently ambiguous: each becomes a greedy
+ *   (e.g. `"dMyyyy"`) are inherently ambiguous: each becomes a greedy
  *   `\d{1,2}`/etc. in sequence, so the split between fields depends on
  *   regex backtracking, not on any documented rule. Prefer zero-padded
  *   tokens (`MM`, `dd`) or an explicit separator for reliable parsing.
@@ -90,21 +91,21 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   window reads no clock for it. A two-digit year is a legacy form; a
  *   four-digit year is the one to ask a data source for.
  *
- * @param value The string to decode (e.g. "03/15/2024 14:30:00")
- * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy HH:mm:ss")
- * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
+ * @param value The string to decode (e.g. "15/03/2024 14:30:00")
+ * @param pattern The token pattern describing `value`'s shape (e.g. "dd/MM/yyyy HH:mm:ss")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en")
  * @param options The hundred-year window a `yy` token resolves in
  * @returns ISO `PlainDateTime` string, or "" on no match, malformed pattern, or invalid input
  *
- * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "2024-03-15T14:30:00"
+ * @example parseDateTimeWithPattern("15/03/2024 14:30:00", "dd/MM/yyyy HH:mm:ss") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("15-Mar-2024 02:30 PM", "dd-MMM-yyyy hh:mm a") // "2024-03-15T14:30:00"
- * @example parseDateTimeWithPattern("Mar 15, '24 at 14:30", "MMM d, ''yy 'at' HH:mm", undefined, { yearWindow: 2000 }) // "2024-03-15T14:30:00" ('' is one literal quote)
+ * @example parseDateTimeWithPattern("15 Mar '24 at 14:30", "d MMM ''yy 'at' HH:mm", undefined, { yearWindow: 2000 }) // "2024-03-15T14:30:00" ('' is one literal quote)
  * @example parseDateTimeWithPattern("99-03-15 14:30", "yy-MM-dd HH:mm", undefined, { yearWindow: 1950 }) // "1999-03-15T14:30:00" (1950–2049 window)
  * @example parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm", undefined, { yearWindow: "rolling" }) // "2024-03-15T14:30:00" (while the current UTC year is 1975–2074)
  * @example parseDateTimeWithPattern("24-03-15 14:30", "yy-MM-dd HH:mm") // "" (yy with no window)
- * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss", undefined, { yearWindow: 2000 }) // "2024-03-15T14:30:00" (yyyy ignores the window)
- * @example parseDateTimeWithPattern("02/31/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "" (shape-valid, not a real date)
- * @example parseDateTimeWithPattern("not a date", "MM/dd/yyyy HH:mm:ss") // ""
+ * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss", undefined, { yearWindow: 2000 }) // "2024-03-15T14:30:00" (US order; yyyy ignores the window)
+ * @example parseDateTimeWithPattern("31/02/2024 14:30:00", "dd/MM/yyyy HH:mm:ss") // "" (shape-valid, not a real date)
+ * @example parseDateTimeWithPattern("not a date", "dd/MM/yyyy HH:mm:ss") // ""
  * @example parseDateTimeWithPattern("19 mai 2024 10:20", "d MMMM yyyy HH:mm", ["fr-FR", "en-US"]) // "2024-05-19T10:20:00"
  */
 export function parseDateTimeWithPattern(

@@ -45,7 +45,7 @@ import type { Punctuality, PunctualityTolerance } from "../../types";
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M", early: "PT10M" }) // "early"
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT120M" }) // "onTime" (a 90-minute delay under a 120-minute tolerance)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z", { late: "PT15M", early: "PT0S" }) // "early" (exactly on the plan is on the early boundary, which is outside)
- * @example classifyPunctuality("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]", { late: "PT15M" }) // "late" (the same wall time an hour later, across the fall-back)
+ * @example classifyPunctuality("2024-10-27T01:30:00+01:00[Europe/London]", "2024-10-27T01:30:00+00:00[Europe/London]", { late: "PT15M" }) // "late" (the same wall time an hour later, across the fall-back)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "-PT15M" }) // null (a negative tolerance)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "P1W" }) // null (weeks need a reference point)
  */

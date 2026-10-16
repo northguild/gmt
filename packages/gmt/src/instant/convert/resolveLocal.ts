@@ -31,7 +31,7 @@ const DISAMBIGUATIONS: readonly string[] = [
  * - `localDateTime` is a PlainDateTime string, as `isValidDateTime` accepts: `<date>T<time>`
  *   with no offset (an offset means the wall time already resolved). Its RFC 9557 annotations
  *   are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
- *   (`[America/New_York]`) is ignored and `timeZone` alone resolves the wall time.
+ *   (`[Asia/Tokyo]`) is ignored and `timeZone` alone resolves the wall time.
  * - Returns `""` on invalid input.
  * - `timeZone` may be a UTC offset, including one `getTimeZoneOffset` returned with seconds. A
  *   fixed offset names one instant for every wall time, so `disambiguation` has nothing to decide
@@ -43,15 +43,15 @@ const DISAMBIGUATIONS: readonly string[] = [
  * @param optionsArg How an ambiguous or nonexistent wall time is resolved
  * @returns UTC instant string ending in "Z", or "" on invalid input
  *
- * @example resolveLocal("2024-07-15T12:00:00", "America/New_York") // "2024-07-15T16:00:00Z"
- * @example resolveLocal("2024-11-03T01:30:00", "America/New_York") // "2024-11-03T05:30:00Z" (ambiguous; "compatible" takes the earlier)
- * @example resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" }) // "2024-11-03T06:30:00Z" (the same wall time, an hour later)
- * @example resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "reject" }) // "" (ambiguous, and not guessed)
- * @example resolveLocal("2024-03-10T02:30:00", "America/New_York") // "2024-03-10T07:30:00Z" (nonexistent; "compatible" takes the later)
- * @example resolveLocal("2024-03-10T02:30:00", "America/New_York", { disambiguation: "earlier" }) // "2024-03-10T06:30:00Z"
- * @example resolveLocal("2024-07-15T12:00:00-04:00", "America/New_York") // "" (not a zoneless wall time)
+ * @example resolveLocal("2024-07-15T12:00:00", "Asia/Tokyo") // "2024-07-15T03:00:00Z"
+ * @example resolveLocal("2024-10-27T01:30:00", "Europe/London") // "2024-10-27T00:30:00Z" (ambiguous; "compatible" takes the earlier)
+ * @example resolveLocal("2024-10-27T01:30:00", "Europe/London", { disambiguation: "later" }) // "2024-10-27T01:30:00Z" (the same wall time, an hour later)
+ * @example resolveLocal("2024-10-27T01:30:00", "Europe/London", { disambiguation: "reject" }) // "" (ambiguous, and not guessed)
+ * @example resolveLocal("2024-10-06T02:30:00", "Australia/Sydney") // "2024-10-05T16:30:00Z" (nonexistent; "compatible" takes the later)
+ * @example resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "earlier" }) // "2024-10-05T15:30:00Z"
+ * @example resolveLocal("2024-07-15T12:00:00+05:30", "Asia/Kolkata") // "" (not a zoneless wall time)
  * @example resolveLocal("1970-01-01T12:00:00", "-00:44:30") // "1970-01-01T12:44:30Z" (a stored offset with seconds, what `getTimeZoneOffset` returns for Africa/Monrovia then)
- * @example resolveLocal("2024-07-15T12:00:00[foo=bar]", "America/New_York") // "2024-07-15T16:00:00Z" (elective annotation ignored)
+ * @example resolveLocal("2024-07-15T12:00:00[foo=bar]", "Africa/Johannesburg") // "2024-07-15T10:00:00Z" (elective annotation ignored)
  * @example resolveLocal("2024-07-15T12:00:00", "Invalid/Zone") // ""
  */
 export function resolveLocal(

@@ -29,7 +29,7 @@ import { utcOffset } from "../../regex";
  * @example isValidUtcOffset("Z") // false (a designator, not an offset)
  * @example isValidUtcOffset("-0400") // false (basic format)
  * @example isValidUtcOffset("+24:00") // false (out of range)
- * @example isValidUtcOffset("America/New_York") // false (a zone, not an offset)
+ * @example isValidUtcOffset("Europe/London") // false (a zone, not an offset)
  */
 export function isValidUtcOffset(value: string): boolean {
   return typeof value === "string" && utcOffset.test(value);

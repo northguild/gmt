@@ -35,8 +35,8 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param optionsArg How far the search goes, and how a window edge on a clock change is resolved
  * @returns UTC instant string ending in "Z", or "" when none within the horizon or on invalid input
  *
- * @example nextCloseAt("2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T21:00:00Z" — Monday 10:00 to 17:00 local
- * @example nextCloseAt("2024-06-15T16:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-15T16:00:00Z" — already closed
+ * @example nextCloseAt("2024-06-17T08:00:00Z", { timeZone: "Africa/Johannesburg", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T15:00:00Z" — Monday 10:00 to 17:00 local
+ * @example nextCloseAt("2024-06-15T16:00:00Z", { timeZone: "Africa/Johannesburg", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-15T16:00:00Z" — already closed
  * @example nextCloseAt("2024-06-14T23:30:00Z", { timeZone: "UTC", weekly: { 5: [{ from: "23:00", to: "06:00" }] } }) // "2024-06-15T06:00:00Z" — Friday's night window
  * @example nextCloseAt("2024-06-17T14:00:00Z", { timeZone: "UTC", weekly: { 1: [{ from: "00:00", to: "00:00" }], 2: [{ from: "00:00", to: "00:00" }] } }) // "2024-06-19T00:00:00Z" — two touching days are one interval
  * @example nextCloseAt("2024-06-17T14:00:00Z", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }, { within: "PT1H" }) // "" — still open an hour later

@@ -6,10 +6,10 @@ const calendarAnnotation = /\[!?u-ca=/;
  *
  * RFC 9557 lets any suffix annotation carry a critical flag (§3.3; `critical-flag` in the §4.1
  * ABNF), and Temporal honours it for the calendar key:
- * `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][!u-ca=hebrew]")`
+ * `Temporal.ZonedDateTime.from("5784-01-01T14:30:00+02:00[Asia/Jerusalem][!u-ca=hebrew]")`
  * succeeds in the Hebrew calendar, reading ISO year 5784 as Hebrew year 9544. The flag only makes
  * the annotation harder to ignore, so `[!u-ca=...]` is detected exactly like `[u-ca=...]`. A
- * critical time-zone annotation (`[!America/New_York]`) carries no key and does not match.
+ * critical time-zone annotation (`[!Asia/Jerusalem]`) carries no key and does not match.
  * Temporal rejects an upper-case `[U-CA=` key outright, so it needs no special case.
  *
  * Since CORE-8 (#22) the non-calendar validators no longer use it: `isValidDate`,
@@ -25,7 +25,7 @@ const calendarAnnotation = /\[!?u-ca=/;
  *
  * @example hasCalendarAnnotation("2024-02-10T12:00:00Z[u-ca=hebrew]") // true
  * @example hasCalendarAnnotation("2024-02-10T12:00:00Z[!u-ca=hebrew]") // true (critical flag)
- * @example hasCalendarAnnotation("2024-02-10T12:00:00-05:00[!America/New_York]") // false (a zone, not a calendar)
+ * @example hasCalendarAnnotation("2024-02-10T12:00:00+02:00[!Asia/Jerusalem]") // false (a zone, not a calendar)
  */
 export function hasCalendarAnnotation(value: string): boolean {
   return typeof value === "string" && calendarAnnotation.test(value);

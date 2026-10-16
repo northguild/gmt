@@ -97,8 +97,8 @@ const instantBody: RegExp = new RegExp(
  * @param value candidate zoned datetime string
  * @returns whether the unannotated part has GMT's strict extended zoned shape
  *
- * @example hasZonedDateTimeShape("2024-10-03T14:30:00-04:00[America/New_York]") // true
- * @example hasZonedDateTimeShape("2024-10-03 14:30:00-04:00[America/New_York]") // false
+ * @example hasZonedDateTimeShape("2024-10-03T14:30:00+05:30[Asia/Kolkata]") // true
+ * @example hasZonedDateTimeShape("2024-10-03 14:30:00+05:30[Asia/Kolkata]") // false
  */
 export function hasZonedDateTimeShape(value: string): boolean {
   return (

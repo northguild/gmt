@@ -33,7 +33,7 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z") // "-PT5M" (five minutes early)
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z") // "PT0S"
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z") // "PT49H30M" (hours, never days)
- * @example scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]") // "PT1H" (the same wall time, one hour later across the fall-back)
+ * @example scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]") // "PT1H" (the same wall time, one hour later across the fall-back)
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T12:14:00+02:00[Europe/Amsterdam]") // "PT14M" (the zone it is written in does not matter)
  * @example scheduleDeviation("2024-06-15T10:00:00", "2024-06-15T10:14:00Z") // "" (a zoneless plan is not a moment)
  */

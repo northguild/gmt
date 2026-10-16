@@ -10,7 +10,7 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
  * Parse a GMT ZonedDateTime string into a Temporal.ZonedDateTime, read exactly as
- * `Temporal.ZonedDateTime.from` reads it (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`,
+ * `Temporal.ZonedDateTime.from` reads it (`"2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`,
  * which is what `Temporal.ZonedDateTime#toString()` writes). Throws on invalid input — callers wrap
  * this in try-catch per GMT's sentinel contract.
  *

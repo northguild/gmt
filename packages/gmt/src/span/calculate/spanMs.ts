@@ -66,8 +66,8 @@ const MAX_SAFE_NANOSECONDS =
  * @example spanMs("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // -1000
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.123456789Z") // 123.456789
- * @example spanMs("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 82800000 — 23 hours, not 24
- * @example spanMs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000 — offsets decide, the zone is not checked
+ * @example spanMs("2024-03-30T12:00:00+00:00[Europe/London]", "2024-03-31T12:00:00+01:00[Europe/London]") // 82800000 — 23 hours, not 24
+ * @example spanMs("2024-03-10T12:00:00+05:00[Asia/Tokyo]", "2024-03-10T12:00:00-04:00[Asia/Tokyo]") // 32400000 — offsets decide, the zone is not checked
  * @example spanMs("1960-01-01T01:04:30Z", "1960-01-01T00:20:00-00:45[Africa/Monrovia]") // 0 — the zone's −00:44:30, which `-00:45` rounds
  * @example spanMs("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // null — past the safe integer range, use spanNs
  * @example spanMs("2024-03-10T12:00:00Z", "invalid") // null

@@ -28,10 +28,10 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  *   different instant, and years outside 0000–9999 were written in expanded form. For either
  *   string use `Temporal.ZonedDateTime#toString({ timeZoneName: "never" })`.
  *
- * @param value zoned ISO 8601 datetime string (e.g. "2024-03-15T14:30:00-04:00[America/New_York]")
+ * @param value zoned ISO 8601 datetime string (e.g. "2024-03-15T14:30:00-03:00[America/Sao_Paulo]")
  * @returns RFC 3339 datetime string, or "" on invalid input or a year outside 0000–9999
  *
- * @example formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]") // "2024-03-15T14:30:00-04:00"
+ * @example formatRfc3339("2024-03-15T14:30:00-03:00[America/Sao_Paulo]") // "2024-03-15T14:30:00-03:00"
  * @example formatRfc3339("2024-03-15T14:30:00Z[UTC]") // "2024-03-15T14:30:00+00:00"
  * @example formatRfc3339("1969-12-31T23:15:30-00:45[Africa/Monrovia]") // "1970-01-01T00:00:00+00:00" (offset −00:44:30)
  * @example formatRfc3339("+010000-01-01T00:00:00+00:00[UTC]") // ""

@@ -17,8 +17,8 @@ const ABS_DAY_THRESHOLD = 6;
  * @param locale BCP 47 locale(s) passed through to `Intl`
  * @param timeStyle the `Intl.DateTimeFormat` time style
  * @returns the phrase; throws where `Intl` throws, for the caller's sentinel
- * @example formatCalendarDays(1, 1710685800000, "UTC", "en-US", "short") // "tomorrow at 2:30 PM"
- * @example formatCalendarDays(-9, 1710685800000, "UTC", "en-US", "short") // "March 17, 2024 at 2:30 PM"
+ * @example formatCalendarDays(1, 1710685800000, "UTC", "en-GB", "short") // "tomorrow at 14:30"
+ * @example formatCalendarDays(-9, 1710685800000, "UTC", "en-GB", "short") // "17 March 2024 at 14:30"
  */
 export function formatCalendarDays(
   diffDays: number,
@@ -61,7 +61,7 @@ export function formatCalendarDays(
  * @param locale BCP 47 locale(s) passed through to `Intl`
  * @param timeStyle the `Intl.DateTimeFormat` time style
  * @returns the phrase; throws where Temporal or `Intl` throws
- * @example formatCalendarInstants(Temporal.Instant.from("2024-03-17T14:30:00Z"), Temporal.Instant.from("2024-03-16T09:00:00Z"), "UTC", "en-US", "short") // "tomorrow at 2:30 PM"
+ * @example formatCalendarInstants(Temporal.Instant.from("2024-03-17T14:30:00Z"), Temporal.Instant.from("2024-03-16T09:00:00Z"), "UTC", "en-GB", "short") // "tomorrow at 14:30"
  */
 export function formatCalendarInstants(
   target: Temporal.Instant,

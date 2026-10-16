@@ -49,12 +49,12 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *
  * @example intervalFromDurationZoned("2024-01-01T00:00:00+00:00[UTC]", "P1D", "start") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }
  * @example intervalFromDurationZoned("2024-01-02T00:00:00+00:00[UTC]", "P1D", "end") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }
- * @example intervalFromDurationZoned("2024-11-02T01:30:00-04:00[America/New_York]", "P1D", "start", { disambiguation: "later" }) // { start: "2024-11-02T01:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-05:00[America/New_York]" } (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
- * @example intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", "start", { disambiguation: "earlier" }) // { start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T01:30:00-05:00[America/New_York]" } (spring-forward gap; "earlier" moves the end back an hour)
- * @example intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", "start", { disambiguation: "reject" }) // null (spring-forward gap rejected)
- * @example intervalFromDurationZoned("2024-11-03T00:30:00-04:00[America/New_York]", "PT1H", "start", { disambiguation: "later" }) // { start: "2024-11-03T00:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-04:00[America/New_York]" } (exact time — disambiguation never re-resolves it)
- * @example setZoned(intervalFromDurationZoned("2024-11-03T00:30:00-04:00[America/New_York]", "PT1H", "start")?.end ?? "", { hour: 1, minute: 30, second: 0 }, { disambiguation: "later", offset: "ignore" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (pre-1.16.0 end)
- * @example intervalFromDurationZoned("2024-01-31T12:00:00-05:00[America/New_York]", "P1M", "start", { overflow: "reject" }) // null
+ * @example intervalFromDurationZoned("2024-10-26T01:30:00+01:00[Europe/London]", "P1D", "start", { disambiguation: "later" }) // { start: "2024-10-26T01:30:00+01:00[Europe/London]", end: "2024-10-27T01:30:00+00:00[Europe/London]" } (fall-back overlap resolved; default "compatible" would return the +01:00 instant instead)
+ * @example intervalFromDurationZoned("2024-10-05T02:30:00+10:00[Australia/Sydney]", "P1D", "start", { disambiguation: "earlier" }) // { start: "2024-10-05T02:30:00+10:00[Australia/Sydney]", end: "2024-10-06T01:30:00+10:00[Australia/Sydney]" } (spring-forward gap; "earlier" moves the end back an hour)
+ * @example intervalFromDurationZoned("2024-10-05T02:30:00+10:00[Australia/Sydney]", "P1D", "start", { disambiguation: "reject" }) // null (spring-forward gap rejected)
+ * @example intervalFromDurationZoned("2024-10-27T00:30:00+01:00[Europe/London]", "PT1H", "start", { disambiguation: "later" }) // { start: "2024-10-27T00:30:00+01:00[Europe/London]", end: "2024-10-27T01:30:00+01:00[Europe/London]" } (exact time — disambiguation never re-resolves it)
+ * @example setZoned(intervalFromDurationZoned("2024-10-27T00:30:00+01:00[Europe/London]", "PT1H", "start")?.end ?? "", { hour: 1, minute: 30, second: 0 }, { disambiguation: "later", offset: "ignore" }) // "2024-10-27T01:30:00+00:00[Europe/London]" (pre-1.16.0 end)
+ * @example intervalFromDurationZoned("2024-01-31T12:00:00+05:30[Asia/Kolkata]", "P1M", "start", { overflow: "reject" }) // null
  * @example intervalFromDurationZoned("invalid", "P1D", "start") // null
  */
 export function intervalFromDurationZoned(

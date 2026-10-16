@@ -11,7 +11,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
  *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns current day of week number (1-7) or null on invalid input
  *
- * @example getZonedDayOfWeek("America/New_York") // 3
+ * @example getZonedDayOfWeek("Australia/Sydney") // 5
  * @example getZonedDayOfWeek("invalid") // null
  */
 export function getZonedDayOfWeek(ianaTimezone: string): number | null {

@@ -14,9 +14,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value zoned ISO 8601 datetime string
  * @returns plain datetime string or "" on invalid input
  *
- * @example convertZonedToPlainDateTime("2024-02-29T14:30:45.123-05:00[America/New_York]") // "2024-02-29T14:30:45.123"
- * @example convertZonedToPlainDateTime("2024-11-03T01:30:00-05:00[America/New_York]") // "2024-11-03T01:30:00" (the second 01:30, EST)
- * @example convertZonedToPlainDateTime("2024-11-03T01:30:00-04:00[America/New_York]") // "2024-11-03T01:30:00" (the first 01:30, EDT)
+ * @example convertZonedToPlainDateTime("2024-02-29T14:30:45.123-03:00[America/Sao_Paulo]") // "2024-02-29T14:30:45.123"
+ * @example convertZonedToPlainDateTime("2024-10-27T01:30:00+00:00[Europe/London]") // "2024-10-27T01:30:00" (the second 01:30, GMT)
+ * @example convertZonedToPlainDateTime("2024-10-27T01:30:00+01:00[Europe/London]") // "2024-10-27T01:30:00" (the first 01:30, BST)
  * @example convertZonedToPlainDateTime("invalid") // ""
  */
 export function convertZonedToPlainDateTime(value: string): string {

@@ -18,7 +18,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   nothing.
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
- *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`),
+ *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]"`),
  *   and the two endpoints need not agree on a calendar. Ordering is calendar-independent —
  *   verified that `Temporal.Instant` carries no calendar field at all and that
  *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
@@ -34,7 +34,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // true
- * @example intervalAbutsZoned("2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T08:00:00-04:00[America/New_York]") // true (the same instant in another zone)
+ * @example intervalAbutsZoned("2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T17:30:00+05:30[Asia/Kolkata]") // true (the same instant in another zone)
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00.000000001+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false (one-nanosecond gap)
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T13:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false (overlap)
  * @example intervalAbutsZoned("invalid", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false

@@ -40,9 +40,9 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param optionsArg How far the search goes, and how a window edge on a clock change is resolved
  * @returns UTC instant string ending in "Z", or "" when past the horizon or on invalid input
  *
- * @example addOperatingTime("2024-06-14T20:00:00Z", "PT2H", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T14:00:00Z" — Friday 16:00 to Monday 10:00 local
- * @example addOperatingTime("2024-06-14T20:00:00Z", "PT1H", { timeZone: "America/New_York", weekly: { 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-14T21:00:00Z" — due at closing, not at the next opening
- * @example addOperatingTime("2024-06-14T20:00:00Z", "PT2H", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }, { within: "P1D" }) // "" — past the horizon
+ * @example addOperatingTime("2024-06-14T15:00:00Z", "PT2H", { timeZone: "Europe/London", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T09:00:00Z" — Friday 16:00 to Monday 10:00 local
+ * @example addOperatingTime("2024-06-14T15:00:00Z", "PT1H", { timeZone: "Europe/London", weekly: { 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-14T16:00:00Z" — due at closing, not at the next opening
+ * @example addOperatingTime("2024-06-14T15:00:00Z", "PT2H", { timeZone: "Europe/London", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }, { within: "P1D" }) // "" — past the horizon
  * @example addOperatingTime("2024-06-15T12:00:00Z", "PT0S", { timeZone: "UTC", weekly: {} }) // "2024-06-15T12:00:00Z"
  * @example addOperatingTime("2024-06-14T20:00:00Z", "P1D", { timeZone: "UTC", weekly: { 5: [{ from: "09:00", to: "17:00" }] } }) // "" — days are not open time
  * @example addOperatingTime("2024-06-14T20:00:00Z", "-PT1H", { timeZone: "UTC", weekly: { 5: [{ from: "09:00", to: "17:00" }] } }) // ""

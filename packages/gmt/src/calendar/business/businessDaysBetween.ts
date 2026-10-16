@@ -68,11 +68,11 @@ function countBusinessDates(
  * @param calendar BusinessCalendar naming the weekend days and holidays
  * @returns number of working days in `(start, end]`, negative when `end` precedes `start`, or null on invalid input
  *
- * @example businessDaysBetween("2024-07-01", "2024-07-05", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // 3 — Tue, Wed, Fri
+ * @example businessDaysBetween("2024-07-01", "2024-07-05", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // 3 — Tue, Wed, Fri
  * @example businessDaysBetween("2024-07-05", "2024-07-08", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 1 — Monday, over the weekend
  * @example businessDaysBetween("2024-07-01", "2024-07-31", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 22 — July's 23 weekdays less the 1st
  * @example businessDaysBetween("2024-07-01", "2024-07-01", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 0
- * @example businessDaysBetween("2024-07-05", "2024-07-01", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // -3 — reversed
+ * @example businessDaysBetween("2024-07-05", "2024-07-01", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // -3 — reversed
  * @example businessDaysBetween("2024-07-06", "2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 0 — addBusinessDays("2024-07-06", -1) is "2024-07-05", but Saturday is excluded
  * @example businessDaysBetween("2024-07-01", "2024-07-08", { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // 5 — Friday–Saturday weekend
  * @example businessDaysBetween("invalid", "2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // null

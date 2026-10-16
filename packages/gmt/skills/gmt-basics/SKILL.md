@@ -163,10 +163,13 @@ input before you act on it.
   instant has no calendar date until you name a zone — floor it with
   `floorToZone` first, or convert it in the zone you mean.
 - `getFiscalPeriod`'s `yearEndsOn` states the year-end **rule** by example, not
-  one year's end. The NRF 4-5-4 calendar is `"2026-01-31"` — a Saturday on
-  January 31, which is "the Saturday nearest to January 31".
+  one year's end. One published 4-5-4 example (NRF, US) ends its year on the
+  Saturday nearest January 31, which is `"2026-01-31"`, a Saturday on
+  January 31. GMT rule: `year` is the calendar year a fiscal year starts in;
+  add one if you label by the year it ends in.
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
-  fixed ISO Mon–Fri with no locale and no holidays **until you pass it a
+  a fixed Mon–Fri week (Sat–Sun off, CLDR's world default; ISO 8601 defines no
+  weekend) with no locale and no holidays **until you pass it a
   `BusinessCalendar`** — `isBusinessDay(value, { weekend, holidays, timeZone })`
   states the weekend and holidays itself. See the `gmt-arithmetic` skill.
 

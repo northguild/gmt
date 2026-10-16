@@ -24,7 +24,7 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  *   read `"earlier"`, its `to` read `"later"`) overlaps `range`. A rejected window elsewhere
  *   does not matter.
  * - Windows are elapsed time between their resolved edges, so the wall-clock length is not the
- *   real one on transition nights: in New York, 23:00–06:00 is 8 hours across the fall-back
+ *   real one on transition nights: in London, 23:00–06:00 is 8 hours across the fall-back
  *   night and 6 across the spring-forward one, and 00:00–00:00 is 25 and 23 hours.
  * - A window whose edges resolve to an empty or inverted span on a transition night — only a
  *   window shorter than the gap it straddles — is empty that day and left out.
@@ -51,11 +51,11 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  * @param optionsArg How a window edge on a clock change is resolved
  * @returns sorted, merged `{ start, end }` records of the open instants, or [] on invalid input
  *
- * @example recurringWindows({ 1: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "America/New_York") // [{ start: "2024-06-10T13:00:00Z", end: "2024-06-10T21:00:00Z" }]
+ * @example recurringWindows({ 1: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "Africa/Johannesburg") // [{ start: "2024-06-10T07:00:00Z", end: "2024-06-10T15:00:00Z" }]
  * @example recurringWindows({ 5: [{ from: "23:00", to: "06:00" }] }, { start: "2024-06-14T00:00:00Z", end: "2024-06-16T00:00:00Z" }, "UTC") // [{ start: "2024-06-14T23:00:00Z", end: "2024-06-15T06:00:00Z" }] — Friday night into Saturday
- * @example recurringWindows({ 6: [{ from: "23:00", to: "06:00" }] }, { start: "2024-11-02T00:00:00Z", end: "2024-11-04T00:00:00Z" }, "America/New_York") // [{ start: "2024-11-03T03:00:00Z", end: "2024-11-03T11:00:00Z" }] — 8 hours across the fall-back night
- * @example recurringWindows({ 7: [{ from: "02:30", to: "04:00" }] }, { start: "2024-03-10T00:00:00Z", end: "2024-03-11T00:00:00Z" }, "America/New_York") // [{ start: "2024-03-10T07:30:00Z", end: "2024-03-10T08:00:00Z" }] — 02:30 does not exist; "compatible" reads it as 03:30
- * @example recurringWindows({ 7: [{ from: "02:30", to: "04:00" }] }, { start: "2024-03-10T00:00:00Z", end: "2024-03-11T00:00:00Z" }, "America/New_York", { disambiguation: "reject" }) // []
+ * @example recurringWindows({ 6: [{ from: "23:00", to: "06:00" }] }, { start: "2024-10-26T00:00:00Z", end: "2024-10-28T00:00:00Z" }, "Europe/London") // [{ start: "2024-10-26T22:00:00Z", end: "2024-10-27T06:00:00Z" }] — 8 hours across the fall-back night
+ * @example recurringWindows({ 7: [{ from: "02:30", to: "04:00" }] }, { start: "2024-10-05T12:00:00Z", end: "2024-10-06T12:00:00Z" }, "Australia/Sydney") // [{ start: "2024-10-05T16:30:00Z", end: "2024-10-05T17:00:00Z" }] — 02:30 does not exist; "compatible" reads it as 03:30
+ * @example recurringWindows({ 7: [{ from: "02:30", to: "04:00" }] }, { start: "2024-10-05T12:00:00Z", end: "2024-10-06T12:00:00Z" }, "Australia/Sydney", { disambiguation: "reject" }) // []
  * @example recurringWindows({ 1: [{ from: "00:00", to: "00:00" }], 2: [{ from: "00:00", to: "00:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-13T00:00:00Z" }, "UTC") // [{ start: "2024-06-10T00:00:00Z", end: "2024-06-12T00:00:00Z" }] — touching days merge
  * @example recurringWindows({ 8: [{ from: "09:00", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "UTC") // [] — not an ISO weekday
  * @example recurringWindows({ 1: [{ from: "9am", to: "17:00" }] }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }, "UTC") // [] — malformed window

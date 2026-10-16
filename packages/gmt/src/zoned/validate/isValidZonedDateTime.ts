@@ -30,13 +30,13 @@ import { hasSecond60 } from "../../plain/validate/hasSecond60";
  *
  * @example isValidZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]") // true
  * @example isValidZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
- * @example isValidZonedDateTime("2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]") // false (non-ISO calendar: use isValidCalendarZonedDateTime)
- * @example isValidZonedDateTime("2024-02-10T12:00:00-05:00[America/New_York][u-ca=iso8601]") // true
- * @example isValidZonedDateTime("2024-02-10T12:00:00-05:00[America/New_York][foo=bar]") // true (elective annotation ignored)
- * @example isValidZonedDateTime("20241003T143000-0400[America/New_York]") // false (basic format)
- * @example isValidZonedDateTime("2024-10-03 14:30:00-04:00[America/New_York]") // false (space separator)
- * @example isValidZonedDateTime("2024-10-03[America/New_York]") // false (no time)
- * @example isValidZonedDateTime("2024-10-03T14:30:00-05:00[America/New_York]") // false (New York is -04:00 in October)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]") // false (non-ISO calendar: use isValidCalendarZonedDateTime)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]") // true
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]") // true (elective annotation ignored)
+ * @example isValidZonedDateTime("20241003T143000+0530[Asia/Kolkata]") // false (basic format)
+ * @example isValidZonedDateTime("2024-10-03 14:30:00+05:30[Asia/Kolkata]") // false (space separator)
+ * @example isValidZonedDateTime("2024-10-03[Asia/Kolkata]") // false (no time)
+ * @example isValidZonedDateTime("2024-10-03T14:30:00+00:00[Europe/London]") // false (London is +01:00 in early October)
  * @example isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]") // true (-00:45 is Monrovia's -00:44:30, rounded)
  * @example isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]") // true
  * @example isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]") // false (an offset with seconds must be exact)

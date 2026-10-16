@@ -45,7 +45,7 @@ import type { EpcisEventTime } from "../../types";
  * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "-05:00" }) // { eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" }
  * @example formatEpcisEvent({ instant: "2024-06-15T09:30:00-05:00", offset: "-05:00" }) // { eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-05:00" } (the instant is written in UTC)
  * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00.120Z", offset: "+05:45" }) // { eventTime: "2024-06-15T14:30:00.12Z", eventTimeZoneOffset: "+05:45" }
- * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "-04:00", timeZone: "America/New_York" }) // { eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "-04:00" } (EPCIS carries no zone)
+ * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "+05:30", timeZone: "Asia/Kolkata" }) // { eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "+05:30" } (EPCIS carries no zone)
  * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "-00:00" }) // { eventTime: "2024-06-15T14:30:00Z", eventTimeZoneOffset: "+00:00" }
  * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "+14:30" }) // null (past the range GS1 allows)
  * @example formatEpcisEvent({ instant: "2024-06-15T14:30:00Z", offset: "+05:30:00" }) // null (GS1 offsets have no seconds)

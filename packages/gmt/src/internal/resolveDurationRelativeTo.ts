@@ -46,7 +46,7 @@ function hasRelativeToShape(value: string): boolean {
  *   and a zoned date without a time throw, although Temporal's `ParseTemporalRelativeToString`
  *   reads them.
  * - A string with a `u-ca` annotation is read as Temporal's `ParseTemporalRelativeToString` reads
- *   it: with a time zone annotation it is a ZonedDateTime (`"2024-02-24T00:00:00-05:00[America/New_York][u-ca=hebrew]"`,
+ *   it: with a time zone annotation it is a ZonedDateTime (`"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`,
  *   `parseCalendarZonedValue`), otherwise a PlainDate (`"2024-02-24[u-ca=hebrew]"`, or a date-time
  *   whose time Temporal drops, `parseCalendarDateValue`). Annotations follow Temporal's
  *   grammar: elective unknown ones are ignored, the first `u-ca` wins, and an unknown critical

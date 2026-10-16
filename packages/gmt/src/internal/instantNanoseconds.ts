@@ -77,7 +77,7 @@ const minuteOffset = /[+-]\d{2}:\d{2}$/;
  *   bracket; a `Z` instant; an offset written with seconds, which TC39 matches exactly
  *   (`-00:45:00[Africa/Monrovia]` is −00:45:00); a bracket whose zone does not exist; and a
  *   bracket whose zone has no instant in range with that wall time at the written offset or at
- *   an offset that rounds to it (`-00:44[Africa/Monrovia]`, `-05:00[America/New_York]` in
+ *   an offset that rounds to it (`-00:44[Africa/Monrovia]`, `+00:00[Europe/London]` in
  *   June). Such a bracket is not validated here; a function that keeps the zone
  *   (`transitTime`, `toOffsetInstant`) rejects it instead. Calendar and elective annotations
  *   never change the reading. A string whose written reading is outside the instant range, and

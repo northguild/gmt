@@ -23,7 +23,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
- *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`),
+ *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]"`),
  *   and the endpoints need not agree on a calendar. Ordering is calendar-independent — verified
  *   that `Temporal.Instant` carries no calendar field at all and that
  *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in

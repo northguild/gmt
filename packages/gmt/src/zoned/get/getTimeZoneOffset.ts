@@ -30,17 +30,17 @@ import { frameOffset, zoneFrame } from "../../internal/zoneFrame";
  * @param timeZone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or a
  *   stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @param instant ISO 8601 instant string (e.g. "2024-07-15T12:00:00Z")
- * @returns offset string (e.g. "-04:00"), or "" on invalid input
+ * @returns offset string (e.g. "+10:00"), or "" on invalid input
  *
- * @example getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z") // "-04:00"
- * @example getTimeZoneOffset("America/New_York", "2024-01-15T12:00:00Z") // "-05:00"
+ * @example getTimeZoneOffset("Australia/Sydney", "2024-07-15T12:00:00Z") // "+10:00"
+ * @example getTimeZoneOffset("Australia/Sydney", "2024-01-15T12:00:00Z") // "+11:00"
  * @example getTimeZoneOffset("Asia/Kathmandu", "2024-01-15T12:00:00Z") // "+05:45"
  * @example getTimeZoneOffset("Africa/Monrovia", "1970-01-01T12:00:00Z") // "-00:44:30" (an offset with seconds)
  * @example getTimeZoneOffset("-00:44:30", "1970-01-01T12:00:00Z") // "-00:44:30" (its own result, read back)
  * @example getTimeZoneOffset("+05:30:00", "1970-01-01T12:00:00Z") // "+05:30"
  * @example getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z") // ""
- * @example getTimeZoneOffset("America/New_York", "not an instant") // ""
- * @example getTimeZoneOffset("America/New_York", "2024-07-15T16:00:00z") // "" (lower-case z)
+ * @example getTimeZoneOffset("Africa/Johannesburg", "not an instant") // ""
+ * @example getTimeZoneOffset("Africa/Johannesburg", "2024-07-15T16:00:00z") // "" (lower-case z)
  * @example getTimeZoneOffset("UTC", "2016-12-31T23:59:60Z") // "" (leap second)
  * @example getTimeZoneOffset("UTC", "2016-12-31T23:59:60Z".replace(":60", ":59")) // "+00:00" (the clamped instant)
  */

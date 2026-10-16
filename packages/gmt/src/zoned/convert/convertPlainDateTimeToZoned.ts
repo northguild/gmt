@@ -24,13 +24,13 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @param optionsArg optional settings for the precision of the output string and for resolving a DST gap or overlap
  * @returns zoned ISO 8601 datetime string or "" when invalid
  *
- * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45", "America/New_York") // "2024-02-29T14:30:45.000-05:00[America/New_York]"
+ * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45", "Asia/Tokyo") // "2024-02-29T14:30:45.000+09:00[Asia/Tokyo]"
  * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45.123456789", "UTC") // "2024-02-29T14:30:45.123+00:00[UTC]"
  * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45.123456789", "UTC", { smallestUnit: "nanoseconds" }) // "2024-02-29T14:30:45.123456789+00:00[UTC]"
- * @example convertPlainDateTimeToZoned("invalid", "America/New_York") // ""
- * @example convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", { disambiguation: "earlier" }) // "2024-03-10T01:30:00.000-05:00[America/New_York]" (spring-forward gap)
- * @example convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" }) // "2024-11-03T01:30:00.000-05:00[America/New_York]" (fall-back overlap)
- * @example convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", { disambiguation: "reject" }) // ""
+ * @example convertPlainDateTimeToZoned("invalid", "Asia/Kolkata") // ""
+ * @example convertPlainDateTimeToZoned("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "earlier" }) // "2024-10-06T01:30:00.000+10:00[Australia/Sydney]" (spring-forward gap)
+ * @example convertPlainDateTimeToZoned("2024-10-27T01:30:00", "Europe/London", { disambiguation: "later" }) // "2024-10-27T01:30:00.000+00:00[Europe/London]" (fall-back overlap)
+ * @example convertPlainDateTimeToZoned("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "reject" }) // ""
  */
 export function convertPlainDateTimeToZoned(
   value: string,

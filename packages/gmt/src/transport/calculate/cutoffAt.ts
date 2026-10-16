@@ -214,12 +214,12 @@ function rolledDate(
  * @example cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" }) // "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"
  * @example cutoffAt("2024-06-14T16:00:00Z", "PT48H", { timeZone: "Europe/Amsterdam" }) // "2024-06-12T18:00:00+02:00[Europe/Amsterdam]" (48 hours keeps the departure's 18:00)
  * @example cutoffAt("2024-06-14T16:00:00Z", "P1D", { timeZone: "Europe/Amsterdam", atLocalTime: "10:00" }) // "2024-06-13T10:00:00+02:00[Europe/Amsterdam]"
- * @example cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" }) // "2024-11-01T13:00:00-04:00[America/New_York]" (96 elapsed hours across the fall-back)
- * @example cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" }) // "2024-03-09T17:00:00-05:00[America/New_York]" (17:00 local, across the spring-forward)
+ * @example cutoffAt("2024-04-09T07:00:00Z", "PT96H", { timeZone: "Australia/Sydney" }) // "2024-04-05T18:00:00+11:00[Australia/Sydney]" (96 elapsed hours across the fall-back)
+ * @example cutoffAt("2024-04-01T16:00:00Z", "P2D", { timeZone: "Europe/London", atLocalTime: "17:00" }) // "2024-03-30T17:00:00+00:00[Europe/London]" (17:00 local, across the spring-forward)
  * @example cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }) // "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" (Sunday rolls back to Friday)
  * @example cutoffAt("2024-06-18T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }) // "" (a calendar needs a roll convention)
- * @example cutoffAt("2024-11-04T23:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "01:30" }) // "2024-11-03T01:30:00-04:00[America/New_York]" (a repeated hour takes the earlier pass)
- * @example cutoffAt("2024-03-11T22:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "02:30" }) // "" (02:30 on 10 March never happened)
+ * @example cutoffAt("2024-10-28T18:00:00Z", "P1D", { timeZone: "Europe/London", atLocalTime: "01:30" }) // "2024-10-27T01:30:00+01:00[Europe/London]" (a repeated hour takes the earlier pass)
+ * @example cutoffAt("2024-10-07T07:00:00Z", "P1D", { timeZone: "Australia/Sydney", atLocalTime: "02:30" }) // "" (02:30 on 6 October never happened)
  * @example cutoffAt("2024-06-14T18:00:00", "P2D", { timeZone: "Europe/Amsterdam" }) // "" (a zoneless anchor is not a moment)
  * @example cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", roll: "preceding" }) // "" (a roll needs a calendar)
  */

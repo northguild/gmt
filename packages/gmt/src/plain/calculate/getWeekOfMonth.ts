@@ -23,15 +23,15 @@ import { isValidDate } from "../validate";
  * - Returns null if `value` or `locale` is invalid.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @returns 1-based week-of-month row, or null on invalid input
  *
- * @example getWeekOfMonth("2024-02-01", "en-US") // 1
- * @example getWeekOfMonth("2024-02-29", "en-US") // 5
- * @example getWeekOfMonth("2026-02-01", "en-US") // 1
+ * @example getWeekOfMonth("2024-02-01", "ja-JP") // 1
+ * @example getWeekOfMonth("2024-02-29", "ja-JP") // 5
+ * @example getWeekOfMonth("2026-02-01", "pt-BR") // 1
  * @example getWeekOfMonth("2026-02-01", "en-GB") // 1
- * @example getWeekOfMonth("-271821-04-30", "en-US") // 5 (the first representable month; its 1st lies before the range)
- * @example getWeekOfMonth("invalid", "en-US") // null
+ * @example getWeekOfMonth("-271821-04-30", "ja-JP") // 5 (the first representable month; its 1st lies before the range)
+ * @example getWeekOfMonth("invalid", "hi-IN") // null
  * @example getWeekOfMonth("2024-05-12", ["fr-FR", "en-US"]) // 2
  */
 export function getWeekOfMonth(

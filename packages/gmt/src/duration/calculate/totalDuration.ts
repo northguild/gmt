@@ -35,7 +35,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   lower-case `z`, a UTC offset without a zone and a zoned date without a time are invalid.
  * - A `relativeTo` string takes a calendar in RFC 9557 form, as `convertDateToCalendar` and
  *   `convertZonedToCalendar` write it: ISO digits and a `[u-ca=<id>]` annotation, after the zone
- *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00-05:00[America/New_York][u-ca=hebrew]"`).
+ *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
  *   The annotations are read as Temporal reads them: the critical flag and the id's letter case
  *   are accepted, elective unknown annotations are ignored, the first `u-ca` names the calendar,
  *   and a string with a time zone annotation is zoned. An unknown critical annotation, a critical
@@ -57,8 +57,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example totalDuration("P1M", "days") // null (calendar unit needs relativeTo)
  * @example totalDuration("P1M", "days", { relativeTo: "2024-02-01" }) // 29
  * @example totalDuration("P1M", "days", { relativeTo: "20240201" }) // null (basic format)
- * @example totalDuration("P1D", "hours", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // 23 (spring-forward)
- * @example totalDuration("P1D", "hours", { relativeTo: "2024-11-03T01:30[America/New_York]" }) // 25
+ * @example totalDuration("P1D", "hours", { relativeTo: "2024-03-31T00:00:00+00:00[Europe/London]" }) // 23 (spring-forward)
+ * @example totalDuration("P1D", "hours", { relativeTo: "2024-04-07T02:30[Australia/Sydney]" }) // 25
  * @example totalDuration("P1DT2H30M", "minute") // 1590 (singular unit name)
  * @example totalDuration("not a duration", "hours") // null
  * @example totalDuration("P1Y", "days", { relativeTo: "2024-02-24[u-ca=hebrew]" }) // 385 (Hebrew leap year 5784)

@@ -1,7 +1,8 @@
 /**
  * Week-per-period shape of a 52/53-week fiscal year, one entry per month of a quarter.
  *
- * - `"4-5-4"` — the NRF retail calendar, the US retail standard.
+ * - `"4-5-4"` — the longer month falls in the middle of the quarter. One published
+ *   example is the NRF retail calendar (US).
  * - `"4-4-5"` — the longer month falls at the end of the quarter.
  * - `"5-4-4"` — the longer month falls at the start of the quarter.
  *
@@ -16,8 +17,8 @@ export interface FiscalCalendar {
   pattern: FiscalPattern;
   /**
    * The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**,
-   * on the occurrence nearest this date's **month and day**. For the NRF retail calendar —
-   * "the Saturday nearest to January 31" — that is `"2026-01-31"`.
+   * on the occurrence nearest this date's **month and day**. One published 4-5-4 example
+   * (NRF, US) ends its year on the Saturday nearest January 31, which is `"2026-01-31"`.
    */
   yearEndsOn: string;
 }

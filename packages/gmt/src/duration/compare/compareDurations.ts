@@ -26,7 +26,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   lower-case `z`, a UTC offset without a zone and a zoned date without a time are invalid.
  * - A `relativeTo` string takes a calendar in RFC 9557 form, as `convertDateToCalendar` and
  *   `convertZonedToCalendar` write it: ISO digits and a `[u-ca=<id>]` annotation, after the zone
- *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00-05:00[America/New_York][u-ca=hebrew]"`).
+ *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
  *   The annotations are read as Temporal reads them: the critical flag and the id's letter case
  *   are accepted, elective unknown annotations are ignored, the first `u-ca` names the calendar,
  *   and a string with a time zone annotation is zoned. An unknown critical annotation, a critical
@@ -48,9 +48,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" }) // 1
  * @example compareDurations("P1M", "P30D", { relativeTo: "2024-02-01" }) // -1
  * @example compareDurations("P1M", "P30D", { relativeTo: "2024-02-01 00:00" }) // null (space separator)
- * @example compareDurations("P1D", "PT24H", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // -1 (spring-forward)
+ * @example compareDurations("P1D", "PT24H", { relativeTo: "2024-03-31T00:00:00+00:00[Europe/London]" }) // -1 (spring-forward)
  * @example compareDurations("P1Y", "P1Y") // 0
- * @example compareDurations("P1D", "PT24H", { relativeTo: "2024-11-03T01:30[America/New_York]" }) // 1
+ * @example compareDurations("P1D", "PT24H", { relativeTo: "2024-04-07T02:30[Australia/Sydney]" }) // 1
  * @example compareDurations("not a duration", "PT1H") // null
  * @example compareDurations("P1M", "P30D", { relativeTo: "2025-01-15[u-ca=hebrew]" }) // -1 (Tevet 5785, a 29-day Hebrew month)
  * @example compareDurations("P1M", "P30D", { relativeTo: "2024-02-10[!u-ca=hebrew]" }) // 0 (1 Adar I 5784, a 30-day month; the critical flag is accepted)

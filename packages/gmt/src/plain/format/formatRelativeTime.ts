@@ -50,11 +50,11 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeTime("14:30:00", "en-US", { style: "short", reference: "16:30:00" }) // "2 hr. ago"
- * @example formatRelativeTime("09:00:00", "en-US", { reference: "10:30:00", roundingMethod: "floor" }) // "2 hours ago" (−1.5 hours floors to −2)
+ * @example formatRelativeTime("14:30:00", "de-DE", { style: "short", reference: "16:30:00" }) // "vor 2 Std."
+ * @example formatRelativeTime("09:00:00", "en-GB", { reference: "10:30:00", roundingMethod: "floor" }) // "2 hours ago" (−1.5 hours floors to −2)
  * @example formatRelativeTime("not-a-time") // ""
  * @example formatRelativeTime("10:00:00", ["fr-FR", "en-US"], { reference: "12:00:00" }) // "il y a 2 heures"
- * @example formatRelativeTime("10:00:00", "en-US", null as never) // "" (null options)
+ * @example formatRelativeTime("10:00:00", "ja-JP", null as never) // "" (null options)
  */
 export function formatRelativeTime(
   value: string,

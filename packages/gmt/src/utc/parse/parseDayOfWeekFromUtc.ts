@@ -15,7 +15,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @example parseDayOfWeekFromUtc("2024-03-17T14:30:45Z") // 7
  * @example parseDayOfWeekFromUtc("2024-03-18T00:00:00Z") // 1
- * @example parseDayOfWeekFromUtc("2024-03-17T02:30:45Z", { timeZone: "America/New_York" }) // 6 (Saturday in New York)
+ * @example parseDayOfWeekFromUtc("2024-03-17T02:30:45Z", { timeZone: "America/Sao_Paulo" }) // 6 (Saturday in São Paulo)
  * @example parseDayOfWeekFromUtc("invalid") // null
  */
 export function parseDayOfWeekFromUtc(

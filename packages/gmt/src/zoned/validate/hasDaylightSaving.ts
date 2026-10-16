@@ -32,7 +32,7 @@ import {
  * @param options optional setting for the reference instant
  * @returns boolean indicating whether the timeZone observes DST, or false on invalid input
  *
- * @example hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }) // true
+ * @example hasDaylightSaving("Europe/London", { at: "2024-01-15T12:00:00Z" }) // true
  * @example hasDaylightSaving("Australia/Sydney", { at: "2024-06-15T12:00:00Z" }) // true (winter; the next period begins in October)
  * @example hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }) // false
  * @example hasDaylightSaving("Europe/Istanbul", { at: "2015-06-15T12:00:00Z" }) // true
@@ -42,7 +42,7 @@ import {
  * @example hasDaylightSaving("UTC", { at: "2024-01-15T12:00:00Z" }) // false
  * @example hasDaylightSaving("+05:00", { at: "2024-01-15T12:00:00Z" }) // false
  * @example hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }) // false
- * @example hasDaylightSaving("America/New_York", { at: "2024-01-15" }) // false (not an instant)
+ * @example hasDaylightSaving("Australia/Sydney", { at: "2024-01-15" }) // false (not an instant)
  * @example hasDaylightSaving("-00:44:30", { at: "1970-01-01T12:00:00Z" }) // false (a fixed offset)
  */
 export function hasDaylightSaving(

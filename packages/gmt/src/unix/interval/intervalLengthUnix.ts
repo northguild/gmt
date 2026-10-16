@@ -11,7 +11,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   rather than measuring exact duration.
  * - `start` and `end` are each a safe integer or a string of optionally negative ASCII digits.
  * - Fixed-length units (hour, minute, second, …) are zone-independent; a day is a local day in
- *   `options.timeZone`, so New York's 23-hour 2024-03-10 is 1 day long there.
+ *   `options.timeZone`, so Sydney's 23-hour 2024-10-06 is 1 day long there.
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `0` for a zero-length interval (`start === end`).
  * - Returns `null` on invalid input (`start`/`end` that is not a safe integer or numeric string of
@@ -34,7 +34,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example intervalLengthUnix(0, 5400000, "hour") // 1.5
  * @example intervalLengthUnix(0, 0, "hour") // 0
  * @example intervalLengthUnix(86400000, 0, "hour") // null
- * @example intervalLengthUnix(1710046800000, 1710129600000, "day", { timeZone: "America/New_York" }) // 1 (the 23-hour local day)
+ * @example intervalLengthUnix(1728136800000, 1728219600000, "day", { timeZone: "Australia/Sydney" }) // 1 (the 23-hour local day)
  * @example intervalLengthUnix(1710046800000, 1710129600000, "day") // 0.9583333333333334 (23/24 of a UTC day)
  * @example intervalLengthUnix("0", "86400", "hours", { epochUnit: "second" }) // 24
  * @example intervalLengthUnix(NaN, 86400000, "hour") // null

@@ -26,7 +26,7 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
    * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
-   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
+   * ("BST") and `"full"` the long one ("British Summer Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
@@ -35,7 +35,7 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
 
 /**
  * Format a UTC ISO string as a relative day label plus time-of-day, e.g.
- * "Tomorrow at 2:30 PM" — the UTC counterpart of `formatCalendar`. See that
+ * "tomorrow at 14:30" — the UTC counterpart of `formatCalendar`. See that
  * function's JSDoc for the day-label/threshold/connector design; this
  * variant compares calendar days and renders the clock time in `timeZone`.
  *
@@ -51,9 +51,9 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
  * @param options The reference instant, the time zone and the time style
  * @returns the formatted calendar string, or "" on invalid input
  *
- * @example formatCalendarUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York", reference: "2026-03-15T13:00:00Z" }) // "tomorrow at 2:30 PM"
+ * @example formatCalendarUtc("2026-03-16T18:30:00Z", "en-GB", { timeZone: "Africa/Johannesburg", reference: "2026-03-15T13:00:00Z" }) // "tomorrow at 20:30"
  * @example formatCalendarUtc("2026-03-16T13:30:00Z", "fr-FR", { timeZone: "Europe/Paris", reference: "2026-03-15T12:00:00Z" }) // "demain à 14:30"
- * @example formatCalendarUtc("2026-03-16T18:30:00Z", "en-US", null as never) // ""
+ * @example formatCalendarUtc("2026-03-16T18:30:00Z", "hi-IN", null as never) // ""
  * @example formatCalendarUtc("not-a-date") // ""
  * @example formatCalendarUtc("2024-03-16T18:30:00Z", ["fr-FR", "en-US"], { reference: "2024-03-15T13:00:00Z" }) // "demain à 18:30"
  */

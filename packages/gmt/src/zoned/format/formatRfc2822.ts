@@ -27,12 +27,12 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  *   grammar (`"-0044.5"`, `"00-1"`). For the value itself use
  *   `Temporal.ZonedDateTime#toString()`.
  *
- * @param value zoned ISO 8601 datetime string (e.g. "2024-03-15T14:30:00-04:00[America/New_York]")
+ * @param value zoned ISO 8601 datetime string (e.g. "2024-03-15T14:30:00+05:30[Asia/Kolkata]")
  * @returns RFC 5322 date-time string, or "" on invalid input, a sub-minute offset or a negative year
  *
- * @example formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]") // "Fri, 15 Mar 2024 14:30:00 -0400"
+ * @example formatRfc2822("2024-03-15T14:30:00+05:30[Asia/Kolkata]") // "Fri, 15 Mar 2024 14:30:00 +0530"
  * @example formatRfc2822("2024-01-05T09:00:00+00:00[UTC]") // "Fri, 05 Jan 2024 09:00:00 +0000"
- * @example formatRfc2822("2024-03-15T14:30:00.999-04:00[America/New_York]") // "Fri, 15 Mar 2024 14:30:00 -0400"
+ * @example formatRfc2822("2024-03-15T14:30:00.999+05:30[Asia/Kolkata]") // "Fri, 15 Mar 2024 14:30:00 +0530"
  * @example formatRfc2822("1969-12-31T23:15:30-00:45[Africa/Monrovia]") // "" (offset −00:44:30)
  * @example formatRfc2822("-000001-06-15T12:00:00+00:00[UTC]") // ""
  * @example Temporal.ZonedDateTime.from("-000001-06-15T12:00:00+00:00[UTC]").toString() // "-000001-06-15T12:00:00+00:00[UTC]"

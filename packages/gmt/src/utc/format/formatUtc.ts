@@ -56,16 +56,16 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  * @param options The time zone, the zone-name switch and any `Intl.DateTimeFormatOptions`
  * @returns the formatted date/time string, or "" on invalid input
  *
- * @example formatUtc("2026-03-16T18:30:00Z") // "3/16/2026, 6:30:00 PM"
- * @example formatUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York" }) // "3/16/2026, 2:30:00 PM"
- * @example formatUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York", includeTimeZoneName: true }) // "3/16/2026, 2:30:00 PM EDT"
+ * @example formatUtc("2026-03-16T18:30:00Z") // "3/16/2026, 6:30:00 PM" (varies by the runtime's default locale; shown for en-US)
+ * @example formatUtc("2026-03-16T18:30:00Z", "ja-JP", { timeZone: "Asia/Tokyo" }) // "2026/3/17 3:30:00"
+ * @example formatUtc("2026-03-16T18:30:00Z", "ja-JP", { timeZone: "Asia/Tokyo", includeTimeZoneName: true }) // "2026/3/17 3:30:00 JST"
  * @example formatUtc("2024-02-03T14:30:45Z", "ja-JP-u-ca-japanese", { year: "numeric", month: "long" }) // "令和6年2月"
  * @example formatUtc("2024-02-03T14:30:45Z", "ja-JP-u-ca-japanese", { year: "numeric", month: "numeric" }) // "R6/2" — the pre-1.16.0 text
- * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
- * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
- * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { timeZoneName: "short" }) // "2/3/2024, 2:30:45 PM"
- * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { timeZone: "Europe/Londn" }) // "" (unknown zone)
- * @example formatUtc("2024-02-03T14:30:45Z", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
+ * @example formatUtc("2024-02-03T14:30:45Z", "en-GB", { era: "long" }) // "03/02/2024 Anno Domini, 14:30:45"
+ * @example formatUtc("2024-02-03T14:30:45Z", "en-GB", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "03/02/2024 Anno Domini" — the pre-1.16.0 text
+ * @example formatUtc("2024-02-03T14:30:45Z", "de-DE", { timeZoneName: "short" }) // "3.2.2024, 14:30:45"
+ * @example formatUtc("2024-02-03T14:30:45Z", "zh-CN", { timeZone: "Europe/Londn" }) // "" (unknown zone)
+ * @example formatUtc("2024-02-03T14:30:45Z", "pt-BR", null as never) // "" (null options, as ECMA-402 rejects them)
  * @example formatUtc("not-a-date") // ""
  * @example formatUtc("2024-02-03T14:30:45Z", ["fr-FR", "en-US"], { dateStyle: "long" }) // "3 février 2024"
  */

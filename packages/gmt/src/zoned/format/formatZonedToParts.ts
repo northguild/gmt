@@ -42,17 +42,17 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale optional locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402)
+ * @param locale optional locale tag (e.g. "en-GB", "ja-JP"), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
- * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US") // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "EDT" }]
- * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US", { timeZoneName: "longOffset" }) // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "GMT-04:00" }]
- * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US", { year: "numeric", month: "numeric", day: "numeric" }) // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }] — the pre-1.16.0 default
- * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US", { timeZone: "Asia/Tokyo" }) // [] — a ZonedDateTime keeps its own zone
- * @example formatZonedToParts("invalid", "en-US") // []
+ * @example formatZonedToParts("2024-03-15T14:30:00.000+00:00[Europe/London]", "en-GB") // [{ type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "month", value: "03" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "GMT" }]
+ * @example formatZonedToParts("2024-03-15T14:30:00.000+05:30[Asia/Kolkata]", "en-US", { timeZoneName: "longOffset" }) // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "GMT+05:30" }]
+ * @example formatZonedToParts("2024-03-15T14:30:00.000+00:00[Europe/London]", "en-GB", { year: "numeric", month: "numeric", day: "numeric" }) // [{ type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "month", value: "03" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }] — the pre-1.16.0 default
+ * @example formatZonedToParts("2024-03-15T14:30:00.000+00:00[Europe/London]", "en-GB", { timeZone: "Asia/Tokyo" }) // [] — a ZonedDateTime keeps its own zone
+ * @example formatZonedToParts("invalid", "de-DE") // []
  * @example formatZonedToParts("2024-02-03T14:30:45+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "medium", timeStyle: "short" }) // parts of "3 févr. 2024, 14:30"
- * @example formatZonedToParts("2024-02-03T14:30:00-05:00[America/New_York]", "en-US", null as never) // [] (null options, as ECMA-402 rejects them)
+ * @example formatZonedToParts("2024-02-03T14:30:00+02:00[Africa/Johannesburg]", "ar-EG", null as never) // [] (null options, as ECMA-402 rejects them)
  */
 export function formatZonedToParts(
   value: string,

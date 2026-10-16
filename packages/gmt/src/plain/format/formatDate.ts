@@ -28,13 +28,13 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized date string or "" on invalid input
  *
- * @example formatDate("2024-03-15", "en-US", { year: "numeric", month: "long", day: "numeric" }) // "March 15, 2024"
+ * @example formatDate("2024-03-15", "pt-BR", { year: "numeric", month: "long", day: "numeric" }) // "15 de março de 2024"
  * @example formatDate("2024-03-15", "de-DE", { year: "numeric", month: "long", day: "numeric" }) // "15. März 2024"
  * @example formatDate("2024-02-03", "ja-JP-u-ca-japanese", { year: "numeric", month: "long" }) // "令和6年2月"
  * @example formatDate("2024-02-03", "ja-JP-u-ca-japanese", { year: "numeric", month: "numeric" }) // "R6/2" — the pre-1.16.0 text
- * @example formatDate("2024-02-03", "en-US", { timeZoneName: "long" }) // "2/3/2024"
- * @example formatDate("2024-02-03", "en-US", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainDate has no time
- * @example formatDate("2024-02-03", "en-US", { dateStyle: "short" }) // "2/3/24" — the pre-1.16.0 text
+ * @example formatDate("2024-02-03", "hi-IN", { timeZoneName: "long" }) // "3/2/2024"
+ * @example formatDate("2024-02-03", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainDate has no time
+ * @example formatDate("2024-02-03", "en-GB", { dateStyle: "short" }) // "03/02/2024" — the pre-1.16.0 text
  * @example formatDate("invalid") // ""
  * @example formatDate("2024-02-03", ["fr-FR", "en-US"], { year: "numeric", month: "2-digit", day: "2-digit" }) // "03/02/2024" (the first listed locale)
  */

@@ -64,18 +64,18 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  * @param options optional: `Intl.DateTimeFormatOptions` fields, plus how `value` is read, the zone and whether its name is shown
  * @returns the formatted date/time string, or "" on invalid input
  *
- * @example formatUnix("1710685845000", "en-US", { epochUnit: "milliseconds" }) // "3/17/2024, 2:30:45 PM"
- * @example formatUnix(1710685845000, "en-US", { epochUnit: "milliseconds" }) // "3/17/2024, 2:30:45 PM"
- * @example formatUnix("1710685845", "en-US", { epochUnit: "seconds" }) // "3/17/2024, 2:30:45 PM"
- * @example formatUnix("1710685845000", "en-US", { epochUnit: "milliseconds", includeTimeZoneName: true }) // "3/17/2024, 2:30:45 PM UTC"
+ * @example formatUnix("1710685845000", "en-GB", { epochUnit: "milliseconds" }) // "17/03/2024, 14:30:45"
+ * @example formatUnix(1710685845000, "ja-JP", { epochUnit: "milliseconds" }) // "2024/3/17 14:30:45"
+ * @example formatUnix("1710685845", "de-DE", { epochUnit: "seconds" }) // "17.3.2024, 14:30:45"
+ * @example formatUnix("1710685845000", "en-GB", { epochUnit: "milliseconds", includeTimeZoneName: true }) // "17/03/2024, 14:30:45 UTC"
  * @example formatUnix(1706970645, "ja-JP-u-ca-japanese", { epochUnit: "seconds", year: "numeric", month: "long" }) // "令和6年2月"
  * @example formatUnix(1706970645, "ja-JP-u-ca-japanese", { epochUnit: "seconds", year: "numeric", month: "numeric" }) // "R6/2" — the pre-1.16.0 text
- * @example formatUnix(1706970645, "en-US", { epochUnit: "seconds", era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
- * @example formatUnix(1706970645, "en-US", { epochUnit: "seconds", era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
- * @example formatUnix(0, "en-US", { timeZoneName: "short" }) // "1/1/1970, 12:00:00 AM"
- * @example formatUnix(1710685845000, "en-US", { timeZone: "America/New_Yrok" }) // "" (unknown zone)
+ * @example formatUnix(1706970645, "en-GB", { epochUnit: "seconds", era: "long" }) // "03/02/2024 Anno Domini, 14:30:45"
+ * @example formatUnix(1706970645, "en-GB", { epochUnit: "seconds", era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "03/02/2024 Anno Domini" — the pre-1.16.0 text
+ * @example formatUnix(0, "fr-FR", { timeZoneName: "short" }) // "01/01/1970 00:00:00"
+ * @example formatUnix(1710685845000, "zh-CN", { timeZone: "Asia/Tokio" }) // "" (unknown zone)
  * @example formatUnix("1710685845000.0") // "" (not a digit string)
- * @example formatUnix(0, "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
+ * @example formatUnix(0, "pt-BR", null as never) // "" (null options, as ECMA-402 rejects them)
  * @example formatUnix("not-a-number") // ""
  * @example formatUnix(1710685845000, ["fr-FR", "en-US"], { dateStyle: "long" }) // "17 mars 2024"
  */

@@ -32,9 +32,9 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param optionsArg How far the search goes, and how a window edge on a clock change is resolved
  * @returns UTC instant string ending in "Z", or "" when none within the horizon or on invalid input
  *
- * @example nextOpenAt("2024-06-15T16:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
- * @example nextOpenAt("2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T14:00:00Z" — already open
- * @example nextOpenAt("2024-06-15T16:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }, { within: "P1D" }) // "" — Monday is past the horizon
+ * @example nextOpenAt("2024-06-15T15:00:00Z", { timeZone: "America/Sao_Paulo", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T12:00:00Z" — Saturday noon to Monday 09:00 local
+ * @example nextOpenAt("2024-06-17T13:00:00Z", { timeZone: "America/Sao_Paulo", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "2024-06-17T13:00:00Z" — already open
+ * @example nextOpenAt("2024-06-15T15:00:00Z", { timeZone: "America/Sao_Paulo", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }, { within: "P1D" }) // "" — Monday is past the horizon
  * @example nextOpenAt("2024-06-15T16:00:00Z", { timeZone: "UTC", weekly: {} }) // "" — never opens
  * @example nextOpenAt("2024-06-15T16:00:00Z", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }, { within: "-P1D" }) // ""
  */

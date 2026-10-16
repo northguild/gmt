@@ -27,8 +27,8 @@ import { parseCalendarZonedValue } from "../../../internal";
  * @returns true if start and end form a valid zoned interval, or false on invalid input
  *
  * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
- * @example isValidCalendarZonedInterval("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", "2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]") // true
- * @example isValidCalendarZonedInterval("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", "2024-03-25T14:30:00-04:00[America/New_York][u-ca=islamic-civil]") // true (mixed calendars accepted)
+ * @example isValidCalendarZonedInterval("2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]", "2024-03-25T14:30:00+00:00[Europe/London][u-ca=hebrew]") // true
+ * @example isValidCalendarZonedInterval("2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]", "2024-03-25T14:30:00+00:00[Europe/London][u-ca=islamic-civil]") // true (mixed calendars accepted)
  * @example isValidCalendarZonedInterval("2024-12-31T23:59:59+00:00[UTC]", "2024-01-01T10:00:00+00:00[UTC]") // false (start after end)
  * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // true (RFC 9557; mixed calendars accepted)
  * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[u-ca=hebrew][UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false (calendar before the zone)

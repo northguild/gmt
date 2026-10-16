@@ -24,11 +24,11 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * - Validates duration units and values.
  * - Accepts an RFC 9557 calendar-annotated zoned string (as `Temporal.ZonedDateTime#toString()`
  *   and `convertZonedToCalendar` write it, e.g.
- *   `"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`), not just a bare ISO string (E7,
+ *   `"2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]"`), not just a bare ISO string (E7,
  *   issue #152). Calendar-unit arithmetic ("add 1 month") resolves against that calendar (a Hebrew
  *   leap month, an Ethiopic Pagumen) **and** the DST rules of the zone, in one operation: Hebrew
- *   Adar I 15 in `America/New_York` `+1 month` moves both the month (Adar I -> Adar II) and the
- *   offset (-05:00 -> -04:00). The result carries the same calendar annotation. A bare ISO string
+ *   Adar I 25 in `Europe/London` `+1 month` moves both the month (Adar I -> Adar II) and the
+ *   offset (+00:00 -> +01:00). The result carries the same calendar annotation. A bare ISO string
  *   is the `"iso8601"` calendar and returns a bare ISO string.
  * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
  *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
@@ -41,7 +41,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   forward, whatever `disambiguation` said, so "earlier" matched "compatible" and "reject" did not
  *   fail. Pass "compatible" (or omit it) to keep the forward result.
  * - Compatibility: before 1.16.0 a non-"compatible" `disambiguation` re-resolved the final wall
- *   clock (so `+ { minutes: 10 }` from `01:30-05:00` with "earlier" returned `01:40-04:00`, 50
+ *   clock (so `+ { minutes: 10 }` from `01:30+00:00` with "earlier" returned `01:40+01:00`, 50
  *   minutes earlier in exact time). To get that value, re-resolve the result's wall clock:
  *   `setZoned(result, { hour, minute, second }, { disambiguation, offset: "ignore" })`.
  * - There is no `offset` option (removed in 1.16.0): the intermediate wall clock is resolved from
@@ -54,20 +54,20 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @param optionsArg optional settings for resolving a DST gap or overlap and an out-of-range date
  * @returns zoned ISO 8601 string on success, or "" on invalid input
  *
- * @example addZoned("2024-02-29T14:30:45.123-05:00[America/New_York]", { days: 1 }) // "2024-03-01T14:30:45.123-05:00[America/New_York]"
+ * @example addZoned("2024-02-29T14:30:45.123+00:00[Europe/London]", { days: 1 }) // "2024-03-01T14:30:45.123+00:00[Europe/London]"
  * @example addZoned("invalid", { days: 1 }) // ""
- * @example addZoned("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", { months: 1 }) // "2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]" (Adar I -> Adar II, EST -> EDT in one call)
+ * @example addZoned("2024-03-05T14:30:00+00:00[Europe/London][u-ca=hebrew]", { months: 1 }) // "2024-04-04T14:30:00+01:00[Europe/London][u-ca=hebrew]" (Adar I -> Adar II, GMT -> BST in one call)
  * @example addZoned("2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]", { days: 1 }) // "2019-05-01T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]" (Heisei 31 -> Reiwa 1)
  * @example addZoned("2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]", { months: 1 }, { overflow: "reject" }) // "" (day 30 does not exist in the 5-day Pagumen)
- * @example addZoned("2024-03-10T14:30:00-04:00[u-ca=hebrew][America/New_York]", { days: 1 }) // "" (calendar before zone is not RFC 9557)
- * @example addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "later" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
- * @example addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
- * @example addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }) // "2024-03-10T03:30:00-04:00[America/New_York]" (02:30 on 10 March is in the spring-forward gap; "compatible" moves it forward an hour)
- * @example addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" }) // "2024-03-10T01:30:00-05:00[America/New_York]" (spring-forward gap; "earlier" moves it back an hour)
- * @example addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (spring-forward gap rejected)
- * @example addZoned("2024-11-03T01:30:00-05:00[America/New_York]", { minutes: 10 }, { disambiguation: "earlier" }) // "2024-11-03T01:40:00-05:00[America/New_York]" (exact time — disambiguation never re-resolves it)
- * @example setZoned(addZoned("2024-11-03T01:30:00-05:00[America/New_York]", { minutes: 10 }), { hour: 1, minute: 40, second: 0 }, { disambiguation: "earlier", offset: "ignore" }) // "2024-11-03T01:40:00-04:00[America/New_York]" (pre-1.16.0 result)
- * @example addZoned("2024-01-31T12:00:00-05:00[America/New_York]", { months: 1 }, { overflow: "reject" }) // ""
+ * @example addZoned("2024-03-10T14:30:00+05:30[u-ca=hebrew][Asia/Kolkata]", { days: 1 }) // "" (calendar before zone is not RFC 9557)
+ * @example addZoned("2024-10-26T01:30:00+01:00[Europe/London]", { days: 1 }, { disambiguation: "later" }) // "2024-10-27T01:30:00+00:00[Europe/London]" (fall-back overlap resolved; default "compatible" would return the +01:00 instant instead)
+ * @example addZoned("2024-10-26T01:30:00+01:00[Europe/London]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
+ * @example addZoned("2024-10-05T02:30:00+10:00[Australia/Sydney]", { days: 1 }) // "2024-10-06T03:30:00+11:00[Australia/Sydney]" (02:30 on 6 October is in the spring-forward gap; "compatible" moves it forward an hour)
+ * @example addZoned("2024-10-05T02:30:00+10:00[Australia/Sydney]", { days: 1 }, { disambiguation: "earlier" }) // "2024-10-06T01:30:00+10:00[Australia/Sydney]" (spring-forward gap; "earlier" moves it back an hour)
+ * @example addZoned("2024-10-05T02:30:00+10:00[Australia/Sydney]", { days: 1 }, { disambiguation: "reject" }) // "" (spring-forward gap rejected)
+ * @example addZoned("2024-10-27T01:30:00+00:00[Europe/London]", { minutes: 10 }, { disambiguation: "earlier" }) // "2024-10-27T01:40:00+00:00[Europe/London]" (exact time — disambiguation never re-resolves it)
+ * @example setZoned(addZoned("2024-10-27T01:30:00+00:00[Europe/London]", { minutes: 10 }), { hour: 1, minute: 40, second: 0 }, { disambiguation: "earlier", offset: "ignore" }) // "2024-10-27T01:40:00+01:00[Europe/London]" (pre-1.16.0 result)
+ * @example addZoned("2024-01-31T12:00:00+02:00[Africa/Johannesburg]", { months: 1 }, { overflow: "reject" }) // ""
  */
 export function addZoned(
   value: string,

@@ -5,7 +5,7 @@ import {
   fiscalYearOf,
 } from "./fiscalCalendar";
 
-/** "The Saturday nearest to January 31" — the NRF 4-5-4 rule, stated as a date. */
+/** The Saturday nearest January 31 — the NRF (US) 4-5-4 year end, stated as a date. */
 const nrfAnchor = Temporal.PlainDate.from("2026-01-31");
 
 describe("fiscalYearEndIn", () => {

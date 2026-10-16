@@ -17,7 +17,7 @@ import { isValidUtc } from "../validate";
  * @param timeZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @returns zoned ISO 8601 string or "" on invalid
  *
- * @example convertUtcToZoned("2024-02-29T00:00:00Z", "America/New_York") // "2024-02-28T19:00:00-05:00[America/New_York]"
+ * @example convertUtcToZoned("2024-02-29T00:00:00Z", "Australia/Sydney") // "2024-02-29T11:00:00+11:00[Australia/Sydney]"
  * @example convertUtcToZoned("invalid", "UTC") // ""
  */
 export function convertUtcToZoned(value: string, timeZone: string): string {

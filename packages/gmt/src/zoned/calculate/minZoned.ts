@@ -11,8 +11,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param zonedDateTimes Array of ISO ZonedDateTime strings
  * @returns The earliest zoned datetime string, or null on invalid input
  *
- * @example minZoned(["2024-03-10T12:00:00[America/New_York]", "2024-03-15T12:00:00[America/New_York]"]) // "2024-03-10T12:00:00-04:00[America/New_York]"
- * @example minZoned(["invalid", "2024-03-15T12:00:00[America/New_York]"]) // "2024-03-15T12:00:00-04:00[America/New_York]"
+ * @example minZoned(["2024-03-10T12:00:00[America/Sao_Paulo]", "2024-03-15T12:00:00[America/Sao_Paulo]"]) // "2024-03-10T12:00:00-03:00[America/Sao_Paulo]"
+ * @example minZoned(["invalid", "2024-03-15T12:00:00[America/Sao_Paulo]"]) // "2024-03-15T12:00:00-03:00[America/Sao_Paulo]"
  * @example minZoned(["invalid", "also invalid"]) // null
  * @example minZoned([]) // null
  */

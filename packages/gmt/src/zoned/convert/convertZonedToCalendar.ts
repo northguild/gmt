@@ -33,12 +33,12 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   "indian" | "ethiopic" | "ethioaa" | "coptic")
  * @returns RFC 9557 zoned datetime string, or "" on invalid input
  *
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]", "iso8601") // "2024-10-03T14:30:45-04:00[America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "japanese") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=japanese]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "roc") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=roc]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45+01:00[Europe/London]", "hebrew") // "2024-10-03T14:30:45+01:00[Europe/London][u-ca=hebrew]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45+01:00[Europe/London][u-ca=hebrew]", "iso8601") // "2024-10-03T14:30:45+01:00[Europe/London]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45+09:00[Asia/Tokyo]", "japanese") // "2024-10-03T14:30:45+09:00[Asia/Tokyo][u-ca=japanese]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45+08:00[Asia/Taipei]", "roc") // "2024-10-03T14:30:45+08:00[Asia/Taipei][u-ca=roc]"
  * @example convertZonedToCalendar("+275760-09-13T00:00:00+00:00[UTC]", "hebrew") // "+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[u-ca=hebrew][America/New_York]", "iso8601") // "" (calendar before zone is not RFC 9557)
+ * @example convertZonedToCalendar("2024-10-03T14:30:45+01:00[u-ca=hebrew][Europe/London]", "iso8601") // "" (calendar before zone is not RFC 9557)
  * @example convertZonedToCalendar("invalid", "hebrew") // ""
  */
 export function convertZonedToCalendar(

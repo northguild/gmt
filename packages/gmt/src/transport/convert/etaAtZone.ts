@@ -44,8 +44,8 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokyo") // "2024-06-15T21:30:00+09:00[Asia/Tokyo]"
  * @example etaAtZone("2024-06-15T12:30:00Z", "America/Los_Angeles") // "2024-06-15T05:30:00-07:00[America/Los_Angeles]"
  * @example etaAtZone("2024-06-15T12:30:00+02:00", "Pacific/Apia") // "2024-06-15T23:30:00+13:00[Pacific/Apia]" (the offset fixes the instant; the zone renders it)
- * @example etaAtZone("2024-11-03T05:30:00Z", "America/New_York") // "2024-11-03T01:30:00-04:00[America/New_York]" (the first 01:30 of the fall-back night)
- * @example etaAtZone("2024-11-03T06:30:00Z", "America/New_York") // "2024-11-03T01:30:00-05:00[America/New_York]" (the second; the offset tells them apart)
+ * @example etaAtZone("2024-04-06T15:30:00Z", "Australia/Sydney") // "2024-04-07T02:30:00+11:00[Australia/Sydney]" (the first 02:30 of the fall-back night)
+ * @example etaAtZone("2024-04-06T16:30:00Z", "Australia/Sydney") // "2024-04-07T02:30:00+10:00[Australia/Sydney]" (the second; the offset tells them apart)
  * @example etaAtZone("2024-06-15T12:30:00", "Asia/Tokyo") // "" (no offset designator: not a moment)
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokio") // ""
  */

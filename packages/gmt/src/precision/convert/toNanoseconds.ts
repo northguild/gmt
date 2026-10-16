@@ -34,8 +34,8 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example toNanoseconds("1970-01-01T00:00:00Z") // 0n
  * @example toNanoseconds("2024-03-10T12:00:00.123456789Z") // 1710072000123456789n
  * @example toNanoseconds("1969-12-31T23:59:59Z") // -1000000000n
- * @example toNanoseconds("2024-03-10T12:00:00-05:00[America/New_York]") // 1710090000000000000n
- * @example toNanoseconds("2024-03-10T12:00:00+05:00[America/New_York]") // 1710054000000000000n — the offset decides, the zone is not checked
+ * @example toNanoseconds("2024-03-10T12:00:00+05:30[Asia/Kolkata]") // 1710052200000000000n
+ * @example toNanoseconds("2024-03-10T12:00:00+05:00[Asia/Kolkata]") // 1710054000000000000n — the offset decides, the zone is not checked
  * @example toNanoseconds("1960-01-01T00:20:00-00:45[Africa/Monrovia]") // -315615330000000000n — the zone's −00:44:30, which `-00:45` rounds
  * @example toNanoseconds("2024-03-10T12:00:00") // 0n — no offset designator
  * @example toNanoseconds("20240310T120000Z") // 0n — basic format

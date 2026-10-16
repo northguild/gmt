@@ -47,13 +47,13 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @param options optional settings for resolving an out-of-range date and the new wall-clock time
  * @returns zoned ISO 8601 string with fields set, or "" on invalid input
  *
- * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", { hour: 9 }) // "2024-03-10T09:00:00-04:00[America/New_York]"
- * @example setZoned("2024-01-31T12:00:00-05:00[America/New_York]", { month: 2 }) // "2024-02-29T12:00:00-05:00[America/New_York]" (constrain clamps to the last valid day)
- * @example setZoned("2024-01-31T12:00:00-05:00[America/New_York]", { month: 2 }, { overflow: "reject" }) // ""
- * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", {}) // "2024-03-10T12:00:00-04:00[America/New_York]" (empty fields object is a no-op)
- * @example setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, { disambiguation: "reject" }) // "2024-11-03T01:00:00-05:00[America/New_York]" (offset defaults to "prefer": the source's -05:00 is still valid, so it is kept and "reject" never fires)
- * @example setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, { disambiguation: "reject", offset: "ignore" }) // "" (offset "ignore" re-resolves the repeated 01:00, and "reject" throws)
- * @example setZoned("2024-03-10T12:00:00-04:00[America/New_York]", { hour: "9" }) // "" (not converted)
+ * @example setZoned("2024-03-10T12:00:00+09:00[Asia/Tokyo]", { hour: 9 }) // "2024-03-10T09:00:00+09:00[Asia/Tokyo]"
+ * @example setZoned("2024-01-31T12:00:00+05:30[Asia/Kolkata]", { month: 2 }) // "2024-02-29T12:00:00+05:30[Asia/Kolkata]" (constrain clamps to the last valid day)
+ * @example setZoned("2024-01-31T12:00:00+05:30[Asia/Kolkata]", { month: 2 }, { overflow: "reject" }) // ""
+ * @example setZoned("2024-03-10T12:00:00+09:00[Asia/Tokyo]", {}) // "2024-03-10T12:00:00+09:00[Asia/Tokyo]" (empty fields object is a no-op)
+ * @example setZoned("2024-10-27T01:45:00+00:00[Europe/London]", { minute: 0 }, { disambiguation: "reject" }) // "2024-10-27T01:00:00+00:00[Europe/London]" (offset defaults to "prefer": the source's +00:00 is still valid, so it is kept and "reject" never fires)
+ * @example setZoned("2024-10-27T01:45:00+00:00[Europe/London]", { minute: 0 }, { disambiguation: "reject", offset: "ignore" }) // "" (offset "ignore" re-resolves the repeated 01:00, and "reject" throws)
+ * @example setZoned("2024-03-10T12:00:00+09:00[Asia/Tokyo]", { hour: "9" }) // "" (not converted)
  * @example setZoned("invalid", { hour: 9 }) // ""
  */
 export function setZoned(

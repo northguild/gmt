@@ -30,16 +30,16 @@ import { resolveLocale } from "../../internal/resolveLocale";
  *
  * @param value ISO ZonedDateTime string
  * @param unit date unit to compare by ("year" | "month" | "week" | "day", or its plural)
- * @param locale optional BCP 47 locale tag or preference list — sets the "week" start (e.g. "en-US", ["fr-FR", "en-US"])
+ * @param locale optional BCP 47 locale tag or preference list — sets the "week" start (e.g. "pt-BR", ["fr-FR", "en-US"])
  * @returns true if `value`'s local day falls in the same `unit` as today in its own timeZone, false on an unsupported unit or invalid input
  *
- * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "month") // true, if today is any day in March 2024 in America/New_York
+ * @example isZonedThisUnit("2024-03-15T10:00:00+11:00[Australia/Sydney]", "month") // true, if today is any day in March 2024 in Australia/Sydney
  * @example isZonedThisUnit("2024-02-26T10:00:00+01:00[Europe/Paris]", "week", "fr-FR") // true, if today is 2024-03-01 in Europe/Paris (same fr-FR Monday-start week)
- * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "hour" as never) // false (unsupported unit)
+ * @example isZonedThisUnit("2024-03-15T10:00:00-03:00[America/Sao_Paulo]", "hour" as never) // false (unsupported unit)
  * @example isZonedThisUnit("invalid", "month") // false
- * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "week", "not-a-locale-!!") // false (invalid locale)
- * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "day", "not-a-locale-!!") // false (invalid locale, for every unit)
- * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "months") // true, if today is any day in March 2024 in America/New_York
+ * @example isZonedThisUnit("2024-03-15T10:00:00-03:00[America/Sao_Paulo]", "week", "not-a-locale-!!") // false (invalid locale)
+ * @example isZonedThisUnit("2024-03-15T10:00:00-03:00[America/Sao_Paulo]", "day", "not-a-locale-!!") // false (invalid locale, for every unit)
+ * @example isZonedThisUnit("2024-03-15T10:00:00+11:00[Australia/Sydney]", "months") // true, if today is any day in March 2024 in Australia/Sydney
  */
 export function isZonedThisUnit(
   value: string,

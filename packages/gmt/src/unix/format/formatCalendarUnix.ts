@@ -15,7 +15,7 @@ import { isObject } from "../../internal/isObject";
  *
  * @example
  * import { FormatCalendarUnixOptions } from "@northguild/gmt/unix";
- * const opts: FormatCalendarUnixOptions = { timeZone: "America/New_York" };
+ * const opts: FormatCalendarUnixOptions = { timeZone: "Asia/Tokyo" };
  */
 export interface FormatCalendarUnixOptions {
   /**
@@ -43,7 +43,7 @@ export interface FormatCalendarUnixOptions {
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
    * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
-   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
+   * ("BST") and `"full"` the long one ("British Summer Time"). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
@@ -52,7 +52,7 @@ export interface FormatCalendarUnixOptions {
 
 /**
  * Format a unix epoch value as a relative day label plus time-of-day, e.g.
- * "Tomorrow at 2:30 PM" — the unix counterpart of `formatCalendar`. See
+ * "tomorrow at 14:30" — the unix counterpart of `formatCalendar`. See
  * that function's JSDoc for the day-label/threshold/connector design; this
  * variant compares calendar days and renders the clock time in `timeZone`.
  *
@@ -70,11 +70,11 @@ export interface FormatCalendarUnixOptions {
  * @param options optional: the reference instant, how epochs are read, the zone and the width of the time
  * @returns the formatted calendar string, or "" on invalid input
  *
- * @example formatCalendarUnix(1710685845000, "en-US", { epochUnit: "milliseconds", timeZone: "America/New_York" }) // day label + time relative to "now", or the absolute fallback beyond the ±6-day threshold
- * @example formatCalendarUnix(1710772200000, "en-US", { reference: 1710685000000, timeZone: "UTC" }) // "tomorrow at 2:30 PM"
- * @example formatCalendarUnix("1710772200", "en-US", { reference: "1710685000", epochUnit: "second" }) // "tomorrow at 2:30 PM"
- * @example formatCalendarUnix(1710772200000, "en-US", { reference: 1710685000000, timeZone: "America/New_Yrok" }) // "" (unknown zone)
- * @example formatCalendarUnix(1710772200000, "en-US", null as never) // ""
+ * @example formatCalendarUnix(1710685845000, "ja-JP", { epochUnit: "milliseconds", timeZone: "Asia/Tokyo" }) // day label + time relative to "now", or the absolute fallback beyond the ±6-day threshold
+ * @example formatCalendarUnix(1710772200000, "en-GB", { reference: 1710685000000, timeZone: "UTC" }) // "tomorrow at 14:30"
+ * @example formatCalendarUnix("1710772200", "de-DE", { reference: "1710685000", epochUnit: "second" }) // "morgen um 14:30"
+ * @example formatCalendarUnix(1710772200000, "fr-FR", { reference: 1710685000000, timeZone: "Australia/Sidney" }) // "" (unknown zone)
+ * @example formatCalendarUnix(1710772200000, "hi-IN", null as never) // ""
  * @example formatCalendarUnix("not-a-number") // ""
  * @example formatCalendarUnix(1710613800000, ["fr-FR", "en-US"], { reference: 1710507600000 }) // "demain à 18:30"
  */

@@ -13,7 +13,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *
  * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123Z") // "000"
  * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123456789Z") // "789"
- * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123456789Z", { timeZone: "America/New_York" }) // "789"
+ * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123456789Z", { timeZone: "Australia/Sydney" }) // "789"
  * @example parseNanosecondFromUtc("invalid") // ""
  */
 export function parseNanosecondFromUtc(

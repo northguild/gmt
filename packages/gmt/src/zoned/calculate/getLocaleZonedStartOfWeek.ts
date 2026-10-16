@@ -11,7 +11,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return the start of the week containing `value`, using `locale`'s
- * first day of week (e.g. en-US: Sunday, fr-FR: Monday).
+ * first day of week (e.g. fr-FR: Monday, hi-IN: Sunday).
  *
  * - Resolves the locale's first day of week via
  *   `Intl.Locale.prototype.weekInfo`.
@@ -30,16 +30,16 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "hi-IN", "ar-EG"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
  * @param optionsArg optional setting for the precision of the output string
  * @returns zoned ISO 8601 string for the start of `value`'s locale-relative week, or "" on invalid input
  *
- * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US") // "2024-02-25T00:00:00+00:00[UTC]" (Sunday)
+ * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "hi-IN") // "2024-02-25T00:00:00+00:00[UTC]" (Sunday)
  * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "fr-FR") // "2024-02-26T00:00:00+00:00[UTC]" (Monday)
- * @example getLocaleZonedStartOfWeek("2024-09-11T12:00:00-03:00[America/Santiago]", "en-US") // "2024-09-08T01:00:00-03:00[America/Santiago]" (that Sunday's midnight was skipped)
- * @example getLocaleZonedStartOfWeek("invalid", "en-US") // ""
+ * @example getLocaleZonedStartOfWeek("2024-09-11T12:00:00-03:00[America/Santiago]", "pt-BR") // "2024-09-08T01:00:00-03:00[America/Santiago]" (that Sunday's midnight was skipped)
+ * @example getLocaleZonedStartOfWeek("invalid", "ja-JP") // ""
  * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "not-a-locale-!!") // ""
- * @example getLocaleZonedStartOfWeek("2024-05-15T12:00:00+02:00[Europe/Berlin]", ["en-US", "fr-FR"]) // "2024-05-12T00:00:00+02:00[Europe/Berlin]"
+ * @example getLocaleZonedStartOfWeek("2024-05-15T12:00:00+02:00[Europe/Berlin]", ["hi-IN", "fr-FR"]) // "2024-05-12T00:00:00+02:00[Europe/Berlin]"
  */
 export function getLocaleZonedStartOfWeek(
   value: string,

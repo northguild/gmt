@@ -6,7 +6,7 @@
  *
  * @returns array of IANA timezone identifier strings, or `[]` on failure
  *
- * @example getTimeZones() // ["America/New_York", "Europe/London", ...]
+ * @example getTimeZones() // ["Africa/Abidjan", "Africa/Accra", ...]
  * @example getTimeZones().length // ~422 (varies by runtime/ICU)
  */
 export function getTimeZones(): string[] {

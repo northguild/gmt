@@ -10,7 +10,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value ISO 8601 zoned datetime string
  * @returns Zoned datetime string without milliseconds or "" for invalid
  *
- * @example chopZonedMilliseconds("2024-02-29T14:30:45.123-05:00[America/New_York]") // "2024-02-29T14:30:45-05:00[America/New_York]"
+ * @example chopZonedMilliseconds("2024-02-29T14:30:45.123+00:00[Europe/London]") // "2024-02-29T14:30:45+00:00[Europe/London]"
  * @example chopZonedMilliseconds("invalid") // ""
  */
 export function chopZonedMilliseconds(value: string): string {

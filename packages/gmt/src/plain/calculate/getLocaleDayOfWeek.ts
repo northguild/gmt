@@ -6,7 +6,7 @@ import { isValidDate } from "../validate";
 /**
  * Return the locale-relative day-of-week index for `value`.
  *
- * - `0` = the locale's first day of week (e.g. Sunday for en-US, Monday for fr-FR).
+ * - `0` = the locale's first day of week (e.g. Monday for fr-FR, Sunday for ja-JP).
  * - Resolves the locale's first day of week via `Intl.Locale.prototype.weekInfo`.
  * - Falls back to Monday if the runtime's `weekInfo` data doesn't resolve
  *   a first day for the locale.
@@ -16,15 +16,15 @@ import { isValidDate } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO 8601 date string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @returns locale-relative day-of-week index (0–6) or null on invalid input
  *
- * @example getLocaleDayOfWeek("2024-02-25", "en-US") // 0 (Sunday)
- * @example getLocaleDayOfWeek("2024-02-26", "en-US") // 1 (Monday)
+ * @example getLocaleDayOfWeek("2024-02-25", "ja-JP") // 0 (Sunday)
+ * @example getLocaleDayOfWeek("2024-02-26", "ja-JP") // 1 (Monday)
  * @example getLocaleDayOfWeek("2024-02-26", "fr-FR") // 0 (Monday)
- * @example getLocaleDayOfWeek("invalid-date", "en-US") // null
+ * @example getLocaleDayOfWeek("invalid-date", "pt-BR") // null
  * @example getLocaleDayOfWeek("2024-02-29", "not-a-locale-!!") // null
- * @example getLocaleDayOfWeek("2024-05-15", ["en-US", "fr-FR"]) // 3 (Wednesday in a Sunday-first week)
+ * @example getLocaleDayOfWeek("2024-05-15", ["pt-BR", "fr-FR"]) // 3 (Wednesday in a Sunday-first week)
  */
 export function getLocaleDayOfWeek(
   value: string,

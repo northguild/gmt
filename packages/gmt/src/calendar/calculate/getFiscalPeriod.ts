@@ -19,20 +19,23 @@ const DAYS_PER_WEEK = 7;
  * insertion fall out of `calendar` — nothing here is bundled, because there is no single
  * correct retail calendar.
  *
- * - `calendar.pattern` is the weeks-per-period shape of a quarter: `"4-5-4"` (the NRF retail
- *   standard), `"4-4-5"` or `"5-4-4"`. Four quarters of 13 weeks make the 52-week year.
+ * - `calendar.pattern` is the weeks-per-period shape of a quarter: `"4-5-4"`, `"4-4-5"` or
+ *   `"5-4-4"`. Four quarters of 13 weeks make the 52-week year.
  * - **`calendar.yearEndsOn` states the year-end *rule*, by example, not one year's end.**
  *   Fiscal years end on that date's weekday, on the occurrence nearest that date's month and
- *   day. The NRF's published rule — "the Saturday nearest to January 31"
- *   ([NRF 4-5-4 calendar](https://nrf.com/resources/4-5-4-calendar)) — is `"2026-01-31"`, a
- *   Saturday falling exactly on January 31. Passing a published year end from a 53-week year
- *   instead (`"2024-02-03"`) states a different rule, because that date sits three days off
- *   the target the rule is centred on, and yields a different, self-consistent calendar.
- * - Weeks are numbered through the fiscal year as the NRF publishes them. A 53rd week is
- *   appended to period 12 — the NRF adds it "to the end of the calendar" — which makes a 4-5-4
- *   year's final quarter 4-5-5.
- * - The `year` label follows the NRF: fiscal 2023 runs 2023-01-29 to 2024-02-03. Organisations
- *   labelling by the end year should add one.
+ *   day. One published 4-5-4 example (NRF, US) ends its year on the Saturday nearest
+ *   January 31: it adds a 53rd week when "there are four or more days left in January"
+ *   ([NRF 4-5-4 calendar](https://nrf.com/resources/4-5-4-calendar)). As `yearEndsOn` that
+ *   is `"2026-01-31"`, a Saturday falling exactly on January 31. Passing a
+ *   published year end from a 53-week year instead (`"2024-02-03"`) states a different rule,
+ *   because that date sits three days off the target the rule is centred on, and yields a
+ *   different, self-consistent calendar.
+ * - GMT rule: weeks are numbered 1 to 52 (or 53) through the fiscal year, and a 53rd week is
+ *   appended to period 12, which makes a 4-5-4 year's final quarter 4-5-5. The NRF example
+ *   (US) places it the same way, "to the end of the calendar".
+ * - GMT rule: `year` is the calendar year the fiscal year starts in, so under the rule above
+ *   fiscal 2023 runs 2023-01-29 to 2024-02-03. Organisations differ on this; if yours labels a
+ *   fiscal year by the year it ends in, add one.
  * - **`year` is not a unique key for a rule anchored near 1 January.** A 52/53-week year is
  *   364 or 371 days, so it drifts against the calendar, and no label taken from a calendar
  *   year survives that for every anchor. Under `yearEndsOn: "2022-12-31"` — the Saturday
@@ -40,10 +43,10 @@ const DAYS_PER_WEEK = 7;
  *   label, and 2020, 2025 and 2031 label no fiscal year at all. Grouping by `year` there
  *   merges 104 weeks and drops a year. `"2027-01-02"` states a different rule, the Saturday
  *   nearest to 2 January: it too gives 2023 twice, merging 105 weeks, and skips 2018, 2024
- *   and 2029. January/February anchors like the NRF's
- *   are unaffected. If your rule sits near a year boundary, key on the fiscal year's own start
- *   date — which `yearEndsOn` determines, and which is yours to enumerate — not on `year`.
- *   GMT does not invent a label the inputs do not fix.
+ *   and 2029. January/February anchors, such as the NRF example's, are unaffected. If your
+ *   rule sits near a year boundary, key on the fiscal year's own start date — which
+ *   `yearEndsOn` determines, and which is yours to enumerate — not on `year`. GMT does not
+ *   invent a label the inputs do not fix.
  * - A `yearEndsOn` month-day that does not exist in a year follows Temporal's
  *   `overflow: "constrain"`: a February 29 rule reads February 28 in common years. A rule tied
  *   to the end of a month (the weekday nearest to, or last in, the month's final days) would

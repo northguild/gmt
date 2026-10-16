@@ -13,7 +13,7 @@ import { isoYearString } from "../../internal/isoYearString";
  *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns current year string (zero-padded to 4 digits) or "" on invalid input
  *
- * @example getZonedYear("America/New_York") // "2024"
+ * @example getZonedYear("Africa/Johannesburg") // "2024"
  * @example getZonedYear("invalid") // ""
  */
 export function getZonedYear(ianaTimezone: string): string {

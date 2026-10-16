@@ -13,10 +13,10 @@ const MONTHS_PER_YEAR = 12;
  *
  * - With no options these are the calendar quarters: Q1 is January to March, and `year` is
  *   the calendar year.
- * - Labelling a fiscal year by the calendar year it starts in matches the NRF retail
- *   convention `getFiscalPeriod` uses. Organisations that label a fiscal year by the calendar
- *   year it *ends* in — for a fiscal year that starts in October, FY2025 begins in October
- *   2024 — should add one to `year`.
+ * - GMT rule: a fiscal year is labelled by the calendar year it starts in, the same rule
+ *   `getFiscalPeriod` uses. Organisations that label a fiscal year by the calendar year it
+ *   *ends* in — for a fiscal year that starts in October, FY2025 begins in October 2024 —
+ *   should add one to `year`.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
  *   `getIsoWeekDate` for why a moment is not accepted here.
  * - Returns null on invalid input, including a `fiscalYearStartMonth` that is not an integer

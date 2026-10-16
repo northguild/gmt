@@ -44,11 +44,11 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  * @param options the unit to round to, with an optional increment and rounding mode
  * @returns Rounded ISO 8601 zoned datetime string, or "" on invalid input
  *
- * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "hour" }) // "2024-06-15T13:00:00-04:00[America/New_York]"
- * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:30:00-04:00[America/New_York]"
+ * @example roundZoned("2024-06-15T12:34:56+02:00[Africa/Johannesburg]", { smallestUnit: "hour" }) // "2024-06-15T13:00:00+02:00[Africa/Johannesburg]"
+ * @example roundZoned("2024-06-15T12:34:56+02:00[Africa/Johannesburg]", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:30:00+02:00[Africa/Johannesburg]"
  * @example roundZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", { smallestUnit: "hour", roundingMode: "trunc" }) // "2024-09-29T04:00:00+13:45[Pacific/Chatham]" (after the input — TC39 wall-clock rounding)
- * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "hours" }) // "2024-06-15T13:00:00-04:00[America/New_York]" (plural unit name)
- * @example roundZoned("2024-06-15T12:34:56.123456789-04:00[America/New_York]", { smallestUnit: "millisecond" }) // "2024-06-15T12:34:56.123-04:00[America/New_York]" (precision follows the unit)
+ * @example roundZoned("2024-06-15T12:34:56+02:00[Africa/Johannesburg]", { smallestUnit: "hours" }) // "2024-06-15T13:00:00+02:00[Africa/Johannesburg]" (plural unit name)
+ * @example roundZoned("2024-06-15T12:34:56.123456789+02:00[Africa/Johannesburg]", { smallestUnit: "millisecond" }) // "2024-06-15T12:34:56.123+02:00[Africa/Johannesburg]" (precision follows the unit)
  * @example roundZoned("invalid", { smallestUnit: "hour" }) // ""
  */
 export function roundZoned(

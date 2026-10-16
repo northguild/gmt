@@ -49,7 +49,7 @@ export interface DriftReport {
  * - `revisions` is the number of EST records, the first included.
  * - `drift` is the last EST's `at` minus the first's, in exact elapsed time with hours as the
  *   largest unit: positive when the estimate moved later, negative when earlier. Across a
- *   fall-back night, 01:30 EDT to 01:30 EST is `PT1H`.
+ *   fall-back night, 01:30 BST to 01:30 GMT is `PT1H`.
  * - With `tolerance`, `exceedsTolerance` is `true` when the drift, in either direction, is
  *   **greater** than the tolerance; exactly the tolerance is `false`. Without it, `null`.
  * - `first` and `last` echo `at` exactly as written; both are instants (`Z`/offset) or zoned

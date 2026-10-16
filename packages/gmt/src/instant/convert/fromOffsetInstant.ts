@@ -48,14 +48,14 @@ import { isObject } from "../../internal/isObject";
  * @returns local ISO 8601 string carrying the pair's own offset, or "" on invalid input
  *
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }) // "2024-07-15T12:00:00-04:00"
- * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }) // "2024-07-15T12:00:00-04:00[America/New_York]"
- * @example fromOffsetInstant({ instant: "2024-11-03T05:30:00Z", offset: "-04:00", timeZone: "America/New_York" }) // "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30 of the fall-back night
- * @example fromOffsetInstant({ instant: "2024-11-03T06:30:00Z", offset: "-05:00", timeZone: "America/New_York" }) // "2024-11-03T01:30:00-05:00[America/New_York]" — the second, an hour later
+ * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/Santiago" }) // "2024-07-15T12:00:00-04:00[America/Santiago]"
+ * @example fromOffsetInstant({ instant: "2024-10-27T00:30:00Z", offset: "+01:00", timeZone: "Europe/London" }) // "2024-10-27T01:30:00+01:00[Europe/London]" — the first 01:30 of the fall-back night
+ * @example fromOffsetInstant({ instant: "2024-10-27T01:30:00Z", offset: "+00:00", timeZone: "Europe/London" }) // "2024-10-27T01:30:00+00:00[Europe/London]" — the second, an hour later
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "+00:00" }) // "2024-07-15T16:00:00+00:00"
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-00:00" }) // "2024-07-15T16:00:00+00:00" (RFC 9557's "offset unknown" is not kept)
  * @example fromOffsetInstant({ instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" }) // "1969-12-31T23:15:30-00:45[Africa/Monrovia]" — RFC 9557 rounds the written offset; the zone keeps the instant exact
  * @example fromOffsetInstant({ instant: "1970-01-01T00:00:00Z", offset: "-00:44:30" }) // "1969-12-31T23:15:30-00:44:30" — no zone to round against, so the seconds are written
- * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-05:00", timeZone: "America/New_York" }) // "" (offset contradicts the zone)
+ * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "+11:00", timeZone: "Australia/Sydney" }) // "" (offset contradicts the zone: Sydney is +10:00 in July)
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "-04:00" }) // "" (an offset is not a zone)
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "Z" }) // "" (a designator, not an offset)
  * @example fromOffsetInstant({ instant: "not an instant", offset: "-04:00" }) // ""

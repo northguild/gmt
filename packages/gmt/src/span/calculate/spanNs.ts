@@ -44,8 +44,8 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example spanNs("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // -1000000000n
  * @example spanNs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0n
  * @example spanNs("2024-03-10T12:00:00.123456789Z", "2024-03-10T12:00:00.123456790Z") // 1n
- * @example spanNs("2024-03-10T07:00:00-05:00[America/New_York]", "2024-03-10T12:00:00Z") // 0n — same instant, different zones
- * @example spanNs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000000000n — offsets decide, the zone is not checked
+ * @example spanNs("2024-03-10T07:00:00-05:00[America/Bogota]", "2024-03-10T12:00:00Z") // 0n — same instant, different zones
+ * @example spanNs("2024-03-10T12:00:00+05:00[Asia/Tokyo]", "2024-03-10T12:00:00-04:00[Asia/Tokyo]") // 32400000000000n — offsets decide, the zone is not checked
  * @example spanNs("1960-01-01T01:04:30Z", "1960-01-01T00:20:00-00:45[Africa/Monrovia]") // 0n — the zone's −00:44:30, which `-00:45` rounds
  * @example spanNs("2024-03-10T12:00:00Z", "invalid") // null
  */

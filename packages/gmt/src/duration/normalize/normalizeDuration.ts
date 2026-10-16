@@ -21,7 +21,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   lower-case `z`, a UTC offset without a zone and a zoned date without a time are invalid.
  * - A `relativeTo` string takes a calendar in RFC 9557 form, as `convertDateToCalendar` and
  *   `convertZonedToCalendar` write it: ISO digits and a `[u-ca=<id>]` annotation, after the zone
- *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00-05:00[America/New_York][u-ca=hebrew]"`).
+ *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
  *   The annotations are read as Temporal reads them: the critical flag and the id's letter case
  *   are accepted, elective unknown annotations are ignored, the first `u-ca` names the calendar,
  *   and a string with a time zone annotation is zoned. An unknown critical annotation, a critical
@@ -42,7 +42,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @example normalizeDuration("P45D", { largestUnit: "month", relativeTo: "20240101" }) // "" (basic format)
  * @example normalizeDuration("P1DT25H") // "P2DT1H"
  * @example normalizeDuration("PT2H", { smallestUnit: "minute", roundingIncrement: 60 }) // ""
- * @example normalizeDuration("PT25H", { largestUnit: "day", relativeTo: "2024-11-03T01:30[America/New_York]" }) // "P1D"
+ * @example normalizeDuration("PT25H", { largestUnit: "day", relativeTo: "2024-04-07T02:30[Australia/Sydney]" }) // "P1D"
  * @example normalizeDuration("invalid") // ""
  * @example normalizeDuration("P400D", { largestUnit: "year", relativeTo: "2024-02-24[u-ca=hebrew]" }) // "P1Y15D" (Hebrew leap year 5784)
  * @example normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-02-10[!u-ca=hebrew]" }) // "P1M15D" (1 Adar I 5784; the critical flag is accepted)

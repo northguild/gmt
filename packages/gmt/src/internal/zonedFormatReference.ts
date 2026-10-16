@@ -8,7 +8,7 @@ import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
  *
  * @param reference the option as given
  * @returns false for a string of neither form, a non-finite number, or a value of another type
- * @example isValidZonedFormatReference("2024-03-15T09:00:00-04:00[America/New_York]") // true
+ * @example isValidZonedFormatReference("2024-03-15T09:00:00+09:00[Asia/Tokyo]") // true
  * @example isValidZonedFormatReference("2024-03-15T13:00:00Z") // true
  * @example isValidZonedFormatReference(undefined) // true
  * @example isValidZonedFormatReference(Number.NaN) // false
