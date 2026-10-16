@@ -5,8 +5,6 @@
  * can be tested in isolation. The only TS-compiler coupling lives behind small
  * injectable callbacks (`classifyType`, `classifyParamType`, `optionPropertyType`,
  * `classifyReturnType`) so `buildPlaygroundSpec` can be exercised with mocks.
- *
- * See `.kilo/plans/1788099109759-auto-generate-playground-specs.md`.
  */
 
 import ts from "typescript";

@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
 """Tests for optimize/scripts/run.py: one short summary from both optimizer reports.
@@ -33,7 +33,6 @@ AO = {
     "sync": {
         "agents": {"missing": ["tester"], "wrong_target": [], "dangling": [], "extra": []},
         "skills": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
-        "kilo": {"exists": True, "missing_personas": [], "bad_prompts": []},
     },
     "summary": {"orphans": 1, "broken_links": 1},
 }

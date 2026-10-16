@@ -31,37 +31,38 @@ and [§ Git — Only on an Explicit Instruction](../../../AGENTS.md#git--only-on
 
 | Category | Trigger | Pipeline | Changeset |
 | --- | --- | --- | --- |
-| **A. New feature** | New function, option, namespace or capability | `architect` → (`researcher`) → `tdd-dev` → (`tester`) → `gmt-reviewer` → `finalizer` | `minor` |
+| **A. Story** | A tracker story: realm (`MAR-*`, `CORE-*`, …) or `DOX-*` | [`/plan-story`](../plan-story/SKILL.md) in its own session, then the gate, then `tdd-dev` → (`tester`) → `gmt-reviewer` → (`dox-builder` → `dox-tester`) → `finalizer` | per rule |
 | **B. Bug fix** | Incorrect behaviour or a failing test | (`researcher`) → `tdd-dev` → `tester` → `gmt-reviewer` → `finalizer` | `patch` |
 | **C. Refactor** | Internals only, no behaviour change | `tdd-dev` → `tester` → `finalizer` (commit message only) | none |
 | **D. Documentation** | Docs, READMEs, JSDoc | `finalizer` (documentation steps only) | none |
 | **E. Research** | Temporal behaviour, design options | `researcher` only; do not implement unless asked | — |
 | **F. Code review** | Review code or a diff | `gmt-reviewer` ([checklist](../../../context/code-review-checklist.md) first) | — |
-| **G. Direct execution** | Complete spec given | `tdd-dev` → `gmt-reviewer` → `finalizer` | per rule |
-| **H. Dox** | Anything in `apps/dox` | `dox-architect` → `dox-builder` → `dox-tester` | per rule |
+| **G. Owner's spec, no story** | The owner hands over a complete spec for work with no tracker row | `tdd-dev` → `gmt-reviewer` → `finalizer` | per rule |
+| **H. Dox fix, no story** | A change in `apps/dox` with no story id | `dox-architect` → `dox-builder` → `dox-tester` | per rule |
 
 Changeset levels follow the one [changeset rule](../../../context/coding-standards.md#changesets).
 
-- **A.** For an epic story, check `Blocked by` in `context/domination/tracker.md` (or run
-  `pnpm deps:ready`) first; never start a blocked story. Skip `architect` when `/plan-story` already wrote the spec folder or the user gave a
-  complete spec, `researcher` if the Temporal API is well known.
+**The plan gate runs for category A only** — exactly when the work is a tracker story. Every
+story is planned with `/plan-story`, however small: a small story gets a small spec (an index
+and one slice), never no spec. Nothing else has a story spec, so nothing else runs the gate.
+
+- **A.** Check `Blocked by` in the tracker (or `pnpm deps:ready`) first; never start a blocked
+  story. Skip `researcher` if the Temporal API is well known. A small story (one function, under
+  50 lines, no new namespace, not locale-aware) may skip `tester`; say so.
 - **B.** Skip `architect`; `tdd-dev` records the failing repro before the fix.
 - **C.** Skip `architect`, `researcher` and the release steps of `finalizer`.
 - **H.** `dox-architect` returns the execution spec; the main session then runs `dox-builder`
   and `dox-tester`. Library changes found on the way go through A or B, never through Dox.
 
-**Small stories** (one function, under 50 lines, no new namespace, not locale-aware): skip
-`architect` and `tester` and say so. **Never skip `gmt-reviewer`** — a wrong constant is the
-same size as a right one.
+**Never skip `gmt-reviewer`** where it appears — a wrong constant is the same size as a right one.
 
 ## Find the spec
 
 Planning is [`/plan-story`](../plan-story/SKILL.md), in its own session. To implement, read the
 story id from the branch (`feature/197-mar-16-…` → `MAR-16`) and load
 `context/domination/specs/<ID>/index.md`, plus `context/dox/specs/<id>/index.md` if it exists.
-For a story (categories A, G and H), run `python3 .agents/skills/plan-story/scripts/plan_gate.py`
-first. On `FAIL`, stop and tell the owner to run `/plan-story`; never plan inline. Bug fixes,
-refactors, docs, research and reviews have no story spec and skip the gate.
+For a story (category A), run `python3 .agents/skills/plan-story/scripts/plan_gate.py` first. On
+`FAIL`, stop and tell the owner to run `/plan-story`; never plan inline.
 
 ## Hand each worker the least context that works
 
@@ -101,8 +102,3 @@ the story is done, write a `/handoff` note and continue in a fresh session.
 
 In a single-model chat, run the same sequence as labelled steps in one turn — see
 [references/inline-mode.md](references/inline-mode.md).
-
-## Kilo
-
-`kilo.jsonc` registers this skill as the `pipeline` primary agent; it alone may `task` the
-specialists, and every specialist has `task` denied.

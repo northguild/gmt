@@ -53,11 +53,6 @@ A persona is a top-level `.md` in `.agents/` whose YAML frontmatter has `name`.
   in `.agents/skills/` needs a symlink `.claude/skills/<dir>` that resolves to it. Reported as
   `missing`, `wrong_target` (not a symlink, or points elsewhere), `dangling` (target gone) and
   `extra` (no matching source).
-- `kilo.jsonc` is JSONC: `//` and `/* */` comments and trailing commas are stripped before
-  parsing. Reported: personas missing from `agent` (`missing_personas`) and entries whose
-  `{file:...}` prompt path does not exist (`bad_prompts`). Absent file: `{"exists": false}`.
-- `KILO_EXEMPT` (in `checks_sync.py`) = `{Explore}`: personas that override a Claude Code built-in
-  agent. Kilo ships its own, so they need no `kilo.jsonc` entry.
 
 ## What this skill does NOT check
 
@@ -78,10 +73,9 @@ A persona is a top-level `.md` in `.agents/` whose YAML frontmatter has `name`.
   "personas": [{"file": "...", "name": "tester", "lines": 90, "model": "sonnet",
                 "over_line_budget": false, "warnings": []}],
   "sync": {"agents": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
-           "skills": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
-           "kilo": {"exists": true, "missing_personas": [], "bad_prompts": []}},
+           "skills": {"missing": [], "wrong_target": [], "dangling": [], "extra": []}},
   "summary": {"orphans": 0, "broken_links": 0, "near_duplicates": 0, "over_budget_files": 0,
-              "persona_warnings": 0, "symlink_problems": 0, "kilo_problems": 0}
+              "persona_warnings": 0, "symlink_problems": 0}
 }
 ```
 
@@ -91,7 +85,7 @@ not a directory, or no entry file found).
 ## Usage report (`scripts/usage.py`)
 
 Args: `--days` (7), `--project-glob` (`*`), `--root` (`~/.claude/projects`), `--top` (15),
-`--json`. Walks `<root>/<glob>/**/*.jsonl` modified within the window. Files under
+`--json`. Walks `<root>/<glob>/**/*.jsonl` modified within the window, then keeps only lines whose `timestamp` (ISO 8601) is inside it. A line with no parseable timestamp is kept, since its file passed the mtime test. Files under
 `subagents/` take `agentType` and `spawnDepth` from the sibling `agent-<id>.meta.json`; all
 others are `MAIN`, depth 0. Requests are de-duplicated by `message.id`. `BIG_CONTEXT = 150000`.
 Output tokens are never reported (logged mid-stream, unreliable).
@@ -105,5 +99,4 @@ Applied by the human (or the agent, on request):
 - **Over-budget context or persona file**: split along sub-topics and update the links.
 - **Near-duplicates**: merge, or clarify scope so each file has a distinct concern.
 - **Persona model**: set an explicit model; add `Agent` to `disallowedTools`.
-- **Sync drift**: create the missing symlink (`ln -s`), or remove the dangling or extra one;
-  add the persona to `kilo.jsonc` or fix its `{file:...}` path.
+- **Sync drift**: create the missing symlink (`ln -s`), or remove the dangling or extra one.

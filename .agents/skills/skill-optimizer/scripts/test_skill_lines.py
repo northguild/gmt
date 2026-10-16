@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
 """Tests for skill-optimizer: line budgets and .claude symlink sync.

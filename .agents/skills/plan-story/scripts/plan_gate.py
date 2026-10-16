@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # ///
 """Plan gate: a story may be implemented only once /plan-story has approved its spec.
 
@@ -43,7 +43,7 @@ def frontmatter(text: str) -> dict[str, str]:
     for line in text[4:end if end != -1 else 4].splitlines():
         m = FIELD_RE.match(line)
         if m:
-            fields[m.group(1)] = m.group(2)
+            fields[m.group(1)] = re.sub(r"\s+#.*$", "", m.group(2)).strip("'\"")
     return fields
 
 
@@ -89,8 +89,13 @@ def check(root: Path, story: str) -> list[str]:
     if not dox:
         found.append(f"{story}: index has no dox decision (dox: none, or the Dox spec index path)")
     elif dox != "none":
-        dox_found, _ = check_spec(root, root / dox, f"{story} Dox")
-        found.extend(dox_found)
+        if Path(dox).is_absolute():
+            found.append(f"{story}: dox path {dox} is absolute; absolute paths are not allowed")
+        elif root not in (root / dox).resolve().parents:
+            found.append(f"{story}: dox path {dox} is outside the repo")
+        else:
+            dox_found, _ = check_spec(root, root / dox, f"{story} Dox")
+            found.extend(dox_found)
     return found
 
 

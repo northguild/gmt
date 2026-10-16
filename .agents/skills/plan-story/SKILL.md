@@ -53,7 +53,7 @@ owner. Then resume the same `architect` (`SendMessage`) with the answers to fina
 ## 5. Dox tools — `dox-architect` (Opus), in two calls
 
 **5a. Shortlist.** Spawn `dox-architect` in shortlist mode with the story id, the tracker row and
-(for a realm story) `context/domination/specs/<ID>/index.md`. It returns 2–5 candidate tools,
+(for a realm story) `context/domination/specs/<ID>/index.md`. It returns 2–4 candidate tools,
 ranked, each with: name, what the reader does with it, the library functions it calls, why it
 fits this story's painpoint, and rough size. It marks one as recommended. No spec yet.
 

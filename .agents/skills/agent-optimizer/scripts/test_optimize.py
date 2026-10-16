@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.14,<3.15"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
 """Tests for optimize.py.

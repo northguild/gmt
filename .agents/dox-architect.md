@@ -1,6 +1,6 @@
 ---
 name: dox-architect
-description: Plans and orchestrates work on the Dox documentation site (apps/dox) for @northguild/gmt — new features, fixes, or reviews of the site, its widgets, the globe, or the Dox chat. Reads context/dox/, re-verifies against the live repo and writes an execution spec; the main session then runs dox-builder and dox-tester.
+description: Plans work on the Dox documentation site (apps/dox) for @northguild/gmt — new features, fixes, or reviews of the site, its widgets, the globe, or the Dox chat. Reads context/dox/, re-verifies against the live repo and writes an execution spec; the main session then runs dox-builder and dox-tester.
 model: opus
 effort: high
 disallowedTools: Agent
@@ -66,7 +66,7 @@ work is scoped against what is already built.
 
 When the main session asks for a shortlist (the [`plan-story`](./skills/plan-story/SKILL.md)
 skill, step 5a), do not write a spec. Read the story's tracker row, its library spec index and
-the tools already in `built.md`, then return 2–5 candidate tools, ranked, in 40 lines or fewer.
+the tools already in `built.md`, then return 2–4 candidate tools (`AskUserQuestion` takes at most 4 options), ranked, in 40 lines or fewer.
 For each: name, what the reader does with it, the library functions it calls, why it fits the
 story's painpoint, and rough size (small / medium / large). Prefer distinct standalone tools to
 panels bolted onto an existing one. Mark one **recommended** and say why in one line. The owner

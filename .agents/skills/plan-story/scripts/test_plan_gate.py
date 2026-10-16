@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
 """Tests for plan_gate.py: a story may be implemented only once its plan is approved.
@@ -116,3 +116,22 @@ def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> 
     write(tmp_path, f"{LIB}/a.md", "slice\n")
     assert plan_gate.main(["MAR-16", "--root", str(tmp_path)]) == 0
     assert "PASS" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("line, expected", [
+    ("status: draft        # approved only after review", "draft"),
+    ("status: 'approved'", "approved"),
+    ('status: "approved"', "approved"),
+    ('dox: "none"', "none"),
+    ("dox: context/dox/specs/x/index.md # the Dox spec", "context/dox/specs/x/index.md"),
+])
+def test_frontmatter_strips_comments_and_quotes(line: str, expected: str) -> None:
+    fields = plan_gate.frontmatter(f"---\n{line}\n---\n")
+    assert next(iter(fields.values())) == expected
+
+
+@pytest.mark.parametrize("dox, word", [("/tmp/x/index.md", "absolute"), ("../outside/index.md", "outside")])
+def test_dox_path_outside_repo_fails_without_traceback(tmp_path: Path, dox: str, word: str) -> None:
+    write(tmp_path, f"{LIB}/index.md", index(dox=dox))
+    write(tmp_path, f"{LIB}/a.md", "slice\n")
+    assert any("dox path" in p and word in p for p in problems(tmp_path))

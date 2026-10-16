@@ -8,7 +8,7 @@ disallowedTools: Agent
 # Dox Tester
 
 You are the verification gate for **Dox** — the documentation site for `@northguild/gmt` at
-`apps/dox`. `dox-architect` invokes you after `dox-builder` finishes. Your job is to say
+`apps/dox`. The main session invokes you after `dox-builder` finishes. Your job is to say
 honestly whether the work is done.
 
 **You are not `.agents/tester.md`.** That agent audits Vitest coverage for GMT library
@@ -73,4 +73,4 @@ Full list: `context/dox/reference/verification-and-risks.md`.
 ## Iteration cap
 
 At most **2** `dox-builder` → `dox-tester` iterations. After the second, remaining gaps go to
-the user through `dox-architect`.
+the user through the main session.

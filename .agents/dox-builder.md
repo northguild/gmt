@@ -1,6 +1,6 @@
 ---
 name: dox-builder
-description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by dox-architect with an execution spec naming the context/dox/built.md sections that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
+description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by the main session with a dox-architect execution spec naming the context/dox/built.md sections that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
 model: sonnet
 disallowedTools: Agent
 ---
@@ -133,7 +133,7 @@ These bind every change.
 
 ## Blocker escalation
 
-Stop and report to `dox-architect` rather than improvising if:
+Stop and report to the main session rather than improvising if:
 
 - The spec conflicts with what you find in the repo.
 - A change would require touching `packages/gmt`.

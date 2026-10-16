@@ -40,12 +40,20 @@ are fixed upstream, not edited here.
 | `/caveman` | Terse reply mode |
 | `/astro` | Astro reference for `apps/dox` |
 
-## Python in skills
-
-All Python used by skills shares one root-level setup — `pyproject.toml` / `uv.lock` / `.venv` at the repo root. Skills under `.agents/skills/` do not each carry their own Python env; scripts live in the skill's `scripts/` directory and run against the shared root venv (`uv run`).
-
-Run `uv sync --extra dev` once at the repo root to install the shared env (needed for IDE import resolution and to run `pytest`/`pyright` locally).
-
 **`/code-review` name collision.** Claude Code ships a built-in `/code-review`. If the
 built-in wins, load the GMT checklist directly:
 [code-review-checklist.md](./code-review-checklist.md).
+
+## Python in skills
+
+**Run skill scripts with `python3`** — any Python 3.9 or later, including the system `python3`
+on macOS. The scripts use the standard library only (PyYAML is optional), so they need no venv:
+
+```bash
+python3 .agents/skills/optimize/scripts/run.py
+```
+
+**Tests and type checks use the shared root env.** `pyproject.toml`, `uv.lock` and `.venv` at
+the repo root serve every skill; skills do not carry their own env. Run `uv sync --extra dev`
+once, then `uv run pytest -q .agents/skills` (and `pyright`). The suite must also pass on
+Python 3.9, since that is what `python3` is on a stock Mac.

@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash(python3:*), Bash(uv run:*), Bash(cat .env*
 ---
 
 Audit the top-level entry files (`AGENTS.md`, `CLAUDE.md`), every file under `context/`
-(recursively), the personas in `.agents/*.md`, and the `.claude/` and `kilo.jsonc` mirrors for
+(recursively), the personas in `.agents/*.md`, and the `.claude/` mirrors for
 token waste. A second script tallies where tokens actually went in recent sessions.
 
 > This skill is **advisory only — it never edits files**. It prints reports; the human applies
@@ -51,8 +51,6 @@ token waste. A second script tallies where tokens actually went in recent sessio
 - `sync.agents` / `sync.skills` — each persona needs `.claude/agents/<name>.md` and each
   `.agents/skills/<dir>` needs `.claude/skills/<dir>`, as symlinks that resolve to it. Lists:
   `missing`, `wrong_target`, `dangling` (broken link), `extra` (no matching source).
-- `sync.kilo` — personas absent from `kilo.jsonc` `agent`, and entries whose
-  `{file:...}` prompt path does not exist.
 
 ## Usage report
 

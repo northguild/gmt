@@ -40,8 +40,6 @@ Thumbs.db
 npm-debug.log*
 yarn-error.log*
 
-# Kilo
-.kilo/
 
 # Python
 __pycache__/

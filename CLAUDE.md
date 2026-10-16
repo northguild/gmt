@@ -26,8 +26,7 @@ Scoped documentation — load only what the task requires. The index lives in on
 
 ## Agents
 
-The personas in `.agents/*.md` are symlinked into `.claude/agents/` (Claude Code) and
-registered in `kilo.jsonc` (Kilo). The main session orchestrates with the `/pipeline` skill and
+The personas in `.agents/*.md` are symlinked into `.claude/agents/`. The main session orchestrates with the `/pipeline` skill and
 spawns each specialist directly; no specialist spawns another. Library: `architect` → `researcher` /
 `tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox: `dox-architect` → `dox-builder` /
 `dox-tester`. Planners (`architect`, `dox-architect`), `researcher` and `gmt-reviewer` run on Opus; every other agent on Sonnet.

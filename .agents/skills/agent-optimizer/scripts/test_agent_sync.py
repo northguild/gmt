@@ -1,8 +1,8 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
-"""Tests for agent-optimizer: .claude symlink sync and kilo.jsonc.
+"""Tests for agent-optimizer: .claude symlink sync.
 
 Run with:
     python3 -m pytest -q .agents/skills
@@ -11,8 +11,6 @@ Run with:
 from __future__ import annotations
 
 import importlib.util
-import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -91,44 +89,3 @@ def test_dangling_and_extra(tmp_path: Path) -> None:
     assert result["agents"]["extra"] == ["plain.md"]
     assert result["skills"]["dangling"] == ["gone"]
     assert result["skills"]["extra"] == ["stray"]
-
-
-JSONC = """{
-  // comment
-  "agent": {
-    "a": { "prompt": "{file:.agents/a.md}", }, // trailing
-    "b": { "prompt": "{file:.agents/nope.md}" },
-    "url": { "prompt": "http://x.io//path,}" },
-  },
-}
-"""
-
-
-def test_strip_jsonc_keeps_strings() -> None:
-    data = json.loads(checks_sync.strip_jsonc(JSONC))
-    assert data["agent"]["url"]["prompt"] == "http://x.io//path,}"
-    assert set(data["agent"]) == {"a", "b", "url"}
-
-
-def test_kilo_missing_and_bad_prompt(tmp_path: Path) -> None:
-    repo(tmp_path)
-    write_tree(tmp_path, {".agents/c.md": "---\nname: c\n---\n", "kilo.jsonc": JSONC})
-    result = checks_sync.check_kilo(tmp_path)
-    assert result["exists"] is True
-    assert result["missing_personas"] == ["c"]
-    assert result["bad_prompts"] == [{"agent": "b", "path": ".agents/nope.md"}]
-
-
-def test_kilo_absent(tmp_path: Path) -> None:
-    assert checks_sync.check_kilo(repo(tmp_path))["exists"] is False
-
-
-def test_kilo_unparseable(tmp_path: Path) -> None:
-    write_tree(tmp_path, {"kilo.jsonc": "{ nope"})
-    assert "error" in checks_sync.check_kilo(tmp_path)
-
-
-def test_kilo_exempts_claude_code_builtin_overrides(tmp_path: Path) -> None:
-    repo(tmp_path)
-    write_tree(tmp_path, {".agents/Explore.md": "---\nname: Explore\n---\n", "kilo.jsonc": "{\"agent\": {}}"})
-    assert "Explore" not in checks_sync.check_kilo(tmp_path)["missing_personas"]

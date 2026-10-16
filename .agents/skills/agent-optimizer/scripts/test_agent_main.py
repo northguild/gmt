@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = ["pytest"]
 # ///
 """Tests for agent-optimizer: main (end to end).
@@ -92,7 +92,6 @@ def test_main_report_sections(tmp_path: Path) -> None:
     out = json.loads(result.stdout)
     assert result.returncode == 0
     assert [p["name"] for p in out["personas"]] == ["arch"]
-    assert {"agents", "skills", "kilo"} <= set(out["sync"])
+    assert {"agents", "skills"} <= set(out["sync"])
     assert out["summary"]["orphans"] == 0
     assert out["summary"]["persona_warnings"] >= 1
-

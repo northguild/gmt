@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # dependencies = []
 # ///
 """
@@ -18,6 +18,8 @@ top-level "inventory" object with cross-skill findings (duplicate names, similar
 
 Budgets and thresholds are documented in references/rules.md and kept here as constants.
 """
+
+from __future__ import annotations
 
 import argparse
 import json

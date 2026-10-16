@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Audit top-level agent config files (AGENTS.md, CLAUDE.md, ...), every file under context/
-(recursively), the `.agents/*.md` personas, and the `.claude`/kilo.jsonc sync, for token waste
+(recursively), the `.agents/*.md` personas, and the `.claude` symlink sync, for token waste
 and progressive-disclosure violations.
 
 Advisory only: reads files and prints a JSON report. Never writes or edits files.
@@ -12,6 +12,8 @@ Usage:
 Budgets and thresholds are documented in references/rules.md and kept here as constants.
 Persona constants (PERSONA_LINE_BUDGET, OPUS_ALLOWED) live in checks_personas.py.
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -143,7 +145,6 @@ def audit_context_dir(root: Path, entry_files: list[Path]) -> dict[str, object]:
 def summarize(out: dict[str, object]) -> dict[str, int]:
     ctx, sync = out["context"], out["sync"]
     sym = sum(len(v) for kind in ("agents", "skills") for v in sync[kind].values())
-    kilo = sync["kilo"]
     return {
         "orphans": len(ctx["orphans"]), "broken_links": len(ctx["broken_links"]),
         "near_duplicates": len(ctx["near_duplicates"]),
@@ -151,7 +152,6 @@ def summarize(out: dict[str, object]) -> dict[str, int]:
         + sum(1 for e in out["entry_files"] if e["over_budget"] or e["over_line_budget"]),
         "persona_warnings": sum(len(p["warnings"]) for p in out["personas"]),
         "symlink_problems": sym,
-        "kilo_problems": len(kilo.get("missing_personas", [])) + len(kilo.get("bad_prompts", [])),
     }
 
 
@@ -174,7 +174,7 @@ def main() -> None:
         "entry_files": [audit_entry_file(e, root) for e in entry_files],
         "context": audit_context_dir(root, entry_files),
         "personas": checks_personas.audit_personas(root),
-        "sync": {**checks_sync.check_symlinks(root), "kilo": checks_sync.check_kilo(root)},
+        "sync": checks_sync.check_symlinks(root),
     }
     out["summary"] = summarize(out)
     print(json.dumps(out, indent=2))

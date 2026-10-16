@@ -85,7 +85,7 @@ nonexistent wall times are never resolved silently.
 
 ## Small-story optimization
 
-For trivial stories (single function, < 50 lines, no new namespace, no locale-awareness), the main session may skip you entirely when the user provides the spec directly.
+Every story is planned through [`/plan-story`](./skills/plan-story/SKILL.md), however small. For a small story (single function, under 50 lines, no new namespace, not locale-aware), keep the spec small: an index and one slice.
 
 ## Blocker escalation
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.9"
 # ///
 """Run agent-optimizer and skill-optimizer and print one short summary.
 
@@ -8,7 +8,7 @@ Usage:
     python3 .agents/skills/optimize/scripts/run.py [--all] [--usage] [--base REF] [--limit N]
 
 By default it lists only findings in files this branch changed (vs --base, default origin/main,
-plus uncommitted and untracked files) and repo-wide problems (symlinks, kilo.jsonc, duplicate
+plus uncommitted and untracked files) and repo-wide problems (symlinks, duplicate
 skills). Everything else is counted as backlog. --all lists every finding. Exit 1 when a listed
 finding exists, else 0.
 """
@@ -20,6 +20,11 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Callable, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import size_backlog  # noqa: E402
 
 SKILLS = Path(__file__).resolve().parents[2]
 REPO = "(repo)"
@@ -49,10 +54,6 @@ def findings(ao: dict, so: dict, root: Path) -> list[Finding]:
         for problem, names in sync.get(kind, {}).items():
             if names:
                 out.append((REPO, f"sync: {kind} {problem.replace('_', ' ')}: {', '.join(names)}"))
-    kilo = sync.get("kilo", {})
-    if kilo.get("missing_personas"):
-        out.append((REPO, f"kilo.jsonc missing: {', '.join(kilo['missing_personas'])}"))
-    out += [(REPO, f"kilo.jsonc bad prompt: {b}") for b in kilo.get("bad_prompts", [])]
     for skill in so.get("skills", []):
         out += [(rel(skill["dir"], root), w) for w in skill.get("warnings", [])]
     inv = so.get("inventory", {})
@@ -61,11 +62,15 @@ def findings(ao: dict, so: dict, root: Path) -> list[Finding]:
     return out
 
 
-def relevant(found: list[Finding], changed: set[str]) -> list[Finding]:
-    """Keep repo-wide findings and those on a changed file (or a skill dir holding one)."""
+def relevant(found: list[Finding], changed: set[str],
+             base: Optional[Callable[[str], Optional[str]]] = None) -> list[Finding]:
+    """Keep repo-wide findings and those on a changed file (or a skill dir holding one).
+
+    With a base reader, a size finding is kept only when this branch caused it.
+    """
     def hit(path: str) -> bool:
         return path == REPO or path in changed or any(c.startswith(path + "/") for c in changed)
-    return [f for f in found if hit(f[0])]
+    return [f for f in found if hit(f[0]) and (base is None or size_backlog.caused_here(f, changed, base))]
 
 
 def render(found: list[Finding], listed: list[Finding], limit: int) -> str:
@@ -90,6 +95,8 @@ def changed_files(root: Path, base: str) -> set[str]:
 
 def report(script: str, *args: str) -> dict:
     out = subprocess.run([sys.executable, str(SKILLS / script), *args], capture_output=True, text=True)
+    if out.returncode != 0:  # the optimizers exit 0 even with findings, so non-zero means a crash
+        sys.exit(f"{script} failed (exit {out.returncode}):\n{(out.stderr or out.stdout).strip()}")
     return json.loads(out.stdout)
 
 
@@ -105,7 +112,8 @@ def main(argv: list[str] | None = None) -> int:
     ao = report("agent-optimizer/scripts/optimize.py", str(root))
     so = report("skill-optimizer/scripts/optimize.py", "--all", str(root / ".agents" / "skills"))
     found = findings(ao, so, root)
-    listed = found if args.all else relevant(found, changed_files(root, args.base))
+    base = size_backlog.git_reader(root, args.base)
+    listed = found if args.all else relevant(found, changed_files(root, args.base), base)
     print(render(found, listed, args.limit))
     if args.usage:
         usage = subprocess.run([sys.executable, str(SKILLS / "agent-optimizer/scripts/usage.py"),

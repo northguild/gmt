@@ -76,7 +76,8 @@ These are the non-negotiables. Full detail is in the context files above.
 
 ## Sessions and Agents
 
-- **A story is `/plan-story`, `/clear`, `/implement`.** Every skill: [context/skills.md](./context/skills.md).
-- **One story per session.** Near ~200K tokens, `/handoff` and start fresh (auto-compact: 200K).
-- **The main session orchestrates** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)); specialists never spawn agents.
-- **Read in excerpts.** Pass paths and sections; keep test output to `--reporter=dot | tail`.
+- **A story is `/plan-story`, `/clear`, `/implement`.** Skills: [context/skills.md](./context/skills.md).
+- **One story per session.** Near 200K tokens, `/handoff` and start anew.
+- **Only the main session spawns agents** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)).
+- **Needs Claude Code 2.1.251+.** Older ones run every agent on Sonnet.
+- **Read in excerpts.** Pass paths, not content; tests: `--reporter=dot | tail`.

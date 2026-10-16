@@ -6,6 +6,7 @@ import glob
 import json
 import os
 import time
+from datetime import datetime, timezone
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -35,15 +36,35 @@ def result_size(content: object) -> int:
     return len(json.dumps(content))
 
 
-def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict) -> None:
+def too_old(raw_ts: object, cutoff: float) -> bool:
+    """True when a line's ISO 8601 `timestamp` is before the cutoff (epoch seconds).
+
+    A line with no timestamp, or one that does not parse, is kept: its file already passed the
+    mtime prefilter, and dropping unknown lines would hide real usage.
+    """
+    if not isinstance(raw_ts, str):
+        return False
+    try:
+        when = datetime.fromisoformat(raw_ts[:-1] + "+00:00" if raw_ts.endswith("Z") else raw_ts)
+    except ValueError:
+        return False
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return when.timestamp() < cutoff
+
+
+def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: float = 0.0) -> None:
     agent, depth, _ = agent_of(path)
     seen: set[str] = set()
     pending: dict[str, str] = {}
     with open(path, errors="ignore") as fh:
         for raw in fh:
             try:
-                msg = (json.loads(raw).get("message") or {})
-            except ValueError:
+                entry = json.loads(raw)
+                msg = entry.get("message") or {}
+            except (ValueError, AttributeError):
+                continue
+            if too_old(entry.get("timestamp"), cutoff):
                 continue
             if not isinstance(msg, dict):
                 continue
@@ -85,7 +106,7 @@ def tally(root: Path, days: int = 7, project_glob: str = "*", top: int = 15) -> 
             continue
         agent, _, is_sub = agent_of(path)
         spawns[agent] += is_sub
-        scan_file(path, agg, depth_ctx, reads)
+        scan_file(path, agg, depth_ctx, reads, cutoff)
     total = sum(r["context"] for r in agg.values()) or 1
     rows = [
         {"agent": a, "model": m, "requests": r["requests"], "context": r["context"],
