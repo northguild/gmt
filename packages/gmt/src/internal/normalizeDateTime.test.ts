@@ -1,3 +1,4 @@
+import { MustTestLocales } from "../test/localeMatrix";
 import { normalizeDateTime } from "./normalizeDateTime";
 
 describe("normalizeDateTime", () => {
@@ -89,6 +90,34 @@ describe("normalizeDateTime", () => {
     "applies lowercase for locale $locale: $input -> $expected",
     ({ input, locale, expected }) => {
       expect(normalizeDateTime(input, { lower: true, locale })).toBe(expected);
+    },
+  );
+
+  // The default names the language, not one country (coding-standards
+  // § International authority first). Unicode SpecialCasing tailors
+  // lowercasing only for lt, tr and az, so en and en-US lowercase alike:
+  // U+0130 becomes U+0069 U+0307 in both.
+  it("lowercases in the en locale when no locale is given", () => {
+    const spy = vi.spyOn(String.prototype, "toLocaleLowerCase");
+    try {
+      normalizeDateTime("HELLO", { lower: true });
+      expect(spy.mock.calls).toEqual([["en"]]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it.each`
+    locale
+    ${undefined}
+    ${"en"}
+    ${MustTestLocales.enUS}
+  `(
+    "lowercases HELLO İSTANBUL the same way when the locale is $locale",
+    ({ locale }) => {
+      expect(normalizeDateTime("HELLO İSTANBUL", { lower: true, locale })).toBe(
+        "hello i̇stanbul",
+      );
     },
   );
 

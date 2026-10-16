@@ -1,5 +1,8 @@
 import * as getLocaleEraNamesModule from "../plain/locale/getLocaleEraNames";
 import * as getLocaleMeridiemsModule from "../plain/locale/getLocaleMeridiems";
+import * as getLocaleMonthNamesModule from "../plain/locale/getLocaleMonthNames";
+import * as getLocaleWeekdayNamesModule from "../plain/locale/getLocaleWeekdayNames";
+import { MustTestLocales } from "../test/localeMatrix";
 import {
   DATE_PATTERN_FIELDS,
   DATE_TIME_PATTERN_FIELDS,
@@ -180,6 +183,109 @@ describe("parseValueWithPattern", () => {
         spy.mockRestore();
       }
     });
+  });
+
+  // CLDR's `en` carries every English month, weekday, era and day-period
+  // name; `en-US` adds none of its own (checked on ICU 78.3 / CLDR 48).
+  // The default names the language, not one country
+  // (coding-standards § International authority first).
+  describe("name tokens default to the en locale", () => {
+    it.each`
+      token     | locale
+      ${"MMMM"} | ${undefined}
+      ${"MMM"}  | ${undefined}
+      ${"EEEE"} | ${undefined}
+      ${"EEE"}  | ${undefined}
+      ${"a"}    | ${undefined}
+      ${"GGGG"} | ${undefined}
+      ${"GG"}   | ${undefined}
+      ${"MMMM"} | ${[]}
+      ${"a"}    | ${[]}
+      ${"GG"}   | ${[]}
+    `(
+      "looks up $token names in en when the locale is $locale",
+      ({ token, locale }: { token: string; locale: undefined | [] }) => {
+        const spies = [
+          vi.spyOn(getLocaleMonthNamesModule, "getLocaleMonthNames"),
+          vi.spyOn(getLocaleWeekdayNamesModule, "getLocaleWeekdayNames"),
+          vi.spyOn(getLocaleMeridiemsModule, "getLocaleMeridiems"),
+          vi.spyOn(getLocaleEraNamesModule, "getLocaleEraNames"),
+        ];
+        try {
+          parseValueWithPattern("x", token, locale, DATE_TIME_PATTERN_FIELDS);
+          const locales = spies.flatMap((spy) =>
+            spy.mock.calls.map((call) => call[0]),
+          );
+          expect(locales).toEqual(["en"]);
+        } finally {
+          for (const spy of spies) spy.mockRestore();
+        }
+      },
+    );
+
+    it.each`
+      value                     | pattern              | expected
+      ${"January 2024"}         | ${"MMMM yyyy"}       | ${{ year: 2024, month: 1 }}
+      ${"February 2024"}        | ${"MMMM yyyy"}       | ${{ year: 2024, month: 2 }}
+      ${"March 2024"}           | ${"MMMM yyyy"}       | ${{ year: 2024, month: 3 }}
+      ${"April 2024"}           | ${"MMMM yyyy"}       | ${{ year: 2024, month: 4 }}
+      ${"May 2024"}             | ${"MMMM yyyy"}       | ${{ year: 2024, month: 5 }}
+      ${"June 2024"}            | ${"MMMM yyyy"}       | ${{ year: 2024, month: 6 }}
+      ${"July 2024"}            | ${"MMMM yyyy"}       | ${{ year: 2024, month: 7 }}
+      ${"August 2024"}          | ${"MMMM yyyy"}       | ${{ year: 2024, month: 8 }}
+      ${"September 2024"}       | ${"MMMM yyyy"}       | ${{ year: 2024, month: 9 }}
+      ${"October 2024"}         | ${"MMMM yyyy"}       | ${{ year: 2024, month: 10 }}
+      ${"November 2024"}        | ${"MMMM yyyy"}       | ${{ year: 2024, month: 11 }}
+      ${"December 2024"}        | ${"MMMM yyyy"}       | ${{ year: 2024, month: 12 }}
+      ${"Jan 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 1 }}
+      ${"Feb 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 2 }}
+      ${"Mar 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 3 }}
+      ${"Apr 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 4 }}
+      ${"May 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 5 }}
+      ${"Jun 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 6 }}
+      ${"Jul 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 7 }}
+      ${"Aug 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 8 }}
+      ${"Sep 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 9 }}
+      ${"Oct 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 10 }}
+      ${"Nov 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 11 }}
+      ${"Dec 2024"}             | ${"MMM yyyy"}        | ${{ year: 2024, month: 12 }}
+      ${"Monday 2024-03-11"}    | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 11 }}
+      ${"Tuesday 2024-03-12"}   | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 12 }}
+      ${"Wednesday 2024-03-13"} | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 13 }}
+      ${"Thursday 2024-03-14"}  | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 14 }}
+      ${"Friday 2024-03-15"}    | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 15 }}
+      ${"Saturday 2024-03-16"}  | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 16 }}
+      ${"Sunday 2024-03-17"}    | ${"EEEE yyyy-MM-dd"} | ${{ year: 2024, month: 3, day: 17 }}
+      ${"Mon 2024-03-11"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 11 }}
+      ${"Tue 2024-03-12"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 12 }}
+      ${"Wed 2024-03-13"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 13 }}
+      ${"Thu 2024-03-14"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 14 }}
+      ${"Fri 2024-03-15"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 15 }}
+      ${"Sat 2024-03-16"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 16 }}
+      ${"Sun 2024-03-17"}       | ${"EEE yyyy-MM-dd"}  | ${{ year: 2024, month: 3, day: 17 }}
+      ${"09:30 AM"}             | ${"hh:mm a"}         | ${{ hour: 9, minute: 30 }}
+      ${"09:30 PM"}             | ${"hh:mm a"}         | ${{ hour: 21, minute: 30 }}
+      ${"12:00 AM"}             | ${"hh:mm a"}         | ${{ hour: 0, minute: 0 }}
+      ${"12:00 PM"}             | ${"hh:mm a"}         | ${{ hour: 12, minute: 0 }}
+      ${"0044 Before Christ"}   | ${"yyyy GGGG"}       | ${{ year: -43 }}
+      ${"2024 Anno Domini"}     | ${"yyyy GGGG"}       | ${{ year: 2024 }}
+      ${"0044 BC"}              | ${"yyyy GG"}         | ${{ year: -43 }}
+      ${"2024 AD"}              | ${"yyyy GG"}         | ${{ year: 2024 }}
+    `(
+      "parses $value against $pattern to $expected with the locale omitted, en and en-US",
+      ({ value, pattern, expected }) => {
+        for (const locale of [undefined, "en", MustTestLocales.enUS]) {
+          expect(
+            parseValueWithPattern(
+              value,
+              pattern,
+              locale,
+              DATE_TIME_PATTERN_FIELDS,
+            ),
+          ).toEqual(expected);
+        }
+      },
+    );
   });
 
   describe("a yy token resolves only in the caller's window", () => {

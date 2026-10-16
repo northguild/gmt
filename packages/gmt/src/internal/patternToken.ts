@@ -538,16 +538,19 @@ export function parseValueWithPattern(
 
   // No `locale` is required to parse a pattern containing only numeric
   // tokens, but a name-based token (MMM/MMMM/EEE/EEEE/a/GG/GGGG) needs
-  // *some* locale to resolve against — default to "en-US" rather than
+  // *some* locale to resolve against — default to "en" rather than
   // silently returning "" for every caller who didn't have another
-  // locale in mind. An empty preference list names no locale either, so
-  // it takes that same default: ECMA-402 ResolveLocale would answer `[]`
-  // with the *host* locale, which would make a decoder of a fixed
-  // producer format read differently on a French machine (house rule,
-  // ./resolveLocale.ts).
+  // locale in mind. CLDR's `en` holds the English month, weekday, era
+  // and day-period names; a regional tag such as `en-US` adds none of
+  // its own, so the default names the language and no one country
+  // (coding-standards § International authority first). An empty
+  // preference list names no locale either, so it takes that same
+  // default: ECMA-402 ResolveLocale would answer `[]` with the *host*
+  // locale, which would make a decoder of a fixed producer format read
+  // differently on a French machine (house rule, ./resolveLocale.ts).
   const omitted =
     locale === undefined || (Array.isArray(locale) && locale.length === 0);
-  const resolvedLocale = omitted ? "en-US" : resolveLocale(locale);
+  const resolvedLocale = omitted ? "en" : resolveLocale(locale);
   if (resolvedLocale === null) return null;
 
   const compiled = compilePattern(pattern, allowedFields, resolvedLocale);
