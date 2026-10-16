@@ -2,6 +2,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { GnssSystem, GnssWeek, GnssWeekCounter } from "../types/gnss";
 import { NANOSECONDS_PER_SECOND, NANOSECONDS_PER_WEEK } from "./foreignEpochs";
 import { GNSS_TIME_SCALES, scaleLabelOfUtc } from "./gnssTimeScales";
+import { isObject } from "./isObject";
+import { parseUtcReading } from "./utcReading";
 
 /** The scale a week counter counts on, and after how many weeks it wraps. */
 export interface GnssWeekCounterSpec {
@@ -125,27 +127,15 @@ export function weeksSince(
 }
 
 /**
- * The era a week number belongs to.
- *
- * - An integer from 0 is the era itself.
- * - `"rolling"` reads `Temporal.Now.instant()` once and picks the era that puts the full week
- *   within half a counter period of the current one: `Fnow − M/2 < F ≤ Fnow + M/2`, clamped at
- *   era 0 (a GMT rule, after the rolling two-digit-year window). Call it inside `try`: the clock
- *   read can throw.
+ * The era that puts a week within half a counter period of the current one:
+ * `Fnow − M/2 < F ≤ Fnow + M/2`, clamped at era 0 (a GMT rule, after the rolling two-digit-year
+ * window). Reads `Temporal.Now.instant()` once; call it inside `try`, as the clock read can throw.
  *
  * @param counter the week counter
  * @param week the week number the counter shows
- * @param rolloverEra an integer era from 0, or "rolling"
- * @returns the era, or null for any other value or when the clock reads before the counter's epoch
+ * @returns the era, or null when the clock reads before the counter's epoch
  */
-export function resolveRolloverEra(
-  counter: GnssWeekCounter,
-  week: bigint,
-  rolloverEra: unknown,
-): bigint | null {
-  if (rolloverEra !== "rolling") {
-    return weekNumber(rolloverEra);
-  }
+function rollingEra(counter: GnssWeekCounter, week: bigint): bigint | null {
   const { system, modulus } = GNSS_WEEK_COUNTERS[counter];
   const now = scaleLabelOfUtc(system, {
     epochNanoseconds: Temporal.Now.instant().epochNanoseconds,
@@ -159,6 +149,75 @@ export function resolveRolloverEra(
     NANOSECONDS_PER_WEEK;
   const numerator = currentWeek - week + modulus / 2n;
   return numerator < 0n ? 0n : numerator / modulus;
+}
+
+/**
+ * The era of the earliest occurrence of a week time whose label is at or after a pivot's label:
+ * `Lp ≤ L < Lp + period`. Labels are compared, not UTC instants: every scale with a week counter
+ * is continuous, so label order is instant order and a listed leap second keeps its place.
+ *
+ * @param counter the week counter
+ * @param week the week number the counter shows
+ * @param timeOfWeek nanoseconds into the week
+ * @param notBefore the pivot, an ISO 8601 UTC instant string; a listed second 60 is accepted
+ * @returns the era, or null when the pivot is not an instant the leap-second table places or
+ *   falls before the counter's epoch
+ */
+function pivotEra(
+  counter: GnssWeekCounter,
+  week: bigint,
+  timeOfWeek: bigint,
+  notBefore: unknown,
+): bigint | null {
+  const reading = parseUtcReading(notBefore);
+  if (reading === null) {
+    return null;
+  }
+  const { system, modulus } = GNSS_WEEK_COUNTERS[counter];
+  // scaleLabelOfUtc is null for a second 60 the table does not list and before the epoch.
+  const pivot = scaleLabelOfUtc(system, reading);
+  if (pivot === null) {
+    return null;
+  }
+  const eraZero = labelOfWeek(counter, week, timeOfWeek, 0n);
+  if (pivot.labelNanoseconds <= eraZero) {
+    return 0n;
+  }
+  const period = modulus * NANOSECONDS_PER_WEEK;
+  // Ceiling division of a positive bigint: an occurrence exactly at the pivot counts.
+  return (pivot.labelNanoseconds - eraZero + period - 1n) / period;
+}
+
+/**
+ * The era a week number belongs to.
+ *
+ * - An integer from 0 is the era itself.
+ * - `"rolling"` reads `Temporal.Now.instant()` once and picks the era within half a counter
+ *   period of the current week, clamped at era 0. Call it inside `try`: the clock read can throw.
+ * - `{ notBefore }` reads `notBefore` once and picks the earliest occurrence at or after it; other
+ *   keys are ignored. It never reads the clock.
+ *
+ * @param counter the week counter
+ * @param week the week number the counter shows
+ * @param timeOfWeek nanoseconds into the week
+ * @param rolloverEra an integer era from 0, "rolling", or `{ notBefore }`
+ * @returns the era, or null for any other value, when the clock reads before the counter's epoch,
+ *   or for a pivot that is not a placed instant at or after the counter's epoch
+ */
+export function resolveRolloverEra(
+  counter: GnssWeekCounter,
+  week: bigint,
+  timeOfWeek: bigint,
+  rolloverEra: unknown,
+): bigint | null {
+  if (rolloverEra === "rolling") {
+    return rollingEra(counter, week);
+  }
+  if (isObject(rolloverEra)) {
+    const { notBefore } = rolloverEra as { notBefore?: unknown };
+    return pivotEra(counter, week, timeOfWeek, notBefore);
+  }
+  return weekNumber(rolloverEra);
 }
 
 /**

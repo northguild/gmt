@@ -1,10 +1,27 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,
+  mockTemporalInstantFromThrow,
   mockTemporalNowInstantThrow,
 } from "../../test/mocks";
 import { gnssWeekToUtc } from "./gnssWeekToUtc";
 import { utcToGnss } from "./utcToGnss";
+import { utcToGnssWeek } from "./utcToGnssWeek";
+
+/** Nanoseconds in a week (IS-GPS-200N §3.3.4: 604 800 s). */
+const NANOSECONDS_PER_WEEK = 604_800_000_000_000n;
+
+/**
+ * A time-scale string's wall clock, read as if UTC, in epoch nanoseconds: its label.
+ *
+ * @param scaleString a string such as "2019-03-10T00:00:00 GPS"
+ * @returns the label nanoseconds
+ */
+function scaleLabel(scaleString: string): bigint {
+  return Temporal.PlainDateTime.from(
+    scaleString.slice(0, scaleString.indexOf(" ")),
+  ).toZonedDateTime("UTC").epochNanoseconds;
+}
 
 describe("gnssWeekToUtc", () => {
   // label = epoch + (era × modulus + week) weeks + time of week, then label → UTC through TAI.
@@ -223,4 +240,177 @@ describe("gnssWeekToUtc: rolling era", () => {
     mockTemporalNowInstantThrow();
     expect(gnssWeekToUtc("GPS-LNAV", 100, 0, "rolling")).toBe("");
   });
+});
+
+describe("gnssWeekToUtc: notBefore pivot", () => {
+  // The week resolves to the earliest occurrence of that week and time of week at or after the
+  // pivot: era = ceil((pivot label − era-0 label) / period), never below 0. Labels are compared
+  // on the counter's scale, so a pivot exactly at the decoded instant counts.
+  it.each`
+    counter       | week    | tow       | notBefore                           | expected                  | why
+    ${"GPS-LNAV"} | ${1020} | ${0}      | ${"2019-01-01T00:00:00Z"}           | ${"2019-03-09T23:59:42Z"} | ${"era 1: pivot before the 2019 rollover"}
+    ${"GPS-LNAV"} | ${1020} | ${0}      | ${"2019-04-07T00:00:00Z"}           | ${"2038-10-23T23:59:42Z"} | ${"era 2: pivot after the 2019 rollover"}
+    ${"GPS-LNAV"} | ${100}  | ${0}      | ${"2010-01-01T00:00:00Z"}           | ${"2021-03-06T23:59:42Z"} | ${"era 2"}
+    ${"GPS-LNAV"} | ${0}    | ${0}      | ${"2019-04-06T23:59:42Z"}           | ${"2019-04-06T23:59:42Z"} | ${"exactly equal: counts"}
+    ${"GPS-LNAV"} | ${0}    | ${0}      | ${"2019-04-06T23:59:42.000000001Z"} | ${"2038-11-20T23:59:42Z"} | ${"1 ns after: the next era"}
+    ${"GPS-LNAV"} | ${0}    | ${0}      | ${"2019-04-06T23:59:41.999999999Z"} | ${"2019-04-06T23:59:42Z"} | ${"1 ns before: this era"}
+    ${"GPS-LNAV"} | ${0}    | ${0}      | ${"2019-04-07T05:29:42+05:30"}      | ${"2019-04-06T23:59:42Z"} | ${"an offset names the same instant: equal counts"}
+    ${"GPS-LNAV"} | ${392}  | ${345618} | ${"2026-10-15T00:00:00Z"}           | ${"2026-10-15T00:00:00Z"} | ${"equal counts in 2026"}
+    ${"GPS-LNAV"} | ${392}  | ${345617} | ${"2026-10-15T00:00:00Z"}           | ${"2046-05-30T23:59:59Z"} | ${"1 s before the pivot: the next era"}
+    ${"QZS-LNAV"} | ${1020} | ${0}      | ${"2019-01-01T00:00:00Z"}           | ${"2019-03-09T23:59:42Z"} | ${"QZSS weeks are GPS weeks"}
+    ${"GPS-CNAV"} | ${100}  | ${0}      | ${"2000-01-01T00:00:00Z"}           | ${"2138-12-06T23:59:42Z"} | ${"13-bit: era 1"}
+    ${"GPS-CNAV"} | ${2295} | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"era 0"}
+    ${"GPS-CNAV"} | ${8191} | ${0}      | ${"2026-10-15T00:00:00Z"}           | ${"2136-12-29T23:59:42Z"} | ${"the last CNAV week of era 0"}
+    ${"QZS-CNAV"} | ${2295} | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"QZSS CNAV era 0"}
+    ${"BDT"}      | ${939}  | ${86404}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"BDT − UTC 4 s in 2024"}
+    ${"BDT"}      | ${0}    | ${0}      | ${"2006-01-01T00:00:00Z"}           | ${"2006-01-01T00:00:00Z"} | ${"pivot at the BeiDou epoch"}
+    ${"GAL"}      | ${1271} | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"Galileo era 0"}
+    ${"GAL"}      | ${0}    | ${0}      | ${"1999-08-21T23:59:47Z"}           | ${"1999-08-21T23:59:47Z"} | ${"pivot at the Galileo epoch"}
+    ${"IRN-LNAV"} | ${247}  | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"NavIC 10-bit: era 1"}
+    ${"IRN-L1NV"} | ${1271} | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"NavIC 13-bit: era 0"}
+    ${"GPS-LNAV"} | ${100}  | ${0}      | ${"1980-01-06T00:00:00Z"}           | ${"1981-12-05T23:59:59Z"} | ${"pivot at the GPS epoch: era 0"}
+    ${"GPS-LNAV"} | ${0}    | ${0}      | ${"1980-01-06T00:00:00Z"}           | ${"1980-01-06T00:00:00Z"} | ${"the GPS epoch itself"}
+  `(
+    "returns $expected for $counter week $week, $tow s, notBefore $notBefore ($why)",
+    ({ counter, week, tow, notBefore, expected }) => {
+      expect(gnssWeekToUtc(counter, week, tow, { notBefore })).toBe(expected);
+    },
+  );
+
+  // A pivot inside a listed inserted second is placed on the scale like any other instant: the
+  // GPS label of 2016-12-31T23:59:60Z is week 906 + 17 s of era 1 (ITU-R TF.460-6 Annex 1 §2.2).
+  it.each`
+    week   | tow     | notBefore                   | expected                    | why
+    ${906} | ${17}   | ${"2016-01-01T00:00:00Z"}   | ${"2016-12-31T23:59:60Z"}   | ${"the result is an inserted second"}
+    ${906} | ${17}   | ${"2016-12-31T23:59:60Z"}   | ${"2016-12-31T23:59:60Z"}   | ${"a listed second-60 pivot: equal counts"}
+    ${906} | ${18}   | ${"2016-12-31T23:59:60Z"}   | ${"2017-01-01T00:00:00Z"}   | ${"the second after the pivot: this era"}
+    ${906} | ${16}   | ${"2016-12-31T23:59:60Z"}   | ${"2036-08-16T23:59:58Z"}   | ${"the second before the pivot: the next era"}
+    ${906} | ${17}   | ${"2016-12-31T23:59:60.5Z"} | ${"2036-08-16T23:59:59Z"}   | ${"half a second into the pivot: the next era"}
+    ${906} | ${17.5} | ${"2016-12-31T23:59:60.5Z"} | ${"2016-12-31T23:59:60.5Z"} | ${"a fractional second-60 pivot: equal counts"}
+  `(
+    "returns $expected for GPS-LNAV week $week, $tow s, notBefore $notBefore ($why)",
+    ({ week, tow, notBefore, expected }) => {
+      expect(gnssWeekToUtc("GPS-LNAV", week, tow, { notBefore })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
+    counter       | week   | notBefore                    | why
+    ${"GAL"}      | ${100} | ${"1999-01-01T00:00:00Z"}    | ${"before Galileo's epoch"}
+    ${"GAL"}      | ${0}   | ${"1999-08-21T23:59:46Z"}    | ${"1 s before Galileo's epoch"}
+    ${"IRN-L1NV"} | ${0}   | ${"1999-08-21T23:59:46Z"}    | ${"1 s before NavIC's epoch"}
+    ${"BDT"}      | ${0}   | ${"2005-12-31T23:59:60Z"}    | ${"a listed second 60, before BeiDou's epoch"}
+    ${"GPS-LNAV"} | ${100} | ${"1979-12-31T00:00:00Z"}    | ${"before the GPS epoch"}
+    ${"GPS-LNAV"} | ${0}   | ${"+275760-09-01T00:00:00Z"} | ${"the result is past Temporal's instant range"}
+    ${"GPS-LNAV"} | ${100} | ${"9999-12-31T00:00:00Z"}    | ${"the result is past year 9999"}
+  `(
+    "returns '' for $counter week $week, notBefore $notBefore ($why)",
+    ({ counter, week, notBefore }) => {
+      expect(gnssWeekToUtc(counter, week, 0, { notBefore })).toBe("");
+    },
+  );
+
+  it.each`
+    notBefore                                        | why
+    ${"2019-04-07"}                                  | ${"a date only"}
+    ${"2019-04-07T00:00:00"}                         | ${"no offset"}
+    ${"2017-12-31T23:59:60Z"}                        | ${"a second 60 the table does not list"}
+    ${"2019-04-07 00:00:00Z"}                        | ${"a space separator"}
+    ${""}                                            | ${"empty"}
+    ${123}                                           | ${"a number"}
+    ${Temporal.Instant.from("2019-01-01T00:00:00Z")} | ${"an Instant, not a string"}
+    ${null}                                          | ${"null"}
+    ${undefined}                                     | ${"undefined"}
+  `("returns '' for notBefore $notBefore ($why)", ({ notBefore }) => {
+    expect(gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore })).toBe("");
+  });
+
+  it.each`
+    rolloverEra                              | why
+    ${{}}                                    | ${"no notBefore"}
+    ${[]}                                    | ${"an empty array"}
+    ${["2019-01-01T00:00:00Z"]}              | ${"an array holding the instant"}
+    ${{ notbefore: "2019-01-01T00:00:00Z" }} | ${"wrong case: the key is exact"}
+  `("returns '' for the era $rolloverEra ($why)", ({ rolloverEra }) => {
+    expect(gnssWeekToUtc("GPS-LNAV", 100, 0, rolloverEra)).toBe("");
+  });
+
+  it("ignores keys other than notBefore", () => {
+    const notBefore = "2019-01-01T00:00:00Z";
+    expect(
+      gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore, extra: 1 } as never),
+    ).toBe(gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore }));
+    expect(gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore })).toBe(
+      "2019-03-09T23:59:42Z",
+    );
+  });
+
+  it("reads notBefore once", () => {
+    const read = vi.fn(() => "2019-01-01T00:00:00Z");
+    const rolloverEra = {
+      get notBefore() {
+        return read();
+      },
+    };
+    expect(gnssWeekToUtc("GPS-LNAV", 1020, 0, rolloverEra)).toBe(
+      "2019-03-09T23:59:42Z",
+    );
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it("never reads the clock", () => {
+    const now = vi.spyOn(Temporal.Now, "instant");
+    expect(
+      gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" }),
+    ).toBe("2038-10-23T23:59:42Z");
+    expect(now).not.toHaveBeenCalled();
+  });
+
+  it("returns '' when Temporal.Instant.from throws while reading the pivot", () => {
+    mockTemporalInstantFromThrow();
+    expect(
+      gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" }),
+    ).toBe("");
+  });
+
+  it("returns '' when Temporal.Instant.fromEpochNanoseconds throws while writing", () => {
+    mockTemporalInstantFromEpochNanosecondsThrow();
+    expect(
+      gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" }),
+    ).toBe("");
+  });
+
+  // The result r is the earliest occurrence at or after the pivot: on the counter's scale,
+  // label(r) ≥ label(pivot) and label(r) − one counter period < label(pivot). Reading r back gives
+  // the same week and time of week.
+  it.each`
+    counter       | system   | weeks   | week    | tow      | notBefore
+    ${"GPS-LNAV"} | ${"GPS"} | ${1024} | ${1020} | ${0}     | ${"2019-01-01T00:00:00Z"}
+    ${"GPS-LNAV"} | ${"GPS"} | ${1024} | ${1020} | ${0}     | ${"2019-04-07T00:00:00Z"}
+    ${"GPS-LNAV"} | ${"GPS"} | ${1024} | ${0}    | ${0}     | ${"2019-04-06T23:59:42Z"}
+    ${"GPS-LNAV"} | ${"GPS"} | ${1024} | ${906}  | ${17}    | ${"2016-01-01T00:00:00Z"}
+    ${"GPS-LNAV"} | ${"GPS"} | ${1024} | ${906}  | ${16}    | ${"2016-12-31T23:59:60Z"}
+    ${"QZS-LNAV"} | ${"QZS"} | ${1024} | ${1020} | ${0}     | ${"2019-01-01T00:00:00Z"}
+    ${"GPS-CNAV"} | ${"GPS"} | ${8192} | ${100}  | ${0}     | ${"2000-01-01T00:00:00Z"}
+    ${"QZS-CNAV"} | ${"QZS"} | ${8192} | ${2295} | ${86418} | ${"2020-01-01T00:00:00Z"}
+    ${"GAL"}      | ${"GAL"} | ${4096} | ${1271} | ${86418} | ${"2020-01-01T00:00:00Z"}
+    ${"BDT"}      | ${"BDT"} | ${8192} | ${939}  | ${86404} | ${"2020-01-01T00:00:00Z"}
+    ${"IRN-LNAV"} | ${"IRN"} | ${1024} | ${247}  | ${86418} | ${"2020-01-01T00:00:00Z"}
+    ${"IRN-L1NV"} | ${"IRN"} | ${8192} | ${1271} | ${86418} | ${"2020-01-01T00:00:00Z"}
+  `(
+    "places $counter week $week, $tow s within one period at or after $notBefore",
+    ({ counter, system, weeks, week, tow, notBefore }) => {
+      const result = gnssWeekToUtc(counter, week, tow, { notBefore });
+      const label = scaleLabel(utcToGnss(system, result));
+      const pivot = scaleLabel(utcToGnss(system, notBefore));
+      expect(label >= pivot).toBe(true);
+      expect(label - BigInt(weeks) * NANOSECONDS_PER_WEEK < pivot).toBe(true);
+      expect(utcToGnssWeek(counter, result)).toMatchObject({
+        week,
+        timeOfWeekSeconds: tow,
+      });
+    },
+  );
 });

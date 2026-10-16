@@ -206,7 +206,7 @@ describe("resolveRolloverEra", () => {
     ${3}                       | ${3n}
     ${Number.MAX_SAFE_INTEGER} | ${9007199254740991n}
   `("reads the integer era $rolloverEra as $expected", ({ rolloverEra }) => {
-    expect(resolveRolloverEra("GPS-LNAV", 100n, rolloverEra)).toBe(
+    expect(resolveRolloverEra("GPS-LNAV", 100n, 0n, rolloverEra)).toBe(
       BigInt(rolloverEra),
     );
   });
@@ -222,7 +222,7 @@ describe("resolveRolloverEra", () => {
     ${null}       | ${"null"}
     ${undefined}  | ${"absent"}
   `("returns null for the era $rolloverEra ($why)", ({ rolloverEra }) => {
-    expect(resolveRolloverEra("GPS-LNAV", 100n, rolloverEra)).toBeNull();
+    expect(resolveRolloverEra("GPS-LNAV", 100n, 0n, rolloverEra)).toBeNull();
   });
 
   // At 2026-10-15T00:00:00Z the GPS full week is 2440 (LNAV week 392, era 2). The rolling era puts
@@ -241,7 +241,7 @@ describe("resolveRolloverEra", () => {
       vi.spyOn(Temporal.Now, "instant").mockReturnValue(
         Temporal.Instant.from("2026-10-15T00:00:00Z"),
       );
-      expect(resolveRolloverEra(counter, week, "rolling")).toBe(expected);
+      expect(resolveRolloverEra(counter, week, 0n, "rolling")).toBe(expected);
     },
   );
 
@@ -249,6 +249,58 @@ describe("resolveRolloverEra", () => {
     vi.spyOn(Temporal.Now, "instant").mockReturnValue(
       Temporal.Instant.from("1990-01-01T00:00:00Z"),
     );
-    expect(resolveRolloverEra("GAL", 100n, "rolling")).toBeNull();
+    expect(resolveRolloverEra("GAL", 100n, 0n, "rolling")).toBeNull();
+  });
+
+  // era = ceil((pivot label − era-0 label) / period), never below 0 (eras from the independent
+  // label arithmetic: GPS label = UTC + (TAI − UTC) − 19 s).
+  it.each`
+    counter       | week     | timeOfWeek             | notBefore                           | expected  | why
+    ${"GPS-LNAV"} | ${1020n} | ${0n}                  | ${"2019-01-01T00:00:00Z"}           | ${1n}     | ${"before the 2019 rollover"}
+    ${"GPS-LNAV"} | ${1020n} | ${0n}                  | ${"2019-04-07T00:00:00Z"}           | ${2n}     | ${"after the 2019 rollover"}
+    ${"GPS-LNAV"} | ${0n}    | ${0n}                  | ${"2019-04-06T23:59:42Z"}           | ${2n}     | ${"exactly equal: counts"}
+    ${"GPS-LNAV"} | ${0n}    | ${0n}                  | ${"2019-04-06T23:59:42.000000001Z"} | ${3n}     | ${"1 ns after"}
+    ${"GPS-LNAV"} | ${100n}  | ${0n}                  | ${"1980-01-06T00:00:00Z"}           | ${0n}     | ${"at the epoch"}
+    ${"GPS-LNAV"} | ${906n}  | ${17_000_000_000n}     | ${"2016-12-31T23:59:60Z"}           | ${1n}     | ${"a listed second 60, equal"}
+    ${"GPS-LNAV"} | ${906n}  | ${16_000_000_000n}     | ${"2016-12-31T23:59:60Z"}           | ${2n}     | ${"a listed second 60, 1 s after"}
+    ${"GPS-CNAV"} | ${100n}  | ${0n}                  | ${"2000-01-01T00:00:00Z"}           | ${1n}     | ${"13-bit"}
+    ${"IRN-LNAV"} | ${247n}  | ${86_418_000_000_000n} | ${"2020-01-01T00:00:00Z"}           | ${1n}     | ${"NavIC 10-bit"}
+    ${"GPS-LNAV"} | ${0n}    | ${0n}                  | ${"+275760-09-01T00:00:00Z"}        | ${13951n} | ${"placed; the label is past Temporal's range"}
+  `(
+    "resolves notBefore $notBefore for $counter week $week to era $expected ($why)",
+    ({ counter, week, timeOfWeek, notBefore, expected }) => {
+      expect(resolveRolloverEra(counter, week, timeOfWeek, { notBefore })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
+    counter       | rolloverEra                              | why
+    ${"GAL"}      | ${{ notBefore: "1999-01-01T00:00:00Z" }} | ${"before Galileo's epoch"}
+    ${"GPS-LNAV"} | ${{ notBefore: "1979-12-31T00:00:00Z" }} | ${"before the GPS epoch"}
+    ${"GPS-LNAV"} | ${{ notBefore: "2017-12-31T23:59:60Z" }} | ${"a second 60 the table does not list"}
+    ${"GPS-LNAV"} | ${{ notBefore: "2019-04-07T00:00:00" }}  | ${"no offset"}
+    ${"GPS-LNAV"} | ${{ notBefore: 123 }}                    | ${"not a string"}
+    ${"GPS-LNAV"} | ${{}}                                    | ${"no notBefore"}
+    ${"GPS-LNAV"} | ${[]}                                    | ${"an array"}
+  `(
+    "returns null for $counter and the era $rolloverEra ($why)",
+    ({ counter, rolloverEra }) => {
+      expect(resolveRolloverEra(counter, 100n, 0n, rolloverEra)).toBeNull();
+    },
+  );
+
+  it("reads notBefore once and never reads the clock", () => {
+    const now = vi.spyOn(Temporal.Now, "instant");
+    const read = vi.fn(() => "2019-04-07T00:00:00Z");
+    const rolloverEra = {
+      get notBefore() {
+        return read();
+      },
+    };
+    expect(resolveRolloverEra("GPS-LNAV", 1020n, 0n, rolloverEra)).toBe(2n);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(now).not.toHaveBeenCalled();
   });
 });
