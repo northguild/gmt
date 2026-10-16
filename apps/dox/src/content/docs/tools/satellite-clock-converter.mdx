@@ -1,0 +1,54 @@
+---
+title: Satellite Clock Converter
+description: Read a time on one clock and see it on seven more. Give a UTC instant or a TAI, GPS, Galileo, BeiDou, QZSS, GLO or NavIC reading, and see how far each clock is from UTC.
+industries: [gnss, maritime]
+---
+
+import SatelliteClockConverter from "../../../components/SatelliteClockConverter.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="satellite clocks">
+
+<Fragment slot="keypoint">
+
+Satellite clocks do not add leap seconds, so each one leads UTC by a whole number of seconds. The gap depends on the clock and on the day.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A receiver prints the time on its own system's clock. A log, a database or a court wants UTC. The two differ by seconds, and the number of seconds changed each time UTC added one.
+
+Type a UTC instant, or a reading followed by a space and its clock: `TAI`, `GPS`, `GAL`, `BDT`, `QZS`, `GLO` or `IRN`. The tool calls [`gnssToUtc`](/reference/gnss/convert/gnssToUtc/) or [`fromTAI`](/reference/timescale/convert/fromTAI/) to find the instant, then [`utcToGnss`](/reference/gnss/convert/utcToGnss/) and [`toTAI`](/reference/timescale/convert/toTAI/) for the same instant on every other clock. The slider steps through every day UTC inserted a second.
+
+</Fragment>
+
+<SatelliteClockConverter fullbleed />
+
+<Fragment slot="after">
+
+**Each clock starts on its own day.** Galileo's reading begins at the end of 21 August 1999 and BeiDou's on 1 January 2006, and 1972 has only GLO. A clock has no reading before its first instant, and the table says "no result" for it and why. That is a correct answer, not a failure. [A BeiDou time of 2005](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22preset%22%3A%22before-beidou%22%7D) is one.
+
+**GLO is UTC's own hours.** GLO is GLONASS time as RINEX and the BIPM report it, in UTC's own hours. It has no leap seconds to subtract, so it reads the same as UTC and leads it by 0 seconds.
+
+**IRN is derived.** NavIC's clock is not published as a separate count, so its reading is worked out from GPS time.
+
+**Inside an inserted second.** [The second UTC added at the end of 2016](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22preset%22%3A%22inside-leap-second%22%7D) is written `23:59:60`. Every clock reads it, but a length of time from UTC cannot be taken across it, so the table says "inside an inserted second".
+
+**When the answer is `NO SIGNAL`.** The library gives `""` for a clock token it does not know, a `23:59:60` on a day with no inserted second, a reading the clock never showed, or text that is not a time. The tool says which in one sentence. [A `23:59:60` on 31 December 2017](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22preset%22%3A%22no-leap-second-that-day%22%7D) is one: no second was inserted that year.
+
+**Gaps that stay.** The gaps are 37 seconds for TAI, 18 for GPS, Galileo, QZS and NavIC, 4 for BeiDou and 0 for GLO. They stay as they are until UTC inserts another second, which the first plate shows as the next change.
+
+```ts
+utcToGnss("GPS", "2024-01-01T00:00:00Z");              // "2024-01-01T00:00:18 GPS"
+utcToGnss("BDT", "2024-01-01T00:00:00Z");              // "2024-01-01T00:00:04 BDT"
+gnssToUtc("BDT", "2024-01-01T00:00:04 BDT");           // "2024-01-01T00:00:00Z"
+toTAI("2024-01-01T00:00:00Z");                         // "2024-01-01T00:00:37 TAI"
+fromTAI("2026-01-01T00:00:37 TAI");                    // "2026-01-01T00:00:00Z"
+```
+
+**Reference:** [`utcToGnss`](/reference/gnss/convert/utcToGnss/), [`gnssToUtc`](/reference/gnss/convert/gnssToUtc/), [`toTAI`](/reference/timescale/convert/toTAI/), [`fromTAI`](/reference/timescale/convert/fromTAI/), [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/), [`nextLeapSecond`](/reference/timescale/calculate/nextLeapSecond/). The rules are in [GNSS: System Time and Week Rollover](/guides/industries/gnss-system-time-and-week-rollover/) and [Maritime: GNSS Time and Week Rollover](/guides/industries/maritime-gnss-time-and-week-rollover/).
+
+</Fragment>
+
+</ToolLayout>

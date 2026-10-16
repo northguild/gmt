@@ -35,7 +35,9 @@ export const CONTINUOUS_UTC_FROM = "2027-05-20";
  * `nextLeapSecond` from `INTEGER_UTC_FROM` until it returns `""`. The walk
  * also stops if a step does not move forward, so a library fault cannot loop.
  */
-export function insertions(lib: TimescaleLib): string[] {
+export function insertions(
+  lib: Pick<TimescaleLib, "nextLeapSecond">,
+): string[] {
   const found: string[] = [];
   let current = INTEGER_UTC_FROM;
   for (;;) {
@@ -52,7 +54,10 @@ export function insertions(lib: TimescaleLib): string[] {
  * `59` is reading the label, not arithmetic; the library does the adding.
  * `""` when the label does not end in second 60 or the library refuses it.
  */
-export function secondAfter(lib: TimescaleLib, insertion: string): string {
+export function secondAfter(
+  lib: Pick<TimescaleLib, "addUtc">,
+  insertion: string,
+): string {
   const match = /^(.*T\d{2}:\d{2}:)60(Z)$/.exec(insertion);
   if (match === null) return "";
   return lib.addUtc(`${match[1]}59${match[2]}`, { seconds: 1 });

@@ -1,0 +1,43 @@
+/*
+ * Satellite Clock Converter (MAR-16).
+ *
+ * Section/controls/codeframe/output chrome lives in gmt-widget.css; labels,
+ * inputs, selects and chips in gmt-form-controls.css. The frame, the bars and
+ * the table are the shared GNSS sheet's (gmt-gnss-widgets.css); the result
+ * plates are the punctuality sheet's. This sheet holds what only this tool
+ * needs: its container, the two-line table cells and the plates' widths.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an
+ * accent edge is never a single side.
+ */
+
+.gmt-satellite-clock-converter {
+  container: gmt-satellite-clock-converter / inline-size;
+}
+
+/* Every table cell is two lines, so a row keeps its height whether or not the
+   second line has words: a clock's "derived" tag, a "written as" note, or the
+   reason a reading is missing. */
+.gmt-satellite-clock-converter .gmt-clock-line {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-satellite-clock-converter .gmt-clock-sub {
+  color: var(--gmt-ice);
+  font-size: 0.8125rem;
+}
+
+.gmt-satellite-clock-converter .gmt-punct-hero-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The bar chips hold the longest value ("inside an inserted second") without
+   moving the bars beside them while the slider is dragged. */
+.gmt-satellite-clock-converter .gmt-gnss-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

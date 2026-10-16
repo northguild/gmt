@@ -1,0 +1,97 @@
+/*
+ * GNSS Week Decoder (MAR-16).
+ *
+ * Section/controls/codeframe/output chrome lives in gmt-widget.css; labels,
+ * inputs, selects and chips in gmt-form-controls.css. The frame, the lanes, the
+ * pin, the "today" mark and the peer tables are the shared GNSS sheet's
+ * (gmt-gnss-widgets.css); the result plates are the punctuality sheet's. This
+ * sheet holds what only this tool needs: its container, the lane slots that
+ * keep their boxes, and the plates' widths.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an
+ * accent edge is never a single side.
+ */
+
+.gmt-gnss-week-decoder {
+  container: gmt-gnss-week-decoder / inline-size;
+}
+
+/* Each field group hides with `hidden`; the labels are flex or grid items with
+   an author `display`, so each has its own rule. */
+.gmt-gnss-week-decoder [data-field][hidden] {
+  display: none;
+}
+
+/* The mode group: a fieldset with no border, the radios as chips in a row. */
+.gmt-gnss-week-decoder [data-role="mode-group"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-gnss-week-decoder [data-role="mode-group"] > legend {
+  inline-size: 100%;
+  padding: 0;
+  margin-block-end: var(--gmt-space-1);
+}
+
+/* A lane slot is a lane over a row of chips. Four are always drawn, so the
+   frame is the same height for every counter; a blank one keeps its box and
+   shows nothing. */
+.gmt-gnss-laneset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-width: 0;
+}
+
+.gmt-gnss-laneset[data-blank] {
+  visibility: hidden;
+}
+
+.gmt-gnss-laneset .gmt-gnss-flags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--gmt-space-2);
+  overflow: hidden;
+}
+
+/* A lane that begins after a gap (an era far from the others) is set off by a
+   dashed top edge, the shared gap's recipe. */
+.gmt-gnss-laneset:has(.gmt-gnss-lane[data-gap]) {
+  padding-block-start: var(--gmt-space-1);
+  border-top: 1px dashed var(--gmt-border-strong);
+}
+
+/* Words in place of the lanes (no counter picked): they take a lane's place at
+   the top of the drawing and do not move the slots. */
+.gmt-gnss-lanes {
+  position: relative;
+}
+
+.gmt-gnss-lanes-empty {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  margin: 0;
+  padding: var(--gmt-space-2);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+}
+
+.gmt-gnss-lanes-empty[hidden] {
+  display: none;
+}
+
+.gmt-gnss-week-decoder .gmt-punct-hero-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gmt-gnss-week-decoder .gmt-gnss-table-box + .gmt-gnss-table-box {
+  margin-block-start: var(--gmt-space-3);
+}

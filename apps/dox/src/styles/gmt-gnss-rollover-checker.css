@@ -1,0 +1,103 @@
+/*
+ * GNSS Rollover Checker (MAR-16).
+ *
+ * Section/controls/codeframe/output chrome lives in gmt-widget.css; labels,
+ * inputs, selects and chips in gmt-form-controls.css. The frame, the strip, the
+ * pin, the "today" mark and the table are the shared GNSS sheet's
+ * (gmt-gnss-widgets.css); the result plates are the punctuality sheet's. This
+ * sheet holds what only this tool needs: its container, the field groups, the
+ * strip's key and chip slots, and the plates' widths.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an
+ * accent edge is never a single side.
+ */
+
+.gmt-gnss-rollover-checker {
+  container: gmt-gnss-rollover-checker / inline-size;
+}
+
+/* Each field hides with `hidden`; the labels are grid items with an author
+   `display`, so the rule has to be explicit. */
+.gmt-gnss-rollover-checker [data-field][hidden] {
+  display: none;
+}
+
+/* The choice groups: a fieldset with no border, the radios as chips in a row. */
+.gmt-gnss-rollover-checker [data-role="model-group"],
+.gmt-gnss-rollover-checker [data-role="now-group"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-gnss-rollover-checker [data-role="model-group"] > legend,
+.gmt-gnss-rollover-checker [data-role="now-group"] > legend {
+  inline-size: 100%;
+  padding: 0;
+  margin-block-end: var(--gmt-space-1);
+}
+
+/* Two-line table cells, so a row keeps its height whether or not the second
+   line has words ("your receiver", "next to wrap"). */
+.gmt-gnss-rollover-checker .gmt-clock-line {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-gnss-rollover-checker .gmt-clock-sub {
+  color: var(--gmt-ice);
+  font-size: 0.8125rem;
+}
+
+/* The plates hold still while the clock ticks or the slider drags. */
+.gmt-gnss-rollover-checker .gmt-punct-hero-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The strip's key: what the lit and the hatched parts mean, in words, so the
+   pattern is never the only signal. */
+.gmt-gnss-rollover-checker .gmt-rollover-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  min-block-size: 1.2rem;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.gmt-gnss-rollover-checker .gmt-rollover-key > [hidden] {
+  display: none;
+}
+
+/* Five chip slots in a grid, always drawn, so the strip is the same height for
+   every reading. An unused slot keeps its box and shows nothing. */
+.gmt-gnss-rollover-checker .gmt-rollover-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-gnss-rollover-checker .gmt-rollover-chip {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gmt-gnss-rollover-checker .gmt-rollover-chip[data-blank] {
+  visibility: hidden;
+}
+
+.gmt-gnss-rollover-checker .gmt-gnss-ruler > [hidden],
+.gmt-gnss-rollover-checker .gmt-gnss-track > [hidden] {
+  display: none;
+}
