@@ -256,8 +256,7 @@ Where calendar semantics are ambiguous, GMT does what [Temporal](https://tc39.es
 
 - **Arithmetic clamps.** A day that does not exist follows Temporal's default `overflow: "constrain"`: `2024-02-29` plus one year is `2025-02-28`; Jan 31 plus one month is Feb 29/28.
 - **Parsers reject.** `parse*` functions and the scoped grammars above use `overflow: "reject"` and return the sentinel for `"31 Feb"`. A parser must not invent a date.
-- **The ecosystem agrees.** Temporal, Moment, Luxon, dayjs, spacetime and `@internationalized/date` all clamp. date-fns `setYear` is the outlier (it rolls to Mar 1).
-- **The law agrees.** A period ending on a day that does not exist ends on the last day of that month: [EU Reg. 1182/71 Art 3(2)(c)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:31971R1182), [UK Companies Act 2006 s390/s391](https://www.legislation.gov.uk/ukpga/2006/46/section/391), [US 26 CFR 1.441-2](https://www.law.cornell.edu/cfr/text/26/1.441-2) (52–53-week years).
+- **Why clamp.** ISO 8601-1 defines calendar dates and durations, but it gives no rule for adding a month or a year to a day the result's month does not have. Temporal does: `add`, `subtract` and `with` default to `overflow: "constrain"`, which moves a day that does not exist to the last day of that month (the `RegulateISODate` operation in the [Temporal specification](https://tc39.es/proposal-temporal/)). Temporal is the highest rung in the [source order](../apps/dox/src/content/docs/guides/concepts/standards.mdx), so GMT follows it. Stated as a GMT rule: a date or period that would land on a day that does not exist lands on the last day of that month instead.
 - **Known divergence, documented and not built:** a "month-end" rule would put a Feb-28 anchor on 02-29 in leap years. Temporal gives 02-28, and so does GMT (e.g. `getFiscalPeriod`'s `yearEndsOn`).
 
 ### 2. Zone-aware unit boundaries are never truncate-and-re-resolve

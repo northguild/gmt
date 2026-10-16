@@ -379,7 +379,7 @@ start; `space/` is not reserved, and nothing in this story creates it.
 | Fraction: 1–9 digits after `.`; output shortest | RFC 3339 §5.6 `time-secfrac = "." 1*DIGIT`; TC39 Temporal nanosecond resolution; `Temporal.PlainDateTime.prototype.toString()` automatic digits |
 | Four-digit years in scale strings | **GMT rule.** Every scale starts in 1972 or later; a result after 9999-12-31 returns `""` |
 | `nextLeapSecond` writes a deleted second as `…T23:59:59Z` | TF.460-6 §2.2 (23:59:59 is the omitted second). Writing its label: **GMT rule**. Reachable only by internal tests: the closed table has no deleted second |
-| `leapSecondsBetween` is signed and half-open | **GMT rule.** `[start, end)` per `interval/`'s half-open standard (EWD831) |
+| `leapSecondsBetween` is signed and half-open | **GMT rule.** `[start, end)` per `interval/`'s half-open standard (EWD831). A leap second is in the interval when its start is: an inserted second starts at 23:59:60.000 (TF.460-6 Annex 1 §2.2), not at the 00:00:00 where TAI − UTC steps |
 | Nonexistent labels are rejected | [LOCAL_TIME_RESOLUTION.md](../../reference/LOCAL_TIME_RESOLUTION.md) `"reject"`: a label inside a deleted second has no instant; an inserted second has its own label, so nothing is ambiguous |
 | `hasSecond60` rename | D3; TF.460-6 §2.1–2.2 |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
@@ -695,9 +695,17 @@ first `j ≥ 1` with `A[j] > u`, or −1.
 
 - `taiMinusUtc`: `Number((t − u) / S) − (secondSixty ? 1 : 0)` with `t = taiOfUtc(...)`. During an
   inserted second this is the old value (36 at `2016-12-31T23:59:60Z`).
-- `leapSecondsBetween`: `taiMinusUtc(end) − taiMinusUtc(start)`: the signed count of steps whose
-  second starts in `[start, end)` (`23:59:60 → 00:00:00` is 1; `23:59:59 → 23:59:60` is 0; a deleted
-  second counts −1).
+- `leapSecondsBetween`: `started(end) − started(start)`, where `started(x)` is the number of leap
+  seconds that started before `x`. That is `taiMinusUtc(x)`, plus 1 when `x` is inside an inserted
+  second past its start. An inserted second starts at `…T23:59:60.000Z` (ITU-R TF.460-6 Annex 1
+  §2.2), so it counts when that start falls in `[start, end)`. The result is a signed count:
+  `23:59:60 → 00:00:00` is 1; `23:59:59 → 23:59:60` is 0; `23:59:60.5 → 00:00:00` is 0, because that
+  second started at 23:59:60.000, before `start`. A deleted second counts −1 when its omitted
+  23:59:59.000 falls in `[start, end)`.
+  - It is **not** `taiMinusUtc(end) − taiMinusUtc(start)`. TAI − UTC steps at the following
+    00:00:00, so that difference counts an insertion whose second started before `start`
+    (`23:59:60.5 → 00:00:00` would give 1) and breaks the half-open rule. Over whole days the two
+    agree.
 - `nextLeapSecond`: `j = nextStepIndex`; −1 → `""`. Else the UTC date of `A[j] − S`, as `…T23:59:60Z`
   for a positive step (`formatUtcReading` with `secondSixty: true`) and `…T23:59:59Z` for a deleted
   second (`Instant#toString`).
@@ -881,6 +889,7 @@ insertion (2016-12-31) TAI − UTC stays 37 s."
  * @example leapSecondsBetween("2000-01-01T00:00:00Z", "2024-01-01T00:00:00Z") // 5
  * @example leapSecondsBetween("2024-01-01T00:00:00Z", "2000-01-01T00:00:00Z") // -5
  * @example leapSecondsBetween("2016-12-31T23:59:60Z", "2017-01-01T00:00:00Z") // 1
+ * @example leapSecondsBetween("2016-12-31T23:59:60.5Z", "2017-01-01T00:00:00Z") // 0 — it started at 23:59:60.000
  * @example leapSecondsBetween("1971-01-01T00:00:00Z", "2024-01-01T00:00:00Z") // null
  */
 
@@ -1333,6 +1342,7 @@ Plus §6.11. **Battle matrix:** for each `c` of `sameInstantBattleCases`, `taiMi
 | `"2024-01-01T00:00:00Z"` | `"2000-01-01T00:00:00Z"` | `-5` |
 | `"2016-12-31T23:59:60Z"` | `"2017-01-01T00:00:00Z"` | `1` |
 | `"2016-12-31T23:59:59Z"` | `"2016-12-31T23:59:60Z"` | `0` |
+| `"2016-12-31T23:59:60.5Z"` | `"2017-01-01T00:00:00Z"` | `0` (the inserted second started at 23:59:60.000, before `start`; TF.460-6 Annex 1 §2.2) |
 | `"1971-01-01T00:00:00Z"` | `"2024-01-01T00:00:00Z"` | `null` |
 
 ### 6.4 `nextLeapSecond`

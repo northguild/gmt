@@ -20,43 +20,42 @@ each:
 2. **Which calendar year labels the fiscal year.** Today it is always the year the fiscal year
    starts in. `getQuarter` uses the same rule for month-based fiscal years.
 
-The four published calendars below disagree on both. No international standard settles either
-question. So both become **required, named fields** that the caller states. GMT keeps no
-default, because any default would match one peer and silently mislabel the others.
+No international standard settles either question. The two published calendars below, from
+two countries, disagree on both, and IAS 1 ¶51(c) names a third label, the year the period ends
+in. So both become **required, named fields** that the caller states. GMT keeps no default,
+because any default would match one source and silently mislabel the others.
 
-| Peer (country)         | 53rd week goes in                    | Year labelled by                                                        |
-| ---------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
-| NRF 4-5-4 (US)         | the last period ("end of the calendar") | start year (fiscal 2023 = 2023-01-29 to 2024-02-03)                  |
-| ONS trading periods (UK) | the first period ("a five week January") | the calendar year holding most of it (2025 = 2024-12-29 to 2026-01-03) |
-| Canadian Tire (CA)     | the last quarter (Q4 2020 = 14 weeks) | the calendar year holding most of it (2020 = 2019-12-29 to 2021-01-02) |
-| Woolworths Group (AU)  | the last quarter (Q4 F24 = 13 weeks, Q4 F25 = 12) | end year (F24 = 2023-06-26 to 2024-06-30)                   |
+| Source                                     | 53rd week goes in                         | Year labelled by                                                        |
+| ------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------- |
+| NRF 4-5-4 calendar (US trade body; peer)   | the last period ("end of the calendar")   | start year (fiscal 2023 = 2023-01-29 to 2024-02-03)                     |
+| ONS trading periods (UK statistics office; peer) | the first period ("a five week January") | the calendar year holding most of it (2025 = 2024-12-29 to 2026-01-03) |
+| IAS 1 ¶51(c) (IASB; international)         | —                                         | a reporting period is identified by the date it ends, so `"endYear"`     |
 
-ONS and Canadian Tire are the strongest evidence that the majority rule is needed. Their
-labels are neither the start year nor the end year: 2024-12-29 to 2026-01-03 is "2025", and
-2019-12-29 to 2021-01-02 is "2020". Of the three rules, only the majority rule gives those
-labels.
+ONS is the evidence that the majority rule is needed. Its label is neither the start year nor
+the end year: 2024-12-29 to 2026-01-03 is "2025". Of the three rules, only the majority rule
+gives that label.
 
 ---
 
 ## 0. Authority — what each rule rests on
 
-International body first. National sources are labelled peers. None of them is an authority
-for GMT, and each is cited only to show that callers disagree.
+International body first (IAS 1). The two national sources, NRF (US) and ONS (UK), are labelled
+peers. Neither is an authority for GMT; each is cited only to show that callers disagree.
+Company calendars are not used as sources.
 
 | Rule                                                                                         | Source                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A reporting period of 52 weeks (so also 53) is permitted                                     | **IAS 1 ¶37** (IASB): "Normally, an entity consistently prepares financial statements for a one-year period. However, for practical reasons, some entities prefer to report, for example, for a 52-week period. This Standard does not preclude this practice." Text read from the XRB's reproduction, NZ IAS 1 (Diff Rep), issued November 2012. The IFRS Foundation's own text (ifrs.org, IAS 1 HTML) is behind registration: **not reached**. |
-| A fiscal year is identified by the date its reporting period ends                            | **IAS 1 ¶51(c)**: an entity shall display "the date of the end of the reporting period or the period covered by the set of financial statements or notes". Same source and reach as above. Used only as the reason for the tie rule below; it does not mandate a year label. |
-| IAS 1 is superseded                                                                          | IFRS 18 replaces IAS 1 for annual periods beginning on or after 1 January 2027 and carries the general-presentation paragraphs into IAS 8. The paragraph that ¶37 becomes: **not reached**. The finalizer re-checks this before release, and the JSDoc cites "IAS 1 ¶37" until the new number is read from the source. |
+| A fiscal year is identified by the date its reporting period ends                            | **IAS 1 ¶51(c)**: an entity shall display "the date of the end of the reporting period or the period covered by the set of financial statements or notes". Same source and reach as above. It is the reason the `"endYear"` option exists, and the reason for the tie rule below. It does not require any one year label. |
+| IAS 1 is superseded                                                                          | IFRS 18 replaces IAS 1 for annual periods beginning on or after 1 January 2027 and carries the general-presentation paragraphs into IAS 8. Where the text of ¶37 and ¶51(c) now sits (standard and paragraph number): **not reached**. The finalizer re-checks this before release, and the JSDoc cites "IAS 1 ¶37" and "IAS 1 ¶51(c)" until the new numbers are read from the source. |
 | No international standard fixes the period pattern, the 53rd-week placement or the year label | IAS 1 ¶37 permits the 52-week period and says nothing more. IAS 34 (interim reporting) does not define 4-4-5 shapes either. So all three are caller-stated parameters. Pattern and year end already were; this spec adds the other two. |
 | 53rd week in the **last** period — peer (US)                                                  | NRF, _4-5-4 Calendar_ FAQ (nrf.com/resources/4-5-4-calendar, datePublished 2026-02-04): "it is sometimes necessary to add a 53rd week to the end of the calendar"; the test for it: "If, after laying out the entire 52-week calendar for any given year, there are four or more days left in January during the 53rd week, then a 53rd week is added." NRF 2023–2025 calendar PDF: "Fiscal Year 2023 is a 53 week year", with week 53 = 2024-01-28 to 2024-02-03. |
 | 53rd week in the **first** period — peer (UK)                                                 | ONS, _Retail sales index reporting periods_, `tradingperiods2026.xlsx` (published 21 November 2025), Note 2: "Typically reporting periods follow a four-week four-week five-week reporting cycle. With 365 days in a year this shifts the periods back by one day annually (two on a leap year). To offset this shift a five week January is introduced every five to six years." Sheet "Trading Periods for 2025": weeks 5,4,5,4,4,5,4,4,5,4,4,5, from 2024-12-29 to 2026-01-03. |
-| 53rd week in the **last** quarter — peer (CA)                                                 | Canadian Tire Corporation, _Q4 and Full-Year 2020 MD&A and Financial Statements_, Note 2: "The fiscal year of the Company consists of a 52 or 53-week period ending on the Saturday closest to December 31. The fiscal years … presented for 2020 and 2019 are the 53-week and 52-week periods ended January 2, 2021 and December 28, 2019"; MD&A: "Q4 2020 (14 weeks ended January 2, 2021)". Periods within the quarter are not published. |
-| 53rd week in the **last** quarter, label = end year — peer (AU)                               | Woolworths Group, _2024 Annual Report_, Note 1.1: "for the 53-week period ended 30 June 2024 … The comparative period is the 52-week period ended 25 June 2023." ASX F24 results release (28 Aug 2024): "Q1’24 (14 WEEKS) … Q4’24 (13 WEEKS)". ASX F25 results release (27 Aug 2025): "Q1’25 (14 WEEKS) … Q4’25 (12 WEEKS)", "52 weeks ended 29 June 2025". |
-| Label = calendar year holding the most of the fiscal year — peers (UK, CA)                   | ONS sheet titles ("Trading Periods for 2025" = 2024-12-29 to 2026-01-03) and Canadian Tire ("2020" = 2019-12-29 to 2021-01-02). Neither publishes the rule in words. It is the only one of the three rules that reproduces both (§6.1). |
+| Label = calendar year holding the most of the fiscal year — peer (UK)                        | ONS sheet titles ("Trading Periods for 2025" = 2024-12-29 to 2026-01-03; "Trading Periods for 2020" = 2019-12-29 to 2021-01-02). ONS does not publish the rule in words. It is the only one of the three rules that reproduces these titles (§6.1). |
+| Label = end year                                                                             | **IAS 1 ¶51(c)**, above: a reporting period is identified by the date it ends. |
 | Majority is measured in **days**                                                             | **GMT rule.** The fiscal year and the calendar year share no unit except the day. Months have unequal lengths, and a week can straddle 1 January. |
 | An even split goes to the **end** year                                                       | **GMT rule.** No peer publishes a tie rule. IAS 1 ¶51(c) identifies a reporting period by its end date, so the year that holds the end date wins. Ties occur only in 364-day years that split 182/182, and only for year ends from 29 June to 4 July (§6.3). No month-based fiscal year can tie (§3.3). |
-| Both fields are required; there is no default                                                 | **GMT rule.** The four peers above disagree. A default would match one and mislabel the rest without warning ([no catch-all functions](../../coding-standards.md#api-contract): every call the types accept returns a correct value). |
+| Both fields are required; there is no default                                                 | **GMT rule.** NRF and ONS disagree on both choices, and IAS 1 ¶51(c) supports a third label. A default would match one and mislabel the rest without warning ([no catch-all functions](../../coding-standards.md#api-contract): every call the types accept returns a correct value). |
 | A missing or unrecognised field returns the sentinel                                          | [coding-standards § API Contract](../../coding-standards.md#api-contract): `null` for an object return, `false` for a boolean validator. |
 | A label from a calendar year cannot be unique for every year end                              | Arithmetic: a 364/371-day year drifts against a 365/366-day year. Verified for every rule in §6.3: each rule has a window of about five or six year-end month-days where two fiscal years share a label. The window moves with the rule; no rule removes it. |
 
@@ -96,7 +95,7 @@ a middle period, so there is no third value.
 | `packages/gmt/src/calendar/calculate/getQuarter.ts`         | `getQuarter(value: string, options?: { fiscalYearStartMonth: number; yearLabel: FiscalYearLabel }): { year: number; quarter: number } \| null`                                                                                              | when `options` is given, both fields are now required; `fiscalYearStartMonth` loses its default |
 | `packages/gmt/src/calendar/validate/isValidFiscalExtraWeek.ts` | `isValidFiscalExtraWeek(value: unknown): value is FiscalExtraWeek`                                                                                                                                                                     | new                                |
 | `packages/gmt/src/calendar/validate/isValidFiscalYearLabel.ts` | `isValidFiscalYearLabel(value: unknown): value is FiscalYearLabel`                                                                                                                                                                     | new                                |
-| `packages/gmt/src/calendar/validate/isValidFiscalCalendar.ts`  | `isValidFiscalCalendar(calendar: unknown): calendar is FiscalCalendar`                                                                                                                                                                 | new. Follows `isValidBusinessCalendar` |
+| `packages/gmt/src/calendar/validate/isValidFiscalCalendar.ts`  | `isValidFiscalCalendar(calendar: unknown): calendar is FiscalCalendar`                                                                                                                                                                 | new. Follows `isValidBusinessCalendar`, including refusing arrays |
 
 `getQuarter` with no `options` still returns calendar quarters. That call has one possible
 answer, so it needs no label. Once `options` is passed, the caller has asked for a fiscal year
@@ -106,6 +105,10 @@ The two single-field validators narrow a string read from config, an env var or 
 same job `isValidFiscalPattern` does. `isValidFiscalCalendar` replaces the advice to check the
 pattern and the date separately. A `null` from `getFiscalPeriod` can mean a bad calendar or an
 unusable date, and one call now tells them apart.
+
+`isValidFiscalCalendar` returns `false` for an array, as `isValidBusinessCalendar` does. A
+calendar is four named fields, never a tuple, which is the precedent CORE-79 set for
+`Position`. An array with those four properties attached is still refused.
 
 ### 1.3 Internal — `packages/gmt/src/internal/fiscalCalendar.ts`
 
@@ -118,6 +121,9 @@ export function fiscalPeriodOfWeek(
   extraWeek: FiscalExtraWeek,
 ): number;
 
+// new: shared by getQuarter and getFiscalPeriod (§3.3)
+export function gregorianCycleShift(year: number): number;
+
 // new
 export function fiscalYearLabel(
   start: Temporal.PlainDate,
@@ -126,10 +132,13 @@ export function fiscalYearLabel(
 ): number;
 ```
 
-- `fiscalYearOf` is **unchanged**. It still returns `{ start, weeks }`, so its tests do not move.
-  `getFiscalPeriod` derives `end` as `start.add({ days: weeks * 7 - 1 })`.
+- `fiscalYearOf` still returns `{ start, weeks }`. The search runs on a date already moved into
+  the safe cycle (§3.3), so it no longer needs a null return for a fiscal year that runs past
+  Temporal's range. `getFiscalPeriod` derives `end` as `start.add({ days: weeks * 7 - 1 })`, in
+  the same cycle.
 - `fiscalYearEndIn` is unchanged.
-- `fiscalYearLabel` is exported from `internal/index.ts` beside the other two. `getQuarter` and
+- `fiscalYearLabel` and `gregorianCycleShift` are exported from `internal/index.ts` beside the
+  other two. `getQuarter` and
   `getFiscalPeriod` both call it, so the majority rule and the tie rule live in one place.
 
 ---
@@ -142,8 +151,14 @@ export function fiscalYearLabel(
    unrecognised `pattern`, a `yearEndsOn` that is not a plain ISO date, and an `extraWeek` or
    `yearLabel` that is missing or not one of the listed values.
 2. `zonelessCalendarDate(value)` is null → `null` (unchanged: moments and junk are refused).
-3. `fiscalYearOf` is null (an out-of-range year) → `null`.
-4. Anything thrown (a hostile getter, Temporal range limits) → outer `catch` → `null`.
+3. Anything thrown (a hostile getter) → outer `catch` → `null`.
+
+Every date `zonelessCalendarDate` accepts gets a value, including dates whose fiscal year starts
+before Temporal's first date (-271821-04-19) or ends after its last (+275760-09-13). The work runs
+inside the Gregorian cycle shift (§3.3), the same way `getQuarter` does. `getFiscalPeriod` no
+longer returns `null` for a fiscal year that runs past Temporal's range. The label is a number,
+so it may name a year outside that range: `"endYear"` at `+275760-09-13` under the ONS calendar
+is 275761.
 
 ### `getQuarter` → `null`
 
@@ -155,11 +170,15 @@ export function fiscalYearLabel(
 5. `zonelessCalendarDate(value)` is null → `null`.
 6. Anything thrown → `null`.
 
+Like `getFiscalPeriod`, every accepted date gets a value through the cycle shift (§3.3), even
+when its fiscal year starts in the year before Temporal's first date.
+
 ### Validators → `false`
 
 - Each is total: any input, no throw. Non-string → `false`.
 - `isValidFiscalCalendar` reads each field once inside `try`. A getter that throws → `false`.
-- `isValidFiscalCalendar` accepts extra properties, as `isValidBusinessCalendar` does.
+- `isValidFiscalCalendar` accepts extra properties and refuses arrays, as `isValidBusinessCalendar`
+  does.
 
 ---
 
@@ -206,17 +225,39 @@ year has at least 365 days and wins. That is why the loop covers every year in t
 of comparing only the two end years. An earlier draft compared only the end years and labelled
 ONS 2025 as "2026".
 
-### 3.3 `getQuarter` with `options`
+### 3.3 `getQuarter` with `options`, and the Gregorian cycle shift
 
 ```text
 startYear = date.month < m ? date.year - 1 : date.year
-start     = PlainDate(startYear, m, 1)
+shift     = gregorianCycleShift(startYear)
+start     = PlainDate(startYear - shift, m, 1)
 end       = start.add({ years: 1 }).subtract({ days: 1 })
-year      = fiscalYearLabel(start, end, options.yearLabel)
+year      = fiscalYearLabel(start, end, options.yearLabel) + shift
 quarter   = floor(((date.month - m + 12) % 12) / 3) + 1        // unchanged
 ```
 
-- `start.add({ years: 1 })` from day 1 of a month never clamps.
+**`gregorianCycleShift(year)`** returns the multiple of 400 years that moves `year` into 2000 to
+2399: `year − 2000 − (((year % 400) + 400) % 400)`. Each 400-year Gregorian cycle has 146,097
+days, which is a whole number of weeks, and its leap years fall in the same places. So moving a
+date by a multiple of 400 years keeps its month, day and weekday. The weekday is what the
+"nearest weekday" year-end rule depends on. Labels and week numbers computed in the moved cycle
+are the same as in the real one, apart from the year offset, which is added back to the label
+only. Examples: `gregorianCycleShift(2024)` is 0, `gregorianCycleShift(-271820)` is -274000,
+`gregorianCycleShift(275760)` is 273600.
+
+**Why it is needed.** Both functions probe a calendar year next to the date's own. `getQuarter`
+builds the first day of the fiscal year, which can be in the year before the date.
+`fiscalYearOf` builds year ends from one year before to two years after. Near Temporal's lower
+limit the probe itself throws: `Temporal.PlainDate.from({ year: -271822, month: 5, day: 1 })` and
+`fiscalYearEndIn(nrfAnchor, -271822)` both throw `RangeError`. So a valid date such as
+`-271821-04-19` returned `null`, though its quarter and fiscal period are well defined. The same
+can happen at the upper limit, where `fiscalYearOf` probes two years ahead. Running the whole
+computation in 2000 to 2399 means no probe ever leaves the range.
+
+`getFiscalPeriod` uses the same shift (§3.4), so the two functions agree near the limits.
+
+- `start.add({ years: 1 })` from day 1 of a month never clamps, and in the moved cycle it never
+  leaves the range.
 - `m = 1`: start and end fall in the same year, so all three labels agree.
 - Majority for month-based years: start months 1 to 7 give the start year (July to December is
   184 days, more than 181 or 182). Start months 8 to 12 give the end year. No start month can
@@ -226,16 +267,22 @@ quarter   = floor(((date.month - m + 12) % 12) / 3) + 1        // unchanged
 
 ```text
 if !isValidFiscalCalendar(calendar): return null
-date = zonelessCalendarDate(value); if !date: return null
-fy   = fiscalYearOf(date, PlainDate.from(calendar.yearEndsOn)); if !fy: return null
-end  = fy.start.add({ days: fy.weeks * 7 - 1 })
-week = floor(fy.start.until(date, { largestUnit: "day" }).days / 7) + 1
+date  = zonelessCalendarDate(value); if !date: return null
+shift = gregorianCycleShift(date.year)
+local = date.with({ year: date.year - shift })            // same month, day and weekday
+fy    = fiscalYearOf(local, PlainDate.from(calendar.yearEndsOn))
+end   = fy.start.add({ days: fy.weeks * 7 - 1 })
+week  = floor(fy.start.until(local, { largestUnit: "day" }).days / 7) + 1
 return {
-  year:   fiscalYearLabel(fy.start, end, calendar.yearLabel),
+  year:   fiscalYearLabel(fy.start, end, calendar.yearLabel) + shift,
   period: fiscalPeriodOfWeek(week, fy.weeks, calendar.pattern, calendar.extraWeek),
   week,
 }
 ```
+
+`fy.start` and `end` are dates in the moved cycle. They are never moved back, because only the
+label leaves the function. That is why a fiscal year that runs past Temporal's range still gets
+a value.
 
 Read each field of `calendar` once into a local, then validate and use the locals. Do not read
 from `calendar` again after validation. A getter could return a different value the second
@@ -245,7 +292,8 @@ time.
 
 - `isValidFiscalExtraWeek`: `typeof value === "string" && (value === "firstPeriod" || value === "lastPeriod")`.
 - `isValidFiscalYearLabel`: the same, over the three label values.
-- `isValidFiscalCalendar`: `isObject(calendar)`, then read the four fields once and require
+- `isValidFiscalCalendar`: `isObject(calendar) && !Array.isArray(calendar)`, as in
+  `isValidBusinessCalendar`, then read the four fields once and require
   `isValidFiscalPattern`, `isValidDate`, `isValidFiscalExtraWeek` and `isValidFiscalYearLabel`.
   Wrap it in `try`/`catch` → `false`.
 
@@ -277,8 +325,8 @@ export type FiscalExtraWeek = "firstPeriod" | "lastPeriod";
  *
  * - `"startYear"` — the year its first day falls in. NRF (US): fiscal 2023 runs 2023-01-29 to
  *   2024-02-03.
- * - `"endYear"` — the year its last day falls in. Woolworths Group (AU): F24 runs 2023-06-26 to
- *   2024-06-30.
+ * - `"endYear"` — the year its last day falls in. IAS 1 ¶51(c) identifies a reporting period by
+ *   the date it ends: a fiscal year from 2023-06-26 to 2024-06-30 is 2024.
  * - `"majorityYear"` — the calendar year holding the most of its days. ONS (UK): 2025 runs
  *   2024-12-29 to 2026-01-03. When two years hold exactly half each, the label is the end year,
  *   the year holding the date the period ends on.
@@ -316,9 +364,9 @@ Replace the two `GMT rule:` bullets and the "not a unique key" bullet with these
  *   and there is no default.
  * - `calendar.extraWeek` is the period a 53rd week is added to: `"firstPeriod"` (ONS, UK: "a
  *   five week January") or `"lastPeriod"` (NRF, US: "to the end of the calendar").
- * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`
- *   (Woolworths Group, AU) or `"majorityYear"`, the calendar year holding the most days (ONS,
- *   UK; Canadian Tire, CA). GMT rule: a 182/182 split goes to the end year, because IAS 1
+ * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"` (the
+ *   year holding the end date, by which IAS 1 ¶51(c) identifies a reporting period) or
+ *   `"majorityYear"`, the calendar year holding the most days (ONS, UK). GMT rule: a 182/182 split goes to the end year, because IAS 1
  *   ¶51(c) identifies a reporting period by the date it ends.
  * - **`year` is not a unique key for every year end.** A 364- or 371-day year drifts against
  *   the calendar, so every label rule has year ends where two fiscal years share a label and a
@@ -458,11 +506,10 @@ Shorthand used in the tables:
 ```ts
 const NRF = { pattern: "4-5-4", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod", yearLabel: "startYear" } as const;
 const ONS = { pattern: "4-4-5", yearEndsOn: "2022-12-31", extraWeek: "firstPeriod", yearLabel: "majorityYear" } as const;
-const CTC = { pattern: "4-4-5", yearEndsOn: "2022-12-31", extraWeek: "lastPeriod", yearLabel: "majorityYear" } as const;
-const WW  = { pattern: "4-4-5", yearEndsOn: "2021-06-27", extraWeek: "lastPeriod", yearLabel: "endYear" } as const;
+const J   = { pattern: "4-4-5", yearEndsOn: "2021-06-27", extraWeek: "lastPeriod", yearLabel: "endYear" } as const; // a late-June year end, no published source
 ```
 
-### 6.1 Published years (one per peer)
+### 6.1 Published years (NRF and ONS)
 
 **NRF (US), fiscal 2023 (53 weeks) and 2017.** Sources: NRF FAQ ("January 29 – February 4,
 2017" is week 1 of 2017, not restated) and the NRF 2023–2025 PDF (week 53 = 2024-01-28 to
@@ -499,38 +546,19 @@ the Saturday four days later, not the Saturday three days earlier. That is a dif
 year-end rule, used before 2004. A caller covering those years states it as a second
 `FiscalCalendar`. Tests cover 2025 only. The full scan is evidence for this spec, not a test.
 
-**Canadian Tire (CA), fiscal 2020 (53 weeks).** Source: 2020 MD&A and Financial Statements
-(year ended January 2, 2021, 53 weeks; 2019 ended December 28, 2019, 52 weeks; Q4 = 14 weeks).
-**Verified** for year bounds, week count, label and quarter. Canadian Tire does not publish its
-periods, so `period` is checked only as its quarter, `ceil(period / 3)`.
-
-| value        | expected                               | published fact                         |
-| ------------ | -------------------------------------- | -------------------------------------- |
-| `2019-12-28` | `{ year: 2019, period: 12, week: 52 }` | 2019 ends December 28, 2019            |
-| `2019-12-29` | `{ year: 2020, period: 1, week: 1 }`   | 2020 opens in 2019; labelled 2020      |
-| `2020-09-26` | `{ year: 2020, period: 9, week: 39 }`  | Q3 ends                                |
-| `2020-09-27` | `{ year: 2020, period: 10, week: 40 }` | Q4 opens; weeks 40–53 = 14 weeks       |
-| `2021-01-02` | `{ year: 2020, period: 12, week: 53 }` | 2020 ends January 2, 2021              |
-| `2021-01-03` | `{ year: 2021, period: 1, week: 1 }`   | 2021 opens                             |
-
-**Woolworths Group (AU), F24 (53 weeks).** Sources: 2024 Annual Report Note 1.1 and the F24 and
-F25 ASX results releases. **Verified for year bounds, week count, week number and label only.**
-Woolworths' quarters are 14-13-13-12 in a 52-week year and 14-13-13-13 in F24. That is not
-three 13-week quarters, so no `FiscalPattern` fits it, and its periods and quarters are **not
-modelled** (§10).
+**ONS (UK), 2020 (53 weeks).** Source: the same workbook, sheet "Trading Periods for 2020":
+January 2019-12-29 to 2020-02-01 (5 weeks); sheet 2019 ends 2019-12-28; sheet 2021 opens
+2021-01-03. **Verified.** A second ONS year, so the majority label is pinned for a year that
+starts in December and ends in January.
 
 | value        | expected                               | published fact                          |
 | ------------ | -------------------------------------- | --------------------------------------- |
-| `2023-06-25` | `{ year: 2023, period: 12, week: 52 }` | F23 ends 25 June 2023 (52 weeks)        |
-| `2023-06-26` | `{ year: 2024, period: 1, week: 1 }`   | F24 opens; labelled by its end year     |
-| `2024-06-30` | `{ year: 2024, period: 12, week: 53 }` | F24 ends 30 June 2024 (53 weeks)        |
-| `2024-07-01` | `{ year: 2025, period: 1, week: 1 }`   | F25 opens                               |
-| `2025-06-29` | `{ year: 2025, period: 12, week: 52 }` | F25 ends 29 June 2025 (52 weeks)        |
-
-Assert only `year` and `week` for these rows (`expect.objectContaining`), and say so in the
-`describe` name. Asserting `period` would pin a value the source contradicts. Woolworths does
-not state its year-end rule in the documents read. `"2021-06-27"` (Sunday nearest 27 June,
-which is the last Sunday of June) reproduces all three published year ends.
+| `2019-12-28` | `{ year: 2019, period: 12, week: 52 }` | 2019 ends                               |
+| `2019-12-29` | `{ year: 2020, period: 1, week: 1 }`   | 2020 opens in 2019; labelled 2020       |
+| `2020-02-01` | `{ year: 2020, period: 1, week: 5 }`   | the five-week January ends              |
+| `2020-02-02` | `{ year: 2020, period: 2, week: 6 }`   | February opens                          |
+| `2021-01-02` | `{ year: 2020, period: 12, week: 53 }` | 2020 ends in 2021; still labelled 2020  |
+| `2021-01-03` | `{ year: 2021, period: 1, week: 1 }`   | 2021 opens                              |
 
 ### 6.2 `extraWeek` placement (53-week year: NRF fiscal 2023, `4-5-4`)
 
@@ -560,8 +588,10 @@ walk is identical under both values.
 | `2024-01-28` | NRF, `"majorityYear"`                 | 2023            |                                                      |
 | `2024-12-29` | ONS, `"startYear"`                    | 2024            |                                                      |
 | `2024-12-29` | ONS, `"endYear"`                      | 2026            | the 3-year span: neither end matches ONS             |
-| `2024-06-30` | WW, `"majorityYear"`                  | 2023            | 189 days in 2023, 182 in 2024                        |
-| `2024-06-30` | WW, `"startYear"`                     | 2023            |                                                      |
+| `2023-06-26` | J (`"endYear"`)                       | 2024            | `{ year: 2024, period: 1, week: 1 }`; 2023-06-26 to 2024-06-30 |
+| `2024-06-30` | J (`"endYear"`)                       | 2024            | `{ year: 2024, period: 12, week: 53 }`               |
+| `2024-06-30` | J, `"majorityYear"`                   | 2023            | 189 days in 2023, 182 in 2024: the end year and the majority differ |
+| `2024-06-30` | J, `"startYear"`                      | 2023            |                                                      |
 
 **Tie (GMT rule).** `T = { pattern: "4-4-5", yearEndsOn: "2026-07-01", extraWeek: "lastPeriod", yearLabel: "majorityYear" }`.
 The fiscal year 2025-07-03 to 2026-07-01 has 182 days in 2025 and 182 in 2026.
@@ -629,6 +659,7 @@ common year. This pins §3.3.
 - `extraWeek` of `"lastQuarter"`, `"middle"`, `""`, `12`, `null`
 - `yearLabel` of `"fiscalYear"`, `"StartYear"`, `""`, `2024`, `null`
 - a calendar whose `yearLabel` getter throws
+- an array with `pattern`, `yearEndsOn`, `extraWeek` and `yearLabel` set as properties
 - a calendar whose `extraWeek` getter returns `"lastPeriod"` on the first read and `"bogus"` on
   later reads: the result must equal the `NRF` result, which proves each field is read once
 - all existing invalid-pattern, invalid-`yearEndsOn` and invalid-value rows, with the two new
@@ -650,9 +681,32 @@ common year. This pins §3.3.
   `"lastQuarter"`, `""`, `1`, `null`, `undefined`, `{}`.
 - `isValidFiscalYearLabel`: true for the three values; false for `"fiscalYear"`,
   `"start"`, `""`, `2024`, `null`, `undefined`.
-- `isValidFiscalCalendar`: true for `NRF`, `ONS`, `CTC`, `WW` and `T`, and for `NRF` with an
+- `isValidFiscalCalendar`: true for `NRF`, `ONS`, `J` and `T`, and for `NRF` with an
   extra property. False for the 1.19 shape, for each field wrong in turn, for `null`, `"4-5-4"`,
-  `[]`, and for a calendar whose getter throws.
+  `[]`, for an array with the four `NRF` fields set as properties (arrays are refused, as in
+  `isValidBusinessCalendar`), and for a calendar whose getter throws.
+
+### 6.7 Temporal's range limits (the cycle shift, §3.3)
+
+Values came from the reference implementation running in the moved cycle. Each date is
+Temporal's first or last, and each fiscal year runs past that limit.
+
+| call                                                                         | expected                                      | moved-cycle fiscal year  |
+| ---------------------------------------------------------------------------- | --------------------------------------------- | ------------------------ |
+| `getFiscalPeriod("-271821-04-19", NRF)`                                      | `{ year: -271821, period: 3, week: 12 }`      | 2179-01-31 to 2180-01-29 |
+| `getFiscalPeriod("-271821-04-19", { ...NRF, yearLabel: "endYear" })`         | `{ year: -271820, period: 3, week: 12 }`      | same                     |
+| `getFiscalPeriod("-271821-04-19", ONS)`                                      | `{ year: -271821, period: 4, week: 16 }`      | 2179-01-03 to 2180-01-01 |
+| `getFiscalPeriod("+275760-09-13", NRF)`                                      | `{ year: 275760, period: 8, week: 32 }`       | 2160-02-03 to 2161-01-31 |
+| `getFiscalPeriod("+275760-09-13", ONS)`                                      | `{ year: 275760, period: 9, week: 37 }`       | 2159-12-30 to 2161-01-03 |
+| `getFiscalPeriod("+275760-09-13", { ...ONS, yearLabel: "endYear" })`         | `{ year: 275761, period: 9, week: 37 }`       | same                     |
+| `getQuarter("-271821-04-19", { fiscalYearStartMonth: 5, yearLabel: "startYear" })` | `{ year: -271822, quarter: 4 }`         | 2178-05-01 to 2179-04-30 |
+| `getQuarter("-271821-04-19", { fiscalYearStartMonth: 5, yearLabel: "endYear" })`   | `{ year: -271821, quarter: 4 }`         | same                     |
+| `getQuarter("-271821-04-19", { fiscalYearStartMonth: 5, yearLabel: "majorityYear" })` | `{ year: -271822, quarter: 4 }`      | same (245 days in the start year) |
+
+Without the shift, every row above returned `null`: the year-before probe for the lower limit
+and the year-after probe for the upper limit throw `RangeError`. Also test `gregorianCycleShift`
+directly: 2024 → 0, -271820 → -274000, 275760 → 273600, and that a date moved by the result keeps
+its month, day and `dayOfWeek` for one date in each of the 400 years of a cycle.
 
 ---
 
@@ -665,8 +719,8 @@ Each slice is red → green → refactor, and the suite stays green between slic
    not change `FiscalCalendar` yet. Write `isValidFiscalCalendar` against an inline type until
    slice 3, so this slice compiles alone.
 2. **Internal.** `fiscalYearLabel` (§3.2), tested directly: the start, end and majority
-   values for ONS 2025, CTC 2020, WW F24 and the tie year. Then `fiscalPeriodOfWeek` gains
-   `extraWeek` (§3.1, §6.2 internal walk). Update its current call site to pass
+   values for ONS 2025, ONS 2020, NRF 2023, the `J` year (2023-06-26 to 2024-06-30) and the
+   tie year. Then `gregorianCycleShift` (§6.7). Then `fiscalPeriodOfWeek` gains `extraWeek` (§3.1, §6.2 internal walk). Update its current call site to pass
    `"lastPeriod"`, which keeps behaviour unchanged.
 3. **`getFiscalPeriod`.** Make both fields required on `FiscalCalendar`. Validate with
    `isValidFiscalCalendar`, then wire the label and the placement. Add
@@ -783,7 +837,7 @@ owner first.
 
 - `context/domination/issues/CORE-5.md` lines 18–20 (signatures) and the decisions at lines 106–131: add a
   `## Corrections` entry. It says that the 53rd-week placement and the year label are now
-  required caller parameters, cites the four peers and IAS 1 ¶37, and records the GMT rules for
+  required caller parameters, cites IAS 1 ¶37 and ¶51(c) and the two peers (NRF, ONS), and records the GMT rules for
   the day-count majority and the tie. Leave the original decision text standing; the
   Corrections entry supersedes it. Line 64 ("places the 53rd week correctly for a known NRF
   53-week year") stays true under `"lastPeriod"`.
@@ -799,21 +853,13 @@ owner first.
 
 ## 10. Findings to report
 
-1. **Woolworths puts the 53rd week in the last quarter, not the first.** Its first quarter has
-   14 weeks every year (Q1’24 and Q1’25 are both 14). The 53rd week turns Q4 from 12 weeks
-   (Q4’25) into 13 (Q4’24). So `"lastPeriod"` describes Woolworths, and the brief's statement
-   that it uses the first quarter does not match the source.
-2. **Woolworths does not fit `FiscalPattern`.** Its quarters are 14-13-13-12 (52 weeks) and
-   14-13-13-13 (53 weeks), not three 13-week quarters. GMT reproduces its year bounds, week
-   numbers and end-year label, but not its periods or quarters. Supporting it would need a
-   pattern type that varies by quarter. That is a separate story, with its own painpoint. It is
-   not part of this one.
-3. **ONS changed its year-end rule.** The `ONS` calendar reproduces every sheet from 2004 to
+1. **ONS changed its year-end rule.** The `ONS` calendar reproduces every sheet from 2004 to
    2026, but not 1991, 1992, 1996, 1997, 2002 or 2003. GMT models one rule per calendar, which
    is correct. A caller spanning the change uses two calendars.
-4. **NRF no longer publishes "Saturday nearest January 31".** Its page states the 53rd-week
+2. **NRF no longer publishes "Saturday nearest January 31".** Its page states the 53rd-week
    test as "four or more days left in January". That test is equivalent, and CORE-5 verified it
    against every NRF year from 2017 to 2028. The JSDoc, the skill and the Dox guide quote the
    current wording.
-5. **The IFRS Foundation's own IAS 1 text and the IFRS 18 relocation were not reached.** The
-   citation rests on the XRB reproduction. The finalizer re-checks it before release.
+3. **IAS 1 is replaced by IFRS 18 for periods from 2027-01-01.** Where the text of ¶37 and
+   ¶51(c) now sits was not reached, and neither was the IFRS Foundation's own IAS 1 text. The
+   citations rest on the XRB reproduction. The finalizer re-checks them before release.
