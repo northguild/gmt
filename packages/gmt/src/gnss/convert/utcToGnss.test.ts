@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
+  mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
 import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
 import { toTAI } from "../../timescale/convert/toTAI";
@@ -16,31 +17,36 @@ describe("utcToGnss", () => {
   // Scale − UTC = (TAI − UTC) − (TAI − scale): BIPM utc-gnss "(19-xx) s" for GPS. The GPS rows
   // carry MAR-16's checks: 0 s at the 1980 epoch, 17 s before the 2016 insertion, 18 s in 2024.
   it.each`
-    system   | utcString                      | expected                        | why
-    ${"GPS"} | ${"1980-01-06T00:00:00Z"}      | ${"1980-01-06T00:00:00 GPS"}    | ${"the GPS epoch: 19 − 19"}
-    ${"GPS"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:18 GPS"}    | ${"37 − 19"}
-    ${"GPS"} | ${"2016-12-31T23:59:60Z"}      | ${"2017-01-01T00:00:17 GPS"}    | ${"the inserted second: 36 + 1 − 19"}
-    ${"GPS"} | ${"2016-12-31T23:59:60.25Z"}   | ${"2017-01-01T00:00:17.25 GPS"} | ${"the inserted second, fraction kept"}
-    ${"GPS"} | ${"2017-01-01T08:59:60+09:00"} | ${"2017-01-01T00:00:17 GPS"}    | ${"the inserted second in another offset"}
-    ${"GPS"} | ${"2016-06-01T00:00:00Z"}      | ${"2016-06-01T00:00:17 GPS"}    | ${"17 s before the 2016 insertion: 36 − 19"}
-    ${"GPS"} | ${"2027-06-28T00:00:00Z"}      | ${"2027-06-28T00:00:18 GPS"}    | ${"18 s: the table is closed"}
-    ${"GPS"} | ${"1999-08-21T23:59:47Z"}      | ${"1999-08-22T00:00:00 GPS"}    | ${"13 s: the first LNAV rollover"}
-    ${"GPS"} | ${"2024-01-01T00:00:00.5Z"}    | ${"2024-01-01T00:00:18.5 GPS"}  | ${"18 s, fraction kept"}
-    ${"GAL"} | ${"1999-08-22T00:00:00Z"}      | ${"1999-08-22T00:00:13 GAL"}    | ${"the ICD's 13 s: 32 − 19"}
-    ${"GAL"} | ${"1999-08-21T23:59:47Z"}      | ${"1999-08-22T00:00:00 GAL"}    | ${"the Galileo epoch"}
-    ${"GAL"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:18 GAL"}    | ${"37 − 19"}
-    ${"BDT"} | ${"2006-01-01T00:00:00Z"}      | ${"2006-01-01T00:00:00 BDT"}    | ${"the BeiDou epoch: equals UTC, 33 − 33"}
-    ${"BDT"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:04 BDT"}    | ${"37 − 33"}
-    ${"QZS"} | ${"1980-01-06T00:00:00Z"}      | ${"1980-01-06T00:00:00 QZS"}    | ${"the QZSS week epoch: 19 − 19"}
-    ${"QZS"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:18 QZS"}    | ${"37 − 19"}
-    ${"IRN"} | ${"1999-08-21T23:59:47Z"}      | ${"1999-08-22T00:00:00 IRN"}    | ${"the NavIC epoch, ICD SPS 1.1 §5.7"}
-    ${"IRN"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:18 IRN"}    | ${"37 − 19, derived"}
-    ${"IRN"} | ${"2016-12-31T23:59:60Z"}      | ${"2017-01-01T00:00:17 IRN"}    | ${"the inserted second: 36 + 1 − 19"}
-    ${"GLO"} | ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:00 GLO"}    | ${"UTC's own wall clock, not UTC + 3 h"}
-    ${"GLO"} | ${"2016-12-31T23:59:60Z"}      | ${"2016-12-31T23:59:60 GLO"}    | ${"GLO keeps UTC's leap seconds"}
-    ${"GLO"} | ${"2016-12-31T23:59:60.25Z"}   | ${"2016-12-31T23:59:60.25 GLO"} | ${"GLO keeps UTC's leap seconds, fraction kept"}
-    ${"GLO"} | ${"2017-01-01T08:59:60+09:00"} | ${"2016-12-31T23:59:60 GLO"}    | ${"the inserted second in another offset"}
-    ${"GLO"} | ${"1972-01-01T00:00:00Z"}      | ${"1972-01-01T00:00:00 GLO"}    | ${"the first GLO label"}
+    system   | utcString                           | expected                               | why
+    ${"GPS"} | ${"1980-01-06T00:00:00Z"}           | ${"1980-01-06T00:00:00 GPS"}           | ${"the GPS epoch: 19 − 19"}
+    ${"GPS"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:18 GPS"}           | ${"37 − 19"}
+    ${"GPS"} | ${"2016-12-31T23:59:60Z"}           | ${"2017-01-01T00:00:17 GPS"}           | ${"the inserted second: 36 + 1 − 19"}
+    ${"GPS"} | ${"2016-12-31T23:59:60.25Z"}        | ${"2017-01-01T00:00:17.25 GPS"}        | ${"the inserted second, fraction kept"}
+    ${"GPS"} | ${"2017-01-01T08:59:60+09:00"}      | ${"2017-01-01T00:00:17 GPS"}           | ${"the inserted second in another offset"}
+    ${"GPS"} | ${"2016-06-01T00:00:00Z"}           | ${"2016-06-01T00:00:17 GPS"}           | ${"17 s before the 2016 insertion: 36 − 19"}
+    ${"GPS"} | ${"2027-06-28T00:00:00Z"}           | ${"2027-06-28T00:00:18 GPS"}           | ${"18 s: the table is closed"}
+    ${"GPS"} | ${"1999-08-21T23:59:47Z"}           | ${"1999-08-22T00:00:00 GPS"}           | ${"13 s: the first LNAV rollover"}
+    ${"GPS"} | ${"2024-01-01T00:00:00.5Z"}         | ${"2024-01-01T00:00:18.5 GPS"}         | ${"18 s, fraction kept"}
+    ${"GAL"} | ${"1999-08-22T00:00:00Z"}           | ${"1999-08-22T00:00:13 GAL"}           | ${"the ICD's 13 s: 32 − 19"}
+    ${"GAL"} | ${"1999-08-21T23:59:47Z"}           | ${"1999-08-22T00:00:00 GAL"}           | ${"the Galileo epoch"}
+    ${"GAL"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:18 GAL"}           | ${"37 − 19"}
+    ${"BDT"} | ${"2006-01-01T00:00:00Z"}           | ${"2006-01-01T00:00:00 BDT"}           | ${"the BeiDou epoch: equals UTC, 33 − 33"}
+    ${"BDT"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:04 BDT"}           | ${"37 − 33"}
+    ${"QZS"} | ${"1980-01-06T00:00:00Z"}           | ${"1980-01-06T00:00:00 QZS"}           | ${"the QZSS week epoch: 19 − 19"}
+    ${"QZS"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:18 QZS"}           | ${"37 − 19"}
+    ${"IRN"} | ${"1999-08-21T23:59:47Z"}           | ${"1999-08-22T00:00:00 IRN"}           | ${"the NavIC epoch, ICD SPS 1.1 §5.7"}
+    ${"IRN"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:18 IRN"}           | ${"37 − 19, derived"}
+    ${"IRN"} | ${"2016-12-31T23:59:60Z"}           | ${"2017-01-01T00:00:17 IRN"}           | ${"the inserted second: 36 + 1 − 19"}
+    ${"GLO"} | ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00 GLO"}           | ${"UTC's own wall clock, not UTC + 3 h"}
+    ${"GLO"} | ${"2016-12-31T23:59:60Z"}           | ${"2016-12-31T23:59:60 GLO"}           | ${"GLO keeps UTC's leap seconds"}
+    ${"GLO"} | ${"2016-12-31T23:59:60.25Z"}        | ${"2016-12-31T23:59:60.25 GLO"}        | ${"GLO keeps UTC's leap seconds, fraction kept"}
+    ${"GLO"} | ${"2017-01-01T08:59:60+09:00"}      | ${"2016-12-31T23:59:60 GLO"}           | ${"the inserted second in another offset"}
+    ${"GLO"} | ${"1972-01-01T00:00:00Z"}           | ${"1972-01-01T00:00:00 GLO"}           | ${"the first GLO label"}
+    ${"GPS"} | ${"2016-12-31T23:59:59.999999999Z"} | ${"2017-01-01T00:00:16.999999999 GPS"} | ${"1 ns before the inserted second: 36 − 19"}
+    ${"GPS"} | ${"2016-12-31T23:59:60.999999999Z"} | ${"2017-01-01T00:00:17.999999999 GPS"} | ${"the last nanosecond of the inserted second"}
+    ${"GPS"} | ${"9999-12-31T23:59:41.999999999Z"} | ${"9999-12-31T23:59:59.999999999 GPS"} | ${"the last four-digit GPS label: 37 − 19"}
+    ${"BDT"} | ${"9999-12-31T23:59:55.999999999Z"} | ${"9999-12-31T23:59:59.999999999 BDT"} | ${"the last four-digit BDT label: 37 − 33"}
+    ${"GLO"} | ${"9999-12-31T23:59:59.999999999Z"} | ${"9999-12-31T23:59:59.999999999 GLO"} | ${"the last four-digit GLO label"}
   `(
     "returns $expected for $system $utcString ($why)",
     ({ system, utcString, expected }) => {
@@ -60,6 +66,14 @@ describe("utcToGnss", () => {
     ${"IRN"} | ${"1999-08-21T23:59:46.999999999Z"} | ${"one nanosecond before the NavIC epoch"}
     ${"GLO"} | ${"2017-12-31T23:59:60Z"}           | ${"second 60 with no insertion that day"}
     ${"GLO"} | ${"1971-12-31T23:59:59Z"}           | ${"before 1972"}
+    ${"GAL"} | ${"1999-08-21T23:59:46.999999999Z"} | ${"one nanosecond before the Galileo epoch"}
+    ${"BDT"} | ${"2005-12-31T23:59:59.999999999Z"} | ${"one nanosecond before the BeiDou epoch"}
+    ${"QZS"} | ${"1980-01-05T23:59:59.999999999Z"} | ${"one nanosecond before the QZSS week epoch"}
+    ${"GLO"} | ${"1971-12-31T23:59:59.999999999Z"} | ${"one nanosecond before 1972"}
+    ${"GPS"} | ${"9999-12-31T23:59:42Z"}           | ${"the GPS label is in year 10000"}
+    ${"BDT"} | ${"9999-12-31T23:59:56Z"}           | ${"the BDT label is in year 10000"}
+    ${"GLO"} | ${"+010000-01-01T00:00:00Z"}        | ${"the GLO label is in year 10000"}
+    ${"GPS"} | ${"+275760-09-13T00:00:00Z"}        | ${"Temporal's last instant: its GPS label is past Temporal's range"}
   `("returns '' for $system $utcString ($why)", ({ system, utcString }) => {
     expect(utcToGnss(system, utcString)).toBe("");
   });
@@ -124,6 +138,11 @@ describe("utcToGnss", () => {
   it("returns '' when Temporal.Instant.fromEpochNanoseconds throws while writing", () => {
     mockTemporalInstantFromEpochNanosecondsThrow();
     expect(utcToGnss("GPS", "2024-01-01T00:00:00Z")).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws while writing a GLO second 60", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(utcToGnss("GLO", "2016-12-31T23:59:60Z")).toBe("");
   });
 });
 

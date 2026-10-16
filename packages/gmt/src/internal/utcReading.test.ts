@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
+  mockTemporalPlainTimeFromThrow,
 } from "../test/mocks";
 import {
   formatUtcReading,
@@ -39,6 +40,10 @@ describe("parseUtcReading", () => {
     ${"2016-12-31T18:59:60-05:00[America/New_York]"} | ${"2016-12-31T23:59:59Z"}
     ${"2016-12-31T23:59:60Z[u-ca=hebrew]"}           | ${"2016-12-31T23:59:59Z"}
     ${"2016-12-31T12:34:60Z"}                        | ${"2016-12-31T12:34:59Z"}
+    ${"2016-12-31T23:59:60-00:00"}                   | ${"2016-12-31T23:59:59Z"}
+    ${"2016-12-31T23:59:60+00:00:00"}                | ${"2016-12-31T23:59:59Z"}
+    ${"2016-12-31T23:59:60Z[UTC]"}                   | ${"2016-12-31T23:59:59Z"}
+    ${"2016-12-31T11:59:60-12:00"}                   | ${"2016-12-31T23:59:59Z"}
   `(
     "reads the second-60 string $value as $clamped with secondSixty true",
     ({ value, clamped }) => {
@@ -57,6 +62,7 @@ describe("parseUtcReading", () => {
     ${"2016-12-31T23:59:60z"}            | ${"lower-case z"}
     ${"2016-12-31T23:59:60"}             | ${"no designator"}
     ${"2016-12-31T23:59:60+0900"}        | ${"basic offset"}
+    ${"2017-01-01T08:59:60+09"}          | ${"an hour-only offset"}
     ${"2016-12-31T23:59:60.1234567890Z"} | ${"ten fraction digits"}
     ${"2016-12-31T23:59:60.Z"}           | ${"empty fraction"}
     ${"2016-12-31T24:59:60Z"}            | ${"hour 24"}
@@ -167,6 +173,16 @@ describe("formatUtcReading", () => {
       ).toBe("");
     },
   );
+
+  it("returns an empty string when Temporal.PlainTime.from throws while writing second 60", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(
+      formatUtcReading({
+        epochNanoseconds: utcNs("2016-12-31T23:59:59Z"),
+        secondSixty: true,
+      }),
+    ).toBe("");
+  });
 });
 
 describe("subsecondFraction", () => {

@@ -3,6 +3,7 @@ import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
   mockTemporalNowInstantThrow,
+  mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
 import { gnssWeekToUtc } from "./gnssWeekToUtc";
 import { utcToGnss } from "./utcToGnss";
@@ -26,48 +27,53 @@ function scaleLabel(scaleString: string): bigint {
 describe("gnssWeekToUtc", () => {
   // label = epoch + (era × modulus + week) weeks + time of week, then label → UTC through TAI.
   it.each`
-    counter       | week    | tow                 | era   | expected                            | why
-    ${"GPS-LNAV"} | ${100}  | ${0}                | ${0}  | ${"1981-12-05T23:59:59Z"}           | ${"GPS − UTC 1 s in 1981"}
-    ${"GPS-LNAV"} | ${100}  | ${0}                | ${1}  | ${"2001-07-21T23:59:47Z"}           | ${"one LNAV period later"}
-    ${"GPS-LNAV"} | ${100}  | ${0}                | ${2}  | ${"2021-03-06T23:59:42Z"}           | ${"two LNAV periods later"}
-    ${"GPS-LNAV"} | ${100}  | ${0}                | ${3}  | ${"2040-10-20T23:59:42Z"}           | ${"three LNAV periods later"}
-    ${"GAL"}      | ${100}  | ${0}                | ${0}  | ${"2001-07-21T23:59:47Z"}           | ${"Galileo week 0 is GPS week 1024"}
-    ${"GAL"}      | ${100}  | ${0}                | ${1}  | ${"2080-01-20T23:59:42Z"}           | ${"one 4096-week period later"}
-    ${"BDT"}      | ${100}  | ${0}                | ${0}  | ${"2007-12-02T00:00:00Z"}           | ${"BDT − UTC 0 s in 2007"}
-    ${"BDT"}      | ${100}  | ${0}                | ${1}  | ${"2164-12-01T23:59:56Z"}           | ${"one 8192-week period later"}
-    ${"QZS-LNAV"} | ${100}  | ${0}                | ${0}  | ${"1981-12-05T23:59:59Z"}           | ${"QZSS weeks are GPS weeks"}
-    ${"GPS-CNAV"} | ${100}  | ${0}                | ${0}  | ${"1981-12-05T23:59:59Z"}           | ${"CNAV era 0"}
-    ${"GPS-CNAV"} | ${100}  | ${0}                | ${1}  | ${"2138-12-06T23:59:42Z"}           | ${"one 8192-week period later"}
-    ${"GPS-LNAV"} | ${0}    | ${0}                | ${0}  | ${"1980-01-06T00:00:00Z"}           | ${"the GPS epoch"}
-    ${"GPS-LNAV"} | ${0}    | ${0}                | ${1}  | ${"1999-08-21T23:59:47Z"}           | ${"the first LNAV rollover"}
-    ${"GPS-LNAV"} | ${0}    | ${0}                | ${2}  | ${"2019-04-06T23:59:42Z"}           | ${"the second LNAV rollover"}
-    ${"GPS-LNAV"} | ${0}    | ${0}                | ${3}  | ${"2038-11-20T23:59:42Z"}           | ${"the third LNAV rollover"}
-    ${"GPS-CNAV"} | ${0}    | ${0}                | ${1}  | ${"2137-01-05T23:59:42Z"}           | ${"the first CNAV rollover"}
-    ${"GAL"}      | ${0}    | ${0}                | ${1}  | ${"2078-02-19T23:59:42Z"}           | ${"the first Galileo rollover"}
-    ${"BDT"}      | ${0}    | ${0}                | ${1}  | ${"2163-01-01T23:59:56Z"}           | ${"the first BeiDou rollover"}
-    ${"GAL"}      | ${0}    | ${0}                | ${0}  | ${"1999-08-21T23:59:47Z"}           | ${"the Galileo epoch"}
-    ${"BDT"}      | ${0}    | ${0}                | ${0}  | ${"2006-01-01T00:00:00Z"}           | ${"the BeiDou epoch"}
-    ${"GPS-LNAV"} | ${247}  | ${86418}            | ${2}  | ${"2024-01-01T00:00:00Z"}           | ${"LNAV in 2024"}
-    ${"QZS-LNAV"} | ${247}  | ${86418}            | ${2}  | ${"2024-01-01T00:00:00Z"}           | ${"QZSS LNAV in 2024"}
-    ${"GPS-CNAV"} | ${2295} | ${86418}            | ${0}  | ${"2024-01-01T00:00:00Z"}           | ${"CNAV in 2024"}
-    ${"QZS-CNAV"} | ${2295} | ${86418}            | ${0}  | ${"2024-01-01T00:00:00Z"}           | ${"QZSS CNAV in 2024"}
-    ${"GAL"}      | ${1271} | ${86418}            | ${0}  | ${"2024-01-01T00:00:00Z"}           | ${"Galileo in 2024"}
-    ${"BDT"}      | ${939}  | ${86404}            | ${0}  | ${"2024-01-01T00:00:00Z"}           | ${"BeiDou in 2024"}
-    ${"GPS-LNAV"} | ${906}  | ${16}               | ${1}  | ${"2016-12-31T23:59:59Z"}           | ${"the second before the insertion"}
-    ${"GPS-LNAV"} | ${906}  | ${18}               | ${1}  | ${"2017-01-01T00:00:00Z"}           | ${"the second after the insertion"}
-    ${"GPS-LNAV"} | ${0}    | ${0.1}              | ${2}  | ${"2019-04-06T23:59:42.1Z"}         | ${"a fractional time of week"}
-    ${"GPS-LNAV"} | ${392}  | ${345618}           | ${2}  | ${"2026-10-15T00:00:00Z"}           | ${"LNAV in 2026"}
-    ${"GPS-LNAV"} | ${1023} | ${604799}           | ${2}  | ${"2038-11-20T23:59:41Z"}           | ${"the last LNAV second of era 2"}
-    ${"GPS-CNAV"} | ${8191} | ${0}                | ${0}  | ${"2136-12-29T23:59:42Z"}           | ${"the last CNAV week of era 0"}
-    ${"GPS-LNAV"} | ${0}    | ${604799.999999999} | ${1}  | ${"1999-08-28T23:59:46.999999999Z"} | ${"the last nanosecond of a week"}
-    ${"IRN-LNAV"} | ${0}    | ${0}                | ${0}  | ${"1999-08-21T23:59:47Z"}           | ${"the NavIC epoch"}
-    ${"IRN-LNAV"} | ${0}    | ${0}                | ${1}  | ${"2019-04-06T23:59:42Z"}           | ${"the first NavIC 10-bit rollover"}
-    ${"IRN-LNAV"} | ${0}    | ${0}                | ${2}  | ${"2038-11-20T23:59:42Z"}           | ${"the second NavIC 10-bit rollover"}
-    ${"IRN-L1NV"} | ${0}    | ${0}                | ${1}  | ${"2156-08-21T23:59:42Z"}           | ${"the first NavIC 13-bit rollover"}
-    ${"IRN-LNAV"} | ${247}  | ${86418}            | ${1}  | ${"2024-01-01T00:00:00Z"}           | ${"NavIC LNAV in 2024"}
-    ${"IRN-L1NV"} | ${1271} | ${86418}            | ${0}  | ${"2024-01-01T00:00:00Z"}           | ${"NavIC L1NV in 2024"}
-    ${"GPS-CNAV"} | ${670}  | ${518417.999999999} | ${51} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant"}
-    ${"GPS-CNAV"} | ${1024} | ${0}                | ${0}  | ${"1999-08-21T23:59:47Z"}           | ${"a CNAV week runs on past 1023"}
+    counter       | week    | tow                 | era    | expected                            | why
+    ${"GPS-LNAV"} | ${100}  | ${0}                | ${0}   | ${"1981-12-05T23:59:59Z"}           | ${"GPS − UTC 1 s in 1981"}
+    ${"GPS-LNAV"} | ${100}  | ${0}                | ${1}   | ${"2001-07-21T23:59:47Z"}           | ${"one LNAV period later"}
+    ${"GPS-LNAV"} | ${100}  | ${0}                | ${2}   | ${"2021-03-06T23:59:42Z"}           | ${"two LNAV periods later"}
+    ${"GPS-LNAV"} | ${100}  | ${0}                | ${3}   | ${"2040-10-20T23:59:42Z"}           | ${"three LNAV periods later"}
+    ${"GAL"}      | ${100}  | ${0}                | ${0}   | ${"2001-07-21T23:59:47Z"}           | ${"Galileo week 0 is GPS week 1024"}
+    ${"GAL"}      | ${100}  | ${0}                | ${1}   | ${"2080-01-20T23:59:42Z"}           | ${"one 4096-week period later"}
+    ${"BDT"}      | ${100}  | ${0}                | ${0}   | ${"2007-12-02T00:00:00Z"}           | ${"BDT − UTC 0 s in 2007"}
+    ${"BDT"}      | ${100}  | ${0}                | ${1}   | ${"2164-12-01T23:59:56Z"}           | ${"one 8192-week period later"}
+    ${"QZS-LNAV"} | ${100}  | ${0}                | ${0}   | ${"1981-12-05T23:59:59Z"}           | ${"QZSS weeks are GPS weeks"}
+    ${"GPS-CNAV"} | ${100}  | ${0}                | ${0}   | ${"1981-12-05T23:59:59Z"}           | ${"CNAV era 0"}
+    ${"GPS-CNAV"} | ${100}  | ${0}                | ${1}   | ${"2138-12-06T23:59:42Z"}           | ${"one 8192-week period later"}
+    ${"GPS-LNAV"} | ${0}    | ${0}                | ${0}   | ${"1980-01-06T00:00:00Z"}           | ${"the GPS epoch"}
+    ${"GPS-LNAV"} | ${0}    | ${0}                | ${1}   | ${"1999-08-21T23:59:47Z"}           | ${"the first LNAV rollover"}
+    ${"GPS-LNAV"} | ${0}    | ${0}                | ${2}   | ${"2019-04-06T23:59:42Z"}           | ${"the second LNAV rollover"}
+    ${"GPS-LNAV"} | ${0}    | ${0}                | ${3}   | ${"2038-11-20T23:59:42Z"}           | ${"the third LNAV rollover"}
+    ${"GPS-CNAV"} | ${0}    | ${0}                | ${1}   | ${"2137-01-05T23:59:42Z"}           | ${"the first CNAV rollover"}
+    ${"GAL"}      | ${0}    | ${0}                | ${1}   | ${"2078-02-19T23:59:42Z"}           | ${"the first Galileo rollover"}
+    ${"BDT"}      | ${0}    | ${0}                | ${1}   | ${"2163-01-01T23:59:56Z"}           | ${"the first BeiDou rollover"}
+    ${"GAL"}      | ${0}    | ${0}                | ${0}   | ${"1999-08-21T23:59:47Z"}           | ${"the Galileo epoch"}
+    ${"BDT"}      | ${0}    | ${0}                | ${0}   | ${"2006-01-01T00:00:00Z"}           | ${"the BeiDou epoch"}
+    ${"GPS-LNAV"} | ${247}  | ${86418}            | ${2}   | ${"2024-01-01T00:00:00Z"}           | ${"LNAV in 2024"}
+    ${"QZS-LNAV"} | ${247}  | ${86418}            | ${2}   | ${"2024-01-01T00:00:00Z"}           | ${"QZSS LNAV in 2024"}
+    ${"GPS-CNAV"} | ${2295} | ${86418}            | ${0}   | ${"2024-01-01T00:00:00Z"}           | ${"CNAV in 2024"}
+    ${"QZS-CNAV"} | ${2295} | ${86418}            | ${0}   | ${"2024-01-01T00:00:00Z"}           | ${"QZSS CNAV in 2024"}
+    ${"GAL"}      | ${1271} | ${86418}            | ${0}   | ${"2024-01-01T00:00:00Z"}           | ${"Galileo in 2024"}
+    ${"BDT"}      | ${939}  | ${86404}            | ${0}   | ${"2024-01-01T00:00:00Z"}           | ${"BeiDou in 2024"}
+    ${"GPS-LNAV"} | ${906}  | ${16}               | ${1}   | ${"2016-12-31T23:59:59Z"}           | ${"the second before the insertion"}
+    ${"GPS-LNAV"} | ${906}  | ${18}               | ${1}   | ${"2017-01-01T00:00:00Z"}           | ${"the second after the insertion"}
+    ${"GPS-LNAV"} | ${0}    | ${0.1}              | ${2}   | ${"2019-04-06T23:59:42.1Z"}         | ${"a fractional time of week"}
+    ${"GPS-LNAV"} | ${392}  | ${345618}           | ${2}   | ${"2026-10-15T00:00:00Z"}           | ${"LNAV in 2026"}
+    ${"GPS-LNAV"} | ${1023} | ${604799}           | ${2}   | ${"2038-11-20T23:59:41Z"}           | ${"the last LNAV second of era 2"}
+    ${"GPS-CNAV"} | ${8191} | ${0}                | ${0}   | ${"2136-12-29T23:59:42Z"}           | ${"the last CNAV week of era 0"}
+    ${"GPS-LNAV"} | ${0}    | ${604799.999999999} | ${1}   | ${"1999-08-28T23:59:46.999999999Z"} | ${"the last nanosecond of a week"}
+    ${"IRN-LNAV"} | ${0}    | ${0}                | ${0}   | ${"1999-08-21T23:59:47Z"}           | ${"the NavIC epoch"}
+    ${"IRN-LNAV"} | ${0}    | ${0}                | ${1}   | ${"2019-04-06T23:59:42Z"}           | ${"the first NavIC 10-bit rollover"}
+    ${"IRN-LNAV"} | ${0}    | ${0}                | ${2}   | ${"2038-11-20T23:59:42Z"}           | ${"the second NavIC 10-bit rollover"}
+    ${"IRN-L1NV"} | ${0}    | ${0}                | ${1}   | ${"2156-08-21T23:59:42Z"}           | ${"the first NavIC 13-bit rollover"}
+    ${"IRN-LNAV"} | ${247}  | ${86418}            | ${1}   | ${"2024-01-01T00:00:00Z"}           | ${"NavIC LNAV in 2024"}
+    ${"IRN-L1NV"} | ${1271} | ${86418}            | ${0}   | ${"2024-01-01T00:00:00Z"}           | ${"NavIC L1NV in 2024"}
+    ${"GPS-CNAV"} | ${670}  | ${518417.999999999} | ${51}  | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant"}
+    ${"GPS-CNAV"} | ${1024} | ${0}                | ${0}   | ${"1999-08-21T23:59:47Z"}           | ${"a CNAV week runs on past 1023"}
+    ${"GPS-LNAV"} | ${670}  | ${518417.999999999} | ${408} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant: full week 418462 = 408 × 1024 + 670"}
+    ${"GAL"}      | ${3742} | ${518417.999999999} | ${101} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant: Galileo full week 417438 = 101 × 4096 + 3742"}
+    ${"BDT"}      | ${7506} | ${518403.999999999} | ${50}  | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant: BeiDou full week 417106 = 50 × 8192 + 7506"}
+    ${"GPS-LNAV"} | ${0}    | ${0.0000000006}     | ${2}   | ${"2019-04-06T23:59:42.000000001Z"} | ${"0.6 ns rounds up to the nearest nanosecond"}
+    ${"GPS-LNAV"} | ${0}    | ${0.0000000004}     | ${2}   | ${"2019-04-06T23:59:42Z"}           | ${"0.4 ns rounds down to the nearest nanosecond"}
   `(
     "returns $expected for $counter week $week, $tow s, era $era ($why)",
     ({ counter, week, tow, era, expected }) => {
@@ -102,6 +108,8 @@ describe("gnssWeekToUtc", () => {
     ${"GPS-LNAV"} | ${Number.NaN}              | ${"NaN"}
     ${"GPS-LNAV"} | ${"1"}                     | ${"a numeric string"}
     ${"GPS-CNAV"} | ${Number.MAX_SAFE_INTEGER} | ${"far past the modulus"}
+    ${"GPS-LNAV"} | ${100n}                    | ${"a bigint"}
+    ${"GPS-LNAV"} | ${undefined}               | ${"omitted"}
   `("returns '' for $counter week $week ($why)", ({ counter, week }) => {
     expect(gnssWeekToUtc(counter, week, 0, 0)).toBe("");
   });
@@ -114,36 +122,45 @@ describe("gnssWeekToUtc", () => {
     ${Number.POSITIVE_INFINITY} | ${"Infinity"}
     ${"0"}                      | ${"a numeric string"}
     ${604799.9999999999}        | ${"rounds to a whole week"}
+    ${604799.9999999997}        | ${"rounds to 604 800 s at nanosecond resolution"}
+    ${-0.0000000001}            | ${"negative, though it rounds to 0"}
+    ${0n}                       | ${"a bigint"}
+    ${null}                     | ${"null"}
+    ${undefined}                | ${"omitted"}
   `("returns '' for the time of week $tow ($why)", ({ tow }) => {
     expect(gnssWeekToUtc("GPS-LNAV", 0, tow, 1)).toBe("");
   });
 
   it.each`
-    era                        | why
-    ${-1}                      | ${"negative"}
-    ${1.5}                     | ${"not an integer"}
-    ${"1"}                     | ${"a numeric string"}
-    ${"current"}               | ${"not the name rolling"}
-    ${null}                    | ${"null"}
-    ${Number.MAX_SAFE_INTEGER} | ${"past Temporal's range"}
+    era                         | why
+    ${-1}                       | ${"negative"}
+    ${1.5}                      | ${"not an integer"}
+    ${"1"}                      | ${"a numeric string"}
+    ${"current"}                | ${"not the name rolling"}
+    ${null}                     | ${"null"}
+    ${Number.MAX_SAFE_INTEGER}  | ${"past Temporal's range"}
+    ${undefined}                | ${"omitted: the era is required (D7)"}
+    ${1n}                       | ${"a bigint"}
+    ${true}                     | ${"a boolean"}
+    ${Number.NaN}               | ${"NaN"}
+    ${Number.POSITIVE_INFINITY} | ${"Infinity"}
   `("returns '' for the era $era ($why)", ({ era }) => {
     expect(gnssWeekToUtc("GPS-LNAV", 100, 0, era)).toBe("");
   });
 
+  // One nanosecond past each counter's last four-digit UTC instant (a GMT rule: four-digit years).
   it.each`
     counter       | week    | tow       | era
-    ${"GPS-LNAV"} | ${0}    | ${604800} | ${2}
-    ${"GPS-LNAV"} | ${1024} | ${0}      | ${2}
+    ${"GPS-CNAV"} | ${670}  | ${518418} | ${51}
+    ${"GPS-LNAV"} | ${670}  | ${518418} | ${408}
+    ${"GAL"}      | ${3742} | ${518418} | ${101}
+    ${"BDT"}      | ${7506} | ${518404} | ${50}
   `(
-    "returns '' for $counter week $week, $tow s, era $era (out of range)",
+    "returns '' for $counter week $week, $tow s, era $era: a result in year 10000",
     ({ counter, week, tow, era }) => {
       expect(gnssWeekToUtc(counter, week, tow, era)).toBe("");
     },
   );
-
-  it("returns '' for a result in year 10000", () => {
-    expect(gnssWeekToUtc("GPS-CNAV", 670, 518418, 51)).toBe("");
-  });
 
   it.each`
     counter   | why
@@ -152,6 +169,7 @@ describe("gnssWeekToUtc", () => {
     ${"QZS"}  | ${"a system: QZSS has two counters"}
     ${"IRN"}  | ${"a system: NavIC has two counters"}
     ${"LNAV"} | ${"a message without its system"}
+    ${"CNAV"} | ${"a message without its system"}
     ${null}   | ${"null"}
   `("returns '' for the counter $counter ($why)", ({ counter }) => {
     expect(gnssWeekToUtc(counter, 100, 0, 0)).toBe("");
@@ -180,6 +198,11 @@ describe("gnssWeekToUtc", () => {
   it("returns '' when Temporal.Instant.fromEpochNanoseconds throws while writing", () => {
     mockTemporalInstantFromEpochNanosecondsThrow();
     expect(gnssWeekToUtc("GPS-LNAV", 247, 86418, 2)).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws while writing the inserted second", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(gnssWeekToUtc("GPS-LNAV", 906, 17, 1)).toBe("");
   });
 });
 
@@ -280,13 +303,14 @@ describe("gnssWeekToUtc: notBefore pivot", () => {
   // A pivot inside a listed inserted second is placed on the scale like any other instant: the
   // GPS label of 2016-12-31T23:59:60Z is week 906 + 17 s of era 1 (ITU-R TF.460-6 Annex 1 §2.2).
   it.each`
-    week   | tow     | notBefore                   | expected                    | why
-    ${906} | ${17}   | ${"2016-01-01T00:00:00Z"}   | ${"2016-12-31T23:59:60Z"}   | ${"the result is an inserted second"}
-    ${906} | ${17}   | ${"2016-12-31T23:59:60Z"}   | ${"2016-12-31T23:59:60Z"}   | ${"a listed second-60 pivot: equal counts"}
-    ${906} | ${18}   | ${"2016-12-31T23:59:60Z"}   | ${"2017-01-01T00:00:00Z"}   | ${"the second after the pivot: this era"}
-    ${906} | ${16}   | ${"2016-12-31T23:59:60Z"}   | ${"2036-08-16T23:59:58Z"}   | ${"the second before the pivot: the next era"}
-    ${906} | ${17}   | ${"2016-12-31T23:59:60.5Z"} | ${"2036-08-16T23:59:59Z"}   | ${"half a second into the pivot: the next era"}
-    ${906} | ${17.5} | ${"2016-12-31T23:59:60.5Z"} | ${"2016-12-31T23:59:60.5Z"} | ${"a fractional second-60 pivot: equal counts"}
+    week   | tow     | notBefore                      | expected                    | why
+    ${906} | ${17}   | ${"2016-01-01T00:00:00Z"}      | ${"2016-12-31T23:59:60Z"}   | ${"the result is an inserted second"}
+    ${906} | ${17}   | ${"2016-12-31T23:59:60Z"}      | ${"2016-12-31T23:59:60Z"}   | ${"a listed second-60 pivot: equal counts"}
+    ${906} | ${18}   | ${"2016-12-31T23:59:60Z"}      | ${"2017-01-01T00:00:00Z"}   | ${"the second after the pivot: this era"}
+    ${906} | ${16}   | ${"2016-12-31T23:59:60Z"}      | ${"2036-08-16T23:59:58Z"}   | ${"the second before the pivot: the next era"}
+    ${906} | ${17}   | ${"2016-12-31T23:59:60.5Z"}    | ${"2036-08-16T23:59:59Z"}   | ${"half a second into the pivot: the next era"}
+    ${906} | ${17.5} | ${"2016-12-31T23:59:60.5Z"}    | ${"2016-12-31T23:59:60.5Z"} | ${"a fractional second-60 pivot: equal counts"}
+    ${906} | ${17}   | ${"2017-01-01T08:59:60+09:00"} | ${"2016-12-31T23:59:60Z"}   | ${"the second-60 pivot written at +09:00: equal counts"}
   `(
     "returns $expected for GPS-LNAV week $week, $tow s, notBefore $notBefore ($why)",
     ({ week, tow, notBefore, expected }) => {

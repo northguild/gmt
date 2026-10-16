@@ -24,13 +24,15 @@ import {
  * - A full GPS week number from any other source is the same count, so `"GPS"` reads it too.
  * - GLONASS records carry no week number.
  * - A week time inside an inserted leap second returns `…T23:59:60Z`.
+ * - `timeOfWeekSeconds` may have a fraction; it is rounded to the nearest nanosecond, and a value
+ *   that rounds to 604 800 s returns "".
  * - "" for a negative or non-integer week, a time of week outside 0 up to 604 800, a time before
  *   the system's epoch (Galileo and NavIC time start on 1999-08-22, RINEX week 1024), a result past
  *   year 9999, and on invalid input.
  *
  * @param system the RINEX record's system: "GPS", "GAL", "BDT", "QZS" or "IRN"
  * @param week the record's week number
- * @param timeOfWeekSeconds seconds since the start of the week, 0 up to but not including 604 800
+ * @param timeOfWeekSeconds seconds since the start of the week, 0 up to but not including 604 800, rounded to the nearest nanosecond; a value that rounds to 604 800 s returns ""
  * @returns ISO 8601 UTC instant string (`Z`), or "" on invalid input
  *
  * @example rinexWeekToUtc("IRN", 2295, 86418) // "2024-01-01T00:00:00Z"

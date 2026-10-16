@@ -58,11 +58,12 @@ export const GNSS_TIME_SCALES: Readonly<Record<GnssSystem, GnssTimeScale>> =
       taiMinusScale: null,
       epochLabel: 63072000000000000n,
     }),
-    // TAI − IRNSST = 19 s, DERIVED: BIPM publishes no NavIC row and no NavIC ICD mentions TAI.
-    // RINEX 4.02 §4.1.7 Table 1 gives "GPS = IRN = UTC + ΔtLS"; the NavIC epoch gives the same:
-    // NavIC led UTC by 13 s there (RINEX 4.02 §4.1.6; ISRO-IRNSS-ICD-SPS-1.1 §5.7;
-    // ISRO-NAVIC-ICD-SPS-L1-1.0 §5.6) when TAI − UTC was 32 s (IERS), so 32 − 13. Epoch
-    // 1999-08-22T00:00:00 IRNSST = 1999-08-21T23:59:47Z (RINEX 4.02 §4.1.6; ICD SPS 1.1 §5.7).
+    // TAI − IRNSST = 19 s. RINEX 4.02 §4.1.7 Table 1 equates IRN with GPS time in whole seconds
+    // ("GPS = IRN = UTC + ΔtLS"). BIPM publishes no NavIC relation and no NavIC ICD mentions TAI,
+    // so the offset is DERIVED, and NavIC's own ICD epoch agrees: NavIC led UTC by 13 s there
+    // (RINEX 4.02 §4.1.6; ISRO-IRNSS-ICD-SPS-1.1 §5.7; ISRO-NAVIC-ICD-SPS-L1-1.0 §5.6) when
+    // TAI − UTC was 32 s (IERS), so 32 − 13. Epoch 1999-08-22T00:00:00 IRNSST =
+    // 1999-08-21T23:59:47Z (RINEX 4.02 §4.1.6; ICD SPS 1.1 §5.7).
     IRN: Object.freeze({
       taiMinusScale: 19n,
       epochLabel: 935280000000000000n,

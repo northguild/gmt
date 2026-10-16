@@ -26,8 +26,9 @@ export type GnssWeekCounter =
 /**
  * Which pass of a wrapping week counter a week number belongs to, in one of three forms. An
  * integer from 0 is the era itself (era 0 starts at the system's epoch). `"rolling"` picks the era
- * that puts the week within half a counter period of today, for live receiver output; it reads the
- * clock, so the same stored value can give a different answer in a later year. `{ notBefore }`
+ * that puts the week within half a counter period of today, or era 0, when the week would
+ * otherwise fall before the system's epoch; it is for live receiver output and reads the clock, so
+ * the same stored value can give a different answer in a later year. `{ notBefore }`
  * picks the earliest occurrence at or after an instant you state (a receiver's firmware build
  * date, or the start of a recorded log) and gives the same answer in any year.
  */

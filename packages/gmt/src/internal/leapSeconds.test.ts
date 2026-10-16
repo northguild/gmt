@@ -9,6 +9,7 @@ import {
   taiOfUtc,
   utcOfTai,
 } from "./leapSeconds";
+import { formatUtcReading } from "./utcReading";
 
 /** Epoch nanoseconds of a UTC instant string. */
 function utcNs(iso: string): bigint {
@@ -99,13 +100,14 @@ describe("LEAP_SECOND_STEPS (IERS Leap_Second.dat, Bulletin C 72)", () => {
 
 describe("taiOfUtc", () => {
   it.each`
-    utc                         | tai                        | why
-    ${"1972-01-01T00:00:00Z"}   | ${"1972-01-01T00:00:10"}   | ${"first row, 10 s"}
-    ${"1980-01-06T00:00:00Z"}   | ${"1980-01-06T00:00:19"}   | ${"1980-01-01 row, 19 s"}
-    ${"2016-12-31T23:59:59Z"}   | ${"2017-01-01T00:00:35"}   | ${"last second before the insertion, 36 s"}
-    ${"2017-01-01T00:00:00Z"}   | ${"2017-01-01T00:00:37"}   | ${"first instant of the 37 s row"}
-    ${"2024-01-01T00:00:00Z"}   | ${"2024-01-01T00:00:37"}   | ${"37 s"}
-    ${"2100-01-01T00:00:00.5Z"} | ${"2100-01-01T00:00:37.5"} | ${"closed table: 37 s with no upper bound"}
+    utc                                 | tai                                | why
+    ${"1972-01-01T00:00:00Z"}           | ${"1972-01-01T00:00:10"}           | ${"first row, 10 s"}
+    ${"1980-01-06T00:00:00Z"}           | ${"1980-01-06T00:00:19"}           | ${"1980-01-01 row, 19 s"}
+    ${"2016-12-31T23:59:59Z"}           | ${"2017-01-01T00:00:35"}           | ${"last second before the insertion, 36 s"}
+    ${"2017-01-01T00:00:00Z"}           | ${"2017-01-01T00:00:37"}           | ${"first instant of the 37 s row"}
+    ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:37"}           | ${"37 s"}
+    ${"2100-01-01T00:00:00.5Z"}         | ${"2100-01-01T00:00:37.5"}         | ${"closed table: 37 s with no upper bound"}
+    ${"2016-12-31T23:59:59.999999999Z"} | ${"2017-01-01T00:00:35.999999999"} | ${"1 ns before the inserted second, 36 s"}
   `("maps UTC $utc to TAI $tai ($why)", ({ utc, tai }) => {
     expect(taiOfUtc(LEAP_SECOND_STEPS, ordinary(utc))).toBe(taiNs(tai));
   });
@@ -135,12 +137,13 @@ describe("taiOfUtc", () => {
   });
 
   it.each`
-    reading                                | expected                 | why
-    ${ordinary("2029-12-31T23:59:58Z")}    | ${"2030-01-01T00:00:35"} | ${"last second before the deleted one, 37 s"}
-    ${ordinary("2029-12-31T23:59:59Z")}    | ${null}                  | ${"the deleted second 23:59:59"}
-    ${ordinary("2029-12-31T23:59:59.5Z")}  | ${null}                  | ${"inside the deleted second"}
-    ${ordinary("2030-01-01T00:00:00Z")}    | ${"2030-01-01T00:00:36"} | ${"first instant after the deletion, 36 s"}
-    ${secondSixty("2029-12-31T23:59:59Z")} | ${null}                  | ${"second 60 where a second was deleted"}
+    reading                                       | expected                           | why
+    ${ordinary("2029-12-31T23:59:58Z")}           | ${"2030-01-01T00:00:35"}           | ${"last second before the deleted one, 37 s"}
+    ${ordinary("2029-12-31T23:59:58.999999999Z")} | ${"2030-01-01T00:00:35.999999999"} | ${"1 ns before the deleted second, 37 s"}
+    ${ordinary("2029-12-31T23:59:59Z")}           | ${null}                            | ${"the deleted second 23:59:59"}
+    ${ordinary("2029-12-31T23:59:59.5Z")}         | ${null}                            | ${"inside the deleted second"}
+    ${ordinary("2030-01-01T00:00:00Z")}           | ${"2030-01-01T00:00:36"}           | ${"first instant after the deletion, 36 s"}
+    ${secondSixty("2029-12-31T23:59:59Z")}        | ${null}                            | ${"second 60 where a second was deleted"}
   `(
     "on a table with a negative step, returns $expected for $why",
     ({ reading, expected }) => {
@@ -153,14 +156,16 @@ describe("taiOfUtc", () => {
 
 describe("utcOfTai", () => {
   it.each`
-    tai                        | utc                         | secondSixty | why
-    ${"1972-01-01T00:00:10"}   | ${"1972-01-01T00:00:00Z"}   | ${false}    | ${"first TAI instant of the table"}
-    ${"2017-01-01T00:00:35"}   | ${"2016-12-31T23:59:59Z"}   | ${false}    | ${"before the insertion"}
-    ${"2017-01-01T00:00:36"}   | ${"2016-12-31T23:59:59Z"}   | ${true}     | ${"start of the inserted second, 23:59:60"}
-    ${"2017-01-01T00:00:36.5"} | ${"2016-12-31T23:59:59.5Z"} | ${true}     | ${"inside the inserted second, 23:59:60.5"}
-    ${"2017-01-01T00:00:37"}   | ${"2017-01-01T00:00:00Z"}   | ${false}    | ${"after the insertion"}
-    ${"1972-07-01T00:00:10"}   | ${"1972-06-30T23:59:59Z"}   | ${true}     | ${"1972-06-30 inserted second"}
-    ${"2100-01-01T00:00:37"}   | ${"2100-01-01T00:00:00Z"}   | ${false}    | ${"closed table, 37 s"}
+    tai                                | utc                                 | secondSixty | why
+    ${"1972-01-01T00:00:10"}           | ${"1972-01-01T00:00:00Z"}           | ${false}    | ${"first TAI instant of the table"}
+    ${"2017-01-01T00:00:35"}           | ${"2016-12-31T23:59:59Z"}           | ${false}    | ${"before the insertion"}
+    ${"2017-01-01T00:00:36"}           | ${"2016-12-31T23:59:59Z"}           | ${true}     | ${"start of the inserted second, 23:59:60"}
+    ${"2017-01-01T00:00:36.5"}         | ${"2016-12-31T23:59:59.5Z"}         | ${true}     | ${"inside the inserted second, 23:59:60.5"}
+    ${"2017-01-01T00:00:37"}           | ${"2017-01-01T00:00:00Z"}           | ${false}    | ${"after the insertion"}
+    ${"1972-07-01T00:00:10"}           | ${"1972-06-30T23:59:59Z"}           | ${true}     | ${"1972-06-30 inserted second"}
+    ${"2100-01-01T00:00:37"}           | ${"2100-01-01T00:00:00Z"}           | ${false}    | ${"closed table, 37 s"}
+    ${"2017-01-01T00:00:35.999999999"} | ${"2016-12-31T23:59:59.999999999Z"} | ${false}    | ${"1 ns before the inserted second"}
+    ${"2017-01-01T00:00:36.999999999"} | ${"2016-12-31T23:59:59.999999999Z"} | ${true}     | ${"the last nanosecond of the inserted second, 23:59:60.999999999"}
   `(
     "maps TAI $tai to UTC $utc with secondSixty $secondSixty ($why)",
     ({ tai, utc, secondSixty: sixty }) => {
@@ -178,10 +183,11 @@ describe("utcOfTai", () => {
   });
 
   it.each`
-    tai                        | utc
-    ${"2030-01-01T00:00:35"}   | ${"2029-12-31T23:59:58Z"}
-    ${"2030-01-01T00:00:35.5"} | ${"2029-12-31T23:59:58.5Z"}
-    ${"2030-01-01T00:00:36"}   | ${"2030-01-01T00:00:00Z"}
+    tai                                | utc
+    ${"2030-01-01T00:00:35"}           | ${"2029-12-31T23:59:58Z"}
+    ${"2030-01-01T00:00:35.999999999"} | ${"2029-12-31T23:59:58.999999999Z"}
+    ${"2030-01-01T00:00:35.5"}         | ${"2029-12-31T23:59:58.5Z"}
+    ${"2030-01-01T00:00:36"}           | ${"2030-01-01T00:00:00Z"}
   `(
     "on a table with a negative step, maps TAI $tai to UTC $utc with no second 60",
     ({ tai, utc }) => {
@@ -230,4 +236,14 @@ describe("stepReading", () => {
       });
     },
   );
+
+  // nextLeapSecond writes a step's second with formatUtcReading: 23:59:60 for an insertion, the
+  // omitted 23:59:59 for a deletion (TF.460-6 Annex 1 §2.2).
+  it.each`
+    steps                | index | written
+    ${LEAP_SECOND_STEPS} | ${27} | ${"2016-12-31T23:59:60Z"}
+    ${negativeStepSteps} | ${28} | ${"2029-12-31T23:59:59Z"}
+  `("writes step $index as $written", ({ steps, index, written }) => {
+    expect(formatUtcReading(stepReading(steps, index))).toBe(written);
+  });
 });

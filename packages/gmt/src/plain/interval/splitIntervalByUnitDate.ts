@@ -24,9 +24,8 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  * - Each boundary is computed from `start` (`start + k × amount`), not by stepping from the
  *   previous boundary, so month-end starts don't drift: a monthly split from January 31 lands
  *   on February 29, March 31, April 30. Temporal's `add` constrains a day the month lacks to
- *   the month's last day, and stepping from that boundary would keep the shortened day
- *   (February 29, then March 29).
- * - Comparison: Luxon's `Interval.splitBy` computes each boundary from the start the same way.
+ *   the month's last day (TC39 Temporal `add`, `overflow: "constrain"`), and stepping from that
+ *   boundary would keep the shortened day (February 29, then March 29).
  * - A step that resolves to the same date as the previous boundary is skipped, so no empty
  *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).

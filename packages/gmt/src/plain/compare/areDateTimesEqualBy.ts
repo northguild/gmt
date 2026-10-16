@@ -13,8 +13,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `"month"` requires the same month AND year — March 2023 and March 2024 are
  *   NOT equal by month. A calendar month is a year and a month together, as in
  *   Temporal's `PlainYearMonth`, not a bare month-of-year number.
- * - Comparison: date-fns's `isSameMonth` and Luxon's `dt.hasSame(other, "month")`
- *   give the same answer.
  * - Supports the full `Temporal.DateUnit | Temporal.TimeUnit` range, down to
  *   `"nanosecond"`.
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
@@ -23,7 +21,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   digits cannot change which bucket a value is in. That ignored option was removed in 1.16.0; to
  *   compare more coarsely, pass a coarser unit (0 digits is `"second"`, 3 is `"millisecond"`).
  *
- * Mapping from date-fns:
+ * Migrating from date-fns:
  * - `isSameDay(a, b)` → `areDateTimesEqualBy(a, b, "day")`
  * - `isSameHour(a, b)` → `areDateTimesEqualBy(a, b, "hour")`
  * - `isSameMinute(a, b)` → `areDateTimesEqualBy(a, b, "minute")`

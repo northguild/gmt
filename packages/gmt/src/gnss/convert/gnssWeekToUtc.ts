@@ -17,13 +17,14 @@ import {
  *   years), their CNAV every 8192, Galileo every 4096, BeiDou every 8192, NavIC LNAV every 1024
  *   and L1NV every 8192.
  * - A week number alone cannot say which pass it is, so `rolloverEra` is required: an integer (era
- *   0 starts at the system's epoch); `"rolling"` for the pass within half a counter period of today;
- *   or `{ notBefore }` for the earliest pass at or after an instant you state, as a receiver that
- *   resolves weeks against its firmware build date does. An instant exactly at `notBefore` counts.
+ *   0 starts at the system's epoch); `"rolling"` for the pass within half a counter period of today,
+ *   or era 0, when the week would otherwise fall before the system's epoch; or `{ notBefore }` for
+ *   the earliest pass at or after an instant you state, as a receiver that resolves weeks against
+ *   its firmware build date does. An instant exactly at `notBefore` counts.
  *   Receivers that report a stale week need an integer or a pivot.
  * - `timeOfWeekSeconds` is seconds of week and may have a fraction; it is rounded to the nearest
- *   nanosecond. Convert a coarser broadcast count first (NavIC L5/S: TOWC × 12; NavIC L1: ITOW × 7200
- *   + TOI × 18, per the NavIC ICDs).
+ *   nanosecond, and a value that rounds to 604 800 s returns "". Convert a coarser broadcast count
+ *   first (NavIC L5/S: TOWC × 12; NavIC L1: ITOW × 7200 + TOI × 18, per the NavIC ICDs).
  * - A week time inside an inserted leap second returns `…T23:59:60Z`. Only this realm's functions
  *   read that string back; other GMT functions reject a second of 60.
  * - GLONASS has no week counter, so it is not a counter here.
@@ -34,8 +35,8 @@ import {
  *
  * @param counter the week counter: "GPS-LNAV", "GPS-CNAV", "GAL", "BDT", "QZS-LNAV", "QZS-CNAV", "IRN-LNAV" or "IRN-L1NV"
  * @param week week number as the counter shows it, 0 to the counter's modulus − 1
- * @param timeOfWeekSeconds seconds since the start of the week, 0 up to but not including 604 800
- * @param rolloverEra the counter's pass: an integer from 0, "rolling", or `{ notBefore }` with an ISO 8601 UTC instant
+ * @param timeOfWeekSeconds seconds since the start of the week, 0 up to but not including 604 800, rounded to the nearest nanosecond; a value that rounds to 604 800 s returns ""
+ * @param rolloverEra the counter's pass: an integer from 0, "rolling" (within half a counter period of today, or era 0, when the week would otherwise fall before the system's epoch), or `{ notBefore }` with an ISO 8601 UTC instant
  * @returns ISO 8601 UTC instant string (`Z`), or "" on invalid input
  *
  * @example gnssWeekToUtc("GPS-LNAV", 100, 0, 0) // "1981-12-05T23:59:59Z"

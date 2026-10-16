@@ -16,8 +16,9 @@ import { leapSecond } from "../../regex/leap-second";
  *   extended or basic digits, a bare time with or without a `T` designator, and a designator,
  *   annotation or nothing after the second. Temporal silently clamps each of them to `:59`, so
  *   each is a leap second GMT has to catch. A `[key=value]` annotation value is never read as a time.
- * - Compatibility: earlier releases recognised only an uppercase `T` with extended digits. To
- *   keep that narrower test, match `/T\d{2}:\d{2}:60(?:[.,]\d+)?[-+Zz[]/` yourself.
+ * - **Compatibility:** earlier releases of this test (named `isLeapSecond`) recognised only an
+ *   uppercase `T` with extended digits. To keep that narrower test, match
+ *   `/T\d{2}:\d{2}:60(?:[.,]\d+)?[-+Zz[]/` yourself.
  *
  * @param value ISO date-time or time string
  * @returns true when the string has a second-60 field, otherwise false

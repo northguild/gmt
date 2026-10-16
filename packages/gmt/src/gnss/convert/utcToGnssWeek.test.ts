@@ -196,6 +196,22 @@ const rows = [
     era: 1,
     why: "the first NavIC 10-bit rollover",
   },
+  {
+    counter: "GPS-CNAV",
+    utcString: "9999-12-31T23:59:59.999999999Z",
+    week: 670,
+    timeOfWeekSeconds: 518417.999999999,
+    era: 51,
+    why: "the last four-digit UTC instant: full week 418462",
+  },
+  {
+    counter: "GPS-LNAV",
+    utcString: "9999-12-31T23:59:59.999999999Z",
+    week: 670,
+    timeOfWeekSeconds: 518417.999999999,
+    era: 408,
+    why: "the last four-digit UTC instant: 408 × 1024 + 670",
+  },
 ] as const;
 
 describe("utcToGnssWeek", () => {
@@ -220,12 +236,14 @@ describe("utcToGnssWeek", () => {
   );
 
   it.each`
-    counter       | utcString                 | why
-    ${"IRN-LNAV"} | ${"1999-08-21T23:59:46Z"} | ${"before the NavIC epoch"}
-    ${"GPS-LNAV"} | ${"1980-01-05T23:59:59Z"} | ${"before the GPS epoch"}
-    ${"GAL"}      | ${"1999-08-21T23:59:46Z"} | ${"before the Galileo epoch"}
-    ${"BDT"}      | ${"2005-12-31T23:59:59Z"} | ${"before the BeiDou epoch"}
-    ${"GPS-LNAV"} | ${"2017-12-31T23:59:60Z"} | ${"second 60 with no insertion that day"}
+    counter       | utcString                           | why
+    ${"IRN-LNAV"} | ${"1999-08-21T23:59:46Z"}           | ${"before the NavIC epoch"}
+    ${"GPS-LNAV"} | ${"1980-01-05T23:59:59Z"}           | ${"before the GPS epoch"}
+    ${"GAL"}      | ${"1999-08-21T23:59:46Z"}           | ${"before the Galileo epoch"}
+    ${"BDT"}      | ${"2005-12-31T23:59:59Z"}           | ${"before the BeiDou epoch"}
+    ${"GPS-LNAV"} | ${"2017-12-31T23:59:60Z"}           | ${"second 60 with no insertion that day"}
+    ${"GPS-LNAV"} | ${"1980-01-05T23:59:59.999999999Z"} | ${"one nanosecond before the GPS epoch"}
+    ${"GPS-LNAV"} | ${"-271821-04-20T00:00:00Z"}        | ${"Temporal's first instant, before 1972"}
   `("returns null for $counter $utcString ($why)", ({ counter, utcString }) => {
     expect(utcToGnssWeek(counter, utcString)).toBeNull();
   });
@@ -248,12 +266,31 @@ describe("utcToGnssWeek", () => {
   it.each`
     counter   | why
     ${"GPS"}  | ${"a system: GPS has two counters"}
+    ${"QZS"}  | ${"a system: QZSS has two counters"}
+    ${"IRN"}  | ${"a system: NavIC has two counters"}
     ${"BDS"}  | ${"the constellation name"}
     ${"LNAV"} | ${"a message without its system"}
     ${null}   | ${"null"}
   `("returns null for the counter $counter ($why)", ({ counter }) => {
     expect(utcToGnssWeek(counter, "2024-01-01T00:00:00Z")).toBeNull();
   });
+
+  // Not in the round-trip rows: gnssWeekToUtc writes these instants back in another spelling, or
+  // not at all.
+  it.each`
+    counter       | utcString                      | week    | timeOfWeekSeconds | era     | why
+    ${"GPS-LNAV"} | ${"2017-01-01T08:59:60+09:00"} | ${906}  | ${17}             | ${1}    | ${"the inserted second written at +09:00"}
+    ${"GPS-CNAV"} | ${"+275760-09-13T00:00:00Z"}   | ${6535} | ${518418}         | ${1743} | ${"Temporal's last instant: no upper bound of its own (D1)"}
+  `(
+    "returns week $week, $timeOfWeekSeconds s, era $era for $counter $utcString ($why)",
+    ({ counter, utcString, week, timeOfWeekSeconds, era }) => {
+      expect(utcToGnssWeek(counter, utcString)).toEqual({
+        week,
+        timeOfWeekSeconds,
+        era,
+      });
+    },
+  );
 
   it("returns null for GLO, which has no week counter", () => {
     // @ts-expect-error GLONASS broadcasts no week number, so GLO is not a GnssWeekCounter

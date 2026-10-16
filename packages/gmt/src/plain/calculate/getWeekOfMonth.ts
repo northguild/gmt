@@ -8,14 +8,10 @@ import { isValidDate } from "../validate";
  * Return the 1-based row `value` falls on within its month's calendar
  * grid, using `locale`'s first day of week.
  *
- * - Week 1 is the row containing the 1st of the month, even when that row
- *   is a partial week. This is GMT's own rule, not a standard's: a month
- *   grid draws every day of the month, so its first row always holds the 1st.
- * - Not CLDR's week-of-month field (`W`, UTS #35): that count applies the
- *   locale's `minDays`, so a short leading week may not count as part of
- *   the month.
- * - Comparison: date-fns's `getWeekOfMonth` returns the same number for the
- *   same first day of week.
+ * - Week 1 is the row containing the 1st of the month: UTS #35's week of month (`W`, Part 4 Dates
+ *   § Week Data) with the locale's first day of week and minimal days fixed at 1. The locale's own
+ *   minDays (4 in much of Europe) is not applied, so a short leading week still counts: a month
+ *   grid draws every day of the month.
  * - Distinct from ISO `weekOfYear`: this counts rows within a single
  *   month's grid, reset every month, rather than weeks since Jan 1.
  * - Resolves the locale's first day of week via

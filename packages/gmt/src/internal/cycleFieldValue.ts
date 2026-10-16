@@ -12,8 +12,6 @@
  *   rule, not a standard's: a cycle always moves the way `amount` points, and the nearest
  *   multiple can lie the other way — e.g. minute `22` cycled by `+15` with `round: true` lands on
  *   `30` (the next multiple of 15 above 22), not `15` (the nearest multiple).
- * - Comparison: `@internationalized/date`'s `CycleOptions.round` rounds a bounded field the same
- *   way.
  *
  * @param current the field's current numeric value
  * @param amount signed amount to cycle by

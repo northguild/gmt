@@ -15,17 +15,17 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Each value is a safe integer or a string of optionally negative ASCII digits; `unit` may be
  *   singular or plural.
  * - Returns false for an unsupported unit (including `"quarter"`) or invalid input.
- *
- * Mapping from date-fns:
- * - `isSameDay(a, b)` → `areUnixEqualBy(a, b, "day")`
- * - `isSameMonth(a, b)` → `areUnixEqualBy(a, b, "month")`
- * - `isSameYear(a, b)` → `areUnixEqualBy(a, b, "year")`
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
  *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
  *   offset's seconds (under a minute) of the last instant Temporal supports
  *   (`+275760-09-13T00:00:00Z`) for an offset east of UTC, or of the first
  *   (`-271821-04-20T00:00:00Z`) for one west, this returns `false`. There `false` is the sentinel,
  *   not a comparison. An offset to the minute has no such limit.
+ *
+ * Migrating from date-fns:
+ * - `isSameDay(a, b)` → `areUnixEqualBy(a, b, "day")`
+ * - `isSameMonth(a, b)` → `areUnixEqualBy(a, b, "month")`
+ * - `isSameYear(a, b)` → `areUnixEqualBy(a, b, "year")`
  *
  * @param value1 first Unix epoch: a safe integer or a digit string
  * @param value2 second Unix epoch, in the same unit

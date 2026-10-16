@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalPlainDateTimeFromThrow,
+  mockTemporalPlainTimeFromThrow,
 } from "../test/mocks";
 import {
   formatTimeScaleString,
@@ -49,6 +50,7 @@ describe("parseTimeScaleString", () => {
     ${"2026-01-01T00:00:37.100 TAI"}       | ${"TAI"} | ${"2026-01-01T00:00:37.1"}
     ${"2026-01-01T00:00:37.123456789 TAI"} | ${"TAI"} | ${"2026-01-01T00:00:37.123456789"}
     ${"9999-12-31T23:59:59.999999999 TAI"} | ${"TAI"} | ${"9999-12-31T23:59:59.999999999"}
+    ${"0000-01-01T00:00:00 TAI"}           | ${"TAI"} | ${"0000-01-01T00:00:00"}
     ${"2024-01-01T00:00:18 GPS"}           | ${"GPS"} | ${"2024-01-01T00:00:18"}
     ${"2024-01-01T00:00:00 GLO"}           | ${"GLO"} | ${"2024-01-01T00:00:00"}
   `(
@@ -119,6 +121,7 @@ describe("formatTimeScaleString", () => {
     ${"2026-01-01T00:00:37.5"}         | ${"TAI"} | ${"2026-01-01T00:00:37.5 TAI"}
     ${"2026-01-01T00:00:00"}           | ${"GPS"} | ${"2026-01-01T00:00:00 GPS"}
     ${"9999-12-31T23:59:59.999999999"} | ${"TAI"} | ${"9999-12-31T23:59:59.999999999 TAI"}
+    ${"0000-01-01T00:00:00"}           | ${"TAI"} | ${"0000-01-01T00:00:00 TAI"}
   `(
     "writes the label $wall with token $token as $expected",
     ({ wall, token, expected }) => {
@@ -147,14 +150,26 @@ describe("formatTimeScaleString", () => {
     },
   );
 
-  it("returns an empty string for a label in year 10000 (four-digit years only)", () => {
+  // GMT rule: four-digit years only, 0000 to 9999.
+  it.each`
+    wall                                  | why
+    ${"+010000-01-01T00:00:00"}           | ${"year 10000"}
+    ${"-000001-12-31T23:59:59.999999999"} | ${"year -1"}
+  `("returns an empty string for the label $wall ($why)", ({ wall }) => {
     expect(
       formatTimeScaleString(
-        {
-          labelNanoseconds: labelNs("+010000-01-01T00:00:00"),
-          secondSixty: false,
-        },
+        { labelNanoseconds: labelNs(wall), secondSixty: false },
         "TAI",
+      ),
+    ).toBe("");
+  });
+
+  it("returns an empty string when Temporal.PlainTime.from throws while writing second 60", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(
+      formatTimeScaleString(
+        { labelNanoseconds: labelNs("2016-12-31T23:59:59"), secondSixty: true },
+        "GLO",
       ),
     ).toBe("");
   });

@@ -66,6 +66,27 @@ const rows = [
     timeOfWeekSeconds: 0,
     why: "the Galileo epoch",
   },
+  {
+    system: "IRN",
+    utcString: "1999-08-21T23:59:47Z",
+    week: 1024,
+    timeOfWeekSeconds: 0,
+    why: "the NavIC epoch, counted from 1980 (Table A30)",
+  },
+  {
+    system: "BDT",
+    utcString: "2006-01-01T00:00:00Z",
+    week: 0,
+    timeOfWeekSeconds: 0,
+    why: "the BeiDou epoch",
+  },
+  {
+    system: "GPS",
+    utcString: "9999-12-31T23:59:59.999999999Z",
+    week: 418462,
+    timeOfWeekSeconds: 518417.999999999,
+    why: "the last four-digit UTC instant",
+  },
 ] as const;
 
 describe("utcToRinexWeek", () => {
@@ -87,12 +108,13 @@ describe("utcToRinexWeek", () => {
   );
 
   it.each`
-    system   | utcString                 | why
-    ${"BDT"} | ${"2005-12-31T23:59:59Z"} | ${"before the BeiDou epoch"}
-    ${"GPS"} | ${"1980-01-05T23:59:59Z"} | ${"before the GPS epoch"}
-    ${"GAL"} | ${"1999-08-21T23:59:46Z"} | ${"before the Galileo epoch"}
-    ${"IRN"} | ${"1999-08-21T23:59:46Z"} | ${"before the NavIC epoch"}
-    ${"GPS"} | ${"2017-12-31T23:59:60Z"} | ${"second 60 with no insertion that day"}
+    system   | utcString                           | why
+    ${"BDT"} | ${"2005-12-31T23:59:59Z"}           | ${"before the BeiDou epoch"}
+    ${"BDT"} | ${"2005-12-31T23:59:59.999999999Z"} | ${"one nanosecond before the BeiDou epoch"}
+    ${"GPS"} | ${"1980-01-05T23:59:59Z"}           | ${"before the GPS epoch"}
+    ${"GAL"} | ${"1999-08-21T23:59:46Z"}           | ${"before the Galileo epoch"}
+    ${"IRN"} | ${"1999-08-21T23:59:46Z"}           | ${"before the NavIC epoch"}
+    ${"GPS"} | ${"2017-12-31T23:59:60Z"}           | ${"second 60 with no insertion that day"}
   `("returns null for $system $utcString ($why)", ({ system, utcString }) => {
     expect(utcToRinexWeek(system, utcString)).toBeNull();
   });

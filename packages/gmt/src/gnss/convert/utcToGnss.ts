@@ -12,9 +12,9 @@ import {
  * - `GPS`, `GAL`, `BDT`, `QZS`: continuous scales a fixed number of seconds behind TAI (19, 19, 33,
  *   19), so their lead over UTC grows with every leap second and is read from the built-in table,
  *   never fixed. GPS was 0 s ahead at its 1980 epoch and is 18 s ahead since 2017.
- * - `IRN`: NavIC time (IRNSST), also 19 s behind TAI. Unlike the other four, no international body
- *   states that offset: it is derived from the NavIC ICD's epoch ("ahead of UTC by 13 leap seconds"
- *   when TAI − UTC was 32 s) and agrees with RINEX's "GPS = IRN = UTC + ΔtLS".
+ * - `IRN`: NavIC time, 19 s behind TAI. RINEX 4.02 Table 1 equates IRN with GPS time in whole
+ *   seconds; BIPM publishes no NavIC relation, so the offset is derived, and NavIC's own ICD epoch
+ *   (13 s ahead of UTC when TAI − UTC was 32 s) agrees.
  * - `GLO`: GLONASS time as RINEX and BIPM report it, "the same hours as UTC and not UTC+3 h" (RINEX
  *   4.02 §4.1.2), with UTC's leap seconds: the label is UTC's own wall clock. A raw broadcast
  *   GLONASS system time, which runs three hours ahead, must have the three hours removed first.

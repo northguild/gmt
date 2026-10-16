@@ -3,6 +3,7 @@ import { LEAP_SECOND_STEPS } from "../../internal";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalPlainDateTimeFromThrow,
+  mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
 import { fromTAI } from "./fromTAI";
 import { toTAI } from "./toTAI";
@@ -17,6 +18,7 @@ describe("fromTAI", () => {
     ${"1972-01-01T00:00:10 TAI"}           | ${"1972-01-01T00:00:00Z"}           | ${"10 s, the first TAI instant of the table"}
     ${"2027-06-28T00:00:37 TAI"}           | ${"2027-06-28T00:00:00Z"}           | ${"37 s, the table is closed"}
     ${"9999-12-31T23:59:59.999999999 TAI"} | ${"9999-12-31T23:59:22.999999999Z"} | ${"the last four-digit TAI label"}
+    ${"2017-01-01T00:00:35.999999999 TAI"} | ${"2016-12-31T23:59:59.999999999Z"} | ${"36 s, 1 ns before the inserted second"}
   `("returns $expected for $taiString ($why)", ({ taiString, expected }) => {
     expect(fromTAI(taiString)).toBe(expected);
   });
@@ -28,6 +30,7 @@ describe("fromTAI", () => {
     ${"2017-01-01T00:00:36.5 TAI"}         | ${"2016-12-31T23:59:60.5Z"}
     ${"2017-01-01T00:00:36.123456789 TAI"} | ${"2016-12-31T23:59:60.123456789Z"}
     ${"1972-07-01T00:00:10 TAI"}           | ${"1972-06-30T23:59:60Z"}
+    ${"2017-01-01T00:00:36.999999999 TAI"} | ${"2016-12-31T23:59:60.999999999Z"}
   `(
     "returns the inserted second $expected for $taiString",
     ({ taiString, expected }) => {
@@ -40,6 +43,7 @@ describe("fromTAI", () => {
     ${"1972-01-01T00:00:09.999999999 TAI"} | ${"before 1972-01-01T00:00:10 TAI"}
     ${"2016-12-31T23:59:60 TAI"}           | ${"TAI has no leap seconds"}
     ${"2024-01-01T00:00:37 GPS"}           | ${"wrong token"}
+    ${"0000-01-01T00:00:00 TAI"}           | ${"the first four-digit year, before 1972"}
   `("returns '' for $taiString ($why)", ({ taiString }) => {
     expect(fromTAI(taiString)).toBe("");
   });
@@ -99,6 +103,11 @@ describe("fromTAI", () => {
   it("returns '' when Temporal.Instant.fromEpochNanoseconds throws while writing", () => {
     mockTemporalInstantFromEpochNanosecondsThrow();
     expect(fromTAI("2026-01-01T00:00:37 TAI")).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws while writing second 60", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(fromTAI("2017-01-01T00:00:36 TAI")).toBe("");
   });
 });
 

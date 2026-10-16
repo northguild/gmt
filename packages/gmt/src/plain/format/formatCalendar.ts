@@ -43,8 +43,6 @@ const ABS_DAY_THRESHOLD = 6;
  *   `timeStyle` string with no relative wording. The one-week limit is
  *   GMT's own rule, not a standard's: from 7 days out a date is easier to
  *   place than a day count.
- * - Comparison: Moment's `.calendar()` switches to a date at the same
- *   distance (its `sameElse` case); its wording inside the week differs.
  * - The connector between the day label and the time is read from CLDR's
  *   own combined date+time pattern for the locale (see
  *   `internal/joinDateTimeConnector.ts`), not hardcoded — this is what lets

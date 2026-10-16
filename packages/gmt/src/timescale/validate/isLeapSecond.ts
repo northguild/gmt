@@ -11,6 +11,10 @@ import { LEAP_SECOND_STEPS, parseUtcReading, taiOfUtc } from "../../internal";
  * - Leap smearing is not a leap second: a smeared clock never reads `23:59:60` and is up to a second
  *   off true UTC around an insertion. GMT cannot detect smearing.
  * - `false` is also the answer for every ordinary second.
+ * - **Compatibility:** in 1.19.0 and earlier `isLeapSecond` (in `plain/`) was the syntactic
+ *   second-60 test, now `hasSecond60`; a call relying on that now returns `false` on days with no
+ *   insertion, and for a second 60 that is not an extended-format instant (`"23:59:60"`, no
+ *   designator, a lowercase `t`, basic format).
  *
  * @param isoString ISO 8601 instant string
  * @returns true for an inserted leap second, or false otherwise and on invalid input

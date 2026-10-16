@@ -7,10 +7,10 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
 /**
  * Return the locale-formatted parts of a PlainDateTime.
  *
- * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
- *   `format`). A token pattern hard-codes field order and ships US ordering to
- *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order.
+ * - Use the parts instead of a fixed field pattern. A pattern such as UTS #35's `dd/MM/yyyy` fixes
+ *   one field order for every locale; ECMA-402's `Intl.DateTimeFormat.prototype.formatToParts`
+ *   (§11.3.6; `FormatDateTimeToParts` §11.5.7) returns the fields in the order of the locale's
+ *   CLDR date pattern, so the caller controls presentation and the locale keeps control of order.
  * - Each part is `{ type, value }` where `type` can be:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.

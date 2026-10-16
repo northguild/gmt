@@ -18,8 +18,6 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   another, and this function answers per each value's own zone, because a
  *   `Temporal.ZonedDateTime` reads its calendar and clock fields in its own
  *   time zone.
- * - Comparison: Luxon's `dt.hasSame(other, unit)` also compares the two values'
- *   local times.
  * - Each value's start-of-unit is its real local bucket (see `startOfZoned`), so a bucket a
  *   zone transition shortened is still its own unit: in `Pacific/Chatham` on its 2024
  *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
@@ -32,7 +30,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns:
+ * Migrating from date-fns:
  * - `isSameDay(a, b)` → `areZonedEqualBy(a, b, "day")`
  * - `isSameMonth(a, b)` → `areZonedEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areZonedEqualBy(a, b, "year")`

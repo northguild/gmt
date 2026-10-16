@@ -50,4 +50,13 @@ describe("hasSecond60", () => {
   `("returns false for non-leap second datetime $value", ({ value }) => {
     expect(hasSecond60(value)).toBe(false);
   });
+
+  it.each`
+    value
+    ${null}
+    ${undefined}
+    ${60}
+  `("returns false for the non-string $value", ({ value }) => {
+    expect(hasSecond60(value)).toBe(false);
+  });
 });

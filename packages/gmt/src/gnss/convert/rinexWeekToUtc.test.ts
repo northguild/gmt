@@ -1,4 +1,7 @@
-import { mockTemporalInstantFromEpochNanosecondsThrow } from "../../test/mocks";
+import {
+  mockTemporalInstantFromEpochNanosecondsThrow,
+  mockTemporalPlainTimeFromThrow,
+} from "../../test/mocks";
 import { gnssWeekToUtc } from "./gnssWeekToUtc";
 import { rinexWeekToUtc } from "./rinexWeekToUtc";
 import { utcToGnss } from "./utcToGnss";
@@ -17,6 +20,9 @@ describe("rinexWeekToUtc", () => {
     ${"GAL"} | ${1024}   | ${0}                | ${"1999-08-21T23:59:47Z"}           | ${"the Galileo epoch"}
     ${"IRN"} | ${1024}   | ${0}                | ${"1999-08-21T23:59:47Z"}           | ${"the NavIC epoch"}
     ${"GPS"} | ${418462} | ${518417.999999999} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last four-digit UTC instant"}
+    ${"QZS"} | ${0}      | ${0}                | ${"1980-01-06T00:00:00Z"}           | ${"Table 3: QZSS weeks from the GPS epoch"}
+    ${"BDT"} | ${0}      | ${0}                | ${"2006-01-01T00:00:00Z"}           | ${"the BeiDou epoch: BDT − UTC 0 s"}
+    ${"BDT"} | ${0}      | ${604799.999999999} | ${"2006-01-07T23:59:59.999999999Z"} | ${"the last nanosecond of BDT week 0"}
   `(
     "returns $expected for $system week $week, $tow s ($why)",
     ({ system, week, tow, expected }) => {
@@ -49,18 +55,25 @@ describe("rinexWeekToUtc", () => {
   });
 
   it.each`
-    system   | week                       | tow           | why
-    ${"GPS"} | ${-1}                      | ${0}          | ${"a negative week"}
-    ${"GPS"} | ${1.5}                     | ${0}          | ${"a non-integer week"}
-    ${"GPS"} | ${Number.NaN}              | ${0}          | ${"a NaN week"}
-    ${"GPS"} | ${"2295"}                  | ${0}          | ${"a numeric-string week"}
-    ${"GPS"} | ${2295}                    | ${604800}     | ${"a whole week"}
-    ${"GPS"} | ${2295}                    | ${-1}         | ${"a negative time of week"}
-    ${"GPS"} | ${2295}                    | ${Number.NaN} | ${"a NaN time of week"}
-    ${"GAL"} | ${1023}                    | ${0}          | ${"before the Galileo epoch"}
-    ${"IRN"} | ${1023}                    | ${604799}     | ${"before the NavIC epoch"}
-    ${"GPS"} | ${418462}                  | ${518418}     | ${"a result in year 10000"}
-    ${"GPS"} | ${Number.MAX_SAFE_INTEGER} | ${0}          | ${"past Temporal's range"}
+    system   | week                       | tow                  | why
+    ${"GPS"} | ${-1}                      | ${0}                 | ${"a negative week"}
+    ${"GPS"} | ${1.5}                     | ${0}                 | ${"a non-integer week"}
+    ${"GPS"} | ${Number.NaN}              | ${0}                 | ${"a NaN week"}
+    ${"GPS"} | ${"2295"}                  | ${0}                 | ${"a numeric-string week"}
+    ${"GPS"} | ${2295}                    | ${604800}            | ${"a whole week"}
+    ${"GPS"} | ${2295}                    | ${-1}                | ${"a negative time of week"}
+    ${"GPS"} | ${2295}                    | ${Number.NaN}        | ${"a NaN time of week"}
+    ${"GAL"} | ${1023}                    | ${0}                 | ${"before the Galileo epoch"}
+    ${"IRN"} | ${1023}                    | ${604799}            | ${"before the NavIC epoch"}
+    ${"GAL"} | ${1023}                    | ${604799.999999999}  | ${"one nanosecond before the Galileo epoch"}
+    ${"BDT"} | ${0}                       | ${604799.9999999999} | ${"a time of week that rounds to a whole week"}
+    ${"GPS"} | ${2295}                    | ${604799.9999999997} | ${"a time of week that rounds to 604 800 s at nanosecond resolution"}
+    ${"GPS"} | ${2295}                    | ${"0"}               | ${"a numeric-string time of week"}
+    ${"GPS"} | ${2295}                    | ${undefined}         | ${"an omitted time of week"}
+    ${"GPS"} | ${undefined}               | ${0}                 | ${"an omitted week"}
+    ${"GPS"} | ${2295n}                   | ${0}                 | ${"a bigint week"}
+    ${"GPS"} | ${418462}                  | ${518418}            | ${"a result in year 10000"}
+    ${"GPS"} | ${Number.MAX_SAFE_INTEGER} | ${0}                 | ${"past Temporal's range"}
   `(
     "returns '' for $system week $week, $tow s ($why)",
     ({ system, week, tow }) => {
@@ -85,5 +98,10 @@ describe("rinexWeekToUtc", () => {
   it("returns '' when Temporal.Instant.fromEpochNanoseconds throws while writing", () => {
     mockTemporalInstantFromEpochNanosecondsThrow();
     expect(rinexWeekToUtc("GPS", 2295, 86418)).toBe("");
+  });
+
+  it("returns '' when Temporal.PlainTime.from throws while writing the inserted second", () => {
+    mockTemporalPlainTimeFromThrow();
+    expect(rinexWeekToUtc("GPS", 1930, 17)).toBe("");
   });
 });

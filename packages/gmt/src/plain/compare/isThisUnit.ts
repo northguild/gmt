@@ -28,8 +28,10 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   unit, so an invalid locale returns false for `"day"`, `"month"` and `"year"` too.
  * - **Compatibility:** before 1.16.0 an invalid locale was ignored for every unit but `"week"`.
  *
- * Mapping from date-fns:
- * - `isThisWeek(value, options)` → `isThisUnit(value, "week", locale)`
+ * Migrating from date-fns:
+ * - `isThisWeek(value)` → `isThisUnit(value, "week", "pt-BR")`, or any locale whose week starts on
+ *   Sunday: date-fns starts the week on Sunday (`weekStartsOn: 0`) by default, GMT on Monday
+ * - `isThisWeek(value, { weekStartsOn: 1 })` → `isThisUnit(value, "week")`
  * - `isThisMonth(value)` → `isThisUnit(value, "month")`
  * - `isThisYear(value)` → `isThisUnit(value, "year")`
  *

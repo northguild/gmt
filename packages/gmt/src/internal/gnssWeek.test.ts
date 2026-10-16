@@ -110,6 +110,8 @@ describe("timeOfWeekNanoseconds", () => {
     ${86418.123456789}  | ${86_418_123_456_789n}
     ${604799}           | ${604_799_000_000_000n}
     ${604799.999999999} | ${604_799_999_999_999n}
+    ${0.0000000004}     | ${0n}
+    ${0.0000000006}     | ${1n}
   `("reads $seconds s as $expected ns", ({ seconds, expected }) => {
     expect(timeOfWeekNanoseconds(seconds)).toBe(expected);
   });
@@ -119,9 +121,11 @@ describe("timeOfWeekNanoseconds", () => {
     ${604800}                   | ${"a whole week"}
     ${604799.9999999999}        | ${"rounds to a whole week"}
     ${-0.5}                     | ${"negative"}
+    ${-0.0000000001}            | ${"negative, though it rounds to 0"}
     ${Number.NaN}               | ${"NaN"}
     ${Number.POSITIVE_INFINITY} | ${"Infinity"}
     ${"0"}                      | ${"a numeric string"}
+    ${0n}                       | ${"a bigint"}
     ${null}                     | ${"null"}
   `("returns null for $seconds ($why)", ({ seconds }) => {
     expect(timeOfWeekNanoseconds(seconds)).toBeNull();
