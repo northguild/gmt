@@ -19,9 +19,9 @@ requires) are `tdd-dev`'s; DU checks they landed and reports it if not.
    - `mistakes/duty.mdx` moves to `mistakes/workforce.mdx` (docs-site.md names a realm's mistakes
      page `mistakes/<realm>.mdx`); tag `[workforce]`; its description names the `workforce/`
      namespace, not "GMT's duty/ module".
-   - The three scenarios keep their slugs and take `[workforce, transport]` where the example is a
-     driver's or an operator's log (`duty-day-is-not-midnight`, `paired-rest-that-does-not-qualify`)
-     and `[workforce]` otherwise (`sliding-window-not-calendar-day`).
+   - The three scenarios keep their slugs and take `[workforce]`, the layer that owns the duty
+     functions they run (`duty-day-is-not-midnight`, `paired-rest-that-does-not-qualify`,
+     `sliding-window-not-calendar-day`). Transport's hub links the driver's and operator's cases.
    - **The tag rule needs a link.** These pages import from the root barrel and link no duty
      reference page today, so under B8 they use no declared module and the tag would fail. Each
      gains at least one link to the `/reference/workforce/<module>/<function>/` page of a function

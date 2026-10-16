@@ -127,8 +127,8 @@
     imports, plus `(namespace, *)` for a link to `/reference/<ns>/` itself or an import of the
     namespace barrel. `allowed` = `industriesUsing` over `used`, plus `core` when no own namespace
     appears in `used`. A page's declared tags are a non-empty subset of `allowed`. So the Core
-    timescale guide (`[core]`) passes; a GNSS tool (`[gnss, maritime]`, links `/reference/gnss/…`)
-    passes; a duty scenario (`[workforce, transport]`, links `/reference/workforce/…`) passes; and a
+    timescale guide (`[core]`) passes; a GNSS tool (`[gnss]`, links `/reference/gnss/…`)
+    passes; a duty scenario (`[workforce]`, links `/reference/workforce/…`) passes; and a
     page that links `/reference/transport/` or `/reference/gnss/` cannot be `core`.
   - The sidebar-icon tests count the industries with an own namespace.
   - New: a hub link in `SidebarSublist.astro` draws its icon `aria-hidden` and `focusable="false"`.

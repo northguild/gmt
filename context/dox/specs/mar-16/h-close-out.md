@@ -15,7 +15,7 @@
     sentence and its trap reworded to "own namespace"; the hours-of-work pages under Transport;
     the Converter Bench's and the DST Inspector's new defaults (N1).
   - § Tier 6: the five chat tools in the widget tools list; the tool and starter counts and the
-    per-area counts re-derived from `ENABLED_TOOL_NAMES` and `CHAT_STARTERS`; the "GNSS and maritime" and
+    per-area counts re-derived from `ENABLED_TOOL_NAMES` and `CHAT_STARTERS`; the "GNSS" and
     "Leap seconds and TAI" areas; the per-visitor cap's UTC day (N1).
 - `context/dox/reference/design-system.md`: § Drawn charts gains the stacked industry chart's rule
   (own segment solid, shared segments tinted and hatched, totals never double-count, legend words

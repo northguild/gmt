@@ -27,10 +27,12 @@ duty engine or that Maritime uses `gnss`.
   everywhere: the reference sidebar, `/reference/`, the README, its pages' tags.
 - **Every industry gets a hub page** at `/industries/<id>/`, generated, and every industry is
   listed at `/industries/` and on the `/reference/` root page.
-- **The tags on a tool, scenario, guide or mistakes page** may name any industry whose own
-  namespace or drawn-on modules the page uses, several at once, or `core` when the page uses no
-  industry's own namespace. So a GNSS tool is `[gnss, maritime]`, the duty scenarios are
-  `[workforce, transport]` where they are about drivers, and a timescale-only page may be `core`.
+- **The tags on a tool, scenario, guide or mistakes page** name the layer that owns the functions
+  the page runs, or `core` when the page uses no industry's own namespace. A page sits in one
+  section of each menu, never two: an industry that draws on that layer links the page from its
+  hub's problem list instead of carrying its tag, as Intermodal does for Transport's tools. So a
+  GNSS tool is `[gnss]`, the duty scenarios are `[workforce]`, a timescale-only page is `core`, and
+  Maritime, which has no namespace, tags only its own guide until it has tools of its own.
 
 ### B2. `apps/dox/src/data/industries.json` (new, tracked)
 

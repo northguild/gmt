@@ -32,7 +32,7 @@ Each item names the test that guards it, or says that nothing does. "The five" a
 | E2 | `worker/tools.ts` | the five imports (66) and tools with a trivial `execute` after `showJourneySplit` (409) | `tools.test.ts` |
 | E3 | `src/components/ask/widget-registry.ts` | `import type` only; the schema imports (91); five entries, each with a literal `import("~/lib/<tool>-mount")`; `WIDGET_REGISTRY` (781) | `widget-registry.test.ts`, `widget-graph.test.ts` |
 | E4 | `src/lib/widget-permalink.ts` | `"gnssweek"`, `"satclock"`, `"rollover"`, `"leapline"`, `"elapsed"` in `WidgetKind` (59) and their paths in `WIDGET_PAGE_PATHS` (99) | `widget-permalink.test.ts` |
-| E5 | `src/lib/chat-constants.ts` | `EXAMPLE_AREAS` (360): `{ id: "leapseconds", label: "Leap seconds and TAI" }` after `intervals`, and `{ id: "gnss", label: "GNSS and maritime" }` after `intermodal`; the five starters | `chat-starters.test.ts` |
+| E5 | `src/lib/chat-constants.ts` | `EXAMPLE_AREAS` (360): `{ id: "leapseconds", label: "Leap seconds and TAI" }` after `intervals`, and `{ id: "gnss", label: "GNSS" }` after `intermodal`; the five starters | `chat-starters.test.ts` |
 | E6 | `src/lib/widget-load-error.test.tsx` | the five mounts in `MOUNTS` | **manual** |
 | E7 | `src/components/ask/widget-graph.test.ts` | in `heavy` (134): the five pure modules, `gnss-widgets.ts`, `timescale-widgets.ts`, `gnss-lib.ts`, `timescale-lib.ts`; **not** `gnss-names.ts` | **manual** |
 | E8 | `astro.config.mjs` | `gmt-gnss-widgets.css`, then the five tool sheets, in `customCss` after `gmt-edi-widgets.css`; the Industries sidebar group (B6) | **manual** |
