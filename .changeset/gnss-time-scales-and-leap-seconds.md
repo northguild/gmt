@@ -99,6 +99,7 @@ isValidFiscalCalendar({ pattern: "4-5-4", yearEndsOn: "2026-01-31" }); // false 
 - **The NRF 4-5-4 calendar is described as one published example (US), not the retail standard.** The JSDoc quotes NRF's current wording: a 53rd week is added when "there are four or more days left in January".
 - **`isBusinessDay`'s fixed Monday-to-Friday week is described correctly.** ISO 8601 defines no weekend. Saturday and Sunday off is CLDR's world default.
 - **The JSDoc examples use zones and locales from several countries**, such as London, Tokyo, Sydney, São Paulo, Johannesburg and Kolkata. Only the zone and its offset changed in each example, and every changed result was run again.
+- **Each industry layer has its own TanStack Intent skill:** `gmt-gnss`, `gmt-transport`, `gmt-intermodal` and `gmt-workforce`. Their functions have moved out of the topic skills, so `gmt-integration`, `gmt-timezone`, `gmt-arithmetic` and `gmt-basics` now cover Core alone. `timescale/` is Core, so its leap-second table stays in `gmt-integration`. If you installed a skill with `--map`, map the new industry skills you need.
 - **The notes for readers moving from date-fns are corrected.** date-fns numbers Sunday 0, so `nextDay(value, 0)` becomes `nextWeekday(value, 7)`, and `previousDay` maps the same way. date-fns starts a week on Sunday by default, so `isSameWeek(a, b)` becomes `areDatesEqualBy(a, b, "week", { weekStartsOn: "sunday" })`. Rules that cited another library now cite ECMA-402, UTS #35 or Temporal.
 
 ### Breaking changes
