@@ -51,7 +51,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
   workforce: {
     about:
       "Workforce is people's working time, for any crew, shift or rota. It is counted in duty days that need not start at midnight, in rolling windows that slide across the log, and in rests that may be split in two. A working-time regime is a set of numbers, and the caller states every one of them. This layer reads a duty log against those numbers, and holds none of its own.",
-    guideTitle: "Hours of Work",
+    guideTitle: "Workforce: Hours of Work",
     solves: [
       {
         problem: "A duty day does not start at midnight.",
@@ -181,11 +181,15 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         problem:
           "An ETA that adds up only the travel times leaves out the wait for the next sailing.",
         answer:
-          "{{multimodalETA}} chains the legs, and reports the time in transit and the time in dwell separately.",
+          "{{multimodalETA}} chains the legs, and reports the time in transit and the time in dwell separately. It is built on {{scheduleDelivery}}, which comes from the Transport layer.",
         see: [
           {
             label: "guide",
             href: "/guides/industries/intermodal-bill-of-lading-and-eta/",
+          },
+          {
+            label: "Transport guide",
+            href: "/guides/industries/transport-legs-and-dwell/",
           },
           { label: "Journey Split", href: "/tools/journey-split/" },
           {

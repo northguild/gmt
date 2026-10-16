@@ -34,7 +34,10 @@ export type IndustrySidebarEntry =
       attrs: { "data-gmt-divider": "true"; "data-gmt-industry": string };
     };
 
-/** The entries for `section` (a docs directory such as `tools`), in display order. */
+/**
+ * The entries for `section` (a docs directory such as `tools`, or `guides/industries`), in
+ * display order.
+ */
 export function industrySidebarEntries(
   section: string,
   pages: readonly SectionPage[],
@@ -51,7 +54,7 @@ export function industrySidebarEntries(
       return [
         {
           label: tag.label,
-          link: `#${section}-${id}`,
+          link: `#${section.replace(/\//g, "-")}-${id}`,
           attrs: { "data-gmt-divider": "true", "data-gmt-industry": id },
         },
         ...members.map((page) => ({ slug: `${section}/${page.slug}` })),

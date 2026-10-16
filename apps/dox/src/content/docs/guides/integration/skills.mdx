@@ -6,6 +6,8 @@ sidebar:
 industries: [core]
 ---
 
+import Icon from "../../../../components/Icon.astro";
+
 Every `@northguild/*` package ships [TanStack Intent](https://intent.tanstack.com)
 skill files (`SKILL.md`) inside the npm tarball. Each skill is a self-contained,
 versioned bundle of guidance — API surface, naming conventions, and Temporal
@@ -117,15 +119,16 @@ package for signatures, locale matrices and code examples. It is not an API dump
 | `gmt-timezone` | Zoned get/format/convert, DST disambiguation | `src/zoned/`, `src/unix/`, `src/utc/` |
 | `gmt-integration` | Cache keys, router/query params, foreign epoch bridges, TAI and leap seconds, lint package selection | `src/timescale/`, the lint package READMEs |
 
-The industry skills are layers on top of those four, not part of Core. Load one
-only when the task is in that industry:
+Each industry layer on top of those four has a skill of its own. Load one only when
+the task is in that industry. Maritime has no namespace of its own, so it has no skill:
+its tasks use `gmt-gnss`.
 
-| Slug | Task area | Source folders it points to |
-| --- | --- | --- |
-| `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |
-| `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
-| `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
-| `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits | `src/workforce/` |
+| Industry | Slug | Task area | Source folders it points to |
+| --- | --- | --- | --- |
+| <Icon name="industry-workforce" size="1.1em" class="gmt-ref-industry-icon" /> Workforce | `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits | `src/workforce/` |
+| <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> Transport | `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
+| <Icon name="industry-intermodal" size="1.1em" class="gmt-ref-industry-icon" /> Intermodal | `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
+| <Icon name="industry-gnss" size="1.1em" class="gmt-ref-industry-icon" /> GNSS | `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |
 
 > **Skills are routing pointers, not API documentation.** The skill files carry the
 > core rules and common pitfalls. For a signature, a locale matrix or an example,

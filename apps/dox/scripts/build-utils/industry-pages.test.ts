@@ -14,13 +14,15 @@ const WORKFORCE: HubIndustry = {
   label: "Workforce",
   definition: "People's working time.",
   guide: "/guides/industries/workforce-hours-of-work/",
-  guideTitle: "Hours of Work",
+  guideTitle: "Workforce: Hours of Work",
   about: "Workforce is working time.",
   solves: [
     {
       problem: "A duty day is not midnight.",
       answer: "{{dutyDayFor}} reads the operator's day.",
-      see: [{ label: "guide", href: "/guides/industries/workforce-hours-of-work/" }],
+      see: [
+        { label: "guide", href: "/guides/industries/workforce-hours-of-work/" },
+      ],
     },
   ],
   namespace: "workforce",

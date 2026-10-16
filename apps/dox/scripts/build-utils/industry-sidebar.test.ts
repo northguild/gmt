@@ -78,6 +78,21 @@ describe("industrySidebarEntries", () => {
     );
   });
 
+  it("names a nested section's dividers without a slash and links its pages under the folder", () => {
+    const entries = industrySidebarEntries("guides/industries", [
+      page("transport-legs", "Transport: Legs", ["transport"]),
+    ]);
+    expect(entries).toContainEqual({ slug: "guides/industries" });
+    expect(entries).toContainEqual({
+      label: "Transport",
+      link: "#guides-industries-transport",
+      attrs: { "data-gmt-divider": "true", "data-gmt-industry": "transport" },
+    });
+    expect(entries).toContainEqual({
+      slug: "guides/industries/transport-legs",
+    });
+  });
+
   it("lists a page under every industry it carries", () => {
     const shared = [page("both", "Both", ["transport", "intermodal"])];
     const hits = industrySidebarEntries("scenarios", shared).filter(

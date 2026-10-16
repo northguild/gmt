@@ -9,7 +9,14 @@
  */
 import { useId } from "react";
 import { CHAT_STARTERS, startersByArea } from "~/lib/chat-constants";
+import { INDUSTRY_ICON_PATHS, industryTag } from "~/lib/industry-tags";
 import { WIDGET_REGISTRY } from "./widget-registry";
+
+/** An area's icon, as SVG inner markup: its industry's glyph, the one the sidebar draws. */
+const areaIcon = (area: string): string | undefined => {
+  const icon = industryTag(area)?.icon;
+  return icon ? INDUSTRY_ICON_PATHS[icon] : undefined;
+};
 
 type Starter = (typeof CHAT_STARTERS)[number];
 
@@ -32,6 +39,7 @@ export function ExamplesPanel({
       <div className="gmt-hive-examples-body">
         {startersByArea().map((group) => {
           const groupId = `${uid}-area-${group.area}`;
+          const icon = areaIcon(group.area);
           return (
             <section
               key={group.area}
@@ -39,6 +47,15 @@ export function ExamplesPanel({
               aria-labelledby={groupId}
             >
               <h3 className="gmt-hive-examples-area-title" id={groupId}>
+                {icon && (
+                  <svg
+                    className="gmt-hive-examples-area-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                    dangerouslySetInnerHTML={{ __html: icon }}
+                  />
+                )}
                 {group.label}
               </h3>
               <ul className="gmt-hive-examples-list">

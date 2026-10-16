@@ -355,14 +355,17 @@ import {
 
 export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
 
-/** The areas the example cards in the widget rail are grouped under, in
- * display order. */
+/**
+ * The areas the example cards in the widget rail are grouped under, in display
+ * order: the industry layers that have a tool, by the id and label the site's
+ * industry declaration gives them (`industry-tags.ts`), so the heading carries
+ * that industry's icon. Core holds the zones, DST, intervals and leap-second
+ * starters. An industry with no tool (Workforce, Maritime) has no area.
+ */
 export const EXAMPLE_AREAS = [
-  { id: "zones", label: "Zones and DST" },
-  { id: "intervals", label: "Intervals" },
-  { id: "leapseconds", label: "Leap seconds and TAI" },
+  { id: "core", label: "Core" },
   { id: "transport", label: "Transport" },
-  { id: "intermodal", label: "Intermodal, billing and EDI" },
+  { id: "intermodal", label: "Intermodal" },
   { id: "gnss", label: "GNSS" },
 ] as const;
 
@@ -406,13 +409,13 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Show me what time it is in Tokyo right now.",
     widget: "showGlobe",
-    area: "zones",
+    area: "core",
     args: { zone: "Asia/Tokyo" },
   },
   {
     text: "Show London, Sydney and Tokyo from 15 minutes before London springs forward on 29 March 2026.",
     widget: "showZonePlanner",
-    area: "zones",
+    area: "core",
     // London springs forward at 01:00 UTC on 29 March 2026, so 00:45 UTC is
     // 00:45 GMT there; dragging the slider forward crosses the change.
     args: {
@@ -423,7 +426,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Convert 2:30pm on 15 March 2024 in Sydney to Tokyo time.",
     widget: "showConverterBench",
-    area: "zones",
+    area: "core",
     // Sydney is on AEDT (+11:00) until 7 April 2024.
     args: {
       value: "2024-03-15T14:30:00+11:00[Australia/Sydney]",
@@ -434,7 +437,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
     widget: "showIntervalVisualizer",
-    area: "intervals",
+    area: "core",
     // London is on GMT (+00:00) until 31 March 2024.
     args: {
       aStart: "2024-03-15T09:00:00+00:00[Europe/London]",
@@ -446,7 +449,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "What happens to 1:30am on 27 October 2024 in London?",
     widget: "showDstInspector",
-    area: "zones",
+    area: "core",
     // 27 October 2024 is London's fall-back day: 1:30am happens twice.
     args: { zone: "Europe/London", year: 2024, preset: "overlap" },
   },
@@ -767,7 +770,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "How many leap seconds were inserted from 2000 to 2024, and what was TAI - UTC in 2000?",
     widget: "showLeapSecondTimeline",
-    area: "leapseconds",
+    area: "core",
     args: {
       date: "2000-01-01T00:00:00Z",
       from: "2000-01-01T00:00:00Z",
@@ -777,7 +780,7 @@ export const CHAT_STARTERS: readonly {
   {
     text: "How many seconds really passed from 2016-12-31T23:59:59Z to 2017-01-01T00:00:01Z?",
     widget: "showElapsedVsClock",
-    area: "leapseconds",
+    area: "core",
     args: { start: "2016-12-31T23:59:59Z", end: "2017-01-01T00:00:01Z" },
   },
 ];
