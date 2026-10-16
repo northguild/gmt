@@ -45,9 +45,21 @@ the footnote "before this system's first instant".
 1. The value, the slider, the preset.
 2. A `.gmt-gnss-frame` with three pinned plates (`hero-utc` "UTC", series 1; `hero-tai`
    "TAI − UTC", `taiMinusUtc` + " s", sub `toTAI`; `hero-next` "Next change", `nextLeapSecond` or
-   "none after this instant"), then **the lead bars** (`role="img"`, a hidden list): one bar per
-   clock from 0 to its lead, on one scale whose end is the TAI row's lead; each value on a chip in
-   a fixed right-hand column; the "your reading" row lit in series 1.
+   "none after this instant"), stacked as compact plates, then **the clock ladder** (`role="img"`
+   with an `aria-label` that reads every rung in words, and a hidden list of one sentence per
+   clock). The ladder is one vertical scale of seconds ahead of UTC, anchored at UTC = 0, drawn as
+   an SVG (axis labels, ticks, a rail whose lit part rises to TAI, a marker per rung) beside eight
+   absolutely positioned HTML rows. A clock stands `LADDER.step` pixels above the baseline for each
+   second it leads UTC by; the lead comes from the library, never a literal. Clocks that share a
+   lead share a rung (GPS, GAL, QZS and IRN at the 2024 preset), and crowded blocks of rows are
+   pushed apart and joined to their true height by a leader line. TAI is the top rail. Each row
+   carries a small distinct glyph, its name, a tie tag ("tied to TAI" or "follows UTC", derived
+   from the library across every slider stop, so GLO is the one that stays level), the lead on a
+   chip and the reading in tabular numerals; the tie is also shown by outline (solid or dashed),
+   not colour alone. The stage height is fixed for the slider's longest scale, so stepping through
+   the leap seconds lengthens only the lit rail by one second's height per insertion and nothing
+   else moves. A clock with no reading, or inside an inserted second, has no place on the scale: it leaves the stage and its dashed row is listed under the ladder, below a "No place on the scale" heading, so every row on the stage stands at its true height. The "your reading" row is hatched with a
+   series-1 bottom edge. Nothing animates. The ladder has no focusable part.
 3. **`clocks-table`**: Clock, Reading, Ahead of UTC, for `UTC`, `TAI` and the six systems, every
    row always rendered. Two notes, page-copy facts from the JSDoc: "`GLO` is GLONASS time as RINEX
    and the BIPM report it, in UTC's own hours." and the `IRN` row's chip "derived" with the note

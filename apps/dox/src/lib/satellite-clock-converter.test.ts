@@ -11,7 +11,16 @@ import {
   IRN_NOTE,
   MAX_VALUE_LENGTH,
   SENTENCES,
-  barsAria,
+  LADDER,
+  LADDER_NONE_NOTE,
+  clockTies,
+  emptyRead,
+  ladderAria,
+  ladderChip,
+  ladderLayout,
+  ladderRungs,
+  ladderSpan,
+  offReserve,
   isSeeded,
   matchPreset,
   permalinkOf,
@@ -107,7 +116,6 @@ describe("presets: each one is what the library says", () => {
     for (const key of ["GPS", "GAL", "BDT", "QZS", "GLO", "IRN"]) {
       expect(row(r, key).lead).toEqual({ kind: "inside" });
       expect(row(r, key).leadText).toBe(INSIDE_SECOND_TEXT);
-      expect(row(r, key).bar).toBeNull();
     }
     expect(row(r, "TAI").leadText).toBe("36 s");
     expect(r.plates[0]!.lines[1]).toBe("leap second");
@@ -124,7 +132,6 @@ describe("presets: each one is what the library says", () => {
     expect(r.status).toBe("ok");
     expect(row(r, "BDT").none).toBe(true);
     expect(row(r, "BDT").reading).toBe("");
-    expect(row(r, "BDT").bar).toBeNull();
     expect(row(r, "GPS").reading).toBe("2006-01-01T00:00:12 GPS");
     expect(row(r, "TAI").reading).toBe("2006-01-01T00:00:31 TAI");
     expect(r.next).toBe("2005-12-31T23:59:60Z");
@@ -304,17 +311,72 @@ describe("every row and every lead", () => {
     expect(tai.lead).toEqual({ kind: "seconds", seconds: "36" });
   });
 
-  it("bars are on one scale whose end is TAI's lead", () => {
-    expect(row(r, "TAI").bar).toBe(100);
-    expect(row(r, "UTC").bar).toBe(0);
-    expect(row(r, "GPS")!.bar).toBeCloseTo((18 / 37) * 100, 6);
-    expect(row(r, "BDT")!.bar).toBeCloseTo((4 / 37) * 100, 6);
-    expect(row(r, "GLO")!.bar).toBe(0);
-    for (const x of r.rows) {
-      expect(x.bar).not.toBeNull();
-      expect(x.bar!).toBeGreaterThanOrEqual(0);
-      expect(x.bar!).toBeLessThanOrEqual(100);
+  it("the ladder has one rung per distinct lead, highest first, UTC and GLO sharing the baseline", () => {
+    const { rungs, off } = ladderRungs(r);
+    expect(rungs.map((x) => x.seconds)).toEqual([37, 18, 4, 0]);
+    expect(rungs[1]!.keys).toEqual(["GPS", "GAL", "QZS", "IRN"]);
+    expect(rungs[3]!.keys).toEqual(["UTC", "GLO"]);
+    expect(off).toEqual([]);
+  });
+
+  it("the layout is one constant scale: a second is LADDER.step pixels, and no two rows overlap", () => {
+    const span = ladderSpan(lib, sliderPositions(lib));
+    expect(span).toBe(37);
+    const layout = ladderLayout(r, span);
+    expect(layout.base - layout.taiY!).toBe(37 * LADDER.step);
+    const gps = layout.rungs.find((x) => x.seconds === 18)!;
+    expect(layout.base - gps.y).toBe(18 * LADDER.step);
+    const tops = CLOCK_KEYS.map((k) => layout.tops[k]).sort((a, b) => a - b);
+    for (let i = 1; i < tops.length; i++) {
+      expect(tops[i]! - tops[i - 1]!).toBeGreaterThanOrEqual(LADDER.row);
     }
+    expect(tops[0]!).toBeGreaterThanOrEqual(LADDER.edge);
+    expect(tops.at(-1)! + LADDER.row).toBeLessThanOrEqual(layout.height);
+  });
+
+  it("the stage height does not depend on the reading's own scale", () => {
+    const span = ladderSpan(lib, sliderPositions(lib));
+    expect(ladderLayout(readPreset("inside-leap-second"), span).height).toBe(
+      ladderLayout(r, span).height,
+    );
+    expect(ladderLayout(readPreset("tai-reading"), span).height).toBe(
+      ladderLayout(r, span).height,
+    );
+  });
+
+  it("with no reading the eight rows are spread evenly and no rung is drawn", () => {
+    const layout = ladderLayout(emptyRead(), 37);
+    expect(layout.rungs).toEqual([]);
+    expect(layout.taiY).toBeNull();
+    expect(new Set(CLOCK_KEYS.map((k) => layout.tops[k])).size).toBe(8);
+  });
+
+  it("the library says which clocks move with TAI and which follow UTC", () => {
+    const ties = clockTies(lib, sliderPositions(lib));
+    for (const key of ["GPS", "GAL", "BDT", "QZS", "IRN"] as const) {
+      expect(ties[key]).toBe("tai");
+    }
+    expect(ties.GLO).toBe("utc");
+  });
+
+  it("a clock with no place on the scale is off the ladder, not on rung zero", () => {
+    const early = readPreset("before-beidou");
+    const { rungs, off } = ladderRungs(early);
+    expect(off).toEqual(["BDT"]);
+    expect(rungs.flatMap((x) => x.keys)).not.toContain("BDT");
+    const layout = ladderLayout(early, 37);
+    expect(layout.off).toEqual(["BDT"]);
+    const stood = layout.rungs.flatMap((x) => x.keys);
+    expect(stood).not.toContain("BDT");
+    const inside = ladderRungs(readPreset("inside-leap-second"));
+    const insideLayout = ladderLayout(readPreset("inside-leap-second"), 37);
+    // Only TAI, UTC stand on the stage; TAI is at its true height, no leader.
+    expect(insideLayout.rungs.map((x) => x.keys)).toEqual([["TAI"], ["UTC"]]);
+    expect(insideLayout.rungs[0]!.top + LADDER.row / 2).toBeCloseTo(
+      insideLayout.taiY!,
+      6,
+    );
+    expect(inside.off).toEqual(["GPS", "GAL", "BDT", "QZS", "GLO", "IRN"]);
   });
 
   it("the NavIC row is tagged derived and no other is", () => {
@@ -470,9 +532,16 @@ describe("the plates", () => {
     expect(summaryText(read(""))).not.toBe("");
   });
 
-  it("the bars' label and sentences read each clock", () => {
+  it("the ladder's label and sentences read each clock", () => {
     const result = readPreset("utc-2024");
-    expect(barsAria(result)).toContain("8 bars");
+    expect(ladderAria(result)).toBe(
+      "Ladder of 8 clocks on one scale of seconds ahead of UTC, TAI at the top: TAI 37 s ahead of UTC; GPS, GAL, QZS and IRN 18 s ahead of UTC; BDT 4 s ahead of UTC; UTC and GLO on the baseline, 0 s.",
+    );
+    expect(ladderChip(row(result, "GPS"))).toBe("18 s");
+    expect(ladderChip(row(readPreset("inside-leap-second"), "GPS"))).toBe(
+      "inserted second",
+    );
+    expect(LADDER_NONE_NOTE).toContain("first instant");
     expect(rowSentence(row(result, "GPS"))).toBe(
       "GPS: 2024-01-01T00:00:18 GPS, 18 s ahead of UTC",
     );
@@ -566,5 +635,16 @@ describe("what the page says", () => {
     expect(text).not.toMatch(/UTC\+3|Moscow|MSK|America\/New_York|en-US/);
     expect(GLO_NOTE).toContain("GLONASS time");
     expect(IRN_NOTE).toContain("derives");
+  });
+});
+
+describe("the off-scale reserve", () => {
+  it("is the most clocks any stop leaves off the ladder, from the library", () => {
+    const positions = sliderPositions(lib);
+    const counts = positions.map(
+      (value) => ladderRungs(readClocks(lib, { value })).off.length,
+    );
+    expect(offReserve(lib, positions)).toBe(Math.max(...counts));
+    expect(offReserve(lib, positions)).toBeGreaterThanOrEqual(5);
   });
 });

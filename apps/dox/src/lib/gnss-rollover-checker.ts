@@ -410,9 +410,186 @@ export interface Strip {
   start: string;
   end: string;
   wrongFrom: string;
-  /** Where the lit window ends and the hatched one begins, 0 to 100. */
-  split: number;
+  /**
+   * Where the firmware's window sits on the timeline, as shares of it. They are
+   * not clamped: a window can start before the timeline or run past it, and the
+   * drawing clips to it.
+   */
+  span: { from: number; wrong: number; end: number };
+  /** The stretch of fuse still to burn, from the check date (or the window's
+   *  start) to the wrong-from date; `null` once it is past. */
+  fuse: { from: number; to: number } | null;
   marks: Mark[];
+}
+
+// ---------------------------------------------------------------------------
+// The fuse timeline: one track per counter
+// ---------------------------------------------------------------------------
+
+/** The timeline runs from before the first satellite week to past the last
+ *  first wrap of any counter. These two instants are drawing, not data. */
+export const FUSE_AXIS_START = "1980-01-01T00:00:00Z";
+export const FUSE_AXIS_END = "2170-01-01T00:00:00Z";
+
+/** A wrap of one counter on its track. `next` is the first one after the
+ *  check instant; `past` ones have gone. */
+export interface FuseWrap {
+  at: string;
+  pos: number;
+  state: "past" | "next" | "later";
+}
+
+export interface FuseTrack {
+  counter: GnssWeekCounter;
+  /** "weeks below 1024". */
+  width: string;
+  /** Where the counter's first week starts, as a share of the timeline. */
+  born: number;
+  /** The wraps from era 1 on, inside the timeline. */
+  wraps: FuseWrap[];
+  /** The receiver's own counter. */
+  yours: boolean;
+}
+
+/** Counters of one width, drawn together. */
+export interface FuseGroup {
+  bits: number;
+  label: string;
+  tracks: FuseTrack[];
+}
+
+export interface Fuse {
+  groups: FuseGroup[];
+  /** The reader's clock as a share of the timeline, or `null` outside it. */
+  today: number | null;
+}
+
+/** A year label on the timeline's axis. */
+export interface FuseYear {
+  year: number;
+  pos: number;
+  major: boolean;
+}
+
+/** The share, 0 to 100, an instant is along the timeline. Unclamped. */
+export function axisPos(instant: string): number | null {
+  const a = toEpochMs(FUSE_AXIS_START);
+  const b = toEpochMs(FUSE_AXIS_END);
+  const x = toEpochMs(instant);
+  if (Number.isNaN(x)) return null;
+  return ((x - a) / (b - a)) * 100;
+}
+
+const inAxis = (pos: number | null): number | null =>
+  pos === null || pos < 0 || pos > 100 ? null : pos;
+
+/** The axis's year labels, every 20 years; every other label is "major" and
+ *  survives on a narrow screen. */
+export function fuseYears(): FuseYear[] {
+  const out: FuseYear[] = [];
+  for (let year = 1980, i = 0; year <= 2160; year += 20, i++) {
+    out.push({
+      year,
+      pos: axisPos(`${year}-01-01T00:00:00Z`) ?? 0,
+      major: i % 2 === 0,
+    });
+  }
+  return out;
+}
+
+interface FuseLayout {
+  bits: number;
+  label: string;
+  tracks: {
+    counter: GnssWeekCounter;
+    width: string;
+    born: number;
+    wraps: { at: string; pos: number; ms: number }[];
+  }[];
+}
+
+const FUSE_LAYOUTS = new WeakMap<GnssLib, FuseLayout[]>();
+
+/**
+ * The wraps of every counter, grouped by width, asked of the library once:
+ * `gnssWeekToUtc(counter, 0, 0, era)` for each era whose start falls inside the
+ * timeline. None of it depends on the check date.
+ */
+function fuseLayout(lib: GnssLib): FuseLayout[] {
+  const hit = FUSE_LAYOUTS.get(lib);
+  if (hit !== undefined) return hit;
+  const end = toEpochMs(FUSE_AXIS_END);
+  const byBits = new Map<number, FuseLayout>();
+  for (const counter of GNSS_WEEK_COUNTERS) {
+    const refused = firstRefusedWeek(lib, counter);
+    const bits = Math.round(Math.log2(refused));
+    const wraps: { at: string; pos: number; ms: number }[] = [];
+    for (let era = 1; era < 80; era++) {
+      const at = eraStart(lib, counter, era);
+      const ms = toEpochMs(at);
+      if (at === "" || Number.isNaN(ms) || ms >= end) break;
+      wraps.push({ at, pos: axisPos(at) ?? 0, ms });
+    }
+    const group = byBits.get(bits) ?? {
+      bits,
+      label: `${bits}-bit counters, weeks below ${refused}`,
+      tracks: [],
+    };
+    group.tracks.push({
+      counter,
+      width: `weeks below ${refused}`,
+      born: Math.max(0, axisPos(eraStart(lib, counter, 0)) ?? 0),
+      wraps,
+    });
+    byBits.set(bits, group);
+  }
+  const layout = [...byBits.values()].sort((a, b) => a.bits - b.bits);
+  FUSE_LAYOUTS.set(lib, layout);
+  return layout;
+}
+
+/** The timeline for a check instant: each track's wraps marked past, next or later. */
+function buildFuse(
+  lib: GnssLib,
+  rows: WrapRow[],
+  at: string,
+  nowIso: string,
+  yours: GnssWeekCounter,
+): Fuse {
+  const atMs = toEpochMs(at);
+  const nextOf = new Map(
+    rows.map((r) => [r.counter, r.none ? "" : r.nextWrap]),
+  );
+  return {
+    groups: fuseLayout(lib).map((g) => ({
+      bits: g.bits,
+      label: g.label,
+      tracks: g.tracks.map((t) => {
+        const next = nextOf.get(t.counter) ?? "";
+        return {
+          counter: t.counter,
+          width: t.width,
+          born: t.born,
+          yours: t.counter === yours,
+          wraps: t.wraps.map((w) => ({
+            at: w.at,
+            pos: w.pos,
+            state: w.ms <= atMs ? "past" : w.at === next ? "next" : "later",
+          })),
+        };
+      }),
+    })),
+    today: inAxis(axisPos(nowIso)),
+  };
+}
+
+/** The countdown as numbers, for the large readout. */
+export interface Countdown {
+  past: boolean;
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
 }
 
 export interface RolloverRead {
@@ -438,6 +615,10 @@ export interface RolloverRead {
   /** The rolling row's words. */
   rolling: string;
   strip: Strip | null;
+  /** The fuse timeline: every counter's wraps, whenever the check instant is known. */
+  fuse: Fuse | null;
+  /** The countdown in parts, or `null` while there is none. */
+  countdown: Countdown | null;
   plates: PlateSpec[];
   /** The calls behind the receiver, then behind the table, in the order made. */
   calls: { reading: EdiCall[]; counters: EdiCall[] };
@@ -529,19 +710,11 @@ function blankRead(state: RolloverState): RolloverRead {
     left: null,
     rolling: "",
     strip: null,
+    fuse: null,
+    countdown: null,
     plates: platesOf(null),
     calls: { reading: [], counters: [] },
   };
-}
-
-/** The share of the window an instant is, 0 to 100, or `null` outside it. */
-function posOf(start: string, end: string, instant: string): number | null {
-  const a = toEpochMs(start);
-  const b = toEpochMs(end);
-  const x = toEpochMs(instant);
-  if (!(b > a) || Number.isNaN(x)) return null;
-  const share = ((x - a) / (b - a)) * 100;
-  return share < 0 || share > 100 ? null : share;
 }
 
 /**
@@ -618,6 +791,8 @@ export function readRollover(
   const soonest = [...firstWrap].sort()[0];
   for (const row of read.rows)
     row.soonest = !row.none && row.nextWrap === soonest;
+
+  read.fuse = buildFuse(lib, read.rows, at, nowIso, state.counter);
 
   // 3. The firmware.
   const counter = state.counter;
@@ -722,11 +897,15 @@ export function readRollover(
   let leftLine = "until it reports an early date";
   if (toGo === null) {
     read.left = null;
-  } else if (toGo.negative) {
-    read.left = `past by ${spanText({ ...toGo, negative: false })}`;
-    leftLine = "since it began reporting an early date";
   } else {
-    read.left = spanText(toGo);
+    const { negative, ...parts } = toGo;
+    read.countdown = { past: negative, ...parts };
+    if (negative) {
+      read.left = `past by ${spanText({ ...toGo, negative: false })}`;
+      leftLine = "since it began reporting an early date";
+    } else {
+      read.left = spanText(toGo);
+    }
   }
 
   // 8. The rolling receiver, which only the reader's own clock can pin.
@@ -748,10 +927,10 @@ export function readRollover(
     read.rolling = ROLLING_DATE_TEXT;
   }
 
-  // 9. The strip.
+  // 9. The strip: the window on its counter's track, and the marks.
   const marks: Mark[] = [];
   const mark = (key: Mark["key"], label: string, instant: string) =>
-    marks.push({ key, label, at: instant, pos: posOf(start, end, instant) });
+    marks.push({ key, label, at: instant, pos: inAxis(axisPos(instant)) });
   mark(
     "start",
     state.model === "pivot" ? "build date" : `era ${era} starts`,
@@ -762,7 +941,8 @@ export function readRollover(
       if (
         wrap !== "" &&
         wrap !== wrongFrom &&
-        posOf(start, end, wrap) !== null
+        toEpochMs(wrap) > toEpochMs(start) &&
+        toEpochMs(wrap) < toEpochMs(end)
       ) {
         mark("wrap", "the counter wraps", wrap);
       }
@@ -774,11 +954,21 @@ export function readRollover(
     wrongFrom,
   );
   mark("check", state.nowMode === "today" ? "today" : "check date", at);
+  const span = {
+    from: axisPos(start) ?? 0,
+    wrong: axisPos(wrongFrom) ?? 0,
+    end: axisPos(end) ?? 0,
+  };
+  const checkPos = axisPos(at) ?? 0;
   read.strip = {
     start,
     end,
     wrongFrom,
-    split: posOf(start, end, wrongFrom) ?? 100,
+    span,
+    fuse:
+      checkPos < span.wrong
+        ? { from: Math.max(checkPos, span.from), to: span.wrong }
+        : null,
     marks,
   };
 
@@ -838,15 +1028,29 @@ export function dateOfDay(
 
 /** One sentence per mark, for the drawing's hidden list. */
 export function markSentence(m: Mark): string {
-  const where = m.pos === null ? " (outside the window drawn)" : "";
+  const where = m.pos === null ? " (outside the timeline drawn)" : "";
   return `${m.label}: ${m.at}${where}`;
 }
 
-/** The strip's accessible name. */
+/** The timeline's accessible name: the reading in words. */
 export function stripAria(read: RolloverRead): string {
   const s = read.strip;
   if (s === null) return "No window to draw";
-  return `The firmware reads right from ${s.start} to ${s.wrongFrom}, then reports one counter period early to ${s.end}. ${s.marks.length} marks.`;
+  const next = read.rows.find((r) => r.yours && !r.none)?.nextWrap;
+  return (
+    `Fuse timeline of the ${read.state.counter} counter against every other counter. ` +
+    `The firmware reads right from ${s.start} to ${s.wrongFrom}, then reports one counter period early to ${s.end}. ` +
+    (next === undefined ? "" : `This counter next wraps at ${next}. `) +
+    `${s.marks.length} marks.`
+  );
+}
+
+/** The status badge's words: what the receiver reports. */
+export function verdictBadgeText(read: RolloverRead): string {
+  if (read.status !== "ok" || read.verdict === null) return "";
+  return read.verdict === "right"
+    ? "Reports the right date"
+    : `Reports ${read.verdictText}`;
 }
 
 /** The one live sentence for a reading. */

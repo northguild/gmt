@@ -4,9 +4,13 @@
  *
  * Two UTC readings, and two ways to subtract them. The clock difference counts
  * no inserted second; the seconds that passed, read through TAI, count every
- * one. Two rulers share one scale, the counted seconds mark both, and a hatched
- * sliver on the second ruler is the second the clock never counted. A native
- * range moves the end by day.
+ * one. The three numbers sit as a sum above two rulers: the UTC clock face, one
+ * cell per clock second, and the SI seconds that passed, one cell per second
+ * under it. An inserted second is a stretched `:60` cell on the clock face that
+ * the clock tape leaves a gap for and the elapsed tape fills, so the elapsed
+ * ruler runs one second longer. A long span keeps the seconds next to each end,
+ * a break, and every inserted second as its own cell. A native range moves the
+ * end by day.
  *
  * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
  * listener is delegated on the root, so the host dropping the subtree is a
@@ -27,7 +31,6 @@ import {
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
   blankPlates,
-  canDrawRulers,
   elapsedHandoffs,
   elapsedPlates,
   isSeeded,
@@ -37,20 +40,27 @@ import {
   readArgs,
   readElapsed,
   resultsText,
-  rulerMarks,
+  rulerModel,
   summaryText,
   type ElapsedRead,
+  type RulerCell,
+  type RulerModel,
+  type RulerPiece,
   type ElapsedState,
   type ElapsedVsClockArgs,
 } from "./elapsed-vs-clock";
-import { layoutWidth, onWidthChange, thinTickLabels } from "./label-fit";
+import { onWidthChange } from "./label-fit";
 import {
   drawMs,
   sliderDate,
   sliderMax,
   sliderPosition,
 } from "./leap-second-timeline";
-import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
+import {
+  descriptionHoldHtml,
+  plateHtml,
+  type PlateSpec,
+} from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import type { TimescaleLib } from "./timescale-lib";
 import { loadTimescaleLib } from "./timescale-lib";
@@ -145,22 +155,132 @@ function groupHtml(g: (typeof GROUPS)[number]): string {
   );
 }
 
-function rulerHtml(
+/** The sum the three plates make, with its operators between them. */
+function equationHtml(plates: readonly PlateSpec[]): string {
+  const op = (sign: string) =>
+    `<span class="gmt-evc-op" aria-hidden="true">${sign}</span>`;
+  return (
+    `<span class="gmt-evc-op gmt-evc-op--lead" aria-hidden="true"></span>` +
+    plateHtml(plates[0]!) +
+    op("+") +
+    plateHtml(plates[1]!) +
+    op("=") +
+    plateHtml(plates[2]!)
+  );
+}
+
+/** The four rows of cells, plus the dates, that the rulers draw from one model. */
+type Row = "clock" | "tape-clock" | "tape-elapsed" | "elapsed" | "dates";
+
+const NO_SIGNAL_RULER = "⟨ NO SIGNAL — invalid input ⟩";
+
+function cellHtml(row: Row, c: RulerCell): string {
+  const b = `style="--b:${c.basis}px"${c.leap ? ` title="${escapeAttr(`${c.day} ${c.time}: the inserted second`)}"` : ""}`;
+  const lead = c.leap ? " gmt-evc-cell--leap" : "";
+  if (row === "clock") {
+    return (
+      `<div class="gmt-evc-cell${lead}" ${b}>` +
+      (c.label
+        ? `<span class="gmt-evc-time">${escapeHtml(c.compact ? ":60" : c.time)}</span>`
+        : "") +
+      (c.leap && !c.compact
+        ? `<span class="gmt-evc-tag">inserted second</span>`
+        : "") +
+      `</div>`
+    );
+  }
+  if (row === "elapsed") {
+    const text = c.leap
+      ? c.compact
+        ? "+1"
+        : "+1 s"
+      : c.ordinal === null
+        ? ""
+        : String(c.ordinal);
+    return (
+      `<div class="gmt-evc-cell${lead}" ${b}>` +
+      (text === "" ? "" : `<span class="gmt-evc-time">${text}</span>`) +
+      `</div>`
+    );
+  }
+  const gap = row === "tape-clock" && c.leap ? " gmt-evc-cell--gap" : "";
+  return `<div class="gmt-evc-cell gmt-evc-tape${lead}${gap}" ${b}></div>`;
+}
+
+function manyHtml(row: Row, count: number): string {
+  const b = `style="--b:${LEAP_MANY_PX}px"`;
+  if (row === "clock") {
+    return (
+      `<div class="gmt-evc-cell gmt-evc-cell--leap" ${b}>` +
+      `<span class="gmt-evc-time">+${count}</span>` +
+      `<span class="gmt-evc-tag">inserted seconds</span></div>`
+    );
+  }
+  if (row === "elapsed") {
+    return (
+      `<div class="gmt-evc-cell gmt-evc-cell--leap" ${b}>` +
+      `<span class="gmt-evc-time">+${count} s</span></div>`
+    );
+  }
+  const gap = row === "tape-clock" ? " gmt-evc-cell--gap" : "";
+  return `<div class="gmt-evc-cell gmt-evc-tape gmt-evc-cell--leap${gap}" ${b}></div>`;
+}
+
+const LEAP_MANY_PX = 76;
+
+/** A run narrower than this has no room for a date; the ends and the list carry it. */
+const DATE_MIN_PX = 80;
+
+/** One date, or the two a run crosses, written short. */
+function dateText(cells: readonly RulerCell[]): string {
+  const first = cells[0]!.day;
+  const last = cells[cells.length - 1]!.day;
+  return first === last ? first : `${first} → ${last.slice(5)}`;
+}
+
+function pieceHtml(row: Row, piece: RulerPiece): string {
+  if (piece.kind === "break") {
+    const label = `${piece.skipped} seconds not drawn`;
+    return `<div class="gmt-evc-break" style="--w:${piece.px}px" title="${escapeAttr(label)}"></div>`;
+  }
+  if (piece.kind === "many") {
+    return row === "dates"
+      ? `<div class="gmt-evc-run" style="--b:${LEAP_MANY_PX}px"></div>`
+      : `<div class="gmt-evc-run" style="--b:${LEAP_MANY_PX}px">${manyHtml(row, piece.count)}</div>`;
+  }
+  const px = piece.cells.reduce((n, c) => n + c.basis, 0);
+  const inner =
+    row === "dates"
+      ? px >= DATE_MIN_PX
+        ? `<span class="gmt-evc-date">${escapeHtml(dateText(piece.cells))}</span>`
+        : ""
+      : piece.cells.map((c) => cellHtml(row, c)).join("");
+  return `<div class="gmt-evc-run" style="--b:${px}px">${inner}</div>`;
+}
+
+function rowHtml(row: Row, model: RulerModel): string {
+  return model.pieces.map((p) => pieceHtml(row, p)).join("");
+}
+
+function nosignalHtml(): string {
+  return `<span class="gmt-evc-nosignal">${NO_SIGNAL_RULER}</span>`;
+}
+
+function rulerRowHtml(
   id: "clock" | "elapsed",
   name: string,
   series: 1 | 2,
 ): string {
   return (
-    `<div class="gmt-gnss-ruler-row">` +
-    `<span class="gmt-gnss-label">${escapeHtml(name)}</span>` +
-    `<div class="gmt-elapsed-ruler">` +
-    `<div class="gmt-gnss-track" data-role="track-${id}">` +
-    `<span class="gmt-gnss-span" data-role="span-${id}" data-series="${series}" hidden></span>` +
-    `<div class="gmt-elapsed-marks" data-role="marks-${id}"></div>` +
-    `</div>` +
-    `<div class="gmt-gnss-flags" data-role="chips-${id}" aria-hidden="true"></div>` +
-    `</div></div>`
+    `<div class="gmt-evc-ruler" data-series="${series}" data-role="track-${id}">` +
+    `<span class="gmt-evc-name">${escapeHtml(name)}</span>` +
+    `<div class="gmt-evc-strip" data-role="marks-${id}"></div>` +
+    `</div>`
   );
+}
+
+function tapeHtml(id: "clock" | "elapsed", series: 1 | 2): string {
+  return `<div class="gmt-evc-tapes" data-series="${series}" data-role="span-${id}" hidden></div>`;
 }
 
 /**
@@ -215,17 +335,19 @@ export function renderElapsedVsClockTemplate(
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>2. The same span, counted two ways</h4>` +
     `<div class="gmt-gnss-frame" data-role="frame">` +
-    platesHtml("heroes", blankPlates()) +
-    `<div class="gmt-gnss-ruler" data-role="rulers" role="img" aria-label="">` +
-    rulerHtml("clock", "UTC clock", 2) +
-    rulerHtml("elapsed", "Elapsed", 1) +
-    `<div class="gmt-gnss-ruler-row"><span class="gmt-gnss-label" aria-hidden="true"></span>` +
-    `<div class="gmt-elapsed-ends" aria-hidden="true"><span data-role="ends-low"></span><span data-role="ends-high"></span></div></div>` +
+    `<div class="gmt-evc-eq" data-role="heroes" aria-hidden="true">${equationHtml(blankPlates())}</div>` +
+    `<div class="gmt-evc-figure" data-role="rulers" role="img" aria-label="">` +
+    `<div class="gmt-evc-dates" data-role="dates"></div>` +
+    rulerRowHtml("clock", "UTC clock", 2) +
+    tapeHtml("clock", 2) +
+    tapeHtml("elapsed", 1) +
+    rulerRowHtml("elapsed", "Seconds that passed", 1) +
+    `<div class="gmt-evc-ends" aria-hidden="true"><span data-role="ends-low"></span><span class="gmt-evc-ends-mid">not to scale between breaks</span><span data-role="ends-high"></span></div>` +
     `</div>` +
     `<ul class="gmt-elapsed-legend" aria-label="Legend">` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="2" aria-hidden="true"></i>the clock difference</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="1" aria-hidden="true"></i>the seconds that passed</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" aria-hidden="true"></i>an inserted second</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="2" aria-hidden="true"></i>counted by the clock</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="1" aria-hidden="true"></i>counted through TAI</li>` +
+    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="3" aria-hidden="true"></i>an inserted second</li>` +
     `</ul>` +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
@@ -298,43 +420,46 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     syncRange(sliderEl, sliderDate(position).slice(0, 10));
   }
 
+  /** What the last draw was for, so a change of width can draw the rulers again. */
+  let last: { state: ElapsedState; read: ElapsedRead } | null = null;
+  const frameEl = q<HTMLElement>("frame");
+
   function drawRulers(state: ElapsedState, read: ElapsedRead): void {
-    const placed = canDrawRulers(state);
-    const marks =
-      placed && read.count !== null ? rulerMarks(lib, state, read) : [];
-    for (const id of ["clock", "elapsed"] as const) {
-      const span = q(`span-${id}`);
-      const lit = id === "clock" ? read.clock !== null : read.elapsed !== null;
-      if (span) {
-        span.hidden = !(placed && lit);
-        span.style.setProperty("--from", "0%");
-        span.style.setProperty("--to", "100%");
-      }
-      const markEl = q(`marks-${id}`);
-      if (markEl) {
-        markEl.innerHTML = marks
-          .map((m) =>
-            id === "clock"
-              ? `<span class="gmt-cutoff-mark" data-insertion="${escapeAttr(m.insertion)}" style="--at: ${m.pct}%"></span>`
-              : `<span class="gmt-gnss-sliver gmt-gnss-hatch" data-series="1" data-insertion="${escapeAttr(m.insertion)}" style="--at: ${m.pct}%"></span>`,
-          )
-          .join("");
-      }
-      const chips = q(`chips-${id}`);
-      if (chips) {
-        chips.innerHTML = marks
-          .map(
-            (m) =>
-              `<span class="gmt-gnss-flag" style="--at: ${m.pct}%"><span class="gmt-cutoff-chip">${id === "clock" ? escapeHtml(m.insertion.slice(0, 7)) : "+1 s"}</span></span>`,
-          )
-          .join("");
-      }
-    }
-    const a = drawMs(state.start);
-    const b = drawMs(state.end);
+    last = { state, read };
+    const blank = read.clockCalls.length === 0;
+    const model: RulerModel | null = blank
+      ? null
+      : rulerModel(state, read, frameEl?.clientWidth ?? 0);
+    const placed = model !== null;
+    const clockOk = placed && read.clock !== null;
+    const elapsedOk = placed && read.elapsed !== null;
+
+    const fill = (role: string, html: string) => {
+      const el = q(role);
+      if (el) el.innerHTML = html;
+    };
+    const quiet = blank
+      ? `<span class="gmt-evc-hint">Give a start and an end.</span>`
+      : nosignalHtml();
+    fill("dates", model === null ? "" : rowHtml("dates", model));
+    fill("marks-clock", clockOk ? rowHtml("clock", model) : quiet);
+    fill("marks-elapsed", elapsedOk ? rowHtml("elapsed", model) : quiet);
+    fill("span-clock", clockOk ? rowHtml("tape-clock", model) : "");
+    fill("span-elapsed", elapsedOk ? rowHtml("tape-elapsed", model) : "");
+    const tapeClock = q("span-clock");
+    const tapeElapsed = q("span-elapsed");
+    // A tape that cannot be drawn keeps its height, so the figure holds still.
+    if (tapeClock) tapeClock.hidden = false;
+    if (tapeElapsed) tapeElapsed.hidden = false;
+    tapeClock?.toggleAttribute("data-empty", !clockOk);
+    tapeElapsed?.toggleAttribute("data-empty", !elapsedOk);
+    q("rulers")?.toggleAttribute("data-compressed", model?.compressed === true);
+
     const low = q("ends-low");
     const high = q("ends-high");
     if (low && high) {
+      const a = drawMs(state.start);
+      const b = drawMs(state.end);
       if (a === null || b === null) {
         low.textContent = "";
         high.textContent = "";
@@ -387,30 +512,6 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     }
   }
 
-  /** Chip rows are fitted against the measured width; the drawing is not redrawn. */
-  function fit(): void {
-    for (const id of ["clock", "elapsed"]) {
-      const row = q(`chips-${id}`);
-      if (!row) continue;
-      for (const flag of row.querySelectorAll<HTMLElement>(".gmt-gnss-flag")) {
-        flag.dataset["side"] = "mid";
-      }
-      thinTickLabels(row, ".gmt-gnss-flag");
-      // A chip at either end would leave the row, so it hangs inward.
-      const trackPx = row.clientWidth;
-      if (trackPx === 0) continue;
-      for (const flag of row.querySelectorAll<HTMLElement>(".gmt-gnss-flag")) {
-        const chip = flag.querySelector<HTMLElement>(".gmt-cutoff-chip");
-        if (!chip) continue;
-        const atPx =
-          (parseFloat(flag.style.getPropertyValue("--at")) / 100) * trackPx;
-        const half = layoutWidth(chip) / 2;
-        flag.dataset["side"] =
-          atPx - half < 0 ? "start" : atPx + half > trackPx ? "end" : "mid";
-      }
-    }
-  }
-
   function render(): void {
     const state = readState();
     const now = getUnixNow() ?? 0;
@@ -418,7 +519,7 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
 
     const heroes = q("heroes");
     if (heroes) {
-      heroes.innerHTML = elapsedPlates(read, state).map(plateHtml).join("");
+      heroes.innerHTML = equationHtml(elapsedPlates(read, state));
     }
     drawSlider(state, now);
     drawRulers(state, read);
@@ -441,7 +542,6 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     q("rulers")?.setAttribute("aria-label", text);
     const summary = q("summary");
     if (summary) summary.textContent = text;
-    fit();
   }
 
   function apply(state: ElapsedState): void {
@@ -476,8 +576,12 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
 
   wireCopyButtons(root);
 
-  const frame = q<HTMLElement>("frame");
-  const disposeWidth = frame ? onWidthChange(frame, fit) : () => {};
+  // A new width can change how many seconds the rulers have room to draw.
+  const disposeWidth = frameEl
+    ? onWidthChange(frameEl, () => {
+        if (last) drawRulers(last.state, last.read);
+      })
+    : () => {};
 
   syncPreset();
   render();

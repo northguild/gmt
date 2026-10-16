@@ -6,20 +6,21 @@
  * each clock's lead over UTC:
  *
  * 1. the controls (the value, a slider through the leap seconds, a preset);
- * 2. three plates (UTC, TAI minus UTC, the next change) over a bar for each
- *    clock, drawn from UTC to its lead on one scale;
+ * 2. the clock ladder: eight clocks as rungs on one vertical scale of seconds
+ *    ahead of UTC, TAI as the top rail, beside three plates (UTC, TAI minus
+ *    UTC, the next change);
  * 3. the table of every clock, always eight rows;
  * 4. the calls made and what they returned.
  *
  * The mount never computes a time. Every instant and lead comes from
  * `readClocks` (satellite-clock-converter.ts), which calls the library; the
- * bars only place what those calls returned.
+ * ladder only places what those calls returned.
  *
  * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
  * listener is delegated on the root, so the host dropping the subtree is a
  * complete teardown. The one drag handle is a native range, and the value field
- * is its typed equivalent. The plates, the eight bars and the eight rows keep
- * their boxes from one reading to the next.
+ * is its typed equivalent. The plates, the ladder's stage, its eight rows and
+ * the table's eight rows keep their boxes from one reading to the next.
  */
 import { codeFrameHtml } from "./code-frame";
 import { callResultsText, renderCalls } from "./edi-render";
@@ -28,6 +29,7 @@ import { loadGnssLib, type GnssLib } from "./gnss-lib";
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import {
+  CLOCK_GLYPHS,
   CLOCK_KEYS,
   CLOCK_LINKS,
   CLOCK_PRESETS,
@@ -35,11 +37,21 @@ import {
   DEFAULT_PRESET,
   GLO_NOTE,
   IRN_NOTE,
+  LADDER,
+  LADDER_NONE_NOTE,
+  LADDER_NO_SIGNAL,
+  PLATE_NO_SIGNAL,
+  offReserve,
   MAX_VALUE_LENGTH,
   NO_RESULT_TEXT,
-  barsAria,
   clockHandoffs,
+  clockTies,
+  emptyRead,
   isSeeded,
+  ladderAria,
+  ladderChip,
+  ladderLayout,
+  ladderSpan,
   matchPreset,
   permalinkOf,
   platesOf,
@@ -49,11 +61,16 @@ import {
   rowSentence,
   sliderPositions,
   summaryText,
+  tieTag,
   type ClockRead,
+  type ClockTie,
+  type LadderLayout,
+  type ClockKey,
   type ClockRow,
   type ClockState,
   type SatelliteClockConverterArgs,
 } from "./satellite-clock-converter";
+import type { GnssSystem } from "./gnss-names";
 import { INTEGER_UTC_FROM } from "./timescale-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
@@ -87,16 +104,99 @@ function presetOptionsHtml(presetId: string): string {
   );
 }
 
-/** One bar, empty: the label, a track with a hidden fill, and the value chip. */
-function barRowHtml(key: string): string {
+/** The ladder's drawing is this wide; the rows start just past it. */
+const DRAWING_WIDTH = LADDER.axis + LADDER.rail + LADDER.gutter;
+
+/** One clock's row on the ladder, empty: its mark, name, tie, lead and reading. */
+function ladderRowHtml(key: ClockKey, top: number): string {
   return (
-    `<div class="gmt-gnss-bar-row" data-role="bar-row" data-row="${escapeAttr(key)}">` +
-    `<span class="gmt-gnss-label">${escapeHtml(key)}</span>` +
-    `<div class="gmt-gnss-track"><i class="gmt-gnss-bar" data-role="bar-fill" hidden></i></div>` +
-    `<span class="gmt-cutoff-chip gmt-gnss-value" data-role="bar-value">${NBSP}</span>` +
+    `<div class="gmt-clad-row" data-role="bar-row" data-row="${escapeAttr(key)}" style="top:${top}px">` +
+    `<span class="gmt-clad-glyph" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">${CLOCK_GLYPHS[key]}</svg></span>` +
+    `<span class="gmt-gnss-label gmt-clad-key">${escapeHtml(key)}</span>` +
+    `<span class="gmt-clad-tie" data-role="bar-tie">${escapeHtml(tieTag(key, null)) || NBSP}</span>` +
+    `<span class="gmt-cutoff-chip gmt-clad-lead" data-role="bar-value">${NBSP}</span>` +
+    `<span class="gmt-clad-reading" data-role="bar-reading">${NBSP}</span>` +
     `</div>`
   );
 }
+
+/**
+ * The ladder's drawing: the rail with a tick for each second of the scale (lit
+ * up to TAI), the baseline at UTC and TAI as the top rail, a marker on the rail
+ * for every rung and a leader to its block of rows. Pixels, from `LADDER`.
+ */
+export function ladderSvgHtml(layout: LadderLayout): string {
+  const { axis, rail, gutter, step } = LADDER;
+  const { base, scaleTop, taiY, height } = layout;
+  const edge = axis + rail;
+  const centre = axis + rail / 2;
+  const lit = taiY === null ? base : taiY;
+  const ticks: string[] = [];
+  const labels: string[] = [];
+  for (let s = 0; base - s * step >= scaleTop - 0.001; s++) {
+    const y = base - s * step;
+    const major = s % 5 === 0;
+    const on = y >= lit - 0.001;
+    ticks.push(
+      `<path class="gmt-clad-tick${on ? " is-lit" : ""}${major ? " is-major" : ""}" d="M${axis} ${y}h${major ? 8 : 4}"/>`,
+    );
+    if (s % 10 === 0) {
+      labels.push(
+        `<text class="gmt-clad-axis" x="${axis - 6}" y="${y}" text-anchor="end" dominant-baseline="central">${s === 0 ? "0" : `+${s}`}</text>`,
+      );
+    }
+  }
+  const rungs = layout.rungs
+    .map((r) => {
+      const cy = r.top + (r.keys.length * LADDER.row) / 2;
+      const bend = edge + gutter / 2;
+      return (
+        `<path class="gmt-clad-leader" d="M${edge} ${r.y}H${bend}L${DRAWING_WIDTH} ${cy}"/>` +
+        `<rect class="gmt-clad-mark" x="${centre - 4}" y="${r.y - 4}" width="8" height="8"/>`
+      );
+    })
+    .join("");
+  const unit = (n: number) => Math.round(n * 100) / 100;
+  return (
+    `<svg class="gmt-clad-svg" data-role="ladder-svg" aria-hidden="true" focusable="false" width="${DRAWING_WIDTH}" height="${unit(height)}" viewBox="0 0 ${DRAWING_WIDTH} ${unit(height)}">` +
+    `<rect class="gmt-clad-track" x="${axis}" y="${scaleTop}" width="${rail}" height="${base - scaleTop}"/>` +
+    (taiY === null
+      ? ""
+      : `<rect class="gmt-clad-lit" x="${axis}" y="${taiY}" width="${rail}" height="${base - taiY}"/>`) +
+    ticks.join("") +
+    labels.join("") +
+    `<path class="gmt-clad-baseline" d="M${axis - 4} ${base}H${DRAWING_WIDTH}"/>` +
+    (taiY === null
+      ? ""
+      : `<path class="gmt-clad-toprail" d="M${axis - 4} ${taiY}H${DRAWING_WIDTH}"/>`) +
+    rungs +
+    `</svg>`
+  );
+}
+
+/** The ladder, empty: the stage, its drawing and the eight rows at rest. */
+function ladderHtml(): string {
+  const layout = ladderLayout(emptyRead(), 0);
+  return (
+    `<div class="gmt-clad" data-role="bars" role="img" aria-label="No ladder to draw">` +
+    `<div class="gmt-clad-stage" data-role="ladder" style="--clad-h:${layout.height}px;--clad-w:${DRAWING_WIDTH}px">` +
+    ladderSvgHtml(layout) +
+    CLOCK_KEYS.map((key) => ladderRowHtml(key, layout.tops[key])).join("") +
+    `<span class="gmt-clad-nosignal" data-role="ladder-sentinel" hidden>${LADDER_NO_SIGNAL}</span>` +
+    `</div>` +
+    `<div class="gmt-clad-off" data-role="ladder-off" data-empty hidden><p class="gmt-clad-off-title">No place on the scale</p></div>` +
+    `<ul class="gmt-gnss-visually-hidden" data-role="bar-list"></ul>` +
+    `</div>`
+  );
+}
+
+/** What the ladder's two kinds of mark mean, in words and in outline. */
+const LEGEND_HTML =
+  `<div class="gmt-clad-legend" data-role="ladder-legend">` +
+  `<p class="gmt-clad-legend-title">Seconds ahead of UTC</p>` +
+  `<p class="gmt-clad-legend-item" data-tie="tai"><span class="gmt-clad-glyph" aria-hidden="true"></span>Tied to TAI: climbs one second each time UTC inserts one.</p>` +
+  `<p class="gmt-clad-legend-item" data-tie="utc"><span class="gmt-clad-glyph" aria-hidden="true"></span>Follows UTC: stays level with it.</p>` +
+  `</div>`;
 
 /** One table row, empty. Every cell holds two lines so a row never changes height. */
 function tableRowHtml(key: string): string {
@@ -160,10 +260,8 @@ export function renderSatelliteClockConverterTemplate(
     `<h4>2. How far each clock is from UTC</h4>` +
     `<div class="gmt-gnss-frame" data-role="frame">` +
     platesHtml("heroes", platesOf(null)) +
-    `<div class="gmt-gnss-bars" data-role="bars" role="img" aria-label="No bars to draw">` +
-    CLOCK_KEYS.map(barRowHtml).join("") +
-    `<ul class="gmt-gnss-visually-hidden" data-role="bar-list"></ul>` +
-    `</div>` +
+    ladderHtml() +
+    LEGEND_HTML +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
     `<div data-role="reason-aside" data-grow="slot"></div>` +
@@ -224,6 +322,8 @@ function rowHtml(row: ClockRow): string {
   );
 }
 
+const TIE_ATTR = (tie: ClockTie) => tie ?? "";
+
 function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   const q = <T extends HTMLElement>(role: string) =>
     root.querySelector(`[data-role="${role}"]`) as T | null;
@@ -234,6 +334,11 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   const sliderEl = q<HTMLInputElement>("moment-slider")!;
 
   const positions = sliderPositions(lib);
+  // How long the ladder gets, and which clocks climb it, from the library
+  // at every stop of the slider.
+  const span = ladderSpan(lib, positions);
+  const reserve = offReserve(lib, positions);
+  const ties = clockTies(lib, positions);
   sliderEl.min = "0";
   sliderEl.max = String(Math.max(0, positions.length - 1));
   const ends = root.querySelector<HTMLElement>(".gmt-range-ends");
@@ -276,27 +381,59 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
   function drawPlates(read: ClockRead): void {
     const heroes = q("heroes");
-    if (heroes) heroes.innerHTML = read.plates.map(plateHtml).join("");
+    if (!heroes) return;
+    heroes.innerHTML = read.plates.map(plateHtml).join("");
+    if (read.status !== "sentinel") return;
+    for (const none of heroes.querySelectorAll(".gmt-punct-hero-none")) {
+      none.textContent = PLATE_NO_SIGNAL;
+      none.classList.add("gmt-clad-plate-lost");
+    }
   }
 
-  function drawBars(read: ClockRead): void {
-    qa<HTMLElement>("bar-row").forEach((el, i) => {
-      const row = read.rows[i]!;
-      const fill = el.querySelector<HTMLElement>('[data-role="bar-fill"]')!;
-      const size = row.bar ?? 0;
-      fill.hidden = size === 0;
-      fill.style.setProperty("--size", `${size}%`);
-      if (row.yours) {
-        el.setAttribute("data-series", "1");
-        fill.setAttribute("data-series", "1");
-      } else {
-        el.removeAttribute("data-series");
-        fill.removeAttribute("data-series");
-      }
+  function drawLadder(read: ClockRead): void {
+    const layout = ladderLayout(read, span);
+    const stage = q("ladder");
+    if (stage) {
+      stage.style.setProperty("--clad-h", `${layout.height}px`);
+      const old = stage.querySelector('[data-role="ladder-svg"]');
+      if (old) old.outerHTML = ladderSvgHtml(layout);
+    }
+    const group = q("ladder-off");
+    const keyed = qa<HTMLElement>("bar-row");
+    keyed.forEach((el) => {
+      const row = read.rows.find((r) => r.key === el.dataset["row"])!;
+      const parked = layout.off.includes(row.key);
+      const home = parked ? group : q("ladder");
+      if (home && el.parentElement !== home) home.appendChild(el);
+      const ok = read.status === "ok";
+      const tie: ClockTie =
+        row.key === "UTC" || row.key === "TAI" ? null : ties[row.key as GnssSystem];
+      el.style.top = parked ? "" : `${layout.tops[row.key]}px`;
+      el.toggleAttribute("data-off", parked);
+      if (tie === null) el.removeAttribute("data-tie");
+      else el.setAttribute("data-tie", TIE_ATTR(tie));
+      if (row.yours) el.setAttribute("data-series", "1");
+      else el.removeAttribute("data-series");
+      el.title = ok ? rowSentence(row) : "";
+      el.querySelector<HTMLElement>('[data-role="bar-tie"]')!.textContent =
+        tieTag(row.key, tie) || " ";
       el.querySelector<HTMLElement>('[data-role="bar-value"]')!.textContent =
-        read.status === "ok" ? row.leadText : " ";
+        ok ? ladderChip(row) : " ";
+      el.querySelector<HTMLElement>('[data-role="bar-reading"]')!.textContent =
+        !ok ? " " : row.none ? LADDER_NONE_NOTE : row.reading;
     });
-    q("bars")?.setAttribute("aria-label", barsAria(read));
+    if (group) {
+      group.hidden = reserve === 0 && layout.off.length === 0;
+      group.style.setProperty(
+        "--clad-off-n",
+        String(Math.max(reserve, layout.off.length)),
+      );
+      group.toggleAttribute("data-empty", layout.off.length === 0);
+    }
+    const lost = q("ladder-sentinel");
+    if (lost) lost.hidden = read.status !== "sentinel";
+    stage?.toggleAttribute("data-lost", read.status === "sentinel");
+    q("bars")?.setAttribute("aria-label", ladderAria(read));
     const list = q("bar-list");
     if (list) {
       list.innerHTML =
@@ -323,7 +460,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   function render(): void {
     const read = readClocks(lib, readState());
     drawPlates(read);
-    drawBars(read);
+    drawLadder(read);
     drawTable(read);
 
     renderCalls(q("call-clocks"), read.calls);

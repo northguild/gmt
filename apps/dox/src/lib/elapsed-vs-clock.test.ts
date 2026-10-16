@@ -16,7 +16,7 @@ import {
   readArgs,
   readElapsed,
   resultsText,
-  rulerMarks,
+  rulerModel,
   summaryText,
 } from "./elapsed-vs-clock";
 
@@ -226,8 +226,8 @@ describe("plates and sentences", () => {
     ]) {
       expect(plates.map((x) => x.role)).toEqual([
         "hero-clock",
-        "hero-elapsed",
         "hero-count",
+        "hero-elapsed",
       ]);
       expect(plates.every((x) => x.lines.length === 2)).toBe(true);
     }
@@ -236,8 +236,8 @@ describe("plates and sentences", () => {
   it("writes the first preset's numbers in words", () => {
     const state = presetState(ELAPSED_PRESETS[0]!);
     const plates = elapsedPlates(readElapsed(lib, state), state);
-    expect(plates.map((x) => x.value)).toEqual(["2 s", "3 s", "1"]);
-    expect(plates[2]!.lines).toEqual(["from 2016-12-31", "to 2017-01-01"]);
+    expect(plates.map((x) => x.value)).toEqual(["2 s", "1", "3 s"]);
+    expect(plates[1]!.lines).toEqual(["from 2016-12-31", "to 2017-01-01"]);
   });
 
   it("says a no signal in the summary with its reason", () => {
@@ -264,26 +264,61 @@ describe("plates and sentences", () => {
 });
 
 describe("the rulers", () => {
-  it("places each counted second between the earlier and the later end", () => {
-    const state = presetState(ELAPSED_PRESETS[0]!);
-    const marks = rulerMarks(lib, state, readElapsed(lib, state));
-    expect(marks).toHaveLength(1);
-    expect(marks[0]!.insertion).toBe("2016-12-31T23:59:60Z");
-    // The span runs 23:59:59 to 00:00:01, and the mark is at 00:00:00.
-    expect(marks[0]!.pct).toBe(50);
+  const model = (i: number, width: number) => {
+    const state = presetState(ELAPSED_PRESETS[i]!);
+    return rulerModel(state, readElapsed(lib, state), width);
+  };
+  const leapCells = (m: NonNullable<ReturnType<typeof model>>) =>
+    m.pieces
+      .flatMap((p) => (p.kind === "run" ? p.cells : []))
+      .filter((c) => c.leap);
+
+  it("draws every second of a short span, the inserted one stretched", () => {
+    const m = model(0, 600)!;
+    expect(m.compressed).toBe(false);
+    expect(m.leaps).toBe(1);
+    expect(m.clockSeconds).toBe(2);
+    expect(m.pieces.every((p) => p.kind === "run")).toBe(true);
+    const cells = m.pieces.flatMap((p) => (p.kind === "run" ? p.cells : []));
+    expect(cells).toHaveLength(3);
+    expect(cells.map((c) => c.leap)).toEqual([false, true, false]);
+    expect(cells[1]!.time).toBe("23:59:60");
+    expect(cells[1]!.basis).toBeGreaterThan(cells[0]!.basis);
+  });
+
+  it("keeps each inserted second of a long span as its own cell", () => {
+    const m = model(2, 598)!;
+    expect(m.compressed).toBe(true);
+    expect(leapCells(m)).toHaveLength(5);
+    expect(m.pieces.some((p) => p.kind === "break")).toBe(true);
+  });
+
+  it("says how many when the width cannot hold them", () => {
+    const m = model(2, 330)!;
+    const many = m.pieces.filter((p) => p.kind === "many");
+    expect(many).toHaveLength(1);
+    expect(many[0]).toMatchObject({ count: 5 });
   });
 
   it("draws a backwards span the same way round", () => {
-    const fwd = presetState(ELAPSED_PRESETS[2]!);
-    const back = presetState(ELAPSED_PRESETS[4]!);
-    expect(rulerMarks(lib, back, readElapsed(lib, back))).toEqual(
-      rulerMarks(lib, fwd, readElapsed(lib, fwd)),
-    );
+    expect(model(4, 598)).toEqual(model(2, 598));
+  });
+
+  it("draws a span with no insertion as a plain run", () => {
+    const m = model(3, 598)!;
+    expect(m.leaps).toBe(0);
+    expect(leapCells(m)).toHaveLength(0);
+  });
+
+  it("starts on the inserted second", () => {
+    const m = model(1, 600)!;
+    expect(m.leaps).toBe(1);
+    expect(leapCells(m)).toHaveLength(1);
   });
 
   it("draws nothing for an end it cannot place", () => {
     const state = { start: "garbage", end: "2024-01-01T00:00:00Z" };
     expect(canDrawRulers(state)).toBe(false);
-    expect(rulerMarks(lib, state, readElapsed(lib, state))).toEqual([]);
+    expect(rulerModel(state, readElapsed(lib, state), 600)).toBeNull();
   });
 });

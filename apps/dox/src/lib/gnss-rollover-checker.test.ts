@@ -264,7 +264,12 @@ describe("the two firmware models", () => {
     expect(r.strip!.start).toBe("2020-01-01T00:00:00Z");
     expect(r.strip!.wrongFrom).toBe("2039-08-17T00:00:00Z");
     expect(r.strip!.end).toBe("2059-04-02T00:00:00Z");
-    expect(r.strip!.split).toBeCloseTo(50, 0);
+    // The window sits on the 1980 to 2170 timeline: 2020 is a fifth of the way.
+    expect(r.strip!.span.from).toBeCloseTo(21, 0);
+    expect(r.strip!.span.wrong).toBeCloseTo(31.5, 0);
+    expect(r.strip!.span.end).toBeCloseTo(41.5, 0);
+    // The check date is before the wrong-from date, so some fuse is left.
+    expect(r.strip!.fuse!.to).toBe(r.strip!.span.wrong);
     expect(r.strip!.marks.map((m) => [m.key, m.at])).toEqual([
       ["start", "2020-01-01T00:00:00Z"],
       ["wrap", "2038-11-20T23:59:42Z"],
@@ -284,12 +289,63 @@ describe("the two firmware models", () => {
     expect(r.strip!.marks[1]!.label).toBe("the counter wraps, wrong from");
   });
 
-  it("leaves a mark outside the window without a place", () => {
+  it("leaves a mark outside the timeline without a place", () => {
     const r = read({
       ...preset("navic-built-2020"),
-      date: "2010-01-01T00:00:00Z",
+      date: "2200-01-01T00:00:00Z",
     });
     expect(r.strip!.marks.find((m) => m.key === "check")!.pos).toBeNull();
+    expect(r.strip!.fuse).toBeNull();
+  });
+});
+
+describe("the fuse timeline", () => {
+  const groups = () => read(preset("navic-built-2020")).fuse!.groups;
+
+  it("has one track per counter, grouped by width", () => {
+    expect(
+      groups().map((g) => [g.bits, g.tracks.map((t) => t.counter)]),
+    ).toEqual([
+      [10, ["GPS-LNAV", "QZS-LNAV", "IRN-LNAV"]],
+      [12, ["GAL"]],
+      [13, ["GPS-CNAV", "BDT", "QZS-CNAV", "IRN-L1NV"]],
+    ]);
+    expect(groups()[0]!.label).toBe("10-bit counters, weeks below 1024");
+  });
+
+  it("marks each track's next wrap, and the earlier ones past", () => {
+    const tracks = groups().flatMap((g) => g.tracks);
+    const irn = tracks.find((t) => t.counter === "IRN-LNAV")!;
+    expect(irn.yours).toBe(true);
+    expect(irn.wraps.find((w) => w.state === "next")!.at).toBe(
+      "2038-11-20T23:59:42Z",
+    );
+    // IRN-LNAV began in 1999, so its first wrap, in 2019, has gone.
+    expect(irn.wraps.filter((w) => w.state === "past")).toHaveLength(1);
+    const gps = tracks.find((t) => t.counter === "GPS-LNAV")!;
+    expect(gps.wraps.filter((w) => w.state === "past").length).toBe(2);
+    expect(
+      tracks.filter((t) => t.wraps.some((w) => w.state === "next")),
+    ).toHaveLength(8);
+  });
+
+  it("reaches the last first wrap of any counter", () => {
+    const bdt = groups()
+      .flatMap((g) => g.tracks)
+      .find((t) => t.counter === "BDT")!;
+    expect(bdt.wraps[0]!.at).toBe("2163-01-01T23:59:56Z");
+  });
+
+  it("places today on the timeline, in either mode", () => {
+    expect(read(preset("navic-built-2020")).fuse!.today).toBeCloseTo(24.5, 0);
+  });
+
+  it("gives the countdown in parts, and says when it is past", () => {
+    const now = read(preset("navic-built-2020")).countdown!;
+    expect(now).toMatchObject({ past: false });
+    expect(now.days).toBeGreaterThan(4000);
+    const later = read(preset("navic-built-2020-after-wrap")).countdown!;
+    expect(later.past).toBe(true);
   });
 });
 

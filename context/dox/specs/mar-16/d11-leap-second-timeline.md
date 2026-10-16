@@ -31,15 +31,26 @@ for `check`: `hasSecond60`, `isLeapSecond`, `isValidInstant`; `leapSecondsBetwee
 nothing was inserted at the end of that day" (`hasSecond60` only); "a valid instant, but not a
 second 60" (`isValidInstant`); otherwise `NO SIGNAL`, "This is not an ISO 8601 instant."
 
-**Template.** Three sections: the inputs; a `.gmt-gnss-frame` with three pinned plates
-(`hero-offset` "TAI − UTC on the date", sub "next insertion" or "none after this date";
-`hero-between` "Leap seconds between", sub the two dates; `hero-check` "Your second 60", the
-verdict word) over **the timeline** (`role="img"`, a hidden list): a year axis, the TAI − UTC step
-line, a mark per insertion with fitted chips (`label-fit.ts`), the date's pin, the `from`–`to` band
-hatched with its counted marks lit, the checked second lit when it is an insertion, and a
-"continuous UTC from 2027-05-20" mark with a dashed edge and its chip; then **`insertions-table`**
-(Inserted second, TAI − UTC after), every row always rendered, the counted rows marked; the calls;
-the links row.
+**Template.** Three sections: the inputs; a `.gmt-gnss-frame` holding **the staircase** (`role="img"`,
+its `aria-label` the reading in words, plus a hidden list); the legend; three pinned plates
+(`hero-offset` "TAI − UTC on the date", `hero-between` "Leap seconds between", `hero-check` "Your
+second 60"); then **`insertions-table`** (Inserted second, TAI − UTC after), every row always rendered,
+the counted rows marked; the calls; the links row.
+
+The staircase is a step chart of TAI − UTC from 1972 (the library's first offset) to the last
+inserted second, with a y axis in seconds, gridlines, a filled area, and one riser and one dot per
+insertion, every value from `insertions`, `secondAfter` and `taiMinusUtc`. A year axis labels it every
+five years, and the lit insertions carry fitted chips (`label-fit.ts`). Beyond the last riser the line
+runs flat to a hatched, dashed-edge end cap with the chip "continuous UTC from 2027-05-20". Overlays:
+the date is a vertical cursor with a dot on the step, a dashed guide back to the y axis and a readout
+("2000-01-01 · 32 s") in a strip above the data; the `from`–`to` span is a hatched band whose
+counted risers and dots are thickened and whose readout counts them ("5 leap seconds counted"); a
+checked insertion is a lit riser in the third series colour; a checked second 60 that was never
+inserted is a dashed, struck-through ghost riser labelled "never inserted" at its day. When a
+reading is asked for and the library gives no value, an amber bracketed plate "⟨ NO SIGNAL — invalid
+input ⟩" sits in the plot; a legitimately empty result (no insertion after a date) does not raise it.
+Readouts are clamped inside the plot and use tabular figures. At container widths under 34rem the
+plot is shorter and the y column narrower.
 
 **Presets** († = built timescale JSDoc):
 

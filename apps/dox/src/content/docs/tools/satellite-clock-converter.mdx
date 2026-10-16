@@ -1,7 +1,7 @@
 ---
 title: Satellite Clock Converter
 description: Read a time on one clock and see it on seven more. Give a UTC instant or a TAI, GPS, Galileo, BeiDou, QZSS, GLO or NavIC reading, and see how far each clock is from UTC.
-industries: [gnss, maritime]
+industries: [gnss]
 ---
 
 import SatelliteClockConverter from "../../../components/SatelliteClockConverter.astro";
@@ -40,11 +40,11 @@ Type a UTC instant, or a reading followed by a space and its clock: `TAI`, `GPS`
 **Gaps that stay.** The gaps are 37 seconds for TAI, 18 for GPS, Galileo, QZS and NavIC, 4 for BeiDou and 0 for GLO. They stay as they are until UTC inserts another second, which the first plate shows as the next change.
 
 ```ts
-utcToGnss("GPS", "2024-01-01T00:00:00Z");              // "2024-01-01T00:00:18 GPS"
-utcToGnss("BDT", "2024-01-01T00:00:00Z");              // "2024-01-01T00:00:04 BDT"
-gnssToUtc("BDT", "2024-01-01T00:00:04 BDT");           // "2024-01-01T00:00:00Z"
-toTAI("2024-01-01T00:00:00Z");                         // "2024-01-01T00:00:37 TAI"
-fromTAI("2026-01-01T00:00:37 TAI");                    // "2026-01-01T00:00:00Z"
+utcToGnss("GPS", "2024-01-01T00:00:00Z"); // "2024-01-01T00:00:18 GPS"
+utcToGnss("BDT", "2024-01-01T00:00:00Z"); // "2024-01-01T00:00:04 BDT"
+gnssToUtc("BDT", "2024-01-01T00:00:04 BDT"); // "2024-01-01T00:00:00Z"
+toTAI("2024-01-01T00:00:00Z"); // "2024-01-01T00:00:37 TAI"
+fromTAI("2026-01-01T00:00:37 TAI"); // "2026-01-01T00:00:00Z"
 ```
 
 **Reference:** [`utcToGnss`](/reference/gnss/convert/utcToGnss/), [`gnssToUtc`](/reference/gnss/convert/gnssToUtc/), [`toTAI`](/reference/timescale/convert/toTAI/), [`fromTAI`](/reference/timescale/convert/fromTAI/), [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/), [`nextLeapSecond`](/reference/timescale/calculate/nextLeapSecond/). The rules are in [GNSS: System Time and Week Rollover](/guides/industries/gnss-system-time-and-week-rollover/) and [Maritime: GNSS Time and Week Rollover](/guides/industries/maritime-gnss-time-and-week-rollover/).

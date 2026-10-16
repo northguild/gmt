@@ -15,8 +15,9 @@
  * - `leadOverUtc` (`gnss-widgets.ts`) and `taiMinusUtc` give the leads;
  * - `nextLeapSecond` gives the next change.
  *
- * The only numbers written here are drawing: a bar's width is a clock's lead
- * as a fraction of TAI's, the longest.
+ * The only numbers written here are drawing: the ladder's pixels per second,
+ * its row height and its margins. Where a clock stands on the ladder is its
+ * lead in seconds, as the library measured it.
  *
  * Naming rule: GMT tracks no law, and the UI names no body. Clocks are named
  * by their RINEX tokens (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`) and `TAI`.
@@ -256,8 +257,6 @@ export interface ClockRow {
   lead: ClockLead;
   /** The lead as words: "37 s", "inside an inserted second", "no result". */
   leadText: string;
-  /** The bar's width as a percentage of the track, or `null` for no bar. */
-  bar: number | null;
   /** The tags beside the clock's name: "your reading", "derived". */
   tags: string[];
 }
@@ -368,7 +367,6 @@ function emptyRows(): ClockRow[] {
     writtenAs: null,
     lead: { kind: "none" },
     leadText: "",
-    bar: null,
     tags: key === "IRN" ? [DERIVED_TAG] : [],
   }));
 }
@@ -394,6 +392,21 @@ function blank(
     footnote: "",
     calls,
   };
+}
+
+/** The converter before anything is typed: eight empty rows, no reading. */
+export function emptyRead(): ClockRead {
+  return blank({ value: "" }, "empty", EMPTY_TEXT, null, []);
+}
+
+/** What a ladder row says under its name when the clock has no reading. */
+export const LADDER_NONE_NOTE = "before its first instant";
+
+/** The chip on a ladder row: the table's words, shortened where a lead is not seconds. */
+export function ladderChip(row: ClockRow): string {
+  return row.lead.kind === "inside" && !row.none
+    ? "inserted second"
+    : row.leadText;
 }
 
 /**
@@ -509,30 +522,11 @@ export function readClocks(lib: GnssLib, state: ClockState): ClockRead {
       writtenAs,
       lead,
       leadText: reading === "" ? NO_RESULT_TEXT : leadWords(lead),
-      bar: null,
       tags: [
         yours ? "your reading" : "",
         key === "IRN" ? DERIVED_TAG : "",
       ].filter(Boolean),
     };
-  });
-
-  // Bars: one scale, whose end is TAI's lead (or the longest present).
-  const numbers = rows.map((r) =>
-    r.lead.kind === "seconds" ? Number(r.lead.seconds) : null,
-  );
-  const tai_i = CLOCK_KEYS.indexOf("TAI");
-  const end =
-    numbers[tai_i] ??
-    Math.max(0, ...numbers.filter((n): n is number => n !== null));
-  rows.forEach((row, i) => {
-    const n = numbers[i];
-    row.bar =
-      row.lead.kind === "reference"
-        ? 0
-        : n === null || n === undefined || !(end > 0)
-          ? null
-          : Math.min(100, Math.max(0, (n / end) * 100));
   });
 
   const missing = rows.filter((r) => r.none).map((r) => r.key);
@@ -568,12 +562,326 @@ export function readClocks(lib: GnssLib, state: ClockState): ClockRead {
 // Output
 // ---------------------------------------------------------------------------
 
-/** The sentence a screen reader hears when the bars change. */
-export function barsAria(read: ClockRead): string {
-  if (read.status !== "ok") {
-    return read.failure ?? read.emptyText ?? "No bars to draw";
+// ---------------------------------------------------------------------------
+// The clock ladder
+// ---------------------------------------------------------------------------
+
+/**
+ * The ladder's drawing, in pixels. Nothing here is a time: a clock stands
+ * `step` pixels above the baseline for each second it leads UTC by, and its
+ * lead is the library's.
+ */
+export const LADDER = {
+  /** Pixels per second of lead. */
+  step: 11,
+  /** The height one clock's row takes, and the gap between two blocks of rows. */
+  row: 48,
+  gap: 4,
+  /** Room above the longest scale and below the baseline. */
+  padTop: 28,
+  padBottom: 52,
+  /** The least space between a row and the ladder's top or bottom edge. */
+  edge: 4,
+  /** The three columns of the drawing: second labels, the rail, the leaders. */
+  axis: 30,
+  rail: 18,
+  gutter: 26,
+} as const;
+
+/** How a clock keeps time against the others, as the library shows it. */
+export type ClockTie = "tai" | "utc" | null;
+
+export const TIE_TEXT = {
+  tai: "tied to TAI",
+  utc: "follows UTC",
+} as const;
+
+/**
+ * One small mark for each clock, drawn on a 16-unit square in the ink colour:
+ * a dial for UTC, a plain square for TAI, then a different outline for each
+ * system. A mark identifies a clock beside its name; none is a flag and none
+ * is the default.
+ */
+export const CLOCK_GLYPHS: Record<ClockKey, string> = {
+  UTC: '<circle cx="8" cy="8" r="5.5"/><path d="M8 4.8V8l2.4 1.6"/>',
+  TAI: '<rect x="3" y="3" width="10" height="10"/><path d="M3 8h10"/>',
+  GPS: '<path d="M8 2.6 14 13.4H2Z"/>',
+  GAL: '<path d="M8 2 14 8 8 14 2 8Z"/>',
+  BDT: '<path d="M8 2 13.2 5v6L8 14 2.8 11V5Z"/>',
+  QZS: '<path d="M2.8 12a5.2 5.2 0 0 1 10.4 0"/><circle cx="8" cy="5.2" r="1.3"/>',
+  GLO: '<path d="M8 2.2v11.6M2.2 8h11.6"/>',
+  IRN: '<path d="M8 2 13.8 6.2 11.6 13.4H4.4L2.2 6.2Z"/>',
+};
+
+/** What each row says beside its name: the two ends of the ladder, then each system's tie. */
+export function tieTag(key: ClockKey, tie: ClockTie): string {
+  if (key === "UTC") return "baseline";
+  if (key === "TAI") return "top rail";
+  return tie === null ? "" : TIE_TEXT[tie];
+}
+
+/**
+ * Which satellite clocks move with TAI and which keep UTC's hours, read from
+ * the library over every stop of the slider. A clock is tied to TAI when its
+ * distance from TAI is the same at every stop (`taiMinusUtc` less its lead),
+ * and follows UTC when its lead is the same at every stop. A clock the library
+ * reads at fewer than two stops, or one that does neither, is `null`.
+ */
+export function clockTies(
+  lib: GnssLib,
+  positions: readonly string[],
+): Record<GnssSystem, ClockTie> {
+  const ties = {} as Record<GnssSystem, ClockTie>;
+  for (const system of GNSS_SYSTEMS) {
+    const leads: number[] = [];
+    const fromTai: number[] = [];
+    for (const utc of positions) {
+      const label = lib.utcToGnss(system, utc);
+      const tai = lib.taiMinusUtc(utc);
+      if (label === "" || tai === null) continue;
+      const found = leadOverUtc(lib, utc, label);
+      if (found.kind !== "lead") continue;
+      const seconds = durationSecondsText(found.duration);
+      if (seconds === null) continue;
+      leads.push(Number(seconds));
+      fromTai.push(tai - Number(seconds));
+    }
+    const same = (list: number[]) => list.every((n) => n === list[0]);
+    ties[system] =
+      leads.length < 2
+        ? null
+        : same(fromTai)
+          ? "tai"
+          : same(leads)
+            ? "utc"
+            : null;
   }
-  return `${read.rows.length} bars, one for each clock, drawn from UTC to its lead: ${read.rows.map(rowSentence).join("; ")}.`;
+  return ties;
+}
+
+/**
+ * The longest scale the ladder has to hold, in seconds: the largest
+ * `taiMinusUtc` over the slider's stops. The stage reserves this height for
+ * good, so the ladder grows inside a box that does not move.
+ */
+export function ladderSpan(
+  lib: Pick<GnssLib, "taiMinusUtc">,
+  positions: readonly string[],
+): number {
+  return Math.max(
+    0,
+    ...positions
+      .map((utc) => lib.taiMinusUtc(utc))
+      .filter((n): n is number => n !== null),
+  );
+}
+
+/** One rung: the clocks that stand the same number of seconds from UTC. */
+export interface LadderRung {
+  seconds: number;
+  keys: ClockKey[];
+}
+
+/**
+ * The rungs of a reading, highest first, and the clocks that have no place on
+ * the scale: no reading, or inside an inserted second, where a lead is not a
+ * number of seconds. UTC is the baseline rung at 0. Clocks on one rung keep
+ * the table's order.
+ */
+export function ladderRungs(read: ClockRead): {
+  rungs: LadderRung[];
+  off: ClockKey[];
+} {
+  const rungs = new Map<number, ClockKey[]>();
+  const off: ClockKey[] = [];
+  if (read.status !== "ok") return { rungs: [], off };
+  for (const row of read.rows) {
+    const seconds =
+      row.lead.kind === "reference"
+        ? 0
+        : row.lead.kind === "seconds"
+          ? Number(row.lead.seconds)
+          : null;
+    if (row.none || seconds === null || !(seconds >= 0)) {
+      off.push(row.key);
+      continue;
+    }
+    rungs.set(seconds, [...(rungs.get(seconds) ?? []), row.key]);
+  }
+  return {
+    rungs: [...rungs]
+      .sort((a, b) => b[0] - a[0])
+      .map(([seconds, keys]) => ({ seconds, keys })),
+    off,
+  };
+}
+
+/**
+ * The most clocks any slider stop leaves off the scale, read from the library
+ * at every stop. The group under the ladder reserves this many rows, so a drag
+ * never moves what is below it.
+ */
+export function offReserve(lib: GnssLib, positions: readonly string[]): number {
+  return Math.max(
+    0,
+    ...positions.map((value) => ladderRungs(readClocks(lib, { value })).off.length),
+  );
+}
+
+/** The signal-lost text, in the stage and (short) on the plates. */
+export const LADDER_NO_SIGNAL = "⟨ NO SIGNAL — invalid input ⟩";
+export const PLATE_NO_SIGNAL = "⟨ NO SIGNAL ⟩";
+
+/** A placed rung: where it stands on the rail, and where its rows sit. */
+export interface PlacedRung extends LadderRung {
+  /** The rung's own height, from the ladder's top. */
+  y: number;
+  /** The top of its block of rows. A crowded block is moved off `y`. */
+  top: number;
+}
+
+export interface LadderLayout {
+  /** The stage's height, fixed for a given scale. */
+  height: number;
+  /** The baseline (UTC), and the top of the scale, from the ladder's top. */
+  base: number;
+  scaleTop: number;
+  /** The scale in seconds. */
+  span: number;
+  /** TAI's height, or `null` when there is no TAI reading. */
+  taiY: number | null;
+  rungs: PlacedRung[];
+  /** The top of each clock's row, from the ladder's top. */
+  tops: Record<ClockKey, number>;
+  /** The clocks with no place on the scale. */
+  off: ClockKey[];
+}
+
+/**
+ * Place the rows. A rung's block of rows is centred on the rung; blocks that
+ * would overlap are pushed apart, down and then back up, so every row keeps
+ * its own box inside the stage. A pushed block is joined to its rung by a
+ * leader. Clocks off the scale take no place on the stage. With no reading the eight
+ * rows are spread evenly.
+ */
+export function ladderLayout(read: ClockRead, span: number): LadderLayout {
+  const { step, row, gap, padTop, padBottom, edge } = LADDER;
+  const { rungs, off } = ladderRungs(read);
+  const reach = Math.max(span, ...rungs.map((r) => r.seconds));
+  const count = CLOCK_KEYS.length;
+  const height = Math.max(
+    padTop + padBottom + reach * step,
+    count * row + (count - 1) * gap + 2 * edge,
+  );
+  const base = height - padBottom;
+  const tops = {} as Record<ClockKey, number>;
+
+  if (read.status !== "ok") {
+    const room = height - 2 * edge - row;
+    CLOCK_KEYS.forEach((key, i) => {
+      tops[key] = edge + (i * room) / (count - 1);
+    });
+    return {
+      height,
+      base,
+      scaleTop: base - reach * step,
+      span: reach,
+      taiY: null,
+      rungs: [],
+      tops,
+      off: [],
+    };
+  }
+
+  // Blocks, top to bottom: the rungs. Clocks off the scale are not on the stage;
+  // the mount lists them under it, so each row left here stands at its true height.
+  interface Block {
+    keys: ClockKey[];
+    y: number | null;
+    seconds: number;
+    size: number;
+    top: number;
+  }
+  const blocks: Block[] = [];
+  for (const rung of rungs) {
+    const y = base - rung.seconds * step;
+    const size = rung.keys.length * row;
+    blocks.push({
+      keys: rung.keys,
+      y,
+      seconds: rung.seconds,
+      size,
+      top: y - size / 2,
+    });
+  }
+  let floor = edge;
+  for (const block of blocks) {
+    block.top = Math.max(block.top, floor);
+    floor = block.top + block.size + gap;
+  }
+  let ceiling = height - edge;
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i]!;
+    block.top = Math.min(block.top, ceiling - block.size);
+    ceiling = block.top - gap;
+  }
+  for (const block of blocks) {
+    block.keys.forEach((key, i) => {
+      tops[key] = block.top + i * row;
+    });
+  }
+
+  for (const key of off) tops[key] = 0;
+
+  const taiRung = rungs.find((r) => r.keys.includes("TAI"));
+  return {
+    height,
+    base,
+    scaleTop: base - reach * step,
+    span: reach,
+    taiY: taiRung === undefined ? null : base - taiRung.seconds * step,
+    rungs: blocks
+      .filter((b) => b.y !== null)
+      .map((b) => ({
+        seconds: b.seconds,
+        keys: b.keys,
+        y: b.y!,
+        top: b.top,
+      })),
+    tops,
+    off,
+  };
+}
+
+/** "A", "A and B", "A, B and C". */
+function listOf(items: readonly string[]): string {
+  return items.length <= 1
+    ? (items[0] ?? "")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+/**
+ * The ladder in words, for the figure's `aria-label`: every rung from the top
+ * down, each with its clocks and its lead, then the clocks off the scale.
+ */
+export function ladderAria(read: ClockRead): string {
+  if (read.status !== "ok") {
+    return read.failure ?? read.emptyText ?? "No ladder to draw";
+  }
+  const { rungs, off } = ladderRungs(read);
+  const parts = rungs.map((rung) => {
+    const names = listOf(rung.keys);
+    return rung.seconds === 0
+      ? `${names} on the baseline, 0 s`
+      : `${names} ${rung.seconds} s ahead of UTC`;
+  });
+  const lost = off.map((key) => {
+    const row = read.rows.find((r) => r.key === key)!;
+    return row.none
+      ? `${key}: no result, ${BEFORE_FIRST_INSTANT_NOTE}`
+      : `${key}: ${row.leadText}`;
+  });
+  return `Ladder of ${read.rows.length} clocks on one scale of seconds ahead of UTC, TAI at the top: ${[...parts, ...lost].join("; ")}.`;
 }
 
 /** One row as a sentence: "GPS: 2024-01-01T00:00:18 GPS, 18 s ahead of UTC". */

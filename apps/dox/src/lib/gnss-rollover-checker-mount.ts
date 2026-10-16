@@ -41,6 +41,7 @@ import {
   ROLLOVER_PRESETS,
   dateOfDay,
   dayOfDate,
+  fuseYears,
   isSeeded,
   markSentence,
   matchPreset,
@@ -52,8 +53,11 @@ import {
   rolloverHandoffs,
   stripAria,
   summaryText,
+  verdictBadgeText,
   windowDays,
+  type Countdown,
   type FirmwareModel,
+  type Fuse,
   type GnssRolloverCheckerArgs,
   type Mark,
   type RolloverRead,
@@ -61,7 +65,7 @@ import {
   type WrapRow,
 } from "./gnss-rollover-checker";
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
-import { setPresetDescription } from "./punctuality-widgets";
+import { heroLinesHtml, setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
 import {
@@ -160,6 +164,101 @@ function rowHtml(row: WrapRow): string {
   );
 }
 
+/** How many counters each width group holds in the server-rendered skeleton:
+ *  the 10-bit, the 12-bit and the 13-bit counters. The mount replaces the
+ *  skeleton with the library's own grouping, so the page keeps its height. */
+const SKELETON_ROWS = [3, 1, 4] as const;
+
+const pad2 = (n: number): string => String(n).padStart(2, "0");
+
+const clampPct = (n: number): number => Math.min(100, Math.max(0, n));
+
+/** One track: the stretch before the counter's first week, then its wraps. */
+function trackHtml(counter: string, born: number, ticksHtml: string): string {
+  return (
+    `<div class="gmt-fuse-row" data-counter="${escapeAttr(counter)}">` +
+    `<span class="gmt-gnss-label gmt-fuse-name">${counter === "" ? NBSP : escapeHtml(counter)}</span>` +
+    `<div class="gmt-fuse-track" data-role="strip-track">` +
+    `<i class="gmt-fuse-pre" style="--to:${born}%"></i>` +
+    `<span class="gmt-fuse-ticks">${ticksHtml}</span>` +
+    `</div></div>`
+  );
+}
+
+function ticksOf(track: Fuse["groups"][number]["tracks"][number]): string {
+  return track.wraps
+    .map(
+      (w) =>
+        `<i class="gmt-fuse-tick" data-state="${w.state}" style="--at:${w.pos}%"></i>`,
+    )
+    .join("");
+}
+
+/** The rows of the board, from the library's grouping, or the skeleton. */
+function boardRowsHtml(fuse: Fuse | null): string {
+  if (fuse === null) {
+    return SKELETON_ROWS.map(
+      (n) =>
+        `<div class="gmt-fuse-head">${NBSP}</div>` +
+        Array.from({ length: n }, () => trackHtml("", 0, "")).join(""),
+    ).join("");
+  }
+  return fuse.groups
+    .map(
+      (g) =>
+        `<div class="gmt-fuse-head">${escapeHtml(g.label)}</div>` +
+        g.tracks.map((t) => trackHtml(t.counter, t.born, ticksOf(t))).join(""),
+    )
+    .join("");
+}
+
+function axisHtml(): string {
+  return fuseYears()
+    .map(
+      (y) =>
+        `<span class="gmt-fuse-year"${y.major ? " data-major" : ""} style="--at:${y.pos}%">${y.year}</span>`,
+    )
+    .join("");
+}
+
+function gridHtml(): string {
+  return fuseYears()
+    .map((y) => `<i class="gmt-fuse-gridline" style="--at:${y.pos}%"></i>`)
+    .join("");
+}
+
+/** The large countdown: days, hours, minutes and seconds as fixed cells, with
+ *  the library's own words kept as text for a reader who cannot see them. */
+function countdownHtml(read: RolloverRead | null): string {
+  const c: Countdown | null = read?.countdown ?? null;
+  const empty = c === null || read === null;
+  const cell = (value: string, unit: string) =>
+    `<span class="gmt-fuse-cell" data-unit="${unit}"><b>${value}</b><i>${unit}</i></span>`;
+  const digits = empty
+    ? ""
+    : `<span class="gmt-fuse-digits">` +
+      cell(String(c.days), "days") +
+      cell(pad2(c.hours), "h") +
+      cell(pad2(c.minutes), "min") +
+      cell(pad2(c.seconds), "s") +
+      `</span>`;
+  const line = read?.plates[2]?.lines[0] ?? "";
+  return (
+    `<div class="gmt-punct-hero gmt-fuse-count" data-role="hero-left" data-series="1"` +
+    `${empty ? " data-empty" : ""}${c?.past ? " data-past" : ""} aria-hidden="true">` +
+    `<span class="gmt-punct-hero-cap">${c?.past ? "Past by" : "Time left"}</span>` +
+    `<span class="gmt-punct-hero-value">${empty ? `<span class="gmt-punct-hero-none">${escapeHtml(NO_RESULT_TEXT)}</span>` : escapeHtml(read.left ?? "")}</span>` +
+    digits +
+    heroLinesHtml([{ text: empty ? "" : line }]) +
+    `</div>`
+  );
+}
+
+const BADGE_ICONS =
+  `<svg class="gmt-fuse-icon" data-for="right" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg>` +
+  `<svg class="gmt-fuse-icon" data-for="early" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3 3 8l5 5M13 3 8 8l5 5"/></svg>` +
+  `<svg class="gmt-fuse-icon" data-for="late" viewBox="0 0 16 16" aria-hidden="true"><path d="m8 3 5 5-5 5M3 3l5 5-5 5"/></svg>`;
+
 function chipSlotHtml(): string {
   return `<span class="gmt-cutoff-chip gmt-rollover-chip" data-role="strip-chip" data-blank>${NBSP}</span>`;
 }
@@ -242,27 +341,41 @@ export function renderGnssRolloverCheckerTemplate(
     // 2. The receiver's window
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>2. Where the firmware goes wrong</h4>` +
-    `<div class="gmt-gnss-frame" data-role="frame">` +
-    platesHtml("heroes", platesOf(null)) +
-    `<div class="gmt-gnss-ruler" data-role="strip" role="img" aria-label="No window to draw">` +
-    `<div class="gmt-gnss-ruler-row">` +
-    `<span class="gmt-gnss-label">Window</span>` +
-    `<div class="gmt-gnss-track" data-role="strip-track">` +
-    `<i class="gmt-gnss-span" data-role="strip-lit" hidden></i>` +
-    `<i class="gmt-gnss-span gmt-gnss-hatch" data-role="strip-hatch" hidden></i>` +
-    `<i class="gmt-gnss-rule" data-role="strip-rule" hidden></i>` +
-    `<i class="gmt-gnss-rule" data-role="strip-rule" hidden></i>` +
-    `<i class="gmt-gnss-rule" data-role="strip-rule" hidden></i>` +
-    `<i class="gmt-gnss-today" data-role="strip-today" hidden></i>` +
-    `<i class="gmt-cutoff-mark" data-role="strip-pin" hidden></i>` +
+    `<div class="gmt-gnss-frame gmt-fuse-frame" data-role="frame">` +
+    `<div class="gmt-fuse-layout">` +
+    `<div class="gmt-fuse-aside">` +
+    countdownHtml(null) +
+    `<p class="gmt-fuse-badge" data-role="verdict" data-verdict="none">${BADGE_ICONS}<span class="gmt-fuse-badge-text" data-role="verdict-text">${NBSP}</span></p>` +
+    platesHtml("heroes", platesOf(null).slice(0, 2)) +
     `</div>` +
+    `<div class="gmt-fuse" data-role="strip" role="img" aria-label="No window to draw">` +
+    `<div class="gmt-fuse-axis">${axisHtml()}</div>` +
+    `<div class="gmt-fuse-board" data-role="strip-board">` +
+    `<div class="gmt-fuse-grid">${gridHtml()}</div>` +
+    `<div class="gmt-fuse-rows" data-role="strip-rows">${boardRowsHtml(null)}</div>` +
+    `<div class="gmt-fuse-pins">` +
+    `<i class="gmt-gnss-today" data-role="strip-today" hidden></i>` +
+    `<i class="gmt-fuse-pin" data-role="strip-pin" hidden><b class="gmt-cutoff-mark"></b></i>` +
+    `</div>` +
+    `<div class="gmt-fuse-park" data-role="strip-park" hidden>` +
+    `<i class="gmt-gnss-span gmt-fuse-lit" data-role="strip-lit" hidden></i>` +
+    `<i class="gmt-gnss-span gmt-gnss-hatch gmt-fuse-hatch" data-role="strip-hatch" hidden></i>` +
+    `<i class="gmt-fuse-burn" data-role="strip-fuse" hidden></i>` +
+    `<i class="gmt-fuse-spark" data-role="strip-spark" hidden><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-9 2-2 9 0 2 2 0 9-2 2-9 0-2-2Z"/><circle r="2.2"/></svg></i>` +
+    `</div>` +
+    `</div>` +
+    `<ul class="gmt-gnss-visually-hidden" data-role="strip-list"></ul>` +
     `</div>` +
     `<div class="gmt-rollover-key" data-role="strip-key">` +
-    `<span data-role="strip-key-lit" hidden>reads the right date</span>` +
-    `<span data-role="strip-key-hatch" hidden>reports one counter period early</span>` +
+    `<span data-role="strip-key-lit" hidden><i class="gmt-fuse-swatch" data-kind="lit"></i>reads the right date</span>` +
+    `<span data-role="strip-key-hatch" hidden><i class="gmt-fuse-swatch" data-kind="hatch"></i>reports one counter period early</span>` +
+    `<span><svg class="gmt-fuse-swatch" data-kind="spark" viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-9 2-2 9 0 2 2 0 9-2 2-9 0-2-2Z"/></svg>wrong from</span>` +
+    `<span><i class="gmt-fuse-swatch" data-kind="next"></i>next wrap</span>` +
+    `<span><i class="gmt-fuse-swatch" data-kind="pin"></i>check date</span>` +
+    `<span><i class="gmt-fuse-swatch" data-kind="today"></i>today</span>` +
     `</div>` +
     `<div class="gmt-rollover-chips" data-role="strip-chips">${Array.from({ length: CHIP_SLOTS }, chipSlotHtml).join("")}</div>` +
-    `<ul class="gmt-gnss-visually-hidden" data-role="strip-list"></ul>` +
+    `</div>` +
     `</div>` +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
@@ -387,7 +500,68 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
   function drawPlates(read: RolloverRead): void {
     const heroes = q("heroes");
-    if (heroes) heroes.innerHTML = read.plates.map(plateHtml).join("");
+    if (heroes) {
+      heroes.innerHTML = read.plates.slice(0, 2).map(plateHtml).join("");
+    }
+    const count = q("hero-left");
+    if (count)
+      count.outerHTML = countdownHtml(read.status === "ok" ? read : null);
+
+    const badge = q("verdict");
+    const text = q("verdict-text");
+    if (badge && text) {
+      const words = verdictBadgeText(read);
+      badge.setAttribute(
+        "data-verdict",
+        words === "" ? "none" : (read.verdict ?? "none"),
+      );
+      text.textContent =
+        words !== ""
+          ? words
+          : read.status === "sentinel"
+            ? NO_RESULT_TEXT
+            : " ";
+    }
+  }
+
+  let rowsKey = "";
+
+  /** Builds the tracks once from the library's grouping, then only relabels
+   *  the wraps (past, next, later) and the receiver's own track. */
+  function drawFuse(read: RolloverRead): void {
+    const fuse = read.fuse;
+    const rowsEl = q("strip-rows");
+    const park = q("strip-park");
+    if (rowsEl === null || fuse === null) return;
+    const key = fuse.groups
+      .map((g) => g.tracks.map((t) => t.counter).join())
+      .join("|");
+    if (key !== rowsKey) {
+      // The window's nodes live inside a track; park them before it is rebuilt.
+      for (const role of [
+        "strip-lit",
+        "strip-hatch",
+        "strip-fuse",
+        "strip-spark",
+      ]) {
+        const node = q(role);
+        if (node && park) park.append(node);
+      }
+      rowsEl.innerHTML = boardRowsHtml(fuse);
+      rowsKey = key;
+    }
+    const rows = [...rowsEl.querySelectorAll<HTMLElement>(".gmt-fuse-row")];
+    for (const track of fuse.groups.flatMap((g) => g.tracks)) {
+      const row = rows.find((r) => r.dataset["counter"] === track.counter);
+      if (!row) continue;
+      row.toggleAttribute("data-yours", track.yours);
+      const ticks = row.querySelector<HTMLElement>(".gmt-fuse-ticks");
+      const html = ticksOf(track);
+      if (ticks && ticks.dataset["sig"] !== html) {
+        ticks.innerHTML = html;
+        ticks.dataset["sig"] = html;
+      }
+    }
   }
 
   function drawStrip(read: RolloverRead): void {
@@ -397,15 +571,22 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     };
     const lit = q("strip-lit");
     const hatch = q("strip-hatch");
+    const burn = q("strip-fuse");
+    const spark = q("strip-spark");
     const pin = q("strip-pin");
     const today = q("strip-today");
-    const rules = qa("strip-rule");
     const chips = qa("strip-chip");
     const list = q("strip-list");
 
-    for (const rule of rules) rule.hidden = true;
+    drawFuse(read);
+
     hide(pin, true);
-    hide(today, true);
+    // The reader's clock is a mark of its own: in a date mode it shows where
+    // now sits against the window, in Today mode it is the check itself.
+    const todayAt = read.fuse?.today ?? null;
+    hide(today, todayAt === null);
+    if (today && todayAt !== null)
+      today.style.setProperty("--at", `${todayAt}%`);
     for (const chip of chips) {
       chip.textContent = " ";
       chip.setAttribute("data-blank", "");
@@ -413,41 +594,52 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     hide(q("strip-key-lit"), strip === null);
     hide(q("strip-key-hatch"), strip === null);
 
+    const park = q("strip-park");
     if (strip === null) {
-      hide(lit, true);
-      hide(hatch, true);
+      for (const node of [lit, hatch, burn, spark]) {
+        if (node && park) park.append(node);
+        hide(node, true);
+      }
       q("strip")?.setAttribute("aria-label", stripAria(read));
       if (list) list.innerHTML = "";
       return;
     }
 
+    // The window lives on the receiver's own track.
+    const track = [...root.querySelectorAll<HTMLElement>(".gmt-fuse-row")]
+      .find((r) => r.dataset["counter"] === read.state.counter)
+      ?.querySelector<HTMLElement>(".gmt-fuse-track");
+    for (const node of [lit, hatch, burn, spark]) {
+      if (node && track && node.parentElement !== track) track.append(node);
+    }
+    const { from, wrong, end } = strip.span;
     if (lit) {
-      lit.hidden = false;
-      lit.style.setProperty("--from", "0%");
-      lit.style.setProperty("--to", `${strip.split}%`);
+      lit.hidden = wrong <= 0 || from >= 100;
+      lit.style.setProperty("--from", `${clampPct(from)}%`);
+      lit.style.setProperty("--to", `${clampPct(wrong)}%`);
     }
     if (hatch) {
-      hatch.hidden = strip.split >= 100;
-      hatch.style.setProperty("--from", `${strip.split}%`);
-      hatch.style.setProperty("--to", "100%");
+      hatch.hidden = wrong >= 100 || end <= 0 || end <= wrong;
+      hatch.style.setProperty("--from", `${clampPct(wrong)}%`);
+      hatch.style.setProperty("--to", `${clampPct(end)}%`);
+    }
+    if (burn) {
+      const f = strip.fuse;
+      burn.hidden = f === null || f.to <= 0 || f.from >= 100;
+      if (f) {
+        burn.style.setProperty("--from", `${clampPct(f.from)}%`);
+        burn.style.setProperty("--to", `${clampPct(f.to)}%`);
+      }
+    }
+    if (spark) {
+      spark.hidden = wrong < 0 || wrong > 100;
+      spark.style.setProperty("--at", `${clampPct(wrong)}%`);
     }
 
-    let ruleAt = 0;
     strip.marks.forEach((m: Mark, i) => {
-      if (m.pos !== null) {
-        if (m.key === "check") {
-          const el = m.label === "today" ? today : pin;
-          if (el) {
-            el.hidden = false;
-            el.style.setProperty("--at", `${m.pos}%`);
-          }
-        } else if (m.key !== "start") {
-          const rule = rules[ruleAt++];
-          if (rule) {
-            rule.hidden = false;
-            rule.style.setProperty("--at", `${m.pos}%`);
-          }
-        }
+      if (m.pos !== null && m.key === "check" && m.label !== "today" && pin) {
+        pin.hidden = false;
+        pin.style.setProperty("--at", `${m.pos}%`);
       }
       const chip = chips[i];
       if (chip) {

@@ -7,6 +7,7 @@ import {
   SECONDS_PER_WEEK,
   firstRinexWeek,
   isSeeded,
+  lastWeekOf,
   matchPreset,
   permalinkOf,
   pinOf,
@@ -313,6 +314,17 @@ describe("the library's limits the page leans on", () => {
       "",
     );
     expect(lib.gnssWeekToUtc("GAL", 1, SECONDS_PER_WEEK, 0)).toBe("");
+  });
+
+  it("the week slider ends at the counter's last week: that week reads, the next is refused", () => {
+    for (const counter of GNSS_WEEK_COUNTERS) {
+      const last = lastWeekOf(lib, counter);
+      expect(last).toBeGreaterThan(0);
+      expect(lib.gnssWeekToUtc(counter, last, 0, 0)).not.toBe("");
+      expect(lib.gnssWeekToUtc(counter, last + 1, 0, 0)).toBe("");
+    }
+    expect(lastWeekOf(lib, "GPS-LNAV")).toBe(1023);
+    expect(lastWeekOf(lib, "GPS-CNAV")).toBe(8191);
   });
 
   it("the first RINEX week is the smallest the library reads", () => {

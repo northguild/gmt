@@ -38,13 +38,12 @@ const REQUIRED_ROLES = [
   "hero-count",
   "rulers",
   "track-clock",
+  "dates",
   "span-clock",
   "marks-clock",
-  "chips-clock",
   "track-elapsed",
   "span-elapsed",
   "marks-elapsed",
-  "chips-elapsed",
   "ends-low",
   "ends-high",
   "summary",
@@ -389,27 +388,29 @@ describe("every preset", () => {
       want.plates.count,
       ...want.countLines,
     ]);
-    // Each counted second is a mark on the clock and a sliver on the elapsed ruler.
+    // Each counted second is a stretched cell on the clock face, a hatched
+    // "+1 s" cell on the elapsed ruler, and a gap on the clock tape.
     expect(
-      q(root, "marks-clock").querySelectorAll(".gmt-cutoff-mark"),
+      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap"),
+    ).toHaveLength(want.plates.clock === "no result" ? 0 : want.marks);
+    expect(
+      q(root, "marks-elapsed").querySelectorAll(".gmt-evc-cell--leap"),
     ).toHaveLength(want.marks);
-    expect(
-      q(root, "marks-elapsed").querySelectorAll(".gmt-gnss-sliver"),
-    ).toHaveLength(want.marks);
-    expect(
-      [...q(root, "chips-elapsed").querySelectorAll(".gmt-cutoff-chip")].map(
-        (c) => c.textContent,
-      ),
-    ).toEqual(Array(want.marks).fill("+1 s"));
+    if (want.plates.clock !== "no result") {
+      expect(
+        q(root, "span-clock").querySelectorAll(".gmt-evc-cell--gap"),
+      ).toHaveLength(want.marks);
+    }
     expect(
       [...q(root, "insertions-list").children].map((li) => li.textContent),
     ).toEqual(want.list);
-    expect(q(root, "span-clock").hidden).toBe(
-      want.plates.clock === "no result",
+    expect(q(root, "marks-clock").textContent).toContain(
+      want.plates.clock === "no result" ? "NO SIGNAL" : "",
     );
-    expect(q(root, "span-elapsed").hidden).toBe(
-      want.plates.elapsed === "no result",
+    expect(q(root, "marks-elapsed").textContent).toContain(
+      want.plates.elapsed === "no result" ? "NO SIGNAL" : "",
     );
+    expect(q(root, "rulers").getAttribute("role")).toBe("img");
     expect(q(root, "rulers").getAttribute("aria-label")).toBe(
       text(root, "summary"),
     );
@@ -529,7 +530,7 @@ describe("offset-spelled input", () => {
     type(root, "end", "2017-01-01T09:00:01+09:00");
     expect(q(root, "marks-clock").innerHTML).toBe(z);
     expect(
-      q(root, "marks-clock").querySelectorAll(".gmt-cutoff-mark"),
+      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap"),
     ).toHaveLength(1);
     expect(text(root, "clock-output")).toBe("2000000000n");
     expect(text(root, "count-output")).toBe("1");
@@ -635,17 +636,157 @@ describe("lifecycle", () => {
     spy.restore();
   });
 
-  it("fits its chip rows again when the width changes, and keeps the drawing", async () => {
+  it("redraws when the width changes, and keeps every inserted second", async () => {
     const spy = spyOnResizeObservers();
     const { root } = await mount();
     choose(root, "preset", "twenty-four-years");
+    const leaps = () =>
+      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap").length;
+    expect(leaps()).toBe(5);
     const marks = q(root, "marks-clock").innerHTML;
     Object.defineProperty(q(root, "frame"), "clientWidth", {
       configurable: true,
-      value: 480,
+      value: 600,
     });
     spy.fire();
     expect(q(root, "marks-clock").innerHTML).toBe(marks);
+    expect(leaps()).toBe(5);
+    Object.defineProperty(q(root, "frame"), "clientWidth", {
+      configurable: true,
+      value: 300,
+    });
+    spy.fire();
+    expect(q(root, "marks-clock").textContent).toContain("5");
     spy.restore();
+  });
+});
+
+describe("the links row (D13)", () => {
+  const TIMELINE = "See these dates on the timeline";
+  const CLOCKS = "Every clock at the start";
+  async function mountPreset(id: string) {
+    const mounted = await mount();
+    choose(mounted.root, "preset", id);
+    return mounted;
+  }
+  const link = (root: HTMLElement, role: string) =>
+    q<HTMLAnchorElement>(root, role);
+  const state = (root: HTMLElement, role: string) => ({
+    text: link(root, role).textContent,
+    href: link(root, role).getAttribute("href"),
+    disabled: link(root, role).getAttribute("aria-disabled"),
+  });
+  const enabled = (text: string, href: string) => ({
+    text,
+    href,
+    disabled: null,
+  });
+  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
+
+  it("has both links in the links row, in order", async () => {
+    const { root } = await mount();
+    const row = q(root, "tool-links");
+    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
+    expect(
+      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
+    ).toEqual(["link-timeline", "link-clocks"]);
+  });
+
+  it("sends the span to the timeline as from and to, and the start to the Clock Converter", async () => {
+    const { root } = await mountPreset("across-2016");
+    expect(state(root, "link-timeline")).toEqual(
+      enabled(
+        TIMELINE,
+        encodeWidgetPermalink("leapline", {
+          from: "2016-12-31T23:59:59Z",
+          to: "2017-01-01T00:00:01Z",
+        }),
+      ),
+    );
+    expect(state(root, "link-clocks")).toEqual(
+      enabled(
+        CLOCKS,
+        encodeWidgetPermalink("satclock", { value: "2016-12-31T23:59:59Z" }),
+      ),
+    );
+  });
+
+  it("sends a leap second's own instant, and a span before 1972, which still reads a clock difference", async () => {
+    const leap = await mountPreset("start-is-the-leap-second");
+    expect(link(leap.root, "link-clocks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("satclock", { value: "2016-12-31T23:59:60Z" }),
+    );
+    document.body.innerHTML = "";
+    const early = await mountPreset("before-1972");
+    expect(link(early.root, "link-timeline").getAttribute("href")).toBe(
+      encodeWidgetPermalink("leapline", {
+        from: "1971-01-01T00:00:00Z",
+        to: "2024-01-01T00:00:00Z",
+      }),
+    );
+  });
+
+  it("sends a backwards span as typed", async () => {
+    const { root } = await mountPreset("backwards");
+    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+      encodeWidgetPermalink("leapline", {
+        from: "2024-01-01T00:00:00Z",
+        to: "2000-01-01T00:00:00Z",
+      }),
+    );
+    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("satclock", { value: "2024-01-01T00:00:00Z" }),
+    );
+  });
+
+  it("follows what is typed", async () => {
+    const { root } = await mountPreset("across-2016");
+    type(root, "start", "2020-01-01T00:00:00Z");
+    type(root, "end", "2024-01-01T00:00:00Z");
+    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+      encodeWidgetPermalink("leapline", {
+        from: "2020-01-01T00:00:00Z",
+        to: "2024-01-01T00:00:00Z",
+      }),
+    );
+    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("satclock", { value: "2020-01-01T00:00:00Z" }),
+    );
+  });
+
+  it("disables both links, with no href, on a second 60 that never happened", async () => {
+    const { root } = await mountPreset("not-inserted");
+    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
+    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+  });
+
+  it("disables both links for blank fields, and lights them again for a reading", async () => {
+    const { root } = await mountPreset("across-2016");
+    type(root, "start", "");
+    type(root, "end", "");
+    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
+    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+    type(root, "start", "2020-01-01T00:00:00Z");
+    type(root, "end", "2024-01-01T00:00:00Z");
+    expect(link(root, "link-timeline").hasAttribute("href")).toBe(true);
+    expect(link(root, "link-timeline").hasAttribute("aria-disabled")).toBe(
+      false,
+    );
+    expect(link(root, "link-clocks").hasAttribute("href")).toBe(true);
+  });
+
+  it("lands on seeds the other tools read back", async () => {
+    const { root } = await mountPreset("across-2016");
+    const read = (role: string, kind: "leapline" | "satclock") => {
+      const href = link(root, role).getAttribute("href")!;
+      return seedFromLocation(kind, href.slice(href.indexOf("?")));
+    };
+    expect(read("link-timeline", "leapline")).toEqual({
+      from: "2016-12-31T23:59:59Z",
+      to: "2017-01-01T00:00:01Z",
+    });
+    expect(read("link-clocks", "satclock")).toEqual({
+      value: "2016-12-31T23:59:59Z",
+    });
   });
 });

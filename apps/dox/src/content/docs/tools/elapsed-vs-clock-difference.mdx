@@ -19,7 +19,7 @@ Subtract two UTC readings and you get the clock difference. Count the seconds th
 
 A UTC day normally has 86400 seconds. On a day with an inserted second it has 86401, and the extra one is written `23:59:60`. Subtracting two UTC readings treats every day as 86400 seconds long, so it skips the inserted ones. Counting through TAI, which never inserts a second, gives the time that really passed.
 
-Type a start and an end, or pick a preset. The two rulers draw the same span: the top one as the clock reads it, the bottom one as the elapsed time, with each inserted second as a hatched sliver. Under them are the three results and the exact calls. Drag the slider to move the end a day at a time.
+Type a start and an end, or pick a preset. The sum at the top adds the leap seconds to the clock difference to get the seconds that passed. Under it, two rulers draw the same span at one scale: the top one as the clock reads it, the bottom one as the seconds that really passed. Each inserted second is a stretched 23:59:60 cell on the clock and a hatched +1 s cell below it, so the two ends no longer line up. Under them are the exact calls. Drag the slider to move the end a day at a time.
 
 </Fragment>
 

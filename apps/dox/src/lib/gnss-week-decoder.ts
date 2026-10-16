@@ -512,6 +512,11 @@ export interface GnssRead {
   counter: GnssWeekCounter | null;
   system: RinexWeekSystem | null;
   lanes: Lane[];
+  /** The counter's modulus (1024, 4096 or 8192 weeks), the ring's circumference;
+   *  `null` with no counter (and for RINEX, which does not wrap). */
+  modulus: number | null;
+  /** The reading's week on the counter, drawn as the ring's hub. */
+  week: number | null;
   /** The words the lanes show in place of lanes. */
   lanesEmpty: string | null;
   counters: CounterRow[];
@@ -705,6 +710,8 @@ function blankRead(state: GnssDecoderState): GnssRead {
     counter: null,
     system: null,
     lanes: [],
+    modulus: null,
+    week: null,
     lanesEmpty: null,
     counters: GNSS_WEEK_COUNTERS.map((counter) => ({
       counter,
@@ -748,6 +755,10 @@ export function readGnss(
   nowIso: string,
 ): GnssRead {
   const read = blankRead(state);
+  // The ring's circumference, known even when the reading is refused.
+  if (state.mode !== "rinex" && state.counter !== "") {
+    read.modulus = firstRefusedWeek(lib, state.counter);
+  }
   const reading: EdiCall[] = read.calls.reading;
   const call = <F extends keyof GnssLib & string>(
     fn: F,
@@ -780,9 +791,9 @@ export function readGnss(
     }
     counter = state.counter;
     system = counterSystem(counter);
+    const refused = firstRefusedWeek(lib, counter);
     week = wholeNumber(state.week);
     if (week === null) return fail(SENTENCES.week);
-    const refused = firstRefusedWeek(lib, counter);
     if (week >= refused) return fail(weeksBelowText(refused));
     tow = timeOfWeek(state.timeOfWeekSeconds);
     if (tow === null) return fail(SENTENCES.tow);
@@ -893,6 +904,7 @@ export function readGnss(
   }
 
   // 4. The lanes (section 2).
+  read.week = state.mode === "rinex" ? null : week;
   if (state.mode === "rinex") {
     read.lanes = rinexLanes(lib, reading, state, system!, utc, week!, tow!);
   } else if (counter === null) {
@@ -1086,12 +1098,13 @@ function rinexLanes(
 
 /** `aria-label` for the lanes' drawing. */
 export function lanesAria(read: GnssRead): string {
-  if (read.lanes.length === 0) return read.lanesEmpty ?? "No lanes to draw";
-  const what =
-    read.state.mode === "rinex"
-      ? "RINEX and broadcast counters"
-      : "rollover eras";
-  return `${read.lanes.length} lanes, one for each of ${what}: ${read.lanes.map((l) => l.sentence).join("; ")}.`;
+  if (read.status === "sentinel") return `No signal: ${read.failure ?? ""}`;
+  if (read.lanes.length === 0) return read.lanesEmpty ?? "No counter to draw";
+  const list = read.lanes.map((l) => l.sentence).join("; ");
+  if (read.state.mode === "rinex") {
+    return `An unwrapped track: the RINEX week and the broadcast counters of its system, ${read.lanes.length} rows. ${list}.`;
+  }
+  return `An odometer ring of ${read.modulus ?? "?"} weeks on ${read.counter ?? "the counter"}, with the hand at week ${read.week ?? "?"}. One lap for each of ${read.lanes.length} eras, so the same week number names ${read.lanes.length} dates: ${list}.`;
 }
 
 /** The sentence a screen reader hears when the plates change. */

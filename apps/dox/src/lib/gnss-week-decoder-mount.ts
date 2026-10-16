@@ -6,7 +6,10 @@
  *
  * 1. the controls (a mode, a counter or system, the week, time of week and era);
  * 2. three plates (UTC, the system's own clock and its lead, the RINEX week)
- *    over a lane for each era the counter has had, or each RINEX counter;
+ *    over an odometer ring: the counter's weeks round a circle, one lap for
+ *    each era it has had, a hand at the reading's week and each lap's date in
+ *    the legend beside it. A RINEX week does not wrap, so it is drawn as an
+ *    unwrapped track of rows instead;
  * 3. two tables, the moment on every broadcast counter and every RINEX system;
  * 4. the calls made and what they returned.
  *
@@ -17,8 +20,9 @@
  * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
  * listener is delegated on the root, so the host dropping the subtree is a
  * complete teardown apart from the width observer. There is no drag handle: the
- * controls are typed fields and selects, and the plates, the lanes (four slots)
- * and both tables keep their boxes from one reading to the next.
+ * controls are typed fields, selects and two ranges (the week and the time of
+ * week), each tied two ways to its typed field, and the plates, the lanes (four
+ * slots) and both tables keep their boxes from one reading to the next.
  */
 import { Temporal } from "@js-temporal/polyfill";
 import { codeFrameHtml } from "./code-frame";
@@ -42,8 +46,10 @@ import {
   MODE_LABELS,
   NO_RESULT_TEXT,
   decoderHandoffs,
+  SECONDS_PER_WEEK,
   isSeeded,
   lanesAria,
+  lastWeekOf,
   matchPreset,
   permalinkOf,
   platesOf,
@@ -67,10 +73,12 @@ import {
   escapeAttr,
   escapeHtml,
   labelTextHtml,
+  rangeFieldHtml,
   renderAside,
   renderWidgetOutput,
   setControlValue,
   setToolLink,
+  syncRange,
   toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
@@ -114,6 +122,70 @@ function blankCells(columns: readonly string[]): string {
   return columns
     .map((c) => `<td role="cell" data-label="${escapeAttr(c)}">&nbsp;</td>`)
     .join("");
+}
+
+// ---------------------------------------------------------------------------
+// The odometer ring
+// ---------------------------------------------------------------------------
+
+/** The ring's drawing space: a square, centre `RING_C`. Lap radii run outside
+ *  in, so era 0 is the outer lap; the tick ring and its labels sit outside them. */
+const RING_C = 170;
+const RING_RADII = [112, 94, 76, 58] as const;
+const TICK_FROM = 122;
+const LABEL_AT = 151;
+/** Ticks round the ring: a minor tick every 1/32 of the modulus, a labelled one every 1/8. */
+const RING_TICKS = 32;
+const RING_LABEL_EVERY = 4;
+
+const at = (turns: number, r: number): [number, number] => [
+  RING_C + r * Math.sin(turns * 2 * Math.PI),
+  RING_C - r * Math.cos(turns * 2 * Math.PI),
+];
+const f1 = (n: number) => n.toFixed(1);
+
+/** The tick marks and week labels for a counter of `modulus` weeks. The labels
+ *  are the modulus divided evenly, a drawing and not a library calculation. */
+function ringTicksHtml(modulus: number): string {
+  let out = "";
+  for (let k = 0; k < RING_TICKS; k++) {
+    const major = k % RING_LABEL_EVERY === 0;
+    const [x1, y1] = at(k / RING_TICKS, TICK_FROM);
+    const [x2, y2] = at(k / RING_TICKS, TICK_FROM + (major ? 9 : 5));
+    out += `<line class="gmt-ring-tick"${major ? " data-major" : ""} x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}"/>`;
+    if (major) {
+      const [lx, ly] = at(k / RING_TICKS, LABEL_AT);
+      out += `<text class="gmt-ring-tick-label" x="${f1(lx)}" y="${f1(ly + 3.5)}" text-anchor="middle">${Math.round((k / RING_TICKS) * modulus)}</text>`;
+    }
+  }
+  return out;
+}
+
+function ringHtml(): string {
+  const c = RING_C;
+  const laps = RING_RADII.map(
+    (r, i) =>
+      `<g class="gmt-ring-lap" data-role="ring-lap" data-slot="${i}" hidden>` +
+      `<circle class="gmt-ring-track" cx="${c}" cy="${c}" r="${r}"/>` +
+      `<circle class="gmt-ring-fill" cx="${c}" cy="${c}" r="${r}" pathLength="100" transform="rotate(-90 ${c} ${c})"/>` +
+      `<g class="gmt-ring-spin" data-role="ring-today" hidden><line class="gmt-ring-today" x1="${c}" y1="${c - r - 8}" x2="${c}" y2="${c - r + 8}"/></g>` +
+      `<g class="gmt-ring-spin" data-role="ring-dot"><circle class="gmt-ring-dot" cx="${c}" cy="${c - r}" r="5.5"/></g>` +
+      `<text class="gmt-ring-era" data-role="ring-era" x="${c - 8}" y="${c - r + 3.5}" text-anchor="end"> </text>` +
+      `</g>`,
+  ).join("");
+  return (
+    `<div class="gmt-gnss-ring" data-role="ring" data-state="idle" aria-hidden="true">` +
+    `<svg viewBox="0 0 ${2 * c} ${2 * c}" focusable="false">` +
+    `<g data-role="ring-ticks">${ringTicksHtml(1024)}</g>` +
+    `<g class="gmt-ring-spin gmt-ring-hand" data-role="ring-hand" data-series="1"><line x1="${c}" y1="${c - 50}" x2="${c}" y2="${c - RING_RADII[0] - 9}"/></g>` +
+    laps +
+    `<g class="gmt-ring-hub">` +
+    `<text class="gmt-ring-cap" data-role="ring-cap" x="${c}" y="${c - 16}" text-anchor="middle">WEEK</text>` +
+    `<text class="gmt-ring-week" data-role="ring-week" x="${c}" y="${c + 10}" text-anchor="middle">-</text>` +
+    `<text class="gmt-ring-sub" data-role="ring-sub" x="${c}" y="${c + 28}" text-anchor="middle"> </text>` +
+    `</g>` +
+    `</svg></div>`
+  );
 }
 
 function laneSlotHtml(index: number): string {
@@ -183,8 +255,32 @@ export function renderGnssWeekDecoderTemplate(
     `<select class="gmt-select" data-role="system">${optionsHtml(RINEX_WEEK_SYSTEMS, state.system)}</select></label>` +
     `<label class="gmt-label" data-field="week">${labelTextHtml("Week")}` +
     `<input class="gmt-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" data-role="week" value="${escapeAttr(state.week)}"></label>` +
+    `<label class="gmt-label gmt-field-wide" data-field="week-slider">${labelTextHtml("Slide the week")}` +
+    rangeFieldHtml({
+      role: "week-slider",
+      chipRole: "week-value",
+      min: 0,
+      max: 0,
+      step: 1,
+      value: 0,
+      valueText: "week 0",
+      ends: ["0", " "],
+    }) +
+    `</label>` +
     `<label class="gmt-label" data-field="tow">${labelTextHtml("Time of week (seconds)")}` +
     `<input class="gmt-input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-role="tow" value="${escapeAttr(state.timeOfWeekSeconds)}"></label>` +
+    `<label class="gmt-label gmt-field-wide" data-field="tow-slider">${labelTextHtml("Slide the time of week")}` +
+    rangeFieldHtml({
+      role: "tow-slider",
+      chipRole: "tow-value",
+      min: 0,
+      max: SECONDS_PER_WEEK - 1,
+      step: 1,
+      value: 0,
+      valueText: "0 s",
+      ends: ["0", String(SECONDS_PER_WEEK - 1)],
+    }) +
+    `</label>` +
     `<label class="gmt-label" data-field="era-mode">${labelTextHtml("Which era")}` +
     `<select class="gmt-select" data-role="era-mode">${optionsHtml(ERA_MODES, state.eraMode, (v) => ERA_MODE_LABELS[v as EraMode])}</select></label>` +
     `<label class="gmt-label" data-field="era">${labelTextHtml("Era number")}` +
@@ -200,9 +296,12 @@ export function renderGnssWeekDecoderTemplate(
     `<h4>2. Read it</h4>` +
     `<div class="gmt-gnss-frame" data-role="frame">` +
     platesHtml("heroes", platesOf(null)) +
-    `<div class="gmt-gnss-lanes" data-role="lanes" role="img" aria-label="No lanes to draw">` +
+    `<div class="gmt-gnss-lanes" data-role="lanes" data-form="ring" role="img" aria-label="No counter to draw">` +
+    ringHtml() +
+    `<div class="gmt-gnss-legend" data-role="legend">` +
     Array.from({ length: LANE_SLOTS }, (_, i) => laneSlotHtml(i)).join("") +
     `<p class="gmt-widget-hint gmt-gnss-lanes-empty" data-role="lanes-empty" hidden></p>` +
+    `</div>` +
     `<ul class="gmt-gnss-visually-hidden" data-role="lane-list"></ul>` +
     `</div>` +
     `</div>` +
@@ -256,8 +355,17 @@ interface Controller {
 
 /** The fields each mode shows. */
 const FIELDS: Record<GnssDecoderMode, readonly string[]> = {
-  broadcast: ["counter", "week", "tow", "era-mode", "era", "pivot"],
-  rinex: ["system", "week", "tow"],
+  broadcast: [
+    "counter",
+    "week",
+    "week-slider",
+    "tow",
+    "tow-slider",
+    "era-mode",
+    "era",
+    "pivot",
+  ],
+  rinex: ["system", "week", "tow", "tow-slider"],
   utc: ["counter", "utc"],
 };
 
@@ -273,6 +381,8 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   const systemEl = q<HTMLSelectElement>("system")!;
   const weekEl = q<HTMLInputElement>("week")!;
   const towEl = q<HTMLInputElement>("tow")!;
+  const weekSliderEl = q<HTMLInputElement>("week-slider")!;
+  const towSliderEl = q<HTMLInputElement>("tow-slider")!;
   const eraModeEl = q<HTMLSelectElement>("era-mode")!;
   const eraEl = q<HTMLInputElement>("era")!;
   const pivotEl = q<HTMLInputElement>("pivot")!;
@@ -315,7 +425,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       "counter",
       "system",
       "week",
+      "week-slider",
       "tow",
+      "tow-slider",
       "era-mode",
       "era",
       "pivot",
@@ -351,9 +463,64 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     showFields();
   }
 
+  /** A whole number from 0 in the typed text, else `null`. */
+  const whole = (text: string): number | null =>
+    /^\d+$/.test(text.trim()) && Number.isSafeInteger(Number(text))
+      ? Number(text)
+      : null;
+
+  /** Put a range's last-value label under its right end. */
+  function setEnd(slider: HTMLInputElement, text: string): void {
+    const ends = slider
+      .closest(".gmt-range-field")
+      ?.querySelector<HTMLElement>(".gmt-range-ends");
+    if (ends?.lastElementChild) ends.lastElementChild.textContent = text;
+  }
+
+  /**
+   * The ranges follow the typed fields. The week range ends at the counter's
+   * last week (a library probe) and is live only in broadcast mode with a
+   * counter; the time-of-week range is live whenever the mode reads one. A
+   * typed value that is not a stop (a fraction, a blank, a week past the end)
+   * leaves the range where it was.
+   */
+  function drawSliders(): void {
+    const m = mode();
+    const counter = counterEl.value as GnssWeekCounter | "";
+    const last =
+      m === "broadcast" && counter !== "" ? lastWeekOf(lib, counter) : null;
+    weekSliderEl.disabled = last === null;
+    weekSliderEl.max = String(last ?? 0);
+    setEnd(weekSliderEl, last === null ? " " : String(last));
+    const week = whole(weekEl.value);
+    if (week !== null && last !== null && week <= last) {
+      weekSliderEl.value = String(week);
+    }
+    syncRange(weekSliderEl, `week ${weekSliderEl.value}`);
+
+    towSliderEl.disabled = m === "utc";
+    const tow = Number(towEl.value);
+    if (
+      towEl.value.trim() !== "" &&
+      Number.isFinite(tow) &&
+      tow >= 0 &&
+      tow < SECONDS_PER_WEEK
+    ) {
+      towSliderEl.value = String(Math.floor(tow));
+    }
+    syncRange(towSliderEl, `${towSliderEl.value} s`);
+  }
+
   function drawPlates(read: GnssRead): void {
     const heroes = q("heroes");
     if (heroes) heroes.innerHTML = read.plates.map(plateHtml).join("");
+    // An instant may wrap only at its T: the date and the time are each unbreakable.
+    const utc = q("hero-utc")?.querySelector(".gmt-punct-hero-value");
+    const m = /^(\d{4}-\d{2}-\d{2})(T\S*)$/.exec(utc?.textContent ?? "");
+    if (utc && m) {
+      // The value is a flex box, so the pieces share one inline wrapper.
+      utc.innerHTML = `<span><span class="gmt-gnss-nb">${m[1]}</span><wbr><span class="gmt-gnss-nb">${m[2]}</span></span>`;
+    }
   }
 
   function drawLane(slot: HTMLElement, lane: Lane | undefined): void {
@@ -393,13 +560,102 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       .join("");
   }
 
+  /** One ring lap: its track, the lit arc and dot on the reading's lap, and
+   *  the era's number at the seam. The hand and every dot sit at one angle. */
+  function drawRing(read: GnssRead, state: "live" | "lost" | "idle"): void {
+    const ring = q("ring");
+    if (!ring) return;
+    ring.dataset["state"] = state;
+    const modulus = read.modulus ?? 1024;
+    const ticks = q("ring-ticks");
+    if (ticks && ticks.dataset["modulus"] !== String(modulus)) {
+      ticks.innerHTML = ringTicksHtml(modulus);
+      ticks.dataset["modulus"] = String(modulus);
+    }
+    const lit = state === "live" ? read.lanes : [];
+    const angle = lit.find((l) => l.pin !== null)?.pin ?? 0;
+    const hand = q("ring-hand");
+    hand?.style.setProperty("--turn", `${(angle * 3.6).toFixed(2)}deg`);
+    if (hand) hand.toggleAttribute("hidden", state !== "live");
+    const laps = qa<HTMLElement>("ring-lap");
+    laps.forEach((lap, i) => {
+      const lane = lit[i];
+      // A lost or idle ring still shows three faint laps; a live one, one per era.
+      lap.toggleAttribute(
+        "hidden",
+        lane === undefined && (state === "live" || i > 2),
+      );
+      lap.toggleAttribute("data-chosen", lane?.chosen === true);
+      lap.toggleAttribute("data-gap", lane?.gapBefore === true);
+      lap.toggleAttribute(
+        "data-empty",
+        lane === undefined || lane.pin === null,
+      );
+      if (lane?.chosen === true) lap.setAttribute("data-series", "1");
+      else lap.removeAttribute("data-series");
+      const lapAngle = (lane?.pin ?? 0) * 3.6;
+      lap
+        .querySelector<SVGGElement>('[data-role="ring-dot"]')
+        ?.style.setProperty("--turn", `${lapAngle.toFixed(2)}deg`);
+      const fill = lap.querySelector<SVGCircleElement>(".gmt-ring-fill");
+      const share = lane?.chosen === true && lane.pin !== null ? lane.pin : 0;
+      fill?.style.setProperty("stroke-dasharray", `${share} ${100 - share}`);
+      const today = lap.querySelector<SVGGElement>('[data-role="ring-today"]');
+      if (today) {
+        today.toggleAttribute("hidden", lane?.today == null);
+        if (lane?.today != null)
+          today.style.setProperty(
+            "--turn",
+            `${(lane.today * 3.6).toFixed(2)}deg`,
+          );
+      }
+      const era = lap.querySelector('[data-role="ring-era"]');
+      if (era) era.textContent = lane?.label ?? " ";
+    });
+    const set = (role: string, text: string) => {
+      const el = q(role);
+      if (el) el.textContent = text;
+    };
+    if (state === "live") {
+      const own = lit.find((l) => l.chosen);
+      set("ring-cap", own === undefined ? "WEEK" : own.label);
+      set("ring-week", String(read.week ?? "-"));
+      set("ring-sub", `of ${modulus}`);
+    } else if (state === "lost") {
+      // The signal-lost state, in words, never a blank hub.
+      set("ring-cap", "\u27e8 NO SIGNAL \u27e9");
+      set("ring-week", " ");
+      set("ring-sub", " ");
+    } else {
+      set("ring-cap", "WEEK");
+      set("ring-week", "-");
+      set("ring-sub", "no reading");
+    }
+  }
+
   function drawLanes(read: GnssRead): void {
     const slots = qa<HTMLElement>("laneset");
     slots.forEach((slot, i) => drawLane(slot, read.lanes[i]));
+    const rinex = read.state.mode === "rinex";
+    const state =
+      read.status === "sentinel"
+        ? "lost"
+        : read.lanes.length > 0
+          ? "live"
+          : "idle";
+    const lanes = q("lanes");
+    if (lanes) lanes.dataset["form"] = rinex ? "track" : "ring";
+    drawRing(read, rinex ? "idle" : state);
     const empty = q("lanes-empty");
     if (empty) {
-      empty.hidden = read.lanesEmpty === null;
-      empty.textContent = read.lanesEmpty ?? "";
+      // The hub has room for the short form; the whole sentinel sentence goes here.
+      const lostTrack = state === "lost";
+      const text = lostTrack
+        ? "\u27e8 NO SIGNAL \u2014 invalid input \u27e9"
+        : (read.lanesEmpty ?? "");
+      empty.hidden = text === "";
+      empty.classList.toggle("gmt-gnss-lost", lostTrack);
+      empty.textContent = text;
     }
     q("lanes")?.setAttribute("aria-label", lanesAria(read));
     const list = q("lane-list");
@@ -450,6 +706,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
   function render(): void {
     showFields();
+    drawSliders();
     const state = readState();
     const read = readGnss(lib, state, Temporal.Now.instant().toString());
     last = read;
@@ -517,7 +774,18 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   let shownMode: GnssDecoderMode = mode();
 
   root.addEventListener("input", (e) => {
-    const role = (e.target as HTMLElement).dataset?.["role"] ?? "";
+    const target = e.target as HTMLElement;
+    // A range writes its stop into the typed field; the field is the state.
+    if (target === weekSliderEl || target === towSliderEl) {
+      setControlValue(
+        target === weekSliderEl ? weekEl : towEl,
+        (target as HTMLInputElement).value,
+      );
+      syncPreset();
+      render();
+      return;
+    }
+    const role = target.dataset?.["role"] ?? "";
     if (!/^(week|tow|era|pivot|utc)$/.test(role)) return;
     syncPreset();
     render();

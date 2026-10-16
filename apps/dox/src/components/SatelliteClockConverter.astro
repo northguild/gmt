@@ -49,9 +49,11 @@ const html = renderSatelliteClockConverterTemplate();
     document
       .querySelectorAll<HTMLElement>(".gmt-satellite-clock-converter")
       .forEach((el) => {
-        mountSatelliteClockConverter(el, seed, new AbortController().signal).catch(
-          (error) => showUnavailable(el, error),
-        );
+        mountSatelliteClockConverter(
+          el,
+          seed,
+          new AbortController().signal,
+        ).catch((error) => showUnavailable(el, error));
       });
   }
 </script>

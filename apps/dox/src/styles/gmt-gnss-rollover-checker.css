@@ -2,11 +2,14 @@
  * GNSS Rollover Checker (MAR-16).
  *
  * Section/controls/codeframe/output chrome lives in gmt-widget.css; labels,
- * inputs, selects and chips in gmt-form-controls.css. The frame, the strip, the
- * pin, the "today" mark and the table are the shared GNSS sheet's
+ * inputs, selects and chips in gmt-form-controls.css. The frame, the lit and
+ * hatched spans, the "today" mark and the table are the shared GNSS sheet's
  * (gmt-gnss-widgets.css); the result plates are the punctuality sheet's. This
  * sheet holds what only this tool needs: its container, the field groups, the
- * strip's key and chip slots, and the plates' widths.
+ * key and chip slots, and the fuse timeline: one track per counter from 1980
+ * to 2170 grouped by width, a tick per wrap (the next one taller), the
+ * receiver's window as a lit bracket, a spark where it goes wrong, the check
+ * date and today as pins, and beside it the countdown and the status badge.
  *
  * Nothing here is a verdict colour. Amber is the sentinel's alone, and an
  * accent edge is never a single side.
@@ -80,7 +83,7 @@
    every reading. An unused slot keeps its box and shows nothing. */
 .gmt-gnss-rollover-checker .gmt-rollover-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: var(--gmt-space-2);
   min-width: 0;
 }
@@ -88,9 +91,8 @@
 .gmt-gnss-rollover-checker .gmt-rollover-chip {
   min-width: 0;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .gmt-gnss-rollover-checker .gmt-rollover-chip[data-blank] {
@@ -100,4 +102,653 @@
 .gmt-gnss-rollover-checker .gmt-gnss-ruler > [hidden],
 .gmt-gnss-rollover-checker .gmt-gnss-track > [hidden] {
   display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * The fuse timeline
+ * --------------------------------------------------------------------------- */
+
+.gmt-gnss-rollover-checker .gmt-fuse-frame {
+  --series: var(--gmt-series-1);
+  --fuse-label-w: 9.5ch;
+  --fuse-gap: var(--gmt-space-3);
+  --fuse-row-h: 1.75rem;
+}
+
+/* The layout is the frame's child, because a container cannot query itself.
+   Narrow: the countdown above the chart. Wide: the chart on the left. */
+.gmt-fuse-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  min-width: 0;
+}
+
+.gmt-fuse-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+  order: -1;
+}
+
+@container gmt-gnss-frame (min-width: 46rem) {
+  .gmt-fuse-layout {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    align-items: start;
+  }
+  .gmt-fuse-aside {
+    order: 0;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+  .gmt-fuse-layout > .gmt-fuse,
+  .gmt-fuse-layout > .gmt-rollover-key,
+  .gmt-fuse-layout > .gmt-rollover-chips {
+    grid-column: 1;
+  }
+}
+
+/* ---- The countdown: the hero ---- */
+
+.gmt-fuse-count {
+  position: relative;
+  align-items: stretch;
+}
+
+/* The words stay in the page for a reader who cannot see the cells. When there
+   is no countdown the value is the "no result" text, and that is drawn. */
+.gmt-fuse-count:not([data-empty]) > .gmt-punct-hero-value {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.gmt-fuse-digits {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+}
+
+.gmt-fuse-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gmt-fuse-cell > b {
+  font-weight: 500;
+  font-size: var(--gmt-text-xl);
+  line-height: 1.1;
+  min-inline-size: 2ch;
+  text-align: center;
+}
+
+.gmt-fuse-cell[data-unit="days"] > b {
+  min-inline-size: 5ch;
+  font-size: calc(var(--gmt-text-xl) * 1.25);
+}
+
+.gmt-fuse-cell > i {
+  font-style: normal;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-fuse-count[data-past] .gmt-fuse-digits {
+  color: var(--gmt-ice-dim);
+}
+
+/* ---- The status badge ---- */
+
+.gmt-fuse-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  box-sizing: border-box;
+  margin: 0;
+  /* Two lines always, so a longer verdict never grows the column. */
+  min-block-size: calc(2lh + 2 * var(--gmt-space-2) + 2px);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-fuse-badge-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gmt-fuse-icon {
+  display: none;
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gmt-fuse-badge[data-verdict="right"] .gmt-fuse-icon[data-for="right"],
+.gmt-fuse-badge[data-verdict="early"] .gmt-fuse-icon[data-for="early"],
+.gmt-fuse-badge[data-verdict="late"] .gmt-fuse-icon[data-for="late"] {
+  display: block;
+}
+
+/* Right: lit glass in the series colour. Early and late: a hatch that leans
+   the other way each time. The icon and the words carry it, not colour. */
+.gmt-fuse-badge[data-verdict="right"] {
+  border-color: var(--gmt-series-1);
+  background-color: color(from var(--gmt-series-1) srgb r g b / 0.16);
+}
+
+.gmt-fuse-badge[data-verdict="early"],
+.gmt-fuse-badge[data-verdict="late"] {
+  border-style: dashed;
+  border-color: var(--gmt-ice);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-ice) srgb r g b / 0.16) 0,
+    color(from var(--gmt-ice) srgb r g b / 0.16) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+.gmt-fuse-badge[data-verdict="late"] {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color(from var(--gmt-ice) srgb r g b / 0.16) 0,
+    color(from var(--gmt-ice) srgb r g b / 0.16) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+/* The two quiet plates under the badge stack in the column. */
+.gmt-fuse-aside .gmt-punct-heroes {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-gnss-rollover-checker
+  .gmt-fuse-aside
+  .gmt-punct-heroes
+  [data-role]
+  .gmt-punct-hero-value {
+  font-size: var(--gmt-text-base);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* ---- The chart ---- */
+
+.gmt-fuse {
+  --fuse-plane-start: calc(var(--fuse-label-w) + var(--fuse-gap));
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-width: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.gmt-fuse-axis {
+  position: relative;
+  block-size: 1.1rem;
+  margin-inline-start: var(--fuse-plane-start);
+  color: var(--gmt-ice-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-fuse-year {
+  position: absolute;
+  inset-inline-start: var(--at);
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+/* The bottom padding is the pin heads' own lane, below the last track, so a
+   head never covers a year label or a heading. */
+.gmt-fuse-board {
+  position: relative;
+  min-width: 0;
+  padding-block-end: 0.875rem;
+}
+
+/* The year lines and the pins run through every track, in the plane the
+   tracks share. */
+.gmt-fuse-grid,
+.gmt-fuse-pins {
+  position: absolute;
+  inset-block: 0 0.875rem;
+  inset-inline: var(--fuse-plane-start) 0;
+  pointer-events: none;
+}
+
+.gmt-fuse-gridline {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at);
+  inline-size: 1px;
+  background: var(--gmt-border);
+}
+
+.gmt-fuse-rows {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gmt-fuse-head {
+  min-block-size: 1.4rem;
+  padding-block-start: var(--gmt-space-2);
+  box-sizing: border-box;
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-fuse-head:first-child {
+  padding-block-start: 0;
+}
+
+.gmt-fuse-row {
+  display: grid;
+  grid-template-columns: var(--fuse-label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--fuse-gap);
+  block-size: var(--fuse-row-h);
+}
+
+.gmt-fuse-name {
+  overflow: hidden;
+  white-space: nowrap;
+  border-block-end: 2px solid transparent;
+  line-height: 1.3;
+}
+
+/* The receiver's own track: its label gets a bottom edge and the track a full
+   border in the series colour. */
+.gmt-fuse-row[data-yours] .gmt-fuse-name {
+  border-block-end-color: var(--gmt-series-1);
+  font-weight: 600;
+}
+
+.gmt-fuse-track {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  block-size: 1rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill-subtle);
+}
+
+.gmt-fuse-row[data-yours] .gmt-fuse-track {
+  border-color: var(--gmt-series-1);
+}
+
+/* The wire down the middle of a track: the fuse itself. */
+.gmt-fuse-track::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  block-size: 1px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--gmt-border-strong) 0,
+    var(--gmt-border-strong) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+/* Before the counter's first week: nothing was broadcast. */
+.gmt-fuse-pre {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--to, 0%);
+  background-color: var(--gmt-surface);
+  opacity: 0.85;
+}
+
+.gmt-fuse-ticks {
+  display: contents;
+}
+
+.gmt-fuse-tick {
+  position: absolute;
+  inset-block: 1px;
+  inset-inline-start: var(--at);
+  inline-size: 2px;
+  translate: -50% 0;
+  background: var(--gmt-ice-dim);
+}
+
+.gmt-fuse-tick[data-state="past"] {
+  opacity: 0.45;
+}
+
+/* The next wrap: taller than the track, wider, in the primary ink. */
+.gmt-fuse-tick[data-state="next"] {
+  inset-block: -4px;
+  inline-size: 4px;
+  background: var(--gmt-ice);
+  box-shadow: 0 0 0 2px var(--gmt-surface);
+}
+
+/* ---- The window on the receiver's track ---- */
+
+.gmt-gnss-rollover-checker .gmt-fuse-lit,
+.gmt-gnss-rollover-checker .gmt-fuse-hatch {
+  inset-block: -3px;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-series-1);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-gnss-rollover-checker .gmt-fuse-lit {
+  background-color: color(from var(--gmt-series-1) srgb r g b / 0.38);
+}
+
+.gmt-gnss-rollover-checker .gmt-fuse-hatch {
+  border-style: dashed;
+  background-color: transparent;
+  --hatch: color(from var(--gmt-series-1) srgb r g b / 0.7);
+}
+
+/* The fuse still to burn, from the check date to the spark. */
+.gmt-fuse-burn {
+  position: absolute;
+  inset-inline-start: var(--from, 0%);
+  inline-size: calc(var(--to, 100%) - var(--from, 0%));
+  inset-block-start: calc(50% - 2px);
+  block-size: 4px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--gmt-ice) 0,
+    var(--gmt-ice) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.gmt-fuse-burn[hidden],
+.gmt-fuse-spark[hidden],
+.gmt-fuse-pin[hidden] {
+  display: none;
+}
+
+/* The spark where the fuse burns out. */
+.gmt-fuse-spark {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% -50%;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  display: block;
+}
+
+.gmt-fuse-spark svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  fill: var(--gmt-ice);
+  stroke: var(--gmt-surface);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px color(from var(--gmt-series-1) srgb r g b / 0.9));
+}
+
+.gmt-fuse-spark circle {
+  fill: var(--gmt-series-1);
+  stroke: none;
+}
+
+/* ---- The pins ---- */
+
+.gmt-fuse-pin {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at, 0%);
+  inline-size: 2px;
+  translate: -50% 0;
+  background: var(--gmt-series-1);
+}
+
+.gmt-fuse-pin > .gmt-cutoff-mark {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 50%;
+  translate: -50% 60%;
+}
+
+/* ---- The key ---- */
+
+.gmt-rollover-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-rollover-key > span[hidden] {
+  display: none;
+}
+
+.gmt-fuse-swatch {
+  display: inline-block;
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 0.7rem;
+  box-sizing: border-box;
+}
+
+.gmt-fuse-swatch[data-kind="lit"] {
+  border: 1px solid var(--gmt-series-1);
+  border-radius: var(--gmt-radius-sm);
+  background-color: color(from var(--gmt-series-1) srgb r g b / 0.38);
+}
+
+.gmt-fuse-swatch[data-kind="hatch"] {
+  border: 1px dashed var(--gmt-series-1);
+  border-radius: var(--gmt-radius-sm);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-series-1) srgb r g b / 0.7) 0,
+    color(from var(--gmt-series-1) srgb r g b / 0.7) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+.gmt-fuse-swatch[data-kind="spark"] {
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  fill: var(--gmt-ice);
+  overflow: visible;
+}
+
+.gmt-fuse-swatch[data-kind="next"] {
+  inline-size: 4px;
+  block-size: 0.9rem;
+  background: var(--gmt-ice);
+}
+
+.gmt-fuse-swatch[data-kind="pin"] {
+  inline-size: 2px;
+  block-size: 0.9rem;
+  background: var(--gmt-series-1);
+}
+
+.gmt-fuse-swatch[data-kind="today"] {
+  inline-size: 2px;
+  block-size: 0.9rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--gmt-ice) 0,
+    var(--gmt-ice) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.gmt-fuse-park {
+  display: none;
+}
+
+/* Narrow frames: a shorter label column and rows, and only the major years. */
+@container gmt-gnss-frame (max-width: 30rem) {
+  .gmt-gnss-rollover-checker .gmt-fuse-frame {
+    --fuse-label-w: 9ch;
+    --fuse-gap: var(--gmt-space-2);
+    --fuse-row-h: 1.6rem;
+  }
+
+  .gmt-fuse-year:not([data-major]) {
+    display: none;
+  }
+
+  .gmt-fuse-head {
+    overflow: hidden;
+    letter-spacing: 0;
+  }
+
+  .gmt-gnss-rollover-checker
+    .gmt-fuse-aside
+    .gmt-punct-heroes
+    [data-role]
+    .gmt-punct-hero-value {
+    font-size: var(--gmt-text-sm);
+  }
+}
+
+/* The peer table: the first two headers sat on top of each other when the
+   table stacked. Each header gets its own row of the grid. */
+.gmt-gnss-rollover-checker .gmt-gnss-table th {
+  position: static;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Motion: only where the reader allows it, and subtle ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .gmt-fuse-spark svg {
+    animation: gmt-fuse-spark 2.4s ease-in-out infinite alternate;
+    transform-origin: center;
+  }
+
+  .gmt-fuse-burn {
+    animation: gmt-fuse-burn 1.2s linear infinite;
+  }
+
+  @keyframes gmt-fuse-spark {
+    from {
+      scale: 0.88;
+      rotate: -8deg;
+    }
+    to {
+      scale: 1.1;
+      rotate: 8deg;
+    }
+  }
+
+  @keyframes gmt-fuse-burn {
+    from {
+      background-position-x: 0;
+    }
+    to {
+      background-position-x: 8px;
+    }
+  }
+}
+
+/* ---- Forced colours ---- */
+
+@media (forced-colors: active) {
+  .gmt-fuse-tick,
+  .gmt-fuse-pin,
+  .gmt-fuse-gridline,
+  .gmt-fuse-swatch[data-kind="next"],
+  .gmt-fuse-swatch[data-kind="pin"] {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-fuse-burn {
+    forced-color-adjust: none;
+    background-image: repeating-linear-gradient(
+      to right,
+      CanvasText 0,
+      CanvasText 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  .gmt-fuse-track,
+  .gmt-fuse-lit,
+  .gmt-fuse-hatch,
+  .gmt-fuse-badge,
+  .gmt-fuse-swatch[data-kind="lit"],
+  .gmt-fuse-swatch[data-kind="hatch"] {
+    border-color: CanvasText;
+  }
+
+  .gmt-fuse-spark svg,
+  .gmt-fuse-swatch[data-kind="spark"] {
+    forced-color-adjust: none;
+    fill: CanvasText;
+    stroke: Canvas;
+    filter: none;
+  }
+
+  .gmt-fuse-spark circle {
+    fill: Canvas;
+  }
+
+  .gmt-fuse-pre {
+    background-color: Canvas;
+    opacity: 1;
+  }
+
+  .gmt-fuse-badge[data-verdict="early"],
+  .gmt-fuse-badge[data-verdict="late"] {
+    background-image: none;
+  }
 }

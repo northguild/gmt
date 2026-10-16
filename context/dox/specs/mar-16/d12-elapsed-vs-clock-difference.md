@@ -34,15 +34,23 @@ through TAI, and the inserted second is listed when it is the start (half-open).
 is not a listed insertion, `toTAI` and `leapSecondsBetween` return the sentinel too, with "No leap
 second was inserted at the end of that day."
 
-**Template.** Three sections: the inputs; a `.gmt-gnss-frame` with three pinned plates
-(`hero-clock` "Clock difference", `secondsText(clock)`; `hero-elapsed` "Seconds that passed",
-`secondsText(elapsed)`, series 1; `hero-count` "Leap seconds between", the signed count) over **two
-rulers** (`role="img"`, a hidden list): "UTC clock" and "Elapsed", from start to end on one scale,
-each counted insertion a mark on both with its chip, and on the elapsed ruler a hatched one-second
-sliver (drawn at a minimum width so it shows at any span) with the chip "+1 s"; then
-**`insertions-list`** (the counted seconds, always reserving the tallest list a preset gives), the
-calls and the links row. The test, not the widget, checks `elapsed − clock = count × 10⁹` wherever
-all three read.
+**Template.** Three sections: the inputs; a `.gmt-gnss-frame`; then the calls and the links row. The
+frame reads as a sum above two vernier rulers. The sum is three plates, `hero-clock` "Clock
+difference" (`secondsText(clock)`, series 2), `hero-count` "Leap seconds between" (the signed count,
+series 3) and `hero-elapsed` "Seconds that passed" (`secondsText(elapsed)`, series 1), joined by `+`
+and `=` (a column sum at narrow widths). Under it is the figure (`role="img"`, its `aria-label` the
+summary sentence): the "UTC clock" ruler, one cell per clock second labelled with its wall time; two
+tapes (the clock difference counts every cell and leaves a dashed gap over each inserted second, the
+elapsed tape fills every cell); and the "Seconds that passed" ruler at the same scale, numbering the
+SI seconds. Each inserted second is a stretched `23:59:60` cell in series 3 on the clock face and a
+hatched "+1 s" cell on the elapsed ruler, so the two ends misalign by exactly the seconds inserted.
+A long span compresses: the seconds beside each end stay, a slashed break stands for the rest, and
+every inserted second keeps its own cell; when the width cannot hold them all, one cell says how
+many. Placement is arithmetic only (`drawMs`); every number comes from the library calls. A span
+that cannot be read draws the amber `NO SIGNAL` on the ruler it cannot fill. The earlier end and the
+later end hang under the rulers at opposite edges, then **`insertions-list`** (the counted seconds,
+always reserving the tallest list a preset gives), the calls and the links row. The test, not the
+widget, checks `elapsed − clock = count × 10⁹` wherever all three read.
 
 **Presets** (each output from the run unless marked †):
 

@@ -9,12 +9,13 @@
  * (`timescale-lib.ts`), loaded by the mount. The widget draws the library's
  * results and computes none: the clock difference is `spanNs` of the two UTC
  * readings, the elapsed time is `spanNs` of their two `toTAI` readings, and
- * the count is `leapSecondsBetween`. The only arithmetic here places marks on
- * the rulers (`drawMs`), never a shown result.
+ * the count is `leapSecondsBetween`. The only arithmetic here lays out the
+ * cells of the rulers (`drawMs`, `rulerModel`), never a shown result.
  *
  * Naming rule: GMT tracks no law, and the text names no body.
  */
 
+import { Temporal } from "@js-temporal/polyfill";
 import { runCall, type EdiCall } from "./edi-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { ToolHandoff } from "./widget-permalink";
@@ -25,11 +26,7 @@ import {
   drawMs,
 } from "./leap-second-timeline";
 import type { TimescaleLib } from "./timescale-lib";
-import {
-  insertionsBetween,
-  secondAfter,
-  secondsText,
-} from "./timescale-widgets";
+import { insertionsBetween, secondsText } from "./timescale-widgets";
 
 export { BEFORE_1972_TEXT, NOT_INSERTED_TEXT, NOT_INSTANT_TEXT };
 
@@ -275,7 +272,7 @@ export function readElapsed(
 // Plates and sentences
 // ---------------------------------------------------------------------------
 
-/** The three result plates, in order. A plate with no result keeps its lines. */
+/** The three result plates, in the order of the sum they make: clock difference + leap seconds = seconds that passed. A plate with no result keeps its lines. */
 export function elapsedPlates(
   read: ElapsedRead,
   state: ElapsedState,
@@ -290,18 +287,18 @@ export function elapsedPlates(
       series: 2,
     },
     {
-      role: "hero-elapsed",
-      caption: "Seconds that passed",
-      value: read.elapsed === null ? null : secondsText(read.elapsed),
-      lines: ["read through TAI", "counts every second"],
-      series: 1,
-    },
-    {
       role: "hero-count",
       caption: "Leap seconds between",
       value: read.count === null ? null : String(read.count),
       lines: [`from ${day(state.start)}`, `to ${day(state.end)}`],
       series: 3,
+    },
+    {
+      role: "hero-elapsed",
+      caption: "Seconds that passed",
+      value: read.elapsed === null ? null : secondsText(read.elapsed),
+      lines: ["read through TAI", "counts every second"],
+      series: 1,
     },
   ];
 }
@@ -334,39 +331,220 @@ export function summaryText(state: ElapsedState, read: ElapsedRead): string {
   return parts.join(" ");
 }
 
-/** Where the counted seconds sit between the endpoints, as percentages, for drawing. */
-export interface RulerMark {
-  insertion: string;
-  pct: number;
+// ---------------------------------------------------------------------------
+// The rulers: the clock face above, the seconds that passed below
+// ---------------------------------------------------------------------------
+
+/** One second on a ruler: a clock second, or an inserted one. */
+export interface RulerCell {
+  /** `true` for the inserted second, which the clock face writes `:60`. */
+  leap: boolean;
+  /** The wall time the clock face shows for it, `23:59:60` for the inserted one. */
+  time: string;
+  /** The UTC date it falls on. */
+  day: string;
+  /** Whether the clock face prints `time` on it. */
+  label: boolean;
+  /** Its count among the seconds that passed, or `null` in a compressed ruler. */
+  ordinal: number | null;
+  /** The width it asks for, in px; the rulers share it so the rows line up. */
+  basis: number;
+  /** An inserted second drawn narrow, with no room for its time. */
+  compact: boolean;
+}
+
+/** A run of consecutive seconds, a break where seconds are left out, or many inserted seconds in one cell. */
+export type RulerPiece =
+  | { kind: "run"; cells: RulerCell[] }
+  | { kind: "break"; px: number; skipped: number }
+  | { kind: "many"; count: number };
+
+export interface RulerModel {
+  pieces: RulerPiece[];
+  /** The clock seconds in the span: what the clock difference counts. */
+  clockSeconds: number;
+  /** The inserted seconds in the span. */
+  leaps: number;
+  /** Whether seconds are left out between the first and last runs. */
+  compressed: boolean;
+}
+
+const SECOND_60 = /(:\d{2}:)60(?=[.,Z+-]|$)/;
+const iso = (ms: number): string =>
+  Temporal.Instant.fromEpochMilliseconds(ms).toString();
+const wall = (ms: number): string => iso(ms).slice(11, 19);
+const dayOf = (ms: number): string => iso(ms).slice(0, 10);
+
+/** Basis in px of a cell that carries a time (a stretched inserted second is wider). */
+const LABELLED_PX = 66;
+const PLAIN_PX = 22;
+const COMPACT_LEAP_PX = 34;
+const FULL_PX = 64;
+const FULL_LEAP_PX = 104;
+const FRAME_PAD_PX = 28;
+const DEFAULT_WIDTH_PX = 760;
+
+/** How wide a break is: it grows with the log of the seconds it leaves out, so a longer span reads longer. */
+function breakPx(skipped: number): number {
+  const w = 12 + 3 * (Math.log10(Math.max(skipped, 1)) - 1);
+  return Math.round(Math.min(34, Math.max(12, w)));
 }
 
 /**
- * The ruler's marks: each counted second at its place between the earlier and
- * the later endpoint, or none when an endpoint cannot be placed. A mark sits at
- * the first instant after its inserted second (`secondAfter`), where the clock
- * and the elapsed time part company. Placement only.
+ * What the two rulers draw for `state`, or `null` when an endpoint cannot be
+ * placed. Placement only, never a shown result: the counts come from `read`.
+ *
+ * Both rulers show one cell per second from the earlier endpoint to the later.
+ * A short span shows every second. A longer one shows the seconds next to each
+ * end with a break between, and keeps each inserted second as its own cell
+ * (with the second before it); when the width cannot hold them all, one cell
+ * says how many were left out. `width` is the frame's pixel width, `0` if
+ * unknown.
  */
-export function rulerMarks(
-  lib: TimescaleLib,
+export function rulerModel(
   state: ElapsedState,
   read: ElapsedRead,
-): RulerMark[] {
+  width: number,
+): RulerModel | null {
   const a = drawMs(state.start);
   const b = drawMs(state.end);
-  if (a === null || b === null) return [];
-  const from = Math.min(a, b);
-  const span = Math.max(a, b) - from;
-  const marks: RulerMark[] = [];
-  for (const insertion of read.counted) {
-    const ms = drawMs(secondAfter(lib, insertion)) ?? drawMs(insertion);
-    if (ms === null) continue;
-    const raw = span === 0 ? 0 : ((ms - from) / span) * 100;
-    marks.push({
-      insertion,
-      pct: Math.round(Math.min(100, Math.max(0, raw)) * 100) / 100,
-    });
+  if (a === null || b === null) return null;
+  const sixty = (t: string) => SECOND_60.test(t.trim());
+  const keyA = a + (sixty(state.start) ? 0.5 : 0);
+  const keyB = b + (sixty(state.end) ? 0.5 : 0);
+  const [early, late, earlyIs60, lateIs60] =
+    keyA <= keyB
+      ? [a, b, sixty(state.start), sixty(state.end)]
+      : [b, a, sixty(state.end), sixty(state.start)];
+  // An endpoint written as a second 60 is placed on its own 59, one second back.
+  const low = Math.floor(early / 1000) * 1000 + (earlyIs60 ? 1000 : 0);
+  const high = Math.floor(late / 1000) * 1000 + (lateIs60 ? 1000 : 0);
+  const seconds = Math.max(0, Math.round((high - low) / 1000));
+
+  const leaps = read.counted
+    .flatMap((insertion) => {
+      const ms = drawMs(insertion);
+      return ms === null
+        ? []
+        : [{ k: Math.round((ms - low) / 1000), day: dayOf(ms), ms }];
+    })
+    .sort((x, y) => x.k - y.k);
+  const total = seconds + leaps.length;
+  const strip = Math.max(0, (width || DEFAULT_WIDTH_PX) - FRAME_PAD_PX);
+
+  const second = (idx: number, label: boolean, basis: number): RulerCell => ({
+    leap: false,
+    time: wall(low + idx * 1000),
+    day: dayOf(low + idx * 1000),
+    label,
+    ordinal: null,
+    basis,
+    compact: false,
+  });
+  const leapCell = (l: (typeof leaps)[number], basis: number): RulerCell => ({
+    leap: true,
+    time: `${wall(l.ms).slice(0, 6)}60`,
+    day: l.day,
+    label: true,
+    ordinal: null,
+    basis,
+    compact: basis < LABELLED_PX,
+  });
+
+  const fullMax = Math.min(16, Math.max(3, Math.floor(strip / FULL_PX)));
+  if (total <= fullMax) {
+    const cells: RulerCell[] = [];
+    const leapAt = (k: number) => leaps.filter((l) => l.k === k);
+    for (const l of leapAt(-1)) cells.push(leapCell(l, FULL_LEAP_PX));
+    for (let idx = 0; idx < seconds; idx++) {
+      cells.push(second(idx, true, FULL_PX));
+      for (const l of leapAt(idx)) cells.push(leapCell(l, FULL_LEAP_PX));
+    }
+    cells.forEach((c, i) => (c.ordinal = i + 1));
+    return {
+      pieces: cells.length === 0 ? [] : [{ kind: "run", cells }],
+      clockSeconds: seconds,
+      leaps: leaps.length,
+      compressed: false,
+    };
   }
-  return marks;
+
+  const win = strip >= 340 ? 2 : 1;
+  const assemble = (
+    withLeaps: boolean,
+  ): { pieces: RulerPiece[]; px: number } => {
+    const keyed = new Map<number, RulerCell>();
+    const put = (idx: number) => {
+      if (idx < 0 || idx >= seconds || keyed.has(idx)) return;
+      keyed.set(idx, second(idx, false, PLAIN_PX));
+    };
+    for (let i = 0; i < win; i++) {
+      put(i);
+      put(seconds - 1 - i);
+    }
+    if (withLeaps) {
+      for (const l of leaps) {
+        keyed.set(l.k + 0.5, leapCell(l, COMPACT_LEAP_PX));
+      }
+    }
+    const keys = [...keyed.keys()].sort((x, y) => x - y);
+    const pieces: RulerPiece[] = [];
+    let run: RulerCell[] = [];
+    let px = 0;
+    let prev: number | null = null;
+    const flush = () => {
+      if (run.length === 0) return;
+      if (!run[0]!.leap) {
+        run[0]!.label = true;
+        run[0]!.basis = LABELLED_PX;
+      }
+      px += run.reduce((n, c) => n + c.basis, 0);
+      pieces.push({ kind: "run", cells: run });
+      run = [];
+    };
+    for (const key of keys) {
+      if (prev !== null && key - prev > 1) {
+        flush();
+        const skipped = Math.floor(key) - Math.floor(prev) - 1;
+        const brk = breakPx(skipped);
+        px += brk;
+        pieces.push({ kind: "break", px: brk, skipped });
+      }
+      run.push(keyed.get(key)!);
+      prev = key;
+    }
+    flush();
+    return { pieces, px };
+  };
+
+  let built = assemble(true);
+  let many = false;
+  if (built.px > strip && leaps.length > 0) {
+    built = assemble(false);
+    many = true;
+  }
+  let pieces = built.pieces;
+  if (many) {
+    const firstBreak = pieces.findIndex((p) => p.kind === "break");
+    const cell: RulerPiece = { kind: "many", count: leaps.length };
+    if (firstBreak === -1) pieces = [...pieces, cell];
+    else {
+      const brk = pieces[firstBreak]!;
+      pieces = [
+        ...pieces.slice(0, firstBreak),
+        brk,
+        cell,
+        brk,
+        ...pieces.slice(firstBreak + 1),
+      ];
+    }
+  }
+  return {
+    pieces,
+    clockSeconds: seconds,
+    leaps: leaps.length,
+    compressed: pieces.some((p) => p.kind === "break"),
+  };
 }
 
 /** Whether both endpoints can be placed on the rulers. */

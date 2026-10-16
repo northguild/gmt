@@ -660,3 +660,187 @@ describe("lifecycle", () => {
     spy.restore();
   });
 });
+
+describe("the links row (D13)", () => {
+  const ELAPSED = "Count the real seconds between these dates";
+  const CLOCKS = "Every clock on this date";
+  async function mountPreset(id: string) {
+    const mounted = await mount();
+    choose(mounted.root, "preset", id);
+    return mounted;
+  }
+  const link = (root: HTMLElement, role: string) =>
+    q<HTMLAnchorElement>(root, role);
+  const state = (root: HTMLElement, role: string) => ({
+    text: link(root, role).textContent,
+    href: link(root, role).getAttribute("href"),
+    disabled: link(root, role).getAttribute("aria-disabled"),
+  });
+  const enabled = (text: string, href: string) => ({
+    text,
+    href,
+    disabled: null,
+  });
+  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
+
+  it("has both links in the links row, in order", async () => {
+    const { root } = await mount();
+    const row = q(root, "tool-links");
+    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
+    expect(
+      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
+    ).toEqual(["link-elapsed", "link-clocks"]);
+  });
+
+  it("sends the span to Elapsed vs. Clock as start and end, and the date to the Clock Converter", async () => {
+    const { root } = await mountPreset("from-2000");
+    expect(state(root, "link-elapsed")).toEqual(
+      enabled(
+        ELAPSED,
+        encodeWidgetPermalink("elapsed", {
+          start: "2000-01-01T00:00:00Z",
+          end: "2024-01-01T00:00:00Z",
+        }),
+      ),
+    );
+    expect(state(root, "link-clocks")).toEqual(
+      enabled(
+        CLOCKS,
+        encodeWidgetPermalink("satclock", { value: "2000-01-01T00:00:00Z" }),
+      ),
+    );
+  });
+
+  it("sends a backwards span as typed", async () => {
+    const { root } = await mountPreset("backwards");
+    expect(link(root, "link-elapsed").getAttribute("href")).toBe(
+      encodeWidgetPermalink("elapsed", {
+        start: "2024-01-01T00:00:00Z",
+        end: "2000-01-01T00:00:00Z",
+      }),
+    );
+  });
+
+  it("follows what is typed, and each link is lit by its own fields", async () => {
+    const { root } = await mountPreset("from-2000");
+    type(root, "date", "2016-01-01T00:00:00Z");
+    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("satclock", { value: "2016-01-01T00:00:00Z" }),
+    );
+    type(root, "to", "2020-01-01T00:00:00Z");
+    expect(link(root, "link-elapsed").getAttribute("href")).toBe(
+      encodeWidgetPermalink("elapsed", {
+        start: "2000-01-01T00:00:00Z",
+        end: "2020-01-01T00:00:00Z",
+      }),
+    );
+  });
+
+  it("follows the slider's date", async () => {
+    const { root } = await mountPreset("from-2000");
+    slide(root, 0);
+    const date = q<HTMLInputElement>(root, "date").value;
+    expect(date).toBe("1972-01-01T00:00:00Z");
+    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("satclock", { value: date }),
+    );
+  });
+
+  it("disables the clocks link with no date, and the span link with no span", async () => {
+    const { root } = await mountPreset("backwards");
+    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+    expect(link(root, "link-elapsed").hasAttribute("href")).toBe(true);
+    type(root, "from", "");
+    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
+  });
+
+  it("disables the clocks link for a date before 1972, where the library has no offset", async () => {
+    const { root } = await mountPreset("before-1972");
+    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+  });
+
+  it("disables both links on a second 60 that never happened", async () => {
+    const { root } = await mountPreset("not-inserted");
+    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
+    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+  });
+
+  it("disables the span link for a span the library refused, and lights it again", async () => {
+    const { root } = await mountPreset("from-2000");
+    type(root, "from", "not a date");
+    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
+    // The date is separate: its link is untouched.
+    expect(link(root, "link-clocks").hasAttribute("href")).toBe(true);
+    type(root, "from", "2000-01-01T00:00:00Z");
+    expect(link(root, "link-elapsed").hasAttribute("href")).toBe(true);
+    expect(link(root, "link-elapsed").hasAttribute("aria-disabled")).toBe(
+      false,
+    );
+  });
+
+  it("lands on seeds the other tools read back", async () => {
+    const { root } = await mountPreset("from-2000");
+    const read = (role: string, kind: "elapsed" | "satclock") => {
+      const href = link(root, role).getAttribute("href")!;
+      return seedFromLocation(kind, href.slice(href.indexOf("?")));
+    };
+    expect(read("link-elapsed", "elapsed")).toEqual({
+      start: "2000-01-01T00:00:00Z",
+      end: "2024-01-01T00:00:00Z",
+    });
+    expect(read("link-clocks", "satclock")).toEqual({
+      value: "2000-01-01T00:00:00Z",
+    });
+  });
+});
+
+describe("the staircase", () => {
+  it("draws the y axis, the area, a riser per insertion and the end cap", async () => {
+    const { root } = await mount();
+    expect(
+      [...root.querySelectorAll(".gmt-leap-ytick")].map((t) => t.textContent),
+    ).toEqual(["10", "20", "30", "37"]);
+    expect(root.querySelectorAll(".gmt-leap-riser")).toHaveLength(27);
+    expect(q(root, "step-area").getAttribute("d")).toMatch(/^M0,100 L/);
+    expect(text(root, "continuous-chip")).toBe("continuous UTC from 2027-05-20");
+  });
+
+  it("lights the risers of the counted span and the checked second, and counts them", async () => {
+    const { root } = await mount();
+    const lit = [...root.querySelectorAll(".gmt-leap-riser[data-lit]")].map(
+      (r) => r.getAttribute("data-series"),
+    );
+    expect(lit).toEqual(["2", "2", "2", "2", "3"]);
+    expect(q(root, "band-flag").hidden).toBe(false);
+    expect(text(root, "band-chip")).toBe("5 leap seconds counted");
+  });
+
+  it("puts the cursor's readout and its dot at the step", async () => {
+    const { root } = await mount();
+    expect(text(root, "pin-chip")).toBe("2000-01-01 · 32 s");
+    expect(q(root, "pin-dot").hidden).toBe(false);
+    expect(q(root, "pin-guide").hidden).toBe(false);
+  });
+
+  it("draws a ghost riser for a second 60 that never happened, and no band", async () => {
+    const { root } = await mount();
+    expect(q(root, "ghost").hidden).toBe(true);
+    choose(root, "preset", "not-inserted");
+    expect(q(root, "ghost").hidden).toBe(false);
+    expect(root.querySelectorAll(".gmt-leap-riser[data-lit]")).toHaveLength(0);
+    expect(q(root, "band-flag").hidden).toBe(true);
+  });
+
+  it("shows NO SIGNAL in the plot for a date before 1972, and not for a legitimate empty result", async () => {
+    const { root } = await mount();
+    expect(q(root, "plot-sentinel").hidden).toBe(true);
+    choose(root, "preset", "after-the-table");
+    expect(q(root, "plot-sentinel").hidden).toBe(true);
+    choose(root, "preset", "before-1972");
+    expect(q(root, "plot-sentinel").hidden).toBe(false);
+    expect(q(root, "plot-sentinel").textContent).toBe(
+      "⟨ NO SIGNAL — invalid input ⟩",
+    );
+    expect(q(root, "pin-dot").hidden).toBe(true);
+  });
+});

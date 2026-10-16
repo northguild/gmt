@@ -86,7 +86,7 @@ and 4 render.
 }
 ```
 
-`EXAMPLE_AREAS` gains `{ id: "gnss", label: "GNSS and maritime" }` after `intermodal`. A tool's area follows its first tag; the three GNSS tools are `[gnss, maritime]`, so they share this area.
+`EXAMPLE_AREAS` gains `{ id: "gnss", label: "GNSS" }` after `intermodal`. A tool's area follows its first tag; the three GNSS tools are `[gnss]`, so they share this area.
 
 ### D7. Tests
 

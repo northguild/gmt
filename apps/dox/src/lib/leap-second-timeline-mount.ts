@@ -25,6 +25,7 @@ import {
   NOT_INSTANT_TEXT,
   TIMELINE_LINKS,
   TIMELINE_PRESETS,
+  VERDICT_NOT_INSERTED,
   axisPercent,
   axisTicks,
   blankPlates,
@@ -199,24 +200,36 @@ export function renderLeapSecondTimelineTemplate(
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>2. Every inserted second</h4>` +
     `<div class="gmt-gnss-frame" data-role="frame">` +
-    platesHtml("heroes", blankPlates()) +
-    `<div class="gmt-gnss-track gmt-leap-plot" data-role="plot" role="img" aria-label="">` +
-    `<svg class="gmt-leap-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polyline data-role="step-line" points="" fill="none" vector-effect="non-scaling-stroke"></polyline></svg>` +
+    `<p class="gmt-leap-caption" aria-hidden="true"><span>TAI − UTC, in seconds</span><span>each riser is one inserted second</span></p>` +
+    `<div class="gmt-leap-chart">` +
+    `<div class="gmt-leap-yaxis" data-role="yaxis" aria-hidden="true"></div>` +
+    `<div class="gmt-leap-plot" data-role="plot" role="img" aria-label="">` +
     `<span class="gmt-gnss-span gmt-gnss-hatch gmt-leap-continuous" data-role="continuous-span" data-edge="dashed" style="--from: 100%; --to: 100%"></span>` +
-    `<span class="gmt-gnss-span gmt-gnss-hatch" data-role="band" data-series="2" hidden></span>` +
+    `<span class="gmt-gnss-span gmt-gnss-hatch gmt-leap-band" data-role="band" data-series="2" hidden></span>` +
+    `<div class="gmt-leap-field">` +
+    `<div class="gmt-leap-grid" data-role="grid"></div>` +
+    `<svg class="gmt-leap-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="gmt-leap-area" data-role="step-area" d=""></path><g data-role="risers"></g><polyline data-role="step-line" points="" fill="none" vector-effect="non-scaling-stroke"></polyline></svg>` +
+    `<span class="gmt-leap-guide" data-role="pin-guide" data-series="1" hidden></span>` +
     `<div class="gmt-leap-marks" data-role="marks"></div>` +
-    `<span class="gmt-gnss-rule" data-role="pin" data-series="1" hidden></span>` +
+    `<span class="gmt-leap-ghost" data-role="ghost" data-series="3" hidden><i></i><b>never inserted</b></span>` +
+    `<span class="gmt-leap-dot" data-role="pin-dot" data-series="1" hidden></span>` +
+    `</div>` +
+    `<span class="gmt-gnss-rule gmt-leap-pin" data-role="pin" data-series="1" hidden></span>` +
+    `<span class="gmt-leap-tag" data-role="pin-flag" data-series="1" hidden><span data-role="pin-chip"></span></span>` +
+    `<span class="gmt-leap-tag gmt-leap-tag--band" data-role="band-flag" data-series="2" hidden><span data-role="band-chip"></span></span>` +
+    `<span class="gmt-leap-nosignal" data-role="plot-sentinel" hidden>⟨ NO SIGNAL — invalid input ⟩</span>` +
     `</div>` +
     `<div class="gmt-leap-axis" data-role="axis" aria-hidden="true"></div>` +
-    `<div class="gmt-gnss-flags" data-role="chips-insertions" aria-hidden="true"></div>` +
-    `<div class="gmt-gnss-flags" data-role="chips-pin" aria-hidden="true"><span class="gmt-gnss-flag" data-role="pin-flag" hidden><span class="gmt-cutoff-chip" data-role="pin-chip"></span></span></div>` +
-    `<div class="gmt-gnss-flags" data-role="chips-continuous" aria-hidden="true"><span class="gmt-gnss-flag" data-role="continuous-flag"><span class="gmt-cutoff-chip" data-role="continuous-chip">continuous UTC from ${escapeHtml(CONTINUOUS_UTC_FROM)}</span></span></div>` +
+    `<div class="gmt-gnss-flags gmt-leap-row" data-role="chips-insertions" aria-hidden="true"></div>` +
+    `<div class="gmt-gnss-flags gmt-leap-row" data-role="chips-continuous" aria-hidden="true"><span class="gmt-gnss-flag" data-role="continuous-flag"><span class="gmt-cutoff-chip" data-role="continuous-chip">continuous UTC from ${escapeHtml(CONTINUOUS_UTC_FROM)}</span></span></div>` +
+    `</div>` +
     `<ul class="gmt-leap-legend" aria-label="Legend">` +
     `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" aria-hidden="true"></i>an inserted second</li>` +
     `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="1" aria-hidden="true"></i>the date</li>` +
     `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="2" aria-hidden="true"></i>counted between the two dates</li>` +
     `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="3" aria-hidden="true"></i>your second 60</li>` +
     `</ul>` +
+    platesHtml("heroes", blankPlates()) +
     `</div>` +
     `<ul class="gmt-gnss-visually-hidden" data-role="timeline-list"></ul>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
@@ -296,23 +309,78 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     syncRange(sliderEl, sliderDate(position).slice(0, 10));
   }
 
-  function drawStepLine(read: TimelineRead, now: number): void {
+  /** A TAI - UTC value's height on the plot, as a percentage of its field. */
+  function levelOf(read: TimelineRead, v: number): number {
+    const { low, high } = offsetRange(read);
+    return Math.round(((v - low) / (high - low)) * 10000) / 100;
+  }
+
+  /** The staircase, its filled area, one riser per insertion and the y axis. */
+  function drawStepLine(
+    read: TimelineRead,
+    counted: Set<string>,
+    now: number,
+  ): void {
     const line = q("step-line");
     if (!line) return;
-    const { low, high } = offsetRange(read);
-    const y = (v: number) =>
-      Math.round((100 - ((v - low) / (high - low)) * 100) * 100) / 100;
+    const y = (v: number) => Math.round((100 - levelOf(read, v)) * 100) / 100;
     const points: string[] = [];
+    const risers: string[] = [];
     let level = read.startOffset;
     if (level !== null) points.push(`0,${y(level)}`);
     for (const step of read.steps) {
       if (step.ms === null || step.offset === null || level === null) continue;
       const x = axisPercent(step.ms, now).pct;
       points.push(`${x},${y(level)}`, `${x},${y(step.offset)}`);
+      const isChecked = read.check.insertion === step.insertion;
+      const series = isChecked ? 3 : counted.has(step.insertion) ? 2 : 0;
+      risers.push(
+        `<line class="gmt-leap-riser"${series === 0 ? "" : ` data-series="${series}" data-lit`} x1="${x}" x2="${x}" y1="${y(level)}" y2="${y(step.offset)}" vector-effect="non-scaling-stroke"></line>`,
+      );
       level = step.offset;
     }
     if (level !== null) points.push(`100,${y(level)}`);
     line.setAttribute("points", points.join(" "));
+    const first = points[0];
+    q("step-area")?.setAttribute(
+      "d",
+      first === undefined
+        ? ""
+        : `M0,100 L${points.join(" L")} L100,100 Z`,
+    );
+    const g = q("risers");
+    if (g) g.innerHTML = risers.join("");
+    drawYAxis(read);
+  }
+
+  /** Gridlines and labels at the first level, each multiple of ten and the last. */
+  function drawYAxis(read: TimelineRead): void {
+    const axis = q("yaxis");
+    const grid = q("grid");
+    if (!axis || !grid) return;
+    const { low, high } = offsetRange(read);
+    const values = new Set<number>();
+    const last = read.steps.at(-1)?.offset ?? null;
+    if (read.startOffset !== null) values.add(read.startOffset);
+    for (let v = Math.ceil((low + 1) / 10) * 10; v < high - 1; v += 10) {
+      if (read.startOffset === null || Math.abs(v - read.startOffset) > 3) {
+        if (last === null || Math.abs(v - last) > 3) values.add(v);
+      }
+    }
+    if (last !== null) values.add(last);
+    const ticks = [...values].sort((a, b) => a - b);
+    axis.innerHTML = ticks
+      .map(
+        (v) =>
+          `<span class="gmt-leap-ytick" style="--level: ${levelOf(read, v)}%">${v}</span>`,
+      )
+      .join("");
+    grid.innerHTML = ticks
+      .map(
+        (v) =>
+          `<span class="gmt-leap-gridline" style="--level: ${levelOf(read, v)}%"></span>`,
+      )
+      .join("");
   }
 
   function drawMarks(
@@ -323,14 +391,12 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     const marks = q("marks");
     const chips = q("chips-insertions");
     if (!marks || !chips) return;
-    const { low, high } = offsetRange(read);
     let markHtml = "";
     let chipHtml = "";
     for (const step of read.steps) {
       if (step.ms === null || step.offset === null) continue;
       const at = axisPercent(step.ms, now).pct;
-      const level =
-        Math.round(((step.offset - low) / (high - low)) * 10000) / 100;
+      const level = levelOf(read, step.offset);
       const isChecked = read.check.insertion === step.insertion;
       const isCounted = counted.has(step.insertion);
       const series = isChecked ? 3 : isCounted ? 2 : 0;
@@ -338,9 +404,12 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
       markHtml +=
         `<span class="gmt-cutoff-mark gmt-leap-mark${series === 0 ? " gmt-cutoff-mark--hollow" : ""}"${lit}` +
         ` data-insertion="${escapeAttr(step.insertion)}" style="--at: ${at}%; --level: ${level}%"></span>`;
-      chipHtml +=
-        `<span class="gmt-gnss-flag" style="--at: ${at}%">` +
-        `<span class="gmt-cutoff-chip"${lit}>${escapeHtml(step.insertion.slice(0, 7))}</span></span>`;
+      // Only the lit insertions are lettered: the year axis labels the rest.
+      if (series !== 0) {
+        chipHtml +=
+          `<span class="gmt-gnss-flag" style="--at: ${at}%">` +
+          `<span class="gmt-cutoff-chip"${lit}>${escapeHtml(step.insertion.slice(0, 7))}</span></span>`;
+      }
     }
     marks.innerHTML = markHtml;
     chips.innerHTML = chipHtml;
@@ -357,6 +426,17 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
       .join("");
   }
 
+  /** The offset in force at `ms`, from the library's own steps. */
+  function offsetAt(read: TimelineRead, ms: number): number | null {
+    let level = read.startOffset;
+    for (const step of read.steps) {
+      if (step.ms !== null && step.offset !== null && step.ms <= ms) {
+        level = step.offset;
+      }
+    }
+    return level;
+  }
+
   function drawPinAndBand(
     state: TimelineState,
     read: TimelineRead,
@@ -365,36 +445,93 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     const pin = q("pin");
     const flag = q("pin-flag");
     const chip = q("pin-chip");
+    const dot = q("pin-dot");
+    const guide = q("pin-guide");
     const ms = drawMs(state.date);
     const placed = ms === null ? null : axisPercent(ms, now);
+    const offset = read.offset.offset;
     if (pin) {
       pin.hidden = placed === null;
       if (placed) pin.style.setProperty("--at", `${placed.pct}%`);
     }
+    if (dot && guide) {
+      const show = placed !== null && offset !== null;
+      dot.hidden = !show;
+      guide.hidden = !show;
+      if (show) {
+        const level = `${levelOf(read, offset)}%`;
+        dot.style.setProperty("--at", `${placed.pct}%`);
+        dot.style.setProperty("--level", level);
+        guide.style.setProperty("--at", `${placed.pct}%`);
+        guide.style.setProperty("--level", level);
+      }
+    }
     if (flag && chip) {
-      flag.hidden = placed === null;
-      if (placed) {
+      const show = placed !== null && offset !== null;
+      flag.hidden = !show;
+      if (show) {
         flag.style.setProperty("--at", `${placed.pct}%`);
+        flag.dataset["side"] = placed.pct > 50 ? "end" : "start";
         const day = state.date.trim().slice(0, 10);
         chip.textContent =
           placed.beyond === null
-            ? day
-            : `${day} (${placed.beyond === "after" ? "past" : "before"} the axis)`;
+            ? `${day} · ${offset} s`
+            : `${day} (${placed.beyond === "after" ? "past" : "before"} the axis) · ${offset} s`;
       }
     }
     const band = q("band");
+    const bandFlag = q("band-flag");
+    const bandChip = q("band-chip");
+    const count = read.between.count;
+    const a = drawMs(state.from);
+    const b = drawMs(state.to);
+    const showBand = count !== null && a !== null && b !== null;
     if (band) {
-      const a = drawMs(state.from);
-      const b = drawMs(state.to);
-      const show = read.between.count !== null && a !== null && b !== null;
-      band.hidden = !show;
-      if (show) {
+      band.hidden = !showBand;
+      if (showBand) {
         const pa = axisPercent(a, now).pct;
         const pb = axisPercent(b, now).pct;
         band.style.setProperty("--from", `${Math.min(pa, pb)}%`);
         band.style.setProperty("--to", `${Math.max(pa, pb)}%`);
+        if (bandFlag && bandChip) {
+          const mid = (pa + pb) / 2;
+          bandFlag.hidden = false;
+          bandFlag.style.setProperty("--at", `${mid}%`);
+          bandFlag.dataset["side"] = "mid";
+          bandChip.textContent = `${count} leap ${Math.abs(count) === 1 ? "second" : "seconds"} counted`;
+        }
       }
     }
+    if (bandFlag && !showBand) bandFlag.hidden = true;
+
+    // A second 60 that was never inserted: a struck-through ghost riser at its day.
+    const ghost = q("ghost");
+    if (ghost) {
+      const cms = drawMs(state.check);
+      const base = cms === null ? null : offsetAt(read, cms);
+      const show =
+        cms !== null &&
+        base !== null &&
+        read.check.verdict === VERDICT_NOT_INSERTED;
+      ghost.hidden = !show;
+      if (show) {
+        const x = axisPercent(cms, now);
+        ghost.style.setProperty("--at", `${x.pct}%`);
+        ghost.style.setProperty("--level", `${levelOf(read, base)}%`);
+        ghost.dataset["side"] = x.pct > 60 ? "end" : "start";
+      }
+    }
+
+    // NO SIGNAL: a reading was asked for and the library gave no value.
+    const sentinel = q("plot-sentinel");
+    if (sentinel) {
+      sentinel.hidden = !(
+        (read.offset.calls.length > 0 && read.offset.offset === null) ||
+        (read.between.calls.length > 0 && read.between.count === null) ||
+        (read.check.calls.length > 0 && read.check.verdict === null)
+      );
+    }
+
     const span = q("continuous-span");
     const cflag = q("continuous-flag");
     const at = continuousPercent(now);
@@ -465,7 +602,25 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     if (axis) thinTickLabels(axis, ".gmt-leap-axis-tick");
     const chips = q("chips-insertions");
     if (chips) thinTickLabels(chips, ".gmt-gnss-flag");
-    for (const role of ["chips-pin", "chips-continuous"]) {
+    // The cursor's and the band's readouts stay inside the plot.
+    const plot = q("plot");
+    const plotPx = plot?.clientWidth ?? 0;
+    for (const role of ["pin-flag", "band-flag"]) {
+      const tag = q(role);
+      if (!tag || tag.hidden || plotPx === 0) continue;
+      const atPx = (parseFloat(tag.style.getPropertyValue("--at")) / 100) * plotPx;
+      const w = layoutWidth(tag);
+      // The cursor's readout sits beside its pin, flipped when it would run
+      // out; the band's is centred. Both are clamped inside the plot.
+      let left = atPx - w / 2;
+      if (role === "pin-flag") {
+        left = atPx + w + 4 <= plotPx ? atPx + 4 : atPx - w - 4;
+      }
+      left = Math.min(Math.max(left, 0), Math.max(0, plotPx - w));
+      tag.dataset["side"] = "px";
+      tag.style.setProperty("--px", `${Math.round(left)}px`);
+    }
+    for (const role of ["chips-continuous"]) {
       const row = q(role);
       const flag = row?.querySelector<HTMLElement>(".gmt-gnss-flag");
       const chip = flag?.querySelector<HTMLElement>(".gmt-cutoff-chip");
@@ -488,7 +643,7 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     const heroes = q("heroes");
     if (heroes) heroes.innerHTML = timelinePlates(read).map(plateHtml).join("");
     drawSlider(state, now);
-    drawStepLine(read, now);
+    drawStepLine(read, counted, now);
     drawMarks(read, counted, now);
     drawAxis(now);
     drawPinAndBand(state, read, now);

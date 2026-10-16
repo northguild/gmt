@@ -57,6 +57,9 @@ const REQUIRED_ROLES = [
   "strip",
   "strip-track",
   "strip-list",
+  "strip-rows",
+  "verdict",
+  "verdict-text",
   "summary",
   "reason-aside",
   "counters-table",
@@ -337,9 +340,12 @@ describe("the strip", () => {
     const { root } = await mount({ preset: "navic-built-2020" });
     const drawing = q(root, "strip");
     expect(drawing.getAttribute("role")).toBe("img");
-    expect(drawing.getAttribute("aria-label")).toContain(
-      "The firmware reads right from 2020-01-01T00:00:00Z",
+    const label = drawing.getAttribute("aria-label")!;
+    expect(label).toContain("Fuse timeline of the IRN-LNAV counter");
+    expect(label).toContain(
+      "The firmware reads right from 2020-01-01T00:00:00Z to 2039-08-17T00:00:00Z, then reports one counter period early to 2059-04-02T00:00:00Z.",
     );
+    expect(label).toContain("This counter next wraps at 2038-11-20T23:59:42Z.");
     const items = [...q(root, "strip-list").querySelectorAll("li")].map(
       (li) => li.textContent,
     );
@@ -362,7 +368,9 @@ describe("the strip", () => {
       lit.style.getPropertyValue("--to"),
     );
     expect(q<HTMLElement>(root, "strip-pin").hidden).toBe(false);
-    expect(q<HTMLElement>(root, "strip-today").hidden).toBe(true);
+    // In a date mode the reader's clock is still marked, so the window can be
+    // read against now; the clock is pinned to the same day as the check here.
+    expect(q<HTMLElement>(root, "strip-today").hidden).toBe(false);
     expect(text(root, "strip-key-hatch")).toBe(
       "reports one counter period early",
     );
@@ -387,9 +395,129 @@ describe("the strip", () => {
 
   it("says a mark outside the window is outside", async () => {
     const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "date", "2060-01-01T00:00:00Z");
-    expect(text(root, "strip-list")).toContain("(outside the window drawn)");
+    type(root, "date", "2200-01-01T00:00:00Z");
+    expect(text(root, "strip-list")).toContain("(outside the timeline drawn)");
     expect(q<HTMLElement>(root, "strip-pin").hidden).toBe(true);
+  });
+});
+
+describe("the fuse timeline", () => {
+  const rowsOf = (root: HTMLElement) => [
+    ...root.querySelectorAll<HTMLElement>(".gmt-fuse-row"),
+  ];
+
+  it("draws a skeleton of eight rows and three width headings before the library loads", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderGnssRolloverCheckerTemplate();
+    expect(rowsOf(root)).toHaveLength(8);
+    expect(root.querySelectorAll(".gmt-fuse-head")).toHaveLength(3);
+    expect(root.querySelectorAll(".gmt-fuse-year").length).toBeGreaterThan(5);
+  });
+
+  it("draws one track per counter, grouped by width, with the receiver's own marked", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    expect(rowsOf(root).map((r) => r.dataset["counter"])).toEqual([
+      "GPS-LNAV",
+      "QZS-LNAV",
+      "IRN-LNAV",
+      "GAL",
+      "GPS-CNAV",
+      "BDT",
+      "QZS-CNAV",
+      "IRN-L1NV",
+    ]);
+    expect(
+      [...root.querySelectorAll(".gmt-fuse-head")].map((h) => h.textContent),
+    ).toEqual([
+      "10-bit counters, weeks below 1024",
+      "12-bit counters, weeks below 4096",
+      "13-bit counters, weeks below 8192",
+    ]);
+    expect(
+      rowsOf(root)
+        .filter((r) => r.hasAttribute("data-yours"))
+        .map((r) => r.dataset["counter"]),
+    ).toEqual(["IRN-LNAV"]);
+  });
+
+  it("emphasises every counter's next wrap and puts the window on the receiver's track", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    const next = root.querySelectorAll('.gmt-fuse-tick[data-state="next"]');
+    expect(next).toHaveLength(8);
+    const own = rowsOf(root).find((r) => r.dataset["counter"] === "IRN-LNAV")!;
+    for (const role of [
+      "strip-lit",
+      "strip-hatch",
+      "strip-spark",
+      "strip-fuse",
+    ]) {
+      expect(own.contains(q(root, role)), role).toBe(true);
+    }
+    type(root, "date", "2030-01-01T00:00:00Z");
+    expect(
+      root.querySelectorAll('.gmt-fuse-tick[data-state="past"]').length,
+    ).toBeGreaterThan(0);
+    expect(q<HTMLElement>(root, "strip-fuse").hidden).toBe(false);
+  });
+
+  it("keeps the window on the track of a newly chosen counter", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    choose(root, "counter", "GAL");
+    const own = rowsOf(root).find((r) => r.dataset["counter"] === "GAL")!;
+    expect(own.contains(q(root, "strip-lit"))).toBe(true);
+    expect(own.hasAttribute("data-yours")).toBe(true);
+    expect(
+      rowsOf(root).filter((r) => r.hasAttribute("data-yours")),
+    ).toHaveLength(1);
+  });
+
+  it("burns out the fuse once the check date is past the wrong-from date", async () => {
+    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
+    expect(q<HTMLElement>(root, "strip-fuse").hidden).toBe(true);
+  });
+});
+
+describe("the countdown and the badge", () => {
+  it("shows days, hours, minutes and seconds in fixed cells, and the words as text", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    const cells = [...q(root, "hero-left").querySelectorAll(".gmt-fuse-cell")];
+    expect(cells.map((c) => c.getAttribute("data-unit"))).toEqual([
+      "days",
+      "h",
+      "min",
+      "s",
+    ]);
+    expect(cells[0]!.querySelector("b")!.textContent).toBe("4689");
+    expect(plateValue(root, "hero-left")).toBe("4689 days");
+  });
+
+  it("counts past the date with a Past by caption", async () => {
+    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
+    const hero = q(root, "hero-left");
+    expect(hero.hasAttribute("data-past")).toBe(true);
+    expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
+      "Past by",
+    );
+  });
+
+  it("says the verdict in a badge", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("right");
+    expect(text(root, "verdict-text")).toBe("Reports the right date");
+    choose(root, "preset", "navic-built-2020-after-wrap");
+    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("early");
+    expect(text(root, "verdict-text")).toBe("Reports a date 7168 days early");
+    choose(root, "preset", "firmware-ahead");
+    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("late");
+  });
+
+  it("shows no result in the badge and an empty countdown under a sentinel", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    type(root, "pivot", "garbage");
+    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("none");
+    expect(text(root, "verdict-text")).toBe("no result");
+    expect(q(root, "hero-left").hasAttribute("data-empty")).toBe(true);
+    expect(q(root, "hero-left").querySelector(".gmt-fuse-digits")).toBeNull();
   });
 });
 
@@ -761,5 +889,119 @@ describe("lifecycle", () => {
     expect(vi.getTimerCount()).toBe(0);
     handle.destroy();
     handle.destroy();
+  });
+});
+
+describe("the links row (D13)", () => {
+  const ERAS = "See every era of this reading";
+  const link = (root: HTMLElement) => q<HTMLAnchorElement>(root, "link-eras");
+  const state = (root: HTMLElement) => ({
+    text: link(root).textContent,
+    href: link(root).getAttribute("href"),
+    disabled: link(root).getAttribute("aria-disabled"),
+  });
+  const disabled = { text: ERAS, href: null, disabled: "true" };
+
+  /** The week and time of week the counter broadcasts at `utc`, from the library. */
+  function broadcast(counter: string, utc: string) {
+    const w = lib.utcToGnssWeek(counter as never, utc)!;
+    return {
+      week: String(w.week),
+      timeOfWeekSeconds: String(w.timeOfWeekSeconds),
+    };
+  }
+
+  it("has the one link in the links row", async () => {
+    const { root } = await mount();
+    const row = q(root, "tool-links");
+    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
+    expect(
+      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
+    ).toEqual(["link-eras"]);
+  });
+
+  it("sends the broadcast week and time of week and the build date to the Week Decoder", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    expect(state(root)).toEqual({
+      text: ERAS,
+      href: encodeWidgetPermalink("gnssweek", {
+        mode: "broadcast",
+        counter: "IRN-LNAV",
+        ...broadcast("IRN-LNAV", NOW),
+        rolloverNotBefore: "2020-01-01T00:00:00Z",
+      }),
+      disabled: null,
+    });
+  });
+
+  it("sends a fixed era as rolloverEra", async () => {
+    const { root } = await mount({ preset: "gps-lnav-fixed-era" });
+    expect(link(root).getAttribute("href")).toBe(
+      encodeWidgetPermalink("gnssweek", {
+        mode: "broadcast",
+        counter: "GPS-LNAV",
+        ...broadcast("GPS-LNAV", NOW),
+        rolloverEra: "2",
+      }),
+    );
+  });
+
+  it("sends the week the receiver broadcasts, which is the true week after the window ends", async () => {
+    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
+    expect(link(root).getAttribute("href")).toBe(
+      encodeWidgetPermalink("gnssweek", {
+        mode: "broadcast",
+        counter: "IRN-LNAV",
+        ...broadcast("IRN-LNAV", "2040-01-01T00:00:00Z"),
+        rolloverNotBefore: "2020-01-01T00:00:00Z",
+      }),
+    );
+  });
+
+  it("follows the slider's date", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    slide(root, 0);
+    expect(link(root).getAttribute("href")).toBe(
+      encodeWidgetPermalink("gnssweek", {
+        mode: "broadcast",
+        counter: "IRN-LNAV",
+        ...broadcast("IRN-LNAV", "2020-01-01T00:00:00Z"),
+        rolloverNotBefore: "2020-01-01T00:00:00Z",
+      }),
+    );
+  });
+
+  it("is disabled, with no href, on NO SIGNAL and lit again by a good reading", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    expect(link(root).hasAttribute("href")).toBe(true);
+    type(root, "pivot", "garbage");
+    expect(state(root)).toEqual(disabled);
+    type(root, "pivot", "2020-01-01T00:00:00Z");
+    type(root, "date", "2016-12-31T23:59:60Z");
+    expect(state(root)).toEqual(disabled);
+    type(root, "date", NOW);
+    expect(link(root).hasAttribute("href")).toBe(true);
+    expect(link(root).hasAttribute("aria-disabled")).toBe(false);
+    pick(root, "model-era");
+    type(root, "era", "abc");
+    expect(state(root)).toEqual(disabled);
+  });
+
+  it("is disabled for a blank field", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    type(root, "date", "");
+    expect(state(root)).toEqual(disabled);
+  });
+
+  it("lands on a seed the Week Decoder reads back as the reading's own", async () => {
+    const { root } = await mount({ preset: "galileo-built-2024" });
+    const href = link(root).getAttribute("href")!;
+    const seed = seedFromLocation("gnssweek", href.slice(href.indexOf("?")));
+    expect(seed).toEqual({
+      mode: "broadcast",
+      counter: "GAL",
+      ...broadcast("GAL", NOW),
+      rolloverNotBefore: "2024-01-01T00:00:00Z",
+    });
   });
 });

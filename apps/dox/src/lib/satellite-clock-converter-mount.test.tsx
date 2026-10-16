@@ -35,6 +35,10 @@ const REQUIRED_ROLES = [
   "hero-tai",
   "hero-next",
   "bars",
+  "ladder",
+  "ladder-svg",
+  "ladder-legend",
+  "ladder-off",
   "bar-list",
   "summary",
   "reason-aside",
@@ -146,7 +150,7 @@ describe("renderSatelliteClockConverterTemplate", () => {
     expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
   });
 
-  it("renders four numbered sections, 2 and 3 wide, with three plates, eight bars and eight rows", () => {
+  it("renders four numbered sections, 2 and 3 wide, with three plates, a ladder of eight clocks and eight rows", () => {
     const root = document.createElement("div");
     root.innerHTML = renderSatelliteClockConverterTemplate();
     const sections = [...root.querySelectorAll(".gmt-widget-section")];
@@ -224,7 +228,7 @@ describe("the table", () => {
     ]);
   });
 
-  it("marks the reader's own clock as lit, in the table and the bars", async () => {
+  it("marks the reader's own clock as lit, in the table and the ladder", async () => {
     const { root } = await mount({ preset: "beidou-reading" });
     const lit = rows(root).filter((r) => r.hasAttribute("data-reading"));
     expect(lit.map((r) => r.dataset["row"])).toEqual(["BDT"]);
@@ -283,23 +287,19 @@ describe("the table", () => {
   });
 });
 
-describe("the bars", () => {
-  it("draw each clock from UTC to its lead on one scale", async () => {
+describe("the ladder", () => {
+  const rowOf = (root: HTMLElement, key: string) =>
+    barRows(root).find((r) => r.dataset["row"] === key)!;
+
+  it("puts each clock at its lead on one scale, sharing a rung where leads match", async () => {
     const { root } = await mount({ preset: "utc-2024" });
-    const size = (key: string) => {
-      const fill = barRows(root)
-        .find((r) => r.dataset["row"] === key)!
-        .querySelector<HTMLElement>('[data-role="bar-fill"]')!;
-      return {
-        hidden: fill.hidden,
-        size: fill.style.getPropertyValue("--size"),
-      };
-    };
-    expect(size("TAI")).toEqual({ hidden: false, size: "100%" });
-    expect(size("UTC").hidden).toBe(true);
-    expect(size("GLO").hidden).toBe(true);
-    expect(size("BDT").hidden).toBe(false);
-    expect(parseFloat(size("GPS").size)).toBeCloseTo((18 / 37) * 100, 4);
+    const top = (key: string) => parseFloat(rowOf(root, key).style.top);
+    expect(top("TAI")).toBeLessThan(top("GPS"));
+    expect(top("GPS")).toBeLessThan(top("BDT"));
+    expect(top("BDT")).toBeLessThan(top("UTC"));
+    // One mark per rung: 37, 18, 4 and 0.
+    expect(root.querySelectorAll(".gmt-clad-mark")).toHaveLength(4);
+    expect(root.querySelector(".gmt-clad-toprail")).not.toBeNull();
     const chips = barRows(root).map(
       (r) => r.querySelector('[data-role="bar-value"]')!.textContent,
     );
@@ -315,15 +315,97 @@ describe("the bars", () => {
     ]);
   });
 
-  it("are a labelled image with a hidden list, and nothing inside takes focus", async () => {
+  it("says which clocks are tied to TAI and which follow UTC, from the library", async () => {
+    const { root } = await mount({ preset: "utc-2024" });
+    const tie = (key: string) =>
+      rowOf(root, key).querySelector('[data-role="bar-tie"]')!.textContent;
+    expect(tie("UTC")).toBe("baseline");
+    expect(tie("TAI")).toBe("top rail");
+    for (const key of ["GPS", "GAL", "BDT", "QZS", "IRN"]) {
+      expect(tie(key)).toBe("tied to TAI");
+    }
+    expect(tie("GLO")).toBe("follows UTC");
+  });
+
+  it("keeps the stage the same height from one reading to the next", async () => {
+    const { root } = await mount({ preset: "utc-2024" });
+    const height = () => q(root, "ladder").style.getPropertyValue("--clad-h");
+    const before = height();
+    type(root, "2006-01-01T00:00:00Z");
+    expect(height()).toBe(before);
+    slide(root, 0);
+    expect(height()).toBe(before);
+  });
+
+  it("puts a clock with no reading off the scale, and says so", async () => {
+    const { root } = await mount({ preset: "before-beidou" });
+    const bdt = rowOf(root, "BDT");
+    expect(bdt.hasAttribute("data-off")).toBe(true);
+    const group = q(root, "ladder-off");
+    expect(group.hidden).toBe(false);
+    expect(group.textContent).toContain("No place on the scale");
+    expect(bdt.parentElement).toBe(group);
+    expect(rowOf(root, "GPS").parentElement).toBe(q(root, "ladder"));
+    expect(bdt.style.top).toBe("");
+    expect(bdt.querySelector('[data-role="bar-reading"]')!.textContent).toBe(
+      "before its first instant",
+    );
+  });
+
+  it("reserves the off group's room for the worst slider stop, so a drag never moves it", async () => {
+    const { root } = await mount({ preset: "utc-2024" });
+    const group = q(root, "ladder-off");
+    const reserved = () => group.style.getPropertyValue("--clad-off-n");
+    const before = reserved();
+    // Before 1980 the five TAI-tied clocks are off the scale.
+    expect(Number(before)).toBeGreaterThanOrEqual(5);
+    expect(group.hidden).toBe(false);
+    const offCount = () =>
+      group.querySelectorAll("[data-role=bar-row]").length;
+    slide(root, 0);
+    const early = offCount();
+    expect(early).toBeGreaterThan(0);
+    slide(root, 20);
+    expect(offCount()).not.toBe(early);
+    expect(reserved()).toBe(before);
+    expect(group.hidden).toBe(false);
+  });
+
+  it("is a labelled image with a hidden list, and nothing inside takes focus", async () => {
     const { root } = await mount({ preset: "utc-2024" });
     const drawing = q(root, "bars");
     expect(drawing.getAttribute("role")).toBe("img");
-    expect(drawing.getAttribute("aria-label")).toContain("8 bars");
+    expect(drawing.getAttribute("aria-label")).toContain(
+      "Ladder of 8 clocks on one scale of seconds ahead of UTC",
+    );
+    expect(drawing.getAttribute("aria-label")).toContain(
+      "GPS, GAL, QZS and IRN 18 s ahead of UTC",
+    );
     expect(q(root, "bar-list").querySelectorAll("li")).toHaveLength(8);
     expect(
       drawing.querySelectorAll("a, button, input, select, [tabindex]"),
     ).toHaveLength(0);
+  });
+
+  it("reads each preset in words, and a bad token is not a ladder", async () => {
+    const inside = await mount({ preset: "inside-leap-second" });
+    expect(q(inside.root, "bars").getAttribute("aria-label")).toContain(
+      "inserted",
+    );
+    expect(q(inside.root, "ladder-off").querySelectorAll("[data-row]")).toHaveLength(6);
+    const bad = await mount({ preset: "wrong-token" });
+    expect(q(bad.root, "ladder-sentinel").hidden).toBe(false);
+    expect(q(bad.root, "ladder-sentinel").textContent).toBe(
+      "⟨ NO SIGNAL — invalid input ⟩",
+    );
+    expect(q(bad.root, "heroes").textContent).toContain("⟨ NO SIGNAL ⟩");
+    expect(q(inside.root, "ladder-sentinel").hidden).toBe(true);
+    const blank = await mount({ value: "" });
+    expect(q(blank.root, "ladder-sentinel").hidden).toBe(true);
+    expect(q(blank.root, "heroes").textContent).not.toContain("NO SIGNAL");
+    expect(q(bad.root, "bars").getAttribute("aria-label")).not.toContain(
+      "Ladder of 8",
+    );
   });
 });
 
@@ -577,5 +659,125 @@ describe("lifecycle", () => {
     expect(text(root, "clocks-output")).toBe(" ");
     handle.destroy();
     handle.destroy();
+  });
+});
+
+describe("the links row (D13)", () => {
+  const WEEKS = "This moment as a week on every counter";
+  const TIMELINE = "Why these gaps grew";
+  const link = (root: HTMLElement, role: string) =>
+    q<HTMLAnchorElement>(root, role);
+  const state = (root: HTMLElement, role: string) => ({
+    text: link(root, role).textContent,
+    href: link(root, role).getAttribute("href"),
+    disabled: link(root, role).getAttribute("aria-disabled"),
+  });
+  const enabled = (text: string, href: string) => ({
+    text,
+    href,
+    disabled: null,
+  });
+  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
+
+  it("has both links in the links row, in order", async () => {
+    const { root } = await mount();
+    const row = q(root, "tool-links");
+    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
+    expect(
+      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
+    ).toEqual(["link-weeks", "link-timeline"]);
+  });
+
+  it("sends the UTC instant to the Week Decoder in UTC mode and to the timeline as its date", async () => {
+    const { root } = await mount();
+    expect(state(root, "link-weeks")).toEqual(
+      enabled(
+        WEEKS,
+        encodeWidgetPermalink("gnssweek", {
+          mode: "utc",
+          utc: "2024-01-01T00:00:00Z",
+        }),
+      ),
+    );
+    expect(state(root, "link-timeline")).toEqual(
+      enabled(
+        TIMELINE,
+        encodeWidgetPermalink("leapline", { date: "2024-01-01T00:00:00Z" }),
+      ),
+    );
+  });
+
+  it("sends the UTC instant a labelled reading stands for, not the text typed", async () => {
+    for (const id of [
+      "tai-reading",
+      "beidou-reading",
+      "galileo-first-instant",
+    ]) {
+      const { root } = await mount({ preset: id });
+      const utc = UTC[id]!;
+      expect(link(root, "link-weeks").getAttribute("href")).toBe(
+        encodeWidgetPermalink("gnssweek", { mode: "utc", utc }),
+      );
+      expect(link(root, "link-timeline").getAttribute("href")).toBe(
+        encodeWidgetPermalink("leapline", { date: utc }),
+      );
+      document.body.innerHTML = "";
+    }
+  });
+
+  it("sends a leap second's own instant", async () => {
+    const { root } = await mount({ preset: "inside-leap-second" });
+    expect(link(root, "link-weeks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("gnssweek", {
+        mode: "utc",
+        utc: "2016-12-31T23:59:60Z",
+      }),
+    );
+  });
+
+  it("follows the slider to the stop's instant", async () => {
+    const { root } = await mount();
+    const stops = sliderPositions(lib);
+    slide(root, 0);
+    expect(link(root, "link-weeks").getAttribute("href")).toBe(
+      encodeWidgetPermalink("gnssweek", { mode: "utc", utc: stops[0] }),
+    );
+    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+      encodeWidgetPermalink("leapline", { date: stops[0] }),
+    );
+  });
+
+  it.each(["no-leap-second-that-day", "wrong-token"])(
+    "disables both links, with no href, on NO SIGNAL (%s)",
+    async (id) => {
+      const { root } = await mount({ preset: id });
+      expect(state(root, "link-weeks")).toEqual(disabled(WEEKS));
+      expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
+    },
+  );
+
+  it("disables both links for a blank value, and lights them again for a reading", async () => {
+    const { root } = await mount();
+    type(root, "");
+    expect(state(root, "link-weeks")).toEqual(disabled(WEEKS));
+    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
+    type(root, "2024-01-01T00:00:00Z");
+    expect(link(root, "link-weeks").hasAttribute("href")).toBe(true);
+    expect(link(root, "link-weeks").hasAttribute("aria-disabled")).toBe(false);
+  });
+
+  it("lands on seeds the other tools read back", async () => {
+    const { root } = await mount();
+    const read = (role: string, kind: "gnssweek" | "leapline") => {
+      const href = link(root, role).getAttribute("href")!;
+      return seedFromLocation(kind, href.slice(href.indexOf("?")));
+    };
+    expect(read("link-weeks", "gnssweek")).toEqual({
+      mode: "utc",
+      utc: "2024-01-01T00:00:00Z",
+    });
+    expect(read("link-timeline", "leapline")).toEqual({
+      date: "2024-01-01T00:00:00Z",
+    });
   });
 });

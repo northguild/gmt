@@ -1,6 +1,6 @@
 ## D. The five tools
 
-D1 to D7 are the GNSS Week Decoder (`/tools/gnss-week-decoder/`, kind `gnssweek`, tagged `[gnss, maritime]`). D8 holds
+D1 to D7 are the GNSS Week Decoder (`/tools/gnss-week-decoder/`, kind `gnssweek`, tagged `[gnss]`). D8 holds
 what the five share, D9 to D12 are the other four tools, and D13 links them.
 
 **What it teaches.** A week number means nothing without its counter and its era. The same
@@ -133,19 +133,26 @@ child-selector trap) and ease through `.gmt-grow`. Section 1 is never wrapped.
      A plate with no result reads "no result". Widths are reserved for the longest value any
      preset, any range position and a nine-digit fraction can give: a 30-character instant, a
      33-character label. The arithmetic is written in the sheet beside the rule.
-   - **The era lanes** (`data-role="lanes"`, `role="img"` with a generated `aria-label`, and a
-     visually hidden list of one sentence per lane). One lane per era (D3.3) or per RINEX row
-     (D3.4). A lane is a bar from its era's start to the next era's start; every lane has the same
-     width, so a reading sits at the same x in every era and the pins line up. Each lane has:
-     - a label column on the left: "era n", or "RINEX" / the counter name;
-     - the pin (`.gmt-cutoff-mark`) at the lane's result, placed by the polyfill;
-     - a value chip in a fixed column on the right, on an opaque plate (`.gmt-cutoff-chip`), so
-       the text never moves with the pin;
-     - the chosen era in series 1 (lit glass and a "your reading" chip); the era `"rolling"`
-       would choose carries "nearest today"; the others are neutral;
-     - a "today" mark on the lane that holds the reader's now, a dashed `--gmt-ice` rule with a
-       chip, never amber.
-     A lane with no result keeps its box, has no pin, and its chip reads "no result".
+   - **The odometer ring** (`data-role="lanes"`, `role="img"` with a generated `aria-label` that
+     states the counter, its modulus, the week the hand points at and every era's date, and a
+     visually hidden list of one sentence per lap). The counter is a circle of its modulus
+     (1024, 4096 or 8192 weeks, read from the library's first refused week), with a labelled tick
+     every eighth of the circle. A lap is one era, outside in (era 0 outermost); one hand crosses
+     every lap at the reading's week and turns as the week slider moves (a short ease, only under
+     `prefers-reduced-motion: no-preference`). The era the reading resolves to is lit in series 1
+     (a bright track, a filled arc from the top to the hand, a filled dot); the other laps are
+     faint with a hollow dot, so one week number is seen to name several dates. A short bright dash
+     marks the lap that holds today; an era far from the rest sits on a dashed lap. The hub holds
+     the week, the modulus and the era, in tabular figures at fixed positions. Beside the ring a
+     legend has one row per lap, in the `.gmt-gnss-laneset` markup: a swatch matching its lap, the
+     era, the UTC date `gnssWeekToUtc` gives for that era in a value chip, and the "your reading",
+     "nearest today" and "today" chips; the reading's row is a full border and a tint. A lap with
+     no result has no dot and its chip reads "no result". Under 34rem of frame width the legend
+     drops below the ring.
+     **A refused reading** keeps the ring with faint laps, no hand, and the bracketed amber words
+     "NO SIGNAL — invalid input" in the hub, never a blank hub. **A RINEX reading** does not wrap, so
+     `data-form="track"` hides the ring and draws the legend's own rows as an unwrapped track: the
+     RINEX row and each counter of the system on one date axis, a pin on each.
    - **The calls**, one per line, with results (`.gmt-widget-codeframe`).
 3. **The same moment on every counter.** Two real tables (`display: table`, `table-layout:
    fixed`, `overflow-x: auto`), each row always rendered:

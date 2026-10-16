@@ -336,6 +336,17 @@
   overflow-wrap: anywhere;
 }
 
+/* The site's `.sl-markdown-content th:first-child, td:first-child` rule
+   (gmt-content.css) sets `width: 1%` and `white-space: nowrap` to keep a
+   parameter table's first column compact. In a fixed-layout table that squeezes
+   the first column to its padding, so the first two columns print on top of
+   each other, and the stacked rows' first cell shrinks the same way. The
+   doubled class out-ranks it whatever the load order. */
+.gmt-gnss-table.gmt-gnss-table :is(th, td):first-child {
+  width: auto;
+  white-space: normal;
+}
+
 /* Clear of the frame's bevelled corners: at least 10px of inline padding on
    the first and last cell of every row. */
 .gmt-gnss-table :is(th, td):first-child {
@@ -417,6 +428,18 @@
     color: var(--gmt-ice-dim);
     text-align: left;
   }
+}
+
+/* The hero value is a long ISO instant. It scales with the frame and wraps at
+   any character rather than clip: the punctuality plate's `nowrap` and fixed
+   size are for short readings. */
+.gmt-gnss-frame
+  .gmt-punct-hero:not(.gmt-punct-hero--quiet)
+  .gmt-punct-hero-value {
+  min-inline-size: 0;
+  font-size: clamp(1.1rem, 3.8cqi, 1.9rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* The text a drawing's list holds: one sentence per lane or mark, read out and

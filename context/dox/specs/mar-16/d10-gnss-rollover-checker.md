@@ -62,15 +62,21 @@ build date is not an ISO 8601 instant.") or is before the counter's first week; 
 instant (second 60 included: "Pick a date outside an inserted second."); the date is before the
 counter's first week (the D3 sentence); the firmware's window runs past the year 9999.
 
-**Template.** Three sections: the inputs; a `.gmt-gnss-frame` with three pinned plates
-(`hero-reports` "The receiver reports", series 1; `hero-wrong-from` "Wrong from", the date the
-firmware starts reporting wrong dates; `hero-left` "Time left", the countdown, or "past by n
-days") over **the window strip** (`role="img"`): the firmware's window lit in series 1 (from the
-build date, or the fixed era), the window after it hatched with the chip "reports one counter
-period early", the build date's mark in pivot mode, the check date's pin, a "today" mark, each wrap
-a mark with its chip; then
+**Template.** Three sections: the inputs; a `.gmt-gnss-frame` holding **the fuse timeline**; then
 **`counters-table`** (Counter, Width, Next wrap, Time left), the rolling row, the calls and the
-links row (D13).
+links row (D13). The timeline (`role="img"`, its `aria-label` states the reading) is one track per
+counter from 1980 to 2170, grouped under 10-bit, 12-bit and 13-bit headings in the library's
+order. Each wrap is a tick and each counter's next wrap is a taller, heavier one. On the receiver's
+own track the firmware's window is a lit bracket in series 1 (from the build date, or the fixed
+era), a spark marks where the fuse burns out (the wrong-from date), and the window after it is
+hatched ("reports one counter period early"). The check date is a pin through every track and
+today a dashed line. Beside it, or above it when the frame is narrow, the countdown is the hero:
+days, hours, minutes and seconds in fixed tabular cells, live each second in Today mode and
+"Past by" once the date has gone. Under it a status badge (`verdict`) reads "Reports the right
+date", "Reports n days early" or "Reports n days late", each with its own icon and hatch, never a
+verdict colour. Two quiet plates (`hero-reports` "The receiver reports", `hero-wrong-from` "Wrong
+from") sit under the badge. Positions come from library calls; the figure animates only under
+`prefers-reduced-motion: no-preference`, and a check outside the axis draws no pin.
 
 **Presets** (each pinned with a `date` unless it says "today"; every value from the run unless
 marked †):
