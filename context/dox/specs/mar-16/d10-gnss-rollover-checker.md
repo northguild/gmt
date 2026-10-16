@@ -1,6 +1,6 @@
 ## D. The five tools (continued)
 
-### D10. GNSS Rollover Checker: `/tools/gnss-rollover-checker/`, kind `rollover`, GNSS and Maritime
+### D10. GNSS Rollover Checker: `/tools/gnss-rollover-checker/`, kind `rollover`, GNSS
 
 **What it answers.** "Is my receiver affected, and when?" Every broadcast counter wraps; firmware
 that fixes the era starts reporting dates one counter period early (or late) after the wrap. All

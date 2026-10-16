@@ -1,6 +1,6 @@
 ## D. The five tools (continued)
 
-### D9. Satellite Clock Converter: `/tools/satellite-clock-converter/`, kind `satclock`, GNSS and Maritime
+### D9. Satellite Clock Converter: `/tools/satellite-clock-converter/`, kind `satclock`, GNSS
 
 **What it teaches.** One instant reads differently on every clock, and the gap between a
 satellite clock and UTC grew with each leap second. It takes over the per-system offsets the

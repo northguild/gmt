@@ -37,12 +37,13 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
 5. **Generator spot-check** in `$W` after `generate`:
    - every function of L§1.1 except the removed GPS forms has a page, and none of `gpsToUtc`,
      `utcToGps`, `gpsWeekToUtc`, `utcToGpsWeek`, `GpsNavMessage` is in the corpus or the route
-     manifest; `/reference/gnss/` and `/reference/timescale/` and their module indexes exist,
-     carry no `industries` line, and are listed under "For any industry" on `/reference/` and in
-     the reference sidebar's general groups, with the Unreleased badge;
-   - `/reference/types/GnssSystem`, `GnssWeekCounter`, `RolloverEra`, `GnssWeek` and
-     `RinexWeekSystem` are pages with no tag; `RinexWeek` is inline on `utcToRinexWeek` and its
-     corpus `url` carries the anchor;
+     manifest; `/reference/gnss/` and `/reference/timescale/` and their module indexes exist with
+     the Unreleased badge: `gnss` under the reference sidebar's "By industry" divider with the
+     `gnss` tag, `timescale` under "For any industry" and the general groups with no tag;
+   - `/reference/types/GnssSystem`, `GnssWeekCounter` and `RinexWeekSystem` are pages tagged
+     `gnss` (every function that reaches them is in `gnss/`, the `typeIndustry` rule);
+     `RolloverEra`, `GnssWeek` and `RinexWeek` each have one user and are inline on
+     `gnssWeekToUtc`, `utcToGnssWeek` and `utcToRinexWeek`, their corpus `url` carrying the anchor;
    - `/reference/plain/validate/hasSecond60` exists, `/reference/plain/validate/isLeapSecond` is
      not in the route manifest, and `public/_redirects` holds its three `301` rules;
    - `LIVE_PLAYGROUND_TEMPLATES.gnssWeekToUtc` has form fields with `rolloverEra` as `expr` (C1);
@@ -72,8 +73,8 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
    reference sidebar's general group `timescale`, its "By industry" groups in declared order with
    `workforce` and `gnss`, and no `duty` group; `/reference/` root; `/reference/transport/` and
    `/reference/intermodal/`; the tools, scenarios and mistakes sidebars and the tools index in
-   declared order, with the Workforce pages under Workforce (and Transport where tagged) and the
-   GNSS tools under GNSS and Maritime; `/why-gmt/`'s sentence, its stacked chart and its number
+   declared order, each page under the one industry whose layer it runs (Workforce pages under
+   Workforce, GNSS tools under GNSS), never two; `/why-gmt/`'s sentence, its stacked chart and its number
    format in the reader's locale; the Workforce guide at its new path; the pages and tools section N rebalanced. Anything else is a regression.
 9. **`grow:measure --base http://127.0.0.1:48391`** passes for the five tool pages and every tool
    whose presets changed, in Chromium and WebKit at 1440 and 390. **`readout:still --base

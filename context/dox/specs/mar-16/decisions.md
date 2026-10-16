@@ -79,7 +79,9 @@ Four pieces:
     and `timescale` (and on `workforce` when it needs it). The rule is
     `context/coding-standards.md` line 230, "Core namespaces, industry layers, cross-industry
     layers". Step DU moves the duty pages and redirects the old URLs.
-17. **The GNSS tools carry two tags**, GNSS and Maritime; the two leap-second tools stay Core.
+17. **Each page carries the tag of the layer whose functions it runs**, so it sits in one menu
+    section: the GNSS tools and scenarios are `gnss`, the duty scenarios `workforce`, the two
+    leap-second tools Core. Maritime and Transport link those pages from their hub's `solves` list.
 18. **The "By industry" chart is stacked:** each industry's own functions solid, the layers it
     draws on lighter and named, and no function counted twice in any total (B9).
 19. **`mistakes/duty` moves to `mistakes/workforce`**, with a redirect (M2, M3), following the
