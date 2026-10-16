@@ -40,7 +40,7 @@ The types live in `packages/gmt/src/types/gnss.ts`:
 
 `toTAI` / `fromTAI` (`packages/gmt/src/timescale/convert/`) and the time-scale string grammar are built here; the TAI64 labels stay in their own story.
 
-The code lives in the `gnss/` and `timescale/` building-block namespaces; this story creates no `maritime/` namespace ([MAR-16 spec](../specs/MAR-16-spec.md), D13).
+The code lives in the `gnss/` and `timescale/` building-block namespaces; this story creates no `maritime/` namespace ([MAR-16 spec, D13](../specs/MAR-16/decisions-d7-d13.md)).
 
 ## String format
 
