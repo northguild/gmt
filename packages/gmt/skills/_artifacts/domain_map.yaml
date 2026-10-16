@@ -25,6 +25,9 @@ domains:
   - name: Integration
     slug: integration
     description: Integrating gmt with application frameworks and linting tools
+  - name: Industry Layers
+    slug: industry-layers
+    description: One skill per industry layer (gnss/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
   - name: Contributor
     slug: contributor
     description: Library maintainer workflows — issues, PRs, implementation, testing
@@ -127,7 +130,7 @@ skills:
   - name: GMT Arithmetic
     slug: gmt-arithmetic
     domain: arithmetic
-    description: Add or subtract time from dates; add*/subtract* accept an optional overflow option (addTime/subtractTime take none), diff* accept optional rounding options, isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars do business-day arithmetic against a BusinessCalendar of weekend days and holidays with the six RollConvention values, ISO 8601 duration strings (totalDuration for a total in one unit), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), spanMs/spanNs/spanWallClock for elapsed-versus-wall-clock spans, half-open interval algebra over instants (intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals), the positional interval range math on the same half-open rule, and hours-of-work rules over a duty log in the workforce layer, @northguild/gmt/workforce (evaluateDutyLog/dutyViolations/dutyDayFor/dutyTotals/longestRun/qualifyingRests/qualifyingRestPairs/isValidDutyLog) with every limit the caller's
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow option (addTime/subtractTime take none), diff* accept optional rounding options, isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars do business-day arithmetic against a BusinessCalendar of weekend days and holidays with the six RollConvention values, ISO 8601 duration strings (totalDuration for a total in one unit), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), spanMs/spanNs/spanWallClock for elapsed-versus-wall-clock spans, half-open interval algebra over instants (intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals), the positional interval range math on the same half-open rule
     type: core
     packages:
       - '@northguild/gmt'
@@ -195,14 +198,6 @@ skills:
       - spanNs
       - spanWallClock
       - isValidSpan
-      - evaluateDutyLog
-      - dutyViolations
-      - dutyDayFor
-      - dutyTotals
-      - longestRun
-      - qualifyingRests
-      - qualifyingRestPairs
-      - isValidDutyLog
     tasks:
       - Add/subtract dates with overflow control
       - Calculate differences with rounding options
@@ -226,15 +221,11 @@ skills:
       - Write and read non-ISO calendar strings with negative years and Japanese era codes
       - Measure month and year differences at month ends in a non-ISO calendar
       - Rely on exact results at the first and last representable instant
-      - Check a duty log against the caller's hours-of-work rules at one instant, every rule reported
-      - List every failed window of a set of hours-of-work rules over a month
-      - Find the operator-designated day an instant falls in, from a start time in a reference zone
-      - Total time in a set of statuses, the longest unbroken stretch, and the rests or paired rests that qualify
 
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff, scheduleDeviation/classifyPunctuality/punctualityRate, bestAvailable/estimateDrift, nextDeparture, freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, bolTimestamp/multimodalETA, the EDI readers and writers split by kind of value (parseEdifactDate/Time/DateTime/OffsetDateTime/DatePeriod/DateTimePeriod, parseX12Date/Time/DateTime/DateRange/DateTimeRange, parseX12DateAndTime, formatX12TimeElement, x12TimeCodeOffset/x12TimeCodeZone, classifyEdifactDtmFormat/classifyX12DateTimePeriodFormat/classifyX12TimeCode, parseEpcisEvent/formatEpcisEvent) with their format* and isValid* twins, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime, and isInDaylightSaving/hasDaylightSaving. Transport legs, intermodal free time and EDI timestamps are in gmt-transport and gmt-intermodal
     type: core
     packages:
       - '@northguild/gmt'
@@ -279,6 +270,105 @@ skills:
       - floorToZone
       - bucketRange
       - isValidZoneBucketUnit
+      - recurringWindows
+      - operatingIntervals
+      - isOpenAt
+      - nextOpenAt
+      - nextCloseAt
+      - operatingTimeBetween
+      - addOperatingTime
+    tasks:
+      - Get current time in a timezone
+      - Format datetime in a timezone
+      - Format zoned datetime range
+      - Format DST-safe relative zoned spans
+      - Validate timezone and zoned datetime
+      - Convert plain to zoned with DST disambiguation
+      - Convert zoned to plain, UTC, or another timezone
+      - Convert between UTC and Unix epochs
+      - Add/subtract duration from zoned datetime with disambiguation
+      - Jump to boundary (start/end of unit/quarter) for zoned/unix
+      - Get locale-aware week boundaries for zoned datetime
+      - Clamp/closest zoned datetime to range/candidates
+      - Read zoned value's UTC offset and DST status
+      - Tell whether a zone observes daylight time at a stated instant, by GMT's rule read from the zone's clock changes (hasDaylightSaving with at)
+      - Cycle (wrap) a single zoned field with disambiguation
+      - Keep an event's original UTC offset alongside its instant
+      - Parse, add and diff zoned values at the first and last representable instant
+      - Tell an ambiguous or nonexistent wall time apart before resolving it
+      - Resolve a zoneless local wall time to an instant under a stated policy
+      - Floor an instant to a local hour/day/week/month boundary in a named zone
+      - Bucket a range of instants by local calendar unit, DST-length buckets included
+      - Get the real start/end of a local unit that never lands after or before the input across a DST transition
+      - Count the real hours in a local day, including days whose midnight is skipped
+      - Read a zoned string for a zone with a sub-minute offset back as the instant it was written for
+      - Expand a weekly pattern of local windows, including ones that wrap midnight, into instants in a zone
+      - Resolve opening hours with holidays and dated overrides into open intervals
+      - Tell whether a place is open at an instant, and when it next opens or closes
+      - Measure the open time elapsed between two instants
+      - Find the deadline of an SLA measured in open hours
+
+  - name: GMT Integration
+    slug: gmt-integration
+    domain: integration
+    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss
+    type: composition
+    packages:
+      - '@northguild/gmt'
+      - '@northguild/gmt-eslint'
+      - '@northguild/gmt-biome'
+      - '@northguild/gmt-oxlint'
+    covers:
+      - taiMinusUtc
+      - leapSecondsBetween
+      - nextLeapSecond
+      - isLeapSecond
+      - toTAI
+      - fromTAI
+    tasks:
+      - Create stable cache keys from date values
+      - Use with routers and query params
+      - Read a UTC or Unix instant's fields in the system zone with timeZone "local"
+      - Use with table libraries for sort keys
+      - Use with state management
+      - Serialize nanosecond timestamps across a JSON boundary
+      - Truncate nanoseconds to a storage engine's precision
+      - Tell a 0n sentinel apart from 0n the epoch with precision/validate
+      - Convert between ISO 8601 and a foreign epoch (NTP, FILETIME, .NET ticks, Excel, PostgreSQL)
+      - Read TAI − UTC at an instant, count the leap seconds between two instants, and find the next one from the closed IERS table
+      - Tell a real inserted leap second from a well-formed second 60 (isLeapSecond, not hasSecond60)
+      - Convert between UTC and a TAI time-scale string, a listed leap second included
+      - Choose ESLint config
+      - Choose Biome config
+      - Choose Oxlint config
+
+  - name: GMT GNSS
+    slug: gmt-gnss
+    domain: industry-layers
+    description: Convert between UTC and the six RINEX GNSS time scales as peers (GPS/GAL/BDT/QZS/GLO/IRN via utcToGnss/gnssToUtc), decode broadcast weeks by named counter with a required rolloverEra of an integer, "rolling" or { notBefore } (gnssWeekToUtc/utcToGnssWeek), and read continuous RINEX navigation weeks (rinexWeekToUtc/utcToRinexWeek)
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
+      - utcToGnss
+      - gnssToUtc
+      - gnssWeekToUtc
+      - utcToGnssWeek
+      - rinexWeekToUtc
+      - utcToRinexWeek
+    tasks:
+      - Convert between UTC and the time of any of the six GNSS systems as peers (GPS, Galileo, BeiDou, QZSS, GLONASS, NavIC)
+      - Decode a broadcast GNSS week and time of week by its named counter, with an integer era, "rolling" or a firmware-date notBefore pivot
+      - Read a continuous RINEX navigation-file week, which never wraps, apart from a broadcast week
+
+  - name: GMT Transport
+    slug: gmt-transport
+    domain: industry-layers
+    description: Transport timing — transitTime/etaAtZone/dwellTime, crossingTime/scheduleDelivery, cutoffAt/cutoffSchedule/isPastCutoff/timeToCutoff, scheduleDeviation/classifyPunctuality/punctualityRate, bestAvailable/estimateDrift, nextDeparture; every tolerance, connect time and cut-off offset is the caller's
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
       - transitTime
       - etaAtZone
       - dwellTime
@@ -294,6 +384,27 @@ skills:
       - bestAvailable
       - estimateDrift
       - nextDeparture
+    tasks:
+      - Add a leg's transit time to a departure as exact elapsed time in the departure's zone
+      - Render a UTC arrival as local time in the zone where it lands
+      - Measure dwell as elapsed duration plus local calendar days crossed
+      - Measure a canal, strait or border crossing and read both ends in the zone that administers it
+      - Chain a multi-leg journey into an end-to-end ETA with local arrivals at every handoff and missed connections flagged
+      - Measure how late or early an arrival was as exact elapsed time, across DST
+      - Classify an arrival as early, on time or late under a stated tolerance
+      - Compute an on-time rate over planned/actual pairs under one tolerance
+      - Pick the best available timestamp from planned, estimated, requested and actual records without showing an estimate as an actual
+      - Measure how far an estimated arrival moved between its first and last revision
+      - Find the next departure a connection can make from a timetable or a headway service
+
+  - name: GMT Intermodal
+    slug: gmt-intermodal
+    domain: industry-layers
+    description: Intermodal timing — freeTimeExpiry/chargeableDays/demurrageClock, billingTimeline, bolTimestamp/multimodalETA, and the EDI readers and writers split by kind of value (parseEdifactDate/Time/DateTime/OffsetDateTime/DatePeriod/DateTimePeriod, parseX12Date/Time/DateTime/DateRange/DateTimeRange, parseX12DateAndTime, formatX12TimeElement, x12TimeCodeOffset/x12TimeCodeZone, classifyEdifactDtmFormat/classifyX12DateTimePeriodFormat/classifyX12TimeCode, parseEpcisEvent/formatEpcisEvent) with their format* and isValid* twins; every tariff term is the caller's
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
       - freeTimeExpiry
       - chargeableDays
       - demurrageClock
@@ -349,49 +460,7 @@ skills:
       - isValidEpcisEvent
       - isValidEpcisEventTime
       - isValidEpcisTimeZoneOffset
-      - recurringWindows
-      - operatingIntervals
-      - isOpenAt
-      - nextOpenAt
-      - nextCloseAt
-      - operatingTimeBetween
-      - addOperatingTime
     tasks:
-      - Get current time in a timezone
-      - Format datetime in a timezone
-      - Format zoned datetime range
-      - Format DST-safe relative zoned spans
-      - Validate timezone and zoned datetime
-      - Convert plain to zoned with DST disambiguation
-      - Convert zoned to plain, UTC, or another timezone
-      - Convert between UTC and Unix epochs
-      - Add/subtract duration from zoned datetime with disambiguation
-      - Jump to boundary (start/end of unit/quarter) for zoned/unix
-      - Get locale-aware week boundaries for zoned datetime
-      - Clamp/closest zoned datetime to range/candidates
-      - Read zoned value's UTC offset and DST status
-      - Tell whether a zone observes daylight time at a stated instant, by GMT's rule read from the zone's clock changes (hasDaylightSaving with at)
-      - Cycle (wrap) a single zoned field with disambiguation
-      - Keep an event's original UTC offset alongside its instant
-      - Parse, add and diff zoned values at the first and last representable instant
-      - Tell an ambiguous or nonexistent wall time apart before resolving it
-      - Resolve a zoneless local wall time to an instant under a stated policy
-      - Floor an instant to a local hour/day/week/month boundary in a named zone
-      - Bucket a range of instants by local calendar unit, DST-length buckets included
-      - Get the real start/end of a local unit that never lands after or before the input across a DST transition
-      - Count the real hours in a local day, including days whose midnight is skipped
-      - Add a leg's transit time to a departure as exact elapsed time in the departure's zone
-      - Render a UTC arrival as local time in the zone where it lands
-      - Measure dwell as elapsed duration plus local calendar days crossed
-      - Measure a canal, strait or border crossing and read both ends in the zone that administers it
-      - Chain a multi-leg journey into an end-to-end ETA with local arrivals at every handoff and missed connections flagged
-      - Measure how late or early an arrival was as exact elapsed time, across DST
-      - Classify an arrival as early, on time or late under a stated tolerance
-      - Compute an on-time rate over planned/actual pairs under one tolerance
-      - Pick the best available timestamp from planned, estimated, requested and actual records without showing an estimate as an actual
-      - Measure how far an estimated arrival moved between its first and last revision
-      - Find the next departure a connection can make from a timetable or a headway service
-      - Read a zoned string for a zone with a sub-minute offset back as the instant it was written for
       - Lay out a container's free time and its half-open expiry in the terminal's local days
       - Count and list the chargeable days of a dwell, with tier bands
       - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg
@@ -408,54 +477,28 @@ skills:
       - Write a UN/EDIFACT DTM value, an X12 date time period or an EPCIS event time pair from ISO 8601 values
       - Check an EDI value against its format code, or a format code alone, before reading it
       - Read a two-digit year with a pattern parser, in a hundred-year window the caller names
-      - Expand a weekly pattern of local windows, including ones that wrap midnight, into instants in a zone
-      - Resolve opening hours with holidays and dated overrides into open intervals
-      - Tell whether a place is open at an instant, and when it next opens or closes
-      - Measure the open time elapsed between two instants
-      - Find the deadline of an SLA measured in open hours
 
-  - name: GMT Integration
-    slug: gmt-integration
-    domain: integration
-    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), the six RINEX GNSS time scales as peers (GPS/GAL/BDT/QZS/GLO/IRN via utcToGnss/gnssToUtc), broadcast weeks by named counter with a required rolloverEra of an integer, "rolling" or { notBefore } (gnssWeekToUtc/utcToGnssWeek), continuous RINEX navigation weeks (rinexWeekToUtc/utcToRinexWeek), and lint package selection (ESLint, Biome, Oxlint)
-    type: composition
+  - name: GMT Workforce
+    slug: gmt-workforce
+    domain: industry-layers
+    description: Hours-of-work rules over a duty log, @northguild/gmt/workforce (evaluateDutyLog/dutyViolations/dutyDayFor/dutyTotals/longestRun/qualifyingRests/qualifyingRestPairs/isValidDutyLog) with every limit the caller's
+    type: core
     packages:
       - '@northguild/gmt'
-      - '@northguild/gmt-eslint'
-      - '@northguild/gmt-biome'
-      - '@northguild/gmt-oxlint'
     covers:
-      - taiMinusUtc
-      - leapSecondsBetween
-      - nextLeapSecond
-      - isLeapSecond
-      - toTAI
-      - fromTAI
-      - utcToGnss
-      - gnssToUtc
-      - gnssWeekToUtc
-      - utcToGnssWeek
-      - rinexWeekToUtc
-      - utcToRinexWeek
+      - evaluateDutyLog
+      - dutyViolations
+      - dutyDayFor
+      - dutyTotals
+      - longestRun
+      - qualifyingRests
+      - qualifyingRestPairs
+      - isValidDutyLog
     tasks:
-      - Create stable cache keys from date values
-      - Use with routers and query params
-      - Read a UTC or Unix instant's fields in the system zone with timeZone "local"
-      - Use with table libraries for sort keys
-      - Use with state management
-      - Serialize nanosecond timestamps across a JSON boundary
-      - Truncate nanoseconds to a storage engine's precision
-      - Tell a 0n sentinel apart from 0n the epoch with precision/validate
-      - Convert between ISO 8601 and a foreign epoch (NTP, FILETIME, .NET ticks, Excel, PostgreSQL)
-      - Read TAI − UTC at an instant, count the leap seconds between two instants, and find the next one from the closed IERS table
-      - Tell a real inserted leap second from a well-formed second 60 (isLeapSecond, not hasSecond60)
-      - Convert between UTC and a TAI time-scale string, a listed leap second included
-      - Convert between UTC and the time of any of the six GNSS systems as peers (GPS, Galileo, BeiDou, QZSS, GLONASS, NavIC)
-      - Decode a broadcast GNSS week and time of week by its named counter, with an integer era, "rolling" or a firmware-date notBefore pivot
-      - Read a continuous RINEX navigation-file week, which never wraps, apart from a broadcast week
-      - Choose ESLint config
-      - Choose Biome config
-      - Choose Oxlint config
+      - Check a duty log against the caller's hours-of-work rules at one instant, every rule reported
+      - List every failed window of a set of hours-of-work rules over a month
+      - Find the operator-designated day an instant falls in, from a start time in a reference zone
+      - Total time in a set of statuses, the longest unbroken stretch, and the rests or paired rests that qualify
 
   - name: Issue Creation
     slug: issue-creation
@@ -545,6 +588,21 @@ cross_references:
   - from: gmt-basics
     to: gmt-integration
     reason: hasSecond60 finds a second 60; isLeapSecond in timescale/ says whether it was a real leap second
+  - from: gmt-timezone
+    to: gmt-transport
+    reason: Transport legs, cut-offs and punctuality build on zoned arithmetic and DST resolution
+  - from: gmt-timezone
+    to: gmt-intermodal
+    reason: Free time, billing deadlines and EDI timestamps build on zoned local days and resolveLocal
+  - from: gmt-transport
+    to: gmt-intermodal
+    reason: multimodalETA takes the Leg[] that scheduleDelivery takes
+  - from: gmt-integration
+    to: gmt-gnss
+    reason: GNSS offsets rest on the leap-second table in timescale/; a second 60 is accepted only on a listed insertion day
+  - from: gmt-arithmetic
+    to: gmt-workforce
+    reason: Hours-of-work rules are built on interval and duration arithmetic
   - from: issue-creation
     to: new-method-implementation
     reason: Issue is first step; implementation skill guides actual code
