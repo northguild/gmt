@@ -1,6 +1,6 @@
 # /// script
-# requires-python = ">=3.14,<3.15"
-# dependencies = ["pyyaml"]
+# requires-python = ">=3.9"
+# dependencies = []
 # ///
 """
 Audit agent skills for token waste, progressive-disclosure violations, and common
@@ -9,8 +9,9 @@ triggering/loading/runtime problems.
 Advisory only: reads skill directories and prints a JSON report. Never writes or edits files.
 
 Usage:
-    uv run optimize.py <skill_directory>
-    uv run optimize.py --all <skills_root>      # scan <root>/<skill>/SKILL.md
+    python3 optimize.py --all <skills_root>      # scan <root>/<skill>/SKILL.md
+    python3 optimize.py <skill_directory>
+(`uv run` also works. PyYAML is optional; fm_parse.py falls back to a built-in parser.)
 
 Single-dir mode returns one object. --all mode returns a list of per-skill objects plus a
 top-level "inventory" object with cross-skill findings (duplicate names, similar descriptions).
@@ -18,16 +19,20 @@ top-level "inventory" object with cross-skill findings (duplicate names, similar
 Budgets and thresholds are documented in references/rules.md and kept here as constants.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
 import re
 import sys
-from difflib import SequenceMatcher
 from pathlib import Path
-from typing import cast
 
-import yaml
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import checks_skill  # noqa: E402
+from checks_inventory import DESCRIPTION_SIMILARITY, inventory_findings  # noqa: E402,F401
+import fm_parse  # noqa: E402
 
 # --- Budgets / thresholds (mirror references/rules.md) ---
 SIZE_BUDGET = 20000          # total SKILL.md chars before a warning (matches quick_validate.py)
@@ -36,7 +41,6 @@ TRIGGER_PHRASES = (          # description should contain at least one concrete 
     "use when", "when the user", "when you", "validate", "optimize", "check", "audit",
     "lint", "verify", "trim", "reduce", "enforce",
 )
-DESCRIPTION_SIMILARITY = 0.80  # pairwise ratio >= this => "similar descriptions" warning
 
 LOCAL_REF_RE = re.compile(
     r"(?<![A-Za-z0-9_./-])"
@@ -74,12 +78,12 @@ def load_skill(skill_path: Path) -> tuple[dict[str, object], str | None]:
         warnings.append("No/invalid YAML frontmatter (must start with --- and close with ---)")
     else:
         try:
-            loaded = yaml.safe_load(m.group(1))
+            loaded = fm_parse.parse_frontmatter(m.group(1))
             if isinstance(loaded, dict):
                 fm = loaded
             elif loaded is not None:
                 warnings.append("Frontmatter must be a YAML mapping")
-        except yaml.YAMLError as exc:
+        except ValueError as exc:
             warnings.append(f"Invalid YAML in frontmatter: {exc}")
 
     name = fm.get("name")
@@ -111,9 +115,10 @@ def load_skill(skill_path: Path) -> tuple[dict[str, object], str | None]:
             })
 
     # Local file references exist
+    # Resolve against the skill dir first, then the repo root (the dir holding .agents/).
+    roots = [skill_path] + [p for p in skill_path.resolve().parents if (p / ".agents").is_dir()][:1]
     for ref in sorted(set(LOCAL_REF_RE.findall(content))):
-        target = skill_path / ref
-        if not target.exists():
+        if not any((base / ref).exists() for base in roots):
             warnings.append(f"Referenced file not found: {ref}")
 
     # Runtime readiness
@@ -125,6 +130,18 @@ def load_skill(skill_path: Path) -> tuple[dict[str, object], str | None]:
     if BACKSLASH_PATH_RE.search(content):
         warnings.append("Backslash path separator found; use forward slashes everywhere")
 
+    lines = checks_skill.line_count(content)
+    line_warnings, notes = checks_skill.check_line_budgets(skill_path, lines)
+    warnings.extend(line_warnings)
+    # A vendored skill (pinned in skills-lock.json) is fixed upstream: its content findings become notes.
+    vendored = checks_skill.vendored_source(skill_path)
+    if vendored:
+        notes.extend(f"vendored ({vendored}), fix upstream: {w}" for w in warnings)
+        warnings = []
+    link_warning = checks_skill.check_claude_link(skill_path)
+    if link_warning:
+        warnings.append(link_warning)
+
     over_budget = chars > SIZE_BUDGET
     if over_budget:
         warnings.append(f"SKILL.md is {chars} chars (budget {SIZE_BUDGET}); move detail to references/")
@@ -135,44 +152,18 @@ def load_skill(skill_path: Path) -> tuple[dict[str, object], str | None]:
         "description": desc if isinstance(desc, str) else "",
         "chars": chars,
         "over_budget": over_budget,
+        "lines": lines,
+        "over_line_budget": lines > checks_skill.SKILL_MD_LINE_BUDGET,
         "section_candidates": section_candidates,
+        "notes": notes,
         "warnings": warnings,
+        "vendored": vendored,
     }, None
 
 
 def find_skills(root: Path) -> list[Path]:
     # Skills are <root>/<skill-name>/SKILL.md (one level deep).
     return sorted({p.parent for p in root.glob("*/SKILL.md")})
-
-
-def inventory_findings(skills: list[dict[str, object]]) -> dict[str, list[dict[str, object]]]:
-    named: list[dict[str, object]] = [s for s in skills if s.get("name")]
-    duplicates: list[dict[str, object]] = []
-    seen: dict[str, list[str]] = {}
-    for s in named:
-        name = cast(str, s["name"])
-        dir_ = cast(str, s["dir"])
-        seen.setdefault(name, []).append(dir_)
-    for n, dirs in seen.items():
-        if len(dirs) > 1:
-            duplicates.append({"name": n, "dirs": dirs})
-
-    similar: list[dict[str, object]] = []
-    descs: list[tuple[str, str]] = [
-        (cast(str, s["name"]), cast(str, s.get("description", "")) or "") for s in named
-    ]
-    for i in range(len(descs)):
-        for j in range(i + 1, len(descs)):
-            a = descs[i][1].lower()
-            b = descs[j][1].lower()
-            if a and b and SequenceMatcher(None, a, b).ratio() >= DESCRIPTION_SIMILARITY:
-                similar.append({
-                    "a": descs[i][0],
-                    "b": descs[j][0],
-                    "ratio": round(SequenceMatcher(None, a, b).ratio(), 2),
-                })
-
-    return {"duplicate_names": duplicates, "similar_descriptions": similar}
 
 
 def main() -> None:

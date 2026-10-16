@@ -4,7 +4,7 @@ description: Audit agent skills for token waste and progressive-disclosure viola
 metadata:
   author: craig-o-curtis
   version: 1.0
-allowed-tools: Read, Grep, Glob, Bash(uv run:*), Bash(python3:*), Bash(cat .env*)[deny], Bash(grep .env*)[deny]
+allowed-tools: Read, Grep, Glob, Bash(python3:*), Bash(uv run:*), Bash(cat .env*)[deny], Bash(grep .env*)[deny]
 ---
 
 Audit every agent skill for token waste, progressive-disclosure violations, and the common
@@ -17,24 +17,30 @@ skill used / name shadowing / runtime errors).
 ## Steps
 
 1. Locate skills via Glob: `**/.agents/skills/*/SKILL.md`
-2. Run the analyzer (report-only):
+2. Run the analyzer (report-only). It needs only the system `python3`; PyYAML is optional
+   (a built-in parser covers `key: value`, quoted values, `>`/`|` blocks and a one-level
+   `metadata:` map when it is missing). `uv run` also works.
 
    ```bash
-   uv run .agents/skills/skill-optimizer/scripts/optimize.py --all .agents/skills
+   python3 .agents/skills/skill-optimizer/scripts/optimize.py --all .agents/skills
    ```
 
    Or a single skill:
 
    ```bash
-   uv run .agents/skills/skill-optimizer/scripts/optimize.py .agents/skills/<name>
+   python3 .agents/skills/skill-optimizer/scripts/optimize.py .agents/skills/<name>
    ```
 
-3. Report per skill: char count, size-budget status, progressive-disclosure section candidates,
-   description trigger-phrase gaps, and runtime-readiness warnings (script exec bit, backslash
-   paths, undocumented deps).
-4. In `--all` mode also report cross-skill issues: duplicate `name`s (shadowing risk) and
+3. Report per skill: char and line count, size-budget status, progressive-disclosure section
+   candidates, description trigger-phrase gaps, and runtime-readiness warnings (script exec
+   bit, backslash paths, undocumented deps).
+4. Report line-budget findings: `SKILL.md` over 200 lines, any `references/` file over 200
+   lines (both are warnings), and the softer `notes` entry for `SKILL.md` at 150 lines or more.
+5. Report missing `.claude/skills/<name>` symlinks. This runs only when the scanned directory is
+   `<repo>/.agents/skills` and `<repo>/.claude/skills` exists.
+6. In `--all` mode also report cross-skill issues: duplicate `name`s (shadowing risk) and
    near-duplicate descriptions (wrong-skill risk).
-5. End with a one-line per-skill verdict and a summary count.
+7. End with a one-line per-skill verdict and a summary count.
 
 ## Rules & thresholds
 

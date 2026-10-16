@@ -74,8 +74,10 @@ These are the non-negotiables. Full detail is in the context files above.
 
 13. **Plain English for anything a person reads.** Commit messages, changesets, PR titles, descriptions and review comments, issues and comments on upstream repos, handoff notes, and replies to the user all follow ISO 24495-1:2023 — the reader can find what they need, understand it first time, and act on it. Plain governs how it is said, not how much: depth, numbers and precise domain terms stay. The [`plain-english` skill](./.agents/skills/plain-english/SKILL.md) carries the rules.
 
-## Python in Skills
+## Sessions and Agents
 
-All Python used by skills shares one root-level setup — `pyproject.toml` / `uv.lock` / `.venv` at the repo root. Skills under `.agents/skills/` do not each carry their own Python env; scripts live in the skill's `scripts/` directory and run against the shared root venv (`uv run`).
-
-Run `uv sync --extra dev` once at the repo root to install the shared env (needed for IDE import resolution and to run `pytest`/`pyright` locally).
+- **A story is `/plan-story`, `/clear`, `/implement`.** Skills: [context/skills.md](./context/skills.md).
+- **One story per session.** Near 200K tokens, `/handoff` and start anew.
+- **Only the main session spawns agents** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)).
+- **Needs Claude Code 2.1.251+.** Older ones run every agent on Sonnet.
+- **Read in excerpts.** Pass paths, not content; tests: `--reporter=dot | tail`.

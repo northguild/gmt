@@ -10,6 +10,16 @@ format used by `scripts/optimize.py`. Tune values here, not in the script or SKI
 - Rationale: keep the always-loaded SKILL.md small; bundle optional detail so it is only read
   on demand (progressive disclosure).
 
+## Line budgets
+
+- `SKILL_MD_LINE_BUDGET = 200` — lines in `SKILL.md`. Over → warning.
+- `SKILL_MD_LINE_SOFT = 150` — at or above this (and within budget) the report adds a `notes`
+  entry, not a warning.
+- `REFERENCE_LINE_BUDGET = 200` — lines in each file under `references/`. Over → warning to
+  split the file. Python files in a skill follow the same 200-line rule (split into sibling
+  modules in `scripts/`); the script does not check them.
+- Rationale: line counts catch dense files that stay under the character budget.
+
 ## Progressive disclosure
 
 - `SECTION_EXTRACT_CHARS = 600` — any `## ` section whose body exceeds this many characters is
@@ -42,6 +52,18 @@ If none match, warn: the skill may not trigger on natural phrasing. Add real use
 - Warn if a script is referenced but its dependencies are not documented in the skill
   `description`/references (so the runner knows what to install).
 
+## Symlink sync
+
+- A skill in `<repo>/.agents/skills/<name>` needs a `<repo>/.claude/skills/<name>` entry
+  (symlink), or Claude Code never loads it. Checked only when the scanned directory is
+  `.agents/skills` (repo root = nearest ancestor holding `.agents`) and `.claude/skills` exists.
+
+## Frontmatter parsing
+
+`import yaml` is optional. Without it, `scripts/fm_parse.py` parses the frontmatter itself
+(`key: value`, quoted values, `>`/`|` blocks with `-`/`+` chomping, one-level nested maps).
+Unreadable input (for example an unterminated `[`) is reported as invalid YAML.
+
 ## Report format (JSON)
 
 Single dir:
@@ -52,6 +74,9 @@ Single dir:
   "name": "skill-name",
   "chars": 1234,
   "over_budget": false,
+  "lines": 47,
+  "over_line_budget": false,
+  "notes": [],
   "section_candidates": [
     { "section": "Setup", "chars": 900, "suggest": "references/setup.md" }
   ],
@@ -73,3 +98,10 @@ Exit code is always 0 (advisory). Non-zero only on a fatal argument error (e.g. 
   if needed.
 - Plugin skills missing? Clear cache, restart, reinstall.
 - Runtime failure? Check dependencies, script permissions (`chmod +x`), and path separators.
+
+## Vendored skills
+
+A skill pinned in the repo-root `skills-lock.json` (installed with `npx skills add`) is
+overwritten by `npx skills update`, so its content findings are fixed upstream, not here. The
+report sets `vendored` to its source and turns its warnings into notes prefixed
+`vendored (<source>), fix upstream:`. The `.claude/skills` symlink check still warns: the link is ours.
