@@ -2,7 +2,9 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   fiscalPeriodOfWeek,
   fiscalYearEndIn,
+  fiscalYearLabel,
   fiscalYearOf,
+  gregorianCycleShift,
 } from "./fiscalCalendar";
 
 /** The Saturday nearest January 31 — the NRF (US) 4-5-4 year end, stated as a date. */
@@ -29,20 +31,6 @@ describe("fiscalYearEndIn", () => {
     "puts the NRF year end falling in $year on $expected",
     ({ year, expected }) => {
       expect(fiscalYearEndIn(nrfAnchor, year).toString()).toBe(expected);
-    },
-  );
-
-  it.each`
-    year    | expected
-    ${2018} | ${2017}
-    ${2024} | ${2023}
-    ${2029} | ${2028}
-  `(
-    "keeps every NRF year end on the anchor's weekday, in $year",
-    ({ year }) => {
-      expect(fiscalYearEndIn(nrfAnchor, year).dayOfWeek).toBe(
-        nrfAnchor.dayOfWeek,
-      );
     },
   );
 
@@ -83,6 +71,7 @@ describe("fiscalYearEndIn", () => {
 describe("fiscalYearOf", () => {
   it.each`
     value           | start           | weeks
+    ${"2023-01-28"} | ${"2022-01-30"} | ${52}
     ${"2023-01-29"} | ${"2023-01-29"} | ${53}
     ${"2024-02-03"} | ${"2023-01-29"} | ${53}
     ${"2024-02-04"} | ${"2024-02-04"} | ${52}
@@ -97,21 +86,6 @@ describe("fiscalYearOf", () => {
         start: Temporal.PlainDate.from(start),
         weeks,
       });
-    },
-  );
-
-  it.each`
-    value           | description
-    ${"2023-01-28"} | ${"the day before a fiscal year opens"}
-    ${"2023-01-29"} | ${"the day it opens"}
-  `(
-    "keeps $value on the right side of the boundary ($description)",
-    ({ value }) => {
-      const result = fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor);
-
-      expect(result?.start.toString()).toBe(
-        value === "2023-01-28" ? "2022-01-30" : "2023-01-29",
-      );
     },
   );
 
@@ -146,14 +120,59 @@ describe("fiscalYearOf", () => {
     );
   });
 
+  // Far from the anchor the rule still holds: 1970-01-31 and 2099-01-31 are Saturdays, and
+  // the Saturdays nearest 31 January 1971 and 2100 are the 30th, so both years are 52 weeks.
   it.each`
-    value           | description
-    ${"1970-06-15"} | ${"decades before the anchor"}
-    ${"2099-06-15"} | ${"decades after it"}
-  `("still resolves $value ($description)", ({ value }) => {
-    const result = fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor);
+    value           | start           | weeks | description
+    ${"1970-06-15"} | ${"1970-02-01"} | ${52} | ${"decades before the anchor"}
+    ${"2099-06-15"} | ${"2099-02-01"} | ${52} | ${"decades after it"}
+  `(
+    "puts $value in the fiscal year starting $start, of $weeks weeks ($description)",
+    ({ value, start, weeks }) => {
+      expect(fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor)).toEqual({
+        start: Temporal.PlainDate.from(start),
+        weeks,
+      });
+    },
+  );
 
-    expect(result?.weeks === 52 || result?.weeks === 53).toBe(true);
+  // NRF, as 2180 and 2160 (685 and 684 cycles on, 146,097 days a cycle): the year end in
+  // -271821 and the one in +275761 are outside Temporal's range.
+  it.each`
+    value              | start              | weeks | description
+    ${"-271820-06-01"} | ${"-271820-01-30"} | ${53} | ${"the search passes -271821, before the range"}
+    ${"+275760-01-15"} | ${"+275759-02-04"} | ${52} | ${"the search stops before +275761"}
+  `(
+    "puts $value in the fiscal year starting $start, of $weeks weeks ($description)",
+    ({ value, start, weeks }) => {
+      expect(fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor)).toEqual({
+        start: Temporal.PlainDate.from(start),
+        weeks,
+      });
+    },
+  );
+
+  it.each`
+    value              | description
+    ${"-271821-04-19"} | ${"its fiscal year opens -271821-01-31, before the first date"}
+    ${"+275760-09-13"} | ${"its fiscal year closes +275761-01-31, after the last date"}
+  `("returns null for $value: $description", ({ value }) => {
+    expect(fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor)).toBeNull();
+  });
+});
+
+describe("gregorianCycleShift", () => {
+  // The result moves a year into 2000 to 2399 at the same place in the 400-year cycle.
+  it.each`
+    year       | expected   | description
+    ${2000}    | ${0}       | ${"the cycle's first year"}
+    ${2399}    | ${0}       | ${"its last year"}
+    ${2400}    | ${400}     | ${"one cycle on: sits where 2000 does"}
+    ${1999}    | ${-400}    | ${"one cycle back: sits where 2399 does"}
+    ${-271820} | ${-274000} | ${"sits where 2180 does"}
+    ${275760}  | ${273600}  | ${"sits where 2160 does"}
+  `("returns $expected for $year ($description)", ({ year, expected }) => {
+    expect(gregorianCycleShift(year)).toBe(expected);
   });
 });
 
@@ -167,54 +186,101 @@ describe("fiscalPeriodOfWeek", () => {
     "lays out all 52 weeks of a 52-week year under $pattern",
     ({ pattern, expected }) => {
       const layout = Array.from({ length: 52 }, (_unused, index) =>
-        fiscalPeriodOfWeek(index + 1, 52, pattern),
+        fiscalPeriodOfWeek(index + 1, 52, pattern, "lastPeriod"),
       );
 
       expect(layout).toEqual(expected);
     },
   );
 
-  it.each`
-    pattern    | finalPeriodWeeks
-    ${"4-5-4"} | ${5}
-    ${"4-4-5"} | ${6}
-    ${"5-4-4"} | ${5}
-  `(
-    "appends the 53rd week to period 12 under $pattern, making it $finalPeriodWeeks weeks long",
-    ({ pattern, finalPeriodWeeks }) => {
-      const weeksInFinalPeriod = Array.from({ length: 53 }, (_unused, index) =>
-        fiscalPeriodOfWeek(index + 1, 53, pattern),
-      ).filter((period) => period === 12).length;
+  /** Weeks in each of the 12 periods, counted from a whole-year walk. */
+  const periodLengths = (
+    weeks: number,
+    pattern: "4-5-4" | "4-4-5" | "5-4-4",
+    extraWeek: "firstPeriod" | "lastPeriod",
+  ) => {
+    const lengths = Array.from({ length: 12 }, () => 0);
+    for (let week = 1; week <= weeks; week++) {
+      lengths[fiscalPeriodOfWeek(week, weeks, pattern, extraWeek) - 1]++;
+    }
+    return lengths;
+  };
 
-      expect(weeksInFinalPeriod).toBe(finalPeriodWeeks);
-      expect(fiscalPeriodOfWeek(53, 53, pattern)).toBe(12);
+  // §3.1 of the fiscal spec: the 53rd week lengthens period 1 or period 12, nothing else.
+  // ONS (UK) 2025 is the 4-4-5 firstPeriod shape: 5,4,5 then 4,4,5 three times.
+  it.each`
+    pattern    | extraWeek        | expected
+    ${"4-5-4"} | ${"firstPeriod"} | ${[5, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4]}
+    ${"4-5-4"} | ${"lastPeriod"}  | ${[4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 5]}
+    ${"4-4-5"} | ${"firstPeriod"} | ${[5, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5]}
+    ${"4-4-5"} | ${"lastPeriod"}  | ${[4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 6]}
+    ${"5-4-4"} | ${"firstPeriod"} | ${[6, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]}
+    ${"5-4-4"} | ${"lastPeriod"}  | ${[5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 5]}
+  `(
+    "lays out a 53-week year under $pattern with extraWeek $extraWeek as $expected",
+    ({ pattern, extraWeek, expected }) => {
+      expect(periodLengths(53, pattern, extraWeek)).toEqual(expected);
     },
   );
 
   it.each`
-    pattern    | description
-    ${"4-5-4"} | ${"the NRF shape"}
-    ${"4-4-5"} | ${"the longer month at quarter end"}
-    ${"5-4-4"} | ${"the longer month at quarter start"}
+    pattern
+    ${"4-5-4"}
+    ${"4-4-5"}
+    ${"5-4-4"}
   `(
-    "gives every quarter 13 weeks in a 52-week year under $pattern ($description)",
+    "lays out a 52-week year under $pattern the same for either extraWeek",
     ({ pattern }) => {
-      const layout = Array.from({ length: 52 }, (_unused, index) =>
-        fiscalPeriodOfWeek(index + 1, 52, pattern),
-      );
+      const walk = (extraWeek: "firstPeriod" | "lastPeriod") =>
+        Array.from({ length: 52 }, (_unused, index) =>
+          fiscalPeriodOfWeek(index + 1, 52, pattern, extraWeek),
+        );
 
-      for (let quarter = 0; quarter < 4; quarter++) {
-        const periods = [quarter * 3 + 1, quarter * 3 + 2, quarter * 3 + 3];
-        const weeks = layout.filter((period) =>
-          periods.includes(period),
-        ).length;
-
-        expect(weeks).toBe(13);
-      }
+      expect(walk("firstPeriod")).toEqual(walk("lastPeriod"));
     },
   );
 
   it("clamps a week past the end of the year to the final period", () => {
-    expect(fiscalPeriodOfWeek(53, 52, "4-5-4")).toBe(12);
+    expect(fiscalPeriodOfWeek(53, 52, "4-5-4", "lastPeriod")).toBe(12);
   });
+});
+
+describe("fiscalYearLabel", () => {
+  // Day counts per calendar year are worked by month length in each row's description.
+  it.each`
+    start           | end             | label             | expected | description
+    ${"2024-12-29"} | ${"2026-01-03"} | ${"startYear"}    | ${2024}  | ${"ONS (UK) 2025 starts in 2024"}
+    ${"2024-12-29"} | ${"2026-01-03"} | ${"endYear"}      | ${2026}  | ${"and ends in 2026"}
+    ${"2024-12-29"} | ${"2026-01-03"} | ${"majorityYear"} | ${2025}  | ${"3 days in 2024, 365 in 2025, 3 in 2026: the published label"}
+    ${"2019-12-29"} | ${"2021-01-02"} | ${"startYear"}    | ${2019}  | ${"Canadian Tire (CA) 2020 starts in 2019"}
+    ${"2019-12-29"} | ${"2021-01-02"} | ${"endYear"}      | ${2021}  | ${"and ends in 2021"}
+    ${"2019-12-29"} | ${"2021-01-02"} | ${"majorityYear"} | ${2020}  | ${"3 days in 2019, 366 in 2020, 2 in 2021: the published label"}
+    ${"2023-06-26"} | ${"2024-06-30"} | ${"startYear"}    | ${2023}  | ${"Woolworths Group (AU) F24 starts in 2023"}
+    ${"2023-06-26"} | ${"2024-06-30"} | ${"endYear"}      | ${2024}  | ${"and ends in 2024: the published label"}
+    ${"2023-06-26"} | ${"2024-06-30"} | ${"majorityYear"} | ${2023}  | ${"5 + 184 = 189 days in 2023, 182 in 2024"}
+    ${"2023-01-29"} | ${"2024-02-03"} | ${"startYear"}    | ${2023}  | ${"NRF (US) fiscal 2023: the published label"}
+    ${"2023-01-29"} | ${"2024-02-03"} | ${"majorityYear"} | ${2023}  | ${"337 days in 2023, 34 in 2024"}
+    ${"2025-07-03"} | ${"2026-07-01"} | ${"startYear"}    | ${2025}  | ${"a tie year starts in 2025"}
+    ${"2025-07-03"} | ${"2026-07-01"} | ${"endYear"}      | ${2026}  | ${"and ends in 2026"}
+    ${"2025-07-03"} | ${"2026-07-01"} | ${"majorityYear"} | ${2026}  | ${"182 days in 2025, 182 in 2026: a tie goes to the end year"}
+    ${"2024-07-04"} | ${"2025-07-02"} | ${"majorityYear"} | ${2025}  | ${"181 days in 2024, 183 in 2025"}
+    ${"2026-07-02"} | ${"2027-06-30"} | ${"majorityYear"} | ${2026}  | ${"183 days in 2026, 181 in 2027"}
+    ${"2023-12-31"} | ${"2024-12-28"} | ${"startYear"}    | ${2023}  | ${"ONS (UK) 2024 starts on 31 December 2023"}
+    ${"2023-12-31"} | ${"2024-12-28"} | ${"endYear"}      | ${2024}  | ${"and ends in 2024"}
+    ${"2023-12-31"} | ${"2024-12-28"} | ${"majorityYear"} | ${2024}  | ${"1 day in 2023, 363 in 2024: the published label"}
+    ${"2023-01-01"} | ${"2023-12-30"} | ${"startYear"}    | ${2023}  | ${"a year inside one calendar year"}
+    ${"2023-01-01"} | ${"2023-12-30"} | ${"endYear"}      | ${2023}  | ${"has one label"}
+    ${"2023-01-01"} | ${"2023-12-30"} | ${"majorityYear"} | ${2023}  | ${"under every rule"}
+  `(
+    "labels $start to $end as $expected under $label ($description)",
+    ({ start, end, label, expected }) => {
+      expect(
+        fiscalYearLabel(
+          Temporal.PlainDate.from(start),
+          Temporal.PlainDate.from(end),
+          label,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

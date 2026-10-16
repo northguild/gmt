@@ -11,14 +11,47 @@
  */
 export type FiscalPattern = "4-5-4" | "4-4-5" | "5-4-4";
 
-/** Caller-supplied 52/53-week fiscal calendar. GMT bundles none. */
+/**
+ * The period a 53rd week is added to, in a fiscal year that has one.
+ *
+ * - `"firstPeriod"` — the first period gets the extra week, so quarter 1 has 14 weeks. One
+ *   published example is the ONS retail trading periods (UK): "a five week January is
+ *   introduced every five to six years".
+ * - `"lastPeriod"` — the last period gets it, so quarter 4 has 14 weeks. One published example
+ *   is the NRF 4-5-4 calendar (US), which adds the week "to the end of the calendar".
+ *
+ * Narrow a candidate with `isValidFiscalExtraWeek`.
+ */
+export type FiscalExtraWeek = "firstPeriod" | "lastPeriod";
+
+/**
+ * The calendar year that names a fiscal year.
+ *
+ * - `"startYear"` — the year its first day falls in. NRF (US): fiscal 2023 runs 2023-01-29 to
+ *   2024-02-03.
+ * - `"endYear"` — the year its last day falls in. Woolworths Group (AU): F24 runs 2023-06-26 to
+ *   2024-06-30.
+ * - `"majorityYear"` — the calendar year holding the most of its days. ONS (UK): 2025 runs
+ *   2024-12-29 to 2026-01-03. When two years hold exactly half each, the label is the end year,
+ *   the year holding the date the period ends on.
+ *
+ * Narrow a candidate with `isValidFiscalYearLabel`.
+ */
+export type FiscalYearLabel = "startYear" | "endYear" | "majorityYear";
+
+/** Caller-supplied 52/53-week fiscal calendar. GMT bundles none, and has no defaults. */
 export interface FiscalCalendar {
   /** The weeks per period within each quarter. */
   pattern: FiscalPattern;
   /**
    * The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**,
-   * on the occurrence nearest this date's **month and day**. One published 4-5-4 example
-   * (NRF, US) ends its year on the Saturday nearest January 31, which is `"2026-01-31"`.
+   * on the occurrence nearest this date's **month and day**. NRF (US) adds a 53rd week when
+   * "there are four or more days left in January", which is the Saturday nearest
+   * January 31: `"2026-01-31"`.
    */
   yearEndsOn: string;
+  /** The period a 53rd week is added to. */
+  extraWeek: FiscalExtraWeek;
+  /** The calendar year that names a fiscal year. */
+  yearLabel: FiscalYearLabel;
 }

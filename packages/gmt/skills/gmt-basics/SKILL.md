@@ -87,7 +87,8 @@ input before you act on it.
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
-  `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
+  `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`,
+  `isValidFiscalCalendar`, `isValidFiscalExtraWeek`, `isValidFiscalYearLabel`
 - **Interchange-format validation**: `isValidRfc3339DateTime`,
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
@@ -163,10 +164,17 @@ input before you act on it.
   instant has no calendar date until you name a zone — floor it with
   `floorToZone` first, or convert it in the zone you mean.
 - `getFiscalPeriod`'s `yearEndsOn` states the year-end **rule** by example, not
-  one year's end. One published 4-5-4 example (NRF, US) ends its year on the
-  Saturday nearest January 31, which is `"2026-01-31"`, a Saturday on
-  January 31. GMT rule: `year` is the calendar year a fiscal year starts in;
-  add one if you label by the year it ends in.
+  one year's end. One published 4-5-4 example (NRF, US) adds a 53rd week when
+  "there are four or more days left in January", which is the Saturday nearest
+  January 31: `"2026-01-31"`, a Saturday on January 31.
+- `getFiscalPeriod` also requires `extraWeek` and `yearLabel`, with no default,
+  because published calendars disagree on both. `extraWeek` is the period a 53rd
+  week is added to: `"firstPeriod"` (ONS, UK) or `"lastPeriod"` (NRF, US).
+  `yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`
+  (Woolworths Group, AU) or `"majorityYear"`, the calendar year holding the most
+  of its days (ONS, UK; Canadian Tire, CA). `getQuarter` with options takes
+  `fiscalYearStartMonth` and `yearLabel`, both required. A calendar missing a
+  field returns `null`; check it with `isValidFiscalCalendar`.
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
   a fixed Mon–Fri week (Sat–Sun off, CLDR's world default; ISO 8601 defines no
   weekend) with no locale and no holidays **until you pass it a

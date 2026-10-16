@@ -17,7 +17,12 @@ export {
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
 export { isInDaylightTime, observesDaylightTime } from "./daylightTime";
-export { fiscalPeriodOfWeek, fiscalYearOf } from "./fiscalCalendar";
+export {
+  fiscalPeriodOfWeek,
+  fiscalYearLabel,
+  fiscalYearOf,
+  gregorianCycleShift,
+} from "./fiscalCalendar";
 export { floorDivide } from "./floorDivide";
 export {
   DOT_NET_TICKS_EPOCH_OFFSET,

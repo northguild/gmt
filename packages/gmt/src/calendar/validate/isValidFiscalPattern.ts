@@ -7,10 +7,9 @@ import type { FiscalPattern } from "../../types";
  *   retail calendar (US).
  * - Accepts any input type and returns false for non-string values.
  * - Uses type assertion to narrow the type.
- * - `getFiscalPeriod` returns null for a pattern it does not recognise — the same sentinel it
- *   returns for a date it cannot place. Check the pattern here to tell a misconfigured
- *   calendar apart from an unusable date: a pattern read from config, an env var or a form is
- *   a bare string until something narrows it.
+ * - A pattern read from config, an env var or a form is a bare string until something narrows
+ *   it. Narrow it here; to check a whole calendar before `getFiscalPeriod`, whose null also
+ *   means a date it cannot place, use `isValidFiscalCalendar`.
  *
  * @param pattern candidate value of any type
  * @returns boolean indicating validity
@@ -18,7 +17,7 @@ import type { FiscalPattern } from "../../types";
  * @example isValidFiscalPattern("4-5-4") // true
  * @example isValidFiscalPattern("4-4-5") // true
  * @example isValidFiscalPattern("5-4-4") // true
- * @example isValidFiscalPattern("4-5-5") // false (the shape a 53-week year's last quarter takes, not a pattern)
+ * @example isValidFiscalPattern("4-5-5") // false (a 53-week year's last quarter under `"lastPeriod"`, not a pattern)
  * @example isValidFiscalPattern("454") // false
  * @example isValidFiscalPattern("invalid") // false
  * @example isValidFiscalPattern(454) // false

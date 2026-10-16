@@ -99,6 +99,9 @@ skills:
       - getQuarter
       - getFiscalPeriod
       - isValidFiscalPattern
+      - isValidFiscalCalendar
+      - isValidFiscalExtraWeek
+      - isValidFiscalYearLabel
     tasks:
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
@@ -117,7 +120,7 @@ skills:
       - List DST transitions for a timezone
       - Read the ISO week date or ordinal date a calendar date falls in
       - Read the calendar or fiscal quarter a date falls in
-      - Place a date in a 52/53-week retail calendar period (4-5-4, 4-4-5, 5-4-4)
+      - Place a date in a 52/53-week retail calendar period (4-5-4, 4-4-5, 5-4-4), stating which period gets a 53rd week and which calendar year names the fiscal year
 
   - name: GMT Arithmetic
     slug: gmt-arithmetic

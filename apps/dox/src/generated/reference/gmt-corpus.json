@@ -330,32 +330,44 @@
     "sourcePath": "packages/gmt/src/calendar/calculate/getFiscalPeriod.ts",
     "examples": [
       {
-        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
         "result": "{ year: 2024, period: 5, week: 19 }"
       },
       {
-        "call": "getFiscalPeriod(\"2024-02-04\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "call": "getFiscalPeriod(\"2024-02-04\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
         "result": "{ year: 2024, period: 1, week: 1 } (NRF fiscal 2024 opens)"
       },
       {
-        "call": "getFiscalPeriod(\"2024-01-28\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "call": "getFiscalPeriod(\"2024-01-28\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
         "result": "{ year: 2023, period: 12, week: 53 } (the 53rd week of NRF fiscal 2023)"
       },
       {
-        "call": "getFiscalPeriod(\"2024-03-31\", { pattern: \"4-4-5\", yearEndsOn: \"2026-01-31\" })",
-        "result": "{ year: 2024, period: 3, week: 9 } (the same week, a period later than 4-5-4 puts it)"
+        "call": "getFiscalPeriod(\"2024-01-28\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"endYear\" })",
+        "result": "{ year: 2024, period: 12, week: 53 } (the same week, named by the year it ends in)"
       },
       {
-        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-5\", yearEndsOn: \"2026-01-31\" })",
+        "call": "getFiscalPeriod(\"2024-03-31\", { pattern: \"4-4-5\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
+        "result": "{ year: 2024, period: 3, week: 9 }"
+      },
+      {
+        "call": "getFiscalPeriod(\"2025-02-01\", { pattern: \"4-4-5\", yearEndsOn: \"2022-12-31\", extraWeek: \"firstPeriod\", yearLabel: \"majorityYear\" })",
+        "result": "{ year: 2025, period: 1, week: 5 } (ONS 2025: a five-week January)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-12-29\", { pattern: \"4-4-5\", yearEndsOn: \"2022-12-31\", extraWeek: \"firstPeriod\", yearLabel: \"majorityYear\" })",
+        "result": "{ year: 2025, period: 1, week: 1 } (ONS 2025 opens in December 2024)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-5\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
         "result": "null (not one of the three patterns)"
       },
       {
-        "call": "getFiscalPeriod(\"2024-06-15T12:00:00Z\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
-        "result": "null (a moment, not a calendar date)"
+        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\" })",
+        "result": "null (no yearLabel)"
       },
       {
-        "call": "getFiscalPeriod(\"invalid\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
-        "result": "null"
+        "call": "getFiscalPeriod(\"2024-06-15T12:00:00Z\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
+        "result": "null (a moment, not a calendar date)"
       }
     ]
   },
@@ -448,7 +460,7 @@
     "namespace": "calendar",
     "module": "calculate",
     "kind": "function",
-    "signature": "getQuarter(value: string, optionsArg?: { fiscalYearStartMonth?: number; }): { year: number; quarter: number; } | null",
+    "signature": "getQuarter(value: string, optionsArg?: { fiscalYearStartMonth: number; yearLabel: FiscalYearLabel; }): { year: number; quarter: number; } | null",
     "description": "Return the quarter `value` falls in, as a year and a quarter number.",
     "sourcePath": "packages/gmt/src/calendar/calculate/getQuarter.ts",
     "examples": [
@@ -461,19 +473,35 @@
         "result": "{ year: 2024, quarter: 4 }"
       },
       {
-        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 1 })",
-        "result": "{ year: 2024, quarter: 2 } (the default, stated)"
-      },
-      {
-        "call": "getQuarter(\"2024-04-01\", { fiscalYearStartMonth: 4 })",
+        "call": "getQuarter(\"2024-04-01\", { fiscalYearStartMonth: 4, yearLabel: \"startYear\" })",
         "result": "{ year: 2024, quarter: 1 }"
       },
       {
-        "call": "getQuarter(\"2024-03-31\", { fiscalYearStartMonth: 4 })",
+        "call": "getQuarter(\"2024-03-31\", { fiscalYearStartMonth: 4, yearLabel: \"startYear\" })",
         "result": "{ year: 2023, quarter: 4 } (the previous fiscal year)"
       },
       {
-        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 13 })",
+        "call": "getQuarter(\"2024-03-31\", { fiscalYearStartMonth: 4, yearLabel: \"endYear\" })",
+        "result": "{ year: 2024, quarter: 4 }"
+      },
+      {
+        "call": "getQuarter(\"2023-10-15\", { fiscalYearStartMonth: 7, yearLabel: \"endYear\" })",
+        "result": "{ year: 2024, quarter: 2 }"
+      },
+      {
+        "call": "getQuarter(\"2023-10-15\", { fiscalYearStartMonth: 7, yearLabel: \"majorityYear\" })",
+        "result": "{ year: 2023, quarter: 2 } (July to December is 184 of its days)"
+      },
+      {
+        "call": "getQuarter(\"2024-10-01\", { fiscalYearStartMonth: 10, yearLabel: \"majorityYear\" })",
+        "result": "{ year: 2025, quarter: 1 }"
+      },
+      {
+        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 4 })",
+        "result": "null (no yearLabel)"
+      },
+      {
+        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 13, yearLabel: \"startYear\" })",
         "result": "null"
       },
       {
@@ -799,6 +827,64 @@
     ]
   },
   {
+    "url": "/reference/calendar/validate/isValidFiscalCalendar",
+    "page": "/reference/calendar/validate/isValidFiscalCalendar",
+    "name": "isValidFiscalCalendar",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFiscalCalendar(calendar: unknown): calendar is FiscalCalendar",
+    "description": "Return true when `calendar` is a `FiscalCalendar` that `getFiscalPeriod` accepts.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidFiscalCalendar.ts",
+    "examples": [
+      {
+        "call": "isValidFiscalCalendar({ pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalCalendar({ pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "false (the 1.19 shape: no extraWeek or yearLabel)"
+      },
+      {
+        "call": "isValidFiscalCalendar({ pattern: \"4-5-4\", yearEndsOn: \"2026-02-30\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalCalendar(\"4-5-4\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/validate/isValidFiscalExtraWeek",
+    "page": "/reference/calendar/validate/isValidFiscalExtraWeek",
+    "name": "isValidFiscalExtraWeek",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFiscalExtraWeek(value: unknown): value is FiscalExtraWeek",
+    "description": "Return true when `value` is a valid FiscalExtraWeek: the period a 53rd week is added to.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidFiscalExtraWeek.ts",
+    "examples": [
+      {
+        "call": "isValidFiscalExtraWeek(\"firstPeriod\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalExtraWeek(\"lastPeriod\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalExtraWeek(\"lastQuarter\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalExtraWeek(12)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidFiscalPattern",
     "page": "/reference/calendar/validate/isValidFiscalPattern",
     "name": "isValidFiscalPattern",
@@ -823,7 +909,7 @@
       },
       {
         "call": "isValidFiscalPattern(\"4-5-5\")",
-        "result": "false (the shape a 53-week year's last quarter takes, not a pattern)"
+        "result": "false (a 53-week year's last quarter under `\"lastPeriod\"`, not a pattern)"
       },
       {
         "call": "isValidFiscalPattern(\"454\")",
@@ -839,6 +925,39 @@
       },
       {
         "call": "isValidFiscalPattern(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/validate/isValidFiscalYearLabel",
+    "page": "/reference/calendar/validate/isValidFiscalYearLabel",
+    "name": "isValidFiscalYearLabel",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFiscalYearLabel(value: unknown): value is FiscalYearLabel",
+    "description": "Return true when `value` is a valid FiscalYearLabel: the rule that picks the calendar year naming a fiscal year.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidFiscalYearLabel.ts",
+    "examples": [
+      {
+        "call": "isValidFiscalYearLabel(\"startYear\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalYearLabel(\"endYear\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalYearLabel(\"majorityYear\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalYearLabel(\"fiscalYear\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalYearLabel(null)",
         "result": "false"
       }
     ]
@@ -6989,7 +7108,7 @@
     "module": "calculate",
     "kind": "function",
     "signature": "nextWeekday(value: string, dayOfWeek: number, options?: { inclusive?: boolean; }): string",
-    "description": "Return a PlainDate ISO string for the next occurrence of `dayOfWeek` on or after `value`.",
+    "description": "Return a PlainDate ISO string for the next occurrence of `dayOfWeek` after `value` (or on it, with `inclusive: true`).",
     "sourcePath": "packages/gmt/src/plain/calculate/nextWeekday.ts",
     "examples": [
       {
@@ -7022,7 +7141,7 @@
     "module": "calculate",
     "kind": "function",
     "signature": "previousWeekday(value: string, dayOfWeek: number, options?: { inclusive?: boolean; }): string",
-    "description": "Return a PlainDate ISO string for the previous occurrence of `dayOfWeek` on or before `value`.",
+    "description": "Return a PlainDate ISO string for the previous occurrence of `dayOfWeek` before `value` (or on it, with `inclusive: true`).",
     "sourcePath": "packages/gmt/src/plain/calculate/previousWeekday.ts",
     "examples": [
       {
@@ -15241,7 +15360,7 @@
     "module": "calculate",
     "kind": "function",
     "signature": "leapSecondsBetween(start: string, end: string): number | null",
-    "description": "Return how many leap seconds fall between two UTC instants: the change in TAI − UTC.",
+    "description": "Return how many leap seconds start between two UTC instants, signed.",
     "sourcePath": "packages/gmt/src/timescale/calculate/leapSecondsBetween.ts",
     "examples": [
       {
@@ -15259,6 +15378,10 @@
       {
         "call": "leapSecondsBetween(\"2016-12-31T23:59:60Z\", \"2017-01-01T00:00:00Z\")",
         "result": "1"
+      },
+      {
+        "call": "leapSecondsBetween(\"2016-12-31T23:59:60.5Z\", \"2017-01-01T00:00:00Z\")",
+        "result": "0 — it started at 23:59:60.000"
       },
       {
         "call": "leapSecondsBetween(\"1971-01-01T00:00:00Z\", \"2024-01-01T00:00:00Z\")",
@@ -18218,17 +18341,40 @@
     "examples": []
   },
   {
-    "url": "/reference/calendar/calculate/getFiscalPeriod#fiscalcalendar",
-    "page": "/reference/calendar/calculate/getFiscalPeriod",
+    "url": "/reference/types/FiscalExtraWeek",
+    "page": "/reference/types/FiscalExtraWeek",
+    "name": "FiscalExtraWeek",
+    "namespace": "types",
+    "module": "fiscal-calendar",
+    "kind": "type",
+    "signature": "",
+    "description": "The period a 53rd week is added to, in a fiscal year that has one.",
+    "sourcePath": "packages/gmt/src/types/fiscal-calendar.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/FiscalYearLabel",
+    "page": "/reference/types/FiscalYearLabel",
+    "name": "FiscalYearLabel",
+    "namespace": "types",
+    "module": "fiscal-calendar",
+    "kind": "type",
+    "signature": "",
+    "description": "The calendar year that names a fiscal year.",
+    "sourcePath": "packages/gmt/src/types/fiscal-calendar.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/FiscalCalendar",
+    "page": "/reference/types/FiscalCalendar",
     "name": "FiscalCalendar",
     "namespace": "types",
     "module": "fiscal-calendar",
     "kind": "type",
     "signature": "",
-    "description": "Caller-supplied 52/53-week fiscal calendar. GMT bundles none.",
+    "description": "Caller-supplied 52/53-week fiscal calendar. GMT bundles none, and has no defaults.",
     "sourcePath": "packages/gmt/src/types/fiscal-calendar.ts",
     "examples": [],
-    "inlineOn": "getFiscalPeriod",
     "members": [
       {
         "name": "pattern",
@@ -18236,7 +18382,15 @@
       },
       {
         "name": "yearEndsOn",
-        "description": "The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**, on the occurrence nearest this date's **month and day**. One published 4-5-4 example (NRF, US) ends its year on the Saturday nearest January 31, which is `\"2026-01-31\"`."
+        "description": "The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**, on the occurrence nearest this date's **month and day**. NRF (US) adds a 53rd week when \"there are four or more days left in January\", which is the Saturday nearest January 31: `\"2026-01-31\"`."
+      },
+      {
+        "name": "extraWeek",
+        "description": "The period a 53rd week is added to."
+      },
+      {
+        "name": "yearLabel",
+        "description": "The calendar year that names a fiscal year."
       }
     ]
   },
@@ -18338,7 +18492,7 @@
     "module": "gnss",
     "kind": "type",
     "signature": "",
-    "description": "Which pass of a wrapping week counter a week number belongs to, in one of three forms. An integer from 0 is the era itself (era 0 starts at the system's epoch). `\"rolling\"` picks the era that puts the week within half a counter period of today, for live receiver output; it reads the clock, so the same stored value can give a different answer in a later year. `{ notBefore }` picks the earliest occurrence at or after an instant you state (a receiver's firmware build date, or the start of a recorded log) and gives the same answer in any year.",
+    "description": "Which pass of a wrapping week counter a week number belongs to, in one of three forms. An integer from 0 is the era itself (era 0 starts at the system's epoch). `\"rolling\"` picks the era that puts the week within half a counter period of today, or era 0, when the week would otherwise fall before the system's epoch; it is for live receiver output and reads the clock, so the same stored value can give a different answer in a later year. `{ notBefore }` picks the earliest occurrence at or after an instant you state (a receiver's firmware build date, or the start of a recorded log) and gives the same answer in any year.",
     "sourcePath": "packages/gmt/src/types/gnss.ts",
     "examples": [],
     "inlineOn": "gnssWeekToUtc"

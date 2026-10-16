@@ -1,18 +1,27 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import type { FiscalCalendar } from "../../types";
 import { getFiscalPeriod } from "./getFiscalPeriod";
 
 /**
- * The NRF 4-5-4 retail calendar, stated as its published rule: "the Saturday nearest to
- * January 31". 2026-01-31 is a Saturday falling exactly on January 31, so it names both
- * halves of the rule without drift.
+ * The NRF 4-5-4 retail calendar (US), with the 1.19 behaviour stated: a 53rd week is added "to
+ * the end of the calendar" when "there are four or more days left in January", which is the
+ * Saturday nearest January 31. 2026-01-31 is a Saturday falling exactly on January 31, so it
+ * names both halves of the rule without drift. NRF labels a fiscal year by its start year.
  */
-const nrf: FiscalCalendar = { pattern: "4-5-4", yearEndsOn: "2026-01-31" };
+const nrf: FiscalCalendar = {
+  pattern: "4-5-4",
+  yearEndsOn: "2026-01-31",
+  extraWeek: "lastPeriod",
+  yearLabel: "startYear",
+};
+
+/** The two fields that reproduce 1.19 exactly, for the rows that state their own rule. */
+const as119 = { extraWeek: "lastPeriod", yearLabel: "startYear" } as const;
 
 describe("getFiscalPeriod", () => {
   it.each`
     value           | expected
-    ${"2024-02-04"} | ${{ year: 2024, period: 1, week: 1 }}
     ${"2024-02-10"} | ${{ year: 2024, period: 1, week: 1 }}
     ${"2024-03-02"} | ${{ year: 2024, period: 1, week: 4 }}
     ${"2024-03-03"} | ${{ year: 2024, period: 2, week: 5 }}
@@ -31,11 +40,6 @@ describe("getFiscalPeriod", () => {
 
   it.each`
     value           | expected                                | description
-    ${"2023-01-29"} | ${{ year: 2023, period: 1, week: 1 }}   | ${"the first day of NRF fiscal 2023"}
-    ${"2024-01-27"} | ${{ year: 2023, period: 12, week: 52 }} | ${"the last day of its 52nd week"}
-    ${"2024-01-28"} | ${{ year: 2023, period: 12, week: 53 }} | ${"the first day of the 53rd week"}
-    ${"2024-02-03"} | ${{ year: 2023, period: 12, week: 53 }} | ${"its last day, still week 53"}
-    ${"2024-02-04"} | ${{ year: 2024, period: 1, week: 1 }}   | ${"the first day of the next fiscal year"}
     ${"2018-01-28"} | ${{ year: 2017, period: 12, week: 53 }} | ${"the 53rd week of NRF fiscal 2017"}
     ${"2018-02-03"} | ${{ year: 2017, period: 12, week: 53 }} | ${"its last day"}
     ${"2018-02-04"} | ${{ year: 2018, period: 1, week: 1 }}   | ${"the first day after it"}
@@ -50,7 +54,6 @@ describe("getFiscalPeriod", () => {
 
   it.each`
     value           | expected                                | description
-    ${"2017-01-29"} | ${{ year: 2017, period: 1, week: 1 }}   | ${"NRF fiscal 2017 opens"}
     ${"2025-02-02"} | ${{ year: 2025, period: 1, week: 1 }}   | ${"NRF fiscal 2025 opens"}
     ${"2026-01-31"} | ${{ year: 2025, period: 12, week: 52 }} | ${"NRF fiscal 2025 closes, on the anchor date itself"}
     ${"2028-01-30"} | ${{ year: 2028, period: 1, week: 1 }}   | ${"NRF fiscal 2028 opens"}
@@ -73,7 +76,7 @@ describe("getFiscalPeriod", () => {
     "puts week $expected.week of $value in period $expected.period under pattern $pattern",
     ({ value, pattern, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern, yearEndsOn: "2026-01-31" }),
+        getFiscalPeriod(value, { pattern, yearEndsOn: "2026-01-31", ...as119 }),
       ).toEqual(expected);
     },
   );
@@ -87,7 +90,11 @@ describe("getFiscalPeriod", () => {
     "appends the 53rd week to the final period under pattern $pattern",
     ({ pattern, expected }) => {
       expect(
-        getFiscalPeriod("2024-01-28", { pattern, yearEndsOn: "2026-01-31" }),
+        getFiscalPeriod("2024-01-28", {
+          pattern,
+          yearEndsOn: "2026-01-31",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -102,7 +109,11 @@ describe("getFiscalPeriod", () => {
     "handles a June-ending fiscal calendar: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern: "4-4-5", yearEndsOn: "2024-06-29" }),
+        getFiscalPeriod(value, {
+          pattern: "4-4-5",
+          yearEndsOn: "2024-06-29",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -115,7 +126,11 @@ describe("getFiscalPeriod", () => {
     "reads yearEndsOn $yearEndsOn as a rule, not an instance: 2023-01-29 is $expected ($description)",
     ({ yearEndsOn, expected }) => {
       expect(
-        getFiscalPeriod("2023-01-29", { pattern: "4-5-4", yearEndsOn }),
+        getFiscalPeriod("2023-01-29", {
+          pattern: "4-5-4",
+          yearEndsOn,
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -128,7 +143,11 @@ describe("getFiscalPeriod", () => {
     "handles a December-ending rule whose year end lands in January: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2022-12-31" }),
+        getFiscalPeriod(value, {
+          pattern: "4-5-4",
+          yearEndsOn: "2022-12-31",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -142,7 +161,11 @@ describe("getFiscalPeriod", () => {
     "handles a January-ending rule whose year end lands in December: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2033-01-01" }),
+        getFiscalPeriod(value, {
+          pattern: "4-5-4",
+          yearEndsOn: "2033-01-01",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -159,10 +182,14 @@ describe("getFiscalPeriod", () => {
     ${"2030-01-05"} | ${{ year: 2028, period: 12, week: 53 }} | ${"the second 2028 year closes in 2030, so none is labelled 2029"}
     ${"2030-01-06"} | ${{ year: 2030, period: 1, week: 1 }}   | ${"the next opens as 2030"}
   `(
-    "labels by the year a fiscal year starts in, collisions included: $value is $expected ($description)",
+    "labels by the year a fiscal year starts in (startYear), collisions included: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2027-01-02" }),
+        getFiscalPeriod(value, {
+          pattern: "4-5-4",
+          yearEndsOn: "2027-01-02",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -187,7 +214,11 @@ describe("getFiscalPeriod", () => {
     "labels the Saturday-nearest-31-December rule by start year: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
-        getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2022-12-31" }),
+        getFiscalPeriod(value, {
+          pattern: "4-5-4",
+          yearEndsOn: "2022-12-31",
+          ...as119,
+        }),
       ).toEqual(expected);
     },
   );
@@ -217,6 +248,7 @@ describe("getFiscalPeriod", () => {
       getFiscalPeriod("2024-06-15", {
         pattern,
         yearEndsOn: "2026-01-31",
+        ...as119,
       } as unknown as FiscalCalendar),
     ).toBeNull();
   });
@@ -229,6 +261,7 @@ describe("getFiscalPeriod", () => {
     ${"2026-01-31T00:00:00"}                         | ${"a datetime rather than a date"}
     ${"2026-01-31T00:00:00Z"}                        | ${"an instant"}
     ${"2026-01-31T00:00:00-05:00[America/New_York]"} | ${"a zoned datetime"}
+    ${"2026-01-31[u-ca=hebrew]"}                     | ${"a non-ISO calendar, whose year and month are not ISO's"}
     ${undefined}                                     | ${"absent"}
     ${null}                                          | ${"null"}
     ${20260131}                                      | ${"a number"}
@@ -239,6 +272,7 @@ describe("getFiscalPeriod", () => {
         getFiscalPeriod("2024-06-15", {
           pattern: "4-5-4",
           yearEndsOn,
+          ...as119,
         } as unknown as FiscalCalendar),
       ).toBeNull();
     },
@@ -265,6 +299,7 @@ describe("getFiscalPeriod", () => {
     ${""}                                            | ${"an empty string"}
     ${"2024-02-30"}                                  | ${"a date that does not exist"}
     ${"2024-12-31T23:59:60"}                         | ${"a leap second"}
+    ${"2024-06-15[u-ca=hebrew]"}                     | ${"a date in a non-ISO calendar"}
   `("returns null when $value is $description", ({ value }) => {
     expect(getFiscalPeriod(value, nrf)).toBeNull();
   });
@@ -285,4 +320,503 @@ describe("getFiscalPeriod", () => {
     mockTemporalPlainDateFromThrow();
     expect(getFiscalPeriod("2024-06-15", nrf)).toBeNull();
   });
+
+  // The pre-built mock fails the first call, the parse of `yearEndsOn` inside validation. These
+  // fail the later call sites instead, each of which the function reaches on the NRF input:
+  // `with` and `add` place the year ends, `until` counts the weeks.
+  it.each`
+    method
+    ${"with"}
+    ${"add"}
+    ${"until"}
+  `(
+    "returns null when Temporal.PlainDate.prototype.$method throws",
+    ({ method }: { method: "with" | "add" | "until" }) => {
+      vi.spyOn(Temporal.PlainDate.prototype, method).mockImplementation(() => {
+        throw new RangeError("simulated failure");
+      });
+
+      expect(getFiscalPeriod("2024-06-15", nrf)).toBeNull();
+    },
+  );
+
+  // majorityYear builds 1 January of the middle year of a fiscal year that spans three
+  // calendar years: ONS (UK) 2025, 2024-12-29 to 2026-01-03.
+  it("returns null when Temporal.PlainDate.from throws on the majorityYear property bag", () => {
+    const from = Temporal.PlainDate.from;
+    vi.spyOn(Temporal.PlainDate, "from").mockImplementation((item, options) => {
+      if (typeof item !== "string") throw new RangeError("simulated failure");
+      return from.call(Temporal.PlainDate, item, options);
+    });
+
+    expect(
+      getFiscalPeriod("2024-12-29", {
+        pattern: "4-4-5",
+        yearEndsOn: "2022-12-31",
+        extraWeek: "firstPeriod",
+        yearLabel: "majorityYear",
+      }),
+    ).toBeNull();
+  });
+
+  // A function is an ECMAScript Object (ECMA-262 §6.1.7), and spec §3.5 reads the calendar
+  // with `isObject`, so its four fields are read like a plain object's.
+  it("reads a function carrying the four NRF fields as the NRF calendar", () => {
+    expect(
+      getFiscalPeriod(
+        "2024-06-15",
+        Object.assign(() => 0, nrf),
+      ),
+    ).toEqual({ year: 2024, period: 5, week: 19 });
+  });
+
+  // `[u-ca=iso8601]` names the ISO calendar, so the rule is NRF's (RFC 9557 §3.3).
+  it("reads yearEndsOn 2026-01-31[u-ca=iso8601] as the NRF rule", () => {
+    expect(
+      getFiscalPeriod("2024-06-15", {
+        ...nrf,
+        yearEndsOn: "2026-01-31[u-ca=iso8601]",
+      }),
+    ).toEqual({ year: 2024, period: 5, week: 19 });
+  });
+});
+
+/** ONS retail trading periods (UK): Saturday nearest 31 December, a five-week January. */
+const ONS: FiscalCalendar = {
+  pattern: "4-4-5",
+  yearEndsOn: "2022-12-31",
+  extraWeek: "firstPeriod",
+  yearLabel: "majorityYear",
+};
+
+/** Canadian Tire (CA): Saturday closest to December 31, the 53rd week in the last quarter. */
+const CTC: FiscalCalendar = {
+  pattern: "4-4-5",
+  yearEndsOn: "2022-12-31",
+  extraWeek: "lastPeriod",
+  yearLabel: "majorityYear",
+};
+
+/** Woolworths Group (AU): the Sunday nearest 27 June (the last Sunday of June), end-year label. */
+const WW: FiscalCalendar = {
+  pattern: "4-4-5",
+  yearEndsOn: "2021-06-27",
+  extraWeek: "lastPeriod",
+  yearLabel: "endYear",
+};
+
+/**
+ * A calendar with a tie year: the Wednesday nearest 1 July. Its year 2025-07-03 to 2026-07-01
+ * has 182 days in 2025 and 182 in 2026.
+ */
+const T: FiscalCalendar = {
+  pattern: "4-4-5",
+  yearEndsOn: "2026-07-01",
+  extraWeek: "lastPeriod",
+  yearLabel: "majorityYear",
+};
+
+describe("getFiscalPeriod reproduces published calendars", () => {
+  // NRF 4-5-4 calendar (US): FAQ week 1 of 2017 opens January 29; the 2023–2025 PDF gives
+  // fiscal 2023 53 weeks with week 53 = 2024-01-28 to 2024-02-03.
+  it.each`
+    value           | expected                                | published
+    ${"2017-01-29"} | ${{ year: 2017, period: 1, week: 1 }}   | ${"2017 week 1 opens January 29"}
+    ${"2023-01-29"} | ${{ year: 2023, period: 1, week: 1 }}   | ${"fiscal 2023 opens"}
+    ${"2024-01-27"} | ${{ year: 2023, period: 12, week: 52 }} | ${"the last day of week 52"}
+    ${"2024-01-28"} | ${{ year: 2023, period: 12, week: 53 }} | ${"week 53 opens, in January (period 12)"}
+    ${"2024-02-03"} | ${{ year: 2023, period: 12, week: 53 }} | ${"week 53 closes"}
+    ${"2024-02-04"} | ${{ year: 2024, period: 1, week: 1 }}   | ${"fiscal 2024 opens"}
+  `("NRF (US): $value is $expected ($published)", ({ value, expected }) => {
+    expect(getFiscalPeriod(value, nrf)).toEqual(expected);
+  });
+
+  // ONS tradingperiods2026.xlsx, sheet "Trading Periods for 2025": January 2024-12-29 to
+  // 2025-02-01 (5 weeks), February 2025-02-02 to 2025-03-01, March 2025-03-02 to 2025-04-05
+  // (5 weeks), December ends 2026-01-03; the 2026 sheet opens 2026-01-04.
+  it.each`
+    value           | expected                                | published
+    ${"2024-12-29"} | ${{ year: 2025, period: 1, week: 1 }}   | ${"2025 opens in 2024 and is labelled 2025"}
+    ${"2025-02-01"} | ${{ year: 2025, period: 1, week: 5 }}   | ${"the five-week January ends"}
+    ${"2025-02-02"} | ${{ year: 2025, period: 2, week: 6 }}   | ${"February opens"}
+    ${"2025-03-01"} | ${{ year: 2025, period: 2, week: 9 }}   | ${"February ends after 4 weeks"}
+    ${"2025-03-02"} | ${{ year: 2025, period: 3, week: 10 }}  | ${"March opens"}
+    ${"2025-04-05"} | ${{ year: 2025, period: 3, week: 14 }}  | ${"March ends after 5 weeks, so Q1 is 14 weeks"}
+    ${"2026-01-03"} | ${{ year: 2025, period: 12, week: 53 }} | ${"2025 ends in 2026 and is still labelled 2025"}
+    ${"2026-01-04"} | ${{ year: 2026, period: 1, week: 1 }}   | ${"2026 opens"}
+  `("ONS (UK): $value is $expected ($published)", ({ value, expected }) => {
+    expect(getFiscalPeriod(value, ONS)).toEqual(expected);
+  });
+
+  // The same ONS workbook, sheets "Trading Periods for 2014", "2020", "2023" and "2024":
+  // 2014 runs 2013-12-29 to 2015-01-03 (53 weeks, 5-week January); 2020 runs 2019-12-29 to
+  // 2021-01-02 with January ending 2020-02-01; 2023 runs 2023-01-01 to 2023-12-30, inside one
+  // calendar year; 2024 runs 2023-12-31 to 2024-12-28, so 1 of its 364 days is in 2023.
+  it.each`
+    value           | expected                                | published
+    ${"2013-12-29"} | ${{ year: 2014, period: 1, week: 1 }}   | ${"2014 opens in 2013 and is labelled 2014"}
+    ${"2015-01-03"} | ${{ year: 2014, period: 12, week: 53 }} | ${"2014 ends in 2015, a 3-calendar-year span"}
+    ${"2020-02-01"} | ${{ year: 2020, period: 1, week: 5 }}   | ${"the 2020 five-week January ends"}
+    ${"2023-12-30"} | ${{ year: 2023, period: 12, week: 52 }} | ${"2023 ends, inside one calendar year"}
+    ${"2023-12-31"} | ${{ year: 2024, period: 1, week: 1 }}   | ${"2024 opens on 31 December 2023 and is labelled 2024"}
+    ${"2024-12-28"} | ${{ year: 2024, period: 12, week: 52 }} | ${"2024 ends, 52 weeks"}
+  `(
+    "ONS (UK), more published years: $value is $expected ($published)",
+    ({ value, expected }) => {
+      expect(getFiscalPeriod(value, ONS)).toEqual(expected);
+    },
+  );
+
+  // Canadian Tire 2020 MD&A: 2020 is the 53 weeks ended January 2, 2021, 2019 the 52 weeks
+  // ended December 28, 2019, and Q4 2020 is 14 weeks. Periods are not published, so the
+  // period is checked as its quarter.
+  it.each`
+    value           | year    | quarter | week  | published
+    ${"2019-12-28"} | ${2019} | ${4}    | ${52} | ${"2019 ends December 28, 2019"}
+    ${"2019-12-29"} | ${2020} | ${1}    | ${1}  | ${"2020 opens in 2019 and is labelled 2020"}
+    ${"2020-09-26"} | ${2020} | ${3}    | ${39} | ${"Q3 ends"}
+    ${"2020-09-27"} | ${2020} | ${4}    | ${40} | ${"Q4 opens: weeks 40 to 53 are 14 weeks"}
+    ${"2021-01-02"} | ${2020} | ${4}    | ${53} | ${"2020 ends January 2, 2021"}
+    ${"2021-01-03"} | ${2021} | ${1}    | ${1}  | ${"2021 opens"}
+  `(
+    "Canadian Tire (CA): $value is year $year, Q$quarter, week $week ($published)",
+    ({ value, year, quarter, week }) => {
+      const result = getFiscalPeriod(value, CTC);
+
+      expect(result).toEqual(expect.objectContaining({ year, week }));
+      expect(Math.ceil((result?.period ?? 0) / 3)).toBe(quarter);
+    },
+  );
+
+  // Woolworths Group 2024 Annual Report Note 1.1 and the F24 and F25 ASX results releases:
+  // F24 is the 53 weeks ended 30 June 2024, F23 the 52 weeks ended 25 June 2023, F25 the 52
+  // weeks ended 29 June 2025. Its quarters are 14-13-13-12, which no FiscalPattern fits, so
+  // the period is not asserted.
+  it.each`
+    value           | year    | week  | published
+    ${"2023-06-25"} | ${2023} | ${52} | ${"F23 ends 25 June 2023 (52 weeks)"}
+    ${"2023-06-26"} | ${2024} | ${1}  | ${"F24 opens, labelled by its end year"}
+    ${"2024-06-30"} | ${2024} | ${53} | ${"F24 ends 30 June 2024 (53 weeks)"}
+    ${"2024-07-01"} | ${2025} | ${1}  | ${"F25 opens"}
+    ${"2025-06-29"} | ${2025} | ${52} | ${"F25 ends 29 June 2025 (52 weeks)"}
+  `(
+    "Woolworths Group (AU), year and week only: $value is F$year week $week ($published)",
+    ({ value, year, week }) => {
+      expect(getFiscalPeriod(value, WW)).toEqual(
+        expect.objectContaining({ year, week }),
+      );
+    },
+  );
+});
+
+describe("getFiscalPeriod extraWeek", () => {
+  // NRF fiscal 2023 (2023-01-29 to 2024-02-03) has 53 weeks. Under "firstPeriod" its first
+  // quarter is 5-5-4; under "lastPeriod" it is 4-5-4 and the last quarter is 4-5-5.
+  it.each`
+    value           | extraWeek        | expected                                | description
+    ${"2023-02-25"} | ${"firstPeriod"} | ${{ year: 2023, period: 1, week: 4 }}   | ${"day 28 of the year"}
+    ${"2023-02-26"} | ${"firstPeriod"} | ${{ year: 2023, period: 1, week: 5 }}   | ${"period 1 is 5 weeks"}
+    ${"2023-03-04"} | ${"firstPeriod"} | ${{ year: 2023, period: 1, week: 5 }}   | ${"the last day of week 5"}
+    ${"2023-03-05"} | ${"firstPeriod"} | ${{ year: 2023, period: 2, week: 6 }}   | ${"period 2 opens a week later"}
+    ${"2023-02-26"} | ${"lastPeriod"}  | ${{ year: 2023, period: 2, week: 5 }}   | ${"the same week, in period 2"}
+    ${"2024-01-28"} | ${"firstPeriod"} | ${{ year: 2023, period: 12, week: 53 }} | ${"week 53 is in period 12 either way"}
+    ${"2024-01-28"} | ${"lastPeriod"}  | ${{ year: 2023, period: 12, week: 53 }} | ${"week 53 is in the lengthened period 12"}
+    ${"2024-06-15"} | ${"firstPeriod"} | ${{ year: 2024, period: 5, week: 19 }}  | ${"no effect in a 52-week year"}
+    ${"2024-06-15"} | ${"lastPeriod"}  | ${{ year: 2024, period: 5, week: 19 }}  | ${"the same"}
+  `(
+    "NRF with extraWeek $extraWeek puts $value at $expected ($description)",
+    ({ value, extraWeek, expected }) => {
+      expect(getFiscalPeriod(value, { ...nrf, extraWeek })).toEqual(expected);
+    },
+  );
+
+  // The ONS calendar with the week moved to the end: its January is 4 weeks, so week 5 is in
+  // February, and week 53 lengthens December.
+  it.each`
+    value           | expected                                | description
+    ${"2025-02-01"} | ${{ year: 2025, period: 2, week: 5 }}   | ${"ONS week 5 moves to February"}
+    ${"2026-01-03"} | ${{ year: 2025, period: 12, week: 53 }} | ${"week 53 in period 12"}
+  `(
+    "ONS with extraWeek lastPeriod puts $value at $expected ($description)",
+    ({ value, expected }) => {
+      expect(
+        getFiscalPeriod(value, { ...ONS, extraWeek: "lastPeriod" }),
+      ).toEqual(expected);
+    },
+  );
+});
+
+describe("getFiscalPeriod yearLabel", () => {
+  it.each`
+    value           | calendar | yearLabel         | year    | description
+    ${"2024-06-15"} | ${nrf}   | ${"endYear"}      | ${2025} | ${"NRF 2024-02-04 to 2025-02-01 ends in 2025"}
+    ${"2024-06-15"} | ${nrf}   | ${"majorityYear"} | ${2024} | ${"332 days in 2024, 32 in 2025"}
+    ${"2024-01-28"} | ${nrf}   | ${"endYear"}      | ${2024} | ${"NRF 2023-01-29 to 2024-02-03 ends in 2024"}
+    ${"2024-01-28"} | ${nrf}   | ${"majorityYear"} | ${2023} | ${"337 days in 2023, 34 in 2024"}
+    ${"2024-12-29"} | ${ONS}   | ${"startYear"}    | ${2024} | ${"ONS 2025 starts in 2024"}
+    ${"2024-12-29"} | ${ONS}   | ${"endYear"}      | ${2026} | ${"and ends in 2026: neither end year matches ONS"}
+    ${"2024-12-29"} | ${ONS}   | ${"majorityYear"} | ${2025} | ${"365 of its 371 days are in 2025"}
+    ${"2024-06-30"} | ${WW}    | ${"majorityYear"} | ${2023} | ${"189 days in 2023, 182 in 2024"}
+    ${"2024-06-30"} | ${WW}    | ${"startYear"}    | ${2023} | ${"F24 starts 2023-06-26"}
+    ${"2024-06-30"} | ${WW}    | ${"endYear"}      | ${2024} | ${"F24 ends 2024-06-30"}
+  `(
+    "labels $value as $year under $yearLabel ($description)",
+    ({ value, calendar, yearLabel, year }) => {
+      expect(getFiscalPeriod(value, { ...calendar, yearLabel })).toEqual(
+        expect.objectContaining({ year }),
+      );
+    },
+  );
+
+  // GMT rule: a 182/182 split goes to the end year, because IAS 1 ¶51(c) lets a reporting
+  // period be identified by the date it ends.
+  it.each`
+    value           | yearLabel         | expected
+    ${"2025-07-03"} | ${"majorityYear"} | ${{ year: 2026, period: 1, week: 1 }}
+    ${"2026-07-01"} | ${"majorityYear"} | ${{ year: 2026, period: 12, week: 52 }}
+    ${"2026-07-01"} | ${"startYear"}    | ${{ year: 2025, period: 12, week: 52 }}
+    ${"2026-07-01"} | ${"endYear"}      | ${{ year: 2026, period: 12, week: 52 }}
+  `(
+    "sends the tie year 2025-07-03 to 2026-07-01 to $expected.year under $yearLabel: $value is $expected",
+    ({ value, yearLabel, expected }) => {
+      expect(getFiscalPeriod(value, { ...T, yearLabel })).toEqual(expected);
+    },
+  );
+
+  // The JSDoc bullet "year is not a unique key for every year end": under "2026-07-01" with
+  // majorityYear, 2025-07-03 to 2026-07-01 and 2026-07-02 to 2027-06-30 are both 2026.
+  it.each`
+    value           | expected                                | fiscalYear
+    ${"2025-07-02"} | ${{ year: 2025, period: 12, week: 52 }} | ${"2024-07-04 to 2025-07-02 (181 days in 2024, 183 in 2025)"}
+    ${"2026-07-01"} | ${{ year: 2026, period: 12, week: 52 }} | ${"2025-07-03 to 2026-07-01 (182 and 182, a tie)"}
+    ${"2026-07-02"} | ${{ year: 2026, period: 1, week: 1 }}   | ${"2026-07-02 to 2027-06-30 (183 days in 2026, 181 in 2027)"}
+  `(
+    "year is not a unique key for every year end: $value is $expected, in $fiscalYear",
+    ({ value, expected }) => {
+      expect(getFiscalPeriod(value, T)).toEqual(expected);
+    },
+  );
+
+  // The tie year's neighbours under the other two labels: near 1 July the start and end years
+  // step by one, so neither repeats there.
+  it.each`
+    value           | yearLabel      | expected                                | fiscalYear
+    ${"2025-07-02"} | ${"startYear"} | ${{ year: 2024, period: 12, week: 52 }} | ${"2024-07-04 to 2025-07-02"}
+    ${"2025-07-03"} | ${"startYear"} | ${{ year: 2025, period: 1, week: 1 }}   | ${"2025-07-03 to 2026-07-01, the tie year"}
+    ${"2026-07-02"} | ${"startYear"} | ${{ year: 2026, period: 1, week: 1 }}   | ${"2026-07-02 to 2027-06-30"}
+    ${"2025-07-02"} | ${"endYear"}   | ${{ year: 2025, period: 12, week: 52 }} | ${"2024-07-04 to 2025-07-02"}
+    ${"2025-07-03"} | ${"endYear"}   | ${{ year: 2026, period: 1, week: 1 }}   | ${"2025-07-03 to 2026-07-01, the tie year"}
+    ${"2026-07-02"} | ${"endYear"}   | ${{ year: 2027, period: 1, week: 1 }}   | ${"2026-07-02 to 2027-06-30"}
+  `(
+    "labels $value as $expected.year under $yearLabel, in $fiscalYear",
+    ({ value, yearLabel, expected }) => {
+      expect(getFiscalPeriod(value, { ...T, yearLabel })).toEqual(expected);
+    },
+  );
+
+  // The JSDoc bullet "year is not a unique key for every year end" for endYear, near 1 January.
+  // ONS (UK) year bounds from tradingperiods2026.xlsx: 2021-01-03 to 2022-01-01 and 2022-01-02
+  // to 2022-12-31 both end in 2022; 2023-12-31 to 2024-12-28 ends in 2024 and 2024-12-29 to
+  // 2026-01-03 in 2026, so no fiscal year is labelled 2025.
+  it.each`
+    value           | expected                                | fiscalYear
+    ${"2022-01-01"} | ${{ year: 2022, period: 12, week: 52 }} | ${"2021-01-03 to 2022-01-01"}
+    ${"2022-01-02"} | ${{ year: 2022, period: 1, week: 1 }}   | ${"2022-01-02 to 2022-12-31, the same label"}
+    ${"2024-12-28"} | ${{ year: 2024, period: 12, week: 52 }} | ${"2023-12-31 to 2024-12-28"}
+    ${"2026-01-03"} | ${{ year: 2026, period: 12, week: 53 }} | ${"2024-12-29 to 2026-01-03, skipping 2025"}
+  `(
+    "year is not a unique key under endYear either: $value is $expected, in $fiscalYear",
+    ({ value, expected }) => {
+      expect(getFiscalPeriod(value, { ...ONS, yearLabel: "endYear" })).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // ONS (UK) 2023 runs 2023-01-01 to 2023-12-30, so all three rules name the same year.
+  it.each`
+    yearLabel
+    ${"startYear"}
+    ${"endYear"}
+    ${"majorityYear"}
+  `(
+    "labels a fiscal year inside one calendar year as 2023 under $yearLabel",
+    ({ yearLabel }) => {
+      expect(getFiscalPeriod("2023-12-30", { ...ONS, yearLabel })).toEqual({
+        year: 2023,
+        period: 12,
+        week: 52,
+      });
+    },
+  );
+});
+
+// Temporal's range is -271821-04-19 to +275760-09-13. The Gregorian calendar repeats every
+// 400 years (146,097 days, a whole number of weeks), so each expected value is the value for
+// the same rule a whole number of cycles inside the range, re-derived with plain
+// `@js-temporal/polyfill` date arithmetic and moved back by those cycles. WW rows assert the
+// period too: here it is only the 4-4-5 pattern's arithmetic, not a Woolworths claim.
+describe("getFiscalPeriod at Temporal's range limits", () => {
+  it.each`
+    value              | calendar | expected                                  | fiscalYear
+    ${"-271820-06-01"} | ${nrf}   | ${{ year: -271820, period: 5, week: 18 }} | ${"-271820-01-30 to -271819-02-03 (as 2180-01-30 to 2181-02-03, 685 cycles on)"}
+    ${"-271821-12-15"} | ${WW}    | ${{ year: -271820, period: 6, week: 25 }} | ${"-271821-06-28 to -271820-06-25 (as 2179-06-28 to 2180-06-25)"}
+    ${"-271820-01-15"} | ${ONS}   | ${{ year: -271820, period: 1, week: 2 }}  | ${"-271820-01-02 to -271820-12-30 (as 2180-01-02 to 2180-12-30)"}
+    ${"+275759-12-15"} | ${ONS}   | ${{ year: 275759, period: 12, week: 50 }} | ${"+275758-12-31 to +275759-12-29 (as 2158-12-31 to 2159-12-29, 684 cycles back)"}
+    ${"+275760-01-15"} | ${nrf}   | ${{ year: 275759, period: 12, week: 50 }} | ${"+275759-02-04 to +275760-02-02 (as 2159-02-04 to 2160-02-02)"}
+    ${"+275760-06-01"} | ${WW}    | ${{ year: 275760, period: 12, week: 49 }} | ${"+275759-06-25 to +275760-06-29, 53 weeks (as 2159-06-25 to 2160-06-29)"}
+  `(
+    "returns $expected for $value, whose fiscal year $fiscalYear lies inside the range",
+    ({ value, calendar, expected }) => {
+      expect(getFiscalPeriod(value, calendar)).toEqual(expected);
+    },
+  );
+
+  // A fiscal year can open on the first date or close on the last one while the year end next
+  // to it, or the month-day the rule targets, lies outside the range. -271821-04-19 is a
+  // Monday and +275760-09-13 a Saturday (the Instant range is 10^8 days either side of
+  // 1970-01-01, a Thursday, and PlainDate reaches one day further back).
+  it.each`
+    value              | yearEndsOn      | yearLabel      | expected                                  | fiscalYear
+    ${"-271821-04-19"} | ${"2021-04-18"} | ${"startYear"} | ${{ year: -271821, period: 1, week: 1 }}  | ${"-271821-04-19 to -271820-04-16 opens on the first date; the year end before it is -271821-04-18"}
+    ${"-271821-04-20"} | ${"2023-04-17"} | ${"startYear"} | ${{ year: -271821, period: 1, week: 1 }}  | ${"-271821-04-20 to -271820-04-17 follows the year end -271821-04-19, whose target -271821-04-17 is before the range"}
+    ${"+275760-09-13"} | ${"2018-09-15"} | ${"endYear"}   | ${{ year: 275760, period: 12, week: 52 }} | ${"+275759-09-16 to +275760-09-13 closes on the last date, two days before its target +275760-09-15"}
+  `(
+    "returns $expected for $value with yearEndsOn $yearEndsOn: $fiscalYear",
+    ({ value, yearEndsOn, yearLabel, expected }) => {
+      const calendar: FiscalCalendar = {
+        pattern: "4-4-5",
+        yearEndsOn,
+        extraWeek: "lastPeriod",
+        yearLabel,
+      };
+
+      expect(getFiscalPeriod(value, calendar)).toEqual(expected);
+    },
+  );
+
+  // Spec §2: a fiscal year Temporal cannot hold returns the sentinel.
+  it.each`
+    value              | calendar | name     | fiscalYear
+    ${"-271821-04-19"} | ${nrf}   | ${"NRF"} | ${"opens -271821-01-31, before the first date (as 2179-01-31)"}
+    ${"+275760-09-13"} | ${nrf}   | ${"NRF"} | ${"closes +275761-01-31, after the last date (as 2161-01-31)"}
+    ${"-271821-04-19"} | ${WW}    | ${"WW"}  | ${"opens -271822-06-29, before the first date (as 2178-06-29)"}
+    ${"+275760-09-13"} | ${WW}    | ${"WW"}  | ${"closes +275761-06-28, after the last date (as 2161-06-28)"}
+  `(
+    "returns null for $value under $name, whose fiscal year $fiscalYear",
+    ({ value, calendar }) => {
+      expect(getFiscalPeriod(value, calendar)).toBeNull();
+    },
+  );
+
+  it("returns null for -271821-04-19 when it closes a fiscal year opening -271822-04-21, before the first date", () => {
+    expect(
+      getFiscalPeriod("-271821-04-19", {
+        pattern: "4-4-5",
+        yearEndsOn: "2023-04-17",
+        extraWeek: "lastPeriod",
+        yearLabel: "startYear",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("getFiscalPeriod calendar validation", () => {
+  it("returns null for the 1.19 shape, which has no extraWeek or yearLabel", () => {
+    expect(
+      getFiscalPeriod("2024-06-15", {
+        pattern: "4-5-4",
+        yearEndsOn: "2026-01-31",
+      } as unknown as FiscalCalendar),
+    ).toBeNull();
+  });
+
+  it.each`
+    field
+    ${"extraWeek"}
+    ${"yearLabel"}
+  `("returns null when NRF lacks $field", ({ field }) => {
+    const calendar: Record<string, unknown> = { ...nrf };
+    delete calendar[field];
+
+    expect(
+      getFiscalPeriod("2024-06-15", calendar as unknown as FiscalCalendar),
+    ).toBeNull();
+  });
+
+  it.each`
+    extraWeek
+    ${"lastQuarter"}
+    ${"middle"}
+    ${""}
+    ${12}
+    ${null}
+  `("returns null when extraWeek is $extraWeek", ({ extraWeek }) => {
+    expect(
+      getFiscalPeriod("2024-06-15", {
+        ...nrf,
+        extraWeek,
+      } as unknown as FiscalCalendar),
+    ).toBeNull();
+  });
+
+  it.each`
+    yearLabel
+    ${"fiscalYear"}
+    ${"StartYear"}
+    ${""}
+    ${2024}
+    ${null}
+  `("returns null when yearLabel is $yearLabel", ({ yearLabel }) => {
+    expect(
+      getFiscalPeriod("2024-06-15", {
+        ...nrf,
+        yearLabel,
+      } as unknown as FiscalCalendar),
+    ).toBeNull();
+  });
+
+  it.each`
+    field
+    ${"pattern"}
+    ${"yearEndsOn"}
+    ${"extraWeek"}
+    ${"yearLabel"}
+  `("returns null when the $field getter throws", ({ field }) => {
+    const calendar = { ...nrf };
+    Object.defineProperty(calendar, field, {
+      get() {
+        throw new Error("hostile getter");
+      },
+    });
+
+    expect(getFiscalPeriod("2024-06-15", calendar)).toBeNull();
+  });
+
+  // A getter that changes its answer would make validation and use disagree. Each field is
+  // read once, so the first answer is the one validated and used. 2023-02-26 is week 5 of
+  // NRF fiscal 2023, a 53-week year: period 1 under firstPeriod, period 2 under lastPeriod.
+  // Under "2024-02-03" (Saturdays nearest 3 February) its year opens 2023-02-05: week 4.
+  it.each`
+    field           | first            | later           | expected
+    ${"extraWeek"}  | ${"firstPeriod"} | ${"lastPeriod"} | ${{ year: 2023, period: 1, week: 5 }}
+    ${"yearLabel"}  | ${"endYear"}     | ${"startYear"}  | ${{ year: 2024, period: 2, week: 5 }}
+    ${"pattern"}    | ${"5-4-4"}       | ${"4-5-4"}      | ${{ year: 2023, period: 1, week: 5 }}
+    ${"yearEndsOn"} | ${"2024-02-03"}  | ${"2026-01-31"} | ${{ year: 2023, period: 1, week: 4 }}
+  `(
+    "uses the first value of a $field getter that returns $first then $later: $expected",
+    ({ field, first, later, expected }) => {
+      let reads = 0;
+      const calendar = { ...nrf };
+      Object.defineProperty(calendar, field, {
+        get() {
+          reads++;
+          return reads === 1 ? first : later;
+        },
+      });
+
+      expect(getFiscalPeriod("2023-02-26", calendar)).toEqual(expected);
+      expect(reads).toBe(1);
+    },
+  );
 });
