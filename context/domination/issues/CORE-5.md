@@ -85,6 +85,55 @@ re-derived from this file later.
   the spec's names. The precedent is `plain/calculate/getDayOfYear`, `getQuarterForDate` and
   `getWeekYear` — `get`-prefixed, date-taking, and in `calculate/`.
 
+### The 53rd-week placement and the year label are caller-stated
+
+This entry replaces two decisions in `## Outcome` below: the sentence "The 53rd week is appended
+to period 12" in the `yearEndsOn` decisions, and the bullet "`year` is the calendar year the
+fiscal year starts in". Both had GMT pick one answer where no international standard picks one.
+The original text stays below for the record; this entry is the rule. The full design is in
+[the fiscal-calendar spec](../specs/audit-fiscal-calendar-spec.md).
+
+- **Both are required fields, with no default.** `FiscalCalendar` is
+  `{ pattern, yearEndsOn, extraWeek, yearLabel }`. `extraWeek` is the period a 53rd week is
+  added to, `"firstPeriod"` or `"lastPeriod"`. `yearLabel` names the fiscal year:
+  `"startYear"`, `"endYear"` or `"majorityYear"`. `getQuarter`'s options are
+  `{ fiscalYearStartMonth, yearLabel }`, both required, and `fiscalYearStartMonth` has no
+  default. `getQuarter` with no options still returns calendar quarters. A missing or
+  unrecognised field returns `null`. `isValidFiscalCalendar`, `isValidFiscalExtraWeek` and
+  `isValidFiscalYearLabel` check them, and a calendar that is an array is refused, as
+  `isValidBusinessCalendar` refuses one.
+- **Why there is no default.** The international authority comes first, and it settles neither
+  choice. IAS 1 ¶37 (IASB) permits a 52-week reporting period and says nothing more. IAS 1
+  ¶51(c) identifies a reporting period by "the date of the end of the reporting period", which
+  is the basis of `"endYear"`. Two national peers, each cited only to show that callers
+  disagree, give different answers. NRF, US, adds the week "to the end of the calendar" and
+  names fiscal 2023 by its start year (2023-01-29 to 2024-02-03). ONS, UK, introduces "a five
+  week January" and names 2024-12-29 to 2026-01-03 as 2025, the calendar year that holds most
+  of it. A default would match one source and mislabel the others without warning. No company
+  calendar is a source.
+- **GMT rule: the majority is counted in days.** The fiscal year and the calendar year share no
+  unit except the day: months differ in length, and a week can straddle 1 January. Every
+  calendar year the fiscal year touches is counted, so the middle year of a three-year span,
+  such as ONS 2025, can win.
+- **GMT rule: a 182/182 tie goes to the end year.** No peer publishes a tie rule. IAS 1 ¶51(c)
+  identifies a period by its end date, so the year that holds the end date wins. Ties occur only
+  in 364-day years whose year end falls from 29 June to 4 July. A month-based fiscal year never
+  ties: start months 1 to 7 put the majority in the start year, and 8 to 12 in the end year.
+- **`year` is still not a unique key for every year end.** A 364- or 371-day year drifts against
+  the calendar, so every label rule has a window of five or six year-end month-days where two
+  fiscal years share a label. The window moves with the rule; no rule removes it. The JSDoc
+  lists the windows and tells the caller to key on the fiscal year's start date there.
+- **`extraWeek: "lastPeriod", yearLabel: "startYear"` keeps every earlier result.** The
+  Verification bullet "`getFiscalPeriod` places the 53rd week correctly for a known NRF 53-week
+  year" stays true under `"lastPeriod"`.
+- **Where IAS 1's text now sits.** IFRS 18 replaces IAS 1 for annual periods beginning on or
+  after 1 January 2027. The IASB's reference material for IFRS 18 (a table of concordance and a
+  mark-up of the requirements brought forward from IAS 1) maps IAS 1 ¶37 to IFRS 18 ¶29, with
+  the wording unchanged, and IAS 1 ¶51(c) to IFRS 18 ¶27(c), with the wording of item (c)
+  unchanged. Both move into IFRS 18 itself, not into IAS 8. The JSDoc cites IAS 1 until its
+  citations are moved to IFRS 18 ¶29 and ¶27(c).
+  ([IFRS 18 reference material](https://www.ifrs.org/content/dam/ifrs/project/primary-financial-statements/ifrs-standard/reference-material-for-ifrs18.pdf))
+
 ## Outcome (delivered)
 
 Shipped as a new `calendar/` namespace — `packages/gmt/src/calendar/calculate/` — holding all

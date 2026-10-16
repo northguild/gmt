@@ -63,7 +63,7 @@ converting between time zones, or doing arithmetic that must respect DST.
 
 ## When to load
 
-- The user needs the current time in a specific timezone (`"America/New_York"`).
+- The user needs the current time in a specific timezone (`"Asia/Tokyo"`).
 - The user wants to format a datetime with its zone attached.
 - The user needs to convert a plain datetime to a zoned instant, or between
   timezones, or between UTC and Unix epochs.
@@ -89,8 +89,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 
 ## Core rules
 
-1. **Use IANA timezone ids, not raw offsets.** `"2024-03-15T14:30:45[America/New_York]"`
-   is correct; bare `"-05:00"` loses the zone and can't observe DST rules.
+1. **Use IANA timezone ids, not raw offsets.** `"2024-03-15T14:30:45[Australia/Sydney]"`
+   is correct; bare `"+11:00"` loses the zone and can't observe DST rules.
 2. **DST disambiguation.** `convertPlainDateTimeToZoned`, `addZoned` and
    `setZoned` accept `disambiguation` (`"compatible"` | `"earlier"` |
    `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned`,
@@ -155,7 +155,7 @@ converting between time zones, or doing arithmetic that must respect DST.
    local day.
 10. **Calendar annotations.** A calendar-annotated zoned string is RFC 9557,
     `Temporal.ZonedDateTime#toString()`: ISO digits, then `[timeZone]`, then
-    `[u-ca=<id>]` (`"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"`).
+    `[u-ca=<id>]` (`"2024-10-03T14:30:45+03:00[Asia/Jerusalem][u-ca=hebrew]"`).
     A calendar annotation before the zone is rejected. Only `addZoned`, `subtractZoned`,
     `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
     `isValidCalendarZonedDateTime` and `zoned/interval/*` (including
@@ -189,10 +189,10 @@ converting between time zones, or doing arithmetic that must respect DST.
     fall-back into the previous date counts that date.
 13. **Zone names and leap seconds.** Every IANA name is a zone, including
     single-component links (`Japan`, `Zulu`, `EST5EDT`), in any case.
-    `toOffsetInstant` returns IANA casing (`"america/new_york"` gives
-    `"America/New_York"`). `:60` is invalid in every spelling (`T`, `t`, space,
+    `toOffsetInstant` returns IANA casing (`"asia/kolkata"` gives
+    `"Asia/Kolkata"`). `:60` is invalid in every spelling (`T`, `t`, space,
     basic format) and every zoned function returns its sentinel for it rather
-    than reading `:59`.
+    than reading `:59`; only `timescale/` and `gnss/` accept a listed one.
 14. **A zoned value formats in its own zone.** `formatZonedDateTime`,
     `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
     `timeZone` option. To show an instant in another zone, use

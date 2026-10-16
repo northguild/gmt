@@ -12,9 +12,9 @@ description: >
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
   clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  intervalCount* matching bucketRange, RFC 9557 calendar strings, and the
-  correct-at-the-edges guarantees at the representable limits, and hours-of-work
-  rules over a duty log (evaluateDutyLog, dutyViolations, dutyDayFor).
+  intervalCount* matching bucketRange, RFC 9557 calendar strings,
+  correct-at-the-edges guarantees at the limits, and hours-of-work rules over a
+  duty log (evaluateDutyLog, dutyViolations, dutyDayFor) in workforce/.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -35,7 +35,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
   - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
-  - 'northguild/gmt:packages/gmt/src/duty/index.ts'
+  - 'northguild/gmt:packages/gmt/src/workforce/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/duty.ts'
 metadata:
   type: core
@@ -149,6 +149,8 @@ and full interval set operations.
    "hours")` measures what the clock face did. Across a DST transition they
    differ by the size of the shift — a wall-clock day is 23, 24.5 or 25 real
    hours. Reaching for the wrong one is the most common span bug there is.
+   `spanMs` and `spanNs` do not count leap seconds: for a leap-second-exact span, convert both ends
+   with `toTAI` or add `leapSecondsBetween(start, end)` (see `gmt-integration`).
 7. **Span sentinels are `null`, not `0`.** `0` and `0n` are valid spans, so all
    three span functions return `null` on invalid input rather than a zero —
    `spanMs` also returns it past `Number.MAX_SAFE_INTEGER` milliseconds, where
@@ -236,10 +238,10 @@ and full interval set operations.
     caller-supplied — GMT bundles no holiday table on the default import path.
 
     ```typescript
-    const nyse = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" };
-    addBusinessDays("2024-07-03", 1, nyse); // "2024-07-05" — skips the holiday
-    businessDaysBetween("2024-07-01", "2024-07-05", nyse); // 3 — start exclusive, end inclusive
-    rollDate("2024-05-31", "modifiedFollowing", nyse); // backward when forward leaves the month
+    const tokyo = { weekend: [6, 7], holidays: ["2024-05-03", "2024-05-06"], timeZone: "Asia/Tokyo" };
+    addBusinessDays("2024-05-02", 1, tokyo); // "2024-05-07" — skips both holidays and the weekend
+    businessDaysBetween("2024-05-01", "2024-05-07", tokyo); // 2 — start exclusive, end inclusive
+    rollDate("2024-08-31", "modifiedFollowing", tokyo); // "2024-08-30" — backward when forward leaves the month
     ```
 
     These are **local-date in, local-date out**: `calendar.timeZone` records the
@@ -337,7 +339,8 @@ and full interval set operations.
 - `duration/*` — ISO 8601 duration strings
 - `span/*` — elapsed and wall-clock spans as raw numbers
 - `interval/*` — half-open interval algebra over instant strings
-- `duty/*` — hours-of-work rules over a duty log
+- `workforce/*` — hours-of-work rules over a duty log (`@northguild/gmt/workforce`;
+  the `duty/*` subpaths are gone)
 
 ## References
 

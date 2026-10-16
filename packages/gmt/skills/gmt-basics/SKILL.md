@@ -88,7 +88,8 @@ input before you act on it.
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
   `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`,
-  `isValidFiscalCalendar`, `isValidFiscalExtraWeek`, `isValidFiscalYearLabel`
+  `isValidFiscalCalendar`, `isValidFiscalExtraWeek`, `isValidFiscalYearLabel`,
+  `hasSecond60`
 - **Interchange-format validation**: `isValidRfc3339DateTime`,
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
@@ -147,8 +148,14 @@ input before you act on it.
   lacks (`timeStyle` on `formatDate`, `dateStyle` on `formatTime`) returns `""`.
   Zoned formatters return `""`/`[]` for a `timeZone` option: to show an instant
   in another zone, use `formatUtc(value, locale, { timeZone })`.
-- Leap seconds (`:60`) are invalid in every spelling (`T`, `t`, space, basic
-  format). `isLeapSecond` tells you one is there. Validators return `false`.
+- A second of `60` is invalid in every spelling (`T`, `t`, space, basic
+  format), and validators return `false` for it. Two functions tell you about
+  one. `hasSecond60` is the shape test: it is true for any second 60, real or
+  not (`"2024-06-15T12:34:60Z"` is `true`). `isLeapSecond`, from `timescale/`,
+  is the table lookup: it is true only for the 27 inserted leap seconds
+  (`"2016-12-31T23:59:60Z"` is `true`, `"2024-06-15T12:34:60Z"` is `false`).
+  Only the `timescale/` and `gnss/` functions accept a second 60, and only a
+  listed one; see the `gmt-integration` skill.
 - `isValidTimeZone` accepts every IANA name, including single-component links
   such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
   offset zone ids such as `"+05:00"`, as Temporal does.
@@ -173,7 +180,7 @@ input before you act on it.
   `yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
   year its last day falls in (IAS 1 ¶51(c) lets a period be identified by the
   date it ends), or `"majorityYear"`, the calendar year holding the most of its
-  days (ONS, UK). `getQuarter` with options takes
+  days (ONS, UK); a 182/182 split goes to the end year. `getQuarter` with options takes
   `fiscalYearStartMonth` and `yearLabel`, both required. A calendar missing a
   field returns `null`; check it with `isValidFiscalCalendar`.
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
