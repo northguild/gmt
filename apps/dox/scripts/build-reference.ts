@@ -1335,7 +1335,14 @@ function fieldForParam(
   if (p.type === "enum") {
     const choices = p.options ?? [];
     if (!choices.length) return null;
-    if (raw !== undefined && !QUOTED_ARG.test(raw)) return null;
+    if (raw !== undefined && !QUOTED_ARG.test(raw)) {
+      // A union with plain `number` (`number | "rolling"`) lists `number` as a
+      // choice; an example that passes a number gets a number field.
+      if (choices.includes("number") && NUMERIC_ARG.test(raw)) {
+        return { name: p.name, kind: "number", seed: raw, ...opt };
+      }
+      return null;
+    }
     const seed = omitted
       ? ""
       : p.value && choices.includes(p.value)

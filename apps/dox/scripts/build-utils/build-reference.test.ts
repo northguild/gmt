@@ -1512,6 +1512,41 @@ describe("buildChoiceSeeds", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildPlaygroundFields", () => {
+  it("models a bare number for a `number | \"literal\"` union param", () => {
+    // Regression: `RolloverEra` (`number | "rolling" | { notBefore }`) classifies
+    // as an enum whose choices include `number`. An example passing `0` failed the
+    // quoted-literal check and cost `gnssWeekToUtc` its whole form.
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "gnss/convert",
+        fn: "gnssWeekToUtc",
+        returnType: "string",
+        params: [
+          {
+            name: "counter",
+            type: "enum",
+            value: "GPS-LNAV",
+            options: ["GPS-LNAV", "GAL"],
+          },
+          { name: "week", type: "number", value: "100" },
+          { name: "timeOfWeekSeconds", type: "number", value: "0" },
+          {
+            name: "rolloverEra",
+            type: "enum",
+            value: "0",
+            options: ["number", "rolling"],
+          },
+        ],
+      },
+      'gnssWeekToUtc("GPS-LNAV", 100, 0, 0)',
+    );
+    expect(res?.fields.at(-1)).toEqual({
+      name: "rolloverEra",
+      kind: "number",
+      seed: "0",
+    });
+  });
+
   it("maps bigint params from their `n`-suffixed example literals", () => {
     // Regression: `NUMERIC_ARG` rejected `1710072000123456789n`, which made
     // fieldForParam return null and dropped the whole precision namespace's
