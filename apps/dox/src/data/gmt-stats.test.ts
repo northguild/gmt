@@ -76,7 +76,7 @@ describe("industry figures", () => {
       declared.map((industry) => ({
         id: industry.id,
         label: industry.label,
-        own: "namespace" in industry ? countIn(industry.namespace) : 0,
+        own: industry.namespace === undefined ? 0 : countIn(industry.namespace),
         drawsOn: industry.drawsOn.map((module) => ({
           module,
           count: countIn(module),

@@ -208,12 +208,12 @@ export const X12_PRESETS: readonly X12Preset[] = [
     date: "20240615",
     time: "14300012",
     timeCode: "",
-    // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
+    // A London office, a Sydney terminal and a Shanghai origin of one shipment, with New York as a peer: none of these three presets is about the US ET code.
     zones: [
-      "America/New_York",
-      "Europe/Berlin",
+      "Europe/London",
+      "Australia/Sydney",
       "Asia/Shanghai",
-      "America/Los_Angeles",
+      "America/New_York",
     ],
   },
   {
@@ -224,12 +224,12 @@ export const X12_PRESETS: readonly X12Preset[] = [
     date: "20240615",
     time: "1430",
     timeCode: "",
-    // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
+    // A London office, a Sydney terminal and a Shanghai origin of one shipment, with New York as a peer: none of these three presets is about the US ET code.
     zones: [
-      "America/New_York",
-      "Europe/Berlin",
+      "Europe/London",
+      "Australia/Sydney",
       "Asia/Shanghai",
-      "America/Los_Angeles",
+      "America/New_York",
     ],
   },
   {
@@ -240,12 +240,12 @@ export const X12_PRESETS: readonly X12Preset[] = [
     date: "20240615",
     time: "1430",
     timeCode: "LT",
-    // Two US offices, a European port and an Asian origin of one shipment: the four zones the DTM Decoder's 203 example reads.
+    // A London office, a Sydney terminal and a Shanghai origin of one shipment, with New York as a peer: none of these three presets is about the US ET code.
     zones: [
-      "America/New_York",
-      "Europe/Berlin",
+      "Europe/London",
+      "Australia/Sydney",
       "Asia/Shanghai",
-      "America/Los_Angeles",
+      "America/New_York",
     ],
   },
   {

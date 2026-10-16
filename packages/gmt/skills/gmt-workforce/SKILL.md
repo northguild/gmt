@@ -79,6 +79,6 @@ violations. The interval and duration rules it builds on are in the
 ## References
 
 - [workforce reference](https://gmt-dox.northguild.workers.dev/reference/workforce/)
-- [Hours of work guide](https://gmt-dox.northguild.workers.dev/guides/intervals/hours-of-work/)
+- [Workforce: Hours of Work guide](https://gmt-dox.northguild.workers.dev/guides/industries/workforce-hours-of-work/)
 - [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
 - [GMT Arithmetic skill](../gmt-arithmetic/SKILL.md)

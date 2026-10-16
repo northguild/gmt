@@ -146,7 +146,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * fail, so they document no failure example
  * (context/coding-standards.md § Scoped exception: the UTC clock readers).
  */
-const SKIP_BUDGET = { examples: 146, docResults: 39 };
+const SKIP_BUDGET = { examples: 146, docResults: 38 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
