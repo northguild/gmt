@@ -81,15 +81,6 @@
       "duration/validate": [
         "./dist/duration/validate/index.d.ts"
       ],
-      "duty": [
-        "./dist/duty/index.d.ts"
-      ],
-      "duty/calculate": [
-        "./dist/duty/calculate/index.d.ts"
-      ],
-      "duty/validate": [
-        "./dist/duty/validate/index.d.ts"
-      ],
       "gnss": [
         "./dist/gnss/index.d.ts"
       ],
@@ -282,6 +273,15 @@
       "utc/validate": [
         "./dist/utc/validate/index.d.ts"
       ],
+      "workforce": [
+        "./dist/workforce/index.d.ts"
+      ],
+      "workforce/calculate": [
+        "./dist/workforce/calculate/index.d.ts"
+      ],
+      "workforce/validate": [
+        "./dist/workforce/validate/index.d.ts"
+      ],
       "zoned": [
         "./dist/zoned/index.d.ts"
       ],
@@ -369,18 +369,6 @@
     "./duration/validate": {
       "types": "./dist/duration/validate/index.d.ts",
       "default": "./dist/duration/validate/index.js"
-    },
-    "./duty": {
-      "types": "./dist/duty/index.d.ts",
-      "default": "./dist/duty/index.js"
-    },
-    "./duty/calculate": {
-      "types": "./dist/duty/calculate/index.d.ts",
-      "default": "./dist/duty/calculate/index.js"
-    },
-    "./duty/validate": {
-      "types": "./dist/duty/validate/index.d.ts",
-      "default": "./dist/duty/validate/index.js"
     },
     "./gnss": {
       "types": "./dist/gnss/index.d.ts",
@@ -637,6 +625,18 @@
     "./utc/validate": {
       "types": "./dist/utc/validate/index.d.ts",
       "default": "./dist/utc/validate/index.js"
+    },
+    "./workforce": {
+      "types": "./dist/workforce/index.d.ts",
+      "default": "./dist/workforce/index.js"
+    },
+    "./workforce/calculate": {
+      "types": "./dist/workforce/calculate/index.d.ts",
+      "default": "./dist/workforce/calculate/index.js"
+    },
+    "./workforce/validate": {
+      "types": "./dist/workforce/validate/index.d.ts",
+      "default": "./dist/workforce/validate/index.js"
     },
     "./zoned": {
       "types": "./dist/zoned/index.d.ts",

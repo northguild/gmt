@@ -1,7 +1,6 @@
 export * from "@js-temporal/polyfill";
 export * from "./calendar";
 export * from "./duration";
-export * from "./duty";
 export * from "./gnss";
 export * from "./instant";
 export * from "./intermodal";
@@ -15,4 +14,5 @@ export * from "./transport";
 export * from "./types";
 export * from "./unix";
 export * from "./utc";
+export * from "./workforce";
 export * from "./zoned";

@@ -358,6 +358,10 @@
         "result": "{ year: 2025, period: 1, week: 1 } (ONS 2025 opens in December 2024)"
       },
       {
+        "call": "getFiscalPeriod(\"+275760-09-13\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
+        "result": "{ year: 275760, period: 8, week: 32 } (Temporal's last date; its fiscal year closes past it)"
+      },
+      {
         "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-5\", yearEndsOn: \"2026-01-31\", extraWeek: \"lastPeriod\", yearLabel: \"startYear\" })",
         "result": "null (not one of the three patterns)"
       },
@@ -851,6 +855,10 @@
       },
       {
         "call": "isValidFiscalCalendar(\"4-5-4\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalCalendar([])",
         "result": "false"
       }
     ]
@@ -1754,242 +1762,6 @@
       {
         "call": "isValidDuration(\"\")",
         "result": "false"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/dutyDayFor",
-    "page": "/reference/duty/calculate/dutyDayFor",
-    "name": "dutyDayFor",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "dutyDayFor(instant: string, day: DutyDay): Interval | null",
-    "description": "Return the operator-designated day an instant falls in: from the most recent `dayStartTime` in `timeZone` at or before the instant, up to (not including) the next one.",
-    "sourcePath": "packages/gmt/src/duty/calculate/dutyDayFor.ts",
-    "examples": [
-      {
-        "call": "dutyDayFor(\"2024-01-01T08:59:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
-        "result": "{ start: \"2023-12-31T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" } — 03:59 local is the previous day"
-      },
-      {
-        "call": "dutyDayFor(\"2024-01-01T09:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
-        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-02T09:00:00Z\" }"
-      },
-      {
-        "call": "dutyDayFor(\"2024-03-10T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"02:30\" })",
-        "result": "{ start: \"2024-03-10T07:30:00Z\", end: \"2024-03-11T06:30:00Z\" } — 02:30 is skipped, read as 03:30; 23 hours"
-      },
-      {
-        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\" })",
-        "result": "{ start: \"2024-11-03T05:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — 01:30 is repeated, the first pass starts it; 25 hours"
-      },
-      {
-        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"later\" })",
-        "result": "{ start: \"2024-11-03T06:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — the second pass; 24 hours"
-      },
-      {
-        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"reject\" })",
-        "result": "null — the day starts at a repeated time"
-      },
-      {
-        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"UTC\" })",
-        "result": "null — no dayStartTime"
-      },
-      {
-        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"Invalid/Zone\", dayStartTime: \"04:00\" })",
-        "result": "null"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/dutyTotals",
-    "page": "/reference/duty/calculate/dutyTotals",
-    "name": "dutyTotals",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "dutyTotals(log: DutyEntry[], window: Interval, statuses: string[]): string",
-    "description": "Return the time a duty log spends in any of `statuses` inside a window, as an exact ISO 8601 duration.",
-    "sourcePath": "packages/gmt/src/duty/calculate/dutyTotals.ts",
-    "examples": [
-      {
-        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T20:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
-        "result": "\"PT8H\""
-      },
-      {
-        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }], { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" }, [\"driving\"])",
-        "result": "\"PT3H\" — cut at the window"
-      },
-      {
-        "call": "dutyTotals([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
-        "result": "\"PT0S\""
-      },
-      {
-        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T10:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
-        "result": "\"\" — inverted entry"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/dutyViolations",
-    "page": "/reference/duty/calculate/dutyViolations",
-    "name": "dutyViolations",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "dutyViolations(log: DutyEntry[], range: Interval, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyViolation[] | null",
-    "description": "Return every violation of a set of hours-of-work rules inside a range, each with the window that failed it: the record over a month, not the check before dispatch.",
-    "sourcePath": "packages/gmt/src/duty/calculate/dutyViolations.ts",
-    "examples": [
-      {
-        "call": "dutyViolations([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
-        "result": "[{ label: \"11 driving\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }, used: \"PT12H\", limit: \"PT11H\" }]"
-      },
-      {
-        "call": "dutyViolations([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-02-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
-        "result": "[]"
-      },
-      {
-        "call": "dutyViolations([], { start: \"2024-02-01T00:00:00Z\", end: \"2024-01-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
-        "result": "null — inverted range"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/evaluateDutyLog",
-    "page": "/reference/duty/calculate/evaluateDutyLog",
-    "name": "evaluateDutyLog",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "evaluateDutyLog(log: DutyEntry[], at: string, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyReport | null",
-    "description": "Evaluate every hours-of-work rule over a duty log at one instant, and report each one whether or not it binds.",
-    "sourcePath": "packages/gmt/src/duty/calculate/evaluateDutyLog.ts",
-    "examples": [
-      {
-        "call": "evaluateDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
-        "result": "{ at: \"2024-01-01T21:00:00Z\", outcomes: [{ label: \"11 driving\", kind: \"cumulativeCap\", severity: \"violation\", satisfied: true, used: \"PT11H\", limit: \"PT11H\", remaining: \"PT0S\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }, periodBasis: null, dueBy: null, resetAt: \"2024-01-01T10:00:00Z\" }], violations: [], advisories: [] }"
-      },
-      {
-        "call": "evaluateDutyLog([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"60 in 7\", kind: \"rollingCap\", statuses: [\"driving\"], cap: \"PT60H\", window: { operatorDays: 7 } }], { timeZone: \"UTC\" })",
-        "result": "null — operator days without dayStartTime"
-      },
-      {
-        "call": "evaluateDutyLog([], \"2024-01-01T00:00:00Z\", [], { timeZone: \"UTC\" })",
-        "result": "{ at: \"2024-01-01T00:00:00Z\", outcomes: [], violations: [], advisories: [] }"
-      },
-      {
-        "call": "evaluateDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }], \"2024-01-01T03:00:00Z\", [], { timeZone: \"UTC\" })",
-        "result": "null — inverted entry"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/longestRun",
-    "page": "/reference/duty/calculate/longestRun",
-    "name": "longestRun",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "longestRun(log: DutyEntry[], window: Interval, statuses: string[]): { interval: Interval; duration: string; } | null",
-    "description": "Return the longest unbroken stretch a duty log spends in any of `statuses` inside a window.",
-    "sourcePath": "packages/gmt/src/duty/calculate/longestRun.ts",
-    "examples": [
-      {
-        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
-        "result": "{ interval: { start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }, duration: \"PT4H\" }"
-      },
-      {
-        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\", \"onDuty\"])",
-        "result": "{ interval: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, duration: \"PT4H\" } — touching entries join"
-      },
-      {
-        "call": "longestRun([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
-        "result": "null — none"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/qualifyingRestPairs",
-    "page": "/reference/duty/calculate/qualifyingRestPairs",
-    "name": "qualifyingRestPairs",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "qualifyingRestPairs(log: DutyEntry[], spec: { statuses: string[]; minimum: string; pair: PairSpec; }): RestPair[]",
-    "description": "Return every paired rest in a duty log: two separate rests that together count as one, because they meet all three floors of `spec.pair`.",
-    "sourcePath": "packages/gmt/src/duty/calculate/qualifyingRestPairs.ts",
-    "examples": [
-      {
-        "call": "qualifyingRestPairs([{ status: \"sleeper\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, { status: \"work\", start: \"2024-01-01T07:30:00Z\", end: \"2024-01-01T11:30:00Z\" }, { status: \"off\", start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
-        "result": "[{ first: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, second: { start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" } }]"
-      },
-      {
-        "call": "qualifyingRestPairs([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T06:00:00Z\" }, { status: \"work\", start: \"2024-01-01T06:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"off\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
-        "result": "[] — 6 + 4: neither is 7"
-      },
-      {
-        "call": "qualifyingRestPairs([], { statuses: [\"off\"], minimum: \"PT10H\" })",
-        "result": "[] — no pair"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/calculate/qualifyingRests",
-    "page": "/reference/duty/calculate/qualifyingRests",
-    "name": "qualifyingRests",
-    "namespace": "duty",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "qualifyingRests(log: DutyEntry[], spec: { statuses: string[]; minimum: string; }): Interval[]",
-    "description": "Return every rest of at least `minimum` in a duty log: the runs of touching entries in any of `spec.statuses` that last that long.",
-    "sourcePath": "packages/gmt/src/duty/calculate/qualifyingRests.ts",
-    "examples": [
-      {
-        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"work\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T16:00:00Z\" }, { status: \"off\", start: \"2024-01-01T16:00:00Z\", end: \"2024-01-01T23:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\" })",
-        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }]"
-      },
-      {
-        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T05:00:00Z\" }, { status: \"sleeper\", start: \"2024-01-01T05:00:00Z\", end: \"2024-01-01T12:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\" })",
-        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T12:00:00Z\" }] — one rest"
-      },
-      {
-        "call": "qualifyingRests([], { statuses: [\"off\"], minimum: \"PT0S\" })",
-        "result": "[] — a zero minimum"
-      }
-    ]
-  },
-  {
-    "url": "/reference/duty/validate/isValidDutyLog",
-    "page": "/reference/duty/validate/isValidDutyLog",
-    "name": "isValidDutyLog",
-    "namespace": "duty",
-    "module": "validate",
-    "kind": "function",
-    "signature": "isValidDutyLog(log: unknown): boolean",
-    "description": "Validate whether a value is a duty log every `duty/` function accepts.",
-    "sourcePath": "packages/gmt/src/duty/validate/isValidDutyLog.ts",
-    "examples": [
-      {
-        "call": "isValidDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }])",
-        "result": "true"
-      },
-      {
-        "call": "isValidDutyLog([])",
-        "result": "true — an empty log"
-      },
-      {
-        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }])",
-        "result": "false — inverted"
-      },
-      {
-        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T02:00:00Z\" }, { status: \"off\", start: \"2024-01-01T01:59:59Z\", end: \"2024-01-01T03:00:00Z\" }])",
-        "result": "false — overlapping"
-      },
-      {
-        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00\", end: \"2024-01-01T01:00:00Z\" }])",
-        "result": "false — no offset"
       }
     ]
   },
@@ -16910,8 +16682,8 @@
     ]
   },
   {
-    "url": "/reference/duty/calculate/dutyDayFor#dutyday",
-    "page": "/reference/duty/calculate/dutyDayFor",
+    "url": "/reference/workforce/calculate/dutyDayFor#dutyday",
+    "page": "/reference/workforce/calculate/dutyDayFor",
     "name": "DutyDay",
     "namespace": "types",
     "module": "duty",
@@ -17823,8 +17595,8 @@
     "examples": []
   },
   {
-    "url": "/reference/duty/calculate/evaluateDutyLog#periodbasis",
-    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "url": "/reference/workforce/calculate/evaluateDutyLog#periodbasis",
+    "page": "/reference/workforce/calculate/evaluateDutyLog",
     "name": "PeriodBasis",
     "namespace": "types",
     "module": "duty",
@@ -17836,8 +17608,8 @@
     "inlineOn": "evaluateDutyLog"
   },
   {
-    "url": "/reference/duty/calculate/evaluateDutyLog#ruleoutcome",
-    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "url": "/reference/workforce/calculate/evaluateDutyLog#ruleoutcome",
+    "page": "/reference/workforce/calculate/evaluateDutyLog",
     "name": "RuleOutcome",
     "namespace": "types",
     "module": "duty",
@@ -17895,8 +17667,8 @@
     ]
   },
   {
-    "url": "/reference/duty/calculate/evaluateDutyLog#dutyreport",
-    "page": "/reference/duty/calculate/evaluateDutyLog",
+    "url": "/reference/workforce/calculate/evaluateDutyLog#dutyreport",
+    "page": "/reference/workforce/calculate/evaluateDutyLog",
     "name": "DutyReport",
     "namespace": "types",
     "module": "duty",
@@ -17926,8 +17698,8 @@
     ]
   },
   {
-    "url": "/reference/duty/calculate/dutyViolations#dutyviolation",
-    "page": "/reference/duty/calculate/dutyViolations",
+    "url": "/reference/workforce/calculate/dutyViolations#dutyviolation",
+    "page": "/reference/workforce/calculate/dutyViolations",
     "name": "DutyViolation",
     "namespace": "types",
     "module": "duty",
@@ -17957,8 +17729,8 @@
     ]
   },
   {
-    "url": "/reference/duty/calculate/qualifyingRestPairs#restpair",
-    "page": "/reference/duty/calculate/qualifyingRestPairs",
+    "url": "/reference/workforce/calculate/qualifyingRestPairs#restpair",
+    "page": "/reference/workforce/calculate/qualifyingRestPairs",
     "name": "RestPair",
     "namespace": "types",
     "module": "duty",
@@ -23978,6 +23750,242 @@
       {
         "call": "isValidUtcTimestamp(\"not a date\")",
         "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/dutyDayFor",
+    "page": "/reference/workforce/calculate/dutyDayFor",
+    "name": "dutyDayFor",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyDayFor(instant: string, day: DutyDay): Interval | null",
+    "description": "Return the operator-designated day an instant falls in: from the most recent `dayStartTime` in `timeZone` at or before the instant, up to (not including) the next one.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/dutyDayFor.ts",
+    "examples": [
+      {
+        "call": "dutyDayFor(\"2024-01-01T08:59:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
+        "result": "{ start: \"2023-12-31T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" } — 03:59 local is the previous day"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T09:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"04:00\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-02T09:00:00Z\" }"
+      },
+      {
+        "call": "dutyDayFor(\"2024-03-10T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"02:30\" })",
+        "result": "{ start: \"2024-03-10T07:30:00Z\", end: \"2024-03-11T06:30:00Z\" } — 02:30 is skipped, read as 03:30; 23 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\" })",
+        "result": "{ start: \"2024-11-03T05:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — 01:30 is repeated, the first pass starts it; 25 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"later\" })",
+        "result": "{ start: \"2024-11-03T06:30:00Z\", end: \"2024-11-04T06:30:00Z\" } — the second pass; 24 hours"
+      },
+      {
+        "call": "dutyDayFor(\"2024-11-03T12:00:00Z\", { timeZone: \"America/New_York\", dayStartTime: \"01:30\", disambiguation: \"reject\" })",
+        "result": "null — the day starts at a repeated time"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"UTC\" })",
+        "result": "null — no dayStartTime"
+      },
+      {
+        "call": "dutyDayFor(\"2024-01-01T12:00:00Z\", { timeZone: \"Invalid/Zone\", dayStartTime: \"04:00\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/dutyTotals",
+    "page": "/reference/workforce/calculate/dutyTotals",
+    "name": "dutyTotals",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyTotals(log: DutyEntry[], window: Interval, statuses: string[]): string",
+    "description": "Return the time a duty log spends in any of `statuses` inside a window, as an exact ISO 8601 duration.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/dutyTotals.ts",
+    "examples": [
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T20:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT8H\""
+      },
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }], { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT3H\" — cut at the window"
+      },
+      {
+        "call": "dutyTotals([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "dutyTotals([{ status: \"driving\", start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T10:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "\"\" — inverted entry"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/dutyViolations",
+    "page": "/reference/workforce/calculate/dutyViolations",
+    "name": "dutyViolations",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dutyViolations(log: DutyEntry[], range: Interval, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyViolation[] | null",
+    "description": "Return every violation of a set of hours-of-work rules inside a range, each with the window that failed it: the record over a month, not the check before dispatch.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/dutyViolations.ts",
+    "examples": [
+      {
+        "call": "dutyViolations([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
+        "result": "[{ label: \"11 driving\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T22:00:00Z\" }, used: \"PT12H\", limit: \"PT11H\" }]"
+      },
+      {
+        "call": "dutyViolations([], { start: \"2024-01-01T00:00:00Z\", end: \"2024-02-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
+        "result": "[]"
+      },
+      {
+        "call": "dutyViolations([], { start: \"2024-02-01T00:00:00Z\", end: \"2024-01-01T00:00:00Z\" }, [], { timeZone: \"UTC\" })",
+        "result": "null — inverted range"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/evaluateDutyLog",
+    "page": "/reference/workforce/calculate/evaluateDutyLog",
+    "name": "evaluateDutyLog",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "evaluateDutyLog(log: DutyEntry[], at: string, rules: DutyRule[], options: { timeZone: string; dayStartTime?: string; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): DutyReport | null",
+    "description": "Evaluate every hours-of-work rule over a duty log at one instant, and report each one whether or not it binds.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/evaluateDutyLog.ts",
+    "examples": [
+      {
+        "call": "evaluateDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"11 driving\", kind: \"cumulativeCap\", statuses: [\"driving\"], cap: \"PT11H\", since: { statuses: [\"off\"], consecutive: \"PT10H\" } }], { timeZone: \"UTC\" })",
+        "result": "{ at: \"2024-01-01T21:00:00Z\", outcomes: [{ label: \"11 driving\", kind: \"cumulativeCap\", severity: \"violation\", satisfied: true, used: \"PT11H\", limit: \"PT11H\", remaining: \"PT0S\", window: { start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }, periodBasis: null, dueBy: null, resetAt: \"2024-01-01T10:00:00Z\" }], violations: [], advisories: [] }"
+      },
+      {
+        "call": "evaluateDutyLog([{ status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T21:00:00Z\" }], \"2024-01-01T21:00:00Z\", [{ label: \"60 in 7\", kind: \"rollingCap\", statuses: [\"driving\"], cap: \"PT60H\", window: { operatorDays: 7 } }], { timeZone: \"UTC\" })",
+        "result": "null — operator days without dayStartTime"
+      },
+      {
+        "call": "evaluateDutyLog([], \"2024-01-01T00:00:00Z\", [], { timeZone: \"UTC\" })",
+        "result": "{ at: \"2024-01-01T00:00:00Z\", outcomes: [], violations: [], advisories: [] }"
+      },
+      {
+        "call": "evaluateDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }], \"2024-01-01T03:00:00Z\", [], { timeZone: \"UTC\" })",
+        "result": "null — inverted entry"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/longestRun",
+    "page": "/reference/workforce/calculate/longestRun",
+    "name": "longestRun",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "longestRun(log: DutyEntry[], window: Interval, statuses: string[]): { interval: Interval; duration: string; } | null",
+    "description": "Return the longest unbroken stretch a duty log spends in any of `statuses` inside a window.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/longestRun.ts",
+    "examples": [
+      {
+        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "{ interval: { start: \"2024-01-01T04:00:00Z\", end: \"2024-01-01T08:00:00Z\" }, duration: \"PT4H\" }"
+      },
+      {
+        "call": "longestRun([{ status: \"driving\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T03:00:00Z\" }, { status: \"onDuty\", start: \"2024-01-01T03:00:00Z\", end: \"2024-01-01T04:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\", \"onDuty\"])",
+        "result": "{ interval: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T04:00:00Z\" }, duration: \"PT4H\" } — touching entries join"
+      },
+      {
+        "call": "longestRun([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T08:00:00Z\" }], { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, [\"driving\"])",
+        "result": "null — none"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/qualifyingRestPairs",
+    "page": "/reference/workforce/calculate/qualifyingRestPairs",
+    "name": "qualifyingRestPairs",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "qualifyingRestPairs(log: DutyEntry[], spec: { statuses: string[]; minimum: string; pair: PairSpec; }): RestPair[]",
+    "description": "Return every paired rest in a duty log: two separate rests that together count as one, because they meet all three floors of `spec.pair`.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/qualifyingRestPairs.ts",
+    "examples": [
+      {
+        "call": "qualifyingRestPairs([{ status: \"sleeper\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, { status: \"work\", start: \"2024-01-01T07:30:00Z\", end: \"2024-01-01T11:30:00Z\" }, { status: \"off\", start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
+        "result": "[{ first: { start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T07:30:00Z\" }, second: { start: \"2024-01-01T11:30:00Z\", end: \"2024-01-01T14:00:00Z\" } }]"
+      },
+      {
+        "call": "qualifyingRestPairs([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T06:00:00Z\" }, { status: \"work\", start: \"2024-01-01T06:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"off\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T14:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\", pair: { eachAtLeast: \"PT2H\", oneAtLeast: \"PT7H\", combinedAtLeast: \"PT10H\" } })",
+        "result": "[] — 6 + 4: neither is 7"
+      },
+      {
+        "call": "qualifyingRestPairs([], { statuses: [\"off\"], minimum: \"PT10H\" })",
+        "result": "[] — no pair"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/calculate/qualifyingRests",
+    "page": "/reference/workforce/calculate/qualifyingRests",
+    "name": "qualifyingRests",
+    "namespace": "workforce",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "qualifyingRests(log: DutyEntry[], spec: { statuses: string[]; minimum: string; }): Interval[]",
+    "description": "Return every rest of at least `minimum` in a duty log: the runs of touching entries in any of `spec.statuses` that last that long.",
+    "sourcePath": "packages/gmt/src/workforce/calculate/qualifyingRests.ts",
+    "examples": [
+      {
+        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"work\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T16:00:00Z\" }, { status: \"off\", start: \"2024-01-01T16:00:00Z\", end: \"2024-01-01T23:00:00Z\" }], { statuses: [\"off\"], minimum: \"PT10H\" })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }]"
+      },
+      {
+        "call": "qualifyingRests([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T05:00:00Z\" }, { status: \"sleeper\", start: \"2024-01-01T05:00:00Z\", end: \"2024-01-01T12:00:00Z\" }], { statuses: [\"off\", \"sleeper\"], minimum: \"PT10H\" })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T12:00:00Z\" }] — one rest"
+      },
+      {
+        "call": "qualifyingRests([], { statuses: [\"off\"], minimum: \"PT0S\" })",
+        "result": "[] — a zero minimum"
+      }
+    ]
+  },
+  {
+    "url": "/reference/workforce/validate/isValidDutyLog",
+    "page": "/reference/workforce/validate/isValidDutyLog",
+    "name": "isValidDutyLog",
+    "namespace": "workforce",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidDutyLog(log: unknown): boolean",
+    "description": "Validate whether a value is a duty log every `workforce/` function accepts.",
+    "sourcePath": "packages/gmt/src/workforce/validate/isValidDutyLog.ts",
+    "examples": [
+      {
+        "call": "isValidDutyLog([{ status: \"off\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { status: \"driving\", start: \"2024-01-01T10:00:00Z\", end: \"2024-01-01T15:00:00Z\" }])",
+        "result": "true"
+      },
+      {
+        "call": "isValidDutyLog([])",
+        "result": "true — an empty log"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T02:00:00Z\", end: \"2024-01-01T01:00:00Z\" }])",
+        "result": "false — inverted"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T02:00:00Z\" }, { status: \"off\", start: \"2024-01-01T01:59:59Z\", end: \"2024-01-01T03:00:00Z\" }])",
+        "result": "false — overlapping"
+      },
+      {
+        "call": "isValidDutyLog([{ status: \"on\", start: \"2024-01-01T00:00:00\", end: \"2024-01-01T01:00:00Z\" }])",
+        "result": "false — no offset"
       }
     ]
   },

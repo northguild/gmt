@@ -1,7 +1,7 @@
 import { parseDutyLog } from "../../internal/dutyLog";
 
 /**
- * Validate whether a value is a duty log every `duty/` function accepts.
+ * Validate whether a value is a duty log every `workforce/` function accepts.
  *
  * - True for an array of `{ status, start, end }` entries where `status` is a string and `start`
  *   and `end` are ISO 8601 instant strings (offset required, no leap second), `end` after `start`.
@@ -9,7 +9,7 @@ import { parseDutyLog } from "../../internal/dutyLog";
  *   previous one ends, since entries are half-open, or later, leaving a gap. Order is by instant,
  *   not text.
  * - `[]` is a valid, empty log. Extra keys on an entry are ignored.
- * - Every other `duty/` function returns its sentinel for a log this rejects.
+ * - Every other `workforce/` function returns its sentinel for a log this rejects.
  * - Returns `false` for a non-array, an entry that is not an object, a non-string status, a bound
  *   that is not an instant, a zero-length or inverted entry, and entries out of order or
  *   overlapping.
