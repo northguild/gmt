@@ -163,19 +163,19 @@ describe("the library's arguments", () => {
   it("adds the calendar only on the working basis", () => {
     expect(termsOf(base)).toEqual({
       basis: "calendar",
-      timeZone: "America/New_York",
+      timeZone: "Europe/London",
       firstDay: "eventDay",
     });
     expect(
       termsOf({ ...base, basis: "working", holidays: "2024-06-19\n" }),
     ).toEqual({
       basis: "working",
-      timeZone: "America/New_York",
+      timeZone: "Europe/London",
       firstDay: "eventDay",
       calendar: {
         weekend: [6, 7],
         holidays: ["2024-06-19"],
-        timeZone: "America/New_York",
+        timeZone: "Europe/London",
       },
     });
   });

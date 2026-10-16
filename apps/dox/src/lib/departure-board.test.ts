@@ -50,8 +50,8 @@ const lib: PunctualityLib = {
 
 const AMS = (t: string) => `2024-06-15T${t}+02:00[Europe/Amsterdam]`;
 const HEL = (t: string) => `2024-06-15T${t}+03:00[Europe/Helsinki]`;
-const EDT = (t: string) => `2024-11-03T${t}-04:00[America/New_York]`;
-const EST = (t: string) => `2024-11-03T${t}-05:00[America/New_York]`;
+const BST = (t: string) => `2024-10-27T${t}+01:00[Europe/London]`;
+const GMT = (t: string) => `2024-10-27T${t}+00:00[Europe/London]`;
 const FERRY_IN_TIME_ORDER = [
   HEL("07:30:00"),
   HEL("10:30:00"),
@@ -278,10 +278,10 @@ describe("collectDepartureFacts", () => {
   });
 
   it("DB4 and DB4b: hourly across the fall-back", () => {
-    expect(facts(stateOf("fall-back-hourly")).made).toBe(EST("01:00:00"));
+    expect(facts(stateOf("fall-back-hourly")).made).toBe(GMT("01:00:00"));
     expect(
-      facts(stateOf("fall-back-hourly", { after: EDT("00:30:00") })).made,
-    ).toBe(EDT("01:00:00"));
+      facts(stateOf("fall-back-hourly", { after: BST("00:30:00") })).made,
+    ).toBe(BST("01:00:00"));
   });
 
   it("PD3: with no connection the ferry made and naive agree", () => {
@@ -556,7 +556,7 @@ describe("handoffArgs", () => {
   it("is null with no departure or no onward leg", () => {
     expect(handoffArgs(stateOf("shuttle-headway"), "")).toBeNull();
     expect(
-      handoffArgs(stateOf("fall-back-hourly"), EST("01:00:00")),
+      handoffArgs(stateOf("fall-back-hourly"), GMT("01:00:00")),
     ).toBeNull();
     expect(
       handoffArgs(
@@ -623,11 +623,11 @@ describe("railDepartures", () => {
   it("draws the hourly service's repeated hour as two ticks", () => {
     const state = stateOf("fall-back-hourly");
     const ticks = railDepartures(state, {
-      startMs: epochMs(EDT("00:00:00")),
-      endMs: epochMs(EST("04:00:00")),
+      startMs: epochMs(BST("00:00:00")),
+      endMs: epochMs(GMT("04:00:00")),
     }).ticks;
-    expect(ticks).toContain(epochMs(EDT("01:00:00")));
-    expect(ticks).toContain(epochMs(EST("01:00:00")));
+    expect(ticks).toContain(epochMs(BST("01:00:00")));
+    expect(ticks).toContain(epochMs(GMT("01:00:00")));
   });
 
   it("draws a list's entries that are moments, in the window", () => {
@@ -669,7 +669,7 @@ describe("departureWait", () => {
 
   it("counts exact time across the repeated hour", () => {
     const s = stateOf("fall-back-hourly");
-    expect(facts(s).made).toBe(EST("01:00:00"));
+    expect(facts(s).made).toBe(GMT("01:00:00"));
     expect(departureWait(s.after, facts(s).made, lib)).toBe("PT30M");
   });
 

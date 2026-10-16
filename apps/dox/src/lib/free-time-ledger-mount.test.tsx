@@ -3,9 +3,9 @@
  *
  * The Free Time Ledger end to end: template → mount → interact → assert,
  * against the real `@northguild/gmt`. Every preset's printed results are
- * checked against the literal `freeTimeExpiry` and `chargeableDays` JSDoc
- * examples they draw, and the coloured cells against the library's own counts,
- * so a drift in the library or the widget fails here.
+ * checked against literal `freeTimeExpiry` and `chargeableDays` results taken
+ * from a run of the library, and the coloured cells against the library's own
+ * counts, so a drift in the library or the widget fails here.
  */
 import { Temporal } from "@js-temporal/polyfill";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
@@ -58,37 +58,37 @@ const REQUIRED_ROLES = [
 ];
 
 const FRIDAY_EXPIRY =
-  '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-16",\n  expiresAt: "2024-06-17T04:00:00Z" }';
+  '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-16",\n  expiresAt: "2024-06-16T23:00:00Z" }';
 
-/** The JSDoc examples the presets draw, verbatim: [freeTimeExpiry, chargeableDays]. */
+/** Each preset's printed results, verbatim from a library run: [freeTimeExpiry, chargeableDays]. */
 const EXPECTED: Record<string, [string, string]> = {
   "friday-three-days": [
     FRIDAY_EXPIRY,
-    '{ freeDaysUsed: 3,\n  chargeableDays: 1,\n  expiresAt: "2024-06-17T04:00:00Z",\n  chargedDates: ["2024-06-17"],\n  byTier: [{ from: 1, to: null, days: 1 }] }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 1,\n  expiresAt: "2024-06-16T23:00:00Z",\n  chargedDates: ["2024-06-17"],\n  byTier: [{ from: 1, to: null, days: 1 }] }',
   ],
   "read-as-next-day": [
-    '{ freeTimeStart: "2024-06-15",\n  lastFreeDay: "2024-06-17",\n  expiresAt: "2024-06-18T04:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-18T04:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
+    '{ freeTimeStart: "2024-06-15",\n  lastFreeDay: "2024-06-17",\n  expiresAt: "2024-06-17T23:00:00Z" }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-17T23:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
   ],
   "out-at-expiry": [
     FRIDAY_EXPIRY,
-    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-17T04:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-16T23:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
   ],
   "working-days": [
-    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-18",\n  expiresAt: "2024-06-19T04:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 6,\n  expiresAt: "2024-06-19T04:00:00Z",\n  chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 6 }] }',
+    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-19",\n  expiresAt: "2024-06-19T22:00:00Z" }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 5,\n  expiresAt: "2024-06-19T22:00:00Z",\n  chargedDates: ["2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 5 }] }',
   ],
   "terminal-holiday": [
-    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-18",\n  expiresAt: "2024-06-19T04:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 3,\n  expiresAt: "2024-06-19T04:00:00Z",\n  chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
+    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-19",\n  expiresAt: "2024-06-19T22:00:00Z" }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 3,\n  expiresAt: "2024-06-19T22:00:00Z",\n  chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
   ],
   tiers: [
-    FRIDAY_EXPIRY,
-    '{ freeDaysUsed: 3,\n  chargeableDays: 12,\n  expiresAt: "2024-06-17T04:00:00Z",\n  chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26", "2024-06-27", "2024-06-28"],\n  byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }',
+    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-16",\n  expiresAt: "2024-06-16T22:00:00Z" }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 12,\n  expiresAt: "2024-06-16T22:00:00Z",\n  chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26", "2024-06-27", "2024-06-28"],\n  byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }',
   ],
   "no-free-time": [
     "NO SIGNAL",
-    '{ freeDaysUsed: 0,\n  chargeableDays: 3,\n  expiresAt: "2024-06-14T04:00:00Z",\n  chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
+    '{ freeDaysUsed: 0,\n  chargeableDays: 3,\n  expiresAt: "2024-06-13T22:00:00Z",\n  chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
   ],
 };
 
@@ -257,13 +257,13 @@ describe("mountFreeTimeLedger", () => {
     );
     expect(q(root, "expiry-marker").hidden).toBe(false);
     expect(q(root, "call-charges").textContent).toBe(
-      'chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" })',
+      'chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T23:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "Europe/London", firstDay: "eventDay" })',
     );
   });
 
   it("charges nothing when the end is typed as exactly the expiry, and notes why", async () => {
     const { root } = await mount();
-    type(root, "clock-end", "2024-06-17T04:00:00Z");
+    type(root, "clock-end", "2024-06-16T23:00:00Z");
     expect(datesIn(root, "chargeable")).toEqual([]);
     expect(q(root, "charges-output").textContent).toContain(
       "chargeableDays: 0",
@@ -292,14 +292,14 @@ describe("mountFreeTimeLedger", () => {
     expect(datesIn(root, "closed")).toEqual([
       "2024-06-15",
       "2024-06-16",
-      "2024-06-19",
+      "2024-06-17",
       "2024-06-22",
       "2024-06-23",
     ]);
     expect(datesIn(root, "free")).toEqual([
       "2024-06-14",
-      "2024-06-17",
       "2024-06-18",
+      "2024-06-19",
     ]);
     expect(datesIn(root, "chargeable")).toEqual([
       "2024-06-20",
@@ -307,7 +307,7 @@ describe("mountFreeTimeLedger", () => {
       "2024-06-24",
     ]);
     expect(q(root, "call-charges").textContent).toContain(
-      'calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" }',
+      'calendar: { weekend: [6, 7], holidays: ["2024-06-17"], timeZone: "Africa/Johannesburg" }',
     );
   });
 
@@ -315,14 +315,17 @@ describe("mountFreeTimeLedger", () => {
     const { root } = await mount();
     choosePreset(root, "working-days");
     // Closed days inside the free window are not counted; after expiry every day is charged.
-    expect(datesIn(root, "closed")).toEqual(["2024-06-15", "2024-06-16"]);
+    expect(datesIn(root, "closed")).toEqual([
+      "2024-06-15",
+      "2024-06-16",
+      "2024-06-17",
+    ]);
     expect(datesIn(root, "free")).toEqual([
       "2024-06-14",
-      "2024-06-17",
       "2024-06-18",
+      "2024-06-19",
     ]);
     expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-19",
       "2024-06-20",
       "2024-06-21",
       "2024-06-22",
@@ -342,7 +345,7 @@ describe("mountFreeTimeLedger", () => {
     expect(datesIn(root, "closed")).toEqual([
       "2024-06-15",
       "2024-06-16",
-      "2024-06-19",
+      "2024-06-17",
       "2024-06-22",
       "2024-06-23",
     ]);
@@ -437,7 +440,7 @@ describe("mountFreeTimeLedger", () => {
     expect(
       plate("hero-expires").querySelector(".gmt-punct-hero-value")!.textContent,
     ).toBe("17 Jun 00:00");
-    expect(plate("hero-expires").textContent).toContain("America/New_York");
+    expect(plate("hero-expires").textContent).toContain("Europe/London");
     expect(q(root, "heroes").getAttribute("aria-hidden")).toBe("true");
     type(root, "clock-start", "2024-06-18T19:00:00Z");
     expect(plate("hero-charged").hasAttribute("data-empty")).toBe(true);
@@ -547,7 +550,7 @@ describe("mountFreeTimeLedger", () => {
       new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
     );
     expect(q<HTMLInputElement>(root, "clock-end").value).not.toBe(
-      "2024-06-17T04:00:01Z",
+      "2024-06-16T23:00:01Z",
     );
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
 
@@ -576,7 +579,7 @@ describe("mountFreeTimeLedger", () => {
     );
     const after = q<HTMLInputElement>(root, "clock-end").value;
     expect(after).not.toBe(before);
-    expect(after).toContain("[America/New_York]");
+    expect(after).toContain("[Europe/London]");
   });
 
   it("moves a handle twelve snap units on PageUp and PageDown", async () => {
@@ -635,19 +638,19 @@ describe("mountFreeTimeLedger", () => {
     const { root, handle } = await mount();
     expect(handle.getPermalinkState?.()).toEqual({
       clockStart: "2024-06-14T19:00:00Z",
-      clockEnd: "2024-06-17T04:00:01Z",
+      clockEnd: "2024-06-16T23:00:01Z",
       freeDays: "3",
       firstDay: "eventDay",
       basis: "calendar",
       chargeBasis: "calendar",
-      zone: "America/New_York",
+      zone: "Europe/London",
     });
     choosePreset(root, "terminal-holiday");
     const state = handle.getPermalinkState?.() as Record<string, string>;
     expect(state).toMatchObject({
       basis: "working",
       weekend: "6,7",
-      holidays: "2024-06-19",
+      holidays: "2024-06-17",
     });
     // And a link made of those strings reproduces the preset.
     const again = await mount(state);

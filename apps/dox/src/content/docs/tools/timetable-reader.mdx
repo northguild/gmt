@@ -33,10 +33,10 @@ behind a repeated or skipped local time in any zone, see the
 <Fragment slot="after">
 
 **Worth trying:** [the spring-forward
-rows](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22America%2FNew_York%22%2C%22duration%22%3A%22PT1H%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22departure1%22%3A%222024-03-10T01%3A30%3A00%22%2C%22departure2%22%3A%222024-03-10T02%3A30%3A00%22%2C%22departure3%22%3A%222024-03-10T03%3A30%3A00%22%7D) —
-01:30, 02:30 and 03:30 printed on New York's spring-forward night, where
-02:30 never shows. Then [an offset written into the skipped
-hour](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22America%2FNew_York%22%2C%22duration%22%3A%22PT1H%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22departure1%22%3A%222024-03-10T02%3A30%3A00%22%2C%22offset1%22%3A%22-05%3A00%22%7D) —
+rows](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22Europe%2FLondon%22%2C%22timeZone%22%3A%22Europe%2FLondon%22%2C%22duration%22%3A%22PT1H%22%2C%22departure1%22%3A%222024-03-31T00%3A30%3A00%22%2C%22departure2%22%3A%222024-03-31T01%3A30%3A00%22%2C%22departure3%22%3A%222024-03-31T02%3A30%3A00%22%7D) —
+00:30, 01:30 and 02:30 printed on London's spring-forward night, where
+01:30 never shows. Then [an offset written into the skipped
+hour](/tools/timetable-reader/?w=timetable&wa=%7B%22startTimeZone%22%3A%22Europe%2FLondon%22%2C%22timeZone%22%3A%22Europe%2FLondon%22%2C%22duration%22%3A%22PT1H%22%2C%22departure1%22%3A%222024-03-31T01%3A30%3A00%22%2C%22offset1%22%3A%22%2B00%3A00%22%7D) —
 a skipped time does not exist, so no offset can make it valid.
 
 Reference: [`scheduleDelivery`](/reference/transport/calculate/scheduleDelivery/)

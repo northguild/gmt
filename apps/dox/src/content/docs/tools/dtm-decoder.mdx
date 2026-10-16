@@ -35,7 +35,7 @@ Paste a UN/EDIFACT `DTM` segment, or type a value and its format code (data elem
 
 **Worth trying:** [a `CET` value](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22DTM%2B137%3A202406151430CET%3A303%27%22%7D) —
 the result is `NO SIGNAL`, and the sentence says the `303` field holds a signed hour, `UTC` or `GMT`. Replace `CET` with `UTC` and the value states its offset. Then [a two-digit year](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22240615%22%2C%22format%22%3A%22101%22%7D) —
-the result is `NO SIGNAL`: no EDI function reads a two-digit year, and the sentence names the pattern parser and the `yearWindow` that read it. For a value that returns a result, try [a period of local date-times](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22202406151430202406201600%22%2C%22format%22%3A%22719%22%2C%22zone1%22%3A%22America%2FNew_York%22%2C%22zone2%22%3A%22Europe%2FBerlin%22%7D): each end lands in the zones you chose.
+the result is `NO SIGNAL`: no EDI function reads a two-digit year, and the sentence names the pattern parser and the `yearWindow` that read it. For a value that returns a result, try [a period of local date-times](/tools/dtm-decoder/?w=dtm&wa=%7B%22input%22%3A%22202406151430202406201600%22%2C%22format%22%3A%22719%22%2C%22zone1%22%3A%22Asia%2FKolkata%22%2C%22zone2%22%3A%22Europe%2FBerlin%22%7D): each end lands in the zones you chose.
 
 </Fragment>
 

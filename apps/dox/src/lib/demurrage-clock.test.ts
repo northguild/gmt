@@ -445,10 +445,10 @@ describe("the texts", () => {
     s.rows[5] = { type: "arrived", at: "2024-06-14T19:00:00Z" };
     const marks = eventMarks(s, lib);
     expect(marks.map((m) => [m.n, m.word, m.local])).toEqual([
-      [1, "discharged", "Fri 14 Jun 15:00"],
-      [2, "available", "Sat 15 Jun 08:00"],
-      [3, "gated out", "Thu 20 Jun 10:30"],
-      [4, "empty returned", "Thu 27 Jun 05:00"],
+      [1, "discharged", "Fri 14 Jun 20:00"],
+      [2, "available", "Sat 15 Jun 13:00"],
+      [3, "gated out", "Thu 20 Jun 15:30"],
+      [4, "empty returned", "Thu 27 Jun 10:00"],
     ]);
   });
 });
@@ -531,7 +531,7 @@ describe("the hand-off to the Free Time Ledger", () => {
     expect(freeTimeArgs(readClocks(s, lib), s)).toEqual({
       clockStart: "2024-06-14T19:00:00Z",
       clockEnd: "2024-06-20T14:30:00Z",
-      zone: "America/New_York",
+      zone: "Europe/London",
     });
     expect(freeTimeHint(readClocks(s, lib))).toBe("");
   });

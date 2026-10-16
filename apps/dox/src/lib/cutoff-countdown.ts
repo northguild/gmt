@@ -48,7 +48,7 @@ export interface CountdownPreset {
 }
 
 const AMS = "Europe/Amsterdam";
-const NY = "America/New_York";
+const LON = "Europe/London";
 const GATEIN = "2024-06-12T17:00:00+02:00[Europe/Amsterdam]";
 
 /** Every preset is a section 9 row (appendix Z). */
@@ -81,21 +81,21 @@ export const COUNTDOWN_PRESETS: readonly CountdownPreset[] = [
   },
   {
     id: "other-clock",
-    label: "Now read on a New York clock: 11:00",
+    label: "Now read on a Kolkata clock: 20:30",
     description:
-      "The same instant written on a New York clock. Both are compared as instants, so the zone each is written in does not matter.",
+      "The same instant written on a Kolkata clock. Both are compared as instants, so the zone each is written in does not matter.",
     cutoff: GATEIN,
-    now: "2024-06-12T11:00:00-04:00[America/New_York]",
+    now: "2024-06-12T20:30:00+05:30[Asia/Kolkata]",
     timeZone: AMS,
   },
   {
     id: "repeated-hour",
-    label: "Two 01:30s on New York's fall-back night",
+    label: "Two 01:30s on London's fall-back night",
     description:
-      "The cut-off is the first 01:30, EDT. Now is the second 01:30, EST, an hour later. The offsets tell them apart.",
-    cutoff: "2024-11-03T01:30:00-04:00[America/New_York]",
-    now: "2024-11-03T01:30:00-05:00[America/New_York]",
-    timeZone: NY,
+      "The cut-off is the first 01:30, BST. Now is the second 01:30, GMT, an hour later. The offsets tell them apart.",
+    cutoff: "2024-10-27T01:30:00+01:00[Europe/London]",
+    now: "2024-10-27T01:30:00+00:00[Europe/London]",
+    timeZone: LON,
   },
   {
     id: "zoneless-now",

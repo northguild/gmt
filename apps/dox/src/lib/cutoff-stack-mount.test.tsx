@@ -66,7 +66,7 @@ const EXPECTED: Record<string, [string, string | null]> = {
     '[{ name: "document", at: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-13T10:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-06-13T18:00:00+02:00[Europe/Amsterdam]" }]',
   ],
   "skipped-hour": [
-    '"2024-03-11T22:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "VGM", offset: "P1D", atLocalTime: "02:30" }], { timeZone: "America/New_York" }',
+    '"2024-04-01T17:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "VGM", offset: "P1D", atLocalTime: "01:30" }], { timeZone: "Europe/London" }',
     null,
   ],
 };
@@ -179,12 +179,12 @@ describe("mountCutoffStack", () => {
     expect(q(root, "stack-timeline").getAttribute("tabindex")).toBe("-1");
   });
 
-  it("draws day columns at their real width, not all equal, across New York's fall-back", async () => {
-    // R1's own range: a departure on 4 November 2024, with an axis reaching
-    // back across 3 November, the 25-hour fall-back day.
+  it("draws day columns at their real width, not all equal, across London's fall-back", async () => {
+    // R1's own range: a departure on 29 October 2024, with an axis reaching
+    // back across 27 October, the 25-hour fall-back day.
     const seed = {
-      anchor: "2024-11-05T18:00:00-05:00[America/New_York]",
-      timeZone: "America/New_York",
+      anchor: "2024-10-29T18:00:00+00:00[Europe/London]",
+      timeZone: "Europe/London",
       cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
     };
     const { root } = await mount(seed);

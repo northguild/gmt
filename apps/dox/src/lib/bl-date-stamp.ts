@@ -199,13 +199,13 @@ export interface BlDatePreset {
  */
 export const BL_DATE_PRESETS: readonly BlDatePreset[] = [
   {
-    id: "new-york-evening",
-    label: "New York evening",
+    id: "sao-paulo-evening",
+    label: "São Paulo evening",
     description:
-      "A box is loaded at 21:00 in New York. In UTC the clock has already reached the next day, but the bill of lading carries the local date. Shanghai is added as a second calendar.",
+      "A box is loaded at 22:00 in São Paulo. In UTC the clock has already reached the next day, but the bill of lading carries the local date. Shanghai is added as a second calendar.",
     value: "2024-06-16T01:00:00Z",
     event: "shippedOnBoard",
-    timeZone: "America/New_York",
+    timeZone: "America/Sao_Paulo",
     zone2: "Asia/Shanghai",
     zone3: "",
     zone4: "",
@@ -461,7 +461,7 @@ export function blNullText(state: BlDateState, lib: BlDateLib): string {
     return "Choose the place of the event. Every bill of lading date is the local one, so the zone is required.";
   }
   if (read(PROBE_MOMENT, PROBE_EVENT, zone) === "") {
-    return `The library does not read ${zone} as a place. Use an IANA zone name such as America/New_York, or a UTC offset such as +08:00.`;
+    return `The library does not read ${zone} as a place. Use an IANA zone name such as Europe/London, or a UTC offset such as +08:00.`;
   }
   if (read(state.value.trim(), PROBE_EVENT, zone) === "") {
     return "The value is not a moment. It needs a Z, an offset, or an offset with a bracketed zone.";

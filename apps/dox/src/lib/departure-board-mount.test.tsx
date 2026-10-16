@@ -210,8 +210,8 @@ describe("mountDepartureBoard: every preset", () => {
     "fall-back-hourly": {
       verdict: "You make the 01:00.",
       naive: "The connection time changes nothing here.",
-      made: JSON.stringify("2024-11-03T01:00:00-05:00[America/New_York]"),
-      naiveOut: JSON.stringify("2024-11-03T01:00:00-05:00[America/New_York]"),
+      made: JSON.stringify("2024-10-27T01:00:00+00:00[Europe/London]"),
+      naiveOut: JSON.stringify("2024-10-27T01:00:00+00:00[Europe/London]"),
       href: null,
     },
   };

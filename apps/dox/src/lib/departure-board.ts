@@ -82,8 +82,8 @@ export interface DeparturePreset {
 
 const AMS = (t: string) => `2024-06-15T${t}+02:00[Europe/Amsterdam]`;
 const HEL = (t: string) => `2024-06-15T${t}+03:00[Europe/Helsinki]`;
-const EDT = (t: string) => `2024-11-03T${t}-04:00[America/New_York]`;
-const EST = (t: string) => `2024-11-03T${t}-05:00[America/New_York]`;
+const BST = (t: string) => `2024-10-27T${t}+01:00[Europe/London]`;
+const GMT = (t: string) => `2024-10-27T${t}+00:00[Europe/London]`;
 
 /** Appendix Z's SHUTTLE, FERRY (out of order) and HOURLY. */
 const SHUTTLE: Headway = {
@@ -100,8 +100,8 @@ const FERRY: readonly string[] = [
 ];
 const HOURLY: Headway = {
   headway: "PT1H",
-  from: EDT("00:00:00"),
-  to: EST("04:00:00"),
+  from: BST("00:00:00"),
+  to: GMT("04:00:00"),
 };
 
 export const DEPARTURE_PRESETS: readonly DeparturePreset[] = [
@@ -149,13 +149,13 @@ export const DEPARTURE_PRESETS: readonly DeparturePreset[] = [
   },
   {
     id: "fall-back-hourly",
-    label: "Hourly across New York's fall-back",
+    label: "Hourly across London's fall-back",
     description:
-      "A service every hour from midnight on 3 November 2024, the night New York's clocks went back. Departures keep their spacing in exact time, so after 01:30 EDT the next one is 01:00 EST, the second pass of the repeated hour.",
+      "A service every hour from midnight on 27 October 2024, the night London's clocks went back. Departures keep their spacing in exact time, so after 01:30 BST the next one is 01:00 GMT, the second pass of the repeated hour.",
     form: "headway",
     departures: FERRY,
     headway: HOURLY,
-    after: EDT("01:30:00"),
+    after: BST("01:30:00"),
     minimumConnection: "",
     onwardDuration: "",
     onwardZone: "",

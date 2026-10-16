@@ -69,8 +69,8 @@ export interface BoardPreset {
 const LON = (t: string) => `2024-06-14T${t}+01:00[Europe/London]`;
 const AMS = (t: string) => `2024-06-15T${t}+02:00[Europe/Amsterdam]`;
 const SIN = (d: string, t: string) => `2024-06-${d}T${t}+08:00[Asia/Singapore]`;
-const EDT = (t: string) => `2024-11-03T${t}-04:00[America/New_York]`;
-const EST = (t: string) => `2024-11-03T${t}-05:00[America/New_York]`;
+const AEDT = (t: string) => `2024-04-07T${t}+11:00[Australia/Sydney]`;
+const AEST = (t: string) => `2024-04-07T${t}+10:00[Australia/Sydney]`;
 
 const pair = (planned: string, actual: string): PlannedActual => ({
   planned,
@@ -128,14 +128,14 @@ export const PUNCTUALITY_PRESETS: readonly BoardPreset[] = [
   },
   {
     id: "fall-back",
-    label: "A delay across New York's fall-back",
+    label: "A delay across Sydney's fall-back",
     description:
-      "Four arrivals on Sunday 3 November 2024, when New York's clocks went back from 02:00 to 01:00. The 01:30 arrived at the second 01:30, an hour late, and the station clock shows no delay. The wall-clock column is the naive reading.",
+      "Four arrivals on Sunday 7 April 2024, when Sydney's clocks went back from 03:00 to 02:00. The 02:30 arrived at the second 02:30, an hour late, and the station clock shows no delay. The wall-clock column is the naive reading.",
     rows: [
-      pair(EDT("01:30:00"), EST("01:30:00")),
-      pair(EDT("01:50:00"), EST("01:05:00")),
-      pair(EDT("00:45:00"), EDT("01:10:00")),
-      pair(EST("01:40:00"), EST("01:50:00")),
+      pair(AEDT("02:30:00"), AEST("02:30:00")),
+      pair(AEDT("02:50:00"), AEST("02:05:00")),
+      pair(AEDT("01:45:00"), AEDT("02:10:00")),
+      pair(AEST("02:40:00"), AEST("02:50:00")),
     ],
     late: "PT15M",
   },

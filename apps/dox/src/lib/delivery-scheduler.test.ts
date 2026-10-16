@@ -199,10 +199,10 @@ describe("legCalls", () => {
     const { legs, facts } = journey(preset);
     const calls = legCalls(facts, legs, 0, lib)!;
     expect(calls.departure).toBe(facts.departures[0]);
-    expect(calls.duration).toBe("PT46H");
-    expect(calls.zone).toBe("America/Los_Angeles");
-    expect(calls.arrival).toBe(transitTime(calls.departure, "PT46H"));
-    expect(calls.local).toBe(etaAtZone(calls.arrival, "America/Los_Angeles"));
+    expect(calls.duration).toBe("PT45H");
+    expect(calls.zone).toBe("Europe/London");
+    expect(calls.arrival).toBe(transitTime(calls.departure, "PT45H"));
+    expect(calls.local).toBe(etaAtZone(calls.arrival, "Europe/London"));
   });
 
   it("returns a sentinel, not a guess, for a duration that is not one", () => {
@@ -237,23 +237,23 @@ describe("legsOf / optionsOf / permalinkOf", () => {
 
   it("legsOf produces V30's exact result", () => {
     expect(scheduleDelivery(legsOf(state))).toEqual({
-      eta: "2024-03-23T01:30:00+09:00[Asia/Tokyo]",
+      eta: "2024-04-12T17:30:00+09:00[Asia/Tokyo]",
       legTimes: [
         {
-          arrival: "2024-03-10T12:00:00Z",
-          localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]",
+          arrival: "2024-03-31T04:00:00Z",
+          localArrival: "2024-03-31T05:00:00+01:00[Europe/London]",
           dwellAfter: "PT2H",
           mode: "truck",
         },
         {
-          arrival: "2024-03-21T14:00:00Z",
-          localArrival: "2024-03-21T23:00:00+09:00[Asia/Tokyo]",
+          arrival: "2024-04-11T06:00:00Z",
+          localArrival: "2024-04-11T15:00:00+09:00[Asia/Tokyo]",
           dwellAfter: "PT24H",
           mode: "ship",
         },
         {
-          arrival: "2024-03-22T16:30:00Z",
-          localArrival: "2024-03-23T01:30:00+09:00[Asia/Tokyo]",
+          arrival: "2024-04-12T08:30:00Z",
+          localArrival: "2024-04-12T17:30:00+09:00[Asia/Tokyo]",
           dwellAfter: "PT0S",
           mode: "rail",
         },
@@ -278,7 +278,7 @@ describe("legsOf / optionsOf / permalinkOf", () => {
   });
 
   it("originZoneOf reads leg 1's bracketed zone", () => {
-    expect(originZoneOf(state)).toBe("America/Chicago");
+    expect(originZoneOf(state)).toBe("Europe/Rome");
   });
 });
 
@@ -294,7 +294,7 @@ describe("buildItinerary", () => {
   const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
   const legs = preset.legs.map((l) => legObject(l));
   const facts = collectJourneyFacts(legs, undefined, lib);
-  const itinerary = buildItinerary(facts, legs, "America/Chicago", lib)!;
+  const itinerary = buildItinerary(facts, legs, "Europe/Rome", lib)!;
 
   function flatEvents(it: ReturnType<typeof buildItinerary>) {
     return it!.groups.flatMap((g) => g.events);
@@ -313,20 +313,20 @@ describe("buildItinerary", () => {
     expect(new Set(dates).size).toBe(dates.length);
   });
 
-  it("gives Los Angeles and Chicago spring-forward DST notes inside the itinerary", () => {
+  it("gives London and Rome spring-forward DST notes inside the itinerary", () => {
     const events = flatEvents(itinerary);
     const dstEvents = events.filter((e) => e.kind === "dst");
     expect(dstEvents.length).toBeGreaterThan(0);
-    const la = dstEvents.find((e) => e.zone === "America/Los_Angeles");
-    const chi = dstEvents.find((e) => e.zone === "America/Chicago");
-    expect(la?.note).toBe("Los Angeles clocks spring forward 02:00 → 03:00");
-    expect(chi?.note).toContain("Chicago clocks spring forward");
+    const lon = dstEvents.find((e) => e.zone === "Europe/London");
+    const rome = dstEvents.find((e) => e.zone === "Europe/Rome");
+    expect(lon?.note).toBe("London clocks spring forward 01:00 → 02:00");
+    expect(rome?.note).toContain("Rome clocks spring forward");
   });
 
-  it("reads Los Angeles' arrival 1 h early against the offset table (V41)", () => {
+  it("reads London's arrival 1 h early against the offset table (V41)", () => {
     const events = flatEvents(itinerary);
     const laArrival = events.find(
-      (e) => e.kind === "arrival" && e.zone === "America/Los_Angeles",
+      (e) => e.kind === "arrival" && e.zone === "Europe/London",
     )!;
     expect(laArrival.time).toBe("05:00");
     expect(laArrival.offsetCheck).toEqual({
@@ -340,7 +340,7 @@ describe("buildItinerary", () => {
     const events = flatEvents(itinerary);
     const last = events.filter((e) => e.kind === "arrival").at(-1)!;
     expect(last.isEta).toBe(true);
-    expect(last.isoText).toBe("2024-03-23T01:30:00+09:00[Asia/Tokyo]");
+    expect(last.isoText).toBe("2024-04-12T17:30:00+09:00[Asia/Tokyo]");
   });
 
   it("marks the scheduled departure and the missed handoff on V32", () => {
@@ -353,13 +353,13 @@ describe("buildItinerary", () => {
     const missedItinerary = buildItinerary(
       missedFacts,
       missedLegs,
-      "America/Chicago",
+      "Europe/Rome",
       lib,
     )!;
     const missedChart = buildChartData(
       missedFacts,
       missedLegs,
-      "America/Chicago",
+      "Europe/Rome",
       lib,
     )!;
     expect(missedChart.legs.some((l) => l.missed)).toBe(true);
@@ -376,11 +376,11 @@ describe("buildItinerary", () => {
     // The truck's own arrival station must never carry a "wait" badge here:
     // the ship never actually waited for anything, it missed the handoff.
     const truckStation = missedChart.stations.find(
-      (s) => s.zone === "America/Los_Angeles",
+      (s) => s.zone === "Europe/London",
     )!;
     expect(truckStation.badges.some((b) => b.kind === "wait")).toBe(false);
     expect(missedChart.conflict?.legIndex).toBe(1);
-    expect(missedChart.conflict?.zone).toBe("America/Los_Angeles");
+    expect(missedChart.conflict?.zone).toBe("Europe/London");
     // Scheduled to leave before the cargo was ready: the conflict this
     // record exists to mark.
     expect(missedChart.conflict!.scheduledMs).toBeLessThan(
@@ -392,11 +392,11 @@ describe("buildItinerary", () => {
     expect(missedHandoff.missedText).toContain("06:30");
   });
 
-  it("reads a naive delta of an hour on both New York arrivals (V58)", () => {
+  it("reads a naive delta of an hour on both London arrivals (V58)", () => {
     const p = DELIVERY_PRESETS.find((pp) => pp.id === "fall-back-night")!;
     const l = p.legs.map((leg) => legObject(leg));
     const f = collectJourneyFacts(l, undefined, lib);
-    const t = buildItinerary(f, l, "America/New_York", lib)!;
+    const t = buildItinerary(f, l, "Europe/London", lib)!;
     const arrivals = flatEvents(t).filter((e) => e.kind === "arrival");
     expect(arrivals.map((e) => e.offsetCheck?.naiveTime)).toEqual([
       "04:00",
@@ -438,10 +438,10 @@ describe("buildItinerary", () => {
   });
 
   it("builds chart data as equal-count legs, one per leg, with the leg's own duration text", () => {
-    const chart = buildChartData(facts, legs, "America/Chicago", lib)!;
+    const chart = buildChartData(facts, legs, "Europe/Rome", lib)!;
     expect(chart.legs).toHaveLength(3);
     expect(chart.legs.map((l) => l.durationText)).toEqual([
-      "1 d 22 h",
+      "1 d 21 h",
       "11 d",
       "2 h 30 min",
     ]);
@@ -449,9 +449,7 @@ describe("buildItinerary", () => {
     expect(chart.stations).toHaveLength(4);
     expect(chart.stations[0]!.isOrigin).toBe(true);
     expect(chart.stations.at(-1)!.isEta).toBe(true);
-    const laStation = chart.stations.find(
-      (s) => s.zone === "America/Los_Angeles",
-    )!;
+    const laStation = chart.stations.find((s) => s.zone === "Europe/London")!;
     expect(laStation.badges.some((b) => b.kind === "offset")).toBe(true);
     expect(laStation.badges.find((b) => b.kind === "offset")!.text).toBe(
       "1 h early",
@@ -459,14 +457,14 @@ describe("buildItinerary", () => {
     expect(laStation.badges.some((b) => b.kind === "handling")).toBe(true);
   });
 
-  it("attaches both Chicago's and Los Angeles's spring-forward transitions to leg ① (default preset)", () => {
-    const chart = buildChartData(facts, legs, "America/Chicago", lib)!;
+  it("attaches both Rome's and London's spring-forward transitions to leg ① (default preset)", () => {
+    const chart = buildChartData(facts, legs, "Europe/Rome", lib)!;
     const legOneTransitions = chart.transitions.filter(
       (t) => t.legIndex === 0 && t.kind === "dst",
     );
     const zones = new Set(legOneTransitions.map((t) => t.zone));
-    expect(zones.has("America/Chicago")).toBe(true);
-    expect(zones.has("America/Los_Angeles")).toBe(true);
+    expect(zones.has("Europe/Rome")).toBe(true);
+    expect(zones.has("Europe/London")).toBe(true);
   });
 });
 
@@ -474,17 +472,17 @@ describe("buildEtaSummary", () => {
   const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
   const legs = preset.legs.map((l) => legObject(l));
   const facts = collectJourneyFacts(legs, undefined, lib);
-  const chartData = buildChartData(facts, legs, "America/Chicago", lib);
+  const chartData = buildChartData(facts, legs, "Europe/Rome", lib);
 
   it("names the real ETA, its exact ISO, the door-to-door span and the DST and offset flags (V30)", () => {
     const summary = buildEtaSummary(facts, legs, chartData);
     expect(summary.status).toBe("ok");
     expect(summary.legCount).toBe(3);
-    expect(summary.etaIso).toBe("2024-03-23T01:30:00+09:00[Asia/Tokyo]");
-    expect(summary.etaLocal).toBe("Sat 23 Mar 2024 · 01:30 Tokyo (+09:00)");
-    // 2024-03-08T14:00:00Z (the exact departure) to 2024-03-22T16:30:00Z
-    // (the exact final arrival) is 14 days, 2 hours, 30 minutes.
-    expect(summary.doorToDoor).toBe("14 d 2 h 30 min door to door");
+    expect(summary.etaIso).toBe("2024-04-12T17:30:00+09:00[Asia/Tokyo]");
+    expect(summary.etaLocal).toBe("Fri 12 Apr 2024 · 17:30 Tokyo (+09:00)");
+    // 2024-03-29T07:00:00Z (the exact departure) to 2024-04-12T08:30:00Z
+    // (the exact final arrival) is 14 days, 1 hour, 30 minutes.
+    expect(summary.doorToDoor).toBe("14 d 1 h 30 min door to door");
     expect(summary.flags).toContain("DST ×2");
     expect(summary.flags).toContain("1 h offset-table error");
     expect(summary.flags).not.toContain("Date Line");
@@ -499,7 +497,7 @@ describe("buildEtaSummary", () => {
     const missedChart = buildChartData(
       missedFacts,
       missedLegs,
-      "America/Chicago",
+      "Europe/Rome",
       lib,
     );
     const summary = buildEtaSummary(missedFacts, missedLegs, missedChart);

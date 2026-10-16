@@ -36,7 +36,7 @@ export const zoneSchema = z
   .max(64)
   .regex(
     /^[A-Za-z0-9_+-]+(\/[A-Za-z0-9_+-]+){0,2}$/,
-    "must look like an IANA zone identifier, e.g. America/New_York",
+    "must look like an IANA zone identifier, e.g. Europe/London",
   );
 
 /** An ISO-8601 local or zoned date-time, as the widgets' inputs accept. */
@@ -93,7 +93,7 @@ export const showIntervalVisualizerInput = z.object({
  * A dwell: two instants and the zone its days are counted in.
  *
  * `zone` is required here although `dwellTime` can take it from a bracketed
- * entry: a model answering "23:00 in New York" sends a wall time with no
+ * entry: a model answering "23:00 in Johannesburg" sends a wall time with no
  * offset, and the widget reads it in this zone (`resolveWallTime`). Without a
  * zone there is nothing to count days in, which the widget can still show, but
  * is not a question worth a tool call.
@@ -422,7 +422,7 @@ export const placeSchema = z
   .max(64)
   .regex(
     /^[A-Za-z0-9_+:-]+(\/[A-Za-z0-9_+-]+){0,2}$/,
-    "must look like an IANA zone identifier or a UTC offset, e.g. America/New_York or +08:00",
+    "must look like an IANA zone identifier or a UTC offset, e.g. Europe/London or +08:00",
   );
 
 /**
@@ -531,9 +531,13 @@ export const showGnssRolloverCheckerInput = z
       .optional(),
     date: z.string().min(10).max(64).optional(),
   })
-  .refine((v) => (v.firmwareNotBefore === undefined) !== (v.firmwareEra === undefined), {
-    message: "Send exactly one of firmwareNotBefore and firmwareEra.",
-  });
+  .refine(
+    (v) =>
+      (v.firmwareNotBefore === undefined) !== (v.firmwareEra === undefined),
+    {
+      message: "Send exactly one of firmwareNotBefore and firmwareEra.",
+    },
+  );
 
 /**
  * The Leap Second Timeline: a date for TAI - UTC, two dates to count the leap
@@ -669,7 +673,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Two time intervals on a shared timeline, with their intersection, union, difference and XOR.",
     when: "the reader asks how two time ranges relate — overlap, gaps, combining them",
-    args: "aStart, aEnd, bStart, bEnd — ISO date-times. Include a zone when the reader named one (2024-11-03T09:00:00-04:00[America/New_York]); a plain 2024-11-03T09:00:00 is fine when they did not, and is read as UTC.",
+    args: "aStart, aEnd, bStart, bEnd — ISO date-times. Include a zone when the reader named one (2024-10-27T09:00:00+00:00[Europe/London]); a plain 2024-10-27T09:00:00 is fine when they did not, and is read as UTC.",
   },
   {
     name: "showConverterBench",

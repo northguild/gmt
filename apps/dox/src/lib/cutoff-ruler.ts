@@ -47,18 +47,19 @@ export interface RulerPreset {
   atLocalTime: string;
 }
 
-const NY = "America/New_York";
+const LON = "Europe/London";
+const SYD = "Australia/Sydney";
 const AMS = "Europe/Amsterdam";
 
 /** Every preset is a section 9 row (appendix Z). */
 export const RULER_PRESETS: readonly RulerPreset[] = [
   {
-    id: "new-york-fall-back",
-    label: "New York, Monday 4 November 2024: the clocks go back in between",
+    id: "sydney-fall-back",
+    label: "Sydney, Monday 8 April 2024: the clocks go back in between",
     description:
-      "A ship leaves New York at 18:00 on Monday 4 November 2024. The clocks went back on Sunday, so two calendar days is 49 hours, 48 hours lands at 19:00, and two days at 17:00 is 50 hours: three answers an hour apart.",
-    anchor: "2024-11-04T18:00:00-05:00[America/New_York]",
-    timeZone: NY,
+      "A ship leaves Sydney at 18:00 on Monday 8 April 2024. The clocks went back on Sunday, so two calendar days is 49 hours, 48 hours lands at 19:00, and two days at 17:00 is 50 hours: three answers an hour apart.",
+    anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+    timeZone: SYD,
     days: "2",
     atLocalTime: "17:00",
   },
@@ -73,34 +74,34 @@ export const RULER_PRESETS: readonly RulerPreset[] = [
     atLocalTime: "17:00",
   },
   {
-    id: "new-york-spring-forward",
-    label: "New York, Monday 11 March 2024: the clocks go forward in between",
+    id: "london-spring-forward",
+    label: "London, Monday 1 April 2024: the clocks go forward in between",
     description:
-      "The clocks went forward on Sunday 10 March, so two calendar days is only 47 hours, and 48 hours lands at 17:00, the same instant as the pinned reading: an agreement by accident.",
-    anchor: "2024-03-11T22:00:00Z",
-    timeZone: NY,
+      "The clocks went forward on Sunday 31 March, so two calendar days is only 47 hours, and 48 hours lands at 17:00, the same instant as the pinned reading: an agreement by accident.",
+    anchor: "2024-04-01T17:00:00Z",
+    timeZone: LON,
     days: "2",
     atLocalTime: "17:00",
   },
   {
     id: "repeated-hour",
-    label: "1 day before at 01:30, on New York's fall-back night",
+    label: "1 day before at 02:30, on Sydney's fall-back night",
     description:
-      "01:30 happened twice on 3 November 2024. The pinned reading takes the first pass, 01:30 EDT.",
-    anchor: "2024-11-04T23:00:00Z",
-    timeZone: NY,
+      "02:30 happened twice on 7 April 2024. The pinned reading takes the first pass, 02:30 AEDT.",
+    anchor: "2024-04-08T08:00:00Z",
+    timeZone: SYD,
     days: "1",
-    atLocalTime: "01:30",
+    atLocalTime: "02:30",
   },
   {
     id: "skipped-hour",
-    label: "1 day before at 02:30, on New York's spring-forward night",
+    label: "1 day before at 01:30, on London's spring-forward night",
     description:
-      '02:30 never showed on a New York clock on 10 March 2024. The pinned reading returns "", the other two still resolve.',
-    anchor: "2024-03-11T22:00:00Z",
-    timeZone: NY,
+      '01:30 never showed on a London clock on 31 March 2024. The pinned reading returns "", the other two still resolve.',
+    anchor: "2024-04-01T17:00:00Z",
+    timeZone: LON,
     days: "1",
-    atLocalTime: "02:30",
+    atLocalTime: "01:30",
   },
 ];
 

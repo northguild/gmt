@@ -198,17 +198,17 @@ const EXPECTED: Record<string, Expected> = {
 const PLATES: Record<string, string[]> = {
   "import-demurrage": [
     "discharged",
-    "Fri 14 Jun 15:00",
+    "Fri 14 Jun 20:00",
     "gated out",
-    "Thu 20 Jun 10:30",
+    "Thu 20 Jun 15:30",
     "5 d 19 h 30 min",
     "PT139H30M",
   ],
   "import-detention": [
     "gated out",
-    "Thu 20 Jun 10:30",
+    "Thu 20 Jun 16:30",
     "empty returned",
-    "Thu 27 Jun 05:00",
+    "Thu 27 Jun 11:00",
     "6 d 18 h 30 min",
     "PT162H30M",
   ],
@@ -421,8 +421,8 @@ describe("every preset, against the real library", () => {
   it("opens on the first preset with its terminal clock", async () => {
     const { root } = await mount();
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("import-demurrage");
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("America/New_York");
-    expect(text(root, "label")).toBe("America/New_York");
+    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Europe/London");
+    expect(text(root, "label")).toBe("Europe/London");
   });
 
   it("lays the day columns out in the terminal's zone and the bars over the same scale", async () => {
@@ -446,10 +446,10 @@ describe("every preset, against the real library", () => {
     const { root } = await mount();
     const events = [...q(root, "rail").querySelectorAll(".gmt-dem-event")];
     expect(events.map((e) => e.getAttribute("aria-label"))).toEqual([
-      "discharged, Fri 14 Jun 15:00 on the America/New_York clock",
-      "available, Sat 15 Jun 08:00 on the America/New_York clock",
-      "gated out, Thu 20 Jun 10:30 on the America/New_York clock",
-      "empty returned, Thu 27 Jun 05:00 on the America/New_York clock",
+      "discharged, Fri 14 Jun 20:00 on the Europe/London clock",
+      "available, Sat 15 Jun 13:00 on the Europe/London clock",
+      "gated out, Thu 20 Jun 15:30 on the Europe/London clock",
+      "empty returned, Thu 27 Jun 10:00 on the Europe/London clock",
     ]);
     expect(
       [...q(root, "rail").querySelectorAll(".gmt-dem-word")].map(
@@ -502,7 +502,7 @@ describe("the options", () => {
     );
     expect(plate(root, "hero-start")).toEqual([
       "available",
-      "Sat 15 Jun 08:00",
+      "Sat 15 Jun 13:00",
     ]);
     expect(text(root, "clock-output")).toContain(
       interval("2024-06-15T12:00:00Z", "2024-06-20T14:30:00Z"),
@@ -598,19 +598,19 @@ describe("the hand-off to the Free Time Ledger", () => {
       encodeWidgetPermalink("freetime", {
         clockStart: "2024-06-14T19:00:00Z",
         clockEnd: "2024-06-20T14:30:00Z",
-        zone: "America/New_York",
+        zone: "Europe/London",
       }),
     );
     const seeded = seedFromLocation("freetime", href.slice(href.indexOf("?")));
     expect(seeded).toEqual({
       clockStart: "2024-06-14T19:00:00Z",
       clockEnd: "2024-06-20T14:30:00Z",
-      zone: "America/New_York",
+      zone: "Europe/London",
     });
     const state = readFreeTimeArgs(seeded);
     expect(state.clockStart).toBe("2024-06-14T19:00:00Z");
     expect(state.clockEnd).toBe("2024-06-20T14:30:00Z");
-    expect(state.zone).toBe("America/New_York");
+    expect(state.zone).toBe("Europe/London");
     // And the tool the link opens shows the same values.
     const target = document.createElement("div");
     target.innerHTML = renderFreeTimeLedgerTemplate(seeded);
@@ -623,7 +623,7 @@ describe("the hand-off to the Free Time Ledger", () => {
     ).toBe("2024-06-20T14:30:00Z");
     expect(
       target.querySelector<HTMLSelectElement>('[data-role="zone"]')!.value,
-    ).toBe("America/New_York");
+    ).toBe("Europe/London");
   });
 
   it("carries the strings the library returned, and leaves the zone out when there is none", async () => {
@@ -769,7 +769,7 @@ describe("on-screen words", () => {
   it("states the chosen clock in one hidden sentence", async () => {
     const { root } = await mount();
     expect(text(root, "summary")).toBe(
-      "demurrage: discharged to gated out: from Fri 14 Jun 15:00 to Thu 20 Jun 10:30 on the America/New_York clock. It ran for 5 d 19 h 30 min.",
+      "demurrage: discharged to gated out: from Fri 14 Jun 20:00 to Thu 20 Jun 15:30 on the Europe/London clock. It ran for 5 d 19 h 30 min.",
     );
     expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
     expect(q(root, "summary").classList.contains("gmt-ledger-sr")).toBe(true);

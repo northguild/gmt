@@ -97,7 +97,7 @@ export interface StackPreset {
 }
 
 const AMS = "Europe/Amsterdam";
-const NY = "America/New_York";
+const LON = "Europe/London";
 
 const GATE: CutoffFields = {
   name: "gate-in",
@@ -189,14 +189,14 @@ export const STACK_PRESETS: readonly StackPreset[] = [
   },
   {
     id: "skipped-hour",
-    label: "02:30 on New York's spring-forward night",
+    label: "01:30 on London's spring-forward night",
     description:
-      "VGM at 02:30 one day before a Monday departure lands on 10 March 2024, when New York's clocks skipped from 02:00 to 03:00. A skipped time is never shifted: one failed entry returns [] for the whole stack.",
-    anchor: "2024-03-11T22:00:00Z",
-    timeZone: NY,
+      "VGM at 01:30 one day before a Monday departure lands on 31 March 2024, when London's clocks skipped from 01:00 to 02:00. A skipped time is never shifted: one failed entry returns [] for the whole stack.",
+    anchor: "2024-04-01T17:00:00Z",
+    timeZone: LON,
     cutoffs: [
       { name: "gate-in", offset: "P1D", atLocalTime: "" },
-      { name: "VGM", offset: "P1D", atLocalTime: "02:30" },
+      { name: "VGM", offset: "P1D", atLocalTime: "01:30" },
     ],
     calendar: false,
     weekend: [],

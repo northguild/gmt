@@ -386,13 +386,13 @@ describe("the strip", () => {
     expect(stripApplies(r)).toBe(true);
     const rows = gapRows(r.house!, preset("local-203").zones, lib);
     expect(rows.map((x) => x.instant)).toEqual([
-      "2024-06-15T18:30:00Z",
+      "2024-06-15T12:30:00Z",
       "2024-06-15T12:30:00Z",
       "2024-06-15T06:30:00Z",
-      "2024-06-15T21:30:00Z",
+      "2024-06-15T04:30:00Z",
     ]);
-    expect(rows[0]!.offset).toBe("-04:00");
-    expect(rows[0]!.third).toBe("202406151430-0400");
+    expect(rows[0]!.offset).toBe("+02:00");
+    expect(rows[0]!.third).toBe("202406151430+0200");
   });
 
   it("resolves both ends of a period of local date-times", () => {

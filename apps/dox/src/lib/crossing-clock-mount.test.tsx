@@ -46,16 +46,16 @@ const EXPECTED: Record<string, [string, string | null]> = {
     '{ duration: "PT9H30M", enter: "2024-06-15T10:00:00+02:00[Europe/Berlin]", exit: "2024-06-15T19:30:00+02:00[Europe/Berlin]" }',
   ],
   "spring-forward": [
-    '"2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York"',
-    '{ duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]", exit: "2024-03-10T08:00:00-04:00[America/New_York]" }',
+    '"2024-03-31T00:00:00Z", "2024-03-31T07:00:00Z", "Europe/London"',
+    '{ duration: "PT7H", enter: "2024-03-31T00:00:00+00:00[Europe/London]", exit: "2024-03-31T08:00:00+01:00[Europe/London]" }',
   ],
   "fall-back": [
-    '"2024-11-03T05:30:00Z", "2024-11-03T06:30:00Z", "America/New_York"',
-    '{ duration: "PT1H", enter: "2024-11-03T01:30:00-04:00[America/New_York]", exit: "2024-11-03T01:30:00-05:00[America/New_York]" }',
+    '"2024-10-27T00:30:00Z", "2024-10-27T01:30:00Z", "Europe/London"',
+    '{ duration: "PT1H", enter: "2024-10-27T01:30:00+01:00[Europe/London]", exit: "2024-10-27T01:30:00+00:00[Europe/London]" }',
   ],
   "fixed-offset": [
-    '"2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "-05:00"',
-    '{ duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[-05:00]", exit: "2024-03-10T07:00:00-05:00[-05:00]" }',
+    '"2024-03-31T00:00:00Z", "2024-03-31T07:00:00Z", "+02:00"',
+    '{ duration: "PT7H", enter: "2024-03-31T02:00:00+02:00[+02:00]", exit: "2024-03-31T09:00:00+02:00[+02:00]" }',
   ],
   "read-elsewhere": [
     '"2024-06-15T08:00:00+02:00[Europe/Berlin]", "2024-06-15T17:30:00+02:00[Europe/Berlin]", "America/Panama"',
@@ -173,7 +173,7 @@ describe("mountCrossingClock", () => {
     choosePreset(root, "spring-forward");
     expect(q(root, "ruler-summary").textContent).toContain("never shown");
     expect(q(root, "strip-changes").textContent).toContain(
-      "02:00–03:00 never shown",
+      "01:00–02:00 never shown",
     );
     expect(
       q(root, "strip-changes").querySelector(
@@ -203,10 +203,10 @@ describe("mountCrossingClock", () => {
     choosePreset(root, "spring-forward");
 
     expect(q(root, "entry-time").textContent).toBe("00:00");
-    expect(q(root, "entry-meta").textContent).toBe("-05:00 · New York");
-    expect(q(root, "entry-date").textContent).toBe("10 Mar 2024");
+    expect(q(root, "entry-meta").textContent).toBe("+00:00 · London");
+    expect(q(root, "entry-date").textContent).toBe("31 Mar 2024");
     expect(q(root, "exit-time").textContent).toBe("08:00");
-    expect(q(root, "exit-meta").textContent).toBe("-04:00 · New York");
+    expect(q(root, "exit-meta").textContent).toBe("+01:00 · London");
 
     // The face is a night-light toggle button (crystal-clock.ts): the
     // accessible name and role live there, and the svg inside is
@@ -214,7 +214,7 @@ describe("mountCrossingClock", () => {
     const entryButton = q(root, "entry-clock").querySelector("button")!;
     expect(entryButton.getAttribute("aria-pressed")).toBe("false");
     expect(entryButton.getAttribute("aria-label")).toBe(
-      "Entry clock, 00:00, minus 05:00, New York. 02:00–03:00 never shown. Light up the face.",
+      "Entry clock, 00:00, plus 00:00, London. 01:00–02:00 never shown. Light up the face.",
     );
     const entrySvg = entryButton.querySelector("svg")!;
     expect(entrySvg.getAttribute("aria-hidden")).toBe("true");
@@ -222,7 +222,7 @@ describe("mountCrossingClock", () => {
 
     const exitButton = q(root, "exit-clock").querySelector("button")!;
     expect(exitButton.getAttribute("aria-label")).toBe(
-      "Exit clock, 08:00, minus 04:00, New York. 02:00–03:00 never shown. Light up the face.",
+      "Exit clock, 08:00, plus 01:00, London. 01:00–02:00 never shown. Light up the face.",
     );
   });
 
@@ -235,7 +235,7 @@ describe("mountCrossingClock", () => {
       );
       expect(highlights, prefix).toHaveLength(1);
       expect(highlights[0]!.querySelector("title")!.textContent).toBe(
-        "02:00–03:00 never shown",
+        "01:00–02:00 never shown",
       );
     }
 
@@ -286,8 +286,8 @@ describe("mountCrossingClock", () => {
 
     expect(q(root, "entry-time").textContent).toBe("01:30");
     expect(q(root, "exit-time").textContent).toBe("01:30");
-    expect(q(root, "entry-meta").textContent).toBe("-04:00 · New York");
-    expect(q(root, "exit-meta").textContent).toBe("-05:00 · New York");
+    expect(q(root, "entry-meta").textContent).toBe("+01:00 · London");
+    expect(q(root, "exit-meta").textContent).toBe("+00:00 · London");
     expect(q(root, "entry-clock").querySelector("svg")!.dataset.state).toBe(
       "repeated",
     );

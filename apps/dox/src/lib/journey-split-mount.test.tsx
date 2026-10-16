@@ -86,8 +86,8 @@ const CALLS3 = ["multimodalETA", "scheduleDelivery", ...Array(7).fill(DIFFS)];
 const EXPECTED: Record<string, Expected> = {
   "scheduled-sailing": {
     results: [
-      '{ eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }',
-      '{ eta: "2024-06-29T23:00:00-05:00[America/Chicago]", legTimes: [{ arrival: "2024-06-10T06:00:00Z", localArrival: "2024-06-10T14:00:00+08:00[Asia/Shanghai]", dwellAfter: "PT6H", mode: "truck" }, { arrival: "2024-06-26T12:00:00Z", localArrival: "2024-06-26T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT36H", mode: "ship" }, { arrival: "2024-06-30T04:00:00Z", localArrival: "2024-06-29T23:00:00-05:00[America/Chicago]", dwellAfter: "PT0S", mode: "rail" }] }',
+      '{ eta: "2024-06-30T13:30:00+09:30[Australia/Adelaide]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT84H" }',
+      '{ eta: "2024-06-30T13:30:00+09:30[Australia/Adelaide]", legTimes: [{ arrival: "2024-06-10T06:00:00Z", localArrival: "2024-06-10T14:00:00+08:00[Asia/Shanghai]", dwellAfter: "PT6H", mode: "truck" }, { arrival: "2024-06-26T12:00:00Z", localArrival: "2024-06-26T22:00:00+10:00[Australia/Sydney]", dwellAfter: "PT36H", mode: "ship" }, { arrival: "2024-06-30T04:00:00Z", localArrival: "2024-06-30T13:30:00+09:30[Australia/Adelaide]", dwellAfter: "PT0S", mode: "rail" }] }',
       '"PT6H"',
       '"PT48H"',
       '"PT42H"',
@@ -98,7 +98,7 @@ const EXPECTED: Record<string, Expected> = {
     ],
     calls: CALLS3,
     plates: [
-      ["Sat 29 Jun 23:00", ["America/Chicago", "484 h door to door"]],
+      ["Sun 30 Jun 13:30", ["Australia/Adelaide", "484 h door to door"]],
       ["16 d 16 h", ["PT400H"]],
       ["3 d 12 h", ["PT84H"]],
     ],
@@ -111,10 +111,10 @@ const EXPECTED: Record<string, Expected> = {
         "2 d",
       ],
       [
-        "Leg 2: Wed 26 Jun 05:00",
+        "Leg 2: Wed 26 Jun 22:00",
         "1 d 12 h",
-        "Thu 27 Jun 17:00",
-        "Thu 27 Jun 17:00",
+        "Fri 28 Jun 10:00",
+        "Fri 28 Jun 10:00",
         "1 d 12 h",
       ],
     ],
@@ -127,8 +127,8 @@ const EXPECTED: Record<string, Expected> = {
   },
   "no-schedule": {
     results: [
-      '{ eta: "2024-06-28T05:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT42H" }',
-      '{ eta: "2024-06-28T05:00:00-05:00[America/Chicago]", legTimes: [{ arrival: "2024-06-10T06:00:00Z", localArrival: "2024-06-10T14:00:00+08:00[Asia/Shanghai]", dwellAfter: "PT6H", mode: "truck" }, { arrival: "2024-06-24T18:00:00Z", localArrival: "2024-06-24T11:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT36H", mode: "ship" }, { arrival: "2024-06-28T10:00:00Z", localArrival: "2024-06-28T05:00:00-05:00[America/Chicago]", dwellAfter: "PT0S", mode: "rail" }] }',
+      '{ eta: "2024-06-28T19:30:00+09:30[Australia/Adelaide]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT42H" }',
+      '{ eta: "2024-06-28T19:30:00+09:30[Australia/Adelaide]", legTimes: [{ arrival: "2024-06-10T06:00:00Z", localArrival: "2024-06-10T14:00:00+08:00[Asia/Shanghai]", dwellAfter: "PT6H", mode: "truck" }, { arrival: "2024-06-24T18:00:00Z", localArrival: "2024-06-25T04:00:00+10:00[Australia/Sydney]", dwellAfter: "PT36H", mode: "ship" }, { arrival: "2024-06-28T10:00:00Z", localArrival: "2024-06-28T19:30:00+09:30[Australia/Adelaide]", dwellAfter: "PT0S", mode: "rail" }] }',
       '"PT6H"',
       '"PT6H"',
       '"PT0S"',
@@ -139,7 +139,7 @@ const EXPECTED: Record<string, Expected> = {
     ],
     calls: CALLS3,
     plates: [
-      ["Fri 28 Jun 05:00", ["America/Chicago", "442 h door to door"]],
+      ["Fri 28 Jun 19:30", ["Australia/Adelaide", "442 h door to door"]],
       ["16 d 16 h", ["PT400H"]],
       ["1 d 18 h", ["PT42H"]],
     ],
@@ -152,10 +152,10 @@ const EXPECTED: Record<string, Expected> = {
         "6 h",
       ],
       [
-        "Leg 2: Mon 24 Jun 11:00",
+        "Leg 2: Tue 25 Jun 04:00",
         "1 d 12 h",
-        "Tue 25 Jun 23:00",
-        "Tue 25 Jun 23:00",
+        "Wed 26 Jun 16:00",
+        "Wed 26 Jun 16:00",
         "1 d 12 h",
       ],
     ],
@@ -178,8 +178,8 @@ const EXPECTED: Record<string, Expected> = {
   },
   "across-a-clock-change": {
     results: [
-      '{ eta: "2024-03-10T12:00:00-04:00[America/New_York]", totalLegs: 2, totalTransit: "PT13H", totalDwell: "PT2H" }',
-      '{ eta: "2024-03-10T12:00:00-04:00[America/New_York]", legTimes: [{ arrival: "2024-03-10T11:00:00Z", localArrival: "2024-03-10T07:00:00-04:00[America/New_York]", dwellAfter: "PT2H", mode: "rail" }, { arrival: "2024-03-10T16:00:00Z", localArrival: "2024-03-10T12:00:00-04:00[America/New_York]", dwellAfter: "PT0S", mode: "truck" }] }',
+      '{ eta: "2024-03-31T12:00:00+01:00[Europe/London]", totalLegs: 2, totalTransit: "PT13H", totalDwell: "PT2H" }',
+      '{ eta: "2024-03-31T12:00:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-03-31T06:00:00Z", localArrival: "2024-03-31T07:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "rail" }, { arrival: "2024-03-31T11:00:00Z", localArrival: "2024-03-31T12:00:00+01:00[Europe/London]", dwellAfter: "PT0S", mode: "truck" }] }',
       '"PT2H"',
       '"PT2H"',
       '"PT0S"',
@@ -187,16 +187,16 @@ const EXPECTED: Record<string, Expected> = {
     ],
     calls: ["multimodalETA", "scheduleDelivery", ...Array(4).fill(DIFFS)],
     plates: [
-      ["Sun 10 Mar 12:00", ["America/New_York", "15 h door to door"]],
+      ["Sun 31 Mar 12:00", ["Europe/London", "15 h door to door"]],
       ["13 h", ["PT13H"]],
       ["2 h", ["PT2H"]],
     ],
     rows: [
       [
-        "Leg 1: Sun 10 Mar 07:00",
+        "Leg 1: Sun 31 Mar 07:00",
         "2 h",
-        "Sun 10 Mar 09:00",
-        "Sun 10 Mar 09:00",
+        "Sun 31 Mar 09:00",
+        "Sun 31 Mar 09:00",
         "2 h",
       ],
     ],
@@ -542,7 +542,7 @@ describe("the form", () => {
     expect(call).not.toContain('dwellAfter: ""');
     expect(call).not.toContain('departure: ""');
     expect(call).toContain(
-      '{ duration: "PT52H", timeZone: "America/Chicago", mode: "rail" }',
+      '{ duration: "PT52H", timeZone: "Australia/Adelaide", mode: "rail" }',
     );
   });
 
@@ -792,7 +792,7 @@ describe("on-screen words", () => {
   it("states the split in one hidden sentence", async () => {
     const { root } = await mount();
     expect(text(root, "summary")).toBe(
-      "Moving 16 d 16 h and waiting 3 d 12 h. ETA Sat 29 Jun 23:00 in America/Chicago, 484 h door to door.",
+      "Moving 16 d 16 h and waiting 3 d 12 h. ETA Sun 30 Jun 13:30 in Australia/Adelaide, 484 h door to door.",
     );
     expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
     expect(q(root, "summary").classList.contains("gmt-ledger-sr")).toBe(true);

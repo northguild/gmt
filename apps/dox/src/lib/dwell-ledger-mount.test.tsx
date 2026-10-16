@@ -54,13 +54,13 @@ const REQUIRED_ROLES = [
 /** The `dwellTime` JSDoc examples the presets draw, verbatim. */
 const EXPECTED: Record<string, string[]> = {
   "two-hours-two-days": [
-    '{ duration: "PT2H",\n  enter: "2024-06-15T23:00:00-04:00[America/New_York]",\n  exit: "2024-06-16T01:00:00-04:00[America/New_York]",\n  calendarDays: 2 }',
+    '{ duration: "PT2H",\n  enter: "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",\n  exit: "2024-06-16T01:00:00+02:00[Africa/Johannesburg]",\n  calendarDays: 2 }',
   ],
   "exit-at-midnight": [
-    '{ duration: "PT6H",\n  enter: "2024-06-15T18:00:00-04:00[America/New_York]",\n  exit: "2024-06-16T00:00:00-04:00[America/New_York]",\n  calendarDays: 1 }',
+    '{ duration: "PT6H",\n  enter: "2024-06-15T18:00:00+09:00[Asia/Tokyo]",\n  exit: "2024-06-16T00:00:00+09:00[Asia/Tokyo]",\n  calendarDays: 1 }',
   ],
   "spring-forward": [
-    '{ duration: "PT7H",\n  enter: "2024-03-10T00:00:00-05:00[America/New_York]",\n  exit: "2024-03-10T08:00:00-04:00[America/New_York]",\n  calendarDays: 1 }',
+    '{ duration: "PT7H",\n  enter: "2024-03-31T00:00:00+00:00[Europe/London]",\n  exit: "2024-03-31T08:00:00+01:00[Europe/London]",\n  calendarDays: 1 }',
   ],
   "london-vs-amsterdam": [
     '{ duration: "PT2H30M",\n  enter: "2024-06-15T23:30:00+01:00[Europe/London]",\n  exit: "2024-06-16T02:00:00+01:00[Europe/London]",\n  calendarDays: 2 }',
@@ -198,14 +198,14 @@ describe("mountDwellLedger", () => {
       "2024-06-16",
     ]);
     expect(q(root, "summary").textContent).toBe(
-      "PT2H elapsed · 2 local days in America/New_York",
+      "PT2H elapsed · 2 local days in Africa/Johannesburg",
     );
     expect(q(root, "dwell-output").classList).toContain("gmt-playground-live");
   });
 
   it("drops to one day when the exit is typed as local midnight", async () => {
     const { root } = await mount();
-    type(root, "exit", "2024-06-16T00:00:00-04:00[America/New_York]");
+    type(root, "exit", "2024-06-16T00:00:00+02:00[Africa/Johannesburg]");
     expect(touchedDates(root, "cells-dwell")).toEqual(["2024-06-15"]);
     expect(q(root, "dwell-output").textContent).toContain("calendarDays: 1 }");
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
@@ -215,7 +215,7 @@ describe("mountDwellLedger", () => {
     const { root } = await mount();
     choosePreset(root, "spring-forward");
     const cell = q(root, "cells-dwell").querySelector<HTMLElement>(
-      '[data-date="2024-03-10"]',
+      '[data-date="2024-03-31"]',
     )!;
     expect(cell.dataset.hours).toBe("23");
     expect(cell.dataset.state).toBe("lit");
@@ -283,7 +283,7 @@ describe("mountDwellLedger", () => {
     );
     const after = q<HTMLInputElement>(root, "exit").value;
     expect(after).not.toBe(before);
-    expect(after).toMatch(/\[America\/New_York\]$/);
+    expect(after).toMatch(/\[Africa\/Johannesburg\]$/);
   });
 
   it("keeps the entry from passing the exit", async () => {
@@ -322,11 +322,11 @@ describe("mountDwellLedger", () => {
       );
     key("ArrowRight");
     expect(q<HTMLInputElement>(root, "exit").value).toBe(
-      "2024-06-16T01:15:00-04:00[America/New_York]",
+      "2024-06-16T01:15:00+02:00[Africa/Johannesburg]",
     );
     key("ArrowLeft", true);
     expect(q<HTMLInputElement>(root, "exit").value).toBe(
-      "2024-06-16T00:15:00-04:00[America/New_York]",
+      "2024-06-16T00:15:00+02:00[Africa/Johannesburg]",
     );
     key("Home");
     // The exit cannot pass the entry.
@@ -366,7 +366,7 @@ describe("mountDwellLedger", () => {
     expect(lines("hero-elapsed")).toEqual(["PT2H"]);
     expect(value("hero-days")).toBe("2");
     // The second line is always there; it is blank without a second zone.
-    expect(lines("hero-days")).toEqual(["in America/New_York", ""]);
+    expect(lines("hero-days")).toEqual(["in Africa/Johannesburg", ""]);
     choosePreset(root, "london-vs-amsterdam");
     expect(value("hero-elapsed")).toBe("2 h 30 min");
     expect(lines("hero-days")).toEqual([
@@ -383,7 +383,7 @@ describe("mountDwellLedger", () => {
     const { root } = await mount();
     choosePreset(root, "spring-forward");
     const odd = q(root, "cells-dwell").querySelector<HTMLElement>(
-      '[data-date="2024-03-10"] .gmt-ledger-odd',
+      '[data-date="2024-03-31"] .gmt-ledger-odd',
     )!;
     expect(odd.textContent).toBe("23 h");
     expect(odd.dataset.dst).toBe("short");
@@ -440,10 +440,10 @@ describe("mountDwellLedger", () => {
     const { root } = await mount({
       entry: "2024-06-15T23:00:00",
       exit: "2024-06-16T01:00:00",
-      zone: "America/New_York",
+      zone: "Africa/Johannesburg",
     });
     expect(q<HTMLInputElement>(root, "entry").value).toBe(
-      "2024-06-15T23:00:00-04:00[America/New_York]",
+      "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
     );
     expect(q(root, "dwell-output").textContent).toBe(
       EXPECTED["two-hours-two-days"]![0],
@@ -457,9 +457,9 @@ describe("mountDwellLedger", () => {
   it("round-trips its state as a permalink, omitting empty zones", async () => {
     const { root, handle } = await mount();
     expect(handle.getPermalinkState?.()).toEqual({
-      entry: "2024-06-15T23:00:00-04:00[America/New_York]",
-      exit: "2024-06-16T01:00:00-04:00[America/New_York]",
-      zone: "America/New_York",
+      entry: "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
+      exit: "2024-06-16T01:00:00+02:00[Africa/Johannesburg]",
+      zone: "Africa/Johannesburg",
     });
     choosePreset(root, "no-zone");
     expect(handle.getPermalinkState?.()).toEqual({

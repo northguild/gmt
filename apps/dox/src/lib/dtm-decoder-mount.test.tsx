@@ -364,16 +364,16 @@ describe("every preset, against the real library", () => {
 describe("the strip", () => {
   it("reads 202406151430 in the four example zones", async () => {
     const { root } = await mount();
-    expect(text(root, "instant-1")).toBe("2024-06-15T18:30:00Z");
-    expect(text(root, "offset-1")).toBe("-04:00");
-    expect(text(root, "as205-1")).toBe("202406151430-0400");
+    expect(text(root, "instant-1")).toBe("2024-06-15T12:30:00Z");
+    expect(text(root, "offset-1")).toBe("+02:00");
+    expect(text(root, "as205-1")).toBe("202406151430+0200");
     expect(text(root, "instant-2")).toBe("2024-06-15T12:30:00Z");
     expect(text(root, "instant-3")).toBe("2024-06-15T06:30:00Z");
-    expect(text(root, "instant-4")).toBe("2024-06-15T21:30:00Z");
-    expect(text(root, "gap")).toContain("Widest gap: 15 h");
+    expect(text(root, "instant-4")).toBe("2024-06-15T04:30:00Z");
+    expect(text(root, "gap")).toContain("Widest gap: 8 h");
     expect(q(root, "timeline").dataset["state"]).toBe("marks");
     expect(q(root, "copy-resolve").dataset["copyText"]).toBe(
-      'resolveLocal("2024-06-15T14:30:00", "America/New_York", { disambiguation: "reject" })',
+      'resolveLocal("2024-06-15T14:30:00", "Africa/Johannesburg", { disambiguation: "reject" })',
     );
   });
 
