@@ -2,6 +2,7 @@
 name: dox-tester
 description: Verifies completed Dox (apps/dox) work against its definition of done — runs each line literally and reports pass/fail, plus the epic-wide gates (monorepo green, gmt matrix unperturbed, generator spot-check, keyboard-only pass, contrast, visual gates, chat grounding and citation integrity). Reports gaps; does not fix them. Not for auditing packages/gmt Vitest coverage — that is `tester`.
 model: sonnet
+disallowedTools: Agent
 ---
 
 # Dox Tester

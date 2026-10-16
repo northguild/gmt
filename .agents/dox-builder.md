@@ -2,6 +2,7 @@
 name: dox-builder
 description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by dox-architect with an execution spec naming the context/dox/built.md sections that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
 model: sonnet
+disallowedTools: Agent
 ---
 
 # Dox Builder

@@ -1,100 +1,109 @@
 # optimize-agent-context — rules & thresholds
 
-This file is the single source of truth for the budgets, extraction thresholds, and report
-format used by `scripts/optimize.py`. Tune values here, not in the script or SKILL.md.
+Single source of truth for the budgets, lists and report format used by `scripts/optimize.py`
+(constants at its top, and in `scripts/checks_personas.py` for the persona ones). Tune values
+here and in those constants together.
 
-## Entry file size budget
+## Size budgets
 
-- `ENTRY_SIZE_BUDGET = 4000` — total characters in an entry file (`AGENTS.md`, `CLAUDE.md`).
-  Over budget → warning to move detail into `context/`.
-- Rationale: entry files are read on (nearly) every task. Keep them a routing table plus a
-  short quick-reference — bulk detail belongs in scoped `context/*.md` files loaded on demand
-  (progressive disclosure).
+| Constant | Value | Applies to |
+| --- | --- | --- |
+| `ENTRY_SIZE_BUDGET` | 4000 chars | `AGENTS.md`, `CLAUDE.md` |
+| `ENTRY_LINE_BUDGET` | 150 lines | entry files |
+| `CONTEXT_FILE_BUDGET` | 15000 chars | each `context/**/*.md` |
+| `CONTEXT_LINE_BUDGET` | 200 lines | each `context/**/*.md` |
+| `PERSONA_LINE_BUDGET` | 200 lines | each persona in `.agents/*.md` |
+| `SECTION_EXTRACT_CHARS` | 600 chars | a `## ` section body in an entry file |
+| `CONTEXT_SIMILARITY` | 0.80 | pairwise ratio over non-blank lines |
 
-## Progressive disclosure — entry file sections
+Over a char or line budget is a warning to move detail into scoped files. Entry files are read
+on nearly every task, so keep them a routing table plus a short quick reference. The same
+200-line rule holds for Python and Markdown files in a skill; split instead of growing.
 
-- `SECTION_EXTRACT_CHARS = 600` — any `## ` section in an entry file whose body exceeds this
-  many characters is an extraction candidate. Suggested target: `context/<slug>.md`, with the
-  section replaced by a one-line link in a routing table, e.g.:
-  `| [context/foo.md](./context/foo.md) | When you need … |`
+## Context checks
 
-## Context directory checks
+- **Recursion**: all of `context/` is scanned, including `context/domination/**` and
+  `context/dox/**`.
+- **Archive exclusion** (`ARCHIVE_DIR_NAME = "archive"`): anything under `context/archive/` is
+  skipped for orphan, budget, line and duplicate checks.
+- **Orphans**: Markdown links are followed transitively from the entry files (`AGENTS.md`,
+  `CLAUDE.md`) and from every `.agents/*.md`. A context file not reached is an orphan. Links
+  resolve relative to the file that holds them; `#anchors` and `?query` are dropped first.
+- **Broken links**: any relative `.md` link, in an entry file, persona or context file, whose
+  target is missing. `http(s):`, `mailto:`, anchor-only and absolute-path links are ignored, as
+  is anything inside code fences or inline code.
+- **Near-duplicates**: pairs at or above `CONTEXT_SIMILARITY` are merge candidates.
 
-- **Orphans**: any `context/*.md` file not linked from any entry file is dead weight — either
-  link it (add a routing-table row) or delete it if it's stale. An orphaned file with real
-  content (e.g. a large undocumented roadmap or spec) is the highest-priority finding: it's
-  paying storage/maintenance cost with zero chance of ever being loaded via the documented
-  discovery path.
-- **Broken links**: any entry-file link pointing at a `context/*.md` (or other `.md`) file that
-  doesn't exist. Fix the path or remove the row.
-- `CONTEXT_FILE_BUDGET = 15000` — total characters in a single `context/*.md` file. Over budget
-  → warning to split into smaller, more narrowly scoped files (e.g. split a giant
-  `standards.md` into `coding-standards.md` / `testing-standards/index.md`, as this repo already
-  does).
-- `CONTEXT_SIMILARITY = 0.80` — pairwise `SequenceMatcher` ratio between two context files' full
-  content at or above this is reported as "near-duplicate context files" (candidates to merge
-  — two files saying almost the same thing is wasted context budget and a drift risk when only
-  one gets updated).
+## Persona audit (`.agents/*.md`)
+
+A persona is a top-level `.md` in `.agents/` whose YAML frontmatter has `name`.
+
+- Line budget: `PERSONA_LINE_BUDGET`.
+- `model:` must be present and not `inherit` (inherit runs on the caller's model, usually the
+  most expensive).
+- `model: opus` or `fable` is allowed only for names in `OPUS_ALLOWED`:
+  `[architect, dox-architect, researcher, gmt-reviewer]` (planners, the researcher and the
+  final standards reviewer). Every other persona stays on Sonnet or lower.
+- `disallowedTools` must list `Agent`; nested spawns are banned. Comma lists and `[a, b]`
+  lists both parse.
+
+## Sync checks
+
+- Every persona needs a symlink `.claude/agents/<name>.md` that resolves to it. Every directory
+  in `.agents/skills/` needs a symlink `.claude/skills/<dir>` that resolves to it. Reported as
+  `missing`, `wrong_target` (not a symlink, or points elsewhere), `dangling` (target gone) and
+  `extra` (no matching source).
+- `kilo.jsonc` is JSONC: `//` and `/* */` comments and trailing commas are stripped before
+  parsing. Reported: personas missing from `agent` (`missing_personas`) and entries whose
+  `{file:...}` prompt path does not exist (`bad_prompts`). Absent file: `{"exists": false}`.
+- `KILO_EXEMPT` (in `checks_sync.py`) = `{Explore}`: personas that override a Claude Code built-in
+  agent. Kilo ships its own, so they need no `kilo.jsonc` entry.
 
 ## What this skill does NOT check
 
-- It does not parse or validate skill files (`.agents/skills/*/SKILL.md`) — that's
-  `skill-optimizer`'s job. Entry files and `context/` are a different layer (project-wide
-  agent instructions vs. reusable per-task skills).
-- It does not judge content quality/correctness — only size, linkage, and duplication.
+- Skill files (`.agents/skills/*/SKILL.md`): that is `skill-optimizer`'s job.
+- Content quality or correctness; only size, linkage, duplication, model choice and sync.
 
-## Report format (JSON)
+## Report format (JSON, abridged)
 
 ```json
 {
-  "entry_files": [
-    {
-      "file": "/abs/path/AGENTS.md",
-      "chars": 2414,
-      "over_budget": false,
-      "section_candidates": [
-        {
-          "section": "Core Rules",
-          "chars": 900,
-          "suggest": "context/core-rules.md"
-        }
-      ],
-      "warnings": []
-    }
-  ],
-  "context": {
-    "dir": "/abs/path/context",
-    "exists": true,
-    "files": [
-      {
-        "file": "/abs/path/context/roadmap.md",
-        "chars": 71576,
-        "over_budget": true,
-        "linked_from": [],
-        "warnings": [
-          "71576 chars (budget 15000); split into smaller scoped files"
-        ]
-      }
-    ],
-    "orphans": ["/abs/path/context/roadmap.md"],
-    "near_duplicates": []
-  }
+  "entry_files": [{"file": "...", "chars": 2414, "lines": 87, "over_budget": false,
+                   "over_line_budget": false, "section_candidates": [], "warnings": []}],
+  "context": {"dir": "...", "exists": true,
+              "files": [{"file": "...", "chars": 900, "lines": 40, "over_budget": false,
+                         "over_line_budget": false, "linked_from": ["AGENTS.md"], "warnings": []}],
+              "orphans": [], "broken_links": [{"file": "...", "link": "./x.md"}],
+              "near_duplicates": []},
+  "personas": [{"file": "...", "name": "tester", "lines": 90, "model": "sonnet",
+                "over_line_budget": false, "warnings": []}],
+  "sync": {"agents": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
+           "skills": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
+           "kilo": {"exists": true, "missing_personas": [], "bad_prompts": []}},
+  "summary": {"orphans": 0, "broken_links": 0, "near_duplicates": 0, "over_budget_files": 0,
+              "persona_warnings": 0, "symlink_problems": 0, "kilo_problems": 0}
 }
 ```
 
-Exit code is always 0 on a successful scan (advisory). Non-zero only on a fatal argument error
-(path not a directory, or no entry file found).
+Exit code is 0 on a successful scan (advisory). Non-zero only on a fatal argument error (path
+not a directory, or no entry file found).
+
+## Usage report (`scripts/usage.py`)
+
+Args: `--days` (7), `--project-glob` (`*`), `--root` (`~/.claude/projects`), `--top` (15),
+`--json`. Walks `<root>/<glob>/**/*.jsonl` modified within the window. Files under
+`subagents/` take `agentType` and `spawnDepth` from the sibling `agent-<id>.meta.json`; all
+others are `MAIN`, depth 0. Requests are de-duplicated by `message.id`. `BIG_CONTEXT = 150000`.
+Output tokens are never reported (logged mid-stream, unreliable).
 
 ## Fixing findings
 
-This skill never edits files. Typical fixes, applied by the human (or the agent, on request):
+Applied by the human (or the agent, on request):
 
-- **Orphan context file**: add a row to the routing table in every entry file (`AGENTS.md`,
-  `CLAUDE.md`), or delete the file if it's stale/superseded.
-- **Over-budget entry file / oversized section**: extract the section body into
-  `context/<slug>.md` and replace it with a one-line link, same pattern as `## Core Rules`
-  already does for this repo's own detail files.
-- **Over-budget context file**: split along its natural sub-topics into two or more files, and
-  update the routing table (and any other entry-file links) to list all resulting files.
-- **Near-duplicate context files**: merge into one file, or clarify scope so each file covers a
-  genuinely distinct concern, and update any links that pointed at the file being removed.
+- **Orphan**: link it from a parent file or an entry-file routing row, or delete or archive it.
+- **Over-budget entry file or section**: extract into `context/<slug>.md` and leave a link.
+- **Over-budget context or persona file**: split along sub-topics and update the links.
+- **Near-duplicates**: merge, or clarify scope so each file has a distinct concern.
+- **Persona model**: set an explicit model; add `Agent` to `disallowedTools`.
+- **Sync drift**: create the missing symlink (`ln -s`), or remove the dangling or extra one;
+  add the persona to `kilo.jsonc` or fix its `{file:...}` path.

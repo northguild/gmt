@@ -27,9 +27,10 @@ Scoped documentation — load only what the task requires. The index lives in on
 ## Agents
 
 The personas in `.agents/*.md` are symlinked into `.claude/agents/` (Claude Code) and
-registered in `kilo.jsonc` (Kilo). Library pipeline: `master` → `driver` → `architect` /
-`researcher` / `tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox site: `dox-architect` →
-`dox-builder` / `dox-tester`.
+registered in `kilo.jsonc` (Kilo). The main session orchestrates with the `/pipeline` skill and
+spawns each specialist directly; no specialist spawns another. Library: `architect` → `researcher` /
+`tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox: `dox-architect` → `dox-builder` /
+`dox-tester`. Planners (`architect`, `dox-architect`), `researcher` and `gmt-reviewer` run on Opus; every other agent on Sonnet.
 
 ## Available Skills
 
@@ -51,6 +52,14 @@ Skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Run t
 | `/prototype`       | Throwaway prototype to answer a design question                             |
 | `/handoff`         | Write a handoff note for the next session                                   |
 | `/grill-with-docs` | Interview-style design review that records decisions as docs                |
+| `/plan-story`      | Plans a story from the branch name or an id: library spec, then Dox tools    |
+| `/grilling`        | Design-tree interview that stress-tests a plan; `/plan-story` runs it          |
+| `/grill-me`        | Owner-only shortcut that runs `/grilling`                                    |
+| `/pipeline`        | Classifies a library or Dox request and runs the specialists in order       |
+| `/agent-optimizer` | Audits AGENTS.md, context/, personas and symlinks; reports token usage      |
+| `/skill-optimizer` | Audits skills for size, progressive disclosure and trigger collisions       |
+| `/caveman`         | Terse reply mode                                                            |
+| `/astro`           | Astro reference for `apps/dox`                                              |
 
 **`/code-review` name collision.** Claude Code ships a built-in `/code-review`. If the
 built-in wins, load the GMT checklist directly:

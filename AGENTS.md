@@ -74,6 +74,12 @@ These are the non-negotiables. Full detail is in the context files above.
 
 13. **Plain English for anything a person reads.** Commit messages, changesets, PR titles, descriptions and review comments, issues and comments on upstream repos, handoff notes, and replies to the user all follow ISO 24495-1:2023 — the reader can find what they need, understand it first time, and act on it. Plain governs how it is said, not how much: depth, numbers and precise domain terms stay. The [`plain-english` skill](./.agents/skills/plain-english/SKILL.md) carries the rules.
 
+## Sessions and Agents
+
+- **One story per session.** `/clear` between stories. Near ~200K tokens, write a `/handoff` note and start fresh; the project settings auto-compact at 200K.
+- **The main session orchestrates** with the [`pipeline` skill](./.agents/skills/pipeline/SKILL.md). Specialists never spawn agents. Planners, `researcher` and `gmt-reviewer` run on Opus, workers on Sonnet.
+- **Read in excerpts.** Pass workers file paths and section names, not pasted content; keep test output to `--reporter=dot | tail`.
+
 ## Python in Skills
 
 All Python used by skills shares one root-level setup — `pyproject.toml` / `uv.lock` / `.venv` at the repo root. Skills under `.agents/skills/` do not each carry their own Python env; scripts live in the skill's `scripts/` directory and run against the shared root venv (`uv run`).

@@ -1,7 +1,9 @@
 ---
 name: architect
 description: Plans and designs new @northguild/gmt library work — expands a story or request into an implementation-ready spec (signatures, file locations, Temporal calls, sentinels, edge cases, locale and zone matrices). Checks the epic tracker's Blocked by column first. Does not write implementation code. For apps/dox use dox-architect.
-model: inherit
+model: opus
+effort: high
+disallowedTools: Agent
 ---
 
 # Architect
@@ -26,7 +28,7 @@ Planning and design. Break user requests into concrete deliverables, expand skel
 
 ## Delegation
 
-You do not delegate. Return the finished plan to whoever invoked you — `driver` in Kilo (`kilo.jsonc` denies `architect` the `task` tool), or the main session in Claude Code — and it executes the plan. In single-model chat, present the plan and then switch into the [`driver`](./driver.md) role to execute it.
+You do not delegate. Return the finished plan to whoever invoked you — the main session, which runs the [pipeline](./skills/pipeline/SKILL.md) — and it executes the plan. In single-model chat, present the plan and then run the [pipeline inline](./skills/pipeline/references/inline-mode.md).
 
 ## Process
 
@@ -59,7 +61,9 @@ You do not delegate. Return the finished plan to whoever invoked you — `driver
 
 ## Output
 
-A plan document that `driver` can execute directly. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test.
+A plan the main session can hand straight to `tdd-dev`. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test.
+
+**Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md`, 150 lines or fewer: scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
 
 ### The Authority table
 
@@ -81,8 +85,8 @@ nonexistent wall times are never resolved silently.
 
 ## Small-story optimization
 
-For trivial stories (single function, < 50 lines, no new namespace, no locale-awareness), `driver` may skip you entirely when the user provides the spec directly.
+For trivial stories (single function, < 50 lines, no new namespace, no locale-awareness), the main session may skip you entirely when the user provides the spec directly.
 
 ## Blocker escalation
 
-If research reveals a design conflict or ambiguity that blocks planning, report it to the user with context. Do not hand an ambiguous plan to `driver`.
+If research reveals a design conflict or ambiguity that blocks planning, report it to the user with context. Do not hand back an ambiguous plan.

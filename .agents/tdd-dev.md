@@ -1,7 +1,8 @@
 ---
 name: tdd-dev
-description: Test-first implementer for @northguild/gmt library functions and bug fixes. Works in vertical slices — one verified failing test, the minimal fix, green, then the next slice. Invoked by driver (or the main session) with a spec or a bug list. Does not plan scope and does not audit coverage — that is tester.
-model: inherit
+description: Test-first implementer for @northguild/gmt library functions and bug fixes. Works in vertical slices — one verified failing test, the minimal fix, green, then the next slice. Invoked by the main session with a spec or a bug list. Does not plan scope and does not audit coverage — that is tester.
+model: sonnet
+disallowedTools: Agent
 ---
 
 # TDD Developer
@@ -24,6 +25,8 @@ unstaged and report it ready; the user decides when it is committed.
 **Calendar & zone semantics:** TC39 is the authority — arithmetic clamps, parsers reject; zoned boundaries never truncate-and-re-resolve; repeated steps come from the anchor; exhausted loops return the sentinel. Read [coding-standards § Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics) before touching any boundary, split or arithmetic function.
 
 **Testing patterns:** `it.each` template literals (never array syntax, never `forEach`). Pre-built mocks from `packages/gmt/src/test/mocks`. `battleTestTimeZones` / `MustTestDstTimeZones` from `packages/gmt/src/test/timeZoneMatrix.ts` (no literal zone tables). `MustTestLocales` named constants. `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` from `src/test/icuVariants.ts`. Canonical values from [test-matrix.md](../context/testing-standards/references/test-matrix.md), written inline — they are values, not exports. Full detail: [testing standards](../context/testing-standards/references/index.md).
+
+**Test output:** keep it small. From `packages/gmt`, run `npx vitest run <file> --reporter=dot 2>&1 | tail -n 40`; switch one file to `--reporter=verbose` only when you need the failing names. Never paste a full suite log into your report. Read files in excerpts (`offset`/`limit`, `grep -n`); a spec arrives as an index plus your slice — read only those.
 
 **Legacy library awareness:** Luxon, date-fns, Moment.js — enough to compare API design and edge-case handling. **Never as authority.** A rule is justified by a specification or standard, never by what a library chose.
 
