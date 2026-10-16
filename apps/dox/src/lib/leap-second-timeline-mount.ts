@@ -23,6 +23,7 @@ import {
   CUSTOM_PRESET_ID,
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
+  TIMELINE_LINKS,
   TIMELINE_PRESETS,
   axisPercent,
   axisTicks,
@@ -40,6 +41,7 @@ import {
   sliderMax,
   sliderPosition,
   summaryText,
+  timelineHandoffs,
   timelinePlates,
   type LeapSecondTimelineArgs,
   type TimelineRead,
@@ -51,6 +53,7 @@ import type { TimescaleLib } from "./timescale-lib";
 import { loadTimescaleLib } from "./timescale-lib";
 import { CONTINUOUS_UTC_FROM, INTEGER_UTC_FROM } from "./timescale-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { handoffHref } from "./widget-permalink";
 import {
   escapeAttr,
   escapeHtml,
@@ -59,7 +62,9 @@ import {
   renderAside,
   renderWidgetOutput,
   setControlValue,
+  setToolLink,
   syncRange,
+  toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -225,6 +230,7 @@ export function renderLeapSecondTimelineTemplate(
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>3. What the library returns</h4>` +
     GROUPS.map(groupHtml).join("") +
+    toolLinksHtml(TIMELINE_LINKS) +
     `</div>` +
     `</div>` +
     `</div>`
@@ -508,6 +514,10 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
       read.check.reason,
     );
 
+    const handoffs = timelineHandoffs(state, read);
+    setToolLink(q("link-elapsed"), handoffHref(handoffs.elapsed));
+    setToolLink(q("link-clocks"), handoffHref(handoffs.clocks));
+
     const text = summaryText(state, read);
     q("plot")?.setAttribute("aria-label", text);
     const summary = q("summary");
@@ -579,7 +589,7 @@ export const mountLeapSecondTimeline: MountFn<LeapSecondTimelineArgs> = async (
     lib = await loadTimescaleLib();
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

@@ -40,6 +40,7 @@ import {
   firstRefusedWeek,
 } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
+import type { ToolHandoff } from "./widget-permalink";
 
 export { NO_RESULT_TEXT };
 
@@ -426,6 +427,8 @@ export interface RolloverRead {
   at: string | null;
   rows: WrapRow[];
   reported: string | null;
+  /** The week and time of week the counter broadcasts at the check instant. */
+  broadcast: { week: number; timeOfWeekSeconds: number } | null;
   verdict: "right" | "early" | "late" | null;
   /** "the right date", "a date 7168 days early". */
   verdictText: string;
@@ -519,6 +522,7 @@ function blankRead(state: RolloverState): RolloverRead {
       none: true,
     })),
     reported: null,
+    broadcast: null,
     verdict: null,
     verdictText: "",
     wrongFrom: null,
@@ -703,6 +707,10 @@ export function readRollover(
   };
   const verdict = judge(reported);
   read.reported = reported;
+  read.broadcast = {
+    week: truth.week,
+    timeOfWeekSeconds: truth.timeOfWeekSeconds,
+  };
   read.verdict = verdict.kind;
   read.verdictText = verdict.text;
   read.wrongFrom = wrongFrom;
@@ -848,3 +856,43 @@ export function summaryText(read: RolloverRead): string {
 }
 
 export { ROLLOVER_NOW_MODES };
+
+// ---------------------------------------------------------------------------
+// Links to the other tools
+// ---------------------------------------------------------------------------
+
+/** The links row: every era of this reading. */
+export const ROLLOVER_LINKS = [
+  { role: "link-eras", text: "See every era of this reading" },
+] as const;
+
+/**
+ * Where the link goes for `read`, or `null` while there is no reading. The
+ * decoder gets the counter, the week and time of week the counter broadcasts at
+ * the check instant, and the firmware's own form: the build date as
+ * `rolloverNotBefore`, or the fixed era as `rolloverEra`.
+ */
+export function rolloverHandoffs(read: RolloverRead): {
+  eras: ToolHandoff | null;
+} {
+  const { state, broadcast } = read;
+  if (read.status !== "ok" || read.reported === null || broadcast === null) {
+    return { eras: null };
+  }
+  const firmware: Record<string, string> =
+    state.model === "pivot"
+      ? { rolloverNotBefore: state.pivot.trim() }
+      : { rolloverEra: String(wholeNumber(state.era) ?? "") };
+  return {
+    eras: {
+      kind: "gnssweek",
+      args: {
+        mode: "broadcast",
+        counter: state.counter,
+        week: String(broadcast.week),
+        timeOfWeekSeconds: String(broadcast.timeOfWeekSeconds),
+        ...firmware,
+      },
+    },
+  };
+}

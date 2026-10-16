@@ -144,6 +144,12 @@ const MAX_KEYS = 400;
 const LEDGER_DRAWN =
   '[data-role="track"], [data-role="track-dwell"], [data-role="track-compare"], .gmt-ledger-hold > :first-child';
 
+/** What may move inside a GNSS or leap-second tool: the insides of its lanes,
+ *  bars, strip, timeline and rulers, and a hold's live wrapper (`holdHtml`
+ *  writes it first). */
+const GNSS_DRAWN =
+  '[data-role="lanes"], [data-role="bars"], [data-role="strip"], [data-role="plot"], [data-role="rulers"], .gmt-ledger-hold > :first-child';
+
 const TOOLS = [
   {
     slug: "departure-board",
@@ -277,6 +283,51 @@ const TOOLS = [
     // The lanes' day columns and the gate move with the moment by design; the
     // plot is measured, and so is every plate above it.
     drawn: '[data-role="plot"]',
+  },
+  /* The GNSS and leap-second tools (MAR-16). Their frame is `.gmt-gnss-frame`;
+     what moves with the value by design is what they draw: the lanes, the
+     bars, the strip, the timeline and the rulers, and a hold's live wrapper.
+     The Week Decoder has no slider in the built widget, so it has no entry. */
+  {
+    slug: "satellite-clock-converter",
+    root: ".gmt-satellite-clock-converter",
+    presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
+    controls: [{ sel: '[data-role="moment-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+  },
+  {
+    slug: "gnss-rollover-checker",
+    root: ".gmt-gnss-rollover-checker",
+    // The presets that check on a stated date: the slider is live only there.
+    presets: ["navic-built-2020", "navic-fixed-era", "galileo-built-2024"],
+    controls: [{ sel: '[data-role="date-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+  },
+  {
+    slug: "leap-second-timeline",
+    root: ".gmt-leap-second-timeline",
+    presets: ["from-2000", "last-insertion", "after-the-table"],
+    controls: [{ sel: '[data-role="date-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+  },
+  {
+    slug: "elapsed-vs-clock-difference",
+    root: ".gmt-elapsed-vs-clock",
+    presets: ["across-2016", "twenty-four-years", "no-insertions"],
+    controls: [{ sel: '[data-role="end-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
   },
 ];
 

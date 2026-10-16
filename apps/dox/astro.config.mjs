@@ -271,6 +271,12 @@ export default defineConfig({
         "./src/styles/gmt-bl-date-stamp.css", // B/L Date Stamp widget (INT-14)
         "./src/styles/gmt-journey-split.css", // Journey Split widget (INT-14)
         "./src/styles/gmt-edi-widgets.css", // EDI timestamp widgets, shared (INT-15)
+        "./src/styles/gmt-gnss-widgets.css", // GNSS and leap-second widgets, shared (MAR-16)
+        "./src/styles/gmt-gnss-week-decoder.css", // GNSS Week Decoder widget (MAR-16)
+        "./src/styles/gmt-satellite-clock-converter.css", // Satellite Clock Converter widget (MAR-16)
+        "./src/styles/gmt-gnss-rollover-checker.css", // GNSS Rollover Checker widget (MAR-16)
+        "./src/styles/gmt-leap-second-timeline.css", // Leap Second Timeline widget (MAR-16)
+        "./src/styles/gmt-elapsed-vs-clock.css", // Elapsed vs. Clock Difference widget (MAR-16)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

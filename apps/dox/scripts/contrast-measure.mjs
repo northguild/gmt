@@ -89,6 +89,7 @@ const PAGES = [
   },
   { id: "reference-dst", path: "/reference/zoned/get/getDstTransitions/" },
   { id: "tools-index", path: "/tools/" },
+  { id: "industries-maritime", path: "/industries/maritime/" },
   { id: "dox-chat", path: "/dox/" },
   { id: "dox-chat+timetable", path: "/dox/", open: "showTimetableReader" },
   { id: "dox-chat+x12", path: "/dox/", open: "showX12TimeReader" },

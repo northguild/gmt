@@ -35,11 +35,13 @@ import {
 import { loadGnssLib, type GnssLib } from "./gnss-lib";
 import {
   CUSTOM_PRESET_ID,
+  DECODER_LINKS,
   ERA_MODES,
   ERA_MODE_LABELS,
   GNSS_PRESETS,
   MODE_LABELS,
   NO_RESULT_TEXT,
+  decoderHandoffs,
   isSeeded,
   lanesAria,
   matchPreset,
@@ -59,6 +61,7 @@ import { counterSystem } from "./gnss-widgets";
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { handoffHref } from "./widget-permalink";
 import {
   chipToggleHtml,
   escapeAttr,
@@ -67,6 +70,8 @@ import {
   renderAside,
   renderWidgetOutput,
   setControlValue,
+  setToolLink,
+  toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -230,6 +235,7 @@ export function renderGnssWeekDecoderTemplate(
     `<h4>4. What the library returns</h4>` +
     codeFrameHtml("decoder") +
     `<output class="gmt-widget-output" data-role="decoder-output">&nbsp;</output>` +
+    toolLinksHtml(DECODER_LINKS) +
     `</div>` +
     `</div>` +
     `</div>`
@@ -471,6 +477,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
     const summary = q("summary");
     if (summary) summary.textContent = summaryText(read);
+    const handoffs = decoderHandoffs(read);
+    setToolLink(q("link-clocks"), handoffHref(handoffs.clocks));
+    setToolLink(q("link-rollover"), handoffHref(handoffs.rollover));
     const aside = q("reason-aside");
     if (aside) {
       if (read.status === "sentinel") {
@@ -567,7 +576,7 @@ export const mountGnssWeekDecoder: MountFn<GnssWeekDecoderArgs> = async (
     lib = await loadGnssLib();
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

@@ -125,6 +125,22 @@ const PAGES = [
   { slug: "tool-bl-date-stamp", path: "/tools/bl-date-stamp/" },
   { slug: "tool-epcis-event-reader", path: "/tools/epcis-event-reader/" },
   { slug: "tool-journey-split", path: "/tools/journey-split/" },
+  { slug: "tool-gnss-week-decoder", path: "/tools/gnss-week-decoder/" },
+  {
+    slug: "tool-satellite-clock-converter",
+    path: "/tools/satellite-clock-converter/",
+  },
+  { slug: "tool-gnss-rollover-checker", path: "/tools/gnss-rollover-checker/" },
+  { slug: "tool-leap-second-timeline", path: "/tools/leap-second-timeline/" },
+  {
+    slug: "tool-elapsed-vs-clock-difference",
+    path: "/tools/elapsed-vs-clock-difference/",
+  },
+  /* The industry pages the new tools are linked from, and the reference index. */
+  { slug: "industries", path: "/industries/" },
+  { slug: "industries-maritime", path: "/industries/maritime/" },
+  { slug: "industries-transport", path: "/industries/transport/" },
+  { slug: "reference", path: "/reference/" },
   /* Added last, deliberately. Through DOX-C3b this was the page being changed
      on almost every step, so covering it earlier would have meant a gate that
      failed by design and got ignored. It is stable now, and it is the only page

@@ -33,6 +33,7 @@ import {
 } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import { INTEGER_UTC_FROM, insertions, secondAfter } from "./timescale-widgets";
+import type { ToolHandoff } from "./widget-permalink";
 
 export { NO_RESULT_TEXT };
 
@@ -599,4 +600,27 @@ export function summaryText(read: ClockRead): string {
       return `${p.caption} ${p.value}${lines.length === 0 ? "" : `, ${lines.join(", ")}`}`;
     })
     .join(". ");
+}
+
+// ---------------------------------------------------------------------------
+// Links to the other tools
+// ---------------------------------------------------------------------------
+
+/** The links row: the moment as a week, and why the gaps grew. */
+export const CLOCK_LINKS = [
+  { role: "link-weeks", text: "This moment as a week on every counter" },
+  { role: "link-timeline", text: "Why these gaps grew" },
+] as const;
+
+/** Where each link goes for `read`, or `null` while there is no UTC instant. */
+export function clockHandoffs(read: ClockRead): {
+  weeks: ToolHandoff | null;
+  timeline: ToolHandoff | null;
+} {
+  const utc = read.status === "ok" ? read.utc : null;
+  if (utc === null || utc === "") return { weeks: null, timeline: null };
+  return {
+    weeks: { kind: "gnssweek", args: { mode: "utc", utc } },
+    timeline: { kind: "leapline", args: { date: utc } },
+  };
 }

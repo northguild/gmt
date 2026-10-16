@@ -15,7 +15,7 @@
 // ["**/*.md"] }`), verified to work for a cross-package import during this
 // story's spike (see PR notes). Explicit static imports rather than a glob:
 // Wrangler's bundler is esbuild, not Vite, so `import.meta.glob` isn't
-// available, and four fixed files don't need generated-module machinery —
+// available, and a handful of fixed files don't need generated-module machinery —
 // add a new import line here if a consumer-facing skill is added later.
 //
 // Astro's own ambient types declare `*.md` imports as `AstroComponentFactory`
@@ -25,14 +25,22 @@
 // core-rules.ts for the same pattern.
 import gmtArithmetic from "../../../packages/gmt/skills/gmt-arithmetic/SKILL.md";
 import gmtBasics from "../../../packages/gmt/skills/gmt-basics/SKILL.md";
+import gmtGnss from "../../../packages/gmt/skills/gmt-gnss/SKILL.md";
 import gmtIntegration from "../../../packages/gmt/skills/gmt-integration/SKILL.md";
+import gmtIntermodal from "../../../packages/gmt/skills/gmt-intermodal/SKILL.md";
 import gmtTimezone from "../../../packages/gmt/skills/gmt-timezone/SKILL.md";
+import gmtTransport from "../../../packages/gmt/skills/gmt-transport/SKILL.md";
+import gmtWorkforce from "../../../packages/gmt/skills/gmt-workforce/SKILL.md";
 
 export const VOCABULARY_CONTENT: string = [
   gmtBasics,
   gmtArithmetic,
   gmtTimezone,
   gmtIntegration,
+  gmtGnss,
+  gmtTransport,
+  gmtIntermodal,
+  gmtWorkforce,
 ]
   .map((s) => s as unknown as string)
   .join("\n\n---\n\n");

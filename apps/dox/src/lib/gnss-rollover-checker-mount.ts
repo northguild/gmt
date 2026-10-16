@@ -36,6 +36,7 @@ import {
   MAX_VALUE_LENGTH,
   NOW_MODE_LABELS,
   NO_RESULT_TEXT,
+  ROLLOVER_LINKS,
   ROLLOVER_NOW_MODES,
   ROLLOVER_PRESETS,
   dateOfDay,
@@ -48,6 +49,7 @@ import {
   presetState,
   readArgs,
   readRollover,
+  rolloverHandoffs,
   stripAria,
   summaryText,
   windowDays,
@@ -61,6 +63,7 @@ import {
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { handoffHref } from "./widget-permalink";
 import {
   chipToggleHtml,
   escapeAttr,
@@ -70,7 +73,9 @@ import {
   renderAside,
   renderWidgetOutput,
   setControlValue,
+  setToolLink,
   syncRange,
+  toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -279,6 +284,7 @@ export function renderGnssRolloverCheckerTemplate(
     `<h4>4. What the library returns</h4>` +
     codeFrameHtml("rollover") +
     `<output class="gmt-widget-output" data-role="rollover-output">${NBSP}</output>` +
+    toolLinksHtml(ROLLOVER_LINKS) +
     `</div>` +
     `</div>` +
     `</div>`
@@ -517,6 +523,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
     const summary = q("summary");
     if (summary) summary.textContent = summaryText(read);
+    setToolLink(q("link-eras"), handoffHref(rolloverHandoffs(read).eras));
     const aside = q("reason-aside");
     if (aside) {
       if (read.status === "sentinel") {
@@ -626,7 +633,7 @@ export const mountGnssRolloverChecker: MountFn<
     lib = await loadGnssLib();
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

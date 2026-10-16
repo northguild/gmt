@@ -22,11 +22,13 @@ import {
   BEFORE_1972_TEXT,
   CLOCK_REFUSES_TEXT,
   CUSTOM_PRESET_ID,
+  ELAPSED_LINKS,
   ELAPSED_PRESETS,
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
   blankPlates,
   canDrawRulers,
+  elapsedHandoffs,
   elapsedPlates,
   isSeeded,
   matchPreset,
@@ -54,6 +56,7 @@ import type { TimescaleLib } from "./timescale-lib";
 import { loadTimescaleLib } from "./timescale-lib";
 import { INTEGER_UTC_FROM } from "./timescale-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { handoffHref } from "./widget-permalink";
 import {
   escapeAttr,
   escapeHtml,
@@ -62,7 +65,9 @@ import {
   renderAside,
   renderWidgetOutput,
   setControlValue,
+  setToolLink,
   syncRange,
+  toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -231,6 +236,7 @@ export function renderElapsedVsClockTemplate(
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>3. What the library returns</h4>` +
     GROUPS.map(groupHtml).join("") +
+    toolLinksHtml(ELAPSED_LINKS) +
     `</div>` +
     `</div>` +
     `</div>`
@@ -427,6 +433,10 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     );
     drawGroup("count", read.countCalls, read.count !== null, read.countReason);
 
+    const handoffs = elapsedHandoffs(state, read);
+    setToolLink(q("link-timeline"), handoffHref(handoffs.timeline));
+    setToolLink(q("link-clocks"), handoffHref(handoffs.clocks));
+
     const text = summaryText(state, read);
     q("rulers")?.setAttribute("aria-label", text);
     const summary = q("summary");
@@ -491,7 +501,7 @@ export const mountElapsedVsClock: MountFn<ElapsedVsClockArgs> = async (
     lib = await loadTimescaleLib();
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

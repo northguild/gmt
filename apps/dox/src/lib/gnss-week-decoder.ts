@@ -49,6 +49,7 @@ import {
   weeksBelowText,
 } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
+import type { ToolHandoff } from "./widget-permalink";
 
 export { BEFORE_FIRST_WEEK_NOTE, NO_RESULT_TEXT };
 
@@ -1109,4 +1110,49 @@ export function summaryText(read: GnssRead): string {
 /** The slider ends the mount sets: the counter's last week. */
 export function lastWeekOf(lib: GnssLib, counter: GnssWeekCounter): number {
   return pad(firstRefusedWeek(lib, counter) - 1, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Links to the other tools
+// ---------------------------------------------------------------------------
+
+/** The links row: every satellite clock at the moment, and the rollover check. */
+export const DECODER_LINKS = [
+  { role: "link-clocks", text: "Every satellite clock at this moment" },
+  {
+    role: "link-rollover",
+    text: "Is a receiver on this counter affected, and when?",
+  },
+] as const;
+
+/**
+ * Where each link goes for `read`, or `null` while there is nothing to send.
+ *
+ * The clocks link carries the UTC result. The rollover link carries the
+ * counter, the era form the reading used (the pivot for "not before", else the
+ * era the reading falls in, which is the era "rolling" chose) and the UTC
+ * result as the check date. A RINEX reading has no counter, so it sends none.
+ */
+export function decoderHandoffs(read: GnssRead): {
+  clocks: ToolHandoff | null;
+  rollover: ToolHandoff | null;
+} {
+  const utc = read.status === "ok" ? read.utc : null;
+  if (utc === null || utc === "") return { clocks: null, rollover: null };
+  const clocks: ToolHandoff = { kind: "satclock", args: { value: utc } };
+  const { state, counter } = read;
+  const pivot = state.pivot.trim();
+  const era: Record<string, string> | null =
+    state.mode === "broadcast" && state.eraMode === "notBefore"
+      ? { firmwareNotBefore: pivot }
+      : read.carry.era === null
+        ? null
+        : { firmwareEra: read.carry.era };
+  if (state.mode === "rinex" || counter === null || era === null) {
+    return { clocks, rollover: null };
+  }
+  return {
+    clocks,
+    rollover: { kind: "rollover", args: { counter, ...era, date: utc } },
+  };
 }

@@ -29,6 +29,7 @@ import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import {
   CLOCK_KEYS,
+  CLOCK_LINKS,
   CLOCK_PRESETS,
   CUSTOM_PRESET_ID,
   DEFAULT_PRESET,
@@ -37,6 +38,7 @@ import {
   MAX_VALUE_LENGTH,
   NO_RESULT_TEXT,
   barsAria,
+  clockHandoffs,
   isSeeded,
   matchPreset,
   permalinkOf,
@@ -54,6 +56,7 @@ import {
 } from "./satellite-clock-converter";
 import { INTEGER_UTC_FROM } from "./timescale-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { handoffHref } from "./widget-permalink";
 import {
   escapeAttr,
   escapeHtml,
@@ -62,7 +65,9 @@ import {
   renderAside,
   renderWidgetOutput,
   setControlValue,
+  setToolLink,
   syncRange,
+  toolLinksHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -180,6 +185,7 @@ export function renderSatelliteClockConverterTemplate(
     `<h4>4. What the library returns</h4>` +
     codeFrameHtml("clocks") +
     `<output class="gmt-widget-output" data-role="clocks-output">${NBSP}</output>` +
+    toolLinksHtml(CLOCK_LINKS) +
     `</div>` +
     `</div>` +
     `</div>`
@@ -334,6 +340,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
 
     const summary = q("summary");
     if (summary) summary.textContent = summaryText(read);
+    const handoffs = clockHandoffs(read);
+    setToolLink(q("link-weeks"), handoffHref(handoffs.weeks));
+    setToolLink(q("link-timeline"), handoffHref(handoffs.timeline));
     const aside = q("reason-aside");
     if (aside) {
       if (read.status === "sentinel") {
@@ -393,7 +402,7 @@ export const mountSatelliteClockConverter: MountFn<
     lib = await loadGnssLib();
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

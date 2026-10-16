@@ -133,4 +133,13 @@ your `package.json`:
 | `@northguild/gmt` | `gmt-basics` | Current date/time, parse, format, relative time, compare, validate |
 | `@northguild/gmt` | `gmt-arithmetic` | Add/subtract, diff, durations, interval range math |
 | `@northguild/gmt` | `gmt-timezone` | Timezone-aware arithmetic, formatting, DST disambiguation |
-| `@northguild/gmt` | `gmt-integration` | Cache keys, router/query params, lint package selection |
+| `@northguild/gmt` | `gmt-integration` | Cache keys, router/query params, foreign epoch bridges, TAI and leap seconds, lint package selection |
+
+The industry skills are layers on top of those four, not part of Core:
+
+| Package | Slug | Task area |
+| --- | --- | --- |
+| `@northguild/gmt` | `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras |
+| `@northguild/gmt` | `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures |
+| `@northguild/gmt` | `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps |
+| `@northguild/gmt` | `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits |

@@ -22,6 +22,7 @@ import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { runCall, type EdiCall } from "./edi-widgets";
 import type { PlateSpec } from "./ledger-widgets";
+import type { ToolHandoff } from "./widget-permalink";
 import type { TimescaleLib } from "./timescale-lib";
 import {
   CONTINUOUS_UTC_FROM,
@@ -605,4 +606,40 @@ export function offsetRange(read: TimelineRead): { low: number; high: number } {
   );
   if (values.length === 0) return { low: 0, high: 1 };
   return { low: Math.min(...values) - 1, high: Math.max(...values) + 1 };
+}
+
+// ---------------------------------------------------------------------------
+// Links to the other tools
+// ---------------------------------------------------------------------------
+
+/** The links row: count the real seconds, and every clock on the date. */
+export const TIMELINE_LINKS = [
+  {
+    role: "link-elapsed",
+    text: "Count the real seconds between these dates",
+  },
+  { role: "link-clocks", text: "Every clock on this date" },
+] as const;
+
+/**
+ * Where each link goes, or `null` while the library gave no value for what it
+ * would send: the span needs a count, the clocks link needs an offset.
+ */
+export function timelineHandoffs(
+  state: TimelineState,
+  read: TimelineRead,
+): { elapsed: ToolHandoff | null; clocks: ToolHandoff | null } {
+  const from = state.from.trim();
+  const to = state.to.trim();
+  const date = state.date.trim();
+  return {
+    elapsed:
+      read.between.count !== null && from !== "" && to !== ""
+        ? { kind: "elapsed", args: { start: from, end: to } }
+        : null,
+    clocks:
+      read.offset.offset !== null && date !== ""
+        ? { kind: "satclock", args: { value: date } }
+        : null,
+  };
 }

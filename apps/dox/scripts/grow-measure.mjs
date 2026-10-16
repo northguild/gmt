@@ -211,6 +211,38 @@ const PAGES = [
     preset: '[data-role="preset"]',
     drag: null,
   },
+  /* The decoder's drag is `tow-slider`; the built widget has no slider yet, so
+     it is load pass only until it does. */
+  {
+    slug: "gnss-week-decoder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "satellite-clock-converter",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="moment-slider"]',
+  },
+  {
+    slug: "gnss-rollover-checker",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="date-slider"]',
+  },
+  {
+    slug: "leap-second-timeline",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="date-slider"]',
+  },
+  {
+    slug: "elapsed-vs-clock-difference",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="end-slider"]',
+  },
   {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",

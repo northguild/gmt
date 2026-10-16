@@ -360,8 +360,10 @@ export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide section
 export const EXAMPLE_AREAS = [
   { id: "zones", label: "Zones and DST" },
   { id: "intervals", label: "Intervals" },
+  { id: "leapseconds", label: "Leap seconds and TAI" },
   { id: "transport", label: "Transport" },
   { id: "intermodal", label: "Intermodal, billing and EDI" },
+  { id: "gnss", label: "GNSS and maritime" },
 ] as const;
 
 export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -728,6 +730,51 @@ export const CHAT_STARTERS: readonly {
       ],
       minimumConnection: "PT45M",
     },
+  },
+  {
+    text: "A receiver reports Galileo week 1024, 18 seconds in, first era: what UTC time is that?",
+    widget: "showGnssWeekDecoder",
+    area: "gnss",
+    // Galileo's first era is era 0, so the question states its era.
+    args: {
+      mode: "broadcast",
+      counter: "GAL",
+      week: 1024,
+      timeOfWeekSeconds: 18,
+      rolloverEra: "0",
+    },
+  },
+  {
+    text: "What do the GPS, Galileo, BeiDou, QZSS, GLONASS and NavIC clocks read at 2024-01-01T00:00:00Z?",
+    widget: "showSatelliteClockConverter",
+    area: "gnss",
+    args: { value: "2024-01-01T00:00:00Z" },
+  },
+  {
+    text: "A NavIC receiver's firmware was built on 2020-01-01: when does it start reporting wrong dates?",
+    widget: "showGnssRolloverChecker",
+    area: "gnss",
+    // The question gives a build date, not an era, and names no date to check.
+    args: {
+      counter: "IRN-LNAV",
+      firmwareNotBefore: "2020-01-01T00:00:00Z",
+    },
+  },
+  {
+    text: "How many leap seconds were inserted from 2000 to 2024, and what was TAI - UTC in 2000?",
+    widget: "showLeapSecondTimeline",
+    area: "leapseconds",
+    args: {
+      date: "2000-01-01T00:00:00Z",
+      from: "2000-01-01T00:00:00Z",
+      to: "2024-01-01T00:00:00Z",
+    },
+  },
+  {
+    text: "How many seconds really passed from 2016-12-31T23:59:59Z to 2017-01-01T00:00:01Z?",
+    widget: "showElapsedVsClock",
+    area: "leapseconds",
+    args: { start: "2016-12-31T23:59:59Z", end: "2017-01-01T00:00:01Z" },
   },
 ];
 

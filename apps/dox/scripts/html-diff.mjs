@@ -118,6 +118,26 @@ const PAGES = [
     path: "tools/journey-split",
     widget: "gmt-journey-split gmt-widget",
   },
+  {
+    path: "tools/gnss-week-decoder",
+    widget: "gmt-gnss-week-decoder gmt-widget",
+  },
+  {
+    path: "tools/satellite-clock-converter",
+    widget: "gmt-satellite-clock-converter gmt-widget",
+  },
+  {
+    path: "tools/gnss-rollover-checker",
+    widget: "gmt-gnss-rollover-checker gmt-widget",
+  },
+  {
+    path: "tools/leap-second-timeline",
+    widget: "gmt-leap-second-timeline gmt-widget",
+  },
+  {
+    path: "tools/elapsed-vs-clock-difference",
+    widget: "gmt-elapsed-vs-clock gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

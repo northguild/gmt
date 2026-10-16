@@ -109,6 +109,19 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   elapsed: "/tools/elapsed-vs-clock-difference/",
 };
 
+/** A tool to open and the permalink keys that seed it, for a cross-link. */
+export interface ToolHandoff {
+  kind: WidgetKind;
+  args: Record<string, string>;
+}
+
+/** The permalink a handoff opens, or `null` while the link has nothing to send. */
+export function handoffHref(handoff: ToolHandoff | null): string | null {
+  return handoff === null
+    ? null
+    : encodeWidgetPermalink(handoff.kind, handoff.args);
+}
+
 export function encodeWidgetPermalink(
   kind: WidgetKind,
   args: Record<string, unknown>,

@@ -375,3 +375,42 @@ export function chipToggleHtml(o: {
     : "gmt-chip-toggle";
   return `<label class="${cls}"><input type="${o.type}"${name} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
 }
+
+/** One link to another tool: its `data-role` and its text. */
+export interface ToolLink {
+  role: string;
+  text: string;
+}
+
+/**
+ * A row of links to other tools (`.gmt-widget-controls`). Each starts disabled,
+ * as `aria-disabled` with no `href`, and `setToolLink` turns it on once the
+ * widget has a result to send, so the row holds still whatever the state.
+ */
+export function toolLinksHtml(links: readonly ToolLink[]): string {
+  return (
+    `<div class="gmt-widget-controls" data-role="tool-links">` +
+    links
+      .map(
+        (l) =>
+          `<a class="gmt-button gmt-button--pad" data-role="${escapeAttr(l.role)}" aria-disabled="true">${escapeHtml(l.text)}</a>`,
+      )
+      .join("") +
+    `</div>`
+  );
+}
+
+/** Point a tool link at `href`, or disable it (`null`: no `href`, `aria-disabled`). */
+export function setToolLink(
+  link: HTMLElement | null,
+  href: string | null,
+): void {
+  if (!link) return;
+  if (href === null) {
+    link.removeAttribute("href");
+    link.setAttribute("aria-disabled", "true");
+  } else {
+    link.setAttribute("href", href);
+    link.removeAttribute("aria-disabled");
+  }
+}

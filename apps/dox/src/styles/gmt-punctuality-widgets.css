@@ -54,7 +54,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock)
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock)
   .gmt-punct-hatch {
   background-image: repeating-linear-gradient(
     45deg,

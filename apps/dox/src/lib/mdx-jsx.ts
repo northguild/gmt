@@ -375,6 +375,11 @@ export function renderMdxComponents(body: string): string {
     "Globe",
     "MultiZoneScrubber",
     "X12TimeReader",
+    "GnssWeekDecoder",
+    "SatelliteClockConverter",
+    "GnssRolloverChecker",
+    "LeapSecondTimeline",
+    "ElapsedVsClock",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

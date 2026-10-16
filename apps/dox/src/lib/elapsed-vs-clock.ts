@@ -17,6 +17,7 @@
 
 import { runCall, type EdiCall } from "./edi-widgets";
 import type { PlateSpec } from "./ledger-widgets";
+import type { ToolHandoff } from "./widget-permalink";
 import {
   BEFORE_1972_TEXT,
   NOT_INSERTED_TEXT,
@@ -380,4 +381,39 @@ export function resultsText(calls: readonly EdiCall[]): string {
       typeof c.result === "bigint" ? `${c.result}n` : JSON.stringify(c.result),
     )
     .join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Links to the other tools
+// ---------------------------------------------------------------------------
+
+/** The links row: the dates on the timeline, and every clock at the start. */
+export const ELAPSED_LINKS = [
+  { role: "link-timeline", text: "See these dates on the timeline" },
+  { role: "link-clocks", text: "Every clock at the start" },
+] as const;
+
+/**
+ * Where each link goes, or `null` while the library gave no value for the
+ * span: with no clock difference, elapsed time or count there is nothing to
+ * send.
+ */
+export function elapsedHandoffs(
+  state: ElapsedState,
+  read: ElapsedRead,
+): { timeline: ToolHandoff | null; clocks: ToolHandoff | null } {
+  const start = state.start.trim();
+  const end = state.end.trim();
+  const result =
+    read.clock !== null || read.elapsed !== null || read.count !== null;
+  return {
+    timeline:
+      result && start !== "" && end !== ""
+        ? { kind: "leapline", args: { from: start, to: end } }
+        : null,
+    clocks:
+      result && start !== ""
+        ? { kind: "satclock", args: { value: start } }
+        : null,
+  };
 }

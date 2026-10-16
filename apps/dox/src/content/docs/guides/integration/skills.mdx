@@ -43,6 +43,10 @@ Sample output:
   - gmt-arithmetic
   - gmt-timezone
   - gmt-integration
+  - gmt-gnss
+  - gmt-transport
+  - gmt-intermodal
+  - gmt-workforce
 
 @northguild/gmt-eslint
   - first-time-setup
@@ -72,7 +76,7 @@ For projects that want explicit routing, pass `--map` to bind a task keyword to 
 skill so `intent list` highlights the right match automatically:
 
 ```bash
-npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "lint=first-time-setup"
+npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "lint=first-time-setup"
 ```
 
 ## Allowlist skills
@@ -111,7 +115,17 @@ package for signatures, locale matrices and code examples. It is not an API dump
 | `gmt-basics` | Current values, parse, format, relative time, compare, validate | `src/plain/`, `src/zoned/` |
 | `gmt-arithmetic` | Add/subtract, diff, durations, interval range math | `src/plain/`, `src/duration/`, `src/plain/interval/` |
 | `gmt-timezone` | Zoned get/format/convert, DST disambiguation | `src/zoned/`, `src/unix/`, `src/utc/` |
-| `gmt-integration` | Cache keys, router/query params, lint package selection | the lint package READMEs |
+| `gmt-integration` | Cache keys, router/query params, foreign epoch bridges, TAI and leap seconds, lint package selection | `src/timescale/`, the lint package READMEs |
+
+The industry skills are layers on top of those four, not part of Core. Load one
+only when the task is in that industry:
+
+| Slug | Task area | Source folders it points to |
+| --- | --- | --- |
+| `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |
+| `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
+| `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
+| `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits | `src/workforce/` |
 
 > **Skills are routing pointers, not API documentation.** The skill files carry the
 > core rules and common pitfalls. For a signature, a locale matrix or an example,
