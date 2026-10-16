@@ -1,0 +1,139 @@
+/*
+ * Elapsed vs. Clock Difference widget (MAR-16). Root: `.gmt-elapsed-vs-clock`.
+ *
+ * The frame, ruler rows, track, span, sliver, hatch, flags and visually hidden
+ * text are the GNSS sheet's (`gmt-gnss-widgets.css`); the plates, chip, mark and
+ * series mapping come from the punctuality and cut-off sheets, which list this
+ * root. This sheet holds what only this tool draws: the ruler column, the
+ * marks on a track, the end dates, the legend and the list of inserted seconds.
+ *
+ * Amber belongs to the NO SIGNAL state alone. An accent edge is a bottom edge or
+ * a full border, never one side. Tokens only. Nothing here animates.
+ */
+
+.gmt-elapsed-vs-clock .gmt-elapsed-ruler {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gmt-elapsed-vs-clock .gmt-gnss-ruler {
+  gap: var(--gmt-space-1);
+}
+
+/* The marks sit on the track at their own place; the track is the positioning
+   context for the slivers, so the marks layer is a plain overlay. */
+.gmt-elapsed-vs-clock .gmt-elapsed-marks {
+  position: absolute;
+  inset: 0;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-marks > .gmt-cutoff-mark {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% -50%;
+}
+
+.gmt-elapsed-vs-clock .gmt-gnss-span[hidden],
+.gmt-elapsed-vs-clock .gmt-gnss-flag[hidden] {
+  display: none;
+}
+
+.gmt-elapsed-vs-clock .gmt-gnss-flag {
+  white-space: nowrap;
+}
+
+/* Where the span starts and ends, hung under the rulers at opposite edges. */
+.gmt-elapsed-vs-clock .gmt-elapsed-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  min-block-size: 1.2em;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The three plates reserve the width of the longest value and line their tool
+   can print, so a preset or a drag never moves one. */
+.gmt-elapsed-vs-clock .gmt-punct-hero-value {
+  min-inline-size: 11ch;
+}
+
+.gmt-elapsed-vs-clock [data-role="hero-count"] .gmt-punct-hero-value {
+  min-inline-size: 3ch;
+}
+
+.gmt-elapsed-vs-clock .gmt-punct-hero-sub {
+  min-inline-size: 25ch;
+}
+
+.gmt-elapsed-vs-clock [data-role="hero-count"] .gmt-punct-hero-sub {
+  min-inline-size: 15ch;
+}
+
+/* The list of inserted seconds keeps one height whatever the span, and scrolls
+   when a long span lists more than it shows. */
+.gmt-elapsed-vs-clock .gmt-elapsed-list-title {
+  margin: 0;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-list {
+  box-sizing: border-box;
+  block-size: calc(5 * 1.7em + 2 * var(--gmt-space-2));
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.7;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-list:focus-visible {
+  outline: 2px solid var(--gmt-cyan-bright);
+  outline-offset: 2px;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-list-note {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-group + .gmt-elapsed-group {
+  margin-block-start: var(--gmt-space-3);
+}
+
+.gmt-elapsed-vs-clock .gmt-elapsed-group .gmt-widget-output {
+  white-space: pre-wrap;
+}
+
+@media (forced-colors: active) {
+  .gmt-elapsed-vs-clock .gmt-elapsed-list {
+    border-color: CanvasText;
+  }
+}

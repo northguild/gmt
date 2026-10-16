@@ -1,0 +1,150 @@
+/*
+ * Leap Second Timeline widget (MAR-16). Root: `.gmt-leap-second-timeline`.
+ *
+ * The frame, track, span, rule, hatch, flags and tables are the GNSS sheet's
+ * (`gmt-gnss-widgets.css`); the plates, chip, mark and series mapping come from
+ * the punctuality and cut-off sheets, which list this root. This sheet holds
+ * what only this tool draws: the tall plot, the step line, the marks placed by
+ * level, the year axis and the legend.
+ *
+ * Amber belongs to the NO SIGNAL state alone. An accent edge is a bottom edge or
+ * a full border, never one side. Tokens only. Nothing here animates.
+ */
+
+/* The plot is a track made tall: the step line fills it and the marks and
+   rules are placed by percentages of it. */
+.gmt-leap-second-timeline .gmt-leap-plot {
+  block-size: 11rem;
+  overflow: hidden;
+}
+
+.gmt-leap-second-timeline .gmt-leap-line {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.gmt-leap-second-timeline .gmt-leap-line polyline {
+  stroke: var(--gmt-ice);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.gmt-leap-second-timeline .gmt-leap-marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* A mark sits on the step line, at its time and its new level. */
+.gmt-leap-second-timeline .gmt-leap-mark {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  translate: -50% 50%;
+}
+
+/* Continuous UTC: no more insertions. A hatched stretch with a dashed full
+   border, so it is a word and a pattern and not an edge on one side. */
+.gmt-leap-second-timeline .gmt-leap-continuous {
+  box-sizing: border-box;
+  border: 1px dashed var(--gmt-ice-dim);
+  --hatch: color(from var(--gmt-ice-dim) srgb r g b / 0.35);
+}
+
+.gmt-leap-second-timeline .gmt-gnss-span[hidden] {
+  display: none;
+}
+
+/* The year axis: ticks hung under the plot at their own place. */
+.gmt-leap-second-timeline .gmt-leap-axis {
+  position: relative;
+  min-width: 0;
+  block-size: 1.4rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-leap-second-timeline .gmt-leap-axis-tick {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.gmt-leap-second-timeline .gmt-leap-axis-tick[hidden],
+.gmt-leap-second-timeline .gmt-gnss-flag[hidden] {
+  display: none;
+}
+
+.gmt-leap-second-timeline .gmt-gnss-flag {
+  white-space: nowrap;
+}
+
+.gmt-leap-second-timeline .gmt-leap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The three plates reserve the width of the longest value and line their
+   tool can print, so a preset or a drag never moves one. */
+.gmt-leap-second-timeline [data-role="hero-offset"] .gmt-punct-hero-value {
+  min-inline-size: 4.2em;
+}
+
+.gmt-leap-second-timeline [data-role="hero-offset"] .gmt-punct-hero-sub {
+  min-inline-size: 21ch;
+}
+
+.gmt-leap-second-timeline [data-role="hero-between"] .gmt-punct-hero-value {
+  min-inline-size: 3em;
+}
+
+.gmt-leap-second-timeline [data-role="hero-between"] .gmt-punct-hero-sub {
+  min-inline-size: 18ch;
+}
+
+.gmt-leap-second-timeline [data-role="hero-check"] .gmt-punct-hero-sub {
+  min-inline-size: 19ch;
+}
+
+/* The verdict is words, held to the longest it can say. */
+.gmt-leap-second-timeline [data-role="hero-check"] {
+  flex: 1 1 18rem;
+}
+
+.gmt-leap-second-timeline [data-role="hero-check"] .gmt-punct-hero-value {
+  min-block-size: calc(2 * 1.3 * var(--gmt-text-lg));
+}
+
+.gmt-leap-second-timeline .gmt-leap-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-leap-second-timeline .gmt-leap-group + .gmt-leap-group {
+  margin-block-start: var(--gmt-space-3);
+}
+
+.gmt-leap-second-timeline .gmt-leap-group .gmt-widget-output {
+  white-space: pre-wrap;
+}
+
+@media (forced-colors: active) {
+  .gmt-leap-second-timeline .gmt-leap-line polyline {
+    stroke: CanvasText;
+  }
+
+  .gmt-leap-second-timeline .gmt-leap-continuous {
+    border-color: CanvasText;
+  }
+}

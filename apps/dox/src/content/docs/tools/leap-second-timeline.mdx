@@ -1,0 +1,55 @@
+---
+title: Leap Second Timeline
+description: Every second UTC has inserted, on one timeline. See TAI minus UTC on a date, count the leap seconds between two dates, and test whether a 23:59:60 timestamp was really inserted.
+industries: [core]
+---
+
+import LeapSecondTimeline from "../../../components/LeapSecondTimeline.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="leap seconds">
+
+<Fragment slot="keypoint">
+
+A `23:59:60` is real only on a day when a second was inserted. The last was at the end of 2016, and after 2027-05-20 UTC has none to add.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+UTC has been kept within a second of the Earth's turning by inserting a second now and then. Each one is written `23:59:60`, and each one moves the gap between TAI and UTC up by a second. The gap was 10 seconds when UTC began counting whole seconds on 1972-01-01, and it has been 37 seconds since the end of 2016.
+
+The timeline draws every inserted second the library lists, with TAI minus UTC as a step line under them. Type a date and the pin lands on the axis, with the gap on that date and the next insertion after it. Type two dates and the band between them lights the seconds that were counted. Type a `23:59:60` and the tool says whether it was inserted, merely well-formed, or not a second 60 at all. Drag the slider to move the date a day at a time.
+
+</Fragment>
+
+<LeapSecondTimeline fullbleed />
+
+<Fragment slot="after">
+
+**The offset.** [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) returns the whole seconds TAI is ahead of UTC at an instant. It returns `null` before 1972-01-01, because before then UTC and TAI did not differ by a whole number of seconds. The tool shows that as `NO SIGNAL` with one sentence saying why. [`nextLeapSecond`](/reference/timescale/calculate/nextLeapSecond/) returns the next inserted second after the date, or `""` when the table lists none. An empty answer there is a real answer, and the tool says "none after this date".
+
+**The count.** [`leapSecondsBetween`](/reference/timescale/calculate/leapSecondsBetween/) counts the seconds inserted between two instants. Swap the two dates and the count is negative. The tool lights the counted marks and the table rows, and says so in words as well as colour.
+
+**The second 60.** [`isLeapSecond`](/reference/timescale/validate/isLeapSecond/) is `true` only for a `23:59:60` on a day when a second was inserted. A `23:59:60` on any other day is well-formed text and still returns `false`. The offset spelling `08:59:60+09:00` is the same second as `23:59:60Z` on the day before, and the library reads it that way.
+
+**Continuous UTC.** The dashed span at the right of the axis marks the date from which UTC is planned to run with no more inserted seconds. The offset stays where it is, at 37 seconds, and the answer to "when is the next one" stays empty.
+
+```ts
+taiMinusUtc("2000-01-01T00:00:00Z"); // 32
+nextLeapSecond("2000-01-01T00:00:00Z"); // "2005-12-31T23:59:60Z"
+nextLeapSecond("2024-01-01T00:00:00Z"); // ""
+leapSecondsBetween("2000-01-01T00:00:00Z", "2024-01-01T00:00:00Z"); // 5
+leapSecondsBetween("2024-01-01T00:00:00Z", "2000-01-01T00:00:00Z"); // -5
+isLeapSecond("2016-12-31T23:59:60Z"); // true
+isLeapSecond("2017-12-31T23:59:60Z"); // false
+taiMinusUtc("1971-01-01T00:00:00Z"); // null
+```
+
+**Worth trying:** [the offset on 2016-01-01](/tools/leap-second-timeline/?w=leapline&wa=%7B%22date%22%3A%222016-01-01T00%3A00%3A00Z%22%7D) — 36 seconds, with the last insertion still to come. [A second 60 on a day with no insertion](/tools/leap-second-timeline/?w=leapline&wa=%7B%22check%22%3A%222017-12-31T23%3A59%3A60Z%22%7D) — well-formed, and `isLeapSecond` is `false`. [The same kind of second, written with an offset](/tools/leap-second-timeline/?w=leapline&wa=%7B%22check%22%3A%222009-01-01T08%3A59%3A60%2B09%3A00%22%7D) — it is the end of 2008 in UTC, and it was inserted. [A date far past the axis](/tools/leap-second-timeline/?w=leapline&wa=%7B%22date%22%3A%222100-01-01T00%3A00%3A00Z%22%7D) — still 37 seconds. [The two dates swapped](/tools/leap-second-timeline/?w=leapline&wa=%7B%22from%22%3A%222024-01-01T00%3A00%3A00Z%22%2C%22to%22%3A%222000-01-01T00%3A00%3A00Z%22%7D) — the count turns negative. [A date before 1972](/tools/leap-second-timeline/?w=leapline&wa=%7B%22date%22%3A%221971-01-01T00%3A00%3A00Z%22%2C%22from%22%3A%221971-01-01T00%3A00%3A00Z%22%2C%22to%22%3A%222024-01-01T00%3A00%3A00Z%22%7D) — the library answers `null`, and the tool shows `NO SIGNAL`.
+
+**Reference:** [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/), [`nextLeapSecond`](/reference/timescale/calculate/nextLeapSecond/), [`leapSecondsBetween`](/reference/timescale/calculate/leapSecondsBetween/) and [`isLeapSecond`](/reference/timescale/validate/isLeapSecond/). The guide is [Leap Seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>
