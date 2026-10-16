@@ -72,10 +72,12 @@ describe("searchChunks — DOX-C1 DoD question spread", () => {
     // is honest retrieval, not padding; DOX-C2's own DoD uses that example
     // for the end-to-end *LLM* refusal test, where recognizing "none of
     // these describe cron support" is the model's job, not retrieval's.
-    // This test needs zero real keyword overlap with the corpus at all.
+    // This test needs zero real keyword overlap with the corpus at all. Not
+    // "translate this sentence into french" either: NMEA messages are
+    // "sentences", so the Maritime guide is an honest match for it.
     for (const q of [
       "recommend a good pizza restaurant nearby",
-      "translate this sentence into french",
+      "suggest a vegetarian lasagne recipe",
     ]) {
       const results = searchChunks(chunks, q);
       expect(results.length).toBeLessThan(5);

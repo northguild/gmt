@@ -58,7 +58,10 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         answer:
           "An operator names the time its day starts and the zone it is read in. {{dutyDayFor}} returns the day an instant falls in, so a log is grouped by the operator's day and never by the calendar's.",
         see: [
-          { label: "guide", href: "/guides/intervals/hours-of-work/" },
+          {
+            label: "guide",
+            href: "/guides/industries/workforce-hours-of-work/",
+          },
           {
             label: "scenario",
             href: "/scenarios/duty-day-is-not-midnight/",
@@ -70,12 +73,15 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         answer:
           "A rule that asks for a rest in any stretch of a given length looks at every such stretch, not at each day on its own. {{evaluateDutyLog}} checks every rule at one instant, and {{dutyTotals}} adds up the time spent in the statuses you name inside a window.",
         see: [
-          { label: "guide", href: "/guides/intervals/hours-of-work/" },
+          {
+            label: "guide",
+            href: "/guides/industries/workforce-hours-of-work/",
+          },
           {
             label: "scenario",
             href: "/scenarios/sliding-window-not-calendar-day/",
           },
-          { label: "mistakes", href: "/mistakes/duty/" },
+          { label: "mistakes", href: "/mistakes/workforce/" },
         ],
       },
       {
@@ -87,7 +93,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
             label: "scenario",
             href: "/scenarios/paired-rest-that-does-not-qualify/",
           },
-          { label: "mistakes", href: "/mistakes/duty/" },
+          { label: "mistakes", href: "/mistakes/workforce/" },
         ],
       },
       {
@@ -95,8 +101,11 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         answer:
           "A log with overlapping entries, or an entry that ends before it starts, gives a total that looks right and is not. {{isValidDutyLog}} tells whether every function in this layer accepts the log.",
         see: [
-          { label: "guide", href: "/guides/intervals/hours-of-work/" },
-          { label: "mistakes", href: "/mistakes/duty/" },
+          {
+            label: "guide",
+            href: "/guides/industries/workforce-hours-of-work/",
+          },
+          { label: "mistakes", href: "/mistakes/workforce/" },
         ],
       },
     ],
@@ -194,30 +203,18 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
     solves: [
       {
         problem:
-          "A leg's running time is elapsed time, not a difference between two wall clocks.",
+          "Elapsed time is neither a difference between two wall clocks nor a count of the days something sat.",
         answer:
-          "A leg that crosses a clock change lands at a different local time than the hours suggest. {{transitTime}} adds the duration to the departure, and {{etaAtZone}} shows the arrival in the reader's zone.",
-        see: [
-          {
-            label: "guide",
-            href: "/guides/industries/transport-legs-and-dwell/",
-          },
-          { label: "scenario", href: "/scenarios/transit-across-dst/" },
-          { label: "mistakes", href: "/mistakes/transport/" },
-        ],
-      },
-      {
-        problem:
-          "Elapsed hours divided by the length of a day is not the days something sat.",
-        answer:
-          "Days are counted midnight to midnight where it sat. {{dwellTime}} returns the elapsed time and the local calendar days together.",
+          "A leg that crosses a clock change lands at a different local time than the hours suggest. {{transitTime}} adds the duration to the departure, and {{etaAtZone}} shows the arrival in the reader's zone. Days are counted midnight to midnight where the thing sat, and {{dwellTime}} returns the elapsed time and the local calendar days together.",
         see: [
           {
             label: "guide",
             href: "/guides/industries/transport-legs-and-dwell/",
           },
           { label: "Dwell Ledger", href: "/tools/dwell-ledger/" },
+          { label: "scenario", href: "/scenarios/transit-across-dst/" },
           { label: "scenario", href: "/scenarios/container-dwell-days/" },
+          { label: "mistakes", href: "/mistakes/transport/" },
         ],
       },
       {
@@ -259,6 +256,137 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
           },
           { label: "Punctuality Board", href: "/tools/punctuality-board/" },
           { label: "scenario", href: "/scenarios/estimate-shown-as-actual/" },
+        ],
+      },
+      {
+        problem: "A crew's hours of work do not follow the calendar.",
+        answer:
+          "A driver's or an operator's day starts at the time the operator names, and a rest is counted across any stretch of the log. {{dutyDayFor}} returns the operator's day for an instant, and {{evaluateDutyLog}} checks a duty log against the limits you state. These come from the Workforce layer.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/workforce-hours-of-work/",
+          },
+          { label: "scenario", href: "/scenarios/duty-day-is-not-midnight/" },
+          {
+            label: "scenario",
+            href: "/scenarios/paired-rest-that-does-not-qualify/",
+          },
+        ],
+      },
+    ],
+  },
+  gnss: {
+    about:
+      "GNSS is satellite navigation time. Every system keeps its own continuous clock, counts weeks on a counter that wraps, and differs from UTC by a number of seconds that grew with every leap second. This layer reads those clocks and weeks for all six systems alike, without an offset kept by hand.",
+    guideTitle: "GNSS: System Time and Week Rollover",
+    solves: [
+      {
+        problem: "A receiver's week number repeats.",
+        answer:
+          "{{gnssWeekToUtc}} takes the counter and the rollover era by name, and {{utcToGnssWeek}} returns the week, the time of week and the era.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/gnss-system-time-and-week-rollover/",
+          },
+          { label: "GNSS Week Decoder", href: "/tools/gnss-week-decoder/" },
+          {
+            label: "GNSS Rollover Checker",
+            href: "/tools/gnss-rollover-checker/",
+          },
+          { label: "scenario", href: "/scenarios/gnss-week-that-wrapped/" },
+        ],
+      },
+      {
+        problem:
+          "Satellite time is not UTC, and the gap grew with each leap second.",
+        answer:
+          "{{utcToGnss}} and {{gnssToUtc}} read each system's gap from the built-in leap-second table, for every system alike.",
+        see: [
+          {
+            label: "Satellite Clock Converter",
+            href: "/tools/satellite-clock-converter/",
+          },
+          { label: "scenario", href: "/scenarios/gnss-offset-hardcoded/" },
+        ],
+      },
+      {
+        problem:
+          "A week in a RINEX navigation file is not the week a satellite sends.",
+        answer:
+          "{{rinexWeekToUtc}} and {{utcToRinexWeek}} read the continuous count.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/rinex-week-read-as-broadcast/",
+          },
+          { label: "GNSS Week Decoder", href: "/tools/gnss-week-decoder/" },
+        ],
+      },
+      {
+        problem: "A logged second sixty may not be a real leap second.",
+        answer:
+          "{{isLeapSecond}} checks the table, and {{toTAI}} and {{fromTAI}} carry an inserted second through.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/a-leap-second-that-never-happened/",
+          },
+          {
+            label: "guide",
+            href: "/guides/core-date-operations/leap-seconds-and-tai/",
+          },
+        ],
+      },
+    ],
+  },
+  maritime: {
+    about:
+      "Maritime is time at sea and in a ship's records. Ships and their shore systems take time from satellite receivers, carry it between instruments in standard sentences, and keep logs that outlive a receiver's week counter. This layer draws on the satellite clocks and the leap-second table, and adds no functions of its own.",
+    guideTitle: "Maritime: GNSS Time and Week Rollover",
+    solves: [
+      {
+        problem:
+          "A receiver starts reporting dates a whole counter period early.",
+        answer:
+          "{{gnssWeekToUtc}} names the pass of the counter, so a week resolved against a build date can be checked against the pass it should be in.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/maritime-gnss-time-and-week-rollover/",
+          },
+          {
+            label: "GNSS Rollover Checker",
+            href: "/tools/gnss-rollover-checker/",
+          },
+        ],
+      },
+      {
+        problem: "A log mixes satellite time and UTC.",
+        answer:
+          "{{gnssToUtc}} turns a labelled satellite reading into UTC, for the system and the date it names.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/gnss-system-time-and-week-rollover/",
+          },
+          {
+            label: "Satellite Clock Converter",
+            href: "/tools/satellite-clock-converter/",
+          },
+        ],
+      },
+      {
+        problem: "A leap second turns up in a ship's record.",
+        answer:
+          "{{isLeapSecond}} tells whether a second sixty is a real one, whatever offset the record carries.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/core-date-operations/leap-seconds-and-tai/",
+          },
+          { label: "mistakes", href: "/mistakes/gnss/" },
         ],
       },
     ],

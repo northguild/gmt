@@ -1,0 +1,278 @@
+---
+title: "GNSS: System Time and Week Rollover"
+description: utcToGnss, gnssToUtc, gnssWeekToUtc, utcToGnssWeek, rinexWeekToUtc and utcToRinexWeek — the six satellite system times as they differ from UTC, the week counters that wrap, and the continuous weeks of a RINEX navigation file.
+sidebar:
+  order: 8
+industries: [gnss]
+---
+
+Every satellite navigation system keeps its own clock, and none of them is UTC. Each clock runs
+continuously, with no leap seconds, so the number of seconds it leads UTC by grew each time UTC
+inserted one. Each system also counts weeks on a counter that wraps, and a receiver that reports
+week 247 does not say which of the passes it is in. The functions here read those clocks and weeks
+for all six systems alike, with no gap typed in by hand.
+
+The six systems are peers. The International Maritime Organization (IMO) recognises GPS, GLONASS,
+BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation System.
+Recognition is not equal everywhere: BeiDou and IRNSS are recognised for ocean waters, and IRNSS
+only within 55°E–110°E, 50°N–5°S. The examples below rotate through the systems, and none leads.
+
+```typescript
+import {
+  gnssToUtc,
+  gnssWeekToUtc,
+  rinexWeekToUtc,
+  utcToGnss,
+  utcToGnssWeek,
+  utcToRinexWeek,
+} from "@northguild/gmt/gnss/convert";
+```
+
+The functions live in `@northguild/gmt/gnss/convert`. The leap seconds they read come from
+[`timescale/`](/reference/timescale), which is Core: [Leap Seconds and
+TAI](/guides/core-date-operations/leap-seconds-and-tai/) explains the table.
+
+## Each clock runs ahead of UTC by a gap that grew
+
+[`utcToGnss(system, utc)`](/reference/gnss/convert/utcToGnss) gives a system's clock reading at a
+UTC instant, as `YYYY-MM-DDTHH:MM:SS[.fraction] <token>`, where the token is the system's RINEX
+time-system identifier. [`gnssToUtc(system, value)`](/reference/gnss/convert/gnssToUtc) reads one
+back. The gap is not an argument: it comes from the leap-second table for the date the call is given.
+
+```typescript
+import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("BDT", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:04 BDT"
+utcToGnss("GAL", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:18 GAL"
+utcToGnss("GAL", "2016-06-01T00:00:00Z");
+// "2016-06-01T00:00:17 GAL"
+gnssToUtc("QZS", "2024-01-01T00:00:18 QZS");
+// "2024-01-01T00:00:00Z"
+```
+
+Galileo, GPS, QZSS and NavIC each led UTC by 17 seconds in June 2016 and by 18 seconds since the
+last insertion, at the end of that year. BeiDou started on 2006-01-01 equal to UTC and leads by 4.
+A fixed gap is right for one stretch of dates and wrong for the rest, which is why no function here
+takes one:
+
+| System | 2016-06-01T00:00:00Z | 2024-01-01T00:00:00Z |
+| --- | --- | --- |
+| `BDT` | `2016-06-01T00:00:03 BDT` | `2024-01-01T00:00:04 BDT` |
+| `GAL` | `2016-06-01T00:00:17 GAL` | `2024-01-01T00:00:18 GAL` |
+| `GLO` | `2016-06-01T00:00:00 GLO` | `2024-01-01T00:00:00 GLO` |
+| `GPS` | `2016-06-01T00:00:17 GPS` | `2024-01-01T00:00:18 GPS` |
+| `IRN` | `2016-06-01T00:00:17 IRN` | `2024-01-01T00:00:18 IRN` |
+| `QZS` | `2016-06-01T00:00:17 QZS` | `2024-01-01T00:00:18 QZS` |
+
+The leap second itself has a reading on each continuous clock. The inserted second at the end of
+2016 is `2017-01-01T00:00:17` on GPS time, and a label read back at that instant returns the
+inserted second:
+
+```typescript
+import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GPS", "2016-12-31T23:59:60Z");
+// "2017-01-01T00:00:17 GPS"
+gnssToUtc("GPS", "2017-01-01T00:00:17 GPS");
+// "2016-12-31T23:59:60Z"
+```
+
+Only the functions of this layer and of `timescale/` read a result with a second of 60. Every other
+function in the library rejects it.
+
+## Six scales and their first instants
+
+The scales are defined by RINEX 4.02 and by the International Bureau of Weights and Measures
+(BIPM). Four are a fixed number of seconds behind TAI, so their lead over UTC grows with each
+insertion: GPS, Galileo and QZSS time 19 seconds behind, BeiDou time 33. NavIC time is 19 seconds
+behind TAI as well. RINEX 4.02 equates it with GPS time in whole seconds, and the BIPM publishes no
+NavIC relation, so the library derives the offset. NavIC's own epoch, 13 seconds ahead of UTC when
+TAI − UTC was 32 seconds, agrees.
+
+Each clock has a first instant, and an earlier date returns an empty string:
+
+| System | First instant | Reading at that instant |
+| --- | --- | --- |
+| `GAL` | `1999-08-21T23:59:47Z` | `1999-08-22T00:00:00 GAL` |
+| `BDT` | `2006-01-01T00:00:00Z` | `2006-01-01T00:00:00 BDT` |
+| `GLO` | `1972-01-01T00:00:00Z` | `1972-01-01T00:00:00 GLO` |
+| `GPS` | `1980-01-06T00:00:00Z` | `1980-01-06T00:00:00 GPS` |
+| `IRN` | `1999-08-21T23:59:47Z` | `1999-08-22T00:00:00 IRN` |
+| `QZS` | `1980-01-06T00:00:00Z` | `1980-01-06T00:00:00 QZS` |
+
+Galileo's count starts 13 seconds before 1999-08-22T00:00:00 UTC, which is why its first reading is
+13 seconds from the instant the date suggests.
+
+```typescript
+import { utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GAL", "1999-08-21T23:59:47Z");
+// "1999-08-22T00:00:00 GAL"
+utcToGnss("GAL", "1999-08-21T23:59:46Z");
+// ""
+```
+
+The results are the nominal relations between the scales. The small corrections a satellite
+broadcasts for its own clock are not applied.
+
+## `GLO` is in UTC's own hours
+
+`GLO` is GLONASS time as RINEX and the BIPM report it: in UTC's own hours, with UTC's leap seconds.
+The library reads no other GLONASS scale. So a `GLO` label is UTC's wall clock, and it is the one
+scale that has a second 60 exactly when UTC does:
+
+```typescript
+import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GLO", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:00 GLO"
+utcToGnss("GLO", "2016-12-31T23:59:60Z");
+// "2016-12-31T23:59:60 GLO"
+gnssToUtc("GLO", "2017-12-31T23:59:60 GLO");
+// ""
+```
+
+GLONASS has no week counter, so it has no entry in the next two sections.
+
+## Week counters wrap: name the counter and the era
+
+A receiver reports a week number on a counter of a fixed width, and the counter wraps. A 10-bit
+counter shows 0 to 1023 and starts again after about 19.6 years. Which counter a week came from
+depends on the message that carried it, so the functions take the counter by name:
+
+| Counter | Wraps every | Used by |
+| --- | --- | --- |
+| `GPS-LNAV`, `QZS-LNAV`, `IRN-LNAV` | 1024 weeks | the legacy navigation messages |
+| `GAL` | 4096 weeks | Galileo |
+| `GPS-CNAV`, `QZS-CNAV`, `BDT`, `IRN-L1NV` | 8192 weeks | the civil navigation messages |
+
+[`gnssWeekToUtc(counter, week, timeOfWeekSeconds, rolloverEra)`](/reference/gnss/convert/gnssWeekToUtc)
+needs the pass too, because the week alone cannot say which one it is. `rolloverEra` is one of three
+forms:
+
+- **An integer.** Era 0 starts at the system's epoch. The `GPS-LNAV` counter wrapped in 1999, wrapped
+  in 2019 and wraps next in 2038.
+- **`"rolling"`.** The pass within half a counter period of today, or era 0 when the week would
+  otherwise fall before the system's epoch. It is the right choice for a live receiver and the wrong
+  one for an archive, because its answer changes as the years pass.
+- **`{ notBefore }`.** The earliest pass at or after an instant you state, which is how a receiver
+  that resolves weeks against its firmware build date behaves. An instant exactly at `notBefore`
+  counts.
+
+```typescript
+import { gnssWeekToUtc, utcToGnssWeek } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("IRN-LNAV", 247, 86418, 0);
+// "2004-05-17T00:00:05Z"
+gnssWeekToUtc("IRN-LNAV", 247, 86418, 1);
+// "2024-01-01T00:00:00Z"
+gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" });
+// "2019-03-09T23:59:42Z"
+gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" });
+// "2038-10-23T23:59:42Z"
+utcToGnssWeek("IRN-LNAV", "2024-01-01T00:00:00Z");
+// { week: 247, timeOfWeekSeconds: 86418, era: 1 }
+```
+
+The same week number on the 13-bit counter of the same system is a different thing. A week from a
+civil message fed to a 10-bit counter is out of range and returns an empty string:
+
+```typescript
+import { gnssWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("GPS-CNAV", 2295, 86418, 0);
+// "2024-01-01T00:00:00Z"
+gnssWeekToUtc("GPS-LNAV", 2295, 86418, 0);
+// ""
+```
+
+The first wrap of each counter, the instant its week reads 0 again:
+
+| Counter | First wrap |
+| --- | --- |
+| `GPS-LNAV` (and `QZS-LNAV`) | `1999-08-21T23:59:47Z` |
+| `IRN-LNAV` | `2019-04-06T23:59:42Z` |
+| `GAL` | `2078-02-19T23:59:42Z` |
+| `GPS-CNAV` (and `QZS-CNAV`) | `2137-01-05T23:59:42Z` |
+| `IRN-L1NV` | `2156-08-21T23:59:42Z` |
+| `BDT` | `2163-01-01T23:59:56Z` |
+
+`timeOfWeekSeconds` is seconds into the week and may carry a fraction, which is rounded to the
+nearest nanosecond. A value that rounds to 604 800 seconds returns an empty string. A week time
+inside an inserted second returns the inserted second:
+
+```typescript
+import { gnssWeekToUtc, utcToGnssWeek } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("GPS-LNAV", 906, 17, 1);
+// "2016-12-31T23:59:60Z"
+utcToGnssWeek("GPS-LNAV", "2016-12-31T23:59:60Z");
+// { week: 906, timeOfWeekSeconds: 17, era: 1 }
+```
+
+## A RINEX week is not a broadcast week
+
+A RINEX navigation file writes a continuous week count that never wraps. For GPS, QZSS, NavIC and
+Galileo records it counts from 1980-01-06. For a BeiDou record it counts BDT weeks from 2006-01-01.
+[`rinexWeekToUtc(system, week, timeOfWeekSeconds)`](/reference/gnss/convert/rinexWeekToUtc) takes
+the system alone, because the count has no era, and
+[`utcToRinexWeek`](/reference/gnss/convert/utcToRinexWeek) goes the other way.
+
+```typescript
+import { rinexWeekToUtc, utcToRinexWeek } from "@northguild/gmt/gnss/convert";
+
+rinexWeekToUtc("IRN", 2295, 86418);
+// "2024-01-01T00:00:00Z"
+rinexWeekToUtc("BDT", 809, 165600);
+// "2021-07-05T21:59:56Z"
+utcToRinexWeek("BDT", "2021-07-05T21:59:56Z");
+// { week: 809, timeOfWeekSeconds: 165600 }
+```
+
+It is not the week a satellite broadcasts. A civil or L1NV record has no week column, so take the
+week from the record's epoch line. Feeding a RINEX week to a broadcast counter returns a date a
+whole number of counter periods away, with no error:
+
+```typescript
+import { gnssWeekToUtc, rinexWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+rinexWeekToUtc("GAL", 2295, 86418);
+// "2024-01-01T00:00:00Z"
+gnssWeekToUtc("GAL", 2295, 86418, 0);
+// "2043-08-17T00:00:00Z"
+```
+
+## The tools
+
+- The [GNSS Week Decoder](/tools/gnss-week-decoder/) takes a week and a time of week and shows
+  every pass the counter has had, with the rollover instants.
+- The [Satellite Clock Converter](/tools/satellite-clock-converter/) shows one UTC instant on all
+  six clocks and on TAI, with the gap each one has.
+- The [GNSS Rollover Checker](/tools/gnss-rollover-checker/) shows when a receiver, modelled as a
+  firmware build date or a fixed pass, starts reporting the wrong date.
+
+For ships, and for the receivers and logs on them, see [Maritime: GNSS Time and Week
+Rollover](/guides/industries/maritime-gnss-time-and-week-rollover/).
+
+## See it break, then work
+
+- [A Fixed Gap Applied to an Old Log](/scenarios/gnss-offset-hardcoded/)
+- [The Week That Wrapped](/scenarios/gnss-week-that-wrapped/)
+- [A 13-Bit Week Read as 10-Bit](/scenarios/thirteen-bit-week-read-as-ten-bit/)
+- [A RINEX Week Read as a Broadcast Week](/scenarios/rinex-week-read-as-broadcast/)
+- [GNSS mistakes](/mistakes/gnss/)
+
+## Sources
+
+- IMO, Maritime Safety Committee, 104th session, summary (October 2021): GPS, GLONASS, BeiDou,
+  Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation System. The
+  recognitions follow the policy of IMO resolution A.1046(27) (2011), whose annex MSC.599(111)
+  (2026) revised. A.1046(27) itself names no system. GPS and GLONASS are recognised by A.860(20)
+  (1997), BeiDou by SN.1/Circ.329 (2014), Galileo by SN.1/Circ.334 (2016), IRNSS by SN.1/Circ.340
+  (2020) and QZSS by SN.1/Circ.341 (2021).
+- RINEX 4.02, the IGS Receiver Independent Exchange Format: the time-system identifiers, the
+  navigation-file weeks and the relations between the scales.
+- BIPM: the relations of the satellite scales to TAI and UTC.
+- IERS, `Leap_Second.dat` and Bulletin C 72, for the leap seconds the gaps are read from.

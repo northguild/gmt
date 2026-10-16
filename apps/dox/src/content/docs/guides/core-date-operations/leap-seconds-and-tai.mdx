@@ -1,0 +1,186 @@
+---
+title: Leap Seconds and TAI
+description: The inserted seconds in a table, TAI minus UTC by date, which days really have a second 60, counting and finding leap seconds, moving between UTC and TAI through an inserted second, and elapsed time against the clock difference.
+sidebar:
+  order: 14
+industries: [core]
+---
+
+UTC has had a second 60 on some days since 1972. Each one was inserted so that UTC stays close to
+the rotation of the Earth, and each one made the number of seconds that UTC trails TAI (International
+Atomic Time) grow by one. The `timescale/` namespace holds that table and the functions that read
+it. A date, a count and a conversion all come from the same table, so none of them takes a
+number you typed in.
+
+## The insertions
+
+The table follows the IERS file `Leap_Second.dat` as of IERS Bulletin C 72. Each row is the last
+second of a UTC day, and the number is TAI − UTC after it.
+
+| Inserted second | TAI − UTC after |
+| --- | --- |
+| `1972-06-30T23:59:60Z` | 11 |
+| `1972-12-31T23:59:60Z` | 12 |
+| `1973-12-31T23:59:60Z` | 13 |
+| `1974-12-31T23:59:60Z` | 14 |
+| `1975-12-31T23:59:60Z` | 15 |
+| `1976-12-31T23:59:60Z` | 16 |
+| `1977-12-31T23:59:60Z` | 17 |
+| `1978-12-31T23:59:60Z` | 18 |
+| `1979-12-31T23:59:60Z` | 19 |
+| `1981-06-30T23:59:60Z` | 20 |
+| `1982-06-30T23:59:60Z` | 21 |
+| `1983-06-30T23:59:60Z` | 22 |
+| `1985-06-30T23:59:60Z` | 23 |
+| `1987-12-31T23:59:60Z` | 24 |
+| `1989-12-31T23:59:60Z` | 25 |
+| `1990-12-31T23:59:60Z` | 26 |
+| `1992-06-30T23:59:60Z` | 27 |
+| `1993-06-30T23:59:60Z` | 28 |
+| `1994-06-30T23:59:60Z` | 29 |
+| `1995-12-31T23:59:60Z` | 30 |
+| `1997-06-30T23:59:60Z` | 31 |
+| `1998-12-31T23:59:60Z` | 32 |
+| `2005-12-31T23:59:60Z` | 33 |
+| `2008-12-31T23:59:60Z` | 34 |
+| `2012-06-30T23:59:60Z` | 35 |
+| `2015-06-30T23:59:60Z` | 36 |
+| `2016-12-31T23:59:60Z` | 37 |
+
+The table is closed. The General Conference on Weights and Measures (CGPM) decided in 2022
+(Resolution 4) to let the difference between UTC and the rotation of the Earth grow past one
+second, and in 2026 (Resolution 5) that continuous UTC becomes effective on 20 May 2027. No
+insertion after 2016 is known and none is planned. A weekly check compares the table with the
+IERS file and fails if the two differ, so a row added by IERS shows up as a failed run.
+
+## TAI − UTC by date
+
+[`taiMinusUtc(instant)`](/reference/timescale/calculate/taiMinusUtc) returns the whole seconds TAI
+leads UTC by at an instant. Before 1972 UTC did not differ from TAI by whole seconds, so there
+is no integer and the function returns `null`. An integer written for all dates is wrong for
+every date before 1972.
+
+```typescript
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+taiMinusUtc("1971-12-31T23:59:59Z");
+// null
+taiMinusUtc("1972-01-01T00:00:00Z");
+// 10
+taiMinusUtc("1999-08-22T00:00:00Z");
+// 32
+taiMinusUtc("2016-12-31T23:59:60Z");
+// 36
+taiMinusUtc("2017-01-01T00:00:00Z");
+// 37
+```
+
+## `23:59:60` is real only on listed days
+
+A second 60 is a real reading on the days of the table and an invalid one on every other day.
+[`hasSecond60`](/reference/plain/validate/hasSecond60) only asks whether the text has a 60 in the
+seconds place, so it accepts a day UTC never inserted a second on.
+[`isLeapSecond`](/reference/timescale/validate/isLeapSecond) asks the table, and it reads any offset,
+because an inserted second is the same instant everywhere:
+
+```typescript
+import { hasSecond60 } from "@northguild/gmt/plain/validate";
+import { isLeapSecond } from "@northguild/gmt/timescale/validate";
+
+hasSecond60("2017-12-31T23:59:60Z");
+// true
+isLeapSecond("2017-12-31T23:59:60Z");
+// false
+isLeapSecond("2016-12-31T23:59:60Z");
+// true
+isLeapSecond("2017-01-01T08:59:60+09:00");
+// true
+```
+
+See [A Leap Second That Never Happened](/scenarios/a-leap-second-that-never-happened/). Every
+other function in the library rejects a second of 60, including `isValidInstant`.
+
+## Counting and finding
+
+[`leapSecondsBetween(start, end)`](/reference/timescale/calculate/leapSecondsBetween) counts the
+insertions in the half-open range from `start` up to but not including `end`. It is signed: the
+reverse order gives the negative. It returns `null` if either end is before 1972.
+[`nextLeapSecond(instant)`](/reference/timescale/calculate/nextLeapSecond) returns the first
+insertion after an instant, or an empty string when there is none, as there is none after the
+last row of the table.
+
+```typescript
+import { leapSecondsBetween, nextLeapSecond } from "@northguild/gmt/timescale/calculate";
+
+leapSecondsBetween("2000-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+// 5
+leapSecondsBetween("2024-01-01T00:00:00Z", "2000-01-01T00:00:00Z");
+// -5
+leapSecondsBetween("2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z");
+// 1
+leapSecondsBetween("1971-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+// null
+nextLeapSecond("2016-01-01T00:00:00Z");
+// "2016-12-31T23:59:60Z"
+nextLeapSecond("2024-01-01T00:00:00Z");
+// ""
+```
+
+## UTC and TAI through an inserted second
+
+[`toTAI`](/reference/timescale/convert/toTAI) and [`fromTAI`](/reference/timescale/convert/fromTAI)
+move an instant between the two scales. TAI has no second 60, so the inserted second maps to its
+own TAI reading, and the readings across it run without a repeat:
+
+```typescript
+import { fromTAI, toTAI } from "@northguild/gmt/timescale/convert";
+
+toTAI("2016-12-31T23:59:59Z");
+// "2017-01-01T00:00:35 TAI"
+toTAI("2016-12-31T23:59:60Z");
+// "2017-01-01T00:00:36 TAI"
+toTAI("2017-01-01T00:00:00Z");
+// "2017-01-01T00:00:37 TAI"
+toTAI("2017-12-31T23:59:60Z");
+// ""
+fromTAI("2017-01-01T00:00:36 TAI");
+// "2016-12-31T23:59:60Z"
+```
+
+## Elapsed seconds against the clock difference
+
+Two UTC readings two hours apart on the clock are 7201 seconds apart in elapsed time when an
+insertion falls between them. [`spanNs`](/reference/span/calculate/spanNs) subtracts readings as
+written, so on UTC readings it misses the inserted second. It returns `null` for a reading with a
+second of 60, which it cannot place on a straight line. Give it the TAI readings of the same
+instants and the inserted second counts:
+
+```typescript
+import { spanNs } from "@northguild/gmt/span/calculate";
+
+spanNs("2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z");
+// 1000000000n
+spanNs("2016-12-31T23:59:60Z", "2017-01-01T00:00:00Z");
+// null
+spanNs("2016-12-31T23:00:36Z", "2017-01-01T01:00:37Z");
+// 7201000000000n
+```
+
+The last call is the span between the TAI readings of `2016-12-31T23:00:00Z` and
+`2017-01-01T01:00:00Z`, written with a `Z` because `spanNs` reads one. The two UTC instants are two
+hours apart on the clock and 7201 seconds apart in elapsed time. See [Mistakes: leap
+seconds](/mistakes/leap-seconds/).
+
+## Tools
+
+- The [Leap Second Timeline](/tools/leap-second-timeline/) draws every insertion, and the
+  integer-seconds era before and the continuous era after.
+- [Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/) shows the clock difference and
+  the elapsed seconds of two readings side by side.
+
+## Sources
+
+- IERS, `Leap_Second.dat`, and Bulletin C 72.
+- ITU-R Recommendation TF.460-6: the standard-frequency and time-signal emissions, with UTC defined
+  from 1972.
+- CGPM 2022, Resolution 4, and CGPM 2026, Resolution 5, on the future of UTC.

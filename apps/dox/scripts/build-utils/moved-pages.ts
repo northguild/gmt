@@ -27,4 +27,10 @@ export const MOVED_PAGES: readonly MovedPage[] = [
   { from: "/reference/duty", to: "/reference/workforce" },
   { from: "/reference/duty/calculate", to: "/reference/workforce/calculate" },
   { from: "/reference/duty/validate", to: "/reference/workforce/validate" },
+  // The hours-of-work pages became the Workforce industry's guide and mistakes page.
+  {
+    from: "/guides/intervals/hours-of-work",
+    to: "/guides/industries/workforce-hours-of-work",
+  },
+  { from: "/mistakes/duty", to: "/mistakes/workforce" },
 ];

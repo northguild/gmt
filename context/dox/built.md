@@ -620,6 +620,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   layer the page does not use. A new industry is one entry in `industry-tags.ts` and one icon;
   it gets a tag when its first page ships, not before. The intermodal tag's definition is
   "Container free time, demurrage, billing deadlines, bill of lading dates and EDI timestamps."
+  - **Cross-industry layers are industries.** A function several industries need lives in the
+    cross-industry layer for its domain (`workforce`, `gnss`), or in Core when it is truly general
+    (`timescale`), never in a grab-bag namespace and never in one industry's namespace. On the site
+    that layer is an industry like any other, and each industry that uses it lists it in `drawsOn`
+    in `industries.json` (Transport draws on `workforce`). The rule is `context/coding-standards.md`,
+    "Core namespaces, industry layers, cross-industry layers".
   - **Trap: a `core` page never links an industry layer's reference pages.** The test reads
     `/reference/<layer>/` or an import from `@northguild/gmt/<layer>` in a page's source as use
     of that layer, and a page that uses a layer cannot be tagged `core`. The Standards guide is

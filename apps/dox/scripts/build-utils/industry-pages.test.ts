@@ -13,14 +13,14 @@ const WORKFORCE: HubIndustry = {
   id: "workforce",
   label: "Workforce",
   definition: "People's working time.",
-  guide: "/guides/intervals/hours-of-work/",
+  guide: "/guides/industries/workforce-hours-of-work/",
   guideTitle: "Hours of Work",
   about: "Workforce is working time.",
   solves: [
     {
       problem: "A duty day is not midnight.",
       answer: "{{dutyDayFor}} reads the operator's day.",
-      see: [{ label: "guide", href: "/guides/intervals/hours-of-work/" }],
+      see: [{ label: "guide", href: "/guides/industries/workforce-hours-of-work/" }],
     },
   ],
   namespace: "workforce",
@@ -220,7 +220,7 @@ describe("renderIndustryHubs", () => {
 
   it("links each token of a pain point to its function, and lists the pages that show it", () => {
     expect(body(hub("workforce"))).toContain(
-      "- **A duty day is not midnight.** [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor) reads the operator's day. See [guide](/guides/intervals/hours-of-work/).",
+      "- **A duty day is not midnight.** [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor) reads the operator's day. See [guide](/guides/industries/workforce-hours-of-work/).",
     );
   });
 

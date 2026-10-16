@@ -1,7 +1,7 @@
 ---
 title: "A Paired Rest That Does Not Qualify"
 description: Two rests may count as one when each is at least 2 hours, one at least 7 and both together at least 10. Checking two whole numbers passes 6 + 4 and fails 7.5 + 2.5 — both wrong.
-industries: [core]
+industries: [workforce, transport]
 ---
 
 import Scenario from "~/components/Scenario.astro";
@@ -49,5 +49,5 @@ The playground opens on the 7.5 + 2.5 pair. Change the first rest's `end` to
 `"2024-01-01T06:00:00Z"`, and the `work` entry's `start` with it: the pair is 6 + 2.5 now,
 and the result is `[]`. Lower `oneAtLeast` to `"PT6H"` and `combinedAtLeast` to `"PT8H"` and
 the same rests qualify, because the floors are yours. An `elapsedWindow` rule takes the same
-`PairSpec` as `exclude`, so a qualifying pair moves its close. The rules are in [Hours of
-Work](/guides/intervals/hours-of-work/#totals-runs-and-paired-rests).
+`PairSpec` as `exclude`, so a qualifying pair moves its close. [`qualifyingRestPairs`](/reference/workforce/calculate/qualifyingRestPairs) is the function here. The rules are in [Hours of
+Work](/guides/industries/workforce-hours-of-work/#totals-runs-and-paired-rests).

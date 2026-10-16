@@ -4,7 +4,7 @@
     "label": "Workforce",
     "definition": "People's working time: duty logs, hours-of-work limits, rest and rolling windows, for any crew, shift or rota.",
     "icon": "industry-workforce",
-    "guide": "/guides/intervals/hours-of-work/",
+    "guide": "/guides/industries/workforce-hours-of-work/",
     "namespace": "workforce",
     "drawsOn": []
   },
@@ -25,5 +25,22 @@
     "guide": "/guides/industries/intermodal-free-time-and-demurrage/",
     "namespace": "intermodal",
     "drawsOn": ["transport"]
+  },
+  {
+    "id": "gnss",
+    "label": "GNSS",
+    "definition": "Satellite navigation time for any receiver: the six system times, week numbers and their rollovers, and RINEX navigation weeks.",
+    "icon": "industry-gnss",
+    "guide": "/guides/industries/gnss-system-time-and-week-rollover/",
+    "namespace": "gnss",
+    "drawsOn": ["timescale"]
+  },
+  {
+    "id": "maritime",
+    "label": "Maritime",
+    "definition": "Satellite time at sea and in ships' records: the clocks receivers on board read, their week rollovers and the leap seconds between them.",
+    "icon": "industry-maritime",
+    "guide": "/guides/industries/maritime-gnss-time-and-week-rollover/",
+    "drawsOn": ["gnss", "timescale"]
   }
 ]

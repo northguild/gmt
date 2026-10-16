@@ -1,12 +1,12 @@
 ---
 title: Hours of Work
-description: Evaluate hours-of-work rules over a duty log with the duty/ module — caps, windows, breaks, rests, quotas and patterns, every number yours — and read the day the operator designates, not local midnight.
+description: Evaluate hours-of-work rules over a duty log with the workforce layer — caps, windows, breaks, rests, quotas and patterns, every number yours — and read the day the operator designates, not local midnight.
 sidebar:
-  order: 5
-industries: [core]
+  order: 10
+industries: [workforce]
 ---
 
-Use the `duty/` functions to check a status log against hours-of-work rules: caps on time
+Use the `workforce/` functions to check a status log against hours-of-work rules: caps on time
 worked, windows that close, breaks that are due, rests that must be long enough. A driver, a
 crew member and a resident all keep this kind of log, and their rules come in about a dozen
 shapes. GMT builds each shape once.
@@ -954,4 +954,9 @@ the 28 days hold three free periods.
 - [A Paired Rest That Does Not Qualify](/scenarios/paired-rest-that-does-not-qualify/) — 6 + 4
   hours checked as three constraints.
 
-The mistakes these prevent are collected on [Hours of Work Mistakes](/mistakes/duty/).
+The mistakes these prevent are collected on [Workforce Mistakes](/mistakes/workforce/).
+The functions are in the [`workforce`](/reference/workforce) namespace, which
+[`dutyDayFor`](/reference/workforce/calculate/dutyDayFor),
+[`evaluateDutyLog`](/reference/workforce/calculate/evaluateDutyLog),
+[`dutyViolations`](/reference/workforce/calculate/dutyViolations) and
+[`isValidDutyLog`](/reference/workforce/validate/isValidDutyLog) belong to.

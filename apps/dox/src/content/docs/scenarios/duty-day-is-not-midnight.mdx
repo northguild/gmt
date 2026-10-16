@@ -1,7 +1,7 @@
 ---
 title: "The Duty Day Is Not Midnight"
 description: An operator's day starts at 04:00 in New York. Grouping a driver's log by local midnight puts a 03:30 entry in the wrong day, and an entry logged in Tokyo in the wrong day again.
-industries: [core]
+industries: [workforce, transport]
 ---
 
 import Scenario from "~/components/Scenario.astro";
@@ -34,5 +34,5 @@ In the playground, change the instant to `"2024-01-01T09:00:00Z"` and the day mo
 local opens it. Change `dayStartTime` to `"00:00"` and the day is the calendar date, because
 the operator said so. Try `"2024-03-10T12:00:00Z"` with `dayStartTime: "02:30"`: 02:30 is
 skipped that morning, so the day starts at 03:30 and is 23 hours long. Leave `dayStartTime` out
-and the result is `null`: there is no default. The rules are in [Hours of
-Work](/guides/intervals/hours-of-work/#the-operator-designated-day).
+and the result is `null`: there is no default. [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor) is the function here. The rules are in [Hours of
+Work](/guides/industries/workforce-hours-of-work/#the-operator-designated-day).

@@ -1,16 +1,17 @@
 ---
-title: Hours of Work
-description: Common mistakes when checking a duty log against hours-of-work rules with GMT's duty/ module.
-industries: [core]
+title: Workforce
+description: Common mistakes when checking a duty log against hours-of-work rules with GMT's workforce/ namespace.
+industries: [workforce]
 ---
 
-The `duty/` module is `dutyDayFor`, `evaluateDutyLog`, `dutyViolations`, `dutyTotals`,
-`longestRun`, `qualifyingRests`, `qualifyingRestPairs` and `isValidDutyLog`. The mistakes around
+The `workforce/` namespace is [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor),
+`evaluateDutyLog`, `dutyViolations`, `dutyTotals`, `longestRun`, `qualifyingRests`,
+`qualifyingRestPairs` and [`isValidDutyLog`](/reference/workforce/validate/isValidDutyLog). The mistakes around
 them are the ones every hand-built hours-of-work check makes: counting the wrong day, reading a
 sliding window as a fixed one or the reverse, letting rest stretch a window, checking a paired
 rest as two whole numbers, and folding several limits into one. Every rule's numbers are yours;
 GMT names no regime. Every output shown here is what the function returns. See [Hours of
-Work](/guides/intervals/hours-of-work/) for the rules.
+Work](/guides/industries/workforce-hours-of-work/) for the rules.
 
 ## Mistakes
 

@@ -360,7 +360,7 @@ describe("buildRedirects, moved pages", () => {
     ).toThrow(/\/reference\/x\/y\/z has two rules/);
   });
 
-  it("lists the three index pages the duty namespace had, and nothing else", () => {
+  it("lists the three index pages the duty namespace had, and the two pages of hours of work", () => {
     expect(MOVED_PAGES).toEqual([
       { from: "/reference/duty", to: "/reference/workforce" },
       {
@@ -368,6 +368,11 @@ describe("buildRedirects, moved pages", () => {
         to: "/reference/workforce/calculate",
       },
       { from: "/reference/duty/validate", to: "/reference/workforce/validate" },
+      {
+        from: "/guides/intervals/hours-of-work",
+        to: "/guides/industries/workforce-hours-of-work",
+      },
+      { from: "/mistakes/duty", to: "/mistakes/workforce" },
     ]);
   });
 
@@ -381,6 +386,14 @@ describe("buildRedirects, moved pages", () => {
 
 describe("the generated _redirects", () => {
   const file = resolve(import.meta.dirname, "..", "..", "public", "_redirects");
+  const contentDir = resolve(
+    import.meta.dirname,
+    "..",
+    "..",
+    "src",
+    "content",
+    "docs",
+  );
   const corpusFile = resolve(
     import.meta.dirname,
     "..",
@@ -424,12 +437,17 @@ describe("the generated _redirects", () => {
       const route = source.replace(/\.md$/, "").replace(/\/$/, "");
       // Not a live route, in any letter case: a redirect is applied before the asset.
       expect(folded.has(route.toLowerCase()), source).toBe(false);
-      // And every target is a live route.
+      // And every target is a live route: a reference route, or a moved page's content file.
       const landed = target
         .split("#")[0]
         .replace(/\.md$/, "")
         .replace(/\/$/, "");
-      expect(referenceRoutes.has(landed), target).toBe(true);
+      const live =
+        referenceRoutes.has(landed) ||
+        [".mdx", ".md"].some((ext) =>
+          existsSync(resolve(contentDir, `.${landed}${ext}`)),
+        );
+      expect(live, target).toBe(true);
     }
   });
 });

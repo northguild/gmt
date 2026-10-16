@@ -101,7 +101,7 @@
       "count": 4
     }
   ],
-  "industryNamespaces": ["intermodal", "transport", "workforce"],
+  "industryNamespaces": ["intermodal", "transport", "workforce", "gnss"],
   "industryLayers": [
     {
       "id": "workforce",
@@ -132,7 +132,36 @@
           "shared": true
         }
       ]
+    },
+    {
+      "id": "gnss",
+      "label": "GNSS",
+      "own": 6,
+      "drawsOn": [
+        {
+          "module": "timescale",
+          "count": 6,
+          "shared": false
+        }
+      ]
+    },
+    {
+      "id": "maritime",
+      "label": "Maritime",
+      "own": 0,
+      "drawsOn": [
+        {
+          "module": "gnss",
+          "count": 6,
+          "shared": true
+        },
+        {
+          "module": "timescale",
+          "count": 6,
+          "shared": false
+        }
+      ]
     }
   ],
-  "industryFunctions": 78
+  "industryFunctions": 84
 }

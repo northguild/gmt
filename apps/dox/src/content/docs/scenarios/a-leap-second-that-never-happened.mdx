@@ -1,0 +1,32 @@
+---
+title: "A Leap Second That Never Happened"
+description: A log line reads 2017-12-31T23:59:60Z, a pattern check accepts it, and no second was inserted that day.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Leap Second That Never Happened"
+  description="A feed delivers 2017-12-31T23:59:60Z. A validation rule accepts any timestamp with a seconds field of 60 as a real leap second. Is it one?"
+  naiveCode={`// The naive approach: a seconds field of 60 means a leap second
+import { hasSecond60 } from "@northguild/gmt/plain/validate";
+
+hasSecond60("2017-12-31T23:59:60Z");
+// true — well-formed, so the rule accepts it`}
+  explanation={`A seconds field of 60 is well-formed on any day, and Temporal silently clamps it to 59, so a syntax test has a job: it catches the spelling. It cannot say whether the second exists. UTC has had 27 inserted seconds, the last on 2016-12-31, and the table of them is closed. \`isLeapSecond\` looks the day up, in any offset spelling, and answers false for every other second 60.`}
+  gmtCode={`import { isLeapSecond } from "@northguild/gmt/timescale/validate";
+
+isLeapSecond("2017-12-31T23:59:60Z");
+// false — no second was inserted that day
+isLeapSecond("2016-12-31T23:59:60Z");
+// true
+isLeapSecond("2017-01-01T08:59:60+09:00");
+// true — the same inserted second, written in another offset`}
+  fixedSpecId="isLeapSecond"
+/>
+
+In the widget, change the year to 2016 and the answer turns true. Change it to any other year
+and it stays false. The [Leap Second Timeline](/tools/leap-second-timeline/) draws every listed
+insertion, and the rules are in [Leap Seconds and
+TAI](/guides/core-date-operations/leap-seconds-and-tai/#a-leap-second-is-real-only-on-listed-days).

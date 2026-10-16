@@ -1,6 +1,6 @@
 ---
 title: Industries
-description: Guides for the industry layers built on GMT's core — transport and intermodal so far — showing how the shared primitives are used in the trade, with real-world scenarios.
+description: Guides for the industry layers built on the core primitives, with real-world scenarios.
 sidebar:
   order: 0
 ---
@@ -9,6 +9,8 @@ The core of GMT is a set of general primitives: zoned arithmetic, real day bound
 half-open intervals, business calendars. Each industry layer is a small set of functions
 that name the operation an industry actually performs, built on those primitives so every
 layer agrees about what a midnight, a day or an elapsed hour is.
+
+Each industry also has an overview page under [By industry](/industries/).
 
 Three things hold across every industry layer:
 
@@ -26,6 +28,15 @@ Three things hold across every industry layer:
 
 ## Layers
 
+- [Workforce: hours of work](./workforce-hours-of-work/) — read a duty log against the limits you
+  state: the operator's day, sliding and fixed windows, split rests and quotas. Shared by any
+  crew, shift or rota; Transport draws on it.
+- [GNSS: system time and week rollover](./gnss-system-time-and-week-rollover/) — read each
+  satellite system's clock against UTC, name the week counter and the rollover era, and turn a
+  RINEX navigation week into a date. Draws on the leap-second table.
+- [Maritime: GNSS time and week rollover](./maritime-gnss-time-and-week-rollover/) — which systems
+  a ship may use, why the log keeps UTC, how long a receiver's week counter stays right over a
+  ship's service life, and a leap second in a ship's record.
 - [Transport: legs and dwell](./transport-legs-and-dwell/) — add a leg's transit time to a
   departure, show an arrival where it lands, and measure dwell in exact hours and local
   calendar days. Shared by road, rail, sea and air. Its
