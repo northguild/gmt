@@ -1512,38 +1512,121 @@ describe("buildChoiceSeeds", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildPlaygroundFields", () => {
-  it("models a bare number for a `number | \"literal\"` union param", () => {
-    // Regression: `RolloverEra` (`number | "rolling" | { notBefore }`) classifies
-    // as an enum whose choices include `number`. An example passing `0` failed the
-    // quoted-literal check and cost `gnssWeekToUtc` its whole form.
-    const res = BR.buildPlaygroundFields(
-      {
-        module: "gnss/convert",
-        fn: "gnssWeekToUtc",
-        returnType: "string",
-        params: [
-          {
-            name: "counter",
-            type: "enum",
-            value: "GPS-LNAV",
-            options: ["GPS-LNAV", "GAL"],
+  describe("a union of string literals and an open type", () => {
+    // `RolloverEra` is `number | "rolling" | { notBefore: string }`. It classifies as source
+    // text (`expr`), so the field holds the example's argument as written and the reader can
+    // type any form of the union.
+    const gnssWeek = {
+      module: "gnss/convert",
+      fn: "gnssWeekToUtc",
+      returnType: "string" as const,
+      params: [
+        {
+          name: "counter",
+          type: "enum" as const,
+          value: "GPS-LNAV",
+          options: ["GPS-LNAV", "GAL"],
+        },
+        { name: "week", type: "number" as const, value: "100" },
+        { name: "timeOfWeekSeconds", type: "number" as const, value: "0" },
+        { name: "rolloverEra", type: "expr" as const, value: "0" },
+      ],
+    };
+    const eraOf = (call: string) =>
+      BR.buildPlaygroundFields(gnssWeek, call)?.fields.at(-1);
+
+    it("seeds a bare number as the number it is", () => {
+      expect(eraOf('gnssWeekToUtc("GPS-LNAV", 100, 0, 0)')).toEqual({
+        name: "rolloverEra",
+        kind: "expr",
+        seed: "0",
+      });
+    });
+
+    it("seeds a quoted word with its quotes, so it stays a string", () => {
+      expect(eraOf('gnssWeekToUtc("GPS-LNAV", 100, 0, "rolling")')).toEqual({
+        name: "rolloverEra",
+        kind: "expr",
+        seed: '"rolling"',
+      });
+    });
+
+    it("seeds an object literal as written", () => {
+      expect(
+        eraOf(
+          'gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "2020-01-01T00:00:00Z" })',
+        ),
+      ).toEqual({
+        name: "rolloverEra",
+        kind: "expr",
+        seed: '{ notBefore: "2020-01-01T00:00:00Z" }',
+      });
+    });
+
+    it("seeds nothing when an optional parameter is left out", () => {
+      const optional = {
+        ...gnssWeek,
+        params: gnssWeek.params.map((p) =>
+          p.name === "rolloverEra" ? { ...p, optional: true } : p,
+        ),
+      };
+      expect(
+        BR.buildPlaygroundFields(
+          optional,
+          'gnssWeekToUtc("GPS-LNAV", 100, 0)',
+        )?.fields.at(-1),
+      ).toEqual({
+        name: "rolloverEra",
+        kind: "expr",
+        seed: "",
+        optional: true,
+      });
+    });
+
+    it("sends the function back to the textarea when the argument is not a literal", () => {
+      expect(
+        eraOf('gnssWeekToUtc("GPS-LNAV", 100, 0, someEra)'),
+      ).toBeUndefined();
+    });
+
+    it("loads the field from an example, as any other field", () => {
+      const examples = [
+        { call: 'gnssWeekToUtc("GPS-LNAV", 100, 0, 0)', result: '"a"' },
+        { call: 'gnssWeekToUtc("GAL", 5, 7, "rolling")', result: '"b"' },
+      ];
+      const fields = BR.buildPlaygroundFields(
+        gnssWeek,
+        examples[0].call,
+      )!.fields;
+      expect(BR.buildChoiceSeeds(gnssWeek, examples, fields)).toEqual({
+        counter: {
+          "GPS-LNAV": {
+            week: { seed: "100" },
+            timeOfWeekSeconds: { seed: "0" },
+            rolloverEra: { seed: "0" },
           },
-          { name: "week", type: "number", value: "100" },
-          { name: "timeOfWeekSeconds", type: "number", value: "0" },
-          {
-            name: "rolloverEra",
-            type: "enum",
-            value: "0",
-            options: ["number", "rolling"],
+          GAL: {
+            week: { seed: "5" },
+            timeOfWeekSeconds: { seed: "7" },
+            rolloverEra: { seed: '"rolling"' },
           },
-        ],
-      },
-      'gnssWeekToUtc("GPS-LNAV", 100, 0, 0)',
-    );
-    expect(res?.fields.at(-1)).toEqual({
-      name: "rolloverEra",
-      kind: "number",
-      seed: "0",
+        },
+      });
+    });
+
+    it("writes the example's argument into a synthesized template, or an empty string with none", () => {
+      expect(BR.synthesizeTemplate(gnssWeek)).toBe(
+        'gnssWeekToUtc("GPS-LNAV", 100, 0, 0)',
+      );
+      const bare = {
+        ...gnssWeek,
+        params: gnssWeek.params.map((p) =>
+          p.name === "rolloverEra" ? { ...p, value: "" } : p,
+        ),
+      };
+      expect(BR.synthesizeTemplate(bare)).toBe(
+        'gnssWeekToUtc("GPS-LNAV", 100, 0, "")',
+      );
     });
   });
 
@@ -2763,6 +2846,31 @@ describe("buildSidebar with industries", () => {
     ]);
   });
 
+  it("puts a layer other industries draw on under the divider too, in the order the industries are declared", () => {
+    // `workforce` is drawn on by transport; a drawn-on namespace that no industry owns
+    // (`timescale`) stays among the general groups.
+    const out = BR.buildSidebar(
+      symbols([
+        ...rows,
+        sym("workforce", "calculate", "dutyDayFor"),
+        sym("timescale", "convert", "toTAI"),
+      ]),
+      [],
+      ["workforce", "transport", "intermodal"],
+    );
+    expect(labelsAt(out, 4)).toEqual([
+      "plain",
+      "regex",
+      "timescale",
+      "zoned",
+      "workforce",
+      "transport",
+      "intermodal",
+    ]);
+    expect(out).toContain('"data-gmt-industry": "workforce"');
+    expect(out).not.toContain('"data-gmt-industry": "timescale"');
+  });
+
   it("puts a third industry in the group with no change to the generator", () => {
     const out = BR.buildSidebar(
       symbols([...rows, sym("maritime", "calculate", "laytime")]),
@@ -2845,19 +2953,29 @@ describe("industry tag on a page", () => {
     expect(page).not.toContain("industries:");
   });
 
-  it("tags a type only when every function that reaches it is in one industry namespace", () => {
-    const layers = ["intermodal", "transport"];
+  it("tags a type only when every function that reaches it is in one industry's own namespace", () => {
+    const owner = (namespace: string) =>
+      ({ intermodal: "intermodal", transport: "transport" })[namespace];
     expect(
-      BR.typeIndustry(["transport/calculate/a", "transport/compare/b"], layers),
+      BR.typeIndustry(["transport/calculate/a", "transport/compare/b"], owner),
     ).toBe("transport");
     expect(
-      BR.typeIndustry(["transport/calculate/a", "plain/calculate/b"], layers),
+      BR.typeIndustry(["transport/calculate/a", "plain/calculate/b"], owner),
     ).toBeUndefined();
     expect(
-      BR.typeIndustry(["transport/calculate/a", "intermodal/parse/b"], layers),
+      BR.typeIndustry(["transport/calculate/a", "intermodal/parse/b"], owner),
     ).toBeUndefined();
-    expect(BR.typeIndustry(["plain/calculate/a"], layers)).toBeUndefined();
-    expect(BR.typeIndustry([], layers)).toBeUndefined();
+    expect(BR.typeIndustry(["plain/calculate/a"], owner)).toBeUndefined();
+    expect(BR.typeIndustry([], owner)).toBeUndefined();
+  });
+
+  it("tags with the industry that owns the namespace, which a drawn-on namespace does not make", () => {
+    // `timescale` is drawn on by industries and owned by none: a type only its functions reach is
+    // general. `gnss` is owned, so a type only its functions reach is tagged GNSS.
+    const owner = (namespace: string) =>
+      namespace === "gnss" ? "gnss" : undefined;
+    expect(BR.typeIndustry(["gnss/convert/a"], owner)).toBe("gnss");
+    expect(BR.typeIndustry(["timescale/convert/a"], owner)).toBeUndefined();
   });
 });
 

@@ -23,8 +23,10 @@
  *   tests, test files   `vitest list --json` — collection only; it never runs a test body
  *   functions/namespace `apps/dox/src/generated/reference/gmt-corpus.json`, the generated
  *                       reference corpus (`kind: "function"`, grouped by `namespace`)
- *   industry layers     `apps/dox/src/content/docs/guides/industries/`, one guide per layer,
- *                       each named for its namespace (`transport-legs-and-dwell.mdx`)
+ *   industries          `apps/dox/src/data/industries.json`, the declaration of each
+ *                       industry: the namespace it owns, if any, and the modules it draws
+ *                       on. Each guide under `apps/dox/src/content/docs/guides/industries/`
+ *                       is named for a declared industry (`transport-legs-and-dwell.mdx`)
  *   CI multipliers      `.github/workflows/ci.yml`'s `gmt-matrix` node/timezone matrix
  *   locales             `MustTestLocales` in `packages/gmt/src/test/localeMatrix.ts`
  *   other libraries     `apps/dox/src/data/library-measurements.json`, one entry per library:
@@ -49,8 +51,10 @@
  *   the sentence        the earliest and the latest day a library was measured
  *   under the table
  *   the namespace       one `/reference/<namespace>/` link per namespace that exports a
- *   links               function, each labelled with its namespace, with the industry layers
- *                       on the "By industry" line
+ *   links               function, each labelled with its namespace, on a line of their
+ *                       own; and a "By industry:" line that links each declared
+ *                       industry's page (`/industries/<id>/`), in declared order, labelled
+ *                       with the industry's label
  *
  * Three invariants keep the rewriting honest:
  *
@@ -77,6 +81,10 @@ const CORPUS = "apps/dox/src/generated/reference/gmt-corpus.json";
 const WORKFLOW = ".github/workflows/ci.yml";
 const LOCALES = "packages/gmt/src/test/localeMatrix.ts";
 const INDUSTRY_GUIDES = "apps/dox/src/content/docs/guides/industries";
+/** The declaration of every industry. The docs site reads the same file (`industry-tags.ts`). */
+const INDUSTRIES = "apps/dox/src/data/industries.json";
+/** Ids no industry may take: `core` tags core-only pages, and `space` is taken by a planned expansion. */
+const RESERVED_INDUSTRY_IDS = ["core", "space"];
 const VITEST_CONFIG = "packages/gmt/vitest.config.ts";
 
 const ROOT_README = "README.md";
@@ -92,7 +100,9 @@ const PATTERN_NAMESPACE = "regex";
 const MEASUREMENTS = "apps/dox/src/data/library-measurements.json";
 /** The docs site's API reference; a namespace's index page is `<REFERENCE><namespace>/`. */
 const REFERENCE = "https://gmt-dox.northguild.workers.dev/reference/";
-/** How the line that links the industry namespaces starts. */
+/** The docs site's industry pages; an industry's page is `<INDUSTRY_PAGES><id>/`. */
+const INDUSTRY_PAGES = "https://gmt-dox.northguild.workers.dev/industries/";
+/** How the line that links the industries' pages starts. */
 const INDUSTRY_LINE = "By industry:";
 /**
  * A count the READMEs spell as a word, by its value. A count past the end is reported, not
@@ -181,11 +191,14 @@ function suiteCounts() {
 function apiSurface() {
   const corpus = JSON.parse(readFileSync(CORPUS, "utf8"));
   const functions = new Map();
+  const modules = new Map();
   let patterns = 0;
 
   for (const entry of corpus) {
     if (entry.kind === "function") {
       functions.set(entry.namespace, (functions.get(entry.namespace) ?? 0) + 1);
+      const key = `${entry.namespace}/${entry.module}`;
+      modules.set(key, (modules.get(key) ?? 0) + 1);
     } else if (
       entry.namespace === PATTERN_NAMESPACE &&
       entry.kind === PATTERN_NAMESPACE
@@ -196,35 +209,136 @@ function apiSurface() {
 
   // Descending, so the generated chart data reads in bar order.
   const byNamespace = [...functions.entries()].sort((a, b) => b[1] - a[1]);
-  const industries = industryLayers(new Set(functions.keys()));
+  const declared = industryDeclarations(functions, modules);
+  const owned = new Set(declared.flatMap((d) => d.namespace ?? []));
+  // How many functions a declared module holds: a whole namespace, or one sub-module.
+  const countOf = (module) =>
+    module.includes("/") ? modules.get(module) : functions.get(module);
+  const industryLayers = declared.map((d) => ({
+    id: d.id,
+    label: d.label,
+    own: d.namespace ? functions.get(d.namespace) : 0,
+    drawsOn: d.drawsOn.map((module) => ({
+      module,
+      count: countOf(module),
+      // Another industry's own namespace is a shared industry layer; any other module is Core.
+      shared: owned.has(module.split("/")[0]),
+    })),
+  }));
   return {
     byNamespace,
-    industries: byNamespace
+    industryNamespaces: byNamespace
       .map(([namespace]) => namespace)
-      .filter((namespace) => industries.has(namespace)),
+      .filter((namespace) => owned.has(namespace)),
+    industryLayers,
+    // Every function once: a drawn-on segment repeats functions counted in their own column or
+    // in Core, so only the own counts are summed.
+    industryFunctions: industryLayers.reduce(
+      (sum, layer) => sum + layer.own,
+      0,
+    ),
+    declaredIndustries: declared,
     functions: byNamespace.reduce((sum, [, count]) => sum + count, 0),
     patterns,
   };
 }
 
 /**
- * The namespaces that are industry layers rather than core primitives. Every layer ships with a
- * guide under INDUSTRY_GUIDES named `<namespace>-<topic>.mdx`, so the guides are the list — a new
- * layer joins the /why-gmt industry chart when its guide lands, with nothing typed here.
+ * The declared industries (INDUSTRIES), checked against the corpus. `functions` maps each
+ * namespace to the number of functions it exports and `modules` maps each `namespace/module`
+ * likewise. Throws, naming the file and the rule, when a declaration breaks one:
+ *
+ *   an `id` is a lowercase word, unique, and never reserved
+ *   a `namespace` equals the `id` and exports a function
+ *   a namespace named for a declared industry is that industry's `namespace`
+ *   every `drawsOn` entry is a namespace or a `namespace/module` that exports a function,
+ *   is not repeated, is not the industry's own namespace, and is not listed whole and as
+ *   one of its own sub-modules
+ *   an industry with no `namespace` draws on at least one module
+ *   every guide under INDUSTRY_GUIDES is named for a declared industry
  */
-function industryLayers(namespaces) {
-  const layers = new Set();
-  for (const file of readdirSync(INDUSTRY_GUIDES)) {
-    if (!file.endsWith(".mdx") || file === "index.mdx") continue;
-    const namespace = file.slice(0, file.indexOf("-"));
-    if (!namespaces.has(namespace)) {
-      throw new Error(
-        `${INDUSTRY_GUIDES}/${file}: an industry guide is named for its namespace, and \`${namespace}\` exports no function`,
+function industryDeclarations(functions, modules) {
+  const declared = JSON.parse(readFileSync(INDUSTRIES, "utf8"));
+  if (!Array.isArray(declared) || declared.length === 0) {
+    throw new Error(`${INDUSTRIES}: declares no industry`);
+  }
+  const fail = (id, message) => {
+    throw new Error(`${INDUSTRIES}: ${id}: ${message}`);
+  };
+  const ids = new Set();
+  for (const d of declared) {
+    const id = d.id;
+    if (typeof id !== "string" || !/^[a-z]+$/.test(id)) {
+      fail(String(id), "an `id` is one lowercase word");
+    }
+    if (RESERVED_INDUSTRY_IDS.includes(id)) {
+      fail(id, `\`${id}\` is reserved, so no industry may take it as its id`);
+    }
+    if (ids.has(id)) fail(id, "this `id` is declared twice");
+    ids.add(id);
+    if (typeof d.label !== "string" || d.label === "") {
+      fail(id, "needs a `label`");
+    }
+    if (d.namespace !== undefined) {
+      if (d.namespace !== id) {
+        fail(
+          id,
+          `its \`namespace\` is \`${d.namespace}\`, and an industry's namespace is named for it. Use \`${id}\``,
+        );
+      }
+      if (!functions.has(d.namespace)) {
+        fail(id, `its namespace \`${d.namespace}\` exports no function`);
+      }
+    }
+    if (!Array.isArray(d.drawsOn))
+      fail(id, "needs a `drawsOn` list, empty if none");
+    const seen = new Set();
+    for (const module of d.drawsOn) {
+      const exported = module.includes("/")
+        ? modules.has(module)
+        : functions.has(module);
+      if (!exported) {
+        fail(id, `draws on \`${module}\`, which exports no function`);
+      }
+      if (seen.has(module)) fail(id, `draws on \`${module}\` twice`);
+      seen.add(module);
+      if (module.split("/")[0] === d.namespace) {
+        fail(id, `draws on \`${module}\`, which is its own namespace`);
+      }
+    }
+    for (const module of seen) {
+      if (module.includes("/") && seen.has(module.split("/")[0])) {
+        fail(
+          id,
+          `draws on \`${module.split("/")[0]}\` whole and on \`${module}\`. List one of them`,
+        );
+      }
+    }
+    if (d.namespace === undefined && d.drawsOn.length === 0) {
+      fail(
+        id,
+        "owns no namespace and draws on no module, so it has no function to declare",
       );
     }
-    layers.add(namespace);
   }
-  return layers;
+  for (const d of declared) {
+    if (functions.has(d.id) && d.namespace !== d.id) {
+      fail(
+        d.id,
+        `a namespace named \`${d.id}\` exports functions, so this industry declares it as its \`namespace\``,
+      );
+    }
+  }
+  for (const file of readdirSync(INDUSTRY_GUIDES)) {
+    if (!file.endsWith(".mdx") || file === "index.mdx") continue;
+    const prefix = file.slice(0, file.indexOf("-"));
+    if (!ids.has(prefix)) {
+      throw new Error(
+        `${INDUSTRY_GUIDES}/${file}: an industry guide is named for a declared industry, and \`${prefix}\` is not one; declare it in ${INDUSTRIES}`,
+      );
+    }
+  }
+  return declared;
 }
 
 /** The CI matrix the executions figure multiplies by. */
@@ -341,7 +455,9 @@ function statsObject(f) {
       namespace,
       count,
     })),
-    industries: f.industries,
+    industryNamespaces: f.industryNamespaces,
+    industryLayers: f.industryLayers,
+    industryFunctions: f.industryFunctions,
   };
 }
 
@@ -601,33 +717,46 @@ function tableRowProblems(text, f) {
 }
 
 /**
- * The namespace index pages a README links must be those of the namespaces that export a
- * function, each at least once, with the industry layers on the "By industry" line and nothing
- * else there. A Markdown link to one is labelled with the namespace its URL names. A link
- * deeper than a namespace's index page is not one of these.
+ * The README's links into the docs site, in three rules.
+ *
+ *   1. Every namespace that exports a function has a `/reference/<namespace>/` link, labelled
+ *      with the namespace, on a line that does not start with "By industry:". That includes
+ *      the namespaces industries own. No other `/reference/` link names a namespace, and a
+ *      sub-module has no README link of its own. The link to `/reference/` itself is the
+ *      front door and is allowed.
+ *   2. The "By industry:" line links `/industries/<id>/` for exactly the declared industries,
+ *      in declared order, each labelled with its `label`, and holds no `/reference/` link.
+ *   3. No `/industries/<id>/` link to an undeclared id anywhere.
  */
 function namespaceLinkProblems(text, f) {
+  const lines = text.split("\n");
+  const problems = [];
+
+  // Rule 1.
+  const linked = new Set();
   const link = new RegExp(
     `${escapeRegExp(REFERENCE)}([\\w-]+)\\/?(?![\\w/-])`,
     "g",
   );
-  const linked = new Set();
-  const onIndustryLine = new Set();
-  for (const line of text.split("\n")) {
-    for (const [, namespace] of line.matchAll(link)) {
-      linked.add(namespace);
-      if (line.startsWith(INDUSTRY_LINE)) onIndustryLine.add(namespace);
+  const deeper = new RegExp(
+    `${escapeRegExp(REFERENCE)}([\\w-]+/[\\w-][\\w/.-]*)`,
+    "g",
+  );
+  for (const line of lines) {
+    if (line.startsWith(INDUSTRY_LINE)) continue;
+    for (const [, namespace] of line.matchAll(link)) linked.add(namespace);
+    for (const [, path] of line.matchAll(deeper)) {
+      problems.push(
+        `links ${REFERENCE}${path}, which is deeper than a namespace. A sub-module has no README link of its own: link its namespace`,
+      );
     }
   }
   const namespaces = f.byNamespace.map(([namespace]) => namespace);
-  const industries = new Set(f.industries);
-  const problems = [];
-
   for (const namespace of namespaces) {
     if (linked.has(namespace)) continue;
     problems.push(
-      `no link to ${REFERENCE}${namespace}/ — \`${namespace}\` exports functions, so it needs one. ` +
-        `Add it to ${industries.has(namespace) ? `the "${INDUSTRY_LINE}" line` : "the list of namespaces"}`,
+      `no link to ${REFERENCE}${namespace}/ on a line of its own. \`${namespace}\` exports functions, so it needs one. ` +
+        `Add it to the list of namespaces`,
     );
   }
   for (const namespace of linked) {
@@ -647,16 +776,53 @@ function namespaceLinkProblems(text, f) {
         `A namespace link is labelled with its namespace: write [${namespace}], or correct the URL`,
     );
   }
-  for (const namespace of namespaces) {
-    if (!linked.has(namespace)) continue;
-    if (industries.has(namespace) && !onIndustryLine.has(namespace)) {
+
+  // Rule 2.
+  const industryLines = lines.filter((line) => line.startsWith(INDUSTRY_LINE));
+  const expected = f.industryLayers.map(({ id, label }) => ({ id, label }));
+  const describe = (list) => list.map(({ id }) => id).join(", ");
+  if (industryLines.length !== 1) {
+    problems.push(
+      `needs exactly one line that starts with "${INDUSTRY_LINE}" and links each industry's page. It has ${industryLines.length}`,
+    );
+  } else {
+    const line = industryLines[0];
+    if (line.includes(REFERENCE)) {
       problems.push(
-        `\`${namespace}\` is an industry namespace, and its link is not on the "${INDUSTRY_LINE}" line. Move it there`,
+        `the "${INDUSTRY_LINE}" line links a ${REFERENCE} page. It links each industry's page (${INDUSTRY_PAGES}<id>/) and nothing in the reference`,
       );
     }
-    if (!industries.has(namespace) && onIndustryLine.has(namespace)) {
+    const found = [
+      ...line.matchAll(
+        new RegExp(
+          `\\[([^\\]]*)\\]\\(${escapeRegExp(INDUSTRY_PAGES)}([\\w-]+)\\/\\)`,
+          "g",
+        ),
+      ),
+    ].map(([, label, id]) => ({ id, label }));
+    if (found.map((x) => x.id).join() !== expected.map((x) => x.id).join()) {
       problems.push(
-        `the "${INDUSTRY_LINE}" line links \`${namespace}\`, which is not an industry namespace. Move it to the list of namespaces`,
+        `the "${INDUSTRY_LINE}" line links ${describe(found) || "no industry"}, and the declared industries are ${describe(expected)}, in that order. ` +
+          `Link exactly those, each as [Label](${INDUSTRY_PAGES}<id>/)`,
+      );
+    } else {
+      for (const [i, { id, label }] of found.entries()) {
+        if (label !== expected[i].label) {
+          problems.push(
+            `the link to ${INDUSTRY_PAGES}${id}/ is labelled "${label}". An industry link is labelled with the industry's label: write [${expected[i].label}]`,
+          );
+        }
+      }
+    }
+  }
+
+  // Rule 3.
+  const declaredIds = new Set(expected.map(({ id }) => id));
+  const pages = new RegExp(`${escapeRegExp(INDUSTRY_PAGES)}([\\w-]+)`, "g");
+  for (const [, id] of text.matchAll(pages)) {
+    if (!declaredIds.has(id)) {
+      problems.push(
+        `links ${INDUSTRY_PAGES}${id}/, and \`${id}\` is not a declared industry. Remove the link, or declare it in ${INDUSTRIES}`,
       );
     }
   }
@@ -855,8 +1021,20 @@ function show() {
   );
   for (const [ns, count] of f.byNamespace)
     console.log(
-      `    ${ns.padEnd(10)} ${count}${f.industries.includes(ns) ? "  (industry)" : ""}`,
+      `    ${ns.padEnd(10)} ${count}${f.industryNamespaces.includes(ns) ? "  (industry)" : ""}`,
     );
+  console.log(
+    `industries       ${f.industryLayers.length}, ${n(f.industryFunctions)} functions in their own namespaces (${INDUSTRIES})`,
+  );
+  for (const layer of f.industryLayers) {
+    const drawsOn = layer.drawsOn.map(
+      ({ module, count, shared }) =>
+        `${module} (${count}${shared ? ", shared layer" : ", core"})`,
+    );
+    console.log(
+      `    ${layer.label.padEnd(12)} owns ${layer.own > 0 ? `${layer.id} (${layer.own})` : "no namespace"}; draws on ${drawsOn.length > 0 ? drawsOn.join(", ") : "nothing"}`,
+    );
+  }
   console.log(
     `other libraries  ${f.others.length}, measured ${f.measuredFrom} to ${f.measuredTo} (${MEASUREMENTS})`,
   );

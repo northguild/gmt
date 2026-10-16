@@ -28,4 +28,24 @@ export const RENAMED_FUNCTIONS: readonly RenamedFunction[] = [
     from: "duration/calculate/durationAs",
     to: "duration/calculate/totalDuration",
   },
+  // `isLeapSecond` kept its name for a new function, the check against the leap-second table.
+  // The old one, which reads the syntax of a seconds field of 60, is `hasSecond60`.
+  { from: "plain/validate/isLeapSecond", to: "plain/validate/hasSecond60" },
+  // The duty engine became the `workforce` industry layer.
+  ...[
+    "dutyDayFor",
+    "dutyTotals",
+    "dutyViolations",
+    "evaluateDutyLog",
+    "longestRun",
+    "qualifyingRestPairs",
+    "qualifyingRests",
+  ].map((name) => ({
+    from: `duty/calculate/${name}`,
+    to: `workforce/calculate/${name}`,
+  })),
+  {
+    from: "duty/validate/isValidDutyLog",
+    to: "workforce/validate/isValidDutyLog",
+  },
 ];

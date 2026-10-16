@@ -6,6 +6,8 @@ template: splash
 
 import {
   industryDistributionSvg,
+  industryLegendHtml,
+  industrySummaryHtml,
   localeMatrixSvg,
   namespaceDistributionSvg,
   suiteTestSvg,
@@ -109,7 +111,7 @@ alternative and about {formatCount(executionRatio(executionRange.min))}× the le
 
 GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces, plus {gmtStats.patterns}
 regex patterns in `regex`. {coreNamespaces.length} namespaces are the core — {coreNamespaceList} — and
-{industryNamespaces.length} are industry layers built on it: {industryNamespaceList}. All of it is generated
+{industryNamespaces.length} belong to one industry each: {industryNamespaceList}. All of it is generated
 from the same TypeScript source and verified by the same test suite.
 
 <ChartContainer
@@ -128,7 +130,9 @@ from the same TypeScript source and verified by the same test suite.
       label: "By industry",
       chart: "industries",
       svg: industryDistributionSvg,
-      caption: `${industryFunctions} functions across ${industryNamespaces.length} industry layers. Each names one operation a trade performs, and returns the same ISO 8601 and RFC 9557 strings as the core.`,
+      legend: industryLegendHtml,
+      summary: industrySummaryHtml,
+      caption: `${industryFunctions} functions across ${industryNamespaces.length} industry layers; lighter segments are shared layers an industry draws on.`,
     },
   ]}
 >

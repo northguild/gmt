@@ -42,7 +42,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
   - [ ] `node scripts/stats.mjs check` passes, and every figure in the four fact lines and the comparison table matches `apps/dox/src/data/gmt-stats.json` and `apps/dox/src/data/library-measurements.json`
   - [ ] The comparison table has GMT's row first, then one row per library in `library-measurements.json`, by tests, most first
   - [ ] `node scripts/api-surface.mjs check` passes, and one sampled call run by hand returns the result its line shows
-  - [ ] The namespace links name every namespace that exports functions and no other, the industry namespaces sit on the "By industry:" line, and each link resolves to `/reference/<namespace>/` on the docs site
+  - [ ] The namespace links name every namespace that exports functions and no other, the "By industry:" line links each declared industry's page (`/industries/<id>/`), and each link resolves to `/reference/<namespace>/` on the docs site
   - [ ] The agent prompt equals `AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts` in both READMEs and in `CONTRIBUTING.md`
   - [ ] The two files are identical: `cmp README.md packages/gmt/README.md` prints nothing
   - [ ] Neither README holds a section for one function or one feature; that content is in a docs guide and the generated reference

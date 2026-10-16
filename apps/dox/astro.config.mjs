@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
+import { industriesSidebar } from "./src/generated/industries-sidebar.ts";
 import { toolsSidebar } from "./src/generated/tools-sidebar.ts";
 import { scenariosSidebar } from "./src/generated/scenarios-sidebar.ts";
 import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
@@ -201,6 +202,7 @@ export default defineConfig({
             { slug: "install" },
           ],
         },
+        { label: "Industries", collapsed: true, items: industriesSidebar },
         { label: "API Reference", collapsed: true, items: referenceSidebar },
         {
           label: "Guides",

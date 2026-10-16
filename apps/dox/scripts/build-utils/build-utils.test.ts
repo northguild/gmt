@@ -1121,6 +1121,108 @@ describe("classifyType (checker-backed — pure number unions)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// classifyType (checker-backed) — string literals beside an open type
+// ---------------------------------------------------------------------------
+
+describe("classifyType (checker-backed — string literals beside an open type)", () => {
+  const classifyParams = (source: string) => {
+    const { checker, sourceFile } = compile(source);
+    return paramTypes(checker, sourceFile, "f").map((type) =>
+      classifyType(checker, type),
+    );
+  };
+
+  it('classifies `number | "rolling"` as source text, not as an enum with `number` for a choice', () => {
+    const [era] = classifyParams(
+      `function f(era: number | "rolling"): void {}`,
+    );
+    expect(era).toEqual({ type: "expr" });
+  });
+
+  it('classifies `number | "rolling" | { notBefore: string }` as source text', () => {
+    const [era] = classifyParams(`
+      type RolloverEra = number | "rolling" | { notBefore: string };
+      function f(era: RolloverEra): void {}
+    `);
+    expect(era).toEqual({ type: "expr" });
+  });
+
+  it("holds for the whole class: bigint, an object type or an interface beside string literals", () => {
+    const [big, obj, named, optional] = classifyParams(`
+      interface Pivot { notBefore: string }
+      function f(
+        big: bigint | "auto",
+        obj: "none" | { start: string; end: string },
+        named: "none" | Pivot,
+        optional?: number | "rolling",
+      ): void {}
+    `);
+    expect(big).toEqual({ type: "expr" });
+    expect(obj).toEqual({ type: "expr" });
+    expect(named).toEqual({ type: "expr" });
+    expect(optional).toEqual({ type: "expr" });
+  });
+
+  it('keeps `1 | 2 | "x"` an enum: every member is a literal a list can name', () => {
+    const [mixed] = classifyParams(`function f(m: 1 | 2 | "x"): void {}`);
+    // The checker's order is not ours to pin: compare the choices as a set.
+    expect(mixed?.type).toBe("enum");
+    expect([...(mixed?.options ?? [])].sort()).toEqual(["1", "2", "x"]);
+  });
+
+  it("leaves `string | number` as it was, because it holds no string literal", () => {
+    const [either] = classifyParams(`function f(v: string | number): void {}`);
+    expect(either).toEqual({ type: "string" });
+  });
+
+  it("keeps a union of units and an array of units an enum: an array is a choice of the same units", () => {
+    const [units] = classifyParams(`
+      type Unit = "years" | "months";
+      function f(u: Unit | Unit[]): void {}
+    `);
+    expect(units).toEqual({ type: "enum", options: ["years", "months"] });
+  });
+});
+
+describe("classifyTypeFromString (string literals beside an open type)", () => {
+  it.each([
+    `number | "rolling"`,
+    `number | "rolling" | { notBefore: string }`,
+    `"rolling" | bigint`,
+  ])("classifies %s as source text", (written) => {
+    expect(classifyTypeFromString(written)).toEqual({ type: "expr" });
+  });
+
+  it("keeps a union of string and number literals an enum", () => {
+    expect(classifyTypeFromString(`1 | 2 | "x"`)).toEqual({
+      type: "enum",
+      options: ["1", "2", "x"],
+    });
+  });
+});
+
+describe("seedForParam (source text)", () => {
+  const expr: ClassifiedType = { type: "expr" };
+
+  it("seeds the argument as the example wrote it, quotes included", () => {
+    const examples = (call: string): ExampleLike[] => [{ call, result: "" }];
+    expect(seedForParam(examples(`f("rolling")`), 0, expr)).toBe(`"rolling"`);
+    expect(seedForParam(examples("f(2)"), 0, expr)).toBe("2");
+    expect(
+      seedForParam(
+        examples(`f({ notBefore: "2020-01-01T00:00:00Z" })`),
+        0,
+        expr,
+      ),
+    ).toBe(`{ notBefore: "2020-01-01T00:00:00Z" }`);
+  });
+
+  it("seeds nothing when no example reaches the parameter", () => {
+    expect(seedForParam([], 0, expr)).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // classifyType (checker-backed) — calendar and numberingSystem
 // ---------------------------------------------------------------------------
 

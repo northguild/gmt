@@ -83,8 +83,9 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
         built library. `sync` fixes a stale figure. Everything else needs a hand edit, and
         `check` says which.
       - **The story adds or removes a namespace that exports functions:** add or remove
-        its `/reference/<namespace>/` link. An industry namespace goes on the
-        "By industry:" line. Any other goes in the line of namespace links above it.
+        its `/reference/<namespace>/` link on the line of namespace links, whoever owns
+        it; the "By industry:" line links each industry's page (`/industries/<id>/`)
+        and changes only when an industry is declared or removed.
       - **`library-measurements.json` gains or loses a library:** add or delete its row
         in the comparison table, and correct the count word in the fact lines ("six").
         **A re-measurement changes the order of the rows:** move them. GMT's row is first,

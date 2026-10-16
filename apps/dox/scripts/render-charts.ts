@@ -8,7 +8,12 @@ import {
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { gmtStats } from "../src/data/gmt-stats";
 import { localeMatrixRows } from "../src/lib/locale-families";
-import { BAR_CHARTS, type BarChartId } from "../src/lib/why-gmt-charts";
+import {
+  BAR_CHARTS,
+  industryLegend,
+  industrySummary,
+  type BarChartId,
+} from "../src/lib/why-gmt-charts";
 
 // The static SVG is the no-JS fallback; ChartContainer.astro mounts the same
 // definition live on top of it to add the hover tooltip.
@@ -40,7 +45,11 @@ export function renderNamespaceChart(): string {
   return renderBarChart("namespaces");
 }
 
-/** The industry layers — the API-surface toggle's other view. */
+/**
+ * The industry layers, stacked: each industry's own functions solid, the modules it draws on
+ * hatched above them — the API-surface toggle's other view. The server SVG draws the same marks
+ * the live chart does, because both come from the one definition.
+ */
 export function renderIndustryChart(): string {
   return renderBarChart("industries");
 }
@@ -159,4 +168,7 @@ export const testExecutionSvg = renderTestExecutionChart();
 export const suiteTestSvg = renderSuiteTestChart();
 export const namespaceDistributionSvg = renderNamespaceChart();
 export const industryDistributionSvg = renderIndustryChart();
+/** The key under the stacked chart, and its counts in words for a reader who cannot see the bars. */
+export const industryLegendHtml = industryLegend();
+export const industrySummaryHtml = industrySummary();
 export const localeMatrixSvg = renderLocaleMatrixChart();

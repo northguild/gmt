@@ -33,8 +33,10 @@ function shouldSkip() {
     for (const dir of readdirSync(packagesDir, {
       withFileTypes: true,
     }).sort()) {
-      if (dir.isDirectory())
-        inputs.push(join(packagesDir, dir.name, "package.json"));
+      if (!dir.isDirectory()) continue;
+      // A directory with no package.json (a tool cache, a half-deleted package) is no input.
+      const manifest = join(packagesDir, dir.name, "package.json");
+      if (existsSync(manifest)) inputs.push(manifest);
     }
   } catch {
     return false;

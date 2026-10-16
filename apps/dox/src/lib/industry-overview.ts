@@ -48,6 +48,59 @@ export interface IndustryOverview {
 }
 
 export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
+  workforce: {
+    about:
+      "Workforce is people's working time, for any crew, shift or rota. It is counted in duty days that need not start at midnight, in rolling windows that slide across the log, and in rests that may be split in two. A working-time regime is a set of numbers, and the caller states every one of them. This layer reads a duty log against those numbers, and holds none of its own.",
+    guideTitle: "Hours of Work",
+    solves: [
+      {
+        problem: "A duty day does not start at midnight.",
+        answer:
+          "An operator names the time its day starts and the zone it is read in. {{dutyDayFor}} returns the day an instant falls in, so a log is grouped by the operator's day and never by the calendar's.",
+        see: [
+          { label: "guide", href: "/guides/intervals/hours-of-work/" },
+          {
+            label: "scenario",
+            href: "/scenarios/duty-day-is-not-midnight/",
+          },
+        ],
+      },
+      {
+        problem: "A sliding window is not a calendar day.",
+        answer:
+          "A rule that asks for a rest in any stretch of a given length looks at every such stretch, not at each day on its own. {{evaluateDutyLog}} checks every rule at one instant, and {{dutyTotals}} adds up the time spent in the statuses you name inside a window.",
+        see: [
+          { label: "guide", href: "/guides/intervals/hours-of-work/" },
+          {
+            label: "scenario",
+            href: "/scenarios/sliding-window-not-calendar-day/",
+          },
+          { label: "mistakes", href: "/mistakes/duty/" },
+        ],
+      },
+      {
+        problem: "Two short rests may count as one, or may not.",
+        answer:
+          "A regime that lets a rest be split sets a floor for each part and for the two together. {{qualifyingRestPairs}} finds the pairs that meet all of the floors you state, so a pair that meets only two of them is not counted.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/paired-rest-that-does-not-qualify/",
+          },
+          { label: "mistakes", href: "/mistakes/duty/" },
+        ],
+      },
+      {
+        problem: "A log has to be checked before it is counted.",
+        answer:
+          "A log with overlapping entries, or an entry that ends before it starts, gives a total that looks right and is not. {{isValidDutyLog}} tells whether every function in this layer accepts the log.",
+        see: [
+          { label: "guide", href: "/guides/intervals/hours-of-work/" },
+          { label: "mistakes", href: "/mistakes/duty/" },
+        ],
+      },
+    ],
+  },
   intermodal: {
     about:
       "Intermodal moves a container between ship, rail and truck. Each hand-off has its own clock, its own tariff and its own paperwork. This layer covers the free time a container gets and the charges after it, the dates on billing deadlines and bills of lading, an ETA across several modes, and the timestamps inside EDI messages and EPCIS events.",

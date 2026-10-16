@@ -1,5 +1,7 @@
+import { INDUSTRY_LAYER_IDS } from "./industry-tags";
+
 /**
- * The "Start here" pages both `llms.txt` and `llms-full.txt` list. The page
+ * The "Start here" and "Industries" pages both `llms.txt` and `llms-full.txt` list. The page
  * modules keep their own `import.meta.glob` (Vite resolves it per module) and
  * pass the resulting raw-source map in.
  */
@@ -33,4 +35,24 @@ export function topLevelPages(
     .sort(
       (a, b) => rank(a.slug) - rank(b.slug) || a.slug.localeCompare(b.slug),
     );
+}
+
+/**
+ * The industry pages under content/docs/industries/, with their raw source: the index first, then
+ * one hub per industry in declared order. A hub that is not on disk is left out, and so is a page
+ * for an industry that is not declared.
+ */
+export function industryPages(
+  raw: Record<string, string>,
+): { slug: string; source: string }[] {
+  const bySlug = new Map(
+    Object.entries(raw).map(([key, source]) => [docsRelativePath(key), source]),
+  );
+  return [
+    "industries/index",
+    ...INDUSTRY_LAYER_IDS.map((id) => `industries/${id}`),
+  ].flatMap((slug) => {
+    const source = bySlug.get(slug);
+    return source === undefined ? [] : [{ slug, source }];
+  });
 }

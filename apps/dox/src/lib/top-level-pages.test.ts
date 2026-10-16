@@ -1,4 +1,9 @@
-import { docsRelativePath, topLevelPages } from "./top-level-pages";
+import { INDUSTRY_LAYER_IDS } from "./industry-tags";
+import {
+  docsRelativePath,
+  industryPages,
+  topLevelPages,
+} from "./top-level-pages";
 
 describe("docsRelativePath", () => {
   it.each`
@@ -36,5 +41,32 @@ describe("topLevelPages", () => {
 
   it("returns nothing for a map with no top-level page", () => {
     expect(topLevelPages({ "../content/docs/guides/a.mdx": "a" })).toEqual([]);
+  });
+});
+
+describe("industryPages", () => {
+  const hub = (id: string) => `../content/docs/industries/${id}.mdx`;
+
+  it("lists the index first, then each industry's hub in declared order, whatever order the glob gave", () => {
+    const raw = {
+      [hub(INDUSTRY_LAYER_IDS.at(-1)!)]: "last",
+      "../content/docs/industries/index.mdx": "index",
+      [hub(INDUSTRY_LAYER_IDS[0]!)]: "first",
+    };
+    expect(industryPages(raw).map((p) => p.slug)).toEqual([
+      "industries/index",
+      `industries/${INDUSTRY_LAYER_IDS[0]}`,
+      `industries/${INDUSTRY_LAYER_IDS.at(-1)}`,
+    ]);
+  });
+
+  it("leaves out a page of an industry that is not declared, and pages outside industries/", () => {
+    expect(
+      industryPages({
+        "../content/docs/industries/elsewhere.mdx": "x",
+        "../content/docs/guides/industries/index.mdx": "g",
+        "../content/docs/why-gmt.mdx": "w",
+      }),
+    ).toEqual([]);
   });
 });

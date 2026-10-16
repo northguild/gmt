@@ -85,11 +85,82 @@
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
 }
 
+/* A shaded bar segment — a module an industry draws on. Its edge is the text-safe ink of
+ * the hue, which clears 3:1 against the chart surface in both themes. The hatch itself is
+ * the page-level pattern (ChartContainer.astro), so the segment reads as different from a
+ * solid one without colour. */
+.gmt-chart .ts-chart__bar-y rect[fill*="-hatch"] {
+  stroke: var(--gmt-spring-ink);
+}
+
 /* Cell tiles — locale matrix cards */
 .gmt-chart .ts-chart__cell rect {
   stroke: var(--gmt-border-strong);
   stroke-width: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* The key under the stacked industry chart: two swatches, each a mark with a full border.
+ * The shared swatch tints with `background-color` and draws the hatch in `background-image`,
+ * so neither wipes the other. The words beside them carry the meaning. */
+.gmt-chart-key {
+  margin: var(--gmt-space-3) 0 0 0;
+}
+
+.gmt-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.gmt-chart-swatch {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 0.875rem;
+  border: 1px solid var(--gmt-border-strong);
+  forced-color-adjust: none;
+}
+
+.gmt-chart-swatch--own {
+  background-color: color-mix(in srgb, var(--gmt-spring) 30%, transparent);
+}
+
+.gmt-chart-swatch--shared {
+  border-color: var(--gmt-spring-ink);
+  background-color: color-mix(in srgb, var(--gmt-spring) 12%, transparent);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-spring) 60%, transparent) 0,
+    color-mix(in srgb, var(--gmt-spring) 60%, transparent) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+/* Each bar's counts in words, for a reader who cannot see the bars. */
+.gmt-chart-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Page-level gradient <defs> for the bars. Zero-size rather than display:none,
@@ -140,6 +211,11 @@
 }
 
 @media (forced-colors: active) {
+  /* The hatch may not survive system colours, so a shaded segment keeps a dashed edge. */
+  .gmt-chart .ts-chart__bar-y rect[fill*="-hatch"] {
+    stroke-dasharray: 4 3;
+  }
+
   .gmt-chart-toggle__button[aria-pressed="true"] {
     forced-color-adjust: none;
     background: Highlight;

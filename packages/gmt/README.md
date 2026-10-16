@@ -4,14 +4,14 @@
 
 [Docs](https://gmt-dox.northguild.workers.dev/) · [API reference](https://gmt-dox.northguild.workers.dev/reference/) · [Tools](https://gmt-dox.northguild.workers.dev/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
-- **57,562 tests, run 1,726,860 times in CI.** Every test runs in 10 time zones on 3 Node versions.
-- **52× the CI test runs** of the six libraries below, combined.
-- **644 functions, to the nanosecond**, tested in 17 locales.
+- **60,923 tests, run 1,827,690 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+- **55× the CI test runs** of the six libraries below, combined.
+- **659 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 | Library                   | Tests      | CI test runs  | Built on  |
 | ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **57,562** | **1,726,860** | Temporal  |
+| **`@northguild/gmt`**     | **60,923** | **1,827,690** | Temporal  |
 | Spacetime                 | 6,086      | 12,172        | `Date`    |
 | Moment.js                 | 3,901      | 11,703        | `Date`    |
 | date-fns                  | 3,213      | 3,213         | `Date`    |
@@ -47,9 +47,9 @@ resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "rejec
 ```
 
 Every function has a reference page with a live playground:
-[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [workforce](https://gmt-dox.northguild.workers.dev/reference/workforce/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/) · [timescale](https://gmt-dox.northguild.workers.dev/reference/timescale/) · [gnss](https://gmt-dox.northguild.workers.dev/reference/gnss/)
+[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [workforce](https://gmt-dox.northguild.workers.dev/reference/workforce/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/) · [timescale](https://gmt-dox.northguild.workers.dev/reference/timescale/) · [gnss](https://gmt-dox.northguild.workers.dev/reference/gnss/) · [transport](https://gmt-dox.northguild.workers.dev/reference/transport/) · [intermodal](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
 
-By industry: [transport](https://gmt-dox.northguild.workers.dev/reference/transport/) · [intermodal](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
+By industry: [Workforce](https://gmt-dox.northguild.workers.dev/industries/workforce/) · [Transport](https://gmt-dox.northguild.workers.dev/industries/transport/) · [Intermodal](https://gmt-dox.northguild.workers.dev/industries/intermodal/)
 
 Then the [guides](https://gmt-dox.northguild.workers.dev/guides/) show how to do each job, and the [tools](https://gmt-dox.northguild.workers.dev/tools/) let you try it on your own values.
 

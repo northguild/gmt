@@ -5,12 +5,20 @@ import {
   readSectionPage,
 } from "./industry-sidebar";
 
+const page = (slug: string, title: string, industries: string[]) => ({
+  slug,
+  title,
+  description: "",
+  industries,
+});
+
 const pages = [
-  { slug: "zone-planner", title: "Zone Planner", industries: ["core"] },
-  { slug: "dwell-ledger", title: "Dwell Ledger", industries: ["transport"] },
-  { slug: "demurrage-clock", title: "Demurrage Clock", industries: ["intermodal"] },
-  { slug: "converter-bench", title: "Converter Bench", industries: ["core"] },
-  { slug: "bl-date-stamp", title: "B/L Date Stamp", industries: ["intermodal"] },
+  page("zone-planner", "Zone Planner", ["core"]),
+  page("dwell-ledger", "Dwell Ledger", ["transport"]),
+  page("demurrage-clock", "Demurrage Clock", ["intermodal"]),
+  page("converter-bench", "Converter Bench", ["core"]),
+  page("bl-date-stamp", "B/L Date Stamp", ["intermodal"]),
+  page("duty-planner", "Duty Planner", ["workforce"]),
 ];
 
 const divider = (section: string, id: string, label: string) => ({
@@ -20,17 +28,19 @@ const divider = (section: string, id: string, label: string) => ({
 });
 
 describe("industrySidebarEntries", () => {
-  it("puts the index first, then each industry's divider and its pages by title", () => {
+  it("puts the index first, then each industry's divider and its pages by title, an industry after the ones it builds on", () => {
     expect(industrySidebarEntries("tools", pages)).toEqual([
       { slug: "tools" },
       divider("tools", "core", "Core"),
       { slug: "tools/converter-bench" },
       { slug: "tools/zone-planner" },
+      divider("tools", "workforce", "Workforce"),
+      { slug: "tools/duty-planner" },
+      divider("tools", "transport", "Transport"),
+      { slug: "tools/dwell-ledger" },
       divider("tools", "intermodal", "Intermodal"),
       { slug: "tools/bl-date-stamp" },
       { slug: "tools/demurrage-clock" },
-      divider("tools", "transport", "Transport"),
-      { slug: "tools/dwell-ledger" },
     ]);
   });
 
@@ -47,8 +57,15 @@ describe("industrySidebarEntries", () => {
         "link" in entry ? [entry.link] : [],
       );
     const scenarios = links("scenarios");
-    expect(scenarios).toEqual(["#scenarios-core", "#scenarios-intermodal", "#scenarios-transport"]);
-    expect(scenarios.some((link) => links("mistakes").includes(link))).toBe(false);
+    expect(scenarios).toEqual([
+      "#scenarios-core",
+      "#scenarios-workforce",
+      "#scenarios-transport",
+      "#scenarios-intermodal",
+    ]);
+    expect(scenarios.some((link) => links("mistakes").includes(link))).toBe(
+      false,
+    );
   });
 
   it("leaves out an industry with no pages", () => {
@@ -56,11 +73,13 @@ describe("industrySidebarEntries", () => {
       "mistakes",
       pages.filter((p) => !p.industries.includes("transport")),
     );
-    expect(entries).not.toContainEqual(divider("mistakes", "transport", "Transport"));
+    expect(entries).not.toContainEqual(
+      divider("mistakes", "transport", "Transport"),
+    );
   });
 
   it("lists a page under every industry it carries", () => {
-    const shared = [{ slug: "both", title: "Both", industries: ["transport", "intermodal"] }];
+    const shared = [page("both", "Both", ["transport", "intermodal"])];
     const hits = industrySidebarEntries("scenarios", shared).filter(
       (e) => "slug" in e && e.slug === "scenarios/both",
     );
@@ -70,8 +89,14 @@ describe("industrySidebarEntries", () => {
 
 describe("industrySidebarSource", () => {
   it("writes a module that exports the entries under the given name", () => {
-    const source = industrySidebarSource("scenariosSidebar", "scenarios", pages);
-    expect(source).toContain("export const scenariosSidebar: SidebarItem[] = [");
+    const source = industrySidebarSource(
+      "scenariosSidebar",
+      "scenarios",
+      pages,
+    );
+    expect(source).toContain(
+      "export const scenariosSidebar: SidebarItem[] = [",
+    );
     expect(source).toContain('  {"slug":"scenarios"},');
     expect(source).toContain(
       '  {"label":"Intermodal","link":"#scenarios-intermodal","attrs":{"data-gmt-divider":"true","data-gmt-industry":"intermodal"}},',
@@ -85,17 +110,43 @@ describe("readSectionPage", () => {
       "a-b-l",
       '---\ntitle: "A B/L Dated a Day Late"\ndescription: x\nindustries: [intermodal]\n---\nbody',
     );
-    expect(page).toEqual({ slug: "a-b-l", title: "A B/L Dated a Day Late", industries: ["intermodal"] });
-    expect(readSectionPage("x", "---\ntitle: 'Quoted'\nindustries: [core, transport]\n---\n")).toEqual({
+    expect(page).toEqual({
+      slug: "a-b-l",
+      title: "A B/L Dated a Day Late",
+      description: "x",
+      industries: ["intermodal"],
+    });
+    expect(
+      readSectionPage(
+        "x",
+        "---\ntitle: 'Quoted'\nindustries: [core, transport]\n---\n",
+      ),
+    ).toEqual({
       slug: "x",
       title: "Quoted",
+      description: "",
       industries: ["core", "transport"],
     });
   });
 
+  it("reads a description written as a folded block, and a quoted one", () => {
+    expect(
+      readSectionPage(
+        "folded",
+        "---\ntitle: F\ndescription: >\n  First line\n  second line.\nindustries: [core]\n---\n",
+      ).description,
+    ).toBe("First line second line.");
+    expect(
+      readSectionPage(
+        "quoted",
+        '---\ntitle: Q\ndescription: "A: quoted"\nindustries: [core]\n---\n',
+      ).description,
+    ).toBe("A: quoted");
+  });
+
   it("stops on a page with no industries", () => {
-    expect(() => readSectionPage("orphan", "---\ntitle: Orphan\n---\n")).toThrow(
-      /orphan\.mdx has no `industries`/,
-    );
+    expect(() =>
+      readSectionPage("orphan", "---\ntitle: Orphan\n---\n"),
+    ).toThrow(/orphan\.mdx has no `industries`/);
   });
 });

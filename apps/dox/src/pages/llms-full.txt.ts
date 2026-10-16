@@ -6,7 +6,7 @@ import {
   stripFrontmatter,
   stripMdx,
 } from "~/lib/page-markdown";
-import { topLevelPages } from "~/lib/top-level-pages";
+import { industryPages, topLevelPages } from "~/lib/top-level-pages";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -114,6 +114,22 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     };
   });
 
+  // Industry pages: the index, then one page per industry in declared order.
+  const industryPageList = industryPages(RAW).map(({ slug, source }) => {
+    const { data, body } = stripFrontmatter(source);
+    const md = stripMdx(body, { gmtVersion, values });
+    const title = data.title ?? slug;
+    return {
+      title,
+      url: `${base}/${slug}.md`,
+      markdown: pageToMarkdown({
+        title,
+        body: md,
+        industries: data.industries,
+      }),
+    };
+  });
+
   // Reference pages (sorted by slug)
   const refPages = Object.entries(RAW)
     .filter(([path]) => path.includes("/content/docs/reference/"))
@@ -142,6 +158,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
 
   const allPages = [
     ...startPages,
+    ...industryPageList,
     ...guidePages,
     ...scenarioPages,
     ...mistakePages,
