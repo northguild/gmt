@@ -4,7 +4,10 @@ import {
   nextPtMidnightMs,
   ptDayKey,
   secondsUntilMidnight,
-  secondsUntilPtReset,
+  secondsUntilVisitorReset,
+  VISITOR_CAP_TIME_ZONE,
+  nextVisitorMidnightMs,
+  visitorDayKey,
 } from "./pt-day";
 import { convertUtcToUnix } from "@northguild/gmt";
 
@@ -21,7 +24,9 @@ describe("the UTC clock (Workers AI)", () => {
     // Five hours to 00:00Z, twelve to Pacific midnight; both carry the same
     // 300 s margin.
     expect(secondsUntilMidnight(noonPacific, "UTC")).toBe(5 * 3600 + 300);
-    expect(secondsUntilPtReset(noonPacific)).toBe(12 * 3600 + 300);
+    expect(secondsUntilMidnight(noonPacific, "America/Los_Angeles")).toBe(
+      12 * 3600 + 300,
+    );
     expect(nextMidnightMs(noonPacific, "UTC")).toBe(
       convertUtcToUnix("2026-06-16T00:00:00Z")!,
     );
@@ -92,17 +97,49 @@ describe("nextPtMidnightMs", () => {
   });
 });
 
-describe("secondsUntilPtReset", () => {
+describe("the visitor cap's clock", () => {
+  it("counts UTC days", () => {
+    expect(VISITOR_CAP_TIME_ZONE).toBe("UTC");
+    // 2026-06-16T00:30Z is the 16th in UTC but still the 15th in Pacific.
+    const earlyUtc = convertUtcToUnix("2026-06-16T00:30:00Z")!;
+    expect(visitorDayKey(earlyUtc)).toBe("2026-06-16");
+    expect(ptDayKey(earlyUtc)).toBe("2026-06-15");
+  });
+
+  it("rolls over at UTC midnight", () => {
+    expect(visitorDayKey(convertUtcToUnix("2026-06-15T23:59:00Z")!)).toBe(
+      "2026-06-15",
+    );
+    expect(visitorDayKey(convertUtcToUnix("2026-06-16T00:01:00Z")!)).toBe(
+      "2026-06-16",
+    );
+  });
+
+  it("does not throw on a nonsense clock", () => {
+    expect(visitorDayKey(Number.NaN)).toBe("unknown");
+  });
+
+  it("resets at the next UTC midnight", () => {
+    const noon = convertUtcToUnix("2026-06-15T12:00:00Z")!;
+    expect(nextVisitorMidnightMs(noon)).toBe(
+      convertUtcToUnix("2026-06-16T00:00:00Z")!,
+    );
+  });
+});
+
+describe("secondsUntilVisitorReset", () => {
   it("never returns a TTL short enough to expire a key early", () => {
     // One second before midnight, the naive answer is ~1s — far too short for a
     // key that still has to be readable right up to the boundary.
-    const oneSecondBefore = convertUtcToUnix("2026-06-16T06:59:59Z")!;
-    expect(secondsUntilPtReset(oneSecondBefore)).toBeGreaterThanOrEqual(60);
+    const oneSecondBefore = convertUtcToUnix("2026-06-15T23:59:59Z")!;
+    expect(secondsUntilVisitorReset(oneSecondBefore)).toBeGreaterThanOrEqual(
+      60,
+    );
   });
 
   it("covers the whole remaining day plus a margin", () => {
-    const justAfterMidnight = convertUtcToUnix("2026-06-15T07:01:00Z")!;
-    const ttl = secondsUntilPtReset(justAfterMidnight);
+    const justAfterMidnight = convertUtcToUnix("2026-06-15T00:01:00Z")!;
+    const ttl = secondsUntilVisitorReset(justAfterMidnight);
     expect(ttl).toBeGreaterThan(23 * 3600);
     expect(ttl).toBeLessThan(25 * 3600);
   });

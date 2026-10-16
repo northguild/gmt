@@ -35,7 +35,7 @@ import {
 
 type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
-const shareFormat = new Intl.NumberFormat("en-US", {
+const shareFormat = new Intl.NumberFormat(undefined, {
   style: "percent",
   maximumFractionDigits: 1,
 });

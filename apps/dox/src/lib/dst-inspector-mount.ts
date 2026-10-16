@@ -66,7 +66,7 @@ import {
   wireCopyButtons,
 } from "./widget-ui";
 
-const DEFAULT_ZONE = "America/New_York";
+const DEFAULT_ZONE = "Europe/London";
 const DEFAULT_YEAR = 2024;
 const DISOPTIONS = ["compatible", "earlier", "later", "reject"] as const;
 

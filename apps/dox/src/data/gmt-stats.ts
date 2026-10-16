@@ -91,7 +91,7 @@ export function formatNamespaceList(rows: readonly NamespaceCount[]): string {
   return listFormat.format(rows.map((row) => `\`${row.namespace}\``));
 }
 
-const countFormat = new Intl.NumberFormat("en-US");
+const countFormat = new Intl.NumberFormat(undefined);
 
 export function formatCount(value: number): string {
   return countFormat.format(value);

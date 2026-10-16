@@ -158,10 +158,10 @@ describe("ciExecutionTooltip", () => {
 
   it("shows Luxon's Node-matrix re-runs", () => {
     expect(tooltipOf("luxon").rows).toEqual([
-      { label: "Suite tests", value: "1,222" },
-      { label: "Matrix re-runs", value: "3,666" },
+      { label: "Suite tests", value: formatCount(1222) },
+      { label: "Matrix re-runs", value: formatCount(3666) },
       { label: "Matrix", value: "4 Node versions" },
-      { label: "CI executions", value: "4,888" },
+      { label: "CI executions", value: formatCount(4888) },
     ]);
   });
 
@@ -201,7 +201,7 @@ describe("namespaceTooltip", () => {
       value: formatCount(plain?.count ?? 0),
     });
     expect(share?.label).toBe("Share of core");
-    expect(share?.value).toMatch(/^\d{1,3}(\.\d)?%$/);
+    expect(share?.value).toMatch(/^\d{1,3}(?:[.,]\d)?\s?%$/);
   });
 
   it("counts regex as patterns with no share of the function total", () => {
@@ -330,7 +330,7 @@ describe("industryTooltip", () => {
 
 /** The share the tooltip states, from the distinct total of all own namespaces. */
 function shareOf(own: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(undefined, {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(own / INDUSTRY_FUNCTION_TOTAL);

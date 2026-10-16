@@ -94,7 +94,8 @@ describe("readUsage / recordRequest", () => {
 
   it("buckets a Gemini brain by Pacific day, so a UTC rollover does not reset it", async () => {
     const store = fakeStore();
-    // 23:00 Pacific and 01:00 UTC the next calendar day are the same PT day.
+    // 23:00 Pacific and 06:00 UTC the next calendar day are the same PT day,
+    // and the same UTC day, so the visitor count carries too.
     const latePacific = convertUtcToUnix("2026-06-16T06:00:00Z")!;
     await recordRequest(store, geminiBrain, "v1", latePacific);
     const stillSameDay = convertUtcToUnix("2026-06-16T06:30:00Z")!;
@@ -103,7 +104,7 @@ describe("readUsage / recordRequest", () => {
     expect(snapshot.perBrain[geminiBrain.id]).toBe(1);
   });
 
-  it("resets after Pacific midnight", async () => {
+  it("resets the visitor count after UTC midnight", async () => {
     const store = fakeStore();
     await recordRequest(store, BRAINS[0], "v1", NOW);
     const tomorrow = NOW + 1000 * 60 * 60 * 24;
@@ -140,8 +141,9 @@ describe("each brain on its provider's clock (DOX-C4)", () => {
     expect(snapshot.perBrain[geminiBrain.id]).toBe(1);
     // Cloudflare's pool refilled at 00:00Z; the badge must say so.
     expect(snapshot.perBrain[workersAIBrain.id]).toBe(0);
-    // The visitor cap is Dox's own, and still on the Pacific day.
-    expect(snapshot.visitor).toBe(2);
+    // The visitor cap is Dox's own, and counts UTC days: both requests were on
+    // the 15th UTC, and the read is on the 16th.
+    expect(snapshot.visitor).toBe(0);
   });
 
   it("keeps a Workers AI spent mark across the Pacific rollover, until UTC midnight", async () => {

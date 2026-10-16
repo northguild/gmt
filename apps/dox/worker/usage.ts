@@ -48,9 +48,9 @@ import {
 import {
   dayKey,
   nextMidnightMs,
-  ptDayKey,
   secondsUntilMidnight,
-  secondsUntilPtReset,
+  secondsUntilVisitorReset,
+  visitorDayKey,
 } from "../src/lib/pt-day";
 
 /** The subset of KVNamespace this module uses — hand-declared for the same
@@ -189,7 +189,7 @@ export async function readUsage(
         safeGet(brainStateKey(days[index], brain.id)),
       ),
     ),
-    safeGet(visitorKey(ptDayKey(nowMs), visitorHash)),
+    safeGet(visitorKey(visitorDayKey(nowMs), visitorHash)),
   ]);
 
   const perBrain: Record<string, number> = {};
@@ -226,7 +226,10 @@ export async function recordRequest(
 
   const writes: [key: string, expirationTtl: number][] = [
     [brainCountKey(day, brain.id), ttl],
-    [visitorKey(ptDayKey(nowMs), visitorHash), secondsUntilPtReset(nowMs)],
+    [
+      visitorKey(visitorDayKey(nowMs), visitorHash),
+      secondsUntilVisitorReset(nowMs),
+    ],
   ];
 
   await Promise.all(

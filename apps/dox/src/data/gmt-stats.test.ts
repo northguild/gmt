@@ -229,7 +229,9 @@ describe("competitor comparisons", () => {
 });
 
 describe("formatCount", () => {
-  it("groups thousands", () => {
-    expect(formatCount(374820)).toBe("374,820");
+  it("groups thousands in the reader's locale", () => {
+    expect(formatCount(374820)).toBe(
+      new Intl.NumberFormat(undefined).format(374820),
+    );
   });
 });

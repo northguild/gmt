@@ -2,11 +2,11 @@
  * Quota day boundaries — when each daily allowance refills.
  *
  * Gemini's daily quota resets at **midnight Pacific**, not UTC — Google's rate
- * limit docs are explicit about it — and Dox's own per-visitor cap follows the
- * same clock. Workers AI's Neuron allocation resets at **00:00 UTC** (DOX-C4).
- * So every helper here takes the zone whose midnight it means; the Pacific
- * ones are thin wrappers for the visitor cap and the Gemini brains. Which zone
- * a brain uses is `BRAIN_PROVIDERS` in chat-constants.ts.
+ * limit docs are explicit about it. Workers AI's Neuron allocation resets at
+ * **00:00 UTC** (DOX-C4). Dox's own per-visitor cap is not a provider's quota,
+ * so it counts UTC days. So every helper here takes the zone whose midnight it
+ * means; the thin wrappers are for the Gemini brains (Pacific) and the visitor
+ * cap (UTC). Which zone a brain uses is `BRAIN_PROVIDERS` in chat-constants.ts.
  *
  * Computed with `@northguild/gmt` rather than hand-rolled `Intl` calls. It is
  * already a workspace dependency of this app, it is the library this whole site
@@ -19,9 +19,14 @@ import { convertUnixToZoned } from "@northguild/gmt/unix/convert";
 import { addZoned, startOfZoned } from "@northguild/gmt/zoned/calculate";
 import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 
-/** Google resets RPD quotas at midnight in this zone, and the visitor cap
- * resets with it. */
+/** Google resets RPD quotas at midnight in this zone. That is the provider's
+ * stated reset, so each Gemini brain's own quota stays on it. The visitor cap
+ * is Dox's own and uses `VISITOR_CAP_TIME_ZONE`. */
 export const QUOTA_TIME_ZONE = "America/Los_Angeles";
+
+/** The clock of Dox's per-visitor daily cap: UTC days, for the cap's day key
+ * and its reset. */
+export const VISITOR_CAP_TIME_ZONE = "UTC";
 
 /**
  * The calendar date for an instant in `timeZone`, as `YYYY-MM-DD`.
@@ -77,7 +82,17 @@ export function secondsUntilMidnight(nowMs: number, timeZone: string): number {
   return Math.max(60, remaining + 300);
 }
 
-/** Seconds until the Pacific quota refills — see `secondsUntilMidnight`. */
-export function secondsUntilPtReset(nowMs: number): number {
-  return secondsUntilMidnight(nowMs, QUOTA_TIME_ZONE);
+/** The UTC calendar date for an instant — the visitor cap's bucket key. */
+export function visitorDayKey(nowMs: number): string {
+  return dayKey(nowMs, VISITOR_CAP_TIME_ZONE);
+}
+
+/** The next UTC midnight — when a visitor's questions refill. */
+export function nextVisitorMidnightMs(nowMs: number): number {
+  return nextMidnightMs(nowMs, VISITOR_CAP_TIME_ZONE);
+}
+
+/** Seconds until the visitor cap refills — see `secondsUntilMidnight`. */
+export function secondsUntilVisitorReset(nowMs: number): number {
+  return secondsUntilMidnight(nowMs, VISITOR_CAP_TIME_ZONE);
 }

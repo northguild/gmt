@@ -41,7 +41,7 @@ export interface BrainsInfo {
     /** `null` for a dev, who is exempt from the per-visitor cap. */
     remaining: number | null;
     unlimited: boolean;
-    /** ISO instant of the next Pacific midnight, when this visitor's own
+    /** ISO instant of the next UTC midnight, when this visitor's own
      * questions refill. */
     resetsAt: string;
   };
