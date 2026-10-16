@@ -20,16 +20,16 @@ each:
 2. **Which calendar year labels the fiscal year.** Today it is always the year the fiscal year
    starts in. `getQuarter` uses the same rule for month-based fiscal years.
 
-No international standard settles either question. The two published calendars below, from
-two countries, disagree on both, and IAS 1 ¶51(c) names a third label, the year the period ends
-in. So both become **required, named fields** that the caller states. GMT keeps no default,
-because any default would match one source and silently mislabel the others.
+No international standard settles either question. The two published calendars below, from two
+countries, disagree on both, and IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) names a third label, the
+year the period ends in. So both become **required, named fields** that the caller states. GMT
+keeps no default, because any default would match one source and silently mislabel the others.
 
 | Source                                     | 53rd week goes in                         | Year labelled by                                                        |
 | ------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------- |
 | NRF 4-5-4 calendar (US trade body; peer)   | the last period ("end of the calendar")   | start year (fiscal 2023 = 2023-01-29 to 2024-02-03)                     |
 | ONS trading periods (UK statistics office; peer) | the first period ("a five week January") | the calendar year holding most of it (2025 = 2024-12-29 to 2026-01-03) |
-| IAS 1 ¶51(c) (IASB; international)         | —                                         | a reporting period is identified by the date it ends, so `"endYear"`     |
+| IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c); IASB; international) | —                                         | a reporting period is identified by the date it ends, so `"endYear"`     |
 
 ONS is the evidence that the majority rule is needed. Its label is neither the start year nor
 the end year: 2024-12-29 to 2026-01-03 is "2025". Of the three rules, only the majority rule
@@ -39,23 +39,23 @@ gives that label.
 
 ## 0. Authority — what each rule rests on
 
-International body first (IAS 1). The two national sources, NRF (US) and ONS (UK), are labelled
-peers. Neither is an authority for GMT; each is cited only to show that callers disagree.
-Company calendars are not used as sources.
+International body first (IASB: IFRS 18, formerly IAS 1). The two national sources, NRF (US) and
+ONS (UK), are labelled peers. Neither is an authority for GMT; each is cited only to show that
+callers disagree. Company calendars are not used as sources.
 
 | Rule                                                                                         | Source                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A reporting period of 52 weeks (so also 53) is permitted                                     | **IAS 1 ¶37** (IASB): "Normally, an entity consistently prepares financial statements for a one-year period. However, for practical reasons, some entities prefer to report, for example, for a 52-week period. This Standard does not preclude this practice." Text read from the XRB's reproduction, NZ IAS 1 (Diff Rep), issued November 2012. The IFRS Foundation's own text (ifrs.org, IAS 1 HTML) is behind registration: **not reached**. |
-| A fiscal year is identified by the date its reporting period ends                            | **IAS 1 ¶51(c)**: an entity shall display "the date of the end of the reporting period or the period covered by the set of financial statements or notes". Same source and reach as above. It is the reason the `"endYear"` option exists, and the reason for the tie rule below. It does not require any one year label. |
-| IAS 1 is superseded                                                                          | IFRS 18 replaces IAS 1 for annual periods beginning on or after 1 January 2027 and carries the general-presentation paragraphs into IAS 8. Where the text of ¶37 and ¶51(c) now sits (standard and paragraph number): **not reached**. The finalizer re-checks this before release, and the JSDoc cites "IAS 1 ¶37" and "IAS 1 ¶51(c)" until the new numbers are read from the source. |
-| No international standard fixes the period pattern, the 53rd-week placement or the year label | IAS 1 ¶37 permits the 52-week period and says nothing more. IAS 34 (interim reporting) does not define 4-4-5 shapes either. So all three are caller-stated parameters. Pattern and year end already were; this spec adds the other two. |
+| A reporting period of 52 weeks (so also 53) is permitted                                     | **IFRS 18 ¶29 (formerly IAS 1 ¶37)** (IASB): "Normally, an entity consistently prepares financial statements for a one-year period. However, for practical reasons, some entities prefer to report, for example, for a 52-week period. This Standard does not preclude this practice." Text read from the XRB's reproduction, NZ IAS 1 (Diff Rep), issued November 2012. The IASB's IFRS 18 reference material maps ¶37 to IFRS 18 ¶29 with the wording unchanged. |
+| A fiscal year is identified by the date its reporting period ends                            | **IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))**: an entity shall disclose prominently (IAS 1: "display") "the date of the end of the reporting period or the period covered by the set of financial statements or notes". Same sources as above; the wording of item (c) is unchanged. It is the reason the `"endYear"` option exists, and the reason for the tie rule below. It does not require any one year label. |
+| IFRS 18 replaces IAS 1                                                                       | IFRS 18, *Presentation and Disclosure in Financial Statements* (IASB, 2024), replaces IAS 1 for reporting periods beginning on or after 2027-01-01. Its table of concordance maps IAS 1 ¶37 to IFRS 18 ¶29 and IAS 1 ¶51(c) to IFRS 18 ¶27(c), both in IFRS 18 itself ([IFRS 18 reference material](https://www.ifrs.org/content/dam/ifrs/project/primary-financial-statements/ifrs-standard/reference-material-for-ifrs18.pdf)). GMT cites "IFRS 18 ¶29 (formerly IAS 1 ¶37)" and "IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))". |
+| No international standard fixes the period pattern, the 53rd-week placement or the year label | IFRS 18 ¶29 (formerly IAS 1 ¶37) does not preclude the 52-week period and says nothing more. IAS 34 (interim reporting) does not define 4-4-5 shapes either. So all three are caller-stated parameters. Pattern and year end already were; this spec adds the other two. |
 | 53rd week in the **last** period — peer (US)                                                  | NRF, _4-5-4 Calendar_ FAQ (nrf.com/resources/4-5-4-calendar, datePublished 2026-02-04): "it is sometimes necessary to add a 53rd week to the end of the calendar"; the test for it: "If, after laying out the entire 52-week calendar for any given year, there are four or more days left in January during the 53rd week, then a 53rd week is added." NRF 2023–2025 calendar PDF: "Fiscal Year 2023 is a 53 week year", with week 53 = 2024-01-28 to 2024-02-03. |
 | 53rd week in the **first** period — peer (UK)                                                 | ONS, _Retail sales index reporting periods_, `tradingperiods2026.xlsx` (published 21 November 2025), Note 2: "Typically reporting periods follow a four-week four-week five-week reporting cycle. With 365 days in a year this shifts the periods back by one day annually (two on a leap year). To offset this shift a five week January is introduced every five to six years." Sheet "Trading Periods for 2025": weeks 5,4,5,4,4,5,4,4,5,4,4,5, from 2024-12-29 to 2026-01-03. |
 | Label = calendar year holding the most of the fiscal year — peer (UK)                        | ONS sheet titles ("Trading Periods for 2025" = 2024-12-29 to 2026-01-03; "Trading Periods for 2020" = 2019-12-29 to 2021-01-02). ONS does not publish the rule in words. It is the only one of the three rules that reproduces these titles (§6.1). |
-| Label = end year                                                                             | **IAS 1 ¶51(c)**, above: a reporting period is identified by the date it ends. |
+| Label = end year                                                                             | **IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))**, above: a reporting period is identified by the date it ends. |
 | Majority is measured in **days**                                                             | **GMT rule.** The fiscal year and the calendar year share no unit except the day. Months have unequal lengths, and a week can straddle 1 January. |
-| An even split goes to the **end** year                                                       | **GMT rule.** No peer publishes a tie rule. IAS 1 ¶51(c) identifies a reporting period by its end date, so the year that holds the end date wins. Ties occur only in 364-day years that split 182/182, and only for year ends from 29 June to 4 July (§6.3). No month-based fiscal year can tie (§3.3). |
-| Both fields are required; there is no default                                                 | **GMT rule.** NRF and ONS disagree on both choices, and IAS 1 ¶51(c) supports a third label. A default would match one and mislabel the rest without warning ([no catch-all functions](../../coding-standards.md#api-contract): every call the types accept returns a correct value). |
+| An even split goes to the **end** year                                                       | **GMT rule.** No peer publishes a tie rule. IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) identifies a reporting period by its end date, so the year that holds the end date wins. Ties occur only in 364-day years that split 182/182, and only for year ends from 29 June to 4 July (§6.3). No month-based fiscal year can tie (§3.3). |
+| Both fields are required; there is no default                                                 | **GMT rule.** NRF and ONS disagree on both choices, and IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) supports a third label. A default would match one and mislabel the rest without warning ([no catch-all functions](../../coding-standards.md#api-contract): every call the types accept returns a correct value). |
 | A missing or unrecognised field returns the sentinel                                          | [coding-standards § API Contract](../../coding-standards.md#api-contract): `null` for an object return, `false` for a boolean validator. |
 | A label from a calendar year cannot be unique for every year end                              | Arithmetic: a 364/371-day year drifts against a 365/366-day year. Verified for every rule in §6.3: each rule has a window of about five or six year-end month-days where two fiscal years share a label. The window moves with the rule; no rule removes it. |
 
@@ -325,8 +325,9 @@ export type FiscalExtraWeek = "firstPeriod" | "lastPeriod";
  *
  * - `"startYear"` — the year its first day falls in. NRF (US): fiscal 2023 runs 2023-01-29 to
  *   2024-02-03.
- * - `"endYear"` — the year its last day falls in. IAS 1 ¶51(c) identifies a reporting period by
- *   the date it ends: a fiscal year from 2023-06-26 to 2024-06-30 is 2024.
+ * - `"endYear"` — the year its last day falls in. IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))
+ *   identifies a reporting period by the date it ends: a fiscal year from 2023-06-26 to
+ *   2024-06-30 is 2024.
  * - `"majorityYear"` — the calendar year holding the most of its days. ONS (UK): 2025 runs
  *   2024-12-29 to 2026-01-03. When two years hold exactly half each, the label is the end year,
  *   the year holding the date the period ends on.
@@ -358,16 +359,17 @@ export interface FiscalCalendar {
 Replace the two `GMT rule:` bullets and the "not a unique key" bullet with these:
 
 ```text
- * - Fiscal years of 52 or 53 weeks are permitted by IAS 1 ¶37. No international standard
+ * - IFRS 18 ¶29 (formerly IAS 1 ¶37) does not preclude a 52-week reporting period, and a
+ *   53-week year follows from it. No international standard
  *   says where the 53rd week goes or which calendar year names the fiscal year, and published
  *   calendars disagree on both. So `calendar.extraWeek` and `calendar.yearLabel` are required,
  *   and there is no default.
  * - `calendar.extraWeek` is the period a 53rd week is added to: `"firstPeriod"` (ONS, UK: "a
  *   five week January") or `"lastPeriod"` (NRF, US: "to the end of the calendar").
- * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"` (the
- *   year holding the end date, by which IAS 1 ¶51(c) identifies a reporting period) or
- *   `"majorityYear"`, the calendar year holding the most days (ONS, UK). GMT rule: a 182/182 split goes to the end year, because IAS 1
- *   ¶51(c) identifies a reporting period by the date it ends.
+ * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
+ *   year holding the end date, or `"majorityYear"`, the calendar year holding the most days
+ *   (ONS, UK). IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) identifies a reporting period by the
+ *   date it ends. GMT rule: a 182/182 split goes to the end year, for that reason.
  * - **`year` is not a unique key for every year end.** A 364- or 371-day year drifts against
  *   the calendar, so every label rule has year ends where two fiscal years share a label and a
  *   calendar year names none. `"startYear"` and `"endYear"` do this for year ends near
@@ -623,7 +625,8 @@ shares a label:
 - `"majorityYear"`: 06-29, 06-30, 07-01, 07-02, 07-03
 
 Sending ties to the start year instead gives 06-30 to 07-04, which is also five days. The tie
-rule does not change how many year ends are affected, so the IAS 1 ¶51(c) reasoning decides it.
+rule does not change how many year ends are affected, so the IFRS 18 ¶27(c) (formerly IAS 1
+¶51(c)) reasoning decides it.
 The scan is evidence for this spec, not a test.
 
 ### 6.4 `getQuarter`
@@ -837,15 +840,14 @@ owner first.
 
 - `context/domination/issues/CORE-5.md` lines 18–20 (signatures) and the decisions at lines 106–131: add a
   `## Corrections` entry. It says that the 53rd-week placement and the year label are now
-  required caller parameters, cites IAS 1 ¶37 and ¶51(c) and the two peers (NRF, ONS), and records the GMT rules for
+  required caller parameters, cites IFRS 18 ¶29 and ¶27(c) (formerly IAS 1 ¶37 and ¶51(c)) and the two peers (NRF, ONS), and records the GMT rules for
   the day-count majority and the tie. Leave the original decision text standing; the
   Corrections entry supersedes it. Line 64 ("places the 53rd week correctly for a known NRF
   53-week year") stays true under `"lastPeriod"`.
 - `context/coding-standards.md` lines 15 and 261: no change.
-- `context/domination/issues/INT-58.md` line 46 and `context/dox/specs/int-58-billing-deadlines.md`
-  lines 676 and 745: they describe a tax-regulation citation in the fiscal JSDoc. The current
-  `getFiscalPeriod.ts` and `internal/fiscalCalendar.ts` contain none, so the notes are stale.
-  The finalizer confirms that and removes them. This spec does not add any.
+- `context/domination/issues/INT-58.md` and `context/dox/specs/int-58-billing-deadlines.md`
+  state that the fiscal JSDoc carries no tax-law citation, which matches `getFiscalPeriod.ts`
+  and `internal/fiscalCalendar.ts`. This spec does not add any.
 - The tracker: the owner decides whether this change gets its own story id. If it does, add a
   row with `Blocked by` empty. Otherwise it ships under CORE-5's Corrections.
 
@@ -860,6 +862,7 @@ owner first.
    test as "four or more days left in January". That test is equivalent, and CORE-5 verified it
    against every NRF year from 2017 to 2028. The JSDoc, the skill and the Dox guide quote the
    current wording.
-3. **IAS 1 is replaced by IFRS 18 for periods from 2027-01-01.** Where the text of ¶37 and
-   ¶51(c) now sits was not reached, and neither was the IFRS Foundation's own IAS 1 text. The
-   citations rest on the XRB reproduction. The finalizer re-checks them before release.
+3. **IFRS 18 replaces IAS 1 for reporting periods beginning on or after 2027-01-01.** The
+   IASB's IFRS 18 reference material maps IAS 1 ¶37 to IFRS 18 ¶29 and IAS 1 ¶51(c) to IFRS 18
+   ¶27(c), so GMT cites "IFRS 18 ¶29 (formerly IAS 1 ¶37)" and "IFRS 18 ¶27(c) (formerly IAS 1
+   ¶51(c))". The IAS 1 wording quoted in §0 is read from the XRB reproduction.

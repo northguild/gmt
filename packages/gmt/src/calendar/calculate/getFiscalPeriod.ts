@@ -32,16 +32,18 @@ const DAYS_PER_WEEK = 7;
  *   from a 53-week year instead (`"2024-02-03"`) states a different rule, because that date
  *   sits three days off the target the rule is centred on, and yields a different,
  *   self-consistent calendar.
- * - IAS 1 ¶37 does not preclude reporting for a 52-week period, and a 53-week year follows
- *   from it. No international standard says where the 53rd week goes or which calendar year
- *   names the fiscal year, and published calendars disagree on both. So `calendar.extraWeek` and `calendar.yearLabel` are required,
- *   and there is no default.
+ * - IFRS 18 ¶29 (formerly IAS 1 ¶37; IFRS 18 applies to reporting periods beginning on or
+ *   after 2027-01-01) does not preclude reporting for a 52-week period, and a 53-week year
+ *   follows from it. No international standard says where the 53rd week goes or which
+ *   calendar year names the fiscal year, and published calendars disagree on both. So
+ *   `calendar.extraWeek` and `calendar.yearLabel` are required, and there is no default.
  * - `calendar.extraWeek` is the period a 53rd week is added to: `"firstPeriod"` (ONS, UK: "a
  *   five week January") or `"lastPeriod"` (NRF, US: "to the end of the calendar").
  * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
- *   year its last day falls in (IAS 1 ¶51(c) lets a reporting period be identified by the
- *   date it ends), or `"majorityYear"`, the calendar year holding the most days (ONS, UK).
- *   GMT rule: a 182/182 split goes to the end year, for the same IAS 1 ¶51(c) reason.
+ *   year its last day falls in, or `"majorityYear"`, the calendar year holding the most days
+ *   (ONS, UK). IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) lets a reporting period be identified
+ *   by the date it ends, which supports `"endYear"`. GMT rule: a 182/182 split goes to the
+ *   end year, for the same reason.
  * - **`year` is not a unique key for every year end.** A 364- or 371-day year drifts against
  *   the calendar, so every label rule has year ends where two fiscal years share a label and a
  *   calendar year names none. `"startYear"` and `"endYear"` do this for year ends near

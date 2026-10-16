@@ -163,8 +163,8 @@ export function fiscalPeriodOfWeek(
  * - Every calendar year in the span is counted, not only the two end years. A 371-day year can
  *   touch three calendar years (2024-12-29 to 2026-01-03), and then the middle one wins.
  * - GMT rule: when two years hold exactly half the days each (182 and 182), the later one, the
- *   year holding the end date, wins, because IAS 1 ¶51(c) lets a reporting period be
- *   identified by the date it ends.
+ *   year holding the end date, wins, because IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) lets a
+ *   reporting period be identified by the date it ends.
  */
 export function fiscalYearLabel(
   start: Temporal.PlainDate,

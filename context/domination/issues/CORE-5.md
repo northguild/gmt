@@ -103,22 +103,23 @@ The original text stays below for the record; this entry is the rule. The full d
   `isValidFiscalYearLabel` check them, and a calendar that is an array is refused, as
   `isValidBusinessCalendar` refuses one.
 - **Why there is no default.** The international authority comes first, and it settles neither
-  choice. IAS 1 ¶37 (IASB) permits a 52-week reporting period and says nothing more. IAS 1
-  ¶51(c) identifies a reporting period by "the date of the end of the reporting period", which
-  is the basis of `"endYear"`. Two national peers, each cited only to show that callers
-  disagree, give different answers. NRF, US, adds the week "to the end of the calendar" and
-  names fiscal 2023 by its start year (2023-01-29 to 2024-02-03). ONS, UK, introduces "a five
-  week January" and names 2024-12-29 to 2026-01-03 as 2025, the calendar year that holds most
-  of it. A default would match one source and mislabel the others without warning. No company
-  calendar is a source.
+  choice. IFRS 18 ¶29 (formerly IAS 1 ¶37; IASB) does not preclude a 52-week reporting period
+  and says nothing more. IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) identifies a reporting period by
+  "the date of the end of the reporting period", which is the basis of `"endYear"`. Two national
+  peers, each cited only to show that callers disagree, give different answers. NRF, US, adds
+  the week "to the end of the calendar" and names fiscal 2023 by its start year (2023-01-29 to
+  2024-02-03). ONS, UK, introduces "a five week January" and names 2024-12-29 to 2026-01-03 as
+  2025, the calendar year that holds most of it. A default would match one source and mislabel
+  the others without warning. No company calendar is a source.
 - **GMT rule: the majority is counted in days.** The fiscal year and the calendar year share no
   unit except the day: months differ in length, and a week can straddle 1 January. Every
   calendar year the fiscal year touches is counted, so the middle year of a three-year span,
   such as ONS 2025, can win.
-- **GMT rule: a 182/182 tie goes to the end year.** No peer publishes a tie rule. IAS 1 ¶51(c)
-  identifies a period by its end date, so the year that holds the end date wins. Ties occur only
-  in 364-day years whose year end falls from 29 June to 4 July. A month-based fiscal year never
-  ties: start months 1 to 7 put the majority in the start year, and 8 to 12 in the end year.
+- **GMT rule: a 182/182 tie goes to the end year.** No peer publishes a tie rule. IFRS 18
+  ¶27(c) (formerly IAS 1 ¶51(c)) identifies a period by its end date, so the year that holds
+  the end date wins. Ties occur only in 364-day years whose year end falls from 29 June to
+  4 July. A month-based fiscal year never ties: start months 1 to 7 put the majority in the
+  start year, and 8 to 12 in the end year.
 - **`year` is still not a unique key for every year end.** A 364- or 371-day year drifts against
   the calendar, so every label rule has a window of five or six year-end month-days where two
   fiscal years share a label. The window moves with the rule; no rule removes it. The JSDoc
@@ -126,12 +127,14 @@ The original text stays below for the record; this entry is the rule. The full d
 - **`extraWeek: "lastPeriod", yearLabel: "startYear"` keeps every earlier result.** The
   Verification bullet "`getFiscalPeriod` places the 53rd week correctly for a known NRF 53-week
   year" stays true under `"lastPeriod"`.
-- **Where IAS 1's text now sits.** IFRS 18 replaces IAS 1 for annual periods beginning on or
-  after 1 January 2027. The IASB's reference material for IFRS 18 (a table of concordance and a
-  mark-up of the requirements brought forward from IAS 1) maps IAS 1 ¶37 to IFRS 18 ¶29, with
-  the wording unchanged, and IAS 1 ¶51(c) to IFRS 18 ¶27(c), with the wording of item (c)
-  unchanged. Both move into IFRS 18 itself, not into IAS 8. The JSDoc cites IAS 1 until its
-  citations are moved to IFRS 18 ¶29 and ¶27(c).
+- **IFRS 18 is the standard cited.** IFRS 18, *Presentation and Disclosure in Financial
+  Statements* (IASB, 2024), replaces IAS 1 for reporting periods beginning on or after
+  2027-01-01. The IASB's reference material for IFRS 18 (a table of concordance and a mark-up
+  of the requirements brought forward from IAS 1) maps IAS 1 ¶37 to IFRS 18 ¶29, with the
+  wording unchanged, and IAS 1 ¶51(c) to IFRS 18 ¶27(c), where "display" becomes "disclose
+  prominently" and the wording of item (c) is unchanged. Both sit in IFRS 18 itself, not in
+  IAS 8. The JSDoc, the skill and the changeset cite "IFRS 18 ¶29 (formerly IAS 1 ¶37)" and
+  "IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))".
   ([IFRS 18 reference material](https://www.ifrs.org/content/dam/ifrs/project/primary-financial-statements/ifrs-standard/reference-material-for-ifrs18.pdf))
 
 ## Outcome (delivered)

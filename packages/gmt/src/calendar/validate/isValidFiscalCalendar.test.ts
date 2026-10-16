@@ -18,7 +18,7 @@ const ONS = {
 
 /**
  * A mid-year calendar: the Sunday nearest 27 June, the extra week in the last period, and the
- * year named by the date it ends (IAS 1 ¶51(c)).
+ * year named by the date it ends (IFRS 18 ¶27(c), formerly IAS 1 ¶51(c)).
  */
 const JUNE_END_YEAR = {
   pattern: "4-4-5",

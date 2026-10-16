@@ -395,7 +395,7 @@ const ONS: FiscalCalendar = {
 
 /**
  * A mid-year calendar: the Sunday nearest 27 June, the extra week in the last period, and the
- * year named by the date it ends (IAS 1 ¶51(c)).
+ * year named by the date it ends (IFRS 18 ¶27(c), formerly IAS 1 ¶51(c)).
  */
 const JUNE_END_YEAR: FiscalCalendar = {
   pattern: "4-4-5",
@@ -550,8 +550,8 @@ describe("getFiscalPeriod yearLabel", () => {
     },
   );
 
-  // GMT rule: a 182/182 split goes to the end year, because IAS 1 ¶51(c) lets a reporting
-  // period be identified by the date it ends.
+  // GMT rule: a 182/182 split goes to the end year, because IFRS 18 ¶27(c) (formerly IAS 1
+  // ¶51(c)) lets a reporting period be identified by the date it ends.
   it.each`
     value           | yearLabel         | expected
     ${"2025-07-03"} | ${"majorityYear"} | ${{ year: 2026, period: 1, week: 1 }}

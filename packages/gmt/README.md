@@ -42,8 +42,8 @@ addBusinessDays("2024-03-15", 1); // "2024-03-18"
 
 // Time zones, and the night the clocks change
 convertUtcToZoned("2024-06-15T12:00:00Z", "Asia/Tokyo"); // "2024-06-15T21:00:00+09:00[Asia/Tokyo]"
-addZoned("2024-03-10T01:30:00-05:00[America/New_York]", { hours: 1 }); // "2024-03-10T03:30:00-04:00[America/New_York]"
-resolveLocal("2024-03-10T02:30:00", "America/New_York", { disambiguation: "reject" }); // "" (02:30 did not happen that day)
+addZoned("2024-10-06T01:30:00+10:00[Australia/Sydney]", { hours: 1 }); // "2024-10-06T03:30:00+11:00[Australia/Sydney]"
+resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "reject" }); // "" (02:30 did not happen that day)
 ```
 
 Every function has a reference page with a live playground:

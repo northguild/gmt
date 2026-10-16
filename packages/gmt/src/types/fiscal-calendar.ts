@@ -29,9 +29,9 @@ export type FiscalExtraWeek = "firstPeriod" | "lastPeriod";
  *
  * - `"startYear"` — the year its first day falls in. NRF (US): fiscal 2023 runs 2023-01-29 to
  *   2024-02-03.
- * - `"endYear"` — the year its last day falls in. IAS 1 ¶51(c) lets a reporting period be
- *   identified by the date it ends. Under `yearEndsOn: "2021-06-27"`, the year 2023-06-26 to
- *   2024-06-30 is 2024.
+ * - `"endYear"` — the year its last day falls in. IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) lets
+ *   a reporting period be identified by the date it ends. Under `yearEndsOn: "2021-06-27"`,
+ *   the year 2023-06-26 to 2024-06-30 is 2024.
  * - `"majorityYear"` — the calendar year holding the most of its days. ONS (UK): 2025 runs
  *   2024-12-29 to 2026-01-03. When two years hold exactly half each, the label is the end year,
  *   the year holding the date the period ends on.

@@ -178,9 +178,10 @@ input before you act on it.
   because published calendars disagree on both. `extraWeek` is the period a 53rd
   week is added to: `"firstPeriod"` (ONS, UK) or `"lastPeriod"` (NRF, US).
   `yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
-  year its last day falls in (IAS 1 ¶51(c) lets a period be identified by the
-  date it ends), or `"majorityYear"`, the calendar year holding the most of its
-  days (ONS, UK); a 182/182 split goes to the end year. `getQuarter` with options takes
+  year its last day falls in, or `"majorityYear"`, the calendar year holding the
+  most of its days (ONS, UK); a 182/182 split goes to the end year. IFRS 18
+  ¶27(c) (formerly IAS 1 ¶51(c)) lets a period be identified by the date it
+  ends, which supports `"endYear"` and the tie rule. `getQuarter` with options takes
   `fiscalYearStartMonth` and `yearLabel`, both required. A calendar missing a
   field returns `null`; check it with `isValidFiscalCalendar`.
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
