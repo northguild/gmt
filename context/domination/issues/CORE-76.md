@@ -21,24 +21,24 @@ The two facts every hand-built implementation gets wrong are generic too. The da
   - `RuleOutcome` is `{ label: string, kind: DutyRule['kind'], severity, satisfied: boolean, used: string | number | null, limit: string | number | null, remaining: string | number | null, window: Interval | null, periodBasis: 'elapsed' | 'operatorDay' | 'calendar' | null, dueBy: string | null, resetAt: string | null }`.
   - `DutyReport` is `{ at: string, outcomes: RuleOutcome[], violations: RuleOutcome[], advisories: RuleOutcome[] }`.
   - `DutyViolation` is `{ label: string, window: Interval, used: string | number, limit: string | number }`.
-- `packages/gmt/src/duty/calculate/dutyDayFor.ts`:
+- `packages/gmt/src/calendar/duty/dutyDayFor.ts`:
   - `dutyDayFor(instant: string, day: DutyDay): Interval | null` — The operator-designated 24-hour period an instant falls in: the most recent `dayStartTime` in `timeZone` at or before the instant, to the next one. A `dayStartTime` that is nonexistent or ambiguous on a transition day resolves under `day.disambiguation`, `'compatible'` by default (the CORE-4 policy), stated in the JSDoc with the [LOCAL_TIME_RESOLUTION.md](../../reference/LOCAL_TIME_RESOLUTION.md) vocabulary; the period is then 23 or 25 hours long and the JSDoc says so.
-- `packages/gmt/src/duty/calculate/evaluateDutyLog.ts`:
+- `packages/gmt/src/calendar/duty/evaluateDutyLog.ts`:
   - `evaluateDutyLog(log: DutyEntry[], at: string, rules: DutyRule[], options: { timeZone: string, dayStartTime?: string, disambiguation?: Disambiguation }): DutyReport | null` — Every rule evaluated at one instant, each reported whether or not it binds. `dayStartTime` is required by any rule whose `Period` is `operatorDays`; a rule that needs it without it returns the sentinel. A planned roster is the same call with the plan appended to the log and `at` set to the plan's end.
-- `packages/gmt/src/duty/calculate/dutyViolations.ts`:
+- `packages/gmt/src/calendar/duty/dutyViolations.ts`:
   - `dutyViolations(log: DutyEntry[], range: Interval, rules: DutyRule[], options): DutyViolation[] | null` — Every violation inside a range, each with the window that failed it: the monthly record, not the dispatch check.
-- `packages/gmt/src/duty/calculate/dutyTotals.ts`:
+- `packages/gmt/src/calendar/duty/dutyTotals.ts`:
   - `dutyTotals(log: DutyEntry[], window: Interval, statuses: string[]): string` — Merged, summed time in any of `statuses` inside `window`, as an ISO duration.
-- `packages/gmt/src/duty/calculate/longestRun.ts`:
+- `packages/gmt/src/calendar/duty/longestRun.ts`:
   - `longestRun(log, window: Interval, statuses: string[]): { interval: Interval, duration: string } | null` — The longest unbroken stretch in `statuses` inside the window; the sentinel when there is none.
-- `packages/gmt/src/duty/calculate/qualifyingRests.ts`:
+- `packages/gmt/src/calendar/duty/qualifyingRests.ts`:
   - `qualifyingRests(log, spec: { statuses: string[], minimum: string }): Interval[]` — Rest periods of at least `minimum`.
-- `packages/gmt/src/duty/calculate/qualifyingRestPairs.ts`:
+- `packages/gmt/src/calendar/duty/qualifyingRestPairs.ts`:
   - `qualifyingRestPairs(log, spec: { statuses: string[], minimum: string, pair: PairSpec }): RestPair[]` — The pairs of consecutive rests, each shorter than `minimum`, that satisfy all three constraints.
-- `packages/gmt/src/duty/validate/isValidDutyLog.ts`:
+- `packages/gmt/src/calendar/validate/isValidDutyLog.ts`:
   - `isValidDutyLog(log: unknown): boolean` — Entries are ordered by `start`, non-overlapping, each `end` after its `start`, every bound a parseable instant, every status a string. Everything else returns the sentinel from the functions above.
 - Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)):
-  - `guides/intervals/hours-of-work.mdx` — a Core guide, not an industry guide, so `duty` is charted as a core namespace: the operator-designated day, sliding versus fixed periods, one `##` per rule kind, and five example rule arrays labelled by their numbers only (an 11-hour cap inside a 14-hour window with a 60-hour rolling cap over 7 operator days; 10 hours of rest in every 24 in at most two periods; a 12-hour cap with a 10-hour rest before duty; a 100-hour cap over 672 hours and 1,000 over a year; an 80-hour average over four weeks with one 24-hour free period in seven).
+  - `guides/intervals/hours-of-work.mdx` — a Core guide, not an industry guide. The engine is the `calendar/duty` sub-module (`@northguild/gmt/calendar/duty`; `isValidDutyLog` is in `calendar/validate`), not a namespace: a function shared across industries lives in the general namespace it belongs to, as a sub-module (`calendar/hours`, `calendar/business`, `calendar/duty`), and never gets a namespace of its own, takes an industry's namespace, or goes in a catch-all shared namespace. Every industry that uses it declares `calendar/duty` in Dox (Transport now; Maritime, Rail, Aviation and Health as their stories ship). The guide covers the operator-designated day, sliding versus fixed periods, one `##` per rule kind, and five example rule arrays labelled by their numbers only (an 11-hour cap inside a 14-hour window with a 60-hour rolling cap over 7 operator days; 10 hours of rest in every 24 in at most two periods; a 12-hour cap with a 10-hour rest before duty; a 100-hour cap over 672 hours and 1,000 over a year; an 80-hour average over four weeks with one 24-hour free period in seven).
   - Scenarios: `duty-day-is-not-midnight` (`dutyDayFor`), `sliding-window-not-calendar-day` (`evaluateDutyLog`), `paired-rest-that-does-not-qualify` (`qualifyingRestPairs`).
   - `mistakes/duty.mdx` — bucketing by local midnight; a fixed week where the rule says a sliding window and the reverse; a break that extends the elapsed window; a paired rest checked as two integers; a monthly cap that does not split the tour at the boundary; elapsed hours where the rule says calendar days across a fall-back; a nested cap folded into one number.
   - Index entries in `guides/index.mdx` and `mistakes/index.mdx`.
@@ -81,7 +81,7 @@ Nested caps (a 13-hour cap inside a 14-hour cap inside a 16-hour window) are thr
 
 Settled while building the story (2026-10-14). The rule types' JSDoc in `types/duty.ts` is the full statement of each kind; these are the choices the spec left open or got wrong.
 
-- **Names and places follow the repo's rules.** `dutyDayFor` takes an instant, so it lives in `duty/calculate/`, not `duty/get/` (coding standards: `get/` is for current-moment readers). The validator is `isValidDutyLog`, as every validator is named. One exported function per file, so `dutyViolations`, `longestRun`, `qualifyingRests` and `qualifyingRestPairs` have their own.
+- **Names and places follow the repo's rules.** `dutyDayFor` takes an instant, so it is a calculator in `calendar/duty/`, never a `get/` reader (coding standards: `get/` is for current-moment readers). The validator is `isValidDutyLog`, as every validator is named, and lives with the other calendar validators in `calendar/validate/`, following `calendar/hours` and `calendar/business`. One exported function per file, so `dutyViolations`, `longestRun`, `qualifyingRests` and `qualifyingRestPairs` have their own.
 - **Public functions are not generic.** The reference generator refuses a generic public function (#288). The types keep `S extends string = string`, so a typed status vocabulary still passes in; the functions take `DutyEntry[]` and `DutyRule[]`.
 - **`qualifyingRests` is two functions.** One returns `Interval[]`, `qualifyingRestPairs` returns `RestPair[]`, rather than one function whose return type depends on an option. A pair is two rests in a row, each shorter than `minimum` (a rest of `minimum` is a full rest and pairs with nothing; no pair spans one), and a rest shorter than `eachAtLeast` is skipped. `elapsedWindow`'s `exclude` uses the same pairs.
 - **`elapsedWindow` takes `since: Reset`, and `rollingCap` takes `reset?: Reset`.** The table omitted them, but the window cannot open without knowing what reset precedes it, and the verification's 34-hour restart needs a reset on the rolling cap.

@@ -157,7 +157,10 @@ hours) sits before the Transport rows that need it for `MAR-19`'s office hours, 
 (identifiers) before IoT, because no story consumes it. They carry high ID numbers because they
 were added after the realm IDs were assigned, which is exactly why the `#` column and not the ID
 is the build order. `CORE-76` (hours of work) is Core because five realms' duty rules run on it;
-no story names it as a dependency, so it takes the slot of its first intended consumer.
+no story names it as a dependency, so it takes the slot of its first intended consumer. Its
+engine lives at `calendar/duty` (`@northguild/gmt/calendar/duty`), and every industry that uses
+it declares that module in Dox: Transport now; Maritime, Rail, Aviation and Health as their
+stories ship.
 `CORE-78` (the UTC timestamp check) is one function that no story consumes, so it takes the
 first open slot. `CORE-80` (speed and bundle size) adds no function and changes no output. It sits
 straight after `MAR-16`, so every later story is built on the closed-form internals and under
@@ -198,7 +201,7 @@ later phases, each just before its first consumer or, with no consumer, in the f
   `CORE-54` is under IMM dates, crypto expiries, the IATA season and reference calendars;
   `CORE-55` is under trading sessions, curfews, recurring crew windows, gate hours and laytime
   office hours; `CORE-56` is `CORE-3`'s second generation; `CORE-76` is the one engine under
-  every duty-log rule a caller states.
+  every duty-log rule a caller states, at `calendar/duty`.
 
 ### Phase 2 — Logistics & Transport (the priority realms)
 
@@ -216,8 +219,9 @@ Highest commercial value and the thinnest coverage in the original plan.
   math anchored to a caller's event.
 - **CORE-78** — one check for a UTC timestamp in the plain RFC 3339 spelling, with an
   upper-case `T` and `Z`. It ships with the intermodal release.
-- **CORE-76** — the hours-of-work engine: composable rule objects over a duty log, every number
-  the caller's. It precedes Maritime.
+- **CORE-76** — the hours-of-work engine at `calendar/duty`: composable rule objects over a duty
+  log, every number the caller's. It precedes Maritime. Transport declares `calendar/duty` in
+  Dox now; Maritime, Rail, Aviation and Health declare it when their stories ship.
 - **MAR-16 … MAR-19, MAR-59** — GNSS, AIS, ship's time, laytime and NMEA.
 - **CORE-80** — faster span arithmetic and a smaller bundle, straight after `MAR-16`. It adds
   the benchmarks and the size budget every later story is held to.

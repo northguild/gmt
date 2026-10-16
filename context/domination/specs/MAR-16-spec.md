@@ -1145,14 +1145,15 @@ check that one was inserted on that day; for that, use `isLeapSecond` from `time
 
 ## 5. Namespace wiring, file by file
 
-Following `precision/` (a Core namespace, not an industry layer) and `duty/` (the namespace barrel
-re-exports the polyfill first).
+Following `precision/` (a Core namespace, not an industry layer) and `calendar/` (the namespace
+barrel re-exports the polyfill first). `timescale/` and `gnss/` are namespaces because each is a
+new time domain, not a function shared across industries.
 
 ### 5.1 Library source
 
 1. `timescale/calculate/index.ts`: `leapSecondsBetween`, `nextLeapSecond`, `taiMinusUtc`.
    `timescale/convert/index.ts`: `fromTAI`, `toTAI`. `timescale/validate/index.ts`: `isLeapSecond`.
-2. `timescale/index.ts`: polyfill re-export first (with `duty/index.ts`'s comment), then
+2. `timescale/index.ts`: polyfill re-export first (with `calendar/index.ts`'s comment), then
    `./calculate`, `./convert`, `./validate`.
 3. `gnss/convert/index.ts`: the six `gnss` functions of §1.1, alphabetical. `gnss/index.ts`:
    polyfill, then `./convert`.

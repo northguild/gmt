@@ -99,8 +99,8 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── span/           (CORE-2)
                                     ├── instant/        (CORE-4)
                                     ├── calendar/       (CORE-5, CORE-7, CORE-54, CORE-55)
+                                    │   └── duty/       (CORE-76 — hours of work, shared by five realms)
                                     ├── interval/       (CORE-6)
-                                    ├── duty/           (CORE-76)
                                     ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds; SPA-46 TAI64)
                                     ├── gnss/           (MAR-16 — satellite system times, weeks, rollovers)
                                     │
@@ -145,9 +145,8 @@ entry per category barrel, mirrored in `typesVersions`).
 | `precision/` | CORE-1, CORE-3, CORE-56 | Nanosecond bridge, JSON serialisation, foreign epoch conversion, timestamps inside identifiers and data-platform encodings |
 | `span/`      | CORE-2         | Exact and wall-clock spans                                                 |
 | `instant/`   | CORE-4         | Instant-plus-offset pairs, explicit local-time resolution                 |
-| `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours |
+| `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55, CORE-76 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours, and the hours-of-work engine (`calendar/duty`: duty-log rule objects, the operator-designated day, violations and remaining-time reports) |
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
-| `duty/`      | CORE-76        | Duty-log rule objects, the operator-designated day, violations and remaining-time reports |
 | `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
 | `gnss/`      | MAR-16         | The six RINEX system times, week counters, rollovers, RINEX weeks          |
 

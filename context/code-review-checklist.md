@@ -15,7 +15,8 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
 - [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
-- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `duty/`, `gnss/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `gnss/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] A function shared across industries lives in the general namespace it belongs to, as a sub-module (`calendar/hours`, `calendar/business`, `calendar/duty`). It never gets a namespace of its own, never takes an industry's namespace, and never goes in a catch-all shared namespace. A new namespace is for a new time domain only (`timescale/`, `gnss/`).
 - [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
 - [ ] Repeated calendar steps are computed from the anchor (`start.add(amount × k)`), not by compounding the previous result
