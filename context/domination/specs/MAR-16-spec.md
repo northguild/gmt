@@ -9,13 +9,13 @@ its own (D6; tracker, "International authority first"). Owner decisions on scope
 peers, the leap-second table, GLONASS, NavIC and the namespace layout are final; this spec does not
 re-open them.
 
-**Where the code lives (owner decision, D13).** Two new building-block namespaces, neither of them
-an industry layer:
+**Where the code lives (owner decision, D13).** Two new namespaces:
 
-- **`timescale/`** — a Core primitive like `precision/`: the leap-second table and its queries, and
+- **`timescale/`** — a Core namespace like `precision/`: the leap-second table and its queries, and
   `toTAI` / `fromTAI`.
-- **`gnss/`** — a cross-industry primitive: the six satellite system times, the week and rollover
-  functions, and the RINEX week functions.
+- **`gnss/`** — a cross-industry layer for the GNSS industry, which Maritime draws on now and
+  Aviation and IoT later: the six satellite system times, the week and rollover functions, and
+  the RINEX week functions.
 
 There is no `space/` and no `maritime/` namespace in this story. Story IDs (MAR-16, SPA-48, SPA-46)
 do not change; only code locations do.
@@ -302,12 +302,12 @@ For the 10-bit counters the types alone already protect: a RINEX week such as 22
 (≥ 1024) and returns the sentinel. The 13-bit counters (`GPS-CNAV`, `QZS-CNAV`, `IRN-L1NV`) and
 Galileo's 12-bit one accept such numbers, which is why the separate function matters.
 
-### D13. Namespaces: `timescale/` and `gnss/`; the Space realm's name is unsettled
+### D13. Namespaces: `timescale/` (Core) and `gnss/` (a cross-industry layer); the Space realm's name is unsettled
 
-**Owner decision.** `timescale/` is a Core primitive (like `precision/`): TAI − UTC, leap seconds,
-`toTAI` / `fromTAI`. `gnss/` is a cross-industry primitive: satellite system times and weeks, used
-by maritime, aviation, IoT, finance timestamping and space alike. Neither is an industry layer on
-the docs site. `maritime/` is created by the first story that ships something maritime-only
+**Owner decision.** `timescale/` is a Core namespace (like `precision/`): TAI − UTC, leap seconds,
+`toTAI` / `fromTAI`, general time primitives anyone uses. `gnss/` is an industry layer for the GNSS
+industry (EUSPA publishes a GNSS market report), and a cross-industry one: satellite system times
+and weeks that Maritime draws on now, and Aviation and IoT later. The name does not change. `maritime/` is created by the first story that ships something maritime-only
 (MAR-17, MAR-18, MAR-19 or MAR-59).
 
 **The Space realm's own namespace name is deliberately unsettled.** "space" will collide with a
@@ -1145,9 +1145,9 @@ check that one was inserted on that day; for that, use `isLeapSecond` from `time
 
 ## 5. Namespace wiring, file by file
 
-Following `precision/` (a Core namespace, not an industry layer) and `calendar/` (the namespace
-barrel re-exports the polyfill first). `timescale/` and `gnss/` are namespaces because each is a
-new time domain, not a function shared across industries.
+Following `precision/` (a Core namespace) and `calendar/` (the namespace barrel re-exports the
+polyfill first). `timescale/` is a Core namespace; `gnss/` is a cross-industry layer, the GNSS
+industry, which Maritime draws on (D13).
 
 ### 5.1 Library source
 

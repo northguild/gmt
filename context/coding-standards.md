@@ -227,8 +227,8 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
 - `zoned/` — IANA timezone-aware operations (`ZonedDateTime`)
 - Never mix the two in the same function or module.
-- **Shared functions are sub-modules, not namespaces.** A function shared across industries lives in the general namespace it belongs to, as a sub-module (`calendar/hours`, `calendar/business`, `calendar/duty`). It never gets a namespace of its own, never takes an industry's namespace, and never goes in a catch-all shared namespace. A new namespace is for a new time domain only (`timescale/`, `gnss/`).
-- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/` (see `packages/gmt/src/`).
+- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, later `maritime/`, `aviation/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
+- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/`, `workforce/`, `gnss/` (see `packages/gmt/src/`).
 
 ## International authority first
 

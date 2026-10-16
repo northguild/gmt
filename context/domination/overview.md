@@ -99,11 +99,14 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── span/           (CORE-2)
                                     ├── instant/        (CORE-4)
                                     ├── calendar/       (CORE-5, CORE-7, CORE-54, CORE-55)
-                                    │   └── duty/       (CORE-76 — hours of work, shared by five realms)
                                     ├── interval/       (CORE-6)
                                     ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds; SPA-46 TAI64)
+                                    │
+                                    │   cross-industry layers (industry domains others draw on)
+                                    ├── workforce/      (CORE-76 — hours of work: duty logs and rules)
                                     ├── gnss/           (MAR-16 — satellite system times, weeks, rollovers)
                                     │
+                                    │   industry layers
                                     ├── transport/      (TRAN-8 … TRAN-10, TRAN-57)
                                     ├── intermodal/     (INT-12, INT-14, INT-15, INT-58)
                                     ├── maritime/       (MAR-17 … MAR-19, MAR-59)
@@ -145,17 +148,28 @@ entry per category barrel, mirrored in `typesVersions`).
 | `precision/` | CORE-1, CORE-3, CORE-56 | Nanosecond bridge, JSON serialisation, foreign epoch conversion, timestamps inside identifiers and data-platform encodings |
 | `span/`      | CORE-2         | Exact and wall-clock spans                                                 |
 | `instant/`   | CORE-4         | Instant-plus-offset pairs, explicit local-time resolution                 |
-| `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55, CORE-76 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours, and the hours-of-work engine (`calendar/duty`: duty-log rule objects, the operator-designated day, violations and remaining-time reports) |
+| `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours |
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
 | `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
-| `gnss/`      | MAR-16         | The six RINEX system times, week counters, rollovers, RINEX weeks          |
 
 These are universal primitives. `interval/` and `calendar/` in particular are consumed by
 laytime, hours-of-work rules, free time, market sessions and medication windows — five realms
 that would otherwise each implement interval arithmetic and disagree about boundaries.
-`CORE-54` … `CORE-56` and `CORE-76` exist for the same reason: holiday rules, weekly opening
-windows, identifier timestamps and hours-of-work rules would otherwise each be written several
-times.
+`CORE-54` … `CORE-56` exist for the same reason: holiday rules, weekly opening windows and
+identifier timestamps would otherwise each be written several times.
+
+### Cross-industry layers
+
+A cross-industry layer is a recognised industry domain that other industries draw on. It is not
+Core, because its functions are specific to an industry or kind of work, and it is not one
+industry's namespace, because several industries need it.
+
+| Layer        | Story          | What it provides                                                          | Drawn on by |
+| ------------ | -------------- | ------------------------------------------------------------------------- | ----------- |
+| `workforce/` | CORE-76        | Workforce management: duty-log rule objects, the operator-designated day, violations and remaining-time reports | Transport now; Health (resident duty hours), Aviation, Rail, Maritime later |
+| `gnss/`      | MAR-16         | The GNSS industry: the six RINEX system times, week counters, rollovers, RINEX weeks | Maritime now; Aviation, IoT later |
+
+`CORE-76` keeps its Core id: it was planned as a Core story, and its id is the build-order key.
 
 ---
 

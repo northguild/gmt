@@ -35,7 +35,7 @@ figure within 4%):
 | `plain/`               |    63 kB |                                                      |
 | `zoned/`               |    26 kB |                                                      |
 | `utc/` + `unix/`       |    31 kB |                                                      |
-| All realm namespaces   |    30 kB | `intermodal`, `transport`, `calendar` (with `calendar/duty`), `gnss`, `timescale`, … |
+| All realm namespaces   |    30 kB | `intermodal`, `transport`, `calendar`, `workforce`, `gnss`, `timescale`, … |
 | **Total**              | **486 kB** | **126.5 kB gzipped**                               |
 
 ### What a real user pays (tree-shaken, one function imported)
