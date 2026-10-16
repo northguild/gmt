@@ -181,3 +181,64 @@ describe("searchChunks — one index per corpus", () => {
     expect(warm.map((c) => c.id)).toEqual(cold.map((c) => c.id));
   });
 });
+
+describe("searchChunks — GNSS and leap-second questions", () => {
+  it("a Galileo week and time of week finds gnssWeekToUtc", () => {
+    const results = searchChunks(
+      chunks,
+      "What UTC time is Galileo week 1024, time of week 18, era 0?",
+    );
+    expect(
+      results.some((c) => c.kind === "function" && c.title === "gnssWeekToUtc"),
+    ).toBe(true);
+  });
+
+  it("seconds across the 2016 leap second finds leapSecondsBetween or the leap-seconds guide", () => {
+    const results = searchChunks(
+      chunks,
+      "How many seconds passed across the 2016 leap second?",
+    );
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "leapSecondsBetween") ||
+          (c.kind === "guide" && c.url.includes("leap-seconds-and-tai")),
+      ),
+    ).toBe(true);
+  });
+
+  it("the next GNSS week rollover finds gnssWeekToUtc or the Maritime guide", () => {
+    const results = searchChunks(
+      chunks,
+      "When does the next GNSS week rollover happen?",
+    );
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "gnssWeekToUtc") ||
+          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
+      ),
+    ).toBe(true);
+  });
+
+  it("a 23:59:60 question finds the isLeapSecond function", () => {
+    const results = searchChunks(
+      chunks,
+      "Is 2016-12-31T23:59:60Z a real leap second?",
+    );
+    expect(
+      results.some((c) => c.kind === "function" && c.title === "isLeapSecond"),
+    ).toBe(true);
+  });
+
+  it("GLONASS time offset from UTC finds utcToGnss or the Maritime guide", () => {
+    const results = searchChunks(chunks, "GLONASS time offset from UTC");
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "utcToGnss") ||
+          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
+      ),
+    ).toBe(true);
+  });
+});

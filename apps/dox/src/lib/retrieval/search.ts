@@ -53,6 +53,31 @@ const STOPWORDS = new Set([
   "that",
 ]);
 
+/* A function's name is the sharpest statement of what it does, but the
+   default tokenizer keeps `isLeapSecond` as one term, so a question that says
+   "leap second" never matched the name. Emit the whole identifier (so a
+   question that names it still matches exactly) plus its camelCase words
+   ("is", "leap", "second"). Only the index is split: a query that types an
+   identifier ("formatDate") stays one narrow term instead of fanning out to
+   every chunk that mentions "format" or "date". Runs of capitals stay
+   together ("utcToGnss" -> utc, to, gnss; "ISOString" -> iso, string). */
+const SPACE_OR_PUNCTUATION = /[\n\r\p{Z}\p{P}]+/u;
+
+function tokenizeQuery(text: string): string[] {
+  return text.split(SPACE_OR_PUNCTUATION).filter(Boolean);
+}
+
+function tokenizeIndexed(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of text.split(SPACE_OR_PUNCTUATION)) {
+    if (!raw) continue;
+    out.push(raw);
+    const words = raw.match(/\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\p{Nd}+/gu);
+    if (words && words.length > 1) out.push(...words);
+  }
+  return out;
+}
+
 function processTerm(term: string): string | false {
   const lower = term.toLowerCase();
   if (STOPWORDS.has(lower) || lower.length < 2) return false;
@@ -96,6 +121,7 @@ function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
     idField: "id",
     fields: ["title", "text"],
     storeFields: ["namespace"],
+    tokenize: tokenizeIndexed,
     processTerm,
     searchOptions: {
       // BM25's default field weights already favor short, exact matches —
@@ -103,6 +129,7 @@ function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
       // formatDate do") ranks the function's own chunk above a guide that
       // merely mentions the name in passing.
       boost: { title: 2 },
+      tokenize: tokenizeQuery,
       prefix: true,
       fuzzy: 0.2,
     },
