@@ -82,6 +82,12 @@ Four pieces:
 17. **The GNSS tools carry two tags**, GNSS and Maritime; the two leap-second tools stay Core.
 18. **The "By industry" chart is stacked:** each industry's own functions solid, the layers it
     draws on lighter and named, and no function counted twice in any total (B9).
+19. **`mistakes/duty` moves to `mistakes/workforce`**, with a redirect (M2, M3), following the
+    `mistakes/<industry>.mdx` convention.
+20. **No market report is cited for the GNSS layer.** Its pages rest on IMO's recognition of the
+    six systems and on RINEX and the BIPM (section 0).
+21. **Intermodal draws on `transport`.** Its pages already use Transport's functions (`dwellTime`),
+    and a declaration states what an industry uses.
 
 | Tool | Page | Kind | Chat tool | Tag | Library calls |
 | --- | --- | --- | --- | --- | --- |
@@ -305,7 +311,7 @@ duty engine or that Maritime uses `gnss`.
 
 An array in display order. **The order follows what builds on what**, so a reader meets a layer
 before any layer that uses it: **Workforce** (draws on nothing), **Transport** (draws on
-`workforce`), **Intermodal** (built on transport's legs and day counts, its guides say so),
+`workforce`), **Intermodal** (draws on `transport`: its legs and day counts, decision 21),
 **GNSS** (draws on Core `timescale` only), **Maritime** (draws on `gnss`). Today's order is
 intermodal before transport, an accident of the function count, so the tools index, the three
 section sidebars, the reference "By industry" groups and the README line change order; read that
@@ -338,7 +344,7 @@ diff as intended.
     "icon": "industry-intermodal",
     "guide": "/guides/industries/intermodal-free-time-and-demurrage/",
     "namespace": "intermodal",
-    "drawsOn": []
+    "drawsOn": ["transport"]
   },
   {
     "id": "gnss",
@@ -376,7 +382,7 @@ Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
   `namespace`, or that `namespace` and `module`); no entry is both listed whole and as one of its
   sub-modules.
 - An entry of `drawsOn` that is another industry's own namespace is a **shared industry layer**
-  (Transport's `workforce`, Maritime's `gnss`); any other entry is a **Core module** (`timescale`).
+  (Transport's `workforce`, Intermodal's `transport`, Maritime's `gnss`); any other entry is a **Core module** (`timescale`).
 - An industry with no `namespace` draws on at least one module.
 - `guide` is the path of a guide whose file is `guides/industries/<id>-<topic>.mdx`.
 - `icon` names a key of `INDUSTRY_ICON_PATHS`.
@@ -592,7 +598,9 @@ Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
   (so no `timescale` page), and tag a shared type only with an industry.
 - **`gmt-stats.test.ts`**: re-derives `industryLayers`, `industryNamespaces` and
   `industryFunctions` from the corpus and the JSON, and asserts no function is counted in two own
-  namespaces and `coreFunctions + industryFunctions === functions`.
+  namespaces and `coreFunctions + industryFunctions === functions`. A fixture row checks one
+  industry's own namespace drawn on by another (Intermodal's `transport` segment equals
+  Transport's own count, and the distinct total counts it once).
 - **`index-pages.test.ts`**, **`build-reference.test.ts`**, **`industry-sidebar.test.ts`**: follow
   the rename and the new root page, with fixtures of an industry that owns a namespace and draws on
   another industry's, one that draws on a sub-module, and one that owns none.
@@ -1693,14 +1701,16 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
     in the `after` build, in declared order in the Industries sidebar group with their icons
     (`aria-hidden`). Each hub's function lists equal the corpus: its own namespace's functions, and
     per drawn-on module exactly that module's functions (GNSS lists `timescale`; Maritime lists
-    `gnss` and `timescale`; Transport lists `workforce`). Each hub's guides, tools, scenarios and
+    `gnss` and `timescale`; Transport lists `workforce`; Intermodal lists `transport`, with the
+    line "Part of the Transport industry layer"). Each hub's guides, tools, scenarios and
     mistakes lists equal the pages whose frontmatter carries its tag. Every link on every hub
     resolves. The hubs are in `llms.txt` and `llms-full.txt`.
 18. **The stacked chart (B9).** A script in `$SP` reads `$SP/after`'s corpus and
     `industries.json` and prints, per industry, its own count and each drawn-on module's count, and
     the distinct total of all own namespaces. On `/why-gmt/` in the `after` build:
-    - each column's segments equal the script's counts, in declared order; Maritime has only shaded
-      segments;
+    - each column's segments equal the script's counts, in declared order; Transport's column has a
+      shaded `workforce` segment, Intermodal's a shaded `transport` segment, GNSS's a shaded
+      `timescale` segment, and Maritime has only shaded segments;
     - the caption's first number equals the distinct total, which is less than the sum of every
       column's height whenever a layer is drawn on, and `coreFunctions + industryFunctions` equals
       the corpus's function count (`gmt-stats` test);
