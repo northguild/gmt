@@ -40,6 +40,11 @@ the index plus its own slice.
 what the story consumes, update its `## What gmt provides (do not re-implement)` section first —
 the `Blocked by` column is generated from it.
 
+## 5. Optimize
+
+Run [`/optimize`](../optimize/SKILL.md) (`python3 .agents/skills/optimize/scripts/run.py`). Fix
+every finding this story caused or worsened; list pre-existing ones for the owner as backlog.
+
 Leave every change unstaged and report that the work is ready. Do not `git add`, commit, push,
 branch or open a PR unless the owner asks in plain words
 ([AGENTS.md § Git](../../../AGENTS.md#git--only-on-an-explicit-instruction)).

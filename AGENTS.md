@@ -76,12 +76,7 @@ These are the non-negotiables. Full detail is in the context files above.
 
 ## Sessions and Agents
 
-- **One story per session.** `/clear` between stories. Near ~200K tokens, write a `/handoff` note and start fresh; the project settings auto-compact at 200K.
-- **The main session orchestrates** with the [`pipeline` skill](./.agents/skills/pipeline/SKILL.md). Specialists never spawn agents. Planners, `researcher` and `gmt-reviewer` run on Opus, workers on Sonnet.
-- **Read in excerpts.** Pass workers file paths and section names, not pasted content; keep test output to `--reporter=dot | tail`.
-
-## Python in Skills
-
-All Python used by skills shares one root-level setup — `pyproject.toml` / `uv.lock` / `.venv` at the repo root. Skills under `.agents/skills/` do not each carry their own Python env; scripts live in the skill's `scripts/` directory and run against the shared root venv (`uv run`).
-
-Run `uv sync --extra dev` once at the repo root to install the shared env (needed for IDE import resolution and to run `pytest`/`pyright` locally).
+- **A story is `/plan-story`, `/clear`, `/implement`.** Every skill: [context/skills.md](./context/skills.md).
+- **One story per session.** Near ~200K tokens, `/handoff` and start fresh (auto-compact: 200K).
+- **The main session orchestrates** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)); specialists never spawn agents.
+- **Read in excerpts.** Pass paths and sections; keep test output to `--reporter=dot | tail`.
