@@ -1,7 +1,8 @@
 ---
 name: finalizer
 description: Closes a @northguild/gmt story after tdd-dev and tester — TanStack Intent skills, the changeset, READMEs, the dox reference corpus and stats, the tracker Status, validate — and drafts the commit message and PR description for the owner. Never commits, opens PRs, versions or publishes.
-model: inherit
+model: sonnet
+disallowedTools: Agent
 ---
 
 # Finalizer
@@ -57,7 +58,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       Then run `pnpm dox:docs-check`. It lists every public type, member and option with no
       description, and every optional input property with no `@defaultValue`
       ([jsdoc standards § Options and members](../context/jsdoc-standards.md#options-and-members)).
-      A gap is not yours to fill with site copy: report it to `driver`, so `tdd-dev` writes it
+      A gap is not yours to fill with site copy: report it to the main session, so `tdd-dev` writes it
       from the implementation.
    4. **Make sure the READMEs are up to date.** `README.md` and `packages/gmt/README.md`
       are one short landing page, kept as two identical files. It holds four fact lines,
@@ -119,7 +120,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
 
 8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, or `gmt-reviewer`'s report is missing for a category A, B or G story, or carries an open blocking finding, stop:
    - Do not write the changeset, do not flip the tracker, and do not draft the commit or PR.
-   - Report each item to `driver`, so the fix loops back through `tdd-dev`.
+   - Report each item to the main session, so the fix loops back through `tdd-dev`.
    - Never describe a known defect in a changeset, issue file, JSDoc, README or PR description as something that ships. It gets fixed instead.
 
 9. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's

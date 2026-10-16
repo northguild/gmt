@@ -26,35 +26,15 @@ Scoped documentation — load only what the task requires. The index lives in on
 
 ## Agents
 
-The personas in `.agents/*.md` are symlinked into `.claude/agents/` (Claude Code) and
-registered in `kilo.jsonc` (Kilo). Library pipeline: `master` → `driver` → `architect` /
-`researcher` / `tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox site: `dox-architect` →
-`dox-builder` / `dox-tester`.
+The personas in `.agents/*.md` are symlinked into `.claude/agents/`. The main session orchestrates with the `/pipeline` skill and
+spawns each specialist directly; no specialist spawns another. Library: `architect` → `researcher` /
+`tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox: `dox-architect` → `dox-builder` /
+`dox-tester`. Planners (`architect`, `dox-architect`), `researcher` and `gmt-reviewer` run on Opus; every other agent on Sonnet.
 
 ## Available Skills
 
-Skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Run them with
-`/skill-name`.
-
-| Skill              | What it does                                                                |
-| ------------------ | --------------------------------------------------------------------------- |
-| `/update-readme`   | Syncs the landing-page READMEs' figures, sample, namespaces and prompt      |
-| `/plain-english`   | ISO 24495-1 plain-language rules for prose a person reads, not runs         |
-| `/changelog`       | Rewrites the pending `.changeset/*.md` description to match CHANGELOG style |
-| `/commit-message`  | Drafts a ready-to-copy commit message from the current diff (read-only)     |
-| `/pr-desc`         | Drafts a PR title and description from the branch diff (read-only)          |
-| `/code-review`     | GMT-specific review checklist — see note below                              |
-| `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes                    |
-| `/tdd`             | Vertical-slice red → green reference                                        |
-| `/implement`       | Implement a spec or ticket end to end (leaves changes unstaged)             |
-| `/research`        | Research a question against primary sources into a Markdown file            |
-| `/prototype`       | Throwaway prototype to answer a design question                             |
-| `/handoff`         | Write a handoff note for the next session                                   |
-| `/grill-with-docs` | Interview-style design review that records decisions as docs                |
-
-**`/code-review` name collision.** Claude Code ships a built-in `/code-review`. If the
-built-in wins, load the GMT checklist directly:
-[context/code-review-checklist.md](./context/code-review-checklist.md).
+A story is `/plan-story`, then `/clear`, then `/implement`. Every skill, by task:
+[context/skills.md](./context/skills.md).
 
 ## Repo Layout (quick orientation)
 
