@@ -1,4 +1,4 @@
-# Spec: the Maritime industry layer and five GNSS and leap-second tools (MAR-16)
+# Spec: declared industry layers (Workforce, GNSS, Maritime) and five GNSS and leap-second tools (MAR-16)
 
 What `apps/dox` ships for MAR-16 (#197). `dox-builder` builds against this spec, and `dox-tester`
 verifies against section I. This is not `packages/gmt` work: the library side is
@@ -7,19 +7,22 @@ spec" below, "L§n" for its section n).
 
 Four pieces:
 
-1. **Industry layers stop being namespaces** (section B). Each industry is declared once, with the
-   modules it draws on (whole namespaces or sub-modules such as `calendar/duty`), and gets its own overview page at `/industries/<id>/`. Transport and
-   Intermodal keep working and keep every URL. `timescale` and `gnss` are building blocks and sit
-   with the general namespaces. **Maritime** is a new industry that draws on `gnss` and
-   `timescale` and owns no namespace yet.
+1. **Industry layers are declared** (section B). Each industry is declared once, with its own
+   namespace (if it has one) and the modules it draws on, and gets its own overview page at
+   `/industries/<id>/`. Transport and Intermodal keep working and keep every URL. Two
+   **cross-industry layers** join them as industries: **Workforce** (`workforce/`, people's working
+   time; the duty engine moves there) and **GNSS** (`gnss/`). `timescale` stays Core.
+   **Maritime** is an industry that draws on `gnss` and `timescale` and owns no namespace yet.
+   The `/why-gmt` "By industry" chart becomes stacked, with shared layers shaded and never
+   counted twice (B9).
 2. **Generator fixes the new API needs** (section C): a playground classifier defect that
    `rolloverEra: number | "rolling"` exposes, and the redirect for the `isLeapSecond` →
    `hasSecond60` rename.
 3. **Five standalone tools** (section D): the GNSS Week Decoder, the Satellite Clock Converter, the
    GNSS Rollover Checker, the Leap Second Timeline and Elapsed vs. Clock Difference, each with its
    chat registration.
-4. **The MAR-16 content pages** (section F1): the Maritime guide, the Core leap-seconds guide, the
-   scenarios, the two mistakes pages and the index edits that L§8.4 describes. This work writes
+4. **The MAR-16 content pages** (section F1): the GNSS and Maritime guides, the Core leap-seconds
+   guide, the scenarios, the two mistakes pages and the index edits that L§8.4 describes. This work writes
    them; the library pipeline does not.
 
 **Decisions (closed, owner):**
@@ -28,7 +31,8 @@ Four pieces:
    "Industries" sidebar group after "Start here".
 2. The overview text leaves `/reference/transport/` and `/reference/intermodal/` for the industry
    pages; each namespace index keeps a one-line pointer.
-3. The industry order is Transport, Intermodal, Maritime.
+3. The industry order follows what builds on what (B2): Workforce, Transport, Intermodal, GNSS,
+   Maritime.
 4. `dox-builder` edits the README "By industry:" line and namespace line in step D1. The library
    finalizer's `/update-readme` pass only verifies them.
 5. A RINEX `BDT` week counts from 2006-01-01 BDT; `GPS`, `QZS`, `GAL` and `IRN` count from
@@ -65,18 +69,25 @@ Four pieces:
     Resolution 5 for continuous UTC. The library exports neither.
 15. **The comparison baseline** is the base branch built inside a scratch copy (I0). This
     worktree's `packages/gmt/dist` is never rebuilt.
-16. **`duty/` is no longer a namespace.** The duty calculators move to `calendar/duty` and
-    `isValidDutyLog` to `calendar/validate`. Industries declare **modules** (a whole namespace or a
-    sub-module), so Transport declares `["transport", "calendar/duty"]`. A function shared across
-    industries lives in its general namespace as a sub-module, never in a namespace of its own and
-    never under an industry's name. Step DU repoints links to the moved pages and redirects the old
-    `/reference/duty/…` routes.
+16. **Cross-industry layers are industries.** `workforce/` is a new industry layer (workforce
+    management: people's working time); the duty engine moves there, seven functions in
+    `workforce/calculate` and `isValidDutyLog` in `workforce/validate`, and the `/duty` subpaths are
+    removed. `gnss/` is an industry layer too, named for the GNSS market segment it serves.
+    `timescale/` stays Core. Each industry declares its own namespace and the modules it draws on:
+    Transport owns `transport` and draws on `workforce`; Intermodal owns `intermodal`; Workforce owns
+    `workforce`; GNSS owns `gnss` and draws on `timescale`; Maritime owns none yet and draws on `gnss`
+    and `timescale` (and on `workforce` when it needs it). The rule is
+    `context/coding-standards.md` line 230, "Core namespaces, industry layers, cross-industry
+    layers". Step DU moves the duty pages and redirects the old URLs.
+17. **The GNSS tools carry two tags**, GNSS and Maritime; the two leap-second tools stay Core.
+18. **The "By industry" chart is stacked:** each industry's own functions solid, the layers it
+    draws on lighter and named, and no function counted twice in any total (B9).
 
 | Tool | Page | Kind | Chat tool | Tag | Library calls |
 | --- | --- | --- | --- | --- | --- |
-| GNSS Week Decoder | `/tools/gnss-week-decoder/` | `gnssweek` | `showGnssWeekDecoder` | Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `rinexWeekToUtc`, `utcToRinexWeek`, `utcToGnss`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration` |
-| Satellite Clock Converter | `/tools/satellite-clock-converter/` | `satclock` | `showSatelliteClockConverter` | Maritime | `utcToGnss`, `gnssToUtc`, `toTAI`, `fromTAI`, `taiMinusUtc`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration`, `addUtc`, `startOfUtc` |
-| GNSS Rollover Checker | `/tools/gnss-rollover-checker/` | `rollover` | `showGnssRolloverChecker` | Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `areUtcEqual`, `diffUtcAsDuration`, `isValidInstant` |
+| GNSS Week Decoder | `/tools/gnss-week-decoder/` | `gnssweek` | `showGnssWeekDecoder` | GNSS, Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `rinexWeekToUtc`, `utcToRinexWeek`, `utcToGnss`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration` |
+| Satellite Clock Converter | `/tools/satellite-clock-converter/` | `satclock` | `showSatelliteClockConverter` | GNSS, Maritime | `utcToGnss`, `gnssToUtc`, `toTAI`, `fromTAI`, `taiMinusUtc`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration`, `addUtc`, `startOfUtc` |
+| GNSS Rollover Checker | `/tools/gnss-rollover-checker/` | `rollover` | `showGnssRolloverChecker` | GNSS, Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `areUtcEqual`, `diffUtcAsDuration`, `isValidInstant` |
 | Leap Second Timeline | `/tools/leap-second-timeline/` | `leapline` | `showLeapSecondTimeline` | Core | `taiMinusUtc`, `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `addUtc`, `startOfUtc` |
 | Elapsed vs. Clock Difference | `/tools/elapsed-vs-clock-difference/` | `elapsed` | `showElapsedVsClock` | Core | `spanNs`, `toTAI`, `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant` |
 
@@ -165,11 +176,12 @@ says where to look, not what is there.
   The library's JSDoc may; this work, the guides and mistakes pages of F1 included, does not
   repeat it. Where a page needs to say what `GLO` is, it says: GLONASS time as RINEX and the BIPM
   report it, in UTC's own hours, and the library reads no other GLONASS scale.
-- **A function shared across industries lives in the general namespace it belongs to, as a
-  sub-module** (`calendar/duty`, `calendar/hours`). It never gets a namespace of its own and never
-  takes an industry's name. Industries declare the modules they draw on (B1). The rule is
-  `context/coding-standards.md` § "Shared functions are sub-modules, not namespaces" (line 230): a
-  new namespace is for a new time domain only (`timescale/`, `gnss/`).
+- **Core namespaces, industry layers, cross-industry layers** (`context/coding-standards.md` line
+  230). A function shared across industries goes in the cross-industry layer for its domain
+  (`workforce`, `gnss`) or in Core if it is truly general (`timescale`), never in a grab-bag
+  "shared" namespace, never in one industry's namespace when others need it, and never in a new
+  namespace that is not a recognised domain. On the site a cross-industry layer is an industry
+  like any other, and other industries declare it among the modules they draw on (B1).
 - **"space" is not an industry, area, kind or namespace name.** A planned spatial and geo
   expansion takes the word.
 - **GMT tracks no law.** No statute, regulator, agency, court or named regime appears in a widget
@@ -234,11 +246,11 @@ says where to look, not what is there.
 
 **In scope:** section B (industry layers, hub pages, the README line and the agent docs that state
 the rule); section C (the classifier fix, the rename redirect); section D (five tools and their
-registration); the MAR-16 content pages of F1 (L§8.4: the Maritime guide, the Core guide, five
+registration); the MAR-16 content pages of F1 (L§8.4: the GNSS and Maritime guides, the Core guide, five
 scenarios, two mistakes pages, the index edits); the five tool pages; the links between the tools
-and from the content pages into them; the Maritime overview text; section M (the duty engine, `calendar/duty`, under
-Transport, with its moved URLs); section N (the Dox items of the international-standards audit: widget defaults, the
-example rebalance, the hours-of-work examples); `context/dox/` close-out (section H).
+and from the content pages into them; the GNSS and Maritime overview text; section M (the Workforce layer: the duty pages
+moved and retagged, with their redirects); section N (the Dox items of the international-standards audit: widget defaults, the
+example rebalance, the Workforce guide's examples); the stacked "By industry" chart (B9); `context/dox/` close-out (section H).
 
 **Not in scope:**
 
@@ -263,52 +275,61 @@ exports a function; `gmt-stats.json` `industries` lists those namespaces;
 `src/lib/industry-tags.ts` builds every tag id from that list; the API Reference's "By industry"
 group, the overview text at `/reference/<namespace>/`, the page tags, the `/why-gmt` industry chart
 and the README's "By industry:" line all key on it. A Maritime guide therefore makes
-`stats.mjs` throw ("`maritime` exports no function").
+`stats.mjs` throw ("`maritime` exports no function"), and nothing can say that Transport uses the
+duty engine or that Maritime uses `gnss`.
 
 ### B1. The rule
 
-- **An industry is declared** in `apps/dox/src/data/industries.json`, with the **modules** it
-  draws on. A module is a subpath of the exports map at one of two depths: a whole namespace
-  (`transport`, `gnss`, `timescale`), meaning every module in it, or one sub-module
-  (`calendar/duty`), meaning that module alone. An industry draws on the duty engine without
-  drawing on the rest of `calendar/`.
-- **A function shared across industries lives in the general namespace it belongs to, as a
-  sub-module.** It never gets a namespace of its own and never takes an industry's name. The duty
-  engine is `calendar/duty` (beside `calendar/hours`), and its validator is in `calendar/validate`;
-  the satellite scales are `gnss` and `timescale`. Industries declare the modules they draw on.
-- **An industry's own namespace** is the declared whole namespace named for it
-  (`@northguild/gmt/<id>`), when one exists: `transport` for Transport, `intermodal` for
-  Intermodal, none yet for Maritime. Every other declared module is a building block it draws on,
-  and stays general everywhere: in the reference sidebar, on `/reference/`, in the README and in
-  its pages' tags.
-- **An own namespace behaves as an industry namespace does today:** it sits under the reference
-  sidebar's "By industry" divider, its pages carry the industry tag, and its functions count in
-  the `/why-gmt` industry chart.
+- **An industry is declared** in `apps/dox/src/data/industries.json`: its own namespace, when it
+  has one, and the modules it **draws on**. A drawn-on module is a subpath of the exports map at
+  one of two depths: a whole namespace (`workforce`, `gnss`, `timescale`), meaning every module in
+  it, or one sub-module (`<namespace>/<module>`), meaning that module alone.
+- **An industry's own namespace is named for it** (`@northguild/gmt/<id>`): `transport`,
+  `intermodal`, `workforce`, `gnss`. Maritime has none yet; MAR-17 creates `maritime/`.
+- **A cross-industry layer is an industry** (decision 16, `context/coding-standards.md` line 230).
+  `workforce` and `gnss` are recognised domains that other industries draw on; on the site each is
+  an industry with its own namespace, hub, guide and tag, and the industries that use it declare
+  it in `drawsOn`. `timescale` is Core: no industry owns it, and GNSS and Maritime draw on it.
+- **An own namespace is an industry namespace:** it sits under the reference sidebar's "By
+  industry" divider, its reference pages carry its industry's tag, and its functions are that
+  industry's solid segment in the `/why-gmt` chart (B9). A drawn-on Core module stays general
+  everywhere: the reference sidebar, `/reference/`, the README, its pages' tags.
 - **Every industry gets a hub page** at `/industries/<id>/`, generated, and every industry is
   listed at `/industries/` and on the `/reference/` root page.
-- **The tag on a tool, scenario, guide or mistakes page** may name an industry whose declared
-  modules the page uses, or `core` when the page uses no industry's own namespace.
-- **A building block may be declared by several industries.** `calendar/duty` is declared by
-  Transport today (section M), and Maritime, Rail, Aviation and Health add it when each arrives;
-  `gnss` and `timescale` are declared by Maritime, and Aviation and IoT add them when they arrive.
-  A building block never moves into an industry's own namespace.
+- **The tags on a tool, scenario, guide or mistakes page** may name any industry whose own
+  namespace or drawn-on modules the page uses, several at once, or `core` when the page uses no
+  industry's own namespace. So a GNSS tool is `[gnss, maritime]`, the duty scenarios are
+  `[workforce, transport]` where they are about drivers, and a timescale-only page may be `core`.
 
 ### B2. `apps/dox/src/data/industries.json` (new, tracked)
 
-An array in display order. **The order is transport, intermodal, then maritime** (each builds on
-the one before it). Today's order is intermodal before transport, an accident of the function
-count, so the tools index, the three section sidebars and the reference "By industry" groups list
-Transport first after this change; read that diff as intended.
+An array in display order. **The order follows what builds on what**, so a reader meets a layer
+before any layer that uses it: **Workforce** (draws on nothing), **Transport** (draws on
+`workforce`), **Intermodal** (built on transport's legs and day counts, its guides say so),
+**GNSS** (draws on Core `timescale` only), **Maritime** (draws on `gnss`). Today's order is
+intermodal before transport, an accident of the function count, so the tools index, the three
+section sidebars, the reference "By industry" groups and the README line change order; read that
+diff as intended.
 
 ```json
 [
+  {
+    "id": "workforce",
+    "label": "Workforce",
+    "definition": "People's working time: duty logs, hours-of-work limits, rest and rolling windows, for any crew, shift or rota.",
+    "icon": "industry-workforce",
+    "guide": "/guides/industries/workforce-hours-of-work/",
+    "namespace": "workforce",
+    "drawsOn": []
+  },
   {
     "id": "transport",
     "label": "Transport",
     "definition": "Legs, dwell, cut-offs, punctuality and crew hours of work, shared by road, rail, sea and air.",
     "icon": "industry-transport",
     "guide": "/guides/industries/transport-legs-and-dwell/",
-    "modules": ["transport", "calendar/duty"]
+    "namespace": "transport",
+    "drawsOn": ["workforce"]
   },
   {
     "id": "intermodal",
@@ -316,81 +337,91 @@ Transport first after this change; read that diff as intended.
     "definition": "<today's text from industry-tags.ts>",
     "icon": "industry-intermodal",
     "guide": "/guides/industries/intermodal-free-time-and-demurrage/",
-    "modules": ["intermodal"]
+    "namespace": "intermodal",
+    "drawsOn": []
+  },
+  {
+    "id": "gnss",
+    "label": "GNSS",
+    "definition": "Satellite navigation time for any receiver: the six system times, week numbers and their rollovers, and RINEX navigation weeks.",
+    "icon": "industry-gnss",
+    "guide": "/guides/industries/gnss-system-time-and-week-rollover/",
+    "namespace": "gnss",
+    "drawsOn": ["timescale"]
+  },
+  {
+    "id": "maritime",
+    "label": "Maritime",
+    "definition": "Satellite time at sea and in ships' records: the clocks receivers on board read, their week rollovers and the leap seconds between them.",
+    "icon": "industry-maritime",
+    "guide": "/guides/industries/maritime-gnss-time-and-week-rollover/",
+    "drawsOn": ["gnss", "timescale"]
   }
 ]
 ```
 
-The Maritime entry is added in step D1b + D3 of section K, right after its guide is written (the
-overview test requires the guide):
-
-```json
-{
-  "id": "maritime",
-  "label": "Maritime",
-  "definition": "Satellite time at sea and in its records: GNSS system times, week numbers and their rollovers, RINEX navigation weeks and leap seconds.",
-  "icon": "industry-maritime",
-  "guide": "/guides/industries/maritime-gnss-time-and-week-rollover/",
-  "modules": ["gnss", "timescale"]
-}
-```
-
-Transport declares `calendar/duty` from D1 on, so D1 and section M agree from the start: the duty
-engine stays in the general reference list under `calendar`, and its seven calculators appear on
-`/industries/transport/`. `isValidDutyLog` is in `calendar/validate`, which Transport does not
-declare, so the hub does not list it; the hours-of-work guide and the reference link it. D1 needs
-the library's move of `duty/` to `calendar/duty` (P1). The page retags, links and redirects of
-section M follow in step DU.
+D1 writes Workforce, Transport and Intermodal (with the library's `workforce/` move landed, P1).
+The GNSS and Maritime entries are added in step D1b + D3, right after their guides are written (the
+overview test requires each guide).
 
 Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
 
 - `id` is a lowercase word, unique, and never `core` or `space`. `industry-tags.ts` exports
   `RESERVED_INDUSTRY_IDS = ["core", "space"]` with a comment: `core` is the tag for core-only
   pages; `space` is taken by a planned spatial and geo expansion.
-- `modules` is non-empty, has no duplicate, and each entry is a whole namespace or a
-  `namespace/module` that exports a function (the corpus has a function with that `namespace`, or
-  that `namespace` and `module`). No entry is both listed whole and as one of its sub-modules.
-- If a namespace named `<id>` exports a function, industry `<id>` lists it whole.
+- `namespace`, when present, equals `id` and exports a function. If a namespace named `<id>`
+  exports a function, industry `<id>` declares it as its `namespace`.
+- `drawsOn` has no duplicate and does not hold the industry's own namespace. Each entry is a whole
+  namespace or a `namespace/module` that exports a function (the corpus has a function with that
+  `namespace`, or that `namespace` and `module`); no entry is both listed whole and as one of its
+  sub-modules.
+- An entry of `drawsOn` that is another industry's own namespace is a **shared industry layer**
+  (Transport's `workforce`, Maritime's `gnss`); any other entry is a **Core module** (`timescale`).
+- An industry with no `namespace` draws on at least one module.
 - `guide` is the path of a guide whose file is `guides/industries/<id>-<topic>.mdx`.
 - `icon` names a key of `INDUSTRY_ICON_PATHS`.
 
 ### B3. `scripts/stats.mjs` and the READMEs
 
-- **`industryLayers()` becomes `industryDeclarations(namespaces)`.** It reads
-  `apps/dox/src/data/industries.json` and checks: every declared module exports a function (a whole
-  namespace, or a `namespace/module` pair in the corpus);
-  every `guides/industries/<prefix>-….mdx` prefix is a declared `id` (error: "an industry guide is
-  named for a declared industry, and `<prefix>` is not one; declare it in
-  apps/dox/src/data/industries.json"); a namespace named for a declared industry is listed whole
-  in that industry's `modules`. The header comment's "industry layers" source line says the declaration file is
-  the source.
-- **`apiSurface()` returns `industryNamespaces`**: the namespaces that are some industry's own,
-  in `byNamespace` order. `gmt-stats.json`'s key `industries` is renamed `industryNamespaces`; its
-  value today stays `["intermodal", "transport"]`. `statsObject()` (line 344) and `show`
-  (line 858, which also prints each industry with its modules) follow.
+- **`industryLayers()` becomes `industryDeclarations(corpus)`.** It reads
+  `apps/dox/src/data/industries.json` and checks the B2 rules that need the corpus: every
+  `namespace` and `drawsOn` entry exports a function; every `guides/industries/<prefix>-….mdx`
+  prefix is a declared `id` (error: "an industry guide is named for a declared industry, and
+  `<prefix>` is not one; declare it in apps/dox/src/data/industries.json"); a namespace named for a
+  declared industry is that industry's `namespace`. The header comment's "industry layers" source
+  line says the declaration file is the source.
+- **`apiSurface()` returns `industryNamespaces`**: every industry's own namespace, in
+  `byNamespace` order. `gmt-stats.json`'s key `industries` is renamed `industryNamespaces`. With
+  the library's move it holds `transport`, `intermodal`, `workforce` and `gnss`.
+- **`apiSurface()` also returns `industryLayers`**, the stacked chart's data (B9), in declared
+  order: `{ id, label, own: number, drawsOn: [{ module, count, shared: boolean }] }`, each count the
+  corpus's functions in that namespace or `namespace/module`; and **`industryFunctions`**, the
+  number of distinct functions in all own namespaces. Core functions are every function outside
+  an own namespace, so `coreFunctions + industryFunctions = functions` exactly. `statsObject()`
+  (line 344) writes all three into `gmt-stats.json`, and `show` (line 858) prints each industry
+  with its namespace and drawn-on modules.
 - **`namespaceLinkProblems` (line 610) checks the new README shape:**
   1. Every namespace that exports a function has one `…/reference/<ns>/` link, labelled with its
-     namespace, on a line that does not start with `By industry:`. That now includes
-     `transport` and `intermodal`. No `/reference/` link to anything else: a sub-module such as
-     `calendar/duty` has no README link of its own, because `calendar` is linked.
+     namespace, on a line that does not start with `By industry:`. That includes the own
+     namespaces (`transport`, `intermodal`, `workforce`, `gnss`). No `/reference/` link to anything
+     else; a sub-module has no README link of its own.
   2. The `By industry:` line links `https://gmt-dox.northguild.workers.dev/industries/<id>/` for
      exactly the declared industries, in declared order, each labelled with its `label`, and
      holds no `/reference/` link.
   3. No `/industries/<id>/` link to an undeclared id anywhere.
   Each failure is a message for a person, as today; `sync` rewrites none of it.
-- **The README edit**, identical in both files: `[transport](…/reference/transport/)` and
-  `[intermodal](…/reference/intermodal/)` join the namespace line (after the namespaces already
-  there, in the line's present order; the library finalizer adds `[gnss]` and `[timescale]` there
-  too, L§5.3). Line 52 becomes
-  `By industry: [Transport](https://gmt-dox.northguild.workers.dev/industries/transport/) · [Intermodal](https://gmt-dox.northguild.workers.dev/industries/intermodal/)`,
-  and `· [Maritime](https://gmt-dox.northguild.workers.dev/industries/maritime/)` is appended in
-  step D3. Then `node scripts/stats.mjs check` passes.
+- **The README edit**, identical in both files: `[transport]`, `[intermodal]` and `[workforce]`
+  join the namespace line and `[duty]` leaves it (the library finalizer adds `[gnss]` and
+  `[timescale]`, L§5.3; whichever of the two lands second keeps the line consistent). Line 52
+  becomes `By industry: [Workforce](…/industries/workforce/) · [Transport](…/industries/transport/)
+  · [Intermodal](…/industries/intermodal/)`, with the full site URL in each link, and
+  `· [GNSS](…/industries/gnss/) · [Maritime](…/industries/maritime/)` is appended in step D3. Then
+  `node scripts/stats.mjs check` passes.
 - **The agent docs that state the old rule**, one sentence each, saying the namespace line links
   every namespace and the "By industry:" line links each industry's page:
   `.agents/finalizer.md` (86–87), `.agents/gmt-reviewer.md` (359),
   `.agents/skills/update-readme/SKILL.md` (30, 62), `.agents/skills/update-readme/references/steps.md`
-  (67), `context/code-review-checklist.md` (44; the library pipeline has other edits in this file,
-  so change only that line).
+  (67), `context/code-review-checklist.md` (44; change only that line).
 
 ### B4. `src/lib/industry-tags.ts` and `src/data/gmt-stats.ts`
 
@@ -399,47 +430,54 @@ Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
   icon and guide come from the JSON.
 - Exports, all derived from the JSON:
   - `INDUSTRY_TAG_IDS` (core, then the layers in declared order) and `INDUSTRY_LAYER_IDS` (the
-    layers), as today;
-  - `industryModules(id): readonly string[]` (what it draws on, as declared);
+    layers);
+  - `ownNamespace(id): string | undefined`; `OWN_NAMESPACES` (in declared order);
+    `industryOwning(namespace): string | undefined`;
+  - `drawsOn(id): readonly string[]`;
   - `moduleCovers(declared, namespace, module): boolean`: a whole namespace covers each of its
     modules; a sub-module covers itself alone. Every consumer below matches through it, never by
     string prefix;
-  - `ownNamespace(id): string | undefined` (its namespace named for it);
-  - `OWN_NAMESPACES: readonly string[]` (every industry's own namespace, in declared order);
-  - `industryOwning(namespace): string | undefined`;
-  - `industriesDrawingOn(namespace, module): readonly string[]`;
+  - `industriesUsing(namespace, module): readonly string[]`: every industry whose own namespace or
+    drawn-on modules cover it;
   - `RESERVED_INDUSTRY_IDS`.
-- `INDUSTRY_ICON_PATHS` gains `"industry-maritime"`: an anchor, in the same 24×24 stroke format.
-  It reuses no transport mode's glyph (`ship` and `barge` are modes in `transport-icons.ts`).
-- `industrySidebarCss()` emits one rule per industry that has an own namespace (only those have a
+- `INDUSTRY_ICON_PATHS` gains three glyphs in the 24×24 stroke format of the others, none reusing
+  a transport mode's glyph (`ship` and `barge` are modes): `"industry-workforce"` (a person beside
+  a clock face), `"industry-gnss"` (a satellite: a body, two panels and a signal arc) and
+  `"industry-maritime"` (an anchor). Each is legible at 14px; `industry-tags.test.ts` checks every
+  icon exists.
+- `industrySidebarCss()` emits one rule per industry with an own namespace (only those have a
   reference group). Its test says so.
-- `gmt-stats.ts`: `GmtStats.industries` becomes `industryNamespaces`; `coreNamespaces` and the
-  exported `industryNamespaces` (the `NamespaceCount[]`) read it. Names of the exports stay.
+- `gmt-stats.ts`: `GmtStats.industries` becomes `industryNamespaces`; `GmtStats` gains
+  `industryLayers` and `industryFunctions`. `coreNamespaces`, the exported `industryNamespaces`
+  (the `NamespaceCount[]`), `coreFunctions` and `industryFunctions` read them; the names of the
+  exports stay. `gmt-stats.test.ts` asserts `coreFunctions + industryFunctions === functions`.
 - `src/content/docs/why-gmt.mdx` line 112: "{n} are industry layers built on it" becomes
   "{n} belong to one industry each". The figures still come from `gmt-stats`.
 
 ### B5. The generator (`scripts/build-reference.ts`, `scripts/build-utils/index-pages.ts`)
 
 - `industryOf(namespace)` (line 3153) becomes `industryOwning(namespace)`. `withIndustry` and
-  `typeIndustry` (line 2804) read the owned namespaces: a shared type is tagged only when every
-  function that reaches it is in one industry's own namespace. A `gnss` type is general.
+  `typeIndustry` (line 2804) read the own namespaces: a shared type is tagged only when every
+  function that reaches it is in one industry's own namespace. A `gnss` type is tagged GNSS; a
+  `timescale` type is general.
 - `buildSidebar(…, industries)` receives `OWN_NAMESPACES`. The divider, its label and each own
-  namespace group's `Overview` link with `data-gmt-industry` are unchanged.
-- `industryIndex()` (line 2814) returns every declared industry with its `modules`.
+  namespace group's `Overview` link with `data-gmt-industry` are unchanged; `workforce` and `gnss`
+  now sit under the divider.
+- `industryIndex()` (line 2814) returns every declared industry with its `namespace` and `drawsOn`.
 - **`/reference/` root** (`renderIndexPages`): "For any industry" lists every namespace that is no
-  industry's own (so `gnss` and `timescale` appear there). "By industry" lists every declared
-  industry: its `Icon`, `[Label](/industries/<id>/)`, its definition, then
-  "Draws on [`gnss`](/reference/gnss) and [`timescale`](/reference/timescale)." (a list built
-  from its modules, each linked to its own index: `calendar/duty` to `/reference/calendar/duty`).
-  Its lead sentence: "Each industry draws on the namespaces and modules above. Some add a namespace
-  of their own."
+  industry's own (`timescale` among them). "By industry" lists every declared industry: its `Icon`,
+  `[Label](/industries/<id>/)`, its definition, then its own namespace as a link when it has one
+  and "Draws on [`gnss`](/reference/gnss) and [`timescale`](/reference/timescale)." (each module
+  linked to its own index). Its lead sentence: "Each industry has a namespace of its own, draws on
+  the layers above it, or both."
 - **`/reference/<own namespace>/`** keeps its tag and its module lists. The pain-point block
   (`industryIntro`) leaves it for the hub. In its place, one line: "The Transport industry's own
   namespace. What it solves, and the guides and tools that show it, are on
-  [Transport](/industries/transport/)." The URL is unchanged, so no redirect is needed.
+  [Transport](/industries/transport/)." The URLs of `transport` and `intermodal` are unchanged.
 - `industryIntro` and `painPointItem` move to `scripts/build-utils/industry-pages.ts` (B6).
   `firstSentence` and `listItem` are exported from `index-pages.ts` for it.
-- `referenceInputs()` lists `src/data/industries.json` and `build-utils/industry-pages.ts`.
+- `referenceInputs()` lists `src/data/industries.json`, `build-utils/industry-pages.ts` and
+  `build-utils/moved-pages.ts` (M3).
 
 ### B6. The hub pages
 
@@ -452,20 +490,24 @@ Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
   `guides/`, `tools/`, `scenarios/` and `mistakes/`, using `readSectionPage` from
   `build-utils/industry-sidebar.ts` (extend it to read `description` for the lists).
 - **It writes**, through `writeIfChanged`, deleting a stale hub as `syncTree` does:
-  - `src/content/docs/industries/index.mdx`: title `By industry`, one item per industry: label
-    as a link to its hub, definition, "Draws on" its modules.
-  - `src/content/docs/industries/<id>.mdx` per industry, frontmatter `title: <Label>`,
-    `description: <definition>`, `industries: [<id>]`, then:
+  - `src/content/docs/industries/index.mdx`: title `By industry`, one item per industry: label as
+    a link to its hub, definition, its own namespace, and "Draws on" its modules.
+  - `src/content/docs/industries/<id>.mdx` per industry (`workforce`, `transport`, `intermodal`,
+    `gnss`, `maritime`), frontmatter `title: <Label>`, `description: <definition>`,
+    `industries: [<id>]`, then:
     1. the overview's `about` paragraph;
     2. `## What these functions solve`: each pain point, its `{{name}}` tokens linked to the
-       function's corpus `url`. A token naming a function outside the industry's declared
-       modules (`moduleCovers`) stops the step with a message naming `src/lib/industry-overview.ts`;
+       function's corpus `url`. A token naming a function outside the industry's own namespace and
+       drawn-on modules stops the step with a message naming `src/lib/industry-overview.ts`;
     3. "Start with the guide: [title](guide)." with the guide's own title;
-    4. `## Functions it draws on`: for each declared module in declared order. A whole namespace
-       is `### [`ns`](/reference/ns)`, then each of its modules as a bold link to its index and its
-       functions as `listItem`s. A sub-module is `### [`ns/module`](/reference/ns/module)` and its
-       functions;
-    5. `## Guides`, `## Tools`, `## Scenarios`, `## Mistakes`: every page in that section whose
+    4. `## Its own functions` (when it has a namespace): `### [`ns`](/reference/ns)`, each module
+       as a bold link to its index and its functions as `listItem`s;
+    5. `## Functions it draws on`: per drawn-on module in declared order, a whole namespace as
+       `### [`ns`](/reference/ns)` with its modules, a sub-module as
+       `### [`ns/module`](/reference/ns/module)` with its functions. A shared industry layer's
+       heading is followed by "Part of the [GNSS](/industries/gnss/) industry layer." (its own
+       hub);
+    6. `## Guides`, `## Tools`, `## Scenarios`, `## Mistakes`: every page in that section whose
        `industries` holds the id, by title, each `- [Title](/section/slug/): description`. An empty
        section is left out.
   - `src/generated/industries-sidebar.ts`: `industriesSidebar`, `{ label: "Overview", slug:
@@ -486,73 +528,111 @@ Rules, each enforced (B3 for `stats.mjs`, B8 for the tests):
   "Industries" section after "Start here" listing `/industries/` and each hub.
 - `guides/industries/index.mdx` (step D3): one sentence under its intro: "Each industry also has
   an overview page under [By industry](/industries/)." Its frontmatter description stops naming
-  the layers ("transport and intermodal so far"): "Guides for the industry layers built on the
-  core primitives, with real-world scenarios."
+  the layers: "Guides for the industry layers built on the core primitives, with real-world
+  scenarios." Its "Layers" list gains the Workforce, GNSS and Maritime guides.
 
 ### B7. Overview text (`src/lib/industry-overview.ts`)
 
-- `IndustryOverview` keeps its shape. A `{{name}}` token now resolves against the functions of
-  the industry's declared modules (`moduleCovers`): a whole namespace's functions, or a
-  sub-module's alone.
-- **The Maritime entry** (step D3). Wording is the builder's, under `/plain-english` and the test's
-  rules: no digit (so no "1024", no "L1NV"), no "GMT", no law, no UTC+3 or Moscow. Draft:
-  - `about`: ships and their shore systems read time from satellites. Each satellite system keeps
-    its own continuous clock, counts weeks on a counter that wraps, and differs from UTC by a
-    number of seconds that grew with every leap second. This layer reads those clocks and weeks
-    without a hand-kept offset.
-  - Pain points, three to five:
-    1. "A receiver's week number repeats." → `{{gnssWeekToUtc}}` takes the counter and the
-       rollover era by name, and `{{utcToGnssWeek}}` returns the week, the time of week and the
-       era. See the decoder, the rollover checker and the wrapped-week scenario.
-    2. "Satellite time is not UTC, and the gap grew with each leap second." → `{{utcToGnss}}` and
-       `{{gnssToUtc}}` read each system's gap from the built-in leap-second table, for every
-       system alike. See the clock converter and the hard-coded offset scenario.
-    3. "A week in a RINEX navigation file is not the week a satellite sends." →
-       `{{rinexWeekToUtc}}` and `{{utcToRinexWeek}}` read the continuous count. See the RINEX
-       scenario and the decoder tool.
-    4. "A logged second sixty may not be a real leap second." → `{{isLeapSecond}}` checks the
-       table, and `{{toTAI}}` and `{{fromTAI}}` carry an inserted second through. See the
-       leap-second scenario and the leap-seconds guide.
-  - `guideTitle`: the Maritime guide's own title, read from its file.
-- The **Transport** entry gains one pain point for hours of work in step DU (section M):
-  `{{…}}` tokens name `calendar/duty` functions, which resolve because Transport declares
-  `calendar/duty` (not `isValidDutyLog`, which is in `calendar/validate`); the "see" links point at
-  the hours-of-work guide, `mistakes/duty` and the duty scenarios.
+- `IndustryOverview` keeps its shape. A `{{name}}` token resolves against the industry's own
+  namespace and its drawn-on modules (`moduleCovers`).
+- Wording is the builder's, under `/plain-english` and the test's rules: no digit (so no "1024",
+  no "L1NV"), no "GMT", no law or named regime, no UTC+3 or Moscow, three to five pain points.
+- **Workforce** (step DU): `about`: people's working time is counted in duty days, rolling
+  windows and rests that may be split; a regime is a set of numbers the caller states. Pain points
+  from the hours-of-work pages: a duty day that does not start at midnight (`{{dutyDayFor}}`); a
+  sliding window that is not a calendar day (`{{evaluateDutyLog}}`, `{{dutyTotals}}`); a split rest
+  that does or does not qualify (`{{qualifyingRestPairs}}`); a log that must be checked before it is
+  counted (`{{isValidDutyLog}}`). "See" links: the Workforce guide, `mistakes/workforce`, the three
+  scenarios.
+- **Transport** gains one pain point (step DU) for crew hours of work: tokens name `workforce`
+  functions, which resolve because Transport draws on `workforce`; "see" links to the Workforce
+  guide and the driver-shaped scenarios.
+- **GNSS** (step D3): `about`: every satellite system keeps its own continuous clock, counts weeks
+  on a counter that wraps, and differs from UTC by a number of seconds that grew with every leap
+  second; this layer reads those clocks and weeks without a hand-kept offset. Pain points:
+  1. "A receiver's week number repeats." → `{{gnssWeekToUtc}}` takes the counter and the rollover
+     era by name, and `{{utcToGnssWeek}}` returns the week, the time of week and the era. See the
+     decoder, the rollover checker and the wrapped-week scenario.
+  2. "Satellite time is not UTC, and the gap grew with each leap second." → `{{utcToGnss}}` and
+     `{{gnssToUtc}}` read each system's gap from the built-in leap-second table, for every system
+     alike. See the clock converter and the hard-coded offset scenario.
+  3. "A week in a RINEX navigation file is not the week a satellite sends." → `{{rinexWeekToUtc}}`
+     and `{{utcToRinexWeek}}` read the continuous count. See the RINEX scenario and the decoder.
+  4. "A logged second sixty may not be a real leap second." → `{{isLeapSecond}}` checks the table,
+     and `{{toTAI}}` and `{{fromTAI}}` carry an inserted second through (drawn on from
+     `timescale`). See the leap-second scenario and the leap-seconds guide.
+- **Maritime** (step D3): `about`: ships and their shore systems take time from satellite
+  receivers, carry it between instruments in standard sentences, and keep logs that outlive a
+  receiver's week counter. Pain points: a receiver that starts reporting dates a counter period
+  early (`{{gnssWeekToUtc}}`, the rollover checker); a log that mixes satellite time and UTC
+  (`{{gnssToUtc}}`); a leap second in a ship's record (`{{isLeapSecond}}`). "See" links: the
+  Maritime guide, the GNSS guide, the rollover checker and the clock converter.
+- `guideTitle` of each: its guide's own title, read from its file.
 
 ### B8. Tests
 
 - **`industry-tags.test.ts`**:
   - "has a tag for core and for every declared industry": `INDUSTRY_TAG_IDS` equals core plus the
     JSON ids in order; no id is in `RESERVED_INDUSTRY_IDS`; every icon exists.
-  - **The used-layer rule changes.** For each page, `used` = the `(namespace, module)` pairs whose
+  - **The declaration rules of B2** that need no corpus, and those that do against the generated
+    corpus.
+  - **The used-layer rule.** For each page, `used` = the `(namespace, module)` pairs whose
     `/reference/<ns>/<module>/…` pages it links or whose `@northguild/gmt/<ns>/<module>` barrel it
     imports, plus `(namespace, *)` for a link to `/reference/<ns>/` itself or an import of the
-    namespace barrel. `drawn` = the industries with a declared module that covers something in
-    `used` (`moduleCovers`). `ownUsed` = the industries whose own namespace appears in `used`. A
-    page's declared tags are a non-empty subset of `drawn`, plus `core` when `ownUsed` is empty. So
-    the Core timescale guide (`[core]`, links `/reference/timescale/`) passes, the decoder page
-    (`[maritime]`) passes, the duty pages (`[transport]`, link `/reference/calendar/duty/…`) pass,
-    a page that links only `/reference/calendar/hours/…` cannot take the Transport tag, and a page
-    that links `/reference/transport/` still cannot be `core`.
+    namespace barrel. `allowed` = `industriesUsing` over `used`, plus `core` when no own namespace
+    appears in `used`. A page's declared tags are a non-empty subset of `allowed`. So the Core
+    timescale guide (`[core]`) passes; a GNSS tool (`[gnss, maritime]`, links `/reference/gnss/…`)
+    passes; a duty scenario (`[workforce, transport]`, links `/reference/workforce/…`) passes; and a
+    page that links `/reference/transport/` or `/reference/gnss/` cannot be `core`.
   - The sidebar-icon tests count the industries with an own namespace.
   - New: a hub link in `SidebarSublist.astro` draws its icon `aria-hidden` and `focusable="false"`.
 - **`industry-overview.test.ts`**: text for every declared industry and nothing else; tokens name
-  functions of the declared modules (`corpus` filtered through `moduleCovers`); the generated
-  reference tests tag every page of an **own** namespace, tag no page of any other namespace (so
-  no `gnss` or `timescale` page), and tag a shared type only with an industry.
-- **`gmt-stats.test.ts`**, **`index-pages.test.ts`**, **`build-reference.test.ts`**,
-  **`industry-sidebar.test.ts`**: follow the rename and the new root page, with a fixture of one
-  industry that owns a namespace and declares a sub-module, and one that owns none.
-- **`industry-tags.test.ts`, the declaration rules:** every `modules` entry is a whole namespace or
-  a `namespace/module` with functions; no duplicate; no entry both whole and as a sub-module; an
-  own namespace is listed whole; no declared module is named for an industry other than its own
-  (the shared-function rule of B1).
-- **New `scripts/build-utils/industry-pages.test.ts`**: a hub's sections and order; a sub-module
-  lists only its own functions (a `calendar/duty` hub section holds no `calendar/hours` function);
-  a token outside the declared modules throws; an empty section is left out; the index lists every industry;
-  the sidebar source holds `data-gmt-industry-link` and never `data-gmt-industry`.
+  functions of the own namespace or drawn-on modules; the generated reference tests tag every page
+  of an **own** namespace (so every `workforce` and `gnss` page), tag no page of any other namespace
+  (so no `timescale` page), and tag a shared type only with an industry.
+- **`gmt-stats.test.ts`**: re-derives `industryLayers`, `industryNamespaces` and
+  `industryFunctions` from the corpus and the JSON, and asserts no function is counted in two own
+  namespaces and `coreFunctions + industryFunctions === functions`.
+- **`index-pages.test.ts`**, **`build-reference.test.ts`**, **`industry-sidebar.test.ts`**: follow
+  the rename and the new root page, with fixtures of an industry that owns a namespace and draws on
+  another industry's, one that draws on a sub-module, and one that owns none.
+- **New `scripts/build-utils/industry-pages.test.ts`**: a hub's sections and order; a shared
+  industry layer's heading links its hub; a sub-module lists only its own functions; a token outside
+  the own namespace and drawn-on modules throws; an empty section is left out; the index lists
+  every industry; the sidebar source holds `data-gmt-industry-link` and never `data-gmt-industry`.
 - **A stats test is not added** (root `scripts/` has none); `node scripts/stats.mjs check` is the
   gate (I3).
+
+### B9. The stacked "By industry" chart (`/why-gmt`)
+
+- **Data:** `gmtStats.industryLayers` (B3), never a figure typed in the page or the chart module.
+- **Marks** (`industryDefinition` in `src/lib/why-gmt-charts.ts`): one column per industry, in
+  declared order, stacked with `@tanstack/charts`'s stacking (`stackRowsY` or the `barY` stack
+  option; look it up in the installed version's documentation with `ctx7` before writing). The
+  bottom segment is the industry's own functions, in the spring gradient, solid. Above it, one
+  segment per drawn-on module, in a lighter tint of the same hue with a hatch (`--gmt-spring` at
+  reduced strength plus a pattern, so the difference never rests on colour alone). An industry with
+  no own namespace (Maritime) has only shaded segments.
+- **Tooltip** (`industryTooltip`): the industry, its own functions, and one row per drawn-on module:
+  "draws on `gnss` (GNSS industry layer): n" or "draws on `timescale` (Core): n".
+- **Legend**, under the chart: a solid swatch "the industry's own functions" and a hatched swatch
+  "a shared layer it draws on". Swatches are marks; the words carry the meaning.
+- **Caption** (`why-gmt.mdx` line 131): "`{industryFunctions}` functions across
+  `{industryNamespaces.length}` industry layers; lighter segments are shared layers an industry
+  draws on." The figures come from `gmt-stats`. **No total counts a function twice**: the caption's
+  number is the distinct functions of the own namespaces; a drawn-on segment repeats functions
+  already counted in their own column (Workforce's, GNSS's) or in Core, and is never added into a
+  total. The `industries` share in the tooltip ("Share of industry layers") divides by that
+  distinct total and is shown for the own segment only.
+- **The no-JS render** (`scripts/render-charts.ts`, `industryDistributionSvg`) draws the same stacked
+  marks and the legend, so the server SVG and the live chart agree.
+- **Accessibility:** the chart has no table fallback today, so none is added; its `aria-label`
+  ("Public functions by industry layer, own and shared") and a visually hidden list under the
+  chart give each industry's own count and each drawn-on module's count in words.
+- **Design system:** no card or legend item carries a left-only accent; tokens only; the hatch is
+  drawn with `background-color` plus `background-image` per the hatch trap; contrast at 7:1 for
+  every label and tick and 3:1 for the shaded segment's edge against the chart surface, in both
+  themes (`contrast:measure` on `/why-gmt/`).
 
 ---
 
@@ -601,7 +681,7 @@ regenerate).
 
 ## D. The five tools
 
-D1 to D7 are the GNSS Week Decoder (`/tools/gnss-week-decoder/`, kind `gnssweek`, Maritime). D8 holds
+D1 to D7 are the GNSS Week Decoder (`/tools/gnss-week-decoder/`, kind `gnssweek`, tagged `[gnss, maritime]`). D8 holds
 what the five share, D9 to D12 are the other four tools, and D13 links them.
 
 **What it teaches.** A week number means nothing without its counter and its era. The same
@@ -838,19 +918,19 @@ and 4 render.
   `timeOfWeekSeconds` and either `rolloverEra` (digits or `rolling`) or `rolloverNotBefore` (the
   date a receiver counts from) as the reader gave them; never pick an era for them. `system` names a RINEX record's system. `utc` is an ISO 8601 instant."
 
-**`CHAT_STARTERS` card**, area `maritime`:
+**`CHAT_STARTERS` card**, area `gnss`:
 
 ```ts
 {
   text: "A receiver reports Galileo week 1024, 18 seconds in, first era: what UTC time is that?",
   widget: "showGnssWeekDecoder",
-  area: "maritime",
+  area: "gnss",
   // Galileo's first era is era 0; GAL week 1024 + 18 s is 2019-04-07T00:00:00Z (L§4.3).
   args: { mode: "broadcast", counter: "GAL", week: 1024, timeOfWeekSeconds: 18, rolloverEra: "0" },
 }
 ```
 
-`EXAMPLE_AREAS` gains `{ id: "maritime", label: "Maritime" }` after `intermodal`.
+`EXAMPLE_AREAS` gains `{ id: "gnss", label: "GNSS and maritime" }` after `intermodal`. A tool's area follows its first tag; the three GNSS tools are `[gnss, maritime]`, so they share this area.
 
 ### D7. Tests
 
@@ -917,7 +997,7 @@ and 4 render.
   `gmt-cutoff-widgets.css`, so nothing is copied. Each tool's own sheet follows it in `customCss`.
 - **Cross-links** between the tools (D13) are built with `encodeWidgetPermalink`.
 
-### D9. Satellite Clock Converter: `/tools/satellite-clock-converter/`, kind `satclock`, Maritime
+### D9. Satellite Clock Converter: `/tools/satellite-clock-converter/`, kind `satclock`, GNSS and Maritime
 
 **What it teaches.** One instant reads differently on every clock, and the gap between a
 satellite clock and UTC grew with each leap second. It takes over the per-system offsets the
@@ -990,7 +1070,7 @@ and on TAI, with each clock's lead over UTC on that date"; when "Call when the r
 GPS, Galileo, BeiDou, QZSS, GLONASS or NavIC clock or TAI reads at an instant, how far a
 satellite clock is from UTC, or to convert a time-scale string to UTC"; args "`value` exactly as the
 reader gave it: a UTC instant or a string ending in TAI, GPS, GAL, BDT, QZS, GLO or IRN". Starter,
-area `maritime`: "What do the GPS, Galileo, BeiDou, QZSS, GLONASS and NavIC clocks read at
+area `gnss`: "What do the GPS, Galileo, BeiDou, QZSS, GLONASS and NavIC clocks read at
 2024-01-01T00:00:00Z?", `args: { value: "2024-01-01T00:00:00Z" }`.
 
 **Tests.** Every preset against the real library: the clock detected, the calls in order, every
@@ -998,7 +1078,7 @@ row, every lead, the TAI cross-check, the "written as" note, each sentence, the 
 (one more than the insertions, the first at `INTEGER_UTC_FROM`), the permalink round trip; the
 mount's regions and holds; no `UTC+3`, `Moscow` or `MSK` anywhere.
 
-### D10. GNSS Rollover Checker: `/tools/gnss-rollover-checker/`, kind `rollover`, Maritime
+### D10. GNSS Rollover Checker: `/tools/gnss-rollover-checker/`, kind `rollover`, GNSS and Maritime
 
 **What it answers.** "Is my receiver affected, and when?" Every broadcast counter wraps; firmware
 that fixes the era starts reporting dates one counter period early (or late) after the wrap. All
@@ -1098,7 +1178,7 @@ satellite week counter, with the next wrap of every counter"; when "Call when th
 is affected, when the next rollover is, or why a receiver reports a date about 19.6 years early";
 args "`counter` as named (for example `IRN-LNAV`); `firmwareNotBefore` when the reader gives a
 build or release date, `firmwareEra` as digits when they give an era; `date` only when the reader
-names one". Starter, area `maritime`: "A NavIC receiver's firmware was built on 2020-01-01: when
+names one". Starter, area `gnss`: "A NavIC receiver's firmware was built on 2020-01-01: when
 does it start reporting wrong dates?", `args: { counter: "IRN-LNAV", firmwareNotBefore:
 "2020-01-01T00:00:00Z" }`.
 
@@ -1115,10 +1195,10 @@ rollover" in a heading or the starter.
 **What it teaches.** UTC took 27 inserted seconds between 1972 and 2016, none since, and none after
 continuous UTC begins on 2027-05-20. A `23:59:60` is real only on a listed day.
 
-**Tag: Core, by the B1 rule.** It uses `timescale`, `utc`, `plain` and `precision`. None is an
-industry's own namespace, so `core` is allowed; Maritime also draws on `timescale` and would be
-allowed too. Core is chosen because leap seconds matter to every industry that logs time, and
-`timescale` is a Core building block (L D13). The tools index and the three section sidebars
+**Tag: Core, by the B1 rule** (decision 12). It uses `timescale`, `utc`, `plain` and `precision`.
+None is an industry's own namespace, so `core` is allowed; GNSS and Maritime draw on `timescale`
+and would be allowed too. Core is chosen because leap seconds matter to every industry that logs
+time, and `timescale` stays a Core namespace (decision 16). The tools index and the three section sidebars
 already group Core tools (five Core tools ship today; `build-tool-index.ts` and
 `industry-sidebar.ts` walk `INDUSTRY_TAG_IDS`, which starts with `core`), so nothing changes there.
 
@@ -1278,7 +1358,7 @@ Each item names the test that guards it, or says that nothing does. "The five" a
 | E2 | `worker/tools.ts` | the five imports (66) and tools with a trivial `execute` after `showJourneySplit` (409) | `tools.test.ts` |
 | E3 | `src/components/ask/widget-registry.ts` | `import type` only; the schema imports (91); five entries, each with a literal `import("~/lib/<tool>-mount")`; `WIDGET_REGISTRY` (781) | `widget-registry.test.ts`, `widget-graph.test.ts` |
 | E4 | `src/lib/widget-permalink.ts` | `"gnssweek"`, `"satclock"`, `"rollover"`, `"leapline"`, `"elapsed"` in `WidgetKind` (59) and their paths in `WIDGET_PAGE_PATHS` (99) | `widget-permalink.test.ts` |
-| E5 | `src/lib/chat-constants.ts` | `EXAMPLE_AREAS` (360): `{ id: "leapseconds", label: "Leap seconds and TAI" }` after `intervals`, and `{ id: "maritime", label: "Maritime" }` after `intermodal`; the five starters | `chat-starters.test.ts` |
+| E5 | `src/lib/chat-constants.ts` | `EXAMPLE_AREAS` (360): `{ id: "leapseconds", label: "Leap seconds and TAI" }` after `intervals`, and `{ id: "gnss", label: "GNSS and maritime" }` after `intermodal`; the five starters | `chat-starters.test.ts` |
 | E6 | `src/lib/widget-load-error.test.tsx` | the five mounts in `MOUNTS` | **manual** |
 | E7 | `src/components/ask/widget-graph.test.ts` | in `heavy` (134): the five pure modules, `gnss-widgets.ts`, `timescale-widgets.ts`, `gnss-lib.ts`, `timescale-lib.ts`; **not** `gnss-names.ts` | **manual** |
 | E8 | `astro.config.mjs` | `gmt-gnss-widgets.css`, then the five tool sheets, in `customCss` after `gmt-edi-widgets.css`; the Industries sidebar group (B6) | **manual** |
@@ -1289,7 +1369,7 @@ Each item names the test that guards it, or says that nothing does. "The five" a
 | E13 | `scripts/readout-still.mjs` | `TOOLS` (147): the decoder (`week-slider`, `tow-slider`), the converter (`moment-slider`), the rollover checker (`date-slider`, presets in "A date" mode), the timeline (`date-slider`), elapsed (`end-slider`); frame `.gmt-gnss-frame` for each; drawn: the lanes, bars, strip, timeline or rulers and a hold's live wrapper | **manual** |
 | E14 | `scripts/contrast-measure.mjs` | the five tool pages and `/industries/maritime/` in `PAGES` (76) | **manual** |
 | E15 | `src/styles/gmt-a11y.css` | forced colours for the family: lanes, bars, strips, rulers, pins, marks, today marks, slivers and hatched rows keep a system colour; plates and chips take `border-color: CanvasText` | **manual**; the browser pass checks it |
-| E16 | `src/lib/industry-tags.ts` / `industries.json` | the Maritime entry and its icon (step D3) | `industry-tags.test.ts`, `industry-overview.test.ts` |
+| E16 | `src/lib/industry-tags.ts` / `industries.json` | the Workforce entry and icon (D1), the GNSS and Maritime entries and icons (step D3) | `industry-tags.test.ts`, `industry-overview.test.ts` |
 | E17 | `gmt-cutoff-widgets.css`, `gmt-punctuality-widgets.css` | the five roots join the plate, mark, chip and series `:is()` lists, and `.gmt-gnss-frame` joins the chart-surface list | **manual** |
 
 ---
@@ -1307,7 +1387,12 @@ nothing is elided. Only merged functions are named: every L§1.1 function except
 forms, never SPA-46's TAI64 functions. `scripts/api-surface.mjs check` checks each import-bound
 `call // result`.
 
-**Authorities, in the order of decision 11.** The Maritime guide rests on IMO's recognition of
+**Placement.** The `gnss` and `maritime` tags and the `gnss-` and `maritime-` guide prefixes are
+valid only once D3 declares those industries, so D1b and D3 run as one step: no test, check or
+`stats.mjs` run between them. A scenario is tagged `maritime` as well as `gnss` where its example
+is a ship's receiver or log.
+
+**Authorities, in the order of decision 11.** The GNSS and Maritime guides rest on IMO's recognition of
 each system as a component of the Worldwide Radionavigation System, in section 0's short form,
 with the scope caveat once (BeiDou and IRNSS for ocean waters, IRNSS only within its region) and
 the full citation chain in a sources list; on IEC 61162-1:2024 (Edition 6.0) for the sentence
@@ -1320,14 +1405,15 @@ system's scale.
 
 | Page | Tag | Content |
 | --- | --- | --- |
-| `guides/industries/maritime-gnss-time-and-week-rollover.mdx` | `[maritime]` | One `##` per rule, every system a peer: each system's clock runs ahead of UTC by a gap that grew with each leap second, read from the table (examples rotate through the systems; none leads); the six RINEX scales and their first instants, with Galileo's 13 s and NavIC's derived offset; `GLO` is GLONASS time in UTC's own hours, with UTC's leap seconds, and the library reads no other GLONASS scale; week counters by name (LNAV, CNAV, L1NV, Galileo, BeiDou), the rollover instants, an integer era against `"rolling"`; RINEX navigation weeks against broadcast weeks, with `BDT` counting from 2006 and the other four from 1980; links to the five tools; a closing `## See it break, then work` list. The `maritime` tag and the `maritime-` prefix are valid only once D3 declares Maritime, so D1b and D3 run as one step: no test, check or `stats.mjs` run between them |
+| `guides/industries/gnss-system-time-and-week-rollover.mdx` | `[gnss]` | The GNSS industry's guide. One `##` per rule, every system a peer (with section 0's recognition sentence and scope caveat once): each system's clock runs ahead of UTC by a gap that grew with each leap second, read from the table (examples rotate through the systems; none leads); the six RINEX scales and their first instants, with Galileo's 13 s and NavIC's derived offset; `GLO` is GLONASS time in UTC's own hours, with UTC's leap seconds, and the library reads no other GLONASS scale; week counters by name (LNAV, CNAV, L1NV, Galileo, BeiDou), the rollover instants, an integer era, `"rolling"` and a `notBefore` pivot; RINEX navigation weeks against broadcast weeks, with `BDT` counting from 2006 and the other four from 1980; links to the three GNSS tools; a closing `## See it break, then work` list |
+| `guides/industries/maritime-gnss-time-and-week-rollover.mdx` | `[maritime]` | The Maritime guide, about ships, not the scales: IMO's recognition of the six systems (section 0's sentence, the scope caveat, the full citation in a sources list); shipboard equipment carrying time in IEC 61162-1:2024 sentences, in UTC; why a ship's log keeps UTC and when a satellite clock reading enters it; a receiver's week-rollover exposure over a ship's service life (the rollover checker); a leap second in a ship's record. It sends the reader to the GNSS guide for each rule rather than restating it. Links the three GNSS tools |
 | `guides/core-date-operations/leap-seconds-and-tai.mdx` | `[core]` | Beside `nanosecond-precision.mdx`. The insertions in a table, citing IERS `Leap_Second.dat` and Bulletin C 72; TAI − UTC by date (`taiMinusUtc`, `null` before 1972); `23:59:60` is real only on listed days (`isLeapSecond` against `hasSecond60`); counting with `leapSecondsBetween` (signed, half-open); `nextLeapSecond` and its `""`; `toTAI` and `fromTAI` through an inserted second; elapsed seconds against the clock difference (`spanNs` over TAI readings); CGPM 2022 Resolution 4 and CGPM 2026 Resolution 5, and why the table is closed; the weekly canary; links to the Timeline and Elapsed vs. Clock. Links `/reference/timescale/…` freely |
-| `scenarios/gnss-offset-hardcoded.mdx` | `[maritime]` | `<Scenario>`, `fixedSpecId="utcToGnss"`: a fixed gap applied to a log from before the last insertion |
-| `scenarios/gnss-week-that-wrapped.mdx` | `[maritime]` | `fixedSpecId="gnssWeekToUtc"`: a 10-bit week read in the wrong era |
-| `scenarios/thirteen-bit-week-read-as-ten-bit.mdx` | `[maritime]` | `fixedSpecId="gnssWeekToUtc"`: a CNAV or L1NV week fed to a 10-bit counter |
-| `scenarios/rinex-week-read-as-broadcast.mdx` | `[maritime]` | `fixedSpecId="rinexWeekToUtc"`: `IRN` 2295, 86418 read as `IRN-L1NV` gives 2043-08-17T00:00:00Z (L D12) |
+| `scenarios/gnss-offset-hardcoded.mdx` | `[gnss, maritime]` | `<Scenario>`, `fixedSpecId="utcToGnss"`: a fixed gap applied to a log from before the last insertion |
+| `scenarios/gnss-week-that-wrapped.mdx` | `[gnss, maritime]` | `fixedSpecId="gnssWeekToUtc"`: a 10-bit week read in the wrong era |
+| `scenarios/thirteen-bit-week-read-as-ten-bit.mdx` | `[gnss]` | `fixedSpecId="gnssWeekToUtc"`: a CNAV or L1NV week fed to a 10-bit counter |
+| `scenarios/rinex-week-read-as-broadcast.mdx` | `[gnss]` | `fixedSpecId="rinexWeekToUtc"`: `IRN` 2295, 86418 read as `IRN-L1NV` gives 2043-08-17T00:00:00Z (L D12) |
 | `scenarios/a-leap-second-that-never-happened.mdx` | `[core]` | `fixedSpecId="isLeapSecond"`: `2017-12-31T23:59:60Z` accepted by a pattern check |
-| `mistakes/maritime.mdx` | `[maritime]` | `<Mistake>` pairs with `rightSpecId`: the sign of a system's lead over UTC, and of TAI − GST; a fixed gap; today's gap applied at a system's first instant; `GLO` read on any clock other than UTC's hours (the Wrong side adds an offset of its own; the page names no other scale); a week with no counter or era; a RINEX week fed to a broadcast counter |
+| `mistakes/gnss.mdx` | `[gnss, maritime]` | `<Mistake>` pairs with `rightSpecId`: the sign of a system's lead over UTC, and of TAI − GST; a fixed gap; today's gap applied at a system's first instant; `GLO` read on any clock other than UTC's hours (the Wrong side adds an offset of its own; the page names no other scale); a week with no counter or era; a RINEX week fed to a broadcast counter |
 | `mistakes/leap-seconds.mdx` | `[core]` | `hasSecond60` used as a leap-second check; an integer TAI − UTC before 1972; a span across an insertion read as elapsed seconds |
 | Indexes | — | `guides/index.mdx`, `guides/core-date-operations/index.mdx`, `mistakes/index.mdx` and `guides/industries/index.mdx` gain the new links (hand-kept, docs-site.md). `scenarios/index.mdx` is generated; never edit it |
 
@@ -1351,8 +1437,8 @@ library, and section 0's rules hold on every page.
   passage it illustrates, each a seeded permalink with the page's own numbers:
   `gnss-week-that-wrapped.mdx` and `thirteen-bit-week-read-as-ten-bit.mdx` (decoder and rollover
   checker), `rinex-week-read-as-broadcast.mdx` (decoder), `gnss-offset-hardcoded.mdx` (clock
-  converter), `a-leap-second-that-never-happened.mdx` (timeline), the two guides (their tools),
-  `mistakes/maritime.mdx` and `mistakes/leap-seconds.mdx` (beside the matching pairs).
+  converter), `a-leap-second-that-never-happened.mdx` (timeline), the three guides (their tools),
+  `mistakes/gnss.mdx` and `mistakes/leap-seconds.mdx` (beside the matching pairs).
 - `guides/core-date-operations/nanosecond-precision.mdx` line 102: "Leap-second-aware time scales
   (TAI, GPS) are not part of this namespace." becomes "Leap-second-aware time scales (TAI and the
   satellite clocks) are not part of this namespace." and gains links to the two guides (each by its
@@ -1405,10 +1491,11 @@ library, and section 0's rules hold on every page.
 
 - **`context/dox/built.md`**, present tense:
   - § Tiers 0–1, "The two industry namespaces stand apart…": rewritten as declared industries
-    (B1–B7): the JSON, own namespaces, declared modules (whole namespaces or sub-modules),
-    building blocks several industries declare (`calendar/duty` for Transport; `gnss` and
-    `timescale` for Maritime), the shared-function rule, the hubs, the Industries sidebar group, the
-    root page, the tag rule, the README line. The "Page tag" bullet reads own namespaces.
+    (B1–B9): the JSON (own namespace and `drawsOn`), cross-industry layers as industries
+    (`workforce`, `gnss`), drawn-on modules (whole namespaces or sub-modules, shared industry layers
+    or Core), the hubs, the Industries sidebar group, the root page, the tag rule with several tags,
+    the README line, the stacked chart and its no-double-count rule. The "Page tag" bullet reads own
+    namespaces.
   - § Tiers 0–1 Generator: the `expr` classification (C1); `RENAMED_FUNCTIONS` holds
     `isLeapSecond`.
   - § Tier 2: the five tools in the teaching-widget list with their rules and the GNSS family's
@@ -1417,9 +1504,11 @@ library, and section 0's rules hold on every page.
     sentence and its trap reworded to "own namespace"; the hours-of-work pages under Transport;
     the Converter Bench's and the DST Inspector's new defaults (N1).
   - § Tier 6: the five chat tools in the widget tools list; the tool and starter counts and the
-    per-area counts re-derived from `ENABLED_TOOL_NAMES` and `CHAT_STARTERS`; the Maritime and
+    per-area counts re-derived from `ENABLED_TOOL_NAMES` and `CHAT_STARTERS`; the "GNSS and maritime" and
     "Leap seconds and TAI" areas; the per-visitor cap's UTC day (N1).
-- `context/dox/reference/design-system.md` § Drawn charts: the family's five drawings join the
+- `context/dox/reference/design-system.md`: § Drawn charts gains the stacked industry chart's rule
+  (own segment solid, shared segments tinted and hatched, totals never double-count, legend words
+  carry the meaning); and the family's five drawings join the
   list (the decoder's era lanes, the converter's lead bars, the rollover checker's window strip,
   the timeline's step chart with its continuous-UTC mark, the elapsed tool's twin rulers with
   their one-second slivers), and the sentence that names the readout gate's tools names them.
@@ -1445,7 +1534,7 @@ library, and section 0's rules hold on every page.
 
 ## I. Definition of done (`dox-tester`: run each line literally)
 
-**I0. The two private trees.** Nothing in I6 to I16 uses port 4321, `apps/dox/dist` or this
+**I0. The two private trees.** Nothing in I6 to I19 uses port 4321, `apps/dox/dist` or this
 worktree's `packages/gmt/dist` in place. `$SP` is the session scratchpad and `$W` is this worktree.
 
 ```bash
@@ -1493,13 +1582,11 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
    - `LIVE_PLAYGROUND_TEMPLATES.gnssWeekToUtc` has form fields with `rolloverEra` as `expr` (C1);
    - `/reference/transport/` and `/reference/intermodal/` still exist, carry their tag and the
      one-line pointer to the hub, and no longer hold the pain-point block;
-     `/reference/calendar/duty/` exists, carries no tag and sits under `calendar` in the general
-     list; no `/reference/duty…` route is in the manifest, and `public/_redirects` holds the three
-     `301` rules for each moved function and for `/reference/duty`, `/reference/duty/calculate` and
-     `/reference/duty/validate`;
-   - `src/content/docs/industries/` holds `index.mdx`, `transport.mdx`, `intermodal.mdx` and
-     `maritime.mdx`, and is ignored by git; `transport.mdx` lists the transport functions and,
-     under `calendar/duty`, the seven duty calculators and no other `calendar` function.
+     `/reference/workforce/` and `/reference/gnss/` sit under the reference sidebar's "By industry"
+     divider with their icons, and every page in them carries its industry's tag;
+     `/reference/timescale/` stays general and untagged;
+   - `src/content/docs/industries/` holds `index.mdx`, `workforce.mdx`, `transport.mdx`,
+     `intermodal.mdx`, `gnss.mdx` and `maritime.mdx`, and is ignored by git (I17 checks them).
 6. **Boundaries.** `git -C "$W" status --short` shows no path this work changed under
    `packages/gmt` except `packages/gmt/README.md`; under `context/domination` only the CORE-76
    lines of `issues/CORE-76.md` and `tracker.md` (diff those two files against the owner's state
@@ -1516,11 +1603,12 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
 8. **`visual:diff`:** `visual:before` in `$SP/base/apps/dox`; copy `.visual/before` into
    `$SP/after/apps/dox/.visual/`; `visual:after` and `visual:diff` there. Expected differences, each
    read and matched to this spec: the new pages; the "Industries" sidebar group on every page; the
-   reference sidebar's general groups (`gnss`, `timescale`) and its industry order; `/reference/`
-   root; `/reference/transport/` and `/reference/intermodal/`; the tools, scenarios and mistakes
-   sidebars and the tools index in declared order, with the duty pages now under Transport;
-   `/why-gmt/`'s sentence and its chart's number format in the reader's locale; the
-   hours-of-work guide; the pages and tools section N rebalanced. Anything else is a regression.
+   reference sidebar's general group `timescale`, its "By industry" groups in declared order with
+   `workforce` and `gnss`, and no `duty` group; `/reference/` root; `/reference/transport/` and
+   `/reference/intermodal/`; the tools, scenarios and mistakes sidebars and the tools index in
+   declared order, with the Workforce pages under Workforce (and Transport where tagged) and the
+   GNSS tools under GNSS and Maritime; `/why-gmt/`'s sentence, its stacked chart and its number
+   format in the reader's locale; the Workforce guide at its new path; the pages and tools section N rebalanced. Anything else is a regression.
 9. **`grow:measure --base http://127.0.0.1:48391`** passes for the five tool pages and every tool
    whose presets changed, in Chromium and WebKit at 1440 and 390. **`readout:still --base
    http://127.0.0.1:48391`** passes for every tool in its list at its default widths, in Chromium
@@ -1580,19 +1668,49 @@ Re-run the `rsync` lines and the `after` site build after any builder change.
     - `CURATED_TIMEZONES` is in UTC-offset order (its test);
     - the per-visitor cap resets at 00:00 UTC, and each brain's quota still at Google's Pacific
       midnight (`pt-day` tests).
-14. **Citations (section 0, F1):** on the Maritime guide, the five tool pages and the chat copy,
+14. **Citations (section 0, F1):** on the GNSS and Maritime guides, the five tool pages and the chat copy,
     `grep` finds no sentence that cites A.1046(27) or IEC 61108 as naming or recognising the six
     systems; every page that calls the systems "peers" carries the IMO recognition sentence and
     states the scope caveat once; IEC 61108 is cited only by part and system; IEC 61162 is cited as
     IEC 61162-1:2024, Edition 6.0. Each citation links or names its primary page from research §9a.
-15. **Duty under Transport (section M):** `/industries/transport/` lists the seven
-    `calendar/duty` functions; `hours-of-work.mdx`, `mistakes/duty.mdx` and the three duty
-    scenarios carry the Transport tag, each links a `/reference/calendar/duty/…` page, and they sit
-    under Transport in their sidebars; the API Reference shows `calendar/duty` under `calendar` and
-    no `duty` group; following each old `/reference/duty/…` URL on the served build lands on its
-    new page (`wrangler dev` applies `_redirects`; the static server does not, so check the rules
-    in the file and one live with `wrangler dev`); no page names a regime, a regulator or a statute.
-16. Firefox does not launch on this machine. Record it as blocked. Do not bypass the sandbox.
+15. **The Workforce layer (section M):** `/industries/workforce/` lists the eight `workforce`
+    functions as its own, and `/industries/transport/` lists them under "Functions it draws on"
+    with the line "Part of the Workforce industry layer"; the Workforce guide is at
+    `/guides/industries/workforce-hours-of-work/`, the mistakes page at `/mistakes/workforce/`; the
+    five pages carry the tags of M2, each links a `/reference/workforce/…` page, and they sit under
+    their industries in the sidebars; the API Reference has a `workforce` group under "By industry"
+    and no `duty` group; no page names a regime, a regulator or a statute.
+16. **Redirects.** `public/_redirects` holds three `301` rules (bare, trailing slash, `.md`) for:
+    `isLeapSecond` (C2); each of the eight moved duty functions to its `/reference/workforce/…` page;
+    `/reference/duty`, `/reference/duty/calculate`, `/reference/duty/validate`,
+    `/guides/intervals/hours-of-work` and `/mistakes/duty` to their new pages (M3). No source is a
+    live route in the manifest or the build, and every target is. On `wrangler dev` over the
+    `after` build (which applies `_redirects`; the Python server does not), each old URL answers
+    `301` and its `Location` opens a page that returns `200`. `grep` over `apps/dox/src` (outside
+    `generated/` and the generated reference) finds no link to an old URL.
+17. **The industry hubs.** `/industries/`, `/industries/workforce/`, `/industries/transport/`,
+    `/industries/intermodal/`, `/industries/gnss/` and `/industries/maritime/` each return `200`
+    in the `after` build, in declared order in the Industries sidebar group with their icons
+    (`aria-hidden`). Each hub's function lists equal the corpus: its own namespace's functions, and
+    per drawn-on module exactly that module's functions (GNSS lists `timescale`; Maritime lists
+    `gnss` and `timescale`; Transport lists `workforce`). Each hub's guides, tools, scenarios and
+    mistakes lists equal the pages whose frontmatter carries its tag. Every link on every hub
+    resolves. The hubs are in `llms.txt` and `llms-full.txt`.
+18. **The stacked chart (B9).** A script in `$SP` reads `$SP/after`'s corpus and
+    `industries.json` and prints, per industry, its own count and each drawn-on module's count, and
+    the distinct total of all own namespaces. On `/why-gmt/` in the `after` build:
+    - each column's segments equal the script's counts, in declared order; Maritime has only shaded
+      segments;
+    - the caption's first number equals the distinct total, which is less than the sum of every
+      column's height whenever a layer is drawn on, and `coreFunctions + industryFunctions` equals
+      the corpus's function count (`gmt-stats` test);
+    - no function is in two own namespaces (the script asserts it);
+    - the tooltip names each shared layer and whether it is an industry layer or Core; the legend
+      has a solid and a hatched swatch with words;
+    - `contrast:measure` passes on `/why-gmt/` in both themes (7:1 for labels and ticks, 3:1 for the
+      shaded segment's edge); no legend item or caption block has a left-only accent; the no-JS SVG
+      shows the same segments as the live chart.
+19. Firefox does not launch on this machine. Record it as blocked. Do not bypass the sandbox.
 
 `pnpm run validate` is not run here: it rebuilds the library under the dev server. The main
 session runs it once at the end (section K).
@@ -1607,9 +1725,11 @@ session runs it once at the end (section K).
 `timescale-lib.ts` and their tests; for each of the five tools its pure module, mount, tests,
 component, sheet and page (D1, D9–D12); `src/styles/gmt-gnss-widgets.css`;
 `src/test/gnss-lib.ts`, `src/test/timescale-lib.ts`; the F1 pages
-(`guides/industries/maritime-gnss-time-and-week-rollover.mdx`,
-`guides/core-date-operations/leap-seconds-and-tai.mdx`, five scenarios, `mistakes/maritime.mdx`,
-`mistakes/leap-seconds.mdx`).
+(`guides/industries/gnss-system-time-and-week-rollover.mdx`,
+`guides/industries/maritime-gnss-time-and-week-rollover.mdx`,
+`guides/core-date-operations/leap-seconds-and-tai.mdx`, five scenarios, `mistakes/gnss.mdx`,
+`mistakes/leap-seconds.mdx`); `scripts/build-utils/moved-pages.ts` (M3); the moved Workforce pages
+(M2).
 
 **Changed:** `/scripts/stats.mjs`; `/README.md`, `/packages/gmt/README.md` (two lines);
 `/.gitignore`; `/.agents/finalizer.md`, `/.agents/gmt-reviewer.md`,
@@ -1622,8 +1742,8 @@ component, sheet and page (D1, D9–D12); `src/styles/gmt-gnss-widgets.css`;
 `gmt-stats.json` (by `stats:sync`), `gmt-stats.test.ts`; `src/lib/why-gmt-charts.ts`;
 `src/content/docs/why-gmt.mdx`; `src/components/SidebarSublist.astro`;
 `src/pages/llms.txt.ts`, `llms-full.txt.ts`; the registration files of section E;
-`src/lib/retrieval/search.test.ts`; the F2 pages and the four F1 indexes; the five duty pages (M2); `scripts/build-utils/moved-index-pages.ts` (new, M3) and
-`buildRedirects` with `redirects.test.ts`;
+`src/lib/retrieval/search.test.ts`; the F2 pages and the four F1 indexes; the five Workforce pages (M2: two moved, three retagged), `guides/index.mdx` and every page that
+linked them; `buildRedirects` with `redirects.test.ts`; `scripts/render-charts.ts` (B9);
 the N1 files (`converter-bench-mount.ts`, `dst-inspector-mount.ts`, `curated-timezones.ts`,
 `pt-day.ts` and the Worker's cap that reads it) and their tests; the N2 pages, presets and
 starters, and the tests that assert their outputs.
@@ -1638,17 +1758,17 @@ library slices are half written.
 
 | Step | What | Needs | Who |
 | --- | --- | --- | --- |
-| P1 | Library slices 0–8 green, with the GPS-only API removed (decision 9), the `{ notBefore }` era form (decision 13), the duty engine moved to `calendar/duty` and `calendar/validate` with the `/duty` subpaths removed (decision 16), the barrels, exports map and `gmt-modules.ts` keys (L§5.1–5.4) and the library's wiring of L§5–§8.3 | — | driver |
+| P1 | Library slices 0–8 green, with the GPS-only API removed (decision 9), the `{ notBefore }` era form (decision 13), `duty/` moved to `workforce/` with the `/duty` subpaths removed (decision 16), the barrels, exports map and `gmt-modules.ts` keys (L§5.1–5.4) and the library's wiring of L§5–§8.3 | — | driver |
 | P2 | **One build of `packages/gmt/dist`**, by the main session, after warning the owner (his dev server reads `dist`). Nothing in this plan builds it again | P1 | main session |
-| D1 | Section B without Maritime (with `calendar/duty` in Transport's `modules`), the README lines; C1; C2 | P2, with the library's `calendar/duty` move landed | one `dox-builder` |
+| D1 | Section B with Workforce, Transport and Intermodal (GNSS and Maritime wait for their guides), the stacked chart (B9), the README lines; C1; C2 | P2, with the library's `workforce/` move landed | one `dox-builder` |
 | S | D8's shared modules, loaders, test helpers and `gmt-gnss-widgets.css` | D1 | one `dox-builder` |
-| D1b + D3 | One step. F1's pages, then the Maritime entry in `industries.json`, its icon, its overview text (B7), the README's Maritime link and the `guides/industries/index.mdx` sentence (B6). Tests run at the end of the step, not between | D1, C1 | builder A |
-| DU | Section M: the Transport pain point, the five duty retags with their reference links, the moved URLs and their redirects, the README `[duty]` link, the CORE-76 lines | D1 | builder B |
+| D1b + D3 | One step. F1's pages, then the GNSS and Maritime entries in `industries.json`, their icons, their overview text (B7), the README's GNSS and Maritime links and the `guides/industries/index.mdx` edits (B6). Tests run at the end of the step, not between | D1, C1 | builder A |
+| DU | Section M: the Workforce and Transport overview text, the two page moves and five retags with their reference links, the moved URLs and their redirects, the README `[duty]`/`[workforce]` links, the CORE-76 lines | D1 | builder B |
 | N1 | Section N1: the widget defaults, `curated-timezones.ts`, `pt-day.ts`, `why-gmt-charts.ts` | D1 | builder C |
 | T-G | **The GNSS track:** the decoder (D1–D7), then the Clock Converter (D9), then the Rollover Checker (D10), each widget first and its page last | S; each page's tag needs D3 | builder D |
 | T-L | **The leap-second track:** the Timeline (D11), then Elapsed vs. Clock (D12) | S | builder E |
 | R | **Registration, once, for all five:** section E, the D13 links and the five starters | T-G, T-L | one builder |
-| HW | `hours-of-work.mdx` examples (N3), after DU retagged it | DU | builder B |
+| HW | The Workforce guide's examples (N3), after DU moved it | DU | builder B |
 | N2 | The example rebalance (N2), split by section (below) | DU, N1, and R for the starters | builders F–J |
 | D4 | F2's links into the tools; the D7 and I12 retrieval rows | D1b + D3, R | one builder |
 | T | Section I | everything above | `dox-tester` |
@@ -1663,8 +1783,8 @@ presets live in `chat-constants.ts` and the tool modules:
 
 | N2 builder | Owns |
 | --- | --- |
-| F | `content/docs/guides/` (concepts, conversion, core-date-operations, zoned-date-operations, intervals other than `hours-of-work.mdx`) |
-| G | `content/docs/guides/industries/`, `content/docs/tools/` |
+| F | `content/docs/guides/` (concepts, conversion, core-date-operations, zoned-date-operations, intervals) |
+| G | `content/docs/guides/industries/` other than the Workforce guide (HW owns it), `content/docs/tools/` |
 | H | `content/docs/scenarios/`, `content/docs/mistakes/` |
 | I | the widget presets and defaults in `src/lib/*.ts` (`crossing-clock.ts`, `demurrage-clock.ts`, `free-time-ledger.ts`, `dwell-ledger.ts`, `cutoff-*.ts`, `journey-split.ts`, `delivery-scheduler.ts`, `timetable-reader*.ts`, `punctuality-board.ts`, `departure-board.ts`, `bl-date-stamp.ts`, `dtm-decoder.ts`, `zoned-input.ts`) and their tests |
 | J | `chat-constants.ts` starters and `dox-tools.ts` examples, after builder I, so a starter's seed matches its tool's presets |
@@ -1702,65 +1822,67 @@ the library.
 
 ---
 
-## M. The duty engine under Transport (step DU)
+## M. The Workforce layer (step DU)
 
-From `/Users/craigcurtis/.claude/plans/the-duty-work-fns-playful-kazoo.md`, as the owner amended it:
-**`duty/` is no longer a namespace.** The driver moves the seven duty calculators to `calendar/duty`
-(`@northguild/gmt/calendar/duty`, beside `calendar/hours`) and `isValidDutyLog` to
-`calendar/validate`, and removes the `/duty` subpaths (P1). The library side, its exports map and
-the `GMT_MODULES` keys (`duty/calculate` and `duty/validate` out, `calendar/duty` in, as
-`gmt-modules.test.ts` requires) are the driver's; DU checks they landed and reports it if not.
+`duty/` becomes `workforce/` (decision 16). The driver moves the seven duty calculators to
+`workforce/calculate` and `isValidDutyLog` to `workforce/validate`, and removes the `/duty`
+subpaths (P1). The library side, its exports map and the `GMT_MODULES` keys (`duty/calculate` and
+`duty/validate` out, `workforce/calculate` and `workforce/validate` in, as `gmt-modules.test.ts`
+requires) are the driver's; DU checks they landed and reports it if not.
 
-1. **Declaration.** Transport's entry already reads `"modules": ["transport", "calendar/duty"]`
-   and the wider definition from D1 (B2). Add the Transport pain point for hours of work to
-   `industry-overview.ts` (B7), naming `calendar/duty` functions and linking the hours-of-work
-   guide, `mistakes/duty` and the duty scenarios. Confirm `/industries/transport/` lists the seven
-   `calendar/duty` functions under `### calendar/duty`, and nothing else from `calendar`, with no
-   hand edit; a needed hand edit is a generator bug, fixed in the generator.
-2. **Retag five pages from `industries: [core]` to `[transport]`:**
-   `guides/intervals/hours-of-work.mdx`, `mistakes/duty.mdx`,
-   `scenarios/duty-day-is-not-midnight.mdx`, `scenarios/sliding-window-not-calendar-day.mdx`,
-   `scenarios/paired-rest-that-does-not-qualify.mdx`. The guide stays in `guides/intervals/`: the
-   `guides/industries/<id>-…` prefix is for an industry's own guide.
+1. **Declaration and text.** D1 already declares Workforce (own namespace `workforce`) and
+   Transport drawing on it (B2). DU writes Workforce's overview text and Transport's crew-hours
+   pain point (B7). Confirm `/industries/workforce/` lists the eight `workforce` functions under
+   "Its own functions" and `/industries/transport/` lists them under "Functions it draws on" with
+   "Part of the Workforce industry layer", with no hand edit; a needed hand edit is a generator
+   bug, fixed in the generator.
+2. **Move and retag the pages.**
+   - `guides/intervals/hours-of-work.mdx` moves to `guides/industries/workforce-hours-of-work.mdx`
+     and becomes the Workforce guide (its title stays unless the move makes it read wrongly);
+     tag `[workforce]`.
+   - `mistakes/duty.mdx` moves to `mistakes/workforce.mdx` (docs-site.md names a realm's mistakes
+     page `mistakes/<realm>.mdx`); tag `[workforce]`; its description names the `workforce/`
+     namespace, not "GMT's duty/ module".
+   - The three scenarios keep their slugs and take `[workforce, transport]` where the example is a
+     driver's or an operator's log (`duty-day-is-not-midnight`, `paired-rest-that-does-not-qualify`)
+     and `[workforce]` otherwise (`sliding-window-not-calendar-day`).
    - **The tag rule needs a link.** These pages import from the root barrel and link no duty
-     reference page today, so under B8 they use no declared module and the Transport tag would
-     fail. Each gains at least one link to the `/reference/calendar/duty/<function>/` page of a
-     function it shows, in its related links or beside the passage, and the hours-of-work guide
-     links `isValidDutyLog` at `/reference/calendar/validate/isValidDutyLog/`.
-3. **Moved reference URLs.**
-   - Every hand-written link to `/reference/duty/…` points at the new page:
-     `/reference/calendar/duty/<function>` for the seven calculators,
-     `/reference/calendar/validate/isValidDutyLog` for the validator. An import in a page's code
-     block from `@northguild/gmt/duty/…` becomes `@northguild/gmt/calendar/duty` or
-     `@northguild/gmt/calendar/validate`. `grep -rn "reference/duty\|gmt/duty"` over
-     `apps/dox/src` outside `generated/` and `content/docs/reference/` finds nothing afterwards.
+     reference page today, so under B8 they use no declared module and the tag would fail. Each
+     gains at least one link to the `/reference/workforce/<module>/<function>/` page of a function
+     it shows, in its related links or beside the passage.
+   - Every link to the moved pages (`guides/index.mdx`, the scenarios, the mistakes page, the
+     guides' "See also" lists, any `/dox` starter or tool page) points at the new paths.
+3. **Moved URLs and their redirects.**
+   - Every hand-written link to `/reference/duty/…` points at `/reference/workforce/…` (same module
+     and function names). An import in a code block from `@northguild/gmt/duty/…` becomes
+     `@northguild/gmt/workforce/…`. `grep -rn "reference/duty\|gmt/duty\|guides/intervals/hours-of-work\|mistakes/duty"`
+     over `apps/dox/src` outside `generated/` and `content/docs/reference/` finds nothing afterwards.
    - **Function redirects:** `RENAMED_FUNCTIONS` (C2's file) gains one entry per moved function,
-     `duty/calculate/<name>` → `calendar/duty/<name>` for the seven, and `duty/validate/isValidDutyLog`
-     → `calendar/validate/isValidDutyLog`. They shipped in 1.19.0, so their old URLs have inbound
+     `duty/calculate/<name>` → `workforce/calculate/<name>` and `duty/validate/isValidDutyLog` →
+     `workforce/validate/isValidDutyLog`. They shipped in 1.19.0, so their old URLs have inbound
      links; each gets the three `301` rules.
-   - **Index redirects:** the old index routes `/reference/duty`, `/reference/duty/calculate` and
-     `/reference/duty/validate` are not function pages, so a new leaf list,
-     `scripts/build-utils/moved-index-pages.ts` (`MOVED_INDEX_PAGES`), maps them to
-     `/reference/calendar/duty`, `/reference/calendar/duty` and `/reference/calendar/validate`.
+   - **Other moved pages:** a new leaf list, `scripts/build-utils/moved-pages.ts` (`MOVED_PAGES`,
+     `{ from, to }` site paths), holds `/reference/duty` → `/reference/workforce`,
+     `/reference/duty/calculate` → `/reference/workforce/calculate`, `/reference/duty/validate` →
+     `/reference/workforce/validate`, `/guides/intervals/hours-of-work` →
+     `/guides/industries/workforce-hours-of-work` and `/mistakes/duty` → `/mistakes/workforce`.
      `buildRedirects` writes the same three `301` rules for each (bare, trailing slash, `.md`
-     twin). Generation fails when a target is not an index route or a source still is one, as it
-     does for a renamed function. `referenceInputs()` lists the new file; `redirects.test.ts`
-     covers it.
-   - Shared duty types keep their `/reference/types/<Name>` pages; only the links inside them
-     change, by regeneration.
-4. **README.** `duty` no longer exports functions, so the namespace line loses `[duty]`; `calendar`
-   is already linked and the sub-module gets no link of its own (B3). This is within section 0's
-   README exception; if the library finalizer has made the edit, DU confirms `stats.mjs check`
-   passes and leaves it.
+     twin). Generation fails when a `to` is not a page or a route in the build's page list, or a
+     `from` still is one. `redirects.test.ts` covers it. The `/dox` chat's links come from the
+     route manifest and the retrieval chunks, so they follow the move with no list.
+   - Shared duty types keep their `/reference/types/<Name>` pages; their tag becomes Workforce by
+     `typeIndustry`, and the links inside them change by regeneration.
+4. **README.** The namespace line loses `[duty]` and gains `[workforce]`, and the "By industry:"
+   line leads with Workforce (B3). Within section 0's README exception; if the library finalizer
+   has made the namespace edit, DU confirms `stats.mjs check` passes and leaves it.
 5. **Context docs**, in the present tense with no history: `context/domination/issues/CORE-76.md`
-   line 41 says the duty engine is a cross-industry building block in `calendar/duty`, its guide is
-   a Core guide, and each industry that uses it declares `calendar/duty` (Transport today;
+   line 41 says the duty engine is the `workforce/` cross-industry layer, its guide is the
+   Workforce industry guide, and each industry that uses it declares `workforce` (Transport today;
    Maritime, Rail, Aviation and Health when they arrive). The id `CORE-76` stays.
-   `context/domination/tracker.md`'s CORE-76 notes keep "CORE-76 is Core" and add that each
-   industry declares `calendar/duty` in `industries.json`. `context/dox/built.md` states the
-   shared-function rule of B1. Then `grep -rn "duty" context/dox context/domination/overview.md`
-   and correct any Dox line that names a `duty/` namespace; a needed `overview.md` change is
-   reported to the main session.
+   `context/domination/tracker.md`'s CORE-76 notes say the same in one line. `context/dox/built.md`
+   states the cross-industry-layer rule of B1. Then `grep -rn "duty" context/dox
+   context/domination/overview.md` and correct any Dox line that names a `duty/` namespace; a needed
+   `overview.md` change is reported to the main session.
 6. **No changeset from this step and no skills change.** The library's move carries its own
    changeset and skills update; `/tanstack-intent` is run to confirm it reports nothing more for
    the Dox side.
@@ -1818,7 +1940,7 @@ README samples) is the library pipeline's; its regenerated reference pages are n
   pass.
 - **The split** is in section K (builders F–J).
 
-### N3. `hours-of-work.mdx` examples (step HW, after DU)
+### N3. The Workforce guide's examples (step HW, after DU)
 
 - **No US regime leads.** Reorder and reshape the examples so the first is shaped like a sea
   regime (hours of rest per 24 hours and per 7 days, rest in at most two periods), then shapes
@@ -1829,4 +1951,4 @@ README samples) is the library pipeline's; its regenerated reference pages are n
   labelled by its numbers only ("10 hours of rest in any 24, 77 in any 7"), as the page's
   "Five example regimes" section (line 823) already does; the reorder keeps that. The section's
   count in its heading follows the examples it holds.
-- Every result is re-run against `dist`. The page keeps its Transport tag from DU.
+- Every result is re-run against `dist`. The page keeps its Workforce tag and new path from DU.
