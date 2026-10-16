@@ -64,6 +64,8 @@ utcToGnss("GPS", "2024-01-01T00:00:00Z");
   rightSpecId="utcToGnss"
 />
 
+Try 1 June 2016 in the [Satellite Clock Converter](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22value%22%3A%222016-06-01T00%3A00%3A00Z%22%7D) to see every clock's gap for that day.
+
 <Mistake
   severity="medium"
   title="Applying today's gap at a system's first instant"
@@ -114,6 +116,8 @@ utcToGnssWeek("IRN-LNAV", "2024-01-01T00:00:00Z");
   rightSpecId="gnssWeekToUtc"
 />
 
+The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22IRN-LNAV%22%2C%22week%22%3A%22247%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%2C%22rolloverEra%22%3A%221%22%7D) opens on this NavIC reading and shows its other passes.
+
 <Mistake
   severity="critical"
   title="Feeding a RINEX week to a broadcast counter"
@@ -128,3 +132,5 @@ rinexWeekToUtc("GAL", 2295, 86418);
 // "2024-01-01T00:00:00Z"`}
   rightSpecId="rinexWeekToUtc"
 />
+
+The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22rinex%22%2C%22system%22%3A%22GAL%22%2C%22week%22%3A%222295%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%7D) reads week 2295 as a RINEX week.

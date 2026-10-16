@@ -49,7 +49,7 @@ gnssToUtc("BDT", "2024-01-01T00:00:04 BDT");
 A reading kept without its label cannot be converted back, because the gap from UTC differs by
 system and by date. See [Each clock runs ahead of UTC by a gap
 that grew](/guides/industries/gnss-system-time-and-week-rollover/#each-clock-runs-ahead-of-utc-by-a-gap-that-grew).
-The [Satellite Clock Converter](/tools/satellite-clock-converter/) shows one instant on every clock.
+The [Satellite Clock Converter](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22value%22%3A%222024-01-01T00%3A00%3A04+BDT%22%7D) shows one instant on every clock.
 
 ## A receiver's week counter over a ship's life
 
@@ -70,9 +70,9 @@ gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" });
 The same week number reads as two dates 19.6 years apart, depending on the build date the receiver
 resolves it against. See [Week counters wrap: name the counter and the
 era](/guides/industries/gnss-system-time-and-week-rollover/#week-counters-wrap-name-the-counter-and-the-era).
-The [GNSS Rollover Checker](/tools/gnss-rollover-checker/) models a receiver as a build date or a
+The [GNSS Rollover Checker](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22counter%22%3A%22GPS-LNAV%22%2C%22firmwareNotBefore%22%3A%222019-01-01T00%3A00%3A00Z%22%7D) models a receiver as a build date or a
 fixed pass and shows when it starts reporting the wrong date, and the [GNSS Week
-Decoder](/tools/gnss-week-decoder/) shows every pass a given week could be.
+Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22GPS-LNAV%22%2C%22week%22%3A%221020%22%2C%22timeOfWeekSeconds%22%3A%220%22%2C%22rolloverNotBefore%22%3A%222019-01-01T00%3A00%3A00Z%22%7D) shows every pass a given week could be.
 
 ## A leap second in a ship's record
 

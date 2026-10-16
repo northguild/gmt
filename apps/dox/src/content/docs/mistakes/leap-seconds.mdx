@@ -30,6 +30,8 @@ isLeapSecond("2016-12-31T23:59:60Z");
   rightSpecId="isLeapSecond"
 />
 
+The [Leap Second Timeline](/tools/leap-second-timeline/?w=leapline&wa=%7B%22check%22%3A%222017-12-31T23%3A59%3A60Z%22%7D) checks the end of 2017 against the listed insertions.
+
 <Mistake
   severity="medium"
   title="Using a whole number for TAI − UTC before 1972"
@@ -49,6 +51,8 @@ toTAI("1971-12-31T00:00:00Z");
   rightSpecId="taiMinusUtc"
 />
 
+The [Leap Second Timeline](/tools/leap-second-timeline/?w=leapline&wa=%7B%22date%22%3A%221971-12-31T23%3A59%3A59Z%22%7D) shows what it gives for the last second of 1971.
+
 <Mistake
   severity="high"
   title="Reading a span across an insertion as the seconds that passed"
@@ -66,3 +70,5 @@ leapSecondsBetween("2016-12-31T23:00:00Z", "2017-01-01T01:00:00Z");
 // 1`}
   rightSpecId="leapSecondsBetween"
 />
+
+[Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A00%3A00Z%22%2C%22end%22%3A%222017-01-01T01%3A00%3A00Z%22%7D) shows the same two readings with the clock difference and the elapsed seconds side by side.

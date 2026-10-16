@@ -99,8 +99,10 @@ invalid input. It accepts only values inside the range `Temporal.Instant` can re
 `±8_640_000_000_000_000_000_000n`. `0n` is also the epoch itself, so validate the input
 first when the two must be told apart.
 
-Leap-second-aware time scales (TAI, GPS) are not part of this namespace. These are plain
-instant conversions.
+Leap-second-aware time scales (TAI and the satellite clocks) are not part of this namespace.
+These are plain instant conversions. See [Leap Seconds and
+TAI](/guides/core-date-operations/leap-seconds-and-tai/) and [GNSS: System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/).
 
 ## A zoned string names one instant in every reader
 

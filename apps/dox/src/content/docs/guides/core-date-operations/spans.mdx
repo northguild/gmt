@@ -80,7 +80,8 @@ symmetric, since a reversed pair is a negative span rather than an invalid one.
   can be twice the epoch-nanosecond range.
 - **Leap seconds are not counted.** UTC repeats a second rather than numbering a 61st one,
   so a span across one is a second short of the physical elapsed time. Against a smeared
-  clock (Google, AWS, Meta) the error is up to a second spread over the smear window.
+  clock (Google, AWS, Meta) the error is up to a second spread over the smear window. To count
+  them, compare TAI readings: see [Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/).
 
 ## See also
 

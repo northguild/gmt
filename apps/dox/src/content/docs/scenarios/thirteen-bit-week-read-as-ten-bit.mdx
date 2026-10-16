@@ -30,6 +30,7 @@ utcToGnssWeek("QZS-CNAV", "2024-01-01T00:00:00Z");
 
 In the widget, change the counter between `QZS-LNAV` and `QZS-CNAV` with the same week and watch
 the answer change between empty and a date. The same holds for `GPS-LNAV` and `GPS-CNAV`, and for
-`IRN-LNAV` and `IRN-L1NV`. The [GNSS Week Decoder](/tools/gnss-week-decoder/) names the counter
-every week fits. The rules are in [GNSS: System Time and Week
+`IRN-LNAV` and `IRN-L1NV`. The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22QZS-CNAV%22%2C%22week%22%3A%222295%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%2C%22rolloverEra%22%3A%220%22%7D) names the counter
+every week fits, and the [GNSS Rollover Checker](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22counter%22%3A%22QZS-CNAV%22%2C%22firmwareEra%22%3A%220%22%7D) shows when a receiver on the 13-bit QZSS
+counter would first read a wrong pass. The rules are in [GNSS: System Time and Week
 Rollover](/guides/industries/gnss-system-time-and-week-rollover/#week-counters-wrap-name-the-counter-and-the-era).
