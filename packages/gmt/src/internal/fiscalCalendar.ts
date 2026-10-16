@@ -60,19 +60,6 @@ export function gregorianCycleShift(year: number): number {
   return year - SAFE_CYCLE_START - placeInCycle;
 }
 
-/** Move `date` by `years`, or return null when the result lies outside Temporal's range. */
-function moveYears(
-  date: Temporal.PlainDate,
-  years: number,
-): Temporal.PlainDate | null {
-  try {
-    return date.with({ year: date.year + years });
-  } catch {
-    // A date past -271821-04-19 or +275760-09-13 throws RangeError.
-    return null;
-  }
-}
-
 /**
  * Return the fiscal year end falling in calendar year `year`, under the rule `anchor` states.
  *
@@ -106,11 +93,11 @@ export function fiscalYearEndIn(
  *
  * - The fiscal year is the one whose end is the first at or after `date`.
  * - `weeks` is derived from the gap between consecutive year ends — 52 or 53 — never assumed.
- * - The search runs on `date` moved into 2000 to 2399 by whole Gregorian cycles, then the
- *   result is moved back. A year end the search passes on the way, or the month-day a year end
- *   is shifted from, can lie outside Temporal's range when the fiscal year holding `date` does
- *   not.
- * - Returns null when the fiscal year's first or last day lies outside Temporal's range.
+ * - The search reads the year ends in the calendar years either side of `date`, so it throws
+ *   RangeError when one of them lies outside Temporal's range. Near -271821-04-19 or
+ *   +275760-09-13 that happens even when the date is valid. Move `date` into 2000 to 2399 with
+ *   `gregorianCycleShift` first, then add the shift back to any year read off the result:
+ *   whole 400-year cycles keep every month, day, weekday and day count.
  * - Returns null when the gap between year ends is neither 364 nor 371 days, which no
  *   "nearest weekday" rule can produce and so only a corrupted anchor could reach.
  */
@@ -118,14 +105,11 @@ export function fiscalYearOf(
   date: Temporal.PlainDate,
   anchor: Temporal.PlainDate,
 ): { start: Temporal.PlainDate; weeks: number } | null {
-  const shift = gregorianCycleShift(date.year);
-  const local = date.with({ year: date.year - shift });
-
   for (const offset of YEAR_END_SEARCH_OFFSETS) {
-    const year = local.year + offset;
+    const year = date.year + offset;
     const end = fiscalYearEndIn(anchor, year);
 
-    if (Temporal.PlainDate.compare(end, local) < 0) continue;
+    if (Temporal.PlainDate.compare(end, date) < 0) continue;
 
     const start = fiscalYearEndIn(anchor, year - 1).add({ days: 1 });
     const days = start.until(end, { largestUnit: "day" }).days + 1;
@@ -134,10 +118,7 @@ export function fiscalYearOf(
       return null;
     }
 
-    const realStart = moveYears(start, shift);
-    if (!realStart || !moveYears(end, shift)) return null;
-
-    return { start: realStart, weeks: days / 7 };
+    return { start, weeks: days / 7 };
   }
 
   return null;

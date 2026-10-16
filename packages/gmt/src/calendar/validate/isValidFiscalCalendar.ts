@@ -12,9 +12,10 @@ import { isValidFiscalYearLabel } from "./isValidFiscalYearLabel";
  * - `yearEndsOn` must be a plain ISO date. A datetime or a date that does not exist is not.
  * - `extraWeek` must be `"firstPeriod"` or `"lastPeriod"`, and `yearLabel` must be
  *   `"startYear"`, `"endYear"` or `"majorityYear"`. Both are required: there is no default.
- * - Extra properties are ignored. Returns false for `null` and any other non-object.
+ * - Extra properties are ignored.
+ * - Returns `false` for non-objects, `null` and arrays.
  * - `getFiscalPeriod` returns null for a calendar this rejects, the same sentinel it returns
- *   for a date it cannot place. Check the calendar here to tell the two apart.
+ *   for an invalid date. Check the calendar here to tell the two apart.
  *
  * @param calendar candidate value of any type
  * @returns boolean indicating whether `getFiscalPeriod` accepts it
@@ -23,12 +24,13 @@ import { isValidFiscalYearLabel } from "./isValidFiscalYearLabel";
  * @example isValidFiscalCalendar({ pattern: "4-5-4", yearEndsOn: "2026-01-31" }) // false (the 1.19 shape: no extraWeek or yearLabel)
  * @example isValidFiscalCalendar({ pattern: "4-5-4", yearEndsOn: "2026-02-30", extraWeek: "lastPeriod", yearLabel: "startYear" }) // false
  * @example isValidFiscalCalendar("4-5-4") // false
+ * @example isValidFiscalCalendar([]) // false
  */
 export function isValidFiscalCalendar(
   calendar: unknown,
 ): calendar is FiscalCalendar {
   try {
-    if (!isObject(calendar)) {
+    if (!isObject(calendar) || Array.isArray(calendar)) {
       return false;
     }
 

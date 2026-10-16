@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import type { FiscalCalendar } from "../../types";
 import { getFiscalPeriod } from "./getFiscalPeriod";
+import { getQuarter } from "./getQuarter";
 
 /**
  * The NRF 4-5-4 retail calendar (US), with the 1.19 behaviour stated: a 53rd week is added "to
@@ -279,11 +280,14 @@ describe("getFiscalPeriod", () => {
   );
 
   it.each`
-    calendar     | description
-    ${undefined} | ${"no calendar"}
-    ${null}      | ${"a null calendar"}
-    ${{}}        | ${"an empty calendar"}
-    ${"4-5-4"}   | ${"a string instead of a calendar"}
+    calendar                  | description
+    ${undefined}              | ${"no calendar"}
+    ${null}                   | ${"a null calendar"}
+    ${{}}                     | ${"an empty calendar"}
+    ${"4-5-4"}                | ${"a string instead of a calendar"}
+    ${[]}                     | ${"an empty array"}
+    ${[nrf]}                  | ${"an array holding the NRF calendar"}
+    ${Object.assign([], nrf)} | ${"an array with the four NRF fields set on it"}
   `("returns null when the calendar is $description", ({ calendar }) => {
     expect(
       getFiscalPeriod("2024-06-15", calendar as unknown as FiscalCalendar),
@@ -389,16 +393,11 @@ const ONS: FiscalCalendar = {
   yearLabel: "majorityYear",
 };
 
-/** Canadian Tire (CA): Saturday closest to December 31, the 53rd week in the last quarter. */
-const CTC: FiscalCalendar = {
-  pattern: "4-4-5",
-  yearEndsOn: "2022-12-31",
-  extraWeek: "lastPeriod",
-  yearLabel: "majorityYear",
-};
-
-/** Woolworths Group (AU): the Sunday nearest 27 June (the last Sunday of June), end-year label. */
-const WW: FiscalCalendar = {
+/**
+ * A mid-year calendar: the Sunday nearest 27 June, the extra week in the last period, and the
+ * year named by the date it ends (IAS 1 ¶51(c)).
+ */
+const JUNE_END_YEAR: FiscalCalendar = {
   pattern: "4-4-5",
   yearEndsOn: "2021-06-27",
   extraWeek: "lastPeriod",
@@ -466,47 +465,6 @@ describe("getFiscalPeriod reproduces published calendars", () => {
       expect(getFiscalPeriod(value, ONS)).toEqual(expected);
     },
   );
-
-  // Canadian Tire 2020 MD&A: 2020 is the 53 weeks ended January 2, 2021, 2019 the 52 weeks
-  // ended December 28, 2019, and Q4 2020 is 14 weeks. Periods are not published, so the
-  // period is checked as its quarter.
-  it.each`
-    value           | year    | quarter | week  | published
-    ${"2019-12-28"} | ${2019} | ${4}    | ${52} | ${"2019 ends December 28, 2019"}
-    ${"2019-12-29"} | ${2020} | ${1}    | ${1}  | ${"2020 opens in 2019 and is labelled 2020"}
-    ${"2020-09-26"} | ${2020} | ${3}    | ${39} | ${"Q3 ends"}
-    ${"2020-09-27"} | ${2020} | ${4}    | ${40} | ${"Q4 opens: weeks 40 to 53 are 14 weeks"}
-    ${"2021-01-02"} | ${2020} | ${4}    | ${53} | ${"2020 ends January 2, 2021"}
-    ${"2021-01-03"} | ${2021} | ${1}    | ${1}  | ${"2021 opens"}
-  `(
-    "Canadian Tire (CA): $value is year $year, Q$quarter, week $week ($published)",
-    ({ value, year, quarter, week }) => {
-      const result = getFiscalPeriod(value, CTC);
-
-      expect(result).toEqual(expect.objectContaining({ year, week }));
-      expect(Math.ceil((result?.period ?? 0) / 3)).toBe(quarter);
-    },
-  );
-
-  // Woolworths Group 2024 Annual Report Note 1.1 and the F24 and F25 ASX results releases:
-  // F24 is the 53 weeks ended 30 June 2024, F23 the 52 weeks ended 25 June 2023, F25 the 52
-  // weeks ended 29 June 2025. Its quarters are 14-13-13-12, which no FiscalPattern fits, so
-  // the period is not asserted.
-  it.each`
-    value           | year    | week  | published
-    ${"2023-06-25"} | ${2023} | ${52} | ${"F23 ends 25 June 2023 (52 weeks)"}
-    ${"2023-06-26"} | ${2024} | ${1}  | ${"F24 opens, labelled by its end year"}
-    ${"2024-06-30"} | ${2024} | ${53} | ${"F24 ends 30 June 2024 (53 weeks)"}
-    ${"2024-07-01"} | ${2025} | ${1}  | ${"F25 opens"}
-    ${"2025-06-29"} | ${2025} | ${52} | ${"F25 ends 29 June 2025 (52 weeks)"}
-  `(
-    "Woolworths Group (AU), year and week only: $value is F$year week $week ($published)",
-    ({ value, year, week }) => {
-      expect(getFiscalPeriod(value, WW)).toEqual(
-        expect.objectContaining({ year, week }),
-      );
-    },
-  );
 });
 
 describe("getFiscalPeriod extraWeek", () => {
@@ -531,11 +489,18 @@ describe("getFiscalPeriod extraWeek", () => {
   );
 
   // The ONS calendar with the week moved to the end: its January is 4 weeks, so week 5 is in
-  // February, and week 53 lengthens December.
+  // February, and week 53 lengthens December. The year 2019-12-29 to 2021-01-02 has 53 weeks:
+  // periods 1 to 11 run 4-4-5, so period 9 ends with week 39, and period 12 is weeks 48 to 53.
   it.each`
     value           | expected                                | description
     ${"2025-02-01"} | ${{ year: 2025, period: 2, week: 5 }}   | ${"ONS week 5 moves to February"}
     ${"2026-01-03"} | ${{ year: 2025, period: 12, week: 53 }} | ${"week 53 in period 12"}
+    ${"2019-12-28"} | ${{ year: 2019, period: 12, week: 52 }} | ${"2019 ends after 52 weeks"}
+    ${"2019-12-29"} | ${{ year: 2020, period: 1, week: 1 }}   | ${"2020 opens in 2019 and is labelled 2020"}
+    ${"2020-09-26"} | ${{ year: 2020, period: 9, week: 39 }}  | ${"the third quarter ends"}
+    ${"2020-09-27"} | ${{ year: 2020, period: 10, week: 40 }} | ${"the fourth quarter opens: weeks 40 to 53 are 14 weeks"}
+    ${"2021-01-02"} | ${{ year: 2020, period: 12, week: 53 }} | ${"2020 ends on 2 January 2021"}
+    ${"2021-01-03"} | ${{ year: 2021, period: 1, week: 1 }}   | ${"2021 opens"}
   `(
     "ONS with extraWeek lastPeriod puts $value at $expected ($description)",
     ({ value, expected }) => {
@@ -548,23 +513,40 @@ describe("getFiscalPeriod extraWeek", () => {
 
 describe("getFiscalPeriod yearLabel", () => {
   it.each`
-    value           | calendar | yearLabel         | year    | description
-    ${"2024-06-15"} | ${nrf}   | ${"endYear"}      | ${2025} | ${"NRF 2024-02-04 to 2025-02-01 ends in 2025"}
-    ${"2024-06-15"} | ${nrf}   | ${"majorityYear"} | ${2024} | ${"332 days in 2024, 32 in 2025"}
-    ${"2024-01-28"} | ${nrf}   | ${"endYear"}      | ${2024} | ${"NRF 2023-01-29 to 2024-02-03 ends in 2024"}
-    ${"2024-01-28"} | ${nrf}   | ${"majorityYear"} | ${2023} | ${"337 days in 2023, 34 in 2024"}
-    ${"2024-12-29"} | ${ONS}   | ${"startYear"}    | ${2024} | ${"ONS 2025 starts in 2024"}
-    ${"2024-12-29"} | ${ONS}   | ${"endYear"}      | ${2026} | ${"and ends in 2026: neither end year matches ONS"}
-    ${"2024-12-29"} | ${ONS}   | ${"majorityYear"} | ${2025} | ${"365 of its 371 days are in 2025"}
-    ${"2024-06-30"} | ${WW}    | ${"majorityYear"} | ${2023} | ${"189 days in 2023, 182 in 2024"}
-    ${"2024-06-30"} | ${WW}    | ${"startYear"}    | ${2023} | ${"F24 starts 2023-06-26"}
-    ${"2024-06-30"} | ${WW}    | ${"endYear"}      | ${2024} | ${"F24 ends 2024-06-30"}
+    value           | calendar         | yearLabel         | year    | description
+    ${"2024-06-15"} | ${nrf}           | ${"endYear"}      | ${2025} | ${"NRF 2024-02-04 to 2025-02-01 ends in 2025"}
+    ${"2024-06-15"} | ${nrf}           | ${"majorityYear"} | ${2024} | ${"332 days in 2024, 32 in 2025"}
+    ${"2024-01-28"} | ${nrf}           | ${"endYear"}      | ${2024} | ${"NRF 2023-01-29 to 2024-02-03 ends in 2024"}
+    ${"2024-01-28"} | ${nrf}           | ${"majorityYear"} | ${2023} | ${"337 days in 2023, 34 in 2024"}
+    ${"2024-12-29"} | ${ONS}           | ${"startYear"}    | ${2024} | ${"ONS 2025 starts in 2024"}
+    ${"2024-12-29"} | ${ONS}           | ${"endYear"}      | ${2026} | ${"and ends in 2026: neither end year matches ONS"}
+    ${"2024-12-29"} | ${ONS}           | ${"majorityYear"} | ${2025} | ${"365 of its 371 days are in 2025"}
+    ${"2024-06-30"} | ${JUNE_END_YEAR} | ${"majorityYear"} | ${2023} | ${"189 days in 2023, 182 in 2024"}
+    ${"2024-06-30"} | ${JUNE_END_YEAR} | ${"startYear"}    | ${2023} | ${"2023-06-26 to 2024-06-30 starts in 2023"}
+    ${"2024-06-30"} | ${JUNE_END_YEAR} | ${"endYear"}      | ${2024} | ${"and ends in 2024"}
   `(
     "labels $value as $year under $yearLabel ($description)",
     ({ value, calendar, yearLabel, year }) => {
       expect(getFiscalPeriod(value, { ...calendar, yearLabel })).toEqual(
         expect.objectContaining({ year }),
       );
+    },
+  );
+
+  // JUNE_END_YEAR, the Sunday nearest 27 June: 2022-06-27 to 2023-06-25 (52 weeks),
+  // 2023-06-26 to 2024-06-30 (53 weeks) and 2024-07-01 to 2025-06-29 (52 weeks). Each is named
+  // by the year it ends in, so a year that opens in June is labelled one year on.
+  it.each`
+    value           | expected                                | description
+    ${"2023-06-25"} | ${{ year: 2023, period: 12, week: 52 }} | ${"2023 ends on 25 June 2023, 52 weeks"}
+    ${"2023-06-26"} | ${{ year: 2024, period: 1, week: 1 }}   | ${"2024 opens in 2023, labelled by its end year"}
+    ${"2024-06-30"} | ${{ year: 2024, period: 12, week: 53 }} | ${"2024 ends on 30 June 2024, 53 weeks"}
+    ${"2024-07-01"} | ${{ year: 2025, period: 1, week: 1 }}   | ${"2025 opens"}
+    ${"2025-06-29"} | ${{ year: 2025, period: 12, week: 52 }} | ${"2025 ends on 29 June 2025, 52 weeks"}
+  `(
+    "labels a June year end by its end year: $value is $expected ($description)",
+    ({ value, expected }) => {
+      expect(getFiscalPeriod(value, JUNE_END_YEAR)).toEqual(expected);
     },
   );
 
@@ -654,17 +636,16 @@ describe("getFiscalPeriod yearLabel", () => {
 // Temporal's range is -271821-04-19 to +275760-09-13. The Gregorian calendar repeats every
 // 400 years (146,097 days, a whole number of weeks), so each expected value is the value for
 // the same rule a whole number of cycles inside the range, re-derived with plain
-// `@js-temporal/polyfill` date arithmetic and moved back by those cycles. WW rows assert the
-// period too: here it is only the 4-4-5 pattern's arithmetic, not a Woolworths claim.
+// `@js-temporal/polyfill` date arithmetic and moved back by those cycles.
 describe("getFiscalPeriod at Temporal's range limits", () => {
   it.each`
-    value              | calendar | expected                                  | fiscalYear
-    ${"-271820-06-01"} | ${nrf}   | ${{ year: -271820, period: 5, week: 18 }} | ${"-271820-01-30 to -271819-02-03 (as 2180-01-30 to 2181-02-03, 685 cycles on)"}
-    ${"-271821-12-15"} | ${WW}    | ${{ year: -271820, period: 6, week: 25 }} | ${"-271821-06-28 to -271820-06-25 (as 2179-06-28 to 2180-06-25)"}
-    ${"-271820-01-15"} | ${ONS}   | ${{ year: -271820, period: 1, week: 2 }}  | ${"-271820-01-02 to -271820-12-30 (as 2180-01-02 to 2180-12-30)"}
-    ${"+275759-12-15"} | ${ONS}   | ${{ year: 275759, period: 12, week: 50 }} | ${"+275758-12-31 to +275759-12-29 (as 2158-12-31 to 2159-12-29, 684 cycles back)"}
-    ${"+275760-01-15"} | ${nrf}   | ${{ year: 275759, period: 12, week: 50 }} | ${"+275759-02-04 to +275760-02-02 (as 2159-02-04 to 2160-02-02)"}
-    ${"+275760-06-01"} | ${WW}    | ${{ year: 275760, period: 12, week: 49 }} | ${"+275759-06-25 to +275760-06-29, 53 weeks (as 2159-06-25 to 2160-06-29)"}
+    value              | calendar         | expected                                  | fiscalYear
+    ${"-271820-06-01"} | ${nrf}           | ${{ year: -271820, period: 5, week: 18 }} | ${"-271820-01-30 to -271819-02-03 (as 2180-01-30 to 2181-02-03, 685 cycles on)"}
+    ${"-271821-12-15"} | ${JUNE_END_YEAR} | ${{ year: -271820, period: 6, week: 25 }} | ${"-271821-06-28 to -271820-06-25 (as 2179-06-28 to 2180-06-25)"}
+    ${"-271820-01-15"} | ${ONS}           | ${{ year: -271820, period: 1, week: 2 }}  | ${"-271820-01-02 to -271820-12-30 (as 2180-01-02 to 2180-12-30)"}
+    ${"+275759-12-15"} | ${ONS}           | ${{ year: 275759, period: 12, week: 50 }} | ${"+275758-12-31 to +275759-12-29 (as 2158-12-31 to 2159-12-29, 684 cycles back)"}
+    ${"+275760-01-15"} | ${nrf}           | ${{ year: 275759, period: 12, week: 50 }} | ${"+275759-02-04 to +275760-02-02 (as 2159-02-04 to 2160-02-02)"}
+    ${"+275760-06-01"} | ${JUNE_END_YEAR} | ${{ year: 275760, period: 12, week: 49 }} | ${"+275759-06-25 to +275760-06-29, 53 weeks (as 2159-06-25 to 2160-06-29)"}
   `(
     "returns $expected for $value, whose fiscal year $fiscalYear lies inside the range",
     ({ value, calendar, expected }) => {
@@ -695,21 +676,27 @@ describe("getFiscalPeriod at Temporal's range limits", () => {
     },
   );
 
-  // Spec §2: a fiscal year Temporal cannot hold returns the sentinel.
+  // A fiscal year can run past the first or last date and still have a year, period and week:
+  // all three are calendar arithmetic, and no date of the fiscal year is returned. Each value
+  // is worked in the year 685 cycles on (-271821 as 2179) or 684 back (+275760 as 2160), and
+  // only the year is moved back.
   it.each`
-    value              | calendar | name     | fiscalYear
-    ${"-271821-04-19"} | ${nrf}   | ${"NRF"} | ${"opens -271821-01-31, before the first date (as 2179-01-31)"}
-    ${"+275760-09-13"} | ${nrf}   | ${"NRF"} | ${"closes +275761-01-31, after the last date (as 2161-01-31)"}
-    ${"-271821-04-19"} | ${WW}    | ${"WW"}  | ${"opens -271822-06-29, before the first date (as 2178-06-29)"}
-    ${"+275760-09-13"} | ${WW}    | ${"WW"}  | ${"closes +275761-06-28, after the last date (as 2161-06-28)"}
+    value              | calendar         | name               | expected                                   | fiscalYear
+    ${"-271821-04-19"} | ${nrf}           | ${"NRF"}           | ${{ year: -271821, period: 3, week: 12 }}  | ${"opens -271821-01-31, before the first date (as 2179-01-31 to 2180-01-29; day 79)"}
+    ${"+275760-09-13"} | ${nrf}           | ${"NRF"}           | ${{ year: 275760, period: 8, week: 32 }}   | ${"closes +275761-01-31, after the last date (as 2160-02-03 to 2161-01-31; day 224)"}
+    ${"-271821-04-19"} | ${JUNE_END_YEAR} | ${"JUNE_END_YEAR"} | ${{ year: -271821, period: 10, week: 43 }} | ${"opens -271822-06-29, before the first date (as 2178-06-29 to 2179-06-27; day 295)"}
+    ${"+275760-09-13"} | ${JUNE_END_YEAR} | ${"JUNE_END_YEAR"} | ${{ year: 275761, period: 3, week: 11 }}   | ${"closes +275761-06-28, after the last date (as 2160-06-30 to 2161-06-28; day 77)"}
+    ${"-271821-04-19"} | ${ONS}           | ${"ONS"}           | ${{ year: -271821, period: 4, week: 16 }}  | ${"opens -271821-01-03, before the first date (as 2179-01-03 to 2180-01-01; 363 days in 2179)"}
+    ${"+275760-09-13"} | ${ONS}           | ${"ONS"}           | ${{ year: 275760, period: 9, week: 37 }}   | ${"closes +275761-01-03, after the last date (as 2159-12-30 to 2161-01-03; 366 days in 2160)"}
   `(
-    "returns null for $value under $name, whose fiscal year $fiscalYear",
-    ({ value, calendar }) => {
-      expect(getFiscalPeriod(value, calendar)).toBeNull();
+    "returns $expected for $value under $name, whose fiscal year $fiscalYear",
+    ({ value, calendar, expected }) => {
+      expect(getFiscalPeriod(value, calendar)).toEqual(expected);
     },
   );
 
-  it("returns null for -271821-04-19 when it closes a fiscal year opening -271822-04-21, before the first date", () => {
+  it("returns week 52 for -271821-04-19 when it closes a fiscal year opening -271822-04-21, before the first date", () => {
+    // As 2178-04-21 to 2179-04-19: 364 days, so the last day is week 52 of period 12.
     expect(
       getFiscalPeriod("-271821-04-19", {
         pattern: "4-4-5",
@@ -717,8 +704,74 @@ describe("getFiscalPeriod at Temporal's range limits", () => {
         extraWeek: "lastPeriod",
         yearLabel: "startYear",
       }),
-    ).toBeNull();
+    ).toEqual({ year: -271822, period: 12, week: 52 });
   });
+
+  // Every extraWeek and yearLabel at both ends, on a 53-week year that runs past the range.
+  // "The Wednesday nearest 20 March" (2024-03-20): -271821-03-18 to -271820-03-22, as
+  // 2179-03-18 to 2180-03-22, 371 days with 2180-02-29. -271821-04-19 is day 33, week 5:
+  // period 1 when it is five weeks long, period 2 when it is four. 289 days fall in -271821.
+  // "The Monday nearest 17 April" (2023-04-17): +275760-04-15 to +275761-04-20, as 2160-04-15
+  // to 2161-04-20, 371 days. +275760-09-13 is day 152, week 22: periods run 5-4-5-4-4 to week
+  // 22 under firstPeriod, and 4-4-5-4-4 to week 21 under lastPeriod. 261 days fall in 275760.
+  it.each`
+    value              | yearEndsOn      | extraWeek        | yearLabel         | expected
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"firstPeriod"} | ${"startYear"}    | ${{ year: -271821, period: 1, week: 5 }}
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"firstPeriod"} | ${"endYear"}      | ${{ year: -271820, period: 1, week: 5 }}
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"firstPeriod"} | ${"majorityYear"} | ${{ year: -271821, period: 1, week: 5 }}
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"lastPeriod"}  | ${"startYear"}    | ${{ year: -271821, period: 2, week: 5 }}
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"lastPeriod"}  | ${"endYear"}      | ${{ year: -271820, period: 2, week: 5 }}
+    ${"-271821-04-19"} | ${"2024-03-20"} | ${"lastPeriod"}  | ${"majorityYear"} | ${{ year: -271821, period: 2, week: 5 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"firstPeriod"} | ${"startYear"}    | ${{ year: 275760, period: 5, week: 22 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"firstPeriod"} | ${"endYear"}      | ${{ year: 275761, period: 5, week: 22 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"firstPeriod"} | ${"majorityYear"} | ${{ year: 275760, period: 5, week: 22 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"lastPeriod"}  | ${"startYear"}    | ${{ year: 275760, period: 6, week: 22 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"lastPeriod"}  | ${"endYear"}      | ${{ year: 275761, period: 6, week: 22 }}
+    ${"+275760-09-13"} | ${"2023-04-17"} | ${"lastPeriod"}  | ${"majorityYear"} | ${{ year: 275760, period: 6, week: 22 }}
+  `(
+    "returns $expected for $value with yearEndsOn $yearEndsOn, $extraWeek and $yearLabel, a 53-week year past the range",
+    ({ value, yearEndsOn, extraWeek, yearLabel, expected }) => {
+      expect(
+        getFiscalPeriod(value, {
+          pattern: "4-4-5",
+          yearEndsOn,
+          extraWeek,
+          yearLabel,
+        }),
+      ).toEqual(expected);
+    },
+  );
+
+  // getQuarter labels a fiscal year that starts on day 1 of a month. Its February year matches
+  // NRF's (opening near 1 February) and its July year matches JUNE_END_YEAR's (opening near
+  // 1 July) at both ends: each pair starts in the same calendar year, ends in the same one, and
+  // puts most of its days in the same one. So the two functions name each year alike under
+  // every label.
+  it.each`
+    value              | calendar         | fiscalYearStartMonth | yearLabel         | year
+    ${"-271821-04-19"} | ${nrf}           | ${2}                 | ${"startYear"}    | ${-271821}
+    ${"-271821-04-19"} | ${nrf}           | ${2}                 | ${"endYear"}      | ${-271820}
+    ${"-271821-04-19"} | ${nrf}           | ${2}                 | ${"majorityYear"} | ${-271821}
+    ${"-271821-04-19"} | ${JUNE_END_YEAR} | ${7}                 | ${"startYear"}    | ${-271822}
+    ${"-271821-04-19"} | ${JUNE_END_YEAR} | ${7}                 | ${"endYear"}      | ${-271821}
+    ${"-271821-04-19"} | ${JUNE_END_YEAR} | ${7}                 | ${"majorityYear"} | ${-271822}
+    ${"+275760-09-13"} | ${nrf}           | ${2}                 | ${"startYear"}    | ${275760}
+    ${"+275760-09-13"} | ${nrf}           | ${2}                 | ${"endYear"}      | ${275761}
+    ${"+275760-09-13"} | ${nrf}           | ${2}                 | ${"majorityYear"} | ${275760}
+    ${"+275760-09-13"} | ${JUNE_END_YEAR} | ${7}                 | ${"startYear"}    | ${275760}
+    ${"+275760-09-13"} | ${JUNE_END_YEAR} | ${7}                 | ${"endYear"}      | ${275761}
+    ${"+275760-09-13"} | ${JUNE_END_YEAR} | ${7}                 | ${"majorityYear"} | ${275760}
+  `(
+    "names the year of $value as $year under $yearLabel, as getQuarter does with fiscalYearStartMonth $fiscalYearStartMonth",
+    ({ value, calendar, fiscalYearStartMonth, yearLabel, year }) => {
+      expect(getFiscalPeriod(value, { ...calendar, yearLabel })?.year).toBe(
+        year,
+      );
+      expect(getQuarter(value, { fiscalYearStartMonth, yearLabel })?.year).toBe(
+        year,
+      );
+    },
+  );
 });
 
 describe("getFiscalPeriod calendar validation", () => {

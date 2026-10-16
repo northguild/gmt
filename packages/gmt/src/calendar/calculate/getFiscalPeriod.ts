@@ -3,6 +3,7 @@ import {
   fiscalPeriodOfWeek,
   fiscalYearLabel,
   fiscalYearOf,
+  gregorianCycleShift,
   zonelessCalendarDate,
 } from "../../internal";
 import { isObject } from "../../internal/isObject";
@@ -37,10 +38,10 @@ const DAYS_PER_WEEK = 7;
  *   and there is no default.
  * - `calendar.extraWeek` is the period a 53rd week is added to: `"firstPeriod"` (ONS, UK: "a
  *   five week January") or `"lastPeriod"` (NRF, US: "to the end of the calendar").
- * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`
- *   (Woolworths Group, AU) or `"majorityYear"`, the calendar year holding the most days (ONS,
- *   UK; Canadian Tire, CA). GMT rule: a 182/182 split goes to the end year, because IAS 1
- *   ¶51(c) lets a reporting period be identified by the date it ends.
+ * - `calendar.yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
+ *   year its last day falls in (IAS 1 ¶51(c) lets a reporting period be identified by the
+ *   date it ends), or `"majorityYear"`, the calendar year holding the most days (ONS, UK).
+ *   GMT rule: a 182/182 split goes to the end year, for the same IAS 1 ¶51(c) reason.
  * - **`year` is not a unique key for every year end.** A 364- or 371-day year drifts against
  *   the calendar, so every label rule has year ends where two fiscal years share a label and a
  *   calendar year names none. `"startYear"` and `"endYear"` do this for year ends near
@@ -58,9 +59,12 @@ const DAYS_PER_WEEK = 7;
  *   ends, never assumed from a table.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
  *   `getIsoWeekDate` for why a moment is not accepted here.
- * - Returns null on invalid input, including a calendar with a missing or unrecognised field.
- *   That shares the sentinel with a date that cannot be placed, so check the calendar with
- *   `isValidFiscalCalendar` first to tell the two apart.
+ * - Every date Temporal accepts gets a value, even when its fiscal year runs past
+ *   -271821-04-19 or +275760-09-13. The year, period and week are calendar arithmetic, and no
+ *   date of the fiscal year is returned.
+ * - Returns null on invalid input: a `value` that is not a zoneless ISO date, or a calendar
+ *   that is an array or has a missing or unrecognised field. Both share the sentinel, so check
+ *   the calendar with `isValidFiscalCalendar` first to tell the two apart.
  *
  * @param value zoneless ISO 8601 date or datetime string (e.g. "2024-06-15")
  * @param calendar { pattern, yearEndsOn, extraWeek, yearLabel }, all required
@@ -73,6 +77,7 @@ const DAYS_PER_WEEK = 7;
  * @example getFiscalPeriod("2024-03-31", { pattern: "4-4-5", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod", yearLabel: "startYear" }) // { year: 2024, period: 3, week: 9 }
  * @example getFiscalPeriod("2025-02-01", { pattern: "4-4-5", yearEndsOn: "2022-12-31", extraWeek: "firstPeriod", yearLabel: "majorityYear" }) // { year: 2025, period: 1, week: 5 } (ONS 2025: a five-week January)
  * @example getFiscalPeriod("2024-12-29", { pattern: "4-4-5", yearEndsOn: "2022-12-31", extraWeek: "firstPeriod", yearLabel: "majorityYear" }) // { year: 2025, period: 1, week: 1 } (ONS 2025 opens in December 2024)
+ * @example getFiscalPeriod("+275760-09-13", { pattern: "4-5-4", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod", yearLabel: "startYear" }) // { year: 275760, period: 8, week: 32 } (Temporal's last date; its fiscal year closes past it)
  * @example getFiscalPeriod("2024-06-15", { pattern: "4-5-5", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod", yearLabel: "startYear" }) // null (not one of the three patterns)
  * @example getFiscalPeriod("2024-06-15", { pattern: "4-5-4", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod" }) // null (no yearLabel)
  * @example getFiscalPeriod("2024-06-15T12:00:00Z", { pattern: "4-5-4", yearEndsOn: "2026-01-31", extraWeek: "lastPeriod", yearLabel: "startYear" }) // null (a moment, not a calendar date)
@@ -96,7 +101,8 @@ export function getFiscalPeriod(
   week: number;
 } | null {
   try {
-    if (!isObject(calendar)) return null;
+    // An array is refused before its fields are copied, as isValidFiscalCalendar refuses it.
+    if (!isObject(calendar) || Array.isArray(calendar)) return null;
 
     // Read each field once: a getter could answer differently on a second read, and the
     // value validated must be the value used.
@@ -112,8 +118,13 @@ export function getFiscalPeriod(
     const date = zonelessCalendarDate(value);
     if (!date) return null;
 
+    // A fiscal year near Temporal's first or last date can run past it. Its year, period and
+    // week are calendar arithmetic, so work them in the year 2000 to 2399 with the same leap
+    // pattern, then move the year back. Period and week do not move.
+    const shift = gregorianCycleShift(date.year);
+    const local = date.with({ year: date.year - shift });
     const fiscalYear = fiscalYearOf(
-      date,
+      local,
       Temporal.PlainDate.from(fields.yearEndsOn),
     );
     if (!fiscalYear) return null;
@@ -122,11 +133,11 @@ export function getFiscalPeriod(
     const end = start.add({ days: weeks * DAYS_PER_WEEK - 1 });
     const week =
       Math.floor(
-        start.until(date, { largestUnit: "day" }).days / DAYS_PER_WEEK,
+        start.until(local, { largestUnit: "day" }).days / DAYS_PER_WEEK,
       ) + 1;
 
     return {
-      year: fiscalYearLabel(start, end, fields.yearLabel),
+      year: fiscalYearLabel(start, end, fields.yearLabel) + shift,
       period: fiscalPeriodOfWeek(week, weeks, fields.pattern, fields.extraWeek),
       week,
     };

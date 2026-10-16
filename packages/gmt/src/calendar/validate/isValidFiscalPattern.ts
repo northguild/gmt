@@ -9,7 +9,7 @@ import type { FiscalPattern } from "../../types";
  * - Uses type assertion to narrow the type.
  * - A pattern read from config, an env var or a form is a bare string until something narrows
  *   it. Narrow it here; to check a whole calendar before `getFiscalPeriod`, whose null also
- *   means a date it cannot place, use `isValidFiscalCalendar`.
+ *   means an invalid date, use `isValidFiscalCalendar`.
  *
  * @param pattern candidate value of any type
  * @returns boolean indicating validity

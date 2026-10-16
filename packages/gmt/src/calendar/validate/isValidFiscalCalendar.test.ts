@@ -16,16 +16,11 @@ const ONS = {
   yearLabel: "majorityYear",
 } as const;
 
-/** Canadian Tire (CA): the 53rd week in the last quarter, majority-year label. */
-const CTC = {
-  pattern: "4-4-5",
-  yearEndsOn: "2022-12-31",
-  extraWeek: "lastPeriod",
-  yearLabel: "majorityYear",
-} as const;
-
-/** Woolworths Group (AU): the last Sunday of June, end-year label. */
-const WW = {
+/**
+ * A mid-year calendar: the Sunday nearest 27 June, the extra week in the last period, and the
+ * year named by the date it ends (IAS 1 ¶51(c)).
+ */
+const JUNE_END_YEAR = {
   pattern: "4-4-5",
   yearEndsOn: "2021-06-27",
   extraWeek: "lastPeriod",
@@ -45,8 +40,8 @@ describe("isValidFiscalCalendar", () => {
     calendar                                              | description
     ${NRF}                                                | ${"NRF (US)"}
     ${ONS}                                                | ${"ONS (UK)"}
-    ${CTC}                                                | ${"Canadian Tire (CA)"}
-    ${WW}                                                 | ${"Woolworths Group (AU)"}
+    ${{ ...ONS, extraWeek: "lastPeriod" }}                | ${"ONS with the extra week in the last period"}
+    ${JUNE_END_YEAR}                                      | ${"a June year end labelled by end year"}
     ${T}                                                  | ${"a calendar with a tie year"}
     ${{ ...NRF, note: "extra" }}                          | ${"NRF with an extra property, which is ignored"}
     ${{ ...NRF, pattern: "5-4-4" }}                       | ${"NRF with the 5-4-4 pattern"}
@@ -106,19 +101,16 @@ describe("isValidFiscalCalendar", () => {
     expect(isValidFiscalCalendar(candidate)).toBe(false);
   });
 
-  // Spec §3.5 (`isObject`): an array is an Object, so it is judged by its four fields like any
-  // other object, never refused for its type.
+  // A calendar is a record of named fields, not a list, so an array is refused for its type,
+  // as isValidBusinessCalendar refuses one, even with the four fields set on it.
   it.each`
-    candidate                 | expected | description
-    ${[]}                     | ${false} | ${"no fiscal calendar fields"}
-    ${[NRF]}                  | ${false} | ${"the calendar as an element, not as its fields"}
-    ${Object.assign([], NRF)} | ${true}  | ${"the four fields set on the array itself"}
-  `(
-    "returns $expected for an array, which is an Object, with $description",
-    ({ candidate, expected }) => {
-      expect(isValidFiscalCalendar(candidate)).toBe(expected);
-    },
-  );
+    candidate                 | description
+    ${[]}                     | ${"no fiscal calendar fields"}
+    ${[NRF]}                  | ${"the calendar as an element, not as its fields"}
+    ${Object.assign([], NRF)} | ${"the four fields set on the array itself"}
+  `("returns false for an array with $description", ({ candidate }) => {
+    expect(isValidFiscalCalendar(candidate)).toBe(false);
+  });
 
   it.each`
     field

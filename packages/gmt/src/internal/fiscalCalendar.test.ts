@@ -136,14 +136,15 @@ describe("fiscalYearOf", () => {
     },
   );
 
-  // NRF, as 2180 and 2160 (685 and 684 cycles on, 146,097 days a cycle): the year end in
-  // -271821 and the one in +275761 are outside Temporal's range.
+  // Temporal's first and last dates, moved 685 cycles on and 684 back (146,097 days a cycle),
+  // as getFiscalPeriod moves them. Here the whole fiscal year exists, as it does not at -271821
+  // and +275760.
   it.each`
-    value              | start              | weeks | description
-    ${"-271820-06-01"} | ${"-271820-01-30"} | ${53} | ${"the search passes -271821, before the range"}
-    ${"+275760-01-15"} | ${"+275759-02-04"} | ${52} | ${"the search stops before +275761"}
+    value           | start           | weeks | description
+    ${"2179-04-19"} | ${"2179-01-31"} | ${52} | ${"-271821-04-19, in the year opening -271821-01-31"}
+    ${"2160-09-13"} | ${"2160-02-03"} | ${52} | ${"+275760-09-13, in the year closing +275761-01-31"}
   `(
-    "puts $value in the fiscal year starting $start, of $weeks weeks ($description)",
+    "puts $value in the fiscal year starting $start, of $weeks weeks (as $description)",
     ({ value, start, weeks }) => {
       expect(fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor)).toEqual({
         start: Temporal.PlainDate.from(start),
@@ -152,12 +153,17 @@ describe("fiscalYearOf", () => {
     },
   );
 
+  // The caller moves a date into 2000 to 2399 first. Unmoved, the search reaches a year end
+  // outside Temporal's range, and Temporal throws.
   it.each`
     value              | description
-    ${"-271821-04-19"} | ${"its fiscal year opens -271821-01-31, before the first date"}
-    ${"+275760-09-13"} | ${"its fiscal year closes +275761-01-31, after the last date"}
-  `("returns null for $value: $description", ({ value }) => {
-    expect(fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor)).toBeNull();
+    ${"-271820-06-01"} | ${"the search passes the year end in -271821, before the first date"}
+    ${"-271821-04-19"} | ${"the year end before it, -271821-01-30, is before the first date"}
+    ${"+275760-09-13"} | ${"the year end after it, +275761-01-31, is after the last date"}
+  `("throws RangeError for $value ($description)", ({ value }) => {
+    expect(() =>
+      fiscalYearOf(Temporal.PlainDate.from(value), nrfAnchor),
+    ).toThrow(RangeError);
   });
 });
 
@@ -252,11 +258,11 @@ describe("fiscalYearLabel", () => {
     ${"2024-12-29"} | ${"2026-01-03"} | ${"startYear"}    | ${2024}  | ${"ONS (UK) 2025 starts in 2024"}
     ${"2024-12-29"} | ${"2026-01-03"} | ${"endYear"}      | ${2026}  | ${"and ends in 2026"}
     ${"2024-12-29"} | ${"2026-01-03"} | ${"majorityYear"} | ${2025}  | ${"3 days in 2024, 365 in 2025, 3 in 2026: the published label"}
-    ${"2019-12-29"} | ${"2021-01-02"} | ${"startYear"}    | ${2019}  | ${"Canadian Tire (CA) 2020 starts in 2019"}
+    ${"2019-12-29"} | ${"2021-01-02"} | ${"startYear"}    | ${2019}  | ${"ONS (UK) 2020 starts in 2019"}
     ${"2019-12-29"} | ${"2021-01-02"} | ${"endYear"}      | ${2021}  | ${"and ends in 2021"}
     ${"2019-12-29"} | ${"2021-01-02"} | ${"majorityYear"} | ${2020}  | ${"3 days in 2019, 366 in 2020, 2 in 2021: the published label"}
-    ${"2023-06-26"} | ${"2024-06-30"} | ${"startYear"}    | ${2023}  | ${"Woolworths Group (AU) F24 starts in 2023"}
-    ${"2023-06-26"} | ${"2024-06-30"} | ${"endYear"}      | ${2024}  | ${"and ends in 2024: the published label"}
+    ${"2023-06-26"} | ${"2024-06-30"} | ${"startYear"}    | ${2023}  | ${"a June year end starts in 2023"}
+    ${"2023-06-26"} | ${"2024-06-30"} | ${"endYear"}      | ${2024}  | ${"and ends in 2024"}
     ${"2023-06-26"} | ${"2024-06-30"} | ${"majorityYear"} | ${2023}  | ${"5 + 184 = 189 days in 2023, 182 in 2024"}
     ${"2023-01-29"} | ${"2024-02-03"} | ${"startYear"}    | ${2023}  | ${"NRF (US) fiscal 2023: the published label"}
     ${"2023-01-29"} | ${"2024-02-03"} | ${"majorityYear"} | ${2023}  | ${"337 days in 2023, 34 in 2024"}
