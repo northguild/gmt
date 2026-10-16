@@ -63,7 +63,7 @@ You do not delegate. Return the finished plan to whoever invoked you — the mai
 
 A plan the main session can hand straight to `tdd-dev`. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test.
 
-**Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md`, 150 lines or fewer: scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
+**Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md`, 150 lines or fewer, starting with frontmatter `story`, `issue`, `status: draft` and `dox: none` (the [plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over) reads it; only the owner's approval sets `approved`): scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
 
 ### The Authority table
 

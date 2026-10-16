@@ -59,7 +59,9 @@ same size as a right one.
 Planning is [`/plan-story`](../plan-story/SKILL.md), in its own session. To implement, read the
 story id from the branch (`feature/197-mar-16-…` → `MAR-16`) and load
 `context/domination/specs/<ID>/index.md`, plus `context/dox/specs/<id>/index.md` if it exists.
-No spec folder and the story is not small: run `/plan-story` first.
+For a story (categories A, G and H), run `python3 .agents/skills/plan-story/scripts/plan_gate.py`
+first. On `FAIL`, stop and tell the owner to run `/plan-story`; never plan inline. Bug fixes,
+refactors, docs, research and reviews have no story spec and skip the gate.
 
 ## Hand each worker the least context that works
 

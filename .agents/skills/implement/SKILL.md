@@ -1,30 +1,45 @@
 ---
 name: implement
-description: "Implement a piece of work based on a spec or set of tickets."
+description: "Implement a planned gmt or Dox story end to end, after a plan gate confirms /plan-story approved its spec. Use when the owner types /implement in a story worktree."
 disable-model-invocation: true
 ---
 
-Implement the work described by the user in the spec or tickets.
+# Implement a planned story
 
-If the work is an epic story — a `CORE-*`/`DOX-*`/realm ID with a row in
-`context/domination/tracker.md` or `context/dox/tracker.md` — read its `Blocked by` cell
-first. A non-empty cell means something has to land before this can start: say so instead of
-working around it. A `(parenthesised)` entry is not a blocker — it is a shared primitive this
-story has to build itself, so fold it into the work and say you are doing that.
-`pnpm deps:ready` lists what is startable.
+## 1. Gate — nothing runs until the plan is approved
 
-Use /tdd where possible, at pre-agreed seams.
+```bash
+python3 .agents/skills/plan-story/scripts/plan_gate.py          # story from the branch name
+python3 .agents/skills/plan-story/scripts/plan_gate.py MAR-16   # or name it
+```
 
-Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+- **PASS:** continue.
+- **FAIL:** stop. Show the owner each `FAIL` line and say: "Run `/plan-story` first." Do not plan
+  inline, do not write a spec yourself, and do not work around a failed gate.
 
-Once done, use /code-review to review the work.
+The gate checks that the spec index exists, is marked `status: approved`, stays within 150
+lines, links slices that exist and stay within 200 lines, and records the Dox decision
+(`dox: none` or an approved Dox spec).
 
-For an epic story, flip its `Status` to `Done` in the tracker and run `pnpm deps:sync`.
-Flipping the status is what clears the story from every other row's `Blocked by` cell, and
-`sync` is what applies it. If the work changed what the story consumes, update its
-`## What gmt provides (do not re-implement)` section first — the column is generated from it.
+## 2. Blocked by
 
-Leave every change unstaged in the working tree and report that the work is ready. Do not
-`git add`, `git commit`, `git push`, branch, or open a PR unless the user asks you to in plain
-words (see [AGENTS.md § Git — Only on an Explicit Instruction](../../../AGENTS.md#git--only-on-an-explicit-instruction)).
-If a commit message would help, draft one with `/commit-message`.
+Read the story's `Blocked by` cell in `context/domination/tracker.md` (or `context/dox/tracker.md`).
+A non-empty cell means something has to land first: say so instead of working around it. A
+`(parenthesised)` entry is not a blocker — it is a shared primitive this story builds itself, so
+fold it into the work and say so. `pnpm deps:ready` lists what is startable.
+
+## 3. Build
+
+Follow [`/pipeline`](../pipeline/SKILL.md) from "Find the spec": tdd-dev, tester and gmt-reviewer
+per library slice, then dox-builder and dox-tester per Dox slice, then finalizer. Each worker gets
+the index plus its own slice.
+
+## 4. Finish
+
+`finalizer` flips the story's `Status` to `Done` and runs `pnpm deps:sync`. If the work changed
+what the story consumes, update its `## What gmt provides (do not re-implement)` section first —
+the `Blocked by` column is generated from it.
+
+Leave every change unstaged and report that the work is ready. Do not `git add`, commit, push,
+branch or open a PR unless the owner asks in plain words
+([AGENTS.md § Git](../../../AGENTS.md#git--only-on-an-explicit-instruction)).

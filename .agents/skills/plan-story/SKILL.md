@@ -66,10 +66,23 @@ candidate, the "why" as the description.
 200 lines or fewer each. Every tool ships with its Dox chat button. Grill its open questions as
 in 4b before it finalizes. If the owner chose none, skip.
 
-## 6. Hand over
+## 6. Approve and hand over
 
-Show the owner the spec paths and each index's slice table, and nothing else. Then tell them:
-"Run `/clear`, then say `implement` — `/pipeline` picks the specs up from the branch name."
+Every index starts with frontmatter the architects write as a draft:
+
+```yaml
+---
+story: MAR-16
+issue: 197
+status: draft        # approved only after grilling ends and the owner approves
+dox: none            # or context/dox/specs/mar-16/index.md
+---
+```
+
+Show the owner the spec paths and each index's slice table. Ask with `AskUserQuestion` whether to
+approve. On yes, set `status: approved` in each index (library and Dox) and set `dox:` in the
+library index, then run `python3 .agents/skills/plan-story/scripts/plan_gate.py` — it must print
+`PASS`. Then tell the owner: "Run `/clear`, then `/implement`." 
 
 ## Rules
 

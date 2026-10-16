@@ -47,7 +47,7 @@ Skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Run t
 | `/code-review`     | GMT-specific review checklist — see note below                              |
 | `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes                    |
 | `/tdd`             | Vertical-slice red → green reference                                        |
-| `/implement`       | Implement a spec or ticket end to end (leaves changes unstaged)             |
+| `/implement`       | Implements a planned story; a plan gate stops it until `/plan-story` approved the spec |
 | `/research`        | Research a question against primary sources into a Markdown file            |
 | `/prototype`       | Throwaway prototype to answer a design question                             |
 | `/handoff`         | Write a handoff note for the next session                                   |

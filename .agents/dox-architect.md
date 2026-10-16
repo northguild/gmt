@@ -80,7 +80,9 @@ chooses; the main session then resumes you with the choice and you write the spe
    docs so `context/dox/` gets corrected rather than drifting.
 2. **Write the execution spec** for `dox-builder`: exact files to create and modify, the
    constraints and traps from `built.md` that apply, and a definition of done. Keep the spec to
-   150 lines or fewer; link `built.md` sections instead of copying them.
+   150 lines or fewer; link `built.md` sections instead of copying them. For a planned story,
+   write it as `context/dox/specs/<id>/index.md` with frontmatter `story`, `status: draft`, plus
+   one slice per tool ([plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over)).
 3. **Return the spec** to the main session. It runs `dox-builder`, then `dox-tester`, at most
    **2** builder → tester iterations ([pipeline](./skills/pipeline/SKILL.md)).
 4. **Close-out is part of the spec.** Its definition of done tells `dox-builder` to update `built.md` so it still describes what is built — present tense, the
