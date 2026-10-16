@@ -66,7 +66,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `toTT` from SPA-47 — GMST formulations mix UT1 and TT arguments
 - `taiMinusUtc` from SPA-48 — the TT − UTC link for dates the leap-second table covers
 - `toNanoseconds` from CORE-1 — precision conversion
-- `Position` / `isValidPosition` from CORE-79 — the observer's position
+- `Position` from CORE-79 — the observer's position; checked with the internal `readPosition` helper, returning `null` for an invalid one
 
 ## Verification
 

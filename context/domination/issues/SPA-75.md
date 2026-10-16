@@ -53,7 +53,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `floorToZone` / `bucketRange` from CORE-5 — the local day being searched
 - `resolveLocal` from CORE-4 — local date to instant
 - `toNanoseconds` from CORE-1 — exact interpolation
-- `Position` / `isValidPosition` from CORE-79 — the `location` argument and the `subsolarPoint` result
+- `Position` from CORE-79 — the `location` argument and the `subsolarPoint` result; `location` is checked with the internal `readPosition` helper, and an invalid one returns `null`
 
 ## Verification
 

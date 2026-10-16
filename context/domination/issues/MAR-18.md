@@ -47,7 +47,7 @@ GMT can represent IANA zones. It cannot represent a captain-declared offset, a z
 - `mergeIntervals` from CORE-6 — building the offset-in-force timeline
 - `spanMs` from CORE-2 — nearest-candidate selection for the short DTG
 - `regex/` — pattern matchers
-- `Position` / `isValidPosition` from CORE-79 — the vessel's position
+- `Position` from CORE-79 — the vessel's position; checked with the internal `readPosition` helper, returning `null` for an invalid one
 
 ## Verification
 
