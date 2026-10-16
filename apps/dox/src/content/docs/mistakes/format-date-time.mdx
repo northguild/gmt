@@ -15,11 +15,11 @@ import Mistake from "../../../components/Mistake.astro";
   severity="high"
   title="Using Intl.DateTimeFormat directly"
   description="Intl.DateTimeFormat does not cover GMT's extended format set (Rfc2822, HTTP, SQL, Rfc3339, relative), and the order of its formatToParts output varies by locale. GMT's format functions are consistent across locales and formats."
-  wrongCode={`const f = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
-f.format(new Date("2024-03-15")); // "Thursday, March 14, 2024" in New York — the Date is UTC midnight`}
+  wrongCode={`const f = new Intl.DateTimeFormat("en", { dateStyle: "full" });
+f.format(new Date("2024-03-15")); // "Thursday, March 14, 2024" in São Paulo — the Date is UTC midnight`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
-formatDate("2024-03-15", "en-US", { dateStyle: "full" }); // "Friday, March 15, 2024" — no time zone involved`}
+formatDate("2024-03-15", "en", { dateStyle: "full" }); // "Friday, March 15, 2024" — no time zone involved`}
 />
 
 <Mistake
@@ -57,7 +57,7 @@ getLocaleMonthNames("not-a-locale-!!"); // [] — only a malformed tag is reject
   wrongCode={`// no equivalent of format("{yyyy}-{MM}-{dd}", date)`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
-formatDate("2024-03-15", "en-US", { dateStyle: "long" }); // "March 15, 2024" — dedicated function, no tokens`}
+formatDate("2024-03-15", "en", { dateStyle: "long" }); // "March 15, 2024" — dedicated function, no tokens`}
 />
 
 <Mistake
@@ -75,11 +75,11 @@ formatDate("2024-03-15", "ja-JP", { dateStyle: "long" }); // "2024年3月15日" 
   severity="medium"
   title="Confusing formatCalendar with formatRelativeDateTime"
   description="formatCalendar names the calendar day and the time of a datetime — 'tomorrow at 9:00 AM' — and falls back to an absolute date a week or more away. formatRelativeDateTime states a distance — 'tomorrow', 'in 3 hours', '3 days ago' — with no time of day. They have different output shapes."
-  wrongCode={`formatCalendar("2024-03-16T09:00:00", "en-US", { reference: "2024-03-15T08:00:00" });
+  wrongCode={`formatCalendar("2024-03-16T09:00:00", "en", { reference: "2024-03-15T08:00:00" });
 // "tomorrow at 9:00 AM" — used where a relative distance was wanted`}
   rightCode={`import { formatRelativeDateTime } from "@northguild/gmt";
 
-formatRelativeDateTime("2024-03-16T09:00:00", "en-US", { reference: "2024-03-15T08:00:00" }); // "tomorrow"`}
+formatRelativeDateTime("2024-03-16T09:00:00", "en", { reference: "2024-03-15T08:00:00" }); // "tomorrow"`}
 />
 
 ## See also

@@ -8,22 +8,22 @@ import Scenario from "~/components/Scenario.astro";
 
 <Scenario
   title="A 26-Hour Rail Leg Across Spring-Forward"
-  description="A train departs New York at 20:00 on 9 March 2024 and its scheduled running time is 26 hours. Clocks spring forward at 02:00 that night. When does it arrive?"
+  description="A train departs London at 20:00 on 30 March 2024 and its scheduled running time is 26 hours. Clocks spring forward at 01:00 that night. When does it arrive?"
   naiveCode={`// The naive approach: add a day and two hours to the wall clock
-const departure = "2024-03-09T20:00:00"; // local wall time
-// "one day later" is 2024-03-10T20:00:00, plus two hours is 22:00
-const arrival = "2024-03-10T22:00:00";
-// The train has run 25 elapsed hours at 22:00 on the 10th, not 26.
+const departure = "2024-03-30T20:00:00"; // local wall time
+// "one day later" is 2024-03-31T20:00:00, plus two hours is 22:00
+const arrival = "2024-03-31T22:00:00";
+// The train has run 25 elapsed hours at 22:00 on the 31st, not 26.
 // The published arrival is an hour early, and every connection off it is wrong.`}
-  explanation={`The night of 9 March 2024 is 23 hours long in New York. "A day later" on the wall clock is only 23 elapsed hours, so a wall-clock addition of one day and two hours puts the train in the station after 25 hours of running, an hour before it is really there. A running time is *elapsed* time: the train does not go faster because the clocks changed. \`transitTime\` adds the duration as exact time in the departure's own zone, so a \`D\` component is 24 hours exactly and the arrival's wall clock shows whatever offset is in force when it gets there.`}
+  explanation={`The night of 30 March 2024 is 23 hours long in London. "A day later" on the wall clock is only 23 elapsed hours, so a wall-clock addition of one day and two hours puts the train in the station after 25 hours of running, an hour before it is really there. A running time is *elapsed* time: the train does not go faster because the clocks changed. \`transitTime\` adds the duration as exact time in the departure's own zone, so a \`D\` component is 24 hours exactly and the arrival's wall clock shows whatever offset is in force when it gets there.`}
   gmtCode={`import { transitTime } from "@northguild/gmt/transport";
 
-transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "PT26H");
-// "2024-03-10T23:00:00-04:00[America/New_York]" — 26 elapsed hours, EDT on arrival
+transitTime("2024-03-30T20:00:00+00:00[Europe/London]", "PT26H");
+// "2024-03-31T23:00:00+01:00[Europe/London]" — 26 elapsed hours, BST on arrival
 
 // P1DT2H is the same 26 hours: a day is 24 exact hours here, not "tomorrow"
-transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "P1DT2H");
-// "2024-03-10T23:00:00-04:00[America/New_York]"`}
+transitTime("2024-03-30T20:00:00+00:00[Europe/London]", "P1DT2H");
+// "2024-03-31T23:00:00+01:00[Europe/London]"`}
   fixedSpecId="transitTime"
 />
 

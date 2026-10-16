@@ -30,8 +30,8 @@ cutoffAt(departure, "PT24H", { timeZone: "Asia/Shanghai" });
 
 In the playground, move the anchor by a day and watch the deadline move with it: a rescheduled
 event is a new call, not a stored deadline to fix. Try a 96-hour offset from an arrival,
-`cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" })`, which is exact
-elapsed time across New York's fall-back and reads 13:00, not the arrival's 12:00. The rules are
+`cutoffAt("2024-10-29T12:00:00Z", "PT96H", { timeZone: "Europe/London" })`, which is exact
+elapsed time across London's fall-back and reads 13:00, not the arrival's 12:00. The rules are
 in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/#the-anchor-is-your-event).
 
 Open the [Cut-off

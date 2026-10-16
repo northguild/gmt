@@ -56,20 +56,20 @@ import {
   isBusinessDay,
 } from "@northguild/gmt";
 
-const nyse = {
+const london = {
   weekend: [6, 7],
-  holidays: ["2024-05-31", "2024-07-04"],
-  timeZone: "America/New_York",
+  holidays: ["2024-05-31", "2024-12-25"],
+  timeZone: "Europe/London",
 };
 
-businessDaysBetween("2024-07-01", "2024-07-05", nyse);
-// 3 — start exclusive, end inclusive, and 4 July is a holiday
+businessDaysBetween("2024-12-23", "2024-12-27", london);
+// 3 — start exclusive, end inclusive, and 25 December is a holiday
 
-nextBusinessDay("2024-07-03", nyse);
-// "2024-07-05" — strictly after, skipping the holiday
+nextBusinessDay("2024-12-24", london);
+// "2024-12-26" — strictly after, skipping the holiday
 
-previousBusinessDay("2024-07-05", nyse);
-// "2024-07-03"
+previousBusinessDay("2024-12-26", london);
+// "2024-12-24"
 ```
 
 ## Roll a date onto a working day
@@ -82,16 +82,16 @@ explicit convention. The six conventions are `following`, `modifiedFollowing`,
 alone. `nextBusinessDay` and `previousBusinessDay` are the strict neighbours.
 
 ```typescript
-rollDate("2024-05-31", "following", nyse);
+rollDate("2024-05-31", "following", london);
 // "2024-06-03" — forward past the weekend
 
-rollDate("2024-05-31", "modifiedFollowing", nyse);
+rollDate("2024-05-31", "modifiedFollowing", london);
 // "2024-05-30" — backward instead, because forward leaves May
 
-rollDate("2024-03-15", "endOfMonth", nyse);
+rollDate("2024-03-15", "endOfMonth", london);
 // "2024-03-29" — March's last working day; March ends on a Sunday
 
-rollDate("2024-06-01", "none", nyse);
+rollDate("2024-06-01", "none", london);
 // "2024-06-01" — unadjusted, Saturday or not
 ```
 
@@ -107,14 +107,14 @@ that may disagree. An empty list has no calendar to return, so `mergeCalendars([
 `null`.
 
 ```typescript
-const london = { weekend: [6, 7], holidays: ["2024-05-06"], timeZone: "Europe/London" };
+const newYork = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" };
 
-const both = mergeCalendars([nyse, london]);
-// { weekend: [6, 7], holidays: ["2024-05-06", "2024-05-31", "2024-07-04"], timeZone: "America/New_York" }
+const both = mergeCalendars([london, newYork]);
+// { weekend: [6, 7], holidays: ["2024-05-31", "2024-07-04", "2024-12-25"], timeZone: "Europe/London" }
 // timeZone is the first calendar's; the merged set spans localities that may disagree
 
-isBusinessDay("2024-05-06", both);
-// false — a UK holiday closes the merged calendar too
+isBusinessDay("2024-07-04", both);
+// false — a US holiday closes the merged calendar too
 
 mergeCalendars([]);
 // null

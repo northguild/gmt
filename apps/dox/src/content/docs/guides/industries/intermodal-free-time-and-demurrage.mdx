@@ -112,23 +112,23 @@ lays the window out.
 ```typescript
 import { freeTimeExpiry } from "@northguild/gmt/intermodal";
 
-// A Friday afternoon discharge in New York with three free days.
+// A Friday afternoon discharge in São Paulo with three free days.
 freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
   basis: "calendar",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
 });
-// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T03:00:00Z" }
 
 // The same tariff read the other way: one more day.
 freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
   basis: "calendar",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "nextDay",
 });
-// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T04:00:00Z" }
+// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T03:00:00Z" }
 
-freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York" });
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/Sao_Paulo" });
 // null — firstDay has no default
 ```
 
@@ -150,10 +150,10 @@ moves the count backwards.
 // 23:00 local on the 14th: the free day is over an hour later.
 freeTimeExpiry("2024-06-15T03:00:00Z", 1, {
   basis: "calendar",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
 });
-// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-14", expiresAt: "2024-06-15T04:00:00Z" }
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-14", expiresAt: "2024-06-15T03:00:00Z" }
 
 // Santiago skipped midnight on 8 September 2024, so that day starts at 01:00.
 freeTimeExpiry("2024-09-07T15:00:00Z", 1, {
@@ -178,38 +178,38 @@ terminal's
 `null`, because a working-day count with a guessed weekend is a wrong charge.
 
 ```typescript
-const terminal = { weekend: [6, 7], holidays: [], timeZone: "America/New_York" };
+const terminal = { weekend: [6, 7], holidays: [], timeZone: "America/Sao_Paulo" };
 
 // Friday, Monday, Tuesday: the weekend does not count.
 freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
   basis: "working",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
   calendar: terminal,
 });
-// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-18", expiresAt: "2024-06-19T04:00:00Z" }
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-18", expiresAt: "2024-06-19T03:00:00Z" }
 
 // A terminal holiday on the Monday moves expiry a day.
 freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
   basis: "working",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
   calendar: { ...terminal, holidays: ["2024-06-17"] },
 });
-// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-19", expiresAt: "2024-06-20T04:00:00Z" }
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-19", expiresAt: "2024-06-20T03:00:00Z" }
 
 // A Saturday discharge: free time starts Monday under either convention.
 freeTimeExpiry("2024-06-15T14:00:00Z", 2, {
   basis: "working",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
   calendar: terminal,
 });
-// { freeTimeStart: "2024-06-17", lastFreeDay: "2024-06-18", expiresAt: "2024-06-19T04:00:00Z" }
+// { freeTimeStart: "2024-06-17", lastFreeDay: "2024-06-18", expiresAt: "2024-06-19T03:00:00Z" }
 
 freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
   basis: "working",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
 });
 // null — a working-day count needs the terminal's calendar
@@ -233,23 +233,23 @@ import { chargeableDays } from "@northguild/gmt/intermodal";
 const tariff = {
   basis: "calendar",
   chargeBasis: "calendar",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   firstDay: "eventDay",
 };
 
 // Out exactly as free time ends: nothing to pay.
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff);
-// { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T03:00:00Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T03:00:00Z",
 //   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
 
 // One second later: one charged day, and its date.
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
-// { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T03:00:01Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T03:00:00Z",
 //   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
 
 // Out on the second free day: two free days used, none charged.
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-15T15:00:00Z", 3, tariff);
-// { freeDaysUsed: 2, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
+// { freeDaysUsed: 2, chargeableDays: 0, expiresAt: "2024-06-17T03:00:00Z",
 //   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
 ```
 
@@ -266,7 +266,7 @@ there is no last free day to name.
 
 ```typescript
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T15:00:00Z", 0, tariff);
-// { freeDaysUsed: 0, chargeableDays: 3, expiresAt: "2024-06-14T04:00:00Z",
+// { freeDaysUsed: 0, chargeableDays: 3, expiresAt: "2024-06-14T03:00:00Z",
 //   chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"],
 //   byTier: [{ from: 1, to: null, days: 3 }] }
 ```
@@ -283,30 +283,30 @@ time and charges alike, so neither counts a day the gate is closed or a holiday:
 either.
 
 ```typescript
-const shutForJuneteenth = { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" };
+const shutForLabourDay = { weekend: [6, 7], holidays: ["2024-05-01"], timeZone: "Africa/Johannesburg" };
 
 // Working-day free time, every calendar day charged after it.
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+chargeableDays("2024-04-26T19:00:00Z", "2024-05-06T15:00:00Z", 3, {
   basis: "working",
   chargeBasis: "calendar",
-  timeZone: "America/New_York",
+  timeZone: "Africa/Johannesburg",
   firstDay: "eventDay",
-  calendar: shutForJuneteenth,
+  calendar: shutForLabourDay,
 });
-// { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-06-19T04:00:00Z",
-//   chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],
+// { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-04-30T22:00:00Z",
+//   chargedDates: ["2024-05-01", "2024-05-02", "2024-05-03", "2024-05-04", "2024-05-05", "2024-05-06"],
 //   byTier: [{ from: 1, to: null, days: 6 }] }
 
 // Working days throughout: the holiday and the weekend are not charged.
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+chargeableDays("2024-04-26T19:00:00Z", "2024-05-06T15:00:00Z", 3, {
   basis: "working",
   chargeBasis: "working",
-  timeZone: "America/New_York",
+  timeZone: "Africa/Johannesburg",
   firstDay: "eventDay",
-  calendar: shutForJuneteenth,
+  calendar: shutForLabourDay,
 });
-// { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z",
-//   chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],
+// { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-04-30T22:00:00Z",
+//   chargedDates: ["2024-05-02", "2024-05-03", "2024-05-06"],
 //   byTier: [{ from: 1, to: null, days: 3 }] }
 ```
 
@@ -319,7 +319,7 @@ index. GMT computes days, never money.
 
 ```typescript
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { ...tariff, tiers: [5, 10] });
-// { freeDaysUsed: 3, chargeableDays: 12, expiresAt: "2024-06-17T04:00:00Z",
+// { freeDaysUsed: 3, chargeableDays: 12, expiresAt: "2024-06-17T03:00:00Z",
 //   chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21",
 //                  "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26",
 //                  "2024-06-27", "2024-06-28"],

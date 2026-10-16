@@ -64,7 +64,7 @@ addDate("2024-12-15", { months: 1 }); // "2025-01-15" — handles overflow`}
   severity="medium"
   title="Confusing getWeekOfMonth with parseWeekFromDate"
   description="getWeekOfMonth tells you which week-of-month a date falls in (1-6). parseWeekFromDate returns the ISO week number (1-53). They answer different questions and produce different numbers for the same input."
-  wrongCode={`const wom = getWeekOfMonth("2024-01-31", "en-US"); // 5
+  wrongCode={`const wom = getWeekOfMonth("2024-01-31", "en"); // 5
 // used as if it were an ISO week number`}
   rightCode={`import { getIsoWeekDate, parseWeekFromDate } from "@northguild/gmt";
 

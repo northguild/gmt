@@ -15,11 +15,11 @@ designed to make the boundary impossible to cross by accident.
 | Family | Types | Namespace | Example |
 | --- | --- | --- | --- |
 | **Plain** | `PlainDate`, `PlainTime`, `PlainDateTime`, `Duration` | `@northguild/gmt/plain` | `"2024-03-17T14:30:00"` |
-| **Zoned** | `ZonedDateTime`, `Instant` | `@northguild/gmt/zoned` | `"2024-03-17T14:30:00-04:00[America/New_York]"` |
+| **Zoned** | `ZonedDateTime`, `Instant` | `@northguild/gmt/zoned` | `"2024-03-17T14:30:00+09:00[Asia/Tokyo]"` |
 
 - **Plain** values are calendar math without a timezone. `"2024-03-17T14:30:00"` is
   just numbers on a clock face — it has no instant behind it until you attach a zone.
-- **Zoned** values carry an IANA timezone identifier. `"2024-03-17T14:30:00-04:00[America/New_York]"`
+- **Zoned** values carry an IANA timezone identifier. `"2024-03-17T14:30:00+09:00[Asia/Tokyo]"`
   is a real, absolute instant. The bracketed zone is part of the value, not metadata.
 
 ## Why they never mix
@@ -39,9 +39,9 @@ both. If you need to move between them, use an explicit conversion:
 import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
 // Attach a timezone to a plain value — this is where DST disambiguation matters.
-convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
-// "2024-03-10T03:30:00.000-04:00[America/New_York]" — default "compatible" rounds the
-// nonexistent 2:30 AM forward. See DST Disambiguation for the full picture.
+convertPlainDateTimeToZoned("2024-03-31T01:30:00", "Europe/London");
+// "2024-03-31T02:30:00.000+01:00[Europe/London]" — default "compatible" rounds the
+// nonexistent 1:30 AM forward. See DST Disambiguation for the full picture.
 ```
 
 ## The other namespaces

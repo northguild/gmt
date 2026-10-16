@@ -50,47 +50,47 @@ scheduleDelivery([
 //     { arrival: "2024-06-15T17:00:00Z", localArrival: "2024-06-16T02:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S" }] }
 ```
 
-The journey — a truck to Los Angeles, a ship to Tokyo, a train onward — chained in one call:
+The journey — a truck to London, a ship to Tokyo, a train onward — chained in one call:
 
 ```typescript
-const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
+const truck = { departure: "2024-03-29T08:00:00+01:00[Europe/Berlin]", duration: "PT44H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" };
 const ship = { duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" };
 const rail = { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" };
 
 scheduleDelivery([truck, ship, rail]);
-// { eta: "2024-03-23T01:30:00+09:00[Asia/Tokyo]",
+// { eta: "2024-04-12T16:30:00+09:00[Asia/Tokyo]",
 //   legTimes: [
-//     { arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" },
-//     { arrival: "2024-03-21T14:00:00Z", localArrival: "2024-03-21T23:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" },
-//     { arrival: "2024-03-22T16:30:00Z", localArrival: "2024-03-23T01:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" } ] }
+//     { arrival: "2024-03-31T03:00:00Z", localArrival: "2024-03-31T04:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "truck" },
+//     { arrival: "2024-04-11T05:00:00Z", localArrival: "2024-04-11T14:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" },
+//     { arrival: "2024-04-12T07:30:00Z", localArrival: "2024-04-12T16:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" } ] }
 ```
 
 The ship has no `departure` of its own: it leaves when the truck's arrival plus its two-hour
-dwell allows. The truck lands at 05:00 in Los Angeles, three hours after the clocks sprang
-forward that morning. An offset table holding Los Angeles's winter −08:00 reads that arrival as
-04:00, an hour early, and every handoff time after it inherits the error. Open the whole journey
-in the [Delivery Scheduler](/tools/delivery-scheduler/) to see the itinerary flag the Los
-Angeles arrival 1 h early against that offset table's reading.
+dwell allows. The truck lands at 04:00 in London, three hours after the clocks sprang
+forward that morning. An offset table holding London's winter +00:00 reads that arrival as
+03:00, an hour early, and every handoff time after it inherits the error. Open the whole journey
+in the [Delivery Scheduler](/tools/delivery-scheduler/) to see the itinerary flag the
+London arrival 1 h early against that offset table's reading.
 
-**The Date Line.** A westbound leg out of Los Angeles at 23:00 on Friday 14 June lands in Tokyo
-at 02:00 on Sunday 16 June, after 11 elapsed hours.
+**The Date Line.** A westbound leg out of Tahiti at 23:00 on Friday 14 June lands in Auckland
+at 02:30 on Sunday 16 June, after 5 hours 30 minutes of elapsed time.
 
 ```typescript
-scheduleDelivery([{ departure: "2024-06-14T23:00:00-07:00[America/Los_Angeles]", duration: "PT11H", timeZone: "Asia/Tokyo" }]);
-// { eta: "2024-06-16T02:00:00+09:00[Asia/Tokyo]", … }
+scheduleDelivery([{ departure: "2024-06-14T23:00:00-10:00[Pacific/Tahiti]", duration: "PT5H30M", timeZone: "Pacific/Auckland" }]);
+// { eta: "2024-06-16T02:30:00+12:00[Pacific/Auckland]", … }
 ```
 
-Eastbound, a flight out of Tokyo at 17:00 on 17 June lands in Los Angeles at 11:00 the same
-date — six wall-clock hours before it left, by the clocks alone.
+Eastbound, a flight out of Auckland at 17:00 on 17 June lands in Tahiti at 00:30 the same
+date — sixteen and a half wall-clock hours before it left, by the clocks alone.
 
 ```typescript
 scheduleDelivery([
-  { departure: "2024-06-17T17:00:00+09:00[Asia/Tokyo]", duration: "PT10H", timeZone: "America/Los_Angeles", dwellAfter: "PT3H", mode: "air" },
-  { duration: "PT44H", timeZone: "America/Chicago", mode: "truck" },
+  { departure: "2024-06-17T17:00:00+12:00[Pacific/Auckland]", duration: "PT5H30M", timeZone: "Pacific/Tahiti", dwellAfter: "PT3H", mode: "air" },
+  { duration: "PT44H", timeZone: "Pacific/Rarotonga", mode: "ship" },
 ]);
-// { eta: "2024-06-19T12:00:00-05:00[America/Chicago]",
-//   legTimes: [{ arrival: "2024-06-17T18:00:00Z", localArrival: "2024-06-17T11:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT3H", mode: "air" },
-//     { arrival: "2024-06-19T17:00:00Z", localArrival: "2024-06-19T12:00:00-05:00[America/Chicago]", dwellAfter: "PT0S", mode: "truck" }] }
+// { eta: "2024-06-18T23:30:00-10:00[Pacific/Rarotonga]",
+//   legTimes: [{ arrival: "2024-06-17T10:30:00Z", localArrival: "2024-06-17T00:30:00-10:00[Pacific/Tahiti]", dwellAfter: "PT3H", mode: "air" },
+//     { arrival: "2024-06-19T09:30:00Z", localArrival: "2024-06-18T23:30:00-10:00[Pacific/Rarotonga]", dwellAfter: "PT0S", mode: "ship" }] }
 ```
 
 Nothing special happens at the Date Line, because each end here is only an instant rendered in
@@ -152,10 +152,10 @@ the departure is already exact, and an invalid `startTimeZone` returns `null` ev
 needs it.
 
 ```typescript
-scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/New_York" });
-// { eta: "2024-06-15T15:00:00+00:00[UTC]", … } — read as 10:00 in New York
+scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Asia/Kolkata" });
+// { eta: "2024-06-15T05:30:00+00:00[UTC]", … } — read as 10:00 in Kolkata
 
-scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/New_York" });
+scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Asia/Kolkata" });
 // { eta: "2024-06-15T11:00:00+00:00[UTC]", … } — already exact: the option is ignored
 
 scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Mars/Olympus_Mons" });
@@ -184,8 +184,8 @@ scheduleDelivery([
 A bracket that contradicts its offset returns `null`.
 
 ```typescript
-scheduleDelivery([{ departure: "2024-06-15T10:00:00-05:00[America/New_York]", duration: "PT1H", timeZone: "UTC" }]);
-// null — New York is -04:00 in June: the bracket and the offset disagree
+scheduleDelivery([{ departure: "2024-06-15T10:00:00+00:00[Europe/London]", duration: "PT1H", timeZone: "UTC" }]);
+// null — London is +01:00 in June: the bracket and the offset disagree
 ```
 
 The resolution rule, stated once: an ambiguous wall time (a fall-back night's repeated hour)
@@ -194,20 +194,20 @@ resolves to the later instant. Writing the offset picks the other pass of a repe
 names no instant in a skipped one, because none exists.
 
 ```typescript
-// 01:30 on New York's fall-back night, with no offset: the earlier pass
-scheduleDelivery([{ departure: "2024-11-03T01:30:00[America/New_York]", duration: "PT1H", timeZone: "America/New_York" }]);
-// { eta: "2024-11-03T01:30:00-05:00[America/New_York]", … } — it left 05:30Z
+// 02:30 on Sydney's fall-back night, with no offset: the earlier pass
+scheduleDelivery([{ departure: "2024-04-07T02:30:00[Australia/Sydney]", duration: "PT1H", timeZone: "Australia/Sydney" }]);
+// { eta: "2024-04-07T02:30:00+10:00[Australia/Sydney]", … } — it left 15:30Z
 
-// The same 01:30, with -05:00 written: the later pass
-scheduleDelivery([{ departure: "2024-11-03T01:30:00-05:00[America/New_York]", duration: "PT1H", timeZone: "America/New_York" }]);
-// { eta: "2024-11-03T02:30:00-05:00[America/New_York]", … } — it left 06:30Z
+// The same 02:30, with +10:00 written: the later pass
+scheduleDelivery([{ departure: "2024-04-07T02:30:00+10:00[Australia/Sydney]", duration: "PT1H", timeZone: "Australia/Sydney" }]);
+// { eta: "2024-04-07T03:30:00+10:00[Australia/Sydney]", … } — it left 16:30Z
 
-// 02:30 on New York's spring-forward night never shows: it resolves to 03:30
-scheduleDelivery([{ departure: "2024-03-10T02:30:00[America/New_York]", duration: "PT1H", timeZone: "America/New_York" }]);
-// { eta: "2024-03-10T04:30:00-04:00[America/New_York]", … } — it left 07:30Z, 03:30 EDT
+// 01:30 on London's spring-forward night never shows: it resolves to 02:30
+scheduleDelivery([{ departure: "2024-03-31T01:30:00[Europe/London]", duration: "PT1H", timeZone: "Europe/London" }]);
+// { eta: "2024-03-31T03:30:00+01:00[Europe/London]", … } — it left 01:30Z, 02:30 BST
 
 // Writing an offset into the skipped hour still names nothing: null
-scheduleDelivery([{ departure: "2024-03-10T02:30:00-05:00[America/New_York]", duration: "PT1H", timeZone: "America/New_York" }], { startTimeZone: "America/New_York" });
+scheduleDelivery([{ departure: "2024-03-31T01:30:00+00:00[Europe/London]", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" });
 // null — no offset names a time the clock skipped
 ```
 
@@ -217,12 +217,12 @@ the first at or after the previous arrival plus its dwell. When neither pass is 
 takes the earlier pass, and the connection is missed.
 
 ```typescript
-// Leg 1 lands in New York at 01:00 EST (06:00Z), after the 01:30 EDT pass has gone
+// Leg 1 lands in London at 01:00 GMT (01:00Z), after the 01:30 BST pass has gone
 scheduleDelivery([
-  { departure: "2024-11-03T06:00:00Z", duration: "PT0S", timeZone: "America/New_York" },
-  { departure: "2024-11-03T01:30:00", duration: "PT1H", timeZone: "UTC" },
+  { departure: "2024-10-27T01:00:00Z", duration: "PT0S", timeZone: "Europe/London" },
+  { departure: "2024-10-27T01:30:00", duration: "PT1H", timeZone: "UTC" },
 ]);
-// { eta: "2024-11-03T07:30:00+00:00[UTC]", … } — it left at the later pass, 01:30 EST (06:30Z)
+// { eta: "2024-10-27T02:30:00+00:00[UTC]", … } — it left at the later pass, 01:30 GMT (01:30Z)
 ```
 
 Read a printed timetable this way in the [Timetable Reader](/tools/timetable-reader/), and see
@@ -271,24 +271,24 @@ crossingTime("2024-06-15T08:00:00Z", "2024-06-15T17:30:00Z", "Europe/Berlin");
 // { duration: "PT9H30M", enter: "2024-06-15T10:00:00+02:00[Europe/Berlin]", exit: "2024-06-15T19:30:00+02:00[Europe/Berlin]" }
 
 // Seven elapsed hours, while the wall clocks read 00:00 and 08:00
-crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York");
-// { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]", exit: "2024-03-10T08:00:00-04:00[America/New_York]" }
+crossingTime("2024-03-31T00:00:00Z", "2024-03-31T07:00:00Z", "Europe/London");
+// { duration: "PT7H", enter: "2024-03-31T00:00:00+00:00[Europe/London]", exit: "2024-03-31T08:00:00+01:00[Europe/London]" }
 
-// One elapsed hour; both ends read 01:30, and the offsets tell them apart
-crossingTime("2024-11-03T05:30:00Z", "2024-11-03T06:30:00Z", "America/New_York");
-// { duration: "PT1H", enter: "2024-11-03T01:30:00-04:00[America/New_York]", exit: "2024-11-03T01:30:00-05:00[America/New_York]" }
+// One elapsed hour; both ends read 02:30, and the offsets tell them apart
+crossingTime("2024-04-06T15:30:00Z", "2024-04-06T16:30:00Z", "Australia/Sydney");
+// { duration: "PT1H", enter: "2024-04-07T02:30:00+11:00[Australia/Sydney]", exit: "2024-04-07T02:30:00+10:00[Australia/Sydney]" }
 ```
 
 `targetZone` is always the rendering zone, and a bracket in the input never supplies it. A fixed
-offset renders with no DST: the spring-forward night on a fixed −05:00 reads 07:00, not New
-York's 08:00.
+offset renders with no DST: the spring-forward night on a fixed +00:00 reads 07:00, not
+London's 08:00.
 
 ```typescript
 crossingTime("2024-06-15T08:00:00+02:00[Europe/Berlin]", "2024-06-15T17:30:00+02:00[Europe/Berlin]", "America/Panama");
 // { duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" } — the offset fixes each instant, and the Berlin bracket is not checked
 
-crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "-05:00");
-// { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[-05:00]", exit: "2024-03-10T07:00:00-05:00[-05:00]" } — 07:00, not New York's 08:00
+crossingTime("2024-03-31T00:00:00Z", "2024-03-31T07:00:00Z", "+00:00");
+// { duration: "PT7H", enter: "2024-03-31T00:00:00+00:00[+00:00]", exit: "2024-03-31T07:00:00+00:00[+00:00]" } — 07:00, not London's 08:00
 ```
 
 A zero-length crossing is `PT0S`. An exit before its entry, an unknown zone, or a zoneless time

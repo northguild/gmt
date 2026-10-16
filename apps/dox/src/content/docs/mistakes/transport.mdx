@@ -27,8 +27,8 @@ Math.ceil(hours / 24);
 // 1 — the terminal bills 2`}
   rightCode={`import { dwellTime } from "@northguild/gmt/transport";
 
-dwellTime("2024-06-15T23:00:00-04:00[America/New_York]", "2024-06-16T01:00:00-04:00[America/New_York]");
-// { duration: "PT2H", enter: "2024-06-15T23:00:00-04:00[America/New_York]", exit: "2024-06-16T01:00:00-04:00[America/New_York]", calendarDays: 2 }`}
+dwellTime("2024-06-15T23:00:00+10:00[Australia/Sydney]", "2024-06-16T01:00:00+10:00[Australia/Sydney]");
+// { duration: "PT2H", enter: "2024-06-15T23:00:00+10:00[Australia/Sydney]", exit: "2024-06-16T01:00:00+10:00[Australia/Sydney]", calendarDays: 2 }`}
   rightSpecId="dwellTime"
 />
 
@@ -36,24 +36,24 @@ dwellTime("2024-06-15T23:00:00-04:00[America/New_York]", "2024-06-16T01:00:00-04
   severity="high"
   title="Counting dwell days from bare instants with no zone"
   description="A day count needs a place. Z and offset-only strings name a moment and nothing else, so with no targetZone there is no locality to count days in and dwellTime returns null rather than guessing. Pass the IANA zone of the terminal, or use entry strings that carry one."
-  wrongCode={`dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z");
+  wrongCode={`dwellTime("2024-06-15T13:00:00Z", "2024-06-15T15:00:00Z");
 // null — no place to count days in`}
   rightCode={`import { dwellTime } from "@northguild/gmt/transport";
 
-dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "America/New_York").calendarDays; // 2
-dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "Europe/Amsterdam").calendarDays; // 1`}
+dwellTime("2024-06-15T13:00:00Z", "2024-06-15T15:00:00Z", "Australia/Sydney").calendarDays; // 2
+dwellTime("2024-06-15T13:00:00Z", "2024-06-15T15:00:00Z", "Europe/Amsterdam").calendarDays; // 1`}
 />
 
 <Mistake
   severity="high"
   title="Adding a running time as a wall-clock duration"
   description="addZoned moves the wall clock by the date part of a duration, which is right for a recurring meeting and wrong for a running time. Across a spring-forward, one day and two hours on the wall clock is 25 elapsed hours. transitTime adds exact time, so P1DT2H is 26 hours and the arrival is an hour later, when the train is actually there."
-  wrongCode={`addZoned("2024-03-09T20:00:00-05:00[America/New_York]", { days: 1, hours: 2 });
-// "2024-03-10T22:00:00-04:00[America/New_York]" — only 25 elapsed hours`}
+  wrongCode={`addZoned("2024-03-30T20:00:00+00:00[Europe/London]", { days: 1, hours: 2 });
+// "2024-03-31T22:00:00+01:00[Europe/London]" — only 25 elapsed hours`}
   rightCode={`import { transitTime } from "@northguild/gmt/transport";
 
-transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "P1DT2H");
-// "2024-03-10T23:00:00-04:00[America/New_York]" — 26 elapsed hours`}
+transitTime("2024-03-30T20:00:00+00:00[Europe/London]", "P1DT2H");
+// "2024-03-31T23:00:00+01:00[Europe/London]" — 26 elapsed hours`}
   rightSpecId="transitTime"
 />
 
@@ -72,25 +72,25 @@ addZoned("2024-06-15T10:00:00+02:00[Europe/Berlin]", { months: 1 });
 <Mistake
   severity="high"
   title="Carrying last winter's offset into a summer departure"
-  description="A bracketed zone whose offset contradicts it is rejected, not reinterpreted: New York is -04:00 in June, so a departure written -05:00[America/New_York] is not a moment the zone ever showed, and transitTime returns the empty string as isValidZonedDateTime does. Write the offset the zone kept at that moment, or drop the bracket and keep only the offset if that is really all you know."
-  wrongCode={`transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H");
+  description="A bracketed zone whose offset contradicts it is rejected, not reinterpreted: London is +01:00 in June, so a departure written +00:00[Europe/London] is not a moment the zone ever showed, and transitTime returns the empty string as isValidZonedDateTime does. Write the offset the zone kept at that moment, or drop the bracket and keep only the offset if that is really all you know."
+  wrongCode={`transitTime("2024-06-15T10:00:00+00:00[Europe/London]", "PT2H");
 // "" — the offset contradicts the zone`}
   rightCode={`import { transitTime } from "@northguild/gmt/transport";
 
-transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "PT2H");
-// "2024-06-15T12:00:00-04:00[America/New_York]"`}
+transitTime("2024-06-15T10:00:00+01:00[Europe/London]", "PT2H");
+// "2024-06-15T12:00:00+01:00[Europe/London]"`}
 />
 
 <Mistake
   severity="medium"
   title="Rendering an arrival in a fixed offset instead of the destination's zone"
-  description="etaAtZone accepts a fixed offset as a zone, as Temporal does, but an offset observes no DST. On the fall-back night the destination is still on -04:00 for the first arrival and already on -05:00 for the second, so a fixed -05:00 shows the first an hour early (00:30 instead of 01:30). The second comes out right only because New York has just moved to -05:00, and all summer every arrival shows an hour early. GMT does not resolve an airport code to a zone, so pass the IANA identifier."
-  wrongCode={`etaAtZone("2024-11-03T05:30:00Z", "-05:00");
-// "2024-11-03T00:30:00-05:00[-05:00]" — New York was still on EDT; the board is an hour early`}
+  description="etaAtZone accepts a fixed offset as a zone, as Temporal does, but an offset observes no DST. On the fall-back night the destination is still on +11:00 for the first arrival and already on +10:00 for the second, so a fixed +10:00 shows the first an hour early (01:30 instead of 02:30). The second comes out right only because Sydney has just moved to +10:00, and for half the year every arrival shows an hour early. GMT does not resolve an airport code to a zone, so pass the IANA identifier."
+  wrongCode={`etaAtZone("2024-04-06T15:30:00Z", "+10:00");
+// "2024-04-07T01:30:00+10:00[+10:00]" — Sydney was still on +11:00; the board is an hour early`}
   rightCode={`import { etaAtZone } from "@northguild/gmt/transport";
 
-etaAtZone("2024-11-03T05:30:00Z", "America/New_York");
-// "2024-11-03T01:30:00-04:00[America/New_York]"`}
+etaAtZone("2024-04-06T15:30:00Z", "Australia/Sydney");
+// "2024-04-07T02:30:00+11:00[Australia/Sydney]"`}
   rightSpecId="etaAtZone"
 />
 
@@ -117,17 +117,17 @@ and the [Crossing Clock](/tools/crossing-clock/).
   title="Reading a handoff through an offset table"
   description="A fixed offset is a place's offset at one moment, not a standing fact. Reading an arrival that crosses a DST transition through the offset the table was built with misreads it by an hour. scheduleDelivery reads every handoff as an exact instant, never through a stale offset."
   wrongCode={`// The naive approach: one UTC offset per place, from a table
-const OFFSET_HOURS = { "America/Los_Angeles": -8 }; // Los Angeles, as the table was built in winter
-const departed = Date.parse("2024-03-08T08:00:00-06:00"); // Chicago, 08:00
-const arrived = departed + 46 * 36e5; // 2024-03-10T12:00:00.000Z
-const toLocal = (ms) => new Date(ms + OFFSET_HOURS["America/Los_Angeles"] * 36e5).toISOString().slice(0, 16);
-toLocal(arrived); // "2024-03-10T04:00" — an hour early: the clocks sprang forward that morning`}
+const OFFSET_HOURS = { "Europe/London": 0 }; // London, as the table was built in winter
+const departed = Date.parse("2024-03-29T08:00:00+01:00"); // Amsterdam, 08:00
+const arrived = departed + 46 * 36e5; // 2024-03-31T05:00:00.000Z
+const toLocal = (ms) => new Date(ms + OFFSET_HOURS["Europe/London"] * 36e5).toISOString().slice(0, 16);
+toLocal(arrived); // "2024-03-31T05:00" — an hour early: the clocks sprang forward that morning`}
   rightCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
 
-const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
+const truck = { departure: "2024-03-29T08:00:00+01:00[Europe/Amsterdam]", duration: "PT46H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" };
 scheduleDelivery([truck]);
-// { eta: "2024-03-10T05:00:00-07:00[America/Los_Angeles]",
-//   legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" }] } — 05:00, not 04:00`}
+// { eta: "2024-03-31T06:00:00+01:00[Europe/London]",
+//   legTimes: [{ arrival: "2024-03-31T05:00:00Z", localArrival: "2024-03-31T06:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "truck" }] } — 06:00, not 05:00`}
   rightSpecId="scheduleDelivery"
 />
 
@@ -135,48 +135,48 @@ scheduleDelivery([truck]);
   severity="high"
   title="Checking a connection against the arrival, not the arrival plus handling"
   description="An arrival is not the moment cargo can leave again: the handling time at the handoff, the minimum connect time, still has to pass. scheduleDelivery checks a scheduled departure against the arrival plus that dwell, and a departure inside it is a missed connection, not a comparison between two instants."
-  wrongCode={`Date.parse("2024-03-10T13:30:00Z") >= Date.parse("2024-03-10T12:00:00Z");
+  wrongCode={`Date.parse("2024-03-31T06:30:00Z") >= Date.parse("2024-03-31T05:00:00Z");
 // true — but the handoff needs two hours, and the ship sails inside it`}
   rightCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
 
-const truck = { departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" };
-const ship = { departure: "2024-03-10T06:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
-const laterShip = { departure: "2024-03-10T07:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
+const truck = { departure: "2024-03-29T08:00:00+01:00[Europe/Amsterdam]", duration: "PT46H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" };
+const ship = { departure: "2024-03-31T07:30:00[Europe/London]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
+const laterShip = { departure: "2024-03-31T08:30:00[Europe/London]", duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" };
 scheduleDelivery([truck, ship]); // null — missed
 scheduleDelivery([truck, laterShip]);
-// { eta: "2024-03-21T23:30:00+09:00[Asia/Tokyo]",
-//   legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" },
-//     { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] } — half an hour later, made`}
+// { eta: "2024-04-11T16:30:00+09:00[Asia/Tokyo]",
+//   legTimes: [{ arrival: "2024-03-31T05:00:00Z", localArrival: "2024-03-31T06:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "truck" },
+//     { arrival: "2024-04-11T07:30:00Z", localArrival: "2024-04-11T16:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "ship" }] } — half an hour later, made`}
   rightSpecId="scheduleDelivery"
 />
 
 <Mistake
   severity="medium"
   title="Stamping a published local time as UTC"
-  description="A published departure with no offset is a local time in the zone it was announced in, not UTC. Adding a bare Z reads New York's 10:00 as 10:00 UTC — four hours early in June. Read it through startTimeZone and scheduleDelivery adds the zone's real offset."
+  description="A published departure with no offset is a local time in the zone it was announced in, not UTC. Adding a bare Z reads São Paulo's 10:00 as 10:00 UTC — three hours early. Read it through startTimeZone and scheduleDelivery adds the zone's real offset."
   wrongCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
 
 scheduleDelivery([{ departure: "2024-06-15T10:00:00Z", duration: "PT1H", timeZone: "UTC" }]);
 // { eta: "2024-06-15T11:00:00+00:00[UTC]",
-//   legTimes: [{ arrival: "2024-06-15T11:00:00Z", localArrival: "2024-06-15T11:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } — read New York's 10:00 as UTC`}
+//   legTimes: [{ arrival: "2024-06-15T11:00:00Z", localArrival: "2024-06-15T11:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } — read São Paulo's 10:00 as UTC`}
   rightCode={`import { scheduleDelivery } from "@northguild/gmt/transport";
 
-scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/New_York" });
-// { eta: "2024-06-15T15:00:00+00:00[UTC]",
-//   legTimes: [{ arrival: "2024-06-15T15:00:00Z", localArrival: "2024-06-15T15:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } — 10:00 in New York, four hours later in UTC`}
+scheduleDelivery([{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/Sao_Paulo" });
+// { eta: "2024-06-15T14:00:00+00:00[UTC]",
+//   legTimes: [{ arrival: "2024-06-15T14:00:00Z", localArrival: "2024-06-15T14:00:00+00:00[UTC]", dwellAfter: "PT0S" }] } — 10:00 in São Paulo, three hours later in UTC`}
   rightSpecId="scheduleDelivery"
 />
 
 <Mistake
   severity="medium"
   title="Timing a crossing from its wall clocks"
-  description="Subtracting two printed clock readings assumes both ends share one offset. On a DST night they don't: New York's fall-back makes an hour-long crossing read as zero. crossingTime reads the exact elapsed time, never the printed digits."
-  wrongCode={`(Date.parse("2024-11-03T01:30:00") - Date.parse("2024-11-03T01:30:00")) / 36e5;
-// 0 — both ends read 01:30, so the naive subtraction sees no time pass at all`}
+  description="Subtracting two printed clock readings assumes both ends share one offset. On a DST night they don't: Sydney's fall-back makes an hour-long crossing read as zero. crossingTime reads the exact elapsed time, never the printed digits."
+  wrongCode={`(Date.parse("2024-04-07T02:30:00") - Date.parse("2024-04-07T02:30:00")) / 36e5;
+// 0 — both ends read 02:30, so the naive subtraction sees no time pass at all`}
   rightCode={`import { crossingTime } from "@northguild/gmt/transport";
 
-crossingTime("2024-11-03T05:30:00Z", "2024-11-03T06:30:00Z", "America/New_York");
-// { duration: "PT1H", enter: "2024-11-03T01:30:00-04:00[America/New_York]", exit: "2024-11-03T01:30:00-05:00[America/New_York]" }`}
+crossingTime("2024-04-06T15:30:00Z", "2024-04-06T16:30:00Z", "Australia/Sydney");
+// { duration: "PT1H", enter: "2024-04-07T02:30:00+11:00[Australia/Sydney]", exit: "2024-04-07T02:30:00+10:00[Australia/Sydney]" }`}
   rightSpecId="crossingTime"
 />
 

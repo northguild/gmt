@@ -19,24 +19,24 @@ The `instant/` namespace is that pair:
 ```typescript
 import { fromOffsetInstant, toOffsetInstant } from "@northguild/gmt";
 
-toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]");
-// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+toOffsetInstant("2024-07-15T12:00:00+10:00[Australia/Sydney]");
+// { instant: "2024-07-15T02:00:00Z", offset: "+10:00", timeZone: "Australia/Sydney" }
 
 // Most feeds send no zone at all — the offset alone is what happened.
-toOffsetInstant("2024-07-15T12:00:00-04:00");
-// { instant: "2024-07-15T16:00:00Z", offset: "-04:00" }
+toOffsetInstant("2024-07-15T12:00:00+10:00");
+// { instant: "2024-07-15T02:00:00Z", offset: "+10:00" }
 
 // A UTC-only feed plus a zone you know from somewhere else.
-toOffsetInstant("2024-07-15T16:00:00Z", "America/New_York");
-// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+toOffsetInstant("2024-07-15T02:00:00Z", "Australia/Sydney");
+// { instant: "2024-07-15T02:00:00Z", offset: "+10:00", timeZone: "Australia/Sydney" }
 
-fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00" });
-// "2024-07-15T12:00:00-04:00"
+fromOffsetInstant({ instant: "2024-07-15T02:00:00Z", offset: "+10:00" });
+// "2024-07-15T12:00:00+10:00"
 ```
 
 ## An offset is not a zone
 
-`-05:00` does not identify `America/New_York`. It is every zone sitting at `-05:00` that
+`+10:00` does not identify `Australia/Sydney`. It is every zone sitting at `+10:00` that
 day, and it says nothing about what that zone will do next spring.
 
 **Store the zone for anything still to be scheduled. Store the offset for anything that
@@ -56,7 +56,7 @@ that with [`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone).
 ```typescript
 import { isValidTimeZone, isValidUtcOffset } from "@northguild/gmt";
 
-isValidUtcOffset("-04:00"); // true
+isValidUtcOffset("+10:00"); // true
 isValidUtcOffset("-00:44:30"); // true (Africa/Monrovia before 1972)
 isValidUtcOffset("Z"); // false (a designator, not an offset)
 isValidUtcOffset("+0530"); // false (no colon)
@@ -76,17 +76,17 @@ policy for the two days a year the mapping is not one-to-one.
 ```typescript
 import { classifyLocal, resolveLocal } from "@northguild/gmt";
 
-classifyLocal("2024-11-03T01:30:00", "America/New_York"); // "ambiguous"
-classifyLocal("2024-03-10T02:30:00", "America/New_York"); // "nonexistent"
-classifyLocal("2024-07-15T12:00:00", "America/New_York"); // "unique"
+classifyLocal("2024-10-27T01:30:00", "Europe/London"); // "ambiguous"
+classifyLocal("2024-03-31T01:30:00", "Europe/London"); // "nonexistent"
+classifyLocal("2024-07-15T12:00:00", "Europe/London"); // "unique"
 
-resolveLocal("2024-11-03T01:30:00", "America/New_York");
-// "2024-11-03T05:30:00Z" — the default "compatible" takes the first 01:30
+resolveLocal("2024-10-27T01:30:00", "Europe/London");
+// "2024-10-27T00:30:00Z" — the default "compatible" takes the first 01:30
 
-resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" });
-// "2024-11-03T06:30:00Z" — the same wall clock, an hour of real time later
+resolveLocal("2024-10-27T01:30:00", "Europe/London", { disambiguation: "later" });
+// "2024-10-27T01:30:00Z" — the same wall clock, an hour of real time later
 
-resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "reject" });
+resolveLocal("2024-10-27T01:30:00", "Europe/London", { disambiguation: "reject" });
 // "" — ambiguous, and not guessed
 ```
 

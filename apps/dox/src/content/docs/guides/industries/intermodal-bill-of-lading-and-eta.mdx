@@ -30,8 +30,8 @@ date when the transport document has been issued". `bolTimestamp` returns that d
 ```typescript
 import { bolTimestamp } from "@northguild/gmt/intermodal";
 
-// Loaded at 21:00 in New York, which is 01:00Z on the 16th. The B/L is dated the 15th.
-bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/New_York" });
+// Loaded at 22:00 in São Paulo, which is 01:00Z on the 16th. The B/L is dated the 15th.
+bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "America/Sao_Paulo" });
 // "2024-06-15"
 
 // Loaded at 07:00 in Shanghai, which is 23:00Z on the 14th. The UTC date is a day early.
@@ -78,11 +78,11 @@ it, is not the zone the date is read in:
 ```typescript
 import { bolTimestamp } from "@northguild/gmt/intermodal";
 
-// Logged in Copenhagen, loaded in New York.
-bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "America/New_York" });
+// Logged in Copenhagen, loaded in São Paulo.
+bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "America/Sao_Paulo" });
 // "2024-06-15"
 
-bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/New_York" }); // "" — no offset: not a moment
+bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/Sao_Paulo" }); // "" — no offset: not a moment
 ```
 
 ## `event` names the date; it does not change it
@@ -94,8 +94,8 @@ it fills. Anything else returns `""`.
 ```typescript
 import { bolTimestamp } from "@northguild/gmt/intermodal";
 
-bolTimestamp("2024-06-16T01:00:00Z", "received", { timeZone: "America/New_York" }); // "2024-06-15"
-bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/New_York" }); // "" — not a B/L event
+bolTimestamp("2024-06-16T01:00:00Z", "received", { timeZone: "America/Sao_Paulo" }); // "2024-06-15"
+bolTimestamp("2024-06-16T01:00:00Z", "loaded", { timeZone: "America/Sao_Paulo" }); // "" — not a B/L event
 ```
 
 ## Transit and dwell, apart: `multimodalETA`
@@ -110,16 +110,16 @@ the first departure to the ETA.
 ```typescript
 import { multimodalETA } from "@northguild/gmt/intermodal";
 
-// Truck, ship and rail, Shanghai to Chicago: 6 hours to the port, 2 days at the terminal,
-// 14 days 6 hours at sea, 36 hours at Los Angeles, 52 hours by rail.
+// Truck, ship and rail, Shanghai to São Paulo: 6 hours to the port, 2 days at the terminal,
+// 14 days 6 hours at sea, 36 hours at Santos, 52 hours by rail.
 const legs = [
   { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
     timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" },
-  { duration: "P14DT6H", timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" },
-  { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" },
+  { duration: "P14DT6H", timeZone: "America/Sao_Paulo", dwellAfter: "PT36H", mode: "ship" },
+  { duration: "PT52H", timeZone: "America/Sao_Paulo", mode: "rail" },
 ];
 multimodalETA(legs);
-// { eta: "2024-06-29T23:00:00-05:00[America/Chicago]", totalLegs: 3,
+// { eta: "2024-06-30T01:00:00-03:00[America/Sao_Paulo]", totalLegs: 3,
 //   totalTransit: "PT400H", totalDwell: "PT84H" } — 484 hours door to door
 
 multimodalETA([]); // { eta: "", totalLegs: 0, totalTransit: "PT0S", totalDwell: "PT0S" }
@@ -132,9 +132,9 @@ not the change in the wall clock:
 ```typescript
 import { multimodalETA } from "@northguild/gmt/intermodal";
 
-// Four elapsed hours from 23:00 EST land at 04:00 EDT. The wall clock moved five.
-multimodalETA([{ departure: "2024-03-09T23:00:00-05:00[America/New_York]", duration: "PT4H", timeZone: "America/New_York" }]);
-// { eta: "2024-03-10T04:00:00-04:00[America/New_York]", totalLegs: 1, totalTransit: "PT4H", totalDwell: "PT0S" }
+// Four elapsed hours from 23:00 GMT land at 04:00 BST. The wall clock moved five.
+multimodalETA([{ departure: "2024-03-30T23:00:00+00:00[Europe/London]", duration: "PT4H", timeZone: "Europe/London" }]);
+// { eta: "2024-03-31T04:00:00+01:00[Europe/London]", totalLegs: 1, totalTransit: "PT4H", totalDwell: "PT0S" }
 ```
 
 ## A wait for a scheduled departure is dwell
@@ -149,17 +149,17 @@ import { multimodalETA } from "@northguild/gmt/intermodal";
 
 const truck = { departure: "2024-06-10T08:00:00+08:00[Asia/Shanghai]", duration: "PT6H",
   timeZone: "Asia/Shanghai", dwellAfter: "P2D", mode: "truck" };
-const rail = { duration: "PT52H", timeZone: "America/Chicago", mode: "rail" };
+const rail = { duration: "PT52H", timeZone: "America/Sao_Paulo", mode: "rail" };
 
 // The ship sails at 10:00 Shanghai time on the 13th, 20 hours after the dwell ends.
 multimodalETA([truck, { departure: "2024-06-13T10:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H",
-  timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" }, rail]);
-// { eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3,
+  timeZone: "America/Sao_Paulo", dwellAfter: "PT36H", mode: "ship" }, rail]);
+// { eta: "2024-06-30T21:00:00-03:00[America/Sao_Paulo]", totalLegs: 3,
 //   totalTransit: "PT400H", totalDwell: "PT104H" }
 
 // A sailing inside the two-day dwell is a missed connection.
 multimodalETA([truck, { departure: "2024-06-12T13:00:00+08:00[Asia/Shanghai]", duration: "P14DT6H",
-  timeZone: "America/Los_Angeles", dwellAfter: "PT36H", mode: "ship" }, rail]);
+  timeZone: "America/Sao_Paulo", dwellAfter: "PT36H", mode: "ship" }, rail]);
 // null
 ```
 

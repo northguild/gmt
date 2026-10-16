@@ -35,8 +35,8 @@ common span bug there is. A wall-clock day containing a DST transition is 23 or 
 long (24.5 in `Australia/Lord_Howe`), so:
 
 ```typescript
-const start = "2024-03-09T12:00:00-05:00[America/New_York]";
-const end = "2024-03-10T12:00:00-04:00[America/New_York]";
+const start = "2024-03-30T12:00:00+00:00[Europe/London]";
+const end = "2024-03-31T12:00:00+01:00[Europe/London]";
 
 spanMs(start, end);
 // 82800000 — 23 hours actually elapsed
@@ -52,8 +52,9 @@ spanWallClock(start, end, "days");
 string, never via an instant, so DST disambiguation cannot distort it, and a local time that
 never occurred is measured as written.
 
-The two endpoints need not share a zone. A flight leaving New York at 23:00 and landing in
-Berlin at 11:00 the next local day is 12 wall-clock hours and 7 elapsed hours. It truncates
+The two endpoints need not share a zone. A flight leaving São Paulo at 23:00 and landing in
+Berlin at 11:00 the next local day, with Berlin on winter time, is 12 wall-clock hours and 8
+elapsed hours. It truncates
 toward zero, and it is not a count of midnights crossed.
 
 ## Check before you measure

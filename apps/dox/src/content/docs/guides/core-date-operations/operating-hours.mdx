@@ -38,30 +38,30 @@ import type { OperatingSchedule } from "@northguild/gmt/types";
 
 const nineToFive = [{ from: "09:00", to: "17:00" }];
 const desk: OperatingSchedule = {
-  timeZone: "America/New_York",
+  timeZone: "Europe/London",
   weekly: { 1: nineToFive, 2: nineToFive, 3: nineToFive, 4: nineToFive, 5: nineToFive },
-  holidays: ["2024-07-04"],
-  overrides: [{ date: "2024-07-05", windows: [{ from: "10:00", to: "12:00" }] }],
+  holidays: ["2024-12-25"],
+  overrides: [{ date: "2024-12-26", windows: [{ from: "10:00", to: "12:00" }] }],
 };
 
-operatingIntervals(desk, { start: "2024-07-04T04:00:00Z", end: "2024-07-06T04:00:00Z" });
-// [{ start: "2024-07-05T14:00:00Z", end: "2024-07-05T16:00:00Z" }] — the holiday is closed, the override replaces Friday
+operatingIntervals(desk, { start: "2024-12-25T00:00:00Z", end: "2024-12-27T00:00:00Z" });
+// [{ start: "2024-12-26T10:00:00Z", end: "2024-12-26T12:00:00Z" }] — the holiday is closed, the override replaces Thursday
 
-isOpenAt("2024-06-17T14:00:00Z", desk); // true — Monday 10:00 local
-nextOpenAt("2024-06-15T16:00:00Z", desk); // "2024-06-17T13:00:00Z" — Saturday noon to Monday 09:00 local
-nextCloseAt("2024-06-17T14:00:00Z", desk); // "2024-06-17T21:00:00Z" — 17:00 local
+isOpenAt("2024-06-17T09:00:00Z", desk); // true — Monday 10:00 local
+nextOpenAt("2024-06-15T11:00:00Z", desk); // "2024-06-17T08:00:00Z" — Saturday noon to Monday 09:00 local
+nextCloseAt("2024-06-17T09:00:00Z", desk); // "2024-06-17T16:00:00Z" — 17:00 local
 
-operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", desk); // "PT2H" — Friday 16:00 to Monday 10:00
-addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk); // "2024-06-17T20:00:00Z" — an 8-hour SLA from Friday 16:00: Monday 16:00
-addOperatingTime("2024-06-14T20:00:00Z", "PT8H", desk, { within: "P1D" }); // "" — not due within a day
+operatingTimeBetween("2024-06-14T15:00:00Z", "2024-06-17T09:00:00Z", desk); // "PT2H" — Friday 16:00 to Monday 10:00
+addOperatingTime("2024-06-14T15:00:00Z", "PT8H", desk); // "2024-06-17T15:00:00Z" — an 8-hour SLA from Friday 16:00: Monday 16:00
+addOperatingTime("2024-06-14T15:00:00Z", "PT8H", desk, { within: "P1D" }); // "" — not due within a day
 
 // A curfew wraps midnight and belongs to the night it starts on.
 recurringWindows(
   { 6: [{ from: "23:00", to: "06:00" }] },
-  { start: "2024-11-02T00:00:00Z", end: "2024-11-04T00:00:00Z" },
-  "America/New_York",
+  { start: "2024-04-05T00:00:00Z", end: "2024-04-08T00:00:00Z" },
+  "Australia/Sydney",
 );
-// [{ start: "2024-11-03T03:00:00Z", end: "2024-11-03T11:00:00Z" }] — 8 hours across the fall-back night
+// [{ start: "2024-04-06T12:00:00Z", end: "2024-04-06T20:00:00Z" }] — 8 hours across the fall-back night
 ```
 
 ## The rules
@@ -81,7 +81,7 @@ merge, so a run of whole days is one interval.
 
 The default `disambiguation` is `"compatible"`. An edge in a repeated fall-back hour takes
 the earlier instant, and one in a skipped spring-forward hour moves forward by the gap. So a
-`23:00` to `06:00` window is 8 real hours across New York's fall-back night and 6 across its
+`23:00` to `06:00` window is 8 real hours across Sydney's fall-back night and 6 across its
 spring-forward night.
 
 Under `"earlier"`, a skipped midnight can move a date's first window onto the previous

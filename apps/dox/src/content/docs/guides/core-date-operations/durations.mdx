@@ -215,15 +215,15 @@ diffDateAsDuration("2024-03-10", "2024-04-05", "days");
 // "P26D"
 
 diffZonedAsDuration(
-  "2024-03-09T12:00:00-05:00[America/New_York]",
-  "2024-03-11T12:00:00-04:00[America/New_York]",
+  "2024-10-05T12:00:00+10:00[Australia/Sydney]",
+  "2024-10-07T12:00:00+11:00[Australia/Sydney]",
   "days",
 );
-// "P2D" — calendar days on New York's wall clock, across a DST spring-forward
+// "P2D" — calendar days on Sydney's wall clock, across a DST spring-forward
 
 diffZonedAsDuration(
-  "2024-03-09T12:00:00-05:00[America/New_York]",
-  "2024-03-11T12:00:00-04:00[America/New_York]",
+  "2024-10-05T12:00:00+10:00[Australia/Sydney]",
+  "2024-10-07T12:00:00+11:00[Australia/Sydney]",
   "hours",
 );
 // "PT47H" — real elapsed time: the spring-forward day had 23 hours

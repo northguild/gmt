@@ -7,7 +7,7 @@ industries: [core]
 ---
 
 Use these functions when you need timezone-aware operations: "add 30 days in the
-user's zone", "start of this day in America/New_York", "schedule a meeting across
+user's zone", "start of this day in Asia/Tokyo", "schedule a meeting across
 a DST boundary".
 
 ## Current time in a zone
@@ -15,7 +15,7 @@ a DST boundary".
 ```typescript
 import { getZonedNow, getZonedToday } from "@northguild/gmt/zoned";
 
-getZonedNow("America/New_York"); // "2024-03-15T10:30:45"
+getZonedNow("Europe/London"); // "2024-03-15T10:30:45"
 getZonedToday("Asia/Tokyo"); // "2024-03-16"
 ```
 
@@ -28,8 +28,8 @@ import {
   isValidTimeZone,
 } from "@northguild/gmt/zoned";
 
-formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "en-US");
-// "3/15/2024, 2:30:45 PM EDT"
+formatZonedDateTime("2024-03-15T14:30:45[Europe/London]", "en-US");
+// "3/15/2024, 2:30:45 PM GMT"
 
 formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
   dateStyle: "full",
@@ -37,7 +37,7 @@ formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
 });
 // "Sunday, March 17, 2024 at 2:30 PM" — the wording comes from the runtime's CLDR data
 
-isValidTimeZone("America/New_York"); // true
+isValidTimeZone("Europe/London"); // true
 ```
 
 ## Convert plain to zoned (DST disambiguation)
@@ -47,10 +47,10 @@ Attaching a timezone to a plain value is where DST gaps and overlaps matter:
 ```typescript
 import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
-convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
-// "2024-03-10T03:30:00.000-04:00[America/New_York]" — default "compatible" rounds forward
+convertPlainDateTimeToZoned("2024-03-31T01:30:00", "Europe/London");
+// "2024-03-31T02:30:00.000+01:00[Europe/London]" — default "compatible" rounds forward
 
-convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+convertPlainDateTimeToZoned("2024-03-31T01:30:00", "Europe/London", {
   disambiguation: "reject",
 });
 // "" — no such local time exists
@@ -72,11 +72,11 @@ act on.
 ```typescript
 import { addZoned, subtractZoned } from "@northguild/gmt/zoned";
 
-addZoned("2024-03-15T14:30:45[America/New_York]", { days: 1 });
-// "2024-03-16T14:30:45-04:00[America/New_York]"
+addZoned("2024-03-15T14:30:45[Africa/Johannesburg]", { days: 1 });
+// "2024-03-16T14:30:45+02:00[Africa/Johannesburg]"
 
-addZoned("2026-03-07T23:00:00-05:00[America/New_York]", { hours: 2 });
-// "2026-03-08T01:00:00-05:00[America/New_York]"
+addZoned("2026-10-03T23:00:00+10:00[Australia/Sydney]", { hours: 2 });
+// "2026-10-04T01:00:00+10:00[Australia/Sydney]"
 ```
 
 `addZoned`, `subtractZoned` and `intervalFromDurationZoned` follow TC39's AddZonedDateTime.
@@ -92,14 +92,14 @@ It never re-resolves the time part, so adding 10 minutes is always 10 real minut
 time-only duration ignores it. Before 1.16.0 a gap landing always moved forward.
 
 ```typescript
-addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
-// "2024-03-10T01:30:00-05:00[America/New_York]" — 02:30 is in the gap; "earlier" moves back
+addZoned("2024-03-30T01:30:00+00:00[Europe/London]", { days: 1 }, { disambiguation: "earlier" });
+// "2024-03-31T00:30:00+00:00[Europe/London]" — 01:30 is in the gap; "earlier" moves back
 
-addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" });
+addZoned("2024-03-30T01:30:00+00:00[Europe/London]", { days: 1 }, { disambiguation: "reject" });
 // ""
 
-addZoned("2024-03-10T01:55:00-05:00[America/New_York]", { minutes: 10 });
-// "2024-03-10T03:05:00-04:00[America/New_York]" — ten real minutes, across the gap
+addZoned("2024-03-31T00:55:00+00:00[Europe/London]", { minutes: 10 });
+// "2024-03-31T02:05:00+01:00[Europe/London]" — ten real minutes, across the gap
 ```
 
 ## Difference between two zoned values
@@ -112,15 +112,15 @@ Hours and smaller are counted in exact time:
 import { diffZoned } from "@northguild/gmt/zoned";
 
 diffZoned(
-  "2024-03-09T12:00:00-05:00[America/New_York]",
-  "2024-03-10T12:00:00-04:00[America/New_York]",
+  "2024-10-05T12:00:00+10:00[Australia/Sydney]",
+  "2024-10-06T12:00:00+11:00[Australia/Sydney]",
   "days",
 );
 // 1 — noon to noon, though the day had 23 hours
 
 diffZoned(
-  "2024-03-09T12:00:00-05:00[America/New_York]",
-  "2024-03-10T12:00:00-04:00[America/New_York]",
+  "2024-10-05T12:00:00+10:00[Australia/Sydney]",
+  "2024-10-06T12:00:00+11:00[Australia/Sydney]",
   "hours",
 );
 // 23
@@ -133,18 +133,18 @@ returns the sentinel. Convert one end with `convertZonedToZoned` first:
 import { convertZonedToZoned, diffZoned } from "@northguild/gmt/zoned";
 
 diffZoned(
-  "2024-01-01T00:00:00-05:00[America/New_York]",
+  "2024-01-01T00:00:00+09:00[Asia/Tokyo]",
   "2024-01-03T00:00:00+01:00[Europe/Paris]",
   "days",
 );
 // null — calendar unit across two time zones
 
 diffZoned(
-  "2024-01-01T00:00:00-05:00[America/New_York]",
-  convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "America/New_York"),
+  "2024-01-01T00:00:00+09:00[Asia/Tokyo]",
+  convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "Asia/Tokyo"),
   "days",
 );
-// 1 — both ends now read on New York's wall clock
+// 2 — both ends now read on Tokyo's wall clock
 ```
 
 ## Boundaries (start/end of unit, quarter, hours-in-day)
@@ -152,11 +152,11 @@ diffZoned(
 ```typescript
 import { startOfZoned, endOfZoned } from "@northguild/gmt/zoned";
 
-startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
-// "2024-03-01T00:00:00-05:00[America/New_York]"
+startOfZoned("2024-03-15T14:30:45[Europe/London]", "month");
+// "2024-03-01T00:00:00+00:00[Europe/London]"
 
-endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
-// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
+endOfZoned("2024-03-15T14:30:45[Europe/London]", "hour");
+// "2024-03-15T14:59:59.999999999+00:00[Europe/London]"
 ```
 
 `startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
@@ -169,8 +169,8 @@ start — even when the wall-clock boundary was skipped or repeated:
 startOfZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "hour");
 // "2024-09-29T03:45:00+13:45[Pacific/Chatham]" — local 03:00 never happened; the hour began at the jump
 
-startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
-// "2024-11-03T01:00:00-05:00[America/New_York]" — the repeated 1 a.m. is its own hour
+startOfZoned("2024-10-27T01:45:00+00:00[Europe/London]", "hour");
+// "2024-10-27T01:00:00+00:00[Europe/London]" — the repeated 1 a.m. is its own hour
 ```
 
 A midnight repeated on the same date stays one 25-hour day. America/Havana repeats its
@@ -200,19 +200,19 @@ it rounds the wall clock and re-resolves it, which can land after the input. Use
 ```typescript
 import { setZoned } from "@northguild/gmt/zoned";
 
-setZoned("2024-03-15T14:30:45[America/New_York]", { hour: 9 });
-// "2024-03-15T09:30:45-04:00[America/New_York]"
+setZoned("2024-03-15T14:30:45[Australia/Sydney]", { hour: 9 });
+// "2024-03-15T09:30:45+11:00[Australia/Sydney]"
 
 setZoned(
-  "2024-11-03T01:45:00-05:00[America/New_York]",
+  "2024-10-27T01:45:00+00:00[Europe/London]",
   { minute: 0 },
   { disambiguation: "reject" },
 );
-// "2024-11-03T01:00:00-05:00[America/New_York]" — offset defaults to "prefer", as Temporal's
-// ZonedDateTime#with does, so the still-valid -05:00 is kept
+// "2024-10-27T01:00:00+00:00[Europe/London]" — offset defaults to "prefer", as Temporal's
+// ZonedDateTime#with does, so the still-valid +00:00 is kept
 
 setZoned(
-  "2024-11-03T01:45:00-05:00[America/New_York]",
+  "2024-10-27T01:45:00+00:00[Europe/London]",
   { minute: 0 },
   { disambiguation: "reject", offset: "ignore" },
 );
@@ -224,8 +224,8 @@ setZoned(
 ```typescript
 import { cycleZoned } from "@northguild/gmt/zoned";
 
-cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1);
-// "2024-01-15T09:30:00-06:00[America/Chicago]" — wraps, stays in the same year
+cycleZoned("2024-12-15T09:30:00+05:30[Asia/Kolkata]", "month", 1);
+// "2024-01-15T09:30:00+05:30[Asia/Kolkata]" — wraps, stays in the same year
 
 cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
 // "2024-03-10T03:30:00-05:00[America/Chicago]" — cycled hour lands in a gap; disambiguation resolves it
@@ -236,7 +236,7 @@ cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
 ```typescript
 import { getHoursInZonedDay } from "@northguild/gmt/zoned";
 
-getHoursInZonedDay("2024-03-10T12:00:00-04:00[America/New_York]"); // 23 — spring-forward
+getHoursInZonedDay("2024-10-06T12:00:00+11:00[Australia/Sydney]"); // 23 — spring-forward
 getHoursInZonedDay("2024-11-03T12:00:00-05:00[America/New_York]"); // 25 — fall-back
 getHoursInZonedDay("2024-02-29T12:00:00+00:00[UTC]"); // 24 — normal
 getHoursInZonedDay("2024-09-08T12:00:00-03:00[America/Santiago]"); // 23 — midnight skipped
@@ -257,14 +257,14 @@ zoned value in hand:
 ```typescript
 import { getZonedOffset, getZonedOffsetAs, getTimeZoneOffset } from "@northguild/gmt/zoned";
 
-getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]"); // "-04:00"
-getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes"); // -240
-getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "nanoseconds"); // -14400000000000
+getZonedOffset("2024-07-15T12:00:00+10:00[Australia/Sydney]"); // "+10:00"
+getZonedOffsetAs("2024-07-15T12:00:00+10:00[Australia/Sydney]", "minutes"); // 600
+getZonedOffsetAs("2024-07-15T12:00:00+10:00[Australia/Sydney]", "nanoseconds"); // 36000000000000
 getZonedOffsetAs("2024-05-15T12:00:00+05:45[Asia/Kathmandu]", "minutes");
 // 345 — GMT has half- and quarter-hour offsets too, not just whole hours
 
-getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z"); // "-04:00"
-getTimeZoneOffset("America/New_York", "2024-01-15T12:00:00Z"); // "-05:00"
+getTimeZoneOffset("Australia/Sydney", "2024-07-15T12:00:00Z"); // "+10:00"
+getTimeZoneOffset("Australia/Sydney", "2024-01-15T12:00:00Z"); // "+11:00"
 getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z"); // ""
 getZonedOffset("invalid"); // ""
 
@@ -306,7 +306,7 @@ reference is the current instant. An invalid zone, an invalid `at` and a fixed o
 ```typescript
 import { hasDaylightSaving } from "@northguild/gmt/zoned";
 
-hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }); // true
+hasDaylightSaving("Europe/London", { at: "2024-01-15T12:00:00Z" }); // true
 hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }); // false
 hasDaylightSaving("Invalid/Zone", { at: "2024-01-15T12:00:00Z" }); // false
 ```
@@ -321,10 +321,10 @@ Each object's `instant` is a UTC ISO 8601 string, and `offsetBefore`/`offsetAfte
 ```typescript
 import { getDstTransitions } from "@northguild/gmt/zoned";
 
-getDstTransitions("America/New_York", 2024);
+getDstTransitions("Europe/London", 2024);
 // [
-//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
-//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+//   { instant: "2024-03-31T01:00:00Z", offsetBefore: "+00:00", offsetAfter: "+01:00" },
+//   { instant: "2024-10-27T01:00:00Z", offsetBefore: "+01:00", offsetAfter: "+00:00" }
 // ]
 
 getDstTransitions("Asia/Tokyo", 2024);
@@ -355,10 +355,10 @@ The full list of what the rule reads as standard time is in
 ```typescript
 import { isInDaylightSaving } from "@northguild/gmt/zoned";
 
-isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
+isInDaylightSaving("2024-07-15T12:00:00+01:00[Europe/London]");
 // true
 
-isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]");
+isInDaylightSaving("2024-01-15T12:00:00+00:00[Europe/London]");
 // false
 
 // Southern-hemisphere DST spans the new year.
@@ -386,14 +386,14 @@ every `Intl.DateTimeFormatOptions` `timeZoneName` value:
 ```typescript
 import { formatTimeZoneName } from "@northguild/gmt/zoned";
 
-formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" });
-// "ET" — season-independent
+formatTimeZoneName("Australia/Sydney", "en-US", { style: "shortGeneric" });
+// "Sydney Time" — season-independent
 
-formatTimeZoneName("America/New_York", "en-US", { style: "longGeneric" });
-// "Eastern Time" — season-independent
+formatTimeZoneName("Australia/Sydney", "en-US", { style: "longGeneric" });
+// "Australian Eastern Time" — season-independent
 
-formatTimeZoneName("America/New_York", "en-US", { style: "long" });
-// "Eastern Standard Time" or "Eastern Daylight Time", depending on the current date
+formatTimeZoneName("Australia/Sydney", "en-US", { style: "long" });
+// "Australian Eastern Standard Time" or "Australian Eastern Daylight Time", depending on the current date
 
 formatTimeZoneName("Invalid/Zone", "en-US");
 // ""
@@ -415,18 +415,18 @@ candidate by temporal distance:
 import { clampZoned, closestZonedTo } from "@northguild/gmt/zoned";
 
 clampZoned(
-  "2024-02-01T12:00:00[America/New_York]",
-  "2024-03-01T00:00:00[America/New_York]",
-  "2024-03-31T23:59:59[America/New_York]",
+  "2024-02-01T12:00:00[Asia/Tokyo]",
+  "2024-03-01T00:00:00[Asia/Tokyo]",
+  "2024-03-31T23:59:59[Asia/Tokyo]",
 );
-// "2024-03-01T00:00:00-05:00[America/New_York]"
+// "2024-03-01T00:00:00+09:00[Asia/Tokyo]"
 
-closestZonedTo("2024-03-15T12:00:00[America/New_York]", [
-  "2024-03-01T00:00:00[America/New_York]",
-  "2024-03-20T00:00:00[America/New_York]",
-  "2024-03-18T00:00:00[America/New_York]",
+closestZonedTo("2024-03-15T12:00:00[Asia/Tokyo]", [
+  "2024-03-01T00:00:00[Asia/Tokyo]",
+  "2024-03-20T00:00:00[Asia/Tokyo]",
+  "2024-03-18T00:00:00[Asia/Tokyo]",
 ]);
-// "2024-03-18T00:00:00-04:00[America/New_York]"
+// "2024-03-18T00:00:00+09:00[Asia/Tokyo]"
 ```
 
 ## See also

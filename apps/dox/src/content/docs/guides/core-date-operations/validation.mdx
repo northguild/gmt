@@ -27,11 +27,11 @@ isValidDateTime("2024-03-15T14:30:45"); // true
 ```typescript
 import { isValidTimeZone, isValidZonedDateTime } from "@northguild/gmt/zoned";
 
-isValidTimeZone("America/New_York"); // true
+isValidTimeZone("Africa/Johannesburg"); // true
 isValidTimeZone("Invalid/Zone"); // false
 
-isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
-isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
+isValidZonedDateTime("2024-03-15T14:30:45[Europe/London]"); // true
+isValidZonedDateTime("2024-02-30T14:30:45[Europe/London]"); // false
 ```
 
 `isValidZonedDateTime` accepts `[u-ca=iso8601]` and rejects any other calendar annotation,
@@ -41,8 +41,8 @@ a calendar, use `isValidCalendarZonedDateTime`. The calendar annotation must fol
 ```typescript
 import { isValidCalendarZonedDateTime, isValidUtc } from "@northguild/gmt";
 
-isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"); // true
-isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]"); // false — the zone comes first
+isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]"); // true
+isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[u-ca=hebrew][Asia/Jerusalem]"); // false — the zone comes first
 
 isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]"); // true — a UTC string's calendar annotation is ignored
 ```
@@ -82,13 +82,13 @@ the other RFC 3339 spellings, numeric offsets included, use `isValidRfc3339DateT
 ```typescript
 import { hasDaylightSaving, getDstTransitions } from "@northguild/gmt/zoned";
 
-hasDaylightSaving("America/New_York", { at: "2024-01-15T12:00:00Z" }); // true
+hasDaylightSaving("Europe/London", { at: "2024-01-15T12:00:00Z" }); // true
 hasDaylightSaving("Asia/Tokyo", { at: "2024-01-15T12:00:00Z" }); // false
 
-getDstTransitions("America/New_York", 2024);
+getDstTransitions("Europe/London", 2024);
 // [
-//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
-//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+//   { instant: "2024-03-31T01:00:00Z", offsetBefore: "+00:00", offsetAfter: "+01:00" },
+//   { instant: "2024-10-27T01:00:00Z", offsetBefore: "+01:00", offsetAfter: "+00:00" }
 // ]
 
 getDstTransitions("Asia/Tokyo", 2024); // [] — no transitions

@@ -172,7 +172,7 @@ intervalDivideEquallyDate("2024-01-01", "2024-01-01", 3);
 ```
 
 A zero-length interval returns `n` identical zero-length pieces. `intervalDivideEquallyZoned`
-divides a DST-crossing interval by real elapsed time, not local clock time: the New York day
+divides a DST-crossing interval by real elapsed time, not local clock time: the Sydney day
 that skips an hour, divided by 23, gives 23 one-hour pieces.
 
 ## Count unit boundaries crossed
@@ -210,7 +210,7 @@ import {
 intervalCountTime("12:30:00", "13:00:00", "hour"); // 1
 intervalCountUnix(0, 86400000, "hour"); // 24
 intervalCountUtc("2024-01-01T23:59:00Z", "2024-01-02T00:01:00Z", "day"); // 2
-intervalCountZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour"); // 23 — the spring-forward local day is 23 hours long
+intervalCountZoned("2024-10-06T00:00:00+10:00[Australia/Sydney]", "2024-10-07T00:00:00+11:00[Australia/Sydney]", "hour"); // 23 — the spring-forward local day is 23 hours long
 ```
 
 `intervalCountZoned`, `intervalCountUnix` and `intervalCountUtc` count the same local buckets
@@ -257,7 +257,7 @@ import {
 
 intervalLengthTime("09:00:00", "17:30:00", "hour"); // 8.5
 intervalLengthUtc("2024-01-01T00:00:00Z", "2024-01-02T12:00:00Z", "day"); // 1.5
-intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour"); // 23 — the spring-forward local day is 23 real hours
+intervalLengthZoned("2024-10-06T00:00:00+10:00[Australia/Sydney]", "2024-10-07T00:00:00+11:00[Australia/Sydney]", "hour"); // 23 — the spring-forward local day is 23 real hours
 intervalLengthUnix(0, 86400, "day", { epochUnit: "seconds" }); // 1
 ```
 
@@ -323,18 +323,18 @@ carry different zones. Swapping the arguments can change the answer:
 
 ```typescript
 intervalOverlappingDaysZoned(
-  "2024-01-01T20:00:00-05:00[America/New_York]",
-  "2024-01-02T06:00:00-05:00[America/New_York]",
+  "2024-01-01T20:00:00-03:00[America/Sao_Paulo]",
+  "2024-01-02T06:00:00-03:00[America/Sao_Paulo]",
   "2024-01-02T01:00:00Z[UTC]",
   "2024-01-02T10:00:00Z[UTC]",
 );
-// 2 — counted in New York, the overlap touches 1 and 2 January
+// 2 — counted in São Paulo, the overlap touches 1 and 2 January
 
 intervalOverlappingDaysZoned(
   "2024-01-02T01:00:00Z[UTC]",
   "2024-01-02T10:00:00Z[UTC]",
-  "2024-01-01T20:00:00-05:00[America/New_York]",
-  "2024-01-02T06:00:00-05:00[America/New_York]",
+  "2024-01-01T20:00:00-03:00[America/Sao_Paulo]",
+  "2024-01-02T06:00:00-03:00[America/Sao_Paulo]",
 );
 // 1 — the same two intervals, counted in UTC, touch only 2 January
 ```

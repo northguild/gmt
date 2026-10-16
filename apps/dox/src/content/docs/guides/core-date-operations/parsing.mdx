@@ -153,8 +153,8 @@ a number), matching the sentinel convention of their `format*` counterparts:
 ```typescript
 import { parseRfc2822, parseHttpDate, parseSqlDateTime, parseRfc3339 } from "@northguild/gmt";
 
-parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
-// "2024-03-15T14:30:00-04:00[-04:00]"
+parseRfc2822("Fri, 15 Mar 2024 14:30:00 +0530");
+// "2024-03-15T14:30:00+05:30[+05:30]"
 
 parseHttpDate("Fri, 15 Mar 2024 14:30:00 GMT");
 // "2024-03-15T14:30:00Z"
@@ -167,18 +167,18 @@ parseSqlDateTime("2024-03-15 14:30:00");
 parseSqlDateTime("2024-03-15 14:30");
 // "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
-parseRfc3339("2024-03-15T14:30:00-04:00");
-// "2024-03-15T14:30:00-04:00[-04:00]"
+parseRfc3339("2024-03-15T14:30:00+11:00");
+// "2024-03-15T14:30:00+11:00[+11:00]"
 ```
 
 A receiver reads RFC 5322's full and obsolete syntax: comments, any letter case, two-digit
 years and zone names. A day name that contradicts the date returns `""`:
 
 ```typescript
-parseRfc2822("fri,15 Mar 24 14:30 -0400 (EDT)");
-// "2024-03-15T14:30:00-04:00[-04:00]"
+parseRfc2822("fri,15 Mar 24 14:30 +0200 (SAST)");
+// "2024-03-15T14:30:00+02:00[+02:00]"
 
-parseRfc2822("Sat, 15 Mar 2024 14:30:00 -0400");
+parseRfc2822("Sat, 15 Mar 2024 14:30:00 +0530");
 // "" — 15 March 2024 was a Friday
 ```
 
@@ -200,7 +200,7 @@ import {
 
 rfc3339DateTime.test("2023-02-29T10:00:00Z"); // true
 isValidRfc3339DateTime("2023-02-29T10:00:00Z"); // false — 2023 has no 29 February
-isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 -0400"); // false — a Friday
+isValidRfc2822DateTime("Sat, 15 Mar 2024 14:30:00 +0530"); // false — a Friday
 isValidHttpDate("Sun Nov  6 08:49:37 1994"); // true — asctime-date
 isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT"); // false — hour 24
 isValidSqlDateTime("2024-02-30 14:30:00"); // false — February has no 30th

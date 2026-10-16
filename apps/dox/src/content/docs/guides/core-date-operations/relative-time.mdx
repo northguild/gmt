@@ -16,7 +16,7 @@ all share the same option shape.
 | ISO date `"2024-03-15"` | `formatRelativeDate` | `@northguild/gmt` |
 | ISO time `"14:30:45"` | `formatRelativeTime` | `@northguild/gmt` |
 | ISO datetime `"2024-03-15T14:30:45"` | `formatRelativeDateTime` | `@northguild/gmt` |
-| Zoned `"…[America/New_York]"` | `formatRelativeZoned` | `@northguild/gmt/zoned` |
+| Zoned `"…[Europe/London]"` | `formatRelativeZoned` | `@northguild/gmt/zoned` |
 | Unix epoch (ms or seconds) | `formatRelativeUnix` | `@northguild/gmt/unix` |
 | UTC ISO `"…Z"` | `formatRelativeUtc` | `@northguild/gmt/utc` |
 
@@ -33,9 +33,9 @@ formatRelativeDate("2024-03-14", "en-US", { reference: ref }); // "yesterday"
 formatRelativeDate("2024-03-12", "en-US", { reference: ref }); // "3 days ago"
 
 formatRelativeZoned(
-  "2024-03-15T10:00:00-04:00[America/New_York]",
+  "2024-03-15T10:00:00+00:00[Europe/London]",
   "en-US",
-  { reference: "2024-03-15T12:00:00-04:00[America/New_York]" },
+  { reference: "2024-03-15T12:00:00+00:00[Europe/London]" },
 );
 // "2 hours ago" — DST-safe via Temporal.ZonedDateTime arithmetic
 

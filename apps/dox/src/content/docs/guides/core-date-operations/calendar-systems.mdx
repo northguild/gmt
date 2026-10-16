@@ -207,7 +207,7 @@ the calendar (RFC 9557 §4.1):
 ```
 <date>T<time><offset>[<timeZone>][u-ca=<id>]
 
-2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]
+2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]
 2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]
 ```
 
@@ -217,21 +217,21 @@ calendar annotation before the zone is not RFC 9557 and returns the sentinel:
 ```typescript
 import { addZoned, convertZonedToCalendar, isValidCalendarZonedDateTime } from "@northguild/gmt";
 
-convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
-// "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"
+convertZonedToCalendar("2024-10-03T14:30:45+03:00[Asia/Jerusalem]", "hebrew");
+// "2024-10-03T14:30:45+03:00[Asia/Jerusalem][u-ca=hebrew]"
 
-convertZonedToCalendar("2024-10-03T14:30:45-04:00[u-ca=hebrew][America/New_York]", "iso8601");
+convertZonedToCalendar("2024-10-03T14:30:45+03:00[u-ca=hebrew][Asia/Jerusalem]", "iso8601");
 // "" — the calendar annotation must follow the zone
 
-isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]");
+isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]");
 // true
 
-isValidCalendarZonedDateTime("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]");
+isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[u-ca=hebrew][Asia/Jerusalem]");
 // false
 
-addZoned("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", { months: 1 });
-// "2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]"
-// Adar I -> Adar II AND EST -> EDT, resolved in one call. No ordering of a plain/ calendar
+addZoned("2024-03-25T14:30:00+11:00[Australia/Sydney][u-ca=hebrew]", { months: 1 });
+// "2024-04-23T14:30:00+10:00[Australia/Sydney][u-ca=hebrew]"
+// Adar II -> Nisan AND AEDT -> AEST, resolved in one call. No ordering of a plain/ calendar
 // operation and a zoned/ conversion produces this: do the calendar step first and DST is
 // applied to an already-resolved wall time; do the zoned step first and there is no calendar
 // left to step in.
