@@ -10,6 +10,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | Arithmetic            | Add/subtract, durations, interval range math                            | gmt-arithmetic                                                                                 |
 | Zoned Date Operations | IANA timezone-aware date operations, DST disambiguation               | gmt-timezone                                                                                   |
 | Integration           | Application framework integration, cache keys, lint package selection | gmt-integration                                                                                |
+| Industry Layers       | One skill per industry layer, drawing on the core skills              | gmt-gnss, gmt-transport, gmt-intermodal, gmt-workforce                                         |
 | Contributor           | Library maintainer workflows — issues, PRs, implementation, testing   | issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow |
 
 ## Skill Inventory
@@ -17,9 +18,13 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | Skill                   | Type        | Domain                | What it covers                                                                                                   | Failure modes |
 | ----------------------- | ----------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- |
 | gmt-basics              | core        | Core Date Operations  | getNow, getToday, formatDate, formatRelativeDate, isAfterDate, isValidDate, isValidTimeZone, parseDateWithPattern, getLocaleMonthNames |               |
-| gmt-arithmetic          | core        | Arithmetic            | addDate, subtractTime, diffDate, clampDate, closestDateTo, business calendars (addBusinessDays, rollDate, mergeCalendars), duration API, interval math          |               |
+| gmt-arithmetic          | core        | Arithmetic            | addDate, subtractTime, diffDate, clampDate, closestDateTo, business calendars (addBusinessDays, rollDate, mergeCalendars), duration API, interval math |               |
 | gmt-timezone            | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, convertPlainDateTimeToZoned, addZoned, startOfZoned, hasDaylightSaving         |               |
-| gmt-integration         | composition | Integration           | Cache keys, router/query params, table-sort keys, lint package selection                                          |               |
+| gmt-integration         | composition | Integration           | Cache keys, router/query params, table-sort keys, foreign epochs, TAI and leap seconds (timescale/), lint package selection |               |
+| gmt-gnss                | core        | Industry Layers       | utcToGnss, gnssToUtc, gnssWeekToUtc, utcToGnssWeek, rinexWeekToUtc, utcToRinexWeek (gnss/) |               |
+| gmt-transport           | core        | Industry Layers       | transitTime, etaAtZone, dwellTime, scheduleDelivery, cutoffAt, classifyPunctuality, nextDeparture (transport/) |               |
+| gmt-intermodal          | core        | Industry Layers       | freeTimeExpiry, chargeableDays, demurrageClock, billingTimeline, bolTimestamp, EDI and EPCIS timestamps (intermodal/) |               |
+| gmt-workforce           | core        | Industry Layers       | evaluateDutyLog, dutyViolations, dutyDayFor, dutyTotals (workforce/) |               |
 | issue-creation          | lifecycle   | Contributor           | Feature requests, missing methods, issue templates                                                             |               |
 | pr-contribution         | lifecycle   | Contributor           | PR workflow, tests, contribution guidelines                                                                      |               |
 | new-method-implementation | maintainer | Contributor        | Adding methods to gmt source                                                                                   |               |
@@ -45,10 +50,21 @@ consumers.
 | unit-test-generation      | maintainer | Writing tests for internal code |
 | api-expansion-workflow    | lifecycle  | Feature request workflow        |
 
+## Core and industry layers
+
+Core namespaces hold general time primitives and stay in the topic skills
+(`timescale/` leap seconds and TAI are in `gmt-integration`). Each industry
+layer (`gnss/`, `transport/`, `intermodal/`, `workforce/`) has its own consumer
+skill, and its functions are in no topic skill. A topic skill may keep a
+one-line cross-reference to an industry skill, and no function lists or
+examples of industry functions.
+
 ## Skill file structure
 
 - **Consumer skills** (shipped in the npm tarball): `skills/gmt-basics/`,
-  `skills/gmt-arithmetic/`, `skills/gmt-timezone/`, `skills/gmt-integration/`
+  `skills/gmt-arithmetic/`, `skills/gmt-timezone/`, `skills/gmt-integration/`,
+  `skills/gmt-gnss/`, `skills/gmt-transport/`, `skills/gmt-intermodal/`,
+  `skills/gmt-workforce/`
   — lightweight routing pointers (~30-60 lines each) that point agents to the
   docs site and the JSDoc in the installed package for full API details.
 - **Contributor skills** (excluded from the npm tarball via `.npmignore`):
@@ -56,7 +72,7 @@ consumers.
 
 ## Recommended Skill File Structure
 
-- **Consumer skills:** gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration
+- **Consumer skills:** gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration, gmt-gnss, gmt-transport, gmt-intermodal, gmt-workforce
 - **Contributor skills:** issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow
 
 ## Notes

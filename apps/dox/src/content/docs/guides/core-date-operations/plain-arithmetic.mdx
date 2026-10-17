@@ -41,20 +41,20 @@ the weekend and the holidays yourself:
 ```typescript
 import { addBusinessDays, subtractBusinessDays } from "@northguild/gmt";
 
-const nyse = {
+const london = {
   weekend: [6, 7],
-  holidays: ["2024-05-31", "2024-07-04"],
-  timeZone: "America/New_York",
+  holidays: ["2024-05-31", "2024-12-25"],
+  timeZone: "Europe/London",
 };
 
-addBusinessDays("2024-07-03", 1);
-// "2024-07-04" — no calendar, so the Thursday counts
+addBusinessDays("2024-12-24", 1);
+// "2024-12-25" — no calendar, so the Wednesday counts
 
-addBusinessDays("2024-07-03", 1, nyse);
-// "2024-07-05" — 4 July is a holiday, so the count skips it
+addBusinessDays("2024-12-24", 1, london);
+// "2024-12-26" — 25 December is a holiday, so the count skips it
 
-subtractBusinessDays("2024-07-05", 1, nyse);
-// "2024-07-03"
+subtractBusinessDays("2024-12-26", 1, london);
+// "2024-12-24"
 ```
 
 The rest of the business-day family (counting days between two dates, rolling a date

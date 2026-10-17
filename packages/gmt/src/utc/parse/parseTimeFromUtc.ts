@@ -14,7 +14,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns ISO time string (e.g., "14:30:45") or "" on invalid input
  *
  * @example parseTimeFromUtc("2024-03-17T14:30:45Z") // "14:30:45"
- * @example parseTimeFromUtc("2024-03-17T14:30:45Z", { timeZone: "America/New_York" }) // "10:30:45"
+ * @example parseTimeFromUtc("2024-03-17T14:30:45Z", { timeZone: "Africa/Johannesburg" }) // "16:30:45"
  * @example parseTimeFromUtc("invalid") // ""
  * @example parseTimeFromUtc("1970-01-01T12:44:30Z", { timeZone: "-00:44:30" }) // "12:00:00" (a stored offset with seconds)
  */

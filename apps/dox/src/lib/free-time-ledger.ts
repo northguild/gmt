@@ -73,26 +73,29 @@ export interface FreeTimePreset extends LedgerState {
 }
 
 const friday = "2024-06-14T19:00:00Z";
-const newYork = "America/New_York";
+const johannesburg = "Africa/Johannesburg";
+const london = "Europe/London";
 
 /**
- * Every preset is one of `freeTimeExpiry`'s or `chargeableDays`'s JSDoc
- * examples, so the result the widget prints is a result the library documents.
- * The mount test asserts each one against the literal string.
+ * Each preset is pinned by the mount test, which asserts the widget's output
+ * against a literal string taken from running `freeTimeExpiry` and
+ * `chargeableDays`. The presets sit on London and Johannesburg calendars
+ * (Youth Day for the two working-day ones), so they are not quotations of the
+ * functions' JSDoc examples: the library's output is the reference.
  */
 export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
   {
     id: "friday-three-days",
     label: "Friday discharge, three calendar days",
     description:
-      "Discharged Friday 15:00 in New York with three free calendar days, out one second into Monday. The weekend is consumed, and Monday is a charged day.",
+      "Discharged Friday 20:00 in London with three free calendar days, out one second into Monday. The weekend is consumed, and Monday is a charged day.",
     clockStart: friday,
-    clockEnd: "2024-06-17T04:00:01Z",
+    clockEnd: "2024-06-16T23:00:01Z",
     freeDays: "3",
     firstDay: "eventDay",
     basis: "calendar",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: london,
     weekend: [6, 7],
     holidays: "",
     tiers: "",
@@ -103,12 +106,12 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     description:
       "The same discharge, but free time starts the day after the event. Free time ends on Tuesday, and the Monday gate-out is still free: one convention, one day of charges.",
     clockStart: friday,
-    clockEnd: "2024-06-17T04:00:01Z",
+    clockEnd: "2024-06-16T23:00:01Z",
     freeDays: "3",
     firstDay: "nextDay",
     basis: "calendar",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: london,
     weekend: [6, 7],
     holidays: "",
     tiers: "",
@@ -119,12 +122,12 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     description:
       "Out at 00:00 on Monday, the instant free time ends. The dwell is half-open, so nothing of Monday is used and nothing is charged.",
     clockStart: friday,
-    clockEnd: "2024-06-17T04:00:00Z",
+    clockEnd: "2024-06-16T23:00:00Z",
     freeDays: "3",
     firstDay: "eventDay",
     basis: "calendar",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: london,
     weekend: [6, 7],
     holidays: "",
     tiers: "",
@@ -133,32 +136,32 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     id: "working-days",
     label: "Working-day free time, calendar-day charges",
     description:
-      "Free time counted in working days, then every calendar day charged, the most common shape where free time is in working days. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
+      "Free time counted in working days, then every calendar day charged, the most common shape where free time is in working days. Neither the weekend nor Youth Day (Monday 17 June) burns free time, but the days after it ends are all billed, weekend included.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",
     firstDay: "eventDay",
     basis: "working",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: johannesburg,
     weekend: [6, 7],
-    holidays: "2024-06-19",
+    holidays: "2024-06-17",
     tiers: "",
   },
   {
     id: "terminal-holiday",
     label: "Working days throughout",
     description:
-      "The same dwell on a tariff that charges working days only: the Juneteenth holiday and the weekend after expiry are not charged, so three days are billed instead of six.",
+      "The same dwell on a tariff that charges working days only: Youth Day (Monday 17 June) and the weekend after expiry are not charged, so only the working days are billed.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",
     firstDay: "eventDay",
     basis: "working",
     chargeBasis: "working",
-    zone: newYork,
+    zone: johannesburg,
     weekend: [6, 7],
-    holidays: "2024-06-19",
+    holidays: "2024-06-17",
     tiers: "",
   },
   {
@@ -172,7 +175,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     firstDay: "eventDay",
     basis: "calendar",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: johannesburg,
     weekend: [6, 7],
     holidays: "",
     tiers: "5, 10",
@@ -188,7 +191,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     firstDay: "eventDay",
     basis: "calendar",
     chargeBasis: "calendar",
-    zone: newYork,
+    zone: johannesburg,
     weekend: [6, 7],
     holidays: "",
     tiers: "",

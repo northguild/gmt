@@ -45,7 +45,7 @@ import {
   VISITOR_DAILY_MAX,
   type Brain,
 } from "../src/lib/chat-constants";
-import { nextPtMidnightMs } from "../src/lib/pt-day";
+import { nextPtMidnightMs, nextVisitorMidnightMs } from "../src/lib/pt-day";
 
 export interface ChatHandlerDeps {
   /** Builds a model for a brain id. A factory rather than a single value
@@ -199,10 +199,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
     if (!dev && snapshot.visitor >= VISITOR_DAILY_MAX) {
       return Response.json(
         {
-          // The visitor cap is Dox's own, and it is always on the Pacific day.
-          error: `You have used your ${VISITOR_DAILY_MAX} questions for today. They reset at midnight Pacific.`,
+          // The visitor cap is Dox's own, and it is always on the UTC day.
+          error: `You have used your ${VISITOR_DAILY_MAX} questions for today. They reset at midnight UTC.`,
           retryable: false,
-          resetsAt: convertUnixToUtc(nextPtMidnightMs(nowMs)),
+          resetsAt: convertUnixToUtc(nextVisitorMidnightMs(nowMs)),
         },
         { status: 429 },
       );

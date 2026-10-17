@@ -181,10 +181,10 @@ const NO_ZONES: [string, string, string, string] = ["", "", "", ""];
 /** The four zones the examples that state no offset read their value in. They are
  *  the example's picks, never derived from a value or a code. */
 const EXAMPLE_ZONES: [string, string, string, string] = [
-  "America/New_York",
+  "Africa/Johannesburg",
   "Europe/Berlin",
   "Asia/Shanghai",
-  "America/Los_Angeles",
+  "Australia/Sydney",
 ];
 
 /** Labels name what the format code shows. None implies a meaning for the

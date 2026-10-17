@@ -35,8 +35,11 @@ import type {
   PlaygroundField,
 } from "../src/lib/playground-spec";
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
-import { INDUSTRY_LAYER_IDS, industryTag } from "../src/lib/industry-tags";
-import { INDUSTRY_OVERVIEWS } from "../src/lib/industry-overview";
+import {
+  INDUSTRIES,
+  OWN_NAMESPACES,
+  industryOwning,
+} from "../src/lib/industry-tags";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
 import { NULL_IS_EMPTY } from "./build-utils/null-is-empty";
@@ -80,6 +83,7 @@ import {
   type TableContext,
 } from "./build-utils/render-table";
 import { buildRedirects } from "./build-utils/redirects";
+import { MOVED_PAGES } from "./build-utils/moved-pages";
 import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
   functionUrl,
@@ -1220,6 +1224,10 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
       case "units":
         args.push(`{ ${p.unitValue}: ${p.value} }`);
         break;
+      case "expr":
+        // The argument as an example wrote it; with no example, an empty string.
+        args.push(p.value || '""');
+        break;
     }
   }
 
@@ -1342,6 +1350,20 @@ function fieldForParam(
         ? p.value
         : choices[0];
     return { name: p.name, kind: "enum", seed, choices, ...opt };
+  }
+
+  if (p.type === "expr") {
+    // A union of string literals and an open `number` or object type
+    // (`number | "rolling" | { notBefore: string }`): the argument as the example
+    // wrote it, in a field the reader can retype as any form of the union.
+    if (raw === undefined)
+      return { name: p.name, kind: "expr", seed: "", ...opt };
+    const literal =
+      QUOTED_ARG.test(raw) ||
+      NUMERIC_ARG.test(raw) ||
+      BIGINT_ARG.test(raw) ||
+      EXPRESSION_ARG.test(raw);
+    return literal ? { name: p.name, kind: "expr", seed: raw, ...opt } : null;
   }
 
   if (p.type === "boolean") {
@@ -2611,7 +2633,7 @@ interface SymbolEntry {
   unreleased?: boolean;
 }
 
-/** The text of the divider that separates the industry namespaces from the general ones. */
+/** The text of the divider that separates the namespaces industries own from the general ones. */
 export const INDUSTRY_DIVIDER_LABEL = "By industry";
 /** The attribute that marks the divider entry for `SidebarSublist.astro`. */
 export const INDUSTRY_DIVIDER_ATTR = "data-gmt-divider";
@@ -2626,9 +2648,9 @@ export const INDUSTRY_DIVIDER_ATTR = "data-gmt-divider";
  * - One flat `types` group: `Overview`, then every shared type, alphabetical. A type
  *   documented on its function's page is not in the sidebar.
  * - Then a divider entry reading `By industry` (a link entry with `data-gmt-divider`, drawn as
- *   a label by the `SidebarSublist` override, not a link), followed by the namespace group of
- *   each industry in `industries`, in the order given, as siblings of the general groups.
- *   Each industry's Overview link carries `data-gmt-industry`, which the stylesheet reads to
+ *   a label by the `SidebarSublist` override, not a link), followed by the group of each
+ *   namespace in `industries` (the namespaces industries own), in the order given, as siblings
+ *   of the general groups. Each one's Overview link carries `data-gmt-industry`, which the stylesheet reads to
  *   draw the industry's icon beside the group's label (Starlight's groups take no icon).
  * - Modules with ≥ 2 symbols → nested collapsible group.
  * - Modules with exactly 1 symbol → hoisted directly into the namespace
@@ -2636,7 +2658,8 @@ export const INDUSTRY_DIVIDER_ATTR = "data-gmt-divider";
  * - Ordering inside a namespace: multi-symbol module groups first (alpha),
  *   then hoisted single-symbol items (alpha by symbol name).
  *
- * `industries` is the namespaces that are industries; one with no symbols is left out.
+ * `industries` is the namespaces industries own, in declared order; one with no symbols is left
+ * out.
  */
 export function buildSidebar(
   moduleSymbols: Map<string, SymbolEntry[]>,
@@ -2796,41 +2819,33 @@ export function withIndustry(
 }
 
 /**
- * The industry a shared type's page is tagged with: the namespace every public function
- * that reaches the type belongs to, when that is one industry namespace. A type any general
- * function reaches, or two industries share, is general and has no tag.
+ * The industry a shared type's page is tagged with: the industry that owns the namespace every
+ * public function that reaches the type belongs to, when that is one namespace and some industry
+ * owns it. A type any general function reaches, or two industries share, is general and has no
+ * tag. `ownerOf` says which industry owns a namespace.
  */
 export function typeIndustry(
   usedBy: readonly string[],
-  industries: readonly string[],
+  ownerOf: (namespace: string) => string | undefined,
 ): string | undefined {
   const namespaces = new Set(usedBy.map((key) => key.split("/")[0]!));
   if (namespaces.size !== 1) return undefined;
   const [ns] = [...namespaces];
-  return industries.includes(ns!) ? ns : undefined;
+  return ownerOf(ns!);
 }
 
-/** What the root page and an industry's overview say about each industry. */
+/** What the root page says about each declared industry, in declared order. */
 function industryIndex(): IndexedIndustry[] {
-  return INDUSTRY_LAYER_IDS.map((id) => {
-    const tag = industryTag(id);
-    const overview = INDUSTRY_OVERVIEWS[id];
-    if (!tag || !overview) {
-      throw new Error(
-        `[reference] the industry layer ${id} has no tag or no overview text. Add it to src/lib/industry-tags.ts and src/lib/industry-overview.ts.`,
-      );
-    }
-    return {
+  return INDUSTRIES.map(
+    ({ id, label, definition, icon, namespace, drawsOn }) => ({
       id,
-      label: tag.label,
-      definition: tag.definition,
-      icon: tag.icon,
-      guide: tag.guide,
-      guideTitle: overview.guideTitle,
-      about: overview.about,
-      solves: overview.solves,
-    };
-  });
+      label,
+      definition,
+      icon,
+      namespace,
+      drawsOn,
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -2903,11 +2918,37 @@ function referenceInputs(): string[] {
     resolve(appRoot, "scripts", "build-utils", "render-table.ts"),
     resolve(appRoot, "scripts", "build-utils", "type-usage.ts"),
     resolve(appRoot, "src", "lib", "playground-parsers.ts"),
-    // The industry namespaces, their tags and the text of their overview pages.
+    // The industries: their declarations, the namespaces they own and the pages that say what
+    // they are. The hub pages' text is `industry-overview.ts`, read by `build-industry-pages.ts`.
+    resolve(appRoot, "src", "data", "industries.json"),
     resolve(appRoot, "src", "lib", "industry-tags.ts"),
-    resolve(appRoot, "src", "lib", "industry-overview.ts"),
+    resolve(appRoot, "scripts", "build-utils", "moved-pages.ts"),
     resolve(appRoot, "src", "data", "gmt-stats.json"),
   ];
+}
+
+/**
+ * The route of every hand-written page under `src/content/docs`, with no trailing slash:
+ * `guides/concepts/standards.mdx` is `/guides/concepts/standards` and a section's `index.mdx`
+ * is the section's route. The reference tree is left out because this run is writing it: the
+ * route manifest holds its routes. `MOVED_PAGES` is checked against both.
+ */
+function contentRoutes(): string[] {
+  const docs = resolve(appRoot, "src", "content", "docs");
+  return listFiles(
+    docs,
+    (name) => /\.mdx?$/.test(name),
+    (name) => name === "reference",
+  )
+    .map((file) =>
+      relative(docs, file)
+        .replaceAll("\\", "/")
+        .replace(/\.mdx?$/, ""),
+    )
+    .map(
+      (route) =>
+        `/${route.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/",
+    );
 }
 
 function allSourceFiles(dir: string): string[] {
@@ -3148,10 +3189,6 @@ function runGeneration(baseline: ReleasedBaseline) {
 
   const moduleSymbols = new Map<string, SymbolEntry[]>();
   const sharedTypes: SymbolEntry[] = [];
-  /** The industry namespaces, whose pages carry the industry tag. */
-  const industryLayers = INDUSTRY_LAYER_IDS;
-  const industryOf = (namespace: string) =>
-    industryLayers.includes(namespace) ? namespace : undefined;
 
   for (const doc of dedupedDocs) {
     const unreleased = isUnreleased(baseline, doc.name);
@@ -3166,7 +3203,7 @@ function runGeneration(baseline: ReleasedBaseline) {
       // Tagged only when every function that reaches the type is in one industry namespace.
       const typeTag = typeIndustry(
         usage.types.get(doc.name)?.usedBy ?? [],
-        industryLayers,
+        industryOwning,
       );
       pages.set(
         join(TYPES_SECTION, `${doc.name}.mdx`),
@@ -3213,7 +3250,7 @@ function runGeneration(baseline: ReleasedBaseline) {
 
     pages.set(
       join(doc.namespace, doc.module, `${doc.name}.mdx`),
-      withIndustry(withNote(mdx), industryOf(doc.namespace)),
+      withIndustry(withNote(mdx), industryOwning(doc.namespace)),
     );
     pageRoutes.push(pageUrl(doc.namespace, doc.module, doc.name));
 
@@ -3284,7 +3321,7 @@ function runGeneration(baseline: ReleasedBaseline) {
   const pageChanges = syncTree(outMdx, pages);
 
   // Write generated sidebar
-  const sidebarMd = buildSidebar(moduleSymbols, sharedTypes, industryLayers);
+  const sidebarMd = buildSidebar(moduleSymbols, sharedTypes, OWN_NAMESPACES);
   writeIfChanged(join(outGen, "sidebar.ts"), sidebarMd);
 
   // Write artifacts
@@ -3343,14 +3380,16 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 `;
   writeIfChanged(join(outGen, "route-manifest.ts"), manifestTs);
 
-  // 3. redirects: the old URL of every type, to its page or to its anchor, and of every
-  // renamed function.
+  // 3. redirects: the old URL of every type, to its page or to its anchor, of every renamed
+  // function and of every moved page.
   writeIfChanged(
     outRedirects,
     buildRedirects(
       dedupedDocs.filter((d) => d.kind === "type"),
       usage,
       RENAMED_FUNCTIONS,
+      MOVED_PAGES,
+      new Set([...routes, ...contentRoutes()]),
     ),
   );
 

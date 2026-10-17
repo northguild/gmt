@@ -36,7 +36,13 @@ export type ParamType =
   | "boolean"
   | "enum"
   | "units"
-  | "array";
+  | "array"
+  /**
+   * A union that mixes string literals with a value no choice list can name: the open
+   * `number` or `bigint`, or an object type (`number | "rolling" | { notBefore: string }`).
+   * The reader types the argument as source text, so every form of the union is reachable.
+   */
+  | "expr";
 
 export interface ParamSpec {
   name: string;
@@ -505,6 +511,18 @@ export function classifyType(
   return withUnitOrder(classifyTypeAsPrinted(checker, type, paramName));
 }
 
+/**
+ * True for a union member that no list of choices can name: the open `number` or `bigint`, or
+ * an object type. An array is not one: `DateDurationUnit | DateDurationUnit[]` is still a choice
+ * of units.
+ */
+function isOpenMember(type: ts.Type): boolean {
+  if (type.flags & (ts.TypeFlags.Number | ts.TypeFlags.BigInt)) return true;
+  if (!(type.flags & ts.TypeFlags.Object)) return false;
+  const name = type.symbol?.name;
+  return name !== "Array" && name !== "ReadonlyArray";
+}
+
 /** `classifyType`, with any choices in the order the checker holds them. */
 function classifyTypeAsPrinted(
   _checker: ts.TypeChecker,
@@ -523,17 +541,25 @@ function classifyTypeAsPrinted(
   if (type.flags & ts.TypeFlags.Union) {
     const members = (type as ts.UnionType).types;
 
-    // Mixed union: string-literal + number-literal → enum
     const stringLits = members.filter(
       (m) => m.flags & ts.TypeFlags.StringLiteral,
     );
-    const numberLits = members.filter((m) => m.flags & ts.TypeFlags.NumberLike);
+    // String literals beside a member no choice can name (`number`, `bigint`, an object
+    // type) are source text, not an enum: a choice list would offer `number` as a value.
+    if (stringLits.length > 0 && members.some(isOpenMember)) {
+      return { type: "expr" };
+    }
+
+    // Mixed union: string-literal + number-literal → enum
+    const numberLits = members.filter(
+      (m) => m.flags & ts.TypeFlags.NumberLiteral,
+    );
     if (stringLits.length > 0 && numberLits.length > 0) {
       const allLiterals: string[] = [];
       for (const m of members) {
         if (m.flags & ts.TypeFlags.StringLiteral) {
           allLiterals.push((m as ts.StringLiteralType).value);
-        } else if (m.flags & ts.TypeFlags.NumberLike) {
+        } else if (m.flags & ts.TypeFlags.NumberLiteral) {
           allLiterals.push(_checker.typeToString(m));
         }
       }
@@ -747,6 +773,16 @@ function classifyTypeFromStringAsWritten(s: string): ClassifiedType {
     const opts = [...t.matchAll(/"([^"]*)"/g)].map((m) => m[1]);
     if (opts.length > 0) return { type: "enum", options: opts };
   }
+  // `number | "rolling"` and the like: string literals beside an open `number`, `bigint` or
+  // object type are source text, not choices.
+  const members = unionMembers(t);
+  if (
+    members.length > 1 &&
+    members.some((m) => /^"[^"]*"$/.test(m)) &&
+    members.some((m) => /^(number|bigint)$/.test(m) || m.startsWith("{"))
+  ) {
+    return { type: "expr" };
+  }
   // Mixed union: number literals + string literals
   const hasNumberLit = /\b\d+\b/.test(t);
   const hasStringLit = /"[^"]*"/.test(t);
@@ -958,6 +994,8 @@ export function seedForParam(
         const elements = parseArrayArg(raw);
         return elements.length > 0 ? elements.join(",") : "0,0,0";
       }
+      // Source text keeps its quotes: `"rolling"` and `0` are different arguments.
+      if (info.type === "expr") return raw.trim();
       const v = argToValue(raw);
       if (info.type === "enum" && info.options) {
         return info.options.includes(v) ? v : info.options[0];

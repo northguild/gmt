@@ -14,12 +14,12 @@
  *   `Etc/GMT+5`). Temporal must accept every Zone and Link name in the IANA database, and tzdb's
  *   `backward` file has more than forty slash-less ones.
  * - Letter case is not checked: ECMA-402 matches an identifier ASCII-case-insensitively, so `utc`
- *   and `america/new_york` name the same zones as `UTC` and `America/New_York`.
+ *   and `asia/kolkata` name the same zones as `UTC` and `Asia/Kolkata`.
  * - SHAPE ONLY. Whether the name exists is decided by Temporal: its only consumer,
  *   `isValidTimeZone`, also requires `Temporal.ZonedDateTime.from` to accept the zone.
  *
  * @example timeZoneLike.test("UTC")              // true
- * @example timeZoneLike.test("America/New_York") // true
+ * @example timeZoneLike.test("Asia/Kolkata")     // true
  * @example timeZoneLike.test("Japan")            // true (single-component IANA link)
  * @example timeZoneLike.test("Etc/GMT+5")        // true
  * @example timeZoneLike.test("Custom/Zone")      // true (shape only; existence is not checked)

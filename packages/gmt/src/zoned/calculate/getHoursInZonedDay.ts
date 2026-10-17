@@ -22,8 +22,8 @@ import { zonedDateTimeFrom, zonedHoursInDay } from "../../internal";
  * @returns number of hours in the day (usually 23, 24, or 25; fractional for
  *   non-whole-hour DST shifts), or null on invalid input
  *
- * @example getHoursInZonedDay("2024-03-10T12:00:00-04:00[America/New_York]") // 23
- * @example getHoursInZonedDay("2024-11-03T12:00:00-05:00[America/New_York]") // 25
+ * @example getHoursInZonedDay("2024-03-31T12:00:00+01:00[Europe/London]") // 23
+ * @example getHoursInZonedDay("2024-04-07T12:00:00+10:00[Australia/Sydney]") // 25
  * @example getHoursInZonedDay("2024-02-29T12:00:00+00:00[UTC]")              // 24
  * @example getHoursInZonedDay("2024-10-06T12:00:00+11:00[Australia/Lord_Howe]") // 23.5
  * @example getHoursInZonedDay("2024-09-08T12:00:00-03:00[America/Santiago]") // 23 (midnight skipped)

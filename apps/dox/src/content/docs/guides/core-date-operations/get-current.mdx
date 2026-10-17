@@ -51,7 +51,7 @@ consumer expects — and be consistent: mixing the two is a common source of
 ```typescript
 import { getZonedNow, getZonedToday } from "@northguild/gmt/zoned";
 
-getZonedNow("America/New_York"); // "2024-03-15T14:30:45.123-04:00[America/New_York]"
+getZonedNow("Africa/Johannesburg"); // "2024-03-15T14:30:45.123+02:00[Africa/Johannesburg]"
 getZonedToday("Asia/Tokyo"); // "2024-03-16"
 ```
 
@@ -60,7 +60,7 @@ getZonedToday("Asia/Tokyo"); // "2024-03-16"
 ```typescript
 import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned";
 
-getSystemTimeZone(); // "America/New_York"
+getSystemTimeZone(); // "Europe/London"
 getTimeZones(); // ["Africa/Abidjan", "Africa/Accra", ...] — 418 entries on Node.js 24
 ```
 
@@ -78,7 +78,7 @@ import { Temporal } from "@js-temporal/polyfill";
 Temporal.Now.instant(); // Temporal.Instant — absolute point in time
 Temporal.Now.plainDateISO(); // Temporal.PlainDate — system timezone
 Temporal.Now.plainDateTimeISO(); // Temporal.PlainDateTime — system timezone
-Temporal.Now.zonedDateTimeISO("America/New_York"); // Temporal.ZonedDateTime
+Temporal.Now.zonedDateTimeISO("Australia/Sydney"); // Temporal.ZonedDateTime
 ```
 
 GMT re-exports `Temporal` from `@northguild/gmt` if you don't want to depend on the

@@ -1,0 +1,14 @@
+# MAR-16 — Design notes
+
+Part of [MAR-16](../MAR-16.md).
+
+- Every offset except the TAI constants is a function of the date, resolved through the leap-second table. Any implementation that hardcodes 18 is correct only between 2017 and the next leap second.
+- **`GLO` is GLONASS time in UTC hours, as RINEX and BIPM report it; GMT does not implement the three-hour system time.** RINEX 4.02 §4.1.2: "The reported GLONASS time has the same hours as UTC and not UTC+3 h". A `GLO` label is UTC's own wall clock, leap seconds included. A reader of raw broadcast GLONASS system time removes the three hours first; the JSDoc says so.
+- **Galileo's epoch statement is about the count, not a midnight.** The ICD fixes GST at 13 s on 1999-08-22T00:00:00 UTC; the week counter's zero is therefore 13 s before that midnight, and the JSDoc quotes the sentence so nobody "corrects" it to zero.
+- **No system has functions of its own.** Every system goes through `utcToGnss` / `gnssToUtc`, `gnssWeekToUtc` / `utcToGnssWeek` and `rinexWeekToUtc` / `utcToRinexWeek`; a national system never gets its own named function (tracker, "International authority first").
+- **Week functions take the counter by name.** GPS, QZSS and NavIC each broadcast two week counters of different widths, and a week number means nothing without its counter's width. So each `GnssWeekCounter` member has exactly one modulus. GLONASS has no week counter, so `'GLO'` is not a member.
+- **`rolloverEra` is required: an integer, `'rolling'` by name, or a caller-stated pivot `{ notBefore }`.** A week number alone cannot say which pass of the counter it belongs to; a GPS receiver reporting LNAV week 100 is ambiguous across four decades. An integer from 0 is the era, for stored data. `'rolling'` picks the era that puts the full week within half a counter period of the current week, for live receiver output. `{ notBefore }` resolves to the earliest instant at or after a caller-stated UTC instant, as a receiver that resolves weeks against its firmware build date does; an instant exactly equal to it counts. GMT never picks the era itself.
+- **RINEX navigation weeks have their own functions.** A RINEX navigation record's week is continuous from 1980 for GPS, QZSS, NavIC and Galileo (RINEX 4.02 Table A30: "Continuous number, not mod (1024), counted from 1980 (same as GPS)"), and BeiDou records count BDT weeks from 2006. It never wraps and has no era, so `rinexWeekToUtc` / `utcToRinexWeek` read it. A RINEX NavIC week read as a NavIC broadcast week is 1024 weeks off.
+- **Offsets are nominal.** The nanosecond corrections a satellite broadcasts (C0, C1, A0/A1, GGTO) are not inputs and are not applied.
+- Before each system's epoch its time is undefined. Return the sentinel rather than extrapolating.
+- NMEA sentence parsing (RMC, ZDA) is MAR-59; this story is the scale arithmetic those parsers feed.

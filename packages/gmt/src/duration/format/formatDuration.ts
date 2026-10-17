@@ -110,16 +110,16 @@ export interface FormatDurationOptions {
  * @param options How unit names are written, and whether zero components are shown
  * @returns human-readable rendering of the duration, or "" on invalid input
  *
- * @example formatDuration("P1DT2H30M", "en-US") // "1 day, 2 hours, and 30 minutes"
- * @example formatDuration("PT90M", "en-US", { style: "short" }) // "90 min"
- * @example formatDuration("PT90M", "en-US", { style: "narrow" }) // "90m"
- * @example formatDuration("P1DT0H30M", "en-US") // "1 day and 30 minutes"
- * @example formatDuration("PT0S", "en-US") // "0 seconds"
- * @example formatDuration("-P1DT2H", "en-US") // "-1 day and -2 hours"
+ * @example formatDuration("P1DT2H30M", "en-GB") // "1 day, 2 hours and 30 minutes"
+ * @example formatDuration("PT90M", "ja-JP", { style: "short" }) // "90 分"
+ * @example formatDuration("PT90M", "hi-IN", { style: "narrow" }) // "90 मि"
+ * @example formatDuration("P1DT0H30M", "pt-BR") // "1 dia e 30 minutos"
+ * @example formatDuration("PT0S", "en-GB") // "0 seconds"
+ * @example formatDuration("-P1DT2H", "pt-BR") // "-1 dia e -2 horas"
  * @example formatDuration("P1DT2H30M", "de-DE") // "1 Tag, 2 Stunden und 30 Minuten"
- * @example formatDuration("PT0.000000001S", "en-US") // "0.000000001 seconds"
- * @example formatDuration("PT1.123456789S", "en-US") // "1.123456789 seconds"
- * @example formatDuration(parseDuration("PT1.123456789S", { smallestUnit: "millisecond" }), "en-US") // "1.123 seconds"
+ * @example formatDuration("PT0.000000001S", "hi-IN") // "0.000000001 सेकंड"
+ * @example formatDuration("PT1.123456789S", "ja-JP") // "1.123456789 秒"
+ * @example formatDuration(parseDuration("PT1.123456789S", { smallestUnit: "millisecond" }), "en-GB") // "1.123 seconds"
  * @example formatDuration("invalid") // ""
  * @example formatDuration("P1DT2H30M", ["es-ES", "en-US"]) // "1 día, 2 horas y 30 minutos"
  */

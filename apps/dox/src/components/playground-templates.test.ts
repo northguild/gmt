@@ -1,3 +1,4 @@
+import corpus from "../generated/reference/gmt-corpus.json";
 import { GMT_MODULES } from "../lib/gmt-modules";
 import {
   classifyPlaygroundResult,
@@ -121,6 +122,84 @@ describe("live playground templates", () => {
       ).not.toBe("sentinel");
     },
   );
+});
+
+// `rolloverEra` is `number | "rolling" | { notBefore: string }`: a union of string literals and an
+// open `number` or object type. It is source text in the form, so the reader can type any form of
+// the union, and the form opens on the example's argument as written. Every expected value below
+// is read from the generated template or from the function's own JSDoc examples in the corpus.
+describe("gnssWeekToUtc, a union of string literals and an open type", () => {
+  const template = LIVE_PLAYGROUND_TEMPLATES.gnssWeekToUtc;
+  const examples =
+    corpus.find((e) => e.name === "gnssWeekToUtc" && e.kind === "function")
+      ?.examples ?? [];
+  const argsOf = (call: string) => parseCallArgs(call).map((a) => a.trim());
+  /**
+   * The first example for a counter whose result is an instant and whose week and time of week
+   * are number literals: a form field holds a literal, not an expression such as `50399 * 12`.
+   */
+  const exampleFor = (counter: string) =>
+    examples.find(
+      (e) =>
+        argsOf(e.call)[0] === JSON.stringify(counter) &&
+        argsOf(e.call)
+          .slice(1, 3)
+          .every((a) => /^-?\d+(\.\d+)?$/.test(a)) &&
+        e.result !== '""' &&
+        !e.result.startsWith('"" '),
+    );
+
+  it("has a form with the counter as a choice and the other three as typed fields", () => {
+    expect(template).toBeDefined();
+    expect(template?.fields?.map((f) => [f.name, f.kind])).toEqual([
+      ["counter", "enum"],
+      ["week", "number"],
+      ["timeOfWeekSeconds", "number"],
+      ["rolloverEra", "expr"],
+    ]);
+    const counter = template?.fields?.[0];
+    expect(counter?.choices?.length).toBeGreaterThan(1);
+    expect(new Set(counter?.choices).size).toBe(counter?.choices?.length);
+  });
+
+  it("opens the era on the example's own argument, with no list of choices", () => {
+    const era = template?.fields?.find((f) => f.name === "rolloverEra");
+    expect(era?.seed).toBe(argsOf(template!.template)[3]);
+    expect(era?.choices).toBeUndefined();
+  });
+
+  it("loads the week, the time of week and the era of an example when a counter is chosen", () => {
+    const seeds = template?.choiceSeeds?.counter ?? {};
+    expect(Object.keys(seeds)).toContain("BDT");
+    for (const [counter, entry] of Object.entries(seeds)) {
+      const written = argsOf(exampleFor(counter)!.call);
+      expect(entry, counter).toEqual({
+        week: { seed: written[1] },
+        timeOfWeekSeconds: { seed: written[2] },
+        rolloverEra: { seed: written[3] },
+      });
+    }
+  });
+
+  it("answers an era typed as a number, a word or an object", async () => {
+    const mod = await GMT_MODULES[template!.module]?.();
+    const fn = mod?.gnssWeekToUtc as (...a: unknown[]) => unknown;
+    const forms = ["0", '"rolling"', '{ notBefore: "2019-01-01T00:00:00Z" }'];
+    for (const era of forms) {
+      const fields = (template?.fields ?? []).map(seededField);
+      const call = buildCall(
+        template!.fn,
+        fields.map((f) =>
+          f.name === "rolloverEra" ? { ...f, value: era } : f,
+        ),
+      );
+      const args = parseCallArgs(call)
+        .map((a) => a.trim())
+        .map(evaluateArg);
+      expect(typeof fn(...args), call).toBe("string");
+      expect(fn(...args), call).not.toBe("");
+    }
+  });
 });
 
 // The two functions that take a unit object. Every unit the control lists must answer, for

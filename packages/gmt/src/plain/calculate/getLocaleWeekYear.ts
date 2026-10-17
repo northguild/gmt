@@ -22,8 +22,8 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   everywhere. ECMA-402 does not expose a locale's minimal days: Intl Locale Info returns only
  *   `firstDay` and `weekend` (tc39/proposal-intl-locale-info#86), so older runtimes that still
  *   reported it disagreed with newer ones about the same date. Pass CLDR's value when you need a
- *   locale's own rule: in CLDR 48 `weekData`, the world default (`001`) is `1`, as in `US`, `CA`,
- *   `MX`, `JP` and `CN`, and `4` is set for a list of mostly European regions such as `GB`, `DE`
+ *   locale's own rule: in CLDR 48 `weekData`, the world default (`001`) is `1`, as in `JP`, `CN`,
+ *   `MX`, `CA` and `US`, and `4` is set for a list of mostly European regions such as `GB`, `DE`
  *   and `FR`.
  * - Returns null if `value` or `locale` is invalid.
  * - **Compatibility:** before 1.16.0 the default read the runtime's `minimalDays` where one was
@@ -31,18 +31,18 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   `{ minimalDays: 1 }` to keep the Node 22 result for such a locale on every runtime.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @param options The minimal-days-in-first-week rule
  * @returns locale-relative week-numbering year, or null on invalid input
  *
- * @example getLocaleWeekYear("2024-06-15", "en-US") // 2024
- * @example getLocaleWeekYear("2022-01-01", "en-US", { minimalDays: 1 }) // 2022 — Jan 1 is always in week 1
- * @example getLocaleWeekYear("2022-01-01", "en-US") // 2021 — ISO default: the week of Dec 26 holds 1 day of 2022
+ * @example getLocaleWeekYear("2024-06-15", "pt-BR") // 2024
+ * @example getLocaleWeekYear("2022-01-01", "ja-JP", { minimalDays: 1 }) // 2022 — Jan 1 is always in week 1
+ * @example getLocaleWeekYear("2022-01-01", "ja-JP") // 2021 — ISO default: the week of Dec 26 holds 1 day of 2022
  * @example getLocaleWeekYear("2022-01-01", "de-DE") // 2021 — Jan 1, 2022 is a Saturday, in week 52 of 2021
- * @example getLocaleWeekYear("2022-01-01", "en-US", { minimalDays: 0 }) // null
- * @example getLocaleWeekYear("+275760-09-13", "en-US") // 275760 (the last PlainDate; the next week 1 lies past the range)
- * @example getLocaleWeekYear("invalid", "en-US") // null
- * @example getLocaleWeekYear("2024-12-29", ["en-US", "fr-FR"]) // 2025
+ * @example getLocaleWeekYear("2022-01-01", "hi-IN", { minimalDays: 0 }) // null
+ * @example getLocaleWeekYear("+275760-09-13", "ja-JP") // 275760 (the last PlainDate; the next week 1 lies past the range)
+ * @example getLocaleWeekYear("invalid", "ar-EG") // null
+ * @example getLocaleWeekYear("2024-12-29", ["ja-JP", "fr-FR"]) // 2025
  */
 export function getLocaleWeekYear(
   value: string,

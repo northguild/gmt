@@ -18,6 +18,7 @@ export * from "./exact-duration-unit";
 export * from "./fiscal-calendar";
 export * from "./fractional-digit";
 export * from "./free-time-options";
+export * from "./gnss";
 export * from "./interval";
 export * from "./now-unit";
 export * from "./offset";

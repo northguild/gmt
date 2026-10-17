@@ -20,10 +20,10 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @param optionsArg optional setting for the precision of the output string
  * @returns zoned ISO 8601 datetime string or "" on invalid input
  *
- * @example getZonedNow("America/New_York") // "2024-02-29T09:30:45.123-05:00[America/New_York]"
- * @example getZonedNow("America/New_York", { smallestUnit: "second" }) // "2024-02-29T09:30:45-05:00[America/New_York]"
+ * @example getZonedNow("Asia/Tokyo") // "2024-02-29T23:30:45.123+09:00[Asia/Tokyo]"
+ * @example getZonedNow("Asia/Tokyo", { smallestUnit: "second" }) // "2024-02-29T23:30:45+09:00[Asia/Tokyo]"
  * @example getZonedNow("Invalid/Zone") // ""
- * @example getZonedNow("America/New_York", { smallestUnit: "fortnight" as never }) // "" (not a unit from minute to nanosecond)
+ * @example getZonedNow("Asia/Tokyo", { smallestUnit: "fortnight" as never }) // "" (not a unit from minute to nanosecond)
  */
 export function getZonedNow(
   ianaTimezone: string,

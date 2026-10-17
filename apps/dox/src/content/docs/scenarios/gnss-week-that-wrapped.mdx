@@ -1,0 +1,39 @@
+---
+title: "The Week That Wrapped"
+description: A receiver reports week 247, and the log reads it as a date in 1984.
+industries: [gnss]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="The Week That Wrapped"
+  description="A receiver's navigation message carries week 247 and 86418 seconds into the week, counted on a 10-bit counter. A tool turns that into a date. Which one?"
+  naiveCode={`// The naive approach: count weeks from the system's start and ignore the wrap
+const GPS_START = Date.UTC(1980, 0, 6);
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+new Date(GPS_START + 247 * WEEK_MS + 86418 * 1000).toISOString();
+// "1984-10-01T00:00:18.000Z" — the receiver was reporting 1 January 2024`}
+  explanation={`A 10-bit week counter shows 0 to 1023 and then starts again, about every 19.6 years. Week 247 has meant 1984-10-01, 2004-05-17 and 2024-01-01, and it will mean 2043-08-17. The number alone cannot say which. \`gnssWeekToUtc\` makes the caller state the pass, called the era: an integer, \`"rolling"\` for the pass nearest today, or a \`notBefore\` instant for a receiver that resolves weeks against its firmware build date. The result also names the leap-second gap, so the second is the right one.`}
+  gmtCode={`import { gnssWeekToUtc, utcToGnssWeek } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("GPS-LNAV", 247, 86418, 0);
+// "1984-10-01T00:00:15Z"
+gnssWeekToUtc("GPS-LNAV", 247, 86418, 2);
+// "2024-01-01T00:00:00Z"
+gnssWeekToUtc("GPS-LNAV", 247, 86418, { notBefore: "2023-06-01T00:00:00Z" });
+// "2024-01-01T00:00:00Z"
+utcToGnssWeek("GPS-LNAV", "2024-01-01T00:00:00Z");
+// { week: 247, timeOfWeekSeconds: 86418, era: 2 }`}
+  fixedSpecId="gnssWeekToUtc"
+/>
+
+Change the last argument in the widget from `0` to `2` and the date moves forward forty years. Try
+`"rolling"` and the result is the same as era 2, but `"rolling"` picks the pass nearest the day the
+code runs, so an archive read years later gets a different answer. An archive needs a stated era or
+a pivot. The [GNSS Week
+Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22lnav-2024%22%7D) lists every era of week 247, and the [GNSS Rollover
+Checker](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22counter%22%3A%22GPS-LNAV%22%2C%22firmwareNotBefore%22%3A%222023-06-01T00%3A00%3A00Z%22%7D) shows, for a receiver built on 1 June 2023, when a receiver's firmware starts reporting the
+wrong pass. The rules are in [GNSS: System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/#week-counters-wrap-name-the-counter-and-the-era).

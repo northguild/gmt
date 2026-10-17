@@ -3,13 +3,13 @@
  * and reads — the zoned sibling of `calendarDate` (regex/calendar-date.ts):
  *
  *   <date>T<time><offset>[<timeZone>][u-ca=<id>]
- *   2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]
+ *   2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]
  *
  * This is exactly `Temporal.ZonedDateTime#toString()` for a non-ISO calendar. The digits are ISO
  * and the calendar annotation follows the time zone annotation, in RFC 9557 §4.1 order. The date,
  * time and offset are ISO 8601 extended format with an upper-case `Z`. The date
  * half and the annotation are the same groups as `calendarDate`'s. The offset is optional; the
- * time zone annotation may carry RFC 9557's critical flag (`[!America/New_York]`), and so may the
+ * time zone annotation may carry RFC 9557's critical flag (`[!Asia/Jerusalem]`), and so may the
  * calendar annotation.
  *
  * A match proves shape only: `internal/calendarZonedString.ts` hands the string to
@@ -23,8 +23,8 @@
  * Capture groups: 1 year, 2 month, 3 day, 4 time, 5 offset (optional), 6 time zone annotation
  * (with its critical flag, if any), 7 calendar critical flag (`"!"` or undefined), 8 calendar id.
  *
- * @example calendarZonedDateTime.test("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]") // true
- * @example calendarZonedDateTime.test("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]") // false (calendar before zone)
+ * @example calendarZonedDateTime.test("2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]") // true
+ * @example calendarZonedDateTime.test("2024-02-24T14:30:00+02:00[u-ca=hebrew][Asia/Jerusalem]") // false (calendar before zone)
  * @example calendarZonedDateTime.test("2024-03-15T14:30:00Z[UTC]") // false (no calendar annotation)
  */
 export const calendarZonedDateTime: RegExp =

@@ -66,17 +66,17 @@ describe("readingsOf", () => {
 });
 
 describe("collectRulerFacts", () => {
-  it("R1: New York fall-back — 49h/48h/50h", () => {
+  it("R1: Sydney fall-back — 49h/48h/50h", () => {
     const facts = collectRulerFacts(
-      presetState(presetById("new-york-fall-back")),
+      presetState(presetById("sydney-fall-back")),
       lib,
     );
     const [calendar, exact, pinned] = facts.readings;
-    expect(calendar!.at).toBe("2024-11-02T18:00:00-04:00[America/New_York]");
+    expect(calendar!.at).toBe("2024-04-06T18:00:00+11:00[Australia/Sydney]");
     expect(calendar!.hoursBefore).toBe("PT49H");
-    expect(exact!.at).toBe("2024-11-02T19:00:00-04:00[America/New_York]");
+    expect(exact!.at).toBe("2024-04-06T19:00:00+11:00[Australia/Sydney]");
     expect(exact!.hoursBefore).toBe("PT48H");
-    expect(pinned!.at).toBe("2024-11-02T17:00:00-04:00[America/New_York]");
+    expect(pinned!.at).toBe("2024-04-06T17:00:00+11:00[Australia/Sydney]");
     expect(pinned!.hoursBefore).toBe("PT50H");
   });
 
@@ -92,26 +92,26 @@ describe("collectRulerFacts", () => {
     expect(pinned!.hoursBefore).toBe("PT49H");
   });
 
-  it("R3: New York spring-forward — PT48H and pinned coincide", () => {
+  it("R3: London spring-forward — PT48H and pinned coincide", () => {
     const facts = collectRulerFacts(
-      presetState(presetById("new-york-spring-forward")),
+      presetState(presetById("london-spring-forward")),
       lib,
     );
     const [calendar, exact, pinned] = facts.readings;
-    expect(calendar!.at).toBe("2024-03-09T18:00:00-05:00[America/New_York]");
+    expect(calendar!.at).toBe("2024-03-30T18:00:00+00:00[Europe/London]");
     expect(calendar!.hoursBefore).toBe("PT47H");
-    expect(exact!.at).toBe("2024-03-09T17:00:00-05:00[America/New_York]");
+    expect(exact!.at).toBe("2024-03-30T17:00:00+00:00[Europe/London]");
     expect(pinned!.at).toBe(exact!.at);
   });
 
-  it("R4: repeated hour — the first 01:30, -04:00", () => {
+  it("R4: repeated hour — the first 02:30, +11:00", () => {
     const facts = collectRulerFacts(
       presetState(presetById("repeated-hour")),
       lib,
     );
     const pinned = facts.readings[2]!;
-    expect(pinned.at).toBe("2024-11-03T01:30:00-04:00[America/New_York]");
-    expect(pinned.hoursBefore).toBe("PT41H30M");
+    expect(pinned.at).toBe("2024-04-07T02:30:00+11:00[Australia/Sydney]");
+    expect(pinned.hoursBefore).toBe("PT40H30M");
   });
 
   it("R5: skipped hour — the pinned reading is ''", () => {
@@ -120,7 +120,7 @@ describe("collectRulerFacts", () => {
       lib,
     );
     const [calendar, exact, pinned] = facts.readings;
-    expect(calendar!.at).toBe("2024-03-10T18:00:00-04:00[America/New_York]");
+    expect(calendar!.at).toBe("2024-03-31T18:00:00+01:00[Europe/London]");
     expect(exact!.at).toBe(calendar!.at);
     expect(pinned!.at).toBe("");
     expect(pinned!.hoursBefore).toBe("");
@@ -128,9 +128,9 @@ describe("collectRulerFacts", () => {
 
   it("RA: the departure is rendered by etaAtZone", () => {
     expect(
-      collectRulerFacts(presetState(presetById("new-york-fall-back")), lib)
+      collectRulerFacts(presetState(presetById("sydney-fall-back")), lib)
         .departure,
-    ).toBe("2024-11-04T18:00:00-05:00[America/New_York]");
+    ).toBe("2024-04-08T18:00:00+10:00[Australia/Sydney]");
     expect(
       collectRulerFacts(presetState(presetById("amsterdam-june")), lib)
         .departure,
@@ -140,22 +140,22 @@ describe("collectRulerFacts", () => {
 
 describe("transitionBetween", () => {
   it("R1: fall-back, go back 1 h", () => {
-    const state = presetState(presetById("new-york-fall-back"));
+    const state = presetState(presetById("sydney-fall-back"));
     const facts = collectRulerFacts(state, lib);
     const t = transitionBetween(state, facts);
     expect(t).not.toBeNull();
-    expect(t!.wallBefore).toBe("02:00");
-    expect(t!.wallAfter).toBe("01:00");
+    expect(t!.wallBefore).toBe("03:00");
+    expect(t!.wallAfter).toBe("02:00");
     expect(transitionLabel(t!, state.timeZone)).toContain("go back 1 h");
   });
 
   it("R3: spring-forward, go forward 1 h", () => {
-    const state = presetState(presetById("new-york-spring-forward"));
+    const state = presetState(presetById("london-spring-forward"));
     const facts = collectRulerFacts(state, lib);
     const t = transitionBetween(state, facts);
     expect(t).not.toBeNull();
-    expect(t!.wallBefore).toBe("02:00");
-    expect(t!.wallAfter).toBe("03:00");
+    expect(t!.wallBefore).toBe("01:00");
+    expect(t!.wallAfter).toBe("02:00");
     expect(transitionLabel(t!, state.timeZone)).toContain("go forward 1 h");
   });
 
@@ -210,13 +210,13 @@ describe("matchPreset / permalinkOf", () => {
 
 describe("transitionKind", () => {
   it("R1: a fall-back repeats an hour, an overlap", () => {
-    const state = presetState(presetById("new-york-fall-back"));
+    const state = presetState(presetById("sydney-fall-back"));
     const t = transitionBetween(state, collectRulerFacts(state, lib));
     expect(transitionKind(t!)).toBe("overlap");
   });
 
   it("R3: a spring-forward skips an hour, a gap", () => {
-    const state = presetState(presetById("new-york-spring-forward"));
+    const state = presetState(presetById("london-spring-forward"));
     const t = transitionBetween(state, collectRulerFacts(state, lib));
     expect(transitionKind(t!)).toBe("gap");
   });

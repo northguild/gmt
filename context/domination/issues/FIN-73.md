@@ -42,7 +42,7 @@ None of these formats is parseable by a general date library, all of them are si
 ## What gmt provides (do not re-implement)
 
 - `toNanoseconds` / `fromNanoseconds` / `truncateNanoseconds` from CORE-1 — sub-second precision
-- `isLeapSecond` from SPA-48 — validating a `60` seconds field
+- `isLeapSecond` from SPA-48 (`timescale/validate/`) — checking a `60` seconds field against the leap-second table
 - `toOffsetInstant` / `resolveLocal` from CORE-4 — `TZTimestamp` and local market values
 - `regex/` — pattern matchers
 - `TwoDigitYearOptions` and `internal/twoDigitYear.ts` from INT-15 — the caller-stated 100-year window a two-digit year is read and written in

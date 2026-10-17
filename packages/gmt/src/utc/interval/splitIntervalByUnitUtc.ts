@@ -20,7 +20,8 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  *   lands on February 29, March 31, April 30. Temporal's `add` constrains a day the month lacks
  *   to the month's last day, and stepping from that boundary would keep the shortened day
  *   (February 29, then March 29).
- * - Comparison: Luxon's `Interval.splitBy` computes each boundary from the start the same way.
+ * - Each calendar-unit boundary is `start.add(amount × k)` with Temporal's
+ *   `overflow: "constrain"` (TC39 Temporal `add`), never a step from the previous boundary.
  * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
  *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
  *   `Number.MAX_SAFE_INTEGER`.

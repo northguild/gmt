@@ -27,8 +27,8 @@ import type { BusinessCalendar } from "../../types";
  * @example addBusinessDays("2024-03-15", 1) // "2024-03-18" (Friday to Monday)
  * @example addBusinessDays("2024-03-16", 1) // "2024-03-18" (from a Saturday)
  * @example addBusinessDays("2024-03-15", 0) // "2024-03-15"
- * @example addBusinessDays("2024-07-03", 1, { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // "2024-07-05" (skips the holiday)
- * @example addBusinessDays("2024-07-03", -1, { weekend: [6, 7], holidays: ["2024-07-02"], timeZone: "America/New_York" }) // "2024-07-01"
+ * @example addBusinessDays("2024-07-03", 1, { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // "2024-07-05" (skips the holiday)
+ * @example addBusinessDays("2024-07-03", -1, { weekend: [6, 7], holidays: ["2024-07-02"], timeZone: "Australia/Sydney" }) // "2024-07-01"
  * @example addBusinessDays("2024-07-04", 1, { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // "2024-07-07" (Friday–Saturday weekend)
  * @example addBusinessDays("invalid", 1) // ""
  * @example addBusinessDays("2024-03-15", 1, { weekend: [6, 7], holidays: [], timeZone: "Invalid/Zone" }) // "" (bad calendar)

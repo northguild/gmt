@@ -30,6 +30,36 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 export const ICON_STROKE =
   'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
+/**
+ * Lets every ISO instant in `root`'s hero values wrap only at its T, and before a
+ * fraction of a second and the zone after it: the date, the time, the fraction
+ * and the zone are each unbreakable and a `<wbr>` joins them. A hyphen is otherwise a
+ * line-break opportunity, so a narrow plate would split the date itself; and a
+ * nanosecond time with an offset (`T01:00:00.123456789+01:00`) is wider than a
+ * phone's plate on its own.
+ *
+ * Every plain hero value gets the same seven elements whatever it holds, so a
+ * readout that moves between an instant and a word (a NO SIGNAL, a duration)
+ * while the reader drags never adds or removes a node. A value that is not an
+ * instant keeps its own wrapping: its text sits in the first piece, marked
+ * `data-word` so that it is not held unbreakable. An instant with no fraction
+ * leaves the last two pieces empty: its zone stays with its time.
+ */
+export function wrapInstantsAtT(root: ParentNode): void {
+  for (const el of root.querySelectorAll(".gmt-punct-hero-value")) {
+    if (el.children.length > 0) continue;
+    const text = el.textContent ?? "";
+    const m = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/.exec(text);
+    const [date, time, fraction, zone, attr] = m
+      ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
+      : [text, "", "", "", " data-word"];
+    const piece = (s: string) =>
+      `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
+    // The value is a flex box, so the pieces share one inline wrapper.
+    el.innerHTML = `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
+  }
+}
+
 /** Escape text for safe use inside innerHTML. */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -374,4 +404,43 @@ export function chipToggleHtml(o: {
     ? "gmt-chip-toggle gmt-chip-toggle--switch"
     : "gmt-chip-toggle";
   return `<label class="${cls}"><input type="${o.type}"${name} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
+}
+
+/** One link to another tool: its `data-role` and its text. */
+export interface ToolLink {
+  role: string;
+  text: string;
+}
+
+/**
+ * A row of links to other tools (`.gmt-widget-controls`). Each starts disabled,
+ * as `aria-disabled` with no `href`, and `setToolLink` turns it on once the
+ * widget has a result to send, so the row holds still whatever the state.
+ */
+export function toolLinksHtml(links: readonly ToolLink[]): string {
+  return (
+    `<div class="gmt-widget-controls" data-role="tool-links">` +
+    links
+      .map(
+        (l) =>
+          `<a class="gmt-button gmt-button--pad" data-role="${escapeAttr(l.role)}" aria-disabled="true">${escapeHtml(l.text)}</a>`,
+      )
+      .join("") +
+    `</div>`
+  );
+}
+
+/** Point a tool link at `href`, or disable it (`null`: no `href`, `aria-disabled`). */
+export function setToolLink(
+  link: HTMLElement | null,
+  href: string | null,
+): void {
+  if (!link) return;
+  if (href === null) {
+    link.removeAttribute("href");
+    link.setAttribute("aria-disabled", "true");
+  } else {
+    link.setAttribute("href", href);
+    link.removeAttribute("aria-disabled");
+  }
 }

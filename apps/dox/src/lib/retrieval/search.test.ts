@@ -73,9 +73,12 @@ describe("searchChunks — DOX-C1 DoD question spread", () => {
     // for the end-to-end *LLM* refusal test, where recognizing "none of
     // these describe cron support" is the model's job, not retrieval's.
     // This test needs zero real keyword overlap with the corpus at all.
+    // ("translate this sentence into french" is asserted in the refusal-path
+    // block below: NMEA messages are "sentences", so a few Maritime guide
+    // sections are an honest match for it, and it must stay under the bound.)
     for (const q of [
       "recommend a good pizza restaurant nearby",
-      "translate this sentence into french",
+      "suggest a vegetarian lasagne recipe",
     ]) {
       const results = searchChunks(chunks, q);
       expect(results.length).toBeLessThan(5);
@@ -141,10 +144,13 @@ describe("searchChunks — the refusal path's honesty", () => {
   const OFF_DOMAIN = [
     "recommend a pizza restaurant",
     "translate to French",
+    "translate this sentence into french",
     "javascript sorting algorithm",
     "how do I bake sourdough bread",
     "what is the capital of Peru",
     "write me a haiku about cats",
+    "best pasta recipe",
+    "tell me a story about a dog",
   ];
 
   for (const question of OFF_DOMAIN) {
@@ -153,6 +159,18 @@ describe("searchChunks — the refusal path's honesty", () => {
       expect(results.length).toBeLessThan(5);
     });
   }
+
+  it("an everyday word that only occurs inside an identifier does not match on its own", () => {
+    // Splitting `bestAvailable` into best + available on the index side once
+    // took "best pasta recipe" from 6 chunks to 18 and "how do I bake
+    // sourdough bread" from 0 to 3. The body's identifier words now count for
+    // a fraction of a whole word, and short words are not fuzzed into
+    // neighbours (best -> rest/test/past).
+    expect(searchChunks(chunks, "how do I bake sourdough bread")).toEqual([]);
+    expect(
+      searchChunks(chunks, "best pasta recipe", { limit: 100 }).length,
+    ).toBeLessThanOrEqual(2);
+  });
 
   it("does not manufacture a full context out of weak matches", () => {
     // The specific failure this guards: 15 mediocre chunks look, to the
@@ -177,5 +195,96 @@ describe("searchChunks — one index per corpus", () => {
     searchChunks(chunks, "unrelated warm-up query");
     const warm = searchChunks(chunks, "what happens during a DST gap");
     expect(warm.map((c) => c.id)).toEqual(cold.map((c) => c.id));
+  });
+});
+
+describe("searchChunks — camelCase names", () => {
+  it("a plain-words question finds the identifier it describes, near the top", () => {
+    // The point of splitting identifiers: "leap second" never matched the
+    // single term `isLeapSecond` before, and ranked it 45th.
+    const results = searchChunks(chunks, "is it a leap second");
+    expect(results.slice(0, 8).some((c) => c.title === "isLeapSecond")).toBe(
+      true,
+    );
+  });
+
+  it("a question that types the identifier finds its own chunk first", () => {
+    const results = searchChunks(chunks, "what does gnssWeekToUtc return");
+    expect(results[0]?.title).toBe("gnssWeekToUtc");
+  });
+});
+
+describe("searchChunks — GNSS and leap-second questions", () => {
+  it("a Galileo week and time of week finds gnssWeekToUtc", () => {
+    const results = searchChunks(
+      chunks,
+      "What UTC time is Galileo week 1024, time of week 18, era 0?",
+    );
+    expect(
+      results.some((c) => c.kind === "function" && c.title === "gnssWeekToUtc"),
+    ).toBe(true);
+  });
+
+  it("seconds across the 2016 leap second finds leapSecondsBetween or the leap-seconds guide", () => {
+    const results = searchChunks(
+      chunks,
+      "How many seconds passed across the 2016 leap second?",
+    );
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "leapSecondsBetween") ||
+          (c.kind === "guide" && c.url.includes("leap-seconds-and-tai")),
+      ),
+    ).toBe(true);
+  });
+
+  it("the next GNSS week rollover finds gnssWeekToUtc or the Maritime guide", () => {
+    const results = searchChunks(
+      chunks,
+      "When does the next GNSS week rollover happen?",
+    );
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "gnssWeekToUtc") ||
+          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
+      ),
+    ).toBe(true);
+  });
+
+  it("fiscal and workforce questions still return their chunks", () => {
+    expect(
+      searchChunks(chunks, "how do I find the fiscal quarter of a date").some(
+        (c) => c.title === "getQuarter",
+      ),
+    ).toBe(true);
+    expect(
+      searchChunks(
+        chunks,
+        "how do I check a driver's duty hours in a rolling window",
+      ).some((c) => c.title === "dutyViolations"),
+    ).toBe(true);
+  });
+
+  it("a 23:59:60 question finds the isLeapSecond function", () => {
+    const results = searchChunks(
+      chunks,
+      "Is 2016-12-31T23:59:60Z a real leap second?",
+    );
+    expect(
+      results.some((c) => c.kind === "function" && c.title === "isLeapSecond"),
+    ).toBe(true);
+  });
+
+  it("GLONASS time offset from UTC finds utcToGnss or the Maritime guide", () => {
+    const results = searchChunks(chunks, "GLONASS time offset from UTC");
+    expect(
+      results.some(
+        (c) =>
+          (c.kind === "function" && c.title === "utcToGnss") ||
+          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
+      ),
+    ).toBe(true);
   });
 });

@@ -87,37 +87,33 @@ describe("rowDeparture", () => {
   it("is the printed text alone when the row has no offset", () => {
     expect(
       rowDeparture(
-        { departure: "2024-11-03T01:30:00", offset: "" },
-        "America/New_York",
+        { departure: "2024-10-27T01:30:00", offset: "" },
+        "Europe/London",
       ),
-    ).toBe("2024-11-03T01:30:00");
+    ).toBe("2024-10-27T01:30:00");
   });
 
   it("appends the offset and brackets the zone when the row has one", () => {
     expect(
       rowDeparture(
-        { departure: "2024-03-10T02:30:00", offset: "-05:00" },
-        "America/New_York",
+        { departure: "2024-03-31T01:30:00", offset: "+00:00" },
+        "Europe/London",
       ),
-    ).toBe("2024-03-10T02:30:00-05:00[America/New_York]");
+    ).toBe("2024-03-31T01:30:00+00:00[Europe/London]");
   });
 });
 
 describe("classify", () => {
-  it("once, for a New York time that happens only once (V91)", () => {
-    expect(classify("2024-11-03T00:30:00", "America/New_York", lib)).toBe(
-      "once",
-    );
+  it("once, for a London time that happens only once (V91)", () => {
+    expect(classify("2024-10-27T00:30:00", "Europe/London", lib)).toBe("once");
   });
 
-  it("twice, for New York's fall-back 01:30 (V89)", () => {
-    expect(classify("2024-11-03T01:30:00", "America/New_York", lib)).toBe(
-      "twice",
-    );
+  it("twice, for London's fall-back 01:30 (V89)", () => {
+    expect(classify("2024-10-27T01:30:00", "Europe/London", lib)).toBe("twice");
   });
 
-  it("skipped, for New York's spring-forward 02:30 (V90)", () => {
-    expect(classify("2024-03-10T02:30:00", "America/New_York", lib)).toBe(
+  it("skipped, for London's spring-forward 02:30 (V90)", () => {
+    expect(classify("2024-03-31T01:30:00", "Europe/London", lib)).toBe(
       "skipped",
     );
   });
@@ -136,15 +132,15 @@ describe("classify", () => {
 });
 
 describe("offsetChoices", () => {
-  const NY = "America/New_York";
+  const LON = "Europe/London";
 
   /* The label is cut off when it is wider than the select's text area. At the
      narrowest four-in-a-row frame it must show whole; OFFSET_LABEL_MAX is that
      width in characters (see its comment for the measurement). */
   it("keeps every option label within OFFSET_LABEL_MAX characters", () => {
     const cases: [string, string][] = [
-      ["2024-11-03T01:30:00", NY],
-      ["2024-03-10T02:30:00", NY],
+      ["2024-10-27T01:30:00", LON],
+      ["2024-03-31T01:30:00", LON],
       ["2024-10-27T02:30:00", "Europe/Berlin"],
       ["2011-12-30T12:00:00", "Pacific/Apia"],
       ["2024-04-07T02:15:00", "Australia/Lord_Howe"],
@@ -162,31 +158,31 @@ describe("offsetChoices", () => {
   });
 
   it("offers only None for a time that happens once (V91)", () => {
-    expect(offsetChoices("2024-11-03T00:30:00", NY, lib)).toEqual([
+    expect(offsetChoices("2024-10-27T00:30:00", LON, lib)).toEqual([
       { value: "", label: "None" },
     ]);
   });
 
-  it("offers both passes of New York's fall-back 01:30, named as passes (V89)", () => {
-    const choices = offsetChoices("2024-11-03T01:30:00", NY, lib);
-    expect(choices.map((c) => c.value)).toEqual(["", "-04:00", "-05:00"]);
+  it("offers both passes of London's fall-back 01:30, named as passes (V89)", () => {
+    const choices = offsetChoices("2024-10-27T01:30:00", LON, lib);
+    expect(choices.map((c) => c.value)).toEqual(["", "+01:00", "+00:00"]);
     expect(choices[0]!.label).toBe("None (earlier)");
-    expect(choices[1]!.label).toBe("-04:00 (earlier)");
-    expect(choices[2]!.label).toBe("-05:00 (later)");
+    expect(choices[1]!.label).toBe("+01:00 (earlier)");
+    expect(choices[2]!.label).toBe("+00:00 (later)");
   });
 
   it("offers both offsets of a skipped hour, so V83 stays reachable (V90)", () => {
-    const choices = offsetChoices("2024-03-10T02:30:00", NY, lib);
-    expect(choices.map((c) => c.value)).toContain("-05:00");
+    const choices = offsetChoices("2024-03-31T01:30:00", LON, lib);
+    expect(choices.map((c) => c.value)).toContain("+00:00");
     /* Neither offset names an instant here, so neither is dressed as a pass. */
     for (const c of choices.slice(1)) expect(c.label).toContain("(skipped)");
   });
 
   it("offers only None for a blank time, a blank zone or an unparseable time", () => {
     const only = [{ value: "", label: "None" }];
-    expect(offsetChoices("", NY, lib)).toEqual(only);
-    expect(offsetChoices("2024-11-03T01:30:00", "", lib)).toEqual(only);
-    expect(offsetChoices("not a time", NY, lib)).toEqual(only);
+    expect(offsetChoices("", LON, lib)).toEqual(only);
+    expect(offsetChoices("2024-10-27T01:30:00", "", lib)).toEqual(only);
+    expect(offsetChoices("not a time", LON, lib)).toEqual(only);
   });
 });
 
@@ -215,24 +211,24 @@ describe("presets", () => {
     const preset = TIMETABLE_PRESETS.find((p) => p.id === "fall-back")!;
     const state = stateOf(preset);
     expect(leavesAt(state, 0, lib)).toBe(
-      "2024-11-03T00:30:00-04:00[America/New_York]", // V95
+      "2024-10-27T00:30:00+01:00[Europe/London]", // V95
     );
     expect(leavesAt(state, 1, lib)).toBe(
-      "2024-11-03T01:30:00-04:00[America/New_York]", // V86
+      "2024-10-27T01:30:00+01:00[Europe/London]", // V86
     );
     expect(leavesAt(state, 2, lib)).toBe(
-      "2024-11-03T02:30:00-05:00[America/New_York]", // V96
+      "2024-10-27T02:30:00+00:00[Europe/London]", // V96
     );
   });
 
-  it("offset-picks: no offset resolves earlier, -05:00 resolves later (V86, V97)", () => {
+  it("offset-picks: no offset resolves earlier, +00:00 resolves later (V86, V97)", () => {
     const preset = TIMETABLE_PRESETS.find((p) => p.id === "offset-picks")!;
     const state = stateOf(preset);
     expect(leavesAt(state, 0, lib)).toBe(
-      "2024-11-03T01:30:00-04:00[America/New_York]", // V86
+      "2024-10-27T01:30:00+01:00[Europe/London]", // V86
     );
     expect(leavesAt(state, 1, lib)).toBe(
-      "2024-11-03T01:30:00-05:00[America/New_York]", // V97
+      "2024-10-27T01:30:00+00:00[Europe/London]", // V97
     );
   });
 
@@ -243,11 +239,11 @@ describe("presets", () => {
     const leg2 = rowLeg(state, 1)!;
     const leg3 = rowLeg(state, 2)!;
     expect(scheduleDelivery([leg1], optionsOf(state))).toEqual({
-      eta: "2024-03-10T03:30:00-04:00[America/New_York]",
+      eta: "2024-03-31T02:30:00+01:00[Europe/London]",
       legTimes: [
         {
-          arrival: "2024-03-10T07:30:00Z",
-          localArrival: "2024-03-10T03:30:00-04:00[America/New_York]",
+          arrival: "2024-03-31T01:30:00Z",
+          localArrival: "2024-03-31T02:30:00+01:00[Europe/London]",
           dwellAfter: "PT0S",
         },
       ],
@@ -255,7 +251,7 @@ describe("presets", () => {
     const result2 = scheduleDelivery([leg2], optionsOf(state));
     const result3 = scheduleDelivery([leg3], optionsOf(state));
     expect(result2).toEqual(result3);
-    expect(result2?.eta).toBe("2024-03-10T04:30:00-04:00[America/New_York]");
+    expect(result2?.eta).toBe("2024-03-31T03:30:00+01:00[Europe/London]");
   });
 
   it("published-local matches the JSDoc verbatim (V4)", () => {
@@ -263,11 +259,11 @@ describe("presets", () => {
     const state = stateOf(preset);
     const leg = rowLeg(state, 0)!;
     expect(scheduleDelivery([leg], optionsOf(state))).toEqual({
-      eta: "2024-06-15T15:00:00+00:00[UTC]",
+      eta: "2024-06-15T02:00:00+00:00[UTC]",
       legTimes: [
         {
-          arrival: "2024-06-15T15:00:00Z",
-          localArrival: "2024-06-15T15:00:00+00:00[UTC]",
+          arrival: "2024-06-15T02:00:00Z",
+          localArrival: "2024-06-15T02:00:00+00:00[UTC]",
           dwellAfter: "PT0S",
         },
       ],
@@ -297,11 +293,11 @@ describe("presets", () => {
 describe("rowResult", () => {
   it("names the skipped-offset reason when an offset is written into a skipped row (V83)", () => {
     const state: TimetableState = {
-      startTimeZone: "America/New_York",
+      startTimeZone: "Europe/London",
       duration: "PT1H",
-      timeZone: "America/New_York",
+      timeZone: "Europe/London",
       rows: [
-        { departure: "2024-03-10T02:30:00", offset: "-05:00" },
+        { departure: "2024-03-31T01:30:00", offset: "+00:00" },
         { departure: "", offset: "" },
         { departure: "", offset: "" },
         { departure: "", offset: "" },
@@ -314,9 +310,9 @@ describe("rowResult", () => {
 
   it("is null/null for a blank row", () => {
     const state: TimetableState = {
-      startTimeZone: "America/New_York",
+      startTimeZone: "Europe/London",
       duration: "PT1H",
-      timeZone: "America/New_York",
+      timeZone: "Europe/London",
       rows: [
         { departure: "", offset: "" },
         { departure: "", offset: "" },
@@ -345,13 +341,13 @@ describe("readArgs / matchPreset / permalinkOf", () => {
 
   it("reads the flat permalink keys", () => {
     const state = readArgs({
-      startTimeZone: "America/New_York",
-      departure1: "2024-03-10T02:30:00",
-      offset1: "-05:00",
+      startTimeZone: "Europe/London",
+      departure1: "2024-03-31T01:30:00",
+      offset1: "+00:00",
     });
     expect(state.rows[0]).toEqual({
-      departure: "2024-03-10T02:30:00",
-      offset: "-05:00",
+      departure: "2024-03-31T01:30:00",
+      offset: "+00:00",
     });
   });
 
@@ -378,7 +374,7 @@ describe("readArgs / matchPreset / permalinkOf", () => {
     const preset = TIMETABLE_PRESETS.find((p) => p.id === "fall-back")!;
     const link = permalinkOf(stateOf(preset));
     for (const v of Object.values(link)) expect(typeof v).toBe("string");
-    expect(link.departure1).toBe("2024-11-03T00:30:00");
+    expect(link.departure1).toBe("2024-10-27T00:30:00");
     expect(link.departure4).toBeUndefined();
   });
 });
@@ -387,33 +383,33 @@ describe("readArgs / matchPreset / permalinkOf", () => {
 // The day track, the chart and the sizers
 // ---------------------------------------------------------------------------
 
-const NY = "America/New_York";
+const LON = "Europe/London";
 const preset = (id: string) => TIMETABLE_PRESETS.find((p) => p.id === id)!;
 
 describe("classify at the band edges (section 9 C1, C2, C5)", () => {
-  it("is once, twice, twice, once around New York's fall-back hour", () => {
+  it("is once, twice, twice, once around London's fall-back hour", () => {
     expect(
       ["00:59", "01:00", "01:59", "02:00"].map((t) =>
-        classify(`2024-11-03T${t}:00`, NY, lib),
+        classify(`2024-10-27T${t}:00`, LON, lib),
       ),
     ).toEqual(["once", "twice", "twice", "once"]);
   });
 
-  it("is once, skipped, skipped, once around New York's spring-forward hour", () => {
+  it("is once, skipped, skipped, once around London's spring-forward hour", () => {
     expect(
-      ["01:59", "02:00", "02:59", "03:00"].map((t) =>
-        classify(`2024-03-10T${t}:00`, NY, lib),
+      ["00:59", "01:00", "01:59", "02:00"].map((t) =>
+        classify(`2024-03-31T${t}:00`, LON, lib),
       ),
     ).toEqual(["once", "skipped", "skipped", "once"]);
   });
 
   it("is invalid for text that is not a time and for a zone that does not exist", () => {
-    expect(classify("not a time", NY, lib)).toBe("invalid");
-    expect(classify("2024-11-03T01:30:00", "Nope/Zone", lib)).toBe("invalid");
+    expect(classify("not a time", LON, lib)).toBe("invalid");
+    expect(classify("2024-10-27T01:30:00", "Nope/Zone", lib)).toBe("invalid");
   });
 
   it("offers no offset and no badge for an invalid row", () => {
-    expect(offsetChoices("2024-11-03T01:30:00", "Nope/Zone", lib)).toEqual([
+    expect(offsetChoices("2024-10-27T01:30:00", "Nope/Zone", lib)).toEqual([
       { value: "", label: "None" },
     ]);
     expect(rowBadge("invalid", false)).toBeNull();
@@ -435,12 +431,12 @@ describe("trackDate, rowMinute, withMinute, laneState", () => {
       ...base,
       rows: [
         { departure: "", offset: "" },
-        { departure: "2024-11-03T01:30:00", offset: "" },
+        { departure: "2024-10-27T01:30:00", offset: "" },
         base.rows[2],
         base.rows[3],
       ],
     } as TimetableState;
-    expect(trackDate(blankFirst, lib)).toBe("2024-11-03");
+    expect(trackDate(blankFirst, lib)).toBe("2024-10-27");
     const none = {
       ...base,
       rows: base.rows.map(() => ({ departure: "nonsense", offset: "" })),
@@ -449,15 +445,15 @@ describe("trackDate, rowMinute, withMinute, laneState", () => {
   });
 
   it("reads minutes after 00:00 and drops seconds", () => {
-    expect(rowMinute("2024-11-03T01:30:45")).toBe(90);
-    expect(rowMinute("2024-11-03T23:55:00")).toBe(1435);
+    expect(rowMinute("2024-10-27T01:30:45")).toBe(90);
+    expect(rowMinute("2024-10-27T23:55:00")).toBe(1435);
     expect(rowMinute("not a time")).toBeNull();
   });
 
   it("writes the form the presets use", () => {
-    expect(withMinute("2024-11-03", 90)).toBe("2024-11-03T01:30:00");
-    expect(withMinute("2024-11-03", 1435)).toBe("2024-11-03T23:55:00");
-    expect(withMinute("2024-11-03", 0)).toBe("2024-11-03T00:00:00");
+    expect(withMinute("2024-10-27", 90)).toBe("2024-10-27T01:30:00");
+    expect(withMinute("2024-10-27", 1435)).toBe("2024-10-27T23:55:00");
+    expect(withMinute("2024-10-27", 0)).toBe("2024-10-27T00:00:00");
   });
 
   it("says what each lane holds", () => {
@@ -465,35 +461,35 @@ describe("trackDate, rowMinute, withMinute, laneState", () => {
     const state = {
       ...base,
       rows: [
-        { departure: "2024-11-03T01:30:45", offset: "" },
-        { departure: "2024-11-04T01:30:00", offset: "" },
+        { departure: "2024-10-27T01:30:45", offset: "" },
+        { departure: "2024-10-28T01:30:00", offset: "" },
         { departure: "nonsense", offset: "" },
         { departure: "", offset: "" },
       ],
     } as TimetableState;
-    expect(laneState(state, 0, "2024-11-03", lib)).toEqual({
+    expect(laneState(state, 0, "2024-10-27", lib)).toEqual({
       state: "on",
       minute: 90,
       kind: "twice",
     });
-    expect(laneState(state, 1, "2024-11-03", lib)).toEqual({
+    expect(laneState(state, 1, "2024-10-27", lib)).toEqual({
       state: "off",
-      date: "2024-11-04",
+      date: "2024-10-28",
     });
-    expect(laneState(state, 2, "2024-11-03", lib)).toEqual({
+    expect(laneState(state, 2, "2024-10-27", lib)).toEqual({
       state: "invalid",
     });
-    expect(laneState(state, 3, "2024-11-03", lib)).toEqual({ state: "blank" });
+    expect(laneState(state, 3, "2024-10-27", lib)).toEqual({ state: "blank" });
   });
 
   it("puts every preset's rows on the lanes with the kind the library gives", () => {
     const state = stateOf(preset("spring-forward"));
     expect(
-      [0, 1, 2].map((i) => laneState(state, i, "2024-03-10", lib)),
+      [0, 1, 2].map((i) => laneState(state, i, "2024-03-31", lib)),
     ).toEqual([
-      { state: "on", minute: 90, kind: "once" },
-      { state: "on", minute: 150, kind: "skipped" },
-      { state: "on", minute: 210, kind: "once" },
+      { state: "on", minute: 30, kind: "once" },
+      { state: "on", minute: 90, kind: "skipped" },
+      { state: "on", minute: 150, kind: "once" },
     ]);
   });
 });
@@ -509,9 +505,9 @@ describe("dayBands (section 9 B1 to B12)", () => {
     ]);
 
   it.each([
-    ["B1", NY, "2024-11-03", [["twice", 60, 120, "01:00", "02:00"]]],
-    ["B2", NY, "2024-03-10", [["skipped", 120, 180, "02:00", "03:00"]]],
-    ["B3", NY, "2024-06-15", []],
+    ["B1", LON, "2024-10-27", [["twice", 60, 120, "01:00", "02:00"]]],
+    ["B2", LON, "2024-03-31", [["skipped", 60, 120, "01:00", "02:00"]]],
+    ["B3", LON, "2024-06-15", []],
     [
       "B4",
       "Europe/Berlin",
@@ -555,15 +551,15 @@ describe("dayBands (section 9 B1 to B12)", () => {
       "1981-12-31",
       [["skipped", 1410, 1440, "23:30", "00:00"]],
     ],
-    ["B12", "UTC", "2024-11-03", []],
+    ["B12", "UTC", "2024-10-27", []],
   ])("%s: %s on %s", (_id, zone, date, want) => {
     expect(bands(zone as string, date as string)).toEqual(want);
   });
 
   it("starts each band on a printed time the library calls repeated or skipped, and ends it on one it calls unique", () => {
     for (const [zone, date] of [
-      [NY, "2024-11-03"],
-      [NY, "2024-03-10"],
+      [LON, "2024-10-27"],
+      [LON, "2024-03-31"],
       ["Europe/Berlin", "2024-10-27"],
       ["Australia/Lord_Howe", "2024-04-07"],
     ] as const) {
@@ -577,10 +573,10 @@ describe("dayBands (section 9 B1 to B12)", () => {
   });
 
   it("is empty for an invalid zone, date or year", () => {
-    expect(dayBands("Nope/Zone", "2024-11-03", lib)).toEqual([]);
-    expect(dayBands(NY, "2024-02-30", lib)).toEqual([]);
-    expect(dayBands(NY, "not a date", lib)).toEqual([]);
-    expect(dayBands(NY, "0000-01-01", lib)).toEqual([]);
+    expect(dayBands("Nope/Zone", "2024-10-27", lib)).toEqual([]);
+    expect(dayBands(LON, "2024-02-30", lib)).toEqual([]);
+    expect(dayBands(LON, "not a date", lib)).toEqual([]);
+    expect(dayBands(LON, "0000-01-01", lib)).toEqual([]);
   });
 
   it("asks the previous year on 1 January, the next on 31 December, and no other year otherwise", () => {
@@ -592,18 +588,18 @@ describe("dayBands (section 9 B1 to B12)", () => {
         return [];
       },
     } as TimetableLib;
-    dayBands(NY, "2024-06-15", stub);
+    dayBands(LON, "2024-06-15", stub);
     expect(asked).toEqual([2024]);
     asked.length = 0;
-    dayBands(NY, "2024-01-01", stub);
+    dayBands(LON, "2024-01-01", stub);
     expect(asked).toEqual([2023, 2024]);
     asked.length = 0;
-    dayBands(NY, "2024-12-31", stub);
+    dayBands(LON, "2024-12-31", stub);
     expect(asked).toEqual([2024, 2025]);
   });
 
   it("finds the band a minute falls in, start inclusive and end exclusive", () => {
-    const list = dayBands(NY, "2024-11-03", lib);
+    const list = dayBands(LON, "2024-10-27", lib);
     expect(bandAt(59, list)).toBeNull();
     expect(bandAt(60, list)?.kind).toBe("twice");
     expect(bandAt(119, list)?.kind).toBe("twice");
@@ -611,13 +607,13 @@ describe("dayBands (section 9 B1 to B12)", () => {
   });
 
   it("words the chip", () => {
-    expect(bandChipText(dayBands(NY, "2024-11-03", lib))).toBe(
+    expect(bandChipText(dayBands(LON, "2024-10-27", lib))).toBe(
       "01:00\u201302:00 happens twice",
     );
-    expect(bandChipText(dayBands(NY, "2024-03-10", lib))).toBe(
-      "02:00\u201303:00 never shows",
+    expect(bandChipText(dayBands(LON, "2024-03-31", lib))).toBe(
+      "01:00\u201302:00 never shows",
     );
-    expect(bandChipText(dayBands(NY, "2024-06-15", lib))).toBe(
+    expect(bandChipText(dayBands(LON, "2024-06-15", lib))).toBe(
       "No clock change this day",
     );
     expect(bandChipText(dayBands("Pacific/Apia", "2011-12-30", lib))).toBe(
@@ -681,13 +677,13 @@ describe("handleValueText and tagText", () => {
     expect(handleValueText("01:30", "twice", "", "01:30")).toBe(
       "01:30, happens twice, read as the earlier pass",
     );
-    expect(handleValueText("01:30", "twice", "-05:00", "01:30")).toBe(
-      "01:30, happens twice, offset -05:00 written",
+    expect(handleValueText("01:30", "twice", "+00:00", "01:30")).toBe(
+      "01:30, happens twice, offset +00:00 written",
     );
     expect(handleValueText("02:30", "skipped", "", "03:30")).toBe(
       "02:30, never shows on the clock, read as 03:30",
     );
-    expect(handleValueText("02:30", "skipped", "-05:00", null)).toBe(
+    expect(handleValueText("02:30", "skipped", "+00:00", null)).toBe(
       "02:30, never shows on the clock, no instant",
     );
   });
@@ -701,17 +697,11 @@ describe("handleValueText and tagText", () => {
   it("formats a minute and an arrival chip", () => {
     expect(hhmmOfMinute(90)).toBe("01:30");
     expect(
-      arrivalChipText(
-        "2024-11-03T01:30:00-04:00[America/New_York]",
-        "2024-11-03",
-      ),
-    ).toBe("01:30 -04:00");
+      arrivalChipText("2024-10-27T01:30:00+01:00[Europe/London]", "2024-10-27"),
+    ).toBe("01:30 +01:00");
     expect(
-      arrivalChipText(
-        "2024-11-04T00:30:00-05:00[America/New_York]",
-        "2024-11-03",
-      ),
-    ).toBe("00:30 -05:00 11-04");
+      arrivalChipText("2024-10-28T00:30:00+00:00[Europe/London]", "2024-10-27"),
+    ).toBe("00:30 +00:00 10-28");
   });
 });
 
@@ -725,8 +715,8 @@ describe("chartLayout (section 9 L1 to L6)", () => {
 
   it("fall-back", () => {
     const layout = chartLayout(stateOf(preset("fall-back")), lib)!;
-    expect(layout.date).toBe("2024-11-03");
-    expect(layout.dayStart).toBe("2024-11-03T04:00:00Z");
+    expect(layout.date).toBe("2024-10-27");
+    expect(layout.dayStart).toBe("2024-10-26T23:00:00Z");
     expect(layout.dayMinutes).toBe(1500);
     expect(layout.domainMinutes).toBe(1560);
     expect(rows("fall-back")).toEqual([
@@ -752,19 +742,19 @@ describe("chartLayout (section 9 L1 to L6)", () => {
 
   it("spring-forward", () => {
     const layout = chartLayout(stateOf(preset("spring-forward")), lib)!;
-    expect(layout.dayStart).toBe("2024-03-10T05:00:00Z");
+    expect(layout.dayStart).toBe("2024-03-31T00:00:00Z");
     expect(layout.dayMinutes).toBe(1380);
     expect(layout.domainMinutes).toBe(1500);
     expect(rows("spring-forward")).toEqual([
+      [30, 30, 90],
       [90, 90, 150],
-      [150, 150, 210],
-      [210, 150, 210],
+      [150, 90, 150],
     ]);
     expect(layout.rows.map((r) => r.dashed)).toEqual([false, true, false]);
     expect(layout.fans).toEqual([
-      { kind: "skipped", wallStart: 120, wallEnd: 180, exact: [120] },
+      { kind: "skipped", wallStart: 60, wallEnd: 120, exact: [60] },
     ]);
-    expect(chartWindow(layout)).toEqual({ start: 60, end: 300 });
+    expect(chartWindow(layout)).toEqual({ start: 0, end: 240 });
   });
 
   it("published-local", () => {
@@ -789,7 +779,7 @@ describe("chartLayout (section 9 L1 to L6)", () => {
     const state = {
       ...stateOf(preset("spring-forward")),
       rows: [
-        { departure: "2024-03-10T02:30:00", offset: "-05:00" },
+        { departure: "2024-03-31T01:30:00", offset: "+00:00" },
         { departure: "", offset: "" },
         { departure: "", offset: "" },
         { departure: "", offset: "" },
@@ -815,14 +805,14 @@ describe("chartLayout (section 9 L1 to L6)", () => {
       ...base,
       rows: [
         base.rows[0],
-        { departure: "2024-11-04T01:30:00", offset: "" },
+        { departure: "2024-10-28T01:30:00", offset: "" },
         base.rows[2],
         base.rows[3],
       ],
     } as TimetableState;
     const layout = chartLayout(state, lib)!;
     expect(layout.rows.map((r) => r.n)).toEqual([1, 3]);
-    expect(layout.others).toEqual([{ n: 2, date: "2024-11-04" }]);
+    expect(layout.others).toEqual([{ n: 2, date: "2024-10-28" }]);
   });
 
   it("reaches the domain's end for a row at 23:55", () => {
@@ -899,13 +889,13 @@ describe("chartLayout (section 9 L1 to L6)", () => {
 
     it("leaves out a band the marks do not reach", () => {
       // fall-back's band is at 60 to 180; a row at noon is far from it.
-      const { layout, win } = windowOf(["2024-11-03T12:00:00"], "fall-back");
+      const { layout, win } = windowOf(["2024-10-27T12:00:00"], "fall-back");
       expect(layout.fans).toHaveLength(1);
       expect(win.start).toBeGreaterThan(180);
     });
 
     it("takes in a band that touches the marks, whole", () => {
-      const { layout } = windowOf(["2024-11-03T01:00:00"], "fall-back");
+      const { layout } = windowOf(["2024-10-27T01:00:00"], "fall-back");
       const fan = layout.fans[0]!;
       const edge = Math.max(fan.wallEnd, ...fan.exact);
       const at = (m: number) => ({
@@ -945,18 +935,18 @@ describe("chartLayout (section 9 L1 to L6)", () => {
     expect(windowPct(180, { start: 0, end: 360 })).toBe(50);
     expect(windowPct(540, { start: 540, end: 900 })).toBe(0);
     const layout = chartLayout(stateOf(preset("fall-back")), lib)!;
-    expect(exactTickLabel(layout, 0)).toBe("04:00Z");
-    expect(exactTickLabel(layout, 180)).toBe("07:00Z");
+    expect(exactTickLabel(layout, 0)).toBe("23:00Z");
+    expect(exactTickLabel(layout, 180)).toBe("02:00Z");
   });
 });
 
 describe("chartSummary", () => {
   it("reads fall-back word for word", () => {
     expect(chartSummary(chartLayout(stateOf(preset("fall-back")), lib)!)).toBe(
-      "Two clocks for 2024-11-03 in America/New_York. 01:00 to 02:00 happens twice. " +
-        "Row 1 prints 00:30 and leaves at 2024-11-03T00:30:00-04:00[America/New_York], arriving 2024-11-03T01:30:00-04:00[America/New_York]. " +
-        "Row 2 prints 01:30, which happens twice; it is read as the earlier pass and leaves at 2024-11-03T01:30:00-04:00[America/New_York], arriving 2024-11-03T01:30:00-05:00[America/New_York]. " +
-        "Row 3 prints 02:30 and leaves at 2024-11-03T02:30:00-05:00[America/New_York], arriving 2024-11-03T03:30:00-05:00[America/New_York].",
+      "Two clocks for 2024-10-27 in Europe/London. 01:00 to 02:00 happens twice. " +
+        "Row 1 prints 00:30 and leaves at 2024-10-27T00:30:00+01:00[Europe/London], arriving 2024-10-27T01:30:00+01:00[Europe/London]. " +
+        "Row 2 prints 01:30, which happens twice; it is read as the earlier pass and leaves at 2024-10-27T01:30:00+01:00[Europe/London], arriving 2024-10-27T01:30:00+00:00[Europe/London]. " +
+        "Row 3 prints 02:30 and leaves at 2024-10-27T02:30:00+00:00[Europe/London], arriving 2024-10-27T03:30:00+00:00[Europe/London].",
     );
   });
 
@@ -964,9 +954,11 @@ describe("chartSummary", () => {
     const text = chartSummary(
       chartLayout(stateOf(preset("spring-forward")), lib)!,
     );
-    expect(text).toContain("02:00 to 03:00 never shows on the clock.");
     expect(text).toContain(
-      "Row 2 prints 02:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-10T03:30:00-04:00[America/New_York], arriving 2024-03-10T04:30:00-04:00[America/New_York].",
+      "Two clocks for 2024-03-31 in Europe/London. 01:00 to 02:00 never shows on the clock. Row 1 prints 00:30 and leaves at 2024-03-31T00:30:00+00:00[Europe/London], arriving 2024-03-31T02:30:00+01:00[Europe/London]. Row 2 prints 01:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London]. Row 3 prints 02:30 and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London].",
+    );
+    expect(text).toContain(
+      "Row 2 prints 01:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London].",
     );
   });
 
@@ -980,30 +972,30 @@ describe("chartSummary", () => {
     const state = {
       ...stateOf(preset("fall-back")),
       rows: [
-        { departure: "2024-11-03T01:30:00", offset: "-05:00" },
-        { departure: "2024-03-10T02:30:00", offset: "-05:00" },
-        { departure: "2024-11-03T02:30:00", offset: "-05:00" },
-        { departure: "2024-11-04T01:30:00", offset: "" },
+        { departure: "2024-10-27T01:30:00", offset: "+00:00" },
+        { departure: "2024-03-31T01:30:00", offset: "+00:00" },
+        { departure: "2024-10-27T02:30:00", offset: "+00:00" },
+        { departure: "2024-10-28T01:30:00", offset: "" },
       ],
     } as TimetableState;
     const text = chartSummary(chartLayout(state, lib)!);
     expect(text).toContain(
-      "Row 1 prints 01:30 with offset -05:00 and leaves at 2024-11-03T01:30:00-05:00[America/New_York]",
+      "Row 1 prints 01:30 with offset +00:00 and leaves at 2024-10-27T01:30:00+00:00[Europe/London]",
     );
-    expect(text).toContain("Row 2 is on 2024-03-10 and is not drawn.");
+    expect(text).toContain("Row 2 is on 2024-03-31 and is not drawn.");
     expect(text).toContain(
-      "Row 3 prints 02:30 with offset -05:00 and leaves at 2024-11-03T02:30:00-05:00[America/New_York]",
+      "Row 3 prints 02:30 with offset +00:00 and leaves at 2024-10-27T02:30:00+00:00[Europe/London]",
     );
-    expect(text).toContain("Row 4 is on 2024-11-04 and is not drawn.");
+    expect(text).toContain("Row 4 is on 2024-10-28 and is not drawn.");
     const noInstant = {
       ...state,
       rows: [
-        { departure: "2024-11-03T00:55:00", offset: "-05:00" },
+        { departure: "2024-10-27T00:55:00", offset: "+00:00" },
         ...state.rows.slice(1),
       ],
     } as TimetableState;
     expect(chartSummary(chartLayout(noInstant, lib)!)).toContain(
-      "Row 1 prints 00:55 with offset -05:00 and names no instant.",
+      "Row 1 prints 00:55 with offset +00:00 and names no instant.",
     );
   });
 });
@@ -1023,16 +1015,16 @@ describe("the hidden sizers", () => {
   });
 
   it("splits a zoned string only before the bracket and after each slash in the zone", () => {
-    expect(zonedParts("2024-11-03T01:30:00-05:00[America/New_York]")).toEqual([
-      "2024-11-03T01:30:00-05:00",
-      "[America/",
-      "New_York]",
+    expect(zonedParts("2024-10-27T01:30:00+00:00[Europe/London]")).toEqual([
+      "2024-10-27T01:30:00+00:00",
+      "[Europe/",
+      "London]",
     ]);
-    expect(zonedParts("2024-11-03T01:30:00-05:00")).toEqual([
-      "2024-11-03T01:30:00-05:00",
+    expect(zonedParts("2024-10-27T01:30:00+00:00")).toEqual([
+      "2024-10-27T01:30:00+00:00",
     ]);
-    expect(zonedParts("2024-11-03T01:30:00Z[UTC]")).toEqual([
-      "2024-11-03T01:30:00Z",
+    expect(zonedParts("2024-10-27T01:30:00Z[UTC]")).toEqual([
+      "2024-10-27T01:30:00Z",
       "[UTC]",
     ]);
   });
@@ -1100,49 +1092,49 @@ describe("arrivalChipPlacement", () => {
 });
 
 describe("offsetReason", () => {
-  const NY = "America/New_York";
+  const LON = "Europe/London";
 
   it("says a time that happens once has nothing to choose", () => {
-    expect(offsetReason("2024-11-03T00:30:00", NY, "", lib)).toBe(
+    expect(offsetReason("2024-10-27T00:30:00", LON, "", lib)).toBe(
       "Happens once: nothing to choose.",
     );
   });
 
   it("says how to clear an offset a once-row still holds", () => {
-    expect(offsetReason("2024-11-03T00:30:00", NY, "-05:00", lib)).toBe(
+    expect(offsetReason("2024-10-27T00:30:00", LON, "+00:00", lib)).toBe(
       "Happens once: choose None to clear the offset.",
     );
   });
 
   it("says a repeated hour's offset picks the pass", () => {
-    expect(offsetReason("2024-11-03T01:30:00", NY, "", lib)).toBe(
+    expect(offsetReason("2024-10-27T01:30:00", LON, "", lib)).toBe(
       "Happens twice: the offset picks the pass.",
     );
   });
 
   it("says a skipped hour has no offset that makes it valid", () => {
-    expect(offsetReason("2024-03-10T02:30:00", NY, "", lib)).toBe(
+    expect(offsetReason("2024-03-31T01:30:00", LON, "", lib)).toBe(
       "Never shows: no offset makes it valid.",
     );
   });
 
   it("asks for a time when the row is empty or is not one", () => {
-    expect(offsetReason("", NY, "", lib)).toBe("Type a printed time first.");
-    expect(offsetReason("not a time", NY, "", lib)).toBe(
+    expect(offsetReason("", LON, "", lib)).toBe("Type a printed time first.");
+    expect(offsetReason("not a time", LON, "", lib)).toBe(
       "Type a printed time first.",
     );
-    expect(offsetReason("2024-11-03T01:30:00", "", "", lib)).toBe(
+    expect(offsetReason("2024-10-27T01:30:00", "", "", lib)).toBe(
       "Type a printed time first.",
     );
   });
 
   it("is never longer than LONGEST_REASON, which sizes the reserved slot", () => {
     for (const [t, z, o] of [
-      ["2024-11-03T00:30:00", NY, ""],
-      ["2024-11-03T00:30:00", NY, "-05:00"],
-      ["2024-11-03T01:30:00", NY, ""],
-      ["2024-03-10T02:30:00", NY, ""],
-      ["", NY, ""],
+      ["2024-10-27T00:30:00", LON, ""],
+      ["2024-10-27T00:30:00", LON, "+00:00"],
+      ["2024-10-27T01:30:00", LON, ""],
+      ["2024-03-31T01:30:00", LON, ""],
+      ["", LON, ""],
     ] as const) {
       expect(offsetReason(t, z, o, lib).length).toBeLessThanOrEqual(
         LONGEST_REASON.length,

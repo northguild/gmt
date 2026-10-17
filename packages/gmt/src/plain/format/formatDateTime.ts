@@ -29,13 +29,13 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized date-time string or "" on invalid input
  *
- * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "medium", timeStyle: "short" }) // "Mar 15, 2024, 2:30 PM"
- * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "March 15, 2024 at 2:30 PM"
+ * @example formatDateTime("2024-03-15T14:30:00", "en-GB", { dateStyle: "medium", timeStyle: "short" }) // "15 Mar 2024, 14:30"
+ * @example formatDateTime("2024-03-15T14:30:00", "ja-JP", { dateStyle: "long", timeStyle: "short" }) // "2024年3月15日 14:30"
  * @example formatDateTime("2024-03-15T14:30:00", "de-DE", { dateStyle: "medium", timeStyle: "short" }) // "15.03.2024, 14:30"
  * @example formatDateTime("2024-02-03T14:30:45", "en-US", { dateStyle: "short", timeStyle: "full" }) // "2/3/24, 2:30:45 PM"
  * @example formatDateTime("2024-02-03T14:30:45", "en-US", { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }) // "2/3/2024, 2:30:45 PM" — the pre-1.16.0 text
- * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
- * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
+ * @example formatDateTime("2024-02-03T14:30:45", "en-GB", { era: "long" }) // "03/02/2024 Anno Domini, 14:30:45"
+ * @example formatDateTime("2024-02-03T14:30:45", "en-GB", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "03/02/2024 Anno Domini" — the pre-1.16.0 text
  * @example formatDateTime("invalid") // ""
  * @example formatDateTime("2024-02-03T14:30:45", ["fr-FR", "en-US"], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) // "03/02/2024 14:30"
  */

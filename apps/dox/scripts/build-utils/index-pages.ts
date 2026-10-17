@@ -7,7 +7,6 @@
  * written in its place.
  */
 
-import type { PainPoint } from "../../src/lib/industry-overview";
 import { mdCodeSpan, mdText } from "./render-table";
 import { TYPES_SECTION } from "./reference-urls";
 
@@ -35,9 +34,10 @@ export interface IndexedInlineType extends IndexedType {
 }
 
 /**
- * An industry namespace: what the root page and its own overview say about it. The id is
- * the namespace. Everything else comes from `src/lib/industry-tags.ts` and
- * `src/lib/industry-overview.ts`, read by the caller so this module stays pure.
+ * A declared industry: what the root page and its own namespace's index say about it. The
+ * `id` is the industry's, and its hub is at `/industries/<id>/`. Everything else comes from
+ * `src/data/industries.json` (through `src/lib/industry-tags.ts`), read by the caller so this
+ * module stays pure.
  */
 export interface IndexedIndustry {
   id: string;
@@ -47,13 +47,10 @@ export interface IndexedIndustry {
   definition: string;
   /** A name in `Icon.astro`'s dictionary. */
   icon: string;
-  /** The guide that introduces it, as a site path. */
-  guide?: string;
-  /** The guide's title. */
-  guideTitle: string;
-  /** What the industry is, in plain words. */
-  about: string;
-  solves: readonly PainPoint[];
+  /** The namespace it owns (equal to `id`), when it owns one. */
+  namespace?: string;
+  /** The modules it draws on: a whole namespace (`gnss`) or one sub-module (`timescale/convert`). */
+  drawsOn: readonly string[];
 }
 
 export interface IndexInput {
@@ -61,8 +58,8 @@ export interface IndexInput {
   sharedTypes: readonly IndexedType[];
   inlineTypes: readonly IndexedInlineType[];
   /**
-   * The namespaces that are industries, in the order to show them. A namespace named here
-   * is listed under "By industry" and its overview carries the industry text and tag; every
+   * Every declared industry, in the order to show them. The root page lists each under "By
+   * industry". The namespace an industry owns carries its tag and a pointer to its hub; every
    * other namespace is general. Empty or absent: every namespace is general.
    */
   industries?: readonly IndexedIndustry[];
@@ -105,7 +102,11 @@ const byName = <T extends { name: string }>(items: readonly T[]): T[] =>
   [...items].sort((a, b) => a.name.localeCompare(b.name));
 
 /** `- [`name`](url): summary`, or the bare link when there is no summary. */
-function listItem(item: { name: string; url: string; description: string }) {
+export function listItem(item: {
+  name: string;
+  url: string;
+  description: string;
+}) {
   const link = `[${mdCodeSpan(item.name)}](${item.url})`;
   const summary = firstSentence(item.description);
   return summary ? `- ${link}: ${mdText(summary)}` : `- ${link}`;
@@ -136,55 +137,43 @@ function frontmatter(
   ];
 }
 
-/**
- * One "What these functions solve" item: the problem sentence with each `{{name}}` turned
- * into a link to that function's page, then the pages that show it. The text ends its own sentence. A name the namespace
- * does not export stops the generator, so a renamed function cannot leave a dead link.
- */
-function painPointItem(
-  industry: IndexedIndustry,
-  point: PainPoint,
-  pages: readonly IndexedPage[],
-): string {
-  const pieces = point.answer.split(/\{\{(\w+)\}\}/);
-  const answer = pieces
-    .map((piece, i) => {
-      if (i % 2 === 0) return mdText(piece);
-      const target = pages.find((p) => p.name === piece);
-      if (!target) {
-        throw new Error(
-          `[reference] the ${industry.id} overview names ${piece}, which ${industry.id} does not export. Fix src/lib/industry-overview.ts.`,
-        );
-      }
-      return `[${mdCodeSpan(piece)}](${target.url})`;
-    })
-    .join("");
-  const see = point.see.map((l) => `[${mdText(l.label)}](${l.href})`);
-  return `- **${mdText(point.problem)}** ${answer}${see.length ? ` See ${see.join(", ")}.` : ""}`;
+/** The link to a module's index page: a namespace (`gnss`) or a sub-module (`timescale/convert`). */
+function moduleLink(module: string): string {
+  return `[${mdCodeSpan(module)}](/reference/${module})`;
 }
 
-/** The overview of an industry namespace, above its per-module lists. */
-function industryIntro(
-  industry: IndexedIndustry,
-  pages: readonly IndexedPage[],
-): string[] {
-  const lines = [
-    mdText(industry.about),
-    "",
-    `## What these functions solve`,
-    "",
+const conjunction = new Intl.ListFormat("en", {
+  style: "long",
+  type: "conjunction",
+});
+
+/** The sentence that closes a definition, so the line after it reads as a new one. */
+const endsSentence = (text: string): string =>
+  /[.!?]$/.test(text) ? text : `${text}.`;
+
+/**
+ * One industry on the root page: its icon, its label as a link to its hub, its definition, then
+ * the namespace it owns when it owns one, then the modules it draws on, each linked to its own
+ * index.
+ */
+function industryItem(industry: IndexedIndustry): string {
+  const parts = [
+    `<Icon name=${JSON.stringify(industry.icon)} size="1.1em" class="gmt-ref-industry-icon" /> [${mdText(industry.label)}](/industries/${industry.id}/): ${mdText(endsSentence(industry.definition))}`,
   ];
-  for (const point of industry.solves) {
-    lines.push(painPointItem(industry, point, pages));
+  if (industry.namespace) {
+    parts.push(`Its namespace is ${moduleLink(industry.namespace)}.`);
   }
-  lines.push("");
-  if (industry.guide) {
-    lines.push(
-      `Start with the guide: [${mdText(industry.guideTitle)}](${industry.guide}).`,
-      "",
+  if (industry.drawsOn.length > 0) {
+    parts.push(
+      `Draws on ${conjunction.format(industry.drawsOn.map(moduleLink))}.`,
     );
   }
-  return lines;
+  return `- ${parts.join(" ")}`;
+}
+
+/** The line that replaces an industry's pain points on its own namespace's index: they live on its hub. */
+function hubPointer(industry: IndexedIndustry): string {
+  return `The ${mdText(industry.label)} industry's own namespace. What it solves, and the guides and tools that show it, are on [${mdText(industry.label)}](/industries/${industry.id}/).`;
 }
 
 function page(file: string, slug: string, lines: string[]): IndexPage {
@@ -216,11 +205,9 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
       "Every function, regular expression and type @northguild/gmt exports.",
       "reference",
     );
-    const industries = (input.industries ?? []).filter((i) =>
-      namespaces.includes(i.id),
-    );
-    const industryIds = new Set(industries.map((i) => i.id));
-    const general = namespaces.filter((ns) => !industryIds.has(ns));
+    const industries = input.industries ?? [];
+    const owned = new Set(industries.flatMap((i) => i.namespace ?? []));
+    const general = namespaces.filter((ns) => !owned.has(ns));
     if (industries.length) {
       // The icon is a component, so the page imports it. The text surfaces strip the
       // import and the tag (`stripMdx`).
@@ -238,14 +225,10 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
     if (industries.length) {
       lines.push(`## By industry`, "");
       lines.push(
-        "Each of these adds the operations of one industry, built on the namespaces above.",
+        "Each industry has a namespace of its own, draws on the layers above it, or both.",
         "",
       );
-      for (const i of industries) {
-        lines.push(
-          `- <Icon name=${JSON.stringify(i.icon)} size="1.1em" class="gmt-ref-industry-icon" /> [${mdText(i.label)}](/reference/${i.id}): ${mdText(i.definition)}`,
-        );
-      }
+      for (const i of industries) lines.push(industryItem(i));
       lines.push("");
     }
     if (hasTypes) {
@@ -282,7 +265,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
     const mods = modules.get(ns)!;
     const modNames = [...mods.keys()].sort();
 
-    const industry = input.industries?.find((i) => i.id === ns);
+    const industry = input.industries?.find((i) => i.namespace === ns);
 
     // /reference/<ns>/
     {
@@ -292,10 +275,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
         `reference/${ns}`,
         industry?.id,
       );
-      if (industry) {
-        const own = input.pages.filter((p) => p.namespace === ns);
-        lines.push(...industryIntro(industry, own));
-      }
+      if (industry) lines.push(hubPointer(industry), "");
       for (const mod of modNames) {
         lines.push(`## [${mod}](/reference/${ns}/${mod})`, "");
         for (const p of byName(mods.get(mod)!)) lines.push(listItem(p));

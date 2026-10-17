@@ -7,10 +7,10 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
 /**
  * Return the locale-formatted parts of a PlainDate.
  *
- * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
- *   `format`). A token pattern hard-codes field order and ships US ordering to
- *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order.
+ * - Use the parts instead of a fixed field pattern. A pattern such as UTS #35's `dd/MM/yyyy` fixes
+ *   one field order for every locale; ECMA-402's `Intl.DateTimeFormat.prototype.formatToParts`
+ *   (§11.3.6; `FormatDateTimeToParts` §11.5.7) returns the fields in the order of the locale's
+ *   CLDR date pattern, so the caller controls presentation and the locale keeps control of order.
  * - Each part is `{ type, value }` where `type` is one of:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"literal"`.
@@ -42,9 +42,9 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
- * @example formatDateToParts("2024-03-15", "en-US") // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }]
+ * @example formatDateToParts("2024-03-15", "zh-CN") // [{ type: "year", value: "2024" }, { type: "literal", value: "/" }, { type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }]
  * @example formatDateToParts("2024-03-15", "de-DE") // [{ type: "day", value: "15" }, { type: "literal", value: "." }, { type: "month", value: "3" }, { type: "literal", value: "." }, { type: "year", value: "2024" }]
- * @example formatDateToParts("2024-02-29", "en-US", { dateStyle: "full", timeStyle: "full" }) // [{ type: "weekday", value: "Thursday" }, { type: "literal", value: ", " }, { type: "month", value: "February" }, { type: "literal", value: " " }, { type: "day", value: "29" }, { type: "literal", value: ", " }, { type: "year", value: "2024" }]
+ * @example formatDateToParts("2024-02-29", "hi-IN", { dateStyle: "full", timeStyle: "full" }) // [{ type: "weekday", value: "गुरुवार" }, { type: "literal", value: ", " }, { type: "day", value: "29" }, { type: "literal", value: " " }, { type: "month", value: "फ़रवरी" }, { type: "literal", value: " " }, { type: "year", value: "2024" }]
  * @example formatDateToParts("2024-02-29", "en-US", { timeStyle: "long" }) // [] — a PlainDate has no time
  * @example formatZonedToParts("2024-02-29T00:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "AM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateToParts("invalid") // []

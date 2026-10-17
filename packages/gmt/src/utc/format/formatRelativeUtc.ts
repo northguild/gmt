@@ -64,13 +64,13 @@ export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
  * @param options The reference instant, the display unit, rounding, wording and time zone
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", { reference: "2026-04-15T14:30:45Z" }) // "3 months ago"
- * @example formatRelativeUtc("2026-01-15T00:00:00Z", "en-US", { reference: "2026-01-15T10:30:00Z", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
- * @example formatRelativeUtc("2026-01-15T00:00:00Z", "en-US", { reference: "2026-01-15T00:30:00Z", timeZone: "Invalid/Zone" }) // ""
- * @example formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", null as never) // ""
+ * @example formatRelativeUtc("2026-01-15T14:30:45Z", "de-DE", { reference: "2026-04-15T14:30:45Z" }) // "vor 3 Monaten"
+ * @example formatRelativeUtc("2026-01-15T00:00:00Z", "en-GB", { reference: "2026-01-15T10:30:00Z", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
+ * @example formatRelativeUtc("2026-01-15T00:00:00Z", "zh-CN", { reference: "2026-01-15T00:30:00Z", timeZone: "Invalid/Zone" }) // ""
+ * @example formatRelativeUtc("2026-01-15T14:30:45Z", "pt-BR", null as never) // ""
  * @example formatRelativeUtc("not-a-date") // ""
  * @example formatRelativeUtc("2024-03-15T11:30:00Z", ["fr-FR", "en-US"], { reference: "2024-03-15T12:00:00Z" }) // "il y a 30 minutes"
- * @example formatRelativeUtc("1970-01-03T12:00:00Z", "en-US", { reference: "1970-01-01T12:00:00Z", timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
+ * @example formatRelativeUtc("1970-01-03T12:00:00Z", "en-GB", { reference: "1970-01-01T12:00:00Z", timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
  */
 export function formatRelativeUtc(
   value: string,

@@ -1,0 +1,59 @@
+---
+title: GNSS Rollover Checker
+description: Check whether a satellite receiver's firmware will report the wrong date, and when. Pick a counter and how the firmware counts, and see the date it reports, the date it goes wrong from and the next wrap of every counter.
+industries: [gnss]
+---
+
+import GnssRolloverChecker from "../../../components/GnssRolloverChecker.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="satellite week counters">
+
+<Fragment slot="keypoint">
+
+Every satellite week counter wraps back to zero. A receiver that guesses which pass it is on from its build date, or fixes the pass in its firmware, reports a date one counter period early once the real clock passes the end of the window it was built for.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A satellite broadcasts its week as a short number, so the number repeats. The 10-bit counters (GPS-LNAV, QZS-LNAV and IRN-LNAV) repeat every 1024 weeks, which is 7168 days. A receiver has to work out which pass the number is on, and it does that in one of two ways. It counts from the date the firmware was built, or it assumes a fixed era.
+
+Pick a counter and how the firmware counts, then check today or a date. The tool calls [`utcToGnssWeek`](/reference/gnss/convert/utcToGnssWeek/) for the true reading and [`gnssWeekToUtc`](/reference/gnss/convert/gnssWeekToUtc/) for the date the firmware makes of it. [`areUtcEqual`](/reference/utc/compare/areUtcEqual/) and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/) give the verdict and the time left. The slider walks the check date through the firmware's whole window.
+
+</Fragment>
+
+<GnssRolloverChecker fullbleed />
+
+<Fragment slot="after">
+
+**Build date or fixed era.** A firmware that counts from a build date reads right for one counter period after it, then reports a date one period early. A firmware fixed on an era reads right until that era ends. [A NavIC receiver built in 2020](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22preset%22%3A%22navic-built-2020%22%7D) reads the right date in October 2026 and goes wrong in August 2039. [The same receiver checked in 2040](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22preset%22%3A%22navic-built-2020-after-wrap%22%7D) reports a date 7168 days early.
+
+**The counters are not the same length.** The 10-bit counters wrap every 1024 weeks. Galileo's counter is four times as long, and the 13-bit counters (BDT and the CNAV and L1NV messages) are eight times as long. [A Galileo receiver built in 2024](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22preset%22%3A%22galileo-built-2024%22%7D) stays right until 2102.
+
+**A receiver can already be wrong.** [A QZS receiver built in 2005](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22preset%22%3A%22qzss-built-2005%22%7D) went wrong one pass after its build date, years before today, so the plates say how long ago it began reporting an early date.
+
+**A firmware can be ahead.** [Firmware fixed on an era that has not begun](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22preset%22%3A%22firmware-ahead%22%7D) reports a date 7168 days late. The tool says late, not early.
+
+**Why the gap is not always exactly 7168 days.** The counters run on the satellite system's own clock, which does not insert leap seconds. The check is made against UTC, so a few seconds of the gap come from the leap seconds UTC inserted in between. The verdict says them.
+
+**The rolling rule needs a clock.** Firmware that picks the pass nearest to the device's own clock is right as long as that clock is. Only a live check can say what it reads, so the tool shows it only when you check today.
+
+**When the answer is `NO SIGNAL`.** The library gives `""` or `null` for a build date or a check date that is not an ISO 8601 instant, for an era that is not a whole number, for a check date before the counter's first week, and for a date after the year 9999. A build date before the counter's first week is not an error: the tool reads it as era 0, from the counter's first pass, and a line by the result says so. The tool says which fault it found in one sentence. A blank field is not an error. It waits for you to type.
+
+```ts
+utcToGnssWeek("IRN-LNAV", "2026-10-15T00:00:00Z");
+gnssWeekToUtc("IRN-LNAV", week, timeOfWeekSeconds, {
+  notBefore: "2020-01-01T00:00:00Z",
+});
+gnssWeekToUtc("IRN-LNAV", week, timeOfWeekSeconds, 1);
+gnssWeekToUtc("IRN-LNAV", week, timeOfWeekSeconds, "rolling");
+areUtcEqual(reported, "2026-10-15T00:00:00Z");
+diffUtcAsDuration("2026-10-15T00:00:00Z", wrongFrom, "days");
+```
+
+**Reference:** [`utcToGnssWeek`](/reference/gnss/convert/utcToGnssWeek/), [`gnssWeekToUtc`](/reference/gnss/convert/gnssWeekToUtc/), [`areUtcEqual`](/reference/utc/compare/areUtcEqual/), [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/). The rules are in [GNSS: System Time and Week Rollover](/guides/industries/gnss-system-time-and-week-rollover/) and [Maritime: GNSS Time and Week Rollover](/guides/industries/maritime-gnss-time-and-week-rollover/).
+
+</Fragment>
+
+</ToolLayout>

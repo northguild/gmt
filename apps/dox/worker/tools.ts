@@ -56,6 +56,11 @@ import {
   showDepartureBoardInput,
   showDtmDecoderInput,
   showEpcisEventReaderInput,
+  showElapsedVsClockInput,
+  showGnssRolloverCheckerInput,
+  showGnssWeekDecoderInput,
+  showLeapSecondTimelineInput,
+  showSatelliteClockConverterInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -421,6 +426,35 @@ export function buildWorkerTools(
             )
           : accept("journey-split");
       },
+    }),
+
+    // The five GNSS and leap-second tools take instants, counters and eras, not
+    // zones. A value the library does not read is the widget's own NO SIGNAL,
+    // with its reason, so nothing is refused here.
+    showGnssWeekDecoder: tool({
+      description: docFor("showGnssWeekDecoder"),
+      inputSchema: showGnssWeekDecoderInput,
+      execute: () => accept("gnss-week-decoder"),
+    }),
+    showSatelliteClockConverter: tool({
+      description: docFor("showSatelliteClockConverter"),
+      inputSchema: showSatelliteClockConverterInput,
+      execute: () => accept("satellite-clock-converter"),
+    }),
+    showGnssRolloverChecker: tool({
+      description: docFor("showGnssRolloverChecker"),
+      inputSchema: showGnssRolloverCheckerInput,
+      execute: () => accept("gnss-rollover-checker"),
+    }),
+    showLeapSecondTimeline: tool({
+      description: docFor("showLeapSecondTimeline"),
+      inputSchema: showLeapSecondTimelineInput,
+      execute: () => accept("leap-second-timeline"),
+    }),
+    showElapsedVsClock: tool({
+      description: docFor("showElapsedVsClock"),
+      inputSchema: showElapsedVsClockInput,
+      execute: () => accept("elapsed-vs-clock"),
     }),
   };
 

@@ -61,16 +61,16 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffZoned("2024-02-28T14:30:00+00:00[UTC]", "2024-03-01T15:30:00+00:00[UTC]", "days") // 2
- * @example diffZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]", "days") // 1 (a 23-hour local day)
- * @example diffZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "days") // null (calendar unit across two time zones)
- * @example diffUtc(convertZonedToUtc("2024-03-09T12:00:00-05:00[America/New_York]"), convertZonedToUtc("2024-03-10T12:00:00-04:00[America/New_York]"), "days") // 0 (pre-1.16.0 UTC-clock result)
+ * @example diffZoned("2024-03-30T12:00:00+00:00[Europe/London]", "2024-03-31T12:00:00+01:00[Europe/London]", "days") // 1 (a 23-hour local day)
+ * @example diffZoned("2024-01-01T00:00:00+09:00[Asia/Tokyo]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "days") // null (calendar unit across two time zones)
+ * @example diffUtc(convertZonedToUtc("2024-03-30T12:00:00+00:00[Europe/London]"), convertZonedToUtc("2024-03-31T12:00:00+01:00[Europe/London]"), "days") // 0 (pre-1.16.0 UTC-clock result)
  * @example diffZoned("2024-02-28T14:30:00+00:00[UTC]", "2024-03-01T15:30:00+00:00[UTC]", ["day", "hour"]) // { days: 2, hours: 1 } (singular names, plural keys)
  * @example diffZoned("invalid", "2024-03-01T15:30:00+00:00[UTC]", "days") // null
- * @example diffZoned("2023-09-16T00:00:00-04:00[America/New_York][u-ca=hebrew]", "2024-10-03T00:00:00-04:00[America/New_York][u-ca=hebrew]", "months") // 13 (Hebrew leap year 5784; the ISO equivalent is 12)
- * @example diffZoned("2023-09-16T00:00:00-04:00[America/New_York][u-ca=hebrew]", "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]", "hours") // null (different calendars)
- * @example diffZoned("2024-03-10T14:30:00-04:00[u-ca=hebrew][America/New_York]", "2024-03-11T14:30:00-04:00[America/New_York]", "days") // null (calendar before zone is not RFC 9557)
+ * @example diffZoned("2023-09-16T00:00:00-03:00[America/Sao_Paulo][u-ca=hebrew]", "2024-10-03T00:00:00-03:00[America/Sao_Paulo][u-ca=hebrew]", "months") // 13 (Hebrew leap year 5784; the ISO equivalent is 12)
+ * @example diffZoned("2023-09-16T00:00:00-03:00[America/Sao_Paulo][u-ca=hebrew]", "2024-10-03T00:00:00-03:00[America/Sao_Paulo][u-ca=islamic-tbla]", "hours") // null (different calendars)
+ * @example diffZoned("2024-03-10T14:30:00+05:30[u-ca=hebrew][Asia/Kolkata]", "2024-03-11T14:30:00+05:30[Asia/Kolkata]", "days") // null (calendar before zone is not RFC 9557)
  * @example diffZoned("2024-01-01T00:00:00+00:00[UTC]", "2025-03-01T00:00:00+00:00[UTC]", ["years", "days"]) // { years: 1, days: 59 } (P1Y2M; the 2 months are carried into days)
- * @example diffZoned("2024-02-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", ["months", "hours"]) // { months: 1, hours: 47 } (P1M2D; the 2 days include the 23-hour 2024-03-10)
+ * @example diffZoned("2024-02-29T12:00:00+00:00[Europe/London]", "2024-03-31T12:00:00+01:00[Europe/London]", ["months", "hours"]) // { months: 1, hours: 47 } (P1M2D; the 2 days include the 23-hour 2024-03-31)
  */
 export function diffZoned(
   value1: string,

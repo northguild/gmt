@@ -11,25 +11,22 @@ import { isValidDate } from "../validate";
  * - The count depends on which day the week starts — the same month can
  *   span 4, 5, or 6 rows depending on locale (e.g. February 2026 is 4
  *   rows starting Sunday but 5 rows starting Monday).
- * - The count is the row the month's last day falls on, where row 1 holds
- *   the 1st (see `getWeekOfMonth`). This is GMT's own rule for sizing a
- *   month grid, not a standard's; CLDR's `minDays` plays no part.
- * - Comparison: `@internationalized/date`'s `getWeeksInMonth` returns the
- *   same number for the same first day of week.
+ * - The count is the UTS #35 week of month (`W`) of the month's last day, with the locale's first
+ *   day of week and minimal days fixed at 1 (see `getWeekOfMonth`).
  * - Resolves the locale's first day of week via
  *   `Intl.Locale.prototype.weekInfo`.
  * - Returns null if `value` or `locale` is invalid.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @returns number of week-rows the month spans (4-6), or null on invalid input
  *
- * @example getWeeksInMonth("2024-02-15", "en-US") // 5
- * @example getWeeksInMonth("2026-02-15", "en-US") // 4
+ * @example getWeeksInMonth("2024-02-15", "pt-BR") // 5
+ * @example getWeeksInMonth("2026-02-15", "ja-JP") // 4
  * @example getWeeksInMonth("2026-02-15", "en-GB") // 5
- * @example getWeeksInMonth("-271821-04-19", "en-US") // 5 (the first representable month; its 1st lies before the range)
- * @example getWeeksInMonth("invalid", "en-US") // null
- * @example getWeeksInMonth("2024-06-15", ["en-US", "fr-FR"]) // 6
+ * @example getWeeksInMonth("-271821-04-19", "ja-JP") // 5 (the first representable month; its 1st lies before the range)
+ * @example getWeeksInMonth("invalid", "hi-IN") // null
+ * @example getWeeksInMonth("2024-06-15", ["ja-JP", "fr-FR"]) // 6
  */
 export function getWeeksInMonth(
   value: string,

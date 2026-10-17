@@ -212,6 +212,36 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "gnss-week-decoder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="tow-slider"]',
+  },
+  {
+    slug: "satellite-clock-converter",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="moment-slider"]',
+  },
+  {
+    slug: "gnss-rollover-checker",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="date-slider"]',
+  },
+  {
+    slug: "leap-second-timeline",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="date-slider"]',
+  },
+  {
+    slug: "elapsed-vs-clock-difference",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="end-slider"]',
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,
@@ -488,8 +518,12 @@ async function drag(page, selector) {
       const pct =
         (Number(node.value) - Number(node.min)) /
         (Number(node.max) - Number(node.min));
+      /* The thumb's centre runs from half a thumb in from the left edge to half
+         a thumb in from the right one, so a range at its far end is pressed on
+         its thumb and not on the pixel just outside the control. */
+      const half = 8;
       return {
-        x: rect.left + pct * rect.width,
+        x: rect.left + half + pct * (rect.width - 2 * half),
         y: rect.top + rect.height / 2,
         trackLeft: rect.left,
         trackWidth: rect.width,
@@ -694,6 +728,7 @@ async function runOne(...args) {
       atRest: false,
       unpainted: 0,
       notes: [],
+      rawFrames: [],
       problems: crashProblem(error),
     };
   }

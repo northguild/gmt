@@ -26,7 +26,7 @@ import type { BusinessCalendar } from "../../types";
  * @param calendars array of BusinessCalendar records to compose
  * @returns merged BusinessCalendar, or null on invalid input
  *
- * @example mergeCalendars([{ weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }, { weekend: [6, 7], holidays: ["2024-05-06"], timeZone: "Europe/London" }]) // { weekend: [6, 7], holidays: ["2024-05-06", "2024-07-04"], timeZone: "America/New_York" }
+ * @example mergeCalendars([{ weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }, { weekend: [6, 7], holidays: ["2024-05-06"], timeZone: "Europe/London" }]) // { weekend: [6, 7], holidays: ["2024-05-06", "2024-07-04"], timeZone: "Africa/Kigali" }
  * @example mergeCalendars([{ weekend: [6, 7], holidays: [], timeZone: "UTC" }, { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }]) // { weekend: [5, 6, 7], holidays: [], timeZone: "UTC" } — only Sunday to Thursday survive
  * @example mergeCalendars([{ weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "UTC" }]) // { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "UTC" }
  * @example mergeCalendars([]) // null

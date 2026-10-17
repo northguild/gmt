@@ -56,11 +56,7 @@ import {
 } from "./journey-split";
 import { layoutWidth, onWidthChange, thinTickLabels } from "./label-fit";
 import { legFieldset, legHeaderHtml, setModeSelect } from "./leg-form";
-import {
-  descriptionHoldHtml,
-  plateHtml,
-  platesHtml,
-} from "./ledger-widgets";
+import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import { loadJourneyLib, type JourneyLib } from "./transport-lib";
 import { TRANSPORT_ZONES, zoneOptionsHtml } from "./transport-widgets";

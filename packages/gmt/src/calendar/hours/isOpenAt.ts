@@ -31,10 +31,10 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param optionsArg How a window edge on a clock change is resolved
  * @returns true when open at that instant, or false when closed or on invalid input
  *
- * @example isOpenAt("2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // true — Monday 10:00 local
- * @example isOpenAt("2024-06-17T21:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // false — 17:00 local, the window has closed
+ * @example isOpenAt("2024-06-17T01:00:00Z", { timeZone: "Asia/Tokyo", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // true — Monday 10:00 local
+ * @example isOpenAt("2024-06-17T08:00:00Z", { timeZone: "Asia/Tokyo", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // false — 17:00 local, the window has closed
  * @example isOpenAt("2024-06-15T01:00:00Z", { timeZone: "UTC", weekly: { 5: [{ from: "23:00", to: "06:00" }] } }) // true — Friday's night window, on Saturday morning
- * @example isOpenAt("2024-07-04T14:00:00Z", { timeZone: "America/New_York", weekly: { 4: [{ from: "09:00", to: "17:00" }] }, holidays: ["2024-07-04"] }) // false — a holiday
+ * @example isOpenAt("2024-07-04T08:00:00Z", { timeZone: "Africa/Kigali", weekly: { 4: [{ from: "09:00", to: "17:00" }] }, holidays: ["2024-07-04"] }) // false — a holiday
  * @example isOpenAt("2024-06-17T14:00:00", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // false — no offset, not an instant
  * @example isOpenAt("1970-01-01T08:44:30Z", { timeZone: "-00:44:30", weekly: { 4: [{ from: "08:00", to: "17:00" }] } }) // true (08:00 at a stored offset with seconds)
  */

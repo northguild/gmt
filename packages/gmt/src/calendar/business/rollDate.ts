@@ -105,9 +105,9 @@ function rollTo(
  * @param calendar BusinessCalendar naming the weekend days and holidays
  * @returns ISO PlainDate string of the rolled date, or "" on invalid input
  *
- * @example rollDate("2024-05-31", "following", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "America/New_York" }) // "2024-06-03"
- * @example rollDate("2024-05-31", "modifiedFollowing", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "America/New_York" }) // "2024-05-30" — forward would leave May
- * @example rollDate("2024-06-01", "modifiedPreceding", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "America/New_York" }) // "2024-06-03" — backward would leave June
+ * @example rollDate("2024-05-31", "following", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "Europe/London" }) // "2024-06-03"
+ * @example rollDate("2024-05-31", "modifiedFollowing", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "Europe/London" }) // "2024-05-30" — forward would leave May
+ * @example rollDate("2024-06-01", "modifiedPreceding", { weekend: [6, 7], holidays: ["2024-05-31"], timeZone: "Europe/London" }) // "2024-06-03" — backward would leave June
  * @example rollDate("2024-05-29", "following", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // "2024-05-29" — already a working day
  * @example rollDate("2024-03-15", "endOfMonth", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // "2024-03-29" — March ends on a Sunday
  * @example rollDate("2024-06-01", "none", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // "2024-06-01" — a Saturday, unadjusted

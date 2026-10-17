@@ -33,7 +33,7 @@ declare global {
  * - Throws `RangeError` (from `Intl.Locale`) if `locale` is not a well-formed BCP 47 tag; callers turn
  *   that into their sentinel.
  *
- * @example localeWeekInfo("en-US")?.firstDay // 7
+ * @example localeWeekInfo("pt-BR")?.firstDay // 7
  * @example localeWeekInfo("ar-SA")?.weekend // [5, 6]
  */
 export function localeWeekInfo(

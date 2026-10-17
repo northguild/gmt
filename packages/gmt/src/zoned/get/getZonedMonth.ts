@@ -10,7 +10,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
  *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns current month string (zero-padded to 2 digits) or "" on invalid input
  *
- * @example getZonedMonth("America/New_York") // "02"
+ * @example getZonedMonth("Australia/Sydney") // "03"
  * @example getZonedMonth("invalid") // ""
  */
 export function getZonedMonth(ianaTimezone: string): string {

@@ -17,7 +17,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
- *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`),
+ *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]"`),
  *   and the two endpoints need not agree on a calendar. Ordering is calendar-independent —
  *   verified that `Temporal.Instant` carries no calendar field at all and that
  *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
@@ -34,7 +34,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *
  * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
  * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]", "2024-12-31T00:00:00+00:00[UTC]") // false (touching: the first interval excludes 07-01T00:00)
- * @example intervalsOverlapZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T07:00:00-05:00[America/New_York]", "2024-01-01T17:00:00+00:00[UTC]") // false (touching across zones)
+ * @example intervalsOverlapZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T21:00:00+09:00[Asia/Tokyo]", "2024-01-01T17:00:00+00:00[UTC]") // false (touching across zones)
  * @example intervalsOverlapZoned("invalid", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false
  */
 export function intervalsOverlapZoned(

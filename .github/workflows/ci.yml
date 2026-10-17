@@ -175,6 +175,7 @@ jobs:
           node apps/dox/scripts/build-guides.mjs
           node apps/dox/scripts/build-scenario-index.mjs
           pnpm --filter dox exec tsx scripts/build-tool-index.ts
+          pnpm --filter dox exec tsx scripts/build-industry-pages.ts
 
       - name: Public API surface — reachability, examples, doc imports and links
         run: node scripts/api-surface.mjs check

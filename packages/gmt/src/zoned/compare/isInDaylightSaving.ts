@@ -40,8 +40,8 @@ import { isInDaylightTime, zonedDateTimeFrom } from "../../internal";
  * @param value zoned ISO 8601 datetime string
  * @returns true if the instant is in daylight saving time, false otherwise or on invalid input
  *
- * @example isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]") // true
- * @example isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]") // false
+ * @example isInDaylightSaving("2024-07-15T12:00:00+01:00[Europe/London]") // true
+ * @example isInDaylightSaving("2024-01-15T12:00:00+00:00[Europe/London]") // false
  * @example isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]") // true (southern-hemisphere summer)
  * @example isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]") // false (Asia/Tokyo has no DST)
  * @example isInDaylightSaving("2015-07-01T12:00:00+03:00[Europe/Istanbul]") // true (undone 2015-11-08)

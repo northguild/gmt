@@ -10,7 +10,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
  *   a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns ISO date string (YYYY-MM-DD) or "" when invalid
  *
- * @example getZonedToday("America/New_York") // "2024-02-29"
+ * @example getZonedToday("Asia/Kolkata") // "2024-02-29"
  * @example getZonedToday("invalid") // ""
  */
 export function getZonedToday(ianaTimezone: string): string {

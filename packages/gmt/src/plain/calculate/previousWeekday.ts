@@ -5,24 +5,26 @@ import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
- * Return a PlainDate ISO string for the previous occurrence of `dayOfWeek` on or before `value`.
+ * Return a PlainDate ISO string for the previous occurrence of `dayOfWeek` before `value` (or on
+ * it, with `inclusive: true`).
  *
  * - `dayOfWeek` uses Temporal's ISO numbering: 1 (Monday) through 7 (Sunday), consistent with
  *   `getDayOfWeek`/`parseDayOfWeekFromDate`.
  * - Returns "" on invalid input.
  *
- * Replaces date-fns's sixteen `previous*` functions with one parameterized call:
+ * Migrating from date-fns: its eight `previous*` functions map to one parameterized call.
+ * date-fns numbers days 0 (Sunday) to 6 (Saturday), so `previousDay`'s 0 becomes 7.
  *
- * | date-fns              | gmt                              |
- * | ---------------------- | --------------------------------- |
- * | `previousMonday`      | `previousWeekday(value, 1)`      |
- * | `previousTuesday`     | `previousWeekday(value, 2)`      |
- * | `previousWednesday`   | `previousWeekday(value, 3)`      |
- * | `previousThursday`    | `previousWeekday(value, 4)`      |
- * | `previousFriday`      | `previousWeekday(value, 5)`      |
- * | `previousSaturday`    | `previousWeekday(value, 6)`      |
- * | `previousSunday`      | `previousWeekday(value, 7)`      |
- * | `previousDay(v, n)`   | `previousWeekday(value, n)`      |
+ * | date-fns            | gmt                                       |
+ * | ------------------- | ----------------------------------------- |
+ * | `previousMonday`    | `previousWeekday(value, 1)`               |
+ * | `previousTuesday`   | `previousWeekday(value, 2)`               |
+ * | `previousWednesday` | `previousWeekday(value, 3)`               |
+ * | `previousThursday`  | `previousWeekday(value, 4)`               |
+ * | `previousFriday`    | `previousWeekday(value, 5)`               |
+ * | `previousSaturday`  | `previousWeekday(value, 6)`               |
+ * | `previousSunday`    | `previousWeekday(value, 7)`               |
+ * | `previousDay(v, n)` | `previousWeekday(value, n === 0 ? 7 : n)` |
  *
  * @param value ISO PlainDate string
  * @param dayOfWeek target ISO day of week (1-7, Monday-Sunday)

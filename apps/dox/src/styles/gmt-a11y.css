@@ -489,7 +489,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     :is(
       .gmt-cutoff-chip,
@@ -513,7 +518,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;
@@ -536,7 +546,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-stack-day,
   div.gmt-cutoff-stack-day:nth-of-type(even) {
@@ -554,7 +569,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-mark {
     forced-color-adjust: none;
@@ -574,7 +594,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-mark--hollow {
     background: Canvas;
@@ -593,7 +618,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-gate {
     forced-color-adjust: none;
@@ -612,7 +642,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-gate::before {
     background: Highlight;
@@ -633,7 +668,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-closed {
     forced-color-adjust: none;
@@ -653,7 +693,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-series-swatch {
     forced-color-adjust: none;
@@ -692,7 +737,12 @@
       .gmt-dwell,
       .gmt-bl-date-stamp,
       .gmt-journey-split,
-      .gmt-demurrage-clock
+      .gmt-demurrage-clock,
+      .gmt-gnss-week-decoder,
+      .gmt-satellite-clock-converter,
+      .gmt-gnss-rollover-checker,
+      .gmt-leap-second-timeline,
+      .gmt-elapsed-vs-clock
     )
     .gmt-cutoff-axis-tick::before {
     forced-color-adjust: none;
@@ -1252,6 +1302,49 @@
 
   .gmt-js-table th,
   .gmt-js-table td {
+    border-bottom-color: CanvasText;
+  }
+}
+
+/* =======================================================================
+ * GNSS and leap-second tools, forced-colors (gmt-gnss-widgets.css)
+ *
+ * The lanes, bars, strips, rulers, pins, marks, today marks, slivers and
+ * hatched rows carry their meaning by shape, pattern and the word on a chip.
+ * Forced colours drops the fills that also tint them, so each keeps a system
+ * colour (the pins and marks are the cut-off block's, which lists the five
+ * roots): a lit span or sliver is Highlight, a bar or a rule CanvasText, a
+ * window the reading does not use the CanvasText hatch, and the today mark the
+ * dashed CanvasText rule (the sheet above restates the hatch and the dash).
+ * The plates and chips hold text, so they take a CanvasText border and never
+ * opt out (the cut-off block above lists the five roots). Loaded last so it
+ * wins its ties with the sheets.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-gnss-span:not(.gmt-gnss-hatch),
+  .gmt-gnss-sliver {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+
+  .gmt-gnss-bar,
+  .gmt-gnss-rule {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .gmt-gnss-lane[data-series] .gmt-gnss-track,
+  .gmt-gnss-bar-row[data-series] .gmt-gnss-track {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .gmt-gnss-gap {
+    border-top-color: CanvasText;
+  }
+
+  .gmt-gnss-table th,
+  .gmt-gnss-table td {
     border-bottom-color: CanvasText;
   }
 }

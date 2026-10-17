@@ -691,6 +691,25 @@ describe("brains, budgets and failover", () => {
     expect(asked).toEqual([]);
   });
 
+  it("tells a capped visitor the cap resets at UTC midnight, on the same instant it reports", async () => {
+    // 17:30 PDT on the 15th is already the 16th in UTC.
+    const NOW = convertUtcToUnix("2026-06-16T00:30:00Z")!;
+    const usage = fakeUsage();
+    const hash = await hashVisitor("9.9.9.9");
+    for (let i = 0; i < VISITOR_DAILY_MAX; i++) {
+      await recordRequest(usage, BRAINS[0], hash, NOW);
+    }
+
+    const handler = makeHandler({ ...spyResolver(), usage, now: () => NOW });
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    expect(response.status).toBe(429);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(String(body.error)).toContain("midnight UTC");
+    expect(body.resetsAt).toBe("2026-06-17T00:00:00Z");
+  });
+
   it("exempts a dev from the visitor cap", async () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");

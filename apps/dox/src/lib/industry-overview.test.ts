@@ -1,7 +1,7 @@
 /**
- * The text on an industry namespace's overview page: every industry layer has some, every
- * function it names exists in that layer, every link leads to a page, and the wording keeps
- * the owner's content rules.
+ * The text on an industry's overview page: every declared industry has some, every function it
+ * names is in the industry's own namespace or a module it draws on, every link leads to a page,
+ * and the wording keeps the owner's content rules.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -9,7 +9,15 @@ import path from "node:path";
 
 import corpus from "../generated/reference/gmt-corpus.json";
 import { INDUSTRY_OVERVIEWS, overviewFunctionNames } from "./industry-overview";
-import { INDUSTRY_LAYER_IDS, industryTag } from "./industry-tags";
+import {
+  INDUSTRY_LAYER_IDS,
+  OWN_NAMESPACES,
+  drawsOn,
+  industryOwning,
+  industryTag,
+  moduleCovers,
+  ownNamespace,
+} from "./industry-tags";
 
 const DOCS_DIR = path.resolve(import.meta.dirname, "..", "content", "docs");
 
@@ -30,7 +38,7 @@ const everyText = (id: string) => {
 };
 
 describe("industry overviews", () => {
-  it("has text for every industry layer and for nothing else", () => {
+  it("has text for every declared industry and for nothing else", () => {
     expect(Object.keys(INDUSTRY_OVERVIEWS).sort()).toEqual(
       [...INDUSTRY_LAYER_IDS].sort(),
     );
@@ -43,11 +51,21 @@ describe("industry overviews", () => {
   });
 
   it.each(INDUSTRY_LAYER_IDS)(
-    "%s: names only functions the layer exports, and names at least one per problem",
+    "%s: names only functions of its own namespace or a module it draws on, and names at least one per problem",
     (id) => {
+      const modules = [
+        ...(ownNamespace(id) ? [ownNamespace(id)!] : []),
+        ...drawsOn(id),
+      ];
       const exported = new Set(
         corpus
-          .filter((e) => e.namespace === id && e.kind === "function")
+          .filter(
+            (e) =>
+              e.kind === "function" &&
+              modules.some((module) =>
+                moduleCovers(module, e.namespace, e.module),
+              ),
+          )
           .map((e) => e.name),
       );
       for (const point of INDUSTRY_OVERVIEWS[id]!.solves) {
@@ -119,21 +137,23 @@ describe("generated reference pages", () => {
       return { file, namespace: file.split("/")[0]!, industries };
     });
 
-  it("tags every page of an industry namespace, its overview and module indexes included, with that industry", () => {
-    for (const id of INDUSTRY_LAYER_IDS) {
-      const own = pages.filter((p) => p.namespace === id);
-      expect(own.length, id).toBeGreaterThan(0);
+  it("tags every page of an industry's own namespace, its overview and module indexes included, with that industry", () => {
+    expect(OWN_NAMESPACES.length).toBeGreaterThan(0);
+    for (const namespace of OWN_NAMESPACES) {
+      const own = pages.filter((p) => p.namespace === namespace);
+      expect(own.length, namespace).toBeGreaterThan(0);
       expect(
-        own.filter((p) => p.industries !== id).map((p) => p.file),
-        id,
+        own
+          .filter((p) => p.industries !== industryOwning(namespace))
+          .map((p) => p.file),
+        namespace,
       ).toEqual([]);
     }
   });
 
-  it("tags no page of a general namespace, and not the reference root", () => {
+  it("tags no page of a namespace no industry owns, `timescale` among them, and not the reference root", () => {
     const general = pages.filter(
-      (p) =>
-        p.namespace !== "types" && !INDUSTRY_LAYER_IDS.includes(p.namespace),
+      (p) => p.namespace !== "types" && !OWN_NAMESPACES.includes(p.namespace),
     );
     expect(general.length).toBeGreaterThan(0);
     expect(general.filter((p) => p.industries).map((p) => p.file)).toEqual([]);

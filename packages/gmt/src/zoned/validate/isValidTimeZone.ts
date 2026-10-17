@@ -22,7 +22,7 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * @param timeZone timeZone identifier to validate
  * @returns boolean indicating validity
  *
- * @example isValidTimeZone("America/New_York") // true
+ * @example isValidTimeZone("Asia/Kolkata") // true
  * @example isValidTimeZone("Europe/London") // true
  * @example isValidTimeZone("Invalid/Timezone") // false
  * @example isValidTimeZone("Japan") // true (IANA link to Asia/Tokyo)

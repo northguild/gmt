@@ -114,6 +114,18 @@ The same three rules extend to the EDI parsers in `packages/gmt/src/intermodal/p
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: time-scale strings in the `timescale/` and `gnss/` converters (MAR-16)
+
+The same three rules extend to `fromTAI` (`packages/gmt/src/timescale/convert/`) and `gnssToUtc` (`packages/gmt/src/gnss/convert/`). A time-scale string (`"2026-01-01T00:00:37 TAI"`) is an ISO 8601 extended local date-time, one space, and a token naming the scale: `TAI` (FITS 4.0 Table 30) or one of the six RINEX 4.02 §5.2.8 time-system identifiers (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`). ISO 8601 has no designator for TAI or a satellite system's time, and no `Temporal.*.from` reads one at any layer. The grammar is fixed, never caller-supplied:
+
+1. One regex, `timeScaleString` in `internal/timeScaleString.ts`: a four-digit year, `T`, seconds required, one to nine fraction digits after `.`, one space, the token. Not in `regex/`: no standards body publishes the joined form.
+2. The extracted fields are always handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A second of 60 never reaches Temporal: it is refused for every token but `GLO`, and for `GLO` it is passed as 59 with a flag, and kept only for one of the 27 inserted leap seconds.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters do this, and only for one of the 27 inserted leap seconds. Every other function still rejects a second of 60.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),
@@ -215,7 +227,25 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
 - `zoned/` — IANA timezone-aware operations (`ZonedDateTime`)
 - Never mix the two in the same function or module.
-- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/` (see `packages/gmt/src/`).
+- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, later `maritime/`, `aviation/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
+- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/`, `workforce/`, `gnss/` (see `packages/gmt/src/`).
+
+## International authority first
+
+**International authority first.** A rule's authority is, in order: (1) an
+international treaty or standards body — ISO, IEC, ITU, BIPM, IERS, IAU, IMO, ICAO, WMO, WHO,
+UN/CEFACT, CCSDS, IGS/RINEX, IETF, Unicode/CLDR, IANA, ECMA; (2) a multinational industry body —
+ISDA, IATA, BIMCO, DCSA, GS1, HL7 International, FIX, SWIFT; (3) a national source, only as one peer
+among others and labelled with its country. A national system, agency or convention is never a
+default, never the only authority and never gets its own named function. Where no international
+source exists, the rule is a GMT rule backed by sources from at least two countries. Example zones,
+locales, holidays and date orders are spread across regions; none is "the" example. An
+international convention that is law (a maritime labour or watchkeeping convention, a road-transport
+agreement, an aviation-operations annex) may shape an example's numbers, but it is never named in
+code or docs: GMT tracks no law. Evidence records — `painpoints.md` and `research/*.md` — may still
+cite national sources as proof that a painpoint exists. The full rule and its place among the epic's rules are in
+[the tracker's Definition of Done](./domination/tracker.md#added-for-this-epic); an Authority table
+row ([AUTHORITY_TABLE.md](./reference/AUTHORITY_TABLE.md)) names the international source first.
 
 ## Calendar & zone semantics
 
@@ -227,8 +257,7 @@ Where calendar semantics are ambiguous, GMT does what [Temporal](https://tc39.es
 
 - **Arithmetic clamps.** A day that does not exist follows Temporal's default `overflow: "constrain"`: `2024-02-29` plus one year is `2025-02-28`; Jan 31 plus one month is Feb 29/28.
 - **Parsers reject.** `parse*` functions and the scoped grammars above use `overflow: "reject"` and return the sentinel for `"31 Feb"`. A parser must not invent a date.
-- **The ecosystem agrees.** Temporal, Moment, Luxon, dayjs, spacetime and `@internationalized/date` all clamp. date-fns `setYear` is the outlier (it rolls to Mar 1).
-- **The law agrees.** A period ending on a day that does not exist ends on the last day of that month: [EU Reg. 1182/71 Art 3(2)(c)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:31971R1182), [UK Companies Act 2006 s390/s391](https://www.legislation.gov.uk/ukpga/2006/46/section/391), [US 26 CFR 1.441-2](https://www.law.cornell.edu/cfr/text/26/1.441-2) (52–53-week years).
+- **Why clamp.** ISO 8601-1 defines calendar dates and durations, but it gives no rule for adding a month or a year to a day the result's month does not have. Temporal does: `add`, `subtract` and `with` default to `overflow: "constrain"`, which moves a day that does not exist to the last day of that month (the `RegulateISODate` operation in the [Temporal specification](https://tc39.es/proposal-temporal/)). Temporal is the highest rung in the [source order](../apps/dox/src/content/docs/guides/concepts/standards.mdx), so GMT follows it. Stated as a GMT rule: a date or period that would land on a day that does not exist lands on the last day of that month instead.
 - **Known divergence, documented and not built:** a "month-end" rule would put a Feb-28 anchor on 02-29 in leap years. Temporal gives 02-28, and so does GMT (e.g. `getFiscalPeriod`'s `yearEndsOn`).
 
 ### 2. Zone-aware unit boundaries are never truncate-and-re-resolve

@@ -1648,6 +1648,18 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
+  /* The industry's glyph sits before the label on the same line, so the row stays one line tall. */
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-inline-size: 0;
+}
+
+/* The glyph is the sidebar divider's, in the heading's own colour (`currentColor`). */
+.gmt-hive-examples-area-icon {
+  flex: none;
+  inline-size: 1.3em;
+  block-size: 1.3em;
 }
 
 .gmt-hive-examples-list {

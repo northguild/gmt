@@ -86,9 +86,9 @@ export interface DeliveryPreset {
 }
 
 const truck: LegFields = {
-  departure: "2024-03-08T08:00:00-06:00[America/Chicago]",
-  duration: "PT46H",
-  timeZone: "America/Los_Angeles",
+  departure: "2024-03-29T08:00:00+01:00[Europe/Rome]",
+  duration: "PT45H",
+  timeZone: "Europe/London",
   dwellAfter: "PT2H",
   mode: "truck",
 };
@@ -114,7 +114,7 @@ export const DELIVERY_PRESETS: readonly DeliveryPreset[] = [
     id: "truck-ship-rail",
     label: "Truck → ship → rail across the spring-forward",
     description:
-      "A truck leaves Chicago at 08:00 on 8 March 2024 and reaches Los Angeles at 05:00 on the 10th, three hours after the clocks sprang forward. Two hours of handling, eleven days at sea, a day at the Tokyo terminal, then two and a half hours by rail.",
+      "A truck leaves Rome at 08:00 on 29 March 2024 and reaches London at 05:00 on the 31st, three hours after the clocks sprang forward. Two hours of handling, eleven days at sea, a day at the Tokyo terminal, then two and a half hours by rail.",
     startTimeZone: "",
     legs: [truck, ship(""), rail],
   },
@@ -124,15 +124,15 @@ export const DELIVERY_PRESETS: readonly DeliveryPreset[] = [
     description:
       "The ship now sails at a scheduled 07:30. The cargo is ready at 07:00, so it waits 30 minutes and the connection holds.",
     startTimeZone: "",
-    legs: [truck, ship("2024-03-10T07:30:00[America/Los_Angeles]"), rail],
+    legs: [truck, ship("2024-03-31T07:30:00[Europe/London]"), rail],
   },
   {
     id: "missed-connection",
     label: "The ship sails at 06:30: a missed connection",
     description:
-      "The ship sails at 06:30, before the two-hour handoff ends. An offset table's −08:00 would read the truck's arrival as 04:00 and call this a connection. scheduleDelivery returns null.",
+      "The ship sails at 06:30, before the two-hour handoff ends. An offset table's +00:00 would read the truck's arrival as 04:00 and call this a connection. scheduleDelivery returns null.",
     startTimeZone: "",
-    legs: [truck, ship("2024-03-10T06:30:00[America/Los_Angeles]"), rail],
+    legs: [truck, ship("2024-03-31T06:30:00[Europe/London]"), rail],
   },
   {
     id: "trans-pacific",
@@ -159,22 +159,22 @@ export const DELIVERY_PRESETS: readonly DeliveryPreset[] = [
   },
   {
     id: "fall-back-night",
-    label: "Overnight rail across New York's fall-back",
+    label: "Overnight rail across London's fall-back",
     description:
-      "A train leaves at 22:00 on 2 November 2024 and runs six hours through the night New York falls back. The wall clock shows five. An offset table's −04:00 puts every later time an hour late.",
+      "A train leaves at 22:00 on 26 October 2024 and runs six hours through the night London falls back. The wall clock shows five. An offset table's +01:00 puts every later time an hour late.",
     startTimeZone: "",
     legs: [
       {
-        departure: "2024-11-02T22:00:00-04:00[America/New_York]",
+        departure: "2024-10-26T22:00:00+01:00[Europe/London]",
         duration: "PT6H",
-        timeZone: "America/New_York",
+        timeZone: "Europe/London",
         dwellAfter: "PT1H",
         mode: "rail",
       },
       {
         departure: "",
         duration: "PT2H",
-        timeZone: "America/New_York",
+        timeZone: "Europe/London",
         dwellAfter: "",
         mode: "truck",
       },

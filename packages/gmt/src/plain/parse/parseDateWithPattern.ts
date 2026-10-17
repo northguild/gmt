@@ -9,7 +9,7 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
 
 /**
  * Parse a date string against a caller-supplied token pattern (e.g.
- * `"MM/dd/yyyy"`, `"dd-MMM-yyyy"`) and return it as an ISO `PlainDate`
+ * `"dd/MM/yyyy"`, `"dd-MMM-yyyy"`) and return it as an ISO `PlainDate`
  * string.
  *
  * - **Decoding, not display.** This is for consuming a *known, fixed*
@@ -46,9 +46,10 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   (`""`). Any other character that is not a letter (`/ - , space`,
  *   digits and so on) is a literal with no quoting.
  * - `MMMM`/`MMM`/`EEEE`/`EEE`/`GGGG`/`GG` are locale-aware. If `locale`
- *   is omitted and the pattern uses any of them, GMT defaults to
- *   `"en-US"` rather than returning `""` for every caller who didn't
- *   have another locale in mind — pass `locale` explicitly for others.
+ *   is omitted (or an empty list) and the pattern uses any of them, GMT
+ *   reads English names in `"en"`, the language with no region, rather
+ *   than returning `""`. CLDR gives `"en"` the same names as `"en-US"`.
+ *   Pass `locale` for any other language.
  * - `EEEE`/`EEE` are matched against the locale's weekday names but the
  *   result is **not** cross-checked against the constructed date — e.g.
  *   `"Monday, 2024-03-15"` parses successfully against
@@ -56,13 +57,13 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   This is a deliberate scope limit (no second weekday-index-to-ISO-
  *   dayOfWeek mapping layer).
  * - Adjacent variable-width numeric tokens with no literal separator
- *   (e.g. `"Mdyyyy"`) are inherently ambiguous: each becomes a greedy
+ *   (e.g. `"dMyyyy"`) are inherently ambiguous: each becomes a greedy
  *   `\d{1,2}`/etc. in sequence, so the split between fields depends on
  *   regex backtracking, not on any documented rule. Prefer zero-padded
  *   tokens (`MM`, `dd`) or an explicit separator for reliable parsing.
  * - A shape-valid match does not by itself prove a real date: extracted
  *   fields are always handed to `Temporal.PlainDate.from(fields, {
- *   overflow: "reject" })`, so `"02/31/2024"` against `"MM/dd/yyyy"`
+ *   overflow: "reject" })`, so `"31/02/2024"` against `"dd/MM/yyyy"`
  *   still returns `""` — the regex only proves the shape, Temporal
  *   proves the date is real.
  * - A `yy` token needs the caller's hundred-year window,
@@ -73,21 +74,21 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   window reads no clock for it. A two-digit year is a legacy form; a
  *   four-digit year is the one to ask a data source for.
  *
- * @param value The string to decode (e.g. "03/15/2024")
- * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy")
- * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
+ * @param value The string to decode (e.g. "15/03/2024")
+ * @param pattern The token pattern describing `value`'s shape (e.g. "dd/MM/yyyy")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en")
  * @param options The hundred-year window a `yy` token resolves in
  * @returns ISO `PlainDate` string, or "" on no match, malformed pattern, or invalid input
  *
- * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy") // "2024-03-15"
+ * @example parseDateWithPattern("15/03/2024", "dd/MM/yyyy") // "2024-03-15"
  * @example parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy") // "2024-03-15"
- * @example parseDateWithPattern("Mar 15, '24", "MMM d, ''yy", undefined, { yearWindow: 2000 }) // "2024-03-15" ('' is one literal quote)
- * @example parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: 1950 }) // "2024-03-15" (1950–2049 window)
- * @example parseDateWithPattern("03/15/99", "MM/dd/yy", undefined, { yearWindow: 1950 }) // "1999-03-15"
- * @example parseDateWithPattern("03/15/24", "MM/dd/yy", undefined, { yearWindow: "rolling" }) // "2024-03-15" (while the current UTC year is 1975–2074)
- * @example parseDateWithPattern("03/15/24", "MM/dd/yy") // "" (yy with no window)
- * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy", undefined, { yearWindow: 2000 }) // "2024-03-15" (yyyy ignores the window)
- * @example parseDateWithPattern("02/31/2024", "MM/dd/yyyy") // "" (shape-valid, not a real date)
+ * @example parseDateWithPattern("15 Mar '24", "d MMM ''yy", undefined, { yearWindow: 2000 }) // "2024-03-15" ('' is one literal quote)
+ * @example parseDateWithPattern("15.03.24", "dd.MM.yy", undefined, { yearWindow: 1950 }) // "2024-03-15" (1950–2049 window)
+ * @example parseDateWithPattern("15.03.99", "dd.MM.yy", undefined, { yearWindow: 1950 }) // "1999-03-15"
+ * @example parseDateWithPattern("15.03.24", "dd.MM.yy", undefined, { yearWindow: "rolling" }) // "2024-03-15" (while the current UTC year is 1975–2074)
+ * @example parseDateWithPattern("15.03.24", "dd.MM.yy") // "" (yy with no window)
+ * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy", undefined, { yearWindow: 2000 }) // "2024-03-15" (US order; yyyy ignores the window)
+ * @example parseDateWithPattern("31/02/2024", "dd/MM/yyyy") // "" (shape-valid, not a real date)
  * @example parseDateWithPattern("14:30", "HH:mm") // "" (time token in a date-only pattern)
  * @example parseDateWithPattern("19 mai 2024", "d MMMM yyyy", ["fr-FR", "en-US"]) // "2024-05-19"
  */

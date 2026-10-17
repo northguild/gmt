@@ -1,12 +1,13 @@
 /**
- * The `_redirects` file: a 301 from the old URL of every public type, and of every renamed
- * function, to where it is documented now.
+ * The `_redirects` file: a 301 from the old URL of every public type, of every renamed
+ * function and of every moved page, to where it is documented now.
  *
  * A type's page used to sit beside its source file, at `/reference/<ns>/<mod>/<Name>`. A
  * shared type is now at `/reference/types/<Name>`, and a single-use type is a heading on its
  * function's page. The old URL is a pure function of the source path, so the map is derived
  * on every generation and no list of old URLs is kept. A renamed function cannot be derived,
- * so `renamed-functions.ts` keeps a short hand-written list of them.
+ * so `renamed-functions.ts` keeps a short hand-written list of them, and `moved-pages.ts`
+ * keeps the pages that moved and have no function behind them.
  *
  * Pure: types, renames and the usage graph in, the file's text out. The format is Cloudflare's
  * `_redirects` for Workers static assets: one `source destination status` rule per line. A
@@ -14,6 +15,7 @@
  * is the page's `.md` twin. Static rules are matched exactly, case included.
  */
 
+import type { MovedPage } from "./moved-pages";
 import type { RenamedFunction } from "./renamed-functions";
 import { functionUrl, legacyTypeUrl, typePageUrl } from "./reference-urls";
 import type { TypeUsage } from "./type-usage";
@@ -38,12 +40,16 @@ const STATUS = 301;
  * a rule whose source is its own target, two rules with one source, a source that is a page
  * of the site (the redirect would hide the page), a rule over 1,000 characters, or more than
  * 2,000 rules. A rename also throws when its target is not a live function page, so a typo
- * or a second rename fails here instead of redirecting to a 404.
+ * or a second rename fails here instead of redirecting to a 404. A moved page throws when its
+ * `to` is not one of `routes` (the site's pages and routes, with no trailing slash) or when its
+ * `from` still is one, which would hide the page the redirect is meant to replace.
  */
 export function buildRedirects(
   types: readonly RedirectedType[],
   usage: TypeUsage,
   renames: readonly RenamedFunction[] = [],
+  moved: readonly MovedPage[] = [],
+  routes: ReadonlySet<string> = new Set(),
 ): string {
   const rules: Array<{ source: string; target: string }> = [];
   for (const type of types) {
@@ -87,6 +93,19 @@ export function buildRedirects(
       { source: `${old}.md`, target: `${url}.md` },
     );
   }
+  for (const { from, to } of moved) {
+    if (!routes.has(to)) {
+      problems.push(`${from} moved to ${to}, which is not a page or route`);
+    }
+    if (routes.has(from)) {
+      problems.push(`${from} is a page of the site`);
+    }
+    rules.push(
+      { source: from, target: `${to}/` },
+      { source: `${from}/`, target: `${to}/` },
+      { source: `${from}.md`, target: `${to}.md` },
+    );
+  }
   rules.sort((a, b) => a.source.localeCompare(b.source));
 
   // The pages the graph knows: each function's, each shared type's, and their `.md` twins.
@@ -122,7 +141,7 @@ export function buildRedirects(
   return [
     "# GENERATED FILE — do not edit by hand.",
     "# Produced by apps/dox/scripts/build-reference.ts (`pnpm dox:generate`).",
-    "# The old URL of every public type and renamed function, redirected to where it is documented now.",
+    "# The old URL of every public type, renamed function and moved page, redirected to where it is documented now.",
     ...rules.map((r) => `${r.source} ${r.target} ${STATUS}`),
     "",
   ].join("\n");

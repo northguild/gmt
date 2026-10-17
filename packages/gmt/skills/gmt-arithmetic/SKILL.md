@@ -12,9 +12,8 @@ description: >
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
   clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  intervalCount* matching bucketRange, RFC 9557 calendar strings, and the
-  correct-at-the-edges guarantees at the representable limits, and hours-of-work
-  rules over a duty log (evaluateDutyLog, dutyViolations, dutyDayFor).
+  intervalCount* matching bucketRange, RFC 9557 calendar strings,
+  correct-at-the-edges guarantees at the limits.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -35,12 +34,10 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
   - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
-  - 'northguild/gmt:packages/gmt/src/duty/index.ts'
-  - 'northguild/gmt:packages/gmt/src/types/duty.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.19.0'
+  library_version: '1.20.0'
 ---
 
 # GMT Arithmetic
@@ -61,8 +58,6 @@ and full interval set operations.
   these windows?".
 - The user is measuring elapsed time — a profile, a trace span, a sensor
   interval — and wants milliseconds or nanoseconds rather than a `Duration`.
-- The user checks hours of work against rules: driving or duty caps, rest in
-  every 24 hours, a free day in seven, a monthly record of violations.
 
 ## Core rules
 
@@ -149,6 +144,8 @@ and full interval set operations.
    "hours")` measures what the clock face did. Across a DST transition they
    differ by the size of the shift — a wall-clock day is 23, 24.5 or 25 real
    hours. Reaching for the wrong one is the most common span bug there is.
+   `spanMs` and `spanNs` do not count leap seconds: for a leap-second-exact span, convert both ends
+   with `toTAI` or add `leapSecondsBetween(start, end)` (see `gmt-integration`).
 7. **Span sentinels are `null`, not `0`.** `0` and `0n` are valid spans, so all
    three span functions return `null` on invalid input rather than a zero —
    `spanMs` also returns it past `Number.MAX_SAFE_INTEGER` milliseconds, where
@@ -236,10 +233,10 @@ and full interval set operations.
     caller-supplied — GMT bundles no holiday table on the default import path.
 
     ```typescript
-    const nyse = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" };
-    addBusinessDays("2024-07-03", 1, nyse); // "2024-07-05" — skips the holiday
-    businessDaysBetween("2024-07-01", "2024-07-05", nyse); // 3 — start exclusive, end inclusive
-    rollDate("2024-05-31", "modifiedFollowing", nyse); // backward when forward leaves the month
+    const tokyo = { weekend: [6, 7], holidays: ["2024-05-03", "2024-05-06"], timeZone: "Asia/Tokyo" };
+    addBusinessDays("2024-05-02", 1, tokyo); // "2024-05-07" — skips both holidays and the weekend
+    businessDaysBetween("2024-05-01", "2024-05-07", tokyo); // 2 — start exclusive, end inclusive
+    rollDate("2024-08-31", "modifiedFollowing", tokyo); // "2024-08-30" — backward when forward leaves the month
     ```
 
     These are **local-date in, local-date out**: `calendar.timeZone` records the
@@ -250,39 +247,7 @@ and full interval set operations.
     survives only if it is a working day in every input, and returns `null` for an
     empty list. Narrow inputs with `isValidBusinessCalendar` /
     `isValidRollConvention`.
-13. **Hours of work are rules over a duty log, and every number is the
-    caller's.** A log is `{ status, start, end }[]` in the caller's own status
-    words, ordered and non-overlapping (`isValidDutyLog`). A rule is one of 13
-    `DutyRule` kinds (`cumulativeCap`, `elapsedWindow`, `requiredInterruption`,
-    `rollingCap`, `fixedPeriodCap`, `restRequirement`, `freePeriod`,
-    `restBeforeDuty`, `quota`, `dueBy`, `pattern`, `occurrenceCap`,
-    `usageLookback`) with no default limit; GMT names no regulation.
-    `evaluateDutyLog(log, at, rules, { timeZone, dayStartTime?, disambiguation? })`
-    reports every rule at one instant; `dutyViolations` lists each violation in a
-    range once, by its worst window, in the range it began in.
-
-    ```typescript
-    evaluateDutyLog(log, "2024-01-01T21:30:00Z", [{ label: "11 driving", kind: "cumulativeCap",
-      statuses: ["driving"], cap: "PT11H", since: { statuses: ["off"], consecutive: "PT10H" } }],
-      { timeZone: "UTC" }).violations; // [{ label: "11 driving", used: "PT11H30M", limit: "PT11H", … }]
-    ```
-
-    - `{ elapsed: "PT24H" }` slides; `{ operatorDays }`, `{ calendarDays }`,
-      `{ isoWeeks }`, `{ calendarMonths }`, `{ calendarYears }` are whole local
-      periods in `timeZone` (28 calendar days across a fall-back are 673 hours).
-    - The operator day is `dutyDayFor(instant, { timeZone, dayStartTime })`,
-      never local midnight; a rule counting `operatorDays` needs `dayStartTime`.
-    - The log is read up to `at`; unlogged time is neither work nor rest. To
-      check a roster, append the plan and set `at` to its end.
-    - A paired rest is three floors (`PairSpec`), not two integers:
-      `qualifyingRestPairs`.
-    - A count of periods is 10,000 at most, alone or times `adjacent`,
-      `lookback` or `periods`. `fixedPeriodCap.period` and `occurrenceCap.per`
-      are a `LocalPeriod`: a count, never `elapsed`.
-    - `dutyViolations` reads only the time the log covers, and each check reads
-      the log as it stood then, so a record only grows as the log does.
-    - Nested caps are separate rules, reported separately.
-14. **Read the docs site.** This skill is a routing pointer. For full option
+13. **Read the docs site.** This skill is a routing pointer. For full option
     shapes, locale matrices, and code examples, read these:
     - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
     - Each page has a `.md` twin that holds its text, for example
@@ -323,11 +288,6 @@ and full interval set operations.
   `intervalLengthDate`, `intervalDivideEquallyDate`, `mergeIntervalsDate` (each
   with `DateTime`/`Zoned`/`Unix`/`Utc` variants where the type supports it)
 
-- **Hours of work**: `evaluateDutyLog`, `dutyViolations`, `dutyDayFor`,
-  `dutyTotals`, `longestRun`, `qualifyingRests`, `qualifyingRestPairs`,
-  `isValidDutyLog`, types `DutyEntry`, `DutyRule`, `Period`, `LocalPeriod`,
-  `DutyReport`
-
 ## Namespace selection
 
 - `plain/*` — timezone-free dates, times, datetimes
@@ -337,7 +297,7 @@ and full interval set operations.
 - `duration/*` — ISO 8601 duration strings
 - `span/*` — elapsed and wall-clock spans as raw numbers
 - `interval/*` — half-open interval algebra over instant strings
-- `duty/*` — hours-of-work rules over a duty log
+- `workforce/*` — see the `gmt-workforce` skill
 
 ## References
 
@@ -348,4 +308,3 @@ and full interval set operations.
 - [Business calendars guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/business-calendars/)
 - [Interval algebra reference](/reference/interval/calculate/intersectIntervals)
 - [Interval guides](/guides/intervals/interval-basics/)
-- [Hours of work guide](https://gmt-dox.northguild.workers.dev/guides/intervals/hours-of-work/)

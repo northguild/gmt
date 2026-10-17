@@ -87,6 +87,12 @@ describe("renderDstTemplate", () => {
     }
   });
 
+  it("opens on Europe/London", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderDstTemplate();
+    expect((q(root, "zone") as HTMLSelectElement).value).toBe("Europe/London");
+  });
+
   it("starts the ticker and its empty note hidden", () => {
     // Both are revealed by the first render, based on the preset. Shipping
     // either visible would flash content the reader should not see.
@@ -220,7 +226,7 @@ describe("mountDstInspector", () => {
     const rows = (q(root, "transition-body") as HTMLElement).querySelectorAll(
       "tr",
     );
-    // New York has two transitions in 2024.
+    // London has two transitions in 2024.
     expect(rows.length).toBe(2);
   });
 
@@ -293,7 +299,7 @@ describe("mountDstInspector", () => {
   });
 
   it("scrubs the ticker by dragging, through pointer capture", async () => {
-    const { root } = await mount({ preset: "gap" });
+    const { root } = await mount({ zone: "America/New_York", preset: "gap" });
     const handle = q(root, "ticker-handle") as HTMLElement;
     const track = q(root, "ticker-track") as HTMLElement;
     const status = q(root, "ticker-status") as HTMLElement;

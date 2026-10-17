@@ -48,10 +48,10 @@ if (now === "") {
   severity="medium"
   title="Looking for value-taking get* functions here"
   description="getNow and getToday take no arguments. TypeScript rejects a timezone or format string, and at runtime it is silently ignored — you get the system timezone's time, not the zone you named. The zoned and UTC variants live in their own namespaces."
-  wrongCode={`getNow("America/New_York"); // type error; at runtime the argument is ignored — system timezone`}
+  wrongCode={`getNow("Asia/Kolkata"); // type error; at runtime the argument is ignored — system timezone`}
   rightCode={`import { getZonedNow } from "@northguild/gmt/zoned";
 
-getZonedNow("America/New_York"); // "2024-03-15T10:30:45.123-04:00[America/New_York]" — zoned variant`}
+getZonedNow("Asia/Kolkata"); // "2024-03-15T10:30:45.123+05:30[Asia/Kolkata]" — zoned variant`}
 />
 
 <Mistake

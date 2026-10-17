@@ -34,7 +34,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.19.0'
+  library_version: '1.20.0'
 ---
 
 # GMT Basics
@@ -87,7 +87,9 @@ input before you act on it.
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
-  `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
+  `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`,
+  `isValidFiscalCalendar`, `isValidFiscalExtraWeek`, `isValidFiscalYearLabel`,
+  `hasSecond60`
 - **Interchange-format validation**: `isValidRfc3339DateTime`,
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
@@ -146,8 +148,14 @@ input before you act on it.
   lacks (`timeStyle` on `formatDate`, `dateStyle` on `formatTime`) returns `""`.
   Zoned formatters return `""`/`[]` for a `timeZone` option: to show an instant
   in another zone, use `formatUtc(value, locale, { timeZone })`.
-- Leap seconds (`:60`) are invalid in every spelling (`T`, `t`, space, basic
-  format). `isLeapSecond` tells you one is there. Validators return `false`.
+- A second of `60` is invalid in every spelling (`T`, `t`, space, basic
+  format), and validators return `false` for it. Two functions tell you about
+  one. `hasSecond60` is the shape test: it is true for any second 60, real or
+  not (`"2024-06-15T12:34:60Z"` is `true`). `isLeapSecond`, from `timescale/`,
+  is the table lookup: it is true only for the 27 inserted leap seconds
+  (`"2016-12-31T23:59:60Z"` is `true`, `"2024-06-15T12:34:60Z"` is `false`).
+  Only the `timescale/` and `gnss/` functions accept a second 60, and only a
+  listed one; see the `gmt-integration` and `gmt-gnss` skills.
 - `isValidTimeZone` accepts every IANA name, including single-component links
   such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
   offset zone ids such as `"+05:00"`, as Temporal does.
@@ -163,10 +171,22 @@ input before you act on it.
   instant has no calendar date until you name a zone — floor it with
   `floorToZone` first, or convert it in the zone you mean.
 - `getFiscalPeriod`'s `yearEndsOn` states the year-end **rule** by example, not
-  one year's end. The NRF 4-5-4 calendar is `"2026-01-31"` — a Saturday on
-  January 31, which is "the Saturday nearest to January 31".
+  one year's end. One published 4-5-4 example (NRF, US) adds a 53rd week when
+  "there are four or more days left in January", which is the Saturday nearest
+  January 31: `"2026-01-31"`, a Saturday on January 31.
+- `getFiscalPeriod` also requires `extraWeek` and `yearLabel`, with no default,
+  because published calendars disagree on both. `extraWeek` is the period a 53rd
+  week is added to: `"firstPeriod"` (ONS, UK) or `"lastPeriod"` (NRF, US).
+  `yearLabel` names the fiscal year: `"startYear"` (NRF, US), `"endYear"`, the
+  year its last day falls in, or `"majorityYear"`, the calendar year holding the
+  most of its days (ONS, UK); a 182/182 split goes to the end year. IFRS 18
+  ¶27(c) (formerly IAS 1 ¶51(c)) lets a period be identified by the date it
+  ends, which supports `"endYear"` and the tie rule. `getQuarter` with options takes
+  `fiscalYearStartMonth` and `yearLabel`, both required. A calendar missing a
+  field returns `null`; check it with `isValidFiscalCalendar`.
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
-  fixed ISO Mon–Fri with no locale and no holidays **until you pass it a
+  a fixed Mon–Fri week (Sat–Sun off, CLDR's world default; ISO 8601 defines no
+  weekend) with no locale and no holidays **until you pass it a
   `BusinessCalendar`** — `isBusinessDay(value, { weekend, holidays, timeZone })`
   states the weekend and holidays itself. See the `gmt-arithmetic` skill.
 

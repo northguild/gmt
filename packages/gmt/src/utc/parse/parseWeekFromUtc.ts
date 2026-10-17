@@ -21,7 +21,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example parseWeekFromUtc("2024-12-31T12:00:00Z") // 1 (ISO week 1 of 2025)
  * @example parseWeekFromUtc("2024-12-31T12:00:00Z", { weekStartsOn: "sunday" }) // 1 (its Sunday-first week holds 1 January 2025)
  * @example parseWeekFromUtc("2000-12-31T12:00:00Z", { weekStartsOn: "sunday" }) // 1 (its Sunday-first week holds 1 January 2001)
- * @example parseWeekFromUtc("2024-03-17T02:30:45Z", { weekStartsOn: "sunday", timeZone: "America/New_York" }) // 11 (Saturday 16 March in New York)
+ * @example parseWeekFromUtc("2024-03-17T02:30:45Z", { weekStartsOn: "sunday", timeZone: "America/Sao_Paulo" }) // 11 (Saturday 16 March in São Paulo)
  * @example parseWeekFromUtc("invalid") // null
  */
 export function parseWeekFromUtc(

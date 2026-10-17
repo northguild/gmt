@@ -102,58 +102,58 @@ export interface TimetablePreset {
   rows: readonly TimetableRow[];
 }
 
-const NY = "America/New_York";
+const LON = "Europe/London";
 
 /** Every preset is a section 9 row, so every result the widget shows is a
  *  verified value. */
 export const TIMETABLE_PRESETS: readonly TimetablePreset[] = [
   {
     id: "fall-back",
-    label: "New York's fall-back night: 00:30, 01:30, 02:30",
+    label: "London's fall-back night: 00:30, 01:30, 02:30",
     description:
-      "New York's fall-back night, printed as three timetable rows. 00:30 and 02:30 each happen once; 01:30 happens twice, and the clock alone cannot say which pass a printed 01:30 means.",
-    startTimeZone: NY,
+      "London's fall-back night, printed as three timetable rows. 00:30 and 02:30 each happen once; 01:30 happens twice, and the clock alone cannot say which pass a printed 01:30 means.",
+    startTimeZone: LON,
     duration: "PT1H",
-    timeZone: NY,
+    timeZone: LON,
     rows: [
-      { departure: "2024-11-03T00:30:00", offset: "" },
-      { departure: "2024-11-03T01:30:00", offset: "" },
-      { departure: "2024-11-03T02:30:00", offset: "" },
+      { departure: "2024-10-27T00:30:00", offset: "" },
+      { departure: "2024-10-27T01:30:00", offset: "" },
+      { departure: "2024-10-27T02:30:00", offset: "" },
     ],
   },
   {
     id: "offset-picks",
-    label: "01:30 twice: with no offset, then with −05:00",
+    label: "01:30 twice: with no offset, then with +00:00",
     description:
-      "01:30 happens twice on New York's fall-back night. Left with no offset it resolves to the earlier pass; written with −05:00 it resolves to the later one.",
-    startTimeZone: NY,
+      "01:30 happens twice on London's fall-back night. Left with no offset it resolves to the earlier pass; written with +00:00 it resolves to the later one.",
+    startTimeZone: LON,
     duration: "PT1H",
-    timeZone: NY,
+    timeZone: LON,
     rows: [
-      { departure: "2024-11-03T01:30:00", offset: "" },
-      { departure: "2024-11-03T01:30:00", offset: "-05:00" },
+      { departure: "2024-10-27T01:30:00", offset: "" },
+      { departure: "2024-10-27T01:30:00", offset: "+00:00" },
     ],
   },
   {
     id: "spring-forward",
-    label: "New York's spring-forward night: 01:30, 02:30, 03:30",
+    label: "London's spring-forward night: 00:30, 01:30, 02:30",
     description:
-      "02:30 never shows on a New York clock that night, so it resolves to 03:30, the same instant as the row printed 03:30. Two timetable rows, one departure.",
-    startTimeZone: NY,
+      "01:30 never shows on a London clock that night, so it resolves to 02:30, the same instant as the row printed 02:30. Two timetable rows, one departure.",
+    startTimeZone: LON,
     duration: "PT1H",
-    timeZone: NY,
+    timeZone: LON,
     rows: [
-      { departure: "2024-03-10T01:30:00", offset: "" },
-      { departure: "2024-03-10T02:30:00", offset: "" },
-      { departure: "2024-03-10T03:30:00", offset: "" },
+      { departure: "2024-03-31T00:30:00", offset: "" },
+      { departure: "2024-03-31T01:30:00", offset: "" },
+      { departure: "2024-03-31T02:30:00", offset: "" },
     ],
   },
   {
     id: "published-local",
-    label: "A published 10:00, read in New York",
+    label: "A published 10:00, read in Tokyo",
     description:
-      "The library's own documented case: a published 10:00 with no offset, read in New York, arriving in UTC.",
-    startTimeZone: NY,
+      "A published 10:00 with no offset, read in Tokyo, arriving in UTC.",
+    startTimeZone: "Asia/Tokyo",
     duration: "PT1H",
     timeZone: "UTC",
     rows: [{ departure: "2024-06-15T10:00:00", offset: "" }],

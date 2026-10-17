@@ -25,8 +25,8 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  * import { OffsetInstant } from "@northguild/gmt/instant";
  * const pair: OffsetInstant = {
  *   instant: "2024-07-15T16:00:00Z",
- *   offset: "-04:00",
- *   timeZone: "America/New_York",
+ *   offset: "+05:30",
+ *   timeZone: "Asia/Kolkata",
  * };
  */
 export interface OffsetInstant {
@@ -52,8 +52,8 @@ export interface OffsetInstant {
 /**
  * Split an ISO 8601 instant string into the instant-plus-offset pair the world exchanges.
  *
- * - **An offset is not a zone.** `-05:00` does not identify `America/New_York` — it is every
- *   zone at `-05:00` that day. Keep the offset for what already happened; keep the zone for
+ * - **An offset is not a zone.** `+02:00` does not identify `Africa/Johannesburg` — it is every
+ *   zone at `+02:00` that day. Keep the offset for what already happened; keep the zone for
  *   anything still to be scheduled. `timeZone` is optional because most feeds send no zone.
  * - Accepts a `Z` instant, a bare `±HH:MM` offset, or a bracketed IANA zone, in ISO 8601
  *   extended format with a `T` separator — `isValidInstant`'s grammar. Basic format, a space or
@@ -61,7 +61,7 @@ export interface OffsetInstant {
  *   annotations are read as Temporal reads them (RFC 9557 §3.3, proposal-temporal
  *   `ParseISODateTime`): a calendar (`[u-ca=hebrew]`) or elective (`[x-provenance=estimated]`)
  *   annotation is ignored, and an unknown critical one (`[!foo=bar]`) returns null.
- * - A bracketed zone whose offset contradicts it (`"...T12:00:00-05:00[America/New_York]"` in
+ * - A bracketed zone whose offset contradicts it (`"...T12:00:00+00:00[Europe/London]"` in
  *   July) returns null. The string states two things that cannot both be true, and guessing
  *   which one the sender meant is exactly the bug the pair exists to prevent.
  * - A bracketed *offset* time zone (Temporal's own `[-04:00]` shape) yields no `timeZone`
@@ -77,7 +77,7 @@ export interface OffsetInstant {
  *   `getTimeZoneOffset` returns). An offset (`"-05:00"`, `"-00:44:30"`) sets the pair's offset and,
  *   like a bracketed offset zone, yields no `timeZone` field.
  * - The returned `timeZone` is the identifier in its IANA casing on every path —
- *   `"america/new_york"` comes back as `"America/New_York"` — because identifiers match
+ *   `"europe/london"` comes back as `"Europe/London"` — because identifiers match
  *   case-insensitively (ECMA-402). That is what the bracket path and `fromOffsetInstant` return,
  *   so `toOffsetInstant(fromOffsetInstant(pair))` returns `pair`. A link name is kept, not
  *   replaced by its target. Compatibility: earlier releases echoed the argument's casing; pass
@@ -104,23 +104,23 @@ export interface OffsetInstant {
  *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns `{ instant, offset, timeZone? }`, or null on invalid input
  *
- * @example toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+ * @example toOffsetInstant("2024-07-15T12:00:00+09:00[Asia/Tokyo]") // { instant: "2024-07-15T03:00:00Z", offset: "+09:00", timeZone: "Asia/Tokyo" }
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — an offset with no zone behind it
  * @example toOffsetInstant("2024-07-15T16:00:00Z") // { instant: "2024-07-15T16:00:00Z", offset: "+00:00" }
- * @example toOffsetInstant("2024-07-15T16:00:00Z", "America/New_York") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
- * @example toOffsetInstant("2024-01-15T17:00:00Z", "America/New_York") // { instant: "2024-01-15T17:00:00Z", offset: "-05:00", timeZone: "America/New_York" } — same wall time, different offset, six months apart
+ * @example toOffsetInstant("2024-07-15T16:00:00Z", "Europe/London") // { instant: "2024-07-15T16:00:00Z", offset: "+01:00", timeZone: "Europe/London" }
+ * @example toOffsetInstant("2024-01-15T17:00:00Z", "Europe/London") // { instant: "2024-01-15T17:00:00Z", offset: "+00:00", timeZone: "Europe/London" } — same wall time, different offset, six months apart
  * @example toOffsetInstant("1970-01-01T00:00:00Z", "Africa/Monrovia") // { instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" }
  * @example toOffsetInstant("1970-01-01T12:44:30Z", "-00:44:30") // { instant: "1970-01-01T12:44:30Z", offset: "-00:44:30" } — a stored offset with seconds, and no timeZone field
  * @example toOffsetInstant("1969-12-31T23:15:30-00:45[Africa/Monrovia]") // { instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" } — the zone, not the rounded offset, fixes the instant
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[-04:00]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — a bracketed offset is not a zone, so no timeZone field
- * @example toOffsetInstant("2024-07-15T12:00:00-05:00[America/New_York]") // null (offset contradicts the bracketed zone)
+ * @example toOffsetInstant("2024-07-15T12:00:00+00:00[Europe/London]") // null (offset contradicts the bracketed zone)
  * @example toOffsetInstant("-271821-04-19T23:59:00-00:01[Europe/London]") // null (a bracketed zone on a local date before Temporal's date range)
  * @example toOffsetInstant("-271821-04-20T00:00:15Z", "Europe/London") // { instant: "-271821-04-20T00:00:15Z", offset: "-00:01:15", timeZone: "Europe/London" }
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — an elective annotation is ignored
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[!foo=bar]") // null (an unknown critical annotation)
  * @example toOffsetInstant("2024-07-15T12:00:00") // null (no offset designator)
  * @example toOffsetInstant("20240715T120000-0400") // null (basic format)
- * @example toOffsetInstant("2024-07-15T16:00:00Z", "america/new_york") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" } — IANA casing
+ * @example toOffsetInstant("2024-07-15T16:00:00Z", "europe/london") // { instant: "2024-07-15T16:00:00Z", offset: "+01:00", timeZone: "Europe/London" } — IANA casing
  * @example toOffsetInstant("2024-07-15T16:00:00Z", "Japan") // { instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }
  * @example toOffsetInstant("2024-07-15T16:00:00-00:00") // { instant: "2024-07-15T16:00:00Z", offset: "+00:00" } — "offset unknown" is not preserved
  * @example toOffsetInstant("2024-07-15T16:00:00+01:00:00.5") // null (fractional-second offset)

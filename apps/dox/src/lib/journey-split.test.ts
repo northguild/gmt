@@ -45,7 +45,7 @@ const EXPECTED: Record<
 > = {
   "scheduled-sailing": {
     journey: {
-      eta: "2024-06-29T23:00:00-05:00[America/Chicago]",
+      eta: "2024-06-30T13:30:00+09:30[Australia/Adelaide]",
       totalTransit: "PT400H",
       totalDwell: "PT84H",
     },
@@ -62,7 +62,7 @@ const EXPECTED: Record<
   },
   "no-schedule": {
     journey: {
-      eta: "2024-06-28T05:00:00-05:00[America/Chicago]",
+      eta: "2024-06-28T19:30:00+09:30[Australia/Adelaide]",
       totalTransit: "PT400H",
       totalDwell: "PT42H",
     },
@@ -85,7 +85,7 @@ const EXPECTED: Record<
   },
   "across-a-clock-change": {
     journey: {
-      eta: "2024-03-10T12:00:00-04:00[America/New_York]",
+      eta: "2024-03-31T12:00:00+01:00[Europe/London]",
       totalTransit: "PT13H",
       totalDwell: "PT2H",
     },
@@ -267,8 +267,8 @@ describe("the scheduled sailing, in full", () => {
     expect(plates.map((p) => [p.role, p.value, p.lines])).toEqual([
       [
         "hero-eta",
-        "Sat 29 Jun 23:00",
-        ["America/Chicago", "484 h door to door"],
+        "Sun 30 Jun 13:30",
+        ["Australia/Adelaide", "484 h door to door"],
       ],
       ["hero-moving", "16 d 16 h", ["PT400H"]],
       ["hero-waiting", "3 d 12 h", ["PT84H"]],
@@ -285,7 +285,7 @@ describe("the scheduled sailing, in full", () => {
 
   it("has a sentence for a screen reader and a name for the ribbons", () => {
     expect(summaryText(read)).toBe(
-      "Moving 16 d 16 h and waiting 3 d 12 h. ETA Sat 29 Jun 23:00 in America/Chicago, 484 h door to door.",
+      "Moving 16 d 16 h and waiting 3 d 12 h. ETA Sun 30 Jun 13:30 in Australia/Adelaide, 484 h door to door.",
     );
     expect(ribbonsAria(read)).toContain(
       "leg 1 moving, then 6 h of handling after leg 1",
@@ -306,7 +306,7 @@ describe("the clock change", () => {
     expect(journeyPlates(read)[1]!.value).toBe("13 h");
     // The train's 10 hours cross a spring-forward: the wall clock shows 11.
     const hop = read.hops[0]!;
-    expect(hopCells(hop)[0]).toBe("Leg 1: Sun 10 Mar 07:00");
+    expect(hopCells(hop)[0]).toBe("Leg 1: Sun 31 Mar 07:00");
     expect(hopCells(hop)[4]).toBe("2 h");
   });
 });

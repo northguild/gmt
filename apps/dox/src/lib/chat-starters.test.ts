@@ -14,6 +14,7 @@ import {
   startersByArea,
 } from "./chat-constants";
 import { resolveWidget } from "~/components/ask/widget-registry";
+import { INDUSTRY_ICON_PATHS, industryTag } from "./industry-tags";
 import { DOX_TOOLS, DOX_TOOL_DOCS, ENABLED_TOOL_NAMES } from "./dox-tools";
 
 describe("CHAT_STARTERS", () => {
@@ -52,7 +53,9 @@ describe("CHAT_STARTERS", () => {
        answers in prose — which is exactly what the vaguer wording did. */
     for (const starter of CHAT_STARTERS) {
       expect(
-        /Tokyo|New York|London|\d/.test(starter.text),
+        /Tokyo|New York|London|Sydney|Johannesburg|Kolkata|São Paulo|Rome|\d/.test(
+          starter.text,
+        ),
         `${starter.widget} has nothing concrete to pass as an argument`,
       ).toBe(true);
     }
@@ -88,6 +91,21 @@ describe("CHAT_STARTERS", () => {
 
 describe("example areas", () => {
   const areaIds = EXAMPLE_AREAS.map((a) => a.id) as readonly string[];
+
+  it("names each area as an industry, with that industry's label and icon", () => {
+    for (const { id, label } of EXAMPLE_AREAS) {
+      const tag = industryTag(id);
+      expect(tag, id).toBeDefined();
+      expect(label, id).toBe(tag!.label);
+      expect(Object.keys(INDUSTRY_ICON_PATHS), id).toContain(tag!.icon);
+    }
+  });
+
+  it("has no area for an industry that has no tool", () => {
+    const ids = EXAMPLE_AREAS.map((a) => a.id) as readonly string[];
+    expect(ids).not.toContain("workforce");
+    expect(ids).not.toContain("maritime");
+  });
 
   it("files every starter under a known area", () => {
     for (const starter of CHAT_STARTERS) {

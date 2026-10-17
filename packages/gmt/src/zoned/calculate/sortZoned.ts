@@ -13,9 +13,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param order "asc" for ascending (earliest first) | "desc" for descending (latest first)
  * @returns Sorted array of zoned datetime strings
  *
- * @example sortZoned(["2024-03-10T12:00:00[America/New_York]", "2024-01-01T08:00:00[America/New_York]", "2024-02-15T15:30:00[America/New_York]"]) // ["2024-01-01T08:00:00-05:00[America/New_York]", "2024-02-15T15:30:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]"]
- * @example sortZoned(["2024-03-10T12:00:00[America/New_York]", "2024-01-01T08:00:00[America/New_York]", "2024-02-15T15:30:00[America/New_York]"], "desc") // ["2024-03-10T12:00:00-04:00[America/New_York]", "2024-02-15T15:30:00-05:00[America/New_York]", "2024-01-01T08:00:00-05:00[America/New_York]"]
- * @example sortZoned(["invalid", "2024-01-01T08:00:00[America/New_York]", "2024-02-15T15:30:00[America/New_York]"]) // ["2024-01-01T08:00:00-05:00[America/New_York]", "2024-02-15T15:30:00-05:00[America/New_York]"]
+ * @example sortZoned(["2024-03-10T12:00:00[Australia/Sydney]", "2024-01-01T08:00:00[Australia/Sydney]", "2024-02-15T15:30:00[Australia/Sydney]"]) // ["2024-01-01T08:00:00+11:00[Australia/Sydney]", "2024-02-15T15:30:00+11:00[Australia/Sydney]", "2024-03-10T12:00:00+11:00[Australia/Sydney]"]
+ * @example sortZoned(["2024-03-10T12:00:00[Australia/Sydney]", "2024-01-01T08:00:00[Australia/Sydney]", "2024-02-15T15:30:00[Australia/Sydney]"], "desc") // ["2024-03-10T12:00:00+11:00[Australia/Sydney]", "2024-02-15T15:30:00+11:00[Australia/Sydney]", "2024-01-01T08:00:00+11:00[Australia/Sydney]"]
+ * @example sortZoned(["invalid", "2024-01-01T08:00:00[Australia/Sydney]", "2024-02-15T15:30:00[Australia/Sydney]"]) // ["2024-01-01T08:00:00+11:00[Australia/Sydney]", "2024-02-15T15:30:00+11:00[Australia/Sydney]"]
  * @example sortZoned([]) // []
  */
 export function sortZoned(

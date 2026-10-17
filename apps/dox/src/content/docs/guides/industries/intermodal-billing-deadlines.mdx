@@ -46,7 +46,7 @@ local date first, not to its UTC date.
 ```typescript
 import { convertUtcToPlainDate } from "@northguild/gmt/utc";
 
-convertUtcToPlainDate("2026-04-01T02:30:00Z", { timeZone: "America/New_York" });
+convertUtcToPlainDate("2026-04-01T02:30:00Z", { timeZone: "America/Sao_Paulo" });
 // "2026-03-31"
 ```
 
@@ -181,7 +181,7 @@ The usual anchor is the last charged date, `chargeableDays(...).chargedDates.at(
 ```typescript
 import { billingTimeline, chargeableDays } from "@northguild/gmt/intermodal";
 
-const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/Sao_Paulo", firstDay: "eventDay" };
 const lastCharged = chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, tariff).chargedDates.at(-1);
 // "2024-06-24"
 billingTimeline({ anchorOn: "2024-06-24" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });

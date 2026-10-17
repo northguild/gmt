@@ -14,7 +14,7 @@ const sails = Date.parse("2024-06-14T16:00:00Z"); // Friday 18:00 in Amsterdam
 const cutoff = new Date(sails - 48 * 36e5);
 cutoff.toISOString(); // "2024-06-12T16:00:00.000Z" — Wednesday 18:00 in Amsterdam
 // The terminal closed documentation at 17:00. Every filing made in that hour is late.`}
-  explanation={`"Two days before, 17:00" names a day and a time of day on the terminal's clock, not a length of time. Subtracting 48 hours keeps the departure's own time of day, 18:00, so the cut-off is an hour late whenever the vessel sails at any time other than 17:00. When a DST transition falls between the two dates, 48 hours also lands on a different wall-clock hour. The pinned cut-off keeps its 17:00 and lets the elapsed time move instead: before a Monday 18:00 departure in New York, across the 10 March 2024 spring-forward, it is 48 elapsed hours earlier, not 49. \`cutoffAt\` with \`atLocalTime\` takes the two days off the local date and pins the time of day, so the cut-off is 17:00 on the terminal's clock whatever the departure time or the DST calendar.`}
+  explanation={`"Two days before, 17:00" names a day and a time of day on the terminal's clock, not a length of time. Subtracting 48 hours keeps the departure's own time of day, 18:00, so the cut-off is an hour late whenever the vessel sails at any time other than 17:00. When a DST transition falls between the two dates, 48 hours also lands on a different wall-clock hour. The pinned cut-off keeps its 17:00 and lets the elapsed time move instead: before a Monday 18:00 departure in Sydney, across the 6 October 2024 spring-forward, it is 48 elapsed hours earlier, not 49. \`cutoffAt\` with \`atLocalTime\` takes the two days off the local date and pins the time of day, so the cut-off is 17:00 on the terminal's clock whatever the departure time or the DST calendar.`}
   gmtCode={`import { cutoffAt } from "@northguild/gmt/transport";
 
 cutoffAt("2024-06-14T16:00:00Z", "P2D", { timeZone: "Europe/Amsterdam", atLocalTime: "17:00" });
@@ -24,8 +24,8 @@ cutoffAt("2024-06-14T16:00:00Z", "PT48H", { timeZone: "Europe/Amsterdam" });
 // "2024-06-12T18:00:00+02:00[Europe/Amsterdam]" — what subtracting 48 hours gives
 
 // Across the spring-forward the local time holds and the elapsed time moves.
-cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" });
-// "2024-03-09T17:00:00-05:00[America/New_York]" — 48 elapsed hours before Monday 18:00 EDT`}
+cutoffAt("2024-10-07T07:00:00Z", "P2D", { timeZone: "Australia/Sydney", atLocalTime: "17:00" });
+// "2024-10-05T17:00:00+10:00[Australia/Sydney]" — 48 elapsed hours before Monday 18:00 AEDT`}
   fixedSpecId="cutoffAt"
 />
 
@@ -40,8 +40,8 @@ Dwell](/guides/industries/transport-legs-and-dwell/#two-days-before-is-not-48-ho
 Or open this sailing in the [Cut-off
 Ruler](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-06-14T16%3A00%3A00Z%22%2C%22timeZone%22%3A%22Europe%2FAmsterdam%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D):
 with no clock change in between, `P2D` and `PT48H` agree at 18:00, and the pinned reading is
-17:00. Across [New York's
-fall-back](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-11-04T18%3A00%3A00-05%3A00%5BAmerica%2FNew_York%5D%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D)
+17:00. Across [Sydney's
+fall-back](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-04-08T18%3A00%3A00%2B10%3A00%5BAustralia%2FSydney%5D%22%2C%22timeZone%22%3A%22Australia%2FSydney%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D)
 the three readings land an hour apart. Across [the
-spring-forward](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-03-11T22%3A00%3A00Z%22%2C%22timeZone%22%3A%22America%2FNew_York%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D),
+spring-forward](/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-10-07T07%3A00%3A00Z%22%2C%22timeZone%22%3A%22Australia%2FSydney%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D),
 `PT48H` and the pinned 17:00 coincide, and `P2D` is 47 hours.

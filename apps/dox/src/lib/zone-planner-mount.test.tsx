@@ -24,6 +24,13 @@ async function mount(args = {}) {
   return { root, handle, controller };
 }
 
+// The mount imports the scrubber on first use. Under a full parallel suite
+// that cold import alone can pass the 20 s test timeout, so load it once here
+// with room to spare and let each test time only its own work.
+beforeAll(async () => {
+  await import("./multi-zone-scrubber");
+}, 120_000);
+
 afterEach(() => {
   vi.useRealTimers();
   document.body.innerHTML = "";

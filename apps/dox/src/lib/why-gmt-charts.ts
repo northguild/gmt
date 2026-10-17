@@ -7,10 +7,11 @@
  * series hue. The matrix builds its gradients by rewriting the static SVG
  * string, which a live mount would discard on every render, so the bar
  * gradients are declared here instead — ChartContainer emits them as page-level
- * <defs> and the marks reference them with url(#id).
+ * <defs> and the marks reference them with url(#id). The shaded segments of the
+ * "By industry" chart use a hatch pattern declared the same way.
  */
 import type { ChartDefinition, ChartPoint } from "@tanstack/charts";
-import { barX, barY, defineChart } from "@tanstack/charts";
+import { barX, barY, defineChart, stack } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import type {
@@ -25,6 +26,7 @@ import {
   gmtStats,
   industryFunctions,
   industryNamespaces,
+  type IndustryLayerCount,
 } from "../data/gmt-stats";
 import {
   libraryComparisons,
@@ -33,7 +35,7 @@ import {
 
 type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
-const shareFormat = new Intl.NumberFormat("en-US", {
+const shareFormat = new Intl.NumberFormat(undefined, {
   style: "percent",
   maximumFractionDigits: 1,
 });
@@ -60,6 +62,38 @@ export function barGradientId(hue: BarHue): string {
 
 function barGradient(hue: BarHue): BarGradient {
   return { id: barGradientId(hue), hue, ...BAR_OPACITY };
+}
+
+/**
+ * A hatch: a tint of the hue with diagonal lines over it, declared once as a page-level SVG
+ * pattern (`ChartContainer.astro`). The tint and the lines are both the hue's token at reduced
+ * strength, so the difference from a solid bar never rests on colour alone.
+ */
+export interface BarPattern {
+  id: string;
+  hue: BarHue;
+  /** The fill strength of the tint under the lines. */
+  tint: number;
+  /** The strength of the lines. */
+  line: number;
+  /** The side of the repeating tile, in user units. */
+  size: number;
+  lineWidth: number;
+}
+
+export function barHatchId(hue: BarHue): string {
+  return `gmt-bar-${hue}-hatch`;
+}
+
+function barHatch(hue: BarHue): BarPattern {
+  return {
+    id: barHatchId(hue),
+    hue,
+    tint: 0.12,
+    line: 0.6,
+    size: 7,
+    lineWidth: 2,
+  };
 }
 
 function withTooltip(
@@ -210,7 +244,7 @@ export const NAMESPACE_COUNTS: readonly NamespaceRow[] = [
   { namespace: "regex", count: gmtStats.patterns },
 ];
 
-/** Functions per industry layer, largest first. */
+/** Functions in the namespace each industry owns, largest first. */
 export const INDUSTRY_COUNTS: readonly NamespaceRow[] = industryNamespaces;
 
 /** `regex` exports patterns, not functions, so it sits outside the total. */
@@ -242,21 +276,188 @@ export function namespaceTooltip(
   };
 }
 
+/**
+ * The industry's name for a module it draws on: the label of the industry that owns the
+ * namespace (a shared industry layer), or Core for any other module.
+ */
+function drawnOnOwner(
+  module: string,
+  layers: readonly IndustryLayerCount[],
+): string {
+  const owner = layers.find((layer) => layer.id === module.split("/")[0]);
+  return owner ? `${owner.label} industry layer` : "Core";
+}
+
+/**
+ * The tooltip of any segment of an industry's bar: the industry, its own functions with their
+ * share, and one row per module it draws on. The share divides by the distinct functions of
+ * all own namespaces, so it is stated for the own segment only: a drawn-on segment repeats
+ * functions already counted in their own column or in Core.
+ */
 export function industryTooltip(
-  row: NamespaceRow | undefined,
+  layer: IndustryLayerCount | undefined,
+  layers: readonly IndustryLayerCount[] = gmtStats.industryLayers,
 ): ChartTooltipContent {
-  if (!row) return { rows: [] };
-  return {
-    title: row.namespace,
-    color: "var(--gmt-spring)",
-    rows: [
-      { label: "Public functions", value: formatCount(row.count) },
-      {
-        label: "Share of industry layers",
-        value: shareFormat.format(row.count / INDUSTRY_FUNCTION_TOTAL),
-      },
+  if (!layer) return { rows: [] };
+  const rows: ChartTooltipRow[] =
+    layer.own > 0
+      ? [
+          { label: "Own functions", value: formatCount(layer.own) },
+          {
+            label: "Share of industry layers",
+            value: shareFormat.format(layer.own / INDUSTRY_FUNCTION_TOTAL),
+          },
+        ]
+      : [];
+  for (const drawn of layer.drawsOn) {
+    rows.push({
+      label: `draws on ${drawn.module} (${drawnOnOwner(drawn.module, layers)})`,
+      value: formatCount(drawn.count),
+    });
+  }
+  return { title: layer.label, color: "var(--gmt-spring)", rows };
+}
+
+// ---------------------------------------------------------------------------
+// The stacked "By industry" chart
+// ---------------------------------------------------------------------------
+
+/** The series of an industry's own functions; every other series is a module it draws on. */
+export const OWN_SERIES = "own";
+
+/** One segment of one industry's bar. */
+export interface IndustrySegment {
+  /** The industry's label: the bar's place on the x axis. */
+  industry: string;
+  layer: IndustryLayerCount;
+  /** `own`, or the module the segment counts. */
+  series: string;
+  count: number;
+  /** True for a drawn-on module: hatched, never solid. */
+  shaded: boolean;
+}
+
+/**
+ * One segment per own namespace and one per module an industry draws on, industries in declared
+ * order. A segment with no function is left out, so an industry that owns no namespace has only
+ * shaded segments.
+ */
+export function industrySegments(
+  layers: readonly IndustryLayerCount[] = gmtStats.industryLayers,
+): IndustrySegment[] {
+  return layers.flatMap((layer) => [
+    ...(layer.own > 0
+      ? [
+          {
+            industry: layer.label,
+            layer,
+            series: OWN_SERIES,
+            count: layer.own,
+            shaded: false,
+          },
+        ]
+      : []),
+    ...layer.drawsOn
+      .filter((drawn) => drawn.count > 0)
+      .map((drawn) => ({
+        industry: layer.label,
+        layer,
+        series: drawn.module,
+        count: drawn.count,
+        shaded: true,
+      })),
+  ]);
+}
+
+/**
+ * The stack's order, bottom to top: the own functions, then the drawn-on modules as the
+ * declarations first name them. An explicit order, so a bar never depends on the order rows
+ * happen to arrive in.
+ */
+function seriesOrder(segments: readonly IndustrySegment[]): string[] {
+  return [...new Set([OWN_SERIES, ...segments.map((s) => s.series)])];
+}
+
+/**
+ * Each industry's own functions in the solid spring gradient, with the modules it draws on
+ * stacked above in the hatched tint of the same hue.
+ */
+export function industryStackDefinition(tooltip?: ChartTooltipExtension) {
+  const segments = industrySegments();
+  return defineChart({
+    marks: [
+      barY(segments, {
+        x: "industry",
+        y: "count",
+        z: "series",
+        xScale: "x",
+        yScale: "y",
+        layout: stack({ order: seriesOrder(segments) }),
+        fill: (d) =>
+          `url(#${(d as IndustrySegment).shaded ? barHatchId("spring") : barGradientId("spring")})`,
+        stroke: (d) =>
+          (d as IndustrySegment).shaded
+            ? "var(--gmt-spring-ink)"
+            : "var(--gmt-border-strong)",
+        strokeWidth: 1,
+        radius: 0,
+        inset: 2,
+        maxThickness: 40,
+      }),
     ],
-  };
+    scales: {
+      x: {
+        scale: scaleBand,
+        padding: 0.15,
+        axis: { tickLabels: { rotate: -40, thin: false } },
+      },
+      y: { scale: scaleLinear, nice: true, grid: true },
+    },
+    ...withTooltip(tooltip, (datum) =>
+      industryTooltip((datum as IndustrySegment | undefined)?.layer),
+    ),
+  });
+}
+
+/** Escapes the few characters that matter in the text of an HTML element. */
+const escapeHtml = (text: string): string =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * The key under the chart. A solid swatch and a hatched swatch are marks; the words carry the
+ * meaning.
+ */
+export function industryLegend(): string {
+  const item = (modifier: string, words: string) =>
+    `<li><span class="gmt-chart-swatch gmt-chart-swatch--${modifier}" aria-hidden="true"></span><span>${escapeHtml(words)}</span></li>`;
+  return [
+    `<ul class="gmt-chart-legend" aria-label="Key">`,
+    item("own", "the industry's own functions"),
+    item("shared", "a shared layer it draws on"),
+    `</ul>`,
+  ].join("");
+}
+
+/**
+ * Each industry's own count and each drawn-on module's count in words, for a reader who cannot
+ * see the bars. Visually hidden: the chart has no table.
+ */
+export function industrySummary(
+  layers: readonly IndustryLayerCount[] = gmtStats.industryLayers,
+): string {
+  const items = layers.map((layer) => {
+    const parts = [
+      layer.own > 0
+        ? `${formatCount(layer.own)} own functions`
+        : "no namespace of its own",
+      ...layer.drawsOn.map(
+        (drawn) =>
+          `draws on ${drawn.module}, ${formatCount(drawn.count)} functions (${drawnOnOwner(drawn.module, layers)})`,
+      ),
+    ];
+    return `<li>${escapeHtml(`${layer.label}: ${parts.join("; ")}.`)}</li>`;
+  });
+  return `<ul class="gmt-chart-visually-hidden">${items.join("")}</ul>`;
 }
 
 /** Both API-surface views share one bar definition, so they differ in rows, hue and tooltip. */
@@ -309,14 +510,9 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
   );
 }
 
-/** Industry layers are painted spring green, so the toggle reads as a change of chart, not of data. */
+/** The stacked "By industry" chart: see `industryStackDefinition`. */
 export function industryDefinition(tooltip?: ChartTooltipExtension) {
-  return apiSurfaceDefinition(
-    INDUSTRY_COUNTS,
-    "spring",
-    industryTooltip,
-    tooltip,
-  );
+  return industryStackDefinition(tooltip);
 }
 
 // ---------------------------------------------------------------------------
@@ -335,6 +531,8 @@ export interface BarChart {
   width: number;
   height: number;
   gradients: readonly BarGradient[];
+  /** Hatches the chart's shaded marks refer to, declared as page-level patterns. */
+  patterns: readonly BarPattern[];
   /** Widened to the runtime's untyped definition so both charts share a caller. */
   definition: (tooltip?: ChartTooltipExtension) => ChartDefinition;
 }
@@ -350,6 +548,7 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     width: 1200,
     height: 420,
     gradients: [barGradient("spring"), barGradient("signal")],
+    patterns: [],
     definition: ciExecutionsDefinition as unknown as BarChart["definition"],
   },
   "ci-suite": {
@@ -358,6 +557,7 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     width: 1200,
     height: 420,
     gradients: [barGradient("spring"), barGradient("signal")],
+    patterns: [],
     definition: ciSuiteDefinition as unknown as BarChart["definition"],
   },
   namespaces: {
@@ -366,14 +566,16 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     width: 1200,
     height: 360,
     gradients: [barGradient("cyan")],
+    patterns: [],
     definition: namespaceDefinition as unknown as BarChart["definition"],
   },
   industries: {
-    ariaLabel: "Public functions by industry layer",
+    ariaLabel: "Public functions by industry layer, own and shared",
     idPrefix: "industry-distribution",
     width: 1200,
     height: 360,
     gradients: [barGradient("spring")],
+    patterns: [barHatch("spring")],
     definition: industryDefinition as unknown as BarChart["definition"],
   },
 };

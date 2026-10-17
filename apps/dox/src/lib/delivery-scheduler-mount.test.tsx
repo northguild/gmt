@@ -73,15 +73,15 @@ const REQUIRED_ROLES = [
  *  JSDoc example V2, verbatim; the rest are section 9 rows. */
 const EXPECTED: Record<string, [string, string | null]> = {
   "truck-ship-rail": [
-    '[{ departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" }, { duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
-    '{ eta: "2024-03-23T01:30:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" }, { arrival: "2024-03-21T14:00:00Z", localArrival: "2024-03-21T23:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-03-22T16:30:00Z", localArrival: "2024-03-23T01:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }',
+    '[{ departure: "2024-03-29T08:00:00+01:00[Europe/Rome]", duration: "PT45H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" }, { duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
+    '{ eta: "2024-04-12T17:30:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-03-31T04:00:00Z", localArrival: "2024-03-31T05:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "truck" }, { arrival: "2024-04-11T06:00:00Z", localArrival: "2024-04-11T15:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-04-12T08:30:00Z", localArrival: "2024-04-12T17:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }',
   ],
   "ship-scheduled": [
-    '[{ departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" }, { departure: "2024-03-10T07:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
-    '{ eta: "2024-03-23T02:00:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-03-10T12:00:00Z", localArrival: "2024-03-10T05:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT2H", mode: "truck" }, { arrival: "2024-03-21T14:30:00Z", localArrival: "2024-03-21T23:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-03-22T17:00:00Z", localArrival: "2024-03-23T02:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }',
+    '[{ departure: "2024-03-29T08:00:00+01:00[Europe/Rome]", duration: "PT45H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" }, { departure: "2024-03-31T07:30:00[Europe/London]", duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
+    '{ eta: "2024-04-12T18:00:00+09:00[Asia/Tokyo]", legTimes: [{ arrival: "2024-03-31T04:00:00Z", localArrival: "2024-03-31T05:00:00+01:00[Europe/London]", dwellAfter: "PT2H", mode: "truck" }, { arrival: "2024-04-11T06:30:00Z", localArrival: "2024-04-11T15:30:00+09:00[Asia/Tokyo]", dwellAfter: "PT24H", mode: "ship" }, { arrival: "2024-04-12T09:00:00Z", localArrival: "2024-04-12T18:00:00+09:00[Asia/Tokyo]", dwellAfter: "PT0S", mode: "rail" }] }',
   ],
   "missed-connection": [
-    '[{ departure: "2024-03-08T08:00:00-06:00[America/Chicago]", duration: "PT46H", timeZone: "America/Los_Angeles", dwellAfter: "PT2H", mode: "truck" }, { departure: "2024-03-10T06:30:00[America/Los_Angeles]", duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
+    '[{ departure: "2024-03-29T08:00:00+01:00[Europe/Rome]", duration: "PT45H", timeZone: "Europe/London", dwellAfter: "PT2H", mode: "truck" }, { departure: "2024-03-31T06:30:00[Europe/London]", duration: "P11D", timeZone: "Asia/Tokyo", dwellAfter: "PT24H", mode: "ship" }, { duration: "PT2H30M", timeZone: "Asia/Tokyo", mode: "rail" }]',
     null,
   ],
   "trans-pacific": [
@@ -89,8 +89,8 @@ const EXPECTED: Record<string, [string, string | null]> = {
     '{ eta: "2024-06-19T12:00:00-05:00[America/Chicago]", legTimes: [{ arrival: "2024-06-17T18:00:00Z", localArrival: "2024-06-17T11:00:00-07:00[America/Los_Angeles]", dwellAfter: "PT3H", mode: "air" }, { arrival: "2024-06-19T17:00:00Z", localArrival: "2024-06-19T12:00:00-05:00[America/Chicago]", dwellAfter: "PT0S", mode: "truck" }] }',
   ],
   "fall-back-night": [
-    '[{ departure: "2024-11-02T22:00:00-04:00[America/New_York]", duration: "PT6H", timeZone: "America/New_York", dwellAfter: "PT1H", mode: "rail" }, { duration: "PT2H", timeZone: "America/New_York", mode: "truck" }]',
-    '{ eta: "2024-11-03T06:00:00-05:00[America/New_York]", legTimes: [{ arrival: "2024-11-03T08:00:00Z", localArrival: "2024-11-03T03:00:00-05:00[America/New_York]", dwellAfter: "PT1H", mode: "rail" }, { arrival: "2024-11-03T11:00:00Z", localArrival: "2024-11-03T06:00:00-05:00[America/New_York]", dwellAfter: "PT0S", mode: "truck" }] }',
+    '[{ departure: "2024-10-26T22:00:00+01:00[Europe/London]", duration: "PT6H", timeZone: "Europe/London", dwellAfter: "PT1H", mode: "rail" }, { duration: "PT2H", timeZone: "Europe/London", mode: "truck" }]',
+    '{ eta: "2024-10-27T06:00:00+00:00[Europe/London]", legTimes: [{ arrival: "2024-10-27T03:00:00Z", localArrival: "2024-10-27T03:00:00+00:00[Europe/London]", dwellAfter: "PT1H", mode: "rail" }, { arrival: "2024-10-27T06:00:00Z", localArrival: "2024-10-27T06:00:00+00:00[Europe/London]", dwellAfter: "PT0S", mode: "truck" }] }',
   ],
   "dwell-handoff": [
     '[{ departure: "2024-06-15T00:00:00Z", duration: "PT10H", timeZone: "UTC", dwellAfter: "PT2H" }, { duration: "PT5H", timeZone: "Asia/Tokyo" }]',
@@ -255,12 +255,12 @@ describe("the hand-off to the Journey Split", () => {
     );
     expect(seeded).toEqual({
       legCount: "3",
-      departure1: "2024-03-08T08:00:00-06:00[America/Chicago]",
-      duration1: "PT46H",
-      timeZone1: "America/Los_Angeles",
+      departure1: "2024-03-29T08:00:00+01:00[Europe/Rome]",
+      duration1: "PT45H",
+      timeZone1: "Europe/London",
       dwellAfter1: "PT2H",
       mode1: "truck",
-      departure2: "2024-03-10T07:30:00[America/Los_Angeles]",
+      departure2: "2024-03-31T07:30:00[Europe/London]",
       duration2: "P11D",
       timeZone2: "Asia/Tokyo",
       dwellAfter2: "PT12H",
@@ -308,7 +308,7 @@ describe("mountDeliveryScheduler", () => {
     },
   );
 
-  it("names leg 2, 06:30, 05:00 and 07:00 in Los Angeles for the missed connection", async () => {
+  it("names leg 2, 06:30, 05:00 and 07:00 in London for the missed connection", async () => {
     const { root } = await mount();
     choosePreset(root, "missed-connection");
     const text = q(root, "reason-aside").textContent!;
@@ -327,22 +327,18 @@ describe("mountDeliveryScheduler", () => {
       "Leg 3",
     ]);
     expect(q(root, "call-leg-transit").textContent).toContain("transitTime(");
-    expect(q(root, "call-leg-transit").textContent).toContain('"PT46H"');
-    expect(q(root, "call-leg-eta").textContent).toContain(
-      '"America/Los_Angeles"',
-    );
+    expect(q(root, "call-leg-transit").textContent).toContain('"PT45H"');
+    expect(q(root, "call-leg-eta").textContent).toContain('"Europe/London"');
     /* The arrival the first call returns is the instant the second is given. */
     const arrival = q(root, "leg-transit-output").textContent!;
     expect(arrival).not.toBe("NO SIGNAL");
     expect(q(root, "call-leg-eta").textContent).toContain(arrival);
-    expect(q(root, "leg-eta-output").textContent).toContain(
-      "[America/Los_Angeles]",
-    );
+    expect(q(root, "leg-eta-output").textContent).toContain("[Europe/London]");
 
     pick.value = "1";
     pick.dispatchEvent(new Event("change", { bubbles: true }));
     expect(q(root, "call-leg-eta").textContent).not.toContain(
-      '"America/Los_Angeles"',
+      '"Europe/London"',
     );
     expect(q(root, "leg-transit-output").textContent).not.toBe(arrival);
   });
@@ -351,7 +347,7 @@ describe("mountDeliveryScheduler", () => {
     const { root } = await mount();
     choosePreset(root, "truck-ship-rail");
     expect(q(root, "eta").textContent).toContain(
-      "2024-03-23T01:30:00+09:00[Asia/Tokyo]",
+      "ETA 2024-04-12T17:30:00+09:00[Asia/Tokyo]",
     );
   });
 
@@ -359,10 +355,10 @@ describe("mountDeliveryScheduler", () => {
     const { root } = await mount();
     choosePreset(root, "truck-ship-rail");
     expect(q(root, "eta-headline").textContent).toBe(
-      "Sat 23 Mar 2024 · 01:30 Tokyo (+09:00)",
+      "Fri 12 Apr 2024 · 17:30 Tokyo (+09:00)",
     );
     expect(q(root, "eta-duration").textContent).toBe(
-      "14 d 2 h 30 min door to door",
+      "14 d 1 h 30 min door to door",
     );
     const flagsText = q(root, "eta-flags").textContent!;
     expect(flagsText).toContain("DST ×2");
@@ -457,9 +453,9 @@ describe("mountDeliveryScheduler", () => {
     const { root } = await mount();
     choosePreset(root, "truck-ship-rail");
     const journeyText = q(root, "journey").textContent!;
-    expect(journeyText).toContain("Fri 8 Mar 2024");
+    expect(journeyText).toContain("Fri 29 Mar 2024");
     expect(journeyText).toContain("ETA");
-    expect(journeyText).toContain("Los Angeles clocks spring forward");
+    expect(journeyText).toContain("London clocks spring forward");
     expect(
       root.querySelectorAll('[data-role="journey"] .gmt-delivery-day'),
     ).not.toHaveLength(0);
@@ -482,9 +478,9 @@ describe("mountDeliveryScheduler", () => {
     const seed = {
       legs: [
         {
-          departure: "2024-03-08T08:00:00-06:00[America/Chicago]",
-          duration: "PT46H",
-          timeZone: "America/Los_Angeles",
+          departure: "2024-03-29T08:00:00+01:00[Europe/Rome]",
+          duration: "PT45H",
+          timeZone: "Europe/London",
           mode: "truck",
         },
         { duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" },
@@ -494,21 +490,21 @@ describe("mountDeliveryScheduler", () => {
     expect(q<HTMLSelectElement>(root, "leg-count").value).toBe("2");
     expect(
       q(root, "delivery-output").textContent!.replace(/\n\s+/g, " "),
-    ).toContain("2024-03-21T21:00:00+09:00[Asia/Tokyo]");
+    ).toContain("2024-04-11T13:00:00+09:00[Asia/Tokyo]");
   });
 
-  // The truck lands in Los Angeles at 12:00Z on 10 March and is ready at
-  // 14:00Z after its 2-hour dwell. The ship's printed 07:30 is read on Los
-  // Angeles' clock — -07:00 after that morning's spring-forward — as 14:30Z,
-  // so the connection is made and the rail leg lands in Tokyo on the 23rd.
+  // The truck lands in London at 04:00Z on 31 March and is ready at 06:00Z
+  // after its 2-hour dwell. The ship's printed 07:30 is read on London's
+  // clock — +01:00 after that morning's spring-forward — as 06:30Z, so the
+  // connection is made and the rail leg lands in Tokyo on the 12th.
   it("reads a zoneless leg 2 departure on leg 1's clock", async () => {
     const { root } = await mount();
     choosePreset(root, "truck-ship-rail");
-    type(root, "departure-2", "2024-03-10T07:30:00");
+    type(root, "departure-2", "2024-03-31T07:30:00");
     const output = q(root, "delivery-output").textContent!;
     expect(output).not.toBe("NO SIGNAL");
     expect(output.replace(/\n\s+/g, " ")).toContain(
-      "2024-03-23T02:00:00+09:00[Asia/Tokyo]",
+      "2024-04-12T18:00:00+09:00[Asia/Tokyo]",
     );
   });
 

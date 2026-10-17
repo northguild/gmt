@@ -139,10 +139,10 @@ function headwayDeparture(threshold: bigint, service: Headway): string {
  *
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"]) // "2024-06-15T09:30:00Z"
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"], { minimumConnection: "PT45M" }) // "2024-06-15T11:00:00Z" (a 45-minute connection misses the 09:30)
- * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T05:30:00-04:00[America/New_York]"]) // "2024-06-15T05:30:00-04:00[America/New_York]" (echoed as written)
+ * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T05:30:00-04:00[America/Santiago]"]) // "2024-06-15T05:30:00-04:00[America/Santiago]" (echoed as written)
  * @example nextDeparture("2024-06-15T06:05:00+02:00", { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" }) // "2024-06-15T06:20:00+02:00"
  * @example nextDeparture("2024-06-15T09:00:00+02:00", { headway: "PT20M", from: "2024-06-15T06:00:00+02:00", to: "2024-06-15T09:00:00+02:00" }) // "" (to is excluded)
- * @example nextDeparture("2024-11-03T01:30:00-04:00[America/New_York]", { headway: "PT1H", from: "2024-11-03T00:00:00-04:00[America/New_York]", to: "2024-11-03T04:00:00-05:00[America/New_York]" }) // "2024-11-03T01:00:00-05:00[America/New_York]" (hourly in exact time: the repeated hour's second pass)
+ * @example nextDeparture("2024-10-27T01:30:00+01:00[Europe/London]", { headway: "PT1H", from: "2024-10-27T00:00:00+01:00[Europe/London]", to: "2024-10-27T04:00:00+00:00[Europe/London]" }) // "2024-10-27T01:00:00+00:00[Europe/London]" (hourly in exact time: the repeated hour's second pass)
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00"]) // "" (a timetable entry needs an offset)
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00[Europe/London]"]) // "" (a zoned entry needs its offset too)
  * @example nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00Z"], { minimumConnection: "-PT5M" }) // "" (a negative connection)

@@ -61,36 +61,36 @@ export interface CrossingPreset {
 export const CROSSING_PRESETS: readonly CrossingPreset[] = [
   {
     id: "spring-forward",
-    label: "Skipped hour: seven hours across New York's spring-forward",
+    label: "Skipped hour: seven hours across London's spring-forward",
     description:
-      "The clocks jump from 02:00 to 03:00 during this crossing, skipping an hour entirely. Seven hours actually pass; subtracting the wall clocks (00:00 to 08:00) says eight.",
+      "The clocks jump from 01:00 to 02:00 during this crossing, skipping an hour entirely. Seven hours actually pass; subtracting the wall clocks (00:00 to 08:00) says eight.",
     state: {
-      entry: "2024-03-10T05:00:00Z",
-      exit: "2024-03-10T12:00:00Z",
-      targetZone: "America/New_York",
+      entry: "2024-03-31T00:00:00Z",
+      exit: "2024-03-31T07:00:00Z",
+      targetZone: "Europe/London",
     },
   },
   {
     id: "fall-back",
     label:
-      "Added hour: one hour across New York's fall-back, both ends read 01:30",
+      "Added hour: one hour across London's fall-back, both ends read 01:30",
     description:
       "The clocks fall back from 02:00 to 01:00, so 01:00–02:00 happens twice. One hour actually passes, but both ends read 01:30, so subtracting the wall clocks says zero.",
     state: {
-      entry: "2024-11-03T05:30:00Z",
-      exit: "2024-11-03T06:30:00Z",
-      targetZone: "America/New_York",
+      entry: "2024-10-27T00:30:00Z",
+      exit: "2024-10-27T01:30:00Z",
+      targetZone: "Europe/London",
     },
   },
   {
     id: "fixed-offset",
-    label: "The same spring-forward night on a fixed −05:00",
+    label: "The same spring-forward night on a fixed +02:00",
     description:
-      "The same seven hours, read on a fixed −05:00 instead of New York's own clock. A fixed offset observes no DST, so the wall-clock subtraction agrees with the elapsed time.",
+      "The same seven hours, read on a fixed +02:00 instead of London's own clock. A fixed offset observes no DST, so the wall-clock subtraction agrees with the elapsed time.",
     state: {
-      entry: "2024-03-10T05:00:00Z",
-      exit: "2024-03-10T12:00:00Z",
-      targetZone: "-05:00",
+      entry: "2024-03-31T00:00:00Z",
+      exit: "2024-03-31T07:00:00Z",
+      targetZone: "+02:00",
     },
   },
   {

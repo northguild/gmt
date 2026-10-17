@@ -1,0 +1,31 @@
+---
+title: "A RINEX Week Read as a Broadcast Week"
+description: A NavIC record in a RINEX navigation file shows week 2295, and the log reads it as the L1NV counter, 19 years out.
+industries: [gnss]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A RINEX Week Read as a Broadcast Week"
+  description="A RINEX navigation file holds a NavIC record at week 2295 and 86418 seconds into the week. A converter that handles broadcast weeks reads it. What date does it give?"
+  naiveCode={`// The naive approach: any week number is a broadcast week
+import { gnssWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("IRN-L1NV", 2295, 86418, 0);
+// "2043-08-17T00:00:00Z" — a record from 1 January 2024, read 19 years late`}
+  explanation={`A RINEX navigation file writes a continuous week count that never wraps. For GPS, QZSS, NavIC and Galileo it counts from 1980-01-06, and for BeiDou from 2006-01-01. A NavIC satellite broadcasts a different week, counted from 1999 and wrapping. Feeding the file's week to the L1NV broadcast counter puts the date 1024 weeks, about 19.6 years, off. \`rinexWeekToUtc\` reads the file's count, and the system alone is enough.`}
+  gmtCode={`import { rinexWeekToUtc, utcToRinexWeek } from "@northguild/gmt/gnss/convert";
+
+rinexWeekToUtc("IRN", 2295, 86418);
+// "2024-01-01T00:00:00Z"
+utcToRinexWeek("IRN", "2024-01-01T00:00:00Z");
+// { week: 2295, timeOfWeekSeconds: 86418 }`}
+  fixedSpecId="rinexWeekToUtc"
+/>
+
+In the widget, change the system to `BDT` and keep the week: a BeiDou record counts from 2006, so
+week 2295 is 2049-12-27 there, not 2024-01-01. The [GNSS Week
+Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22rinex-navic%22%7D) takes a RINEX week as one of its modes, and opens here on week 2295. The rules are in [GNSS:
+System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/#a-rinex-week-is-not-a-broadcast-week).

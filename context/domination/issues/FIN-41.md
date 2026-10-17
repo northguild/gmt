@@ -11,7 +11,7 @@ The tension is real: bundled calendar data is genuinely useful and genuinely goe
 ## Scope
 
 - `packages/gmt/src/finance/data/` — published **only** at the `@northguild/gmt/finance/data` subpath, never from the realm root or the package root.
-  - `exchangeCalendar(code: string, year: number): MarketCalendar | null` — Reference calendar for a supported exchange and year.
+  - `exchangeCalendar(mic: string, year: number): MarketCalendar | null` — Reference calendar for a supported exchange and year, keyed by its ISO 10383 Market Identifier Code.
   - `paymentSystemCalendar(code: string, year: number): BusinessCalendar | null` — The closing days an operator publishes (for example a central-bank RTGS or a national payment system), for FIN-43's settlement calendars.
   - `supportedCalendars(): { code: string, kind: 'exchange' | 'paymentSystem', name: string, timeZone: string, coverage: { from: number, to: number } }[]`
   - `dataProvenance(): { source: string, revision: string, generatedAt: string, coverageEndsAt: string }`
@@ -20,7 +20,7 @@ The tension is real: bundled calendar data is genuinely useful and genuinely goe
 
 ## Phase 1 coverage
 
-NYSE, NASDAQ, LSE, TYO, EURONEXT for exchanges; TARGET plus the operators of the USD, GBP and JPY large-value payment systems for payment systems — codes to be confirmed against each operator's published calendar.
+Exchanges by ISO 10383 MIC, spread across regions: `XNYS`, `XNAS`, `XLON`, `XPAR`, `XTKS`, `XHKG`, `XNSE`, `BVMF` (each MIC confirmed against the ISO 10383 registry at implementation — not reached — marked, not asserted here); TARGET plus the operators of the USD, GBP and JPY large-value payment systems for payment systems — codes to be confirmed against each operator's published calendar.
 
 ## Design notes
 
@@ -34,7 +34,7 @@ NYSE, NASDAQ, LSE, TYO, EURONEXT for exchanges; TARGET plus the operators of the
 
 This story is what remains of the original `FIN-2` after its business-day arithmetic moved to CORE-7. That relocation was forced by the reprioritisation: logistics now ships before finance and needs business-day math, so it could not stay behind an exchange-calendar story. What is left here is the data, correctly scoped.
 
-The original also defaulted `exchange` to `NYSE`. There is no default exchange — a silently assumed calendar is a silently wrong settlement date.
+The original also defaulted `exchange` to `NYSE` and keyed exchanges by ad-hoc names; they are ISO 10383 MICs now. There is no default exchange — a silently assumed calendar is a silently wrong settlement date.
 
 `currencyCalendar` was a country holiday set under a currency code; removed. Settlement calendars are the payment-system operator's own closing days, exposed as `paymentSystemCalendar` and keyed as FIN-43 documents, and no national holiday set ships.
 
@@ -45,8 +45,9 @@ The original also defaulted `exchange` to `NYSE`. There is no default exchange �
 
 ## Verification
 
-- `exchangeCalendar('NYSE', 2026)` includes the exchange's published holidays for that year
-- The NYSE calendar marks the exchange's published late-November early close as a half day
+- `exchangeCalendar('XHKG', 2026)` and `exchangeCalendar('XNYS', 2026)` each include that exchange's published holidays for the year
+- The `XNYS` calendar marks the exchange's published late-November early close as a half day; the `XHKG` calendar carries its lunch break
+- An ad-hoc name such as `'NYSE'` is not a MIC and returns the sentinel
 - `exchangeCalendar` for an unsupported code or an uncovered year returns the sentinel
 - `isCalendarStale` returns `true` for a date beyond `coverageEndsAt`
 - `dataProvenance` reports a non-empty source and revision

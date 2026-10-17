@@ -10,11 +10,13 @@ Both need the two-part Julian Date (SPA-49): the TDB − TT series is a function
 
 ## Scope
 
-- `packages/gmt/src/space/convert/tdb.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/tdb.ts`:
   - `toTDB(isoString: string): string` — ISO UTC to a TDB scale string.
   - `fromTDB(tdbString: string): string` — TDB to ISO UTC.
   - `tdbMinusTt(isoString: string): number` — The correction in seconds, exposed so callers can see the magnitude they are accepting.
-- `packages/gmt/src/space/convert/tcb.ts`:
+- `<space-ns>/convert/tcb.ts`:
   - `toTCB(isoString: string): string` — ISO UTC to a TCB scale string.
   - `fromTCB(tcbString: string): string`
   - `tcbMinusTdb(isoString: string): number` — The accumulated rate difference in seconds.

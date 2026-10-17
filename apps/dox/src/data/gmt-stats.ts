@@ -28,8 +28,32 @@ export interface GmtStats {
   patterns: number;
   /** Functions per namespace, largest first. */
   byNamespace: readonly NamespaceCount[];
-  /** The namespaces that are industry layers built on the core, in `byNamespace` order. */
-  industries: readonly string[];
+  /** Every industry's own namespace, in `byNamespace` order. */
+  industryNamespaces: readonly string[];
+  /** The "By industry" chart's data: every declared industry in declared order, with the
+   *  functions of its own namespace and the count of each module it draws on. */
+  industryLayers: readonly IndustryLayerCount[];
+  /** Distinct functions in all own namespaces. `coreFunctions + industryFunctions` is
+   *  `functions`: a function is counted once. */
+  industryFunctions: number;
+}
+
+/** One module an industry draws on, with the functions in it. */
+export interface DrawnOnCount {
+  /** A whole namespace (`workforce`) or one sub-module (`timescale/convert`). */
+  module: string;
+  count: number;
+  /** True when the module is another industry's own namespace (a shared industry layer), false
+   *  when it is Core. */
+  shared: boolean;
+}
+
+export interface IndustryLayerCount {
+  id: string;
+  label: string;
+  /** Functions in the industry's own namespace; 0 for one that owns none. */
+  own: number;
+  drawsOn: readonly DrawnOnCount[];
 }
 
 export interface NamespaceCount {
@@ -39,23 +63,23 @@ export interface NamespaceCount {
 
 export const gmtStats: GmtStats = data;
 
-/** The core primitives: every namespace that is not an industry layer, largest first. */
+/** The core primitives: every namespace that is no industry's own, largest first. */
 export const coreNamespaces: readonly NamespaceCount[] =
   gmtStats.byNamespace.filter(
-    (row) => !gmtStats.industries.includes(row.namespace),
+    (row) => !gmtStats.industryNamespaces.includes(row.namespace),
   );
 
-/** The industry layers, largest first. */
+/** The namespaces industries own, largest first. */
 export const industryNamespaces: readonly NamespaceCount[] =
   gmtStats.byNamespace.filter((row) =>
-    gmtStats.industries.includes(row.namespace),
+    gmtStats.industryNamespaces.includes(row.namespace),
   );
 
 const sumCounts = (rows: readonly NamespaceCount[]): number =>
   rows.reduce((sum, row) => sum + row.count, 0);
 
 export const coreFunctions = sumCounts(coreNamespaces);
-export const industryFunctions = sumCounts(industryNamespaces);
+export const industryFunctions = gmtStats.industryFunctions;
 
 const listFormat = new Intl.ListFormat("en-US", {
   style: "long",
@@ -67,7 +91,7 @@ export function formatNamespaceList(rows: readonly NamespaceCount[]): string {
   return listFormat.format(rows.map((row) => `\`${row.namespace}\``));
 }
 
-const countFormat = new Intl.NumberFormat("en-US");
+const countFormat = new Intl.NumberFormat(undefined);
 
 export function formatCount(value: number): string {
   return countFormat.format(value);

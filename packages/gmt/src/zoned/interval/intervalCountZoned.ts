@@ -46,11 +46,11 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  * @returns number of unit boundaries touched, or null on invalid input
  *
  * @example intervalCountZoned("2024-01-01T23:59:00+00:00[UTC]", "2024-01-02T00:01:00+00:00[UTC]", "day") // 2
- * @example intervalCountZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour") // 23 (spring forward)
- * @example intervalCountZoned("2024-11-03T00:00:00-04:00[America/New_York]", "2024-11-04T00:00:00-05:00[America/New_York]", "hour") // 25 (fall back)
- * @example intervalCountZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+09:00[Asia/Tokyo]", "day") // 2 (counted in America/New_York)
+ * @example intervalCountZoned("2024-03-31T00:00:00+00:00[Europe/London]", "2024-04-01T00:00:00+01:00[Europe/London]", "hour") // 23 (spring forward)
+ * @example intervalCountZoned("2024-04-07T00:00:00+11:00[Australia/Sydney]", "2024-04-08T00:00:00+10:00[Australia/Sydney]", "hour") // 25 (fall back)
+ * @example intervalCountZoned("2024-01-01T00:00:00-03:00[America/Sao_Paulo]", "2024-01-03T00:00:00+09:00[Asia/Tokyo]", "day") // 2 (counted in America/Sao_Paulo)
  * @example intervalCountZoned("2024-01-01T05:00:00+00:00[UTC]", "2024-01-01T05:00:00+00:00[UTC]", "day") // 0 (zero-length: holds no instant)
- * @example intervalCountZoned("2023-09-16T00:00:00-04:00[America/New_York][u-ca=hebrew]", "2024-10-03T00:00:00-04:00[America/New_York][u-ca=hebrew]", "month") // 13 (Hebrew leap year; the ISO equivalent is 14)
+ * @example intervalCountZoned("2023-09-16T00:00:00+02:00[Africa/Johannesburg][u-ca=hebrew]", "2024-10-03T00:00:00+02:00[Africa/Johannesburg][u-ca=hebrew]", "month") // 13 (Hebrew leap year; the ISO equivalent is 14)
  * @example intervalCountZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "day") // null
  * @example intervalCountZoned("-271821-04-20T00:00:00+00:00[UTC]", "-271821-04-20T01:00:00+00:00[UTC]", "week") // 1 (the week began before the first instant, but is still touched)
  */

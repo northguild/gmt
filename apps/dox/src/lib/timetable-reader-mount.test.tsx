@@ -77,20 +77,20 @@ const REQUIRED_ROLES = [
 
 const EXPECTED: Record<string, [string, string]> = {
   "fall-back": [
-    '[{ departure: "2024-11-03T00:30:00", duration: "PT1H", timeZone: "America/New_York" }], { startTimeZone: "America/New_York" }',
-    '{ eta: "2024-11-03T01:30:00-04:00[America/New_York]", legTimes: [{ arrival: "2024-11-03T05:30:00Z", localArrival: "2024-11-03T01:30:00-04:00[America/New_York]", dwellAfter: "PT0S" }] }',
+    '[{ departure: "2024-10-27T00:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
+    '{ eta: "2024-10-27T01:30:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-10-27T00:30:00Z", localArrival: "2024-10-27T01:30:00+01:00[Europe/London]", dwellAfter: "PT0S" }] }',
   ],
   "offset-picks": [
-    '[{ departure: "2024-11-03T01:30:00", duration: "PT1H", timeZone: "America/New_York" }], { startTimeZone: "America/New_York" }',
-    '{ eta: "2024-11-03T01:30:00-05:00[America/New_York]", legTimes: [{ arrival: "2024-11-03T06:30:00Z", localArrival: "2024-11-03T01:30:00-05:00[America/New_York]", dwellAfter: "PT0S" }] }',
+    '[{ departure: "2024-10-27T01:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
+    '{ eta: "2024-10-27T01:30:00+00:00[Europe/London]", legTimes: [{ arrival: "2024-10-27T01:30:00Z", localArrival: "2024-10-27T01:30:00+00:00[Europe/London]", dwellAfter: "PT0S" }] }',
   ],
   "spring-forward": [
-    '[{ departure: "2024-03-10T01:30:00", duration: "PT1H", timeZone: "America/New_York" }], { startTimeZone: "America/New_York" }',
-    '{ eta: "2024-03-10T03:30:00-04:00[America/New_York]", legTimes: [{ arrival: "2024-03-10T07:30:00Z", localArrival: "2024-03-10T03:30:00-04:00[America/New_York]", dwellAfter: "PT0S" }] }',
+    '[{ departure: "2024-03-31T00:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
+    '{ eta: "2024-03-31T02:30:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-03-31T01:30:00Z", localArrival: "2024-03-31T02:30:00+01:00[Europe/London]", dwellAfter: "PT0S" }] }',
   ],
   "published-local": [
-    '[{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "America/New_York" }',
-    '{ eta: "2024-06-15T15:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T15:00:00Z", localArrival: "2024-06-15T15:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }',
+    '[{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Asia/Tokyo" }',
+    '{ eta: "2024-06-15T02:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T02:00:00Z", localArrival: "2024-06-15T02:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }',
   ],
   "berlin-fall-back": [
     '[{ departure: "2024-10-27T02:30:00", duration: "PT1H", timeZone: "Europe/Amsterdam" }], { startTimeZone: "Europe/Berlin" }',
@@ -205,7 +205,7 @@ describe("mountTimetableReader", () => {
     const leaves2 = row2.querySelectorAll("td")[1]!.textContent;
     const leaves3 = row3.querySelectorAll("td")[1]!.textContent;
     expect(leaves2).toBe(leaves3);
-    expect(leaves2).toContain("2024-03-10T03:30:00-04:00");
+    expect(leaves2).toContain("2024-03-31T02:30:00+01:00");
   });
 
   it("badges row 2 of spring-forward as skipped", async () => {
@@ -222,10 +222,10 @@ describe("mountTimetableReader", () => {
     expect(row2.textContent).toContain("Occurs twice");
   });
 
-  it("gives NO SIGNAL and the skipped-offset reason for -05:00 typed into the skipped row (V83)", async () => {
+  it("gives NO SIGNAL and the skipped-offset reason for +00:00 typed into the skipped row (V83)", async () => {
     const { root } = await mount();
     choosePreset(root, "spring-forward");
-    type(root, "offset-2", "-05:00");
+    type(root, "offset-2", "+00:00");
     const rowPick = q<HTMLSelectElement>(root, "row-pick");
     rowPick.value = "1";
     rowPick.dispatchEvent(new Event("change", { bubbles: true }));
@@ -274,39 +274,39 @@ describe("mountTimetableReader", () => {
     it("keeps a seeded offset the Offset select had no option for", async () => {
       const { root } = await mount(
         {
-          startTimeZone: "America/New_York",
-          departures: ["2024-11-03T01:30:00", "2024-11-03T01:30:00"],
-          offsets: ["", "-05:00"],
+          startTimeZone: "Europe/London",
+          departures: ["2024-10-27T01:30:00", "2024-10-27T01:30:00"],
+          offsets: ["", "+00:00"],
           duration: "PT1H",
-          timeZone: "America/New_York",
+          timeZone: "Europe/London",
         },
         {},
       );
-      expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("-05:00");
+      expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
       expect(q(root, "row-2-display").textContent).toContain(
-        "2024-11-03T01:30:00-05:00",
+        "2024-10-27T01:30:00+00:00",
       );
     });
 
     it("reads the page's own Worth trying link (an offset in a skipped hour) as NO SIGNAL", async () => {
       const { root } = await mount(
         {
-          startTimeZone: "America/New_York",
+          startTimeZone: "Europe/London",
           duration: "PT1H",
-          timeZone: "America/New_York",
-          departure1: "2024-03-10T02:30:00",
-          offset1: "-05:00",
+          timeZone: "Europe/London",
+          departure1: "2024-03-31T01:30:00",
+          offset1: "+00:00",
         },
         {},
       );
-      expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("-05:00");
+      expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("+00:00");
       expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
     });
 
     it("keeps a zone outside the curated list and reads it", async () => {
       const { root } = await mount(
         {
-          startTimeZone: "America/New_York",
+          startTimeZone: "Europe/London",
           duration: "PT1H",
           timeZone: "Europe/Helsinki",
           departure1: "2024-06-15T10:00:00",
@@ -318,11 +318,11 @@ describe("mountTimetableReader", () => {
     });
   });
 
-  it("keeps row 2's -05:00 when the offset-picks preset is chosen after another", async () => {
+  it("keeps row 2's +00:00 when the offset-picks preset is chosen after another", async () => {
     const { root } = await mount();
     choosePreset(root, "published-local");
     choosePreset(root, "offset-picks");
-    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("-05:00");
+    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("offset-picks");
   });
 
@@ -360,26 +360,26 @@ const lib: TimetableLib = {
   classifyLocal,
 };
 
-const NYZ = "[America/New_York]";
+const LDZ = "[Europe/London]";
 
 /** Section 9 L1 to L5: each row's Leaves and Local arrival, in full. */
 const ROW_TEXTS: Record<string, [string, string][]> = {
   "fall-back": [
-    [`2024-11-03T00:30:00-04:00${NYZ}`, `2024-11-03T01:30:00-04:00${NYZ}`],
-    [`2024-11-03T01:30:00-04:00${NYZ}`, `2024-11-03T01:30:00-05:00${NYZ}`],
-    [`2024-11-03T02:30:00-05:00${NYZ}`, `2024-11-03T03:30:00-05:00${NYZ}`],
+    [`2024-10-27T00:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+01:00${LDZ}`],
+    [`2024-10-27T01:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+00:00${LDZ}`],
+    [`2024-10-27T02:30:00+00:00${LDZ}`, `2024-10-27T03:30:00+00:00${LDZ}`],
   ],
   "offset-picks": [
-    [`2024-11-03T01:30:00-04:00${NYZ}`, `2024-11-03T01:30:00-05:00${NYZ}`],
-    [`2024-11-03T01:30:00-05:00${NYZ}`, `2024-11-03T02:30:00-05:00${NYZ}`],
+    [`2024-10-27T01:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+00:00${LDZ}`],
+    [`2024-10-27T01:30:00+00:00${LDZ}`, `2024-10-27T02:30:00+00:00${LDZ}`],
   ],
   "spring-forward": [
-    [`2024-03-10T01:30:00-05:00${NYZ}`, `2024-03-10T03:30:00-04:00${NYZ}`],
-    [`2024-03-10T03:30:00-04:00${NYZ}`, `2024-03-10T04:30:00-04:00${NYZ}`],
-    [`2024-03-10T03:30:00-04:00${NYZ}`, `2024-03-10T04:30:00-04:00${NYZ}`],
+    [`2024-03-31T00:30:00+00:00${LDZ}`, `2024-03-31T02:30:00+01:00${LDZ}`],
+    [`2024-03-31T02:30:00+01:00${LDZ}`, `2024-03-31T03:30:00+01:00${LDZ}`],
+    [`2024-03-31T02:30:00+01:00${LDZ}`, `2024-03-31T03:30:00+01:00${LDZ}`],
   ],
   "published-local": [
-    [`2024-06-15T10:00:00-04:00${NYZ}`, "2024-06-15T15:00:00+00:00[UTC]"],
+    ["2024-06-15T10:00:00+09:00[Asia/Tokyo]", "2024-06-15T02:00:00+00:00[UTC]"],
   ],
   "berlin-fall-back": [
     [
@@ -596,7 +596,7 @@ describe("the shaded hour", () => {
       "01:00\u201302:00 happens twice",
     );
     expect(q(root, "day-caption").textContent).toBe(
-      "Local day 2024-11-03 in America/New_York",
+      "Local day 2024-10-27 in Europe/London",
     );
   });
 
@@ -606,9 +606,9 @@ describe("the shaded hour", () => {
     const bands = root.querySelectorAll<HTMLElement>(".gmt-timetable-band");
     expect(bands.length).toBe(1);
     expect(bands[0]!.dataset.kind).toBe("skipped");
-    expect(bands[0]!.style.left).toBe("8.3333%");
+    expect(bands[0]!.style.left).toBe("4.1667%");
     expect(q(root, "band-chip").textContent).toBe(
-      "02:00\u201303:00 never shows",
+      "01:00\u201302:00 never shows",
     );
   });
 
@@ -625,19 +625,19 @@ describe("a handle moves its row's printed time", () => {
     const { root } = await mount();
     choosePreset(root, "fall-back");
     keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-11-03T00:35:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T00:35:00");
     expect(q(root, "handle-1").getAttribute("aria-valuenow")).toBe("35");
     keydown(root, "handle-1", "PageUp");
-    expect(value(root, "departure-1")).toBe("2024-11-03T01:35:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T01:35:00");
     keydown(root, "handle-1", "ArrowLeft", true);
-    expect(value(root, "departure-1")).toBe("2024-11-03T00:35:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T00:35:00");
     keydown(root, "handle-1", "End");
-    expect(value(root, "departure-1")).toBe("2024-11-03T23:55:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T23:55:00");
     keydown(root, "handle-1", "Home");
-    expect(value(root, "departure-1")).toBe("2024-11-03T00:00:00");
-    type(root, "departure-1", "2024-11-03T01:32:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T00:00:00");
+    type(root, "departure-1", "2024-10-27T01:32:00");
     keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-11-03T01:35:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T01:35:00");
   });
 
   it("turns the preset to custom once a handle moves, and back when it returns", async () => {
@@ -652,15 +652,15 @@ describe("a handle moves its row's printed time", () => {
   it("moves the handle when a time is typed, and hides it for anything else", async () => {
     const { root } = await mount();
     choosePreset(root, "fall-back");
-    type(root, "departure-1", "2024-11-03T03:15:00");
+    type(root, "departure-1", "2024-10-27T03:15:00");
     expect(q(root, "handle-1").getAttribute("aria-valuenow")).toBe("195");
     expect(q(root, "handle-1").style.left).toBe("13.5417%");
     type(root, "departure-1", "nonsense");
     expect(q(root, "handle-1").hidden).toBe(true);
     expect(q(root, "tag-1").textContent).toBe("1 \u00b7 not a date and time");
-    type(root, "departure-3", "2024-11-04T01:30:00");
+    type(root, "departure-3", "2024-10-28T01:30:00");
     expect(q(root, "handle-3").hidden).toBe(true);
-    expect(q(root, "tag-3").textContent).toBe("3 \u00b7 on 2024-11-04");
+    expect(q(root, "tag-3").textContent).toBe("3 \u00b7 on 2024-10-28");
   });
 
   it("reads the printed time aloud", async () => {
@@ -668,9 +668,9 @@ describe("a handle moves its row's printed time", () => {
     choosePreset(root, "spring-forward");
     keydown(root, "handle-1", "PageUp");
     expect(q(root, "handle-1").getAttribute("aria-valuetext")).toBe(
-      "02:30, never shows on the clock, read as 03:30",
+      "01:30, never shows on the clock, read as 02:30",
     );
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 02:30 skipped");
+    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 01:30 skipped");
   });
 
   it("enters and leaves the repeated hour by keyboard", async () => {
@@ -717,16 +717,16 @@ describe("a handle moves its row's printed time", () => {
     choosePreset(root, "fall-back");
     for (let i = 0; i < 7; i++) keydown(root, "handle-1", "ArrowRight");
     expect(q(root, "tag-1").textContent).toBe("1 \u00b7 01:05 twice");
-    setOffset(root, "offset-1", "-05:00");
+    setOffset(root, "offset-1", "+00:00");
     expect(q(root, "row-1-display").textContent).toContain(
       "Offset written: this pass",
     );
     for (let i = 0; i < 11; i++) keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-11-03T02:00:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T02:00:00");
     expect(q(root, "tag-1").textContent).toBe("1 \u00b7 02:00");
-    expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("-05:00");
+    expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("+00:00");
     expect(fullText(q(root, "row-1-display").querySelectorAll("td")[1]!)).toBe(
-      `2024-11-03T02:00:00-05:00${NYZ}`,
+      `2024-10-27T02:00:00+00:00${LDZ}`,
     );
   });
 
@@ -734,7 +734,7 @@ describe("a handle moves its row's printed time", () => {
     const { root } = await mount();
     choosePreset(root, "offset-picks");
     keydown(root, "handle-2", "PageDown");
-    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("-05:00");
+    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
     expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(false);
     const leaves = q(root, "row-2-display").querySelectorAll("td")[1]!;
     expect(leaves.textContent).toContain("NO SIGNAL");
@@ -742,25 +742,25 @@ describe("a handle moves its row's printed time", () => {
     expect(q(root, "link-2")).toBeNull();
     keydown(root, "handle-2", "PageUp");
     expect(fullText(q(root, "row-2-display").querySelectorAll("td")[1]!)).toBe(
-      `2024-11-03T01:30:00-05:00${NYZ}`,
+      `2024-10-27T01:30:00+00:00${LDZ}`,
     );
   });
 
   it("returns a result when a handle moves the offset's row back into agreement (L8)", async () => {
     const { root } = await mount(
       {
-        startTimeZone: "America/New_York",
+        startTimeZone: "Europe/London",
         duration: "PT1H",
-        timeZone: "America/New_York",
-        departure1: "2024-03-10T02:30:00",
-        offset1: "-05:00",
+        timeZone: "Europe/London",
+        departure1: "2024-03-31T01:30:00",
+        offset1: "+00:00",
       },
       {},
     );
     expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
     expect(q(root, "reason-aside").textContent).toContain(SKIPPED_OFFSET_TEXT);
     keydown(root, "handle-1", "PageDown");
-    expect(value(root, "departure-1")).toBe("2024-03-10T01:30:00");
+    expect(value(root, "departure-1")).toBe("2024-03-31T00:30:00");
     expect(q(root, "timetable-output").textContent).not.toBe("NO SIGNAL");
     expect(q(root, "reason-aside").textContent).toBe("");
   });
@@ -780,10 +780,10 @@ describe("a pointer drag", () => {
     stubTrack(root);
     pointer(root, "handle-2", "pointerdown", 90);
     pointer(root, "handle-2", "pointermove", 75);
-    expect(value(root, "departure-2")).toBe("2024-11-03T01:15:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T01:15:00");
     expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(false);
     pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-11-03T02:10:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T02:10:00");
     expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(true);
     pointer(root, "handle-2", "pointerup", 130);
   });
@@ -793,7 +793,7 @@ describe("a pointer drag", () => {
     choosePreset(root, "fall-back");
     stubTrack(root);
     pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-11-03T01:30:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
   });
 
   it("still drags when setPointerCapture throws", async () => {
@@ -805,7 +805,7 @@ describe("a pointer drag", () => {
     };
     pointer(root, "handle-2", "pointerdown", 90);
     pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-11-03T02:10:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T02:10:00");
   });
 
   it("stops moving after the pointer comes up or capture is lost", async () => {
@@ -815,13 +815,13 @@ describe("a pointer drag", () => {
     pointer(root, "handle-2", "pointerdown", 90);
     pointer(root, "handle-2", "pointerup", 90);
     pointer(root, "handle-2", "pointermove", 200);
-    expect(value(root, "departure-2")).toBe("2024-11-03T01:30:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
     pointer(root, "handle-2", "pointerdown", 90);
     q(root, "handle-2").dispatchEvent(
       new Event("lostpointercapture", { bubbles: true }),
     );
     pointer(root, "handle-2", "pointermove", 200);
-    expect(value(root, "departure-2")).toBe("2024-11-03T01:30:00");
+    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
   });
 
   it("adds a blank row where an empty lane is pressed", async () => {
@@ -831,7 +831,7 @@ describe("a pointer drag", () => {
     expect(q(root, "handle-4").hidden).toBe(true);
     expect(q(root, "tag-4").textContent).toBe("4 \u00b7 click to add");
     pointer(root, "lane-4", "pointerdown", 720);
-    expect(value(root, "departure-4")).toBe("2024-11-03T12:00:00");
+    expect(value(root, "departure-4")).toBe("2024-10-27T12:00:00");
     expect(q(root, "handle-4").hidden).toBe(false);
     pointer(root, "lane-4", "pointerup", 720);
   });
@@ -842,7 +842,7 @@ describe("a pointer drag", () => {
     stubTrack(root);
     pointer(root, "lane-1", "pointerdown", 900);
     pointer(root, "lane-1", "pointermove", 1000);
-    expect(value(root, "departure-1")).toBe("2024-11-03T00:30:00");
+    expect(value(root, "departure-1")).toBe("2024-10-27T00:30:00");
   });
 
   it("refits the chart's window only when the drag settles", async () => {
@@ -856,7 +856,7 @@ describe("a pointer drag", () => {
     ]);
     pointer(root, "handle-3", "pointerdown", 150);
     pointer(root, "handle-3", "pointermove", 720);
-    expect(value(root, "departure-3")).toBe("2024-11-03T12:00:00");
+    expect(value(root, "departure-3")).toBe("2024-10-27T12:00:00");
     expect([plot.dataset.windowStart, plot.dataset.windowEnd]).toEqual([
       "0",
       "300",
@@ -925,13 +925,13 @@ describe("structure", () => {
       expect.stringMatching(
         /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/,
       ),
-      "[America/",
-      "New_York]",
+      "[Europe/",
+      "London]",
     ]);
     expect(full.querySelectorAll("wbr")).toHaveLength(2);
     /* The zone is one block, so it moves to the next line whole. */
     expect(full.querySelector(".gmt-timetable-zone")?.textContent).toBe(
-      "[America/New_York]",
+      "[Europe/London]",
     );
     const printed = root.querySelector(".gmt-timetable-printed-text")!;
     expect(printed.querySelectorAll("wbr")).toHaveLength(0);
@@ -962,7 +962,7 @@ describe("structure", () => {
   it("shows NO SIGNAL as a sentinel in the cells of a row that returns null", async () => {
     const { root } = await mount();
     choosePreset(root, "spring-forward");
-    setOffset(root, "offset-2", "-05:00");
+    setOffset(root, "offset-2", "+00:00");
     const cells = q(root, "row-2-display").querySelectorAll("td");
     for (const i of [1, 3]) {
       const sentinel = cells[i]!.querySelector(".gmt-playground-sentinel");

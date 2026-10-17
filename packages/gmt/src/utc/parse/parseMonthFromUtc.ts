@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns Month (01-12) or "" on invalid input
  *
  * @example parseMonthFromUtc("2024-03-17T14:30:45Z") // "03"
- * @example parseMonthFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/New_York" }) // "12"
+ * @example parseMonthFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/Bogota" }) // "12"
  * @example parseMonthFromUtc("invalid") // ""
  */
 export function parseMonthFromUtc(

@@ -23,7 +23,7 @@ import {
   type EdiCall,
   type WidestGap,
 } from "./edi-widgets";
-import { codeSpan, escapeHtml } from "./widget-ui";
+import { codeSpan, escapeHtml, renderWidgetOutput } from "./widget-ui";
 
 /**
  * Writes the calls a widget made into a call frame, one per line, in the order
@@ -56,6 +56,65 @@ export function renderCalls(
 /** What the calls returned, one result per line in the order the calls were made. */
 export function callResultsText(calls: readonly EdiCall[]): string {
   return calls.map((c) => formatValue(c.result)).join("\n");
+}
+
+/** The line a call that gave the library's sentinel prints in the results pane. */
+export const NO_SIGNAL_LINE = "NO SIGNAL";
+
+/**
+ * Whether a call's own result is the library's refusal (`null` or `""`). Only
+ * read once its group has already failed: in a group that read, a `""` is a
+ * plain answer (`nextLeapSecond` returns it when no insertion follows).
+ */
+function refused(call: EdiCall): boolean {
+  return call.result === null || call.result === "";
+}
+
+/**
+ * Writes a group's results into its output pane: one line for each call, in the
+ * order the calls were made, so line N answers call line N.
+ *
+ * `failed` is the group's verdict (the reading is a sentinel). A failed group
+ * replaces only the calls that gave `null` or `""` with NO SIGNAL and keeps the
+ * value of every other call. When every call refused, or none did (the group
+ * failed before any call, or on a check the calls do not show), the pane is the
+ * whole-pane NO SIGNAL it always was.
+ */
+export function renderCallResults(
+  out: HTMLElement,
+  calls: readonly EdiCall[],
+  failed: boolean,
+  format: (value: unknown) => string = formatValue,
+): void {
+  if (!failed) {
+    renderWidgetOutput(
+      out,
+      calls.map((c) => format(c.result)).join("\n"),
+      "live",
+    );
+    return;
+  }
+  const refusals = calls.filter(refused).length;
+  if (refusals === 0) {
+    renderWidgetOutput(out, NO_SIGNAL_LINE, "sentinel");
+    return;
+  }
+  if (refusals === calls.length) {
+    renderWidgetOutput(
+      out,
+      calls.map(() => NO_SIGNAL_LINE).join("\n"),
+      "sentinel",
+    );
+    return;
+  }
+  renderWidgetOutput(out, "", "live");
+  out.innerHTML = calls
+    .map((c) =>
+      refused(c)
+        ? `<span class="gmt-result-nosignal">${NO_SIGNAL_LINE}</span>`
+        : escapeHtml(format(c.result)),
+    )
+    .join("\n");
 }
 
 /** What the "value taken apart" region draws. `empty` is the words it shows when

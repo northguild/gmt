@@ -51,8 +51,8 @@ import { scheduleDeviation } from "@northguild/gmt/transport";
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z"); // "PT14M"
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z"); // "-PT5M" (five minutes early)
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z"); // "PT49H30M" (hours, never days)
-scheduleDeviation("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]"); // "PT1H"
-scheduleDeviation("2024-03-10T01:30:00-05:00[America/New_York]", "2024-03-10T03:30:00-04:00[America/New_York]"); // "PT1H"
+scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]"); // "PT1H"
+scheduleDeviation("2024-03-31T00:30:00+00:00[Europe/London]", "2024-03-31T02:30:00+01:00[Europe/London]"); // "PT1H"
 scheduleDeviation("2024-06-15T10:00:00", "2024-06-15T10:14:00Z"); // ""
 ```
 
@@ -220,7 +220,7 @@ import { nextDeparture } from "@northguild/gmt/transport";
 
 nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"]); // "2024-06-15T09:30:00Z"
 nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T08:00:00Z", "2024-06-15T09:30:00Z", "2024-06-15T11:00:00Z"], { minimumConnection: "PT45M" }); // "2024-06-15T11:00:00Z"
-nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T05:30:00-04:00[America/New_York]"]); // "2024-06-15T05:30:00-04:00[America/New_York]"
+nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T15:00:00+05:30[Asia/Kolkata]"]); // "2024-06-15T15:00:00+05:30[Asia/Kolkata]"
 nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00"]); // ""
 nextDeparture("2024-06-15T09:00:00Z", ["2024-06-15T09:30:00[Europe/London]"]); // ""
 ```
@@ -241,7 +241,7 @@ nextDeparture("2024-06-15T06:05:00+02:00", shuttle); // "2024-06-15T06:20:00+02:
 nextDeparture("2024-06-15T08:40:00+02:00", shuttle); // "2024-06-15T08:40:00+02:00"
 nextDeparture("2024-06-15T08:55:00+02:00", shuttle); // ""
 nextDeparture("2024-06-15T09:00:00+02:00", shuttle); // ""
-nextDeparture("2024-11-03T01:30:00-04:00[America/New_York]", { headway: "PT1H", from: "2024-11-03T00:00:00-04:00[America/New_York]", to: "2024-11-03T04:00:00-05:00[America/New_York]" }); // "2024-11-03T01:00:00-05:00[America/New_York]"
+nextDeparture("2024-10-27T01:30:00+01:00[Europe/London]", { headway: "PT1H", from: "2024-10-27T00:00:00+01:00[Europe/London]", to: "2024-10-27T04:00:00+00:00[Europe/London]" }); // "2024-10-27T01:00:00+00:00[Europe/London]"
 ```
 
 ### It feeds `scheduleDelivery`

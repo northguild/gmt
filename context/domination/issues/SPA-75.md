@@ -8,16 +8,18 @@
 
 The private `spacetime` library in this organisation plans solar elevation for geospatial work; it will consume this story rather than duplicate it, because the underlying arithmetic needs the two-part Julian Date and TT that only the Space realm keeps.
 
-The standard altitudes are USNO's: "sunrise or sunset is defined to occur when the geometric zenith distance of center of the Sun is 90.8333 degrees" (34′ of refraction plus the 16′ semi-diameter, so "the upper limb of the Sun will then appear to be tangent to the horizon"); civil, nautical and astronomical twilight when the Sun's centre is "geometrically 6 degrees", "12 degrees" and "18 degrees below the horizon"; and at high latitudes the phenomena may not "be observed to occur at all". NOAA's calculator, "based on equations from Astronomical Algorithms, by Jean Meeus", assumes "0.833° of atmospheric refraction" and is "accurate to within a minute for locations between +/- 72° latitude, and within 10 minutes outside of those latitudes".
+The standard altitudes come from the *Explanatory Supplement to the Astronomical Almanac*, prepared jointly by HM Nautical Almanac Office (UK) and the US Naval Observatory, with the IMCCE (France) almanac as a second national peer (both not reached — marked, not asserted). USNO states them this way: "sunrise or sunset is defined to occur when the geometric zenith distance of center of the Sun is 90.8333 degrees" (34′ of refraction plus the 16′ semi-diameter, so "the upper limb of the Sun will then appear to be tangent to the horizon"); civil, nautical and astronomical twilight when the Sun's centre is "geometrically 6 degrees", "12 degrees" and "18 degrees below the horizon"; and at high latitudes the phenomena may not "be observed to occur at all". NOAA's calculator (US), "based on equations from Astronomical Algorithms, by Jean Meeus", assumes "0.833° of atmospheric refraction" and is "accurate to within a minute for locations between +/- 72° latitude, and within 10 minutes outside of those latitudes".
 
 ([USNO Astronomical Applications, *Rise, Set, and Twilight Definitions*](https://aa.usno.navy.mil/faq/RST_defs), [NOAA Global Monitoring Laboratory, Solar Calculator, calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html), Meeus, *Astronomical Algorithms*, 2nd ed., ch. 15, 25 and 28 (printed; the algorithm source, not quoted))
 
 ## Scope
 
-- `packages/gmt/src/space/calculate/solarPosition.ts`:
-  - `solarPosition(isoString: string, location: { latitude: number, longitude: number }): { elevationDegrees: number, azimuthDegrees: number, declinationDegrees: number, equationOfTimeMinutes: number } | null` — Meeus ch. 25 low-accuracy solar coordinates (0.01°), with refraction not applied.
-  - `subsolarPoint(isoString: string): { latitude: number, longitude: number } | null`
-- `packages/gmt/src/space/calculate/solarEvents.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/calculate/solarPosition.ts`:
+  - `solarPosition(isoString: string, location: Position): { elevationDegrees: number, azimuthDegrees: number, declinationDegrees: number, equationOfTimeMinutes: number } | null` — Meeus ch. 25 low-accuracy solar coordinates (0.01°), with refraction not applied.
+  - `subsolarPoint(isoString: string): Position | null` — no `height`.
+- `<space-ns>/calculate/solarEvents.ts`:
   - `solarEvents(isoDate: string, location, options: { timeZone: string }): { sunrise: string | null, sunset: string | null, solarNoon: string, civilDawn: string | null, civilDusk: string | null, nauticalDawn: string | null, nauticalDusk: string | null, astronomicalDawn: string | null, astronomicalDusk: string | null, polar: 'day' | 'night' | 'twilightOnly' | null } | null` — Events for the local date in `timeZone`; `null` for an event that does not occur, with `polar` saying why.
   - `sunEventAt(isoDate: string, location, altitudeDegrees: number, direction: 'rising' | 'setting', options): string | null` — The general form: any altitude, so callers can implement "sun 6° below" or "upper limb" rules.
   - `nightInterval(isoDate: string, location, definition: { from: { event: SolarEventName, offset: string }, to: { event: SolarEventName, offset: string } }, options: { timeZone: string }): Interval | null` — `SolarEventName` is `'sunrise' | 'sunset' | 'civilDawn' | 'civilDusk' | 'nauticalDawn' | 'nauticalDusk' | 'astronomicalDawn' | 'astronomicalDusk'`; each `offset` is a signed ISO duration applied to the event; `to` resolves on the following local date when it precedes `from`. A `from` or `to` event that does not occur on its date returns the sentinel, with the reason available from `solarEvents`.
@@ -33,8 +35,8 @@ The standard altitudes are USNO's: "sunrise or sunset is defined to occur when t
 
 ## Design notes
 
-- **Accuracy is a number in the JSDoc, and it is NOAA's number.** Within ±72° latitude the method is good to about a minute; outside it, to about ten; the functions say so and never claim better than the method delivers. The 0.01° figure often quoted for Meeus's low-accuracy solar position was not verified against the book and is not claimed.
-- **Polar day and night are results, not errors.** The hour-angle equation has no real solution when `cos H₀` falls outside [−1, 1] — an algorithmic consequence, and exactly the USNO's "may not be observed to occur at all". The functions return `null` for that event and set `polar`, so a caller at Tromsø in June gets `polar: 'day'`, not a sentinel that looks like bad input.
+- **Accuracy is a number in the JSDoc, stated as a GMT rule.** No international body publishes an accuracy for this method; NOAA (US) states one for its implementation and is cited as a source, not as the authority. Within ±72° latitude the method is good to about a minute; outside it, to about ten; the functions say so and never claim better than the method delivers. The 0.01° figure often quoted for Meeus's low-accuracy solar position was not verified against the book and is not claimed.
+- **Polar day and night are results, not errors.** The hour-angle equation has no real solution when `cos H₀` falls outside [−1, 1] — an algorithmic consequence, and exactly what the almanacs mean by "may not be observed to occur at all". The functions return `null` for that event and set `polar`, so a caller at Tromsø in June gets `polar: 'day'`, not a sentinel that looks like bad input.
 - **A date and a zone define "the day".** Events are found for the local calendar date in `timeZone`; at longitudes far from the zone's meridian, or across the date line, "today's sunset" differs by zone and the parameter makes that explicit. Instants are returned as ISO strings; the local rendering is `etaAtZone`'s or the caller's.
 - **"Night" is the caller's definition.** `nightInterval` composes two solar events and two offsets; the events and altitudes are astronomy, and which pair a rule uses is the rule's own. The docs show the three shapes above labelled by their events and offsets, never by who requires them.
 - **The Julian Date comes from SPA-49 and TT from SPA-47.** The solar-coordinate formulae take Julian centuries from J2000 in TT; using UTC introduces a 69-second argument error that is negligible for sunrise and not for the subsolar point. Using the two-part JD keeps the arithmetic exact.
@@ -51,6 +53,7 @@ The standard altitudes are USNO's: "sunrise or sunset is defined to occur when t
 - `floorToZone` / `bucketRange` from CORE-5 — the local day being searched
 - `resolveLocal` from CORE-4 — local date to instant
 - `toNanoseconds` from CORE-1 — exact interpolation
+- `Position` from CORE-79 — the `location` argument and the `subsolarPoint` result; `location` is checked with the internal `readPosition` helper, and an invalid one returns `null`
 
 ## Verification
 

@@ -43,7 +43,7 @@ import {
 const state = (over: Partial<BlDateState> = {}): BlDateState => ({
   value: "2024-06-16T01:00:00Z",
   event: "shippedOnBoard",
-  timeZone: "America/New_York",
+  timeZone: "America/Sao_Paulo",
   zone2: "",
   zone3: "",
   zone4: "",
@@ -63,7 +63,7 @@ const EXPECTED: Record<
   string,
   { bl: string; utc: string; sameness: string | null; calendars?: string[] }
 > = {
-  "new-york-evening": {
+  "sao-paulo-evening": {
     bl: "2024-06-15",
     utc: "2024-06-16",
     sameness: "one day later",
@@ -100,9 +100,9 @@ describe("the presets", () => {
   });
 
   it("carries Shanghai as the second calendar of the New York preset, and no other preset carries one", () => {
-    expect(preset("new-york-evening").zone2).toBe("Asia/Shanghai");
+    expect(preset("sao-paulo-evening").zone2).toBe("Asia/Shanghai");
     for (const p of BL_DATE_PRESETS.filter(
-      (x) => x.id !== "new-york-evening",
+      (x) => x.id !== "sao-paulo-evening",
     )) {
       expect([p.zone2, p.zone3, p.zone4], p.id).toEqual(["", "", ""]);
     }
@@ -158,7 +158,7 @@ describe("the calls made", () => {
       [
         "2024-06-16T01:00:00Z",
         "shippedOnBoard",
-        { timeZone: "America/New_York" },
+        { timeZone: "America/Sao_Paulo" },
       ],
       ["2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "UTC" }],
       ["2024-06-16T01:00:00Z", "shippedOnBoard", { timeZone: "Asia/Shanghai" }],
@@ -300,7 +300,7 @@ describe("the lit day", () => {
   });
 
   it("draws a lane with no zone as a box with a note, and no days", () => {
-    const s = preset("new-york-evening");
+    const s = preset("sao-paulo-evening");
     const ms = momentMs(s.value);
     const win = windowFor(ms, s.timeZone)!;
     const lanes = readBlDate(s, blDateLib).lanes;
@@ -344,7 +344,7 @@ describe("the lit day", () => {
     expect(lanes).toHaveLength(LANE_COUNT);
     expect(lanes.map(laneLabel)).toEqual([
       "UTC (naive)",
-      "America/New_York",
+      "America/Sao_Paulo",
       "Asia/Shanghai",
       "Calendar 3",
       "Calendar 4",
@@ -357,11 +357,11 @@ describe("the lit day", () => {
 
 describe("the window and the slider", () => {
   it("is 72 hours wide, centred on the local midnight nearest the moment", () => {
-    const s = preset("new-york-evening");
+    const s = preset("sao-paulo-evening");
     const win = windowFor(momentMs(s.value), s.timeZone)!;
-    // 21:00 on 15 June in New York is nearer the midnight that ends the day.
-    expect(iso(win.startMs)).toBe("2024-06-14T16:00:00Z");
-    expect(iso(win.endMs)).toBe("2024-06-17T16:00:00Z");
+    // 21:00 on 15 June in São Paulo is nearer the midnight that ends the day.
+    expect(iso(win.startMs)).toBe("2024-06-14T15:00:00Z");
+    expect(iso(win.endMs)).toBe("2024-06-17T15:00:00Z");
     expect(win.endMs - win.startMs).toBe(72 * 3_600_000);
     expect(win.snapMinutes).toBe(15);
   });
@@ -408,7 +408,7 @@ describe("the window and the slider", () => {
 
   it("writes a clock time and the gate chip", () => {
     const ms = momentMs("2024-06-16T01:00:00Z");
-    expect(clockTime(ms, "America/New_York")).toBe("21:00");
+    expect(clockTime(ms, "America/Sao_Paulo")).toBe("22:00");
     expect(clockTime(ms + 30_000, "UTC")).toBe("01:00:30");
     expect(clockTime(ms, "Mars/Base")).toBe("");
     expect(utcClock(ms)).toBe("01:00Z");
@@ -437,7 +437,7 @@ describe("why NO SIGNAL", () => {
       bolTimestamp: spy,
     });
     expect(text).toBe(
-      "The library does not read Mars/Base as a place. Use an IANA zone name such as America/New_York, or a UTC offset such as +08:00.",
+      "The library does not read Mars/Base as a place. Use an IANA zone name such as Europe/London, or a UTC offset such as +08:00.",
     );
     expect(spy).toHaveBeenCalledWith("2024-06-15T12:00:00Z", "issue", {
       timeZone: "Mars/Base",
@@ -470,7 +470,7 @@ describe("why NO SIGNAL", () => {
           : blDateLib.bolTimestamp(value, event, o),
     };
     expect(blNullText(state({ timeZone: "Europe/Amsterdam" }), lib)).toBe(
-      "The library does not read Europe/Amsterdam as a place. Use an IANA zone name such as America/New_York, or a UTC offset such as +08:00.",
+      "The library does not read Europe/Amsterdam as a place. Use an IANA zone name such as Europe/London, or a UTC offset such as +08:00.",
     );
     expect(blNullText(state({ timeZone: "Europe/Amsterdam" }), blDateLib)).toBe(
       "The library returned no date for these inputs.",
@@ -511,7 +511,7 @@ describe("the plates and the sentence", () => {
   });
 
   it("shows the date, the local time and the words for the New York preset", () => {
-    const s = preset("new-york-evening");
+    const s = preset("sao-paulo-evening");
     const plates = blPlates(s, readBlDate(s, blDateLib));
     expect(plates).toEqual([
       {
@@ -524,7 +524,7 @@ describe("the plates and the sentence", () => {
         ],
         series: 1,
         value: "Sat 15 Jun 2024",
-        lines: ["21:00 in America/New_York", ""],
+        lines: ["22:00 in America/Sao_Paulo", ""],
       },
       {
         role: "hero-utc",
@@ -564,9 +564,9 @@ describe("the plates and the sentence", () => {
   });
 
   it("says both plates as one sentence", () => {
-    const s = preset("new-york-evening");
+    const s = preset("sao-paulo-evening");
     expect(summaryText(s, readBlDate(s, blDateLib), "")).toBe(
-      "Shipped on board date: Sat 15 Jun 2024, 21:00 in America/New_York. UTC date: Sun 16 Jun 2024, one day later.",
+      "Shipped on board date: Sat 15 Jun 2024, 22:00 in America/Sao_Paulo. UTC date: Sun 16 Jun 2024, one day later.",
     );
     const none = preset("no-zone");
     expect(
@@ -612,10 +612,10 @@ describe("seeds, presets and the permalink", () => {
       value: "2024-06-16T01:00:00Z",
       event: "shippedOnBoard",
     });
-    expect(permalinkOf(preset("new-york-evening"))).toEqual({
+    expect(permalinkOf(preset("sao-paulo-evening"))).toEqual({
       value: "2024-06-16T01:00:00Z",
       event: "shippedOnBoard",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
       zone2: "Asia/Shanghai",
     });
   });

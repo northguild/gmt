@@ -54,9 +54,9 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
  * @param calendarTotal the total in `unit` against the caller's anchor; called only when the unit
  *   is calendrical (month, year) and `diff.total(unit)` throws without a `relativeTo`
  * @returns the formatted phrase; throws where `Intl` or Temporal throws, for the caller's sentinel
- * @example formatRelativeDuration(Temporal.Duration.from({ minutes: -30 }), "en-US", {}, () => 0) // "30 minutes ago"
- * @example formatRelativeDuration(Temporal.Duration.from({ hours: 36 }), "en-US", { largestUnit: "hour" }, () => 0) // "in 36 hours"
- * @example formatRelativeDuration(Temporal.Duration.from({ days: 400 }), "en-US", {}, () => 1) // "next year" (month/year totals come from calendarTotal)
+ * @example formatRelativeDuration(Temporal.Duration.from({ minutes: -30 }), "en-GB", {}, () => 0) // "30 minutes ago"
+ * @example formatRelativeDuration(Temporal.Duration.from({ hours: 36 }), "de-DE", { largestUnit: "hour" }, () => 0) // "in 36 Stunden"
+ * @example formatRelativeDuration(Temporal.Duration.from({ days: 400 }), "en-GB", {}, () => 1) // "next year" (month/year totals come from calendarTotal)
  */
 export function formatRelativeDuration(
   diff: Temporal.Duration,
@@ -100,9 +100,9 @@ export function formatRelativeDuration(
  * @param roundingMethod the caller's `roundingMethod`, `undefined` for the default `"round"`
  * @returns the formatted phrase; throws where `Intl` throws or the rounding method is invalid, for
  *   the caller's sentinel
- * @example formatRelativeAmount(-1.5, "hour", "en-US", {}, "floor") // "2 hours ago"
- * @example formatRelativeAmount(1, "day", "en-US", { numeric: "always" }, undefined) // "in 1 day"
- * @example formatRelativeAmount(1, "day", "en-US", { style: "wide" as never }, undefined) // throws RangeError
+ * @example formatRelativeAmount(-1.5, "hour", "en-GB", {}, "floor") // "2 hours ago"
+ * @example formatRelativeAmount(1, "day", "ja-JP", { numeric: "always" }, undefined) // "1 日後"
+ * @example formatRelativeAmount(1, "day", "fr-FR", { style: "wide" as never }, undefined) // throws RangeError
  */
 export function formatRelativeAmount(
   total: number,

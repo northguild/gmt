@@ -52,11 +52,11 @@ const AUTO_UNITS: Array<{ unit: RelativeDateUnit; maxDays: number }> = [
  * @param options How the distance is measured, rounded and worded
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeDate("2026-01-15", "en-US", { reference: "2026-04-15" }) // "3 months ago"
- * @example formatRelativeDate("2026-03-01", "en-US", { reference: "2026-03-11", largestUnit: "week", roundingMethod: "floor" }) // "2 weeks ago" (−1.43 weeks floors to −2; the default rounds to "last week")
+ * @example formatRelativeDate("2026-01-15", "pt-BR", { reference: "2026-04-15" }) // "há 3 meses"
+ * @example formatRelativeDate("2026-03-01", "en-GB", { reference: "2026-03-11", largestUnit: "week", roundingMethod: "floor" }) // "2 weeks ago" (−1.43 weeks floors to −2; the default rounds to "last week")
  * @example formatRelativeDate("not-a-date") // ""
  * @example formatRelativeDate("2024-01-15", ["fr-FR", "en-US"], { reference: "2024-03-15" }) // "il y a 2 mois"
- * @example formatRelativeDate("2024-03-12", "en-US", null as never) // "" (null options)
+ * @example formatRelativeDate("2024-03-12", "ar-EG", null as never) // "" (null options)
  */
 export function formatRelativeDate(
   value: string,

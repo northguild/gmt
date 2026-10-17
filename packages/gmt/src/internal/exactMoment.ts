@@ -38,16 +38,16 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
 /**
  * Read an exact moment the way `transitTime` reads a departure, or `null`.
  *
- * - A zoned string (`…-04:00[America/New_York]`) is read through its bracket, which must name a
+ * - A zoned string (`…+09:00[Asia/Tokyo]`) is read through its bracket, which must name a
  *   real zone that agrees with the offset, as `isValidZonedDateTime` requires. An offset written
  *   to the minute agrees when it is the zone's sub-minute offset rounded (TC39
  *   `ToTemporalZonedDateTime`, match-minutes), which is how `writeExactMoment` writes one.
  * - A wall time with a bracket and no offset is read in that zone with the `"compatible"`
  *   disambiguation policy (`context/reference/LOCAL_TIME_RESOLUTION.md`): an **ambiguous** wall
  *   time, a fall-back hour the clock ran through twice, resolves to the **earlier** instant
- *   (`2024-11-03T01:30:00[America/New_York]` is `01:30-04:00`), and a **nonexistent** one, a
+ *   (`2024-10-27T01:30:00[Europe/London]` is `01:30+01:00`), and a **nonexistent** one, a
  *   spring-forward hour the clock skipped, to the **later** instant
- *   (`2024-03-10T02:30:00[America/New_York]` is `03:30-04:00`). A caller that must not guess
+ *   (`2024-03-31T01:30:00[Europe/London]` is `02:30+01:00`). A caller that must not guess
  *   refuses the offset-less form before calling, as `nextDeparture` does.
  * - A string that names a zone the zoned read rejects is `null`; it never falls back to its
  *   offset. That includes a zoned string whose local date is −271821-04-19, which
@@ -61,7 +61,7 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  *
  * @example readExactMoment("2024-06-15T10:00:00+09:00") // { nanoseconds: 1718413200000000000n, notation: { kind: "offset", offset: "+09:00" } }
  * @example readExactMoment("2024-06-15T10:00:00Z[Not/AZone]") // null
- * @example readExactMoment("2024-03-10T02:30:00[America/New_York]") // { nanoseconds: 1710055800000000000n, notation: { kind: "zone", timeZone: "America/New_York" } } (nonexistent: the later instant, 03:30-04:00)
+ * @example readExactMoment("2024-03-31T01:30:00[Europe/London]") // { nanoseconds: 1711848600000000000n, notation: { kind: "zone", timeZone: "Europe/London" } } (nonexistent: the later instant, 02:30+01:00)
  */
 export function readExactMoment(value: unknown): ExactMoment | null {
   if (typeof value !== "string") {

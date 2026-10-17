@@ -59,8 +59,8 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @example setUnix(1710072000000, { hour: 9 }, { timeZone: "UTC" }) // 1710061200000 (2024-03-10T09:00:00Z)
  * @example setUnix(1706659200000, { year: 2025 }, { timeZone: "UTC" }) // 1738281600000 (2025-01-31T00:00:00Z)
  * @example setUnix(1706659200000, {}, { timeZone: "UTC" }) // 1706659200000 (empty fields object is a no-op)
- * @example setUnix(1730615400000, { minute: 45 }, { timeZone: "America/New_York" }) // 1730616300000 (the second 01:30 keeps -05:00)
- * @example setUnix(1730615400000, { minute: 45 }, { timeZone: "America/New_York", offset: "ignore" }) // 1730612700000 (re-resolved: the earlier 01:45)
+ * @example setUnix(1729992600000, { minute: 45 }, { timeZone: "Europe/London" }) // 1729993500000 (the second 01:30 keeps +00:00)
+ * @example setUnix(1729992600000, { minute: 45 }, { timeZone: "Europe/London", offset: "ignore" }) // 1729989900000 (re-resolved: the earlier 01:45)
  * @example setUnix(1710072000000, { hour: "9" }, { timeZone: "UTC" }) // null (not converted)
  * @example setUnix(NaN, { hour: 9 }) // null
  */

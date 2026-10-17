@@ -278,7 +278,7 @@ export function findBrain(id: string): Brain | undefined {
 }
 
 /**
- * What a single visitor may spend per Pacific day.
+ * What a single visitor may spend per UTC day (`VISITOR_CAP_TIME_ZONE`).
  *
  * Not a security boundary — it is keyed on a hashed IP, which a determined
  * person can change. It exists so one enthusiastic reader cannot drain a pool
@@ -355,13 +355,18 @@ import {
 
 export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
 
-/** The areas the example cards in the widget rail are grouped under, in
- * display order. */
+/**
+ * The areas the example cards in the widget rail are grouped under, in display
+ * order: the industry layers that have a tool, by the id and label the site's
+ * industry declaration gives them (`industry-tags.ts`), so the heading carries
+ * that industry's icon. Core holds the zones, DST, intervals and leap-second
+ * starters. An industry with no tool (Workforce, Maritime) has no area.
+ */
 export const EXAMPLE_AREAS = [
-  { id: "zones", label: "Zones and DST" },
-  { id: "intervals", label: "Intervals" },
+  { id: "core", label: "Core" },
   { id: "transport", label: "Transport" },
-  { id: "intermodal", label: "Intermodal, billing and EDI" },
+  { id: "intermodal", label: "Intermodal" },
+  { id: "gnss", label: "GNSS" },
 ] as const;
 
 export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -404,35 +409,35 @@ export const CHAT_STARTERS: readonly {
   {
     text: "Show me what time it is in Tokyo right now.",
     widget: "showGlobe",
-    area: "zones",
+    area: "core",
     args: { zone: "Asia/Tokyo" },
   },
   {
-    text: "Show New York, London and Tokyo from 15 minutes before New York springs forward on 8 March 2026.",
+    text: "Show London, Sydney and Tokyo from 15 minutes before London springs forward on 29 March 2026.",
     widget: "showZonePlanner",
-    area: "zones",
-    // New York springs forward at 07:00 UTC on 8 March 2026, so 06:45 UTC is 01:45
-    // EST there; dragging the slider forward crosses the change.
+    area: "core",
+    // London springs forward at 01:00 UTC on 29 March 2026, so 00:45 UTC is
+    // 00:45 GMT there; dragging the slider forward crosses the change.
     args: {
-      zones: ["America/New_York", "Europe/London", "Asia/Tokyo"],
-      time: "2026-03-08T06:45:00Z",
+      zones: ["Europe/London", "Australia/Sydney", "Asia/Tokyo"],
+      time: "2026-03-29T00:45:00Z",
     },
   },
   {
-    text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
+    text: "Convert 2:30pm on 15 March 2024 in Sydney to Tokyo time.",
     widget: "showConverterBench",
-    area: "zones",
-    // New York is on EDT (-04:00) from 10 March 2024.
+    area: "core",
+    // Sydney is on AEDT (+11:00) until 7 April 2024.
     args: {
-      value: "2024-03-15T14:30:00-04:00[America/New_York]",
-      from: "America/New_York",
+      value: "2024-03-15T14:30:00+11:00[Australia/Sydney]",
+      from: "Australia/Sydney",
       to: "Asia/Tokyo",
     },
   },
   {
     text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
     widget: "showIntervalVisualizer",
-    area: "intervals",
+    area: "core",
     // London is on GMT (+00:00) until 31 March 2024.
     args: {
       aStart: "2024-03-15T09:00:00+00:00[Europe/London]",
@@ -442,25 +447,25 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "What happens to 1:30am on 3 November 2024 in New York?",
+    text: "What happens to 1:30am on 27 October 2024 in London?",
     widget: "showDstInspector",
-    area: "zones",
-    // 3 November 2024 is New York's fall-back day: 1:30am happens twice.
-    args: { zone: "America/New_York", year: 2024, preset: "overlap" },
+    area: "core",
+    // 27 October 2024 is London's fall-back day: 1:30am happens twice.
+    args: { zone: "Europe/London", year: 2024, preset: "overlap" },
   },
   {
-    text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
+    text: "How many days is a container at a Johannesburg terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
     widget: "showDwellLedger",
     area: "transport",
     // Wall times, read in `zone` by the widget.
     args: {
       entry: "2024-06-15T23:00",
       exit: "2024-06-16T01:00",
-      zone: "America/New_York",
+      zone: "Africa/Johannesburg",
     },
   },
   {
-    text: "Discharged in New York on Friday afternoon, three free days, out Tuesday morning: what is chargeable?",
+    text: "Discharged in Johannesburg on Friday afternoon, three free days, out Tuesday morning: what is chargeable?",
     widget: "showFreeTimeLedger",
     area: "intermodal",
     // Friday 14 June 2024, 15:00 to Tuesday 18 June, 09:00, wall times in
@@ -473,7 +478,7 @@ export const CHAT_STARTERS: readonly {
       firstDay: "eventDay",
       basis: "calendar",
       chargeBasis: "calendar",
-      zone: "America/New_York",
+      zone: "Africa/Johannesburg",
     },
   },
   {
@@ -508,15 +513,15 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "Shipped on board at 01:00 UTC on 16 June 2024 in New York: what date goes on the bill of lading?",
+    text: "Shipped on board at 01:00 UTC on 16 June 2024 in São Paulo: what date goes on the bill of lading?",
     widget: "showBlDateStamp",
     area: "intermodal",
-    // The question names the event, the moment and New York, so the seed names
+    // The question names the event, the moment and São Paulo, so the seed names
     // all three and nothing else: no other calendar and no latest date.
     args: {
       value: "2024-06-16T01:00:00Z",
       event: "shippedOnBoard",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
     },
   },
   {
@@ -540,12 +545,16 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "An EDIFACT DTM says 202406151430 with format code 203. What instant is that in New York?",
+    text: "An EDIFACT DTM says 202406151430 with format code 203. What instant is that in Johannesburg?",
     widget: "showDtmDecoder",
     area: "intermodal",
-    // The question names New York, so the seed names it and the widget shows an
-    // instant. Format code 203 does not choose the zone.
-    args: { input: "202406151430", format: "203", zone1: "America/New_York" },
+    // The question names Johannesburg, so the seed names it and the widget shows
+    // an instant. Format code 203 does not choose the zone.
+    args: {
+      input: "202406151430",
+      format: "203",
+      zone1: "Africa/Johannesburg",
+    },
   },
   {
     text: "X12 date 20240615, time 1430, time code ET, read in New York: what instant is that?",
@@ -572,16 +581,16 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "A truck leaves Chicago at 08:00 on 8 March 2024: 46 h to Los Angeles, then 11 days by ship to Tokyo. ETA?",
+    text: "A truck leaves Rome at 08:00 on 8 March 2024: 30 h to London, then 11 days by ship to Tokyo. ETA?",
     widget: "showDeliveryScheduler",
     area: "transport",
     // The question names no handling time, so there is no dwell.
     args: {
       legs: [
         {
-          departure: "2024-03-08T08:00:00-06:00[America/Chicago]",
-          duration: "PT46H",
-          timeZone: "America/Los_Angeles",
+          departure: "2024-03-08T08:00:00+01:00[Europe/Rome]",
+          duration: "PT30H",
+          timeZone: "Europe/London",
           mode: "truck",
         },
         { duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" },
@@ -615,14 +624,14 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "A border crossing in New York runs 00:00 to 08:00 on 10 March 2024. How many hours really passed?",
+    text: "A border crossing in London runs 00:00 to 08:00 on 31 March 2024. How many hours really passed?",
     widget: "showCrossingClock",
     area: "transport",
     // Wall times, read in targetZone by the widget.
     args: {
-      entry: "2024-03-10T00:00",
-      exit: "2024-03-10T08:00",
-      targetZone: "America/New_York",
+      entry: "2024-03-31T00:00",
+      exit: "2024-03-31T08:00",
+      targetZone: "Europe/London",
     },
   },
   {
@@ -644,15 +653,15 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
-    text: "Ship leaves New York 18:00, 4 Nov 2024. When is 2 days before, 48 hours before, and 2 days before at 17:00?",
+    text: "Ship leaves Sydney 18:00, 8 Apr 2024. When is 2 days before, 48 hours before, and 2 days before at 17:00?",
     widget: "showCutoffRuler",
     area: "transport",
-    // New York fell back on Sunday 3 November 2024, so the three readings
+    // Sydney fell back on Sunday 7 April 2024, so the three readings
     // land an hour apart. A spring-forward date would make PT48H and 17:00
     // coincide.
     args: {
-      anchor: "2024-11-04T18:00:00-05:00[America/New_York]",
-      timeZone: "America/New_York",
+      anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+      timeZone: "Australia/Sydney",
       days: 2,
       atLocalTime: "17:00",
     },
@@ -728,6 +737,51 @@ export const CHAT_STARTERS: readonly {
       ],
       minimumConnection: "PT45M",
     },
+  },
+  {
+    text: "A receiver reports Galileo week 1024, 18 seconds in, first era: what UTC time is that?",
+    widget: "showGnssWeekDecoder",
+    area: "gnss",
+    // Galileo's first era is era 0, so the question states its era.
+    args: {
+      mode: "broadcast",
+      counter: "GAL",
+      week: 1024,
+      timeOfWeekSeconds: 18,
+      rolloverEra: "0",
+    },
+  },
+  {
+    text: "What do the GPS, Galileo, BeiDou, QZSS, GLONASS and NavIC clocks read at 2024-01-01T00:00:00Z?",
+    widget: "showSatelliteClockConverter",
+    area: "gnss",
+    args: { value: "2024-01-01T00:00:00Z" },
+  },
+  {
+    text: "A NavIC receiver's firmware was built on 2020-01-01: when does it start reporting wrong dates?",
+    widget: "showGnssRolloverChecker",
+    area: "gnss",
+    // The question gives a build date, not an era, and names no date to check.
+    args: {
+      counter: "IRN-LNAV",
+      firmwareNotBefore: "2020-01-01T00:00:00Z",
+    },
+  },
+  {
+    text: "How many leap seconds were inserted from 2000 to 2024, and what was TAI - UTC in 2000?",
+    widget: "showLeapSecondTimeline",
+    area: "core",
+    args: {
+      date: "2000-01-01T00:00:00Z",
+      from: "2000-01-01T00:00:00Z",
+      to: "2024-01-01T00:00:00Z",
+    },
+  },
+  {
+    text: "How many seconds really passed from 2016-12-31T23:59:59Z to 2017-01-01T00:00:01Z?",
+    widget: "showElapsedVsClock",
+    area: "core",
+    args: { start: "2016-12-31T23:59:59Z", end: "2017-01-01T00:00:01Z" },
   },
 ];
 

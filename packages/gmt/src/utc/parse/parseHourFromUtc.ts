@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns Hour (00-23) or "" on invalid input
  *
  * @example parseHourFromUtc("2024-03-17T14:30:45Z") // "14"
- * @example parseHourFromUtc("2024-03-17T02:30:45Z", { timeZone: "America/New_York" }) // "22"
+ * @example parseHourFromUtc("2024-03-17T02:30:45Z", { timeZone: "Asia/Kolkata" }) // "08"
  * @example parseHourFromUtc("invalid") // ""
  */
 export function parseHourFromUtc(

@@ -16,17 +16,17 @@ const SEARCH_SPAN_NANOSECONDS = 368n * 86_400_000_000_000n;
  * @example
  * import { DstTransition } from "@northguild/gmt/zoned";
  * const t: DstTransition = {
- *   instant: "2024-03-10T07:00:00Z",
- *   offsetBefore: "-05:00",
- *   offsetAfter: "-04:00",
+ *   instant: "2024-10-05T16:00:00Z",
+ *   offsetBefore: "+10:00",
+ *   offsetAfter: "+11:00",
  * };
  */
 export interface DstTransition {
-  /** The UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-03-10T07:00:00Z`). */
+  /** The UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-10-05T16:00:00Z`). */
   instant: string;
-  /** The UTC offset in effect immediately before the transition (e.g. `-05:00`). */
+  /** The UTC offset in effect immediately before the transition (e.g. `+10:00`). */
   offsetBefore: string;
-  /** The UTC offset in effect immediately after the transition (e.g. `-04:00`). */
+  /** The UTC offset in effect immediately after the transition (e.g. `+11:00`). */
   offsetAfter: string;
 }
 
@@ -55,10 +55,10 @@ export interface DstTransition {
  * @param year calendar year to scan (must be an integer)
  * @returns array of `{ instant, offsetBefore, offsetAfter }`, in chronological order
  *
- * @example getDstTransitions("America/New_York", 2024)
+ * @example getDstTransitions("Australia/Sydney", 2024)
  * // [
- * //   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
- * //   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" },
+ * //   { instant: "2024-04-06T16:00:00Z", offsetBefore: "+11:00", offsetAfter: "+10:00" },
+ * //   { instant: "2024-10-05T16:00:00Z", offsetBefore: "+10:00", offsetAfter: "+11:00" },
  * // ]
  * @example getDstTransitions("Asia/Singapore", 1982)
  * // [{ instant: "1981-12-31T16:00:00Z", offsetBefore: "+07:30", offsetAfter: "+08:00" }]

@@ -5,7 +5,7 @@ import { isValidDate } from "../validate";
 
 /**
  * Return the end of the week containing `value`, using `locale`'s first
- * day of week (e.g. en-US: week ends Saturday, fr-FR: week ends Sunday).
+ * day of week (e.g. fr-FR: week ends Sunday, ja-JP: week ends Saturday).
  *
  * - Resolves the locale's first day of week via
  *   `Intl.Locale.prototype.weekInfo`.
@@ -20,12 +20,12 @@ import { isValidDate } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO 8601 date string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
+ * @param locale BCP 47 locale tag (e.g. "fr-FR", "ja-JP", "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
  * @returns ISO 8601 date string for the end of `value`'s locale-relative week, or "" on invalid input
  *
- * @example getLocaleEndOfWeek("2024-02-29", "en-US") // "2024-03-02" (Saturday)
+ * @example getLocaleEndOfWeek("2024-02-29", "ja-JP") // "2024-03-02" (Saturday)
  * @example getLocaleEndOfWeek("2024-02-29", "fr-FR") // "2024-03-03" (Sunday)
- * @example getLocaleEndOfWeek("invalid-date", "en-US") // ""
+ * @example getLocaleEndOfWeek("invalid-date", "hi-IN") // ""
  * @example getLocaleEndOfWeek("2024-02-29", "not-a-locale-!!") // ""
  * @example getLocaleEndOfWeek("2024-05-15", ["fr-FR", "en-US"]) // "2024-05-19"
  */

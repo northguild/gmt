@@ -75,7 +75,7 @@ function isValidZonedNowUnit(unit: string): unit is ZonedNowUnit {
  * @param unit unit to extract from current zoned time
  * @returns string representation of the requested unit or "" on invalid input
  *
- * @example getZonedNowUnit("America/New_York", "hour") // "07"
+ * @example getZonedNowUnit("Asia/Tokyo", "hour") // "23"
  * @example getZonedNowUnit("UTC", "hours") // "14", if the UTC time is 14:xx (plural unit name)
  * @example getZonedNowUnit("invalid", "hour") // ""
  */

@@ -64,13 +64,13 @@ sumIntervals([
 ]); // "PT8H" — the overlapping hour counts once
 
 sumIntervals([{ start: "2024-01-01T00:00:00Z", end: "2024-01-03T01:30:00Z" }]); // "PT49H30M"
-sumIntervals([{ start: "2024-03-10T05:00:00Z", end: "2024-03-11T04:00:00Z" }]); // "PT23H"
+sumIntervals([{ start: "2024-10-05T14:00:00Z", end: "2024-10-06T13:00:00Z" }]); // "PT23H"
 sumIntervals([]); // "PT0S"
 ```
 
 Hours are the largest unit. The output is exactly what TC39 `Temporal.Instant.prototype.until`
 returns with `largestUnit: "hour"`, because an instant has no calendar to say how long a day
-is. That is also why the New York day across the spring-forward change is `PT23H`. The total
+is. That is also why the Sydney day across the spring-forward change is `PT23H`. The total
 is summed in `bigint` nanoseconds, so it stays exact at any size.
 
 Composed together, these answer the question every realm asks: how much of this interval

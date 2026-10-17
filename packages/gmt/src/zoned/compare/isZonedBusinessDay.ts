@@ -2,10 +2,11 @@ import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 
 /**
- * Return true when `value` falls on a Monday–Friday ISO business day in the given timezone.
+ * Return true when `value` falls on a Monday–Friday business day in the given timezone.
  *
- * - Uses the fixed ISO Monday–Friday business-day boundary (Mon=1 … Fri=5),
- *   matching the definition used by `addZonedBusinessDays`/`subtractZonedBusinessDays`.
+ * - Uses a fixed Monday–Friday business week (ISO weekday numbers 1 … 5), matching
+ *   `addZonedBusinessDays`/`subtractZonedBusinessDays`. Saturday–Sunday is CLDR's
+ *   world-default weekend; ISO 8601 numbers the weekdays but defines no weekend.
  * - Locale-agnostic: no `Intl.Locale` lookup and no holiday calendar.
  * - Returns false if `value` is invalid.
  *
@@ -20,9 +21,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value ISO 8601 zoned datetime string
  * @returns true if `value` is a Monday–Friday business day, false on invalid input
  *
- * @example isZonedBusinessDay("2024-02-05T10:00:00-05:00[America/New_York]") // true (Monday)
- * @example isZonedBusinessDay("2024-02-10T10:00:00-05:00[America/New_York]") // false (Saturday)
- * @example isZonedBusinessDay("2024-02-04T10:00:00-05:00[America/New_York]") // false (Sunday)
+ * @example isZonedBusinessDay("2024-02-05T10:00:00+05:30[Asia/Kolkata]") // true (Monday)
+ * @example isZonedBusinessDay("2024-02-10T10:00:00+05:30[Asia/Kolkata]") // false (Saturday)
+ * @example isZonedBusinessDay("2024-02-04T10:00:00+05:30[Asia/Kolkata]") // false (Sunday)
  * @example isZonedBusinessDay("invalid") // false
  */
 export function isZonedBusinessDay(value: string): boolean {

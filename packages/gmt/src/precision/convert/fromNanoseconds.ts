@@ -6,7 +6,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * Convert nanoseconds since the Unix epoch back to an ISO 8601 string.
  *
  * - Returns a UTC instant string when no time zone is given, and a zoned string
- *   (`"...[America/New_York]"`) when one is.
+ *   (`"...[Asia/Tokyo]"`) when one is.
  * - No disambiguation policy applies: an instant maps to exactly one wall time in a zone,
  *   so DST gaps and overlaps cannot arise on this direction of the conversion.
  * - A time zone, when given, must be a time zone identifier: an IANA name or a UTC offset to the
@@ -30,7 +30,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  *
  * @example fromNanoseconds(0n) // "1970-01-01T00:00:00Z"
  * @example fromNanoseconds(1710072000123456789n) // "2024-03-10T12:00:00.123456789Z"
- * @example fromNanoseconds(1710072000123456789n, "America/New_York") // "2024-03-10T08:00:00.123456789-04:00[America/New_York]"
+ * @example fromNanoseconds(1710072000123456789n, "Asia/Tokyo") // "2024-03-10T21:00:00.123456789+09:00[Asia/Tokyo]"
  * @example fromNanoseconds(-1000000000n) // "1969-12-31T23:59:59Z"
  * @example fromNanoseconds(0n, "Not/AZone") // ""
  * @example fromNanoseconds(0n, undefined) // "1970-01-01T00:00:00Z" — undefined is the same as omitted

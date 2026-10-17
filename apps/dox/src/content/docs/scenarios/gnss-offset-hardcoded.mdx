@@ -1,0 +1,34 @@
+---
+title: "A Fixed Gap Applied to an Old Log"
+description: A log from June 2016 is converted with today's gap between Galileo time and UTC, and every line is a second off.
+industries: [gnss]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Fixed Gap Applied to an Old Log"
+  description="A receiver on a ship wrote Galileo time into its log in June 2016. A tool converts the whole archive with the gap that holds today. Which UTC second does the first line name?"
+  naiveCode={`// The naive approach: one gap for every date
+const GALILEO_AHEAD_OF_UTC = 18; // seconds, true since the start of 2017
+
+const toGalileo = (utc) => new Date(Date.parse(utc) + GALILEO_AHEAD_OF_UTC * 1000).toISOString();
+
+toGalileo("2016-06-01T00:00:00Z");
+// "2016-06-01T00:00:18.000Z" — the receiver wrote 00:00:17 that day`}
+  explanation={`Every satellite system keeps a continuous clock, so its lead over UTC grows by one second each time UTC inserts a leap second. Galileo time led UTC by 17 seconds in June 2016 and has led it by 18 seconds since the last insertion, at the end of that year. A gap typed in once is right for one stretch of dates and wrong for every other. \`utcToGnss\` reads the gap from the leap-second table for the date it is given, and \`gnssToUtc\` reads it back the same way.`}
+  gmtCode={`import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GAL", "2016-06-01T00:00:00Z");
+// "2016-06-01T00:00:17 GAL"
+utcToGnss("GAL", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:18 GAL"
+gnssToUtc("GAL", "2016-06-01T00:00:17 GAL");
+// "2016-06-01T00:00:00Z"`}
+  fixedSpecId="utcToGnss"
+/>
+
+Change the system in the widget to `BDT` and the gap becomes 3 seconds in June 2016 and 4 seconds
+since 2017, because its clock was set to UTC at its own start in 2006. Change the date to one before 2006 and `BDT` returns an empty string: BeiDou time did not exist yet. The
+[Satellite Clock Converter](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22value%22%3A%222016-06-01T00%3A00%3A00Z%22%7D) shows every system's gap for 1 June 2016 side by side. The rules are in [GNSS: System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/).

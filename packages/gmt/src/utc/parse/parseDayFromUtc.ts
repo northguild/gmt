@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns Day (01-31) or "" on invalid input
  *
  * @example parseDayFromUtc("2024-03-17T14:30:45Z") // "17"
- * @example parseDayFromUtc("2024-03-17T02:30:45Z", { timeZone: "America/New_York" }) // "16"
+ * @example parseDayFromUtc("2024-03-17T02:30:45Z", { timeZone: "America/Lima" }) // "16"
  * @example parseDayFromUtc("invalid") // ""
  */
 export function parseDayFromUtc(

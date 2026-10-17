@@ -1,0 +1,39 @@
+name: Leap-second canary
+
+# Compares GMT's built-in leap-second table (packages/gmt/src/internal/leapSeconds.ts) with the
+# IERS Leap_Second.dat file (MAR-16 spec §5.8). Manual and weekly only: never part of ci.yml or
+# `pnpm run validate`, because those runs have no network. A failing run means IERS lists a row
+# GMT does not, or a row differs: the log prints the IERS header line ("Updated through IERS
+# Bulletin …") and each difference. A new row is a data edit plus a `patch` changeset.
+#
+# The table is closed (CGPM 2026 Resolution 5: continuous UTC from 20 May 2027). Retire this
+# workflow and scripts/leap-seconds.mjs once IERS publishes its file format for continuous UTC.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:43 UTC
+    - cron: "43 6 * * 1"
+
+concurrency:
+  group: leap-seconds
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: IERS leap-second table
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # The script uses only Node built-ins and reads the source as text: no install, no build.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Compare with IERS Leap_Second.dat
+        run: node scripts/leap-seconds.mjs check

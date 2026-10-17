@@ -68,6 +68,11 @@ import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
 import type { DtmDecoderArgs } from "~/lib/dtm-decoder-mount";
 import type { X12TimeReaderArgs } from "~/lib/x12-time-reader-mount";
 import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
+import type { GnssWeekDecoderArgs } from "~/lib/gnss-week-decoder-mount";
+import type { SatelliteClockConverterArgs } from "~/lib/satellite-clock-converter-mount";
+import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount";
+import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
+import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
@@ -83,6 +88,11 @@ import {
   showDstInspectorInput,
   showDtmDecoderInput,
   showEpcisEventReaderInput,
+  showElapsedVsClockInput,
+  showGnssRolloverCheckerInput,
+  showGnssWeekDecoderInput,
+  showLeapSecondTimelineInput,
+  showSatelliteClockConverterInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -709,6 +719,110 @@ const journeyEntry = defineWidget<JourneySplitArgs>({
     ]),
 });
 
+const gnssWeekEntry = defineWidget<GnssWeekDecoderArgs>({
+  title: "GNSS week decoder",
+  kind: "gnssweek",
+  parse: (input) => {
+    const result = showGnssWeekDecoderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/gnss-week-decoder-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderGnssWeekDecoderTemplate(args),
+      mount: m.mountGnssWeekDecoder,
+    })),
+});
+
+const satClockEntry = defineWidget<SatelliteClockConverterArgs>({
+  title: "Satellite clock converter",
+  kind: "satclock",
+  parse: (input) => {
+    const result = showSatelliteClockConverterInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/satellite-clock-converter-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderSatelliteClockConverterTemplate(args),
+      mount: m.mountSatelliteClockConverter,
+    })),
+});
+
+const rolloverEntry = defineWidget<GnssRolloverCheckerArgs>({
+  title: "GNSS rollover checker",
+  kind: "rollover",
+  parse: (input) => {
+    const result = showGnssRolloverCheckerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/gnss-rollover-checker-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderGnssRolloverCheckerTemplate(args),
+      mount: m.mountGnssRolloverChecker,
+    })),
+});
+
+const leapLineEntry = defineWidget<LeapSecondTimelineArgs>({
+  title: "Leap second timeline",
+  kind: "leapline",
+  parse: (input) => {
+    const result = showLeapSecondTimelineInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/leap-second-timeline-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderLeapSecondTimelineTemplate(args),
+      mount: m.mountLeapSecondTimeline,
+    })),
+});
+
+const elapsedEntry = defineWidget<ElapsedVsClockArgs>({
+  title: "Elapsed vs. clock difference",
+  kind: "elapsed",
+  parse: (input) => {
+    const result = showElapsedVsClockInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/elapsed-vs-clock-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderElapsedVsClockTemplate(args),
+      mount: m.mountElapsedVsClock,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -779,6 +893,11 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showBlDateStamp: blDateEntry,
   showEpcisEventReader: epcisEntry,
   showJourneySplit: journeyEntry,
+  showGnssWeekDecoder: gnssWeekEntry,
+  showSatelliteClockConverter: satClockEntry,
+  showGnssRolloverChecker: rolloverEntry,
+  showLeapSecondTimeline: leapLineEntry,
+  showElapsedVsClock: elapsedEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

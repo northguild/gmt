@@ -15,7 +15,7 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *   waited `PT2H` of open time.
  * - Hours are the largest unit (`PT40H`, not `P1DT16H`): an open-time total has no calendar.
  *   Exact to the nanosecond, and elapsed time, not wall-clock distance, so a 00:00–00:00 window
- *   on a New York fall-back date adds 25 hours.
+ *   on a London fall-back date adds 25 hours.
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - `start === end` returns `"PT0S"`.
  * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, `start` after
@@ -33,9 +33,9 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * @param optionsArg How a window edge on a clock change is resolved
  * @returns ISO 8601 duration string of the open time, or "" on invalid input
  *
- * @example operatingTimeBetween("2024-06-14T20:00:00Z", "2024-06-17T14:00:00Z", { timeZone: "America/New_York", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "PT2H" — Friday 16:00 to Monday 10:00 local
+ * @example operatingTimeBetween("2024-06-14T10:30:00Z", "2024-06-17T04:30:00Z", { timeZone: "Asia/Kolkata", weekly: { 1: [{ from: "09:00", to: "17:00" }], 5: [{ from: "09:00", to: "17:00" }] } }) // "PT2H" — Friday 16:00 to Monday 10:00 local
  * @example operatingTimeBetween("2024-06-15T00:00:00Z", "2024-06-16T00:00:00Z", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "PT0S" — a closed Saturday
- * @example operatingTimeBetween("2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z", { timeZone: "America/New_York", weekly: { 7: [{ from: "00:00", to: "00:00" }] } }) // "PT25H" — the fall-back day
+ * @example operatingTimeBetween("2024-10-26T23:00:00Z", "2024-10-28T00:00:00Z", { timeZone: "Europe/London", weekly: { 7: [{ from: "00:00", to: "00:00" }] } }) // "PT25H" — the fall-back day
  * @example operatingTimeBetween("2024-06-10T09:00:00Z", "2024-06-10T09:30:00.5Z", { timeZone: "UTC", weekly: { 1: [{ from: "09:00", to: "17:00" }] } }) // "PT30M0.5S"
  * @example operatingTimeBetween("2024-06-17T00:00:00Z", "2024-06-10T00:00:00Z", { timeZone: "UTC", weekly: {} }) // "" — start after end
  */

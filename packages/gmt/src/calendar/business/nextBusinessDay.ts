@@ -22,8 +22,8 @@ import type { BusinessCalendar } from "../../types";
  * @param calendar BusinessCalendar naming the weekend days and holidays
  * @returns ISO PlainDate string of the next working day, or "" on invalid input
  *
- * @example nextBusinessDay("2024-07-03", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // "2024-07-05" — skips the holiday
- * @example nextBusinessDay("2024-07-04", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // "2024-07-05" — from the holiday itself
+ * @example nextBusinessDay("2024-07-03", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // "2024-07-05" — skips the holiday
+ * @example nextBusinessDay("2024-07-04", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // "2024-07-05" — from the holiday itself
  * @example nextBusinessDay("2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // "2024-07-08" — Friday over the weekend
  * @example nextBusinessDay("2024-07-04", { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // "2024-07-07" — Friday–Saturday weekend
  * @example nextBusinessDay("invalid", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // ""

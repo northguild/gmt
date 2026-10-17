@@ -1,0 +1,55 @@
+---
+title: GNSS Week Decoder
+description: Turn a satellite week number into a date. Say which counter and which era, or give a RINEX week or a UTC instant, and see the answer on every era and the same moment on every counter.
+industries: [gnss]
+---
+
+import GnssWeekDecoder from "../../../components/GnssWeekDecoder.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="satellite week numbers">
+
+<Fragment slot="keypoint">
+
+A broadcast week number repeats. Week 247 on the 10-bit GPS counter is a different day in every pass of the counter, and only the era says which one.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A satellite broadcasts its week in a fixed number of bits. The 10-bit GPS counter reaches week 1023, wraps to 0, and starts again, so a receiver that reports week 247 has not said which pass it is in. That pass is the era. A RINEX navigation file is different: its week is one continuous count, so it has no era.
+
+Say what you have: a broadcast week with a counter and an era, a RINEX week with its system, or a UTC instant. The tool calls [`gnssWeekToUtc`](/reference/gnss/convert/gnssWeekToUtc/) or [`rinexWeekToUtc`](/reference/gnss/convert/rinexWeekToUtc/) for the instant, then draws the same week on every era the counter has had. [`utcToGnssWeek`](/reference/gnss/convert/utcToGnssWeek/) and [`utcToRinexWeek`](/reference/gnss/convert/utcToRinexWeek/) give the table of the same moment on every counter.
+
+</Fragment>
+
+<GnssWeekDecoder fullbleed />
+
+<Fragment slot="after">
+
+**The era is yours to say.** The library takes it three ways: a number counted from the counter's first pass, `"rolling"` (the pass nearest the clock of the machine that asks), or `{ notBefore: "…" }` (the first pass on or after a date you state, as a receiver built in a known year would read it). The tool draws every era, marks the one your reading is in, and marks the one the clock is in today.
+
+**The week is not one number across systems.** The same two numbers mean different days on different counters. [Week 2295, 86418 seconds in](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22rinex-navic%22%7D) is the start of 2024 in a RINEX file for NavIC and a day in 2043 on NavIC's L1 counter. The lanes show both.
+
+**A system clock is not UTC.** Each system's clock runs without leap seconds, so it leads UTC by a whole number of seconds that grew each time UTC added one. The second plate shows the system's own reading of your instant and how far ahead of UTC it is, from [`utcToGnss`](/reference/gnss/convert/utcToGnss/) and [`diffUtcAsDuration`](/reference/utc/calculate/diffUtcAsDuration/).
+
+**Inside an inserted second.** [A reading 17 seconds into GPS week 906 of its second era](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22leap-second%22%7D) is the second UTC added at the end of 2016, written `23:59:60`. The second plate says "inside an inserted second" because a duration from UTC cannot be taken across a second 60.
+
+**When the answer is `NO SIGNAL`.** The library gives `""` or `null` for a week the counter does not show, an instant before the counter's first week, and a `23:59:60` on a day with no inserted second. [GPS week 1024 on the 10-bit counter](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22week-past-the-counter%22%7D) is one: that counter shows weeks 0 to 1023. The tool says why in one sentence. An instant typed with an offset is read as the same instant written with `Z`, and the UTC plate says so in a "written as" line. A lane the counter cannot show for a RINEX week is different: it is a correct answer, and the lane says "no result" without raising a signal.
+
+**The same hour, twice.** [GPS week 100 at the start of its first era](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22same-reading-two-dates%22%7D) is a day in 1981, and one era later it is a day in 2001. [The start of 7 April 2019](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22preset%22%3A%22utc-2019-rollover%22%7D) is week 0 on the 10-bit GPS counter, week 2048 on the 13-bit one and week 1024 on Galileo's.
+
+```ts
+gnssWeekToUtc("GAL", 1024, 18, 0); // "2019-04-07T00:00:00Z"
+gnssWeekToUtc("GAL", 1024, 18, 1); // "2097-10-06T00:00:00Z"
+gnssWeekToUtc("GPS-LNAV", 247, 86418, 2); // "2024-01-01T00:00:00Z"
+rinexWeekToUtc("IRN", 2295, 86418); // "2024-01-01T00:00:00Z"
+utcToGnssWeek("GPS-LNAV", "2019-04-07T00:00:00Z"); // { week: 0, timeOfWeekSeconds: 18, era: 2 }
+utcToGnss("BDT", "2024-01-01T00:00:00Z"); // "2024-01-01T00:00:04 BDT"
+```
+
+**Reference:** [`gnssWeekToUtc`](/reference/gnss/convert/gnssWeekToUtc/), [`utcToGnssWeek`](/reference/gnss/convert/utcToGnssWeek/), [`rinexWeekToUtc`](/reference/gnss/convert/rinexWeekToUtc/), [`utcToRinexWeek`](/reference/gnss/convert/utcToRinexWeek/), [`utcToGnss`](/reference/gnss/convert/utcToGnss/). The rules are in [GNSS: System Time and Week Rollover](/guides/industries/gnss-system-time-and-week-rollover/) and, for the bridge and the log, [Maritime: GNSS Time and Week Rollover](/guides/industries/maritime-gnss-time-and-week-rollover/).
+
+</Fragment>
+
+</ToolLayout>

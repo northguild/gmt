@@ -160,6 +160,15 @@ describe("the chat island's static import graph", () => {
       "lib/edi-lib.ts",
       "lib/dtm-decoder.ts",
       "lib/x12-time-reader.ts",
+      "lib/gnss-widgets.ts",
+      "lib/gnss-lib.ts",
+      "lib/timescale-widgets.ts",
+      "lib/timescale-lib.ts",
+      "lib/gnss-week-decoder.ts",
+      "lib/satellite-clock-converter.ts",
+      "lib/gnss-rollover-checker.ts",
+      "lib/leap-second-timeline.ts",
+      "lib/elapsed-vs-clock.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

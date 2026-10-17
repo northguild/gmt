@@ -20,7 +20,7 @@ import { isValidTimeZone } from "../zoned/validate";
  * @returns the zone to use, or `""` when invalid
  *
  * @example normalizeTimeZone(undefined) // "UTC"
- * @example normalizeTimeZone("local") // system zone, e.g. "America/New_York"
+ * @example normalizeTimeZone("local") // system zone, e.g. "Asia/Tokyo"
  * @example normalizeTimeZone("Europe/Helsinki") // "Europe/Helsinki"
  * @example normalizeTimeZone("America/New_Yrok") // ""
  */

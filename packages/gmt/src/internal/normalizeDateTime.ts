@@ -6,7 +6,8 @@
  * - Normalizes various non-breaking and narrow spaces to plain space
  * - Collapses repeated whitespace to a single space and trims
  * - Normalizes common dash/minus characters to ASCII hyphen-minus
- * - Optionally lowercases the result (disabled by default)
+ * - Optionally lowercases the result (disabled by default), in
+ *   `opts.locale` (default `"en"`: a language, not one country)
  */
 export function normalizeDateTime(
   input: string,
@@ -14,7 +15,7 @@ export function normalizeDateTime(
 ): string {
   if (typeof input !== "string") return "";
 
-  const { lower = false, locale = "en-US" } = opts ?? {};
+  const { lower = false, locale = "en" } = opts ?? {};
 
   // Use NFC where available for stable composed characters
   let s =

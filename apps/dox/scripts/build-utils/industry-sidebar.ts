@@ -1,9 +1,9 @@
 /**
- * A sidebar section grouped by industry: Tools, Scenarios and Mistakes.
+ * A sidebar section grouped by industry: Tools, Scenarios, Mistakes and the industry Guides.
  *
  * The section's index page comes first. Then each industry with at least one page gets a
- * divider and its pages, in the tag order (`INDUSTRY_TAG_IDS`: core, then the layers as the
- * stats list them) and, inside an industry, by title. The tools index groups the same way,
+ * divider and its pages, in the tag order (`INDUSTRY_TAG_IDS`: core, then the industries in
+ * declared order) and, inside an industry, by title. The tools index groups the same way,
  * from the same frontmatter, so the menu and the index never disagree.
  *
  * A divider is a link entry marked `data-gmt-divider`, the API Reference's "By industry"
@@ -20,6 +20,8 @@ export interface SectionPage {
   /** The file name without `.mdx`. */
   slug: string;
   title: string;
+  /** The frontmatter's `description`; empty when the page states none. The hubs list it. */
+  description: string;
   industries: readonly string[];
 }
 
@@ -32,12 +34,17 @@ export type IndustrySidebarEntry =
       attrs: { "data-gmt-divider": "true"; "data-gmt-industry": string };
     };
 
-/** The entries for `section` (a docs directory such as `tools`), in display order. */
+/**
+ * The entries for `section` (a docs directory such as `tools`, or `guides/industries`), in
+ * display order.
+ */
 export function industrySidebarEntries(
   section: string,
   pages: readonly SectionPage[],
 ): IndustrySidebarEntry[] {
-  const byTitle = [...pages].sort((a, b) => a.title.localeCompare(b.title, "en"));
+  const byTitle = [...pages].sort((a, b) =>
+    a.title.localeCompare(b.title, "en"),
+  );
   return [
     { slug: section },
     ...INDUSTRY_TAG_IDS.flatMap((id): IndustrySidebarEntry[] => {
@@ -47,7 +54,7 @@ export function industrySidebarEntries(
       return [
         {
           label: tag.label,
-          link: `#${section}-${id}`,
+          link: `#${section.replace(/\//g, "-")}-${id}`,
           attrs: { "data-gmt-divider": "true", "data-gmt-industry": id },
         },
         ...members.map((page) => ({ slug: `${section}/${page.slug}` })),
@@ -80,7 +87,7 @@ export function industrySidebarSource(
 }
 
 /**
- * A page's title and industries from its raw frontmatter, or an error naming the file when
+ * A page's title, description and industries from its raw frontmatter, or an error naming the file when
  * it states no industry. Quoted values lose their quotes.
  */
 export function readSectionPage(slug: string, source: string): SectionPage {
@@ -89,13 +96,33 @@ export function readSectionPage(slug: string, source: string): SectionPage {
     frontmatter.match(new RegExp(`^${name}:\\s*(.*)$`, "m"))?.[1]?.trim() ?? "";
   const unquote = (value: string): string =>
     /^(["']).*\1$/.test(value) ? value.slice(1, -1) : value;
+  // `description: >` folds the indented lines after it into one.
+  const description = (): string => {
+    const value = field("description");
+    if (!/^[>|][+-]?$/.test(value)) return unquote(value);
+    const lines = frontmatter.split("\n");
+    const start = lines.findIndex((line) => line.startsWith("description:"));
+    const folded: string[] = [];
+    for (const line of lines.slice(start + 1)) {
+      if (!/^\s+\S/.test(line)) break;
+      folded.push(line.trim());
+    }
+    return folded.join(" ");
+  };
   const industries = field("industries")
     .replace(/^\[|\]$/g, "")
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
   if (industries.length === 0) {
-    throw new Error(`[sidebar] ${slug}.mdx has no \`industries\` in its frontmatter`);
+    throw new Error(
+      `[sidebar] ${slug}.mdx has no \`industries\` in its frontmatter`,
+    );
   }
-  return { slug, title: unquote(field("title")) || slug, industries };
+  return {
+    slug,
+    title: unquote(field("title")) || slug,
+    description: description(),
+    industries,
+  };
 }

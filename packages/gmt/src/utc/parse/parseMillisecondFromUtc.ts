@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns Millisecond (000-999) or "" on invalid input
  *
  * @example parseMillisecondFromUtc("2024-03-17T14:30:45.123Z") // "123"
- * @example parseMillisecondFromUtc("2024-03-17T14:30:45.123Z", { timeZone: "America/New_York" }) // "123"
+ * @example parseMillisecondFromUtc("2024-03-17T14:30:45.123Z", { timeZone: "Europe/London" }) // "123"
  * @example parseMillisecondFromUtc("invalid") // ""
  */
 export function parseMillisecondFromUtc(

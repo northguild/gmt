@@ -10,10 +10,12 @@ The first draft bundled TT with TDB in one story. TDB needs the two-part Julian 
 
 ## Scope
 
-- `packages/gmt/src/space/convert/tt.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/tt.ts`:
   - `toTT(isoString: string): string` — ISO UTC to a TT scale string.
   - `fromTT(ttString: string): string` — TT to ISO UTC.
-- `packages/gmt/src/space/convert/tcg.ts`:
+- `<space-ns>/convert/tcg.ts`:
   - `toTCG(isoString: string): string` — ISO UTC to a TCG scale string.
   - `fromTCG(tcgString: string): string` — TCG to ISO UTC.
   - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed like the TDB correction so callers see the magnitude.
@@ -45,7 +47,7 @@ The first draft's `tdbMinusTt`, `toTDB` and `fromTDB` moved to SPA-74 together w
 
 ## What gmt provides (do not re-implement)
 
-- `toTAI` / `fromTAI` from SPA-46 — TT is a constant offset from TAI
+- `toTAI` / `fromTAI` from MAR-16 — TT is a constant offset from TAI
 - `toNanoseconds` / `fromNanoseconds` from CORE-1 — exact elapsed time since the 1977 epoch for the TCG rate
 
 ## Verification

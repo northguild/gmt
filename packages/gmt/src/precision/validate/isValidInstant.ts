@@ -37,7 +37,7 @@ import { parseInstantNanoseconds } from "../../internal";
  *
  * @example isValidInstant("2024-03-10T12:00:00Z") // true
  * @example isValidInstant("1970-01-01T00:00:00Z") // true — the epoch, where toNanoseconds returns 0n
- * @example isValidInstant("2024-03-10T12:00:00-05:00[America/New_York]") // true
+ * @example isValidInstant("2024-03-10T12:00:00+05:30[Asia/Kolkata]") // true
  * @example isValidInstant("2024-03-10T12:00:00Z[Not/AZone]") // true — the zone annotation is not checked
  * @example isValidInstant("2024-03-10T12:00:00-05:00") // true — isValidUtc says false
  * @example isValidInstant("2024-03-10 12:00:00Z") // false — space separator (extended format only)

@@ -35,11 +35,11 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example isValidSpan("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z") // true
  * @example isValidSpan("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // true — a zero span is a span
  * @example isValidSpan("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // true — spans are signed
- * @example isValidSpan("2024-03-10T07:00:00-05:00[America/New_York]", "2024-03-10T12:00:00Z") // true
- * @example isValidSpan("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00Z[Not/AZone]") // true — zone annotations are not checked
+ * @example isValidSpan("2024-03-10T07:00:00-05:00[America/Bogota]", "2024-03-10T12:00:00Z") // true
+ * @example isValidSpan("2024-03-10T12:00:00+05:00[Asia/Tokyo]", "2024-03-10T12:00:00Z[Not/AZone]") // true — zone annotations are not checked
  * @example isValidSpan("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // true — but spanMs returns null, use spanNs
  * @example isValidSpan("2024-03-10T12:00:00Z", "invalid") // false
- * @example isValidSpan("2024-03-10T12:00:00[America/New_York]", "2024-03-11T12:00:00[America/New_York]") // false — no offset designator
+ * @example isValidSpan("2024-03-10T12:00:00[Europe/London]", "2024-03-11T12:00:00[Europe/London]") // false — no offset designator
  */
 export function isValidSpan(start: string, end: string): boolean {
   return (

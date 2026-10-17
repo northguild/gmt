@@ -5,7 +5,7 @@ import { isValidZonedDateTime } from "../validate";
  * Return true when `value`'s local calendar day falls on a weekend for `locale`.
  *
  * - Uses `Intl.Locale.prototype.weekInfo` to resolve which ISO weekday
- *   numbers count as "weekend" for the locale (e.g. en-US: Sat/Sun,
+ *   numbers count as "weekend" for the locale (e.g. en-GB: Sat/Sun,
  *   he-IL/ar-SA: Fri/Sat).
  * - Checks the ZonedDateTime's own local day of week — no separate timezone
  *   conversion needed, since `value` already carries its IANA timezone.
@@ -17,14 +17,14 @@ import { isValidZonedDateTime } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO ZonedDateTime string
- * @param locale BCP 47 locale tag (e.g. "en-US", "he-IL"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns false
+ * @param locale BCP 47 locale tag (e.g. "en-GB", "he-IL"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns false
  * @returns true if `value`'s local day is a weekend day in `locale`, false on invalid input
  *
- * @example isZonedWeekend("2024-02-03T10:00:00-05:00[America/New_York]", "en-US") // true (Saturday)
+ * @example isZonedWeekend("2024-02-03T10:00:00+00:00[Europe/London]", "en-GB") // true (Saturday)
  * @example isZonedWeekend("2024-02-02T10:00:00+02:00[Asia/Jerusalem]", "he-IL") // true (Friday, he-IL weekend is Fri/Sat)
  * @example isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL") // false (Sunday)
- * @example isZonedWeekend("invalid", "en-US") // false
- * @example isZonedWeekend("2024-02-03T10:00:00-05:00[America/New_York]", "not-a-locale-!!") // false
+ * @example isZonedWeekend("invalid", "ja-JP") // false
+ * @example isZonedWeekend("2024-02-03T10:00:00+09:00[Asia/Tokyo]", "not-a-locale-!!") // false
  * @example isZonedWeekend("2024-05-17T12:00:00+02:00[Europe/Berlin]", ["ar-EG", "fr-FR"]) // true
  */
 export function isZonedWeekend(

@@ -5,24 +5,26 @@ import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
- * Return a PlainDate ISO string for the next occurrence of `dayOfWeek` on or after `value`.
+ * Return a PlainDate ISO string for the next occurrence of `dayOfWeek` after `value` (or on it,
+ * with `inclusive: true`).
  *
  * - `dayOfWeek` uses Temporal's ISO numbering: 1 (Monday) through 7 (Sunday), consistent with
  *   `getDayOfWeek`/`parseDayOfWeekFromDate`.
  * - Returns "" on invalid input.
  *
- * Replaces date-fns's sixteen `next*` functions with one parameterized call:
+ * Migrating from date-fns: its eight `next*` functions map to one parameterized call. date-fns
+ * numbers days 0 (Sunday) to 6 (Saturday), so `nextDay`'s 0 becomes 7.
  *
- * | date-fns          | gmt                          |
- * | ----------------- | ----------------------------- |
- * | `nextMonday`      | `nextWeekday(value, 1)`      |
- * | `nextTuesday`     | `nextWeekday(value, 2)`      |
- * | `nextWednesday`   | `nextWeekday(value, 3)`      |
- * | `nextThursday`    | `nextWeekday(value, 4)`      |
- * | `nextFriday`      | `nextWeekday(value, 5)`      |
- * | `nextSaturday`    | `nextWeekday(value, 6)`      |
- * | `nextSunday`      | `nextWeekday(value, 7)`      |
- * | `nextDay(v, n)`   | `nextWeekday(value, n)`      |
+ * | date-fns        | gmt                                   |
+ * | --------------- | ------------------------------------- |
+ * | `nextMonday`    | `nextWeekday(value, 1)`               |
+ * | `nextTuesday`   | `nextWeekday(value, 2)`               |
+ * | `nextWednesday` | `nextWeekday(value, 3)`               |
+ * | `nextThursday`  | `nextWeekday(value, 4)`               |
+ * | `nextFriday`    | `nextWeekday(value, 5)`               |
+ * | `nextSaturday`  | `nextWeekday(value, 6)`               |
+ * | `nextSunday`    | `nextWeekday(value, 7)`               |
+ * | `nextDay(v, n)` | `nextWeekday(value, n === 0 ? 7 : n)` |
  *
  * @param value ISO PlainDate string
  * @param dayOfWeek target ISO day of week (1-7, Monday-Sunday)

@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns Second (00-59) or "" on invalid input
  *
  * @example parseSecondFromUtc("2024-03-17T14:30:45Z") // "45"
- * @example parseSecondFromUtc("2024-03-17T14:30:45Z", { timeZone: "America/New_York" }) // "45"
+ * @example parseSecondFromUtc("2024-03-17T14:30:45Z", { timeZone: "Asia/Tokyo" }) // "45"
  * @example parseSecondFromUtc("invalid") // ""
  */
 export function parseSecondFromUtc(

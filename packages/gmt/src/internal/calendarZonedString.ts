@@ -1,5 +1,5 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../plain/validate/isLeapSecond";
+import { hasSecond60 } from "../plain/validate/hasSecond60";
 import type { CalendarSystem, Disambiguation, Offset } from "../types";
 import {
   canonicalCalendarSystem,
@@ -10,7 +10,7 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
  * Parse a GMT ZonedDateTime string into a Temporal.ZonedDateTime, read exactly as
- * `Temporal.ZonedDateTime.from` reads it (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`,
+ * `Temporal.ZonedDateTime.from` reads it (`"2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`,
  * which is what `Temporal.ZonedDateTime#toString()` writes). Throws on invalid input — callers wrap
  * this in try-catch per GMT's sentinel contract.
  *
@@ -31,7 +31,7 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
  * - The result computes in `computationCalendarId(calendar)` (`"ethioaa"` for `"ethiopic"` and
  *   `"coptic"`), so callers that write a string back take the calendar from
  *   `calendarSystemOfZonedValue(value)`.
- * - `isLeapSecond` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
+ * - `hasSecond60` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
  *   clamps to `:59` instead of throwing.
  *
  * @param value ISO zoned datetime string, optionally with RFC 9557 annotations after the zone
@@ -43,7 +43,7 @@ export function parseCalendarZonedValue(
   value: string,
   options?: { disambiguation?: Disambiguation; offset?: Offset },
 ): Temporal.ZonedDateTime {
-  if (isLeapSecond(value)) {
+  if (hasSecond60(value)) {
     throw new RangeError(`Leap seconds are not supported: ${value}`);
   }
   if (!hasZonedDateTimeShape(value)) {

@@ -1,6 +1,6 @@
 ---
 /**
- * Starlight's `SidebarSublist`, with one addition: dividers.
+ * Starlight's `SidebarSublist`, with two additions: dividers, and an icon on an industry's link.
  *
  * Starlight's sidebar holds only links and groups, so a generated sidebar marks a divider as
  * a link entry with `data-gmt-divider`: the API Reference's "By industry"
@@ -9,9 +9,17 @@
  * label, and the entries up to the next divider are their own list named by it
  * (`aria-labelledby`), so it is plain text for everyone: nothing to open, click or focus, and
  * a screen reader hears "Intermodal, list" before that industry's tools. A divider that also
- * carries `data-gmt-industry` shows that industry's tag icon before its label. Everything
- * else is Starlight's own markup, so current-page highlighting, a page opening only its
- * ancestors, the `sl-sidebar-state` persistence and the mobile menu behave as they do there.
+ * carries `data-gmt-industry` shows that industry's tag icon before its label.
+ *
+ * A link entry that carries `data-gmt-industry-link` (the Industries group: one link per
+ * industry hub, `scripts/build-utils/industry-pages.ts`) shows the same glyph before its
+ * label, as an inline `aria-hidden` SVG in the label's own colour. Its attribute is not
+ * `data-gmt-industry`, because the stylesheet's group-icon rule would then paint the
+ * Industries group's own summary.
+ *
+ * Everything else is Starlight's own markup, so current-page highlighting, a page opening only
+ * its ancestors, the `sl-sidebar-state` persistence and the mobile menu behave as they do
+ * there.
  * Keep it in step with `@astrojs/starlight/components/SidebarSublist.astro` on a Starlight
  * upgrade.
  */
@@ -53,9 +61,8 @@ for (const entry of firstAt < 0 ? [] : sublist.slice(firstAt)) {
 const dividerId = (divider: LinkEntry) =>
 	`gmt-sidebar-divider-${divider.href.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()}`;
 
-/** The divider's industry icon, as SVG inner markup, or undefined for a plain divider. */
-const dividerIcon = (divider: LinkEntry): string | undefined => {
-	const id = divider.attrs['data-gmt-industry'];
+/** An industry's icon, as SVG inner markup, or undefined for a plain divider or link. */
+const industryIcon = (id: unknown): string | undefined => {
 	const icon = typeof id === 'string' ? industryTag(id)?.icon : undefined;
 	return icon ? INDUSTRY_ICON_PATHS[icon] : undefined;
 };
@@ -72,6 +79,15 @@ const dividerIcon = (divider: LinkEntry): string | undefined => {
 						class:list={[{ large: !nested }, entry.attrs.class]}
 						{...entry.attrs}
 					>
+						{industryIcon(entry.attrs['data-gmt-industry-link']) && (
+							<svg
+								class="gmt-sidebar-link-icon"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+								focusable="false"
+								set:html={industryIcon(entry.attrs['data-gmt-industry-link'])}
+							/>
+						)}
 						<span>{entry.label}</span>
 						{entry.badge && (
 							<Badge
@@ -109,13 +125,13 @@ const dividerIcon = (divider: LinkEntry): string | undefined => {
 		sections.map(({ divider, entries }) => (
 			<li class="gmt-sidebar-divider-item">
 				<span id={dividerId(divider)} class="gmt-sidebar-divider">
-					{dividerIcon(divider) && (
+					{industryIcon(divider.attrs['data-gmt-industry']) && (
 						<svg
 							class="gmt-sidebar-divider-icon"
 							viewBox="0 0 24 24"
 							aria-hidden="true"
 							focusable="false"
-							set:html={dividerIcon(divider)}
+							set:html={industryIcon(divider.attrs['data-gmt-industry'])}
 						/>
 					)}
 					{divider.label}

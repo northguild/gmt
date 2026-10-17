@@ -3,11 +3,13 @@ name: gmt-integration
 description: >
   Application integration patterns — stable cache keys, router/query params,
   table-sort keys, nanosecond timestamps across JSON and storage boundaries,
-  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), and lint
-  package selection (ESLint, Biome, Oxlint). Reads the docs site (llms.txt and
-  each page's .md twin) and the installed package's JSDoc for API details, and
-  the lint-package READMEs for lint setup; this skill is a routing pointer, not
-  an API dump.
+  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), TAI and
+  the closed IERS leap-second table (taiMinusUtc, leapSecondsBetween,
+  nextLeapSecond, isLeapSecond, toTAI, fromTAI), and lint package selection
+  (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site
+  (llms.txt and each page's .md twin) and the installed package's JSDoc for API
+  details, and the lint-package READMEs for lint setup; this skill is a routing
+  pointer, not an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
@@ -19,10 +21,11 @@ sources:
   - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/timescale/index.ts'
 metadata:
   type: composition
   library: '@northguild/gmt'
-  library_version: '1.19.0'
+  library_version: '1.20.0'
 ---
 
 # GMT Integration
@@ -37,6 +40,8 @@ which lint package to install for Date-ban enforcement.
 - The user is moving nanosecond timestamps across a JSON wire or into a database.
 - The user is reading or writing another system's epoch — NTP, Windows `FILETIME`,
   .NET ticks, an Excel day serial, or PostgreSQL's internal microseconds.
+- The user needs TAI, TAI − UTC on a date, or whether a `23:59:60` was a real
+  leap second.
 - The user is picking an ESLint, Biome, or Oxlint plugin to ban `Date` APIs.
 - The user has a lint package but not the gmt runtime (or vice versa).
 
@@ -87,9 +92,28 @@ which lint package to install for Date-ban enforcement.
      bracketed zone annotation. One thing is read from it: an offset written to the
      minute that is the zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`)
      names the instant the zone gives.
-6. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
+6. **Leap seconds come from the built-in table, never a literal.** `timescale/`
+   holds the IERS leap-second table as a closed record: 27 insertions, the last
+   on 2016-12-31, and TAI − UTC stays 37 s for every later date, because UTC
+   becomes continuous on 20 May 2027 (CGPM 2026). No function takes a table.
+   ```typescript
+   taiMinusUtc("2024-01-01T00:00:00Z"); // 37
+   leapSecondsBetween("2000-01-01T00:00:00Z", "2024-01-01T00:00:00Z"); // 5
+   isLeapSecond("2016-12-31T23:59:60Z"); // true (a table lookup)
+   isLeapSecond("2024-06-15T12:34:60Z"); // false (hasSecond60 is the shape test)
+   toTAI("2026-01-01T00:00:00Z"); // "2026-01-01T00:00:37 TAI"
+   fromTAI("2017-01-01T00:00:36 TAI"); // "2016-12-31T23:59:60Z"
+   ```
+   - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
+     sentinel there.
+   - `timescale/` and `gnss/` accept a second 60 only on a listed insertion
+     day (for `gnss/`, see the `gmt-gnss` skill), and may return `…T23:59:60Z`. Every other GMT function rejects `:60`,
+     so do not pass that result on.
+   - A smeared clock never reads `23:59:60` and is up to a second off UTC
+     around an insertion. GMT cannot detect smearing.
+7. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
-7. **Read the docs site and the lint README.** This skill is a routing pointer.
+8. **Read the docs site and the lint README.** This skill is a routing pointer.
    For full integration guidance, read these:
    - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
    - Each page has a `.md` twin that holds its text, for example
@@ -127,6 +151,14 @@ the pattern.
 - **Foreign epochs at the boundary**: convert on the way in and on the way out with
   the `precision/convert/` bridges, and keep ISO strings or `bigint` nanoseconds
   everywhere in between — never carry another system's serial through your own code.
+- **Atomic time at the boundary**: convert a TAI label to a UTC instant on the
+  way in (`fromTAI`), and back on the way out. GNSS time scales and weeks are in
+  the `gmt-gnss` skill.
+
+## Key functions
+
+- **Leap seconds and TAI** (`@northguild/gmt/timescale`): `taiMinusUtc`,
+  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`
 
 ## References
 
@@ -135,5 +167,6 @@ the pattern.
 - [App integration guide](https://gmt-dox.northguild.workers.dev/guides/integration/app-integration/)
 - [Nanosecond precision guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/nanosecond-precision/)
 - [Foreign epoch bridges guide](https://gmt-dox.northguild.workers.dev/guides/conversion/foreign-epoch-bridges/)
+- [timescale reference](https://gmt-dox.northguild.workers.dev/reference/timescale/)
 - [Lint Package Selection guide](/guides/integration/linting/)
 - [Core Rules](/core-rules/)

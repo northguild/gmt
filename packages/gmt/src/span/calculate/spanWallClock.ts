@@ -39,8 +39,8 @@ const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, "day" | "hour"> = {
  *   The wall clock is read straight off the string with `Temporal.PlainDateTime.from`. Going
  *   via `ZonedDateTime` would be a local → instant → local round trip, and that round trip is
  *   lossy at exactly the DST edges this function exists to get right: an offset-less
- *   `"2024-03-10T02:30:00[America/New_York]"` names a wall time that never occurred, and
- *   Temporal's default `compatible` disambiguation would silently advance it to `03:30`,
+ *   `"2024-03-31T01:30:00[Europe/London]"` names a wall time that never occurred, and
+ *   Temporal's default `compatible` disambiguation would silently advance it to `02:30`,
  *   turning a 24-hour answer into 23. A nonexistent or ambiguous local time is measured as
  *   written instead — for a clock-face question, the digits in the string *are* the answer.
  * - Requires a bracketed IANA time zone on both endpoints, as `isValidZonedDateTime` does —
@@ -49,8 +49,8 @@ const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, "day" | "hour"> = {
  *   `[u-ca=...]` calendar annotations are rejected; `days` and `hours` mean the same thing in
  *   every calendar system, so the annotation would change nothing.
  * - The endpoints need not share a zone. When they differ, this is the distance between two
- *   local wall clocks — a flight leaving New York at 23:00 and landing in Berlin at 11:00 the
- *   next local day is 12 wall-clock hours, and 7 elapsed hours by `spanMs`.
+ *   local wall clocks — a flight leaving São Paulo at 23:00 and landing in Berlin at 15:00 the
+ *   next local day is 16 wall-clock hours, and 12 elapsed hours by `spanMs`.
  * - Returns `null` on invalid input, not `0` — `0` is the span between a wall time and itself.
  *
  * @param start zoned ISO 8601 datetime string the span is measured from
@@ -58,15 +58,15 @@ const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, "day" | "hour"> = {
  * @param unit "days" or "hours" (or the singular "day" or "hour") of wall-clock distance
  * @returns whole wall-clock units, negative when start is after end, or null on invalid input
  *
- * @example spanWallClock("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]", "hours") // 24 — spanMs reports 82800000 (23 hours)
- * @example spanWallClock("2024-11-02T12:00:00-04:00[America/New_York]", "2024-11-03T12:00:00-05:00[America/New_York]", "days") // 1 — spanMs reports 90000000 (25 hours)
- * @example spanWallClock("2024-03-01T12:00:00-05:00[America/New_York]", "2024-03-02T18:00:00-05:00[America/New_York]", "days") // 1 — truncated toward zero
- * @example spanWallClock("2024-03-02T18:00:00-05:00[America/New_York]", "2024-03-01T12:00:00-05:00[America/New_York]", "hours") // -30
- * @example spanWallClock("2024-03-10T23:00:00-04:00[America/New_York]", "2024-03-11T11:00:00+01:00[Europe/Berlin]", "hours") // 12 — each endpoint's own wall clock
- * @example spanWallClock("2024-03-10T02:30:00[America/New_York]", "2024-03-11T02:30:00[America/New_York]", "hours") // 24 — a wall time that never occurred is measured as written
- * @example spanWallClock("2024-03-01T12:00:00-05:00[America/New_York]", "2024-03-02T12:00:00-05:00[America/New_York]", "day") // 1 — singular unit name
+ * @example spanWallClock("2024-03-30T12:00:00+00:00[Europe/London]", "2024-03-31T12:00:00+01:00[Europe/London]", "hours") // 24 — spanMs reports 82800000 (23 hours)
+ * @example spanWallClock("2024-04-06T12:00:00+11:00[Australia/Sydney]", "2024-04-07T12:00:00+10:00[Australia/Sydney]", "days") // 1 — spanMs reports 90000000 (25 hours)
+ * @example spanWallClock("2024-03-01T12:00:00+05:30[Asia/Kolkata]", "2024-03-02T18:00:00+05:30[Asia/Kolkata]", "days") // 1 — truncated toward zero
+ * @example spanWallClock("2024-03-02T18:00:00+05:30[Asia/Kolkata]", "2024-03-01T12:00:00+05:30[Asia/Kolkata]", "hours") // -30
+ * @example spanWallClock("2024-03-10T23:00:00-03:00[America/Sao_Paulo]", "2024-03-11T15:00:00+01:00[Europe/Berlin]", "hours") // 16 — each endpoint's own wall clock
+ * @example spanWallClock("2024-03-31T01:30:00[Europe/London]", "2024-04-01T01:30:00[Europe/London]", "hours") // 24 — a wall time that never occurred is measured as written
+ * @example spanWallClock("2024-03-01T12:00:00+02:00[Africa/Johannesburg]", "2024-03-02T12:00:00+02:00[Africa/Johannesburg]", "day") // 1 — singular unit name
  * @example spanWallClock("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "days") // null — no bracketed time zone
- * @example spanWallClock("2024-03-01T12:00:00-05:00[America/New_York]", "2024-03-02T12:00:00-05:00[America/New_York]", "minutes") // null
+ * @example spanWallClock("2024-03-01T12:00:00+02:00[Africa/Johannesburg]", "2024-03-02T12:00:00+02:00[Africa/Johannesburg]", "minutes") // null
  */
 export function spanWallClock(
   start: string,

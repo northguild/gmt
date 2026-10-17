@@ -10,7 +10,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value ISO 8601 zoned datetime string
  * @returns Zoned datetime string at minute precision or "" for invalid
  *
- * @example chopZonedSeconds("2024-02-29T14:30:45.123-05:00[America/New_York]") // "2024-02-29T14:30-05:00[America/New_York]"
+ * @example chopZonedSeconds("2024-02-29T14:30:45.123+11:00[Australia/Sydney]") // "2024-02-29T14:30+11:00[Australia/Sydney]"
  * @example chopZonedSeconds("invalid") // ""
  */
 export function chopZonedSeconds(value: string): string {

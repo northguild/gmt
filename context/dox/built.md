@@ -157,14 +157,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `/reference/<ns>/<mod>/`, each listing its children with a one-line summary. Their
     frontmatter uses the block form `sidebar:` / `order: 0`: `ensure-sidebar-order.mjs`
     matches only that form and rewrites any other on every run, which defeats `syncTree`.
-  - **The two industry namespaces stand apart from the general ones.** Which namespaces are
-    industries comes from `INDUSTRY_LAYER_IDS` in `src/lib/industry-tags.ts` (`gmt-stats.json`
-    `industries`, core excluded), never a list typed in the generator, so a new layer lands
-    in every place below with no edit to the generator.
-    - **Sidebar.** `buildSidebar` writes `Overview`, the general namespace groups and `types`
-      in alphabetical order, then a divider reading `By industry`, then the industry namespace
-      groups in `INDUSTRY_LAYER_IDS` order, as siblings of the general groups. Each group
-      keeps its namespace name as its label (the import path) and its inner structure.
+  - **Industries are declared, and each owns at most one namespace.** `src/data/industries.json`
+    lists them in display order: `id`, `label`, a one-line `definition`, `icon`
+    (`industry-<id>`), `guide`, the `namespace` it owns (or none) and the modules it `drawsOn`.
+    Workforce owns `workforce`; Transport owns `transport` and draws on `workforce`; Intermodal
+    owns `intermodal` and draws on `transport`; GNSS owns `gnss` and draws on `timescale`;
+    Maritime owns none and draws on `gnss` and `timescale`. `src/lib/industry-tags.ts`, a leaf
+    module, reads it (`INDUSTRIES`, `INDUSTRY_TAG_IDS` with `core` first, `OWN_NAMESPACES`,
+    `industryOwning`, `drawsOn`, `industriesUsing`, `INDUSTRY_ICON_PATHS`); `core` and `space` are
+    reserved ids. A drawn-on entry is a whole namespace or one sub-module (`moduleCovers`: a
+    namespace covers its modules, a sub-module only itself, never by string prefix), and it is
+    another industry's namespace (a shared industry layer) or a Core one. No generator types a
+    list of industries, so a new one lands in every place below with no generator edit.
+    - **Sidebar.** `buildSidebar` writes `Overview`, the Core namespace groups and `types` in
+      alphabetical order, then a divider reading `By industry`, then the own-namespace groups in
+      declared order, as siblings of the Core groups. Each group keeps its namespace name as its
+      label (the import path) and its inner structure.
       - **The divider is text, not a group.** Starlight's sidebar holds only links and groups,
         so the generator writes it as a link entry with `attrs: { "data-gmt-divider": "true" }`
         and the `Sidebar` override (`src/components/Sidebar.astro`, with its own copy of
@@ -176,42 +184,57 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         also a link in Starlight's data, so the override recomputes the previous and next links
         under a page without it. `SidebarSublist.astro` follows Starlight's file of the same
         name: compare them on a Starlight upgrade.
-      - **The icon.** The industry's `Overview` link carries `attrs: { "data-gmt-industry":
-        <id> }`; `Head.astro` writes one `--gmt-industry-icon` custom property per layer from
-        `industrySidebarCss()` (the tag's own glyph as a mask), and a `:has()` rule in
-        `gmt-shell.css` draws it before the group's label as a mask over the label colour, with
-        `white-space: nowrap`. Forced colours repaint it in `CanvasText` (`gmt-a11y.css`).
-      - **Tools, Scenarios and Mistakes use the same dividers, one per industry.**
-        `scripts/build-industry-sidebars.ts`, a `generate` step, reads each page's title and
-        `industries` and writes `src/generated/{tools,scenarios,mistakes}-sidebar.ts`
+      - **The icon.** An own namespace's `Overview` link carries `attrs: { "data-gmt-industry":
+        <id> }`; `Head.astro` writes one `--gmt-industry-icon` rule per own namespace from
+        `industrySidebarCss()` (the tag's glyph as a mask), and a `:has()` rule in
+        `gmt-shell.css` draws it before the group's label over the label colour, with
+        `white-space: nowrap`. An industry with no namespace has no reference group and no rule.
+        Forced colours repaint it in `CanvasText` (`gmt-a11y.css`).
+      - **Tools, Scenarios, Mistakes and the industry guides use the same dividers.**
+        `scripts/build-industry-sidebars.ts`, a `generate` step, reads each page's title,
+        description and `industries` and writes `src/generated/{tools,scenarios,mistakes,guides-industries}-sidebar.ts`
         (`build-utils/industry-sidebar.ts`): the section's index page, then a divider for each
-        industry with pages, in `INDUSTRY_TAG_IDS` order (core, then the layers), with its pages
-        by title. That is the tools index's grouping, so the menu and the index agree. A page
-        with no `industries` stops the step. A list may hold any number of dividers: each one
-        names the list up to the next, and its id comes from its link (`#tools-intermodal`), so
-        no two collide. A divider with `data-gmt-industry` shows the tag's glyph as an inline
-        `aria-hidden` SVG in the label's own colour, so forced colours repaint it with the text.
-    - **Root page.** `/reference/` lists the general namespaces under "For any industry",
-      then "By industry": each industry's icon (`Icon.astro`, imported by the generated MDX;
-      `stripMdx` drops the import and the tag), its label as a link to its overview, and its
-      one-line definition from `industry-tags.ts`.
-    - **Overview text.** `src/lib/industry-overview.ts` is the one hand-kept leaf: per layer, a
-      plain paragraph, three to five pain points and the title of the guide the tag points at.
-      A pain point is a short `problem` sentence (shown in bold, naming no function) and an `answer` of one or two short sentences with `{{functionName}}` tokens that the generator turns
-      into links to the function pages, and the guide, tool, scenario or mistakes pages that
-      show it. `index-pages.ts` writes them above the per-module lists, then a one-line
-      pointer to the guide. A token naming a function the namespace does not export stops the
-      generator. `industry-overview.test.ts` also fails when a layer has no text, a link has
-      no page, a sentence holds a digit (no figure typed by hand) or the word GMT, or the
-      guide title drifts from the guide. The text names no law or regulator and makes no
-      claim about another library.
-    - **Page tag.** `withIndustry` writes `industries: [<id>]` into the frontmatter of every
-      function page, module index and overview of an industry namespace, so `PageTitle`
-      shows the tag. A general page has no tag, not even `core`. A shared type's page is
-      tagged only when every public function that reaches it (`usedBy` in the usage graph)
-      is in one industry namespace (`typeIndustry`); a type any general function reaches,
-      or two industries share, has none. The tag adds a row under the title of those pages
-      only. The Markdown export of a tagged page gains the `Industry:` line.
+        industry with pages, in `INDUSTRY_TAG_IDS` order, with its pages by title. A page with no
+        `industries` stops the step. Each divider's id comes from its link (`#tools-intermodal`,
+        `#guides-industries-gnss`), so no two collide. A divider with `data-gmt-industry` shows the
+        tag's glyph as an inline `aria-hidden` SVG in the label's own colour.
+    - **Hubs.** `scripts/build-industry-pages.ts` (`build-utils/industry-pages.ts`), a `generate`
+      step, writes `/industries/` ("By industry") and one `/industries/<id>/` per declared
+      industry into `src/content/docs/industries/` (gitignored), from the corpus, the
+      declarations, the hub text and the frontmatter of guides, tools, scenarios and mistakes. A
+      hub holds the industry's `about`, "What these functions solve", "Start with the guide", "Its
+      own functions", "Functions it draws on" (a module another industry owns reads "Part of the
+      [X](/industries/x/) industry layer.") and the Guides, Tools, Scenarios and Mistakes pages
+      tagged with it, by title. It also writes `src/generated/industries-sidebar.ts`, the
+      collapsed Industries group before Guides: Overview, then one link per industry carrying
+      `data-gmt-industry-link`, which shows the icon without matching the group-icon rule.
+      `industryPages()` in `top-level-pages.ts` lists the hubs in `llms.txt` and `llms-full.txt`.
+    - **Hub text.** `src/lib/industry-overview.ts` (`INDUSTRY_OVERVIEWS`) is the one hand-kept
+      leaf, read only by `build-industry-pages.ts`: per declared industry an `about` paragraph
+      and three to five `solves` pain points. A pain point is a short `problem` sentence (bold,
+      naming no function), an `answer` of one or two sentences whose `{{functionName}}` tokens
+      become function links, and the pages that show it. A token outside the industry's own
+      namespace and the modules it draws on stops the generator. The `solves` list is where an
+      industry links the tools and guides of a layer it draws on (Maritime links the GNSS tools,
+      Transport the workforce guide and scenarios). `industry-overview.test.ts` fails when a
+      declared industry has no text, a link has no page, a guide title drifts, or a sentence
+      holds a digit, a law or the word GMT.
+    - **Root page.** `/reference/` lists the Core namespaces under "For any industry", then "By
+      industry": each industry's icon (`Icon.astro`, imported by the generated MDX; `stripMdx`
+      drops the import and the tag), its label linked to its hub, its definition, its namespace
+      and what it draws on. An own namespace's index page points at its hub (`hubPointer`).
+    - **Page tag.** `withIndustry` writes `industries: [<id>]`, from `industryOwning`, into the
+      frontmatter of every function page, module index and overview of an own namespace, so
+      `PageTitle` shows the tag. A Core page has no tag, not even `core`, and `timescale` is
+      Core. A shared type's page is tagged only when every public function that reaches it
+      (`usedBy` in the usage graph) is in one own namespace (`typeIndustry`). The Markdown export
+      of a tagged page gains the `Industry:` line.
+    - **README and chart.** The README's "By industry:" line links `/industries/<id>/` for
+      exactly the declared industries, in order, under their labels (`namespaceLinkProblems` rule
+      2 in `scripts/stats.mjs`). `gmt-stats.json` `industryLayers` gives each industry its own
+      count and its drawn-on modules; `industryFunctions` sums the own counts only, so no
+      function is counted twice. `/why-gmt` stacks them (`industrySegments` in
+      `src/lib/why-gmt-charts.ts`; rule in design-system.md § Drawn charts).
   - **The corpus keeps one entry per public type.** `url` is the link to cite (owner page
     plus `#anchor` for an inline type), `page` is the route that serves it, `inlineOn`
     names the owner function, `members` feeds retrieval. The route manifest is the unique
@@ -222,7 +245,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     the `.md` twin. A renamed function cannot be derived: `scripts/build-utils/renamed-functions.ts`
     lists each released function that was renamed, and each gets the same three rules to its
     new page. The generation fails when a rename's target is not a function page or its source
-    is one. Sources are written in the case the pages are built in. An inline type redirects to its owner page and anchor. Astro's
+    is one. Sources are written in the case the pages are built in. It holds the old
+    `plain/validate/isLeapSecond`, now `hasSecond60` (the name went to the leap-second table
+    check in `timescale/validate`), and the `duty/*` functions, now `workforce/*`. A page with
+    no function behind it (a namespace index, a guide, a mistakes page) is listed in
+    `scripts/build-utils/moved-pages.ts` (`/reference/duty/…`, the hours-of-work guide,
+    `/mistakes/duty`) and gets the same three rules; generation fails unless the new path is
+    live and the old one is not. An inline type redirects to its owner page and anchor. Astro's
     `redirects` is not used: it emits meta-refresh pages. Under `wrangler dev` the source
     match is case-sensitive and the fragment survives in `Location`; `astro dev` does not
     apply the file.
@@ -265,15 +294,25 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     from `docs/dst-disambiguation.md`), `standards`, `correct-at-the-edges`.
   - `core-date-operations/`: `get-current`, `plain-arithmetic`, `comparisons`, `durations`,
     `parsing`, `formatting`, `relative-time`, `validation`, `calendar-systems`,
-    `business-calendars`, `operating-hours`, `nanosecond-precision`, `spans`.
+    `business-calendars`, `operating-hours`, `nanosecond-precision`, `spans`,
+    `leap-seconds-and-tai`.
   - `zoned-date-operations/`: `zoned-operations`, `calendar-boundaries`,
     `offset-instants-and-local-resolution`.
   - `conversion/`: `converting-types`, `foreign-epoch-bridges`.
   - `intervals/`: `interval-basics`, `containment-and-overlap`, `set-operations`,
     `splitting-and-counting`.
-  - `integration/`: `app-integration`, `linting`, `skills`.
-  - `industries/`: one guide per topic, each named for its namespace
-    (`transport-legs-and-dwell`).
+  - `integration/`: `app-integration`, `linting`, `skills` (its industry-skill table has one row
+    per industry skill, with the industry's icon).
+  - `industries/`: one guide per topic, each named for its industry
+    (`transport-legs-and-dwell`, `gnss-system-time-and-week-rollover`,
+    `maritime-gnss-time-and-week-rollover`, `workforce-hours-of-work`). The Guides sidebar is the
+    index, then one autogenerated group per folder, except `industries`, which is the generated
+    `guidesIndustriesSidebar` grouped by industry (`astro.config.mjs`).
+
+  **DST walkthroughs and holiday presets lead with London and Sydney**, opposite hemispheres, so
+  the two clocks change in opposite seasons; New York appears only as a labelled peer or where
+  the subject is a US code (the X12 time codes). The DST Inspector opens on `Europe/London` 2024
+  and the Converter Bench on a London wall time converted to `Australia/Sydney`.
 
   The domain `SKILL.md` Core Patterns teach the same patterns to agents. Maintainer and
   contributor skills are excluded.
@@ -317,6 +356,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   declares, because the checker's order changes with what else the program holds. An enum
   select lists its unit-name choices in the same order (`orderUnitChoices`), then its other
   choices as they were, then `""`. Any other object parameter is a field of source text.
+  A union of string literals is an enum select, with number literals too, but beside an open
+  member (`number`, `bigint` or an object type, `isOpenMember` in `build-utils.ts`) it is a
+  source-text field (`expr`), seeded with the example's argument as written, because a select
+  cannot hold the open member: `RolloverEra` (`number | "rolling" | { notBefore }`) is one.
   An enum select carries per-choice examples (`choiceSeeds` on the template, built by
   `buildChoiceSeeds`): for each choice, the first `@example` that writes it as a quoted literal,
   whose other arguments are literals the form can hold and whose documented result is not a
@@ -582,6 +625,46 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
   Split's loader extends `transport-lib.ts` and the EPCIS Event Reader's extends `edi-lib.ts`, so
   no tool loads a module it does not use. Billing Deadlines holds its three deadlines in plates.
+- **The GNSS and leap-second family** (MAR-16): three GNSS tools and two Core ones. Each pure
+  module takes a loaded library (`GnssLib` from `gnss-lib.ts`, or `TimescaleLib` from
+  `timescale-lib.ts`, both throwing `WidgetLoadError`) and draws its results; the site holds no
+  table of library rules. Shared modules: `gnss-names.ts` (counters, RINEX systems, the six
+  systems, modes, in RINEX tokens), `gnss-widgets.ts` (eras, leads, durations, the no-reading
+  texts) and `timescale-widgets.ts` (the insertions, and the two dates the site holds,
+  `INTEGER_UTC_FROM` 1972-01-01 and `CONTINUOUS_UTC_FROM`). `gmt-gnss-widgets.css` holds the
+  family's frame (`.gmt-gnss-frame`), lanes, rulers, peer tables and hatched "your reading" row;
+  the plates, chip and series come from the punctuality and cut-off sheets, which list the five
+  roots. Each tool also has its own sheet. Each has one signature drawing, `role="img"` with an
+  aria-label and a visually hidden list:
+  - **GNSS Week Decoder** (`/tools/gnss-week-decoder/`): an odometer ring. The counter's weeks
+    run round a circle, one lap per era (era 0 outside, four lap slots), each lap with its era
+    plate, a hand at the reading's week and the week and modulus in the hub. A RINEX week does not
+    wrap, so it draws as an unwrapped track. Plates hold UTC, the system clock with its lead and
+    the RINEX week; two tables give the moment on every counter and every RINEX system.
+  - **Satellite Clock Converter** (`/tools/satellite-clock-converter/`): a ladder of seconds ahead
+    of UTC, TAI the top rail, each clock a row at its rung, lit from the UTC baseline to TAI. A
+    clock with no place on the scale (no reading, or inside an inserted second) is a compact
+    dashed row in an in-flow group under the ladder, "No place on the scale", which reserves the
+    most rows any slider stop puts there (`offReserve`). NO SIGNAL is an amber pill in its own
+    slot under the stage, always laid out and only made visible, so it never covers a rung.
+  - **GNSS Rollover Checker** (`/tools/gnss-rollover-checker/`): a fuse timeline, one track per
+    counter from 1980 to 2170 grouped by counter width, a tick per wrap (the next taller), the
+    firmware's window as a lit bracket, a spark where it goes wrong, and the check date and today
+    as pins. Each group heading sits on the surface above the year lines and the check-date pin,
+    so no line crosses it. The server draws a skeleton with the library's group sizes.
+  - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
+    per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
+    counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
+  - **Elapsed vs. Clock Difference** (`/tools/elapsed-vs-clock-difference/`): a sum of three
+    plates (clock difference + leap seconds = seconds that passed) over two vernier rulers, one
+    cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
+    skips and the elapsed tape fills, so the ends misalign by exactly the seconds inserted; a long
+    span keeps the seconds at each end, a slashed break and every inserted second.
+
+  The decoder links to the converter and the checker, the converter to the decoder and the
+  timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
+  to the converter; `gnss-tool-links.test.ts` runs each link through `seedFromLocation` into its
+  target. States are words and patterns, never a verdict colour.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -607,24 +690,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Tools, scenarios, guides and mistakes carry an industry tag.** A page's frontmatter lists
   its `industries` (`src/content.config.ts`), and the `PageTitle` override renders them under
   the title as `IndustryTags.astro`: an icon and a word, one style for every industry, no colour
-  per industry. A tag is a label, not a link. The tags are the library's industry layers one to
-  one (`gmt-stats.json` `industries`) plus `core` for a page about core functions only;
-  `src/lib/industry-tags.ts` holds each tag's label, one-line definition and icon. A tag is the
-  layer the page's functions come from, so the Dwell Ledger is Transport (`dwellTime`), and its
-  chat-rail area matches. Index pages carry no tag. The Markdown export states the same thing
-  as an `Industry:` line under the title (`pageToMarkdown`), so a tool page names its industry
-  once, from its frontmatter, and `ToolLayout` takes only a use case. `/tools/` lists the tools
-  by industry; `scripts/build-tool-index.ts` generates it from the same frontmatter as plain
-  Markdown (gitignored, like the scenarios index). `industry-tags.test.ts` fails when a shipped
-  layer has no tag, when a page in one of those four sections has none, or when a tag names a
-  layer the page does not use. A new industry is one entry in `industry-tags.ts` and one icon;
-  it gets a tag when its first page ships, not before. The intermodal tag's definition is
-  "Container free time, demurrage, billing deadlines, bill of lading dates and EDI timestamps."
-  - **Trap: a `core` page never links an industry layer's reference pages.** The test reads
-    `/reference/<layer>/` or an import from `@northguild/gmt/<layer>` in a page's source as use
-    of that layer, and a page that uses a layer cannot be tagged `core`. The Standards guide is
-    `core`, so it names `parseEdifactDateTime` and the other EDI functions as inline code and links
-    the EDI guide, never `/reference/intermodal/`.
+  per industry. A tag is a label, not a link. The tags are `core` plus the declared industries
+  (`src/data/industries.json`, read through `src/lib/industry-tags.ts`). Index pages carry no
+  tag. The Markdown export states the tag as an `Industry:` line under the title
+  (`pageToMarkdown`), so `ToolLayout` takes only a use case. `/tools/` lists the tools by
+  industry; `scripts/build-tool-index.ts` generates it from the same frontmatter as plain
+  Markdown (gitignored, like the scenarios index). A new industry is one entry in
+  `industries.json`, one glyph in `INDUSTRY_ICON_PATHS` and one hub text in
+  `industry-overview.ts`; it gets a tag when its first page ships.
+  - **A page is tagged by the one industry whose own namespace it runs**, so it sits in one menu
+    section. The Dwell Ledger is Transport (`dwellTime`); the GNSS tools and scenarios are
+    `gnss`; the duty and hours-of-work pages are `workforce`; a page that runs only Core
+    functions, `timescale` included, is `core` (the Leap Second Timeline, the Elapsed vs. Clock
+    Difference tool, the leap-seconds guide). An industry that draws on a layer links that
+    layer's pages from its hub's `solves` list instead of tagging them, so the Maritime guide is
+    the only `maritime` page. The chat-rail area matches the tag.
+  - **The test allows; authoring picks one.** `industry-tags.test.ts` reads each page's used
+    modules (`/reference/<ns>/<mod>` links, and `@northguild/gmt/<ns>` or
+    `@northguild/gmt/<ns>/<mod>` imports) and fails when a page has no tag, an unknown tag, or a
+    tag outside `allowedTags`: the industries that own or draw on a used module, plus `core` only
+    when no own namespace is used. It also fails when a page carries more than one tag. It
+    cannot tell the owner from an industry that only draws on the layer, since an industry's own
+    guide (Maritime's) rightly takes its own tag over the layers it draws on; authoring picks the
+    owner.
+  - **Cross-industry layers are industries.** A function several industries need lives in the
+    cross-industry layer for its domain (`workforce`, `gnss`), or in Core when it is truly general
+    (`timescale`), never in a grab-bag namespace and never in one industry's namespace. On the site
+    that layer is an industry like any other, and each industry that uses it lists it in `drawsOn`
+    (Transport draws on `workforce`, Maritime on `gnss`). The rule is
+    `context/coding-standards.md`, "Core namespaces, industry layers, cross-industry layers".
+  - **Trap: a `core` page never links an own namespace's reference pages.** The test reads
+    `/reference/<ns>/` or an import from `@northguild/gmt/<ns>` in a page's source as use of that
+    namespace, and a page that uses an own namespace cannot be tagged `core`. The Standards guide
+    is `core`, so it names `parseEdifactDateTime` and the other EDI functions as inline code and
+    links the EDI guide, never `/reference/intermodal/`.
 - **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
   `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
   left controls that looked live and did nothing. Every `.astro` shell — every teaching
@@ -757,8 +856,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, `/tools/dtm-decoder/`,
   `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
-  `/tools/epcis-event-reader/`, `/tools/journey-split/`, plus the Tier 4 `/tools/zoned-earth/`
-  and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
+  `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
+  `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
+  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, plus the Tier 4
+  `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
   instant ending in `Z` and up to eight numbered zone ids, strings only (`permalinkOf` in
@@ -777,7 +878,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   key is ignored. The B/L Date Stamp carries `value`, `event`, `timeZone`, `zone2`…`zone4` and
   `latest`; the Demurrage Clock `eventCount`, `type1`…`at6`, `scope`, `direction`, `startEvent`
   and `zone`; the EPCIS Event Reader `eventTime` and `eventTimeZoneOffset`; and the Journey Split
-  the Delivery Scheduler's `legCount` and numbered leg keys.
+  the Delivery Scheduler's `legCount` and numbered leg keys. The MAR-16 kinds are `gnssweek`
+  (`mode`, `counter`, `system`, `week`, `timeOfWeekSeconds`, `rolloverEra` or
+  `rolloverNotBefore`, `utc`), `satclock` (`value`), `rollover` (`counter`,
+  `firmwareNotBefore` or `firmwareEra`, `date`), `leapline` (`date`, `check`, `from`, `to`) and
+  `elapsed` (`start`, `end`), all strings, each passed as the reader gave it. The decoder and
+  the checker write `{ preset }` alone while the state still matches a preset.
   - **Trap: build a permalink written into a page with `encodeWidgetPermalink`, never
     `encodeURIComponent` and never by hand.** A `DTM` segment ends in `'`, which
     `encodeURIComponent` leaves raw. The content-permalink test matches a link with
@@ -789,7 +895,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   calendar-year scale, because switching presets is only comparable against a still frame.
   Seeded and typed values fit their own scale with 10% padding, and drag snap and keyboard
   step derive from the span.
-- **DST inspector:** `getDstTransitions` returns `…Z` instants.
+- **DST inspector:** opens on `Europe/London` 2024 (a spring gap and an autumn overlap).
+  `getDstTransitions` returns `…Z` instants.
   `buildZonedValueFromMinutes` deliberately omits an offset — resolving the ambiguity is
   what `startOfZoned` exists to show.
 - **Gates:** `scripts/grow-measure.mjs` (`pnpm run grow:measure`) samples every tool page's height
@@ -805,7 +912,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   A run that measured nothing, skipped an interaction, or crashed fails. Both gates are
   diagnostics: a few px of browser difference is read, not chased. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
   in the Departure Board, Punctuality Board, ETA Drift Chart, Timetable Reader, Free Time Ledger,
-  Dwell Ledger and B/L Date Stamp (its range) by keyboard and pointer, in Chromium
+  Dwell Ledger, B/L Date Stamp and the five MAR-16 tools (their ranges) by keyboard and pointer, in Chromium
   and WebKit at 1440 and 390 px viewports, plus the widget root forced to 360 and 300 px (the rail widths); these
   are the script's defaults, so `pnpm run readout:still` with no arguments is the gate. It fails if a hero
   plate, the chart frame, the dragged control or anything above it moves or resizes
@@ -827,6 +934,19 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
+  - **The MAR-16 tools measure the whole widget** (`scope: "widget"`, frame `.gmt-gnss-frame`).
+    Only their drawings (`GNSS_DRAWN`: lanes, bars, strip, plot, rulers and a hold's live
+    wrapper) may move; the range chip is a `riders` element (its left moves, nothing else), and
+    `textBoxes` excuses the width of the call frame's code spans and an instant's unbreakable
+    pieces, never the frame or a plate.
+  - **How they hold still.** Every region is sized to the tallest thing it can show: a hidden
+    sizer of the longest call list, output, footnote or reason (`CALL_LINES` is the most calls
+    any preset or slider stop makes), a fixed count of slots that are always drawn (four lap
+    slots, five chips, eight table rows, the off-scale rows `offReserve` measures), plates that
+    reserve their widest value, and a NO SIGNAL slot that is laid out and only made visible. The
+    server HTML hides exactly the fields the initial state hides (`hiddenAttr` and `shownFields`
+    in the decoder, the checker's model and date fields), so mounting hides nothing and the form
+    keeps its height from the first paint.
 
 ## Tier 3 · HUD chrome
 
@@ -1233,18 +1353,24 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 ### Retrieval
 
 - **Chunks** are built at `astro build` into `/retrieval-chunks.json`
-  (`src/lib/retrieval/corpus.ts`): one per function (name, signature, description, examples,
-  URL) and one per guide `##` heading (`github-slugger` anchors). Guides load through
+  (`src/lib/retrieval/corpus.ts`): one per reference entry, function, type or regex (name,
+  signature, description, examples, URL) and one per guide `##` heading (`github-slugger` anchors). Guides load through
   `import.meta.glob`, not `fs` — `fs` breaks once Astro bundles the endpoint. The Worker
   fetches the chunks same-origin, through the Cache API (`fetch-chunks.ts`).
 - **Once per isolate, not once per request.** `fetchChunks` keeps the parsed array in
   memory for the Cache API's TTL (300 s) and returns the *same array* until it expires, so a
   warm request no longer re-parses 750 KB of JSON. `search.ts` memoises the MiniSearch index
-  in a `WeakMap` keyed on that array; the build over 884 chunks measured 50–70 ms and was
-  paid on every question. A new array — a test fixture or a refreshed corpus — always gets
+  in a `WeakMap` keyed on that array; building it over every chunk costs tens of milliseconds,
+  which used to be paid on every question. A new array — a test fixture or a refreshed corpus — always gets
   a fresh index, and `searchChunks` stays a pure function of its inputs.
+- **A chunk carries the words a reader uses.** A type chunk adds each member's name and
+  description; a function chunk adds `Name: description` for each documented type its signature
+  names (`function-chunks.ts`), because the type, not the function, says "GLONASS".
 - **Search:** MiniSearch BM25 (`src/lib/retrieval/search.ts`) with a stopword list,
   `MIN_RELEVANCE_SCORE`, and up to 15 chunks.
+  - The index splits camelCase identifiers and keeps the whole one (`isLeapSecond` is also
+    is, leap, second; runs of capitals stay together). Only the index side splits: a query that
+    types an identifier stays one narrow term.
   - Without stopwords, "format a date for display" matched most of the corpus.
   - Without the score floor, off-topic questions got padded results.
   - The threshold is tuned to this corpus; re-verify it if the corpus or boosts change
@@ -1252,7 +1378,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Namespace bias, not a filter.** `DoxChat` sends the same-origin referring page
   (`src/lib/page-context.ts`), and `worker/namespace-from-page.ts` turns
   `/reference/<ns>/…` or `/guides/<ns>/…` into a retrieval bias.
-- **Why retrieval and not the whole corpus in the prompt:** the corpus is ~84k tokens.
+- **Why retrieval and not the whole corpus in the prompt:** the corpus is several hundred
+  thousand tokens, far past a prompt budget (`measureCorpus` in `tokens.ts` reports it).
 - **Corpus counts on the empty screen** are generated (`scripts/build-corpus-counts.ts`) and
   checked by `corpus-summary.test.ts`.
 
@@ -1394,18 +1521,33 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showEpcisEventReader({ eventTime, eventTimeZoneOffset? })` (INT-14): both values pass as the
     reader gave them. A missing offset is left out, never filled and never read as UTC.
   - `showJourneySplit({ legs, startTimeZone? })` (INT-14): the Delivery Scheduler's schema.
-- **Count:** 24 tools — the globe, the 22 teaching tools and the Zone Planner — and 24
-  `CHAT_STARTERS`, one card each. Eight tools and eight cards are intermodal. `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers;
-  re-derive them from there.
+  - `showGnssWeekDecoder({ mode, counter?, system?, week?, timeOfWeekSeconds?, rolloverEra?, rolloverNotBefore?, utc? })`
+    (MAR-16): `mode` is `broadcast`, `rinex` or `utc`. A broadcast counter needs exactly one of
+    `rolloverEra` (digits, or `rolling`) and `rolloverNotBefore`, the receiver's own setting;
+    neither is chosen for the reader.
+  - `showSatelliteClockConverter({ value })` (MAR-16): the value exactly as the reader gave
+    it, a UTC instant or a string ending in `TAI`, `GPS`, `GAL`, `BDT`, `QZS`, `GLO` or `IRN`.
+  - `showGnssRolloverChecker({ counter, firmwareNotBefore? | firmwareEra?, date? })` (MAR-16):
+    exactly one firmware field, as the receiver's documentation states it.
+  - `showLeapSecondTimeline({ date?, check?, from?, to? })` (MAR-16): at least one field.
+  - `showElapsedVsClock({ start, end })` (MAR-16): both instants exactly as the reader gave
+    them.
+- **Count:** 29 tools — the globe, the 27 teaching tools and the Zone Planner — and 29
+  `CHAT_STARTERS`, one card each: 7 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
+  Second Timeline and Elapsed vs. Clock Difference are core). `ENABLED_TOOL_NAMES` and
+  `CHAT_STARTERS` hold the numbers; re-derive them from there.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
-  grouped by area. Each entry carries an `area` from `EXAMPLE_AREAS` (Zones and DST,
-  Intervals, Transport, "Intermodal, billing and EDI"), and `startersByArea()` returns the groups in
-  that order, empty areas omitted. `chat-starters.test.ts` asserts every starter has a known
-  area, every area has a starter, and the grouping covers each starter exactly once.
+  grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal and
+  GNSS, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
+  Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
+  `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,
+  no area exists for an industry without a tool, every starter has a known area, every area has
+  a starter, and the grouping covers each starter exactly once.
   - A card is a native `<button>` whose accessible name is the question and whose description
     is a chip naming the widget (the registry title). Activating it sends the question and,
     only if the send went, calls the rail with `starterWidgetCall(starter)`, so the widget does
@@ -1489,8 +1631,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     **stay on Free.**
 - **Ledger (`worker/usage.ts`, KV `DOX_USAGE`):** advisory only — it drives the badge; the
   provider's error is the gate. A brain's `model:` and `state:` keys bucket by its
-  provider's day and expire at its provider's midnight; the visitor cap stays on the Pacific
-  day. Writes are best-effort, and visitors are hashed IPs.
+  provider's day and expire at its provider's midnight; the visitor cap is on the UTC day
+  (`VISITOR_CAP_TIME_ZONE` in `src/lib/pt-day.ts`). Writes are best-effort, and visitors are hashed IPs.
 - **Failover inside one request** (`openFirstWorkingBrain`, `worker/brains.ts`):
   - `await result.warnings` forces the upstream call before any stream opens.
   - That rejection is a contentless `NoOutputGeneratedError`, so `onError` captures the

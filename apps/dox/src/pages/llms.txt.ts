@@ -2,7 +2,7 @@ import type { APIContext, APIRoute } from "astro";
 import { corpus } from "~/generated/reference/corpus";
 import { referenceSections, renderLlmsTxt, type LlmsSection } from "~/lib/llms";
 import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
-import { topLevelPages } from "~/lib/top-level-pages";
+import { industryPages, topLevelPages } from "~/lib/top-level-pages";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -34,6 +34,19 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     };
   });
   sections.push({ heading: "Start here", links: startLinks });
+
+  // Industries — the index, then one page per industry in declared order.
+  const industryLinks = industryPages(RAW).map(({ slug, source }) => {
+    const { data, body } = stripFrontmatter(source);
+    const md = stripMdx(body, { gmtVersion: "", values });
+    const description = data.description ?? md.split("\n")[0] ?? "";
+    return {
+      title: data.title ?? slug,
+      url: `${base}/${slug}.md`,
+      description: String(description).replace(/\s+/g, " ").trim(),
+    };
+  });
+  sections.push({ heading: "Industries", links: industryLinks });
 
   // Guides section — every non-index page under content/docs/guides/
   const guideLinks = Object.entries(RAW)

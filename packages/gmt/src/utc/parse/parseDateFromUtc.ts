@@ -12,7 +12,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns ISO date string (e.g., "2024-03-17") or "" on invalid input
  *
  * @example parseDateFromUtc("2024-03-17T14:30:45Z") // "2024-03-17"
- * @example parseDateFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/New_York" }) // "2024-12-31"
+ * @example parseDateFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/Sao_Paulo" }) // "2024-12-31"
  * @example parseDateFromUtc("invalid") // ""
  */
 export function parseDateFromUtc(

@@ -23,7 +23,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * - Uses Temporal.ZonedDateTime.subtract to subtract duration.
  * - Validates duration units and values.
  * - Accepts an RFC 9557 calendar-annotated zoned string (as `convertZonedToCalendar` writes it,
- *   e.g. `"2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]"`), not just a bare ISO string
+ *   e.g. `"2024-03-25T14:30:00+00:00[Europe/London][u-ca=hebrew]"`), not just a bare ISO string
  *   (E7, issue #152). Calendar-unit arithmetic ("subtract 1 month") resolves against that calendar
  *   **and** the DST rules of the zone, in one operation; the result carries the same calendar
  *   annotation. A bare ISO string is the `"iso8601"` calendar and returns a bare ISO string.
@@ -38,9 +38,9 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   forward, whatever `disambiguation` said, so "earlier" matched "compatible" and "reject" did not
  *   fail. Pass "compatible" (or omit it) to keep the forward result.
  * - Compatibility: before 1.16.0 a non-"compatible" `disambiguation` re-resolved the final wall
- *   clock (so `- { minutes: 10 }` from `2024-11-03T01:30:00-05:00[America/New_York]` with
- *   "earlier" returned `01:20:00-04:00`, 70 minutes before the input in exact time, instead of
- *   `01:20:00-05:00`). To get that value, re-resolve the result's wall clock:
+ *   clock (so `- { minutes: 10 }` from `2024-10-27T01:30:00+00:00[Europe/London]` with
+ *   "earlier" returned `01:20:00+01:00`, 70 minutes before the input in exact time, instead of
+ *   `01:20:00+00:00`). To get that value, re-resolve the result's wall clock:
  *   `setZoned(result, { hour, minute, second }, { disambiguation, offset: "ignore" })`.
  * - There is no `offset` option (removed in 1.16.0): the intermediate wall clock is resolved from
  *   a plain date-time, which has no UTC offset for it to act on (Temporal
@@ -52,18 +52,18 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  * @param optionsArg optional settings for resolving a DST gap or overlap and an out-of-range date
  * @returns zoned ISO 8601 string on success, or "" on invalid input
  *
- * @example subtractZoned("2024-03-10T12:00:00-04:00[America/New_York]", { days: 5 }) // "2024-03-05T12:00:00-05:00[America/New_York]"
+ * @example subtractZoned("2024-03-10T12:00:00+09:00[Asia/Tokyo]", { days: 5 }) // "2024-03-05T12:00:00+09:00[Asia/Tokyo]"
  * @example subtractZoned("invalid", { days: 5 }) // ""
- * @example subtractZoned("2024-11-04T01:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "later" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
- * @example subtractZoned("2024-11-04T01:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
- * @example subtractZoned("2024-03-11T02:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" }) // "2024-03-10T01:30:00-05:00[America/New_York]" (02:30 on 10 March is in the spring-forward gap; "earlier" moves it back an hour, "compatible" forward to 03:30-04:00)
- * @example subtractZoned("2024-03-11T02:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (spring-forward gap rejected)
- * @example subtractZoned("2024-11-03T01:50:00-05:00[America/New_York]", { minutes: 10 }, { disambiguation: "earlier" }) // "2024-11-03T01:40:00-05:00[America/New_York]" (exact time — disambiguation never re-resolves it)
- * @example setZoned(subtractZoned("2024-11-03T01:50:00-05:00[America/New_York]", { minutes: 10 }), { hour: 1, minute: 40, second: 0 }, { disambiguation: "earlier", offset: "ignore" }) // "2024-11-03T01:40:00-04:00[America/New_York]" (pre-1.16.0 result)
- * @example subtractZoned("2024-03-31T12:00:00-04:00[America/New_York]", { months: 1 }, { overflow: "reject" }) // ""
- * @example subtractZoned("2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]", { months: 1 }) // "2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]" (Adar II -> Adar I, EDT -> EST in one call)
+ * @example subtractZoned("2024-10-28T01:30:00+00:00[Europe/London]", { days: 1 }, { disambiguation: "later" }) // "2024-10-27T01:30:00+00:00[Europe/London]" (fall-back overlap resolved; default "compatible" would return the +01:00 instant instead)
+ * @example subtractZoned("2024-10-28T01:30:00+00:00[Europe/London]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
+ * @example subtractZoned("2024-10-07T02:30:00+11:00[Australia/Sydney]", { days: 1 }, { disambiguation: "earlier" }) // "2024-10-06T01:30:00+10:00[Australia/Sydney]" (02:30 on 6 October is in the spring-forward gap; "earlier" moves it back an hour, "compatible" forward to 03:30+11:00)
+ * @example subtractZoned("2024-10-07T02:30:00+11:00[Australia/Sydney]", { days: 1 }, { disambiguation: "reject" }) // "" (spring-forward gap rejected)
+ * @example subtractZoned("2024-10-27T01:50:00+00:00[Europe/London]", { minutes: 10 }, { disambiguation: "earlier" }) // "2024-10-27T01:40:00+00:00[Europe/London]" (exact time — disambiguation never re-resolves it)
+ * @example setZoned(subtractZoned("2024-10-27T01:50:00+00:00[Europe/London]", { minutes: 10 }), { hour: 1, minute: 40, second: 0 }, { disambiguation: "earlier", offset: "ignore" }) // "2024-10-27T01:40:00+01:00[Europe/London]" (pre-1.16.0 result)
+ * @example subtractZoned("2024-03-31T12:00:00+09:00[Asia/Tokyo]", { months: 1 }, { overflow: "reject" }) // ""
+ * @example subtractZoned("2024-04-04T14:30:00+01:00[Europe/London][u-ca=hebrew]", { months: 1 }) // "2024-03-05T14:30:00+00:00[Europe/London][u-ca=hebrew]" (Adar II -> Adar I, BST -> GMT in one call)
  * @example subtractZoned("2019-05-01T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]", { days: 1 }) // "2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]" (Reiwa 1 -> Heisei 31)
- * @example subtractZoned("2024-03-10T14:30:00-04:00[u-ca=hebrew][America/New_York]", { days: 1 }) // "" (calendar before zone is not RFC 9557)
+ * @example subtractZoned("2024-03-10T14:30:00-03:00[u-ca=hebrew][America/Sao_Paulo]", { days: 1 }) // "" (calendar before zone is not RFC 9557)
  */
 export function subtractZoned(
   value: string,

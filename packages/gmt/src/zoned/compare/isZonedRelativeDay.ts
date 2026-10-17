@@ -21,8 +21,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param offsetDays integer number of days from today in `value`'s own timeZone
  * @returns true if `value`'s local day is exactly `offsetDays` days from today in its own timeZone, false on invalid input
  *
- * @example isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0) // true, if today is 2024-03-15 in America/New_York
- * @example isZonedRelativeDay("2024-03-14T10:00:00-04:00[America/New_York]", -1) // true, if today is 2024-03-15 in America/New_York
+ * @example isZonedRelativeDay("2024-03-15T10:00:00+09:00[Asia/Tokyo]", 0) // true, if today is 2024-03-15 in Asia/Tokyo
+ * @example isZonedRelativeDay("2024-03-14T10:00:00+09:00[Asia/Tokyo]", -1) // true, if today is 2024-03-15 in Asia/Tokyo
  * @example isZonedRelativeDay("2024-03-15T10:00:00+13:00[Pacific/Apia]", 0) // true, when the same instant is "yesterday" in Pacific/Niue
  * @example isZonedRelativeDay("invalid", 0) // false
  */

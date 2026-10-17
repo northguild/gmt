@@ -58,8 +58,8 @@ export interface Crossing {
  *
  * @example crossingTime("2024-06-15T08:00:00Z", "2024-06-15T17:30:00Z", "Europe/Berlin") // { duration: "PT9H30M", enter: "2024-06-15T10:00:00+02:00[Europe/Berlin]", exit: "2024-06-15T19:30:00+02:00[Europe/Berlin]" }
  * @example crossingTime("2024-06-15T10:00:00+09:00", "2024-06-15T12:00:00+09:00", "Asia/Tokyo") // { duration: "PT2H", enter: "2024-06-15T10:00:00+09:00[Asia/Tokyo]", exit: "2024-06-15T12:00:00+09:00[Asia/Tokyo]" }
- * @example crossingTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York") // { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]", exit: "2024-03-10T08:00:00-04:00[America/New_York]" } (seven elapsed hours across the spring-forward)
- * @example crossingTime("2024-11-03T05:30:00Z", "2024-11-03T06:30:00Z", "America/New_York") // { duration: "PT1H", enter: "2024-11-03T01:30:00-04:00[America/New_York]", exit: "2024-11-03T01:30:00-05:00[America/New_York]" } (both ends read 01:30; the offsets tell them apart)
+ * @example crossingTime("2024-10-05T14:00:00Z", "2024-10-05T21:00:00Z", "Australia/Sydney") // { duration: "PT7H", enter: "2024-10-06T00:00:00+10:00[Australia/Sydney]", exit: "2024-10-06T08:00:00+11:00[Australia/Sydney]" } (seven elapsed hours across the spring-forward)
+ * @example crossingTime("2024-10-27T00:30:00Z", "2024-10-27T01:30:00Z", "Europe/London") // { duration: "PT1H", enter: "2024-10-27T01:30:00+01:00[Europe/London]", exit: "2024-10-27T01:30:00+00:00[Europe/London]" } (both ends read 01:30; the offsets tell them apart)
  * @example crossingTime("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z", "Asia/Tokyo") // { duration: "PT0S", enter: "2024-06-15T19:00:00+09:00[Asia/Tokyo]", exit: "2024-06-15T19:00:00+09:00[Asia/Tokyo]" }
  * @example crossingTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "+02:00") // { duration: "PT2H30M", enter: "2024-06-16T00:30:00+02:00[+02:00]", exit: "2024-06-16T03:00:00+02:00[+02:00]" } (a fixed offset renders with no DST)
  * @example crossingTime("2024-06-16T01:00:00Z", "2024-06-15T22:30:00Z", "Europe/London") // null (exit before entry)

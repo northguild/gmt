@@ -34,6 +34,14 @@ export const GMT_MODULES: Record<
   "precision/parse": () => import("@northguild/gmt/precision/parse"),
   "precision/validate": () => import("@northguild/gmt/precision/validate"),
 
+  // --- timescale ---
+  "timescale/calculate": () => import("@northguild/gmt/timescale/calculate"),
+  "timescale/convert": () => import("@northguild/gmt/timescale/convert"),
+  "timescale/validate": () => import("@northguild/gmt/timescale/validate"),
+
+  // --- gnss ---
+  "gnss/convert": () => import("@northguild/gmt/gnss/convert"),
+
   // --- instant ---
   "instant/convert": () => import("@northguild/gmt/instant/convert"),
   "instant/validate": () => import("@northguild/gmt/instant/validate"),
@@ -49,14 +57,14 @@ export const GMT_MODULES: Record<
   "interval/compare": () => import("@northguild/gmt/interval/compare"),
   "interval/validate": () => import("@northguild/gmt/interval/validate"),
 
-  // --- duty ---
-  "duty/calculate": () => import("@northguild/gmt/duty/calculate"),
-  "duty/validate": () => import("@northguild/gmt/duty/validate"),
-
   // --- transport ---
   "transport/calculate": () => import("@northguild/gmt/transport/calculate"),
   "transport/compare": () => import("@northguild/gmt/transport/compare"),
   "transport/convert": () => import("@northguild/gmt/transport/convert"),
+
+  // --- workforce ---
+  "workforce/calculate": () => import("@northguild/gmt/workforce/calculate"),
+  "workforce/validate": () => import("@northguild/gmt/workforce/validate"),
 
   // --- intermodal ---
   "intermodal/calculate": () => import("@northguild/gmt/intermodal/calculate"),

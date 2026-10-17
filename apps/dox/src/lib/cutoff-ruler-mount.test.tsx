@@ -38,20 +38,20 @@ const REQUIRED_ROLES = [
 ];
 
 const EXPECTED: Record<string, [string, string, string][]> = {
-  "new-york-fall-back": [
+  "sydney-fall-back": [
     [
-      '"2024-11-04T18:00:00-05:00[America/New_York]", "P2D", { timeZone: "America/New_York" }',
-      "2024-11-02T18:00:00-04:00[America/New_York]",
+      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "P2D", { timeZone: "Australia/Sydney" }',
+      "2024-04-06T18:00:00+11:00[Australia/Sydney]",
       "PT49H",
     ],
     [
-      '"2024-11-04T18:00:00-05:00[America/New_York]", "PT48H", { timeZone: "America/New_York" }',
-      "2024-11-02T19:00:00-04:00[America/New_York]",
+      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "PT48H", { timeZone: "Australia/Sydney" }',
+      "2024-04-06T19:00:00+11:00[Australia/Sydney]",
       "PT48H",
     ],
     [
-      '"2024-11-04T18:00:00-05:00[America/New_York]", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" }',
-      "2024-11-02T17:00:00-04:00[America/New_York]",
+      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "P2D", { timeZone: "Australia/Sydney", atLocalTime: "17:00" }',
+      "2024-04-06T17:00:00+11:00[Australia/Sydney]",
       "PT50H",
     ],
   ],
@@ -97,8 +97,8 @@ describe("renderCutoffRulerTemplate", () => {
 describe("mountCutoffRuler", () => {
   it("prints the three calls, outputs and hours-before for the pill preset (R1)", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
-    const rows = EXPECTED["new-york-fall-back"]!;
+    choosePreset(root, "sydney-fall-back");
+    const rows = EXPECTED["sydney-fall-back"]!;
     const roles = ["calendar", "exact", "pinned"];
     for (let i = 0; i < rows.length; i++) {
       const role = roles[i]!;
@@ -113,10 +113,10 @@ describe("mountCutoffRuler", () => {
 
   it("shows the transition label on R1 (go back) and R3 (go forward), none on R2", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     expect(q(root, "ruler-overview").textContent).toContain("go back 1 h");
 
-    choosePreset(root, "new-york-spring-forward");
+    choosePreset(root, "london-spring-forward");
     expect(q(root, "ruler-overview").textContent).toContain("go forward 1 h");
 
     choosePreset(root, "amsterdam-june");
@@ -133,7 +133,7 @@ describe("mountCutoffRuler", () => {
 
   it("labels the overview's day and 6-hour ticks as visible text", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     const ticks = [
       ...q(root, "ruler-overview").querySelectorAll(".gmt-cutoff-axis-tick"),
     ].map((t) => t.textContent);
@@ -144,7 +144,7 @@ describe("mountCutoffRuler", () => {
 
   it("the close-up labels every local hour as visible text, and R1's three readings land an hour apart", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     const closeup = q(root, "ruler-closeup");
     const tickText = [...closeup.querySelectorAll(".gmt-cutoff-axis-tick")].map(
       (t) => t.textContent,
@@ -174,23 +174,23 @@ describe("mountCutoffRuler", () => {
 
   it("renders the chat seed (the pill args) as R1", async () => {
     const seed = {
-      anchor: "2024-11-04T18:00:00-05:00[America/New_York]",
-      timeZone: "America/New_York",
+      anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+      timeZone: "Australia/Sydney",
       days: 2,
       atLocalTime: "17:00",
     };
     const { root } = await mount(seed);
     expect(q(root, "ruler-output-calendar").textContent).toBe(
-      "2024-11-02T18:00:00-04:00[America/New_York]",
+      "2024-04-06T18:00:00+11:00[Australia/Sydney]",
     );
     expect(q(root, "ruler-output-pinned").textContent).toBe(
-      "2024-11-02T17:00:00-04:00[America/New_York]",
+      "2024-04-06T17:00:00+11:00[Australia/Sydney]",
     );
   });
 
   it("changing 'Days before' to 1 re-renders all three calls with P1D/PT24H", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     const days = q<HTMLSelectElement>(root, "days");
     days.value = "1";
     days.dispatchEvent(new Event("change", { bubbles: true }));
@@ -240,7 +240,7 @@ describe("mountCutoffRuler", () => {
 describe("the ruler's series and DST chips", () => {
   it("gives each reading's lane, close-up row and card one shared series", async () => {
     const { root } = await mount();
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     const seriesOf = (sel: string, scope: HTMLElement) =>
       [...scope.querySelectorAll<HTMLElement>(sel)].map(
         (e) => e.dataset.series,
@@ -259,7 +259,7 @@ describe("the ruler's series and DST chips", () => {
   it("R1 draws an overlap chip and R3 a gap chip, and R2 neither", async () => {
     const { root } = await mount();
     const overview = () => q(root, "ruler-overview");
-    choosePreset(root, "new-york-fall-back");
+    choosePreset(root, "sydney-fall-back");
     expect(
       overview().querySelectorAll(".gmt-cutoff-dst--overlap"),
     ).toHaveLength(1);
@@ -268,7 +268,7 @@ describe("the ruler's series and DST chips", () => {
       overview().querySelectorAll(".gmt-cutoff-ruler-dst-band"),
     ).toHaveLength(3);
 
-    choosePreset(root, "new-york-spring-forward");
+    choosePreset(root, "london-spring-forward");
     expect(overview().querySelectorAll(".gmt-cutoff-dst--gap")).toHaveLength(1);
     expect(
       overview().querySelectorAll(".gmt-cutoff-dst--overlap"),
@@ -296,7 +296,7 @@ describe("the ruler's series and DST chips", () => {
 
   it("holds no focusable descendant in either chart", async () => {
     const { root } = await mount();
-    for (const id of ["new-york-fall-back", "skipped-hour"]) {
+    for (const id of ["sydney-fall-back", "skipped-hour"]) {
       choosePreset(root, id);
       expect(
         q(root, "ruler-overview").querySelectorAll(FOCUSABLE),

@@ -6,6 +6,7 @@ import {
   rangePct,
   setControlValue,
   syncRange,
+  wrapInstantsAtT,
 } from "./widget-ui";
 
 const base = {
@@ -270,5 +271,64 @@ describe("setControlValue", () => {
     const input = document.createElement("input");
     setControlValue(input, "2024-06-15");
     expect(input.value).toBe("2024-06-15");
+  });
+});
+
+describe("wrapInstantsAtT", () => {
+  const hero = (text: string) =>
+    mount(`<div class="gmt-punct-hero-value">${text}</div>`);
+
+  it("holds the date and the time whole and joins them with a wbr", () => {
+    const root = hero("2024-01-01T00:00:00Z");
+    wrapInstantsAtT(root);
+    const pieces = root.querySelectorAll(".gmt-gnss-nb");
+    expect([...pieces].map((p) => p.textContent)).toEqual([
+      "2024-01-01",
+      "T00:00:00Z",
+      "",
+      "",
+    ]);
+    expect(root.querySelectorAll("[data-word]")).toHaveLength(0);
+    expect(root.querySelectorAll("wbr")).toHaveLength(3);
+    expect(root.textContent).toBe("2024-01-01T00:00:00Z");
+  });
+
+  it("keeps a time with a scale suffix in one piece", () => {
+    const root = hero("2019-04-07T00:00:18 GAL");
+    wrapInstantsAtT(root);
+    expect(root.querySelectorAll(".gmt-gnss-nb")[1]?.textContent).toBe(
+      "T00:00:18 GAL",
+    );
+  });
+
+  it("lets a fraction and its zone each move to a line of their own", () => {
+    const root = hero("2024-01-01T01:00:00.123456789+01:00");
+    wrapInstantsAtT(root);
+    expect(
+      [...root.querySelectorAll(".gmt-gnss-nb")].map((p) => p.textContent),
+    ).toEqual(["2024-01-01", "T01:00:00", ".123456789", "+01:00"]);
+    expect(root.textContent).toBe("2024-01-01T01:00:00.123456789+01:00");
+  });
+
+  it("gives an instant with a fraction the same elements as one without", () => {
+    const whole = hero("2024-01-01T00:00:00Z");
+    const fraction = hero("2024-01-01T00:00:00.5Z");
+    wrapInstantsAtT(whole);
+    wrapInstantsAtT(fraction);
+    expect(fraction.querySelectorAll("*")).toHaveLength(
+      whole.querySelectorAll("*").length,
+    );
+  });
+
+  it("gives a word the same elements, marked so it can still wrap", () => {
+    const instant = hero("2024-01-01T00:00:00Z");
+    const word = hero("none after this instant");
+    wrapInstantsAtT(instant);
+    wrapInstantsAtT(word);
+    expect(word.querySelectorAll("*")).toHaveLength(
+      instant.querySelectorAll("*").length,
+    );
+    expect(word.querySelectorAll("[data-word]")).toHaveLength(4);
+    expect(word.textContent).toBe("none after this instant");
   });
 });

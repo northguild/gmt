@@ -13,6 +13,11 @@
  */
 import { tool } from "ai";
 import { z } from "zod";
+import {
+  GNSS_DECODER_MODES,
+  GNSS_WEEK_COUNTERS,
+  RINEX_WEEK_SYSTEMS,
+} from "./gnss-names";
 
 /**
  * The shape of an IANA zone identifier — `Area/Location`, optionally with a
@@ -31,7 +36,7 @@ export const zoneSchema = z
   .max(64)
   .regex(
     /^[A-Za-z0-9_+-]+(\/[A-Za-z0-9_+-]+){0,2}$/,
-    "must look like an IANA zone identifier, e.g. America/New_York",
+    "must look like an IANA zone identifier, e.g. Europe/London",
   );
 
 /** An ISO-8601 local or zoned date-time, as the widgets' inputs accept. */
@@ -88,7 +93,7 @@ export const showIntervalVisualizerInput = z.object({
  * A dwell: two instants and the zone its days are counted in.
  *
  * `zone` is required here although `dwellTime` can take it from a bracketed
- * entry: a model answering "23:00 in New York" sends a wall time with no
+ * entry: a model answering "23:00 in Johannesburg" sends a wall time with no
  * offset, and the widget reads it in this zone (`resolveWallTime`). Without a
  * zone there is nothing to count days in, which the widget can still show, but
  * is not a question worth a tool call.
@@ -417,7 +422,7 @@ export const placeSchema = z
   .max(64)
   .regex(
     /^[A-Za-z0-9_+:-]+(\/[A-Za-z0-9_+-]+){0,2}$/,
-    "must look like an IANA zone identifier or a UTC offset, e.g. America/New_York or +08:00",
+    "must look like an IANA zone identifier or a UTC offset, e.g. Europe/London or +08:00",
   );
 
 /**
@@ -460,6 +465,112 @@ export const showEpcisEventReaderInput = z.object({
 export const showJourneySplitInput = showDeliverySchedulerInput;
 
 /**
+ * The GNSS Week Decoder: a satellite week number and time of week read to UTC
+ * on a rollover era, a RINEX navigation-file week, or a UTC instant turned into
+ * each counter's week, time of week and era. The library takes an era as an
+ * integer or `"rolling"`; a string keeps the schema flat for every provider.
+ * The era is never defaulted, because the library requires it: `broadcast`
+ * needs exactly one of `rolloverEra` and `rolloverNotBefore`. A value the
+ * library does not read is the widget's `NO SIGNAL` to show, not a reason to
+ * refuse the call.
+ */
+export const showGnssWeekDecoderInput = z
+  .object({
+    mode: z.enum(GNSS_DECODER_MODES),
+    counter: z.enum(GNSS_WEEK_COUNTERS).optional(),
+    system: z.enum(RINEX_WEEK_SYSTEMS).optional(),
+    week: z.number().int().min(0).optional(),
+    timeOfWeekSeconds: z.number().min(0).optional(),
+    rolloverEra: z
+      .string()
+      .regex(/^(?:0|[1-9]\d{0,5}|rolling)$/)
+      .optional(),
+    rolloverNotBefore: z.string().min(10).max(64).optional(),
+    utc: z.string().min(10).max(64).optional(),
+  })
+  .refine(
+    (v) =>
+      v.mode === "broadcast"
+        ? v.counter !== undefined &&
+          v.week !== undefined &&
+          v.timeOfWeekSeconds !== undefined &&
+          (v.rolloverEra === undefined) !== (v.rolloverNotBefore === undefined)
+        : v.mode === "rinex"
+          ? v.system !== undefined &&
+            v.week !== undefined &&
+            v.timeOfWeekSeconds !== undefined
+          : v.utc !== undefined,
+    {
+      message:
+        "broadcast needs counter, week, timeOfWeekSeconds and exactly one of rolloverEra and rolloverNotBefore; rinex needs system, week and timeOfWeekSeconds; utc needs utc.",
+    },
+  );
+
+/**
+ * The Satellite Clock Converter: one instant, as a UTC instant or a string
+ * ending in the name of a time scale. The string is passed exactly as the
+ * reader gave it; one the library does not read is the widget's `NO SIGNAL`.
+ */
+export const showSatelliteClockConverterInput = z.object({
+  value: z.string().min(10).max(64),
+});
+
+/**
+ * The GNSS Rollover Checker: a week counter and the firmware's era, given as
+ * the build date the receiver counts from or as an era number, with the date
+ * to check. Exactly one of the two era forms is required, and neither is
+ * defaulted. `date` is left out for today.
+ */
+export const showGnssRolloverCheckerInput = z
+  .object({
+    counter: z.enum(GNSS_WEEK_COUNTERS),
+    firmwareNotBefore: z.string().min(10).max(64).optional(),
+    firmwareEra: z
+      .string()
+      .regex(/^(?:0|[1-9]\d{0,5})$/)
+      .optional(),
+    date: z.string().min(10).max(64).optional(),
+  })
+  .refine(
+    (v) =>
+      (v.firmwareNotBefore === undefined) !== (v.firmwareEra === undefined),
+    {
+      message: "Send exactly one of firmwareNotBefore and firmwareEra.",
+    },
+  );
+
+/**
+ * The Leap Second Timeline: a date for TAI - UTC, two dates to count the leap
+ * seconds between, and a timestamp to check for a real 23:59:60. Each is
+ * optional and at least one is needed. Dates are passed as the reader gave
+ * them; one the library does not read is the widget's `NO SIGNAL`.
+ */
+export const showLeapSecondTimelineInput = z
+  .object({
+    date: z.string().min(10).max(64).optional(),
+    check: z.string().min(10).max(64).optional(),
+    from: z.string().min(10).max(64).optional(),
+    to: z.string().min(10).max(64).optional(),
+  })
+  .refine(
+    (v) =>
+      v.date !== undefined ||
+      v.check !== undefined ||
+      v.from !== undefined ||
+      v.to !== undefined,
+    { message: "Send a date, a check, a from or a to." },
+  );
+
+/**
+ * Elapsed vs. Clock Difference: two UTC instants, passed exactly as the reader
+ * gave them.
+ */
+export const showElapsedVsClockInput = z.object({
+  start: z.string().min(10).max(64),
+  end: z.string().min(10).max(64),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -497,7 +608,12 @@ export type DoxToolName =
   | "showDemurrageClock"
   | "showBlDateStamp"
   | "showEpcisEventReader"
-  | "showJourneySplit";
+  | "showJourneySplit"
+  | "showGnssWeekDecoder"
+  | "showSatelliteClockConverter"
+  | "showGnssRolloverChecker"
+  | "showLeapSecondTimeline"
+  | "showElapsedVsClock";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -524,6 +640,11 @@ export const DOX_TOOL_INPUTS = {
   showBlDateStamp: showBlDateStampInput,
   showEpcisEventReader: showEpcisEventReaderInput,
   showJourneySplit: showJourneySplitInput,
+  showGnssWeekDecoder: showGnssWeekDecoderInput,
+  showSatelliteClockConverter: showSatelliteClockConverterInput,
+  showGnssRolloverChecker: showGnssRolloverCheckerInput,
+  showLeapSecondTimeline: showLeapSecondTimelineInput,
+  showElapsedVsClock: showElapsedVsClockInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -552,7 +673,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Two time intervals on a shared timeline, with their intersection, union, difference and XOR.",
     when: "the reader asks how two time ranges relate — overlap, gaps, combining them",
-    args: "aStart, aEnd, bStart, bEnd — ISO date-times. Include a zone when the reader named one (2024-11-03T09:00:00-04:00[America/New_York]); a plain 2024-11-03T09:00:00 is fine when they did not, and is read as UTC.",
+    args: "aStart, aEnd, bStart, bEnd — ISO date-times. Include a zone when the reader named one (2024-10-27T09:00:00+00:00[Europe/London]); a plain 2024-10-27T09:00:00 is fine when they did not, and is read as UTC.",
   },
   {
     name: "showConverterBench",
@@ -701,6 +822,41 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks how much of a multi-leg journey is moving and how much is waiting, or what the total transit and dwell of a multimodal move are",
     args: "legs (1 to 4, in travel order): departure (ISO date-time with an offset or a bracketed zone; required on the first leg; on a later leg only when it has a scheduled departure), duration (ISO 8601 time units such as PT46H or P11D; no months or years), timeZone (IANA id where the leg arrives), dwellAfter (optional handling time at the hand-off after the leg), mode (optional tag such as truck, ship or rail). startTimeZone (optional IANA id a zoneless first departure is read in). Never invent a zone: ask if the reader did not name one.",
   },
+  {
+    name: "showGnssWeekDecoder",
+    purpose:
+      "Decode a satellite week number and time of week to UTC on every rollover era, read a RINEX navigation-file week, or turn a UTC instant into each counter's week, time of week and era, with each system's offset from UTC.",
+    when: "the reader asks what UTC instant a GPS, Galileo, BeiDou, QZSS or NavIC week number and time of week is, about a week rollover or which era a week belongs to, about a RINEX navigation-file week, or about the offset between UTC and a satellite system's time at an instant",
+    args: "mode is broadcast, rinex or utc. Pass counter (for example GPS-LNAV), week, timeOfWeekSeconds and either rolloverEra (digits or rolling) or rolloverNotBefore (the date a receiver counts from) as the reader gave them; never pick an era for them. system names a RINEX record's system. utc is an ISO 8601 instant.",
+  },
+  {
+    name: "showSatelliteClockConverter",
+    purpose:
+      "Show one instant on every satellite clock and on TAI, with each clock's lead over UTC on that date.",
+    when: "the reader asks what a GPS, Galileo, BeiDou, QZSS, GLONASS or NavIC clock or TAI reads at an instant, how far a satellite clock is from UTC, or to convert a time-scale string to UTC",
+    args: "value exactly as the reader gave it: a UTC instant or a string ending in TAI, GPS, GAL, BDT, QZS, GLO or IRN",
+  },
+  {
+    name: "showGnssRolloverChecker",
+    purpose:
+      "Check when a receiver whose firmware counts weeks from a build date, or fixes the rollover era, starts reporting wrong dates, for any satellite week counter, with the next wrap of every counter.",
+    when: "the reader asks about a GNSS week rollover, whether a receiver is affected, when the next rollover is, or why a receiver reports a date about 19.6 years early",
+    args: "counter as named (for example IRN-LNAV); firmwareNotBefore when the reader gives a build or release date, firmwareEra as digits when they give an era; date only when the reader names one",
+  },
+  {
+    name: "showLeapSecondTimeline",
+    purpose:
+      "Show every leap second UTC has had on a timeline, TAI - UTC at a date, the leap seconds between two dates, and whether a 23:59:60 was really inserted.",
+    when: "the reader asks how many leap seconds there are or were between dates, what TAI - UTC was on a date, whether a 23:59:60 timestamp is real, or when leap seconds end",
+    args: "date (for TAI - UTC), check (a timestamp to test for a 23:59:60), from and to (the span to count): dates exactly as the reader gave them; send only what they named",
+  },
+  {
+    name: "showElapsedVsClock",
+    purpose:
+      "Compare the clock difference between two UTC instants with the seconds that really passed, and list the leap seconds between them.",
+    when: "the reader asks how many seconds really passed between two UTC times, why a duration across a leap second is a second short, or how to measure elapsed time across 23:59:60",
+    args: "start and end: both instants exactly as the reader gave them",
+  },
 ];
 
 /**
@@ -805,6 +961,26 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[23].purpose,
     inputSchema: showJourneySplitInput,
   }),
+  showGnssWeekDecoder: tool({
+    description: DOX_TOOL_DOCS[24].purpose,
+    inputSchema: showGnssWeekDecoderInput,
+  }),
+  showSatelliteClockConverter: tool({
+    description: DOX_TOOL_DOCS[25].purpose,
+    inputSchema: showSatelliteClockConverterInput,
+  }),
+  showGnssRolloverChecker: tool({
+    description: DOX_TOOL_DOCS[26].purpose,
+    inputSchema: showGnssRolloverCheckerInput,
+  }),
+  showLeapSecondTimeline: tool({
+    description: DOX_TOOL_DOCS[27].purpose,
+    inputSchema: showLeapSecondTimelineInput,
+  }),
+  showElapsedVsClock: tool({
+    description: DOX_TOOL_DOCS[28].purpose,
+    inputSchema: showElapsedVsClockInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -852,6 +1028,11 @@ export const ENABLED_TOOL_NAMES = [
   "showBlDateStamp",
   "showEpcisEventReader",
   "showJourneySplit",
+  "showGnssWeekDecoder",
+  "showSatelliteClockConverter",
+  "showGnssRolloverChecker",
+  "showLeapSecondTimeline",
+  "showElapsedVsClock",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

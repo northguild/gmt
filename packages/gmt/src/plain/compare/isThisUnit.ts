@@ -14,7 +14,7 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   the same `Temporal.DateUnit` `areDatesEqualBy` uses.
  * - `"day"` is equivalent to `isRelativeDay(value, 0)`.
  * - `locale` only affects the `"week"` case — which day the week starts on
- *   varies by locale (e.g. en-US: Sunday, fr-FR: Monday). When `unit` is
+ *   varies by locale (e.g. fr-FR: Monday, pt-BR: Sunday). When `unit` is
  *   `"week"` and `locale` is given, the comparison uses `getLocaleStartOfWeek`
  *   instead of the ISO Monday-start default `areDatesEqualBy` otherwise uses.
  * - Compares against `getToday()`, so this depends on the **system clock and
@@ -28,14 +28,16 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   unit, so an invalid locale returns false for `"day"`, `"month"` and `"year"` too.
  * - **Compatibility:** before 1.16.0 an invalid locale was ignored for every unit but `"week"`.
  *
- * Mapping from date-fns:
- * - `isThisWeek(value, options)` → `isThisUnit(value, "week", locale)`
+ * Migrating from date-fns:
+ * - `isThisWeek(value)` → `isThisUnit(value, "week", "pt-BR")`, or any locale whose week starts on
+ *   Sunday: date-fns starts the week on Sunday (`weekStartsOn: 0`) by default, GMT on Monday
+ * - `isThisWeek(value, { weekStartsOn: 1 })` → `isThisUnit(value, "week")`
  * - `isThisMonth(value)` → `isThisUnit(value, "month")`
  * - `isThisYear(value)` → `isThisUnit(value, "year")`
  *
  * @param value ISO PlainDate string
  * @param unit date unit to compare by ("year" | "month" | "week" | "day", or its plural)
- * @param locale optional BCP 47 locale tag or preference list — sets the "week" start (e.g. "en-US", ["fr-FR", "en-US"])
+ * @param locale optional BCP 47 locale tag or preference list — sets the "week" start (e.g. "fr-FR", ["pt-BR", "fr-FR"])
  * @returns true if `value` falls in the same `unit` as today, false on an unsupported unit or invalid input
  *
  * @example isThisUnit("2024-03-15", "month") // true, if today is any day in March 2024
@@ -46,7 +48,7 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  * @example isThisUnit("2024-03-15", "week", "not-a-locale-!!") // false (invalid locale)
  * @example isThisUnit("2024-03-15", "day", "not-a-locale-!!") // false (invalid locale, for every unit)
  * @example isThisUnit("2024-03-15", "months") // true, if today is any day in March 2024
- * @example isThisUnit("2024-02-25", "week", ["en-US", "fr-FR"]) // true, if today is 2024-02-29 (en-US Sunday-start week)
+ * @example isThisUnit("2024-02-25", "week", ["pt-BR", "fr-FR"]) // true, if today is 2024-02-29 (pt-BR Sunday-start week)
  */
 export function isThisUnit(
   value: string,

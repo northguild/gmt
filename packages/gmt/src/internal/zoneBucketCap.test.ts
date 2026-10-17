@@ -64,7 +64,12 @@ describe("certainlyTouchesMoreBuckets", () => {
     const t = at("2024-06-15T12:00:00Z", "UTC");
     expect(certainlyTouchesMoreBuckets(t, t, "day", 0)).toBe(false);
     expect(
-      certainlyTouchesMoreBuckets(t, at("2024-06-14T12:00:00Z", "UTC"), "day", 0),
+      certainlyTouchesMoreBuckets(
+        t,
+        at("2024-06-14T12:00:00Z", "UTC"),
+        "day",
+        0,
+      ),
     ).toBe(false);
   });
 });

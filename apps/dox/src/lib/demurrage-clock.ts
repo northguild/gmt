@@ -235,7 +235,7 @@ export const DEMURRAGE_PRESETS: readonly DemurrageClockPreset[] = [
     scope: "demurrage",
     direction: "import",
     startEvent: "",
-    zone: "America/New_York",
+    zone: "Europe/London",
   },
   {
     id: "import-detention",
@@ -246,7 +246,7 @@ export const DEMURRAGE_PRESETS: readonly DemurrageClockPreset[] = [
     scope: "detention",
     direction: "import",
     startEvent: "",
-    zone: "America/New_York",
+    zone: "Africa/Johannesburg",
   },
   {
     id: "export-storage",
@@ -283,7 +283,7 @@ export const DEMURRAGE_PRESETS: readonly DemurrageClockPreset[] = [
     scope: "demurrage",
     direction: "import",
     startEvent: "",
-    zone: "America/New_York",
+    zone: "Asia/Tokyo",
   },
   {
     id: "gate-out-before-discharge",
@@ -297,7 +297,7 @@ export const DEMURRAGE_PRESETS: readonly DemurrageClockPreset[] = [
     scope: "demurrage",
     direction: "import",
     startEvent: "",
-    zone: "America/New_York",
+    zone: "Asia/Kolkata",
   },
 ];
 

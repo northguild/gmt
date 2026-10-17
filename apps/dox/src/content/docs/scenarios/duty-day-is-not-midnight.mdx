@@ -1,38 +1,38 @@
 ---
 title: "The Duty Day Is Not Midnight"
-description: An operator's day starts at 04:00 in New York. Grouping a driver's log by local midnight puts a 03:30 entry in the wrong day, and an entry logged in Tokyo in the wrong day again.
-industries: [core]
+description: An operator's day starts at 04:00 in São Paulo. Grouping a driver's log by local midnight puts a 03:30 entry in the wrong day, and an entry logged in Tokyo in the wrong day again.
+industries: [workforce]
 ---
 
 import Scenario from "~/components/Scenario.astro";
 
 <Scenario
   title="The Duty Day Is Not Midnight"
-  description="An operator counts hours in days that start at 04:00 New York time. A driver logs work at 23:30 on 31 December, 03:30 on 1 January and 04:30 on 1 January. Which of these fall in the same day?"
+  description="An operator counts hours in days that start at 04:00 São Paulo time. A driver logs work at 23:30 on 31 December, 03:30 on 1 January and 04:30 on 1 January. Which of these fall in the same day?"
   naiveCode={`// The naive approach: group by the local calendar date
 const day = (iso) =>
-  new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-day("2024-01-01T04:30:00Z"); // "2023-12-31" — 23:30 on the 31st
-day("2024-01-01T08:30:00Z"); // "2024-01-01" — 03:30 on the 1st
-day("2024-01-01T09:30:00Z"); // "2024-01-01" — 04:30 on the 1st
+  new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+day("2024-01-01T02:30:00Z"); // "2023-12-31" — 23:30 on the 31st
+day("2024-01-01T06:30:00Z"); // "2024-01-01" — 03:30 on the 1st
+day("2024-01-01T07:30:00Z"); // "2024-01-01" — 04:30 on the 1st
 // The 03:30 entry is counted with 04:30, in a day the operator has not started yet.`}
-  explanation={`The day a rule counts is the operator's: a 24-hour period that starts at a time the operator designated, in a reference zone, wherever the person is. Local midnight is never that day unless the operator says so. With a 04:00 start, 23:30 on the 31st and 03:30 on the 1st are one day, and 04:30 opens the next. Grouping by calendar date splits the first pair and joins the second. The date is also read in the reference zone, not where the entry was logged: an entry from Tokyo still falls in a New York day. \`dutyDayFor\` takes the zone and the start time, with no default for either, and returns the real period. When a clock change falls inside it, the period is shorter or longer by the change: 23 or 25 hours across a one-hour change.`}
+  explanation={`The day a rule counts is the operator's: a 24-hour period that starts at a time the operator designated, in a reference zone, wherever the person is. Local midnight is never that day unless the operator says so. With a 04:00 start, 23:30 on the 31st and 03:30 on the 1st are one day, and 04:30 opens the next. Grouping by calendar date splits the first pair and joins the second. The date is also read in the reference zone, not where the entry was logged: an entry from Tokyo still falls in a São Paulo day. \`dutyDayFor\` takes the zone and the start time, with no default for either, and returns the real period. When a clock change falls inside it, the period is shorter or longer by the change: 23 or 25 hours across a one-hour change.`}
   gmtCode={`import { dutyDayFor } from "@northguild/gmt";
 
-const day = { timeZone: "America/New_York", dayStartTime: "04:00" };
+const day = { timeZone: "America/Sao_Paulo", dayStartTime: "04:00" };
 
-dutyDayFor("2024-01-01T04:30:00Z", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — 23:30 on the 31st
-dutyDayFor("2024-01-01T08:30:00Z", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — 03:30, the same day
-dutyDayFor("2024-01-01T09:30:00Z", day); // { start: "2024-01-01T09:00:00Z", end: "2024-01-02T09:00:00Z" } — 04:30, the next
+dutyDayFor("2024-01-01T02:30:00Z", day); // { start: "2023-12-31T07:00:00Z", end: "2024-01-01T07:00:00Z" } — 23:30 on the 31st
+dutyDayFor("2024-01-01T06:30:00Z", day); // { start: "2023-12-31T07:00:00Z", end: "2024-01-01T07:00:00Z" } — 03:30, the same day
+dutyDayFor("2024-01-01T07:30:00Z", day); // { start: "2024-01-01T07:00:00Z", end: "2024-01-02T07:00:00Z" } — 04:30, the next
 
-// Logged in Tokyo, read in New York: 22:00 on the 31st
-dutyDayFor("2024-01-01T12:00:00+09:00[Asia/Tokyo]", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" }`}
+// Logged in Tokyo, read in São Paulo: 22:00 on the 31st
+dutyDayFor("2024-01-01T10:00:00+09:00[Asia/Tokyo]", day); // { start: "2023-12-31T07:00:00Z", end: "2024-01-01T07:00:00Z" }`}
   fixedSpecId="dutyDayFor"
 />
 
-In the playground, change the instant to `"2024-01-01T09:00:00Z"` and the day moves on: 04:00
+In the playground, change the instant to `"2024-01-01T07:00:00Z"` and the day moves on: 04:00
 local opens it. Change `dayStartTime` to `"00:00"` and the day is the calendar date, because
-the operator said so. Try `"2024-03-10T12:00:00Z"` with `dayStartTime: "02:30"`: 02:30 is
-skipped that morning, so the day starts at 03:30 and is 23 hours long. Leave `dayStartTime` out
-and the result is `null`: there is no default. The rules are in [Hours of
-Work](/guides/intervals/hours-of-work/#the-operator-designated-day).
+the operator said so. Set `timeZone` to `"Europe/London"` and try `"2024-03-31T12:00:00Z"` with
+`dayStartTime: "01:30"`: 01:30 is skipped that morning, so the day starts at 02:30 and is 23 hours long. Leave `dayStartTime` out
+and the result is `null`: there is no default. [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor) is the function here. The rules are in [Hours of
+Work](/guides/industries/workforce-hours-of-work/#the-operator-designated-day).

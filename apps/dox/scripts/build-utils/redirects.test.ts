@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildRedirects, type RedirectedType } from "./redirects";
+import { MOVED_PAGES } from "./moved-pages";
 import { RENAMED_FUNCTIONS } from "./renamed-functions";
 import type { TypeNode, TypeUsage } from "./type-usage";
 import type { CorpusEntry } from "../../src/reference-types";
@@ -228,6 +229,79 @@ describe("buildRedirects, renamed functions", () => {
     ).toThrow(/is a page of the site/);
   });
 
+  it("redirects the syntax check `isLeapSecond` to `hasSecond60`, which is the function it was renamed to", () => {
+    expect(RENAMED_FUNCTIONS).toContainEqual({
+      from: "plain/validate/isLeapSecond",
+      to: "plain/validate/hasSecond60",
+    });
+    expect(
+      rules(
+        buildRedirects(
+          [],
+          usageOf([], ["plain/validate/hasSecond60"]),
+          RENAMED_FUNCTIONS.filter((r) => r.from.endsWith("/isLeapSecond")),
+        ),
+      ),
+    ).toEqual([
+      [
+        "/reference/plain/validate/isLeapSecond",
+        "/reference/plain/validate/hasSecond60/",
+        "301",
+      ],
+      [
+        "/reference/plain/validate/isLeapSecond.md",
+        "/reference/plain/validate/hasSecond60.md",
+        "301",
+      ],
+      [
+        "/reference/plain/validate/isLeapSecond/",
+        "/reference/plain/validate/hasSecond60/",
+        "301",
+      ],
+    ]);
+  });
+
+  it("does not redirect the new `timescale` function of the same name: it is a different page", () => {
+    const live = usageOf(
+      [],
+      [
+        ...RENAMED_FUNCTIONS.map((r) => r.to),
+        "timescale/validate/isLeapSecond",
+      ],
+    );
+    const text = buildRedirects([], live, RENAMED_FUNCTIONS);
+    expect(text).not.toContain("/reference/timescale/validate/isLeapSecond ");
+  });
+
+  it("sends each function that moved from `duty` to `workforce` to its new page, with the three rules", () => {
+    const moved = RENAMED_FUNCTIONS.filter((r) => r.from.startsWith("duty/"));
+    expect(moved.map((r) => r.from)).toEqual([
+      "duty/calculate/dutyDayFor",
+      "duty/calculate/dutyTotals",
+      "duty/calculate/dutyViolations",
+      "duty/calculate/evaluateDutyLog",
+      "duty/calculate/longestRun",
+      "duty/calculate/qualifyingRestPairs",
+      "duty/calculate/qualifyingRests",
+      "duty/validate/isValidDutyLog",
+    ]);
+    for (const r of moved) {
+      expect(r.to).toBe(r.from.replace(/^duty\//, "workforce/"));
+    }
+    expect(
+      rules(
+        buildRedirects(
+          [],
+          usageOf(
+            [],
+            moved.map((r) => r.to),
+          ),
+          moved,
+        ),
+      ),
+    ).toHaveLength(moved.length * 3);
+  });
+
   it("lists renames that all land on a function page", () => {
     const reach = RENAMED_FUNCTIONS.map((r) => r.to);
     expect(
@@ -236,8 +310,90 @@ describe("buildRedirects, renamed functions", () => {
   });
 });
 
+describe("buildRedirects, moved pages", () => {
+  const MOVED = [
+    { from: "/reference/duty", to: "/reference/workforce" },
+    { from: "/guides/old", to: "/guides/new" },
+  ];
+  const ROUTES = new Set(["/reference/workforce", "/guides/new"]);
+
+  it("writes the bare, trailing-slash and .md rules of a moved page, with a 301", () => {
+    expect(rules(buildRedirects([], usageOf([]), [], MOVED, ROUTES))).toEqual([
+      ["/guides/old", "/guides/new/", "301"],
+      ["/guides/old.md", "/guides/new.md", "301"],
+      ["/guides/old/", "/guides/new/", "301"],
+      ["/reference/duty", "/reference/workforce/", "301"],
+      ["/reference/duty.md", "/reference/workforce.md", "301"],
+      ["/reference/duty/", "/reference/workforce/", "301"],
+    ]);
+  });
+
+  it("refuses a moved page whose target is neither a page nor a route", () => {
+    expect(() =>
+      buildRedirects([], usageOf([]), [], MOVED, new Set(["/guides/new"])),
+    ).toThrow(
+      /\/reference\/duty moved to \/reference\/workforce, which is not a page or route/,
+    );
+  });
+
+  it("refuses a moved page whose old path is still a page or route", () => {
+    expect(() =>
+      buildRedirects(
+        [],
+        usageOf([]),
+        [],
+        MOVED,
+        new Set([...ROUTES, "/reference/duty"]),
+      ),
+    ).toThrow(/\/reference\/duty is a page of the site/);
+  });
+
+  it("refuses a moved page and a rename with one source", () => {
+    expect(() =>
+      buildRedirects(
+        [],
+        usageOf([], ["a/b/c"]),
+        [{ from: "x/y/z", to: "a/b/c" }],
+        [{ from: "/reference/x/y/z", to: "/reference/workforce" }],
+        ROUTES,
+      ),
+    ).toThrow(/\/reference\/x\/y\/z has two rules/);
+  });
+
+  it("lists the three index pages the duty namespace had, and the two pages of hours of work", () => {
+    expect(MOVED_PAGES).toEqual([
+      { from: "/reference/duty", to: "/reference/workforce" },
+      {
+        from: "/reference/duty/calculate",
+        to: "/reference/workforce/calculate",
+      },
+      { from: "/reference/duty/validate", to: "/reference/workforce/validate" },
+      {
+        from: "/guides/intervals/hours-of-work",
+        to: "/guides/industries/workforce-hours-of-work",
+      },
+      { from: "/mistakes/duty", to: "/mistakes/workforce" },
+    ]);
+  });
+
+  it("writes the rules of every listed move, each to a route that exists", () => {
+    const routes = new Set(MOVED_PAGES.map((m) => m.to));
+    expect(
+      rules(buildRedirects([], usageOf([]), [], MOVED_PAGES, routes)),
+    ).toHaveLength(MOVED_PAGES.length * 3);
+  });
+});
+
 describe("the generated _redirects", () => {
   const file = resolve(import.meta.dirname, "..", "..", "public", "_redirects");
+  const contentDir = resolve(
+    import.meta.dirname,
+    "..",
+    "..",
+    "src",
+    "content",
+    "docs",
+  );
   const corpusFile = resolve(
     import.meta.dirname,
     "..",
@@ -255,8 +411,10 @@ describe("the generated _redirects", () => {
     ) as CorpusEntry[];
     const types = corpus.filter((e) => e.kind === "type");
     const out = rules(readFileSync(file, "utf8"));
-    // Both slash forms and the .md twin of each type and of each renamed function.
-    expect(out).toHaveLength((types.length + RENAMED_FUNCTIONS.length) * 3);
+    // Both slash forms and the .md twin of each type, each renamed function and each moved page.
+    expect(out).toHaveLength(
+      (types.length + RENAMED_FUNCTIONS.length + MOVED_PAGES.length) * 3,
+    );
 
     const targetOf = new Map(out.map(([source, target]) => [source, target]));
     expect(targetOf.size).toBe(out.length);
@@ -279,12 +437,17 @@ describe("the generated _redirects", () => {
       const route = source.replace(/\.md$/, "").replace(/\/$/, "");
       // Not a live route, in any letter case: a redirect is applied before the asset.
       expect(folded.has(route.toLowerCase()), source).toBe(false);
-      // And every target is a live route.
+      // And every target is a live route: a reference route, or a moved page's content file.
       const landed = target
         .split("#")[0]
         .replace(/\.md$/, "")
         .replace(/\/$/, "");
-      expect(referenceRoutes.has(landed), target).toBe(true);
+      const live =
+        referenceRoutes.has(landed) ||
+        [".mdx", ".md"].some((ext) =>
+          existsSync(resolve(contentDir, `.${landed}${ext}`)),
+        );
+      expect(live, target).toBe(true);
     }
   });
 });

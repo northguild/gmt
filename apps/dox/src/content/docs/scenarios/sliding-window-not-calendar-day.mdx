@@ -1,7 +1,7 @@
 ---
 title: "A Sliding Window Is Not a Calendar Day"
 description: A rule asks for 10 hours of rest in any 24. Each calendar day of the log holds 10, so a per-day check passes, but the 24 hours ending at 06:00 hold 4.
-industries: [core]
+industries: [workforce]
 ---
 
 import Scenario from "~/components/Scenario.astro";
@@ -43,5 +43,6 @@ The playground opens on an 11-hour driving cap. Swap its rule for
 and the 10 hours off before the drive meet it. Move `at` to `"2024-01-02T06:00:00Z"`, past the
 end of the log: the window then holds only the 4 hours from 06:00 to 10:00, and the rule fails.
 Change `per` to `{ calendarDays: 1 }`: the window is now the 2nd, which has only just begun, so
-the rule has not failed yet. The rules are in [Hours of
-Work](/guides/intervals/hours-of-work/#sliding-and-fixed-periods).
+the rule has not failed yet. [`evaluateDutyLog`](/reference/workforce/calculate/evaluateDutyLog) and
+[`dutyViolations`](/reference/workforce/calculate/dutyViolations) are the functions here. The rules are in [Hours of
+Work](/guides/industries/workforce-hours-of-work/#sliding-and-fixed-periods).

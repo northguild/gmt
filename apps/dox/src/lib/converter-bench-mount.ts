@@ -37,10 +37,12 @@ import {
 import { normaliseZonedInput } from "./zoned-input";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
-const DEFAULT_VALUE = "2024-03-15T14:30:00.000-04:00[America/New_York]";
-const DEFAULT_SOURCE_ZONE = "America/New_York";
-const DEFAULT_TARGET_ZONE = "Europe/London";
-const DEFAULT_LOCALE = "en-US";
+/* London and Sydney sit in opposite hemispheres, so their clocks change in
+   opposite seasons. On 15 March London is on GMT and Sydney on daylight time. */
+const DEFAULT_VALUE = "2024-03-15T14:30:00.000+00:00[Europe/London]";
+const DEFAULT_SOURCE_ZONE = "Europe/London";
+const DEFAULT_TARGET_ZONE = "Australia/Sydney";
+const DEFAULT_LOCALE = "en";
 const DEFAULT_REGEX_INPUT = "2024-03-15T14:30:00";
 
 export interface ConverterArgs {

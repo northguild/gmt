@@ -42,7 +42,7 @@ function nextBucketStartWithinRange(
  * Return the start instant of every `unit` bucket the half-open range `[start, end)` touches,
  * bucketed **in `timeZone`**.
  *
- * This is "group by day in `America/New_York`" over UTC timestamps, done correctly. Buckets
+ * This is "group by day in `Europe/London`" over UTC timestamps, done correctly. Buckets
  * are not uniform in length and that is the point: a day that springs forward is 23 hours and
  * one that falls back is 25, so a daily aggregate built on a fixed 24 hours drifts an hour
  * twice a year, and a container's chargeable days — counted in terminal-local calendar days —
@@ -81,14 +81,14 @@ function nextBucketStartWithinRange(
  *   (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what `getTimeZoneOffset` returns)
  * @returns array of UTC instant strings ending in "Z", or [] on invalid input
  *
- * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "day", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"]
- * @example bucketRange("2024-03-09T05:00:00Z", "2024-03-12T04:00:00Z", "day", "America/New_York") // ["2024-03-09T05:00:00Z", "2024-03-10T05:00:00Z", "2024-03-11T04:00:00Z"] (the middle day is 23 hours)
- * @example bucketRange("2024-11-02T04:00:00Z", "2024-11-05T05:00:00Z", "day", "America/New_York") // ["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"] (the middle day is 25 hours)
- * @example bucketRange("2024-11-03T04:00:00Z", "2024-11-03T08:00:00Z", "hour", "America/New_York") // ["2024-11-03T04:00:00Z", "2024-11-03T05:00:00Z", "2024-11-03T06:00:00Z", "2024-11-03T07:00:00Z"] (the repeated 01:00 is its own bucket)
- * @example bucketRange("2024-06-14T04:00:00Z", "2024-06-14T04:00:00Z", "day", "America/New_York") // [] (zero length, on a boundary)
- * @example bucketRange("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", "day", "America/New_York") // ["+275760-09-12T04:00:00Z"] (the next day would start past the last instant; this one is still returned)
+ * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "day", "Asia/Kolkata") // ["2024-06-14T18:30:00Z", "2024-06-15T18:30:00Z", "2024-06-16T18:30:00Z"]
+ * @example bucketRange("2024-03-30T00:00:00Z", "2024-04-01T23:00:00Z", "day", "Europe/London") // ["2024-03-30T00:00:00Z", "2024-03-31T00:00:00Z", "2024-03-31T23:00:00Z"] (the middle day is 23 hours)
+ * @example bucketRange("2024-04-05T13:00:00Z", "2024-04-08T14:00:00Z", "day", "Australia/Sydney") // ["2024-04-05T13:00:00Z", "2024-04-06T13:00:00Z", "2024-04-07T14:00:00Z"] (the middle day is 25 hours)
+ * @example bucketRange("2024-04-06T14:00:00Z", "2024-04-06T18:00:00Z", "hour", "Australia/Sydney") // ["2024-04-06T14:00:00Z", "2024-04-06T15:00:00Z", "2024-04-06T16:00:00Z", "2024-04-06T17:00:00Z"] (the repeated 02:00 is its own bucket)
+ * @example bucketRange("2024-06-14T15:00:00Z", "2024-06-14T15:00:00Z", "day", "Asia/Tokyo") // [] (zero length, on a boundary)
+ * @example bucketRange("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", "day", "America/Sao_Paulo") // ["+275760-09-12T03:00:00Z"] (the next day would start past the last instant; this one is still returned)
  * @example bucketRange("2024-06-16T00:00:00Z", "2024-06-15T00:00:00Z", "day", "UTC") // [] (start after end)
- * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "days", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"] (plural unit name)
+ * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "days", "Asia/Tokyo") // ["2024-06-14T15:00:00Z", "2024-06-15T15:00:00Z", "2024-06-16T15:00:00Z"] (plural unit name)
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "year", "UTC") // [] (not a bucketing unit)
  * @example bucketRange("1970-01-01T00:00:00Z", "1970-01-02T01:00:00Z", "day", "-00:44:30") // ["1969-12-31T00:44:30Z", "1970-01-01T00:44:30Z", "1970-01-02T00:44:30Z"]
  */
@@ -118,7 +118,12 @@ export function bucketRange(
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
     if (
-      certainlyTouchesMoreBuckets(startZoned, endZoned, resolvedUnit, MAX_BUCKETS)
+      certainlyTouchesMoreBuckets(
+        startZoned,
+        endZoned,
+        resolvedUnit,
+        MAX_BUCKETS,
+      )
     )
       return [];
 

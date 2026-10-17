@@ -2,8 +2,7 @@
 
 Execution spec for `dox-builder`, verified by `dox-tester`. This is not `packages/gmt` work.
 `billingTimeline` is final and built in `packages/gmt/dist`. Nothing here edits library
-source, tests, the READMEs or `packages/gmt/skills/`. The one library item found while writing
-this is listed under **Blocked on the library pipeline**. Report it; do not build around it.
+source, tests, the READMEs or `packages/gmt/skills/`.
 
 Sources, in order of precedence: `context/domination/issues/INT-58.md` (Scope → Docs site,
 Design notes, `## Corrections`), the tracker policy "GMT tracks no law"
@@ -672,9 +671,8 @@ and `$SP` is the session scratchpad.
     the chunks the page references. A reference page loads no React.
 13. **Final law grep.** Run
     `grep -rnE "46 CFR|CFR|FMC|US invoice|US trades|US shape|United States|California|Cal\. Bus|§ ?22928|NVOCC|OSRA|Shipping Act|541\.[0-9]" $WT/apps/dox/src/content/docs $WT/apps/dox/src/lib $WT/apps/dox/worker $WT/context/domination/issues/INT-58.md`.
-    Its only allowed output is the pre-existing `26 CFR 1.441-2` line on the generated
-    `reference/calendar/calculate/getFiscalPeriod.mdx`, which is not introduced by this story
-    (see Blocked on the library pipeline). Then run
+    It has no allowed output. The fiscal-period JSDoc carries no tax-law citation, so the
+    generated `reference/calendar/calculate/getFiscalPeriod.mdx` has none either. Then run
     `grep -rniE "\bUS\b|India|statut|jurisdiction" $WT/apps/dox/src/content/docs/{guides/industries,scenarios,mistakes,tools} $WT/apps/dox/src/lib/{free-time-ledger,billing-deadlines,dox-tools,chat-constants}*.ts`
     and read every hit. The only allowed hits are the `MSC USA` carrier name and none else.
     The forbidden verdict words (section 0) must not appear in `billing-deadlines*.ts`,
@@ -739,13 +737,6 @@ and `$SP` is the session scratchpad.
   *Resolution:* border styles carry the lane identity (C7).
 - **R14. `api-surface.mjs` skips blocks with no import**, such as `wrongCode` and `naiveCode`.
   *Resolution:* D4's script checks every value, not only import-bound ones.
-
-## Outside this spec
-
-- The fiscal-period JSDoc (`getFiscalPeriod`, `internal/fiscalCalendar`) carries a tax-regulation
-  citation that reaches its generated reference page. It is not intermodal, so a separate story
-  removes it in `packages/gmt`; Dox regenerates with no hand edit. The final law grep allows
-  that one generated page.
 
 ---
 

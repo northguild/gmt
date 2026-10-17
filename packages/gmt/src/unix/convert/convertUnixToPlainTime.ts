@@ -22,7 +22,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example convertUnixToPlainTime(1706659200000, { timeZone: "UTC" }) // "00:00:00"
  * @example convertUnixToPlainTime(1706659200, { epochUnit: "seconds", timeZone: "UTC" }) // "00:00:00"
  * @example convertUnixToPlainTime(-1, { timeZone: "UTC" }) // "23:59:59.999"
- * @example convertUnixToPlainTime("1706659200000", { timeZone: "local" }) // system-zone wall clock, e.g. "19:00:00" in America/New_York
+ * @example convertUnixToPlainTime("1706659200000", { timeZone: "local" }) // system-zone wall clock, e.g. "09:00:00" in Asia/Tokyo
  * @example convertUnixToPlainTime(NaN) // ""
  * @example convertUnixToPlainTime(45870000, { timeZone: "-00:44:30" }) // "12:00:00" (a stored offset with seconds)
  */

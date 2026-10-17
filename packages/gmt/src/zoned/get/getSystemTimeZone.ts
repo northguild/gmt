@@ -1,7 +1,7 @@
 import { isValidTimeZone } from "../validate/isValidTimeZone";
 
 /**
- * Return the runtime system timeZone name (for example "America/New_York").
+ * Return the runtime system timeZone name (for example "Europe/London").
  *
  * - Uses Intl.DateTimeFormat().resolvedOptions().timeZone to get system timezone.
  * - Returns "" when the host reports no usable time zone. With an empty `TZ` the runtime reports
@@ -10,7 +10,7 @@ import { isValidTimeZone } from "../validate/isValidTimeZone";
  *
  * @returns system timeZone name or "" on failure
  *
- * @example getSystemTimeZone() // "America/New_York"
+ * @example getSystemTimeZone() // "Europe/London"
  */
 export function getSystemTimeZone(): string {
   try {

@@ -49,18 +49,18 @@ describe("presets", () => {
     });
     expect(resultOf("spring-forward")).toEqual({
       duration: "PT7H",
-      enter: "2024-03-10T00:00:00-05:00[America/New_York]",
-      exit: "2024-03-10T08:00:00-04:00[America/New_York]",
+      enter: "2024-03-31T00:00:00+00:00[Europe/London]",
+      exit: "2024-03-31T08:00:00+01:00[Europe/London]",
     });
     expect(resultOf("fall-back")).toEqual({
       duration: "PT1H",
-      enter: "2024-11-03T01:30:00-04:00[America/New_York]",
-      exit: "2024-11-03T01:30:00-05:00[America/New_York]",
+      enter: "2024-10-27T01:30:00+01:00[Europe/London]",
+      exit: "2024-10-27T01:30:00+00:00[Europe/London]",
     });
     expect(resultOf("fixed-offset")).toEqual({
       duration: "PT7H",
-      enter: "2024-03-10T00:00:00-05:00[-05:00]",
-      exit: "2024-03-10T07:00:00-05:00[-05:00]",
+      enter: "2024-03-31T02:00:00+02:00[+02:00]",
+      exit: "2024-03-31T09:00:00+02:00[+02:00]",
     });
     expect(resultOf("read-elsewhere")).toEqual({
       duration: "PT9H30M",
@@ -96,39 +96,36 @@ describe("naiveText", () => {
 });
 
 describe("crossingStrip", () => {
-  it("V48: one skip marker, '02:00–03:00 never shown · clocks jumped to -04:00'", () => {
-    const strip = crossingStrip(
-      resultOf("spring-forward")!,
-      "America/New_York",
-    );
-    expect(strip.entryLabel).toBe("00:00 -05:00");
-    expect(strip.exitLabel).toBe("08:00 -04:00");
+  it("V48: one skip marker, '01:00–02:00 never shown · clocks jumped to +01:00'", () => {
+    const strip = crossingStrip(resultOf("spring-forward")!, "Europe/London");
+    expect(strip.entryLabel).toBe("00:00 +00:00");
+    expect(strip.exitLabel).toBe("08:00 +01:00");
     expect(strip.changes).toHaveLength(1);
     expect(strip.changes[0]).toEqual({
       kind: "skip",
-      percent: expect.closeTo(28.5714, 3),
-      label: "02:00–03:00 never shown · clocks jumped to -04:00",
-      fromHour: 2,
+      percent: expect.closeTo(14.2857, 3),
+      label: "01:00–02:00 never shown · clocks jumped to +01:00",
+      fromHour: 1,
       fromMinute: 0,
-      toHour: 3,
+      toHour: 2,
       toMinute: 0,
     });
     expect(strip.ticks[0].percent).toBe(0);
     expect(strip.ticks.at(-1)!.percent).toBe(100);
     expect(strip.stepHours).toBe(1);
-    expect(strip.summary).toContain("00:00 -05:00 to 08:00 -04:00");
+    expect(strip.summary).toContain("00:00 +00:00 to 08:00 +01:00");
     expect(strip.summary).toContain("never shown");
   });
 
-  it("V49: one repeat marker, '01:00–02:00 shown twice · -04:00 then -05:00'", () => {
-    const strip = crossingStrip(resultOf("fall-back")!, "America/New_York");
-    expect(strip.entryLabel).toBe("01:30 -04:00");
-    expect(strip.exitLabel).toBe("01:30 -05:00");
+  it("V49: one repeat marker, '01:00–02:00 shown twice · +01:00 then +00:00'", () => {
+    const strip = crossingStrip(resultOf("fall-back")!, "Europe/London");
+    expect(strip.entryLabel).toBe("01:30 +01:00");
+    expect(strip.exitLabel).toBe("01:30 +00:00");
     expect(strip.changes).toHaveLength(1);
     expect(strip.changes[0]).toEqual({
       kind: "repeat",
       percent: 50,
-      label: "01:00–02:00 shown twice · -04:00 then -05:00",
+      label: "01:00–02:00 shown twice · +01:00 then +00:00",
       fromHour: 1,
       fromMinute: 0,
       toHour: 2,
@@ -149,7 +146,7 @@ describe("crossingStrip", () => {
   });
 
   it("a fixed offset has no transition to find", () => {
-    const strip = crossingStrip(resultOf("fixed-offset")!, "-05:00");
+    const strip = crossingStrip(resultOf("fixed-offset")!, "+02:00");
     expect(strip.changes).toEqual([]);
   });
 

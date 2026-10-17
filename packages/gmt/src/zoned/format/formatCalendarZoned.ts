@@ -23,8 +23,9 @@ export interface FormatCalendarZonedOptions {
   reference?: string | number;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
-   * ("EDT") and `"full"` the long one ("Eastern Daylight Time"). Any other value returns `""`.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the locale's short zone
+   * name ("BST" in en-GB, "GMT+1" in en-US) and `"full"` the long one ("British Summer Time" in
+   * English). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */
@@ -33,7 +34,7 @@ export interface FormatCalendarZonedOptions {
 
 /**
  * Format a zoned date-time as a relative day label plus time-of-day, e.g.
- * "Tomorrow at 2:30 PM" — the zoned counterpart of `formatCalendar`. See
+ * "tomorrow at 14:30" — the zoned counterpart of `formatCalendar`. See
  * that function's JSDoc for the day-label/threshold/connector design; this
  * variant differs only in reading `value`'s IANA timezone for both the
  * calendar-day comparison and the rendered clock time.
@@ -45,11 +46,11 @@ export interface FormatCalendarZonedOptions {
  * @param options optional settings for the reference moment and the time style
  * @returns the formatted calendar string, or "" on invalid input
  *
- * @example formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "en-US", { reference: "2026-03-15T09:00:00-04:00[America/New_York]" }) // "tomorrow at 2:30 PM"
+ * @example formatCalendarZoned("2026-03-16T14:30:00+00:00[Europe/London]", "en-GB", { reference: "2026-03-15T09:00:00+00:00[Europe/London]" }) // "tomorrow at 14:30"
  * @example formatCalendarZoned("2026-03-16T14:30:00+01:00[Europe/Berlin]", "de-DE", { reference: "2026-03-15T09:00:00+01:00[Europe/Berlin]" }) // "morgen um 14:30"
  * @example formatCalendarZoned("not-a-date") // ""
- * @example formatCalendarZoned("2024-03-16T14:30:00-04:00[America/New_York]", ["fr-FR", "en-US"], { reference: "2024-03-15T09:00:00-04:00[America/New_York]" }) // "demain à 14:30"
- * @example formatCalendarZoned("2024-03-12T10:00:00-04:00[America/New_York]", "en-US", null as never) // "" (null options)
+ * @example formatCalendarZoned("2024-03-16T14:30:00+02:00[Africa/Johannesburg]", ["fr-FR", "en-US"], { reference: "2024-03-15T09:00:00+02:00[Africa/Johannesburg]" }) // "demain à 14:30"
+ * @example formatCalendarZoned("2024-03-12T10:00:00+09:00[Asia/Tokyo]", "ja-JP", null as never) // "" (null options)
  */
 export function formatCalendarZoned(
   value: string,

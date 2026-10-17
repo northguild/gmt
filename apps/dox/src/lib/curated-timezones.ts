@@ -30,38 +30,46 @@
  * hemisphere, half-hour and 45-minute offsets, and zones that do not observe
  * DST at all. Used by the DST inspector, the converter bench, the reference
  * playground and the globe.
+ *
+ * Ordered by standard UTC offset, west to east, with `UTC` at its offset. Zones
+ * that share an offset sit together. On a northern-winter instant the three
+ * southern zones read one hour above their standard offset, which keeps the
+ * order, so one winter instant checks the whole list.
  */
 export const CURATED_TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
+  "Pacific/Honolulu",
   "America/Los_Angeles",
+  "America/Denver",
+  "America/Chicago",
+  "America/New_York",
+  "UTC",
   "Europe/London",
   "Europe/Paris",
   "Europe/Berlin",
-  "Europe/Moscow",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Asia/Kolkata",
-  "Asia/Dubai",
-  "Australia/Sydney",
-  "Australia/Adelaide",
-  "Pacific/Auckland",
-  "Pacific/Honolulu",
-  "Africa/Cairo",
   "Africa/Lagos",
+  "Africa/Cairo",
   "Africa/Johannesburg",
+  "Europe/Moscow",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Australia/Adelaide",
+  "Australia/Sydney",
+  "Pacific/Auckland",
 ] as const;
 
 /**
  * The locales `@northguild/gmt` is tested against — mirrors
  * `packages/gmt/src/test/localeMatrix.ts`'s `MustTestLocales`.
  *
- * Previously a bare array in `ConverterBench.astro`'s frontmatter with no module
- * at all, which made it unreachable from a client-side template.
+ * Starts with the regionless `en`, the converter bench's default.
+ *
+ * Previously a bare array in `ConverterBench.astro`'s frontmatter with no
+ * module at all, which made it unreachable from a client-side template.
  */
 export const CONVERTER_LOCALES = [
+  "en",
   "en-US",
   "en-GB",
   "de-DE",

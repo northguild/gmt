@@ -77,7 +77,7 @@ export interface CutoffScheduleOptions {
  * @example cutoffSchedule("2024-06-18T16:00:00Z", [{ name: "document", offset: "P2D", atLocalTime: "17:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }) // [{ name: "document", at: "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-17T10:00:00+02:00[Europe/Amsterdam]" }] (Sunday's document cut-off rolls back to Friday)
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [], { timeZone: "Europe/Amsterdam" }) // []
  * @example cutoffSchedule("2024-06-14T16:00:00Z", [{ name: "document", offset: "2 days" }], { timeZone: "Europe/Amsterdam" }) // []
- * @example cutoffSchedule("2024-03-11T22:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "VGM", offset: "P1D", atLocalTime: "02:30" }], { timeZone: "America/New_York" }) // [] (02:30 on 10 March never happened)
+ * @example cutoffSchedule("2024-10-07T07:00:00Z", [{ name: "gate-in", offset: "P1D" }, { name: "VGM", offset: "P1D", atLocalTime: "02:30" }], { timeZone: "Australia/Sydney" }) // [] (02:30 on 6 October never happened)
  */
 export function cutoffSchedule(
   anchor: string,

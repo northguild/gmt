@@ -12,7 +12,7 @@ describe("isValidFiscalPattern", () => {
 
   it.each`
     invalidPattern | reason
-    ${"4-5-5"}     | ${"the shape a 53-week year's last quarter takes, not a pattern"}
+    ${"4-5-5"}     | ${"a 53-week year's last quarter under lastPeriod, not a pattern"}
     ${"5-5-4"}     | ${"not one of the three documented shapes"}
     ${"454"}       | ${"no separators"}
     ${"4-5-4 "}    | ${"trailing whitespace"}
@@ -36,6 +36,7 @@ describe("isValidFiscalPattern", () => {
     ${undefined}
     ${["4-5-4"]}
     ${{ pattern: "4-5-4" }}
+    ${new String("4-5-4")}
   `("returns false when $nonString is non-string", ({ nonString }) => {
     expect(isValidFiscalPattern(nonString)).toBe(false);
   });

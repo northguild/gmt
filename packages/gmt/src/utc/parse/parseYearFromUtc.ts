@@ -15,7 +15,7 @@ import { isoYearString } from "../../internal/isoYearString";
  *
  * @example parseYearFromUtc("2024-03-17T14:30:45Z") // "2024"
  * @example parseYearFromUtc("0005-06-01T12:30:00Z") // "0005"
- * @example parseYearFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/New_York" }) // "2024"
+ * @example parseYearFromUtc("2025-01-01T02:00:00Z", { timeZone: "America/Mexico_City" }) // "2024"
  * @example parseYearFromUtc("invalid") // ""
  */
 export function parseYearFromUtc(

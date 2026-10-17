@@ -1,5 +1,9 @@
 # Space-Time Reference Frames Research Summary
 
+> **Superseded by the [MAR-16 spec](../specs/MAR-16/index.md)** (six RINEX scales as peers, FITS and
+> RINEX tokens). The GPS-only scale table and the SPICE designators below are not the plan, and its
+> numbers are not to be trusted (it has the GPS sign backwards). Kept as evidence only.
+
 **Research Date:** 2026-09-07  
 **Purpose:** Inform GMT library design for satellite, orbital, space, and maritime time handling
 

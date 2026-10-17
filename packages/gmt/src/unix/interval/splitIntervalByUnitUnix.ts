@@ -19,7 +19,8 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  *   lands on February 29, March 31, April 30. Temporal's `add` constrains a day the month lacks
  *   to the month's last day, and stepping from that boundary would keep the shortened day
  *   (February 29, then March 29).
- * - Comparison: Luxon's `Interval.splitBy` computes each boundary from the start the same way.
+ * - Each calendar-unit boundary is `start.add(amount × k)` with Temporal's
+ *   `overflow: "constrain"` (TC39 Temporal `add`), never a step from the previous boundary.
  * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
  *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
  *   `Number.MAX_SAFE_INTEGER` (boundaries are then floored to milliseconds).
@@ -60,7 +61,7 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * @example splitIntervalByUnitUnix("invalid", 86400000, "hour", 1) // []
  * @example splitIntervalByUnitUnix(0, 86400000, "hour", 6, { maxPieces: 3 }) // [] (4 slices exceed the limit)
  * @example splitIntervalByUnitUnix(0, 86400000, "hour", 6, { maxPieces: 4 }) // [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
- * @example splitIntervalByUnitUnix(1710046800000, 1710216000000, "day", 1, { timeZone: "America/New_York" }) // [{ start: 1710046800000, end: 1710129600000 }, { start: 1710129600000, end: 1710216000000 }] (the first local day is 23 hours)
+ * @example splitIntervalByUnitUnix(1728136800000, 1728306000000, "day", 1, { timeZone: "Australia/Sydney" }) // [{ start: 1728136800000, end: 1728219600000 }, { start: 1728219600000, end: 1728306000000 }] (the first local day is 23 hours)
  * @example splitIntervalByUnitUnix("0", "86400", "hours", 12, { epochUnit: "second" }) // [{ start: 0, end: 43200 }, { start: 43200, end: 86400 }]
  * @example splitIntervalByUnitUnix(0, 2, "millisecond", 500, { epochUnit: "seconds" }) // [{ start: 0, end: 1 }, { start: 1, end: 2 }] (a step finer than the epoch unit gives one-second pieces)
  */

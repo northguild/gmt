@@ -18,8 +18,6 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
  *   Temporal's `PlainYearMonth`, not a bare month-of-year number. This is a
  *   common point of confusion for callers expecting a bare "same month-of-year"
  *   comparison.
- * - Comparison: date-fns's `isSameMonth` and Luxon's `dt.hasSame(other, "month")`
- *   give the same answer.
  * - `"day"` matches `areDatesEqual` for PlainDate inputs only: `areDatesEqual` also accepts
  *   PlainDateTime strings (`areDatesEqual("2024-01-01", "2024-01-01T10:00")` is `true`), while this
  *   function accepts PlainDate strings only (`areDatesEqualBy` with those inputs and `"day"` is
@@ -28,9 +26,11 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
  * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
  * - Returns false for an unsupported unit or invalid input.
  *
- * Mapping from date-fns:
+ * Migrating from date-fns:
  * - `isSameDay(a, b)` → `areDatesEqualBy(a, b, "day")`
- * - `isSameWeek(a, b, options)` → `areDatesEqualBy(a, b, "week", { weekStartsOn })`
+ * - `isSameWeek(a, b)` → `areDatesEqualBy(a, b, "week", { weekStartsOn: "sunday" })`: date-fns
+ *   starts the week on Sunday (`weekStartsOn: 0`) by default, GMT on Monday
+ * - `isSameWeek(a, b, { weekStartsOn: 1 })` → `areDatesEqualBy(a, b, "week")`
  * - `isSameMonth(a, b)` → `areDatesEqualBy(a, b, "month")`
  * - `isSameYear(a, b)` → `areDatesEqualBy(a, b, "year")`
  *

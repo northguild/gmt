@@ -260,97 +260,123 @@ describe("ensure-sidebar-order.mjs on the generated form", () => {
 // Industry namespaces
 // ---------------------------------------------------------------------------
 
+/** An industry that owns a namespace and draws on nothing. */
+const WORKFORCE: IndexedIndustry = {
+  id: "workforce",
+  label: "Workforce",
+  definition: "People's working time",
+  icon: "industry-workforce",
+  namespace: "workforce",
+  drawsOn: [],
+};
+
+/** An industry that owns a namespace and draws on another industry's. */
 const TRANSPORT: IndexedIndustry = {
   id: "transport",
   label: "Transport",
   definition: "Legs and dwell.",
   icon: "industry-transport",
-  guide: "/guides/industries/transport-legs-and-dwell/",
-  guideTitle: "Transport: Legs and Dwell",
-  about: "Transport is moving goods.",
-  solves: [
-    {
-      problem: "A hold-up is hours, not days.",
-      answer: "{{dwellTime}} counts both.",
-      see: [{ label: "guide", href: "/guides/industries/x/" }],
-    },
-    {
-      problem: "A late arrival needs a stated slack.",
-      answer: "{{isLate}} takes one.",
-      see: [],
-    },
-  ],
+  namespace: "transport",
+  drawsOn: ["workforce"],
 };
 
-/** A third industry no site file knows about: it must need no edit anywhere else. */
+/** A layer other industries draw on, which draws on a Core namespace. */
+const GNSS: IndexedIndustry = {
+  id: "gnss",
+  label: "GNSS",
+  definition: "Satellite time.",
+  icon: "industry-gnss",
+  namespace: "gnss",
+  drawsOn: ["timescale"],
+};
+
+/** An industry that owns no namespace and draws on a whole layer and one sub-module. */
 const MARITIME: IndexedIndustry = {
   id: "maritime",
   label: "Maritime",
   definition: "Laytime and tides.",
   icon: "industry-maritime",
-  guideTitle: "Maritime: Laytime",
-  about: "Maritime is ships.",
-  solves: [
-    {
-      problem: "Laytime is counted.",
-      answer: "{{laytime}} counts it.",
-      see: [],
-    },
-  ],
+  drawsOn: ["gnss", "timescale/convert", "workforce"],
 };
+
+const page = (namespace: string, module: string, name: string) => ({
+  namespace,
+  module,
+  name,
+  url: `/reference/${namespace}/${module}/${name}`,
+  description: `The ${name} function.`,
+});
 
 const WITH_INDUSTRIES: IndexInput = {
   ...INPUT,
   pages: [
     ...INPUT.pages,
-    {
-      namespace: "maritime",
-      module: "calculate",
-      name: "laytime",
-      url: "/reference/maritime/calculate/laytime",
-      description: "Count laytime.",
-    },
+    page("workforce", "calculate", "dutyDayFor"),
+    page("gnss", "convert", "gnssWeekToUtc"),
+    page("timescale", "convert", "toTAI"),
   ],
-  industries: [TRANSPORT, MARITIME],
+  industries: [WORKFORCE, TRANSPORT, GNSS, MARITIME],
 };
 
 describe("renderIndexPages with industries", () => {
-  it("splits the root page into the general namespaces and `By industry`, with each industry's icon, label and definition", () => {
+  it("splits the root page into the namespaces no industry owns and `By industry`, each industry with its icon, hub, definition, namespace and the modules it draws on", () => {
     expect(body(pageAt("/reference", WITH_INDUSTRIES).mdx)).toEqual([
       'import Icon from "../../../components/Icon.astro";',
       "## For any industry",
       "These namespaces work in any industry. Each is named for the kind of value it works on.",
       "- [`regex`](/reference/regex)",
+      "- [`timescale`](/reference/timescale)",
       "## By industry",
-      "Each of these adds the operations of one industry, built on the namespaces above.",
-      '- <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> [Transport](/reference/transport): Legs and dwell.',
-      '- <Icon name="industry-maritime" size="1.1em" class="gmt-ref-industry-icon" /> [Maritime](/reference/maritime): Laytime and tides.',
+      "Each industry has a namespace of its own, draws on the layers above it, or both.",
+      '- <Icon name="industry-workforce" size="1.1em" class="gmt-ref-industry-icon" /> [Workforce](/industries/workforce/): People\'s working time. Its namespace is [`workforce`](/reference/workforce).',
+      '- <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> [Transport](/industries/transport/): Legs and dwell. Its namespace is [`transport`](/reference/transport). Draws on [`workforce`](/reference/workforce).',
+      '- <Icon name="industry-gnss" size="1.1em" class="gmt-ref-industry-icon" /> [GNSS](/industries/gnss/): Satellite time. Its namespace is [`gnss`](/reference/gnss). Draws on [`timescale`](/reference/timescale).',
+      '- <Icon name="industry-maritime" size="1.1em" class="gmt-ref-industry-icon" /> [Maritime](/industries/maritime/): Laytime and tides. Draws on [`gnss`](/reference/gnss), [`timescale/convert`](/reference/timescale/convert), and [`workforce`](/reference/workforce).',
       "## Types",
       "- [Types](/reference/types)",
     ]);
   });
 
-  it("has no `By industry` section, and no icon import, when no namespace is an industry", () => {
+  it("lists an industry that owns no namespace, and names no namespace for it", () => {
+    const only: IndexInput = { ...INPUT, industries: [MARITIME] };
+    const line = body(pageAt("/reference", only).mdx).find((l) =>
+      l.includes("Maritime"),
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("Its namespace");
+  });
+
+  it("keeps a namespace an industry only draws on among the general ones, and a namespace it owns out of them", () => {
+    const root = body(pageAt("/reference", WITH_INDUSTRIES).mdx);
+    const forAnyIndustry = root.slice(
+      root.indexOf("## For any industry") + 1,
+      root.indexOf("## By industry"),
+    );
+    expect(forAnyIndustry).toContain("- [`timescale`](/reference/timescale)");
+    expect(forAnyIndustry).not.toContain(
+      "- [`workforce`](/reference/workforce)",
+    );
+    expect(forAnyIndustry).not.toContain("- [`gnss`](/reference/gnss)");
+  });
+
+  it("has no `By industry` section, and no icon import, when no industry is declared", () => {
     const mdx = pageAt("/reference").mdx;
     expect(mdx).not.toContain("By industry");
     expect(mdx).not.toContain("import");
   });
 
-  it("leaves out an industry that has no pages", () => {
-    const only: IndexInput = { ...INPUT, industries: [MARITIME] };
-    expect(pageAt("/reference", only).mdx).not.toContain("Maritime");
-  });
-
-  it("tags the overview, the function-module indexes and nothing else with the industry", () => {
+  it("tags the overview, the function-module indexes and nothing else with the industry that owns the namespace", () => {
     const tagged = renderIndexPages(WITH_INDUSTRIES)
       .filter((p) => /^industries: \[/m.test(p.mdx))
       .map((p) => [p.route, p.mdx.match(/^industries: \[(\w+)\]$/m)?.[1]]);
     expect(tagged).toEqual([
-      ["/reference/maritime", "maritime"],
-      ["/reference/maritime/calculate", "maritime"],
+      ["/reference/gnss", "gnss"],
+      ["/reference/gnss/convert", "gnss"],
       ["/reference/transport", "transport"],
       ["/reference/transport/calculate", "transport"],
       ["/reference/transport/compare", "transport"],
+      ["/reference/workforce", "workforce"],
+      ["/reference/workforce/calculate", "workforce"],
     ]);
   });
 
@@ -361,40 +387,26 @@ describe("renderIndexPages with industries", () => {
     );
   });
 
-  it("opens an industry overview with its paragraph, the pain points and the guide, above the module lists", () => {
+  it("opens an industry's own namespace with one line that points at its hub, above the module lists", () => {
     const lines = body(pageAt("/reference/transport", WITH_INDUSTRIES).mdx);
-    expect(lines.slice(0, 6)).toEqual([
-      "Transport is moving goods.",
-      "## What these functions solve",
-      "- **A hold-up is hours, not days.** [`dwellTime`](/reference/transport/calculate/dwellTime) counts both. See [guide](/guides/industries/x/).",
-      "- **A late arrival needs a stated slack.** [`isLate`](/reference/transport/compare/isLate) takes one.",
-      "Start with the guide: [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/).",
+    expect(lines.slice(0, 2)).toEqual([
+      "The Transport industry's own namespace. What it solves, and the guides and tools that show it, are on [Transport](/industries/transport/).",
       "## [calculate](/reference/transport/calculate)",
     ]);
+  });
+
+  it("no longer carries the industry's pain points: they live on its hub", () => {
+    const { mdx } = pageAt("/reference/transport", WITH_INDUSTRIES);
+    expect(mdx).not.toContain("What these functions solve");
+    expect(mdx).not.toContain("Start with the guide");
   });
 
   it("leaves a general namespace overview as it was", () => {
     expect(pageAt("/reference/regex", WITH_INDUSTRIES).mdx).toBe(
       pageAt("/reference/regex").mdx,
     );
-  });
-
-  it("stops when an overview names a function the namespace does not export", () => {
-    const broken: IndexInput = {
-      ...WITH_INDUSTRIES,
-      industries: [
-        {
-          ...TRANSPORT,
-          solves: [
-            {
-              problem: "Nothing is there.",
-              answer: "{{missing}} is missing.",
-              see: [],
-            },
-          ],
-        },
-      ],
-    };
-    expect(() => renderIndexPages(broken)).toThrow(/names missing/);
+    expect(pageAt("/reference/timescale", WITH_INDUSTRIES).mdx).not.toContain(
+      "industries:",
+    );
   });
 });

@@ -1,0 +1,36 @@
+---
+title: "A 13-Bit Week Read as 10-Bit"
+description: A full week number of 2295 from a QZSS civil message is fed to the 10-bit counter, and the library refuses it.
+industries: [gnss]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A 13-Bit Week Read as 10-Bit"
+  description="A QZSS CNAV message carries week 2295 and 86418 seconds into the week. The integration was written against the LNAV counter and uses it for every message. What does it return?"
+  naiveCode={`// The naive approach: one counter for every message
+import { gnssWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("QZS-LNAV", 2295, 86418, 0);
+// "" — an LNAV week stops at 1023
+
+// The quick fix: wrap the week to fit the counter
+gnssWeekToUtc("QZS-LNAV", 247, 86418, 0);
+// "1984-10-01T00:00:15Z" — 2295 mod 1024 is 247: a date, and the wrong one`}
+  explanation={`Not every message of a system uses the same counter. QZSS LNAV and NavIC LNAV count weeks in 10 bits. QZSS CNAV, GPS CNAV and NavIC L1NV count them in 13 bits, so the week runs to 8191 and the first wrap is far off. A week taken from a civil message and sent to a 10-bit counter is out of range, and the library returns an empty string rather than a date. Taking the remainder to make it fit turns the error into a plausible date 40 years early, so the counter has to be named by the message the week came from.`}
+  gmtCode={`import { gnssWeekToUtc, utcToGnssWeek } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("QZS-CNAV", 2295, 86418, 0);
+// "2024-01-01T00:00:00Z"
+utcToGnssWeek("QZS-CNAV", "2024-01-01T00:00:00Z");
+// { week: 2295, timeOfWeekSeconds: 86418, era: 0 }`}
+  fixedSpecId="gnssWeekToUtc"
+/>
+
+In the widget, change the counter between `QZS-LNAV` and `QZS-CNAV` with the same week and watch
+the answer change between empty and a date. The same holds for `GPS-LNAV` and `GPS-CNAV`, and for
+`IRN-LNAV` and `IRN-L1NV`. The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22QZS-CNAV%22%2C%22week%22%3A%222295%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%2C%22rolloverEra%22%3A%220%22%7D) names the counter
+every week fits, and the [GNSS Rollover Checker](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22counter%22%3A%22QZS-CNAV%22%2C%22firmwareEra%22%3A%220%22%7D) shows when a receiver on the 13-bit QZSS
+counter would first read a wrong pass. The rules are in [GNSS: System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/#week-counters-wrap-name-the-counter-and-the-era).

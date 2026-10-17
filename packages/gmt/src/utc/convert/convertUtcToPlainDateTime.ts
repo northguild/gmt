@@ -18,7 +18,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @returns plain datetime string in "YYYY-MM-DDTHH:mm:ss" format or "" on invalid input
  *
  * @example convertUtcToPlainDateTime("2024-02-29T00:00:00Z") // "2024-02-29T00:00:00"
- * @example convertUtcToPlainDateTime("2024-02-29T00:00:00Z", { timeZone: "America/New_York" }) // "2024-02-28T19:00:00"
+ * @example convertUtcToPlainDateTime("2024-02-29T00:00:00Z", { timeZone: "Asia/Kolkata" }) // "2024-02-29T05:30:00"
  * @example convertUtcToPlainDateTime("invalid") // ""
  * @example convertUtcToPlainDateTime("+010000-01-01T00:00:00Z") // "+010000-01-01T00:00:00" (a year past 9999 has a sign and six digits)
  * @example convertUtcToPlainDateTime("1970-01-01T12:44:30Z", { timeZone: "-00:44:30" }) // "1970-01-01T12:00:00" (a stored offset with seconds)

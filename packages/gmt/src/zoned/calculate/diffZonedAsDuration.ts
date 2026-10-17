@@ -49,13 +49,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @param options optional: how the difference is rounded and how the string is rendered; a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
- * @example diffZonedAsDuration("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", "days") // "P2D" (wall-clock days; 47 elapsed hours)
+ * @example diffZonedAsDuration("2024-10-05T12:00:00+10:00[Australia/Sydney]", "2024-10-07T12:00:00+11:00[Australia/Sydney]", "days") // "P2D" (wall-clock days; 47 elapsed hours)
  * @example diffZonedAsDuration("2028-01-01T00:00:00+00:00[UTC]", "2028-01-01T00:00:00+00:00[UTC]", "hours") // "PT0S"
  * @example diffZonedAsDuration("2028-01-01T00:00:00+00:00[UTC]", "2028-01-02T13:00:00+13:00[Pacific/Apia]", "days") // "" (calendar unit across two time zones)
- * @example diffUtcAsDuration(convertZonedToUtc("2024-03-09T12:00:00-05:00[America/New_York]"), convertZonedToUtc("2024-03-11T12:00:00-04:00[America/New_York]"), "days") // "P1DT23H" (pre-1.16.0 UTC-clock result)
+ * @example diffUtcAsDuration(convertZonedToUtc("2024-10-05T12:00:00+10:00[Australia/Sydney]"), convertZonedToUtc("2024-10-07T12:00:00+11:00[Australia/Sydney]"), "days") // "P1DT23H" (pre-1.16.0 UTC-clock result)
  * @example diffZonedAsDuration("invalid", "2028-01-01T00:00:00+00:00[UTC]", "days") // ""
- * @example diffZonedAsDuration("2023-09-16T00:00:00-04:00[America/New_York][u-ca=hebrew]", "2024-10-03T00:00:00-04:00[America/New_York][u-ca=hebrew]", "months") // "P13M" (Hebrew leap year 5784)
- * @example diffZonedAsDuration("2024-03-10T14:30:00-04:00[u-ca=hebrew][America/New_York]", "2024-03-11T14:30:00-04:00[America/New_York]", "days") // "" (calendar before zone is not RFC 9557)
+ * @example diffZonedAsDuration("2023-09-16T00:00:00+02:00[Africa/Johannesburg][u-ca=hebrew]", "2024-10-03T00:00:00+02:00[Africa/Johannesburg][u-ca=hebrew]", "months") // "P13M" (Hebrew leap year 5784)
+ * @example diffZonedAsDuration("2024-03-10T14:30:00+09:00[u-ca=hebrew][Asia/Tokyo]", "2024-03-11T14:30:00+09:00[Asia/Tokyo]", "days") // "" (calendar before zone is not RFC 9557)
  */
 export function diffZonedAsDuration(
   value1: string,

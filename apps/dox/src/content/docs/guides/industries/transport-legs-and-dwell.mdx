@@ -34,17 +34,17 @@ actually gets there.
 ```typescript
 import { transitTime } from "@northguild/gmt/transport";
 
-// Four elapsed hours across New York's spring-forward: the clock reads 04:00, not 03:00.
-transitTime("2024-03-09T23:00:00-05:00[America/New_York]", "PT4H");
-// "2024-03-10T04:00:00-04:00[America/New_York]"
+// Four elapsed hours across London's spring-forward: the clock reads 04:00, not 03:00.
+transitTime("2024-03-30T23:00:00+00:00[Europe/London]", "PT4H");
+// "2024-03-31T04:00:00+01:00[Europe/London]"
 
 // A day is 24 exact hours, not "the same wall time tomorrow".
-transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "P1DT2H");
-// "2024-03-10T23:00:00-04:00[America/New_York]"
+transitTime("2024-03-30T20:00:00+00:00[Europe/London]", "P1DT2H");
+// "2024-03-31T23:00:00+01:00[Europe/London]"
 
 // A negative duration recovers the departure from an arrival.
-transitTime("2024-06-15T12:30:00-04:00[America/New_York]", "-PT2H30M");
-// "2024-06-15T10:00:00-04:00[America/New_York]"
+transitTime("2024-06-15T12:30:00+02:00[Africa/Johannesburg]", "-PT2H30M");
+// "2024-06-15T10:00:00+02:00[Africa/Johannesburg]"
 ```
 
 The departure's form is preserved. A bracketed IANA zone stays that zone, `Z` stays `Z`, and
@@ -65,7 +65,7 @@ zone whose offset contradicts it also returns `""`, as
 
 ```typescript
 transitTime("2024-06-15T10:00:00Z", "P1M"); // ""
-transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H"); // "" — June is -04:00
+transitTime("2024-06-15T10:00:00+00:00[Europe/London]", "PT2H"); // "" — June is +01:00
 ```
 
 ## An arrival is rendered where it lands: `etaAtZone`
@@ -88,10 +88,10 @@ offset in the result is what tells them apart. That is why the result carries it
 zone rather than a bare wall time.
 
 ```typescript
-etaAtZone("2024-11-03T05:30:00Z", "America/New_York");
-// "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30
-etaAtZone("2024-11-03T06:30:00Z", "America/New_York");
-// "2024-11-03T01:30:00-05:00[America/New_York]" — the second; the offset tells them apart
+etaAtZone("2024-04-06T15:30:00Z", "Australia/Sydney");
+// "2024-04-07T02:30:00+11:00[Australia/Sydney]" — the first 02:30
+etaAtZone("2024-04-06T16:30:00Z", "Australia/Sydney");
+// "2024-04-07T02:30:00+10:00[Australia/Sydney]" — the second; the offset tells them apart
 ```
 
 The zone is the caller's fact. GMT does not resolve a port, airport or station code to a
@@ -115,10 +115,10 @@ dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/London");
 //   calendarDays: 2 }
 
 // The same two instants, one fewer day: the zone decides.
-dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam");
+dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Africa/Johannesburg");
 // { duration: "PT2H30M",
-//   enter: "2024-06-16T00:30:00+02:00[Europe/Amsterdam]",
-//   exit: "2024-06-16T03:00:00+02:00[Europe/Amsterdam]",
+//   enter: "2024-06-16T00:30:00+02:00[Africa/Johannesburg]",
+//   exit: "2024-06-16T03:00:00+02:00[Africa/Johannesburg]",
 //   calendarDays: 1 }
 ```
 
@@ -135,10 +135,10 @@ barely move.
 
 ```typescript
 // An exit exactly at local midnight does not touch the new day.
-dwellTime("2024-06-15T22:00:00Z", "2024-06-16T04:00:00Z", "America/New_York");
+dwellTime("2024-06-15T21:00:00Z", "2024-06-16T03:00:00Z", "America/Sao_Paulo");
 // { duration: "PT6H",
-//   enter: "2024-06-15T18:00:00-04:00[America/New_York]",
-//   exit: "2024-06-16T00:00:00-04:00[America/New_York]",
+//   enter: "2024-06-15T18:00:00-03:00[America/Sao_Paulo]",
+//   exit: "2024-06-16T00:00:00-03:00[America/Sao_Paulo]",
 //   calendarDays: 1 }
 
 // Seven elapsed hours across the spring-forward, one local day.
@@ -207,14 +207,14 @@ With `atLocalTime`, only the day the offset lands on matters. The offset's exact
 and smaller) comes off the anchor's instant, its calendar part (years, months, weeks, days)
 comes off that local date, and the cut-off is `atLocalTime` on that day. The exact part comes off first, so it can change
 the day: from midnight, `P2DT0.000000001S` lands a day before `P2D`. Across a DST
-transition the local time of day holds and the elapsed time moves. New York sprang forward on
-Sunday 10 March 2024, so the pinned cut-off before a Monday 18:00 departure is 48 elapsed
+transition the local time of day holds and the elapsed time moves. London sprang forward on
+Sunday 31 March 2024, so the pinned cut-off before a Monday 18:00 departure is 48 elapsed
 hours earlier, not 49.
 
 ```typescript
-// Monday 11 March 2024, 18:00 EDT (22:00Z).
-cutoffAt("2024-03-11T22:00:00Z", "P2D", { timeZone: "America/New_York", atLocalTime: "17:00" });
-// "2024-03-09T17:00:00-05:00[America/New_York]"
+// Monday 1 April 2024, 18:00 BST (17:00Z).
+cutoffAt("2024-04-01T17:00:00Z", "P2D", { timeZone: "Europe/London", atLocalTime: "17:00" });
+// "2024-03-30T17:00:00+00:00[Europe/London]"
 ```
 
 Without `atLocalTime`, the offset comes off the way Temporal's `ZonedDateTime#subtract` takes
@@ -223,15 +223,15 @@ This is the shape of an advance-filing deadline stated in hours. 96 hours before
 96 hours, whatever the clock does in between.
 
 ```typescript
-// Arrival Tuesday 5 November 2024, 12:00 EST (17:00Z). New York fell back on the 3rd.
-cutoffAt("2024-11-05T17:00:00Z", "PT96H", { timeZone: "America/New_York" });
-// "2024-11-01T13:00:00-04:00[America/New_York]" — 96 hours; the clock reads 13:00
-cutoffAt("2024-11-05T17:00:00Z", "P4D", { timeZone: "America/New_York" });
-// "2024-11-01T12:00:00-04:00[America/New_York]" — four calendar days keep 12:00, 97 hours
+// Arrival Tuesday 9 April 2024, 12:00 AEST (02:00Z). Sydney fell back on the 7th.
+cutoffAt("2024-04-09T02:00:00Z", "PT96H", { timeZone: "Australia/Sydney" });
+// "2024-04-05T13:00:00+11:00[Australia/Sydney]" — 96 hours; the clock reads 13:00
+cutoffAt("2024-04-09T02:00:00Z", "P4D", { timeZone: "Australia/Sydney" });
+// "2024-04-05T12:00:00+11:00[Australia/Sydney]" — four calendar days keep 12:00, 97 hours
 ```
 
 The [Cut-off Ruler](/tools/cutoff-ruler/) draws all three readings of "two days before" on
-one axis, across New York's fall-back.
+one axis, across a fall-back.
 
 ### The anchor is your event
 
@@ -285,10 +285,10 @@ reads a local time that occurs more than once as "the first occurrence of the re
 time". A skipped hour, or a day a zone deleted, returns `""` rather than shifting the deadline.
 
 ```typescript
-cutoffAt("2024-11-04T23:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "01:30" });
-// "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30
-cutoffAt("2024-03-11T22:00:00Z", "P1D", { timeZone: "America/New_York", atLocalTime: "02:30" });
-// "" — 02:30 on 10 March never happened
+cutoffAt("2024-10-28T23:00:00Z", "P1D", { timeZone: "Europe/London", atLocalTime: "01:30" });
+// "2024-10-27T01:30:00+01:00[Europe/London]" — the first 01:30
+cutoffAt("2024-04-01T22:00:00Z", "P1D", { timeZone: "Europe/London", atLocalTime: "01:30" });
+// "" — 01:30 on 31 March never happened
 ```
 
 ## The whole stack: `cutoffSchedule`
@@ -350,7 +350,7 @@ import { timeToCutoff } from "@northguild/gmt/transport";
 
 timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "PT48H"
 timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "-PT1H"
-timeToCutoff("2024-11-02T17:00:00-04:00[America/New_York]", "2024-11-03T17:00:00-05:00[America/New_York]");
+timeToCutoff("2024-10-26T17:00:00+01:00[Europe/London]", "2024-10-27T17:00:00+00:00[Europe/London]");
 // "PT25H" — across the fall-back
 ```
 

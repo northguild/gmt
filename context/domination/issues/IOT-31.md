@@ -1,6 +1,6 @@
 # IOT-31 — IoT: PTP and TAI-based device time
 
-**Scope:** IEEE 1588 Precision Time Protocol timestamps, which count TAI rather than UTC.
+**Scope:** Precision Time Protocol timestamps — IEC/IEEE 61588:2021, the international edition of IEEE 1588 (text not reached — marked, not asserted) — which count TAI rather than UTC.
 
 ## Gap
 
@@ -37,7 +37,7 @@ This is not a theoretical concern. It is a documented, recurring production fail
 
 - `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
 - The leap-second table from SPA-48 — TAI−UTC by date
-- `toTAI` / `fromTAI` from SPA-46 — the general scale conversion this specialises
+- `toTAI` / `fromTAI` from MAR-16 — the general scale conversion this specialises
 
 ## Verification
 

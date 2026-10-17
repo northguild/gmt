@@ -100,15 +100,15 @@ export interface FormatRelativeUnixOptions {
  * @param options optional: the wording, the unit and rounding of the distance, and what it is measured from
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds", reference: 1805358645000 }) // "3 years ago"
- * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds", reference: 1805358645000, largestUnit: "day" }) // "1,096 days ago"
- * @example formatRelativeUnix(0, "en-US", { reference: 37800000, roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
- * @example formatRelativeUnix("0", "en-US", { reference: "1800", epochUnit: "second", largestUnit: "minutes" }) // "30 minutes ago"
- * @example formatRelativeUnix(0, "en-US", { reference: 1800000, timeZone: "Invalid/Zone" }) // ""
- * @example formatRelativeUnix(0, "en-US", null as never) // ""
+ * @example formatRelativeUnix(1710685845000, "en-GB", { epochUnit: "milliseconds", reference: 1805358645000 }) // "3 years ago"
+ * @example formatRelativeUnix(1710685845000, "de-DE", { epochUnit: "milliseconds", reference: 1805358645000, largestUnit: "day" }) // "vor 1.096 Tagen"
+ * @example formatRelativeUnix(0, "en-GB", { reference: 37800000, roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
+ * @example formatRelativeUnix("0", "ja-JP", { reference: "1800", epochUnit: "second", largestUnit: "minutes" }) // "30 分前"
+ * @example formatRelativeUnix(0, "zh-CN", { reference: 1800000, timeZone: "Invalid/Zone" }) // ""
+ * @example formatRelativeUnix(0, "pt-BR", null as never) // ""
  * @example formatRelativeUnix("not-a-number") // ""
  * @example formatRelativeUnix(1709163000000, ["fr-FR", "en-US"], { reference: 1709164800000 }) // "il y a 30 minutes"
- * @example formatRelativeUnix(218670000, "en-US", { reference: 45870000, timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
+ * @example formatRelativeUnix(218670000, "en-GB", { reference: 45870000, timeZone: "-00:44:30" }) // "in 2 days" (a stored offset with seconds)
  */
 export function formatRelativeUnix(
   value: string | number,

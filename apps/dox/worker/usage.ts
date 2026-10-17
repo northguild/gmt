@@ -23,7 +23,8 @@
  * expires when that provider's allowance actually does. Bucketing everything by
  * the Pacific day left a refilled Workers AI pool reading as used for up to
  * eight hours, and let a spent mark set after UTC midnight vanish early at the
- * Pacific rollover. The visitor cap is Dox's own and stays on the Pacific day.
+ * Pacific rollover. The visitor cap is Dox's own and runs on the UTC day
+ * (`VISITOR_CAP_TIME_ZONE`).
  *
  * ## Every write is best-effort
  *
@@ -48,9 +49,9 @@ import {
 import {
   dayKey,
   nextMidnightMs,
-  ptDayKey,
   secondsUntilMidnight,
-  secondsUntilPtReset,
+  secondsUntilVisitorReset,
+  visitorDayKey,
 } from "../src/lib/pt-day";
 
 /** The subset of KVNamespace this module uses — hand-declared for the same
@@ -189,7 +190,7 @@ export async function readUsage(
         safeGet(brainStateKey(days[index], brain.id)),
       ),
     ),
-    safeGet(visitorKey(ptDayKey(nowMs), visitorHash)),
+    safeGet(visitorKey(visitorDayKey(nowMs), visitorHash)),
   ]);
 
   const perBrain: Record<string, number> = {};
@@ -226,7 +227,10 @@ export async function recordRequest(
 
   const writes: [key: string, expirationTtl: number][] = [
     [brainCountKey(day, brain.id), ttl],
-    [visitorKey(ptDayKey(nowMs), visitorHash), secondsUntilPtReset(nowMs)],
+    [
+      visitorKey(visitorDayKey(nowMs), visitorHash),
+      secondsUntilVisitorReset(nowMs),
+    ],
   ];
 
   await Promise.all(

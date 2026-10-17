@@ -49,6 +49,13 @@
  *                 control's ancestors too. The Timetable Reader needs it: a
  *                 handle in section 1 must not move the table or the output in
  *                 sections 2 and 3;
+ *   riders        a selector for elements that ride the handle by design (the
+ *                 range field's value chip follows the thumb). Their left moves;
+ *                 their top, width and height are still compared, like a handle's;
+ *   textBoxes     a selector for inline text boxes whose width is the width of
+ *                 their text (the call frame's `<code>` and its coloured spans).
+ *                 The frame and its `<pre>` are still measured, so a line added
+ *                 or a frame resized is a move; only a span's own width is not;
  *   pointerSteps  steps in each pointer sweep (default 20). 48 steps are 30
  *                 minutes each on the Timetable Reader's day, so every sweep
  *                 enters a 60-minute band;
@@ -95,8 +102,9 @@
  * Usage:
  *   node scripts/readout-still.mjs --base http://127.0.0.1:4351
  *     [--browsers chromium,webkit] [--widths 1440,390] [--only <slug,...>]
- *     [--keyboard-only]
+ *     [--keyboard-only] [--all]
  *
+ * `--all` prints every distinct problem element once, instead of the first few.
  * `--keyboard-only` skips the pointer drags (WebKit's synthetic pointer events
  * are flaky). Chromium and WebKit only: Firefox is blocked by the sandbox on
  * this machine.
@@ -121,6 +129,8 @@ const BROWSERS = opt("browsers", "chromium,webkit").split(",");
 const WIDTHS = opt("widths", "1440,390").split(",").map(Number);
 const ONLY = opt("only", "").split(",").filter(Boolean);
 const KEYBOARD_ONLY = args.includes("--keyboard-only");
+/** `--all` prints every problem, one line per element, instead of the first six. */
+const ALL = args.includes("--all");
 if (!BROWSERS.every((b) => b === "chromium" || b === "webkit")) {
   console.error(
     `Unsupported --browsers "${BROWSERS.join(",")}": only chromium and webkit run here.`,
@@ -143,6 +153,22 @@ const MAX_KEYS = 400;
  *  first). */
 const LEDGER_DRAWN =
   '[data-role="track"], [data-role="track-dwell"], [data-role="track-compare"], .gmt-ledger-hold > :first-child';
+
+/** What may move inside a GNSS or leap-second tool: the insides of its lanes,
+ *  bars, strip, timeline and rulers, and a hold's live wrapper (`holdHtml`
+ *  writes it first). */
+const GNSS_DRAWN =
+  '[data-role="lanes"], [data-role="bars"], [data-role="strip"], [data-role="plot"], [data-role="rulers"], .gmt-ledger-hold > :first-child';
+
+/** The range field's value chip rides the thumb by design. */
+const RANGE_CHIP = ".gmt-range-chip";
+
+/** The call frame's code and its coloured spans: boxes as wide as their text. */
+const CODE_TEXT = ".gmt-codeframe code, .gmt-codeframe code *";
+
+/** An instant's unbreakable date and time pieces, which are as wide as their
+ *  digits inside a plate that holds its own width. */
+const INSTANT_TEXT = CODE_TEXT + ", .gmt-gnss-nb, .gmt-punct-hero-value > span";
 
 const TOOLS = [
   {
@@ -265,7 +291,7 @@ const TOOLS = [
     // "no-zone" returns no date, so it is left out; every other preset returns
     // a value.
     presets: [
-      "new-york-evening",
+      "sao-paulo-evening",
       "shanghai-morning",
       "rotterdam-fall-back",
       "apia-deleted-day",
@@ -278,7 +304,97 @@ const TOOLS = [
     // plot is measured, and so is every plate above it.
     drawn: '[data-role="plot"]',
   },
+  /* The GNSS and leap-second tools (MAR-16). Their frame is `.gmt-gnss-frame`;
+     what moves with the value by design is what they draw: the lanes, the
+     bars, the strip, the timeline and the rulers, and a hold's live wrapper.
+     The ring's laps, hand and hub are drawn (they sit in `lanes`); the plates,
+     the legend, the tables and the call frame are measured. */
+  {
+    slug: "gnss-week-decoder",
+    root: ".gmt-gnss-week-decoder",
+    presets: ["galileo-2019", "lnav-2024", "same-reading-two-dates"],
+    controls: [
+      { sel: '[data-role="week-slider"]', optional: true },
+      { sel: '[data-role="tow-slider"]', optional: true },
+    ],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+    riders: RANGE_CHIP,
+    textBoxes: INSTANT_TEXT,
+  },
+  {
+    slug: "satellite-clock-converter",
+    root: ".gmt-satellite-clock-converter",
+    presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
+    controls: [{ sel: '[data-role="moment-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+    riders: RANGE_CHIP,
+    textBoxes: INSTANT_TEXT,
+  },
+  {
+    slug: "gnss-rollover-checker",
+    root: ".gmt-gnss-rollover-checker",
+    // The presets that check on a stated date: the slider is live only there.
+    presets: ["navic-built-2020", "navic-fixed-era", "galileo-built-2024"],
+    controls: [{ sel: '[data-role="date-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+    riders: RANGE_CHIP,
+    textBoxes: INSTANT_TEXT,
+  },
+  {
+    slug: "leap-second-timeline",
+    root: ".gmt-leap-second-timeline",
+    presets: ["from-2000", "last-insertion", "after-the-table"],
+    controls: [{ sel: '[data-role="date-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN,
+    riders: RANGE_CHIP,
+    textBoxes: CODE_TEXT,
+  },
+  {
+    slug: "elapsed-vs-clock-difference",
+    root: ".gmt-elapsed-vs-clock",
+    presets: ["across-2016", "twenty-four-years", "no-insertions"],
+    controls: [{ sel: '[data-role="end-slider"]' }],
+    track: null,
+    frame: ".gmt-gnss-frame",
+    scope: "widget",
+    drawn: GNSS_DRAWN + ", .gmt-elapsed-list",
+    riders: RANGE_CHIP,
+    textBoxes: CODE_TEXT,
+  },
 ];
+
+/**
+ * Wait until the widget has stopped easing to the height of its new content.
+ * A forced narrow root re-wraps every section after load, and a tall tool needs
+ * more than the fixed wait to catch up; the drag is measured from rest, so a
+ * settling ease is never read as a readout that moved. A readout that moves
+ * during the drag still fails, because the base is taken after this.
+ */
+async function settled(page, root) {
+  let last = -1;
+  let same = 0;
+  for (let i = 0; i < 60 && same < 3; i++) {
+    const h = await page.evaluate(
+      (r) => document.querySelector(r)?.getBoundingClientRect().height ?? 0,
+      root,
+    );
+    same = h === last ? same + 1 : 0;
+    last = h;
+    await page.waitForTimeout(150);
+  }
+}
 
 const rounded = (r) => ({
   left: Math.round(r.left),
@@ -288,7 +404,14 @@ const rounded = (r) => ({
 });
 
 /** Runs in the page: the named rects, in document order. */
-function snapshotInPage({ controlSel, frame, drawn, scope }) {
+function snapshotInPage({
+  controlSel,
+  frame,
+  drawn,
+  scope,
+  riders,
+  textBoxes,
+}) {
   const control = document.querySelector(controlSel);
   const section = control.closest(".gmt-widget-section");
   const out = [];
@@ -334,7 +457,8 @@ function snapshotInPage({ controlSel, frame, drawn, scope }) {
     if (parent && within.contains(parent)) continue;
     if (el.getClientRects().length === 0) continue;
     if (el.closest("svg")) continue;
-    add("above", el);
+    if (textBoxes && el.matches(textBoxes)) continue;
+    add(riders && el.matches(riders) ? "rider" : "above", el);
   }
   return out;
 }
@@ -349,6 +473,8 @@ async function snapshot(page, controlSel, tool) {
     frame: tool.frame ?? DEFAULT_FRAME,
     drawn: tool.drawn ?? DEFAULT_DRAWN,
     scope: tool.scope ?? "above",
+    riders: tool.riders ?? null,
+    textBoxes: tool.textBoxes ?? null,
   });
 }
 
@@ -371,7 +497,7 @@ function diffSnapshots(base, now, isHandle, pressed = false) {
     const ra = rounded(a);
     const rb = rounded(b);
     const keys =
-      a.kind === "control" && isHandle
+      (a.kind === "control" && isHandle) || a.kind === "rider"
         ? ["top", "width", "height"]
         : ["left", "top", "width", "height"];
     if (keys.some((k) => ra[k] !== rb[k])) {
@@ -469,6 +595,7 @@ async function run() {
         for (const preset of tool.presets) {
           await page.selectOption('[data-role="preset"]', preset);
           await page.waitForTimeout(1500);
+          await settled(page, tool.root);
           for (const {
             sel,
             optional,
@@ -580,9 +707,19 @@ async function run() {
               `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
                 (ok ? "" : `, ${result.problems.length} problem(s)`),
             );
-            for (const p of result.problems.slice(0, 6))
-              console.log(`       ${p}`);
-            if (result.problems.length > 6) {
+            if (ALL) {
+              const seen = new Set();
+              for (const p of result.problems) {
+                const key = p.replace(/^[^:]*: /, "").split(": {")[0];
+                if (seen.has(key)) continue;
+                seen.add(key);
+                console.log(`       ${p}`);
+              }
+            } else {
+              for (const p of result.problems.slice(0, 6))
+                console.log(`       ${p}`);
+            }
+            if (!ALL && result.problems.length > 6) {
               console.log(`       ... and ${result.problems.length - 6} more`);
             }
           }

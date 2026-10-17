@@ -59,6 +59,7 @@
 :is(
   .gmt-punct-frame,
   .gmt-ledger-frame,
+  .gmt-gnss-frame,
   .gmt-cutoff-stack-timeline,
   .gmt-cutoff-ruler-overview,
   .gmt-cutoff-ruler-closeup,
@@ -112,7 +113,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   [data-series="1"] {
   --series: var(--gmt-series-1);
@@ -130,7 +136,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   [data-series="2"] {
   --series: var(--gmt-series-2);
@@ -148,7 +159,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   [data-series="3"] {
   --series: var(--gmt-series-3);
@@ -166,7 +182,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   [data-series="4"] {
   --series: var(--gmt-series-4);
@@ -187,7 +208,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-series-swatch {
   display: inline-block;
@@ -217,7 +243,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-chip {
   display: inline-flex;
@@ -249,7 +280,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-chip[hidden] {
   display: none;
@@ -267,7 +303,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-chip--dim {
   color: var(--gmt-ice-dim);
@@ -284,7 +325,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-icon {
   flex: none;
@@ -307,7 +353,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-mark {
   display: inline-block;
@@ -335,7 +386,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-mark--hollow {
   border: 2px dashed var(--series, var(--gmt-ice));
@@ -358,7 +414,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-gate {
   position: absolute;
@@ -381,7 +442,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-gate::before {
   content: "";
@@ -414,7 +480,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-closed {
   background:
@@ -466,7 +537,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-axis-tick {
   padding-top: 9px;
@@ -484,7 +560,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-axis-tick::before {
   content: "";
@@ -508,7 +589,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-axis-tick--day {
   color: var(--gmt-ice);
@@ -526,7 +612,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   .gmt-cutoff-axis-tick--day::before {
   width: 2px;
@@ -545,7 +636,12 @@
     .gmt-dwell,
     .gmt-bl-date-stamp,
     .gmt-journey-split,
-    .gmt-demurrage-clock
+    .gmt-demurrage-clock,
+    .gmt-gnss-week-decoder,
+    .gmt-satellite-clock-converter,
+    .gmt-gnss-rollover-checker,
+    .gmt-leap-second-timeline,
+    .gmt-elapsed-vs-clock
   )
   :is(.gmt-cutoff-countdown-ticks, .gmt-cutoff-ruler-ticks, .gmt-punct-ticks) {
   height: 1.9rem;
@@ -814,6 +910,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 .gmt-cutoff-ruler-closeup,
 .gmt-cutoff-countdown-axis,
 .gmt-punct-frame,
+.gmt-gnss-frame,
 .gmt-cutoff-mark,
 .gmt-cutoff-chip,
 .gmt-cutoff-gate,

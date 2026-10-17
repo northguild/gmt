@@ -169,6 +169,20 @@ h1[data-page-title] {
   block-size: 1.15em;
 }
 
+/* An industry's link in the Industries group carries the same glyph before its label,
+ * in the link's own colour (`currentColor`, so forced colours repaint it with the text),
+ * one line tall so the row never grows. */
+.sidebar-pane a:has(> .gmt-sidebar-link-icon) {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-pane .gmt-sidebar-link-icon {
+  flex: none;
+  inline-size: 1.15em;
+  block-size: 1.15em;
+}
+
 .sidebar-pane .gmt-sidebar-named-list > li {
   margin-inline-start: 0;
   border-inline-start: 0;

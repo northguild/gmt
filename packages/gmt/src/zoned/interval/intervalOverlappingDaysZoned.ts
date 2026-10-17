@@ -34,7 +34,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings, leap seconds).
  * - Accepts RFC 9557 calendar-annotated zoned strings
- *   (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`; E7, issue #152). All four
+ *   (`"2024-02-24T14:30:00+00:00[Europe/London][u-ca=hebrew]"`; E7, issue #152). All four
  *   arguments must name the same calendar (a bare string names `iso8601`): the count is a day
  *   difference, so different calendars return `null`, as Temporal's `until` throws when
  *   `CalendarEquals` is false. Before 1.16.0 the arguments could name different calendars.
@@ -51,7 +51,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @param bEnd ISO 8601 zoned datetime string for the second interval end
  * @returns number of shared calendar dates (counted in aStart's zone), `0` when disjoint, or null on invalid input
  *
- * @example intervalOverlappingDaysZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", "2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]") // 3 (spring-forward, 47 real hours)
+ * @example intervalOverlappingDaysZoned("2024-03-30T12:00:00+00:00[Europe/London]", "2024-04-01T12:00:00+01:00[Europe/London]", "2024-03-30T12:00:00+00:00[Europe/London]", "2024-04-01T12:00:00+01:00[Europe/London]") // 3 (spring-forward, 47 real hours)
  * @example intervalOverlappingDaysZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "2024-01-03T00:00:00+00:00[UTC]") // 0 (touching: no shared instant)
  * @example intervalOverlappingDaysZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]") // 1 (the end, 01-02T00:00, is excluded)
  * @example intervalOverlappingDaysZoned("2011-12-29T23:00:00-10:00[Pacific/Apia]", "2011-12-31T01:00:00+14:00[Pacific/Apia]", "2011-12-29T23:00:00-10:00[Pacific/Apia]", "2011-12-31T01:00:00+14:00[Pacific/Apia]") // 2 (2011-12-30 was deleted)

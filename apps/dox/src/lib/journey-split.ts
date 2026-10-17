@@ -90,7 +90,7 @@ export interface JourneyPreset {
 const SAILING = "2024-06-12T14:00:00+08:00[Asia/Shanghai]";
 
 /**
- * Truck, ship and rail from Shanghai to Chicago. The ship's departure is the
+ * Truck, ship and rail from Shanghai to Adelaide. The ship's departure is the
  * one thing the two presets that share these legs differ in.
  */
 const sailingLegs = (sailing: string): readonly LegFields[] => [
@@ -104,14 +104,14 @@ const sailingLegs = (sailing: string): readonly LegFields[] => [
   {
     departure: sailing,
     duration: "P14DT6H",
-    timeZone: "America/Los_Angeles",
+    timeZone: "Australia/Sydney",
     dwellAfter: "PT36H",
     mode: "ship",
   },
   {
     departure: "",
     duration: "PT52H",
-    timeZone: "America/Chicago",
+    timeZone: "Australia/Adelaide",
     dwellAfter: "",
     mode: "rail",
   },
@@ -127,7 +127,7 @@ export const JOURNEY_PRESETS: readonly JourneyPreset[] = [
     id: "scheduled-sailing",
     label: "Truck, ship and rail with a scheduled sailing",
     description:
-      "A truck, a ship and a train take cargo from Shanghai to Chicago. The ship sails at a scheduled 14:00 on 12 June, so the cargo waits for it after its handling time ends: 6 hours of handling, then 42 more for the sailing.",
+      "A truck, a ship and a train take cargo from Shanghai to Adelaide. The ship sails at a scheduled 14:00 on 12 June, so the cargo waits for it after its handling time ends: 6 hours of handling, then 42 more for the sailing.",
     startTimeZone: "",
     legs: sailingLegs(SAILING),
   },
@@ -166,20 +166,20 @@ export const JOURNEY_PRESETS: readonly JourneyPreset[] = [
     id: "across-a-clock-change",
     label: "A train across a clock change",
     description:
-      "A train leaves New York at 20:00 on the night before the clocks spring forward. It runs for 10 hours, so the wall clock shows 11. The moving time counts the 10 hours that passed, then two hours of handling, then 3 hours by truck.",
+      "A train leaves London at 20:00 on the night before the clocks spring forward. It runs for 10 hours, so the wall clock shows 11. The moving time counts the 10 hours that passed, then two hours of handling, then 3 hours by truck.",
     startTimeZone: "",
     legs: [
       {
-        departure: "2024-03-09T20:00:00-05:00[America/New_York]",
+        departure: "2024-03-30T20:00:00+00:00[Europe/London]",
         duration: "PT10H",
-        timeZone: "America/New_York",
+        timeZone: "Europe/London",
         dwellAfter: "PT2H",
         mode: "rail",
       },
       {
         departure: "",
         duration: "PT3H",
-        timeZone: "America/New_York",
+        timeZone: "Europe/London",
         dwellAfter: "",
         mode: "truck",
       },

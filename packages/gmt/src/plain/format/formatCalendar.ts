@@ -43,8 +43,6 @@ const ABS_DAY_THRESHOLD = 6;
  *   `timeStyle` string with no relative wording. The one-week limit is
  *   GMT's own rule, not a standard's: from 7 days out a date is easier to
  *   place than a day count.
- * - Comparison: Moment's `.calendar()` switches to a date at the same
- *   distance (its `sameElse` case); its wording inside the week differs.
  * - The connector between the day label and the time is read from CLDR's
  *   own combined date+time pattern for the locale (see
  *   `internal/joinDateTimeConnector.ts`), not hardcoded — this is what lets
@@ -61,11 +59,11 @@ const ABS_DAY_THRESHOLD = 6;
  * @param options What the value is compared with and how the time is written
  * @returns the formatted calendar string, or "" on invalid input
  *
- * @example formatCalendar("2026-03-16T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" }) // "tomorrow at 2:30 PM"
- * @example formatCalendar("2026-03-08T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" }) // "March 8, 2026 at 2:30 PM" (7 days out — beyond the threshold, absolute fallback)
+ * @example formatCalendar("2026-03-16T14:30:00", "en-GB", { reference: "2026-03-15T09:00:00" }) // "tomorrow at 14:30"
+ * @example formatCalendar("2026-03-08T14:30:00", "pt-BR", { reference: "2026-03-15T09:00:00" }) // "8 de março de 2026 às 14:30" (7 days out — beyond the threshold, absolute fallback)
  * @example formatCalendar("not-a-date") // ""
  * @example formatCalendar("2024-03-16T14:30:00", ["fr-FR", "en-US"], { reference: "2024-03-15T09:00:00" }) // "demain à 14:30"
- * @example formatCalendar("2024-03-12T10:00:00", "en-US", null as never) // "" (null options)
+ * @example formatCalendar("2024-03-12T10:00:00", "zh-CN", null as never) // "" (null options)
  */
 export function formatCalendar(
   value: string,

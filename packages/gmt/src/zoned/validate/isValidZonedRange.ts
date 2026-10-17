@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { hasSecond60 } from "../../plain/validate/hasSecond60";
 import { isObject, isOptionsArgument, zonedDateTimeFrom } from "../../internal";
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
 
@@ -22,7 +22,7 @@ import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
  *
  * @example isValidZonedRange({ value1: "2024-01-01T10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // true
  * @example isValidZonedRange({ value1: "2024-12-31T23:59:59+00:00[UTC]", value2: "2024-01-01T10:00:00+00:00[UTC]" }) // false
- * @example isValidZonedRange({ value1: "2024-06-15T12:00:00-04:00[America/New_York]", value2: "2024-06-15T12:00:00-04:00[America/New_York]", options: { allowEqual: true } }) // true
+ * @example isValidZonedRange({ value1: "2024-06-15T12:00:00+09:00[Asia/Tokyo]", value2: "2024-06-15T12:00:00+09:00[Asia/Tokyo]", options: { allowEqual: true } }) // true
  * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // false (non-ISO calendar)
  * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=iso8601]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // true
  * @example isValidZonedRange({ value1: "2024-01-01 10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // false (space separator)
@@ -58,8 +58,8 @@ export function isValidZonedRange(props: {
     }
 
     if (
-      isLeapSecond(value1) ||
-      isLeapSecond(value2) ||
+      hasSecond60(value1) ||
+      hasSecond60(value2) ||
       !hasZonedDateTimeShape(value1) ||
       !hasZonedDateTimeShape(value2)
     ) {

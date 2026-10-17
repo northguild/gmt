@@ -30,15 +30,15 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
- * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 29, 2024, 12:00 - 2:00 PM"
+ * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "de-DE", { dateStyle: "long", timeStyle: "short" }) // "29. Februar 2024, 12:00-14:00 Uhr"
  * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "29/02/2024, 12:00-14:00"
- * @example formatZonedRange("2024-02-03T14:30:45-05:00[America/New_York]", "2024-02-03T15:30:45-05:00[America/New_York]", "zh-CN", { year: "numeric", month: "long" }) // "2024年2月"
- * @example formatZonedRange("2024-02-03T14:30:45-05:00[America/New_York]", "2024-02-03T15:30:45-05:00[America/New_York]", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM - 3:30:45 PM"
- * @example formatZonedRange("2024-02-29T10:00:00-05:00[America/New_York]", "2024-02-29T12:00:00-05:00[America/New_York]", "en-US", { hour: "numeric", timeZone: "UTC" }) // "" — a ZonedDateTime keeps its own zone
- * @example formatZonedRange("2024-02-29T10:00:00-05:00[America/New_York]", "2024-02-29T12:00:00-05:00[America/New_York]", "en-US", { hour: "numeric", minute: "numeric", timeZoneName: "short" }) // "10:00 AM - 12:00 PM EST" — the pre-1.16.0 text
- * @example formatZonedRange("invalid", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US") // "" (invalid input)
+ * @example formatZonedRange("2024-02-03T14:30:45+08:00[Asia/Shanghai]", "2024-02-03T15:30:45+08:00[Asia/Shanghai]", "zh-CN", { year: "numeric", month: "long" }) // "2024年2月"
+ * @example formatZonedRange("2024-02-03T14:30:45+00:00[Europe/London]", "2024-02-03T15:30:45+00:00[Europe/London]", "en-GB", { era: "long" }) // "03/02/2024 Anno Domini, 14:30:45 - 15:30:45"
+ * @example formatZonedRange("2024-02-29T10:00:00+09:00[Asia/Tokyo]", "2024-02-29T12:00:00+09:00[Asia/Tokyo]", "ja-JP", { hour: "numeric", timeZone: "UTC" }) // "" — a ZonedDateTime keeps its own zone
+ * @example formatZonedRange("2024-02-29T10:00:00+00:00[Europe/London]", "2024-02-29T12:00:00+00:00[Europe/London]", "en-GB", { hour: "numeric", minute: "numeric", timeZoneName: "short" }) // "10:00-12:00 GMT" — the pre-1.16.0 text
+ * @example formatZonedRange("invalid", "2024-02-29T14:00:00.000+00:00[UTC]", "fr-FR") // "" (invalid input)
  * @example formatZonedRange("2024-02-03T14:30:45+01:00[Europe/Paris]", "2024-02-03T16:46:15+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "short", timeStyle: "short" }) // "03/02/2024, 14:30 - 16:46"
- * @example formatZonedRange("2024-02-03T14:30:00-05:00[America/New_York]", "2024-02-05T17:00:00-05:00[America/New_York]", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
+ * @example formatZonedRange("2024-02-03T14:30:00-03:00[America/Sao_Paulo]", "2024-02-05T17:00:00-03:00[America/Sao_Paulo]", "pt-BR", null as never) // "" (null options, as ECMA-402 rejects them)
  */
 export function formatZonedRange(
   from: string,

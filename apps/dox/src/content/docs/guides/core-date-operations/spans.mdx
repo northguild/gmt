@@ -35,8 +35,8 @@ common span bug there is. A wall-clock day containing a DST transition is 23 or 
 long (24.5 in `Australia/Lord_Howe`), so:
 
 ```typescript
-const start = "2024-03-09T12:00:00-05:00[America/New_York]";
-const end = "2024-03-10T12:00:00-04:00[America/New_York]";
+const start = "2024-03-30T12:00:00+00:00[Europe/London]";
+const end = "2024-03-31T12:00:00+01:00[Europe/London]";
 
 spanMs(start, end);
 // 82800000 — 23 hours actually elapsed
@@ -52,8 +52,9 @@ spanWallClock(start, end, "days");
 string, never via an instant, so DST disambiguation cannot distort it, and a local time that
 never occurred is measured as written.
 
-The two endpoints need not share a zone. A flight leaving New York at 23:00 and landing in
-Berlin at 11:00 the next local day is 12 wall-clock hours and 7 elapsed hours. It truncates
+The two endpoints need not share a zone. A flight leaving São Paulo at 23:00 and landing in
+Berlin at 11:00 the next local day, with Berlin on winter time, is 12 wall-clock hours and 8
+elapsed hours. It truncates
 toward zero, and it is not a count of midnights crossed.
 
 ## Check before you measure
@@ -79,7 +80,8 @@ symmetric, since a reversed pair is a negative span rather than an invalid one.
   can be twice the epoch-nanosecond range.
 - **Leap seconds are not counted.** UTC repeats a second rather than numbering a 61st one,
   so a span across one is a second short of the physical elapsed time. Against a smeared
-  clock (Google, AWS, Meta) the error is up to a second spread over the smear window.
+  clock (Google, AWS, Meta) the error is up to a second spread over the smear window. To count
+  them, compare TAI readings: see [Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/).
 
 ## See also
 

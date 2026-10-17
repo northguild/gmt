@@ -93,7 +93,7 @@ describe("collectCountdownFacts + verdict", () => {
     });
   });
 
-  it("C4: a New York clock, same instant, closed", () => {
+  it("C4: a Kolkata clock, same instant, closed", () => {
     const facts = collectCountdownFacts(
       presetState(presetById("other-clock")),
       lib,

@@ -42,7 +42,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * @param options optional limit on the size of the output
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
- * @example intervalDivideEquallyZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", 2) // [{ start: "2024-03-09T12:00:00-05:00[America/New_York]", end: "2024-03-10T12:30:00-04:00[America/New_York]" }, { start: "2024-03-10T12:30:00-04:00[America/New_York]", end: "2024-03-11T12:00:00-04:00[America/New_York]" }] (47 real hours split in half)
+ * @example intervalDivideEquallyZoned("2024-10-05T12:00:00+10:00[Australia/Sydney]", "2024-10-07T12:00:00+11:00[Australia/Sydney]", 2) // [{ start: "2024-10-05T12:00:00+10:00[Australia/Sydney]", end: "2024-10-06T12:30:00+11:00[Australia/Sydney]" }, { start: "2024-10-06T12:30:00+11:00[Australia/Sydney]", end: "2024-10-07T12:00:00+11:00[Australia/Sydney]" }] (47 real hours split in half)
  * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 1) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-04T00:00:00+00:00[UTC]" }]
  * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 0) // []
  * @example intervalDivideEquallyZoned("invalid", "2024-01-04T00:00:00+00:00[UTC]", 3) // []

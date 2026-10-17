@@ -1,0 +1,50 @@
+---
+title: Elapsed vs. Clock Difference
+description: Measure one span two ways. The clock reading ignores inserted leap seconds, and the elapsed time counts every second that really passed.
+industries: [core]
+---
+
+import ElapsedVsClock from "../../../components/ElapsedVsClock.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="leap seconds">
+
+<Fragment slot="keypoint">
+
+Subtract two UTC readings and you get the clock difference. Count the seconds that passed and you get the elapsed time. They differ by every second inserted in between.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A UTC day normally has 86400 seconds. On a day with an inserted second it has 86401, and the extra one is written `23:59:60`. Subtracting two UTC readings treats every day as 86400 seconds long, so it skips the inserted ones. Counting through TAI, which never inserts a second, gives the time that really passed.
+
+Type a start and an end, or pick a preset. The sum at the top adds the leap seconds to the clock difference to get the seconds that passed. Under it, two rulers draw the same span at one scale: the top one as the clock reads it, the bottom one as the seconds that really passed. Each inserted second is a stretched 23:59:60 cell on the clock and a hatched +1 s cell below it, so the two ends no longer line up. Under them are the exact calls. Drag the slider to move the end a day at a time.
+
+</Fragment>
+
+<ElapsedVsClock fullbleed />
+
+<Fragment slot="after">
+
+**The clock difference.** [`spanNs`](/reference/span/calculate/spanNs/) subtracts two UTC readings and returns nanoseconds as a `bigint`. It has no answer for a `23:59:60`, because the clock method has no place to put that second, and the tool shows that as `NO SIGNAL` with the reason.
+
+**The elapsed time.** [`toTAI`](/reference/timescale/convert/toTAI/) turns each UTC reading into a TAI reading, and `spanNs` of the two TAI readings is the time that passed. A second 60 is fine here, so a span that starts on the leap second still has an answer. Before 1972-01-01 UTC and TAI did not differ by whole seconds, so the library returns an empty answer and the tool shows `NO SIGNAL`.
+
+**The count.** [`leapSecondsBetween`](/reference/timescale/calculate/leapSecondsBetween/) counts the seconds inserted between the two readings, and it is negative when the end comes first. Zero is a real answer: no second was inserted between the two, so both methods agree.
+
+```ts
+spanNs("2016-12-31T23:59:59Z", "2017-01-01T00:00:01Z"); // 2000000000n
+toTAI("2016-12-31T23:59:59Z"); // "2017-01-01T00:00:35 TAI"
+toTAI("2017-01-01T00:00:01Z"); // "2017-01-01T00:00:38 TAI"
+leapSecondsBetween("2016-12-31T23:59:59Z", "2017-01-01T00:00:01Z"); // 1
+leapSecondsBetween("2020-01-01T00:00:00Z", "2024-01-01T00:00:00Z"); // 0
+```
+
+**Worth trying:** [The 2016 leap second, one second either side](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A59%3A59Z%22%2C%22end%22%3A%222017-01-01T00%3A00%3A01Z%22%7D) — the clock says 2 seconds and the elapsed time is 3. [Twenty-four years](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222000-01-01T00%3A00%3A00Z%22%2C%22end%22%3A%222024-01-01T00%3A00%3A00Z%22%7D) — five inserted seconds, so the two answers differ by 5. [A span with no insertion](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222020-01-01T00%3A00%3A00Z%22%2C%22end%22%3A%222024-01-01T00%3A00%3A00Z%22%7D) — the two answers agree. [Starting on the leap second](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A59%3A60Z%22%2C%22end%22%3A%222017-01-01T00%3A00%3A00Z%22%7D) — the clock method has no answer and the elapsed method gives 1 second. [The ends swapped](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222024-01-01T00%3A00%3A00Z%22%2C%22end%22%3A%222000-01-01T00%3A00%3A00Z%22%7D) — every answer turns negative. [A second 60 that was never inserted](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222017-12-31T23%3A59%3A60Z%22%2C%22end%22%3A%222018-01-01T00%3A00%3A00Z%22%7D) — `NO SIGNAL` on all three. [A start before 1972](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%221971-01-01T00%3A00%3A00Z%22%2C%22end%22%3A%222024-01-01T00%3A00%3A00Z%22%7D) — the clock method answers and the elapsed method does not.
+
+**Reference:** [`spanNs`](/reference/span/calculate/spanNs/), [`toTAI`](/reference/timescale/convert/toTAI/) and [`leapSecondsBetween`](/reference/timescale/calculate/leapSecondsBetween/). The guide is [Leap Seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>

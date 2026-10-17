@@ -74,12 +74,12 @@ export interface FormatRelativeZonedOptions {
  * @param options optional settings for the wording, the display unit, rounding and the reference moment
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeZoned("2023-12-29T00:00:00+00:00[UTC]", "en-US", { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "2 months ago"
- * @example formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US", { reference: "2026-03-07T01:00:00-05:00[America/New_York]" }) // "tomorrow"
+ * @example formatRelativeZoned("2023-12-29T00:00:00+00:00[UTC]", "en-GB", { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "2 months ago"
+ * @example formatRelativeZoned("2026-03-08T01:00:00+05:30[Asia/Kolkata]", "en-IN", { reference: "2026-03-07T01:00:00+05:30[Asia/Kolkata]" }) // "tomorrow"
  * @example formatRelativeZoned("2026-01-15T00:00:00+00:00[UTC]", "en-US", { reference: "2026-01-15T10:30:00+00:00[UTC]", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeZoned("not-a-date") // ""
  * @example formatRelativeZoned("2024-02-28T23:30:00+00:00[UTC]", ["fr-FR", "en-US"], { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "il y a 30 minutes"
- * @example formatRelativeZoned("2024-03-12T10:00:00-04:00[America/New_York]", "en-US", null as never) // "" (null options)
+ * @example formatRelativeZoned("2024-03-12T10:00:00+02:00[Africa/Johannesburg]", "de-DE", null as never) // "" (null options)
  */
 export function formatRelativeZoned(
   value: string,

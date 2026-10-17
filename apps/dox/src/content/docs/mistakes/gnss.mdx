@@ -1,0 +1,136 @@
+---
+title: GNSS
+description: Common mistakes with satellite system times, the leap-second gap to UTC, week counters, rollover eras and RINEX weeks in GMT's GNSS layer.
+industries: [gnss]
+---
+
+The GNSS layer reads the clocks of the six satellite systems and the week counters they broadcast.
+The mistakes around them are the ones a receiver's own firmware makes: adding a gap where it
+should subtract one, fixing the gap once, reading a clock at a date before it existed, adding a
+shift to a scale that has none, leaving the week counter and its pass unstated, and feeding a
+RINEX week to a broadcast counter. Every output shown here is what the function returns.
+
+## System time and UTC
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Adding a system's lead over UTC instead of subtracting it"
+  description="A satellite system's clock runs ahead of UTC, so its label shows a later time than UTC does at the same instant. Reading a NavIC label as UTC plus its lead doubles the error instead of removing it. gnssToUtc takes the lead off, for the date the label carries."
+  wrongCode={`// the log line reads "2024-01-01T00:00:18 IRN"
+new Date(Date.parse("2024-01-01T00:00:18Z") + 18 * 1000).toISOString();
+// "2024-01-01T00:00:36.000Z" — 36 seconds out`}
+  rightCode={`import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+gnssToUtc("IRN", "2024-01-01T00:00:18 IRN");
+// "2024-01-01T00:00:00Z"
+utcToGnss("IRN", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:18 IRN"`}
+  rightSpecId="gnssToUtc"
+/>
+
+<Mistake
+  severity="high"
+  title="Reading a Galileo label as TAI"
+  description="Galileo time is a constant 19 seconds behind TAI, and TAI is 37 seconds ahead of UTC, so a Galileo label is 18 seconds ahead of UTC. Both are continuous scales that look alike, and a label read with the wrong token lands 19 seconds out. gnssToUtc checks the token and removes the lead that belongs to the system."
+  wrongCode={`import { fromTAI } from "@northguild/gmt/timescale/convert";
+
+fromTAI("2024-01-01T00:00:18 TAI");
+// "2023-12-31T23:59:41Z" — a Galileo label, read as TAI`}
+  rightCode={`import { gnssToUtc } from "@northguild/gmt/gnss/convert";
+import { toTAI } from "@northguild/gmt/timescale/convert";
+
+gnssToUtc("GAL", "2024-01-01T00:00:18 GAL");
+// "2024-01-01T00:00:00Z"
+toTAI("2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:37 TAI"`}
+  rightSpecId="gnssToUtc"
+/>
+
+<Mistake
+  severity="high"
+  title="Fixing the gap once"
+  description="The lead of a continuous system over UTC grew by one second with each leap second, and the last insertion was at the end of 2016. A gap typed in once is right for one stretch of dates. utcToGnss reads the gap from the leap-second table for the date it is given."
+  wrongCode={`const GAP_SECONDS = 18; // true since the start of 2017
+new Date(Date.parse("2016-06-01T00:00:00Z") + GAP_SECONDS * 1000).toISOString();
+// "2016-06-01T00:00:18.000Z" — the clock read 00:00:17 that day`}
+  rightCode={`import { utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GPS", "2016-06-01T00:00:00Z");
+// "2016-06-01T00:00:17 GPS"
+utcToGnss("GPS", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:18 GPS"`}
+  rightSpecId="utcToGnss"
+/>
+
+Try 1 June 2016 in the [Satellite Clock Converter](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22value%22%3A%222016-06-01T00%3A00%3A00Z%22%7D) to see every clock's gap for that day.
+
+<Mistake
+  severity="medium"
+  title="Applying today's gap at a system's first instant"
+  description="BeiDou time started on 2006-01-01 equal to UTC, and its lead has grown since. Today's gap applied to that first instant puts the clock four seconds after its own start. utcToGnss returns the label the clock showed, and an empty string for any date before the clock existed."
+  wrongCode={`new Date(Date.parse("2006-01-01T00:00:00Z") + 4 * 1000).toISOString();
+// "2006-01-01T00:00:04.000Z" — BeiDou time began at 00:00:00`}
+  rightCode={`import { utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("BDT", "2006-01-01T00:00:00Z");
+// "2006-01-01T00:00:00 BDT"
+utcToGnss("BDT", "2005-12-31T23:59:59Z");
+// ""`}
+  rightSpecId="utcToGnss"
+/>
+
+## GLONASS time
+
+<Mistake
+  severity="high"
+  title="Shifting a GLO label that is already in UTC's hours"
+  description="GLO is GLONASS time as RINEX and the BIPM report it: in UTC's own hours, with UTC's leap seconds. The library reads no other GLONASS scale. A shift added to a GLO label moves the hour of the result, and nothing in the label asks for one. gnssToUtc reads the label as it stands."
+  wrongCode={`const SHIFT_HOURS = 2; // an offset the integrator believed the label carried
+new Date(Date.parse("2024-06-01T12:00:00Z") - SHIFT_HOURS * 3_600_000).toISOString();
+// "2024-06-01T10:00:00.000Z" — two hours out`}
+  rightCode={`import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+gnssToUtc("GLO", "2024-06-01T12:00:00 GLO");
+// "2024-06-01T12:00:00Z"
+utcToGnss("GLO", "2016-12-31T23:59:60Z");
+// "2016-12-31T23:59:60 GLO"`}
+  rightSpecId="gnssToUtc"
+/>
+
+## Week counters
+
+<Mistake
+  severity="critical"
+  title="Reading a week with no counter or era"
+  description="A broadcast week repeats: a 10-bit counter wraps about every 19.6 years. Counting weeks from the system's start gives the first pass, whatever the date is. gnssWeekToUtc needs the counter and the pass, and utcToGnssWeek returns both with the week."
+  wrongCode={`new Date(Date.UTC(1999, 7, 22) + 247 * 7 * 86_400_000 + 86418 * 1000).toISOString();
+// "2004-05-17T00:00:18.000Z" — the receiver was reporting 1 January 2024`}
+  rightCode={`import { gnssWeekToUtc, utcToGnssWeek } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("IRN-LNAV", 247, 86418, 1);
+// "2024-01-01T00:00:00Z"
+utcToGnssWeek("IRN-LNAV", "2024-01-01T00:00:00Z");
+// { week: 247, timeOfWeekSeconds: 86418, era: 1 }`}
+  rightSpecId="gnssWeekToUtc"
+/>
+
+The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22IRN-LNAV%22%2C%22week%22%3A%22247%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%2C%22rolloverEra%22%3A%221%22%7D) opens on this NavIC reading and shows its other passes.
+
+<Mistake
+  severity="critical"
+  title="Feeding a RINEX week to a broadcast counter"
+  description="A RINEX navigation file writes a continuous week count that never wraps. A Galileo broadcast week counts from 1999 and wraps at 4096. The same number read on the wrong one lands 19 years out, with no error. rinexWeekToUtc reads the file's count."
+  wrongCode={`import { gnssWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("GAL", 2295, 86418, 0);
+// "2043-08-17T00:00:00Z" — a record from 1 January 2024`}
+  rightCode={`import { rinexWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+rinexWeekToUtc("GAL", 2295, 86418);
+// "2024-01-01T00:00:00Z"`}
+  rightSpecId="rinexWeekToUtc"
+/>
+
+The [GNSS Week Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22rinex%22%2C%22system%22%3A%22GAL%22%2C%22week%22%3A%222295%22%2C%22timeOfWeekSeconds%22%3A%2286418%22%7D) reads week 2295 as a RINEX week.

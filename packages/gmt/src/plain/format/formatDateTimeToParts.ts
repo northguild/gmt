@@ -7,10 +7,10 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
 /**
  * Return the locale-formatted parts of a PlainDateTime.
  *
- * - This is GMT's substitute for a token formatter (Luxon `toFormat`, date-fns
- *   `format`). A token pattern hard-codes field order and ships US ordering to
- *   every locale; `formatToParts` gives the caller full control over presentation
- *   while the *locale* keeps control of order.
+ * - Use the parts instead of a fixed field pattern. A pattern such as UTS #35's `dd/MM/yyyy` fixes
+ *   one field order for every locale; ECMA-402's `Intl.DateTimeFormat.prototype.formatToParts`
+ *   (§11.3.6; `FormatDateTimeToParts` §11.5.7) returns the fields in the order of the locale's
+ *   CLDR date pattern, so the caller controls presentation and the locale keeps control of order.
  * - Each part is `{ type, value }` where `type` can be:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.
@@ -48,9 +48,9 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
- * @example formatDateTimeToParts("2024-03-15T14:30:00", "en-US") // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }]
+ * @example formatDateTimeToParts("2024-03-15T14:30:00", "ja-JP") // [{ type: "year", value: "2024" }, { type: "literal", value: "/" }, { type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: " " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }]
  * @example formatDateTimeToParts("2024-03-15T14:30:00", "de-DE") // [{ type: "day", value: "15" }, { type: "literal", value: "." }, { type: "month", value: "3" }, { type: "literal", value: "." }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }]
- * @example formatDateTimeToParts("2024-03-15T14:30:00", "en-US", { year: "numeric", month: "numeric", day: "numeric" }) // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }] — the pre-1.16.0 default
+ * @example formatDateTimeToParts("2024-03-15T14:30:00", "en-GB", { year: "numeric", month: "numeric", day: "numeric" }) // [{ type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "month", value: "03" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }] — the pre-1.16.0 default
  * @example formatDateTimeToParts("2024-02-29T12:00:00", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }]
  * @example formatZonedToParts("2024-02-29T12:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateTimeToParts("invalid") // []

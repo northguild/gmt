@@ -1,4 +1,4 @@
-export * from "./isLeapSecond";
+export * from "./hasSecond60";
 export * from "./isLeapYear";
 export * from "./isValidCalendarDate";
 export * from "./isValidDate";

@@ -302,7 +302,7 @@ const DATE_LABELLED_UNITS: ReadonlySet<WalkerUnit> = new Set([
  *   so the 03:00 hour begins at the transition even though the clock does not read 03:00:00; a
  *   local day whose midnight is skipped begins at 01:00 the same way; and `America/Goose_Bay`'s
  *   2010-11-07 fall-back re-enters 6 November, so that 59-minute stretch is its own day.
- * - **The clock lands on a unit boundary** — hours and smaller only. New York goes back to
+ * - **The clock lands on a unit boundary** — hours and smaller only. London goes back to
  *   01:00:00 exactly, so a second, separate 01:00 hour begins there — which is why a fall-back
  *   day has 25 hour buckets. `Australia/Lord_Howe` goes back to 01:30, mid-hour, so the hour it
  *   is already in simply runs longer: 90 minutes.
@@ -509,7 +509,7 @@ export function nextZonedBucketStart(
  * next bucket starts.
  *
  * - Never earlier than `zoned`, because it is measured from the real bucket `zoned` is in —
- *   New York's second 01:00 hour on a fall-back morning ends at 01:59:59.999999999 −05:00, not
+ *   London's second 01:00 hour on a fall-back morning ends at 01:59:59.999999999 +00:00, not
  *   at the first pass's.
  * - Walks forward from `zoned` itself, never from its bucket's start. No transition between that
  *   start and `zoned` opens a bucket, so both walks reach the same next start — but the start may

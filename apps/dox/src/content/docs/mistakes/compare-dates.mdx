@@ -38,10 +38,10 @@ if (isValidDate(a) && isValidDate(b)) {
   severity="medium"
   title="Comparing different date formats"
   description="isBeforeDate compares two plain dates. A zoned datetime string is invalid input to it, so the result is false whatever the dates are. Convert first so both inputs have the same shape."
-  wrongCode={`isBeforeDate("2024-03-14", "2024-03-15T10:00:00-04:00[America/New_York]"); // false — the zoned string is invalid input`}
+  wrongCode={`isBeforeDate("2024-03-14", "2024-03-15T10:00:00+09:00[Asia/Tokyo]"); // false — the zoned string is invalid input`}
   rightCode={`import { isBeforeDate, parseDateFromZoned } from "@northguild/gmt";
 
-isBeforeDate("2024-03-14", parseDateFromZoned("2024-03-15T10:00:00-04:00[America/New_York]"));
+isBeforeDate("2024-03-14", parseDateFromZoned("2024-03-15T10:00:00+09:00[Asia/Tokyo]"));
 // true — both are plain dates`}
 />
 
@@ -55,7 +55,7 @@ isBeforeDate("2024-03-14", parseDateFromZoned("2024-03-15T10:00:00-04:00[America
 };`}
   rightCode={`import { isWeekend } from "@northguild/gmt";
 
-isWeekend("2024-03-15", "en-US"); // false
+isWeekend("2024-03-15", "en"); // false
 isWeekend("2024-03-15", "he-IL"); // true — 2024-03-15 is a Friday, and he-IL's weekend is Friday–Saturday`}
 />
 
@@ -84,11 +84,11 @@ areDatesEqualBy("2024-03-15", "2024-03-20", "month"); // true — same month and
 <Mistake
   severity="high"
   title="Assuming isRelativeDay/isThisUnit/isPast/isFuture are timeZone-independent"
-  description="The plain predicates resolve 'today' in the system time zone, and a plain date has no zone to pass. A date that is 'today' in New York is 'tomorrow' in Tokyo. When the result must not depend on the host, use the zoned variants: isZonedRelativeDay and isZonedThisUnit resolve 'today' in the value's own time zone, and isZonedPast and isZonedFuture compare instants."
+  description="The plain predicates resolve 'today' in the system time zone, and a plain date has no zone to pass. A date that is 'today' in São Paulo is 'tomorrow' in Tokyo. When the result must not depend on the host, use the zoned variants: isZonedRelativeDay and isZonedThisUnit resolve 'today' in the value's own time zone, and isZonedPast and isZonedFuture compare instants."
   wrongCode={`isPast("2024-03-15"); // depends on the system timezone at runtime`}
   rightCode={`import { isZonedPast } from "@northguild/gmt";
 
-isZonedPast("2024-03-15T00:00:00-04:00[America/New_York]"); // compares instants — no host time zone involved`}
+isZonedPast("2024-03-15T00:00:00+11:00[Australia/Sydney]"); // compares instants — no host time zone involved`}
 />
 
 <Mistake

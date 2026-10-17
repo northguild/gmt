@@ -51,7 +51,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  * @example floorToZone("2024-06-15T03:00:00Z", "day", "America/New_York") // "2024-06-14T04:00:00Z" (the 14 June local midnight — the instant is already 14 June there)
  * @example floorToZone("2024-06-15T03:00:00Z", "day", "UTC") // "2024-06-15T00:00:00Z" (the same instant, a different local day)
  * @example floorToZone("2024-06-15T03:00:00Z", "hour", "Asia/Kathmandu") // "2024-06-15T02:15:00Z" (a +05:45 zone's hour boundary)
- * @example floorToZone("2024-06-15T03:00:00Z", "week", "America/New_York") // "2024-06-10T04:00:00Z" (the Monday)
+ * @example floorToZone("2024-06-15T03:00:00Z", "week", "Asia/Tokyo") // "2024-06-09T15:00:00Z" (the Monday)
  * @example floorToZone("2024-09-08T10:00:00Z", "day", "America/Santiago") // "2024-09-08T04:00:00Z" (local midnight is skipped, so the day starts at 01:00)
  * @example floorToZone("2024-05-15T10:20:30.123Z", "days", "Europe/Berlin") // "2024-05-14T22:00:00Z" (plural unit name)
  * @example floorToZone("2024-06-15T03:00:00Z", "year", "UTC") // "" (not a bucketing unit)

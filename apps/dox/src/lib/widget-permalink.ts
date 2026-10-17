@@ -56,7 +56,12 @@ export type WidgetKind =
   | "demclock"
   | "bldate"
   | "epcis"
-  | "journeysplit";
+  | "journeysplit"
+  | "gnssweek"
+  | "satclock"
+  | "rollover"
+  | "leapline"
+  | "elapsed";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -97,7 +102,25 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   bldate: "/tools/bl-date-stamp/",
   epcis: "/tools/epcis-event-reader/",
   journeysplit: "/tools/journey-split/",
+  gnssweek: "/tools/gnss-week-decoder/",
+  satclock: "/tools/satellite-clock-converter/",
+  rollover: "/tools/gnss-rollover-checker/",
+  leapline: "/tools/leap-second-timeline/",
+  elapsed: "/tools/elapsed-vs-clock-difference/",
 };
+
+/** A tool to open and the permalink keys that seed it, for a cross-link. */
+export interface ToolHandoff {
+  kind: WidgetKind;
+  args: Record<string, string>;
+}
+
+/** The permalink a handoff opens, or `null` while the link has nothing to send. */
+export function handoffHref(handoff: ToolHandoff | null): string | null {
+  return handoff === null
+    ? null
+    : encodeWidgetPermalink(handoff.kind, handoff.args);
+}
 
 export function encodeWidgetPermalink(
   kind: WidgetKind,

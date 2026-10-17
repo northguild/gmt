@@ -76,9 +76,9 @@ interface Expected {
 
 /** What each preset prints, from a run against `packages/gmt/dist`. */
 const EXPECTED: Record<string, Expected> = {
-  "new-york-evening": {
+  "sao-paulo-evening": {
     copy: [
-      bol(VALUE, "shippedOnBoard", "America/New_York"),
+      bol(VALUE, "shippedOnBoard", "America/Sao_Paulo"),
       bol(VALUE, "shippedOnBoard", "UTC"),
       bol(VALUE, "shippedOnBoard", "Asia/Shanghai"),
       'areDatesEqual("2024-06-16", "2024-06-15")',
@@ -91,7 +91,7 @@ const EXPECTED: Record<string, Expected> = {
       "false",
       "true",
     ].join("\n"),
-    bl: ["Sat 15 Jun 2024", "21:00 in America/New_York", ""],
+    bl: ["Sat 15 Jun 2024", "22:00 in America/Sao_Paulo", ""],
     utc: ["Sun 16 Jun 2024", "one day later", ""],
     lit: ["2024-06-16", "2024-06-15", "2024-06-16", "", ""],
   },
@@ -278,7 +278,7 @@ describe("renderBlDateStampTemplate", () => {
     root.innerHTML = renderBlDateStampTemplate();
     expect(q<HTMLInputElement>(root, "value").value).toBe(VALUE);
     expect(q<HTMLSelectElement>(root, "event").value).toBe("shippedOnBoard");
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("America/New_York");
+    expect(q<HTMLSelectElement>(root, "zone").value).toBe("America/Sao_Paulo");
     expect(q<HTMLSelectElement>(root, "zone-2").value).toBe("Asia/Shanghai");
     const slider = q<HTMLInputElement>(root, "moment-slider");
     expect(slider.tagName).toBe("INPUT");
@@ -402,8 +402,10 @@ describe("every preset, against the real library", () => {
 
   it("opens on the first preset", async () => {
     const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("new-york-evening");
-    expect(text(root, "bl-output")).toBe(EXPECTED["new-york-evening"]!.output);
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
+      "sao-paulo-evening",
+    );
+    expect(text(root, "bl-output")).toBe(EXPECTED["sao-paulo-evening"]!.output);
     expect(text(root, "preset-description")).toBe(
       BL_DATE_PRESETS[0]!.description,
     );
@@ -412,7 +414,7 @@ describe("every preset, against the real library", () => {
   it("shows two calendars on the first paint: the place, UTC and Shanghai", async () => {
     const { root } = await mount();
     expect(text(root, "lane-label-0")).toBe("UTC (naive)");
-    expect(text(root, "lane-label-1")).toBe("America/New_York");
+    expect(text(root, "lane-label-1")).toBe("America/Sao_Paulo");
     expect(text(root, "lane-label-2")).toBe("Asia/Shanghai");
     expect(text(root, "note-3")).toBe("no zone chosen");
     expect(q(root, "note-3").hidden).toBe(false);
@@ -447,11 +449,11 @@ describe("the slider", () => {
   it("moves the moment in 15-minute steps and writes it in the form it was typed", async () => {
     const { root } = await mount();
     const slider = q<HTMLInputElement>(root, "moment-slider");
-    // 01:00Z on 16 June is 33 hours into a window that starts at 16:00Z on 14 June.
-    expect(slider.value).toBe("132");
+    // 01:00Z on 16 June is 34 hours into a window that starts at 15:00Z on 14 June.
+    expect(slider.value).toBe("136");
     expect(slider.getAttribute("aria-valuetext")).toBe("Sun 16 Jun 01:00Z");
     expect(text(root, "moment-value")).toBe("Sun 16 Jun 01:00Z");
-    slide(root, 133);
+    slide(root, 137);
     expect(q<HTMLInputElement>(root, "value").value).toBe(
       "2024-06-16T01:15:00Z",
     );
@@ -488,19 +490,19 @@ describe("the slider", () => {
   it("changes the date when the moment crosses the place's midnight, and in no other lane at the same time", async () => {
     const { root } = await mount();
     expect(lit(root, 1)).toBe("2024-06-15");
-    // The window is centred on midnight in New York, 04:00Z: position 144.
+    // The window is centred on midnight in São Paulo, 03:00Z: position 144.
     slide(root, 143);
     expect(q<HTMLInputElement>(root, "value").value).toBe(
-      "2024-06-16T03:45:00Z",
+      "2024-06-16T02:45:00Z",
     );
     expect(lit(root, 1)).toBe("2024-06-15");
     slide(root, 144);
     expect(q<HTMLInputElement>(root, "value").value).toBe(
-      "2024-06-16T04:00:00Z",
+      "2024-06-16T03:00:00Z",
     );
     expect(lit(root, 1)).toBe("2024-06-16");
     expect(plate(root, "hero-bl")[0]).toBe("Sun 16 Jun 2024");
-    expect(plate(root, "hero-bl")[1]).toBe("00:00 in America/New_York");
+    expect(plate(root, "hero-bl")[1]).toBe("00:00 in America/Sao_Paulo");
     expect(plate(root, "hero-utc")[1]).toBe("same date");
     expect(lit(root, 0)).toBe("2024-06-16");
     expect(lit(root, 2)).toBe("2024-06-16");
@@ -522,12 +524,12 @@ describe("the slider", () => {
     type(root, "value", "2024-06-20T12:00:00Z");
     const typed = layout(root, 1);
     expect(typed).not.toEqual(first);
-    // 12:00Z is 08:00 in New York, 44 hours into a window that starts at 16:00Z
+    // 12:00Z is 09:00 in São Paulo, 45 hours into a window that starts at 15:00Z
     // on 18 June.
-    expect(q<HTMLInputElement>(root, "moment-slider").value).toBe("176");
+    expect(q<HTMLInputElement>(root, "moment-slider").value).toBe("180");
     choose(root, "zone", "Asia/Shanghai");
     expect(layout(root, 1)).not.toEqual(typed);
-    choose(root, "preset", "new-york-evening");
+    choose(root, "preset", "sao-paulo-evening");
     expect(layout(root, 1)).toEqual(first);
   });
 
@@ -542,7 +544,9 @@ describe("the slider", () => {
 
   it("makes the state custom and holds the description's height", async () => {
     const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("new-york-evening");
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
+      "sao-paulo-evening",
+    );
     slide(root, 140);
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
     expect(text(root, "preset-description")).toBe("");
@@ -567,7 +571,7 @@ describe("the slider", () => {
     const { root } = await mount();
     const first = text(root, "summary");
     expect(first).toBe(
-      "Shipped on board date: Sat 15 Jun 2024, 21:00 in America/New_York. UTC date: Sun 16 Jun 2024, one day later.",
+      "Shipped on board date: Sat 15 Jun 2024, 22:00 in America/Sao_Paulo. UTC date: Sun 16 Jun 2024, one day later.",
     );
     slide(root, 144);
     slide(root, 145);
@@ -576,7 +580,7 @@ describe("the slider", () => {
     expect(text(root, "summary")).toBe(first);
     vi.advanceTimersByTime(1);
     expect(text(root, "summary")).toBe(
-      "Shipped on board date: Sun 16 Jun 2024, 00:15 in America/New_York. UTC date: Sun 16 Jun 2024, same date.",
+      "Shipped on board date: Sun 16 Jun 2024, 00:15 in America/Sao_Paulo. UTC date: Sun 16 Jun 2024, same date.",
     );
     expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
     expect(q(root, "summary").classList.contains("gmt-ledger-sr")).toBe(true);
@@ -591,7 +595,7 @@ describe("the options", () => {
     type(root, "latest", "2024-06-15");
     expect(plate(root, "hero-bl")).toEqual([
       "Sat 15 Jun 2024",
-      "21:00 in America/New_York",
+      "22:00 in America/Sao_Paulo",
       "on or before the latest date",
     ]);
     expect(plate(root, "hero-utc")).toEqual([
@@ -612,7 +616,7 @@ describe("the options", () => {
     const { root, handle } = await mount({
       value: VALUE,
       event: "shippedOnBoard",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
       latest: "2024-02-30",
     });
     expect(q<HTMLInputElement>(root, "latest").value).toBe("");
@@ -729,7 +733,7 @@ describe("NO SIGNAL", () => {
     const { root } = await mount({
       value: VALUE,
       event: "shippedOnBoard",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
       zone2: "Mars/Base",
     });
     expect(isSentinel(root, "bl-output")).toBe(false);
@@ -742,7 +746,7 @@ describe("NO SIGNAL", () => {
     const { root } = await mount({
       value: VALUE,
       event: "shippedOnBoard",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
       zone2: "+08:00:30",
     });
     expect(dates(root, 2)).toEqual([]);
@@ -756,7 +760,7 @@ describe("NO SIGNAL", () => {
     const { root } = await mount({
       value: VALUE,
       event: "loaded",
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
     });
     expect(q<HTMLSelectElement>(root, "event").value).toBe("loaded");
     expect(isSentinel(root, "bl-output")).toBe(true);
@@ -793,7 +797,7 @@ describe("the chat registration", () => {
     }
     const calendars = resolveWidget("showBlDateStamp", {
       ...base,
-      timeZone: "America/New_York",
+      timeZone: "America/Sao_Paulo",
       zone2: "Mars/Base",
       zone3: "+05:45",
       zone4: "Asia/Shanghai",
@@ -825,7 +829,7 @@ describe("seeding", () => {
       value: "2024-06-14T23:00:00Z",
       event: "received",
       timeZone: "Asia/Shanghai",
-      zone2: "America/New_York",
+      zone2: "America/Sao_Paulo",
       latest: "2024-06-14",
     };
     const { root } = await mount(args, args);
@@ -894,7 +898,7 @@ describe("permalinks", () => {
     const { root, handle } = await mount();
     slide(root, 144);
     const state = handle.getPermalinkState?.() as Record<string, string>;
-    expect(state["value"]).toBe("2024-06-16T04:00:00Z");
+    expect(state["value"]).toBe("2024-06-16T03:00:00Z");
   });
 });
 

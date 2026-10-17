@@ -27,11 +27,11 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized time string or "" on invalid input
  *
- * @example formatTime("14:30:00", "en-US", { timeStyle: "short" }) // "2:30 PM"
+ * @example formatTime("14:30:00", "hi-IN", { timeStyle: "short" }) // "2:30 pm"
  * @example formatTime("14:30:00", "de-DE", { timeStyle: "short" }) // "14:30"
- * @example formatTime("14:30:45", "en-US", { era: "long" }) // "2:30:45 PM"
- * @example formatTime("14:30:45", "en-US", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainTime has no date
- * @example formatTime("14:30:45", "en-US", { timeStyle: "short" }) // "2:30 PM" — the pre-1.16.0 text
+ * @example formatTime("14:30:45", "pt-BR", { era: "long" }) // "14:30:45"
+ * @example formatTime("14:30:45", "ja-JP", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainTime has no date
+ * @example formatTime("14:30:45", "ja-JP", { timeStyle: "short" }) // "14:30" — the pre-1.16.0 text
  * @example formatTime("invalid") // ""
  * @example formatTime("14:30:45", ["fr-FR", "en-US"], { hour: "2-digit", minute: "2-digit" }) // "14:30"
  */

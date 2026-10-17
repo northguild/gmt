@@ -1,0 +1,74 @@
+---
+title: Leap Seconds
+description: Common mistakes with leap seconds, TAI minus UTC, the second-60 syntax check and elapsed time across an insertion in GMT's timescale module.
+industries: [core]
+---
+
+A leap second is a second UTC inserts at the end of a day and the clock reads as `23:59:60`. The
+mistakes around it are three: treating the spelling as proof the second exists, treating TAI − UTC as
+a whole number for every date, and treating the difference of two UTC readings as the seconds that
+passed. Every output shown here is what the function returns.
+
+## Leap seconds and TAI
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Using hasSecond60 as a leap-second check"
+  description="hasSecond60 tests the spelling of the seconds field, which Temporal would silently clamp to 59. A second 60 is well-formed on any day and real on 27 of them. isLeapSecond looks the day up in the leap-second table."
+  wrongCode={`import { hasSecond60 } from "@northguild/gmt/plain/validate";
+
+hasSecond60("2017-12-31T23:59:60Z");
+// true — well-formed, and no second was inserted that day`}
+  rightCode={`import { isLeapSecond } from "@northguild/gmt/timescale/validate";
+
+isLeapSecond("2017-12-31T23:59:60Z");
+// false
+isLeapSecond("2016-12-31T23:59:60Z");
+// true`}
+  rightSpecId="isLeapSecond"
+/>
+
+The [Leap Second Timeline](/tools/leap-second-timeline/?w=leapline&wa=%7B%22check%22%3A%222017-12-31T23%3A59%3A60Z%22%7D) checks the end of 2017 against the listed insertions.
+
+<Mistake
+  severity="medium"
+  title="Using a whole number for TAI − UTC before 1972"
+  description="UTC differed from TAI by whole seconds only from 1972-01-01. Before that the difference was fractional and changed daily, so a constant of 10 seconds is not a lower bound. taiMinusUtc returns null for an earlier date, and toTAI returns an empty string."
+  wrongCode={`const taiMinusUtc = () => 10; // the first whole-second value, for every date
+taiMinusUtc("1971-12-31T23:59:59Z");
+// 10 — in 1971 the difference was not a whole number`}
+  rightCode={`import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+import { toTAI } from "@northguild/gmt/timescale/convert";
+
+taiMinusUtc("1971-12-31T23:59:59Z");
+// null
+taiMinusUtc("1972-01-01T00:00:00Z");
+// 10
+toTAI("1971-12-31T00:00:00Z");
+// ""`}
+  rightSpecId="taiMinusUtc"
+/>
+
+The [Leap Second Timeline](/tools/leap-second-timeline/?w=leapline&wa=%7B%22date%22%3A%221971-12-31T23%3A59%3A59Z%22%7D) shows what it gives for the last second of 1971.
+
+<Mistake
+  severity="high"
+  title="Reading a span across an insertion as the seconds that passed"
+  description="UTC repeats a second rather than numbering a 61st, so the difference of two UTC readings across an insertion is one second short of the time that passed. leapSecondsBetween counts the insertions in the span, signed, and the true elapsed time is the clock difference plus that count."
+  wrongCode={`import { spanNs } from "@northguild/gmt/span/calculate";
+
+spanNs("2016-12-31T23:00:00Z", "2017-01-01T01:00:00Z");
+// 7200000000000n — two hours of clock, one second short of two hours elapsed`}
+  rightCode={`import { spanNs } from "@northguild/gmt/span/calculate";
+import { leapSecondsBetween } from "@northguild/gmt/timescale/calculate";
+
+spanNs("2016-12-31T23:00:00Z", "2017-01-01T01:00:00Z");
+// 7200000000000n
+leapSecondsBetween("2016-12-31T23:00:00Z", "2017-01-01T01:00:00Z");
+// 1`}
+  rightSpecId="leapSecondsBetween"
+/>
+
+[Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A00%3A00Z%22%2C%22end%22%3A%222017-01-01T01%3A00%3A00Z%22%7D) shows the same two readings with the clock difference and the elapsed seconds side by side.

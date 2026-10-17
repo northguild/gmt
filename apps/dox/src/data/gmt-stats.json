@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 57562,
-  "files": 800,
-  "executions": 1726860,
+  "tests": 60972,
+  "files": 821,
+  "executions": 1829160,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 644,
+  "functions": 659,
   "patterns": 27,
   "byNamespace": [
     {
@@ -62,7 +62,7 @@
     },
     {
       "namespace": "calendar",
-      "count": 22
+      "count": 25
     },
     {
       "namespace": "precision",
@@ -81,8 +81,16 @@
       "count": 9
     },
     {
-      "namespace": "duty",
+      "namespace": "workforce",
       "count": 8
+    },
+    {
+      "namespace": "gnss",
+      "count": 6
+    },
+    {
+      "namespace": "timescale",
+      "count": 6
     },
     {
       "namespace": "instant",
@@ -93,5 +101,67 @@
       "count": 4
     }
   ],
-  "industries": ["intermodal", "transport"]
+  "industryNamespaces": ["intermodal", "transport", "workforce", "gnss"],
+  "industryLayers": [
+    {
+      "id": "workforce",
+      "label": "Workforce",
+      "own": 8,
+      "drawsOn": []
+    },
+    {
+      "id": "transport",
+      "label": "Transport",
+      "own": 15,
+      "drawsOn": [
+        {
+          "module": "workforce",
+          "count": 8,
+          "shared": true
+        }
+      ]
+    },
+    {
+      "id": "intermodal",
+      "label": "Intermodal",
+      "own": 55,
+      "drawsOn": [
+        {
+          "module": "transport",
+          "count": 15,
+          "shared": true
+        }
+      ]
+    },
+    {
+      "id": "gnss",
+      "label": "GNSS",
+      "own": 6,
+      "drawsOn": [
+        {
+          "module": "timescale",
+          "count": 6,
+          "shared": false
+        }
+      ]
+    },
+    {
+      "id": "maritime",
+      "label": "Maritime",
+      "own": 0,
+      "drawsOn": [
+        {
+          "module": "gnss",
+          "count": 6,
+          "shared": true
+        },
+        {
+          "module": "timescale",
+          "count": 6,
+          "shared": false
+        }
+      ]
+    }
+  ],
+  "industryFunctions": 84
 }

@@ -10,10 +10,12 @@ This is the least commercially urgent story in the epic and the most differentia
 
 ## Scope
 
-- `packages/gmt/src/space/convert/marsSolDate.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/convert/marsSolDate.ts`:
   - `toMarsSolDate(isoString: string): number | null` — Mars Sol Date from a UTC instant.
   - `fromMarsSolDate(msd: number): string` — Inverse.
-- `packages/gmt/src/space/calculate/marsTime.ts`:
+- `<space-ns>/calculate/marsTime.ts`:
   - `airyMeanTime(isoString: string): { hours: number, minutes: number, seconds: number } | null` — Mean solar time at the Mars prime meridian.
   - `localMeanSolarTime(isoString: string, eastLongitudeDegrees: number): { hours: number, minutes: number, seconds: number } | null`
   - `missionSolNumber(isoString: string, landing: { at: string, eastLongitudeDegrees: number }, options?: { firstSol?: 0 | 1 }): number | null`
@@ -28,7 +30,9 @@ This is the least commercially urgent story in the epic and the most differentia
 - The prime meridian passes through the crater **Airy-0**; mean solar time there is **Airy Mean Time**, the Martian analogue of GMT.
 - Local mean solar time adds east longitude divided by 15, in Mars hours.
 
-([NASA GISS Mars24 technical notes](https://www.giss.nasa.gov/tools/mars24/help/notes.html))
+The authorities are the IAU Working Group on Cartographic Coordinates and Rotational Elements (Archinal et al. 2018, for the Mars prime meridian through Airy-0 and the rotation model) and Allison & McEwen 2000 (*Planetary and Space Science* 48, for the Mars Sol Date and Airy Mean Time definitions); both not reached — marked, not asserted. The constants above are quoted from them at implementation. NASA GISS's Mars24 (United States) implements the same algorithm and is used as a test oracle only.
+
+([NASA GISS Mars24 technical notes](https://www.giss.nasa.gov/tools/mars24/help/notes.html) — test oracle)
 
 ## Design notes
 

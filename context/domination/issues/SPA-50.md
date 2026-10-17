@@ -8,25 +8,27 @@ UTC is an atomic timescale kept within 0.9 s of Earth's rotation by leap seconds
 
 Anything that points at the sky needs UT1, not UTC: Greenwich Mean and Apparent Sidereal Time and the Earth Rotation Angle all take UT1 as their argument. Using UTC instead introduces an error of up to 0.9 seconds of time, which is about 13 arcseconds of rotation — far beyond any pointing budget.
 
-The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Earth orientation), so UT1 is unreachable and sidereal time is absent entirely. Bulletin A also has a floor: it begins in 1973. For any earlier date — every historical eclipse, every archival observation — the only source is **ΔT = TT − UT1** from the piecewise polynomials Espenak and Meeus fitted for the *Five Millennium Canon of Solar Eclipses*, covering −1999 to +3000, with a stated fit error of at most 4 seconds only for −500 to +500 and otherwise "estimated from scatter in the measurements".
+The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Earth orientation), so UT1 is unreachable and sidereal time is absent entirely. Measured Earth-orientation values come first from the IERS EOP C04 series, which begins in 1962, with Bulletin A for the current period (the C04 start year is not reached — marked, not asserted). Only for an earlier date — every historical eclipse, every archival observation — does the source become **ΔT = TT − UT1** from the piecewise polynomials Espenak and Meeus (NASA GSFC, United States) fitted for the *Five Millennium Canon of Solar Eclipses*, covering −1999 to +3000, with a stated fit error of at most 4 seconds only for −500 to +500 and otherwise "estimated from scatter in the measurements".
 
-([IERS Bulletin A](https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html), [Espenak & Meeus, *Polynomial Expressions for Delta T*, NASA GSFC](https://eclipse.gsfc.nasa.gov/SEcat5/deltatpoly.html))
+(IERS EOP C04 — not reached — marked, not asserted; [IERS Bulletin A](https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html); for dates before the measured series only, [Espenak & Meeus (US), *Polynomial Expressions for Delta T*, NASA GSFC](https://eclipse.gsfc.nasa.gov/SEcat5/deltatpoly.html))
 
 ## Scope
 
-- `packages/gmt/src/space/get/ut1.ts`:
+Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+
+- `<space-ns>/get/ut1.ts`:
   - `dut1At(isoString: string): number | null` — DUT1 in seconds for a date, from bundled Bulletin A data.
   - `toUT1(isoString: string, options?: { dut1?: number }): string` — UTC to UT1. An explicit `dut1` overrides the table, for callers with fresher data.
   - `ut1Provenance(): { source: string, bulletin: string, validUntil: string }`
   - `isUt1Stale(at: string): boolean`
-- `packages/gmt/src/space/calculate/deltaT.ts`:
-  - `deltaT(isoDate: string, options?: { source?: 'measured' | 'polynomial' | 'auto' }): { seconds: number, source: 'bulletinA' | 'polynomial', uncertaintySeconds: number | null } | null` — TT − UT1. `'auto'` uses Bulletin A where the table covers the date and the Espenak–Meeus polynomial otherwise; `uncertaintySeconds` is `4` for −500…+500 and `null` elsewhere, because the source gives no other number.
+- `<space-ns>/calculate/deltaT.ts`:
+  - `deltaT(isoDate: string, options?: { source?: 'measured' | 'polynomial' | 'auto' }): { seconds: number, source: 'iersEop' | 'polynomial', uncertaintySeconds: number | null } | null` — TT − UT1. `'auto'` uses the IERS measured series (C04, then Bulletin A) where it covers the date and the Espenak–Meeus polynomial only before it; `uncertaintySeconds` is `4` for −500…+500 and `null` elsewhere, because the source gives no other number.
   - `deltaTPolynomial(decimalYear: number): number` — The piecewise expression alone, with `y = year + (month − 0.5) / 12` as the source defines it.
-- `packages/gmt/src/space/calculate/siderealTime.ts`:
+- `<space-ns>/calculate/siderealTime.ts`:
   - `earthRotationAngle(isoString: string, options?: { dut1?: number }): number | null` — ERA in radians.
   - `greenwichMeanSiderealTime(isoString: string, options?): number | null` — GMST in radians.
   - `greenwichApparentSiderealTime(isoString: string, options?): number | null` — GAST, GMST plus the equation of the equinoxes.
-  - `localSiderealTime(isoString: string, longitudeDegrees: number, options?): number | null`
+  - `localSiderealTime(isoString: string, position: Position, options?): number | null` — uses the position's longitude.
 
 ## ΔT polynomial segments (Espenak & Meeus)
 
@@ -52,7 +54,7 @@ The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Eart
 
 - **DUT1 is predicted, not derived.** Bulletin A publishes measurements and short-term predictions; beyond the prediction horizon there is no correct value. `isUt1Stale` and an overridable `dut1` exist because the bundled table is guaranteed to go out of date, and a silently stale DUT1 is a silently mispointed antenna.
 - **ΔT from a polynomial is a fit, and says so.** The 2005–2050 segment was fitted to *estimated* values for 2010 and 2050 and is an extrapolation for every year after the source was written; `deltaT` in `'auto'` mode therefore prefers Bulletin A for every date the table covers and reports `source` so a caller can tell a measurement from a fit. Where the source states no uncertainty, `uncertaintySeconds` is `null`, not a guess.
-- **UT1 and ΔT are one quantity seen from two sides.** DUT1 = UT1 − UTC and ΔT = TT − UT1 are linked through TT − UTC = 32.184 s + (TAI − UTC); `toUT1` for a pre-1973 date goes through `deltaT` and the leap-second table (SPA-48) is not consulted before 1972, consistent with SPA-46's sentinel.
+- **UT1 and ΔT are one quantity seen from two sides.** DUT1 = UT1 − UTC and ΔT = TT − UT1 are linked through TT − UTC = 32.184 s + (TAI − UTC); `toUT1` for a date before the IERS measured series goes through `deltaT` and the leap-second table (SPA-48) is not consulted before 1972, consistent with SPA-46's sentinel.
 - **Bulletin A and Bulletin C are different products** solving different problems. The epic conflated Earth-orientation data with leap-second data; they have different cadences, different validity windows and different consumers.
 - **Angles are returned in radians**, matching SOFA and ERFA convention, so callers composing with an astronomy library do not convert twice. Stated explicitly because degrees would be the intuitive guess.
 - **GAST requires the equation of the equinoxes**, which depends on nutation. A first implementation may use a truncated nutation series, and the accuracy limit must be documented as a number — the same discipline as the TDB correction in SPA-74.
@@ -64,6 +66,7 @@ The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Eart
 - `toTT` from SPA-47 — GMST formulations mix UT1 and TT arguments
 - `taiMinusUtc` from SPA-48 — the TT − UTC link for dates the leap-second table covers
 - `toNanoseconds` from CORE-1 — precision conversion
+- `Position` from CORE-79 — the observer's position; checked with the internal `readPosition` helper, returning `null` for an invalid one
 
 ## Verification
 
@@ -71,13 +74,13 @@ The epic bundles IERS **Bulletin C** (leap seconds) and not **Bulletin A** (Eart
 - `toUT1` with an explicit `dut1` overrides the table value
 - `isUt1Stale` returns `true` beyond the bulletin's prediction horizon
 - `deltaTPolynomial(2000.0)` returns `63.86` and `deltaTPolynomial(1950.0)` returns `29.07` — the segment constants at their origins, asserted against the source
-- `deltaT` for a date inside Bulletin A coverage returns `source: 'bulletinA'`; for 1850 it returns `source: 'polynomial'` with `uncertaintySeconds: null`; for the year 100 it returns `uncertaintySeconds: 4`
+- `deltaT` for a date inside the IERS measured series returns `source: 'iersEop'`; for 1850 it returns `source: 'polynomial'` with `uncertaintySeconds: null`; for the year 100 it returns `uncertaintySeconds: 4`
 - `deltaT` and `dut1At` agree for a covered date through `TT − UTC = 32.184 + (TAI − UTC)`, asserted
 - Adjacent polynomial segments agree at their shared boundary years to within the source's own discontinuity (the 2050 segment was "introduced to eliminate the discontinuity at 2050"), asserted at 1600, 1700, 1800, 1860, 1900, 1920, 1941, 1961, 1986, 2005 and 2150
 - `earthRotationAngle` advances by approximately 2π over one sidereal day
 - `greenwichMeanSiderealTime` at a known reference epoch matches a published value to the documented tolerance
 - GAST and GMST differ by the equation of the equinoxes, and the difference is within its expected arcsecond range
-- `localSiderealTime` at longitude 0 equals GAST
+- `localSiderealTime` at a position with longitude 0 equals GAST
 - Sidereal time computed from UTC rather than UT1 differs measurably, asserted to document why UT1 is required
 - Invalid longitude returns the sentinel
 - `pnpm run validate` stays green

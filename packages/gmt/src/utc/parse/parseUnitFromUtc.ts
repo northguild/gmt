@@ -69,7 +69,7 @@ export type UtcUnit =
  * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "hours") // "14"
  * @example parseUnitFromUtc("2024-03-17T14:30:45Z", "year") // "2024"
  * @example parseUnitFromUtc("0005-06-01T12:30:00Z", "year") // "0005"
- * @example parseUnitFromUtc("2024-03-17T02:30:45Z", "day", { timeZone: "America/New_York" }) // "16"
+ * @example parseUnitFromUtc("2024-03-17T02:30:45Z", "day", { timeZone: "America/Sao_Paulo" }) // "16"
  * @example parseUnitFromUtc("2024-01-01T00:00:00Z", "week") // "1"
  * @example parseUnitFromUtc("2024-12-31T12:00:00Z", "week", { weekStartsOn: "sunday" }) // "1"
  * @example parseUnitFromUtc("invalid", "month") // ""

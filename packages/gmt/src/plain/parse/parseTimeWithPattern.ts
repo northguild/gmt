@@ -36,9 +36,11 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *   `"o'clock"`. A quote that never closes makes the pattern malformed
  *   (`""`). Any other character that is not a letter (`: , space`,
  *   digits and so on) is a literal with no quoting.
- * - `a` is locale-aware. If `locale` is omitted and the pattern uses
- *   `a`, GMT defaults to `"en-US"` rather than returning `""` for every
- *   caller who didn't have another locale in mind.
+ * - `a` is locale-aware. If `locale` is omitted (or an empty list) and
+ *   the pattern uses `a`, GMT reads the English labels in `"en"`, the
+ *   language with no region, rather than returning `""`. CLDR gives
+ *   `"en"` the same AM and PM labels as `"en-US"`. Pass `locale` for any
+ *   other language.
  * - `h`/`hh` resolve to 24-hour using a matched `a` token: if the label
  *   is the PM label and hour !== 12, add 12; if the AM label and hour
  *   === 12, set hour to 0. With no `a` token in the pattern at all, the
@@ -51,7 +53,7 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *
  * @param value The string to decode (e.g. "02:30:45 PM")
  * @param pattern The token pattern describing `value`'s shape (e.g. "hh:mm:ss a")
- * @param locale Optional BCP 47 locale tag, or a preference list of tags, for the meridiem token (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for the meridiem token (default "en")
  * @returns ISO `PlainTime` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseTimeWithPattern("14:30:45", "HH:mm:ss") // "14:30:45"

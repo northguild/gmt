@@ -32,8 +32,8 @@ import { isValidDate } from "../validate";
  *
  * @example isBusinessDay("2024-02-05") // true (Monday)
  * @example isBusinessDay("2024-02-10") // false (Saturday)
- * @example isBusinessDay("2024-07-04", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // false (holiday)
- * @example isBusinessDay("2024-07-05", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // true
+ * @example isBusinessDay("2024-07-04", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // false (holiday)
+ * @example isBusinessDay("2024-07-05", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Africa/Kigali" }) // true
  * @example isBusinessDay("2024-07-07", { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // true (Sunday is a working day there)
  * @example isBusinessDay("2024-07-05", { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // false (Friday is weekend there)
  * @example isBusinessDay("invalid") // false

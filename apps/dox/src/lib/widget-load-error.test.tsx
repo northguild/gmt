@@ -93,6 +93,26 @@ import {
   WidgetLoadError,
   type MountFn,
 } from "./widget-mount";
+import {
+  mountGnssWeekDecoder,
+  renderGnssWeekDecoderTemplate,
+} from "./gnss-week-decoder-mount";
+import {
+  mountSatelliteClockConverter,
+  renderSatelliteClockConverterTemplate,
+} from "./satellite-clock-converter-mount";
+import {
+  mountGnssRolloverChecker,
+  renderGnssRolloverCheckerTemplate,
+} from "./gnss-rollover-checker-mount";
+import {
+  mountLeapSecondTimeline,
+  renderLeapSecondTimelineTemplate,
+} from "./leap-second-timeline-mount";
+import {
+  mountElapsedVsClock,
+  renderElapsedVsClockTemplate,
+} from "./elapsed-vs-clock-mount";
 
 installJsdomShims();
 
@@ -206,6 +226,31 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "journey split",
     () => renderJourneySplitTemplate(),
     mountJourneySplit as MountFn<never>,
+  ],
+  [
+    "gnss week decoder",
+    () => renderGnssWeekDecoderTemplate(),
+    mountGnssWeekDecoder as MountFn<never>,
+  ],
+  [
+    "satellite clock converter",
+    () => renderSatelliteClockConverterTemplate(),
+    mountSatelliteClockConverter as MountFn<never>,
+  ],
+  [
+    "gnss rollover checker",
+    () => renderGnssRolloverCheckerTemplate(),
+    mountGnssRolloverChecker as MountFn<never>,
+  ],
+  [
+    "leap second timeline",
+    () => renderLeapSecondTimelineTemplate(),
+    mountLeapSecondTimeline as MountFn<never>,
+  ],
+  [
+    "elapsed vs. clock difference",
+    () => renderElapsedVsClockTemplate(),
+    mountElapsedVsClock as MountFn<never>,
   ],
 ];
 

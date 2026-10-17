@@ -56,7 +56,7 @@ export type ZoneFrame = {
  * @param zone the caller's time zone argument
  * @returns the frame, or null when `zone` is neither a time zone identifier nor a stored offset
  *
- * @example zoneFrame("America/New_York") // { timeZone: "America/New_York", shiftNanoseconds: 0n }
+ * @example zoneFrame("Asia/Kolkata") // { timeZone: "Asia/Kolkata", shiftNanoseconds: 0n }
  * @example zoneFrame("+05:30:00") // { timeZone: "+05:30", shiftNanoseconds: 0n }
  * @example zoneFrame("-00:44:30") // { timeZone: "-00:44", shiftNanoseconds: -30000000000n }
  * @example zoneFrame("Z") // null
@@ -111,9 +111,9 @@ function frameOffsetNanoseconds(frame: ZoneFrame): bigint {
  * @returns the frame, or null when the option is invalid
  *
  * @example normalizeZoneFrame(undefined) // { timeZone: "UTC", shiftNanoseconds: 0n }
- * @example normalizeZoneFrame("local") // the system zone, e.g. { timeZone: "America/New_York", shiftNanoseconds: 0n }
+ * @example normalizeZoneFrame("local") // the system zone, e.g. { timeZone: "Asia/Tokyo", shiftNanoseconds: 0n }
  * @example normalizeZoneFrame("-00:44:30") // { timeZone: "-00:44", shiftNanoseconds: -30000000000n }
- * @example normalizeZoneFrame("America/New_Yrok") // null
+ * @example normalizeZoneFrame("Asia/Tokio") // null
  */
 export function normalizeZoneFrame(option?: unknown): ZoneFrame | null {
   if (option === undefined) {

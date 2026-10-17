@@ -32,7 +32,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example startOfUnix(1706659200000, "month", { timeZone: "UTC" }) // 1704067200000
  * @example startOfUnix(1706659200, "day", { epochUnit: "seconds", timeZone: "UTC" }) // 1706659200
  * @example startOfUnix(-86400000, "year", { timeZone: "UTC" }) // -31536000000 (start of 1969)
- * @example startOfUnix(1730616300000, "hour", { timeZone: "America/New_York" }) // 1730613600000 (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back; its hour starts at the second 1am)
+ * @example startOfUnix(1729993500000, "hour", { timeZone: "Europe/London" }) // 1729990800000 (1729993500000 is the second, repeated 1:45am of the Oct 27 2024 fall-back; its hour starts at the second 1am)
  * @example startOfUnix(1706780800, "days", { epochUnit: "second" }) // 1706745600 (plural unit, singular epochUnit, UTC by default)
  * @example startOfUnix(1706659200000, "quarter") // null (use startOfQuarterForUnix)
  * @example startOfUnix(NaN, "day") // null

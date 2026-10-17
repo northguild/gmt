@@ -7,7 +7,7 @@ import {
   findBrain,
   type Brain,
 } from "../src/lib/chat-constants";
-import { nextPtMidnightMs } from "../src/lib/pt-day";
+import { nextVisitorMidnightMs } from "../src/lib/pt-day";
 import { chooseBrain, remainingFor } from "./brains";
 import { getUnixNowMs } from "./clock";
 import { createChatHandler } from "./chat-handler";
@@ -163,8 +163,8 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
         // A dev is exempt from the per-visitor cap. NOT from the shared pool —
         // nothing on the free tier can raise that, and the UI says so.
         unlimited: dev,
-        // The visitor cap is Dox's own and always on the Pacific day.
-        resetsAt: convertUnixToUtc(nextPtMidnightMs(nowMs)),
+        // The visitor cap is Dox's own and always on the UTC day.
+        resetsAt: convertUnixToUtc(nextVisitorMidnightMs(nowMs)),
       },
     },
     {

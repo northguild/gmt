@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { FiscalPattern } from "../types";
+import type { FiscalExtraWeek, FiscalPattern, FiscalYearLabel } from "../types";
 
 /** Weeks per period within one quarter, by pattern. */
 const WEEKS_PER_PERIOD: Record<FiscalPattern, readonly number[]> = {
@@ -29,6 +29,36 @@ const YEAR_END_SEARCH_OFFSETS = [-1, 0, 1, 2];
 
 /** Half the width of the 7-day window a "nearest weekday" year end can land in. */
 const NEAREST_WEEKDAY_RADIUS = 3;
+
+/**
+ * Years in one cycle of the Gregorian leap rule. Every 400-year span has 146,097 days, a whole
+ * number of weeks, and the same leap years in the same places, so moving a date by a multiple
+ * of 400 years keeps its month, day and weekday.
+ */
+const GREGORIAN_CYCLE_YEARS = 400;
+
+/** First year of the cycle that dates are moved into, well inside Temporal's range. */
+const SAFE_CYCLE_START = 2000;
+
+/**
+ * Return the multiple of 400 years that moves `year` into 2000 to 2399, where it keeps its
+ * place in the Gregorian cycle.
+ *
+ * Subtract the result to move a year into that cycle, and add it to move it back. Calendar
+ * arithmetic near Temporal's first or last date (-271821-04-19, +275760-09-13) can step past
+ * the range on the way to an answer that lies inside it; done in the safe cycle it cannot.
+ *
+ * @example gregorianCycleShift(2024) // 0
+ * @example gregorianCycleShift(-271820) // -274000 (-271820 sits where 2180 does)
+ * @example gregorianCycleShift(275760) // 273600 (275760 sits where 2160 does)
+ */
+export function gregorianCycleShift(year: number): number {
+  const placeInCycle =
+    ((year % GREGORIAN_CYCLE_YEARS) + GREGORIAN_CYCLE_YEARS) %
+    GREGORIAN_CYCLE_YEARS;
+
+  return year - SAFE_CYCLE_START - placeInCycle;
+}
 
 /**
  * Return the fiscal year end falling in calendar year `year`, under the rule `anchor` states.
@@ -63,8 +93,13 @@ export function fiscalYearEndIn(
  *
  * - The fiscal year is the one whose end is the first at or after `date`.
  * - `weeks` is derived from the gap between consecutive year ends — 52 or 53 — never assumed.
- * - Returns null when that gap is neither 364 nor 371 days, which no "nearest weekday" rule
- *   can produce and so only a corrupted anchor could reach.
+ * - The search reads the year ends in the calendar years either side of `date`, so it throws
+ *   RangeError when one of them lies outside Temporal's range. Near -271821-04-19 or
+ *   +275760-09-13 that happens even when the date is valid. Move `date` into 2000 to 2399 with
+ *   `gregorianCycleShift` first, then add the shift back to any year read off the result:
+ *   whole 400-year cycles keep every month, day, weekday and day count.
+ * - Returns null when the gap between year ends is neither 364 nor 371 days, which no
+ *   "nearest weekday" rule can produce and so only a corrupted anchor could reach.
  */
 export function fiscalYearOf(
   date: Temporal.PlainDate,
@@ -92,25 +127,73 @@ export function fiscalYearOf(
 /**
  * Return the 1-based period holding `week` of a `weeks`-long fiscal year under `pattern`.
  *
- * The 53rd week, when the year has one, is appended to the final period — the NRF adds it
- * "to the end of the calendar", which turns a 4-5-4 year's last quarter into 4-5-5.
+ * - The 53rd week, when the year has one, lengthens period 1 (`"firstPeriod"`) or period 12
+ *   (`"lastPeriod"`), as `extraWeek` says. A 4-4-5 year then runs 5-4-5 … 4-4-5 or
+ *   4-4-5 … 4-4-6.
+ * - In a 52-week year `extraWeek` has no effect.
  */
 export function fiscalPeriodOfWeek(
   week: number,
   weeks: number,
   pattern: FiscalPattern,
+  extraWeek: FiscalExtraWeek,
 ): number {
   const quarterShape = WEEKS_PER_PERIOD[pattern];
+  const longPeriod = extraWeek === "firstPeriod" ? 1 : PERIODS_PER_YEAR;
   let consumed = 0;
 
   for (let period = 1; period <= PERIODS_PER_YEAR; period++) {
-    const isFinalPeriod = period === PERIODS_PER_YEAR;
-    const extraWeek = isFinalPeriod && weeks === 53 ? 1 : 0;
+    const added = weeks === 53 && period === longPeriod ? 1 : 0;
 
-    consumed += quarterShape[(period - 1) % quarterShape.length] + extraWeek;
+    consumed += quarterShape[(period - 1) % quarterShape.length] + added;
 
     if (week <= consumed) return period;
   }
 
   return PERIODS_PER_YEAR;
+}
+
+/**
+ * Return the calendar year that names the fiscal year running `start` to `end`, both inclusive.
+ *
+ * - `"startYear"` is `start`'s year and `"endYear"` is `end`'s year.
+ * - `"majorityYear"` is the calendar year holding the most of the fiscal year's days. Days are
+ *   the unit because the fiscal year and the calendar year share no other: months differ in
+ *   length, and a week can straddle 1 January.
+ * - Every calendar year in the span is counted, not only the two end years. A 371-day year can
+ *   touch three calendar years (2024-12-29 to 2026-01-03), and then the middle one wins.
+ * - GMT rule: when two years hold exactly half the days each (182 and 182), the later one, the
+ *   year holding the end date, wins, because IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c)) lets a
+ *   reporting period be identified by the date it ends.
+ */
+export function fiscalYearLabel(
+  start: Temporal.PlainDate,
+  end: Temporal.PlainDate,
+  label: FiscalYearLabel,
+): number {
+  if (label === "startYear") return start.year;
+  if (label === "endYear") return end.year;
+
+  let best = end.year;
+  let bestDays = -1;
+
+  for (let year = start.year; year <= end.year; year++) {
+    const from =
+      year === start.year
+        ? start
+        : Temporal.PlainDate.from({ year, month: 1, day: 1 });
+    const to =
+      year === end.year
+        ? end
+        : Temporal.PlainDate.from({ year, month: 12, day: 31 });
+    const days = from.until(to, { largestUnit: "day" }).days + 1;
+
+    // ">=": a tie goes to the later year, which holds the end date.
+    if (days >= bestDays) {
+      best = year;
+      bestDays = days;
+    }
+  }
+
+  return best;
 }

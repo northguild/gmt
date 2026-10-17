@@ -3,6 +3,7 @@ import {
   BAR_CHARTS,
   type BarChartId,
   type BarGradient,
+  type BarPattern,
 } from "../lib/why-gmt-charts";
 
 /**
@@ -15,6 +16,10 @@ interface ChartView {
   svg: string;
   chart?: BarChartId;
   caption?: string;
+  /** The key under the chart, as HTML built by `why-gmt-charts.ts`. */
+  legend?: string;
+  /** Each bar's counts in words, as visually hidden HTML built by `why-gmt-charts.ts`. */
+  summary?: string;
 }
 
 interface Props {
@@ -45,6 +50,15 @@ const afterSlots = await Promise.all(
       : undefined,
   ),
 );
+
+// Every view's hatches, once each, for the same reason.
+const patterns: BarPattern[] = [
+  ...new Map(
+    panels
+      .flatMap((panel) => (panel.chart ? BAR_CHARTS[panel.chart].patterns : []))
+      .map((p) => [p.id, p] as const),
+  ).values(),
+];
 
 // Every view's gradients, once each: a hidden view's live mount still paints with them.
 const gradients: BarGradient[] = [
@@ -79,7 +93,7 @@ const gradients: BarGradient[] = [
     )
   }
   {
-    gradients.length > 0 && (
+    (gradients.length > 0 || patterns.length > 0) && (
       <svg class="gmt-chart-defs" aria-hidden="true" focusable="false">
         <defs>
           {gradients.map((g) => (
@@ -93,6 +107,28 @@ const gradients: BarGradient[] = [
                 style={`stop-color: var(--gmt-${g.hue}); stop-opacity: ${g.bottom}`}
               />
             </linearGradient>
+          ))}
+          {patterns.map((p) => (
+            <pattern
+              id={p.id}
+              width={p.size}
+              height={p.size}
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <rect
+                width={p.size}
+                height={p.size}
+                style={`fill: var(--gmt-${p.hue}); fill-opacity: ${p.tint}`}
+              />
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2={p.size}
+                style={`stroke: var(--gmt-${p.hue}); stroke-opacity: ${p.line}; stroke-width: ${p.lineWidth}`}
+              />
+            </pattern>
           ))}
         </defs>
       </svg>
@@ -110,6 +146,8 @@ const gradients: BarGradient[] = [
           data-gmt-chart={panel.chart}
           set:html={panel.svg}
         />
+        {panel.legend && <div class="gmt-chart-key" set:html={panel.legend} />}
+        {panel.summary && <div set:html={panel.summary} />}
         {panel.caption && <p class="gmt-chart-caption">{panel.caption}</p>}
         {afterSlots[index] && (
           <div class="gmt-chart-after" set:html={afterSlots[index]} />

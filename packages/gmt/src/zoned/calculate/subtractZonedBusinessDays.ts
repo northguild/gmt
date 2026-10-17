@@ -5,7 +5,8 @@ import { isValidZonedDateTime } from "../validate";
 /**
  * Return a zoned ISO 8601 datetime string with `amount` business days subtracted from `value`.
  *
- * - Uses fixed ISO Monday–Friday business days (no locale awareness).
+ * - Uses a fixed Monday–Friday business week (no locale awareness). Saturday–Sunday is
+ *   CLDR's world-default weekend; ISO 8601 defines no weekend.
  * - Has no calendar parameter, so no other weekend and no holidays. It is not the
  *   zoned form of the plain `subtractBusinessDays`, which takes a `BusinessCalendar`.
  * - Saturday and Sunday are skipped during the count.
@@ -16,9 +17,9 @@ import { isValidZonedDateTime } from "../validate";
  * @param amount number of business days to subtract
  * @returns Zoned ISO 8601 datetime string after subtracting business days, or "" on invalid input
  *
- * @example subtractZonedBusinessDays("2024-03-18T14:30:00-04:00[America/New_York]", 1) // "2024-03-15T14:30:00-04:00[America/New_York]"
- * @example subtractZonedBusinessDays("2024-03-18T14:30:00-04:00[America/New_York]", 2) // "2024-03-14T14:30:00-04:00[America/New_York]"
- * @example subtractZonedBusinessDays("2024-03-18T14:30:00-04:00[America/New_York]", 0) // "2024-03-18T14:30:00-04:00[America/New_York]"
+ * @example subtractZonedBusinessDays("2024-03-18T14:30:00+02:00[Africa/Johannesburg]", 1) // "2024-03-15T14:30:00+02:00[Africa/Johannesburg]"
+ * @example subtractZonedBusinessDays("2024-03-18T14:30:00+02:00[Africa/Johannesburg]", 2) // "2024-03-14T14:30:00+02:00[Africa/Johannesburg]"
+ * @example subtractZonedBusinessDays("2024-03-18T14:30:00+02:00[Africa/Johannesburg]", 0) // "2024-03-18T14:30:00+02:00[Africa/Johannesburg]"
  * @example subtractZonedBusinessDays("invalid", 1) // ""
  */
 export function subtractZonedBusinessDays(

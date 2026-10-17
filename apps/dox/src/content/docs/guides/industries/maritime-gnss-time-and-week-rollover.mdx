@@ -1,0 +1,112 @@
+---
+title: "Maritime: GNSS Time and Week Rollover"
+description: How a ship's equipment carries time, why the log keeps UTC, when a satellite clock reading enters a record, and how long a receiver's week counter stays safe over a ship's service life.
+sidebar:
+  order: 9
+industries: [maritime]
+---
+
+A ship's time comes from satellites, is passed between instruments as text, and ends up in a log
+that may be read decades later. This page is about those three steps. The rules for the clocks and
+the week counters are in [GNSS: System Time and Week
+Rollover](/guides/industries/gnss-system-time-and-week-rollover/), and each section below sends
+you there rather than repeating them.
+
+## Which systems a ship may use
+
+The International Maritime Organization (IMO) recognises GPS, GLONASS, BeiDou, Galileo, NavIC
+(IRNSS) and QZSS as components of the Worldwide Radionavigation System. Recognition is not equal
+everywhere: BeiDou and IRNSS are recognised for ocean waters, and IRNSS only within 55°E–110°E,
+50°N–5°S. The full citation is in the sources below. A receiver may use any recognised system, so
+the code that reads a ship's records cannot assume which one produced a time.
+
+## Equipment passes time in UTC
+
+Shipboard instruments talk to each other in the sentence format of IEC 61162-1:2024. Its time
+fields carry UTC. The receiver has already turned its satellite clock into UTC before the sentence
+is written, so a consumer of sentences never sees a system's own time.
+
+A consumer should treat a sentence's time as UTC and not add a gap for the system that produced it.
+Adding the gap twice is the mistake in [GNSS mistakes](/mistakes/gnss/).
+
+## The log keeps UTC
+
+A ship's log records instants in UTC and the zone of the ship's clock separately. UTC is the one
+reading every system can be converted to and from, and it does not move when the ship crosses a
+zone. A satellite clock reading enters a record only when the record is about the satellite: a
+receiver diagnostic, a navigation file or a clock-fault report. Then it carries the system's label
+with it, so a later reader does not mistake it for UTC:
+
+```typescript
+import { gnssToUtc, utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("BDT", "2024-01-01T00:00:00Z");
+// "2024-01-01T00:00:04 BDT"
+gnssToUtc("BDT", "2024-01-01T00:00:04 BDT");
+// "2024-01-01T00:00:00Z"
+```
+
+A reading kept without its label cannot be converted back, because the gap from UTC differs by
+system and by date. See [Each clock runs ahead of UTC by a gap
+that grew](/guides/industries/gnss-system-time-and-week-rollover/#each-clock-runs-ahead-of-utc-by-a-gap-that-grew).
+The [Satellite Clock Converter](/tools/satellite-clock-converter/?w=satclock&wa=%7B%22value%22%3A%222024-01-01T00%3A00%3A04+BDT%22%7D) shows one instant on every clock.
+
+## A receiver's week counter over a ship's life
+
+A ship is in service for decades, and a receiver in the wheelhouse can outlast a counter. A receiver
+that reports a 10-bit week resolves it against a fixed pass, often its firmware build date. Past
+that pass it reports a date a whole number of counter periods early, with no error. Fixed
+at fitting, the receiver is right for about 19.6 years from its build date and wrong after.
+
+```typescript
+import { gnssWeekToUtc } from "@northguild/gmt/gnss/convert";
+
+gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" });
+// "2019-03-09T23:59:42Z"
+gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" });
+// "2038-10-23T23:59:42Z"
+```
+
+The same week number reads as two dates 19.6 years apart, depending on the build date the receiver
+resolves it against. See [Week counters wrap: name the counter and the
+era](/guides/industries/gnss-system-time-and-week-rollover/#week-counters-wrap-name-the-counter-and-the-era).
+The [GNSS Rollover Checker](/tools/gnss-rollover-checker/?w=rollover&wa=%7B%22counter%22%3A%22GPS-LNAV%22%2C%22firmwareNotBefore%22%3A%222019-01-01T00%3A00%3A00Z%22%7D) models a receiver as a build date or a
+fixed pass and shows when it starts reporting the wrong date, and the [GNSS Week
+Decoder](/tools/gnss-week-decoder/?w=gnssweek&wa=%7B%22mode%22%3A%22broadcast%22%2C%22counter%22%3A%22GPS-LNAV%22%2C%22week%22%3A%221020%22%2C%22timeOfWeekSeconds%22%3A%220%22%2C%22rolloverNotBefore%22%3A%222019-01-01T00%3A00%3A00Z%22%7D) shows every pass a given week could be.
+
+## A leap second in a ship's record
+
+UTC inserted its last leap second at the end of 2016. A log written across it holds the reading
+`23:59:60`, which is real on that day and invalid on most others. A clock that has no second 60 repeats
+`23:59:59` instead, which makes two records carry the same second.
+
+```typescript
+import { utcToGnss } from "@northguild/gmt/gnss/convert";
+
+utcToGnss("GPS", "2016-12-31T23:59:60Z");
+// "2017-01-01T00:00:17 GPS"
+```
+
+A satellite clock does not repeat. The continuous count puts the inserted second after
+`23:59:59` where UTC cannot, so a satellite reading is the way to put such records in order. The
+rules for the inserted second are in [Leap Seconds and
+TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+## See it break, then work
+
+- [A Fixed Gap Applied to an Old Log](/scenarios/gnss-offset-hardcoded/)
+- [The Week That Wrapped](/scenarios/gnss-week-that-wrapped/)
+- [GNSS mistakes](/mistakes/gnss/)
+
+## Sources
+
+- IMO, Maritime Safety Committee, 104th session, summary (October 2021): GPS, GLONASS, BeiDou,
+  Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation System. The
+  recognitions follow the policy of IMO resolution A.1046(27) (2011), whose annex MSC.599(111)
+  (2026) revised. A.1046(27) itself names no system. GPS and GLONASS are recognised by A.860(20)
+  (1997), BeiDou by SN.1/Circ.329 (2014), Galileo by SN.1/Circ.334 (2016), IRNSS by SN.1/Circ.340
+  (2020) and QZSS by SN.1/Circ.341 (2021).
+- IEC 61162-1:2024 Ed 6.0, maritime navigation and radiocommunication equipment: digital
+  interfaces, single talker and multiple listeners. IEC 61108 sets the receiver standards, one
+  part per system.
+- RINEX 4.02 and the BIPM, for the scales and their relations.

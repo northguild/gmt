@@ -58,6 +58,21 @@ describe("renderConverterTemplate", () => {
     }
   });
 
+  it("opens on the London to Sydney pair in regionless English", () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderConverterTemplate();
+    expect((q(root, "convert-source") as HTMLSelectElement).value).toBe(
+      "Europe/London",
+    );
+    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
+      "Australia/Sydney",
+    );
+    expect((q(root, "format-locale") as HTMLSelectElement).value).toBe("en");
+    expect((q(root, "convert-value") as HTMLInputElement).value).toBe(
+      "2024-03-15T14:30:00.000+00:00[Europe/London]",
+    );
+  });
+
   it("marks exactly one option selected per select", () => {
     const root = document.createElement("div");
     root.innerHTML = renderConverterTemplate();
@@ -102,9 +117,10 @@ describe("mountConverterBench", () => {
     await mountConverterBench(root, {}, controller.signal);
 
     const out = q(root, "convert-result") as HTMLElement;
-    // Default input is 14:30 New York; London is four hours ahead in March.
-    expect(out.textContent).toContain("18:30");
-    expect(out.textContent).toContain("Europe/London");
+    // Default input is 14:30 in London (GMT in March); Sydney is on daylight
+    // time, eleven hours ahead, so it is 01:30 the next morning.
+    expect(out.textContent).toContain("2024-03-16T01:30:00+11:00");
+    expect(out.textContent).toContain("Australia/Sydney");
   });
 
   it("reconverts when the target zone changes", async () => {

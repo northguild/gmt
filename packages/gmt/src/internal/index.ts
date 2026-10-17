@@ -17,7 +17,12 @@ export {
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
 export { isInDaylightTime, observesDaylightTime } from "./daylightTime";
-export { fiscalPeriodOfWeek, fiscalYearOf } from "./fiscalCalendar";
+export {
+  fiscalPeriodOfWeek,
+  fiscalYearLabel,
+  fiscalYearOf,
+  gregorianCycleShift,
+} from "./fiscalCalendar";
 export { floorDivide } from "./floorDivide";
 export {
   DOT_NET_TICKS_EPOCH_OFFSET,
@@ -103,6 +108,25 @@ export {
 } from "./intervalNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
+export { formatUtcReading, parseUtcReading } from "./utcReading";
+export {
+  isGnssSystem,
+  scaleLabelOfUtc,
+  utcOfScaleLabel,
+} from "./gnssTimeScales";
+export {
+  GNSS_WEEK_COUNTERS,
+  isGnssWeekCounter,
+  labelOfFullWeek,
+  labelOfWeek,
+  resolveRolloverEra,
+  timeOfWeekNanoseconds,
+  weekNumber,
+  weekOfLabel,
+  weeksSince,
+} from "./gnssWeek";
+export { isRinexWeekSystem, RINEX_WEEK_EPOCHS } from "./rinexWeek";
+export { formatTimeScaleString, parseTimeScaleString } from "./timeScaleString";
 export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
@@ -116,6 +140,13 @@ export { getUnitSpan } from "./intervalCountHelpers";
 export { isObject, isOptionsArgument } from "./isObject";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";
+export {
+  LEAP_SECOND_STEPS,
+  nextStepIndex,
+  stepReading,
+  taiOfUtc,
+  utcOfTai,
+} from "./leapSeconds";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";

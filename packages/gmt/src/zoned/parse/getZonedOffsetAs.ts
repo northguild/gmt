@@ -10,12 +10,12 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  *
  * | Member | Description |
  * | --- | --- |
- * | `minutes` | Whole-minute offset (e.g. `-240` for `-04:00`). |
- * | `nanoseconds` | Raw `offsetNanoseconds` from Temporal (e.g. `-14400000000000`). |
+ * | `minutes` | Whole-minute offset (e.g. `-180` for `-03:00`). |
+ * | `nanoseconds` | Raw `offsetNanoseconds` from Temporal (e.g. `-10800000000000`). |
  *
  * @example
  * import { getZonedOffsetAs } from "@northguild/gmt/zoned";
- * getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes");
+ * getZonedOffsetAs("2024-07-15T12:00:00-03:00[America/Sao_Paulo]", "minutes");
  */
 export type ZonedOffsetUnit =
   | "minutes"
@@ -50,11 +50,11 @@ function isValidZonedOffsetUnit(unit: unknown): unit is ZonedOffsetUnit {
  * @param unit "minutes" | "nanoseconds" (or the singular "minute" | "nanosecond")
  * @returns the offset in the requested unit, or null on invalid input
  *
- * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes") // -240
+ * @example getZonedOffsetAs("2024-07-15T12:00:00-03:00[America/Sao_Paulo]", "minutes") // -180
  * @example getZonedOffsetAs("2024-05-15T12:00:00+05:45[Asia/Kathmandu]", "minutes") // 345
  * @example getZonedOffsetAs("2024-02-29T12:00:00+00:00[UTC]", "nanoseconds") // 0
- * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "nanoseconds") // -14400000000000
- * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minute") // -240 (singular unit name)
+ * @example getZonedOffsetAs("2024-07-15T12:00:00-03:00[America/Sao_Paulo]", "nanoseconds") // -10800000000000
+ * @example getZonedOffsetAs("2024-07-15T12:00:00-03:00[America/Sao_Paulo]", "minute") // -180 (singular unit name)
  * @example getZonedOffsetAs("invalid", "minutes") // null
  * @example getZonedOffsetAs("2024-02-29T12:00:00+00:00[UTC]", "fortnights" as never) // null
  */

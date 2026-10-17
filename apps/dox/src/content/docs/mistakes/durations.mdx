@@ -18,12 +18,12 @@ import Mistake from "../../../components/Mistake.astro";
   severity="high"
   title="Confusing duration strings with unit objects"
   description="'P1Y2M' and { years: 1, months: 2 } are one amount in two shapes, and a function takes only one of them. The other shape returns the invalid-input sentinel. When you hold a unit object and the function takes a duration string, write the string with durationFromUnits."
-  wrongCode={`formatDuration({ years: 1, months: 2 }, "en-US"); // "" — a unit object, not a duration string
+  wrongCode={`formatDuration({ years: 1, months: 2 }, "en"); // "" — a unit object, not a duration string
 addDate("2024-01-15", "P1Y2M"); // "" — a duration string, not a unit object`}
   rightCode={`import { addDate, durationFromUnits, formatDuration } from "@northguild/gmt";
 
 durationFromUnits({ years: 1, months: 2 }); // "P1Y2M"
-formatDuration(durationFromUnits({ years: 1, months: 2 }), "en-US"); // "1 year and 2 months"
+formatDuration(durationFromUnits({ years: 1, months: 2 }), "en"); // "1 year and 2 months"
 addDate("2024-01-15", { years: 1, months: 2 }); // "2025-03-15"`}
 />
 
@@ -90,7 +90,7 @@ normalizeDuration("P1M", { largestUnit: "day", relativeTo: "2024-02-01" }); // "
   wrongCode={`// assuming formatDuration("PT1H30M") matches Intl.DurationFormat`}
   rightCode={`import { formatDuration } from "@northguild/gmt";
 
-formatDuration("PT1H30M", "en-US"); // "1 hour and 30 minutes" — joined as a list`}
+formatDuration("PT1H30M", "en"); // "1 hour and 30 minutes" — joined as a list`}
 />
 
 <Mistake

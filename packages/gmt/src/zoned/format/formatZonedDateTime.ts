@@ -24,21 +24,21 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale optional locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402)
+ * @param locale optional locale tag (e.g. "en-GB", "ja-JP"), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized string or "" when invalid
  *
- * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "long" }) // "February 29, 2024 at 12:34:56 PM UTC"
+ * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "de-DE", { dateStyle: "long", timeStyle: "long" }) // "29. Februar 2024 um 12:34:56 UTC"
  * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "29/02/2024, 12:34"
- * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "ja-JP-u-ca-japanese", { year: "numeric", month: "long" }) // "令和6年2月"
- * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "ja-JP-u-ca-japanese", { year: "numeric", month: "numeric" }) // "R6/2" — the pre-1.16.0 text
- * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM EST"
- * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
- * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "en-US", { timeZone: "Asia/Tokyo" }) // "" — a ZonedDateTime keeps its own zone
- * @example formatUtc("2024-02-03T19:30:45Z", "en-US", { timeZone: "Asia/Tokyo", includeTimeZoneName: true }) // "2/4/2024, 4:30:45 AM GMT+9" — the same instant in another zone
- * @example formatZonedDateTime("invalid", "en-US") // "" (invalid input)
+ * @example formatZonedDateTime("2024-02-03T14:30:45+09:00[Asia/Tokyo]", "ja-JP-u-ca-japanese", { year: "numeric", month: "long" }) // "令和6年2月"
+ * @example formatZonedDateTime("2024-02-03T14:30:45+09:00[Asia/Tokyo]", "ja-JP-u-ca-japanese", { year: "numeric", month: "numeric" }) // "R6/2" — the pre-1.16.0 text
+ * @example formatZonedDateTime("2024-02-03T14:30:45+00:00[Europe/London]", "en-GB", { era: "long" }) // "03/02/2024 Anno Domini, 14:30:45 GMT"
+ * @example formatZonedDateTime("2024-02-03T14:30:45+00:00[Europe/London]", "en-GB", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "03/02/2024 Anno Domini" — the pre-1.16.0 text
+ * @example formatZonedDateTime("2024-02-03T14:30:45+00:00[Europe/London]", "en-GB", { timeZone: "Asia/Tokyo" }) // "" — a ZonedDateTime keeps its own zone
+ * @example formatUtc("2024-02-03T14:30:45Z", "en-GB", { timeZone: "Asia/Tokyo", includeTimeZoneName: true }) // "03/02/2024, 23:30:45 GMT+9" — the same instant in another zone
+ * @example formatZonedDateTime("invalid", "pt-BR") // "" (invalid input)
  * @example formatZonedDateTime("2024-02-03T14:30:45+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "short", timeStyle: "short" }) // "03/02/2024 14:30"
- * @example formatZonedDateTime("2024-02-03T14:30:00-05:00[America/New_York]", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
+ * @example formatZonedDateTime("2024-02-03T14:30:00+05:30[Asia/Kolkata]", "hi-IN", null as never) // "" (null options, as ECMA-402 rejects them)
  */
 export function formatZonedDateTime(
   value: string,

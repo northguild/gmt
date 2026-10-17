@@ -15,8 +15,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param timeZone target IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts)
  * @returns zoned ISO 8601 string in target timeZone or "" when invalid
  *
- * @example convertZonedToZoned("2024-02-29T12:34:56.789+00:00[UTC]", "America/New_York") // "2024-02-29T07:34:56.789-05:00[America/New_York]"
- * @example convertZonedToZoned("invalid", "America/New_York") // ""
+ * @example convertZonedToZoned("2024-02-29T12:34:56.789+00:00[UTC]", "Asia/Kolkata") // "2024-02-29T18:04:56.789+05:30[Asia/Kolkata]"
+ * @example convertZonedToZoned("invalid", "Asia/Kolkata") // ""
  */
 export function convertZonedToZoned(value: string, timeZone: string): string {
   if (!isValidZonedDateTime(value) || !isValidTimeZone(timeZone)) {

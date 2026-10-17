@@ -1,0 +1,185 @@
+---
+title: Workforce
+description: Common mistakes when checking a duty log against hours-of-work rules with GMT's workforce/ namespace.
+industries: [workforce]
+---
+
+The `workforce/` namespace is [`dutyDayFor`](/reference/workforce/calculate/dutyDayFor),
+`evaluateDutyLog`, `dutyViolations`, `dutyTotals`, `longestRun`, `qualifyingRests`,
+`qualifyingRestPairs` and [`isValidDutyLog`](/reference/workforce/validate/isValidDutyLog). The mistakes around
+them are the ones every hand-built hours-of-work check makes: counting the wrong day, reading a
+sliding window as a fixed one or the reverse, letting rest stretch a window, checking a paired
+rest as two whole numbers, and folding several limits into one. Every rule's numbers are yours;
+GMT names no regime. Every output shown here is what the function returns. See [Hours of
+Work](/guides/industries/workforce-hours-of-work/) for the rules.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Bucketing a duty log by local midnight"
+  description="The day an hours-of-work rule counts is the operator's: a 24-hour period from a start time the operator chose, in a reference zone, wherever the person is. Grouping by the local calendar date puts 03:30 in the day that starts at 04:00, and reads an entry logged abroad in the wrong zone. dutyDayFor takes the zone and the start time, with no default for either."
+  wrongCode={`new Date("2024-01-01T03:30:00Z").toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+// "2024-01-01" — but the operator's day began at 04:00 on 31 December`}
+  rightCode={`import { dutyDayFor } from "@northguild/gmt";
+
+dutyDayFor("2024-01-01T03:30:00Z", { timeZone: "Europe/London", dayStartTime: "04:00" }); // { start: "2023-12-31T04:00:00Z", end: "2024-01-01T04:00:00Z" }`}
+  rightSpecId="dutyDayFor"
+/>
+
+<Mistake
+  severity="high"
+  title="Checking a fixed week where the rule says any 7 days"
+  description="A cap 'in any 168 hours' is every sliding window, so a check over Monday-to-Sunday weeks passes a log the rule fails. Four 15-hour days from Saturday to Tuesday put 30 hours in each ISO week and 60 in the 168 hours ending on Tuesday. In a Period, { elapsed: 'PT168H' } is the sliding reading."
+  wrongCode={`// 56 hours "in any 7 days", checked per ISO week
+{ label: "56 a week", kind: "fixedPeriodCap", statuses: ["onDuty"], cap: "PT56H", period: { isoWeeks: 1 } }
+// used "PT30H" on Tuesday 9 January — passes`}
+  rightCode={`import { dutyViolations } from "@northguild/gmt";
+
+const log = [
+  { status: "onDuty", start: "2024-01-06T06:00:00Z", end: "2024-01-06T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-07T06:00:00Z", end: "2024-01-07T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-08T06:00:00Z", end: "2024-01-08T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-09T06:00:00Z", end: "2024-01-09T21:00:00Z" },
+];
+
+dutyViolations(
+  log,
+  { start: "2024-01-01T00:00:00Z", end: "2024-01-15T00:00:00Z" },
+  [{ label: "56 in any 168 hours", kind: "rollingCap", statuses: ["onDuty"], cap: "PT56H", window: { elapsed: "PT168H" } }],
+  { timeZone: "UTC" },
+); // [{ label: "56 in any 168 hours", window: { start: "2024-01-02T21:00:00Z", end: "2024-01-09T21:00:00Z" }, used: "PT60H", limit: "PT56H" }]`}
+  rightSpecId="dutyViolations"
+/>
+
+<Mistake
+  severity="medium"
+  title="Checking a sliding window where the rule says a fixed week"
+  description="The reverse mistake. A cap per week from Monday 00:00 to Sunday 24:00 is a fixed period: the same four 15-hour days put 30 hours in each week and pass it. A 168-hour sliding check fails the driver for a rule they kept. Use fixedPeriodCap with { isoWeeks: 1 }, and adjacent: 2 for two weeks in a row."
+  wrongCode={`// 56 hours "a week" (Monday to Sunday), checked as any 168 hours
+{ label: "56 in any 168 hours", kind: "rollingCap", statuses: ["onDuty"], cap: "PT56H", window: { elapsed: "PT168H" } }
+// used "PT60H" on Tuesday 9 January — fails a rule that was kept`}
+  rightCode={`import { dutyViolations } from "@northguild/gmt";
+
+const log = [
+  { status: "onDuty", start: "2024-01-06T06:00:00Z", end: "2024-01-06T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-07T06:00:00Z", end: "2024-01-07T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-08T06:00:00Z", end: "2024-01-08T21:00:00Z" },
+  { status: "onDuty", start: "2024-01-09T06:00:00Z", end: "2024-01-09T21:00:00Z" },
+];
+
+dutyViolations(
+  log,
+  { start: "2024-01-01T00:00:00Z", end: "2024-01-15T00:00:00Z" },
+  [{ label: "56 a week", kind: "fixedPeriodCap", statuses: ["onDuty"], cap: "PT56H", period: { isoWeeks: 1 } }],
+  { timeZone: "UTC" },
+); // []`}
+  rightSpecId="dutyViolations"
+/>
+
+<Mistake
+  severity="high"
+  title="Letting a break extend an elapsed window"
+  description="A window that opens when work starts and closes a fixed time later is elapsed time: rest inside it does not move the close. Adding the break to the close lets driving run two hours past it. Only a qualifying paired rest (exclude) or an extension you declare moves an elapsedWindow."
+  wrongCode={`// 14 hours from 10:00, plus the 2-hour break at 14:00
+const closes = "2024-01-02T02:00:00Z"; // driving until 01:00 looks fine`}
+  rightCode={`import { dutyViolations } from "@northguild/gmt";
+
+const log = [
+  { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+  { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T14:00:00Z" },
+  { status: "off", start: "2024-01-01T14:00:00Z", end: "2024-01-01T16:00:00Z" },
+  { status: "driving", start: "2024-01-01T16:00:00Z", end: "2024-01-02T01:00:00Z" },
+];
+
+dutyViolations(
+  log,
+  { start: "2024-01-01T00:00:00Z", end: "2024-01-02T06:00:00Z" },
+  [{ label: "14 window", kind: "elapsedWindow", startStatuses: ["driving", "onDuty"], length: "PT14H", restrictedStatuses: ["driving"], since: { statuses: ["off"], consecutive: "PT10H" } }],
+  { timeZone: "UTC" },
+); // [{ label: "14 window", window: { start: "2024-01-01T10:00:00Z", end: "2024-01-02T00:00:00Z" }, used: "PT15H", limit: "PT14H" }]`}
+  rightSpecId="dutyViolations"
+/>
+
+<Mistake
+  severity="high"
+  title="Checking a paired rest as two whole numbers"
+  description="A paired rest is three constraints: each rest at least some length, the longer at least another, both together at least a third. '7 + 3 or 8 + 2' is only the whole-hour pairs, so it refuses 7.5 + 2.5, and a check of the total alone accepts 6 + 4. qualifyingRestPairs takes the three floors."
+  wrongCode={`const counts = (a, b) => a + b >= 10;
+counts(6, 4); // true — but neither rest is 7`}
+  rightCode={`import { qualifyingRestPairs } from "@northguild/gmt";
+
+qualifyingRestPairs(
+  [
+    { status: "sleeper", start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" },
+    { status: "driving", start: "2024-01-01T06:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "off", start: "2024-01-01T10:00:00Z", end: "2024-01-01T14:00:00Z" },
+  ],
+  { statuses: ["off", "sleeper"], minimum: "PT10H", pair: { eachAtLeast: "PT2H", oneAtLeast: "PT7H", combinedAtLeast: "PT10H" } },
+); // []`}
+  rightSpecId="qualifyingRestPairs"
+/>
+
+<Mistake
+  severity="medium"
+  title="Counting a tour in the month it started"
+  description="A cap per calendar month counts the time inside each month. A tour from 20:00 on 31 January to 04:00 on 1 February in London is four hours in each month, not eight in January. fixedPeriodCap cuts the tour at the local month boundary and counts each part in its own month."
+  wrongCode={`// The whole 8-hour tour credited to January, the month it started
+const january = 8; // hours; February gets none`}
+  rightCode={`import { dutyViolations } from "@northguild/gmt";
+
+dutyViolations(
+  [{ status: "onDuty", start: "2024-01-31T20:00:00Z", end: "2024-02-01T04:00:00Z" }],
+  { start: "2024-01-15T00:00:00Z", end: "2024-02-15T00:00:00Z" },
+  [{ label: "3 a month", kind: "fixedPeriodCap", statuses: ["onDuty"], cap: "PT3H", period: { calendarMonths: 1 } }],
+  { timeZone: "Europe/London" },
+); // [{ label: "3 a month", window: { start: "2024-01-01T00:00:00Z", end: "2024-02-01T00:00:00Z" }, used: "PT4H", limit: "PT3H" }, { label: "3 a month", window: { start: "2024-02-01T00:00:00Z", end: "2024-03-01T00:00:00Z" }, used: "PT4H", limit: "PT3H" }]`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Counting elapsed hours where the rule says calendar days"
+  description="672 elapsed hours and 28 calendar days are different windows across a clock change. The 28 Sydney days ending on 14 April 2024 hold the 25-hour fall-back day, so they are 673 hours; the 28 ending on 13 October hold the 23-hour spring-forward day, 671. Say which one the rule means: { elapsed: 'PT672H' } or { calendarDays: 28 }. Each outcome names its periodBasis."
+  wrongCode={`// "28 days" counted as 28 × 24 hours
+const window = { elapsed: "PT672H" }; // an hour short across the fall-back`}
+  rightCode={`import { evaluateDutyLog } from "@northguild/gmt";
+
+evaluateDutyLog(
+  [],
+  "2024-04-14T12:00:00Z",
+  [{ label: "28 days", kind: "rollingCap", statuses: ["flight"], cap: "PT100H", window: { calendarDays: 28 } }],
+  { timeZone: "Australia/Sydney" },
+); // { at: "2024-04-14T12:00:00Z", outcomes: [{ label: "28 days", kind: "rollingCap", severity: "violation", satisfied: true, used: "PT0S", limit: "PT100H", remaining: "PT100H", window: { start: "2024-03-17T13:00:00Z", end: "2024-04-14T14:00:00Z" }, periodBasis: "calendar", dueBy: null, resetAt: null }], violations: [], advisories: [] }`}
+  rightSpecId="evaluateDutyLog"
+/>
+
+<Mistake
+  severity="medium"
+  title="Folding nested caps into one number"
+  description="A 13-hour driving cap inside a 14-hour on-duty cap inside a 16-hour window is three rules. Folding them into the smallest one hides which limit binds and how close the others are. Write each as its own rule: every rule is reported, so the second-tightest limit is visible before it binds."
+  wrongCode={`const limit = Math.min(13, 14, 16); // hours — "13 left" when on-duty time has none left`}
+  rightCode={`import { evaluateDutyLog } from "@northguild/gmt";
+
+const report = evaluateDutyLog(
+  [
+    { status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T10:00:00Z" },
+    { status: "driving", start: "2024-01-01T10:00:00Z", end: "2024-01-01T22:00:00Z" },
+    { status: "onDuty", start: "2024-01-01T22:00:00Z", end: "2024-01-02T00:00:00Z" },
+  ],
+  "2024-01-02T00:00:00Z",
+  [
+    { label: "13 driving", kind: "cumulativeCap", statuses: ["driving"], cap: "PT13H", since: { statuses: ["off"], consecutive: "PT10H" } },
+    { label: "14 on duty", kind: "cumulativeCap", statuses: ["driving", "onDuty"], cap: "PT14H", since: { statuses: ["off"], consecutive: "PT10H" } },
+    { label: "16 window", kind: "elapsedWindow", startStatuses: ["driving", "onDuty"], length: "PT16H", restrictedStatuses: ["driving"], since: { statuses: ["off"], consecutive: "PT10H" } },
+  ],
+  { timeZone: "UTC" },
+);
+
+report.outcomes.map(({ label, satisfied, remaining }) => ({ label, satisfied, remaining }));
+// [{ label: "13 driving", satisfied: true, remaining: "PT1H" },
+//  { label: "14 on duty", satisfied: true, remaining: "PT0S" },
+//  { label: "16 window", satisfied: true, remaining: "PT2H" }]`}
+  rightSpecId="evaluateDutyLog"
+/>

@@ -1,0 +1,59 @@
+---
+/**
+ * GNSS Rollover Checker widget (MAR-16).
+ *
+ * A satellite week counter wraps, and firmware that fixes the era or counts from
+ * a build date then reports a date one counter period early. The tool says
+ * whether a receiver is affected and when, and lists the next wrap of every
+ * counter. `utcToGnssWeek` and `gnssWeekToUtc` give the readings;
+ * `areUtcEqual` and `diffUtcAsDuration` give the verdict and the time left.
+ *
+ * **The markup and the wiring both live in `lib/gnss-rollover-checker-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderGnssRolloverCheckerTemplate } from "../lib/gnss-rollover-checker-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane. It adds
+ * `data-tools-fullbleed`, the self-declaring marker that dox.css's two `:has()`
+ * rules read to widen `.main-pane` and drop the max-width of every
+ * `.sl-container` inside `main`. The marker goes on a wrapper here rather than
+ * inside `renderTemplate()` so the mount's markup stays byte-identical and
+ * `scripts/html-diff.mjs` sees the widget itself as unchanged.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderGnssRolloverCheckerTemplate();
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountGnssRolloverChecker } from "../lib/gnss-rollover-checker-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=rollover&wa=` permalink seeds the widget with the values it names;
+       see lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("rollover");
+    document
+      .querySelectorAll<HTMLElement>(".gmt-gnss-rollover-checker")
+      .forEach((el) => {
+        mountGnssRolloverChecker(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

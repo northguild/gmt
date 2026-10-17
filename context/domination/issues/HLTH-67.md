@@ -21,7 +21,7 @@ Every immunization registry and EHR evaluates each administered dose against a s
 - **Age is calendar age (HLTH-36), in weeks and days, not a duration divided by 7.** Minimum ages are stated in weeks, months or years and compared as dates; a child born 29 February is handled by HLTH-36's documented leap-day rule.
 - **Early-by is a whole-day comparison on local dates.** Administration and birth dates are dates, not instants, in immunization records; the functions take dates and refuse instants.
 - **Day counting is a stated convention.** `earlyByDays` is whole days between the administered date and the minimum date, so a dose on the minimum date is 0 days early and one the day before is 1; the grace test is `earlyByDays ≤ graceDays`.
-- Schedules — which vaccines, how many doses, which ages, which grace — are the consumer's data, never on any import path. This story evaluates one dose against the rule the caller supplies.
+- Schedules — which vaccines, how many doses, which ages, which grace — are the consumer's data, never on any import path. The grace-window concept is sourced to WHO immunization schedule guidance, the international reference (not reached — marked, not asserted); no national schedule is the model, and the numbers stay caller parameters. This story evaluates one dose against the rule the caller supplies.
 
 ## Corrections
 
