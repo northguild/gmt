@@ -366,6 +366,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **`agent-prompt.test.ts` keeps `AGENT_PROMPT` (`src/lib/agent-prompt.ts`) equal to the
   fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
   is the source; a change to it goes into all three files in the same edit.
+- **The `/upstream/` defect table reads each group's `state` from `temporal-compat.json`.**
+  `stateLine` in `src/data/temporal-compat.ts` turns the state into the badge and count line for
+  both the Astro row and the Markdown twin (`renderUpstreamDefects` in `src/lib/mdx-jsx.ts`). A
+  `guard` row shows "Kept on purpose", its check count and the snapshot's `guard.reason`, because
+  the canary (`pnpm compat:snapshot`) owns state: the page never reads `failing`, `through` or a
+  version to choose a badge, and `toCompatGroup` fails the build on an unknown state or an
+  incomplete guard. The badge has a full `--gmt-ice-dim-fill` border (`--gmt-border-strong`
+  measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum;
+  the wrapper that scrolls the table is a focusable, named region. The label is "Kept on purpose"
+  because it answers the column's question in familiar words, and "Guarded" already means the
+  `gmtGuard` join of filings on the same page. A reason never says "probe" (a test rejects it), and
+  `owner/repo#n` in a reason renders as a short link (`reasonParts`). Both "ok" badges
+  (`.gmt-defects-badge--ok`, `.gmt-upstream-badge--ok`) use `--gmt-cyan-ink`, not Starlight green
+  (1.69:1 in light).
 
 ## Tier 2 · Widget platform
 

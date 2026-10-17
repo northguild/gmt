@@ -98,7 +98,7 @@ npm. A Core primitive ships with the realm that first uses it.
 | 20 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                       | #283  | 1.19.0  | Done        |
 | 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
 | 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
-| 23 | CORE-81 | Core       | Weekly canaries open issues: guard<br>state, JSON result, issue step                | —                       | #319  | —       | Not started |
+| 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
 | 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
 | 25 | CORE-79 | Core       | `Position` input type                                                               | —                       | #314  | —       | Not started |
 | 26 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                       | #198  | —       | Not started |
