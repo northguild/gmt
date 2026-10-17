@@ -53,7 +53,8 @@ Every builder reads `decisions.md` (decisions 1–21, the tool and library table
 | [f1-content-pages](f1-content-pages.md) | § F intro, F1 | D1b + D3 | The MAR-16 guides, scenarios, mistakes pages and index edits |
 | [f2-tool-page-links](f2-tool-page-links.md) | F2 | D4 | Tool pages and the links from content into the tools |
 | [h-close-out](h-close-out.md) | § H | after T (`dox-architect`) | `built.md` and context close-out |
-| [i-definition-of-done](i-definition-of-done.md) | § I (I0–I19) | T (`dox-tester`) | Definition of done, run literally |
+| [i1-definition-of-done-build-and-visual](i1-definition-of-done-build-and-visual.md) | § I (I0–I10) | T (`dox-tester`) | Definition of done: private trees, tests, generator, boundaries, visual checks |
+| [i2-definition-of-done-content](i2-definition-of-done-content.md) | § I (I11–I19) | T (`dox-tester`) | Definition of done: values, chat grounding, defaults, citations, redirects |
 | [j-k-files-and-order](j-k-files-and-order.md) | § J, § K | main session; N2 (its split table) | Full file list, step order, parallel tracks |
 | [m-workforce-layer](m-workforce-layer.md) | § M | DU | Duty pages moved and retagged, redirects, README, CORE-76 lines |
 | [n1-widget-defaults](n1-widget-defaults.md) | § N intro, N1 | N1 | Non-US widget defaults, timezone order, visitor cap day |
@@ -77,7 +78,7 @@ Every builder reads `decisions.md` (decisions 1–21, the tool and library table
 | HW | builder B | `n3-workforce-guide-examples` (the § N intro is in `n1-widget-defaults`) |
 | N2 | builders F–J | `n2-example-rebalance`, and the N2 split table in `j-k-files-and-order` |
 | D4 | one builder | `f2-tool-page-links` (paths under `apps/dox/src/content/docs/`), D7 rows, I12 |
-| T | `dox-tester` | `i-definition-of-done` |
+| T | `dox-tester` | `i1-definition-of-done-build-and-visual`, `i2-definition-of-done-content` |
 | close-out | `dox-architect` | `h-close-out` |
 | V | main session | none; `pnpm run validate` once, after warning the owner |
 
