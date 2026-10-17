@@ -1,5 +1,5 @@
 /**
- * The Temporal scan the native oracle runs (CORE-6 spec §6.3), promoted from the CORE-6 research
+ * The Temporal scan the native oracle runs (temporalCompat README, "Canary and native oracle"), promoted from the CORE-6 research
  * scratchpad (`q2-xscan-body.js` + `q2-grid-body.js`). `scripts/temporal-compat.mjs oracle` sends
  * each function's source into a Chromium page with native `Temporal` (`Function#toString`), so every
  * function here must be self-contained: no imports, no references outside its own body.

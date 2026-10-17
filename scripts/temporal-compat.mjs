@@ -1,5 +1,5 @@
 /**
- * Temporal compat canary and native oracle (CORE-6 calendar-correctness spec §6.3).
+ * Temporal compat canary and native oracle (see the temporalCompat README, "Canary and native oracle").
  *
  * GMT works around `@js-temporal/polyfill` and runtime-ICU defects in
  * `packages/gmt/src/internal/temporalCompat/` (calendars) and `internal/zonedWallClock*` (zoned
@@ -9,10 +9,13 @@
  * Usage:
  *   node scripts/temporal-compat.mjs check [--fail-on-removable]
  *     Runs every repro against the installed polyfill and prints, per workaround, which probes are
- *     STILL NEEDED or REMOVABLE, with the removal trigger, and the removal steps once every probe of
- *     a workaround passes. Exit 0 whenever it ran: "upstream still broken" is never a failure.
- *     `--fail-on-removable` (manual release checklist only, never CI) exits 1 when any workaround is
- *     removable. Needs `pnpm build` (exit 2 without `packages/gmt/dist`).
+ *     STILL NEEDED, REMOVABLE or GUARD, with the removal trigger, and the removal steps once every
+ *     probe of a workaround passes. GUARD is a group whose probes all pass only because the installed
+ *     package predates the change that would make them fail (its `guard` entry): kept, no steps, and
+ *     never counted removable until the package moves past `guard.through`. Exit 0 whenever it ran:
+ *     "upstream still broken" is never a failure. `--fail-on-removable` (manual release checklist
+ *     only, never CI) exits 1 when any workaround is removable. Needs `pnpm build` (exit 2 without
+ *     `packages/gmt/dist`).
  *
  *   node scripts/temporal-compat.mjs oracle [--chrome=<path>] [--calendars=a,b]
  *     Runs `scripts/temporal-compat/scan-body.js` in Chromium's native Temporal (Playwright from
@@ -32,6 +35,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { readDates, scanBody } from "./temporal-compat/scan-body.js";
 import { formatJson } from "./lib/format-json.mjs";
 import { loadGmt } from "./lib/gmt.mjs";
+import { snapshotRow, workaroundState } from "./lib/workaround-state.mjs";
+import {
+  compatCheckVerdict,
+  couldNotRunVerdict,
+  oracleVerdict,
+  UNTAGGED_ROWS_IN_VERDICT,
+  writeVerdict,
+} from "./lib/canary-verdict.mjs";
 
 // fileURLToPath, not `.pathname`: see scripts/test-markers.mjs — a percent-encoded path breaks
 // any checkout whose directory name contains a space.
@@ -43,7 +54,7 @@ const COMPAT_README = "packages/gmt/src/internal/temporalCompat/README.md";
 const SNAPSHOT = "apps/dox/src/data/temporal-compat.json";
 
 // ---------------------------------------------------------------------------------------------
-// Workarounds: removal triggers (spec §6.5) and removal steps (spec §6.4, compat README)
+// Workarounds: removal triggers and removal steps (temporalCompat README)
 // ---------------------------------------------------------------------------------------------
 
 const WORKAROUNDS = [
@@ -127,6 +138,12 @@ const WORKAROUNDS = [
       "Keep the non-RangeError fallbacks and the far-year month-13 rows in addDate, intervalCountDate and convertDateToCalendar tests: no expected value changes.",
       `Full wording: ${COMPAT_README} § Removal steps 10.`,
     ],
+    guard: {
+      package: "@js-temporal/polyfill",
+      through: "0.5.1",
+      reason:
+        "Polyfill 0.5.1 is older than the change that exposes this bug (tc39/proposal-temporal#3292), so these checks cannot fail on it yet.",
+    },
   },
   {
     defects: ["D11"],
@@ -230,8 +247,12 @@ const CALENDAR_DEFECTS = ["D1", "D2", "D3", "D4", "D5", "D6", "D7"];
 // Shared helpers
 // ---------------------------------------------------------------------------------------------
 
+/** The message of the last `fail`, which the dispatcher turns into a could-not-run verdict. */
+let lastFailure = "";
+
 function fail(code, message) {
   console.error(message);
+  lastFailure = message;
   process.exitCode = code;
 }
 
@@ -259,6 +280,15 @@ function polyfillVersion() {
 
 function runtimeLine() {
   return `@js-temporal/polyfill ${polyfillVersion()} (Node ${process.version}, ICU ${process.versions.icu ?? "none"})`;
+}
+
+/** The runtime as the verdict files record it. */
+function runtimeInfo() {
+  return {
+    polyfill: polyfillVersion(),
+    node: process.version,
+    icu: process.versions.icu ?? null,
+  };
 }
 
 function truncate(text, length) {
@@ -322,12 +352,16 @@ function reportedUnknownRepros(unknown) {
   return true;
 }
 
-/** One probe's line: what it is, and whether it still returns the wrong value. */
-function probeLine({ repro, output, passes }) {
+/**
+ * One probe's line: what it is, and whether it still returns the wrong value. A passing probe in a
+ * group whose state is `guard` says GUARD, because it passes by design rather than by a fix.
+ */
+function probeLine({ repro, output, passes }, state) {
   const calendar = repro.calendar === "iso8601" ? "" : ` ${repro.calendar}`;
   const label = `${repro.defect}.${repro.name}${calendar}`.padEnd(42);
+  const passed = state === "guard" ? "GUARD" : "REMOVABLE";
   return passes
-    ? `  ${label} REMOVABLE (returns spec value)`
+    ? `  ${label} ${passed} (returns spec value)`
     : `  ${label} STILL NEEDED (${truncate(output, 90)})`;
 }
 
@@ -346,15 +380,46 @@ function zonedAPartialFixNote(workaround, results) {
     : null;
 }
 
-/** The verdict under one group's probes: removable with its steps, or how many still fail. */
-function printGroupVerdict({ workaround, results, passing, allPass }) {
-  if (allPass) {
+/** The numbered removal steps of a group. */
+function printSteps(workaround) {
+  workaround.steps.forEach((step, index) =>
+    console.log(`     ${index + 1}. ${step}`),
+  );
+}
+
+/** A guard's reason without its closing period, for placing it inside parentheses. */
+function guardReason(guard) {
+  return guard.reason.replace(/\.$/, "");
+}
+
+/**
+ * The verdict under one group's probes: a guard that holds, removable with its steps (and a note
+ * when a guard has lapsed), or how many probes still fail.
+ */
+function printGroupVerdict({
+  workaround,
+  results,
+  passing,
+  state,
+  guardLapsed,
+}) {
+  const { guard } = workaround;
+  if (state === "guard") {
+    console.log(
+      `  => GUARD: all ${results.length} probes return the spec value by design (${guardReason(guard)}). Holds through ${guard.package} ${guard.through}; installed ${polyfillVersion()}. Keep the workaround; no removal steps.`,
+    );
+    return;
+  }
+  if (state === "removable") {
     console.log(
       `  => REMOVABLE: all ${results.length} probes return the spec value. Steps:`,
     );
-    workaround.steps.forEach((step, index) =>
-      console.log(`     ${index + 1}. ${step}`),
-    );
+    if (guardLapsed) {
+      console.log(
+        `     Guard lapsed: it held through ${guard.package} ${guard.through} (${guardReason(guard)}). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it.`,
+      );
+    }
+    printSteps(workaround);
     return;
   }
   console.log(
@@ -367,7 +432,9 @@ function printGroupVerdict({ workaround, results, passing, allPass }) {
 function printGroup(group) {
   console.log(group.workaround.title);
   console.log(`  Remove when: ${group.workaround.trigger}`);
-  for (const result of group.results) console.log(probeLine(result));
+  for (const result of group.results) {
+    console.log(probeLine(result, group.state));
+  }
   printGroupVerdict(group);
   console.log("");
 }
@@ -378,7 +445,7 @@ const calendarWorkaroundsDone = (removable) =>
     w.defects.some((defect) => CALENDAR_DEFECTS.includes(defect)),
   ).every((w) => removable.includes(w));
 
-function printRemovalSummary(removable) {
+function printRemovalSummary(removable, guarded, stillNeeded) {
   if (calendarWorkaroundsDone(removable)) {
     console.log(
       `D1–D7 are all removable: also delete nonIsoArithmetic.ts, readArithmeticModel.ts and the whole-operation seams (${COMPAT_README} § Removal steps 6).`,
@@ -386,29 +453,68 @@ function printRemovalSummary(removable) {
   }
   if (removable.length === WORKAROUNDS.length) {
     console.log(
-      "Every workaround is removable (spec §6.4 Final removal): inline or keep temporalCompat/index.ts as a facade, delete temporalCompat/ and these check groups, keep `oracle`, bump the dependency floor, and add a changeset note (drops workarounds; no behaviour change).",
+      "Every workaround is removable (temporalCompat README, Removal steps): inline or keep temporalCompat/index.ts as a facade, delete temporalCompat/ and these check groups, keep `oracle`, bump the dependency floor, and add a changeset note (drops workarounds; no behaviour change).",
     );
   }
+  const guardIds = guarded.map((workaround) => workaround.defects.join("+"));
   console.log(
-    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime.`,
+    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime (${stillNeeded} still needed, ${guarded.length} guard${guardIds.length > 0 ? `: ${guardIds.join(", ")}` : ""}).`,
   );
+}
+
+/** Adds each group's state on the installed runtime; the one place `check` decides it. */
+function withStates(groups) {
+  const installed = polyfillVersion();
+  return groups.map((group) => ({
+    ...group,
+    ...workaroundState(
+      {
+        probes: group.results.length,
+        failing: group.results.length - group.passing,
+        guard: group.workaround.guard,
+      },
+      installed,
+    ),
+  }));
 }
 
 async function check(args) {
   if (!requireDist()) return;
-  const { groups, unknown } = await runProbes();
+  const probed = await runProbes();
+  const { unknown } = probed;
 
   console.log(runtimeLine());
   console.log("");
 
   if (reportedUnknownRepros(unknown)) return;
 
+  let groups;
+  try {
+    groups = withStates(probed.groups);
+  } catch (error) {
+    fail(2, error.message);
+    return;
+  }
+
   for (const group of groups) printGroup(group);
 
-  const removable = groups
-    .filter((group) => group.allPass)
-    .map((group) => group.workaround);
-  printRemovalSummary(removable);
+  const inState = (state) =>
+    groups.filter((group) => group.state === state).map((g) => g.workaround);
+  const removable = inState("removable");
+  printRemovalSummary(
+    removable,
+    inState("guard"),
+    inState("still-needed").length,
+  );
+
+  writeVerdict(
+    ROOT,
+    compatCheckVerdict({
+      runtime: runtimeInfo(),
+      groups,
+      snapshotCurrent: snapshotIsCurrent(groups),
+    }),
+  );
 
   if (args.includes("--fail-on-removable") && removable.length > 0) {
     process.exitCode = 1;
@@ -421,9 +527,9 @@ async function check(args) {
 
 /**
  * Mismatches that are not GMT bugs: rows where test262 and Chromium's native Temporal disagree
- * (test262 wins, spec §0/§6.3). Each entry names its test262 file and matches mismatches by
- * `{ scan, calendar, op }` plus an optional `row` predicate. All owner decisions (spec §9) are
- * resolved, so no row is tagged for an open decision.
+ * (test262 wins; the order of authorities is in CORE-6 Decisions). Each entry names its test262 file and matches mismatches by
+ * `{ scan, calendar, op }` plus an optional `row` predicate. All owner decisions
+ * (calendar-standards-decisions.md) are resolved, so no row is tagged for an open decision.
  */
 const TAGGED_MISMATCHES = [];
 
@@ -889,6 +995,8 @@ function makeOracleTally() {
   const counts = { comparisons: 0, mismatches: 0, tagged: 0, untagged: 0 };
   const groups = new Map();
   const stored = [];
+  /** The first untagged mismatches, kept apart so tagged ones never crowd them out of `stored`. */
+  const untagged = [];
 
   /** GMT's answer, or the throw as a string so a crash compares as a value rather than escaping. */
   const answerOf = (run) => {
@@ -913,6 +1021,9 @@ function makeOracleTally() {
     group.count++;
     groups.set(key, group);
     if (stored.length < MAX_STORED_MISMATCHES) stored.push(mismatch);
+    if (!tag && untagged.length < UNTAGGED_ROWS_IN_VERDICT) {
+      untagged.push(mismatch);
+    }
   };
 
   /** The `compare` callback `runTwin` calls once per comparison. */
@@ -922,7 +1033,7 @@ function makeOracleTally() {
     if (actual !== row.expected) record(row, actual);
   };
 
-  return { counts, groups, stored, compare };
+  return { counts, groups, stored, untagged, compare };
 }
 
 /** Runs the twin one calendar at a time, printing how long each took. */
@@ -955,7 +1066,7 @@ async function oracle(args) {
   const gmt = await import(pathToFileURL(join(DIST, "plain/index.js")).href);
   const calendars = calendarsFor(native.scan);
   const dateString = dateStringFromReads(native.reads);
-  const { counts, groups, stored, compare } = makeOracleTally();
+  const { counts, groups, stored, untagged, compare } = makeOracleTally();
 
   runTwinByCalendar(native, calendars, dateString, gmt, compare);
 
@@ -1003,6 +1114,19 @@ async function oracle(args) {
     ),
   );
   writeFileSync(textPath, `${summary}\n`);
+  // Before the exit-1 below, so a run that found GMT bugs still leaves a `ran` verdict.
+  writeVerdict(
+    ROOT,
+    oracleVerdict({
+      runtime: runtimeInfo(),
+      chromium: native.browserVersion,
+      calendars,
+      counts,
+      groups: [...groups.values()],
+      untagged,
+      report: relative(ROOT, jsonPath),
+    }),
+  );
 
   console.log("");
   console.log(summary);
@@ -1017,6 +1141,35 @@ async function oracle(args) {
   }
 }
 
+/** The snapshot file as committed, or an empty string when it does not exist. */
+function committedSnapshot() {
+  const path = `${ROOT}${SNAPSHOT}`;
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
+}
+
+/**
+ * The snapshot file's text for these probe results. `snapshot` writes it, `snapshot --check` and
+ * `check` compare the committed file against it, so the verdict and `validate` can never disagree
+ * about whether the committed copy is current.
+ */
+function snapshotText(groups) {
+  const installed = polyfillVersion();
+  return formatJson({
+    groups: groups.map(({ workaround, results, passing }) =>
+      snapshotRow(
+        workaround,
+        // `failing` is how many probes still return the wrong value on the installed polyfill.
+        { probes: results.length, failing: results.length - passing },
+        installed,
+      ),
+    ),
+  });
+}
+
+/** Whether the committed snapshot equals what `snapshot` would write now. */
+const snapshotIsCurrent = (groups) =>
+  committedSnapshot() === snapshotText(groups);
+
 /**
  * The canary as data: one row per workaround group, for the `/upstream/` page.
  *
@@ -1030,49 +1183,73 @@ async function snapshot(args) {
   const { groups, unknown } = await runProbes();
   if (reportedUnknownRepros(unknown)) return;
 
-  const data = {
-    groups: groups.map(({ workaround, results, passing }) => ({
-      defects: workaround.defects,
-      title: workaround.title,
-      trigger: workaround.trigger,
-      probes: results.length,
-      // How many probes still return the wrong value on the installed polyfill, so a group is
-      // still needed while this is above zero.
-      failing: results.length - passing,
-    })),
-  };
-
+  // `snapshotRow` throws only for a guarded group whose probes all pass while the installed version
+  // cannot be compared with `guard.through`: a fault in the local install, so nothing is written.
+  let next;
+  try {
+    next = snapshotText(groups);
+  } catch (error) {
+    fail(2, `compat snapshot: ${error.message}`);
+    return;
+  }
   const path = `${ROOT}${SNAPSHOT}`;
-  const next = formatJson(data);
 
   if (args.includes("--check")) {
-    const current = existsSync(path) ? readFileSync(path, "utf8") : "";
-    if (current !== next) {
+    if (committedSnapshot() !== next) {
       fail(1, `${SNAPSHOT} is out of date — run: pnpm compat:snapshot`);
       return;
     }
-    const live = data.groups.filter((g) => g.failing > 0).length;
-    console.log(
-      `compat snapshot: ${data.groups.length} group(s) recorded, ${live} still needed`,
-    );
+    console.log(snapshotCountLine(JSON.parse(next).groups));
     return;
   }
 
   writeFileSync(path, next);
   console.log(
-    `compat snapshot: wrote ${data.groups.length} group(s) to ${SNAPSHOT}`,
+    `compat snapshot: wrote ${groups.length} group(s) to ${SNAPSHOT}`,
   );
+}
+
+/** The `snapshot --check` summary, read from each row's `state` rather than re-derived. */
+function snapshotCountLine(rows) {
+  const count = (state) => rows.filter((row) => row.state === state).length;
+  const removable = count("removable");
+  const guard = count("guard");
+  return [
+    `compat snapshot: ${rows.length} group(s) recorded`,
+    `${count("still-needed")} still needed`,
+    ...(removable > 0 ? [`${removable} removable`] : []),
+    ...(guard > 0 ? [`${guard} guard`] : []),
+  ].join(", ");
 }
 
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * Runs `command` and, for `check` and `oracle`, leaves a could-not-run verdict when it exits 2 or
+ * throws, so every run of those two commands ends with exactly one verdict file.
+ */
+async function runWithVerdict(source, command) {
+  try {
+    await command();
+  } catch (error) {
+    writeVerdict(
+      ROOT,
+      couldNotRunVerdict(source, String(error?.message ?? error)),
+    );
+    throw error;
+  }
+  if (process.exitCode === 2) {
+    writeVerdict(ROOT, couldNotRunVerdict(source, lastFailure));
+  }
+}
+
 const [command, ...args] = process.argv.slice(2);
 if (command === "check") {
-  await check(args);
+  await runWithVerdict("temporal-compat-check", () => check(args));
 } else if (command === "snapshot") {
   await snapshot(args);
 } else if (command === "oracle") {
-  await oracle(args);
+  await runWithVerdict("temporal-oracle", () => oracle(args));
 } else {
   fail(
     2,

@@ -1,0 +1,136 @@
+/**
+ * The JSON each canary writes for the issue reporter (CORE-81).
+ *
+ * Pure builders plus one writer; Node built-ins and `./format-json.mjs` only. No verdict carries a
+ * timestamp: the run link dates it, and the files stay deterministic for tests.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { formatJson } from "./format-json.mjs";
+
+/** Where each source's verdict goes, relative to the repo root. Written on every run. */
+export const VERDICT_FILES = {
+  "temporal-compat-check": "artifacts/temporal-compat-check.json",
+  "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
+  "leap-seconds": "artifacts/leap-seconds.json",
+};
+
+/**
+ * How many untagged oracle mismatches a verdict names. 50 rows keep an issue body far below any
+ * size problem while naming enough rows to start; the full list stays in the dated oracle report.
+ */
+export const UNTAGGED_ROWS_IN_VERDICT = 50;
+
+/** The committed snapshot the verdict says is or is not current (`temporal-compat.mjs snapshot`). */
+const SNAPSHOT_PATH = "apps/dox/src/data/temporal-compat.json";
+
+/**
+ * The `check` verdict: one entry per workaround group, in script order.
+ *
+ * @param {{ runtime: { polyfill: string, node: string, icu: string | null },
+ *           groups: Array<{ workaround: { defects: string[], title: string, trigger: string,
+ *             steps: string[], guard?: { package: string, through: string, reason: string } },
+ *             results: unknown[], passing: number,
+ *             state: "still-needed" | "removable" | "guard", guardLapsed: boolean }>,
+ *           snapshotCurrent: boolean }} input
+ */
+export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
+  const inState = (state) => groups.filter((g) => g.state === state).length;
+  return {
+    source: "temporal-compat-check",
+    status: "ran",
+    runtime,
+    counts: {
+      workarounds: groups.length,
+      stillNeeded: inState("still-needed"),
+      removable: inState("removable"),
+      guard: inState("guard"),
+    },
+    snapshot: { path: SNAPSHOT_PATH, current: snapshotCurrent },
+    workarounds: groups.map(
+      ({ workaround, results, passing, state, guardLapsed }) => ({
+        id: workaround.defects.join("+"),
+        defects: workaround.defects,
+        title: workaround.title,
+        trigger: workaround.trigger,
+        state,
+        probes: results.length,
+        failing: results.length - passing,
+        ...(workaround.guard
+          ? { guard: { ...workaround.guard, lapsed: guardLapsed } }
+          : {}),
+        steps: workaround.steps,
+      }),
+    ),
+  };
+}
+
+/**
+ * The `oracle` verdict. `groups` and `untagged` are the tally's: `groups` as
+ * `{ key, count, example }` entries and `untagged` as the first untagged mismatches in tally order
+ * (the tally keeps its own list, so tagged mismatches can never crowd them out).
+ *
+ * @param {{ runtime: object, chromium: string, calendars: string[],
+ *           counts: { comparisons: number, mismatches: number, tagged: number, untagged: number },
+ *           groups: Array<{ key: string, count: number, example: object }>,
+ *           untagged: Array<{ [field: string]: unknown }>,
+ *           report: string }} input
+ */
+export function oracleVerdict({
+  runtime,
+  chromium,
+  calendars,
+  counts,
+  groups,
+  untagged: tallied,
+  report,
+}) {
+  const untagged = tallied.slice(0, UNTAGGED_ROWS_IN_VERDICT);
+  return {
+    source: "temporal-oracle",
+    status: "ran",
+    runtime,
+    chromium,
+    calendars,
+    counts,
+    untaggedGroups: groups
+      .filter((g) => !g.key.endsWith(" [tagged]"))
+      .map(({ key, count, example }) => ({ key, count, example })),
+    untagged,
+    untaggedTruncated: counts.untagged > untagged.length,
+    report,
+  };
+}
+
+/**
+ * The `leap-seconds check` verdict. `differences` is the exact `problems` list the command prints:
+ * source parse problems, IERS parse problems, then the row comparisons, each string unchanged.
+ *
+ * @param {{ header: string | null, gmtRows: number, iersRows: number, differences: string[] }} input
+ *        `header` is the IERS "Updated through …" line, or null when the file has none
+ */
+export function leapSecondsVerdict({ header, gmtRows, iersRows, differences }) {
+  return {
+    source: "leap-seconds",
+    status: "ran",
+    header,
+    rows: { gmt: gmtRows, iers: iersRows },
+    differences: [...differences],
+  };
+}
+
+/**
+ * What a command that exited 2 leaves behind: a canary that cannot run is a finding, not a silence.
+ *
+ * @returns {{ source: string, status: "could-not-run", message: string }}
+ */
+export function couldNotRunVerdict(source, message) {
+  return { source, status: "could-not-run", message };
+}
+
+/** Writes `formatJson(verdict)` to `<root>/<VERDICT_FILES[verdict.source]>`, creating the folder. */
+export function writeVerdict(root, verdict) {
+  const path = join(root, VERDICT_FILES[verdict.source]);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, formatJson(verdict));
+}
