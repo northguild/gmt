@@ -22,7 +22,7 @@ the order they shipped. `pnpm deps -- check` reads build order from row position
 lands: a dependency drops out of every cell the moment its own row is marked `Done`.
 
 Each cell is generated, never hand-edited. It is the story IDs named in that story's
-`## What gmt provides (do not re-implement)` section in `issues/<ID>.md`, minus the ones
+`## What gmt provides (do not re-implement)` section in `issues/<ID>.md` (listed in [issues/index.md](issues/index.md)), minus the ones
 already `Done`. The spec is the source of truth; run `pnpm deps:sync` to regenerate.
 
 - **`(SPA-48)`** — parenthesised, so _not_ a blocker. It is a shared primitive built later in
@@ -163,7 +163,7 @@ engine lives in `workforce/` (`@northguild/gmt/workforce`), a cross-industry lay
 workforce management that other industries draw on and declare in Dox: Transport now; Health,
 Aviation, Rail and Maritime as their stories ship.
 `CORE-78` (the UTC timestamp check) is one function that no story consumes, so it takes the
-first open slot. `CORE-80` (speed and bundle size) adds no function and changes no output. It sits
+first open slot. `CORE-80` (speed and bundle size, measured in the [audit](../perf-and-bundle-size-audit.md)) adds no function and changes no output. It sits
 straight after `CORE-81`, so every later story is built on the closed-form internals and under
 its size budget. `CORE-81` (the weekly canaries open issues) adds no function either. It comes
 first, so a removable workaround or an oracle mismatch reaches an issue before more realms build on

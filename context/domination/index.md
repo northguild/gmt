@@ -8,11 +8,12 @@ This file is a progressive-disclosure entry point. Read what you need:
   citations. **Read this before adding or changing any realm function.**
 - [tracker.md](tracker.md) — The 71 stories in build order, the `Blocked by` column, and
   the Definition of Done binding every story.
-- [issues/](issues/) — Full specs, one file per story, named by story ID.
+- [issues/index.md](issues/index.md) — Full specs, one file per story, named by story ID.
 - [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on
   the docs site, and the rules for them.
-- [research/](research/) — Research records: the primary-source evidence behind specs, including the
-  verification files in [research/spike-2026-09/](research/spike-2026-09/).
+- [specs/index.md](specs/index.md) — Implementation specs that outgrew an issue file.
+- [research/index.md](research/index.md) — Research records: the primary-source evidence behind specs, including the
+  verification files in `research/spike-2026-09/`.
 
 ## Orientation
 

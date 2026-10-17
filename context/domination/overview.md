@@ -260,8 +260,9 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
 - [tracker.md](tracker.md) — 71 stories, `Blocked by` column, Definition of Done
-- [research/spike-2026-09/](research/spike-2026-09/) — verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
-- [issues/](issues/) — story specs, one file per story, named by story ID
+- [research/index.md](research/index.md) — all research records, including the
+  `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
+- [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID
 - [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
 
 Standards cited by stories in this epic, each verified against a primary source. Evidence
