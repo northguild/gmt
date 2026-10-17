@@ -106,9 +106,8 @@
    against this one on a panel this size.
 
    `display: flex; flex-direction: column` is required to stay, not inherited
-   habit: specs/dox-smooth-growth.md pins it ("The section keeps its own
-   `display: flex; flex-direction: column` from `gmt-widget.css`") because
-   `.gmt-grow-inner` takes over the column and inherits this `gap`. The padding
+   habit: `.gmt-grow-inner` takes over the column and inherits this `gap`
+   (context/dox/reference/design-system.md, "Smooth growth"). The padding
    and border added here sit outside the eased height by design —
    `.gmt-grow` is `box-sizing: content-box` for exactly that reason
    (gmt-primitives.css).

@@ -118,6 +118,18 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    `## What gmt provides (do not re-implement)` section first; the column is generated
    from that section.
 
+   **Then retire the spec.** A spec lives only while its story is in progress. Fold what
+   still matters, then delete it: put the Decisions and GMT-rule rows into
+   `context/domination/issues/<ID>.md` under `## Decisions`, worded as current rules; put a
+   Dox spec's decisions into `context/dox/built.md` (or a `context/dox/reference/*.md`
+   file). Leave out test tables, step lists, file tables and build instructions. Rewrite
+   every inbound link or comment that cites the spec
+   (`grep -rnE 'specs/|spec §[0-9]' context .agents scripts apps packages`, minus
+   `node_modules`, `dist` and `CHANGELOG`) to state the reason in plain words, link the
+   issue's Decisions section, or cite the external standard; in `packages/gmt/src` change
+   comments only. Then delete the spec folder and its line in the `specs/index.md` of its
+   side. Check that none of `plan_gate.py`'s tests use the deleted spec.
+
 8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, or `gmt-reviewer`'s report is missing for a category A, B or G story, or carries an open blocking finding, stop:
    - Do not write the changeset, do not flip the tracker, and do not draft the commit or PR.
    - Report each item to the main session, so the fix loops back through `tdd-dev`.

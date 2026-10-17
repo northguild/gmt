@@ -316,8 +316,9 @@ An instant, date or time `t` is inside an interval when `start ≤ t < end`: SQL
 application-time `PERIOD` (ISO/IEC 9075-2:2011), RFC 5545 §3.6.1's non-inclusive `DTEND` and
 EWD831. This holds for `interval/` and for every positional `plain|utc|zoned|unix/interval`
 function (all since 1.16.0). Tie-breaks and empty-interval edges follow the
-[CORE-6 spec](./domination/specs/CORE-6-spec.md) §3; the rules below derive the relations that
-spec has no function for.
+[CORE-6 Design notes](./domination/issues/CORE-6.md#design-notes) and
+[Decisions](./domination/issues/CORE-6.md#decisions); the rules below derive the relations that
+those notes have no function for.
 
 - **No one-unit steps.** Pieces end and start exactly at a cut: no nanosecond, day or `epochUnit`
   step in `intervalDifference*`/`intervalXor*`, and no one-unit gap in `intervalAbuts*`.

@@ -77,7 +77,7 @@ the 3 h; (c) offer both as two distinct kinds. Rung that would decide it under t
 precedence: the ICD is the system's own definition; RINEX is the IGS/RTCM interchange standard. Both
 are standards, so this is the "genuinely conflict" case.
 
-> **Decided — not used (MAR-16 spec, D10).** GMT's `GLO` follows RINEX 4.02 and BIPM (UTC hours,
+> **Decided — not used (MAR-16 issue, [Decisions](../../issues/MAR-16.md#decisions)).** GMT's `GLO` follows RINEX 4.02 and BIPM (UTC hours,
 > with UTC's leap seconds). The ICD's UTC(SU) + 3 h scale and its N_T / N_4 counters (§4.1, §4.3,
 > §4.4) are not implemented and are not cited as an authority; they stay here as evidence only.
 

@@ -37,7 +37,7 @@ One public function per file, as everywhere else. Nothing goes in `transport/get
 
 ## Docs-site scope
 
-The docs site carries these (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)); the execution spec is [context/dox/specs/tran-57-punctuality.md](../../dox/specs/tran-57-punctuality.md):
+The docs site carries these (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)); the built tools are recorded in [built.md](../../dox/built.md):
 
 - Guide `guides/industries/transport-punctuality-and-timestamps.mdx`, one `##` per function: late as exact elapsed time (`scheduleDeviation`), on time needs a stated tolerance (`classifyPunctuality`: the 15-minute, 60/120-minute and day-based examples, both edges outside, early optional), a rate as a count under one tolerance (`punctualityRate`), one field with four meanings (`bestAvailable`), how far the estimate moved (`estimateDrift`), and the next departure a connection can make (`nextDeparture`, list and headway forms, feeding `scheduleDelivery`). Examples are labelled by their numbers only. A cross-link from `transport-multi-leg-scheduling.mdx` to `nextDeparture`, and entries in `guides/index.mdx` and `guides/industries/index.mdx`.
 - Scenarios: `estimate-shown-as-actual` (`bestAvailable` against a latest-recorded-wins pick), `delay-across-fall-back` (`scheduleDeviation` against a wall-clock subtraction).

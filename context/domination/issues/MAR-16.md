@@ -40,7 +40,7 @@ The types live in `packages/gmt/src/types/gnss.ts`:
 
 `toTAI` / `fromTAI` (`packages/gmt/src/timescale/convert/`) and the time-scale string grammar are built here; the TAI64 labels stay in their own story.
 
-The code lives in the `gnss/` and `timescale/` building-block namespaces; this story creates no `maritime/` namespace ([MAR-16 spec, D13](../specs/MAR-16/decisions-d7-d13.md)).
+The code lives in the `gnss/` and `timescale/` building-block namespaces; this story creates no `maritime/` namespace (see [Decisions](#decisions)).
 
 ## String format
 
@@ -71,19 +71,19 @@ The "date-time, space, token" arrangement is a GMT rule; no standard joins the t
 
 ([BIPM Annual Report on Time Activities vol. 15](https://webtai.bipm.org/ftp/pub/tai/annual-reports/bipm-annual-report/annual_report_2020.pdf), [BIPM `utc-gnss`](https://webtai.bipm.org/ftp/pub/tai/other-products/utcgnss/utc-gps), [CGPM 2026 Resolution 5](https://www.bipm.org/en/cgpm-2026/resolution-5), [Meinberg on GPS week rollover](https://kb.meinbergglobal.com/kb/time_sync/gnss_systems/gps_week_number_rollover))
 
-## Corrections
-
-The original MAR-1 and the first draft of this story contained these errors, all corrected above.
-
-- **The sign was backwards.** It stated `GPS − UTC = -18 seconds`. GPS is ahead of UTC, so the offset is `+18`. Implemented as written, every converted timestamp would have been 36 seconds wrong.
-- **The epoch example was wrong.** It asserted that UTC `1980-01-06T00:00:00Z` is GPS time `1980-01-06T00:00:18`. The GPS−UTC offset was **zero** at the GPS epoch — the 18 seconds accumulated from leap seconds inserted afterwards. Using the present-day offset at the epoch is exactly the bug this story exists to prevent, and it was encoded in the acceptance criteria.
-- **TAI − GST had the wrong sign.** The draft gave −19 s. GST is 19 s behind TAI, exactly like GPS, so TAI − GST = +19 s (BIPM).
-- **GLONASS was read as UTC + 3 h.** A RINEX `GLO` time tag is in UTC hours, so a three-hour shift would have put every converted tag three hours out. `GLO` now follows RINEX and BIPM.
-- **`'BDS'` and `'… GLONASST'` are not time tokens.** `BDS` names the constellation; RINEX's time token is `BDT`. No standard defines `GLONASST`.
-
 ## Design notes
 
-[Design notes](MAR-16/design-notes.md): offsets, GLONASS hours, Galileo epoch, week counters, `rolloverEra`, RINEX weeks.
+[Design notes](MAR-16/design-notes.md): offsets, GLONASS hours, Galileo epoch, week counters, `rolloverEra`, RINEX weeks, and the corrections to the original MAR-1 draft.
+
+## Decisions
+
+- **`timescale/` is Core and `gnss/` is a cross-industry layer.** `timescale/` holds the general time primitives (TAI minus UTC, leap seconds, `toTAI`, `fromTAI`). `gnss/` holds satellite system times and weeks, which Maritime uses now and Aviation and IoT will later. `maritime/` is created by the first story that ships something maritime-only (MAR-17, MAR-18, MAR-19 or MAR-59). The Space realm's namespace name is unsettled, because "space" will collide with the planned geo expansion; `space/` is not reserved and nothing here creates it.
+- **A `:60` input is accepted only for a listed insertion.** A UTC-reading function accepts `...T23:59:60[.f]Z` (or any offset spelling of that instant) only when the table lists an insertion at the next 00:00 UTC (ITU-R TF.460-6 Annex 1 section 2.2, Annex 3), and maps it to the inserted TAI second. Any other second-60 string returns the sentinel. Labels inside an inserted second are written as `...T23:59:60[.f]Z`; `GLO` follows UTC, so `...T23:59:60 GLO` is valid exactly when UTC's label is. Every other GMT function still rejects `:60`, and the JSDoc says a written `:60` string is readable only by these functions.
+- **`hasSecond60` is the syntax check and `isLeapSecond` is the table lookup** (see [SPA-48](SPA-48.md)). The rename is a breaking change under `minor`, with a Breaking changes section in the changeset.
+- **The `GLO` lower bound is 1972-01-01T00:00:00Z** (owner decision). RINEX and BIPM give GLONASS time no epoch, so a `GLO` label exists wherever UTC has whole-second leap seconds. Like `utcToGnss("GPS", ...)`, it accepts dates before the constellation existed.
+- **The weekly IERS canary stays until IERS publishes its file format for continuous UTC, then it is retired** (owner decision). Continuous UTC takes effect on 20 May 2027, but TF.460-6 section 2.1 still allows a month end other than June or December on eight weeks' notice, so until then the canary is what would catch an unexpected insertion or a change to the file.
+- **The table is a module-level constant and no function takes a table argument.** After the last row TAI minus UTC is 37 s indefinitely; there is no `.../data` subpath.
+- **NavIC's TAI minus IRNSST of 19 s is derived.** No ICD or BIPM statement gives it, so the JSDoc says it is derived from the ICD epoch and the leap-second table.
 
 ## What gmt provides (do not re-implement)
 

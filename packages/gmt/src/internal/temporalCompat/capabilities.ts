@@ -6,7 +6,7 @@ import { type DefectId, type Repro, repros } from "./repros";
  * polyfill + ICU, and the polyfill is imported once, so a cached answer never goes stale.
  *
  * A workaround whose probe passes never runs: behaviour is the polyfill's own. Tests never force a
- * probe; they assert spec-correct outputs that hold either way (CORE-6 spec §4.5).
+ * probe; they assert spec-correct outputs that hold either way (temporalCompat README).
  */
 
 /** The repro's output, or `ERR <name>: <message>` when it throws. */
@@ -117,7 +117,7 @@ const ARITHMETIC_DEFECTS: readonly DefectId[] = [
 
 /**
  * True when calendar arithmetic in `calendarId` needs the compat layer in this runtime: any of its
- * add, until or read probes fails (CORE-6 spec §3.6.2). `iso8601` never does, and costs nothing.
+ * add, until or read probes fails. `iso8601` never does, and costs nothing.
  * Callers that own a spec path for a whole operation (zoned differences, `Duration` rounding,
  * totals and comparisons) take it when this is true.
  */

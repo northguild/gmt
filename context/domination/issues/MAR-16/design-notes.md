@@ -12,3 +12,13 @@ Part of [MAR-16](../MAR-16.md).
 - **Offsets are nominal.** The nanosecond corrections a satellite broadcasts (C0, C1, A0/A1, GGTO) are not inputs and are not applied.
 - Before each system's epoch its time is undefined. Return the sentinel rather than extrapolating.
 - NMEA sentence parsing (RMC, ZDA) is MAR-59; this story is the scale arithmetic those parsers feed.
+
+## Corrections
+
+Errors in the original MAR-1 and the first draft, all corrected in the story text.
+
+- **The sign was backwards.** GPS is ahead of UTC, so the offset is `+18`, not `-18`; the wrong sign makes every converted timestamp 36 seconds wrong.
+- **The epoch example was wrong.** GPS minus UTC was **zero** at the GPS epoch; the 18 seconds accumulated from later leap seconds. Using today's offset at the epoch is the bug this story exists to prevent.
+- **TAI − GST is +19 s**, not −19 s: GST is 19 s behind TAI, like GPS (BIPM).
+- **GLONASS is not UTC + 3 h.** A RINEX `GLO` time tag is in UTC hours, so `GLO` follows RINEX and BIPM.
+- **`'BDS'` and `'… GLONASST'` are not time tokens.** `BDS` names the constellation; RINEX's token is `BDT`. No standard defines `GLONASST`.

@@ -22,12 +22,13 @@ plan_gate = importlib.util.module_from_spec(_spec)
 sys.modules["plan_gate"] = plan_gate
 _spec.loader.exec_module(plan_gate)
 
-LIB = "context/domination/specs/MAR-16"
-DOX = "context/dox/specs/mar-16"
+# Fixture story: these tests never read a real spec under context/.
+LIB = "context/domination/specs/FIX-1"
+DOX = "context/dox/specs/fix-1"
 
 
 def index(status: str = "approved", dox: str = "none", links: str = "[a](a.md)") -> str:
-    return f"---\nstory: MAR-16\nstatus: {status}\ndox: {dox}\n---\n\n# MAR-16\n\n| Slice |\n| {links} |\n"
+    return f"---\nstory: FIX-1\nstatus: {status}\ndox: {dox}\n---\n\n# FIX-1\n\n| Slice |\n| {links} |\n"
 
 
 def write(root: Path, rel: str, text: str) -> None:
@@ -36,7 +37,7 @@ def write(root: Path, rel: str, text: str) -> None:
     p.write_text(text)
 
 
-def problems(root: Path, story: str = "MAR-16") -> list[str]:
+def problems(root: Path, story: str = "FIX-1") -> list[str]:
     return plan_gate.check(root, story)
 
 
@@ -100,7 +101,7 @@ def test_dox_spec_must_be_approved_too(tmp_path: Path) -> None:
     write(tmp_path, f"{LIB}/a.md", "slice\n")
     write(tmp_path, f"{DOX}/index.md", index(status="draft", links="[t](tool.md)"))
     write(tmp_path, f"{DOX}/tool.md", "tool\n")
-    assert any("mar-16" in p and "not approved" in p for p in problems(tmp_path))
+    assert any("fix-1" in p and "not approved" in p for p in problems(tmp_path))
 
 
 def test_dox_story_uses_dox_specs_only(tmp_path: Path) -> None:
@@ -110,11 +111,11 @@ def test_dox_story_uses_dox_specs_only(tmp_path: Path) -> None:
 
 
 def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert plan_gate.main(["MAR-16", "--root", str(tmp_path)]) == 1
+    assert plan_gate.main(["FIX-1", "--root", str(tmp_path)]) == 1
     assert "FAIL" in capsys.readouterr().out
     write(tmp_path, f"{LIB}/index.md", index())
     write(tmp_path, f"{LIB}/a.md", "slice\n")
-    assert plan_gate.main(["MAR-16", "--root", str(tmp_path)]) == 0
+    assert plan_gate.main(["FIX-1", "--root", str(tmp_path)]) == 0
     assert "PASS" in capsys.readouterr().out
 
 

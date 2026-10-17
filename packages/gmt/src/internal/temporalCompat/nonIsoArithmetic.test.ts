@@ -12,7 +12,7 @@ import {
 import { readArithmeticModel } from "./readArithmeticModel";
 
 // The spec algorithms are called directly, over each model, so they stay covered whether or not
-// the installed polyfill still needs them (CORE-6 spec §4.5). Dates are ISO; expected values are
+// the installed polyfill still needs them. Dates are ISO; expected values are
 // Chromium 152 native Temporal (q2-grid-chromium152.json "grid", q2-xscan-chromium152.json
 // "xscan") or test262, never the polyfill or GMT.
 const models: Record<string, () => ArithmeticModel> = {

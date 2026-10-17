@@ -29,7 +29,7 @@ Without a shared primitive each realm reimplements interval intersection, and th
 
 ## Design notes
 
-Implementation spec: [`../specs/CORE-6-spec.md`](../specs/CORE-6-spec.md). Range-edge defects found and fixed during this story, the sites proven safe, and the `@js-temporal/polyfill` defects: [`../research/range-edge-correctness-audit.md`](../research/range-edge-correctness-audit.md).
+Range-edge defects found and fixed during this story, the sites proven safe, and the `@js-temporal/polyfill` defects: [`../research/range-edge-correctness-audit.md`](../research/range-edge-correctness-audit.md).
 
 - **Half-open `[start, end)` everywhere.** An instant `t` is inside when `start ≤ t < end`. This is EWD831's convention, SQL:2011's closed-open application-time `PERIOD` (ISO/IEC 9075-2:2011), and RFC 5545 §3.6.1's non-inclusive `DTEND`. A container that gates out at exactly 17:00 on the last free day has not used a day of demurrage. Closed intervals double-count at every boundary, and mixed conventions across realms guarantee disputes. State it once, here, and never vary it. The older positional `plain|utc|zoned|unix/interval` functions came before this rule and were brought onto it in 1.16.0 ([coding-standards § 8](../../coding-standards.md#8-intervals-are-half-open-start-end)).
 - **Zero-length intervals are valid.** `start = end` is an *empty* interval: it has a position but contains no instant, so `intervalContains` is always `false` for it. `sumIntervals` of an empty list is `PT0S`, not a sentinel.
@@ -54,6 +54,40 @@ Implementation spec: [`../specs/CORE-6-spec.md`](../specs/CORE-6-spec.md). Range
   - **Format:** an exact duration with hours as the largest unit, identical to TC39 `Temporal.Instant.prototype.until(…, { largestUnit: "hour" }).toString()`. Instant arithmetic has no days, because an instant has no calendar.
   - **Precision:** it is summed as bigint nanoseconds, so it stays exact past 2^53 ns and across the full ±10^8-day Instant range.
 - **`[]` is both a legitimate result and the array sentinel.** A fully covered subtraction, for example, returns `[]`. `isValidInterval` tells the two apart.
+
+## Decisions
+
+Current rules for the interval namespace and the non-ISO calendar work, with the reason for each.
+
+- **Validation is all-or-nothing and happens before any work.** One invalid element anywhere
+  returns the sentinel, even one that could not change the answer (a removal that lies outside
+  `from`). Why: a caller that passes a bad element has a bug, and a result that depends on which
+  elements happened to matter hides it.
+- **Any non-null object with string `start` and `end` is an interval.** Extra keys are ignored
+  and never copied. Why: callers hold richer records (a booking, a shift) and should not have to
+  strip them. No spec covers this; it is a GMT rule.
+- **Outputs are fresh `{ start, end }` objects built from the caller's strings.** An output is never
+  the caller's object, and every endpoint is one of the caller's spellings (see the tie rule
+  above).
+- **Instants are compared as bigint epoch nanoseconds** and summed the same way, so a total stays
+  exact past 2^53 ns across the full instant range. Output durations stop at hours because an
+  instant has no calendar to define a day (`largestUnit: "day"` throws in TC39 Temporal).
+- **Non-ISO calendars follow the spec algorithm, and GMT owns calendar data only where the standard
+  cannot be met without it.** GMT reads fields, month lengths and eras from the polyfill wherever
+  the polyfill is correct, and holds no era offsets, month lengths, leap cycles, epochs or cutover
+  dates of its own. The two exceptions are the published Hebrew arithmetic (Dershowitz and
+  Reingold) and the Indian leap rule for years the runtime gets wrong; the owner ruled that the
+  standard wins over the future-proofing rule there, and a sentinel is not a conforming answer. A
+  workaround is dormant until a probe of the installed polyfill or runtime fails, lives in
+  `internal/temporalCompat/`, and is deleted without changing any output once upstream ships the
+  fix. The rules, the defect table and the removal steps are in the
+  [temporalCompat README](../../../packages/gmt/src/internal/temporalCompat/README.md). The
+  owner's choices on grammar, era codes, Buddhist, Hebrew and Indian ranges, and calendar aliases
+  are in [calendar-standards-decisions](../research/calendar-standards-decisions.md).
+- **Expected values come from the standard, never from GMT or the polyfill.** The order is the
+  ECMA-402 Intl era and month-code text, then test262, then the native engine (Chromium), then an
+  independent arithmetic oracle (Dershowitz and Reingold for Hebrew). The weekly canary runs the
+  same scan against the native engine.
 
 ## What gmt provides (do not re-implement)
 

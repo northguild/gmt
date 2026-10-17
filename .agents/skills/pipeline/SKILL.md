@@ -64,6 +64,10 @@ story id from the branch (`feature/197-mar-16-…` → `MAR-16`) and load
 For a story (category A), run `python3 .agents/skills/plan-story/scripts/plan_gate.py` first. On
 `FAIL`, stop and tell the owner to run `/plan-story`; never plan inline.
 
+A spec lives only while its story is in progress: `finalizer` folds its decisions into the issue
+file (or Dox `built.md`), rewrites inbound references and deletes it. Never cite a spec from code,
+comments or context files; cite the issue's Decisions section or the external standard.
+
 ## Hand each worker the least context that works
 
 - The architect writes a spec folder: `index.md` of 150 lines or fewer (scope, signatures,

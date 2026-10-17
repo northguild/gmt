@@ -152,7 +152,7 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
   - `convertDateToCalendar("+275760-09-13", "hebrew")` produced a string GMT could not read back.
   - `convertDateToCalendar("1000-01-01", "buddhist")` returned `1542-12-27`.
 - **Out of reach:** coptic, ethiopic, chinese and dangi fail at every date in 0.5.1, but GMT does not expose them directly.
-- **GMT decision:** fix every supported calendar in GMT in this branch. A spec is in `specs/CORE-6-calendar-correctness-spec.md`.
+- **GMT decision:** fix every supported calendar in GMT in this branch. The rules are in [CORE-6 Decisions](../issues/CORE-6.md#decisions) and the [temporalCompat README](../../../packages/gmt/src/internal/temporalCompat/README.md).
 
 ### 5.6 Upstream
 
@@ -181,4 +181,4 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
 - test262: `built-ins/Temporal/ZonedDateTime/from/argument-string-limits.js`.
 - js-temporal/temporal-polyfill: v0.5.1 `lib/ecmascript.ts`; commit `05ce7a3`; PR #359.
 - Reproductions: GMT's built `dist` (Node 24.21.0), Chromium 152 via Playwright, Node `--harmony-temporal`.
-- GMT specification: [CORE-6 spec](../specs/CORE-6-spec.md), [CORE-6 issue](../issues/CORE-6.md), [coding-standards § 8 half-open intervals](../../coding-standards.md#8-intervals-are-half-open-start-end).
+- GMT specification: [CORE-6 issue and its Decisions](../issues/CORE-6.md#decisions), [coding-standards § 8 half-open intervals](../../coding-standards.md#8-intervals-are-half-open-start-end).

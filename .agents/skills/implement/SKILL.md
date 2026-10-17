@@ -38,7 +38,9 @@ the index plus its own slice.
 
 `finalizer` flips the story's `Status` to `Done` and runs `pnpm deps:sync`. If the work changed
 what the story consumes, update its `## What gmt provides (do not re-implement)` section first —
-the `Blocked by` column is generated from it.
+the `Blocked by` column is generated from it. It then folds and deletes the story's spec (see
+[finalizer step 7](../../finalizer.md)): Decisions to `issues/<ID>.md` or `built.md`, inbound
+references rewritten, the spec folder and its index line removed.
 
 ## 5. Optimize
 

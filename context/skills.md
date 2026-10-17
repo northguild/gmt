@@ -18,7 +18,7 @@ are fixed upstream, not edited here.
 | Skill | What it does |
 | --- | --- |
 | `/plan-story` | Plans a story from the branch name or an id: library spec, grilling, then Dox tools |
-| `/implement` | Implements a planned story; a plan gate stops it until `/plan-story` approved the spec |
+| `/implement` | Implements a planned story; a plan gate stops it until `/plan-story` approved the spec. The finalizer folds the spec into the issue file and deletes it |
 | `/pipeline` | Classifies a library or Dox request and runs the specialists in order |
 | `/grilling` | Design-tree interview that stress-tests a plan; `/plan-story` runs it |
 | `/grill-me` | Owner-only shortcut that runs `/grilling` |

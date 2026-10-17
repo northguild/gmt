@@ -9,7 +9,7 @@ import { Temporal } from "@js-temporal/polyfill";
  * - `NonISODateUntil`, whose naive "add one unit while it does not surpass" loops start here from
  *   an estimate and adjust by at most a few units.
  *
- * WHY THIS FILE EXISTS (CORE-6 calendar-correctness spec §3.5). Polyfill 0.5.1:
+ * WHY THIS FILE EXISTS (temporalCompat README, "Workarounds"). Polyfill 0.5.1:
  * - D6: `until` re-constrains the day while counting months, so Aug 31 → Sep 30 is `P1M` where the
  *   spec says `P30D` (every non-ISO calendar; fixed on js-temporal main by 10aeb98, unreleased);
  * - D7: `until` with `largestUnit: "years"` throws "mixed-sign" when a Hebrew `M05L` start overshoots

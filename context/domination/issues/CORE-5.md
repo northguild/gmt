@@ -90,8 +90,7 @@ re-derived from this file later.
 This entry replaces two decisions in `## Outcome` below: the sentence "The 53rd week is appended
 to period 12" in the `yearEndsOn` decisions, and the bullet "`year` is the calendar year the
 fiscal year starts in". Both had GMT pick one answer where no international standard picks one.
-The original text stays below for the record; this entry is the rule. The full design is in
-[the fiscal-calendar spec](../specs/audit-fiscal-calendar-spec.md).
+The original text stays below for the record; this entry is the rule.
 
 - **Both are required fields, with no default.** `FiscalCalendar` is
   `{ pattern, yearEndsOn, extraWeek, yearLabel }`. `extraWeek` is the period a 53rd week is
@@ -136,6 +135,16 @@ The original text stays below for the record; this entry is the rule. The full d
   IAS 8. The JSDoc, the skill and the changeset cite "IFRS 18 ¶29 (formerly IAS 1 ¶37)" and
   "IFRS 18 ¶27(c) (formerly IAS 1 ¶51(c))".
   ([IFRS 18 reference material](https://www.ifrs.org/content/dam/ifrs/project/primary-financial-statements/ifrs-standard/reference-material-for-ifrs18.pdf))
+- **ONS changed its year-end rule.** The `ONS` calendar reproduces every published sheet from 2004
+  to 2026 but not 1991, 1992, 1996, 1997, 2002 or 2003. GMT models one rule per calendar, which is
+  correct, so a caller whose years span the change uses two calendars.
+- **NRF's current wording is "four or more days left in January".** NRF no longer publishes
+  "the Saturday nearest January 31". The two tests are equivalent, and the story verified the
+  current one against every NRF year from 2017 to 2028. The JSDoc, the skill and the Dox guide quote
+  the current wording.
+- **The 53rd-week placement and the label are decided by the caller, so no example is neutral.**
+  Every example and test row names `extraWeek` and `yearLabel`, and the changeset and JSDoc cite
+  no statute or government fiscal year (GMT tracks no law).
 
 ## Outcome (delivered)
 

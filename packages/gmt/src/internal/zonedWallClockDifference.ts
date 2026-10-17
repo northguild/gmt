@@ -185,7 +185,7 @@ interface NudgeWindow {
 /**
  * The time zone, calendar and origin wall clock (`isoDateTime`) the rounding steps share. An unset
  * `timeZone` is the spec's plain context: exact times are `GetUTCEpochNanoseconds`, never checked
- * against the instant range (CORE-6 spec §3.6.3).
+ * against the instant range.
  */
 interface RoundingContext {
   timeZone: string | undefined;
@@ -948,7 +948,7 @@ function differenceZonedDateTimeWithRounding(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Plain context (defect 3, CORE-6 spec §3.6.3): no time zone, exact times are
+// Plain context (defect 3 in the header comment): no time zone, exact times are
 // GetUTCEpochNanoseconds and are never checked against the instant range
 // ---------------------------------------------------------------------------------------------
 
