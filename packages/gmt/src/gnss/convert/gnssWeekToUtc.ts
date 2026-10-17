@@ -26,9 +26,10 @@ import {
  * - `timeOfWeekSeconds` is seconds of week and may have a fraction; it is rounded to the nearest
  *   nanosecond, and a value that rounds to 604 800 s returns "". Convert a coarser broadcast count
  *   first (NavIC L5/S: TOWC × 12; NavIC L1: ITOW × 7200 + TOI × 18, per the NavIC ICDs). Both
- *   counts name the start of the next subframe, so the last one of a week (TOWC 50400; ITOW 83
- *   with TOI 400) gives 604 800 s. That value is TOW 0 of the next week: pass `week + 1` and 0, and
- *   when `week` is the counter's last (1023 or 8191), pass week 0 of `rolloverEra + 1`.
+ *   counts name the start of the next subframe (L5/S) or 18-second frame (L1), so the last one of
+ *   a week (TOWC 50400; ITOW 83 with TOI 400) gives 604 800 s. That value is TOW 0 of the next
+ *   week: pass `week + 1` and 0. When `week` is the counter's last (1023 or 8191), pass week 0,
+ *   with `rolloverEra + 1` for an integer era or the same `"rolling"` or `{ notBefore }`.
  * - A week time inside an inserted leap second returns `…T23:59:60Z`. Only this realm's functions
  *   read that string back; other GMT functions reject a second of 60.
  * - GLONASS has no week counter, so it is not a counter here.

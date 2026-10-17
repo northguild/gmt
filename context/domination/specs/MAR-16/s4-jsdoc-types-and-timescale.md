@@ -34,7 +34,8 @@ export type GnssWeekCounter =
 export type RolloverEra = number | "rolling" | {
   /**
    * An ISO 8601 UTC instant. The week resolves to the earliest instant at or after it; an instant
-   * exactly equal to it counts. Before the counter's epoch, or not an instant, returns the sentinel.
+   * exactly equal to it counts. Before the counter's epoch it gives era 0. A value that is not an
+   * instant returns the sentinel.
    */
   notBefore: string;
 };

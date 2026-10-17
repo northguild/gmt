@@ -435,6 +435,44 @@ describe("the sentences", () => {
     expect(r.failure).toBe(beforeFirstWeekText("1999-08-21T23:59:47Z"));
   });
 
+  it("names a check date that falls after the year 9999", () => {
+    const r = read({
+      ...base,
+      nowMode: "date",
+      date: "9999-12-31T23:00:00-05:00",
+    });
+    expect(r.status).toBe("sentinel");
+    expect(r.failure).toBe(ROLLOVER_SENTENCES.dateAfter9999);
+    expect(r.failure).toBe("That date falls after the year 9999.");
+    expect(r.failure).not.toBe(beforeFirstWeekText("1999-08-21T23:59:47Z"));
+    // The last second of the year 9999 written with Z is still a date.
+    const edge = read({
+      ...base,
+      nowMode: "date",
+      date: "9999-12-31T22:00:00Z",
+    });
+    expect(edge.failure).not.toBe(ROLLOVER_SENTENCES.dateAfter9999);
+  });
+
+  it("names a build date that falls after the year 9999", () => {
+    const r = read({ ...base, pivot: "9999-12-31T23:00:00-05:00" });
+    expect(r.status).toBe("sentinel");
+    expect(r.failure).toBe(ROLLOVER_SENTENCES.pivotAfter9999);
+    expect(r.failure).toBe("The build date falls after the year 9999.");
+  });
+
+  it("says a build date before the first week is read as era 0", () => {
+    const early = read({ ...base, pivot: "1970-01-01T00:00:00Z" });
+    expect(early.eraZeroHint).toBe(
+      `Build date before ${base.counter}'s first week (${early.strip!.start}): read as era 0.`,
+    );
+    expect(early.eraZeroHint).toContain("1999-08-21T23:59:47Z");
+    // A build date on or after the first week, or an era, says nothing.
+    expect(read(base).eraZeroHint).toBe("");
+    expect(read({ ...base, model: "era", era: "0" }).eraZeroHint).toBe("");
+    expect(read({ ...base, pivot: "garbage" }).eraZeroHint).toBe("");
+  });
+
   it("names a window that runs past the year 9999", () => {
     const r = read({ ...preset("navic-fixed-era"), era: "100000" });
     expect(r.failure).toBe(ROLLOVER_SENTENCES.beyond);

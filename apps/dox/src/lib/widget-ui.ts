@@ -31,26 +31,32 @@ export const ICON_STROKE =
   'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
 /**
- * Lets every ISO instant in `root`'s hero values wrap only at its T: the date and
- * the time are each unbreakable and a `<wbr>` joins them. A hyphen is otherwise a
- * line-break opportunity, so a narrow plate would split the date itself.
+ * Lets every ISO instant in `root`'s hero values wrap only at its T, and before a
+ * fraction of a second and the zone after it: the date, the time, the fraction
+ * and the zone are each unbreakable and a `<wbr>` joins them. A hyphen is otherwise a
+ * line-break opportunity, so a narrow plate would split the date itself; and a
+ * nanosecond time with an offset (`T01:00:00.123456789+01:00`) is wider than a
+ * phone's plate on its own.
  *
- * Every plain hero value gets the same three elements whatever it holds, so a
+ * Every plain hero value gets the same seven elements whatever it holds, so a
  * readout that moves between an instant and a word (a NO SIGNAL, a duration)
  * while the reader drags never adds or removes a node. A value that is not an
  * instant keeps its own wrapping: its text sits in the first piece, marked
- * `data-word` so that it is not held unbreakable.
+ * `data-word` so that it is not held unbreakable. An instant with no fraction
+ * leaves the last two pieces empty: its zone stays with its time.
  */
 export function wrapInstantsAtT(root: ParentNode): void {
   for (const el of root.querySelectorAll(".gmt-punct-hero-value")) {
     if (el.children.length > 0) continue;
     const text = el.textContent ?? "";
-    const m = /^(\d{4}-\d{2}-\d{2})(T.*)$/.exec(text);
-    const [head, tail, attr] = m
-      ? [m[1]!, m[2]!, ""]
-      : [text, "", " data-word"];
+    const m = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/.exec(text);
+    const [date, time, fraction, zone, attr] = m
+      ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
+      : [text, "", "", "", " data-word"];
+    const piece = (s: string) =>
+      `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
     // The value is a flex box, so the pieces share one inline wrapper.
-    el.innerHTML = `<span><span class="gmt-gnss-nb"${attr}>${escapeHtml(head)}</span><wbr><span class="gmt-gnss-nb"${attr}>${escapeHtml(tail)}</span></span>`;
+    el.innerHTML = `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
   }
 }
 

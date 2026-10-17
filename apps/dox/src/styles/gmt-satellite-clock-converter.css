@@ -90,8 +90,8 @@
   font-family: var(--gmt-font-mono);
   font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
-  /* Plain text wraps between words; an instant's date and time halves stay
-     whole through their `.gmt-gnss-nb` spans. */
+  /* Plain text wraps between words; an instant's date, time, fraction and
+     zone stay whole through their `.gmt-gnss-nb` spans. */
   white-space: normal;
   overflow-wrap: normal;
 }

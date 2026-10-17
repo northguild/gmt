@@ -162,7 +162,7 @@ describe("searchChunks — the refusal path's honesty", () => {
 
   it("an everyday word that only occurs inside an identifier does not match on its own", () => {
     // Splitting `bestAvailable` into best + available on the index side once
-    // took "best pasta recipe" from 5 chunks to 18 and "how do I bake
+    // took "best pasta recipe" from 6 chunks to 18 and "how do I bake
     // sourdough bread" from 0 to 3. The body's identifier words now count for
     // a fraction of a whole word, and short words are not fuzzed into
     // neighbours (best -> rest/test/past).

@@ -363,10 +363,21 @@ const SENTENCES = {
   date: "This is not an ISO 8601 instant with an offset or Z.",
   secondSixty: "Pick a date outside an inserted second.",
   beyond: "The firmware's window runs past the year 9999.",
+  dateAfter9999: "That date falls after the year 9999.",
+  pivotAfter9999: "The build date falls after the year 9999.",
   noGap: "The library could not work out how far apart these two dates are.",
 } as const;
 
 export const ROLLOVER_SENTENCES = SENTENCES;
+
+/** The line by the result when a build date comes before the counter's first
+ *  week: the library reads it as era 0. */
+export function eraZeroHintText(counter: string, first: string): string {
+  return `Build date before ${counter}'s first week (${first}): read as era 0.`;
+}
+
+/** A Z-form instant past the year 9999 is written with a sign and six digits. */
+const pastYear9999 = (z: string): boolean => z.startsWith("+");
 
 export const EMPTY_TEXTS = {
   pivot: "Type the build date to check a receiver.",
@@ -611,6 +622,8 @@ export interface RolloverRead {
   left: string | null;
   /** The rolling row's words. */
   rolling: string;
+  /** "Build date before … read as era 0.", or `""` when the build date is not early. */
+  eraZeroHint: string;
   strip: Strip | null;
   /** The fuse timeline: every counter's wraps, whenever the check instant is known. */
   fuse: Fuse | null;
@@ -706,6 +719,7 @@ function blankRead(state: RolloverState): RolloverRead {
     wrongFrom: null,
     left: null,
     rolling: "",
+    eraZeroHint: "",
     strip: null,
     fuse: null,
     countdown: null,
@@ -758,6 +772,7 @@ export function readRollover(
     if (!lib.isValidInstant(at)) return fail(SENTENCES.date);
     // The week converters and the difference read `Z` only.
     at = asZ(lib, at);
+    if (pastYear9999(at)) return fail(SENTENCES.dateAfter9999);
   }
   read.at = at;
 
@@ -809,6 +824,7 @@ export function readRollover(
     if (pivot === "") return empty(EMPTY_TEXTS.pivot);
     if (!lib.isValidInstant(pivot)) return fail(SENTENCES.pivot);
     pivot = asZ(lib, pivot);
+    if (pastYear9999(pivot)) return fail(SENTENCES.pivotAfter9999);
     firmware = { notBefore: pivot };
   }
 
@@ -831,12 +847,14 @@ export function readRollover(
   let end: string;
   let wrongLine: string;
   let wrapEras: number[] = [];
+  let eraZeroHint = "";
   if (state.model === "pivot") {
     // A build date before the counter's first week reads as era 0, the same
     // as the library's own `{ notBefore }`: the window starts at the epoch.
     const found = call(reading, "utcToGnssWeek", counter, pivot);
     const own = found ?? { week: 0, timeOfWeekSeconds: 0, era: 0 };
     start = found === null ? first : pivot;
+    if (found === null) eraZeroHint = eraZeroHintText(counter, first);
     wrongFrom = call(
       reading,
       "gnssWeekToUtc",
@@ -893,6 +911,7 @@ export function readRollover(
   read.verdict = verdict.kind;
   read.verdictText = verdict.text;
   read.wrongFrom = wrongFrom;
+  read.eraZeroHint = eraZeroHint;
 
   // 7. The countdown, from the check instant to the date it goes wrong.
   const toGo = parseSpan(

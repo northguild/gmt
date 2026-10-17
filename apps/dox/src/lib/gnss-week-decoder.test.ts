@@ -12,6 +12,7 @@ import {
   matchPreset,
   permalinkOf,
   pinOf,
+  platesOf,
   presetState,
   readArgs,
   readGnss,
@@ -125,6 +126,45 @@ describe("what each preset shows", () => {
     ]);
     expect(r.plates[1]!.lines[0]).toBe("ahead of UTC by 4 s");
     expect(r.plates[1]!.caption).toBe("BDT time");
+  });
+
+  it("keeps the instant as typed and says the Z form beside it", () => {
+    const typed = "2024-01-01T01:00:00+01:00";
+    const r = read(withState("utc-2024", { utc: typed }));
+    expect(r.status).toBe("ok");
+    expect(r.plates[0]!.value).toBe(typed);
+    expect(r.plates[0]!.lines).toHaveLength(3);
+    expect(r.plates[0]!.lines[2]).toBe("written as 2024-01-01T00:00:00Z");
+    // The other plates are read from the same instant.
+    const asZ = read(withState("utc-2024", { utc: "2024-01-01T00:00:00Z" }));
+    expect(r.plates[1]!.value).toBe(asZ.plates[1]!.value);
+    expect(r.plates[1]!.lines).toEqual(asZ.plates[1]!.lines);
+  });
+
+  it("writes no note for a Z instant, and always keeps the line", () => {
+    for (const p of GNSS_PRESETS) {
+      const r = read(presetState(p));
+      if (r.status !== "ok") continue;
+      expect(r.plates[0]!.lines, p.id).toHaveLength(3);
+      expect(r.plates[0]!.lines[2], p.id).toBe("");
+    }
+    expect(platesOf(null)[0]!.lines).toHaveLength(3);
+  });
+
+  it("says the Z form in a sentinel too, when the instant was read", () => {
+    const r = read(
+      withState("utc-2024", {
+        utc: "2024-01-01T01:00:00+01:00",
+        counter: "GAL",
+      }),
+    );
+    expect(r.plates[0]!.lines).toHaveLength(3);
+    const before = read(
+      withState("utc-before-galileo", { utc: "1999-08-21T23:59:46+00:00" }),
+    );
+    expect(before.status).toBe("sentinel");
+    expect(before.plates[0]!.value).toBe("1999-08-21T23:59:46+00:00");
+    expect(before.plates[0]!.lines[2]).toBe("written as 1999-08-21T23:59:46Z");
   });
 
   it("says a reading inside an inserted second in words", () => {
@@ -534,8 +574,13 @@ describe("UTC mode reads an instant the way the library does", () => {
       }),
     );
     expect(off.status).toBe("ok");
-    expect(off.plates.map((p) => p.lines)).toEqual(
-      z.plates.map((p) => p.lines),
+    // Only the UTC plate's written-as note differs.
+    expect(off.plates[0]!.lines.slice(0, 2)).toEqual(
+      z.plates[0]!.lines.slice(0, 2),
+    );
+    expect(off.plates[0]!.lines[2]).toBe("written as 2023-12-31T23:00:00Z");
+    expect(off.plates.slice(1).map((p) => p.lines)).toEqual(
+      z.plates.slice(1).map((p) => p.lines),
     );
     expect(off.plates.flatMap((p) => p.lines).join(" ")).toContain("18");
   });

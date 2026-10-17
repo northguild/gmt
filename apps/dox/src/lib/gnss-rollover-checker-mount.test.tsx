@@ -64,6 +64,7 @@ const REQUIRED_ROLES = [
   "reason-aside",
   "counters-table",
   "counters-body",
+  "era-zero-hint",
   "rolling-row",
   "call-rollover",
   "copy-rollover",
@@ -545,6 +546,23 @@ describe("the plates", () => {
   });
 });
 
+describe("the era 0 hint", () => {
+  it("says a build date before the first week is read as era 0, in a held line", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    const hint = q(root, "era-zero-hint");
+    expect((hint.textContent ?? "").trim()).toBe("");
+    type(root, "pivot", "1970-01-01T00:00:00Z");
+    expect(isSentinel(root)).toBe(false);
+    expect(hint.textContent).toMatch(
+      /^Build date before .+'s first week \(.+\): read as era 0\.$/,
+    );
+    type(root, "pivot", "2020-01-01T00:00:00Z");
+    expect((hint.textContent ?? "").trim()).toBe("");
+    // The line sits in a hold sized by the longest hint it can show.
+    expect(hint.closest(".gmt-ledger-hold")).not.toBeNull();
+  });
+});
+
 describe("the sentinel sentences", () => {
   it("are different sentences for different faults, each a NO SIGNAL", async () => {
     const { root } = await mount({ preset: "navic-built-2020" });
@@ -589,6 +607,16 @@ describe("the sentinel sentences", () => {
     expect(isSentinel(root)).toBe(false);
     expect(text(root, "reason-aside")).toContain(EMPTY_TEXTS.date);
     expect(rows(root)).toHaveLength(8);
+  });
+
+  it("names a date past the year 9999, not a date before the first week", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    pick(root, "now-date");
+    type(root, "date", "9999-12-31T23:00:00-05:00");
+    expect(isSentinel(root)).toBe(true);
+    expect(text(root, "reason-aside")).toContain(
+      ROLLOVER_SENTENCES.dateAfter9999,
+    );
   });
 
   it("a correct wrong-date answer is a result, not a NO SIGNAL", async () => {

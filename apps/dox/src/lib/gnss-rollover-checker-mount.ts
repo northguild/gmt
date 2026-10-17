@@ -57,6 +57,7 @@ import {
   markSentence,
   matchPreset,
   permalinkOf,
+  eraZeroHintText,
   platesOf,
   presetState,
   readArgs,
@@ -127,6 +128,11 @@ const ROLLING_SIZERS = [
 ];
 
 const REASON_SIZERS = Object.values(ROLLOVER_SENTENCES);
+
+/** The era 0 hint with each counter's name: the line reserves the longest. */
+const HINT_SIZERS = GNSS_WEEK_COUNTERS.map((c) =>
+  eraZeroHintText(c, "1999-08-21T23:59:47Z"),
+);
 
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"] as const;
 
@@ -424,6 +430,11 @@ export function renderGnssRolloverCheckerTemplate(
     `</div>` +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
+    holdHtml(
+      `<p class="gmt-widget-hint" data-role="era-zero-hint">${NBSP}</p>`,
+      textSizers("p", "gmt-widget-hint", HINT_SIZERS),
+      "gmt-ledger-hold",
+    ) +
     holdHtml(
       `<div data-role="reason-aside" data-grow="slot"></div>`,
       [
@@ -764,6 +775,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     drawStrip(read);
     drawTable(read);
     drawSlider(read);
+    const hint = q("era-zero-hint");
+    if (hint)
+      hint.textContent = read.eraZeroHint === "" ? " " : read.eraZeroHint;
 
     const calls = [...read.calls.reading, ...read.calls.counters];
     renderCalls(q("call-rollover"), calls);

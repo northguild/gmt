@@ -154,7 +154,7 @@ function processTerm(term: string): string | false {
    (PARTS_BOOST), and no typo tolerance on short words (MIN_FUZZY_LENGTH).
    Before those last two, splitting camelCase on the index side took
    "how do I bake sourdough bread" from 0 to 3 chunks, "best pasta recipe"
-   from 5 to 18 (every chunk with `bestAvailable`, plus fuzzy "rest", "test",
+   from 6 to 18 (every chunk with `bestAvailable`, plus fuzzy "rest", "test",
    "past") and "tell me a story about a dog" from 13 to 18.
 
    The out-of-domain column is the one that matters: DOX-C2's refusal path is

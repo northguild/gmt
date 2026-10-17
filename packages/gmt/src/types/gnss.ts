@@ -39,7 +39,8 @@ export type RolloverEra =
       /**
        * An ISO 8601 UTC instant; a listed leap second (`…T23:59:60Z`) is accepted. The week
        * resolves to the earliest instant at or after it; an instant exactly equal to it counts.
-       * Before the counter's epoch, or not an instant, returns the sentinel.
+       * Before the counter's epoch it gives era 0. A value that is not an instant returns the
+       * sentinel.
        */
       notBefore: string;
     };

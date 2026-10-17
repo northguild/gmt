@@ -438,3 +438,17 @@
 .gmt-gnss-week-decoder [data-role="hero-rinex"] .gmt-punct-hero-sub {
   min-inline-size: 22ch;
 }
+
+/* At the narrowest plate a caption line can be wider than the plate (a
+   nanosecond instant "written as" its Z form), so each line wraps and holds two
+   lines' height, whatever its text, so nothing below it moves as the input
+   changes. */
+@container gmt-gnss-frame (max-width: 18rem) {
+  .gmt-gnss-week-decoder .gmt-punct-hero-sub {
+    white-space: normal;
+  }
+
+  .gmt-gnss-week-decoder .gmt-punct-hero-line {
+    min-block-size: 2lh;
+  }
+}

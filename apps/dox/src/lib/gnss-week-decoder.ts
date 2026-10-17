@@ -620,6 +620,16 @@ export function leadText(duration: string): string {
   return `ahead of UTC by ${seconds} s`;
 }
 
+/** The `Z` spelling of an instant written with an offset, or `null` when the
+ *  library spells it as typed. Asked of TAI and back, the way the Satellite
+ *  Clock Converter spells a UTC value, so a second 60 survives. */
+export function utcWrittenAs(lib: GnssLib, utc: string): string | null {
+  const tai = lib.toTAI(utc);
+  if (tai === "") return null;
+  const back = lib.fromTAI(tai);
+  return back === "" || back === utc ? null : back;
+}
+
 export const INSIDE_SECOND_TEXT = "inside an inserted second";
 
 /** The plates' captions the system plate can show, for its hold. */
@@ -635,6 +645,8 @@ export function systemCaptions(): string[] {
 export function platesOf(
   parts: {
     utc: string | null;
+    /** The library's `Z` spelling of an instant typed another way, or `null`. */
+    writtenAs?: string | null;
     eraLine: string;
     leap: boolean;
     system: RinexWeekSystem | null;
@@ -653,6 +665,7 @@ export function platesOf(
       lines: [
         none ? "" : parts.eraLine,
         none || !parts.leap ? "" : "leap second",
+        none || !parts.writtenAs ? "" : `written as ${parts.writtenAs}`,
       ],
       series: 1,
     },
@@ -955,8 +968,12 @@ export function readGnss(
         : own === null
           ? ""
           : `era ${own.era}${nearest ? " · nearest today" : ""}`;
+    // The reader's own instant, spelled back by the library: an offset becomes
+    // `Z`. The lead and the system plate are read from this spelling.
+    const zForm = utcWrittenAs(l, instant);
     r.plates = platesOf({
       utc: instant,
+      writtenAs: zForm,
       eraLine,
       leap,
       system: sys,
@@ -985,6 +1002,7 @@ export function readGnss(
       // week, so the others keep their boxes and read "no result".
       r.plates = platesOf({
         utc: instant,
+        writtenAs: zForm,
         eraLine: "",
         leap,
         system: sys,

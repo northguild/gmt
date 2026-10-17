@@ -442,8 +442,9 @@
   overflow-wrap: anywhere;
 }
 
-/* Half of a hero instant: the date, or the time. Each is unbreakable; the only
-   place the instant may wrap is the `<wbr>` between them (see wrapInstantsAtT). */
+/* A piece of a hero instant: the date, the time, a fraction or its zone.
+   Each is unbreakable; the instant may wrap only at the `<wbr>`s between them
+   (see wrapInstantsAtT). */
 .gmt-gnss-nb:not([data-word]) {
   white-space: nowrap;
 }
