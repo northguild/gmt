@@ -13,6 +13,26 @@
  */
 import snapshot from "./temporal-compat.json";
 
+/**
+ * The states a workaround group can be in. `workaroundState` in `pnpm compat:snapshot` decides
+ * which; the page reads the answer and never works it out again.
+ */
+export const COMPAT_STATES = ["still-needed", "removable", "guard"] as const;
+export type CompatState = (typeof COMPAT_STATES)[number];
+
+/**
+ * Why a group whose probes all pass is still kept, and until which release of which package.
+ * Written by `workaroundState` in `pnpm compat:snapshot`, from the guard the script declares.
+ */
+export interface CompatGuard {
+  /** The package whose version decides the guard. */
+  package: string;
+  /** The last version on which the passing probes prove nothing. */
+  through: string;
+  /** Plain-English reason the probes pass without proving the defect is gone. Shown on the page as written. */
+  reason: string;
+}
+
 export interface CompatGroup {
   /** The canary ids this group covers, e.g. `["D3", "D4"]`. */
   defects: readonly string[];
@@ -21,16 +41,124 @@ export interface CompatGroup {
   /** What has to happen upstream before the workaround can go. */
   trigger: string;
   probes: number;
-  /** Probes still returning the wrong value on the installed polyfill. */
+  /** Probes still returning the wrong value; shown as a count, never used to choose the state. */
   failing: number;
+  /**
+   * Whether the workaround still has to run, as `workaroundState` in `pnpm compat:snapshot`
+   * decided it on the polyfill installed at snapshot time. The page reads it as written.
+   */
+  state: CompatState;
+  /**
+   * Present when the group declares a guard, from `workaroundState` in `pnpm compat:snapshot`.
+   * With `state: "removable"` the guard has lapsed and the page shows no reason.
+   */
+  guard?: CompatGuard;
 }
 
-export const compatGroups: readonly CompatGroup[] = snapshot.groups;
+type SnapshotRow = (typeof snapshot.groups)[number];
 
-/** Groups whose workaround still has to run, because the installed polyfill still has the defect. */
+/**
+ * A JSON import types `state` as `string`, so each row is narrowed here, and a guarded row must say
+ * why. Only the script writes the file and `snapshot --check` guards it, so a throw can fire only
+ * on a hand-edited copy; it fails the build rather than rendering a wrong or empty column. The
+ * row's values pass through unchanged: nothing is computed or corrected here.
+ */
+export const toCompatGroup = (row: SnapshotRow): CompatGroup => {
+  const label = row.defects.join(" + ");
+  const state = COMPAT_STATES.find((known) => known === row.state);
+  if (state === undefined) {
+    throw new Error(
+      `temporal-compat.json: group ${label} has unknown state "${row.state}" — run pnpm compat:snapshot`,
+    );
+  }
+  if (state === "guard") {
+    const { guard } = row;
+    if (
+      guard === undefined ||
+      !guard.package ||
+      !guard.through ||
+      !guard.reason
+    ) {
+      throw new Error(
+        `temporal-compat.json: group ${label} has state "guard" but no complete guard (package, through, reason) — run pnpm compat:snapshot`,
+      );
+    }
+  }
+  return { ...row, state };
+};
+
+export const compatGroups: readonly CompatGroup[] =
+  snapshot.groups.map(toCompatGroup);
+
+/** Groups whose workaround still has to run, because the snapshot's `state` says so. */
 export const groupsStillNeeded: number = compatGroups.filter(
-  (g) => g.failing > 0,
+  (g) => g.state === "still-needed",
 ).length;
+
+/**
+ * The badge text and the count line a row shows, chosen by `state` alone. The Astro row and the
+ * Markdown twin both call it, so the two surfaces cannot drift. `failing` is only ever printed.
+ */
+export const stateLine = (g: CompatGroup): { badge: string; count: string } => {
+  switch (g.state) {
+    case "still-needed":
+      return {
+        badge: "✓ Yes",
+        count: `${g.failing} of ${g.probes} checks fail`,
+      };
+    case "removable":
+      return { badge: "No", count: `${g.probes} of ${g.probes} checks pass` };
+    case "guard":
+      return {
+        badge: "Kept on purpose",
+        count: `${g.probes} of ${g.probes} checks pass`,
+      };
+    default: {
+      const unreachable: never = g.state;
+      throw new Error(`stateLine: unhandled state ${String(unreachable)}`);
+    }
+  }
+};
+
+/**
+ * The short form the `/upstream/` tables print for a GitHub reference: `tc39 #3292`,
+ * `polyfill #369`, or `owner/repo #n` for any other repository.
+ */
+export const shortRef = (repo: string, number: number): string => {
+  const name =
+    repo === "tc39/proposal-temporal"
+      ? "tc39"
+      : repo === "js-temporal/temporal-polyfill"
+        ? "polyfill"
+        : repo;
+  return `${name} #${number}`;
+};
+
+/** A run of plain text in a guard reason, or a reference the page prints as a link. */
+export type ReasonPart = { text: string } | { text: string; href: string };
+
+const GITHUB_REF = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/g;
+
+/**
+ * A guard reason split for the page. Each `owner/repo#n` becomes a short link, so the narrow
+ * state column never has to break a 27-character token mid-word. The snapshot, the Markdown twin
+ * and the canary issue keep the full reference.
+ */
+export const reasonParts = (reason: string): readonly ReasonPart[] => {
+  const parts: ReasonPart[] = [];
+  let last = 0;
+  for (const m of reason.matchAll(GITHUB_REF)) {
+    const [whole, repo, number] = m;
+    if (m.index > last) parts.push({ text: reason.slice(last, m.index) });
+    parts.push({
+      text: shortRef(repo, Number(number)),
+      href: `https://github.com/${repo}/issues/${number}`,
+    });
+    last = m.index + whole.length;
+  }
+  if (last < reason.length) parts.push({ text: reason.slice(last) });
+  return parts;
+};
 
 /** Every probe across every group, and how many still fail. */
 export const probeTotals: { probes: number; failing: number } =

@@ -15,6 +15,7 @@ import {
   compatGroups,
   groupLabel,
   groupWhatBreaks,
+  stateLine,
 } from "../data/temporal-compat";
 import {
   filedByUs,
@@ -251,10 +252,13 @@ function renderUpstreamDefects(): string {
         (f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`,
       )
       .join(", ");
-    const state =
-      group.failing > 0
-        ? `Yes — ${group.failing} of ${group.probes} checks fail`
-        : `No — ${group.probes} of ${group.probes} checks pass`;
+    const { badge, count } = stateLine(group);
+    // A guard row continues with why it is kept; a `|` in that reason would end the cell early.
+    const reason =
+      group.state === "guard" && group.guard
+        ? `. ${group.guard.reason.replaceAll("|", "\\|")}`
+        : "";
+    const state = `${badge} — ${count}${reason}`;
     return `| **${groupLabel(group)}** — ${groupWhatBreaks(group)} | ${state} | ${sent || "—"} |`;
   });
 
