@@ -55,6 +55,15 @@
     grid-column: auto;
   }
 
+  /* The column is narrower than the frame, so the frame-scaled size (up to
+     1.9rem) would not fit a 20-character instant on a line in it. */
+  .gmt-satellite-clock-converter
+    .gmt-gnss-frame
+    .gmt-punct-hero:not(.gmt-punct-hero--quiet)
+    .gmt-punct-hero-value {
+    font-size: clamp(1.1rem, 2.4cqi, 1.3rem);
+  }
+
   .gmt-satellite-clock-converter .gmt-clad-legend {
     grid-column: 2;
     grid-row: 2;
@@ -92,13 +101,6 @@
 
   .gmt-satellite-clock-converter .gmt-punct-hero[data-role="hero-utc"] {
     grid-column: 1 / -1;
-  }
-
-  /* "Next change" can be a 20-character instant, so it keeps the mono face. */
-  .gmt-satellite-clock-converter
-    .gmt-punct-hero:not([data-role="hero-next"])
-    .gmt-punct-hero-value {
-    font-family: var(--gmt-font-display);
   }
 }
 

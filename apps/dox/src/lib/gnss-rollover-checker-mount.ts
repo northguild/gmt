@@ -8,15 +8,15 @@
  * every counter:
  *
  * 1. the controls (the counter, how the firmware counts, today or a date);
- * 2. three plates over the firmware's window, drawn as a strip with the check
- *    date, the wraps and the date it goes wrong marked on it;
+ * 2. three plates over the firmware's window, drawn as a fuse timeline with the
+ *    check date, the wraps and the date it goes wrong marked on it;
  * 3. the table of every counter's next wrap, always eight rows;
  * 4. the calls made and what they returned.
  *
  * The mount never computes a time. Every instant and duration comes from
- * `readRollover` (gnss-rollover-checker.ts), which calls the library; the strip
- * only places what those calls returned. The one clock the mount reads is the
- * reader's own, once a second and only in Today mode, after mount.
+ * `readRollover` (gnss-rollover-checker.ts), which calls the library; the fuse
+ * timeline only places what those calls returned. The one clock the mount reads
+ * is the reader's own, once a second and only in Today mode, after mount.
  *
  * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
  * listener is delegated on the root. The one drag handle is a native range, and
@@ -24,7 +24,7 @@
  */
 import { Temporal } from "@js-temporal/polyfill";
 import { codeFrameHtml } from "./code-frame";
-import { callResultsText, renderCalls } from "./edi-render";
+import { renderCallResults, renderCalls } from "./edi-render";
 import {
   asideSizer,
   callSizer,
@@ -93,6 +93,7 @@ import {
   syncRange,
   toolLinksHtml,
   wireCopyButtons,
+  wrapInstantsAtT,
 } from "./widget-ui";
 
 export type { GnssRolloverCheckerArgs } from "./gnss-rollover-checker";
@@ -133,7 +134,7 @@ const REASON_SIZERS = [
 
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"] as const;
 
-/** The chips under the strip: a build date or era start, up to two wraps, the
+/** The chips under the fuse timeline: a build date or era start, up to two wraps, the
  *  date it goes wrong, and the check date. The slots are always drawn. */
 const CHIP_SLOTS = 5;
 
@@ -309,7 +310,7 @@ function chipSlotHtml(): string {
 
 /**
  * The widget's chrome, seeded with `args` so the first paint shows them. With no
- * args it shows the first preset. The plates, strip, rows and outputs are drawn
+ * args it shows the first preset. The plates, fuse timeline, rows and outputs are drawn
  * by `mount`, because they come from the real library calls.
  */
 export function renderGnssRolloverCheckerTemplate(
@@ -569,6 +570,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     const heroes = q("heroes");
     if (heroes) {
       heroes.innerHTML = read.plates.slice(0, 2).map(plateHtml).join("");
+      wrapInstantsAtT(heroes);
     }
     const count = q("hero-left");
     if (count)
@@ -771,13 +773,8 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     renderCalls(q("call-rollover"), calls);
     const out = q("rollover-output");
     if (out) {
-      if (read.status === "sentinel") {
-        renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      } else if (read.status === "empty") {
-        renderWidgetOutput(out, " ", "empty");
-      } else {
-        renderWidgetOutput(out, callResultsText(calls), "live");
-      }
+      if (read.status === "empty") renderWidgetOutput(out, " ", "empty");
+      else renderCallResults(out, calls, read.status === "sentinel");
     }
 
     const summary = q("summary");

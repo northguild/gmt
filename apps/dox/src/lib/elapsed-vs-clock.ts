@@ -552,13 +552,14 @@ export function canDrawRulers(state: ElapsedState): boolean {
   return drawMs(state.start) !== null && drawMs(state.end) !== null;
 }
 
-/** The results of a group's calls, one per line, a bigint written with its `n`. */
+/** One call's result as printed, a bigint written with its `n`. */
+export function resultText(result: unknown): string {
+  return typeof result === "bigint" ? `${result}n` : JSON.stringify(result);
+}
+
+/** The results of a group's calls, one per line. */
 export function resultsText(calls: readonly EdiCall[]): string {
-  return calls
-    .map((c) =>
-      typeof c.result === "bigint" ? `${c.result}n` : JSON.stringify(c.result),
-    )
-    .join("\n");
+  return calls.map((c) => resultText(c.result)).join("\n");
 }
 
 // ---------------------------------------------------------------------------

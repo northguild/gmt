@@ -323,7 +323,21 @@
   .gmt-punct-hero-value {
   font-size: var(--gmt-text-base);
   line-height: 1.3;
-  white-space: nowrap;
+  /* An instant wraps only at its T (the date and the time are unbreakable). */
+  white-space: normal;
+}
+
+/* A plate's instant is 214px of display face. In a frame narrower than that
+   plus the plate's padding it would wrap at its T for some dates and not for
+   others, and the plate would change height under the dragging reader. Here the
+   date and the time are always two lines. */
+@container gmt-gnss-frame (max-width: 18rem) {
+  .gmt-gnss-rollover-checker
+    .gmt-fuse-aside
+    .gmt-punct-hero-value
+    .gmt-gnss-nb:not([data-word]) {
+    display: block;
+  }
 }
 
 /* ---- The chart ---- */

@@ -110,6 +110,12 @@ const plate = (root: HTMLElement, role: string): [string, string, string] => {
 
 const BLANK = "Not read: the field is blank.";
 const NO_SIGNAL = "NO SIGNAL";
+/** A pane where every line is NO SIGNAL is the amber box; a pane where only
+ *  some are keeps its answers and sets those lines apart. */
+const ALL_NO_SIGNAL = /^NO SIGNAL(\nNO SIGNAL)*$/;
+const noSignalLines = (root: HTMLElement, role: string) =>
+  q(root, role).querySelectorAll(".gmt-result-nosignal").length;
+const lineCount = (s: string) => (s === "" ? 0 : s.split("\n").length);
 const CLOCK_LINES = ["read as UTC", "counts no inserted second"] as const;
 const ELAPSED_LINES = ["read through TAI", "counts every second"] as const;
 
@@ -254,7 +260,11 @@ const EXPECTED: Record<string, Expected> = {
       count:
         'leapSecondsBetween("2017-12-31T23:59:60Z", "2018-01-01T00:00:00Z")',
     },
-    output: { clock: NO_SIGNAL, elapsed: NO_SIGNAL, count: NO_SIGNAL },
+    output: {
+      clock: NO_SIGNAL,
+      elapsed: 'NO SIGNAL\n"2018-01-01T00:00:37 TAI"',
+      count: NO_SIGNAL,
+    },
     plates: { clock: "no result", elapsed: "no result", count: "no result" },
     countLines: ["", ""],
     marks: 0,
@@ -270,7 +280,7 @@ const EXPECTED: Record<string, Expected> = {
     },
     output: {
       clock: "1672531200000000000n",
-      elapsed: NO_SIGNAL,
+      elapsed: 'NO SIGNAL\n"2024-01-01T00:00:37 TAI"',
       count: NO_SIGNAL,
     },
     plates: { clock: "1672531200 s", elapsed: "no result", count: "no result" },
@@ -367,9 +377,14 @@ describe("every preset", () => {
     expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
     for (const g of ["clock", "elapsed", "count"] as const) {
       expect(copy(root, g), g).toBe(want.copy[g]);
-      expect(text(root, `${g}-output`), g).toBe(want.output[g]);
-      expect(isSentinel(root, `${g}-output`), g).toBe(
-        want.output[g] === NO_SIGNAL,
+      const out = text(root, `${g}-output`);
+      expect(out, g).toBe(want.output[g]);
+      expect(isSentinel(root, `${g}-output`), g).toBe(ALL_NO_SIGNAL.test(out));
+      // One result line for each call line, a refusal replacing only its own.
+      expect(lineCount(out), g).toBe(lineCount(want.copy[g]));
+      expect(noSignalLines(root, `${g}-output`), g).toBe(
+        out.split("\n").filter((l) => l === NO_SIGNAL).length -
+          (ALL_NO_SIGNAL.test(out) ? lineCount(out) : 0),
       );
     }
     ["clock", "elapsed", "count"].forEach((g, i) => {
@@ -447,7 +462,11 @@ describe("every preset", () => {
     const { root } = await mount();
     type(root, "start", "soon");
     for (const g of ["clock", "elapsed", "count"]) {
-      expect(isSentinel(root, `${g}-output`), g).toBe(true);
+      // The end still reads, so the elapsed group keeps its second answer.
+      expect(isSentinel(root, `${g}-output`), g).toBe(g !== "elapsed");
+      expect(text(root, `${g}-output`), g).toBe(
+        g === "elapsed" ? 'NO SIGNAL\n"2017-01-01T00:00:38 TAI"' : NO_SIGNAL,
+      );
       expect(text(root, `${g}-aside`), g).toContain(
         "This is not an ISO 8601 instant.",
       );

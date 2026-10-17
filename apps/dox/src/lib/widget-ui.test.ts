@@ -6,6 +6,7 @@ import {
   rangePct,
   setControlValue,
   syncRange,
+  wrapInstantsAtT,
 } from "./widget-ui";
 
 const base = {
@@ -270,5 +271,43 @@ describe("setControlValue", () => {
     const input = document.createElement("input");
     setControlValue(input, "2024-06-15");
     expect(input.value).toBe("2024-06-15");
+  });
+});
+
+describe("wrapInstantsAtT", () => {
+  const hero = (text: string) =>
+    mount(`<div class="gmt-punct-hero-value">${text}</div>`);
+
+  it("holds the date and the time whole and joins them with a wbr", () => {
+    const root = hero("2024-01-01T00:00:00Z");
+    wrapInstantsAtT(root);
+    const pieces = root.querySelectorAll(".gmt-gnss-nb");
+    expect([...pieces].map((p) => p.textContent)).toEqual([
+      "2024-01-01",
+      "T00:00:00Z",
+    ]);
+    expect(root.querySelectorAll("[data-word]")).toHaveLength(0);
+    expect(root.querySelectorAll("wbr")).toHaveLength(1);
+    expect(root.textContent).toBe("2024-01-01T00:00:00Z");
+  });
+
+  it("keeps a time with a scale suffix in one piece", () => {
+    const root = hero("2019-04-07T00:00:18 GAL");
+    wrapInstantsAtT(root);
+    expect(root.querySelectorAll(".gmt-gnss-nb")[1]?.textContent).toBe(
+      "T00:00:18 GAL",
+    );
+  });
+
+  it("gives a word the same elements, marked so it can still wrap", () => {
+    const instant = hero("2024-01-01T00:00:00Z");
+    const word = hero("none after this instant");
+    wrapInstantsAtT(instant);
+    wrapInstantsAtT(word);
+    expect(word.querySelectorAll("*")).toHaveLength(
+      instant.querySelectorAll("*").length,
+    );
+    expect(word.querySelectorAll("[data-word]")).toHaveLength(2);
+    expect(word.textContent).toBe("none after this instant");
   });
 });

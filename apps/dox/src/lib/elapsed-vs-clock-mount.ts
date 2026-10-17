@@ -19,7 +19,7 @@
  */
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import { codeFrameHtml } from "./code-frame";
-import { renderCalls } from "./edi-render";
+import { renderCallResults, renderCalls } from "./edi-render";
 import { asideSizer, callSizer, holdHtml, outputSizer } from "./edi-picture";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import {
@@ -39,7 +39,7 @@ import {
   presetState,
   readArgs,
   readElapsed,
-  resultsText,
+  resultText,
   rulerModel,
   summaryText,
   type ElapsedRead,
@@ -497,8 +497,7 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     const aside = q(`${id}-aside`);
     if (out) {
       if (calls.length === 0) renderWidgetOutput(out, BLANK_TEXT, "empty");
-      else if (!ok) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(out, resultsText(calls), "live");
+      else renderCallResults(out, calls, !ok, resultText);
     }
     if (aside) {
       if (calls.length > 0 && !ok && reason !== "") {

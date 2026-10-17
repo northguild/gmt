@@ -442,6 +442,12 @@
   overflow-wrap: anywhere;
 }
 
+/* Half of a hero instant: the date, or the time. Each is unbreakable; the only
+   place the instant may wrap is the `<wbr>` between them (see wrapInstantsAtT). */
+.gmt-gnss-nb:not([data-word]) {
+  white-space: nowrap;
+}
+
 /* The text a drawing's list holds: one sentence per lane or mark, read out and
    never drawn, so the drawing's values are not a silent picture. */
 .gmt-gnss-visually-hidden {

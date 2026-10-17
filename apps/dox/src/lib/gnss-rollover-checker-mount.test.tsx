@@ -292,6 +292,10 @@ describe("every preset, against the real library", () => {
     expect(rows(root)).toHaveLength(8);
     expect(text(root, "reason-aside")).toBe("");
     expect(text(root, "call-rollover")).toContain("utcToGnssWeek");
+    // One result line for each call line.
+    expect(text(root, "rollover-output").split("\n")).toHaveLength(
+      text(root, "call-rollover").split("\n").length,
+    );
   });
 });
 

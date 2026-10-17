@@ -268,24 +268,10 @@
   font-size: 13px;
 }
 
-.gmt-gnss-nb {
-  white-space: nowrap;
-}
-
 .gmt-gnss-lost {
   color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border: 1px solid var(--gmt-signal-border);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .gmt-ring-spin {
-    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-
-  .gmt-ring-fill {
-    transition: stroke-dasharray 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
 }
 
 /* The legend: one row per lap, a swatch that matches its ring, the era and
@@ -418,6 +404,34 @@
 
   .gmt-gnss-week-decoder [data-role="hero-system"] .gmt-punct-hero-value {
     min-inline-size: 20em;
+  }
+}
+
+/* On a phone the plate holds about 254px of text and a 20-character instant in the
+   display face needs more than that at the frame-scaled size, so it wrapped at
+   its T. Sized to the plate it stays on one line down to a 390px viewport; below
+   that, where no size above the 12px floor would fit, it wraps only at its T. */
+@container gmt-gnss-frame (max-width: 26rem) {
+  /* The two instant plates take the whole row, so their width is the row's and
+     not their digits'. */
+  .gmt-gnss-week-decoder
+    .gmt-gnss-frame
+    .gmt-punct-hero:is([data-role="hero-utc"], [data-role="hero-system"]) {
+    flex: 1 1 100%;
+  }
+
+  .gmt-gnss-week-decoder
+    .gmt-gnss-frame
+    .gmt-punct-hero[data-role="hero-utc"]
+    .gmt-punct-hero-value {
+    font-size: 0.85rem;
+  }
+
+  .gmt-gnss-week-decoder
+    .gmt-gnss-frame
+    .gmt-punct-hero[data-role="hero-system"]
+    .gmt-punct-hero-value {
+    font-size: 0.78rem;
   }
 }
 

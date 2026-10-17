@@ -30,6 +30,30 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 export const ICON_STROKE =
   'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
+/**
+ * Lets every ISO instant in `root`'s hero values wrap only at its T: the date and
+ * the time are each unbreakable and a `<wbr>` joins them. A hyphen is otherwise a
+ * line-break opportunity, so a narrow plate would split the date itself.
+ *
+ * Every plain hero value gets the same three elements whatever it holds, so a
+ * readout that moves between an instant and a word (a NO SIGNAL, a duration)
+ * while the reader drags never adds or removes a node. A value that is not an
+ * instant keeps its own wrapping: its text sits in the first piece, marked
+ * `data-word` so that it is not held unbreakable.
+ */
+export function wrapInstantsAtT(root: ParentNode): void {
+  for (const el of root.querySelectorAll(".gmt-punct-hero-value")) {
+    if (el.children.length > 0) continue;
+    const text = el.textContent ?? "";
+    const m = /^(\d{4}-\d{2}-\d{2})(T.*)$/.exec(text);
+    const [head, tail, attr] = m
+      ? [m[1]!, m[2]!, ""]
+      : [text, "", " data-word"];
+    // The value is a flex box, so the pieces share one inline wrapper.
+    el.innerHTML = `<span><span class="gmt-gnss-nb"${attr}>${escapeHtml(head)}</span><wbr><span class="gmt-gnss-nb"${attr}>${escapeHtml(tail)}</span></span>`;
+  }
+}
+
 /** Escape text for safe use inside innerHTML. */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

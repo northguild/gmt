@@ -23,7 +23,7 @@
  * the table's eight rows keep their boxes from one reading to the next.
  */
 import { codeFrameHtml } from "./code-frame";
-import { callResultsText, renderCalls } from "./edi-render";
+import { renderCallResults, renderCalls } from "./edi-render";
 import {
   asideSizer,
   callSizer,
@@ -95,6 +95,7 @@ import {
   syncRange,
   toolLinksHtml,
   wireCopyButtons,
+  wrapInstantsAtT,
 } from "./widget-ui";
 
 export type { SatelliteClockConverterArgs } from "./satellite-clock-converter";
@@ -427,6 +428,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     const heroes = q("heroes");
     if (!heroes) return;
     heroes.innerHTML = read.plates.map(plateHtml).join("");
+    wrapInstantsAtT(heroes);
     if (read.status !== "sentinel") return;
     for (const none of heroes.querySelectorAll(".gmt-punct-hero-none")) {
       none.textContent = PLATE_NO_SIGNAL;
@@ -513,13 +515,8 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     renderCalls(q("call-clocks"), read.calls);
     const out = q("clocks-output");
     if (out) {
-      if (read.status === "sentinel") {
-        renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      } else if (read.status === "empty") {
-        renderWidgetOutput(out, " ", "empty");
-      } else {
-        renderWidgetOutput(out, callResultsText(read.calls), "live");
-      }
+      if (read.status === "empty") renderWidgetOutput(out, " ", "empty");
+      else renderCallResults(out, read.calls, read.status === "sentinel");
     }
 
     const summary = q("summary");

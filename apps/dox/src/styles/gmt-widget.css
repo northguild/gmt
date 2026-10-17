@@ -382,6 +382,18 @@
   text-shadow: 0 0 6px color(from var(--gmt-signal-ink) srgb r g b / 0.3);
 }
 
+/* One call in a group refused while its neighbours answered: only that call's
+   line is the signal-lost treatment, set on the signal fill so it keeps the
+   contrast of the whole-pane sentinel above. */
+.gmt-widget-output .gmt-result-nosignal {
+  color: var(--gmt-signal-ink);
+  background: var(--gmt-signal-fill);
+  text-shadow: none;
+  padding-inline: var(--gmt-space-1);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
 /* A correct, genuinely empty answer — quiet and unglowing, deliberately not
    the signal-lost treatment above. */
 .gmt-widget-output--empty {

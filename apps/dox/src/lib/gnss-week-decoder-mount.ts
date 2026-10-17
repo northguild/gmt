@@ -33,7 +33,7 @@ import {
   outputSizer,
   textSizers,
 } from "./edi-picture";
-import { callResultsText, renderCalls } from "./edi-render";
+import { renderCallResults, renderCalls } from "./edi-render";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import {
   GNSS_DECODER_MODES,
@@ -91,6 +91,7 @@ import {
   syncRange,
   toolLinksHtml,
   wireCopyButtons,
+  wrapInstantsAtT,
 } from "./widget-ui";
 
 export type { GnssWeekDecoderArgs } from "./gnss-week-decoder";
@@ -587,13 +588,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   function drawPlates(read: GnssRead): void {
     const heroes = q("heroes");
     if (heroes) heroes.innerHTML = read.plates.map(plateHtml).join("");
-    // An instant may wrap only at its T: the date and the time are each unbreakable.
-    const utc = q("hero-utc")?.querySelector(".gmt-punct-hero-value");
-    const m = /^(\d{4}-\d{2}-\d{2})(T\S*)$/.exec(utc?.textContent ?? "");
-    if (utc && m) {
-      // The value is a flex box, so the pieces share one inline wrapper.
-      utc.innerHTML = `<span><span class="gmt-gnss-nb">${m[1]}</span><wbr><span class="gmt-gnss-nb">${m[2]}</span></span>`;
-    }
+    if (heroes) wrapInstantsAtT(heroes);
   }
 
   function drawLane(slot: HTMLElement, lane: Lane | undefined): void {
@@ -799,13 +794,8 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     renderCalls(q("call-decoder"), calls);
     const out = q("decoder-output");
     if (out) {
-      if (read.status === "sentinel") {
-        renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      } else if (read.status === "empty") {
-        renderWidgetOutput(out, " ", "empty");
-      } else {
-        renderWidgetOutput(out, callResultsText(calls), "live");
-      }
+      if (read.status === "empty") renderWidgetOutput(out, " ", "empty");
+      else renderCallResults(out, calls, read.status === "sentinel");
     }
 
     const summary = q("summary");

@@ -359,8 +359,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     reading", "today", "next to wrap", "inserted" and the rest are words and patterns, never a
     verdict colour; amber (`--gmt-signal-*`) is the NO SIGNAL state alone; a chosen lane or row
     is lit glass, a hatch and a chip, with any accent edge on the bottom. Nothing in a drawing is
-    focusable, and nothing animates except the decoder ring's 0.35 s turn, inside
-    `prefers-reduced-motion: no-preference`. Each drawing is `role="img"` with an `aria-label`
+    focusable, and nothing animates: the decoder ring turns to its new reading in one frame.
+    Each drawing is `role="img"` with an `aria-label`
     and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`,
     `gmt-gnss-table`, a tool's own root).
   - They hold still by reserving space: every region is as big as the

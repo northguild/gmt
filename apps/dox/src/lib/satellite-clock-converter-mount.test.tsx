@@ -198,9 +198,15 @@ describe("every preset, against the real library", () => {
     expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
     expect(barRows(root)).toHaveLength(8);
     expect(rows(root)).toHaveLength(8);
+    // One result line for each call line; a refusal replaces only its own.
+    const calls = text(root, "call-clocks");
+    const lines = text(root, "clocks-output").split("\n");
+    if (calls !== "") expect(lines).toHaveLength(calls.split("\n").length);
     if (UTC[id!] === null) {
       expect(isSentinel(root, "clocks-output")).toBe(true);
-      expect(text(root, "clocks-output")).toBe("NO SIGNAL");
+      expect(text(root, "clocks-output")).toBe(
+        lines.map(() => "NO SIGNAL").join("\n"),
+      );
       expect(
         root.querySelector('[data-role="reason-aside"] p')!.textContent,
       ).not.toBe("");
@@ -360,8 +366,7 @@ describe("the ladder", () => {
     // Before 1980 the five TAI-tied clocks are off the scale.
     expect(Number(before)).toBeGreaterThanOrEqual(5);
     expect(group.hidden).toBe(false);
-    const offCount = () =>
-      group.querySelectorAll("[data-role=bar-row]").length;
+    const offCount = () => group.querySelectorAll("[data-role=bar-row]").length;
     slide(root, 0);
     const early = offCount();
     expect(early).toBeGreaterThan(0);
@@ -392,7 +397,9 @@ describe("the ladder", () => {
     expect(q(inside.root, "bars").getAttribute("aria-label")).toContain(
       "inserted",
     );
-    expect(q(inside.root, "ladder-off").querySelectorAll("[data-row]")).toHaveLength(6);
+    expect(
+      q(inside.root, "ladder-off").querySelectorAll("[data-row]"),
+    ).toHaveLength(6);
     const bad = await mount({ preset: "wrong-token" });
     expect(q(bad.root, "ladder-sentinel").hidden).toBe(false);
     expect(q(bad.root, "ladder-sentinel").textContent).toBe(

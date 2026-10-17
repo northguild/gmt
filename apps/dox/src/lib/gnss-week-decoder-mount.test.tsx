@@ -86,6 +86,28 @@ const SENTINEL = new Set([
   "utc-no-leap-second",
 ]);
 
+/** The seventeen result lines of `utc-before-galileo`, from a run of the
+ *  library: 1999-08-21T23:59:46Z is before Galileo's first week. */
+const GALILEO_1999_RESULTS = [
+  "NO SIGNAL",
+  "NO SIGNAL",
+  "NO SIGNAL",
+  "false",
+  "{ week: 1023, timeOfWeekSeconds: 604799, era: 0 }",
+  "{ week: 1023, timeOfWeekSeconds: 604799, era: 0 }",
+  "NO SIGNAL",
+  "NO SIGNAL",
+  "{ week: 1023, timeOfWeekSeconds: 604799, era: 0 }",
+  "{ week: 1023, timeOfWeekSeconds: 604799, era: 0 }",
+  "NO SIGNAL",
+  "NO SIGNAL",
+  "{ week: 1023, timeOfWeekSeconds: 604799 }",
+  "NO SIGNAL",
+  "NO SIGNAL",
+  "{ week: 1023, timeOfWeekSeconds: 604799 }",
+  "NO SIGNAL",
+];
+
 const q = <T extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   role: string,
@@ -222,6 +244,23 @@ describe("every preset, against the real library", () => {
     expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
     expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
     expect(root.querySelectorAll('[data-role="laneset"]')).toHaveLength(4);
+    if (id === "utc-before-galileo") {
+      // Galileo had no signal in 1999: the calls that refused print NO SIGNAL
+      // and every other call keeps its own result, line for line.
+      const out = text(root, "decoder-output").split("\n");
+      expect(out).toHaveLength(text(root, "call-decoder").split("\n").length);
+      expect(out).toEqual(GALILEO_1999_RESULTS);
+      expect(isSentinel(root, "decoder-output")).toBe(false);
+      expect(
+        root.querySelectorAll(
+          '[data-role="decoder-output"] .gmt-result-nosignal',
+        ),
+      ).toHaveLength(10);
+      expect(
+        root.querySelector('[data-role="reason-aside"] p')!.textContent,
+      ).not.toBe("");
+      return;
+    }
     if (SENTINEL.has(id!)) {
       expect(isSentinel(root, "decoder-output")).toBe(true);
       expect(text(root, "decoder-output")).toBe("NO SIGNAL");
@@ -235,6 +274,9 @@ describe("every preset, against the real library", () => {
     expect(text(root, "reason-aside")).toBe("");
     expect(text(root, "call-decoder")).toContain("gnss");
     expect(text(root, "call-decoder").length).toBeGreaterThan(0);
+    expect(text(root, "decoder-output").split("\n")).toHaveLength(
+      text(root, "call-decoder").split("\n").length,
+    );
   });
 });
 

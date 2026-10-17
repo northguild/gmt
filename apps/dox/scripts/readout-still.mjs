@@ -334,7 +334,7 @@ const TOOLS = [
     scope: "widget",
     drawn: GNSS_DRAWN,
     riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    textBoxes: INSTANT_TEXT,
   },
   {
     slug: "gnss-rollover-checker",
@@ -347,7 +347,7 @@ const TOOLS = [
     scope: "widget",
     drawn: GNSS_DRAWN,
     riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    textBoxes: INSTANT_TEXT,
   },
   {
     slug: "leap-second-timeline",

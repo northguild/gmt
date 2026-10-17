@@ -279,7 +279,12 @@ const EXPECTED: Record<string, Expected> = {
         'leapSecondsBetween("1971-01-01T00:00:00Z", "2024-01-01T00:00:00Z")',
       check: "",
     },
-    output: { offset: "NO SIGNAL", between: "NO SIGNAL", check: BLANK },
+    // Both calls of the offset group refused, so each prints its own NO SIGNAL.
+    output: {
+      offset: "NO SIGNAL\nNO SIGNAL",
+      between: "NO SIGNAL",
+      check: BLANK,
+    },
     plates: { offset: NONE, between: NONE, check: NONE },
     lit: [],
     band: false,
@@ -389,7 +394,13 @@ describe("every preset", () => {
       expect(copy, g).toBe(want.copy[g]);
       const out = text(root, `${g}-output`);
       expect(out, g).toBe(want.output[g]);
-      expect(isSentinel(root, `${g}-output`), g).toBe(out === "NO SIGNAL");
+      expect(isSentinel(root, `${g}-output`), g).toBe(
+        /^NO SIGNAL(\nNO SIGNAL)*$/.test(out),
+      );
+      // One result line for each call line.
+      if (want.copy[g] !== "") {
+        expect(out.split("\n").length, g).toBe(want.copy[g].split("\n").length);
+      }
       expect(isEmpty(root, `${g}-output`), g).toBe(out === BLANK);
     }
     expect(plate(root, "hero-offset")).toEqual(want.plates.offset);
