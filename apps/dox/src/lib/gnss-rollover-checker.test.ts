@@ -407,12 +407,16 @@ describe("the sentences", () => {
     expect(r.failure).toBe("The build date is not an ISO 8601 instant.");
   });
 
-  it("names a build date before the counter's first week", () => {
-    const r = read({ ...base, pivot: "1970-01-01T00:00:00Z" });
-    expect(r.status).toBe("sentinel");
-    expect(r.failure).toBe(
-      "The build date is before the counter's first week, which starts at 1999-08-21T23:59:47Z.",
-    );
+  it("reads a build date before the counter's first week as era 0", () => {
+    const early = read({ ...base, pivot: "1970-01-01T00:00:00Z" });
+    const era0 = read({ ...base, model: "era", era: "0" });
+    expect(early.status).toBe("ok");
+    expect(early.failure).toBeNull();
+    expect(early.reported).toBe(era0.reported);
+    expect(early.wrongFrom).toBe(era0.wrongFrom);
+    expect(early.verdictText).toBe(era0.verdictText);
+    expect(early.left).toBe(era0.left);
+    expect(early.left).not.toBeNull();
   });
 
   it("names a date that is not an instant", () => {
@@ -597,4 +601,59 @@ it("holds no skipped, todo or failing test", async () => {
     "utf8",
   );
   expect(source).not.toMatch(/\bit\.(?:skip|todo|fails)\b/);
+});
+
+describe("an instant written with an offset", () => {
+  const after = preset("navic-built-2020-after-wrap");
+
+  it("reads a check date with an offset as the same instant written with Z", () => {
+    const withOffset = read({ ...after, date: "2040-01-01T00:00:00+01:00" });
+    const asZ = read({ ...after, date: "2039-12-31T23:00:00Z" });
+    expect(withOffset.status).toBe("ok");
+    expect(withOffset.verdict).not.toBe("right");
+    expect(withOffset.verdictText).toBe(asZ.verdictText);
+    expect(withOffset.left).toBe(asZ.left);
+    expect(withOffset.left).not.toBeNull();
+    expect(withOffset.reported).toBe(asZ.reported);
+  });
+
+  it("reads +00:00 as Z, so a wrong date is never called right", () => {
+    const r = read({ ...after, date: "2040-01-01T00:00:00+00:00" });
+    expect(r.verdict).toBe("early");
+    expect(r.reported).toBe(
+      read({ ...after, date: "2040-01-01T00:00:00Z" }).reported,
+    );
+    expect(r.verdictText).not.toBe(RIGHT_DATE_TEXT);
+    expect(r.left).not.toBeNull();
+  });
+
+  it("reads a build date with an offset as the same instant written with Z", () => {
+    const withOffset = read({
+      ...after,
+      pivot: "2020-01-01T01:00:00+01:00",
+    });
+    const asZ = read({ ...after, pivot: "2020-01-01T00:00:00Z" });
+    expect(withOffset.status).toBe("ok");
+    expect(withOffset.reported).toBe(asZ.reported);
+    expect(withOffset.wrongFrom).toBe(asZ.wrongFrom);
+    expect(withOffset.verdictText).toBe(asZ.verdictText);
+    expect(withOffset.strip).toEqual(asZ.strip);
+    expect(windowDays(lib, withOffset)).toBe(windowDays(lib, asZ));
+  });
+
+  it("puts the slider on the same day for a date with an offset", () => {
+    const r = read(preset("navic-built-2020"));
+    expect(dayOfDate(lib, r, "2020-01-02T01:00:00+01:00")).toBe(1);
+  });
+
+  it("never turns an unreadable difference into a right date", () => {
+    const broken = {
+      ...lib,
+      diffUtcAsDuration: () => "",
+      areUtcEqual: () => false,
+    };
+    const r = readRollover(broken, after, NOW);
+    expect(r.status).toBe("sentinel");
+    expect(r.verdict).not.toBe("right");
+  });
 });

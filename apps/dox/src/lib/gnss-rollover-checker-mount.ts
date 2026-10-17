@@ -48,7 +48,6 @@ import {
   ROLLING_DATE_TEXT,
   ROLLOVER_LINKS,
   ROLLOVER_SENTENCES,
-  pivotBeforeText,
   ROLLOVER_NOW_MODES,
   ROLLOVER_PRESETS,
   dateOfDay,
@@ -127,10 +126,7 @@ const ROLLING_SIZERS = [
   RIGHT_DATE_TEXT,
 ];
 
-const REASON_SIZERS = [
-  ...Object.values(ROLLOVER_SENTENCES),
-  pivotBeforeText("1999-08-22T00:00:00Z"),
-];
+const REASON_SIZERS = Object.values(ROLLOVER_SENTENCES);
 
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"] as const;
 
@@ -778,7 +774,16 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     }
 
     const summary = q("summary");
-    if (summary) summary.textContent = summaryText(read);
+    if (summary) {
+      // Today mode ticks every second: the live region holds only what stays
+      // true between ticks, and is written only when that sentence changes, so
+      // a screen reader is not read the clock once a second.
+      const spoken =
+        read.status === "ok" && read.reported !== null && todayMode()
+          ? `Today, a ${read.state.counter} receiver reports ${read.verdictText}. It goes wrong from ${read.wrongFrom}.`
+          : summaryText(read);
+      if (summary.textContent !== spoken) summary.textContent = spoken;
+    }
     setToolLink(q("link-eras"), handoffHref(rolloverHandoffs(read).eras));
     const aside = q("reason-aside");
     if (aside) {
@@ -796,6 +801,8 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       }
     }
   }
+
+  const todayMode = () => nowMode() === "today";
 
   /** The clock runs only in Today mode; in a date mode nothing ticks. */
   function syncTicker(): void {

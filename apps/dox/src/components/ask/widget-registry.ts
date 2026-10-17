@@ -734,7 +734,8 @@ const gnssWeekEntry = defineWidget<GnssWeekDecoderArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/gnss-week-decoder-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderGnssWeekDecoderTemplate(args),
+      renderTemplate: (_idPrefix, args) =>
+        m.renderGnssWeekDecoderTemplate(args),
       mount: m.mountGnssWeekDecoder,
     })),
 });
@@ -754,7 +755,8 @@ const satClockEntry = defineWidget<SatelliteClockConverterArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/satellite-clock-converter-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderSatelliteClockConverterTemplate(args),
+      renderTemplate: (_idPrefix, args) =>
+        m.renderSatelliteClockConverterTemplate(args),
       mount: m.mountSatelliteClockConverter,
     })),
 });
@@ -774,7 +776,8 @@ const rolloverEntry = defineWidget<GnssRolloverCheckerArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/gnss-rollover-checker-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderGnssRolloverCheckerTemplate(args),
+      renderTemplate: (_idPrefix, args) =>
+        m.renderGnssRolloverCheckerTemplate(args),
       mount: m.mountGnssRolloverChecker,
     })),
 });
@@ -794,7 +797,8 @@ const leapLineEntry = defineWidget<LeapSecondTimelineArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/leap-second-timeline-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderLeapSecondTimelineTemplate(args),
+      renderTemplate: (_idPrefix, args) =>
+        m.renderLeapSecondTimelineTemplate(args),
       mount: m.mountLeapSecondTimeline,
     })),
 });

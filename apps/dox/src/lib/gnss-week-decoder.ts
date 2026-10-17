@@ -545,6 +545,15 @@ export function timeOfWeek(text: string): number | null {
   return Number.isFinite(n) && n >= 0 && n < SECONDS_PER_WEEK ? n : null;
 }
 
+/** A `:60` seconds field, the one place `hasSecond60` looks. */
+const SECOND_60 = /:60(?=[.,]|[Zz+\-\s]|$)/;
+
+/** The library keeps nanoseconds, so a time of week of 604799.9999999999
+ *  rounds to the next week's second 0 and is refused. True for exactly that. */
+function roundsToNextWeek(tow: number): boolean {
+  return tow < SECONDS_PER_WEEK && Number(tow.toFixed(9)) >= SECONDS_PER_WEEK;
+}
+
 /** The first RINEX week a system accepts, found by doubling then bisecting.
  *  Cached per library. 0 when the system accepts week 0. */
 const FIRST_RINEX = new WeakMap<GnssLib, Map<RinexWeekSystem, number>>();
@@ -584,16 +593,15 @@ const SENTENCES = {
   era: "The era is a whole number from 0, or rolling.",
   pivot: "The date the era counts from is not an ISO 8601 instant.",
   beyond: "That reading falls after the year 9999.",
+  towRounds: `Time of week rounds up to ${SECONDS_PER_WEEK} seconds at nanosecond precision, which is the next week. Use at most 9 decimal places.`,
   noLeap: "No leap second was inserted at the end of that day.",
   badInstant: "This is not an ISO 8601 instant with an offset or Z.",
 } as const;
 
 export const GNSS_SENTENCES = SENTENCES;
 
-/** The sentence for a pivot that is an instant but before the counter's first week. */
-export function pivotBeforeFirstWeekText(firstInstant: string): string {
-  return `The date the era counts from is before the counter's first week, which starts at ${firstInstant}.`;
-}
+/** Era lanes the frame draws at most; the reading's own era is always among them. */
+export const LANE_WINDOW = 4;
 
 /** The sentence for a RINEX week before the system's first week. */
 export function rinexBeforeFirstText(firstInstant: string): string {
@@ -809,12 +817,7 @@ export function readGnss(
     }
     utc = call("gnssWeekToUtc", counter, week, tow, eraArg);
     if (utc === "") {
-      if (
-        typeof eraArg === "object" &&
-        lib.utcToGnssWeek(counter, eraArg.notBefore) === null
-      ) {
-        return fail(pivotBeforeFirstWeekText(eraStart(lib, counter, 0)));
-      }
+      if (roundsToNextWeek(tow)) return fail(SENTENCES.towRounds);
       return fail(SENTENCES.beyond);
     }
   } else if (state.mode === "rinex") {
@@ -825,6 +828,7 @@ export function readGnss(
     if (tow === null) return fail(SENTENCES.tow);
     utc = call("rinexWeekToUtc", system, week, tow);
     if (utc === "") {
+      if (roundsToNextWeek(tow)) return fail(SENTENCES.towRounds);
       return fail(
         week < firstRinexWeek(lib, system)
           ? rinexBeforeFirstText(systemFirstInstant(lib, system))
@@ -841,6 +845,11 @@ export function readGnss(
       return read;
     }
     if (lib.hasSecond60(utc)) {
+      // Ask for the offset first: `isLeapSecond` reads an instant with an
+      // offset or `Z` only, so a bare `23:59:60` would be told "no leap second".
+      if (!lib.isValidInstant(utc.replace(SECOND_60, ":59"))) {
+        return fail(SENTENCES.badInstant);
+      }
       if (!lib.isLeapSecond(utc)) return fail(SENTENCES.noLeap);
     } else if (!lib.isValidInstant(utc)) {
       return fail(SENTENCES.badInstant);
@@ -992,8 +1001,31 @@ export function readGnss(
   }
 }
 
-/** The eras 0 through today's era plus one, plus the reading's own era after a
- *  gap when it is further out. */
+/**
+ * The eras the lanes draw: 0 through today's era plus one, plus the reading's
+ * own era after a gap when it is further out. The frame holds `LANE_WINDOW`
+ * lanes, so a longer list is cut to a window of that many that always holds the
+ * reading's era and, when it fits, today's.
+ */
+function eraWindow(todayEra: number, ownEra: number | null): number[] {
+  const all = Array.from({ length: todayEra + 2 }, (_, e) => e);
+  if (ownEra !== null && ownEra > todayEra + 1) all.push(ownEra);
+  if (all.length <= LANE_WINDOW) return all;
+  const last = all.length - LANE_WINDOW;
+  const own = ownEra === null ? -1 : all.indexOf(ownEra);
+  if (own < 0) return all.slice(0, LANE_WINDOW);
+  const hi = Math.max(own, todayEra);
+  const lo = Math.min(own, todayEra);
+  // Both fit: end on the later. Too far apart: keep the reading.
+  const start =
+    hi - lo < LANE_WINDOW
+      ? hi - (LANE_WINDOW - 1)
+      : own === hi
+        ? hi - (LANE_WINDOW - 1)
+        : lo;
+  const at = Math.min(Math.max(start, 0), last);
+  return all.slice(at, at + LANE_WINDOW);
+}
 function eraLanes(
   lib: GnssLib,
   calls: EdiCall[],
@@ -1014,10 +1046,7 @@ function eraLanes(
   };
   const today = run("utcToGnssWeek", counter, nowIso);
   const todayEra = today?.era ?? 0;
-  const lastDrawn = todayEra + 1;
-  const eras = Array.from({ length: lastDrawn + 1 }, (_, e) => e);
-  const beyond = ownEra !== null && ownEra > lastDrawn;
-  if (beyond) eras.push(ownEra);
+  const eras = eraWindow(todayEra, ownEra);
   const weeksShown = firstRefusedWeek(lib, counter);
   const pin = pinOf(week, tow, weeksShown);
   // The era "rolling" chose is the era of the instant it gave; for a fixed era
@@ -1039,7 +1068,7 @@ function eraLanes(
         today !== null && e === todayEra
           ? pinOf(today.week, today.timeOfWeekSeconds, weeksShown)
           : null,
-      gapBefore: beyond && i === eras.length - 1,
+      gapBefore: i > 0 && e !== eras[i - 1]! + 1,
     };
     return { ...base, sentence: laneSentence(base) };
   });

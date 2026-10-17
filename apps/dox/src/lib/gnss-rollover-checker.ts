@@ -35,6 +35,7 @@ import {
 import type { GnssLib, RolloverEra } from "./gnss-lib";
 import {
   NO_RESULT_TEXT,
+  asZ,
   beforeFirstWeekText,
   eraStart,
   firstRefusedWeek,
@@ -362,6 +363,7 @@ const SENTENCES = {
   date: "This is not an ISO 8601 instant with an offset or Z.",
   secondSixty: "Pick a date outside an inserted second.",
   beyond: "The firmware's window runs past the year 9999.",
+  noGap: "The library could not work out how far apart these two dates are.",
 } as const;
 
 export const ROLLOVER_SENTENCES = SENTENCES;
@@ -371,11 +373,6 @@ export const EMPTY_TEXTS = {
   era: "Type the era the firmware assumes.",
   date: "Type a date to check.",
 } as const;
-
-/** The sentence for a build date before the counter's first week. */
-export function pivotBeforeText(firstInstant: string): string {
-  return `The build date is before the counter's first week, which starts at ${firstInstant}.`;
-}
 
 // ---------------------------------------------------------------------------
 // Reading the library
@@ -759,6 +756,8 @@ export function readRollover(
     if (at === "") return empty(EMPTY_TEXTS.date);
     if (lib.hasSecond60(at)) return fail(SENTENCES.secondSixty);
     if (!lib.isValidInstant(at)) return fail(SENTENCES.date);
+    // The week converters and the difference read `Z` only.
+    at = asZ(lib, at);
   }
   read.at = at;
 
@@ -809,6 +808,7 @@ export function readRollover(
     pivot = state.pivot.trim();
     if (pivot === "") return empty(EMPTY_TEXTS.pivot);
     if (!lib.isValidInstant(pivot)) return fail(SENTENCES.pivot);
+    pivot = asZ(lib, pivot);
     firmware = { notBefore: pivot };
   }
 
@@ -832,9 +832,11 @@ export function readRollover(
   let wrongLine: string;
   let wrapEras: number[] = [];
   if (state.model === "pivot") {
-    const own = call(reading, "utcToGnssWeek", counter, pivot);
-    if (own === null) return fail(pivotBeforeText(first));
-    start = pivot;
+    // A build date before the counter's first week reads as era 0, the same
+    // as the library's own `{ notBefore }`: the window starts at the epoch.
+    const found = call(reading, "utcToGnssWeek", counter, pivot);
+    const own = found ?? { week: 0, timeOfWeekSeconds: 0, era: 0 };
+    start = found === null ? first : pivot;
     wrongFrom = call(
       reading,
       "gnssWeekToUtc",
@@ -866,14 +868,14 @@ export function readRollover(
   // 6. The verdict.
   const judge = (
     result: string,
-  ): { kind: "right" | "early" | "late"; text: string } => {
+  ): { kind: "right" | "early" | "late"; text: string } | null => {
     if (call(reading, "areUtcEqual", result, at)) {
       return { kind: "right", text: RIGHT_DATE_TEXT };
     }
     const span = parseSpan(
       call(reading, "diffUtcAsDuration", at, result, "days"),
     );
-    if (span === null) return { kind: "right", text: "" };
+    if (span === null) return null;
     const kind = span.negative ? "early" : "late";
     return {
       kind,
@@ -881,6 +883,8 @@ export function readRollover(
     };
   };
   const verdict = judge(reported);
+  // A difference the library cannot read is a failure, never a right date.
+  if (verdict === null) return fail(SENTENCES.noGap);
   read.reported = reported;
   read.broadcast = {
     week: truth.week,
@@ -918,11 +922,9 @@ export function readRollover(
       truth.timeOfWeekSeconds,
       "rolling",
     );
-    if (rolled === "") read.rolling = NO_RESULT_TEXT;
-    else {
-      const r = judge(rolled);
-      read.rolling = `rolling reads ${rolled}, ${r.text}`;
-    }
+    const r = rolled === "" ? null : judge(rolled);
+    read.rolling =
+      r === null ? NO_RESULT_TEXT : `rolling reads ${rolled}, ${r.text}`;
   } else {
     read.rolling = ROLLING_DATE_TEXT;
   }
@@ -1006,7 +1008,7 @@ export function dayOfDate(
 ): number | null {
   if (read.strip === null || !lib.isValidInstant(date.trim())) return null;
   const span = parseSpan(
-    lib.diffUtcAsDuration(read.strip.start, date.trim(), "days"),
+    lib.diffUtcAsDuration(read.strip.start, asZ(lib, date.trim()), "days"),
   );
   if (span === null || span.negative) return null;
   if (span.hours + span.minutes + span.seconds !== 0) return null;

@@ -29,6 +29,7 @@ import {
   INTEGER_UTC_FROM,
   insertions,
   insertionsBetween,
+  lacksOffset,
   secondAfter,
 } from "./timescale-widgets";
 
@@ -38,6 +39,8 @@ export const CUSTOM_PRESET_ID = "custom";
 export const BEFORE_1972_TEXT =
   "UTC has differed from TAI by whole seconds only since 1972-01-01.";
 export const NOT_INSTANT_TEXT = "This is not an ISO 8601 instant.";
+export const NO_OFFSET_TEXT =
+  "This is not an ISO 8601 instant with an offset or Z.";
 export const NOT_INSERTED_TEXT =
   "No leap second was inserted at the end of that day.";
 /** Shown in the next-insertion line when the library lists none later. */
@@ -380,6 +383,7 @@ export interface TimelineRead {
  * library calls; the sentences are fixed text.
  */
 export function noValueReason(lib: TimescaleLib, text: string): string {
+  if (lacksOffset(lib, text)) return NO_OFFSET_TEXT;
   if (lib.hasSecond60(text) && !lib.isLeapSecond(text)) {
     return NOT_INSERTED_TEXT;
   }
@@ -456,8 +460,10 @@ function readCheck(lib: TimescaleLib, check: string): CheckRead {
   const has = runCall(lib, "hasSecond60", check);
   const leap = runCall(lib, "isLeapSecond", check);
   const valid = runCall(lib, "isValidInstant", check);
-  const verdict: CheckVerdict | null =
-    leap.result === true
+  const noOffset = lacksOffset(lib, check);
+  const verdict: CheckVerdict | null = noOffset
+    ? null
+    : leap.result === true
       ? VERDICT_INSERTED
       : has.result === true
         ? VERDICT_NOT_INSERTED
@@ -470,7 +476,8 @@ function readCheck(lib: TimescaleLib, check: string): CheckRead {
     insertion: leap.result === true ? lib.fromTAI(lib.toTAI(check)) : "",
     isLeap: leap.result === true,
     hasSecond60: has.result === true,
-    reason: verdict === null ? NOT_INSTANT_TEXT : "",
+    reason:
+      verdict === null ? (noOffset ? NO_OFFSET_TEXT : NOT_INSTANT_TEXT) : "",
   };
 }
 

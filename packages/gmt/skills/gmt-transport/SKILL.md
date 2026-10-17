@@ -21,7 +21,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.19.0'
+  library_version: '1.20.0'
 ---
 
 # GMT Transport

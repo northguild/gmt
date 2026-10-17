@@ -99,7 +99,7 @@
  * @example gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-01-01T00:00:00Z" }) // "2019-03-09T23:59:42Z"
  * @example gnssWeekToUtc("GPS-LNAV", 1020, 0, { notBefore: "2019-04-07T00:00:00Z" }) // "2038-10-23T23:59:42Z" — after the 2019 rollover
  * @example gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "2019-04-06T23:59:42Z" }) // "2019-04-06T23:59:42Z" — equal counts
- * @example gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" }) // "" — before Galileo's epoch
+ * @example gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" }) // "2001-07-21T23:59:47Z" — before Galileo's epoch: era 0
  * @example gnssWeekToUtc("GPS-LNAV", 1024, 0, 2) // "" — an LNAV week stops at 1023
  */
 

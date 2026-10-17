@@ -270,6 +270,10 @@ describe("resolveRolloverEra", () => {
     ${"GPS-CNAV"} | ${100n}  | ${0n}                  | ${"2000-01-01T00:00:00Z"}           | ${1n}     | ${"13-bit"}
     ${"IRN-LNAV"} | ${247n}  | ${86_418_000_000_000n} | ${"2020-01-01T00:00:00Z"}           | ${1n}     | ${"NavIC 10-bit"}
     ${"GPS-LNAV"} | ${0n}    | ${0n}                  | ${"+275760-09-01T00:00:00Z"}        | ${13951n} | ${"placed; the label is past Temporal's range"}
+    ${"GAL"}      | ${100n}  | ${0n}                  | ${"1999-01-01T00:00:00Z"}           | ${0n}     | ${"before Galileo's epoch: the earliest pass is era 0"}
+    ${"GPS-LNAV"} | ${100n}  | ${0n}                  | ${"1979-12-31T00:00:00Z"}           | ${0n}     | ${"before the GPS epoch"}
+    ${"GPS-LNAV"} | ${100n}  | ${0n}                  | ${"1970-01-01T00:00:00Z"}           | ${0n}     | ${"before 1972, where the table has no TAI − UTC"}
+    ${"GAL"}      | ${100n}  | ${0n}                  | ${"1972-06-30T23:59:60Z"}           | ${0n}     | ${"a listed second 60 before the epoch"}
   `(
     "resolves notBefore $notBefore for $counter week $week to era $expected ($why)",
     ({ counter, week, timeOfWeek, notBefore, expected }) => {
@@ -281,9 +285,8 @@ describe("resolveRolloverEra", () => {
 
   it.each`
     counter       | rolloverEra                              | why
-    ${"GAL"}      | ${{ notBefore: "1999-01-01T00:00:00Z" }} | ${"before Galileo's epoch"}
-    ${"GPS-LNAV"} | ${{ notBefore: "1979-12-31T00:00:00Z" }} | ${"before the GPS epoch"}
     ${"GPS-LNAV"} | ${{ notBefore: "2017-12-31T23:59:60Z" }} | ${"a second 60 the table does not list"}
+    ${"GPS-LNAV"} | ${{ notBefore: "1971-12-31T23:59:60Z" }} | ${"a second 60 before 1972, which the table does not list"}
     ${"GPS-LNAV"} | ${{ notBefore: "2019-04-07T00:00:00" }}  | ${"no offset"}
     ${"GPS-LNAV"} | ${{ notBefore: 123 }}                    | ${"not a string"}
     ${"GPS-LNAV"} | ${{}}                                    | ${"no notBefore"}

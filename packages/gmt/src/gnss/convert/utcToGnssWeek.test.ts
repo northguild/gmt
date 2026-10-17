@@ -278,9 +278,8 @@ describe("utcToGnssWeek", () => {
   // Not in the round-trip rows: gnssWeekToUtc writes these instants back in another spelling, or
   // not at all.
   it.each`
-    counter       | utcString                      | week    | timeOfWeekSeconds | era     | why
-    ${"GPS-LNAV"} | ${"2017-01-01T08:59:60+09:00"} | ${906}  | ${17}             | ${1}    | ${"the inserted second written at +09:00"}
-    ${"GPS-CNAV"} | ${"+275760-09-13T00:00:00Z"}   | ${6535} | ${518418}         | ${1743} | ${"Temporal's last instant: no upper bound of its own (D1)"}
+    counter       | utcString                      | week   | timeOfWeekSeconds | era  | why
+    ${"GPS-LNAV"} | ${"2017-01-01T08:59:60+09:00"} | ${906} | ${17}             | ${1} | ${"the inserted second written at +09:00"}
   `(
     "returns week $week, $timeOfWeekSeconds s, era $era for $counter $utcString ($why)",
     ({ counter, utcString, week, timeOfWeekSeconds, era }) => {
@@ -289,6 +288,32 @@ describe("utcToGnssWeek", () => {
         timeOfWeekSeconds,
         era,
       });
+    },
+  );
+
+  it.each`
+    counter       | utcString                      | why
+    ${"GPS-LNAV"} | ${"+010000-01-01T00:00:00Z"}   | ${"one second past 9999-12-31T23:59:59Z: gnssWeekToUtc cannot write it back"}
+    ${"GPS-CNAV"} | ${"+010000-01-01T00:00:00.5Z"} | ${"half a second into year 10000"}
+    ${"BDT"}      | ${"+275760-09-13T00:00:00Z"}   | ${"Temporal's last instant"}
+    ${"IRN-LNAV"} | ${"+010000-01-01T00:00:00Z"}   | ${"NavIC, past year 9999"}
+  `("returns null for $counter $utcString ($why)", ({ counter, utcString }) => {
+    expect(utcToGnssWeek(counter, utcString)).toBeNull();
+  });
+
+  it.each`
+    counter       | utcString                           | why
+    ${"GPS-LNAV"} | ${"9999-12-31T23:59:59Z"}           | ${"the last whole second of year 9999"}
+    ${"GAL"}      | ${"9999-12-31T23:59:59Z"}           | ${"Galileo, the last whole second of year 9999"}
+    ${"GPS-LNAV"} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last nanosecond of year 9999"}
+  `(
+    "round-trips $counter $utcString through gnssWeekToUtc ($why)",
+    ({ counter, utcString }) => {
+      const week = utcToGnssWeek(counter, utcString);
+      expect(week).not.toBeNull();
+      expect(
+        gnssWeekToUtc(counter, week!.week, week!.timeOfWeekSeconds, week!.era),
+      ).toBe(utcString);
     },
   );
 

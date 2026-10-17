@@ -1859,11 +1859,27 @@
       },
       {
         "call": "gnssWeekToUtc(\"GAL\", 100, 0, { notBefore: \"1999-01-01T00:00:00Z\" })",
-        "result": "\"\" — before Galileo's epoch"
+        "result": "\"2001-07-21T23:59:47Z\" — before Galileo's epoch: era 0"
       },
       {
         "call": "gnssWeekToUtc(\"GPS-LNAV\", 1024, 0, 2)",
         "result": "\"\" — an LNAV week stops at 1023"
+      },
+      {
+        "call": "gnssWeekToUtc(\"IRN-LNAV\", 247, 50399 * 12, 1)",
+        "result": "\"2024-01-06T23:59:30Z\" — TOWC 50399"
+      },
+      {
+        "call": "gnssWeekToUtc(\"IRN-LNAV\", 247, 50400 * 12, 1)",
+        "result": "\"\" — TOWC 50400 is 604 800 s, not a time of week"
+      },
+      {
+        "call": "gnssWeekToUtc(\"IRN-LNAV\", 248, 0, 1)",
+        "result": "\"2024-01-06T23:59:42Z\" — TOWC 50400 of week 247"
+      },
+      {
+        "call": "gnssWeekToUtc(\"IRN-LNAV\", 0, 0, 2)",
+        "result": "\"2038-11-20T23:59:42Z\" — TOWC 50400 of week 1023, era 1"
       }
     ]
   },
@@ -1995,6 +2011,10 @@
       {
         "call": "utcToGnssWeek(\"GAL\", \"1999-08-21T23:59:46Z\")",
         "result": "null — before Galileo's epoch"
+      },
+      {
+        "call": "utcToGnssWeek(\"GPS-LNAV\", \"+010000-01-01T00:00:00Z\")",
+        "result": "null — past year 9999"
       }
     ]
   },
@@ -2020,6 +2040,10 @@
       {
         "call": "utcToRinexWeek(\"GPS\", \"1980-01-05T23:59:59Z\")",
         "result": "null"
+      },
+      {
+        "call": "utcToRinexWeek(\"GPS\", \"+010000-01-01T00:00:00Z\")",
+        "result": "null — past year 9999"
       }
     ]
   },
@@ -15058,8 +15082,8 @@
         "result": "-30"
       },
       {
-        "call": "spanWallClock(\"2024-03-10T23:00:00-03:00[America/Sao_Paulo]\", \"2024-03-11T11:00:00+01:00[Europe/Berlin]\", \"hours\")",
-        "result": "12 — each endpoint's own wall clock"
+        "call": "spanWallClock(\"2024-03-10T23:00:00-03:00[America/Sao_Paulo]\", \"2024-03-11T15:00:00+01:00[Europe/Berlin]\", \"hours\")",
+        "result": "16 — each endpoint's own wall clock"
       },
       {
         "call": "spanWallClock(\"2024-03-31T01:30:00[Europe/London]\", \"2024-04-01T01:30:00[Europe/London]\", \"hours\")",
@@ -18154,7 +18178,7 @@
       },
       {
         "name": "yearEndsOn",
-        "description": "The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**, on the occurrence nearest this date's **month and day**. NRF (US) adds a 53rd week when \"there are four or more days left in January\", which is the Saturday nearest January 31: `\"2026-01-31\"`."
+        "description": "The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**, on the occurrence nearest this date's **month and day**. NRF (US) adds a 53rd week when \"there are four or more days left in January\", which is the Saturday nearest January 31: `\"2026-01-31\"`. One rule covers one run of years: ONS (UK) trading periods end on the Saturday nearest December 31 (`\"2022-12-31\"`) from 2004, but when December 31 fell on a Tuesday before then, on the Saturday after it (1997-01-04). Years before 2004 need a second `FiscalCalendar`."
       },
       {
         "name": "extraWeek",
@@ -19658,7 +19682,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"BST\") and `\"full\"` the long one (\"British Summer Time\"). Any other value returns `\"\"`."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the locale's short zone name (\"BST\" in en-GB, \"GMT+1\" in en-US) and `\"full\"` the long one (\"British Summer Time\" in English). Any other value returns `\"\"`."
       }
     ]
   },
@@ -22106,7 +22130,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"BST\") and `\"full\"` the long one (\"British Summer Time\"). Any other value returns `\"\"`."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the locale's short zone name (\"BST\" in en-GB, \"GMT+1\" in en-US) and `\"full\"` the long one (\"British Summer Time\" in English). Any other value returns `\"\"`."
       },
       {
         "name": "reference",
@@ -25563,7 +25587,7 @@
       },
       {
         "name": "timeStyle",
-        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the short time zone name (\"BST\") and `\"full\"` the long one (\"British Summer Time\"). Any other value returns `\"\"`."
+        "description": "The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `\"short\"` writes hours and minutes, `\"medium\"` adds seconds, `\"long\"` adds the locale's short zone name (\"BST\" in en-GB, \"GMT+1\" in en-US) and `\"full\"` the long one (\"British Summer Time\" in English). Any other value returns `\"\"`."
       }
     ]
   },

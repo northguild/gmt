@@ -6,6 +6,7 @@ import {
   ELAPSED_PRESETS,
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
+  NO_OFFSET_TEXT,
   blankPlates,
   canDrawRulers,
   elapsedPlates,
@@ -173,6 +174,16 @@ describe("reasons", () => {
     expect(read.clockReason).toBe(NOT_INSTANT_TEXT);
     expect(read.elapsedReason).toBe(NOT_INSTANT_TEXT);
     expect(read.countReason).toBe(NOT_INSTANT_TEXT);
+  });
+
+  it("asks for the offset when a second 60 has none, on a day that had a leap second", () => {
+    const read = readElapsed(lib, {
+      start: "2016-12-31T23:59:60",
+      end: "2017-01-02T00:00:00Z",
+    });
+    expect(read.clockReason).toBe(NO_OFFSET_TEXT);
+    expect(read.elapsedReason).toBe(NO_OFFSET_TEXT);
+    expect(read.countReason).toBe(NO_OFFSET_TEXT);
   });
 
   it("prefers the bad instant over a second 60 on the other end", () => {

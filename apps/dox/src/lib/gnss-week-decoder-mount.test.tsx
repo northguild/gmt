@@ -385,8 +385,52 @@ describe("the form", () => {
     expect(q<HTMLInputElement>(root, "utc").value).toBe("2024-01-01T00:00:00Z");
     expect(plateValue(root, "hero-utc")).toBe("2024-01-01T00:00:00Z");
     pickMode(root, "rinex");
-    expect(q<HTMLInputElement>(root, "week").value).toBe("247");
+    // RINEX counts one continuous week: 2024-01-01 is week 2295, not 247.
+    expect(q<HTMLInputElement>(root, "week").value).toBe("2295");
+    expect(q<HTMLInputElement>(root, "tow").value).toBe("86418");
     expect(q<HTMLSelectElement>(root, "system").value).toBe("GPS");
+    expect(plateValue(root, "hero-utc")).toBe("2024-01-01T00:00:00Z");
+  });
+
+  it("carries a RINEX week back to the counter's own week and era", async () => {
+    const { root } = await mount({ preset: "rinex-navic" });
+    pickMode(root, "broadcast");
+    expect(q<HTMLInputElement>(root, "week").value).not.toBe("2295");
+    expect(plateValue(root, "hero-utc")).toBe("2024-01-01T00:00:00Z");
+    expect(isSentinel(root, "reason-aside")).toBe(false);
+    expect(q<HTMLInputElement>(root, "week").value).toBe(
+      String(lib.utcToGnssWeek("IRN-LNAV", "2024-01-01T00:00:00Z")!.week),
+    );
+  });
+
+  it("moves the reading's counter when the RINEX system changes", async () => {
+    const { root } = await mount({ preset: "rinex-navic" });
+    const marked = () =>
+      [...q(root, "counter-body").querySelectorAll("tr[data-reading]")].map(
+        (r) => (r as HTMLElement).dataset["row"],
+      );
+    expect(marked()).toEqual(["IRN-LNAV"]);
+    choose(root, "system", "GAL");
+    expect(marked().every((c) => c!.startsWith("GAL"))).toBe(true);
+    expect(marked()).toHaveLength(1);
+  });
+
+  it("draws the reading's era among the lanes when it is further out than today's", async () => {
+    const { root } = await mount({
+      preset: "lnav-2024",
+      week: "0",
+      timeOfWeekSeconds: "0",
+      rolloverEra: "4",
+    });
+    const drawn = lanes(root).map(
+      (l) => l.querySelector('[data-role="lane-label"]')!.textContent,
+    );
+    expect(drawn).toContain("era 4");
+    const chosen = lanes(root)
+      .filter((l) => l.querySelector('[data-role="lane"][data-series]'))
+      .map((l) => l.querySelector('[data-role="lane-label"]')!.textContent);
+    expect(chosen).toEqual(["era 4"]);
+    expect(text(root, "ring-week")).toBe("0");
   });
 
   it("reads the same moment on every counter", async () => {

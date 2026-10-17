@@ -737,6 +737,37 @@ describe("the live clock", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("keeps the ticking instant out of the live sentence", async () => {
+    const { root } = await mount({ preset: "today" });
+    const summary = q(root, "summary");
+    const before = summary.textContent ?? "";
+    expect(before).not.toBe("");
+    expect(before).not.toContain("2026-10-15T00:00:00Z");
+    const watch = new MutationObserver(() => {});
+    watch.observe(summary, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    vi.advanceTimersByTime(3000);
+    expect(summary.textContent).toBe(before);
+    expect(watch.takeRecords()).toHaveLength(0);
+    watch.disconnect();
+  });
+
+  it("speaks again in Today mode when the verdict changes", async () => {
+    const { root } = await mount({ preset: "today" });
+    const summary = q(root, "summary");
+    const before = summary.textContent;
+    choose(root, "counter", "GPS-LNAV");
+    expect(summary.textContent).not.toBe(before);
+  });
+
+  it("still states the date in a pinned-date reading", async () => {
+    const { root } = await mount({ preset: "navic-built-2020" });
+    expect(q(root, "summary").textContent).toContain("2039-08-17T00:00:00Z");
+  });
+
   it("never starts a clock for a pinned date", async () => {
     await mount({ preset: "navic-built-2020" });
     expect(vi.getTimerCount()).toBe(0);

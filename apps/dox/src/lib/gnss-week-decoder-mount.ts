@@ -57,11 +57,11 @@ import {
   decoderHandoffs,
   SECONDS_PER_WEEK,
   isSeeded,
+  LANE_WINDOW,
   lanesAria,
   lastWeekOf,
   matchPreset,
   permalinkOf,
-  pivotBeforeFirstWeekText,
   platesOf,
   presetState,
   readArgs,
@@ -96,9 +96,9 @@ import {
 
 export type { GnssWeekDecoderArgs } from "./gnss-week-decoder";
 
-/** Era lanes the frame reserves: the most any counter draws (eras 0 to today's
- *  era plus one, and one more after a gap). */
-const LANE_SLOTS = 4;
+/** Era lanes the frame reserves. `readGnss` never draws more, and cuts a longer
+ *  list to a window that holds the reading's era, so the frame keeps one height. */
+const LANE_SLOTS = LANE_WINDOW;
 
 const NBSP = "&nbsp;";
 
@@ -125,7 +125,6 @@ const FOOTNOTE_SIZERS = [`No reading: ${BEFORE_FIRST_WEEK_NOTE}.`];
 /** Every sentence the reason aside can show. */
 const REASON_SIZERS = [
   ...Object.values(GNSS_SENTENCES),
-  pivotBeforeFirstWeekText("1999-08-22T00:00:00Z"),
   beforeFirstWeekText("1999-08-22T00:00:00Z"),
 ];
 
@@ -824,16 +823,27 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
     const carry = last?.status === "ok" ? last.carry : null;
     if (carry === null || from === to) return;
     if (to === "utc" && carry.utc !== null) setControlValue(utcEl, carry.utc);
-    if (to !== "utc" && from === "utc") {
-      if (carry.week !== null) setControlValue(weekEl, carry.week);
-      if (carry.timeOfWeekSeconds !== null)
-        setControlValue(towEl, carry.timeOfWeekSeconds);
+    if (to === "rinex" && carry.utc !== null) {
+      // RINEX reads one continuous week, not the broadcast counter's: ask the
+      // library for the instant's week on the record's system.
+      const system = carry.system ?? (systemEl.value as RinexWeekSystem);
+      const r = lib.utcToRinexWeek(system, carry.utc);
+      setControlValue(systemEl, system);
+      if (r !== null) {
+        setControlValue(weekEl, String(r.week));
+        setControlValue(towEl, String(r.timeOfWeekSeconds));
+      }
     }
-    if (to === "rinex" && carry.system !== null)
-      setControlValue(systemEl, carry.system);
-    if (to === "broadcast" && carry.era !== null) {
-      setControlValue(eraModeEl, "number");
-      setControlValue(eraEl, carry.era);
+    if (to === "broadcast" && carry.utc !== null) {
+      // Back to the counter's own week, time of week and era for the instant.
+      const counter = counterEl.value as GnssWeekCounter | "";
+      const own = counter === "" ? null : lib.utcToGnssWeek(counter, carry.utc);
+      if (own !== null) {
+        setControlValue(weekEl, String(own.week));
+        setControlValue(towEl, String(own.timeOfWeekSeconds));
+        setControlValue(eraModeEl, "number");
+        setControlValue(eraEl, String(own.era));
+      }
     }
   }
 
@@ -886,7 +896,21 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       render();
       return;
     }
-    if (target === systemEl || target === eraModeEl) {
+    if (target === systemEl) {
+      // The reading's counter follows its system, or the table would still
+      // mark the old system's counter as "your reading".
+      const counter = counterEl.value as GnssWeekCounter | "";
+      if (counter === "" || counterSystem(counter) !== systemEl.value) {
+        const own = GNSS_WEEK_COUNTERS.find(
+          (c) => counterSystem(c) === systemEl.value,
+        );
+        if (own !== undefined) setControlValue(counterEl, own);
+      }
+      syncPreset();
+      render();
+      return;
+    }
+    if (target === eraModeEl) {
       syncPreset();
       render();
     }

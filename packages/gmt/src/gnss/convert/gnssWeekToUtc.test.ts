@@ -293,6 +293,12 @@ describe("gnssWeekToUtc: notBefore pivot", () => {
     ${"IRN-L1NV"} | ${1271} | ${86418}  | ${"2020-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"} | ${"NavIC 13-bit: era 0"}
     ${"GPS-LNAV"} | ${100}  | ${0}      | ${"1980-01-06T00:00:00Z"}           | ${"1981-12-05T23:59:59Z"} | ${"pivot at the GPS epoch: era 0"}
     ${"GPS-LNAV"} | ${0}    | ${0}      | ${"1980-01-06T00:00:00Z"}           | ${"1980-01-06T00:00:00Z"} | ${"the GPS epoch itself"}
+    ${"GAL"}      | ${100}  | ${0}      | ${"1999-01-01T00:00:00Z"}           | ${"2001-07-21T23:59:47Z"} | ${"a pivot before Galileo's epoch: era 0"}
+    ${"GAL"}      | ${0}    | ${0}      | ${"1999-08-21T23:59:46Z"}           | ${"1999-08-21T23:59:47Z"} | ${"1 s before Galileo's epoch: the epoch itself"}
+    ${"IRN-L1NV"} | ${0}    | ${0}      | ${"1999-08-21T23:59:46Z"}           | ${"1999-08-21T23:59:47Z"} | ${"1 s before NavIC's epoch: the epoch itself"}
+    ${"BDT"}      | ${0}    | ${0}      | ${"2005-12-31T23:59:60Z"}           | ${"2006-01-01T00:00:00Z"} | ${"a listed second 60 before BeiDou's epoch"}
+    ${"GPS-LNAV"} | ${100}  | ${0}      | ${"1979-12-31T00:00:00Z"}           | ${"1981-12-05T23:59:59Z"} | ${"a pivot before the GPS epoch: era 0"}
+    ${"GPS-LNAV"} | ${100}  | ${0}      | ${"1970-01-01T00:00:00Z"}           | ${"1981-12-05T23:59:59Z"} | ${"a pivot before 1972, as a receiver's zeroed build date: era 0"}
   `(
     "returns $expected for $counter week $week, $tow s, notBefore $notBefore ($why)",
     ({ counter, week, tow, notBefore, expected }) => {
@@ -322,13 +328,9 @@ describe("gnssWeekToUtc: notBefore pivot", () => {
 
   it.each`
     counter       | week   | notBefore                    | why
-    ${"GAL"}      | ${100} | ${"1999-01-01T00:00:00Z"}    | ${"before Galileo's epoch"}
-    ${"GAL"}      | ${0}   | ${"1999-08-21T23:59:46Z"}    | ${"1 s before Galileo's epoch"}
-    ${"IRN-L1NV"} | ${0}   | ${"1999-08-21T23:59:46Z"}    | ${"1 s before NavIC's epoch"}
-    ${"BDT"}      | ${0}   | ${"2005-12-31T23:59:60Z"}    | ${"a listed second 60, before BeiDou's epoch"}
-    ${"GPS-LNAV"} | ${100} | ${"1979-12-31T00:00:00Z"}    | ${"before the GPS epoch"}
     ${"GPS-LNAV"} | ${0}   | ${"+275760-09-01T00:00:00Z"} | ${"the result is past Temporal's instant range"}
     ${"GPS-LNAV"} | ${100} | ${"9999-12-31T00:00:00Z"}    | ${"the result is past year 9999"}
+    ${"GPS-LNAV"} | ${100} | ${"1971-12-31T23:59:60Z"}    | ${"a second 60 the table does not list"}
   `(
     "returns '' for $counter week $week, notBefore $notBefore ($why)",
     ({ counter, week, notBefore }) => {
@@ -435,6 +437,30 @@ describe("gnssWeekToUtc: notBefore pivot", () => {
         week,
         timeOfWeekSeconds: tow,
       });
+    },
+  );
+});
+
+// NavIC SPS ICD 1.1 §5.7: "TOWC … indicates the number of 12 second counts at which the next
+// subframe will begin … ranges from 1 to 50400"; L1 ICD 1.0 §6.2.1: ITOW 0 to 83, TOI 1 to 400.
+// So the last subframe of a week gives 50400 × 12 = 604 800 s, the start of the next week.
+describe("gnssWeekToUtc: the NavIC broadcast-count recipe at the end of a week", () => {
+  it.each`
+    counter       | week    | era  | broadcast                                   | tow       | direct   | nextWeek | nextEra | expected                  | why
+    ${"IRN-LNAV"} | ${247}  | ${1} | ${"TOWC 50399"}                             | ${604788} | ${true}  | ${247}   | ${1}    | ${"2024-01-06T23:59:30Z"} | ${"TOWC 50399 × 12 = 604 788 s is inside the week"}
+    ${"IRN-LNAV"} | ${247}  | ${1} | ${"TOWC 50400"}                             | ${604800} | ${false} | ${248}   | ${1}    | ${"2024-01-06T23:59:42Z"} | ${"TOWC 50400 × 12 = 604 800 s is TOW 0 of the next week"}
+    ${"IRN-LNAV"} | ${1023} | ${1} | ${"TOWC 50400"}                             | ${604800} | ${false} | ${0}     | ${2}    | ${"2038-11-20T23:59:42Z"} | ${"the 10-bit week 1023 wraps to 0 and the era advances"}
+    ${"IRN-L1NV"} | ${1271} | ${0} | ${"ITOW 83, TOI 400: 83 × 7200 + 400 × 18"} | ${604800} | ${false} | ${1272}  | ${0}    | ${"2024-01-06T23:59:42Z"} | ${"L1: the last interval of the week is TOW 0 of the next"}
+    ${"IRN-L1NV"} | ${8191} | ${0} | ${"ITOW 83, TOI 400: 83 × 7200 + 400 × 18"} | ${604800} | ${false} | ${0}     | ${1}    | ${"2156-08-21T23:59:42Z"} | ${"the 13-bit week 8191 wraps to 0 and the era advances"}
+  `(
+    "$broadcast at $counter week $week era $era is $tow s: $why",
+    ({ counter, week, era, tow, direct, nextWeek, nextEra, expected }) => {
+      expect(gnssWeekToUtc(counter, week, tow, era)).toBe(
+        direct ? expected : "",
+      );
+      expect(gnssWeekToUtc(counter, nextWeek, direct ? tow : 0, nextEra)).toBe(
+        expected,
+      );
     },
   );
 });

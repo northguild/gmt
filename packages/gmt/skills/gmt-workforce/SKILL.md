@@ -9,13 +9,13 @@ description: >
   limit is the caller's; GMT names no regulation. Reads the docs site
   (llms.txt) and the installed package's JSDoc; a routing pointer.
 sources:
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/intervals/hours-of-work.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/workforce-hours-of-work.mdx'
   - 'northguild/gmt:packages/gmt/src/workforce/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/duty.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.19.0'
+  library_version: '1.20.0'
 ---
 
 # GMT Workforce

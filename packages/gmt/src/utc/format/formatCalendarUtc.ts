@@ -25,8 +25,9 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
   timeZone?: string;
   /**
    * The length of the time-of-day part, as the `timeStyle` of `Intl.DateTimeFormat`. `"short"`
-   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the short time zone name
-   * ("BST") and `"full"` the long one ("British Summer Time"). Any other value returns `""`.
+   * writes hours and minutes, `"medium"` adds seconds, `"long"` adds the locale's short zone
+   * name ("BST" in en-GB, "GMT+1" in en-US) and `"full"` the long one ("British Summer Time" in
+   * English). Any other value returns `""`.
    *
    * @defaultValue `"short"`
    */

@@ -127,8 +127,10 @@ BDT − UTC in 2024 is `37 − 33 = 4`; GAL − UTC at 1999-08-22 is `32 − 19 
   records):
   1. `notBefore` must be a string that `parseUtcReading` accepts and `taiOfUtc` places (a listed
      `:60` is accepted); otherwise null.
-  2. `Lp = scaleLabelOfUtc(system, reading).labelNanoseconds`. If `Lp < epochLabel` (the pivot is
-     before the counter's epoch) → null.
+  2. `Lp = scaleLabelOfUtc(system, reading).labelNanoseconds`. When there is no label, the pivot
+     is either an unlisted second 60 (null) or an instant before the counter's epoch, including
+     before 1972, where TAI − UTC is undefined: the earliest occurrence at or after it is era 0,
+     so the result is `0n`.
   3. `period = M × WEEK` (1024, 4096 or 8192 weeks, by counter); `base = epochLabel + week × WEEK +
      towNs`.
   4. `era = Lp ≤ base ? 0 : ceil((Lp − base) / period)` (bigint ceiling). The result label is

@@ -24,6 +24,7 @@ import {
   startOfUtc,
 } from "@northguild/gmt/utc/calculate";
 import { areUtcEqual } from "@northguild/gmt/utc/compare";
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import type { GnssLib } from "~/lib/gnss-lib";
 
 export const lib = {
@@ -44,4 +45,5 @@ export const lib = {
   addUtc,
   startOfUtc,
   areUtcEqual,
+  toOffsetInstant,
 } as unknown as GnssLib;

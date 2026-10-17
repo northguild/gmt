@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { lib } from "~/test/gnss-lib";
 import {
+  BEFORE_1972_NOTE,
+  BEFORE_1972_PLATE,
   BEFORE_FIRST_INSTANT_NOTE,
   CLOCK_KEYS,
+  FOOTNOTES_RESERVED,
   CLOCK_PRESETS,
   CUSTOM_PRESET_ID,
   DEFAULT_PRESET,
@@ -410,6 +413,17 @@ describe("the written-as note", () => {
     expect(row(result, "UTC").yours).toBe(true);
     expect(row(result, "UTC").writtenAs).toBe("2023-12-31T23:00:00Z");
     expect(row(result, "GPS").reading).toBe("2023-12-31T23:00:18 GPS");
+    // The lead is read from the same instant written with Z.
+    const asZ = read("2023-12-31T23:00:00Z");
+    expect(result.utc).toBe("2024-01-01T00:00:00+01:00");
+    expect(result.rows.map((x) => x.leadText)).toEqual(
+      asZ.rows.map((x) => x.leadText),
+    );
+    expect(row(result, "GPS").lead).toEqual({ kind: "seconds", seconds: "18" });
+    expect(row(result, "GPS").leadText).toBe("18 s");
+    expect(row(result, "BDT").leadText).toBe("4 s");
+    expect(ladderAria(result)).toBe(ladderAria(asZ));
+    expect(ladderAria(result)).not.toContain("no result");
   });
 
   it("shows a trimmed fraction on a scale string", () => {
@@ -439,6 +453,13 @@ describe("each sentence, in order", () => {
     ]) {
       expect(read(value).failure).toBe(SENTENCES.unknownToken);
     }
+  });
+
+  it("a second 60 with no offset asks for the offset, whether or not the day had a leap second", () => {
+    // 2016-12-31 had a leap second; 2017-12-31 did not.
+    expect(read("2016-12-31T23:59:60").failure).toBe(SENTENCES.notAnInstant);
+    expect(read("2017-12-31T23:59:60").failure).toBe(SENTENCES.notAnInstant);
+    expect(read("2016-12-31T23:59:60Z").status).toBe("ok");
   });
 
   it("a second 60 on a day with no leap second is its own sentence", () => {
@@ -487,6 +508,32 @@ describe("each sentence, in order", () => {
     expect(result.rows).toHaveLength(8);
     expect(result.plates.every((p) => p.value === null)).toBe(true);
     expect(result.footnote).toBe("");
+  });
+
+  it("before 1972 is its own case, not 'none after this instant'", () => {
+    const result = read("1971-06-01T00:00:00Z");
+    expect(result.status).toBe("ok");
+    expect(result.taiMinusUtc).toBeNull();
+    expect(result.plates[2]!.value).toBe(BEFORE_1972_PLATE.value);
+    expect(result.plates[2]!.lines[0]).toBe(BEFORE_1972_PLATE.line);
+    expect(result.plates[2]!.value).not.toBe("none after this instant");
+    expect(result.footnote).toBe(BEFORE_1972_NOTE);
+    // From 1972 on, a later instant with no insertion still says "none after".
+    expect(read("1972-01-01T00:00:00Z").plates[2]!.value).not.toBe(
+      BEFORE_1972_PLATE.value,
+    );
+  });
+
+  it("no footnote is longer than the longest one the page reserves", () => {
+    const longest = Math.max(...FOOTNOTES_RESERVED.map((t) => t.length));
+    for (const value of [
+      "1971-06-01T00:00:00Z",
+      "1990-01-01T00:00:00Z",
+      "2004-01-01T00:00:00Z",
+      "2024-01-01T00:00:00Z",
+    ]) {
+      expect(read(value).footnote.length).toBeLessThanOrEqual(longest);
+    }
   });
 
   it("a sentinel is never the legitimate 'none after this instant'", () => {

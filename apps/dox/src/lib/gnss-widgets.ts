@@ -53,6 +53,23 @@ export function labelParts(label: string): LabelParts | null {
 }
 
 // ---------------------------------------------------------------------------
+// Instants with an offset
+// ---------------------------------------------------------------------------
+
+/**
+ * An instant written with `Z`. `diffUtcAsDuration`, `areUtcEqual` and the
+ * week converters read `Z` only, so a value written with an offset
+ * (`2024-01-01T00:00:00+01:00`) goes through the library's `toOffsetInstant`
+ * once, where it is read. A value that already ends in `Z`, and anything the
+ * library cannot read, comes back as typed, so the caller's own checks still
+ * see it.
+ */
+export function asZ(lib: GnssLib, value: string): string {
+  if (value.endsWith("Z")) return value;
+  return lib.toOffsetInstant(value)?.instant ?? value;
+}
+
+// ---------------------------------------------------------------------------
 // A scale's lead over UTC
 // ---------------------------------------------------------------------------
 
@@ -80,6 +97,7 @@ export type Lead =
 export function leadOverUtc(lib: GnssLib, utc: string, label: string): Lead {
   const parts = labelParts(label);
   if (parts === null) return { kind: "none" };
+  utc = asZ(lib, utc);
   if (lib.hasSecond60(utc) || lib.hasSecond60(parts.dateTime)) {
     return { kind: "inside-inserted-second" };
   }

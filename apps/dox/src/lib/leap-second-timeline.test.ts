@@ -9,6 +9,7 @@ import {
   CUSTOM_PRESET_ID,
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
+  NO_OFFSET_TEXT,
   TIMELINE_PRESETS,
   VERDICT_INSERTED,
   VERDICT_NOT_INSERTED,
@@ -200,6 +201,36 @@ describe("the verdict words and reasons", () => {
     });
     expect(r.offset.offset).toBeNull();
     expect(r.offset.reason).toBe(NOT_INSERTED_TEXT);
+  });
+
+  it("a second 60 with no offset asks for the offset first, not a leap second", () => {
+    // 2016-12-31 did have a leap second; the missing offset is the problem.
+    const c = checkOf("2016-12-31T23:59:60");
+    expect(c.verdict).toBeNull();
+    expect(c.reason).toBe(NO_OFFSET_TEXT);
+    expect(checkOf("2016-12-31T23:59:60Z").verdict).toBe(VERDICT_INSERTED);
+    const noLeapDay = checkOf("2017-12-31T23:59:60");
+    expect(noLeapDay.verdict).toBeNull();
+    expect(noLeapDay.reason).toBe(NO_OFFSET_TEXT);
+  });
+
+  it("a date with no offset asks for the offset, a second 60 or not", () => {
+    for (const date of ["2016-12-31T23:59:60", "2016-12-31T23:59:59"]) {
+      const r = readTimeline(lib, { date, check: "", from: "", to: "" });
+      expect(r.offset.offset).toBeNull();
+      expect(r.offset.reason).toBe(NO_OFFSET_TEXT);
+    }
+  });
+
+  it("a span end with no offset asks for the offset", () => {
+    const r = readTimeline(lib, {
+      date: "",
+      check: "",
+      from: "2016-12-31T23:59:60",
+      to: "2017-01-02T00:00:00Z",
+    });
+    expect(r.between.count).toBeNull();
+    expect(r.between.reason).toBe(NO_OFFSET_TEXT);
   });
 
   it("a date that is not an instant says so", () => {

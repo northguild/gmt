@@ -159,4 +159,28 @@ describe("utcToRinexWeek", () => {
     mockTemporalInstantFromThrow();
     expect(utcToRinexWeek("GPS", "2016-12-31T23:59:60Z")).toBeNull();
   });
+
+  it.each`
+    system   | utcString                      | why
+    ${"GPS"} | ${"+010000-01-01T00:00:00Z"}   | ${"one second past 9999-12-31T23:59:59Z: rinexWeekToUtc cannot write it back"}
+    ${"BDT"} | ${"+010000-01-01T00:00:00.5Z"} | ${"half a second into year 10000"}
+    ${"IRN"} | ${"+275760-09-13T00:00:00Z"}   | ${"Temporal's last instant"}
+  `("returns null for $system $utcString ($why)", ({ system, utcString }) => {
+    expect(utcToRinexWeek(system, utcString)).toBeNull();
+  });
+
+  it.each`
+    system   | utcString                           | why
+    ${"GPS"} | ${"9999-12-31T23:59:59Z"}           | ${"the last whole second of year 9999"}
+    ${"BDT"} | ${"9999-12-31T23:59:59.999999999Z"} | ${"the last nanosecond of year 9999"}
+  `(
+    "round-trips $system $utcString through rinexWeekToUtc ($why)",
+    ({ system, utcString }) => {
+      const week = utcToRinexWeek(system, utcString);
+      expect(week).not.toBeNull();
+      expect(rinexWeekToUtc(system, week!.week, week!.timeOfWeekSeconds)).toBe(
+        utcString,
+      );
+    },
+  );
 });

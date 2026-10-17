@@ -105,15 +105,11 @@ describe("rowDeparture", () => {
 
 describe("classify", () => {
   it("once, for a London time that happens only once (V91)", () => {
-    expect(classify("2024-10-27T00:30:00", "Europe/London", lib)).toBe(
-      "once",
-    );
+    expect(classify("2024-10-27T00:30:00", "Europe/London", lib)).toBe("once");
   });
 
   it("twice, for London's fall-back 01:30 (V89)", () => {
-    expect(classify("2024-10-27T01:30:00", "Europe/London", lib)).toBe(
-      "twice",
-    );
+    expect(classify("2024-10-27T01:30:00", "Europe/London", lib)).toBe("twice");
   });
 
   it("skipped, for London's spring-forward 02:30 (V90)", () => {
@@ -701,16 +697,10 @@ describe("handleValueText and tagText", () => {
   it("formats a minute and an arrival chip", () => {
     expect(hhmmOfMinute(90)).toBe("01:30");
     expect(
-      arrivalChipText(
-        "2024-10-27T01:30:00+01:00[Europe/London]",
-        "2024-10-27",
-      ),
+      arrivalChipText("2024-10-27T01:30:00+01:00[Europe/London]", "2024-10-27"),
     ).toBe("01:30 +01:00");
     expect(
-      arrivalChipText(
-        "2024-10-28T00:30:00+00:00[Europe/London]",
-        "2024-10-27",
-      ),
+      arrivalChipText("2024-10-28T00:30:00+00:00[Europe/London]", "2024-10-27"),
     ).toBe("00:30 +00:00 10-28");
   });
 });
@@ -964,7 +954,9 @@ describe("chartSummary", () => {
     const text = chartSummary(
       chartLayout(stateOf(preset("spring-forward")), lib)!,
     );
-    expect(text).toContain("Two clocks for 2024-03-31 in Europe/London. 01:00 to 02:00 never shows on the clock. Row 1 prints 00:30 and leaves at 2024-03-31T00:30:00+00:00[Europe/London], arriving 2024-03-31T02:30:00+01:00[Europe/London]. Row 2 prints 01:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London]. Row 3 prints 02:30 and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London].");
+    expect(text).toContain(
+      "Two clocks for 2024-03-31 in Europe/London. 01:00 to 02:00 never shows on the clock. Row 1 prints 00:30 and leaves at 2024-03-31T00:30:00+00:00[Europe/London], arriving 2024-03-31T02:30:00+01:00[Europe/London]. Row 2 prints 01:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London]. Row 3 prints 02:30 and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London].",
+    );
     expect(text).toContain(
       "Row 2 prints 01:30, which never shows on the clock; it is read as the later instant and leaves at 2024-03-31T02:30:00+01:00[Europe/London], arriving 2024-03-31T03:30:00+01:00[Europe/London].",
     );

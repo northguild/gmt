@@ -130,8 +130,8 @@ The spy also proves the clock is read once per call and never for a numeric era 
 | `gnssWeekToUtc("GPS-LNAV", 906, 17, { notBefore: "2016-01-01T00:00:00Z" })` | `"2016-12-31T23:59:60Z"` (an inserted second) |
 | `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "1980-01-06T00:00:00Z" })` | `"1981-12-05T23:59:59Z"` (pivot at the epoch: era 0) |
 | `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "1980-01-06T00:00:00Z" })` | `"1980-01-06T00:00:00Z"` |
-| `gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" })` | `""` (pivot before Galileo's epoch) |
-| `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "1979-12-31T00:00:00Z" })` | `""` (pivot before the GPS epoch) |
+| `gnssWeekToUtc("GAL", 100, 0, { notBefore: "1999-01-01T00:00:00Z" })` | `"2001-07-21T23:59:47Z"` (pivot before Galileo's epoch: era 0) |
+| `gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore: "1979-12-31T00:00:00Z" })` | `"1981-12-05T23:59:59Z"` (pivot before the GPS epoch: era 0) |
 | `gnssWeekToUtc("GPS-LNAV", 0, 0, { notBefore: "+275760-09-01T00:00:00Z" })` | `""` (result beyond Temporal's instant range) |
 | `notBefore`: `"2019-04-07"` (date only), `"2019-04-07T00:00:00"` (no offset), `"2017-12-31T23:59:60Z"` (unlisted second 60), `123`, missing (`{}`), `null` | `""` |
 | `{ notBefore: "2019-01-01T00:00:00Z", extra: 1 }` | same as without `extra` |

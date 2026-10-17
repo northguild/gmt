@@ -47,7 +47,7 @@ import {
   LADDER,
   LADDER_NONE_NOTE,
   LADDER_NO_SIGNAL,
-  BEFORE_FIRST_INSTANT_NOTE,
+  FOOTNOTES_RESERVED,
   SENTENCES,
   PLATE_NO_SIGNAL,
   offReserve,
@@ -116,10 +116,8 @@ const OUTPUT_SIZER = Array.from(
   () => "2024-01-01T00:00:37 TAI",
 ).join("\n");
 
-/** The longest footnote: every clock without a reading. */
-const FOOTNOTE_SIZERS = [
-  `GPS, GAL, BDT, QZS, GLO, IRN: ${BEFORE_FIRST_INSTANT_NOTE}.`,
-];
+/** The longest footnote the table can show, reserved so it never grows. */
+const FOOTNOTE_SIZERS = [...FOOTNOTES_RESERVED];
 
 const TABLE_COLUMNS = ["Clock", "Reading", "Ahead of UTC"] as const;
 
@@ -214,8 +212,9 @@ function ladderHtml(): string {
     `</div>` +
     `<span class="gmt-clad-nosignal" data-role="ladder-sentinel" hidden>${LADDER_NO_SIGNAL}</span>` +
     `<div class="gmt-clad-off" data-role="ladder-off" data-empty hidden><p class="gmt-clad-off-title">No place on the scale</p></div>` +
-    `<ul class="gmt-gnss-visually-hidden" data-role="bar-list"></ul>` +
-    `</div>`
+    `</div>` +
+    // Outside the role="img" element, so a screen reader can reach the list.
+    `<ul class="gmt-gnss-visually-hidden" data-role="bar-list"></ul>`
   );
 }
 

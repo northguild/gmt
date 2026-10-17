@@ -118,7 +118,12 @@ export function bucketRange(
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
     if (
-      certainlyTouchesMoreBuckets(startZoned, endZoned, resolvedUnit, MAX_BUCKETS)
+      certainlyTouchesMoreBuckets(
+        startZoned,
+        endZoned,
+        resolvedUnit,
+        MAX_BUCKETS,
+      )
     )
       return [];
 

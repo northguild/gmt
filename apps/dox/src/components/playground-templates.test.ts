@@ -134,11 +134,17 @@ describe("gnssWeekToUtc, a union of string literals and an open type", () => {
     corpus.find((e) => e.name === "gnssWeekToUtc" && e.kind === "function")
       ?.examples ?? [];
   const argsOf = (call: string) => parseCallArgs(call).map((a) => a.trim());
-  /** The first example for a counter whose result is an instant. */
+  /**
+   * The first example for a counter whose result is an instant and whose week and time of week
+   * are number literals: a form field holds a literal, not an expression such as `50399 * 12`.
+   */
   const exampleFor = (counter: string) =>
     examples.find(
       (e) =>
         argsOf(e.call)[0] === JSON.stringify(counter) &&
+        argsOf(e.call)
+          .slice(1, 3)
+          .every((a) => /^-?\d+(\.\d+)?$/.test(a)) &&
         e.result !== '""' &&
         !e.result.startsWith('"" '),
     );

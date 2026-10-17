@@ -387,6 +387,9 @@ describe("the ladder", () => {
       "GPS, GAL, QZS and IRN 18 s ahead of UTC",
     );
     expect(q(root, "bar-list").querySelectorAll("li")).toHaveLength(8);
+    // The list sits beside the drawing, not inside the role="img" element.
+    expect(drawing.contains(q(root, "bar-list"))).toBe(false);
+    expect(q(root, "bar-list").closest('[role="img"]')).toBeNull();
     expect(
       drawing.querySelectorAll("a, button, input, select, [tabindex]"),
     ).toHaveLength(0);

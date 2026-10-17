@@ -4,6 +4,7 @@ import {
   CUSTOM_PRESET_ID,
   GNSS_PRESETS,
   GNSS_SENTENCES,
+  LANE_WINDOW,
   SECONDS_PER_WEEK,
   firstRinexWeek,
   isSeeded,
@@ -241,7 +242,7 @@ describe("a call with no answer says why, in one sentence", () => {
     expect(r.failure).toBe(GNSS_SENTENCES.pivot);
   });
 
-  it("a date the era counts from that is before the counter's first week", () => {
+  it("a date the era counts from before the counter's first week reads era 0", () => {
     const r = read(
       withState("not-before-2020", {
         counter: "GAL",
@@ -250,10 +251,22 @@ describe("a call with no answer says why, in one sentence", () => {
         pivot: "1990-01-01T00:00:00Z",
       }),
     );
-    expect(r.status).toBe("sentinel");
-    expect(r.failure).toBe(
-      "The date the era counts from is before the counter's first week, which starts at 1999-08-21T23:59:47Z.",
+    expect(r.status).toBe("ok");
+    expect(r.utc).toBe("1999-11-01T00:00:05Z");
+    expect(r.lanes.find((l) => l.chosen)?.label).toBe("era 0");
+  });
+
+  it("never blames a pre-epoch date for a time of week that rounds up", () => {
+    const r = read(
+      withState("not-before-2020", {
+        counter: "GAL",
+        system: "GAL",
+        week: "10",
+        timeOfWeekSeconds: "604799.9999999999",
+        pivot: "1990-01-01T00:00:00Z",
+      }),
     );
+    expect(r.failure).toBe(GNSS_SENTENCES.towRounds);
   });
 
   it("a RINEX week before the system's first week", () => {
@@ -415,5 +428,115 @@ describe("seed and permalink", () => {
     expect(isSeeded({})).toBe(false);
     expect(isSeeded({ unrelated: "1" })).toBe(false);
     expect(isSeeded({ week: "1" })).toBe(true);
+  });
+});
+
+describe("the era lanes always hold the reading's era", () => {
+  const AFTER_THIRD = "2038-12-01T00:00:00Z";
+  const at = (state: GnssDecoderState, now: string) =>
+    readGnss(lib, state, now);
+
+  it("marks the reading on a lane when it sits in era 4", () => {
+    const r = at(
+      withState("lnav-2024", { week: "0", timeOfWeekSeconds: "0", era: "4" }),
+      NOW,
+    );
+    expect(r.lanes.length).toBeLessThanOrEqual(LANE_WINDOW);
+    expect(r.lanes.filter((l) => l.chosen).map((l) => l.label)).toEqual([
+      "era 4",
+    ]);
+  });
+
+  it("draws the newest era once today is in era 3", () => {
+    const r = at(withState("lnav-2024", { era: "4" }), AFTER_THIRD);
+    expect(r.lanes.length).toBeLessThanOrEqual(LANE_WINDOW);
+    expect(r.lanes.filter((l) => l.chosen)).toHaveLength(1);
+    expect(r.lanes.some((l) => l.today !== null)).toBe(true);
+  });
+
+  it("never draws more lanes than the frame reserves, for any era", () => {
+    for (const now of [NOW, AFTER_THIRD, "2100-01-01T00:00:00Z"]) {
+      for (const era of ["0", "1", "2", "3", "4", "5", "9"]) {
+        const r = at(withState("lnav-2024", { era }), now);
+        if (r.status !== "ok") continue;
+        expect(r.lanes.length, `${now} era ${era}`).toBeLessThanOrEqual(
+          LANE_WINDOW,
+        );
+        expect(
+          r.lanes.filter((l) => l.chosen).length,
+          `${now} era ${era}`,
+        ).toBe(1);
+      }
+    }
+  });
+
+  it("flags a gap only where the eras are not consecutive", () => {
+    const r = at(withState("lnav-2024", { era: "9" }), NOW);
+    expect(r.lanes.map((l) => l.gapBefore)).toEqual(
+      r.lanes.map((l, i) =>
+        i === 0
+          ? false
+          : Number(l.label.slice(4)) !==
+            Number(r.lanes[i - 1]!.label.slice(4)) + 1,
+      ),
+    );
+  });
+});
+
+describe("a time of week that rounds up to the next week", () => {
+  it("does not say the reading falls after the year 9999", () => {
+    const r = read(
+      withState("lnav-2024", { timeOfWeekSeconds: "604799.9999999999" }),
+    );
+    expect(r.status).toBe("sentinel");
+    expect(r.failure).not.toContain("9999");
+    expect(r.failure).toContain("nanosecond");
+  });
+
+  it("still reads the last representable nanosecond", () => {
+    expect(
+      read(withState("lnav-2024", { timeOfWeekSeconds: "604799.999999999" }))
+        .status,
+    ).toBe("ok");
+  });
+
+  it("says the same for a RINEX week", () => {
+    const r = read(
+      withState("rinex-navic", { timeOfWeekSeconds: "604799.9999999999" }),
+    );
+    expect(r.failure).not.toContain("9999");
+  });
+});
+
+describe("UTC mode reads an instant the way the library does", () => {
+  it("asks for an offset before it asks about a leap second", () => {
+    const r = read(withState("utc-2024", { utc: "2016-12-31T23:59:60" }));
+    expect(r.status).toBe("sentinel");
+    expect(r.failure).toBe(GNSS_SENTENCES.badInstant);
+  });
+
+  it("still refuses second 60 on a day with no leap second", () => {
+    const r = read(withState("utc-2024", { utc: "2024-06-30T23:59:60Z" }));
+    expect(r.failure).toBe(GNSS_SENTENCES.noLeap);
+  });
+
+  it("keeps the lead over UTC for an offset input", () => {
+    const z = read(
+      withState("utc-2024", {
+        counter: "GPS-LNAV",
+        utc: "2023-12-31T23:00:00Z",
+      }),
+    );
+    const off = read(
+      withState("utc-2024", {
+        counter: "GPS-LNAV",
+        utc: "2024-01-01T00:00:00+01:00",
+      }),
+    );
+    expect(off.status).toBe("ok");
+    expect(off.plates.map((p) => p.lines)).toEqual(
+      z.plates.map((p) => p.lines),
+    );
+    expect(off.plates.flatMap((p) => p.lines).join(" ")).toContain("18");
   });
 });

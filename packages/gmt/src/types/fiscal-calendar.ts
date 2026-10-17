@@ -48,7 +48,10 @@ export interface FiscalCalendar {
    * The year-end rule, stated as one ISO date: fiscal years end on this date's **weekday**,
    * on the occurrence nearest this date's **month and day**. NRF (US) adds a 53rd week when
    * "there are four or more days left in January", which is the Saturday nearest
-   * January 31: `"2026-01-31"`.
+   * January 31: `"2026-01-31"`. One rule covers one run of years: ONS (UK) trading periods
+   * end on the Saturday nearest December 31 (`"2022-12-31"`) from 2004, but when December 31
+   * fell on a Tuesday before then, on the Saturday after it (1997-01-04). Years before 2004
+   * need a second `FiscalCalendar`.
    */
   yearEndsOn: string;
   /** The period a 53rd week is added to. */

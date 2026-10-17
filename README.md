@@ -4,14 +4,14 @@
 
 [Docs](https://gmt-dox.northguild.workers.dev/) · [API reference](https://gmt-dox.northguild.workers.dev/reference/) · [Tools](https://gmt-dox.northguild.workers.dev/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
-- **60,923 tests, run 1,827,690 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+- **60,972 tests, run 1,829,160 times in CI.** Every test runs in 10 time zones on 3 Node versions.
 - **55× the CI test runs** of the six libraries below, combined.
 - **659 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 | Library                   | Tests      | CI test runs  | Built on  |
 | ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **60,923** | **1,827,690** | Temporal  |
+| **`@northguild/gmt`**     | **60,972** | **1,829,160** | Temporal  |
 | Spacetime                 | 6,086      | 12,172        | `Date`    |
 | Moment.js                 | 3,901      | 11,703        | `Date`    |
 | date-fns                  | 3,213      | 3,213         | `Date`    |

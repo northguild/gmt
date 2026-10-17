@@ -23,12 +23,22 @@ import {
   BEFORE_1972_TEXT,
   NOT_INSERTED_TEXT,
   NOT_INSTANT_TEXT,
+  NO_OFFSET_TEXT,
   drawMs,
 } from "./leap-second-timeline";
 import type { TimescaleLib } from "./timescale-lib";
-import { insertionsBetween, secondsText } from "./timescale-widgets";
+import {
+  insertionsBetween,
+  lacksOffset,
+  secondsText,
+} from "./timescale-widgets";
 
-export { BEFORE_1972_TEXT, NOT_INSERTED_TEXT, NOT_INSTANT_TEXT };
+export {
+  BEFORE_1972_TEXT,
+  NOT_INSERTED_TEXT,
+  NOT_INSTANT_TEXT,
+  NO_OFFSET_TEXT,
+};
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -188,6 +198,7 @@ export interface ElapsedRead {
 /** Why the clock difference gives no value: a second 60 or a bad instant. */
 function clockReason(lib: TimescaleLib, state: ElapsedState): string {
   const ends = [state.start, state.end];
+  if (ends.some((x) => lacksOffset(lib, x))) return NO_OFFSET_TEXT;
   if (ends.some((x) => !lib.hasSecond60(x) && !lib.isValidInstant(x))) {
     return NOT_INSTANT_TEXT;
   }
@@ -204,6 +215,7 @@ function taiReason(
 ): string {
   const bad = [state.start, state.end].find((_, i) => tai[i] === "");
   if (bad === undefined) return NOT_INSTANT_TEXT;
+  if (lacksOffset(lib, bad)) return NO_OFFSET_TEXT;
   if (lib.hasSecond60(bad) && !lib.isLeapSecond(bad)) return NOT_INSERTED_TEXT;
   if (lib.isValidInstant(bad)) return BEFORE_1972_TEXT;
   return NOT_INSTANT_TEXT;

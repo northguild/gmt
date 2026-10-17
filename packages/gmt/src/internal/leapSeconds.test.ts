@@ -76,6 +76,50 @@ describe("LEAP_SECOND_STEPS (IERS Leap_Second.dat, Bulletin C 72)", () => {
     });
   });
 
+  // IERS Earth Orientation Center, Leap_Second.dat (Bulletin C 72), typed here as literals: MJD
+  // and TAI − UTC. A table that moved a row, or changed an offset, still agreed with itself in
+  // every other test; this one does not.
+  it.each`
+    mjd      | date            | offset
+    ${41317} | ${"1972-01-01"} | ${10}
+    ${41499} | ${"1972-07-01"} | ${11}
+    ${41683} | ${"1973-01-01"} | ${12}
+    ${42048} | ${"1974-01-01"} | ${13}
+    ${42413} | ${"1975-01-01"} | ${14}
+    ${42778} | ${"1976-01-01"} | ${15}
+    ${43144} | ${"1977-01-01"} | ${16}
+    ${43509} | ${"1978-01-01"} | ${17}
+    ${43874} | ${"1979-01-01"} | ${18}
+    ${44239} | ${"1980-01-01"} | ${19}
+    ${44786} | ${"1981-07-01"} | ${20}
+    ${45151} | ${"1982-07-01"} | ${21}
+    ${45516} | ${"1983-07-01"} | ${22}
+    ${46247} | ${"1985-07-01"} | ${23}
+    ${47161} | ${"1988-01-01"} | ${24}
+    ${47892} | ${"1990-01-01"} | ${25}
+    ${48257} | ${"1991-01-01"} | ${26}
+    ${48804} | ${"1992-07-01"} | ${27}
+    ${49169} | ${"1993-07-01"} | ${28}
+    ${49534} | ${"1994-07-01"} | ${29}
+    ${50083} | ${"1996-01-01"} | ${30}
+    ${50630} | ${"1997-07-01"} | ${31}
+    ${51179} | ${"1999-01-01"} | ${32}
+    ${53736} | ${"2006-01-01"} | ${33}
+    ${54832} | ${"2009-01-01"} | ${34}
+    ${56109} | ${"2012-07-01"} | ${35}
+    ${57204} | ${"2015-07-01"} | ${36}
+    ${57754} | ${"2017-01-01"} | ${37}
+  `(
+    "has the IERS row MJD $mjd ($date) at TAI − UTC $offset s",
+    ({ mjd, offset }) => {
+      // MJD 40587 is 1970-01-01 (the Unix epoch); a day is 86 400 s.
+      const at = BigInt(mjd - 40587) * 86_400_000_000_000n;
+      const index = LEAP_SECOND_STEPS.at.indexOf(at);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(LEAP_SECOND_STEPS.taiMinusUtc[index]).toBe(BigInt(offset));
+    },
+  );
+
   it("starts every row at 00:00:00 UTC on a month's first day (TF.460-6 Annex 1 §2.1-2.2)", () => {
     for (const at of LEAP_SECOND_STEPS.at) {
       const wall = Temporal.Instant.fromEpochNanoseconds(at)

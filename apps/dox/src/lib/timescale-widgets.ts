@@ -49,6 +49,23 @@ export function insertions(
 }
 
 /**
+ * True when `text` is a well-formed instant that only lacks its offset: it is
+ * not an instant as typed, but is one with `Z` added. A second 60 is read as
+ * second 59 for the test (reading the label, not arithmetic), because the
+ * library refuses second 60 in `isValidInstant`. Asked before any question
+ * about a leap second, so a missing offset is named as the problem rather than
+ * read as "no leap second that day".
+ */
+export function lacksOffset(
+  lib: Pick<TimescaleLib, "hasSecond60" | "isValidInstant">,
+  text: string,
+): boolean {
+  const stamp = text.trim();
+  const probe = lib.hasSecond60(stamp) ? stamp.replace(":60", ":59") : stamp;
+  return !lib.isValidInstant(probe) && lib.isValidInstant(`${probe}Z`);
+}
+
+/**
  * The first instant on the new offset after an insertion:
  * `addUtc(<the insertion with second 59>, { seconds: 1 })`. Rewriting `60` as
  * `59` is reading the label, not arithmetic; the library does the adding.

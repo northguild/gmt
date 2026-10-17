@@ -39,7 +39,7 @@ Pick a counter and how the firmware counts, then check today or a date. The tool
 
 **The rolling rule needs a clock.** Firmware that picks the pass nearest to the device's own clock is right as long as that clock is. Only a live check can say what it reads, so the tool shows it only when you check today.
 
-**When the answer is `NO SIGNAL`.** The library gives `""` or `null` for a build date or a check date that is not an ISO 8601 instant, for an era that is not a whole number, and for a build date before the counter's first week. The tool says which in one sentence. A blank field is not an error. It waits for you to type.
+**When the answer is `NO SIGNAL`.** The library gives `""` or `null` for a build date or a check date that is not an ISO 8601 instant, for an era that is not a whole number, and for a check date before the counter's first week. A build date before the counter's first week is not an error: the tool reads it as era 0, from the counter's first pass. The tool says which in one sentence. A blank field is not an error. It waits for you to type.
 
 ```ts
 utcToGnssWeek("IRN-LNAV", "2026-10-15T00:00:00Z");

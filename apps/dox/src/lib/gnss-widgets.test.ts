@@ -14,6 +14,7 @@ import { GMT_MODULES } from "./gmt-modules";
 import {
   BEFORE_FIRST_WEEK_NOTE,
   NO_RESULT_TEXT,
+  asZ,
   beforeFirstWeekText,
   counterSystem,
   durationSecondsText,
@@ -50,6 +51,15 @@ describe("counterSystem", () => {
     for (const system of RINEX_WEEK_SYSTEMS) {
       expect(GNSS_WEEK_COUNTERS.map(counterSystem)).toContain(system);
     }
+  });
+});
+
+describe("asZ", () => {
+  it("rewrites an offset to Z with the library, and leaves Z and the unreadable alone", () => {
+    expect(asZ(lib, "2040-01-01T00:00:00+01:00")).toBe("2039-12-31T23:00:00Z");
+    expect(asZ(lib, "2040-01-01T00:00:00+00:00")).toBe("2040-01-01T00:00:00Z");
+    expect(asZ(lib, "2040-01-01T00:00:00Z")).toBe("2040-01-01T00:00:00Z");
+    expect(asZ(lib, "garbage")).toBe("garbage");
   });
 });
 
@@ -107,6 +117,18 @@ describe("leadOverUtc", () => {
     expect(leadOverUtc(lib, utc, label)).toEqual({
       kind: "lead",
       duration: lib.diffUtcAsDuration(utc, "2024-01-01T00:00:04Z", "seconds"),
+    });
+  });
+
+  it("reads an instant written with an offset as the same instant written with Z", () => {
+    const label = lib.utcToGnss("GPS", "2023-12-31T23:00:00Z");
+    expect(leadOverUtc(lib, "2024-01-01T00:00:00+01:00", label)).toEqual({
+      kind: "lead",
+      duration: "PT18S",
+    });
+    expect(leadOverUtc(lib, "2023-12-31T23:00:00+00:00", label)).toEqual({
+      kind: "lead",
+      duration: "PT18S",
     });
   });
 

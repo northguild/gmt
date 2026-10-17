@@ -8,7 +8,7 @@
  * `timescale/convert`; `isLeapSecond` in `timescale/validate`; `hasSecond60` in
  * `plain/validate`; `isValidInstant` in `precision/validate`;
  * `diffUtcAsDuration`, `addUtc` and `startOfUtc` in `utc/calculate`;
- * `areUtcEqual` in `utc/compare`. Each name is picked from its module and
+ * `areUtcEqual` in `utc/compare`; `toOffsetInstant` in `instant/convert`. Each name is picked from its module and
  * nothing else is read.
  *
  * A heavy module: it is never imported statically from the chat island. Only
@@ -69,6 +69,7 @@ export interface GnssLib {
   addUtc(value: string, units: Record<string, number>): string;
   startOfUtc(value: string, unit: string): string;
   areUtcEqual(first: string, second: string): boolean;
+  toOffsetInstant(value: string): { instant: string; offset: string } | null;
 }
 
 const CONVERT_NAMES = [
@@ -91,6 +92,7 @@ const UTC_CALCULATE_NAMES = [
   "startOfUtc",
 ] as const;
 const UTC_COMPARE_NAMES = ["areUtcEqual"] as const;
+const INSTANT_CONVERT_NAMES = ["toOffsetInstant"] as const;
 
 /** Reads each name from a module, and fails loudly on a name it lacks. */
 function pick(module: Record<string, unknown>, names: readonly string[]) {
@@ -115,6 +117,7 @@ export async function loadGnssLib(): Promise<GnssLib> {
       precisionValidate,
       utcCalculate,
       utcCompare,
+      instantConvert,
     ] = await Promise.all([
       GMT_MODULES["gnss/convert"](),
       GMT_MODULES["timescale/calculate"](),
@@ -124,6 +127,7 @@ export async function loadGnssLib(): Promise<GnssLib> {
       GMT_MODULES["precision/validate"](),
       GMT_MODULES["utc/calculate"](),
       GMT_MODULES["utc/compare"](),
+      GMT_MODULES["instant/convert"](),
     ]);
     return {
       ...pick(convert, CONVERT_NAMES),
@@ -134,6 +138,7 @@ export async function loadGnssLib(): Promise<GnssLib> {
       ...pick(precisionValidate, PRECISION_VALIDATE_NAMES),
       ...pick(utcCalculate, UTC_CALCULATE_NAMES),
       ...pick(utcCompare, UTC_COMPARE_NAMES),
+      ...pick(instantConvert, INSTANT_CONVERT_NAMES),
     } as unknown as GnssLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

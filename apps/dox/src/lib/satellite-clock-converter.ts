@@ -33,7 +33,12 @@ import {
   leadOverUtc,
 } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
-import { INTEGER_UTC_FROM, insertions, secondAfter } from "./timescale-widgets";
+import {
+  INTEGER_UTC_FROM,
+  insertions,
+  lacksOffset,
+  secondAfter,
+} from "./timescale-widgets";
 import type { ToolHandoff } from "./widget-permalink";
 
 export { NO_RESULT_TEXT };
@@ -56,6 +61,24 @@ export const INSIDE_SECOND_TEXT = "inside an inserted second";
 
 /** What a clock's footnote says when the library gave it no reading. */
 export const BEFORE_FIRST_INSTANT_NOTE = "before this system's first instant";
+
+/** The footnote for an instant before 1972, when UTC and TAI differed by a
+ *  fraction of a second: TAI and every satellite clock have no reading. */
+export const BEFORE_1972_NOTE =
+  "UTC has differed from TAI by whole seconds only since 1972-01-01, so TAI and the satellite clocks have no reading.";
+
+/** The "Next change" plate for an instant before 1972. The library gives no
+ *  next inserted second there, but that is not "none after this instant". */
+export const BEFORE_1972_PLATE = {
+  value: "before 1972",
+  line: "no inserted seconds yet",
+} as const;
+
+/** Every footnote the table can show: the page reserves room for the longest. */
+export const FOOTNOTES_RESERVED: readonly string[] = [
+  BEFORE_1972_NOTE,
+  `TAI, GPS, GAL, BDT, QZS, GLO, IRN: ${BEFORE_FIRST_INSTANT_NOTE}.`,
+];
 
 /** The chip beside UTC: it is the line the others are measured from. */
 export const REFERENCE_TEXT = "the reference";
@@ -314,6 +337,7 @@ export function platesOf(
   } | null,
 ): PlateSpec[] {
   const none = parts === null;
+  const before1972 = !none && parts.taiMinusUtc === null;
   return [
     {
       role: "hero-utc",
@@ -342,15 +366,19 @@ export function platesOf(
       caption: "Next change",
       value: none
         ? null
-        : parts.next === ""
-          ? "none after this instant"
-          : parts.next,
+        : before1972
+          ? BEFORE_1972_PLATE.value
+          : parts.next === ""
+            ? "none after this instant"
+            : parts.next,
       lines: [
         none
           ? ""
-          : parts.next === ""
-            ? "these gaps stay as they are"
-            : "the next inserted second",
+          : before1972
+            ? BEFORE_1972_PLATE.line
+            : parts.next === ""
+              ? "these gaps stay as they are"
+              : "the next inserted second",
         "",
       ],
       quiet: true,
@@ -434,6 +462,12 @@ export function readClocks(lib: GnssLib, state: ClockState): ClockRead {
       return blank(state, "sentinel", SENTENCES.unknownToken, null, calls);
     }
     clock = parts.token;
+  }
+
+  // A UTC value without an offset is asked about first, before any question
+  // about a leap second: the missing offset is the problem.
+  if (clock === "UTC" && lacksOffset(lib, value)) {
+    return blank(state, "sentinel", SENTENCES.notAnInstant, clock, calls);
   }
 
   // GLONASS time keeps UTC's hours, so a second 60 on it is read as UTC's.
@@ -533,7 +567,9 @@ export function readClocks(lib: GnssLib, state: ClockState): ClockRead {
   const footnote =
     missing.length === 0
       ? ""
-      : `${missing.join(", ")}: ${BEFORE_FIRST_INSTANT_NOTE}.`;
+      : taiMinusUtc === null
+        ? BEFORE_1972_NOTE
+        : `${missing.join(", ")}: ${BEFORE_FIRST_INSTANT_NOTE}.`;
 
   return {
     state,
@@ -724,7 +760,9 @@ export function ladderRungs(read: ClockRead): {
 export function offReserve(lib: GnssLib, positions: readonly string[]): number {
   return Math.max(
     0,
-    ...positions.map((value) => ladderRungs(readClocks(lib, { value })).off.length),
+    ...positions.map(
+      (value) => ladderRungs(readClocks(lib, { value })).off.length,
+    ),
   );
 }
 
