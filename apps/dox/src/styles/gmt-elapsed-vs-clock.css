@@ -140,6 +140,12 @@
     gap: 0;
   }
 
+  /* The caption has the full width to itself here, so it wraps rather than
+     run past the plate. */
+  .gmt-elapsed-vs-clock .gmt-evc-eq .gmt-punct-hero-cap {
+    white-space: normal;
+  }
+
   .gmt-elapsed-vs-clock .gmt-evc-figure[data-compressed] .gmt-evc-ends-mid {
     display: none;
   }

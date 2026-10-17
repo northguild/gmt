@@ -90,7 +90,9 @@
   font-family: var(--gmt-font-mono);
   font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  /* Plain text wraps between words; an instant's date and time halves stay
+     whole through their `.gmt-gnss-nb` spans. */
+  white-space: normal;
   overflow-wrap: normal;
 }
 
@@ -542,5 +544,19 @@
        fits the column in every engine, so a reading never wraps and a row
        holds one height whether it has a reading or none. */
     font-size: 0.75rem;
+  }
+}
+
+/* At the narrowest plate a value or a caption line can be wider than the
+   plate, so each wraps and holds two lines' height, whatever its text, so
+   nothing below it moves as the input changes. */
+@container gmt-gnss-frame (max-width: 18rem) {
+  .gmt-satellite-clock-converter .gmt-punct-hero-sub {
+    white-space: normal;
+  }
+
+  .gmt-satellite-clock-converter .gmt-punct-hero-line,
+  .gmt-satellite-clock-converter .gmt-punct-hero-value {
+    min-block-size: 2lh;
   }
 }

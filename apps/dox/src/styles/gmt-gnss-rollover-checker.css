@@ -704,36 +704,16 @@
   overflow-wrap: anywhere;
 }
 
-/* ---- Motion: only where the reader allows it, and subtle ---- */
-
-@media (prefers-reduced-motion: no-preference) {
-  .gmt-fuse-spark svg {
-    animation: gmt-fuse-spark 2.4s ease-in-out infinite alternate;
-    transform-origin: center;
+/* At the narrowest plate a caption line can be wider than the plate, so each
+   line wraps and holds two lines' height, whatever its text, so nothing below
+   it moves as the date changes. */
+@container gmt-gnss-frame (max-width: 18rem) {
+  .gmt-gnss-rollover-checker .gmt-punct-hero-sub {
+    white-space: normal;
   }
 
-  .gmt-fuse-burn {
-    animation: gmt-fuse-burn 1.2s linear infinite;
-  }
-
-  @keyframes gmt-fuse-spark {
-    from {
-      scale: 0.88;
-      rotate: -8deg;
-    }
-    to {
-      scale: 1.1;
-      rotate: 8deg;
-    }
-  }
-
-  @keyframes gmt-fuse-burn {
-    from {
-      background-position-x: 0;
-    }
-    to {
-      background-position-x: 8px;
-    }
+  .gmt-gnss-rollover-checker .gmt-punct-hero-line {
+    min-block-size: 2lh;
   }
 }
 
