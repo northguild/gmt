@@ -38,11 +38,7 @@ import {
 } from "./billing-deadlines";
 import { codeFrameHtml } from "./code-frame";
 import { holdHtml, textSizers } from "./edi-picture";
-import {
-  descriptionHoldHtml,
-  plateHtml,
-  platesHtml,
-} from "./ledger-widgets";
+import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { GMT_MODULES } from "./gmt-modules";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {

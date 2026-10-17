@@ -402,7 +402,9 @@ describe("every preset, against the real library", () => {
 
   it("opens on the first preset", async () => {
     const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("sao-paulo-evening");
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
+      "sao-paulo-evening",
+    );
     expect(text(root, "bl-output")).toBe(EXPECTED["sao-paulo-evening"]!.output);
     expect(text(root, "preset-description")).toBe(
       BL_DATE_PRESETS[0]!.description,
@@ -542,7 +544,9 @@ describe("the slider", () => {
 
   it("makes the state custom and holds the description's height", async () => {
     const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("sao-paulo-evening");
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
+      "sao-paulo-evening",
+    );
     slide(root, 140);
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
     expect(text(root, "preset-description")).toBe("");

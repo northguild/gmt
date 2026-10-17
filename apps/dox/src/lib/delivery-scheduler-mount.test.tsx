@@ -328,16 +328,12 @@ describe("mountDeliveryScheduler", () => {
     ]);
     expect(q(root, "call-leg-transit").textContent).toContain("transitTime(");
     expect(q(root, "call-leg-transit").textContent).toContain('"PT45H"');
-    expect(q(root, "call-leg-eta").textContent).toContain(
-      '"Europe/London"',
-    );
+    expect(q(root, "call-leg-eta").textContent).toContain('"Europe/London"');
     /* The arrival the first call returns is the instant the second is given. */
     const arrival = q(root, "leg-transit-output").textContent!;
     expect(arrival).not.toBe("NO SIGNAL");
     expect(q(root, "call-leg-eta").textContent).toContain(arrival);
-    expect(q(root, "leg-eta-output").textContent).toContain(
-      "[Europe/London]",
-    );
+    expect(q(root, "leg-eta-output").textContent).toContain("[Europe/London]");
 
     pick.value = "1";
     pick.dispatchEvent(new Event("change", { bubbles: true }));
