@@ -102,6 +102,18 @@
   }
 }
 
+/* Beside the ladder the plates have a column of 16 to 21rem, too narrow for two
+   side by side: they stack, so no instant is cut off at the frame's edge. */
+@container gmt-satellite-clock-converter (min-width: 44rem) {
+  .gmt-satellite-clock-converter .gmt-punct-heroes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmt-satellite-clock-converter .gmt-punct-hero[data-role="hero-utc"] {
+    grid-column: auto;
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * The ladder
  * --------------------------------------------------------------------------- */
@@ -279,14 +291,15 @@
   margin-block-start: 0;
 }
 
-/* NO SIGNAL: amber, bracketed, centred on the stage over its resting rows. */
+/* NO SIGNAL: amber, bracketed, in a slot of its own under the stage. The slot
+   is always there (hidden, it is only invisible), so showing it moves nothing
+   and it never lies over a rung. */
 .gmt-satellite-clock-converter .gmt-clad-nosignal {
-  position: absolute;
-  inset-inline: calc(var(--clad-w, 74px) + 4px) 0;
-  inset-block-start: 50%;
-  translate: 0 -50%;
-  max-inline-size: 28rem;
+  display: block;
   box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 36rem;
+  margin-block-start: var(--gmt-space-2);
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-signal-border);
   border-radius: var(--gmt-radius-sm);
@@ -301,15 +314,12 @@
 }
 
 .gmt-satellite-clock-converter .gmt-clad-nosignal[hidden] {
-  display: none;
+  display: block;
+  visibility: hidden;
 }
 
 .gmt-satellite-clock-converter .gmt-clad-plate-lost {
   color: var(--gmt-signal-ink);
-}
-
-.gmt-satellite-clock-converter .gmt-clad-stage[data-lost] .gmt-clad-row {
-  opacity: 0.55;
 }
 
 .gmt-satellite-clock-converter .gmt-clad-key {
@@ -319,7 +329,7 @@
 .gmt-satellite-clock-converter .gmt-clad-tie {
   min-inline-size: 0;
   overflow: hidden;
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -478,4 +488,57 @@
 .gmt-satellite-clock-converter .gmt-clock-sub {
   color: var(--gmt-ice);
   font-size: 0.8125rem;
+  /* "written as 2024-01-01T00:00:37" wraps to a second line in a narrow
+     column; the second line is reserved, so a row keeps one height. */
+  min-block-size: 2lh;
+}
+
+/* The sub lines under a plate's value (the TAI line of the quiet plate) are
+   read at 7:1 on the plate's tint. */
+.gmt-satellite-clock-converter .gmt-punct-hero-sub {
+  color: var(--gmt-ice);
+}
+
+.gmt-satellite-clock-converter [data-role="moment-value"] {
+  min-inline-size: round(up, calc(20ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
+}
+
+/* Stacked rows: a cell is its label and a column of its two lines, so the lines
+   sit one under the other at a fixed place instead of side by side as flex
+   items that resize as the values arrive. */
+@container gmt-gnss-table (max-width: 34rem) {
+  /* A stacked table never scrolls sideways (its box does, if it must). WebKit
+     sizes the box from the table's scrollable overflow when the table is its
+     own scroll container, which made the box taller than its rows by an
+     amount that followed the readings. */
+  .gmt-satellite-clock-converter .gmt-gnss-table {
+    overflow: visible;
+  }
+
+  .gmt-satellite-clock-converter .gmt-gnss-table tbody :is(th, td) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: normal;
+  }
+
+  .gmt-satellite-clock-converter
+    .gmt-gnss-table
+    tbody
+    :is(th, td)[data-label]::before {
+    grid-row: 1 / span 2;
+  }
+
+  .gmt-satellite-clock-converter
+    .gmt-gnss-table
+    tbody
+    :is(th, td)
+    .gmt-clock-line {
+    grid-column: 2;
+    text-align: right;
+    /* An instant with its clock name is 23 characters; at the 12px floor it
+       fits the column in every engine, so a reading never wraps and a row
+       holds one height whether it has a reading or none. */
+    font-size: 0.75rem;
+  }
 }

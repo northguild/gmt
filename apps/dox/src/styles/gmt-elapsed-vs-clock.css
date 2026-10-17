@@ -53,6 +53,18 @@
   font-size: clamp(1.15rem, 2.4cqi, 1.5rem);
   white-space: nowrap;
   overflow-wrap: normal;
+  /* The display face has no tabular figures, so a plate reserves the widest
+     figure it prints, in em: a minus sign, ten digits and " s" is 11.6em when
+     every digit is a 4, the widest. The count is a minus sign and two digits. */
+  min-inline-size: 11.6em;
+}
+
+.gmt-elapsed-vs-clock
+  .gmt-gnss-frame
+  .gmt-evc-eq
+  [data-role="hero-count"]:not(.gmt-punct-hero--quiet)
+  .gmt-punct-hero-value {
+  min-inline-size: 2.7em;
 }
 
 @container gmt-gnss-frame (max-width: 56rem) {
@@ -84,10 +96,20 @@
     .gmt-evc-eq
     .gmt-punct-hero:not(.gmt-punct-hero--quiet)
     .gmt-punct-hero-value {
-    min-inline-size: 0;
+    /* The figure sits at the right and reserves its widest value, so its left
+       edge does not move as the digits change. */
+    min-inline-size: 11.6em;
     justify-content: flex-end;
     font-size: var(--gmt-text-lg);
     white-space: nowrap;
+  }
+
+  .gmt-elapsed-vs-clock
+    .gmt-gnss-frame
+    .gmt-evc-eq
+    [data-role="hero-count"]:not(.gmt-punct-hero--quiet)
+    .gmt-punct-hero-value {
+    min-inline-size: 2.7em;
   }
 
   .gmt-elapsed-vs-clock .gmt-evc-eq .gmt-punct-hero-cap {
@@ -471,4 +493,11 @@
   .gmt-elapsed-vs-clock .gmt-evc-nosignal {
     color: CanvasText;
   }
+}
+
+/* The range chip reserves the width of its longest text, rounded up to a whole
+   pixel, so it neither resizes nor flickers between two roundings mid-drag. */
+.gmt-elapsed-vs-clock [data-role="end-value"] {
+  min-inline-size: round(up, calc(10ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
 }

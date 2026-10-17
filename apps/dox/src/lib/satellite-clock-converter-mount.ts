@@ -24,6 +24,13 @@
  */
 import { codeFrameHtml } from "./code-frame";
 import { callResultsText, renderCalls } from "./edi-render";
+import {
+  asideSizer,
+  callSizer,
+  holdHtml,
+  outputSizer,
+  textSizers,
+} from "./edi-picture";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import { loadGnssLib, type GnssLib } from "./gnss-lib";
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
@@ -40,6 +47,8 @@ import {
   LADDER,
   LADDER_NONE_NOTE,
   LADDER_NO_SIGNAL,
+  BEFORE_FIRST_INSTANT_NOTE,
+  SENTENCES,
   PLATE_NO_SIGNAL,
   offReserve,
   MAX_VALUE_LENGTH,
@@ -91,6 +100,25 @@ import {
 export type { SatelliteClockConverterArgs } from "./satellite-clock-converter";
 
 const NBSP = "&nbsp;";
+
+/** The calls an answered reading makes: one per clock. Both the call frame and
+ *  its result hold this many lines, so they keep one height from the first paint. */
+const CALL_LINES = 10;
+
+const CALL_SIZER = Array.from(
+  { length: CALL_LINES },
+  () => 'fromGpsWeek("GPS", 2295, 345600, "2024-01-01T00:00:00Z")',
+).join("\n");
+
+const OUTPUT_SIZER = Array.from(
+  { length: CALL_LINES },
+  () => "2024-01-01T00:00:37 TAI",
+).join("\n");
+
+/** The longest footnote: every clock without a reading. */
+const FOOTNOTE_SIZERS = [
+  `GPS, GAL, BDT, QZS, GLO, IRN: ${BEFORE_FIRST_INSTANT_NOTE}.`,
+];
 
 const TABLE_COLUMNS = ["Clock", "Reading", "Ahead of UTC"] as const;
 
@@ -182,8 +210,8 @@ function ladderHtml(): string {
     `<div class="gmt-clad-stage" data-role="ladder" style="--clad-h:${layout.height}px;--clad-w:${DRAWING_WIDTH}px">` +
     ladderSvgHtml(layout) +
     CLOCK_KEYS.map((key) => ladderRowHtml(key, layout.tops[key])).join("") +
-    `<span class="gmt-clad-nosignal" data-role="ladder-sentinel" hidden>${LADDER_NO_SIGNAL}</span>` +
     `</div>` +
+    `<span class="gmt-clad-nosignal" data-role="ladder-sentinel" hidden>${LADDER_NO_SIGNAL}</span>` +
     `<div class="gmt-clad-off" data-role="ladder-off" data-empty hidden><p class="gmt-clad-off-title">No place on the scale</p></div>` +
     `<ul class="gmt-gnss-visually-hidden" data-role="bar-list"></ul>` +
     `</div>`
@@ -264,7 +292,11 @@ export function renderSatelliteClockConverterTemplate(
     LEGEND_HTML +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside" data-grow="slot"></div>` +
+    holdHtml(
+      `<div data-role="reason-aside" data-grow="slot"></div>`,
+      Object.values(SENTENCES).map((t) => asideSizer(NO_RESULT_TITLE, [t])),
+      "gmt-ledger-hold",
+    ) +
     `</div>` +
     // 3. The same instant on every clock
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
@@ -274,15 +306,27 @@ export function renderSatelliteClockConverterTemplate(
     `<thead role="rowgroup"><tr role="row">${TABLE_COLUMNS.map((c) => `<th role="columnheader">${escapeHtml(c)}</th>`).join("")}</tr></thead>` +
     `<tbody role="rowgroup" data-role="clocks-body">${CLOCK_KEYS.map(tableRowHtml).join("")}</tbody>` +
     `</table></div>` +
-    `<p class="gmt-widget-hint" data-role="footnote" data-grow="slot">${NBSP}</p>` +
+    holdHtml(
+      `<p class="gmt-widget-hint" data-role="footnote" data-grow="slot">${NBSP}</p>`,
+      textSizers("p", "gmt-widget-hint", FOOTNOTE_SIZERS),
+      "gmt-ledger-hold",
+    ) +
     `<p class="gmt-widget-hint" data-role="glo-note">${escapeHtml(GLO_NOTE)}</p>` +
     `<p class="gmt-widget-hint" data-role="irn-note">${escapeHtml(IRN_NOTE)}</p>` +
     `</div>` +
     // 4. The calls
     `<div class="gmt-widget-section">` +
     `<h4>4. What the library returns</h4>` +
-    codeFrameHtml("clocks") +
-    `<output class="gmt-widget-output" data-role="clocks-output">${NBSP}</output>` +
+    holdHtml(
+      codeFrameHtml("clocks"),
+      [callSizer(CALL_SIZER)],
+      "gmt-ledger-hold",
+    ) +
+    holdHtml(
+      `<output class="gmt-widget-output" data-role="clocks-output">${NBSP}</output>`,
+      [outputSizer("gmt-widget-output", OUTPUT_SIZER)],
+      "gmt-ledger-hold",
+    ) +
     toolLinksHtml(CLOCK_LINKS) +
     `</div>` +
     `</div>` +
@@ -407,7 +451,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       if (home && el.parentElement !== home) home.appendChild(el);
       const ok = read.status === "ok";
       const tie: ClockTie =
-        row.key === "UTC" || row.key === "TAI" ? null : ties[row.key as GnssSystem];
+        row.key === "UTC" || row.key === "TAI"
+          ? null
+          : ties[row.key as GnssSystem];
       el.style.top = parked ? "" : `${layout.tops[row.key]}px`;
       el.toggleAttribute("data-off", parked);
       if (tie === null) el.removeAttribute("data-tie");
@@ -417,8 +463,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       el.title = ok ? rowSentence(row) : "";
       el.querySelector<HTMLElement>('[data-role="bar-tie"]')!.textContent =
         tieTag(row.key, tie) || " ";
-      el.querySelector<HTMLElement>('[data-role="bar-value"]')!.textContent =
-        ok ? ladderChip(row) : " ";
+      el.querySelector<HTMLElement>('[data-role="bar-value"]')!.textContent = ok
+        ? ladderChip(row)
+        : " ";
       el.querySelector<HTMLElement>('[data-role="bar-reading"]')!.textContent =
         !ok ? " " : row.none ? LADDER_NONE_NOTE : row.reading;
     });

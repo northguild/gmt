@@ -216,14 +216,18 @@
   stroke-width: 2.5;
 }
 
+.gmt-ring-era-plate {
+  fill: var(--gmt-surface);
+}
+
+.gmt-ring-era-plate[hidden] {
+  display: none;
+}
+
 .gmt-ring-era {
-  fill: var(--gmt-ice-dim);
+  fill: var(--gmt-ice);
   font-family: var(--gmt-font-mono);
   font-size: 13px;
-  paint-order: stroke;
-  stroke: var(--gmt-surface);
-  stroke-width: 3px;
-  stroke-linejoin: round;
 }
 
 .gmt-ring-lap[data-chosen] .gmt-ring-era {
@@ -384,4 +388,39 @@
     fill: Highlight;
     filter: none;
   }
+}
+
+/* A range chip reserves the width of its longest text, rounded up to a whole
+   pixel, so it neither resizes nor flickers between two roundings mid-drag. */
+.gmt-gnss-week-decoder [data-role="week-value"] {
+  min-inline-size: round(up, calc(12ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
+}
+
+.gmt-gnss-week-decoder [data-role="tow-value"] {
+  min-inline-size: round(up, calc(9ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
+}
+
+/* The result plates hold still while the week or the time of week is dragged.
+   The display face has no tabular figures, so a plate's width would follow its
+   digits; each value reserves the width of its widest whole-second reading, in
+   the value's own em, and the rinex plate reserves its longest sub line. The
+   reserve is only for a frame wide enough to lay the plates side by side; a
+   narrow frame gives each plate the row, and the instant wraps at its T. */
+@container gmt-gnss-frame (min-width: 44rem) {
+  .gmt-gnss-week-decoder
+    .gmt-gnss-frame
+    .gmt-punct-hero[data-role="hero-utc"]
+    .gmt-punct-hero-value {
+    min-inline-size: 17.4em;
+  }
+
+  .gmt-gnss-week-decoder [data-role="hero-system"] .gmt-punct-hero-value {
+    min-inline-size: 20em;
+  }
+}
+
+.gmt-gnss-week-decoder [data-role="hero-rinex"] .gmt-punct-hero-sub {
+  min-inline-size: 22ch;
 }

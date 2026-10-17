@@ -26,6 +26,13 @@
  */
 import { Temporal } from "@js-temporal/polyfill";
 import { codeFrameHtml } from "./code-frame";
+import {
+  asideSizer,
+  callSizer,
+  holdHtml,
+  outputSizer,
+  textSizers,
+} from "./edi-picture";
 import { callResultsText, renderCalls } from "./edi-render";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import {
@@ -38,11 +45,13 @@ import {
 } from "./gnss-names";
 import { loadGnssLib, type GnssLib } from "./gnss-lib";
 import {
+  BEFORE_FIRST_WEEK_NOTE,
   CUSTOM_PRESET_ID,
   DECODER_LINKS,
   ERA_MODES,
   ERA_MODE_LABELS,
   GNSS_PRESETS,
+  GNSS_SENTENCES,
   MODE_LABELS,
   NO_RESULT_TEXT,
   decoderHandoffs,
@@ -52,6 +61,7 @@ import {
   lastWeekOf,
   matchPreset,
   permalinkOf,
+  pivotBeforeFirstWeekText,
   platesOf,
   presetState,
   readArgs,
@@ -63,7 +73,7 @@ import {
   type GnssWeekDecoderArgs,
   type Lane,
 } from "./gnss-week-decoder";
-import { counterSystem } from "./gnss-widgets";
+import { beforeFirstWeekText, counterSystem } from "./gnss-widgets";
 import { descriptionHoldHtml, plateHtml, platesHtml } from "./ledger-widgets";
 import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
@@ -88,6 +98,35 @@ export type { GnssWeekDecoderArgs } from "./gnss-week-decoder";
 /** Era lanes the frame reserves: the most any counter draws (eras 0 to today's
  *  era plus one, and one more after a gap). */
 const LANE_SLOTS = 4;
+
+const NBSP = "&nbsp;";
+
+/** The most lines the call frame and its result ever print: one call per counter
+ *  step, per RINEX system and the reading's own, measured over every preset and
+ *  mode. Both regions reserve it, so they hold one height from the first paint. */
+const CALL_LINES = 24;
+
+const CALL_SIZER = Array.from(
+  { length: CALL_LINES },
+  () => 'utcToGnssWeek("GPS-LNAV", "2024-01-01T00:00:00.123456789Z")',
+).join("\n");
+
+/** The widest result line is the decoded counter object, which wraps in a
+ *  narrow frame; the twin wraps the same way, so it is as tall. */
+const OUTPUT_SIZER = Array.from(
+  { length: CALL_LINES },
+  () => "{ week: 392, timeOfWeekSeconds: 510281.370063161, era: 2 }",
+).join("\n");
+
+/** The longest footnote: a reading before the system's first week. */
+const FOOTNOTE_SIZERS = [`No reading: ${BEFORE_FIRST_WEEK_NOTE}.`];
+
+/** Every sentence the reason aside can show. */
+const REASON_SIZERS = [
+  ...Object.values(GNSS_SENTENCES),
+  pivotBeforeFirstWeekText("1999-08-22T00:00:00Z"),
+  beforeFirstWeekText("1999-08-22T00:00:00Z"),
+];
 
 /** The ordinal a radio group's `name` takes, so two decoders on one page never share it. */
 let instances = 0;
@@ -132,6 +171,8 @@ function blankCells(columns: readonly string[]): string {
  *  in, so era 0 is the outer lap; the tick ring and its labels sit outside them. */
 const RING_C = 170;
 const RING_RADII = [112, 94, 76, 58] as const;
+/** The plate under a lap's era label: room for the longest label at 13px mono. */
+const ERA_PLATE_W = 52;
 const TICK_FROM = 122;
 const LABEL_AT = 151;
 /** Ticks round the ring: a minor tick every 1/32 of the modulus, a labelled one every 1/8. */
@@ -170,7 +211,10 @@ function ringHtml(): string {
       `<circle class="gmt-ring-fill" cx="${c}" cy="${c}" r="${r}" pathLength="100" transform="rotate(-90 ${c} ${c})"/>` +
       `<g class="gmt-ring-spin" data-role="ring-today" hidden><line class="gmt-ring-today" x1="${c}" y1="${c - r - 8}" x2="${c}" y2="${c - r + 8}"/></g>` +
       `<g class="gmt-ring-spin" data-role="ring-dot"><circle class="gmt-ring-dot" cx="${c}" cy="${c - r}" r="5.5"/></g>` +
-      `<text class="gmt-ring-era" data-role="ring-era" x="${c - 8}" y="${c - r + 3.5}" text-anchor="end"> </text>` +
+      // The label sits on a plate of the card's own surface, so its pixels are
+      // read against one flat colour and never against the lap's stroke.
+      `<rect class="gmt-ring-era-plate" data-role="ring-era-plate" x="${c - 8 - ERA_PLATE_W}" y="${c - r - 9}" width="${ERA_PLATE_W + 4}" height="18" rx="3" hidden/>` +
+      `<text class="gmt-ring-era" data-role="ring-era" x="${c - 8}" y="${c - r + 4.5}" text-anchor="end"> </text>` +
       `</g>`,
   ).join("");
   return (
@@ -218,6 +262,7 @@ export function renderGnssWeekDecoderTemplate(
   const presetId = matchPreset(state);
   const preset = GNSS_PRESETS.find((p) => p.id === presetId);
   const group = `gnss-decoder-mode-${++instances}`;
+  const shown = shownFields(state.mode, state.eraMode);
 
   return (
     `<div class="gmt-gnss-week-decoder gmt-widget not-content">` +
@@ -246,16 +291,16 @@ export function renderGnssWeekDecoderTemplate(
     ).join("") +
     `</fieldset>` +
     `<div class="gmt-field-grid">` +
-    `<label class="gmt-label" data-field="counter">${labelTextHtml("Counter")}` +
+    `<label class="gmt-label" data-field="counter"${hiddenAttr(shown, "counter")}>${labelTextHtml("Counter")}` +
     `<select class="gmt-select" data-role="counter">` +
     `<option value=""${state.counter === "" ? " selected" : ""}>(none)</option>` +
     optionsHtml(GNSS_WEEK_COUNTERS, state.counter) +
     `</select></label>` +
-    `<label class="gmt-label" data-field="system">${labelTextHtml("RINEX system")}` +
+    `<label class="gmt-label" data-field="system"${hiddenAttr(shown, "system")}>${labelTextHtml("RINEX system")}` +
     `<select class="gmt-select" data-role="system">${optionsHtml(RINEX_WEEK_SYSTEMS, state.system)}</select></label>` +
-    `<label class="gmt-label" data-field="week">${labelTextHtml("Week")}` +
+    `<label class="gmt-label" data-field="week"${hiddenAttr(shown, "week")}>${labelTextHtml("Week")}` +
     `<input class="gmt-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" data-role="week" value="${escapeAttr(state.week)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="week-slider">${labelTextHtml("Slide the week")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="week-slider"${hiddenAttr(shown, "week-slider")}>${labelTextHtml("Slide the week")}` +
     rangeFieldHtml({
       role: "week-slider",
       chipRole: "week-value",
@@ -267,9 +312,9 @@ export function renderGnssWeekDecoderTemplate(
       ends: ["0", " "],
     }) +
     `</label>` +
-    `<label class="gmt-label" data-field="tow">${labelTextHtml("Time of week (seconds)")}` +
+    `<label class="gmt-label" data-field="tow"${hiddenAttr(shown, "tow")}>${labelTextHtml("Time of week (seconds)")}` +
     `<input class="gmt-input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-role="tow" value="${escapeAttr(state.timeOfWeekSeconds)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="tow-slider">${labelTextHtml("Slide the time of week")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="tow-slider"${hiddenAttr(shown, "tow-slider")}>${labelTextHtml("Slide the time of week")}` +
     rangeFieldHtml({
       role: "tow-slider",
       chipRole: "tow-value",
@@ -281,13 +326,13 @@ export function renderGnssWeekDecoderTemplate(
       ends: ["0", String(SECONDS_PER_WEEK - 1)],
     }) +
     `</label>` +
-    `<label class="gmt-label" data-field="era-mode">${labelTextHtml("Which era")}` +
+    `<label class="gmt-label" data-field="era-mode"${hiddenAttr(shown, "era-mode")}>${labelTextHtml("Which era")}` +
     `<select class="gmt-select" data-role="era-mode">${optionsHtml(ERA_MODES, state.eraMode, (v) => ERA_MODE_LABELS[v as EraMode])}</select></label>` +
-    `<label class="gmt-label" data-field="era">${labelTextHtml("Era number")}` +
+    `<label class="gmt-label" data-field="era"${hiddenAttr(shown, "era")}>${labelTextHtml("Era number")}` +
     `<input class="gmt-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" data-role="era" value="${escapeAttr(state.era)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="pivot">${labelTextHtml("On or after (UTC instant)")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="pivot"${hiddenAttr(shown, "pivot")}>${labelTextHtml("On or after (UTC instant)")}` +
     `<input class="gmt-input" type="text" autocomplete="off" spellcheck="false" data-role="pivot" value="${escapeAttr(state.pivot)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="utc">${labelTextHtml("UTC instant")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="utc"${hiddenAttr(shown, "utc")}>${labelTextHtml("UTC instant")}` +
     `<input class="gmt-input" type="text" autocomplete="off" spellcheck="false" data-role="utc" value="${escapeAttr(state.utc)}"></label>` +
     `</div>` +
     `</div>` +
@@ -306,7 +351,11 @@ export function renderGnssWeekDecoderTemplate(
     `</div>` +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside" data-grow="slot"></div>` +
+    holdHtml(
+      `<div data-role="reason-aside" data-grow="slot"></div>`,
+      REASON_SIZERS.map((t) => asideSizer(NO_RESULT_TITLE, [t])),
+      "gmt-ledger-hold",
+    ) +
     `</div>` +
     // 3. The same moment on every counter
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
@@ -327,13 +376,25 @@ export function renderGnssWeekDecoderTemplate(
         `<tr role="row" data-row="${escapeAttr(s)}"><th role="rowheader" data-label="System">${escapeHtml(s)}</th>${blankCells(RINEX_COLUMNS.slice(1))}</tr>`,
     ).join("")}</tbody>` +
     `</table></div>` +
-    `<p class="gmt-widget-hint" data-role="footnote" data-grow="slot">&nbsp;</p>` +
+    holdHtml(
+      `<p class="gmt-widget-hint" data-role="footnote" data-grow="slot">${NBSP}</p>`,
+      textSizers("p", "gmt-widget-hint", FOOTNOTE_SIZERS),
+      "gmt-ledger-hold",
+    ) +
     `</div>` +
     // 4. The calls
     `<div class="gmt-widget-section">` +
     `<h4>4. What the library returns</h4>` +
-    codeFrameHtml("decoder") +
-    `<output class="gmt-widget-output" data-role="decoder-output">&nbsp;</output>` +
+    holdHtml(
+      codeFrameHtml("decoder"),
+      [callSizer(CALL_SIZER)],
+      "gmt-ledger-hold",
+    ) +
+    holdHtml(
+      `<output class="gmt-widget-output" data-role="decoder-output">${NBSP}</output>`,
+      [outputSizer("gmt-widget-output", OUTPUT_SIZER)],
+      "gmt-ledger-hold",
+    ) +
     toolLinksHtml(DECODER_LINKS) +
     `</div>` +
     `</div>` +
@@ -368,6 +429,22 @@ const FIELDS: Record<GnssDecoderMode, readonly string[]> = {
   rinex: ["system", "week", "tow", "tow-slider"],
   utc: ["counter", "utc"],
 };
+
+/** The fields a state shows: the mode's, less the era number and the date it
+ *  counts from, which follow the era choice. The server-rendered form uses the
+ *  same set, so mounting hides nothing and the form keeps its height. */
+function hiddenAttr(shown: Set<string>, name: string): string {
+  return shown.has(name) ? "" : " hidden";
+}
+
+function shownFields(mode: GnssDecoderMode, eraMode: EraMode): Set<string> {
+  const shown = new Set(FIELDS[mode]);
+  if (mode === "broadcast") {
+    if (eraMode !== "number") shown.delete("era");
+    if (eraMode !== "notBefore") shown.delete("pivot");
+  }
+  return shown;
+}
 
 function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   const q = <T extends HTMLElement>(role: string) =>
@@ -416,11 +493,7 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
   function showFields(): void {
     const m = mode();
     const eraMode = eraModeEl.value as EraMode;
-    const shown = new Set(FIELDS[m]);
-    if (m === "broadcast") {
-      if (eraMode !== "number") shown.delete("era");
-      if (eraMode !== "notBefore") shown.delete("pivot");
-    }
+    const shown = shownFields(m, eraMode);
     for (const name of [
       "counter",
       "system",
@@ -611,6 +684,9 @@ function setupWidget(root: HTMLElement, lib: GnssLib): Controller {
       }
       const era = lap.querySelector('[data-role="ring-era"]');
       if (era) era.textContent = lane?.label ?? " ";
+      lap
+        .querySelector('[data-role="ring-era-plate"]')
+        ?.toggleAttribute("hidden", lane?.label === undefined);
     });
     const set = (role: string, text: string) => {
       const el = q(role);

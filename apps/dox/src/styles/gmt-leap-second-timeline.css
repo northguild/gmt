@@ -160,7 +160,8 @@
   inline-size: 9px;
   block-size: 9px;
   border-width: 2px;
-  box-shadow: 0 0 0 3px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.3);
+  box-shadow: 0 0 0 3px
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.3);
 }
 
 /* Continuous UTC: no more insertions. A hatched run with a full dashed
@@ -216,7 +217,8 @@
   border: 2px solid var(--gmt-surface);
   border-radius: 50%;
   background: var(--series, var(--gmt-ice));
-  box-shadow: 0 0 0 3px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.35);
+  box-shadow: 0 0 0 3px
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.35);
 }
 
 /* Readouts in the strip above the field: the date row first, the count under. */
@@ -460,5 +462,55 @@
   .gmt-leap-second-timeline .gmt-leap-nosignal {
     border-color: CanvasText;
     color: CanvasText;
+  }
+}
+
+/* The range chip reserves the width of its longest text, rounded up to a whole
+   pixel, so it neither resizes nor flickers between two roundings mid-drag. */
+.gmt-leap-second-timeline [data-role="date-value"] {
+  min-inline-size: round(up, calc(10ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+ * The insertions table: every cell is two lines, so a row keeps its height
+ * whether or not the insertion carries a tag. In the stacked layout a cell is
+ * its label and a column of its lines; a bare text node there would shrink to a
+ * sliver beside the label, so the lines are boxes.
+ * --------------------------------------------------------------------------- */
+
+.gmt-leap-second-timeline .gmt-clock-line {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-leap-second-timeline .gmt-clock-sub {
+  min-block-size: 1.75rem;
+}
+
+@container gmt-gnss-table (max-width: 34rem) {
+  .gmt-leap-second-timeline .gmt-gnss-table tbody :is(th, td):first-child {
+    /* The wide layout gives the first column a share; a stacked cell fills the row. */
+    inline-size: auto;
+  }
+
+  .gmt-leap-second-timeline .gmt-gnss-table tbody :is(th, td) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: normal;
+  }
+
+  .gmt-leap-second-timeline
+    .gmt-gnss-table
+    tbody
+    :is(th, td)[data-label]::before {
+    grid-row: 1 / span 2;
+  }
+
+  .gmt-leap-second-timeline .gmt-gnss-table tbody :is(th, td) .gmt-clock-line {
+    grid-column: 2;
+    text-align: right;
   }
 }

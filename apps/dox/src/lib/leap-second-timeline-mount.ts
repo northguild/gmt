@@ -108,6 +108,8 @@ const GROUPS = [
   },
 ] as const;
 
+const NBSP = "&nbsp;";
+
 function presetOptionsHtml(presetId: string): string {
   return (
     `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
@@ -141,6 +143,29 @@ function groupHtml(g: (typeof GROUPS)[number]): string {
       "gmt-ledger-hold",
     ) +
     `</div>`
+  );
+}
+
+/** How many inserted seconds the library lists (`insertions`): the rows the
+ *  table holds. The template draws this many blank rows, so the table has its
+ *  height from the first paint; a test pins it to the library's own walk. */
+export const INSERTION_ROWS = 27;
+
+/** One table row. The inserted second is two lines, so a row keeps its height
+ *  whether or not the insertion carries a tag; an empty line holds its place. */
+function insertionRowHtml(
+  insertion: string,
+  offset: string,
+  tag: string,
+  series: number,
+): string {
+  const line = (inner: string, sub: boolean) =>
+    `<span class="gmt-clock-line${sub ? " gmt-clock-sub" : ""}">${inner === "" ? NBSP : inner}</span>`;
+  return (
+    `<tr${series === 0 ? "" : ` data-reading data-series="${series}"`}>` +
+    `<th scope="row" data-label="Inserted second">${line(escapeHtml(insertion), false)}${line(tag === "" ? "" : `<span class="gmt-cutoff-chip">${tag}</span>`, true)}</th>` +
+    `<td data-label="TAI − UTC after">${line(escapeHtml(offset), false)}</td>` +
+    `</tr>`
   );
 }
 
@@ -236,7 +261,7 @@ export function renderLeapSecondTimelineTemplate(
     `<div class="gmt-gnss-table-box">` +
     `<table class="gmt-gnss-table" data-role="insertions-table">` +
     `<thead><tr><th scope="col">Inserted second</th><th scope="col">TAI − UTC after</th></tr></thead>` +
-    `<tbody data-role="insertions-body"></tbody>` +
+    `<tbody data-role="insertions-body">${Array.from({ length: INSERTION_ROWS }, () => insertionRowHtml("", "", "", 0)).join("")}</tbody>` +
     `</table></div>` +
     `</div>` +
     // 3. The calls
@@ -344,9 +369,7 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     const first = points[0];
     q("step-area")?.setAttribute(
       "d",
-      first === undefined
-        ? ""
-        : `M0,100 L${points.join(" L")} L100,100 Z`,
+      first === undefined ? "" : `M0,100 L${points.join(" L")} L100,100 Z`,
     );
     const g = q("risers");
     if (g) g.innerHTML = risers.join("");
@@ -549,11 +572,11 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
         const isCounted = counted.has(step.insertion);
         const series = isChecked ? 3 : isCounted ? 2 : 0;
         const tag = isChecked ? "your second 60" : isCounted ? "counted" : "";
-        return (
-          `<tr${series === 0 ? "" : ` data-reading data-series="${series}"`}>` +
-          `<th scope="row" data-label="Inserted second">${escapeHtml(step.insertion)}${tag === "" ? "" : ` <span class="gmt-cutoff-chip">${tag}</span>`}</th>` +
-          `<td data-label="TAI − UTC after">${step.offset === null ? "no result" : `${step.offset} s`}</td>` +
-          `</tr>`
+        return insertionRowHtml(
+          step.insertion,
+          step.offset === null ? "no result" : `${step.offset} s`,
+          tag,
+          series,
         );
       })
       .join("");
@@ -608,7 +631,8 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
     for (const role of ["pin-flag", "band-flag"]) {
       const tag = q(role);
       if (!tag || tag.hidden || plotPx === 0) continue;
-      const atPx = (parseFloat(tag.style.getPropertyValue("--at")) / 100) * plotPx;
+      const atPx =
+        (parseFloat(tag.style.getPropertyValue("--at")) / 100) * plotPx;
       const w = layoutWidth(tag);
       // The cursor's readout sits beside its pin, flipped when it would run
       // out; the band's is centred. Both are clamped inside the plot.

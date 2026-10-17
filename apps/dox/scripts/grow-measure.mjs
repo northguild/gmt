@@ -211,13 +211,11 @@ const PAGES = [
     preset: '[data-role="preset"]',
     drag: null,
   },
-  /* The decoder's drag is `tow-slider`; the built widget has no slider yet, so
-     it is load pass only until it does. */
   {
     slug: "gnss-week-decoder",
     root: ".gmt-widget",
     preset: '[data-role="preset"]',
-    drag: null,
+    drag: '[data-role="tow-slider"]',
   },
   {
     slug: "satellite-clock-converter",
@@ -520,8 +518,12 @@ async function drag(page, selector) {
       const pct =
         (Number(node.value) - Number(node.min)) /
         (Number(node.max) - Number(node.min));
+      /* The thumb's centre runs from half a thumb in from the left edge to half
+         a thumb in from the right one, so a range at its far end is pressed on
+         its thumb and not on the pixel just outside the control. */
+      const half = 8;
       return {
-        x: rect.left + pct * rect.width,
+        x: rect.left + half + pct * (rect.width - 2 * half),
         y: rect.top + rect.height / 2,
         trackLeft: rect.left,
         trackWidth: rect.width,
@@ -726,6 +728,7 @@ async function runOne(...args) {
       atRest: false,
       unpainted: 0,
       notes: [],
+      rawFrames: [],
       problems: crashProblem(error),
     };
   }

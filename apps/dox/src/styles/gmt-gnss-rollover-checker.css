@@ -58,6 +58,12 @@
   font-size: 0.8125rem;
 }
 
+.gmt-gnss-rollover-checker th .gmt-clock-sub {
+  /* The first column's tags ("your receiver · next to wrap") wrap to a second
+     line in a narrow column; reserve it so a row keeps one height. */
+  min-block-size: 2lh;
+}
+
 /* The plates hold still while the clock ticks or the slider drags. */
 .gmt-gnss-rollover-checker .gmt-punct-hero-value {
   font-variant-numeric: tabular-nums;
@@ -75,8 +81,11 @@
   color: var(--gmt-ice);
 }
 
+/* An entry with nothing to say keeps its place and goes unseen, so the legend
+   wraps onto the same lines before the reading is drawn as after it. */
 .gmt-gnss-rollover-checker .gmt-rollover-key > [hidden] {
-  display: none;
+  display: block;
+  visibility: hidden;
 }
 
 /* Five chip slots in a grid, always drawn, so the strip is the same height for
@@ -164,8 +173,14 @@
   block-size: 1px;
   margin: -1px;
   overflow: hidden;
-  clip-path: inset(50%);
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+/* With no countdown the "no result" text stands where the cells go, so the hero
+   is as tall as it is with them and drawing the countdown moves nothing. */
+.gmt-fuse-count[data-empty] > .gmt-punct-hero-value {
+  min-block-size: 3.225rem;
 }
 
 .gmt-fuse-digits {
@@ -217,11 +232,12 @@
 
 .gmt-fuse-badge {
   display: flex;
-  align-items: center;
   gap: var(--gmt-space-2);
   box-sizing: border-box;
   margin: 0;
-  /* Two lines always, so a longer verdict never grows the column. */
+  /* Two lines always, so a longer verdict never grows the column; the words
+     start at the top, so one line or two does not move them. */
+  align-items: flex-start;
   min-block-size: calc(2lh + 2 * var(--gmt-space-2) + 2px);
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -236,7 +252,11 @@
 }
 
 .gmt-fuse-badge-text {
+  /* Fills the badge, so its box does not widen and narrow with the verdict. */
+  flex: 1 1 0;
   min-width: 0;
+  /* Two lines, so the text's own box is one height whether the verdict wraps. */
+  min-block-size: 2lh;
   overflow-wrap: anywhere;
 }
 
@@ -368,12 +388,17 @@
 }
 
 .gmt-fuse-head {
+  /* Above the grid lines and the pins that cross the board, on the card's own
+     surface, so the heading is read against a flat colour. */
+  position: relative;
+  z-index: 2;
+  background-color: var(--gmt-surface);
   min-block-size: 1.4rem;
   padding-block-start: var(--gmt-space-2);
   box-sizing: border-box;
   letter-spacing: var(--gmt-tracking-wider);
   text-transform: uppercase;
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
   white-space: nowrap;
 }
 
@@ -750,5 +775,44 @@
   .gmt-fuse-badge[data-verdict="early"],
   .gmt-fuse-badge[data-verdict="late"] {
     background-image: none;
+  }
+}
+
+/* The range chip reserves the width of its longest text, rounded up to a whole
+   pixel, so it neither resizes nor flickers between two roundings mid-drag. */
+.gmt-gnss-rollover-checker [data-role="date-value"] {
+  min-inline-size: round(up, calc(20ch + 2 * var(--gmt-space-1) + 2px), 1px);
+  text-align: center;
+}
+
+/* Stacked rows: a cell is its label and a column of its two lines, so the lines
+   sit one under the other at a fixed place instead of side by side as flex
+   items that resize as the values arrive. */
+@container gmt-gnss-table (max-width: 34rem) {
+  .gmt-gnss-rollover-checker .gmt-gnss-table tbody :is(th, td) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: normal;
+  }
+
+  .gmt-gnss-rollover-checker
+    .gmt-gnss-table
+    tbody
+    :is(th, td)[data-label]::before {
+    grid-row: 1 / span 2;
+  }
+
+  .gmt-gnss-rollover-checker .gmt-gnss-table tbody :is(th, td) .gmt-clock-line {
+    grid-column: 2;
+    text-align: right;
+  }
+}
+
+/* A chip's words wrap to a second line in a narrow frame (the longest is
+   "check date 2039-08-17T00:00:00Z (outside)"), and the row takes the tallest
+   chip's height. Two lines are reserved there, so the row never grows. */
+@container gmt-gnss-frame (max-width: 24rem) {
+  .gmt-gnss-rollover-checker .gmt-rollover-chip {
+    min-block-size: calc(2lh + 6px);
   }
 }

@@ -25,6 +25,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { codeFrameHtml } from "./code-frame";
 import { callResultsText, renderCalls } from "./edi-render";
+import {
+  asideSizer,
+  callSizer,
+  holdHtml,
+  outputSizer,
+  textSizers,
+} from "./edi-picture";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import { GNSS_WEEK_COUNTERS, type GnssWeekCounter } from "./gnss-names";
 import { loadGnssLib, type GnssLib } from "./gnss-lib";
@@ -36,7 +43,12 @@ import {
   MAX_VALUE_LENGTH,
   NOW_MODE_LABELS,
   NO_RESULT_TEXT,
+  EMPTY_TEXTS,
+  RIGHT_DATE_TEXT,
+  ROLLING_DATE_TEXT,
   ROLLOVER_LINKS,
+  ROLLOVER_SENTENCES,
+  pivotBeforeText,
   ROLLOVER_NOW_MODES,
   ROLLOVER_PRESETS,
   dateOfDay,
@@ -86,6 +98,38 @@ import {
 export type { GnssRolloverCheckerArgs } from "./gnss-rollover-checker";
 
 const NBSP = "&nbsp;";
+
+/** The most lines the call frame and its result ever print: the most calls any
+ *  firmware, counter and date makes (one per counter-step plus the reading's
+ *  own), measured over every preset and every stop of the date slider. Both
+ *  regions reserve it, so the frame holds one height from the first paint. */
+const CALL_LINES = 34;
+
+const CALL_SIZER = Array.from(
+  { length: CALL_LINES },
+  () =>
+    'gnssWeekToUtc("galileo", 1024, 0, { notBefore: "2024-01-01T00:00:00Z" })',
+).join("\n");
+
+/** The widest line a result prints is the decoded counter object, which wraps in
+ *  a narrow frame; the twin wraps the same way, so it is as tall. */
+const OUTPUT_SIZER = Array.from(
+  { length: CALL_LINES },
+  () => "{ week: 1023, timeOfWeekSeconds: 604799, era: 3 }",
+).join("\n");
+
+/** The longest sentences the rolling-row hint and the reason aside can show. */
+const ROLLING_SIZERS = [
+  "rolling reads 2007-03-01T00:00:04Z, a date 7167 days 23 h 59 min 56 s early",
+  ROLLING_DATE_TEXT,
+  NO_RESULT_TEXT,
+  RIGHT_DATE_TEXT,
+];
+
+const REASON_SIZERS = [
+  ...Object.values(ROLLOVER_SENTENCES),
+  pivotBeforeText("1999-08-22T00:00:00Z"),
+];
 
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"] as const;
 
@@ -277,6 +321,10 @@ export function renderGnssRolloverCheckerTemplate(
   const presetId = matchPreset(state);
   const preset = ROLLOVER_PRESETS.find((p) => p.id === presetId);
   const group = `gnss-rollover-${++instances}`;
+  // The fields the state shows, as `showFields` will decide: the server-rendered
+  // form hides the rest, so mounting hides nothing and the form keeps its height.
+  const date = state.nowMode === "date";
+  const hid = (shown: boolean): string => (shown ? "" : " hidden");
 
   return (
     `<div class="gmt-gnss-rollover-checker gmt-widget not-content">` +
@@ -309,9 +357,9 @@ export function renderGnssRolloverCheckerTemplate(
       state.model,
     ) +
     `</fieldset>` +
-    `<label class="gmt-label gmt-field-wide" data-field="pivot">${labelTextHtml("Built on or after (UTC instant)")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="pivot"${hid(state.model === "pivot")}>${labelTextHtml("Built on or after (UTC instant)")}` +
     `<input class="gmt-input" type="text" autocomplete="off" spellcheck="false" maxlength="${MAX_VALUE_LENGTH}" data-role="pivot" value="${escapeAttr(state.pivot)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="era">${labelTextHtml("Era the firmware assumes")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="era"${hid(state.model === "era")}>${labelTextHtml("Era the firmware assumes")}` +
     `<input class="gmt-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="${MAX_VALUE_LENGTH}" data-role="era" value="${escapeAttr(state.era)}"></label>` +
     `<fieldset class="gmt-chip-group gmt-field-wide" data-role="now-group"><legend class="gmt-label-text">Check it on</legend>` +
     radiosHtml(
@@ -322,9 +370,9 @@ export function renderGnssRolloverCheckerTemplate(
       state.nowMode,
     ) +
     `</fieldset>` +
-    `<label class="gmt-label gmt-field-wide" data-field="date">${labelTextHtml("Date to check (UTC instant)")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="date"${hid(date)}>${labelTextHtml("Date to check (UTC instant)")}` +
     `<input class="gmt-input" type="text" autocomplete="off" spellcheck="false" maxlength="${MAX_VALUE_LENGTH}" data-role="date" value="${escapeAttr(state.date)}"></label>` +
-    `<label class="gmt-label gmt-field-wide" data-field="date-slider">${labelTextHtml("Slide the date through the firmware's window")}` +
+    `<label class="gmt-label gmt-field-wide" data-field="date-slider"${hid(date)}>${labelTextHtml("Slide the date through the firmware's window")}` +
     rangeFieldHtml({
       role: "date-slider",
       chipRole: "date-value",
@@ -379,7 +427,14 @@ export function renderGnssRolloverCheckerTemplate(
     `</div>` +
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside" data-grow="slot"></div>` +
+    holdHtml(
+      `<div data-role="reason-aside" data-grow="slot"></div>`,
+      [
+        ...REASON_SIZERS.map((t) => asideSizer(NO_RESULT_TITLE, [t])),
+        ...textSizers("p", "gmt-widget-hint", Object.values(EMPTY_TEXTS)),
+      ],
+      "gmt-ledger-hold",
+    ) +
     `</div>` +
     // 3. Every counter's next wrap
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
@@ -389,14 +444,26 @@ export function renderGnssRolloverCheckerTemplate(
     `<thead role="rowgroup"><tr role="row">${TABLE_COLUMNS.map((c) => `<th role="columnheader">${escapeHtml(c)}</th>`).join("")}</tr></thead>` +
     `<tbody role="rowgroup" data-role="counters-body">${GNSS_WEEK_COUNTERS.map(blankRowHtml).join("")}</tbody>` +
     `</table></div>` +
-    `<p class="gmt-widget-hint" data-role="rolling-row" data-grow="slot">${NBSP}</p>` +
+    holdHtml(
+      `<p class="gmt-widget-hint" data-role="rolling-row" data-grow="slot">${NBSP}</p>`,
+      textSizers("p", "gmt-widget-hint", ROLLING_SIZERS),
+      "gmt-ledger-hold",
+    ) +
     `<p class="gmt-widget-hint">Time left is counted in whole days from the check date to each counter's next wrap.</p>` +
     `</div>` +
     // 4. The calls
     `<div class="gmt-widget-section">` +
     `<h4>4. What the library returns</h4>` +
-    codeFrameHtml("rollover") +
-    `<output class="gmt-widget-output" data-role="rollover-output">${NBSP}</output>` +
+    holdHtml(
+      codeFrameHtml("rollover"),
+      [callSizer(CALL_SIZER)],
+      "gmt-ledger-hold",
+    ) +
+    holdHtml(
+      `<output class="gmt-widget-output" data-role="rollover-output">${NBSP}</output>`,
+      [outputSizer("gmt-widget-output", OUTPUT_SIZER)],
+      "gmt-ledger-hold",
+    ) +
     toolLinksHtml(ROLLOVER_LINKS) +
     `</div>` +
     `</div>` +

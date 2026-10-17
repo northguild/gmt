@@ -16,6 +16,7 @@ import {
   VERDICT_NOT_INSERTED,
 } from "./leap-second-timeline";
 import {
+  INSERTION_ROWS,
   mountLeapSecondTimeline,
   renderLeapSecondTimelineTemplate,
 } from "./leap-second-timeline-mount";
@@ -333,6 +334,15 @@ describe("renderLeapSecondTimelineTemplate", () => {
     expect(q(root, "plot").getAttribute("role")).toBe("img");
   });
 
+  it("draws one blank row for every second the library lists, so the table has its height at first paint", async () => {
+    const root = document.createElement("div");
+    root.innerHTML = renderLeapSecondTimelineTemplate();
+    const blank = rows(root);
+    expect(blank).toHaveLength(INSERTION_ROWS);
+    const { root: mounted } = await mount();
+    expect(rows(mounted)).toHaveLength(blank.length);
+  });
+
   it("opens on the first preset, with a native range and text inputs", () => {
     const root = document.createElement("div");
     root.innerHTML = renderLeapSecondTimelineTemplate();
@@ -389,7 +399,7 @@ describe("every preset", () => {
     expect(q(root, "band").hidden).toBe(!want.band);
     // Every inserted second is a mark, a table row and a list item, lit or not.
     expect(root.querySelectorAll(".gmt-leap-mark")).toHaveLength(27);
-    expect(rows(root)).toHaveLength(27);
+    expect(rows(root)).toHaveLength(INSERTION_ROWS);
     expect(q(root, "timeline-list").children).toHaveLength(27);
     expect(
       rows(root).filter((r) => r.hasAttribute("data-reading")),
@@ -417,10 +427,8 @@ describe("every preset", () => {
   it("the table lists the 27 seconds in order with the offset after each", async () => {
     const { root } = await mount();
     const cells = rows(root).map((r) => [
-      r
-        .querySelector("th")!
-        .textContent!.replace(/\s*(counted|your second 60)$/, ""),
-      r.querySelector("td")!.textContent,
+      r.querySelector("th .gmt-clock-line")!.textContent,
+      r.querySelector("td")!.textContent!.trim(),
     ]);
     expect(cells[0]).toEqual(["1972-06-30T23:59:60Z", "11 s"]);
     expect(cells[26]).toEqual(["2016-12-31T23:59:60Z", "37 s"]);
@@ -802,7 +810,9 @@ describe("the staircase", () => {
     ).toEqual(["10", "20", "30", "37"]);
     expect(root.querySelectorAll(".gmt-leap-riser")).toHaveLength(27);
     expect(q(root, "step-area").getAttribute("d")).toMatch(/^M0,100 L/);
-    expect(text(root, "continuous-chip")).toBe("continuous UTC from 2027-05-20");
+    expect(text(root, "continuous-chip")).toBe(
+      "continuous UTC from 2027-05-20",
+    );
   });
 
   it("lights the risers of the counted span and the checked second, and counts them", async () => {
