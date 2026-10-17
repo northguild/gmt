@@ -59,11 +59,18 @@ No `space/` and no `maritime/` directory is created (D13).
 "gnss/convert": () => import("@northguild/gmt/gnss/convert"),
 ```
 
-### 5.5 Docs-site placement: building blocks, and a Maritime industry layer
+The rename needs a redirect: `apps/dox/scripts/build-utils/renamed-functions.ts` maps
+`plain/validate/isLeapSecond` to `plain/validate/hasSecond60`, because the old page shipped and
+has inbound links (dox-architect spec, C2). `/reference/timescale/validate/isLeapSecond` is a
+different page and needs nothing.
 
-`timescale` and `gnss` are building blocks, so their reference pages sit among the general
-namespaces. The **Maritime** industry layer carries the guide, the scenarios and the decoder tool,
-showing how ships use GNSS time on the international footing: the six systems as IMO-recognised
+### 5.5 Docs-site placement: a Core namespace, the GNSS layer, and a Maritime industry
+
+`timescale` is a Core namespace, so its reference pages sit among the general namespaces. `gnss`
+is the GNSS industry's own namespace, a cross-industry layer under "By industry". The GNSS
+industry carries the GNSS guide, the GNSS scenarios, the GNSS mistakes page and the GNSS tools.
+The **Maritime** industry owns no namespace; it draws on `gnss` and `timescale`, and its guide
+shows how ships use GNSS time on the international footing: the six systems as IMO-recognised
 WWRNS components, each by its own instrument and with its own recognition scope (D6), shipborne
 receivers to the IEC 61108 part for each system that has one, and their output carried as
 IEC 61162-1:2024 sentences.
@@ -78,16 +85,21 @@ IEC 61162-1:2024 sentences.
   industry:" line all key on the same ids, and the overview page is the namespace's
   `/reference/<namespace>/` index.
 
-So a Maritime layer cannot exist without a `maritime/` namespace, and the owner has ruled out an
-empty one. **Owner decision: industry layers are separated from namespaces.** Each industry is declared in
-`industry-tags.ts` with the namespaces it draws on (`maritime: { namespaces: ["gnss", "timescale"] }`)
-and has its own overview page. **dox-architect owns this tooling change** (`stats.mjs`,
-`industry-tags.ts`, `industry-overview.ts`, the "By industry" sidebar and the README's industry line)
-and the decoder tool; see the dox-architect spec. This spec supplies only the content:
+So a Maritime industry cannot exist without a `maritime/` namespace, and the owner has ruled out
+an empty one. **Owner decision: industries are separated from namespaces.** Each industry is
+declared in `apps/dox/src/data/industries.json` with the namespace it owns, if any, and the
+modules it `drawsOn` (Maritime: none, and `gnss` and `timescale`), and has its own hub page at
+`/industries/<id>/`. **dox-architect owns this tooling change** (`stats.mjs`, `industries.json`,
+`industry-tags.ts`, `industry-overview.ts`, the "By industry" sidebar and the README's industry
+line) and the tools; see the dox-architect spec. This spec supplies only the content:
 
-- the Maritime guide, scenarios and mistakes page (§8.4) belong to the Maritime layer;
-- `apps/dox/src/lib/chat-constants.ts` gains the decoder tool's `EXAMPLE_AREAS` entry and
-  `CHAT_STARTERS` pill with the tool (§5.10).
+- **A page is tagged by the one industry whose own namespace it runs.** The GNSS guide, the four
+  GNSS scenarios, the GNSS mistakes page and the GNSS tools are `gnss`; the Maritime guide is the
+  only `maritime` page, and the Maritime hub links the GNSS tools and guide from its `solves`
+  list instead of tagging them; a page that runs only `timescale` is `core` (§8.4).
+- `apps/dox/src/lib/chat-constants.ts` gains each tool's `CHAT_STARTERS` card under the area that
+  matches its page's tag: a `GNSS` area for the GNSS tools, `Core` for the timescale-only ones
+  (§5.10).
 
 The timescale guide is a Core guide either way:
 `apps/dox/src/content/docs/guides/core-date-operations/leap-seconds-and-tai.mdx`, beside
@@ -128,8 +140,11 @@ The timescale guide is a Core guide either way:
 
 ### 5.9 Example checkers and the playground
 
-No change. Every `@example` calls only root exports with literal arguments, so
-`scripts/api-surface.mjs`, `test/noThrow.ts` and the Dox playground need nothing new.
+Every `@example` calls only root exports with literal arguments, so `scripts/api-surface.mjs` and
+`test/noThrow.ts` need nothing new. The Dox playground needs one generator fix: `RolloverEra`
+(`number | "rolling"`, and the `{ notBefore }` form) is not an enum of literals, so a union of
+`number` or an object with string literals is an `expr` field seeded with the example's
+argument as written (dox-architect spec, C1).
 
 ### 5.10 Dox decoder tool and industry tooling — see the dox-architect spec
 
@@ -141,6 +156,7 @@ spec's only constraints:
   `"timescale/…"` if it shows TAI);
 - it offers the RINEX week alongside the broadcast counters, so the D12 trap is visible;
 - every preset shows the functions' real output, asserted in its mount test;
-- its page belongs to the Maritime industry layer (§5.5, owner decision).
+- its page is tagged `gnss`, the industry whose namespace it runs, and the Maritime hub links it
+  (§5.5, owner decision).
 
 ---

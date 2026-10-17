@@ -69,27 +69,36 @@
 
 ### 8.4 Docs site pages (every result run against `packages/gmt/dist`)
 
-Per [docs-site.md](../../docs-site.md). The Maritime pages sit in the Maritime industry layer declared by dox-architect's tooling change (§5.5).
+Per [docs-site.md](../../docs-site.md). `dox-builder` writes these pages (dox-architect spec, F1),
+not the library pipeline. Each is tagged by the one industry whose own namespace it runs (§5.5):
+the GNSS guide, scenarios and mistakes page are `gnss`, the Maritime guide is `maritime`, and the
+timescale pages are `core`.
 
-- **Maritime guide** `maritime-gnss-time-and-week-rollover.mdx`: how ships use satellite time,
-  framed by the six IMO recognitions, IEC 61108 per system and IEC 61162-1:2024 (§5.5, D6) — one `##` per rule: why every
-  satellite scale but `GLO` runs ahead of UTC by an amount that changed with each leap second, with
-  all six side by side and no system as the lead example; the six RINEX scales and their
-  epochs (Galileo's 13 s; NavIC's derived offset); `GLO` is UTC hours, and raw broadcast GLONASS
-  system time needs three hours removed; week counters (LNAV, CNAV, L1NV), the rollover instants,
-  `"rolling"` vs an integer era; RINEX navigation weeks vs broadcast weeks; a link to the decoder
-  tool; `## See it break, then work`.
+- **GNSS guide** `guides/industries/gnss-system-time-and-week-rollover.mdx`, one `##` per rule:
+  why every satellite scale but `GLO` runs ahead of UTC by an amount that changed with each leap
+  second, with all six side by side and no system as the lead example; the six RINEX scales and
+  their epochs (Galileo's 13 s; NavIC's derived offset); `GLO` is UTC hours, and raw broadcast
+  GLONASS system time needs three hours removed; week counters (LNAV, CNAV, L1NV), the rollover
+  instants, `"rolling"` vs an integer era; RINEX navigation weeks vs broadcast weeks; the tools;
+  `## See it break, then work`.
+- **Maritime guide** `guides/industries/maritime-gnss-time-and-week-rollover.mdx`: how ships use
+  satellite time, framed by the six IMO recognitions, IEC 61108 per system and IEC 61162-1:2024
+  (§5.5, D6): which systems a ship may use, equipment passing time in UTC, the log keeping UTC, a
+  receiver's week counter over a ship's life, a leap second in a ship's record, and
+  `## See it break, then work`. It links the GNSS guide and tools for the rules themselves.
 - **Core guide** `guides/core-date-operations/leap-seconds-and-tai.mdx`: the 27 insertions in a
   table with the IERS source and Bulletin C 72; TAI − UTC by date; `23:59:60` is real only on listed
   days; counting; CGPM 2022 and 2026 and why the table is closed; the weekly canary.
 - Scenarios (`scenarios/<slug>.mdx`, `<Scenario>` with `fixedSpecId` = the function's playground):
-  `gnss-offset-hardcoded.mdx`, `gnss-week-that-wrapped.mdx`, `cnav-week-read-as-lnav.mdx`,
-  `rinex-navic-week-read-as-broadcast.mdx`, `a-leap-second-that-never-happened.mdx`.
+  `gnss-offset-hardcoded.mdx`, `gnss-week-that-wrapped.mdx`, `thirteen-bit-week-read-as-ten-bit.mdx`,
+  `rinex-week-read-as-broadcast.mdx` and `a-leap-second-that-never-happened.mdx`. A slug names the
+  fault, never one system, so no system is the lead example.
 - Mistakes, Wrong/Correct pairs: for GNSS — the sign of a satellite scale's lead over UTC (GPS
   and Galileo alike); a fixed offset such as 18 s or 4 s; the present-day offset at a system's epoch; GLONASS time read with three hours added; a week without
   its counter or era; a RINEX week fed to a broadcast counter. For timescale — `hasSecond60` used as
-  a leap-second check; integer TAI − UTC before 1972. The GNSS pairs go on the Maritime mistakes
-  page; the timescale pairs on a core mistakes page (`mistakes/leap-seconds.mdx`).
+  a leap-second check; integer TAI − UTC before 1972. The GNSS pairs go on the GNSS mistakes
+  page (`mistakes/gnss.mdx`); the timescale pairs on a core mistakes page
+  (`mistakes/leap-seconds.mdx`).
 - Indexes: `guides/index.mdx`, `guides/core-date-operations/index.mdx`, `mistakes/index.mdx`, and
   `guides/industries/index.mdx`.
 - The decoder tool's page is in the dox-architect spec.

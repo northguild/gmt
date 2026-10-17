@@ -285,7 +285,8 @@ teaching widget; nothing else does, and it never replays on a value change.
 The recipes in `gmt-cutoff-widgets.css` are the pattern for every drawn transport chart: the
 three cut-off tools; the Departure Board, Punctuality Board and ETA Drift Chart, whose
 `.gmt-punct-frame` surface joins the same `:is()` lists; and the Timetable Reader, whose day
-track and two-clocks chart join them too. The seven read as one family:
+track and two-clocks chart join them too. The ledgers, the B/L Date Stamp and the five GNSS
+and leap-second tools list their roots in the same sheets. All of them read as one family:
 
 - **Every label sits on an opaque `--gmt-surface` plate** (`.gmt-cutoff-chip`), in
   `--gmt-ice` or `--gmt-ice-dim`. Then no glyph ever touches a gradient, hatch, glow or line,
@@ -312,10 +313,12 @@ track and two-clocks chart join them too. The seven read as one family:
   control reserves its measured line count with `min-block-size` in `lh`.
   `setPresetDescription` keeps the preset description's height once a drag makes the state
   custom. Gate: `pnpm --filter @gmt/dox run readout:still` (`scripts/readout-still.mjs`), which
-  drags every handle of the Departure Board, the Punctuality Board, the ETA Drift Chart and the
-  Timetable Reader by keyboard and pointer in Chromium and WebKit at 1440, 390, 360 and 300
+  drags every handle of the Departure Board, the Punctuality Board, the ETA Drift Chart, the
+  Timetable Reader, the Free Time Ledger, the Dwell Ledger, the B/L Date Stamp and the five GNSS
+  and leap-second tools by keyboard and pointer in Chromium and WebKit at 1440, 390, 360 and 300
   and fails if a plate, the frame, the dragged control or anything above it moves or resizes.
-  For the Timetable Reader it measures every element in the widget, in all three sections.
+  For the Timetable Reader and the tools with `scope: "widget"` it measures every element in
+  the widget; only the drawing itself may change.
 - **A cell whose content comes and goes holds its size with a hidden sizer** stacked in the
   same grid cell (`.gmt-timetable-hold`, the Timetable Reader's note, time cells and output).
   - The hold is a one-cell grid. Its two children are the sizer and the live wrapper
@@ -339,6 +342,37 @@ track and two-clocks chart join them too. The seven read as one family:
   PLN spring, REQ purple and ACT teal. The Punctuality Board's two tolerances are series 1 and
   series 3, so the on-time band never reads as success. Late, early, made and missed are
   words and patterns.
+- **The GNSS and leap-second tools each have one signature drawing** on the shared
+  `.gmt-gnss-frame` (`gmt-gnss-widgets.css`, then each tool's own sheet):
+  - GNSS Week Decoder: an odometer ring, one lap per era, with era plates in the legend.
+  - Satellite Clock Converter: a TAI ladder, eight clocks as rungs on one scale of seconds
+    ahead of UTC with TAI as the top rail. Clocks off the drawn scale sit in a group of compact
+    rows (`--clad-off-n` reserves their count), and NO SIGNAL is a pill in the flow under the
+    stage.
+  - GNSS Rollover Checker: a fuse timeline per counter, with its group headings above the
+    check-date line.
+  - Leap Second Timeline: a staircase, TAI − UTC stepping up at each inserted second.
+  - Elapsed vs. Clock Difference: vernier rulers, the UTC clock face against the seconds that
+    passed, the second ruler longer by each inserted second.
+  - The family's rules, from the cut-off recipes: text on a `--gmt-surface` plate in
+    `--gmt-ice` or `--gmt-ice-dim`; a series colour on a mark, edge or fill, never on text; "your
+    reading", "today", "next to wrap", "inserted" and the rest are words and patterns, never a
+    verdict colour; amber (`--gmt-signal-*`) is the NO SIGNAL state alone; a chosen lane or row
+    is lit glass, a hatch and a chip, with any accent edge on the bottom. Nothing in a drawing is
+    focusable, and nothing animates except the decoder ring's 0.35 s turn, inside
+    `prefers-reduced-motion: no-preference`. Each drawing is `role="img"` with an `aria-label`
+    and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`,
+    `gmt-gnss-table`, a tool's own root).
+  - They hold still by reserving space: every region is as big as the
+    tallest thing it can show (hidden sizers, fixed slot counts, a NO SIGNAL slot that is only
+    made visible), and the server HTML hides the fields the initial state hides (built.md §
+    Gates).
+- **The industry chart on `/why-gmt` never counts a function twice.** Each industry's bar is its
+  own namespace as a solid spring segment, then each module it draws on as a hatched tint of the
+  same series (`barHatchId("spring")`, `shaded`), so a shared layer reads as borrowed, not owned.
+  Totals sum own counts only (`industryFunctions`), the tooltip says "draws on X (owner)", and
+  the legend's words carry the meaning, never the hatch alone (`industrySegments` in
+  `why-gmt-charts.ts`).
 
 ## `/dox` and the header
 
@@ -368,7 +402,8 @@ track and two-clocks chart join them too. The seven read as one family:
 
 - The starter questions are cards in the widget rail, not pills in the chat: bevelled
   `<button>`s grouped under area headings, each with a chip naming the widget it opens
-  (`ExamplesPanel.tsx`, `gmt-hive.css`). The panel body scrolls inside the rail
+  (`ExamplesPanel.tsx`, `gmt-hive.css`). An area is an industry, and its heading carries the
+  industry's icon, `aria-hidden`, beside the label. The panel body scrolls inside the rail
   (`overflow-y: auto`, `min-height: 0`); the header stays put.
 - **Card text is `--gmt-ice` in every state.** `--gmt-cyan-ink` on the tinted hover fill is under
   7:1 in light, so hover and focus change the border and fill only. The chip is

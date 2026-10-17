@@ -1,5 +1,5 @@
 /**
- * A sidebar section grouped by industry: Tools, Scenarios and Mistakes.
+ * A sidebar section grouped by industry: Tools, Scenarios, Mistakes and the industry Guides.
  *
  * The section's index page comes first. Then each industry with at least one page gets a
  * divider and its pages, in the tag order (`INDUSTRY_TAG_IDS`: core, then the industries in

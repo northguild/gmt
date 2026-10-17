@@ -23,7 +23,8 @@
  * expires when that provider's allowance actually does. Bucketing everything by
  * the Pacific day left a refilled Workers AI pool reading as used for up to
  * eight hours, and let a spent mark set after UTC midnight vanish early at the
- * Pacific rollover. The visitor cap is Dox's own and stays on the Pacific day.
+ * Pacific rollover. The visitor cap is Dox's own and runs on the UTC day
+ * (`VISITOR_CAP_TIME_ZONE`).
  *
  * ## Every write is best-effort
  *

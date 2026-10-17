@@ -2,7 +2,7 @@
  * What an industry namespace's overview page says about the industry: a short
  * paragraph, and the problems its functions solve.
  *
- * Hand-kept text that `scripts/build-reference.ts` reads. A leaf module beside
+ * Hand-kept text that `scripts/build-industry-pages.ts` reads. A leaf module beside
  * `industry-tags.ts` (which `content.config.ts` imports and so must stay small):
  * it imports only that module's list of layers. `industry-overview.test.ts`
  * fails when a layer has no entry here, when a `{{name}}` token names a function

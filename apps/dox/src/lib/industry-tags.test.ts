@@ -351,7 +351,10 @@ describe("industry tags on pages", () => {
    * namespace may be `core`; one that does is tagged with an industry that owns or draws on a
    * module it uses, never `core`. A page may touch a second industry in passing (the Free Time
    * Ledger points at `dwellTime` for the day count it shares) without taking that industry's
-   * tag, so the declared tags are a non-empty subset of the allowed ones and not the whole set.
+   * tag, so the declared tag is one of the allowed ones, not the whole set.
+   *
+   * A page carries one tag, the layer that owns the functions it runs, so it sits in one menu
+   * section. An industry that draws on that layer links the page from its hub's `solves` list.
    */
   it.each(pages)(
     "$page is tagged only with industries its functions belong to",
@@ -360,6 +363,10 @@ describe("industry tags on pages", () => {
       expect(declared.filter((id) => !allowed.includes(id))).toEqual([]);
     },
   );
+
+  it.each(pages)("$page carries one tag, its owner layer's", ({ declared }) => {
+    expect(declared).toHaveLength(1);
+  });
 });
 
 describe("IndustryTags.astro", () => {

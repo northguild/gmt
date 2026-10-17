@@ -93,9 +93,9 @@ Four pieces:
 
 | Tool | Page | Kind | Chat tool | Tag | Library calls |
 | --- | --- | --- | --- | --- | --- |
-| GNSS Week Decoder | `/tools/gnss-week-decoder/` | `gnssweek` | `showGnssWeekDecoder` | GNSS, Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `rinexWeekToUtc`, `utcToRinexWeek`, `utcToGnss`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration` |
-| Satellite Clock Converter | `/tools/satellite-clock-converter/` | `satclock` | `showSatelliteClockConverter` | GNSS, Maritime | `utcToGnss`, `gnssToUtc`, `toTAI`, `fromTAI`, `taiMinusUtc`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration`, `addUtc`, `startOfUtc` |
-| GNSS Rollover Checker | `/tools/gnss-rollover-checker/` | `rollover` | `showGnssRolloverChecker` | GNSS, Maritime | `gnssWeekToUtc`, `utcToGnssWeek`, `areUtcEqual`, `diffUtcAsDuration`, `isValidInstant` |
+| GNSS Week Decoder | `/tools/gnss-week-decoder/` | `gnssweek` | `showGnssWeekDecoder` | GNSS | `gnssWeekToUtc`, `utcToGnssWeek`, `rinexWeekToUtc`, `utcToRinexWeek`, `utcToGnss`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration` |
+| Satellite Clock Converter | `/tools/satellite-clock-converter/` | `satclock` | `showSatelliteClockConverter` | GNSS | `utcToGnss`, `gnssToUtc`, `toTAI`, `fromTAI`, `taiMinusUtc`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `diffUtcAsDuration`, `addUtc`, `startOfUtc` |
+| GNSS Rollover Checker | `/tools/gnss-rollover-checker/` | `rollover` | `showGnssRolloverChecker` | GNSS | `gnssWeekToUtc`, `utcToGnssWeek`, `areUtcEqual`, `diffUtcAsDuration`, `isValidInstant` |
 | Leap Second Timeline | `/tools/leap-second-timeline/` | `leapline` | `showLeapSecondTimeline` | Core | `taiMinusUtc`, `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant`, `addUtc`, `startOfUtc` |
 | Elapsed vs. Clock Difference | `/tools/elapsed-vs-clock-difference/` | `elapsed` | `showElapsedVsClock` | Core | `spanNs`, `toTAI`, `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `hasSecond60`, `isValidInstant` |
 

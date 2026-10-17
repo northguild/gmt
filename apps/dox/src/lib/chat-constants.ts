@@ -278,7 +278,7 @@ export function findBrain(id: string): Brain | undefined {
 }
 
 /**
- * What a single visitor may spend per Pacific day.
+ * What a single visitor may spend per UTC day (`VISITOR_CAP_TIME_ZONE`).
  *
  * Not a security boundary — it is keyed on a hashed IP, which a determined
  * person can change. It exists so one enthusiastic reader cannot drain a pool
