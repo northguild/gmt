@@ -1,7 +1,7 @@
 /**
  * The JSON each canary writes for the issue reporter (CORE-81).
  *
- * Pure builders plus one writer; Node built-ins and `./format-json.mjs` only. No verdict carries a
+ * Pure builders plus two writers; Node built-ins and `./format-json.mjs` only. No verdict carries a
  * timestamp: the run link dates it, and the files stay deterministic for tests.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -133,4 +133,21 @@ export function writeVerdict(root, verdict) {
   const path = join(root, VERDICT_FILES[verdict.source]);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, formatJson(verdict));
+}
+
+/**
+ * `writeVerdict` that only reports a failure, on stderr as `<prefix>: cannot write verdict: …`.
+ * The file is an extra for the issue step: when it cannot be written, the console text and the
+ * exit code of the command that ran stand, and a write inside an error path cannot mask the error.
+ *
+ * @param {string} root
+ * @param {Parameters<typeof writeVerdict>[1]} verdict
+ * @param {string} prefix the command name that leads the stderr line
+ */
+export function saveVerdict(root, verdict, prefix) {
+  try {
+    writeVerdict(root, verdict);
+  } catch (error) {
+    console.error(`${prefix}: cannot write verdict: ${error.message}`);
+  }
 }

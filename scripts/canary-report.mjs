@@ -120,11 +120,12 @@ export function parseArgs(argv) {
 export function ensureLabels(gh, needed) {
   const existing = new Set(
     JSON.parse(gh(["label", "list", "--json", "name", "--limit", "1000"])).map(
-      (/** @type {{ name: string }} */ label) => label.name,
+      (/** @type {{ name: string }} */ label) => label.name.toLowerCase(),
     ),
   );
   for (const name of needed) {
-    if (existing.has(name)) continue;
+    // GitHub label names ignore case: `Canary` already exists as `canary`.
+    if (existing.has(name.toLowerCase())) continue;
     const spec =
       /** @type {Record<string, { description: string, color: string }>} */ (
         LABEL_SPECS

@@ -37,7 +37,7 @@ import { fileURLToPath } from "node:url";
 import {
   couldNotRunVerdict,
   leapSecondsVerdict,
-  writeVerdict,
+  saveVerdict,
 } from "./lib/canary-verdict.mjs";
 
 // fileURLToPath, not `.pathname`: see scripts/test-markers.mjs — a percent-encoded path breaks
@@ -187,16 +187,9 @@ async function readIers(file) {
   return await response.text();
 }
 
-/**
- * Writes the verdict file, and only reports a failure to. The file is an extra for the issue
- * step: when it cannot be written, the console text and the exit code of the check stand.
- */
-function saveVerdict(verdict) {
-  try {
-    writeVerdict(ROOT, verdict);
-  } catch (error) {
-    console.error(`leap-seconds: cannot write verdict: ${error.message}`);
-  }
+/** Writes the verdict file; a failure is only reported (see `saveVerdict`). */
+function saveLeapVerdict(verdict) {
+  saveVerdict(ROOT, verdict, "leap-seconds");
 }
 
 async function loadTables(file) {
@@ -209,7 +202,7 @@ async function loadTables(file) {
     };
   } catch (error) {
     console.error(`leap-seconds: cannot run: ${error.message}`);
-    saveVerdict(
+    saveLeapVerdict(
       couldNotRunVerdict("leap-seconds", `cannot run: ${error.message}`),
     );
     process.exit(2);
@@ -223,7 +216,7 @@ async function check(options) {
     ...iers.problems,
     ...compareRows(source.rows, iers.rows),
   ];
-  saveVerdict(
+  saveLeapVerdict(
     leapSecondsVerdict({
       header: iers.header,
       gmtRows: source.rows.length,

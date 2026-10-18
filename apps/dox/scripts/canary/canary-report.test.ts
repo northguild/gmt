@@ -84,6 +84,22 @@ describe("ensureLabels", () => {
     ]);
   });
 
+  it.each`
+    existingName | needed
+    ${"Canary"}  | ${"canary"}
+    ${"BUG"}     | ${"bug"}
+    ${"canary"}  | ${"CANARY"}
+  `(
+    "an existing $existingName label counts as $needed (GitHub names ignore case): no create call",
+    ({ existingName, needed }: { existingName: string; needed: string }) => {
+      const { gh, calls } = fakeGh(() => labelList(existingName));
+      ensureLabels(gh, [needed]);
+      expect(calls.map((c) => c.args)).toEqual([
+        ["label", "list", "--json", "name", "--limit", "1000"],
+      ]);
+    },
+  );
+
   it("creates a missing bug label with GitHub's default colour", () => {
     const { gh, calls } = fakeGh(() => labelList("canary"));
     ensureLabels(gh, ["canary", "bug"]);

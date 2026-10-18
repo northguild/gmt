@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +9,7 @@ import {
   compatCheckVerdict,
   couldNotRunVerdict,
   oracleVerdict,
+  saveVerdict,
   writeVerdict,
 } from "../../../../scripts/lib/canary-verdict.mjs";
 
@@ -309,5 +310,45 @@ describe("writeVerdict", () => {
         "utf8",
       ),
     ).toBe(formatJson(verdict));
+  });
+});
+
+describe("saveVerdict", () => {
+  let root = "";
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "canary-"));
+  });
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it("writes the verdict like writeVerdict and says nothing on stderr", () => {
+    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+    const verdict = couldNotRunVerdict("temporal-oracle", "no dist");
+    saveVerdict(root, verdict, "temporal-compat");
+    expect(
+      readFileSync(
+        join(root, "artifacts/temporal-oracle-verdict.json"),
+        "utf8",
+      ),
+    ).toBe(formatJson(verdict));
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("returns instead of throwing when `artifacts` is a plain file, and names the prefix on stderr", () => {
+    writeFileSync(join(root, "artifacts"), "not a folder");
+    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() =>
+      saveVerdict(
+        root,
+        couldNotRunVerdict("leap-seconds", "no file"),
+        "leap-seconds",
+      ),
+    ).not.toThrow();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(
+      /^leap-seconds: cannot write verdict: .*EEXIST/,
+    );
   });
 });

@@ -41,7 +41,7 @@ import {
   couldNotRunVerdict,
   oracleVerdict,
   UNTAGGED_ROWS_IN_VERDICT,
-  writeVerdict,
+  saveVerdict,
 } from "./lib/canary-verdict.mjs";
 
 // fileURLToPath, not `.pathname`: see scripts/test-markers.mjs — a percent-encoded path breaks
@@ -254,6 +254,14 @@ function fail(code, message) {
   console.error(message);
   lastFailure = message;
   process.exitCode = code;
+}
+
+/**
+ * Writes a verdict file; a failure is only reported on stderr (see `saveVerdict`), so the console
+ * text and the exit code of `check` and `oracle` are the same whether or not it can be written.
+ */
+function saveCompatVerdict(source, verdict) {
+  saveVerdict(ROOT, verdict, source);
 }
 
 function requireDist() {
@@ -507,8 +515,8 @@ async function check(args) {
     inState("still-needed").length,
   );
 
-  writeVerdict(
-    ROOT,
+  saveCompatVerdict(
+    "temporal-compat-check",
     compatCheckVerdict({
       runtime: runtimeInfo(),
       groups,
@@ -1115,8 +1123,8 @@ async function oracle(args) {
   );
   writeFileSync(textPath, `${summary}\n`);
   // Before the exit-1 below, so a run that found GMT bugs still leaves a `ran` verdict.
-  writeVerdict(
-    ROOT,
+  saveCompatVerdict(
+    "temporal-oracle",
     oracleVerdict({
       runtime: runtimeInfo(),
       chromium: native.browserVersion,
@@ -1232,14 +1240,14 @@ async function runWithVerdict(source, command) {
   try {
     await command();
   } catch (error) {
-    writeVerdict(
-      ROOT,
+    saveCompatVerdict(
+      source,
       couldNotRunVerdict(source, String(error?.message ?? error)),
     );
     throw error;
   }
   if (process.exitCode === 2) {
-    writeVerdict(ROOT, couldNotRunVerdict(source, lastFailure));
+    saveCompatVerdict(source, couldNotRunVerdict(source, lastFailure));
   }
 }
 
