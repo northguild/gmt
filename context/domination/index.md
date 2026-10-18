@@ -14,6 +14,8 @@ This file is a progressive-disclosure entry point. Read what you need:
 - [specs/index.md](specs/index.md) — Implementation specs that outgrew an issue file.
 - [research/index.md](research/index.md) — Research records: the primary-source evidence behind specs, including the
   verification files in `research/spike-2026-09/`.
+- [../ultimation/index.md](../ultimation/index.md) — The epic after this one: parity with every other
+  date and time platform, and the rule that decides when a parity gap becomes a story.
 
 ## Orientation
 
