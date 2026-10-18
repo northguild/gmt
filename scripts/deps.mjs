@@ -5,7 +5,7 @@
  *   node scripts/deps.mjs check          validate both trackers; exit 1 on drift
  *   node scripts/deps.mjs sync           regenerate the domination `Blocked by` column and
  *                                        `context/domination/issues/index.md`
- *   node scripts/deps.mjs ready          list stories nothing is blocking
+ *   node scripts/deps.mjs ready          list stories nothing is blocking (a `Waiting` row is not one)
  *   node scripts/deps.mjs whoneeds <ID>  reverse lookup: who consumes this story
  *
  * The domination column is derived from two inputs: the story IDs named in each story's
@@ -482,7 +482,12 @@ function ready() {
 
   // Domination: the cell already excludes everything Done, so it reads directly.
   const dom = open(dominationTracker().rows);
-  const startable = dom.filter((r) => isReady(r.cells[4]));
+  // A `Waiting` row waits on something outside this repo (named in its spec), so an empty
+  // cell does not make it startable.
+  const waiting = dom.filter((r) => r.status.startsWith("Waiting"));
+  const startable = dom.filter(
+    (r) => isReady(r.cells[4]) && !r.status.startsWith("Waiting"),
+  );
   console.log(
     `\nDomination — ${startable.length} ready of ${dom.length} open:`,
   );
@@ -492,6 +497,10 @@ function ready() {
       `  ${r.id}${shared.length ? `  (also builds ${shared.join(", ")})` : ""}`,
     );
   }
+  if (waiting.length)
+    console.log(
+      `  waiting on something outside this repo: ${waiting.map((r) => r.id).join(", ")}`,
+    );
 
   const doxOpen = open(doxTracker().rows);
   const doxReady = doxOpen.filter((r) => isReady(r.cells[2]));

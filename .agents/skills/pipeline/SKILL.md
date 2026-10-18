@@ -49,6 +49,11 @@ and one slice), never no spec. Nothing else has a story spec, so nothing else ru
 - **A.** Check `Blocked by` in the tracker (or `pnpm deps:ready`) first; never start a blocked
   story. Skip `researcher` if the Temporal API is well known. A small story (one function, under
   50 lines, no new namespace, not locale-aware) may skip `tester`; say so.
+- **A, docs-site Core story.** A `CORE-*` story that adds no function and whose work is the docs
+  site (`CORE-86` … `CORE-88`) has nothing to test first, so `tdd-dev` and `tester` are skipped:
+  `dox-builder` → `dox-tester` for `apps/dox`; `tdd-dev` → `gmt-reviewer` only for a package
+  export (`CORE-87`, if it takes that route); `finalizer` for the READMEs and skills
+  (`CORE-88`). `dox-builder` never touches `packages/gmt`.
 - **B.** Skip `architect`; `tdd-dev` records the failing repro before the fix.
 - **C.** Skip `architect`, `researcher` and the release steps of `finalizer`.
 - **H.** `dox-architect` returns the execution spec; the main session then runs `dox-builder`
