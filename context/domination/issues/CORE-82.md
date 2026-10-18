@@ -6,7 +6,7 @@
 
 Native `Temporal` is on by default in Firefox 139, Chrome 144 and Node 26.0.0. A GMT user on any of them who passes their own `Temporal` values around, or who later runs GMT on the host's engine, depends on GMT giving the same answers there.
 
-Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`.github/workflows/temporal-oracle.yml`) compares about 410,000 Temporal results with Chromium's engine, but it probes `Temporal` itself, not GMT's functions. A GMT answer that differs on a native engine is found by nobody.
+Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`.github/workflows/temporal-oracle.yml`) compares about 410,000 GMT results with Chromium's native `Temporal`, but GMT runs on the polyfill there, and only calendar operations are compared. No test runs GMT itself on a native engine. A GMT answer that differs on a native engine is found by nobody.
 
 ([Firefox 139 release notes](https://www.firefox.com/en-US/firefox/139.0/releasenotes/), [Chrome 144 release notes](https://developer.chrome.com/release-notes/144), [Node.js 26.0.0 changelog](https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V26.md#26.0.0))
 
