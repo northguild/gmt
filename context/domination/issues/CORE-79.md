@@ -23,7 +23,7 @@ Without one shape, each story invents its own field names, axis order, range rul
 
 ## Tool
 
-This story adds the `Position` input type and no function a reader could try. SPA-75's Solar Events Map is the first tool to take it.
+This story adds the `Position` input type and no function a reader could try. MAR-18's Ship's Clock is the first tool to take it.
 
 ## Design notes
 
