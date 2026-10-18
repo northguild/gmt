@@ -672,7 +672,7 @@ describe("lifecycle", () => {
   });
 });
 
-describe("the links row (D13)", () => {
+describe("the links row", () => {
   const WEEKS = "This moment as a week on every counter";
   const TIMELINE = "Why these gaps grew";
   const link = (root: HTMLElement, role: string) =>

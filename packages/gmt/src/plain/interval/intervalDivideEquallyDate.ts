@@ -27,9 +27,9 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`).
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). `start` and `end` must
- *   carry the *same* calendar tag (or both be bare ISO); a mismatch returns `[]` (E5 decision
- *   of record D4). Internal boundaries are computed in whole days (calendar-independent), then
- *   re-formatted in the shared calendar.
+ *   carry the *same* calendar tag (or both be bare ISO); a mismatch returns `[]`. Internal
+ *   boundaries are computed in whole days (calendar-independent), then re-formatted in the shared
+ *   calendar.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated

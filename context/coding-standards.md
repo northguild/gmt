@@ -208,13 +208,13 @@ which records the native Temporal evidence for each rule below.
   `splitIntervalByUnit*`, `intervalOverlappingDays*`; `internal/calendarDatePairPolicy.ts`,
   `calendarZonedPairPolicy.ts`), as Temporal's `until` throws. Ordering (`compare`) has no calendar
   check, so the ordering-only interval functions accept mixed calendars; value-returning interval
-  set operations reject the mismatch (D4). A bare ISO string names `iso8601`. This rule
-  (2026-09-17) replaces E5/E7 decision D5, which measured mixed calendars in ISO.
+  set operations reject the mismatch, since their result must be written in one calendar. A bare
+  ISO string names `iso8601`.
 
 Every Temporal call keeps the try-catch and sentinel rules above. This is not a manual-parsing
 exception: the regex restricts the shape and Temporal parses the string itself.
 
-Do not extend the calendar grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story — see E5's decision D1 and E7's explicit "not in scope" list.
+Do not extend the calendar grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story.
 
 ## Loop Style
 

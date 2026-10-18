@@ -638,7 +638,7 @@ describe("the sliders", () => {
   });
 });
 
-describe("the links row (D13)", () => {
+describe("the links row", () => {
   const link = (root: HTMLElement, role: string) =>
     q<HTMLAnchorElement>(root, role);
   const open = (root: HTMLElement, role: string) => ({

@@ -25,8 +25,8 @@ import { isValidCalendarDate } from "../validate";
  * - Returns `null` on invalid input (wrong type, malformed strings).
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Since the result is a
  *   date *value*, all four arguments must carry the *same* calendar tag (or all be bare ISO);
- *   a mismatch returns `null` rather than guessing an output calendar (E5 decision of record
- *   D4). The output's tag is re-derived from the merged span, never copied from an input.
+ *   a mismatch returns `null` rather than guessing an output calendar. The output's tag is
+ *   re-derived from the merged span, never copied from an input.
  *
  * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
  * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated

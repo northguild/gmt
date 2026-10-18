@@ -109,9 +109,9 @@ describe("intervalUnionDate", () => {
     ).toBeNull();
   });
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings when all four arguments
-  // share the same tag -- the output's date value is re-derived in that calendar (E5
-  // decision of record D4). A mismatch returns null rather than guessing an output calendar.
-  // Goldens verified directly against @js-temporal/polyfill.
+  // share the same tag -- the output's date value is re-derived in that calendar. A mismatch
+  // returns null rather than guessing an output calendar. Goldens verified directly against
+  // @js-temporal/polyfill.
   it("merges in the shared calendar when all four arguments carry the same tag", () => {
     expect(
       intervalUnionDate(

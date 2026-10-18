@@ -16,8 +16,7 @@ import { isValidCalendarDate } from "../validate";
  * - Returns `false` on invalid input (wrong type, malformed strings).
  * - Accepts RFC 9557 calendar-annotated PlainDate strings (as produced by `convertDateToCalendar`) —
  *   E5 (issue #78). Comparison is by calendar-independent ordering (`Temporal.PlainDate.compare`
- *   ignores calendar), so the four endpoints may carry different or no calendar tags — E5
- *   decision of record D4 (ordering-only functions accept mixed calendars).
+ *   ignores calendar), so the four endpoints may carry different or no calendar tags.
  * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
  *   calendar ids); see `isValidCalendarDate`.
  *

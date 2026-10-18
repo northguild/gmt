@@ -66,9 +66,19 @@ Current rules for the interval namespace and the non-ISO calendar work, with the
 - **Any non-null object with string `start` and `end` is an interval.** Extra keys are ignored
   and never copied. Why: callers hold richer records (a booking, a shift) and should not have to
   strip them. No spec covers this; it is a GMT rule.
+- **The first argument wins ties between spellings of one instant.** When two inputs name the
+  same instant differently (`2024-01-01T09:00:00Z` and `2024-01-01T04:00:00-05:00`), the output
+  keeps the first argument's spelling: `a` in `intersectIntervals`, `interval` in
+  `clampInterval`, `from` in `subtractIntervals`, and the first occurrence in `mergeIntervals`
+  and `splitIntervalAt`. Why: outputs must be caller strings, and a positional rule is
+  deterministic without inventing a canonical spelling. No spec covers this; it is a GMT rule.
 - **Outputs are fresh `{ start, end }` objects built from the caller's strings.** An output is never
   the caller's object, and every endpoint is one of the caller's spellings (see the tie rule
   above).
+- **Only `interval/` takes caller-owned `Interval` records.** The older positional functions
+  (`plain|utc|zoned|unix/interval`) take bare values, not records, and return their type's
+  canonical spelling. Why: `interval/` echoes the caller's strings because the caller owns the
+  record; a bare value has no owner whose spelling must survive.
 - **Instants are compared as bigint epoch nanoseconds** and summed the same way, so a total stays
   exact past 2^53 ns across the full instant range. Output durations stop at hours because an
   instant has no calendar to define a day (`largestUnit: "day"` throws in TC39 Temporal).

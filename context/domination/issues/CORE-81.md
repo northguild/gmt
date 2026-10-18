@@ -16,12 +16,12 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 
 1. **Guard state.** A workaround in `scripts/temporal-compat.mjs` can declare that its probes pass by design until an upstream version event. `check` prints it as `GUARD`, with its trigger and no removal steps, and leaves it out of the removable count. D10 is the first.
 2. **JSON result.** `check` and `oracle` write their verdicts to `artifacts/` as JSON next to the existing oracle output: per workaround its state and trigger, and per oracle run the untagged mismatches. `scripts/leap-seconds.mjs check` writes its differences the same way.
-3. **Issue step.** A script read by a final workflow step (`if: always()`, `issues: write`) turns the JSON into issues:
+3. **Issue step.** A script run by a final workflow step (`if: ${{ !cancelled() }}`, `issues: write`) turns the JSON into issues:
    - one issue per workaround that becomes removable, with its trigger and removal steps;
    - one `bug` issue for any untagged oracle mismatch, listing the rows;
    - one issue for a leap-second table difference, with the IERS header line;
-   - a comment on the matching open issue instead of a duplicate, matched by a label and a hidden marker carrying the defect id;
-   - nothing when nothing changed.
+   - a comment on the matching open issue instead of a duplicate, matched by a label and a hidden marker carrying the finding key, on every run while the finding persists;
+   - nothing when there is no finding.
 4. **Job summary.** Every run writes still needed, removable, guard and mismatch counts to `$GITHUB_STEP_SUMMARY`.
 5. **Snapshot reminder.** A removable-workaround issue says when `pnpm compat:snapshot` is due for `apps/dox/src/data/temporal-compat.json`.
 
@@ -88,10 +88,12 @@ Current rules for the canary reporting, with the reason for each.
 - **The snapshot carries the state; the Dox page never derives it.** `temporal-compat.json` keeps
   every field and gains `state` per row and `guard` on a guarded row, from the same
   `workaroundState`, so the `/upstream/` page cannot call D10 "No" while `check` says GUARD.
-- **Write scope sits on the reporting job only.** The `oracle` job stays `contents: read`; the
-  `report` job has `issues: write` and runs `if: ${{ !cancelled() }}`. Dispatch inputs reach the
-  shell only through `env:`. The reporter uses Node built-ins and no `Date`, so
-  `leap-seconds.yml` stays install-free.
+- **Write scope sits on the reporting job only, except in `leap-seconds.yml`.** In
+  `temporal-oracle.yml` the `oracle` job stays `contents: read`; the `report` job has
+  `issues: write` and runs `if: ${{ !cancelled() }}`. `leap-seconds.yml` has one job, which holds
+  `issues: write` for both the check and the report step, because it runs only first-party Node
+  with no install. Dispatch inputs reach the shell only through `env:`. The reporter uses Node
+  built-ins and no `Date`, so `leap-seconds.yml` stays install-free.
 - **The canary tests run in the Dox Vitest project** (`apps/dox/scripts/canary/`). It already
   includes `scripts/**/*.test.ts`, runs inside `validate` and CI, and its no-network preload proves
   the decision code is offline.

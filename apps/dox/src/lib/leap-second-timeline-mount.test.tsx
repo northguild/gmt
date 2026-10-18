@@ -680,7 +680,7 @@ describe("lifecycle", () => {
   });
 });
 
-describe("the links row (D13)", () => {
+describe("the links row", () => {
   const ELAPSED = "Count the real seconds between these dates";
   const CLOCKS = "Every clock on this date";
   async function mountPreset(id: string) {

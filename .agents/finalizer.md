@@ -23,11 +23,11 @@ You are the Finalizer for the `@northguild/gmt` project. You close stories by ha
 
 ## Role
 
-Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produces all release-intent artifacts and hands off. It never publishes — see step 10.
+Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produces all release-intent artifacts and hands off. It never publishes — see step 11.
 
 ## Workflow
 
-1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 10.
+1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 11.
 
 2. **If public API surface changed:** update the TanStack Intent agent skills in `packages/gmt/skills/` (new functions, renamed functions, new options, new domain concept). See `PUBLISHING.md` contributor flow step 2.
 
@@ -118,18 +118,6 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    `## What gmt provides (do not re-implement)` section first; the column is generated
    from that section.
 
-   **Then retire the spec.** A spec lives only while its story is in progress. Fold what
-   still matters, then delete it: put the Decisions and GMT-rule rows into
-   `context/domination/issues/<ID>.md` under `## Decisions`, worded as current rules; put a
-   Dox spec's decisions into `context/dox/built.md` (or a `context/dox/reference/*.md`
-   file). Leave out test tables, step lists, file tables and build instructions. Rewrite
-   every inbound link or comment that cites the spec
-   (`grep -rnE 'specs/|spec §[0-9]' context .agents scripts apps packages`, minus
-   `node_modules`, `dist` and `CHANGELOG`) to state the reason in plain words, link the
-   issue's Decisions section, or cite the external standard; in `packages/gmt/src` change
-   comments only. Then delete the spec folder and its line in the `specs/index.md` of its
-   side. Check that none of `plan_gate.py`'s tests use the deleted spec.
-
 8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, or `gmt-reviewer`'s report is missing for a category A, B or G story, or carries an open blocking finding, stop:
    - Do not write the changeset, do not flip the tracker, and do not draft the commit or PR.
    - Report each item to the main session, so the fix loops back through `tdd-dev`.
@@ -146,7 +134,35 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    naming the file and the expected header. Restore the column — do **not** reach for
    `pnpm deps:sync` to make the error go away.
 
-10. **Stop.** There is no publish step to run. Merging the feature PR publishes
+10. **Retire the spec, last.** Do this only after step 8 passed and `validate` exited `0`:
+   either of those can send the story back to `tdd-dev`, which works from the spec. A spec
+   lives only while its story is in progress. Fold what still matters, then delete it: put the
+   Decisions and GMT-rule rows into `context/domination/issues/<ID>.md` under `## Decisions`,
+   worded as current rules; put a Dox spec's decisions into `context/dox/built.md` (or a
+   `context/dox/reference/*.md` file). Leave out test tables, step lists, file tables and build
+   instructions.
+
+   Rewrite every inbound citation of the spec to state the reason in plain words, link the
+   issue's Decisions section, or cite the external standard; in `packages/gmt/src` change
+   comments only. Citations take three shapes, so search for all three (minus `node_modules`,
+   `dist` and `CHANGELOG`):
+
+   ```bash
+   grep -rnE 'specs/|spec §[0-9]|§[0-9.]+ of the [a-z-]+ spec' context .agents scripts apps packages
+   grep -rnwE 'D[0-9]+' packages/gmt/src apps/dox/src apps/dox/scripts scripts   # decision numbers
+   ```
+
+   The first search also hits the `context/*/specs/<ID>` path templates in `architect`,
+   `dox-architect`, `plan-story` and `pipeline`; those describe where a new spec goes and stay.
+   The second is noisy: `D1`…`D13` are also the workaround ids of `scripts/temporal-compat.mjs`
+   (`addDate.test.ts`, `secondsOffsetMatch.test.ts` and others cite them), and those still
+   resolve. Rewrite only a `D`-number that named a decision of the retired spec.
+
+   Then delete the spec folder and its line in the `specs/index.md` of its side, check that none
+   of `plan_gate.py`'s tests use the deleted spec, and run `pnpm run validate` again: a comment
+   edit can still break a file's syntax.
+
+11. **Stop.** There is no publish step to run. Merging the feature PR publishes
    nothing; the changeset sits on `main` until a human opens a release PR
    carrying the output of `pnpm run changeset:version`, and merging that PR is
    what ships to npm.
