@@ -7,7 +7,6 @@ import {
   intervalSplitAtZoned,
 } from "../src/zoned";
 
-// Slice 10 fixes the loops these exercise.
 const ZONE = "Europe/London";
 // The string carries the zone's real offset for that date: a wrong one is invalid input.
 const zoned = (date: string) =>

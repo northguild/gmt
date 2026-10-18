@@ -229,8 +229,9 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    `resolveDurationRelativeTo` reading a zoned string through `zonedDateTimeFrom` (the range-limit
    fallbacks need it too) and
    `test/secondsOffsetMatch.test.ts`: its values are test262's and hold either way.
-14. **D13:** delete `internal/zonedTransitionSearch.ts` and the
-   `isTransitionSearchCompatNeeded` branches of `zonedNextTransition` and
+14. **D13:** delete `internal/zonedTransitionSearch.ts` (its per-zone transition memo goes with it,
+   and so do the `the transition memo` and `the transition memo at its edges` blocks in its test)
+   and the `isTransitionSearchCompatNeeded` branches of `zonedNextTransition` and
    `zonedPreviousTransition` (`internal/zonedWallClockOperations.ts`), which then return the
    polyfill path filtered by the caller's limit; `isMidnightSkipped` and the D13 terms of
    `needsOwnStartOfDaySearch` and `needsOwnDayBoundsSearch` (`internal/zonedWallClock.ts`, with

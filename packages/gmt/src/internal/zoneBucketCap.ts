@@ -60,9 +60,10 @@ export function certainlyTouchesMoreBuckets(
   let transitions = 0;
   try {
     for (
-      let current = startZoned, next = zonedNextTransition(current);
-      next !== null && next.epochNanoseconds < prefixEndNs;
-      current = next, next = zonedNextTransition(current)
+      let current = startZoned,
+        next = zonedNextTransition(current, prefixEndNs - 1n);
+      next !== null;
+      current = next, next = zonedNextTransition(current, prefixEndNs - 1n)
     ) {
       if (++transitions > MAX_PRECOUNT_TRANSITIONS) {
         return false;

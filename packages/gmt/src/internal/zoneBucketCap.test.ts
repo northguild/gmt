@@ -73,3 +73,27 @@ describe("certainlyTouchesMoreBuckets", () => {
     ).toBe(false);
   });
 });
+
+// Europe/London springs forward 2024-03-31T01:00:00Z (Temporal `getTimeZoneTransition`). With a cap
+// of 1 day the prefix is at most 4 days; four days of wall clock with no change in it hold 4 day
+// starts, 4 - 2 = 2 > 1. A change inside the prefix is one more stretch, 4 - 4 = 0, not certain.
+describe("certainlyTouchesMoreBuckets at a change next to the prefix end", () => {
+  it.each`
+    start                               | end                                 | expected
+    ${"2024-03-27T01:00:00Z"}           | ${"2024-03-31T01:00:00Z"}           | ${true}
+    ${"2024-03-27T00:59:59.999999999Z"} | ${"2024-03-31T01:00:00Z"}           | ${true}
+    ${"2024-03-27T01:00:00.000000001Z"} | ${"2024-03-31T01:00:00.000000001Z"} | ${false}
+  `(
+    "is $expected from $start to $end in Europe/London with a cap of 1 day",
+    ({ start, end, expected }) => {
+      expect(
+        certainlyTouchesMoreBuckets(
+          at(start, "Europe/London"),
+          at(end, "Europe/London"),
+          "day",
+          1,
+        ),
+      ).toBe(expected);
+    },
+  );
+});

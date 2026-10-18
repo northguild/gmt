@@ -1,7 +1,7 @@
 import { bench, describe } from "vitest";
 import { formatDate, getLocaleMonthNames } from "../src/plain";
 
-// One locale, repeated (slice 9).
+// One locale, repeated: the formatter is the cost.
 describe("formatDate and getLocaleMonthNames", () => {
   bench(
     "formatDate, de-DE",

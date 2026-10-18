@@ -176,7 +176,7 @@ const WORKAROUNDS = [
     trigger:
       "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
     steps: [
-      "Delete internal/zonedTransitionSearch.ts and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
+      "Delete internal/zonedTransitionSearch.ts (its per-zone transition memo goes with it) and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
       "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
       "Keep internal/zonedTransitionSearch.test.ts apart from its step guard, and every Boa_Vista, Riga and Simferopol row: their values are native Temporal's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 14.`,
