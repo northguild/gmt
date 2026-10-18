@@ -21,6 +21,10 @@ The older Medication Possession Ratio (MPR) sums days' supply over the period wi
   - `daysSupplyRemaining(fill, onDate: string): number` — Non-negative.
   - `refillTooSoon(previous: { filledOn: string, daysSupply: number }, requestedOn: string, options: { thresholdPercent: number }): { tooSoon: boolean, percentUsed: number, earliestAllowedOn: string }` — An early-refill test; the threshold is a scheme parameter with no default.
 
+## Tool
+
+**Extends Dose Validity and Adherence** with fills: enter fills and their days' supply to see the proportion of days covered and whether a refill is too soon. Calls `proportionOfDaysCovered`, `refillTooSoon`.
+
 ## Design notes
 
 - **Dates, not instants.** Fills are dated, coverage is counted in whole days, and the measure is defined on calendar days; the functions take ISO dates and reject instants rather than resolving a zone that pharmacy claims do not carry.

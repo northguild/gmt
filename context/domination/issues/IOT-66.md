@@ -27,6 +27,10 @@ The library has the ingredients (IOT-30's `uncertaintyInterval`, CORE-1's nanose
   - `commitWaitUntil(timestamp: string, uncertainty: Interval): string` — The instant after which `timestamp` is definitely in the past for every observer: `uncertainty.end`, per TrueTime's `TT.after`.
   - `isDefinitelyPast(timestamp: string, now: Interval): boolean` — `TT.after(t)`: `t < now.start`.
 
+## Tool
+
+**HLC Simulator.** Set two nodes with a chosen skew and let them exchange messages. The tool shows each hybrid clock after every send and receive, the resulting order, and the pairs whose order is indeterminate. Calls `hlcSend`, `hlcReceive`, `hlcCompare`, `uncertaintyOrder`, `commitWaitUntil`.
+
 ## Design notes
 
 - **The rules are the paper's, verbatim in the JSDoc.** HLC's correctness argument depends on the exact four-case analysis in the receive rule (`l.j = l′.j = l.m` → `max(c.j, c.m) + 1`; `l.j = l′.j` → `c.j + 1`; `l.j = l.m` → `c.m + 1`; else `0`); a "close enough" variant loses the causality guarantee silently. Each function's JSDoc quotes the rule it implements and cites Figure 5 of the technical report.

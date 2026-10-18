@@ -24,6 +24,10 @@ The observance shift is where implementations diverge. One policy moves a Saturd
 - `packages/gmt/src/calendar/rules/buildBusinessCalendar.ts`:
   - `buildBusinessCalendar(spec: { timeZone: string, weekend: number[], rules: HolidayRule[], years: { from: number, to: number } }): BusinessCalendar | null` — Expands rules into CORE-7's enumerated shape for a year range, so every consumer keeps working against the existing type.
 
+## Tool
+
+**Holiday Rule Builder.** Compose fixed, nth-weekday and Easter-relative rules with an observance policy. The tool shows the year's dates on a calendar and marks the ones the policy shifted, then sends the built calendar to the Free Time Ledger. Calls `nthWeekdayOfMonth`, `easterSunday`, `observedDate`, `holidayDates`, `buildBusinessCalendar`. Teaches: holidays are rules, and the observance shift is where calendars disagree.
+
 ## Design notes
 
 - **Rules are logic; rule sets are data — and no national rule set ships.** This story ships the three rule forms and the expansion. FIN-41's opt-in `finance/data` subpath carries exchange and payment-system calendars only, each with its source and revision. The TARGET closing days are the worked example in the JSDoc, cited to the operator, not an exported constant.

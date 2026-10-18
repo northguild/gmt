@@ -25,6 +25,10 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 
 ([BIPM Annual Report on Time Activities vol. 15](https://webtai.bipm.org/ftp/pub/tai/annual-reports/bipm-annual-report/annual_report_2020.pdf))
 
+## Tool
+
+**Extends Satellite Clock Converter** with TAI64N labels: give a label to see its instant, or give an instant to see its label, beside the other clocks. Calls `toTai64n`, `fromTai64n`.
+
 ## Design notes
 
 - **Every offset is a function of date**, resolved through the leap-second table. Hardcoding 37 produces a library that is correct only until the next leap second.

@@ -18,9 +18,16 @@ A later story in a realm that already has pages extends them rather than adding 
 
 ## Purpose-built widgets
 
-Every function gets a live playground for free. A story may also ship one teaching widget when
-the rule it teaches is better seen than read, and a playground cannot show it. TRAN-8's Dwell
-Ledger is the first: `calendarDays` only makes sense drawn on a zone's real local-day grid.
+Every function gets a live playground for free. A story that adds public functions also ships
+one or more teaching tools: at least one, and more only when each teaches something distinct.
+TRAN-8's Dwell Ledger is the first: `calendarDays` only makes sense drawn on a zone's real
+local-day grid.
+
+- Each issue file names its seeded tool under `## Tool`. The Dox shortlist at plan time ranks
+  it first and may add or replace candidates; the owner picks.
+- A story that teaches a new facet of an earlier tool extends that tool: its `## Tool` reads
+  "Extends <tool> with <facet>".
+- A story that adds no public function ships none, and its `## Tool` says why.
 
 A widget follows the Tier 2 shape in [../dox/built.md](../dox/built.md), under
 `apps/dox/src/`:

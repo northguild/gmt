@@ -48,6 +48,10 @@ B3's own words: "TDB = TCB − L_B × (JD_TCB − T₀) × 86400 + TDB₀, where
 '2026-01-01T00:00:00 TCB'
 ```
 
+## Tool
+
+**Extends Satellite Clock Converter** with barycentric time: Barycentric Dynamical Time and Barycentric Coordinate Time appear as two more rows. Calls `toTDB`, `toTCB`.
+
 ## Design notes
 
 - **`tdbMinusTt` is exported deliberately.** A caller working at millisecond precision needs to know the correction is being applied and how large it is; a caller at 50 µs needs to know the approximation's error bound exceeds their tolerance. Hiding it inside the conversion makes the accuracy limit invisible.

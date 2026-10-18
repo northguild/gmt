@@ -26,6 +26,10 @@ None of these formats is parseable by a general date library, all of them are si
 - `packages/gmt/src/finance/validate/timestampGranularity.ts`:
   - `meetsGranularity(precision: Precision, required: Precision): boolean` — Whether a detected precision is at least as fine as a required one, for any policy the caller states. `Precision` is the parsers' union: `'second' | 'millisecond' | 'microsecond' | 'nanosecond' | 'picosecond'`.
 
+## Tool
+
+**FIX and SWIFT Timestamp Reader.** Paste a FIX or SWIFT timestamp and see the instant. The tool also checks the value against the granularity you require. Calls `parseFixUtcTimestamp`, `parseFixTzTimestamp`, `parseSwiftDateTimeIndication`, `meetsGranularity`.
+
 ## Design notes
 
 - **Precision is detected from the digit count and reported, never widened.** A FIX engine that emits milliseconds must not be read back as nanoseconds with zeros; downstream latency analysis depends on knowing what was measured. The same rule as HLTH-34's FHIR precision.

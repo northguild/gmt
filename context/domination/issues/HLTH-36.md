@@ -29,6 +29,10 @@ The estimated due date is a date calculation with conventions a caller supplies:
   - `postmenstrualAge(gestationalAgeAtBirth: { weeks: number, days: number }, birthDate: string, at: string): { weeks: number, days: number } | null`
   - `correctedAge(gestationalAgeAtBirth: { weeks: number, days: number }, birthDate: string, at: string, options: { termWeeks: number, applicableUntil?: string }): { weeks: number, days: number } | null` — Chronological age minus `(termWeeks − gestational age at birth)`; the sentinel beyond `applicableUntil` (an ISO duration from birth) only when it is given.
 
+## Tool
+
+**Extends Age and Partial Date Calculator** with ages: enter a birth date and the caller's dating inputs to see the chronological, gestational and corrected ages and the due date. Calls `ageAt`, `gestationalAge`, `correctedAge`, `estimatedDueDate`.
+
 ## Design notes
 
 - **Date arithmetic, not instant arithmetic, for coarse units.** `ageAt` with unit `'year'` or `'month'` compares calendar dates and must not convert to instants. Only `'hour'` normalises offsets. This is the documented rule and the reason the unit is a parameter rather than the caller dividing a duration.

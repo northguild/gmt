@@ -20,6 +20,10 @@ FpML's own element documentation is the specification here: `effectiveDate` is "
 - `packages/gmt/src/finance/validate/isValidRollConventionCode.ts`:
   - `isValidRollConventionCode(value: unknown): value is RollConventionCode`
 
+## Tool
+
+**Schedule Generator.** Enter an effective date, a termination date, a frequency and a roll convention. The tool lists the calculation periods, shows any stub, and lists the payment dates. Calls `calculationPeriods`, `paymentDates`.
+
 ## Design notes
 
 - **Unadjusted first, then adjusted, and the adjustment never feeds back.** A period ending on the 31st that rolls to the 30th for a weekend still starts the next period on the 31st. Generating adjusted dates and rolling forward from them is the canonical schedule bug and the reason both date pairs are returned.

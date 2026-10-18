@@ -21,6 +21,10 @@ FHIR's `Timing.repeat` carries more than frequency and period: `count`/`countMax
   - `classifyAdministration(administeredAt: string, scheduledAt: string, tolerance: string): 'early' | 'onTime' | 'late' | 'missed'`
 - Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)): the health guide gains "Encounter durations", with no new function — midnights crossed as `dwellTime(admitted, discharged, hospitalZone).calendarDays - 1`, calendar days touched as `calendarDays`, exact elapsed time as `duration`, and observation hours as `sumIntervals(subtractIntervals([stay], excluded))` rounded down to whole hours. Examples are labelled by their numbers: a stay from 23:30 to 00:30 crosses one midnight in one hour; a stay crossing two midnights; a stay across a fall-back night whose elapsed time is one hour longer than its wall-clock span. Which counts a payer or a policy uses is the caller's.
 
+## Tool
+
+**Dosing Schedule Across DST.** Enter a `Timing.repeat` and a zone. The tool lists the administrations on a transition night and flags the dose that is repeated or skipped. Calls `expandTiming`, `administrationWindow`, `classifyAdministration`.
+
 ## Design notes
 
 - **`dstPolicy` is required and has no default.** The two policies give different, both-defensible answers, and the choice is clinical rather than technical:

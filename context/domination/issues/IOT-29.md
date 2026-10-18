@@ -17,6 +17,10 @@ The original spec's `monotonicNow(): string` returned an ISO 8601 timestamp from
 - `packages/gmt/src/iot/convert/readingToInstant.ts`:
   - `readingToInstant(reading: Reading): string` — Converts a reading to a wall-clock instant. Explicitly lossy: the result is only as accurate as `timeOrigin`, and drifts if the wall clock has since been corrected.
 
+## Tool
+
+**Clock Offset Estimator.** Enter a device's monotonic readings. The tool shows the span between two readings and the wall-clock instant each reading maps to. Calls `monotonicReading`, `monotonicSpan`, `readingToInstant`. Teaches: a monotonic reading measures a span, never a moment, until it is tied to the wall clock.
+
 ## Design notes
 
 - **The reading pair is the whole point.** Keeping `timeOrigin` and `elapsedNs` separate makes the two questions distinguishable: "how long did this take" is answered exactly by `elapsedNs`, and "when did it happen" is answered approximately by combining them. A single ISO string cannot express that distinction, so callers cannot know which guarantee they have.

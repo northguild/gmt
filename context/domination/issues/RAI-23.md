@@ -17,6 +17,10 @@ Rail operations distinguish running time between stations, dwell while stopped, 
 - `packages/gmt/src/rail/calculate/shuntingWindow.ts`:
   - `shuntingWindow(available: Interval, operations: { name: string, duration: string }[]): { earliestStart: string, latestStart: string, feasible: boolean, slack: string } | null` — Whether a sequence of moves fits, and how much slack remains.
 
+## Tool
+
+**Blocking Time Ruler.** Place two trains on a time-distance strip. The tool draws their blocking times, the minimum headway and any conflicts. Calls `blockingTime`, `blockingConflicts`, `minimumHeadway`, `stationDwell`.
+
 ## Design notes
 
 - **Dwell is returned as both an ISO duration and whole minutes.** Timetables are published in minutes; operational analysis needs the exact duration. Returning only minutes, as the original spec did, discards information that the caller cannot recover.

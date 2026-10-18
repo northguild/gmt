@@ -31,6 +31,10 @@ Every one of those is interval arithmetic over a statement of facts, and the dis
 - `packages/gmt/src/maritime/format/laytimeStatement.ts`:
   - `laytimeStatement(input): { lines: { from: string, to: string, description: string, counted: string, excluded: string, runningTotal: string }[], allowed: string, used: string, balance: { demurrage: string, despatch: string } }` — The time sheet a claim is settled on: every counted and excepted period in order with running totals, from the same intervals the calculation used, so the statement cannot disagree with the number.
 
+## Tool
+
+**Laytime Statement.** Enter the notice of readiness, the laycan, the turn time and the exception intervals the caller supplies. The strip shows each interval, and the time sheet and the demurrage or despatch balance come from the same intervals. Calls `isWithinLaycan`, `laytimeCommencement`, `laytimeUsed`, `laytimeBalance`, `laytimeStatement`. Teaches: the statement cannot disagree with the claim when both come from one interval set.
+
 ## Design notes
 
 - **Exceptions are interval subtraction**, which is why CORE-6 exists. SHEX removes Sundays and holidays; weather exceptions remove caller-supplied intervals from the statement of facts. Both compose through `subtractIntervals`, so they cannot disagree about boundaries. The three weather definitions differ in *what* is subtracted — the pro-rata working time (no. 15), the actual interruption (no. 16), or the actual interruption from an assembled 24-hour day (no. 17) — and the JSDoc quotes each.

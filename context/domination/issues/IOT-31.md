@@ -26,6 +26,10 @@ This is not a theoretical concern. It is a documented, recurring production fail
 - TAI − UTC = **37 seconds** currently (27 leap seconds since 1972; the last was 2016-12-31)
 - The `currentUtcOffset` field default is 37; a grandmaster advertising a stale value is a common failure
 
+## Tool
+
+**PTP Time Converter.** Enter PTP seconds and `currentUtcOffset` and see the UTC instant. The tool checks the offset against the leap-second table. Calls `ptpToUtc`, `utcToPtp`, `ptpOffsetPlausible`. Teaches: PTP is TAI, and 37 seconds is the silent error.
+
 ## Design notes
 
 - **`currentUtcOffset` is a required parameter with no default.** Defaulting it to 37 would make the function silently wrong after the next leap second and silently wrong for any system whose grandmaster is misconfigured — reproducing the exact bug the function exists to catch. Requiring it forces the caller to source it.

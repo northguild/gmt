@@ -16,6 +16,10 @@ Settlement cycles are dated facts that change by market decision; spot cycles an
   - `spotDate(tradeDate: string, options: { cycleDays: number, calendars: BusinessCalendar[], intermediateCalendars: BusinessCalendar[] }): string | null` — The spot date is the `cycleDays`-th day after the trade date that is a business day in all `calendars`; each day between the trade date and the spot date counts only if it is a business day in all `intermediateCalendars`. This is the generic form of "a third calendar's holiday on the day between does or does not delay the value date".
   - `forwardDate(spot: string, tenor: string, options: { calendars: BusinessCalendar[] }): string | null` — Forward value date with end-of-month handling; the value date clears every calendar in `calendars`, and intermediate days are not tested for a forward.
 
+## Tool
+
+**Settlement and Tenor Calculator.** Enter a trade date, a settlement cycle and the calendars involved. The tool shows the settlement, spot and forward dates on a calendar. Calls `settlementDate`, `spotDate`, `forwardDate`.
+
 ## Design notes
 
 - **`spotDate` is not `addBusinessDays` on a merged calendar.** Which calendars the intermediate days must clear differs from which the value date must clear, so the two sets are separate parameters; merging them into one calendar is the standard bug.

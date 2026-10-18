@@ -29,6 +29,10 @@ GMT can represent IANA zones. It cannot represent a captain-declared offset, a z
   - `parseDtg(value: string, options: { referenceInstant?: string } & TwoDigitYearOptions): { instant: string, letter: string } | null` — `DDHHMMZ`, `DDHHMMZ MON YY` or `DDHHMMZ MON YYYY`; the short form needs a reference instant to fix month and year. The `YY` form needs `yearWindow` and returns the sentinel without it: GMT never picks a century for a two-digit year (`TwoDigitYearOptions` and `internal/twoDigitYear.ts`, from INT-15).
   - `formatDtg(isoString: string, options?: { letter?: string, withDate?: boolean }): string` — `Z` by default, in ACP 121's six-figures-plus-letter, three-letter-month, two-digit-year form.
 
+## Tool
+
+**Ship's Clock.** Enter a voyage with clock advances and retards across zone descriptions and the date line. Three clocks sit side by side for the ship, UTC and the port, and a date-time group goes in and comes out. Calls `toShipTime`, `applyClockChange`, `shipTimeSchedule`, `dateLineCrossing`, `nauticalZone`, `parseDtg`, `formatDtg`. Teaches: a ship's day can be 23 or 25 hours, and a rest-hours rule must know it.
+
 ## Design notes
 
 - **`shipOffset` is an offset, not a zone**, and this is the one place in GMT where that is correct rather than a bug. There is no tzdb entry for "what the master ordered", and there is deliberately no attempt to map an offset back to an IANA zone — see CORE-4 on why an offset does not identify a zone.

@@ -34,6 +34,10 @@ The same code then writes those records to Parquet, Arrow, or a protobuf API, ea
   - `toProtoTimestamp(isoString: string): { seconds: bigint, nanos: number } | null` and `fromProtoTimestamp(value): string` — `nanos` in `[0, 999 999 999]`, normalised for negative seconds per the well-known type.
   - `toProtoDuration(isoDuration: string): { seconds: bigint, nanos: number } | null` and `fromProtoDuration(value): string` — signs of `seconds` and `nanos` must agree.
 
+## Tool
+
+**ID Timestamp Decoder.** Paste a UUID, ULID, ObjectId, Snowflake or KSUID and see the instant, the version, the epoch and the precision. A second panel round-trips Parquet INT96, Arrow and protobuf timestamps and flags the Arrow value that has no zone. Calls `fromUuidTimestamp`, `fromUlid`, `fromObjectId`, `fromSnowflake`, `fromKsuid`, `fromParquetInt96`, `fromArrowTimestamp`, `toProtoTimestamp`. Teaches: identifiers carry time, each with its own epoch.
+
 ## Design notes
 
 - **A UUIDv7's sub-millisecond bits are not a timestamp.** RFC 9562 §6.2 permits implementations to fill `rand_a` with extra clock precision, but does not require it and does not define the encoding; reading those bits as time is a guess about a particular generator. `fromUuidTimestamp` returns milliseconds for v7 and the JSDoc says why.

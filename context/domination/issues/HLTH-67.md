@@ -14,6 +14,10 @@ Every immunization registry and EHR evaluates each administered dose against a s
   - `earliestValidDate(input: { birthDate: string, previousDoseOn?: string, rule }): string` — The later of minimum age and minimum interval, **without** the grace window: the dates forecasting uses.
   - `recommendedWindow(input & { rule: { recommendedAge?: string, recommendedInterval?: string, maximumAge?: string } }): { from: string, to: string | null } | null` — The routine window, for reminder systems.
 
+## Tool
+
+**Dose Validity and Adherence.** Enter dose dates and the caller's minimum age, interval and grace. The tool shows which doses count and the earliest valid date for the next. Calls `doseValidity`, `earliestValidDate`.
+
 ## Design notes
 
 - **`graceDays` is required so the exceptions are visible at the call site.** A schedule that gives 0 for one vaccine and 4 for another says so per call; the JSDoc names no schedule.

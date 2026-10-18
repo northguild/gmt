@@ -35,6 +35,10 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 | MJD offset | JD − 2400000.5 | MJD starts at midnight, not noon |
 | Unix epoch | JD 2440587.5 | 1970-01-01 00:00 UTC |
 
+## Tool
+
+**Extends Satellite Clock Converter** with day counts: the same instant appears as a Julian date, a modified Julian date and seconds since J2000. Calls `toJulianDateParts`, `toModifiedJulianDate`, `toJ2000Seconds`.
+
 ## Design notes
 
 - **The two-part form is primary; the single-value form is a convenience.** Both are provided because callers integrating with systems that accept only one number need it, but the lossy one carries its error bound in its JSDoc so the choice is informed.

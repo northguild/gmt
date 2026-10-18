@@ -27,6 +27,10 @@ Validation that accepts any ISO 8601 string will accept invalid FHIR, and valida
 | `dateTime` | year, month, day, or second and finer | Required when a time is present |
 | `instant` | second or finer only | Required |
 
+## Tool
+
+**Extends Clinical Timestamp Decoder** with FHIR: paste a FHIR date, dateTime or instant to see its precision and whether it states an offset. Calls `parseFHIR`, `getFHIRPrecision`.
+
 ## Design notes
 
 - **Precision must be preserved, not padded.** The original spec had `parseFHIR` zero-pad `'2024-06'` to `'2024-06-01T00:00:00Z'`, which silently converts "some time in June" into "midnight UTC on 1 June". That is a fabricated fact, and it is a clinically meaningful one — it changes ordering, age calculations and inclusion in date-ranged queries. Comparison of partial values is HLTH-35's job and needs the original precision intact.

@@ -24,6 +24,10 @@ Sources: [MobilityData stop_times reference](https://github.com/MobilityData/gtf
 - `packages/gmt/src/rail/calculate/serviceDateRange.ts`:
   - `serviceDatesForWindow(window: Interval, timeZone: string, options?: { maxOverflowHours?: number }): { serviceDate: string, from: string, to: string }[]` — The service dates and time ranges to query for a wall-clock window. Defaults to 27 hours of overflow.
 
+## Tool
+
+**GTFS Time Reader.** Enter a time such as `25:35:00` with a service date and a zone. The tool shows the instant and the day overflow, and explains a query window such as `00:00-27:00` on the grid. Calls `parseGtfsTime`, `gtfsToInstant`, `serviceDatesForWindow`. Teaches: the service day is not the calendar day.
+
 ## Design notes
 
 - **The anchor is noon minus 12 hours, not midnight.** On a spring-forward day, local midnight may not exist, and on a fall-back day it occurs twice; noon always exists exactly once. Anchoring at noon and subtracting 12 hours sidesteps both, which is why the specification defines it that way. Implementing it as "local midnight" reintroduces the DST bug the spec was written to avoid.

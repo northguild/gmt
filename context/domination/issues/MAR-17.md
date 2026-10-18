@@ -38,6 +38,10 @@ The original MAR-2 specced `mmsiTimestamp(mmsi, embeddedTime)`, described as ext
 
 The real problem it was gesturing at — AIS reports carry an under-specified time — is what this story now solves.
 
+## Tool
+
+**AIS Second Reconstructor.** Enter the second-of-UTC field of an AIS report and the instant the report was received. The tool shows the reconstructed timestamp, its quality class and the window of ambiguity drawn on a strip. Calls `parseAisSecondOfUtc`, `classifyAisSecond`, `navTimestamp`.
+
 ## Design notes
 
 - **Reconstruction needs a reference instant.** With only a second-of-minute, the report could belong to any minute. `receivedAt` anchors it, and the correct alignment is the candidate minute boundary nearest the reference, which handles reports received either side of a minute rollover.

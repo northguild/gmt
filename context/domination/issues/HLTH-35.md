@@ -23,6 +23,10 @@ FHIRPath, the expression language FHIR itself uses, already defines the answer: 
 - `packages/gmt/src/health/calculate/sortPartialDates.ts`:
   - `sortPartialDates(values: string[], options?: { tieBreak?: 'earliest' | 'latest' }): string[]` — A total order for display. `tieBreak` is required to make it deterministic and its effect is documented.
 
+## Tool
+
+**Age and Partial Date Calculator.** Enter two partial dates and see how the precision rule compares them and what range each one covers. Calls `comparePartialDates`, `partialDateRange`.
+
 ## Design notes
 
 - **`'indeterminate'` is the point of this story.** Comparing `2022` with `2022-06-15` has no correct boolean answer: June 2022 lies inside the range 2022 denotes. Returning `false`, or coercing both to midnight on the first of the year, produces a confidently wrong clinical answer. Consumers must handle the third case explicitly. The result maps one-to-one onto FHIRPath's `{ }` so a FHIRPath engine built on GMT agrees with the reference implementations.
