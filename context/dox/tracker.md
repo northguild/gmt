@@ -1,54 +1,38 @@
 ## GitHub Issues
 
-30 sub-stories on 21 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
-(`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #317 (`DOX-A7`), #328 (`DOX-A8`) and #329
-(`DOX-A9`). Eighteen are done; what each one shipped is in [built.md](built.md). The three open
-ones are Tier 7, the domain and the hosted server, in this order:
-
-- **`DOX-A7` (#317) first.** Dox moves, unchanged, to `northguild.dev/gmt`, and a landing page
-  goes to `northguild.dev` from its own repo. The same PR fixes the duplicated home title,
-  checks in `robots.txt` with the content signals, adds `FUNDING.yml`, and keeps `/api/*` and
-  `/mcp/*` clear for a later Worker. It comes before `CORE-80` in the realm tracker.
-- **`DOX-A8` (#328) next.** The reference corpus and the chat tool schemas ship from the
-  package, or from a build step another repo can run, so a server repo can generate its tool
-  list and OpenAPI from them instead of copying `apps/dox/src/generated`.
-- **`DOX-A9` (#329) last.** The README and the docs link the hosted server once it is live.
-  It waits on a repo outside this one, so its `Blocked by` cell stays `—` and the issue says
-  what it waits for.
-
-The why is northguild/spacetime-ideas#4.
+27 sub-stories on 18 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
+(`DOX-A6`), #289 (`DOX-E1c`) and #293 (`DOX-E1d`). **Every story is done.** What each one shipped is in
+[built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
 which generates `Blocked by`, only for Dox work that belongs to no realm story. The Dox pages and
 tools of a realm story (`TRAN-*`, `INT-*`, `CORE-*` and the rest) add no row here: that story's
 row in [../domination/tracker.md](../domination/tracker.md) tracks them, and what they shipped is
-in [built.md](built.md).
+in [built.md](built.md). Work on the site after Tier 6, such as its domain, the shipped corpus and
+the hosted server, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here.
 
 `apps/dox` is private, so no changesets unless a change also touches `packages/gmt`.
 
-| Order | Story                                       | Blocked by | GitHub Issue | Status      |
-| ----- | ------------------------------------------- | ---------- | ------------ | ----------- |
-| 1     | DOX-A1                                      | —          | #130         | Done        |
-| 2     | DOX-A2                                      | —          | #131         | Done        |
-| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | —          | #132         | Done        |
-| 4     | DOX-A5                                      | —          | #134         | Done        |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | —          | #133         | Done        |
-| 6     | DOX-B1 (DOX-B1a)                            | —          | #135         | Done        |
-| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | —          | #136         | Done        |
-| 8     | DOX-D1                                      | —          | #140         | Done¹       |
-| 9     | DOX-D2                                      | —          | #141         | Done¹       |
-| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | —          | #142         | Done        |
-| 11    | DOX-C0                                      | —          | #171         | Done        |
-| 12    | DOX-C1                                      | —          | #137         | Done        |
-| 13    | DOX-C2                                      | —          | #138         | Done        |
-| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | —          | #139         | Done²       |
-| 15    | DOX-C4                                      | —          | #240         | Done        |
-| 16    | DOX-E1c                                     | —          | #289         | Done³       |
-| 17    | DOX-E1d                                     | —          | #293         | Done⁴       |
-| 18    | DOX-A6                                      | —          | #288         | Done⁵       |
-| 19    | DOX-A7                                      | —          | #317         | Not started |
-| 20    | DOX-A8                                      | —          | #328         | Not started |
-| 21    | DOX-A9                                      | —          | #329         | Not started |
+| Order | Story                                       | Blocked by | GitHub Issue | Status |
+| ----- | ------------------------------------------- | ---------- | ------------ | ------ |
+| 1     | DOX-A1                                      | —          | #130         | Done   |
+| 2     | DOX-A2                                      | —          | #131         | Done   |
+| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | —          | #132         | Done   |
+| 4     | DOX-A5                                      | —          | #134         | Done   |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | —          | #133         | Done   |
+| 6     | DOX-B1 (DOX-B1a)                            | —          | #135         | Done   |
+| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | —          | #136         | Done   |
+| 8     | DOX-D1                                      | —          | #140         | Done¹  |
+| 9     | DOX-D2                                      | —          | #141         | Done¹  |
+| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | —          | #142         | Done   |
+| 11    | DOX-C0                                      | —          | #171         | Done   |
+| 12    | DOX-C1                                      | —          | #137         | Done   |
+| 13    | DOX-C2                                      | —          | #138         | Done   |
+| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | —          | #139         | Done²  |
+| 15    | DOX-C4                                      | —          | #240         | Done   |
+| 16    | DOX-E1c                                     | —          | #289         | Done³  |
+| 17    | DOX-E1d                                     | —          | #293         | Done⁴  |
+| 18    | DOX-A6                                      | —          | #288         | Done⁵  |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.
