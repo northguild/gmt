@@ -7,10 +7,10 @@
 Recurring schedules are written as local rules: "every weekday at 02:30", `0 2 * * 1-5`, `FREQ=MONTHLY;BYDAY=-1FR`. Expanding one across a daylight-saving transition produces a local time that does not exist or occurs twice, and the answer depends on a policy most implementations never state.
 
 - **Recurrence.** RFC 5545 §3.3.10 contradicted itself on a nonexistent local time. Erratum 4271 settles it: such an instance is handled as §3.3.5 says, the first occurrence for a repeated time and the offset before the gap for a skipped one.
-- **Cron.** No standard states a rule. POSIX defines no time zone behaviour, and the two main crontab(5) implementations disagree: one never runs a job in a skipped hour and runs a repeated one twice, the other runs a skipped job soon after the change and does not re-run a repeated one. GitHub Actions and Kubernetes both take a zone for a five-field schedule.
-- **Demand.** rrule 3.1M, cron-parser 23.0M, croner 10.0M and node-cron 5.0M weekly downloads on npm, read on 2026-10-17.
+- **Cron.** No standard states a rule, and one implementation's own pages contradict each other. POSIX defines no time zone behaviour. cronie's crontab(5) gives the matching rule: a time that does not exist never matches, and a time that occurs twice runs its jobs twice. cron(8), in cronie and in Debian alike, says the daemon does otherwise: a job in a skipped interval runs immediately after the change, and a repeated time does not run it again. Both daemons limit that to clock changes under three hours, and to some jobs only: cronie to jobs at a specific time or less often than hourly, Debian to jobs with no `*` in the minute or hour field and not `@hourly`. Every other job runs on the new time as usual, so the same daemon treats `*/5 * * * *` and `30 2 * * *` differently on the same night. GitHub Actions and Kubernetes both take a zone for a five-field schedule.
+- **Demand.** Weekly npm downloads for 2026-09-28 to 2026-10-04: rrule 3.7M, cron-parser 26.6M, croner 11.6M and node-cron 6.3M.
 
-([RFC 5545 §3.3.10, §3.3.5](https://www.rfc-editor.org/rfc/rfc5545.txt), [Erratum 4271](https://www.rfc-editor.org/errata/eid4271), [POSIX crontab](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/crontab.html), [cronie crontab(5)](https://github.com/cronie-crond/cronie/blob/master/man/crontab.5), [Debian cron(8)](https://manpages.debian.org/trixie/cron/cron.8.en.html), [GitHub Actions schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule), [Kubernetes CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/))
+([RFC 5545 §3.3.10, §3.3.5](https://www.rfc-editor.org/rfc/rfc5545.txt), [Erratum 4271](https://www.rfc-editor.org/errata/eid4271), [POSIX crontab](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/crontab.html), [cronie crontab(5)](https://github.com/cronie-crond/cronie/blob/master/man/crontab.5), [cronie cron(8)](https://github.com/cronie-crond/cronie/blob/master/man/cron.8), [Debian cron(8)](https://manpages.debian.org/trixie/cron/cron.8.en.html), [GitHub Actions schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule), [Kubernetes CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/))
 
 ## Scope
 
@@ -32,9 +32,9 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 ## Design notes
 
 - **RRULE follows the RFC.** A touched occurrence resolves as §3.3.5 says, which is Temporal's `compatible` disambiguation. A caller may pass `earlier`, `later` or `reject` instead; the result marks the occurrence either way.
-- **Cron has no default.** The policy is a required parameter, because no standard and no common practice supplies one. The architect counts the policies the two crontab(5) behaviours need (skip or run late in a gap; run once or twice in an overlap) and names them in a narrow union, per the no-catch-all rule.
+- **Cron has no default.** The policy is a required parameter, because no standard and no common practice supplies one. The architect counts the policies from the two documented behaviours, the crontab(5) matching rule (skip a gap; run twice in an overlap) and the cron(8) daemon rule (run late after a gap; run once in an overlap), and from the daemon rule applying only to some jobs, and names them in a narrow union, per the no-catch-all rule.
 - **An invalid date is skipped, not shifted.** `BYMONTHDAY=31` produces nothing in a 30-day month, as §3.3.10 requires.
-- **POSIX is the base, crontab(5) the extensions.** POSIX defines no `/step`, names or nicknames; each is cited to cronie's crontab(5). Where Debian's crontab(5) disagrees (it allows no ranges of names), GMT follows the wider form and the docs page says so.
+- **POSIX is the base, crontab(5) the extensions.** POSIX defines no `/step`, names or nicknames; each is cited to cronie's crontab(5). Where Debian's crontab(5) disagrees (it allows no ranges or lists of names, so `mon-fri` and `mon,wed,fri` are both out), GMT follows the wider form and the docs page says so.
 - **Expansion is bounded.** Every call takes bounds or a count; an `RRULE` with neither `UNTIL` nor `COUNT` never expands without one.
 - **`WKST` matters only for `WEEKLY` with `INTERVAL` above one and for `BYWEEKNO`.** The RFC's own example shows two results; both are tests.
 
@@ -52,7 +52,7 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 - The §3.3.5 overlap case: 01:30 on a fall-back night gives the first occurrence.
 - `WKST=MO` versus `WKST=SU` on the RFC's `WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU` example.
 - Negative `BYSETPOS`, `COUNT` versus `UNTIL`, `RDATE` added and `EXDATE` removed.
-- Cron: a 02:30 job on a spring-forward night and a 01:30 job on a fall-back night under each policy; `*/5`, names, nicknames, `7` as Sunday; POSIX's `0 0 1,15 * 1` example runs on the 1st, the 15th and every Monday.
+- Cron: a 02:30 job on a spring-forward night and a 01:30 job on a fall-back night under each policy; a `*/5` job and a `30 2` job on the same spring-forward night; `*/5`, names, nicknames, `7` as Sunday; POSIX's `0 0 1,15 * 1` example runs on the 1st, the 15th and every Monday.
 - Sentinel rows: a seconds field, `@reboot`, `L`, `W`, `#`, `?`, `UNTIL` with `COUNT`, `EXRULE`.
 - Full matrix: CI's 10 zones × Node 22, 24 and 26.
 - `pnpm run validate` stays green.
