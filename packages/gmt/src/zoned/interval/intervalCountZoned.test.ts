@@ -391,6 +391,42 @@ describe("intervalCountZoned transition cap", () => {
   );
 });
 
+// The cap sits between 9,999 and 10,000 transitions: the count walks `startOfStart` to `startOfEnd`
+// and gives up once that range holds 10,000. With a stubbed transition every minute, a minute
+// count over 9,999 minutes holds 9,999 transitions and answers, and over 10,000 minutes holds
+// 10,000 and answers null.
+describe("intervalCountZoned at the transition cap", () => {
+  it.each`
+    end                                 | expected
+    ${"2024-01-07T22:39:00+00:00[UTC]"} | ${9999}
+    ${"2024-01-07T22:40:00+00:00[UTC]"} | ${null}
+  `(
+    "returns $expected minute buckets to $end with a transition every minute",
+    ({ end, expected }) => {
+      const realGetTimeZoneTransition =
+        Temporal.ZonedDateTime.prototype.getTimeZoneTransition;
+      vi.spyOn(
+        Temporal.ZonedDateTime.prototype,
+        "getTimeZoneTransition",
+      ).mockImplementation(function (
+        this: Temporal.ZonedDateTime,
+        direction: Parameters<
+          Temporal.ZonedDateTime["getTimeZoneTransition"]
+        >[0],
+      ) {
+        return direction === "next"
+          ? this.add({ minutes: 1 })
+          : realGetTimeZoneTransition.call(this, direction);
+      });
+
+      expect(
+        intervalCountZoned("2024-01-01T00:00:00+00:00[UTC]", end, "minute"),
+      ).toBe(expected);
+    },
+    30_000,
+  );
+});
+
 // ---------------------------------------------------------------------------------------------
 // Transition zones. Counts are the number of local buckets the half-open interval touches, as
 // `bucketRange` walks them — a bucket may be shorter than its unit (Chatham's 15-minute 03:00
@@ -522,5 +558,118 @@ describe("intervalCountZoned over thousands of years with no clock change", () =
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
     10_000,
+  );
+});
+
+// Spans long enough that every zone transition is crossed. Expected counts are read from the
+// calendar and verified on @js-temporal/polyfill@0.5.1: 100 years from 2024-01-01 hold
+// 100 * 365 + 24 leap days (2100 is not leap); each spring gap removes one hour bucket and each
+// fall-back adds one, so the hours are 24 per day.
+describe("intervalCountZoned over a century of transitions", () => {
+  const london = (date: string) => `${date}T00:00:00+00:00[Europe/London]`;
+
+  it.each`
+    start                                        | end                                          | unit       | expected
+    ${london("2024-01-01")}                      | ${london("2124-01-01")}                      | ${"day"}   | ${36_524}
+    ${london("2024-01-01")}                      | ${london("2124-01-01")}                      | ${"hour"}  | ${876_576}
+    ${london("2024-01-01")}                      | ${london("2124-01-01")}                      | ${"month"} | ${1200}
+    ${"2011-12-29T00:00:00-10:00[Pacific/Apia]"} | ${"2012-01-01T00:00:00+14:00[Pacific/Apia]"} | ${"day"}   | ${2}
+  `(
+    "returns $expected $unit buckets from $start to $end",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // 20 Tevet 5784 to 1 Tevet 5785: PlainDate#until gives P12M11D in a leap year, and the end sits
+  // on a bucket start, so the 13 months of the Hebrew leap year are touched.
+  it("counts 13 Hebrew months across a leap year", () => {
+    expect(
+      intervalCountZoned(
+        "2024-01-01T00:00:00+00:00[Europe/London][u-ca=hebrew]",
+        "2025-01-01T00:00:00+00:00[Europe/London][u-ca=hebrew]",
+        "month",
+      ),
+    ).toBe(13);
+  });
+});
+
+// The integer bucket rule. Every count was derived by hand from the zone's rule
+// and agrees with the pre-slice walk on @js-temporal/polyfill@0.5.1.
+describe("intervalCountZoned bucket rule across half-hour and sub-minute offset changes", () => {
+  // Lord Howe falls back 02:00 +11:00 to 01:30 +10:30 on 2024-04-07 and springs forward 02:00
+  // +10:30 to 02:30 +11:00 on 2024-10-06. A bucket opens where the wall clock lands on a unit
+  // boundary or on a new label. Africa/Monrovia held -00:44:30 until the clock jumped from
+  // 00:00 to 00:44:30 on 1972-01-07, and New York's local mean time was -04:56:02 until
+  // 12:03:58 became 12:00:00 on 1883-11-18: offsets with seconds move a bucket start off the
+  // minute.
+  it.each`
+    start                                               | end                                                 | unit        | expected | description
+    ${"2024-04-07T01:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:40:00+10:30[Australia/Lord_Howe]"} | ${"minute"} | ${130}   | ${"60 minutes of 01:00 +11:00, then 01:30 to 02:39 +10:30"}
+    ${"2024-04-07T01:50:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:10:00+10:30[Australia/Lord_Howe]"} | ${"minute"} | ${50}    | ${"10 minutes before the fall-back, 40 after"}
+    ${"2024-04-07T01:59:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T01:31:00+10:30[Australia/Lord_Howe]"} | ${"second"} | ${120}   | ${"01:59:00 to 01:59:59 twice over: 60 seconds each pass"}
+    ${"2024-10-06T01:50:00+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T02:40:00+11:00[Australia/Lord_Howe]"} | ${"minute"} | ${20}    | ${"01:50 to 01:59, then 02:30 to 02:39: 02:00 to 02:29 never happened"}
+    ${"2024-10-06T01:59:30+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T02:30:30+11:00[Australia/Lord_Howe]"} | ${"second"} | ${60}    | ${"30 seconds before the jump, 30 after"}
+    ${"2024-10-06T01:00:00+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T04:00:00+11:00[Australia/Lord_Howe]"} | ${"hour"}   | ${3}     | ${"hours 01, the half hour starting 02:30, and 03"}
+    ${"1972-01-06T23:00:00-00:45[Africa/Monrovia]"}     | ${"1972-01-07T01:44:30+00:00[Africa/Monrovia]"}     | ${"minute"} | ${121}   | ${"60 minutes before the jump, a 30-second 00:44 bucket, 59 more and a 30-second 01:44"}
+    ${"1972-01-06T23:58:30-00:45[Africa/Monrovia]"}     | ${"1972-01-07T00:46:00+00:00[Africa/Monrovia]"}     | ${"second"} | ${180}   | ${"90 seconds before the jump, 90 after"}
+    ${"1972-01-06T23:58:30-00:45[Africa/Monrovia]"}     | ${"1972-01-07T01:29:30+00:00[Africa/Monrovia]"}     | ${"minute"} | ${48}    | ${"minutes 23:58 and 23:59, then 00:44 to 01:29"}
+    ${"1883-11-18T11:00:00-04:56:02[America/New_York]"} | ${"1883-11-18T13:00:00-05:00[America/New_York]"}    | ${"minute"} | ${124}   | ${"11:00 to 12:03 local mean time (64), then 12:00 to 12:59 standard time (60)"}
+    ${"1883-11-18T11:00:00-04:56:02[America/New_York]"} | ${"1883-11-18T13:00:00-05:00[America/New_York]"}    | ${"hour"}   | ${3}     | ${"hours 11 and 12, then 12 again after the clock is set back"}
+    ${"1960-04-09T23:50:00+00:00[Europe/London]"}       | ${"1960-04-10T03:10:00+01:00[Europe/London]"}       | ${"minute"} | ${140}   | ${"before 1970 (negative wall nanoseconds): 10 + 120 minutes, skip 02:00 hour, 10 more"}
+    ${"1960-04-10T01:59:30+00:00[Europe/London]"}       | ${"1960-04-10T03:00:30+01:00[Europe/London]"}       | ${"second"} | ${60}    | ${"before 1970: 30 seconds either side of the spring-forward"}
+  `(
+    "returns $expected $unit buckets from $start to $end ($description)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+describe("intervalCountZoned month and year buckets across a deleted date", () => {
+  // Pacific/Kiritimati deleted 1994-12-31 (the clock jumped from -10:00 to +14:00), so the
+  // transition crosses both a date and a month and year boundary.
+  it.each`
+    start                                                                     | end                                                                       | unit       | expected | description
+    ${"1994-12-30T12:00:00-10:00[Pacific/Kiritimati]"}                        | ${"1995-01-01T12:00:00+14:00[Pacific/Kiritimati]"}                        | ${"day"}   | ${2}     | ${"30 December and 1 January; 31 December never happened"}
+    ${"1994-12-30T12:00:00-10:00[Pacific/Kiritimati]"}                        | ${"1995-01-01T12:00:00+14:00[Pacific/Kiritimati]"}                        | ${"hour"}  | ${24}    | ${"12 hours up to the jump, 12 after"}
+    ${"1994-12-30T12:00:00-10:00[Pacific/Kiritimati]"}                        | ${"1995-01-01T12:00:00+14:00[Pacific/Kiritimati]"}                        | ${"month"} | ${2}     | ${"December then January"}
+    ${"1994-12-30T12:00:00-10:00[Pacific/Kiritimati]"}                        | ${"1995-01-01T12:00:00+14:00[Pacific/Kiritimati]"}                        | ${"year"}  | ${2}     | ${"1994 then 1995"}
+    ${"1994-12-30T00:00:00-10:00[Pacific/Kiritimati][u-ca=japanese]"}         | ${"1995-01-02T00:00:00+14:00[Pacific/Kiritimati][u-ca=japanese]"}         | ${"month"} | ${2}     | ${"a non-ISO calendar whose month changes at the jump"}
+    ${"1994-12-30T00:00:00-10:00[Pacific/Kiritimati][u-ca=japanese]"}         | ${"1995-01-02T00:00:00+14:00[Pacific/Kiritimati][u-ca=japanese]"}         | ${"year"}  | ${2}     | ${"a non-ISO calendar whose year changes at the jump (Heisei 6 to 7)"}
+    ${"1994-12-30T00:00:00-10:00[Pacific/Kiritimati][u-ca=islamic-umalqura]"} | ${"1995-01-02T00:00:00+14:00[Pacific/Kiritimati][u-ca=islamic-umalqura]"} | ${"month"} | ${1}     | ${"27 to 30 Rajab 1415: the jump crosses a date but not a month"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia][u-ca=islamic-umalqura]"}       | ${"2012-01-01T12:00:00+14:00[Pacific/Apia][u-ca=islamic-umalqura]"}       | ${"month"} | ${1}     | ${"4 to 7 Safar 1433: Samoa's deleted 30 December stays inside one month"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia][u-ca=japanese]"}               | ${"2012-01-01T12:00:00+14:00[Pacific/Apia][u-ca=japanese]"}               | ${"month"} | ${2}     | ${"December then January across Samoa's jump"}
+  `(
+    "returns $expected $unit buckets from $start to $end ($description)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+// A zone with few or no transitions is searched once, not once per three years of the span.
+// Expected counts are verified on @js-temporal/polyfill@0.5.1; the spy bounds the searches.
+describe("intervalCountZoned over a span with no transitions", () => {
+  it.each`
+    start                                        | end                                             | expected
+    ${"-271821-04-20T00:00:00+00:00[UTC]"}       | ${"+275760-09-13T00:00:00+00:00[UTC]"}          | ${200_000_000}
+    ${"1950-01-01T00:00:00+05:30[Asia/Kolkata]"} | ${"+200000-01-01T00:00:00+05:30[Asia/Kolkata]"} | ${72_336_277}
+  `(
+    "counts $expected days from $start to $end in a few transition searches",
+    ({ start, end, expected }) => {
+      const search = vi.spyOn(
+        Temporal.ZonedDateTime.prototype,
+        "getTimeZoneTransition",
+      );
+
+      try {
+        expect(intervalCountZoned(start, end, "day")).toBe(expected);
+        expect(search.mock.calls.length).toBeLessThanOrEqual(10);
+      } finally {
+        search.mockRestore();
+      }
+    },
+    30_000,
   );
 });

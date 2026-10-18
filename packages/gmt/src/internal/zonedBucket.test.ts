@@ -313,3 +313,58 @@ describe("the 1844 date-line crossings (zoned.E)", () => {
     },
   );
 });
+
+// Week buckets follow `weekStartsOn` (ISO weekday, 1 Monday to 7 Sunday) at an
+// offset change. Samoa deleted Friday 2011-12-30, so 29 December (Thursday) and 31 December
+// (Saturday) fall in one week only when the week begins on a day after Friday or before Thursday.
+// Counts were derived by hand from the weekday of each date and agree with the pre-slice walk.
+describe("countZonedBuckets weeks with a non-default weekStartsOn", () => {
+  const samoa = (date: string, offset: string) =>
+    Temporal.ZonedDateTime.from(`${date}T12:00:00${offset}[Pacific/Apia]`);
+
+  it.each`
+    weekStartsOn | expected | description
+    ${1}         | ${1}     | ${"Monday: 26 December covers 29 December to 1 January"}
+    ${3}         | ${1}     | ${"Wednesday: 28 December covers them all"}
+    ${4}         | ${1}     | ${"Thursday: 29 December covers them all"}
+    ${5}         | ${2}     | ${"Friday: the 23rd begins one week, the deleted 30th the next"}
+    ${6}         | ${2}     | ${"Saturday: 31 December opens a new week at the jump"}
+    ${7}         | ${2}     | ${"Sunday: 1 January opens a new week"}
+  `(
+    "counts $expected weeks with weeks starting on ISO weekday $weekStartsOn across Samoa's jump ($description)",
+    ({ weekStartsOn, expected }) => {
+      expect(
+        countZonedBuckets(
+          samoa("2011-12-29", "-10:00"),
+          samoa("2012-01-01", "+14:00"),
+          "week",
+          weekStartsOn,
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  // New York springs forward on Sunday 2024-03-10 inside a Sunday-start or Wednesday-start week,
+  // which never reopens it: 3, 10 and 17 March, or 6, 13 and 20 March.
+  it.each`
+    weekStartsOn | expected | description
+    ${7}         | ${3}     | ${"Sundays 3, 10 and 17 March"}
+    ${3}         | ${3}     | ${"Wednesdays 6, 13 and 20 March"}
+  `(
+    "counts $expected weeks starting on ISO weekday $weekStartsOn over New York's spring-forward ($description)",
+    ({ weekStartsOn, expected }) => {
+      expect(
+        countZonedBuckets(
+          Temporal.ZonedDateTime.from(
+            "2024-03-06T12:00:00-05:00[America/New_York]",
+          ),
+          Temporal.ZonedDateTime.from(
+            "2024-03-20T12:00:00-04:00[America/New_York]",
+          ),
+          "week",
+          weekStartsOn,
+        ),
+      ).toBe(expected);
+    },
+  );
+});

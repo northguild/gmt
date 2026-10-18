@@ -1,5 +1,6 @@
 import { Temporal } from "../src/internal/temporal";
 import { bench, describe } from "vitest";
+import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { dwellTime } from "../src/transport";
 import {
   intervalCountZoned,
@@ -84,4 +85,36 @@ describe("intervalSplitAtZoned", () => {
       { time: 500 },
     );
   }
+});
+
+// The transition memo is cleared before each run, so every transition is found by the search.
+describe("cold, 100 years", () => {
+  const end = zoned("2124-01-01");
+  const options = { time: 500, setup: () => clearTransitionMemo() };
+
+  for (const unit of ["day", "hour", "month"]) {
+    bench(
+      `intervalCountZoned, ${unit}`,
+      () => {
+        intervalCountZoned(START, end, unit);
+      },
+      options,
+    );
+  }
+
+  bench(
+    "intervalOverlappingDaysZoned",
+    () => {
+      intervalOverlappingDaysZoned(START, end, START, end);
+    },
+    options,
+  );
+
+  bench(
+    "dwellTime",
+    () => {
+      dwellTime("2024-01-01T00:00:00Z", "2124-01-01T00:00:00Z", ZONE);
+    },
+    options,
+  );
 });

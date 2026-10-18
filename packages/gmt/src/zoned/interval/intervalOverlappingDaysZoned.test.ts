@@ -9,17 +9,23 @@ import {
 
 describe("intervalOverlappingDaysZoned", () => {
   it.each`
-    aStart                                            | aEnd                                              | expected
-    ${"2024-03-09T12:00:00-05:00[America/New_York]"}  | ${"2024-03-11T12:00:00-04:00[America/New_York]"}  | ${3}
-    ${"2024-11-02T12:00:00-04:00[America/New_York]"}  | ${"2024-11-04T12:00:00-05:00[America/New_York]"}  | ${3}
-    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}     | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}     | ${3}
-    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}      | ${2}
-    ${"2011-12-29T23:00:00-10:00[Pacific/Apia]"}      | ${"2011-12-31T01:00:00+14:00[Pacific/Apia]"}      | ${2}
-    ${"2010-11-07T00:00:30-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
-    ${"2010-11-06T23:59:00-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
-    ${"2024-04-06T12:00:00-03:00[America/Santiago]"}  | ${"2024-04-07T12:00:00-04:00[America/Santiago]"}  | ${2}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-01-02T00:00:00+00:00[UTC]"}               | ${1}
-    ${"2024-01-01T12:00:00+00:00[UTC]"}               | ${"2024-01-01T12:00:00+00:00[UTC]"}               | ${0}
+    aStart                                              | aEnd                                                | expected
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"}    | ${"2024-03-11T12:00:00-04:00[America/New_York]"}    | ${3}
+    ${"2024-11-02T12:00:00-04:00[America/New_York]"}    | ${"2024-11-04T12:00:00-05:00[America/New_York]"}    | ${3}
+    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}       | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}       | ${3}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${2}
+    ${"2011-12-29T23:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T01:00:00+14:00[Pacific/Apia]"}        | ${2}
+    ${"2010-11-07T00:00:30-03:00[America/Goose_Bay]"}   | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}   | ${2}
+    ${"2010-11-06T23:59:00-03:00[America/Goose_Bay]"}   | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}   | ${2}
+    ${"2024-04-06T12:00:00-03:00[America/Santiago]"}    | ${"2024-04-07T12:00:00-04:00[America/Santiago]"}    | ${2}
+    ${"1994-12-30T12:00:00-10:00[Pacific/Kiritimati]"}  | ${"1995-01-01T12:00:00+14:00[Pacific/Kiritimati]"}  | ${2}
+    ${"2024-04-07T01:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:40:00+10:30[Australia/Lord_Howe]"} | ${1}
+    ${"1960-04-09T23:00:00+00:00[Europe/London]"}       | ${"1960-04-10T03:00:00+01:00[Europe/London]"}       | ${2}
+    ${"2024-01-01T00:00:00+00:00[Europe/London]"}       | ${"2026-01-01T00:00:00+00:00[Europe/London]"}       | ${731}
+    ${"1883-11-17T12:00:00-04:56:02[America/New_York]"} | ${"1883-11-19T12:00:00-05:00[America/New_York]"}    | ${3}
+    ${"1972-01-06T23:00:00-00:45[Africa/Monrovia]"}     | ${"1972-01-07T01:44:30+00:00[Africa/Monrovia]"}     | ${2}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}                 | ${"2024-01-02T00:00:00+00:00[UTC]"}                 | ${1}
+    ${"2024-01-01T12:00:00+00:00[UTC]"}                 | ${"2024-01-01T12:00:00+00:00[UTC]"}                 | ${0}
   `(
     // Distinct local dates of the instants in the half-open span [start, end) (tzdb): the end is
     // excluded, so [01-01T00:00, 01-02T00:00) UTC touches one date and an empty span none. Apia
@@ -260,4 +266,15 @@ describe("intervalOverlappingDaysZoned over thousands of years with no clock cha
     },
     10_000,
   );
+});
+
+describe("intervalOverlappingDaysZoned over Pacific/Apia's deleted day", () => {
+  // 29 and 31 December 2011: the zone skipped the 30th, so the runtime gives
+  // 2011-12-29T00:00-10:00 + 24 h = 2011-12-31T00:00+14:00. Verified on @js-temporal/polyfill@0.5.1.
+  it("counts a span against itself as 2 dates", () => {
+    const start = "2011-12-29T00:00:00-10:00[Pacific/Apia]";
+    const end = "2012-01-01T00:00:00+14:00[Pacific/Apia]";
+
+    expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(2);
+  });
 });

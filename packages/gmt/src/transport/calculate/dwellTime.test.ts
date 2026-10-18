@@ -140,6 +140,9 @@ describe("dwellTime", () => {
     ${"2024-04-06T10:00:00Z"} | ${"2024-04-06T15:00:00Z"}           | ${"Pacific/Chatham"}     | ${2}         | ${"6th 23:45 +13:45 to 7th 03:45 +12:45 across the fall-back"}
     ${"2024-04-06T13:00:00Z"} | ${"2024-04-06T16:00:00Z"}           | ${"Australia/Lord_Howe"} | ${1}         | ${"7th 00:00 +11:00 to 02:30 +10:30 through the half-hour fall-back"}
     ${"2024-10-05T13:00:00Z"} | ${"2024-10-05T16:00:00Z"}           | ${"Australia/Lord_Howe"} | ${2}         | ${"5th 23:30 +10:30 to 6th 03:00 +11:00 across the half-hour spring-forward"}
+    ${"1994-12-31T09:00:00Z"} | ${"1994-12-31T11:00:00Z"}           | ${"Pacific/Kiritimati"}  | ${2}         | ${"30th 23:00 -10:00 to 1 January 01:00 +14:00: the 31st was deleted"}
+    ${"1960-04-09T23:00:00Z"} | ${"1960-04-10T02:00:00Z"}           | ${"Europe/London"}       | ${2}         | ${"before 1970: 9th 23:00 +00:00 to 10th 03:00 +01:00 across the spring-forward"}
+    ${"2024-01-01T00:00:00Z"} | ${"2026-01-01T00:00:00Z"}           | ${"Europe/London"}       | ${731}       | ${"two years and four offset changes: 366 + 365 dates"}
   `(
     "counts $calendarDays distinct local date(s) in $targetZone: $reason",
     ({ entry, exit, targetZone, calendarDays }) => {
@@ -260,4 +263,17 @@ describe("dwellTime", () => {
     },
     10_000,
   );
+});
+
+describe("dwellTime across America/Goose_Bay's repeated date", () => {
+  // 6 November 2010 is re-entered at the 00:01 fall-back on the 7th and counted once. Verified on
+  // @js-temporal/polyfill@0.5.1.
+  it("counts the re-entered date once", () => {
+    expect(
+      dwellTime(
+        "2010-11-06T12:00:00-03:00[America/Goose_Bay]",
+        "2010-11-07T12:00:00-04:00[America/Goose_Bay]",
+      )?.calendarDays,
+    ).toBe(2);
+  });
 });

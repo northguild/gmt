@@ -251,11 +251,13 @@ describe("intervalOverlappingDaysUnix with an unrecognised epochUnit", () => {
   // on 2010-11-07 into 2010-11-06 (1289098860000 = the transition), Apia deleted 2011-12-30, and an
   // empty span holds no instant.
   it.each`
-    aStart           | aEnd             | timeZone               | expected
-    ${1289098830000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
-    ${1289098740000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
-    ${1325235600000} | ${1325242800000} | ${"Pacific/Apia"}      | ${2}
-    ${1712458800000} | ${1712458800000} | ${"America/Santiago"}  | ${0}
+    aStart           | aEnd             | timeZone                | expected
+    ${1289098830000} | ${1289100600000} | ${"America/Goose_Bay"}  | ${2}
+    ${1289098740000} | ${1289100600000} | ${"America/Goose_Bay"}  | ${2}
+    ${1325235600000} | ${1325242800000} | ${"Pacific/Apia"}       | ${2}
+    ${788824800000}  | ${788911200000}  | ${"Pacific/Kiritimati"} | ${2}
+    ${-306982800000} | ${-306972000000} | ${"Europe/London"}      | ${2}
+    ${1712458800000} | ${1712458800000} | ${"America/Santiago"}   | ${0}
   `(
     "returns $expected local dates for the self-overlap $aStart to $aEnd in $timeZone",
     ({ aStart, aEnd, timeZone, expected }) => {

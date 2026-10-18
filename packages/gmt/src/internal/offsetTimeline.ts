@@ -31,7 +31,10 @@ export type OffsetTimeline = {
 
 /**
  * Build the timeline of `frame` over `[fromNs, toNs]`. A fixed-offset frame (an offset zone,
- * `UTC`, an offset with seconds) is one stretch and runs no search.
+ * `UTC`, an offset with seconds) is one stretch and runs no search, unless `maxChanges` is given.
+ *
+ * With `maxChanges`, a range holding more changes than that returns `null` as soon as the
+ * `maxChanges + 1`th is found, without searching further.
  *
  * Throws what Temporal throws for an instant outside its range; callers keep clear of it.
  */
@@ -39,7 +42,19 @@ export function offsetTimeline(
   frame: ZoneFrame,
   fromNs: bigint,
   toNs: bigint,
-): OffsetTimeline {
+): OffsetTimeline;
+export function offsetTimeline(
+  frame: ZoneFrame,
+  fromNs: bigint,
+  toNs: bigint,
+  maxChanges: number,
+): OffsetTimeline | null;
+export function offsetTimeline(
+  frame: ZoneFrame,
+  fromNs: bigint,
+  toNs: bigint,
+  maxChanges?: number,
+): OffsetTimeline | null {
   const first = new Temporal.ZonedDateTime(fromNs, frame.timeZone);
   const timeline: OffsetTimeline = {
     frame,
@@ -49,23 +64,50 @@ export function offsetTimeline(
     offsets: [BigInt(first.offsetNanoseconds) + frame.shiftNanoseconds],
   };
 
-  extendTimeline(timeline, toNs);
-
-  return timeline;
+  return extendTimeline(timeline, toNs, maxChanges) ? timeline : null;
 }
 
 /**
  * Grow `timeline` so that it is complete up to `toNs`, one search of at most three years at a
- * time. Each search passes `until`, so it never stops at a clock-based horizon short of it.
+ * time, or one search per change up to `toNs` under `maxChanges`. Each search passes `until`,
+ * so it never stops at a clock-based horizon short of it. Returns `false` once the timeline holds
+ * more than `maxChanges` changes.
  */
-function extendTimeline(timeline: OffsetTimeline, toNs: bigint): void {
+function extendTimeline(
+  timeline: OffsetTimeline,
+  toNs: bigint,
+  maxChanges = Infinity,
+): boolean {
   const { frame } = timeline;
 
   if (toNs <= timeline.toNs) {
-    return;
+    return true;
   }
 
-  if (isNamedTimeZone(frame.timeZone)) {
+  if (maxChanges !== Infinity) {
+    // A capped walk asks the zone for each next change up to `toNs`, one search per change, even
+    // for a fixed offset, so the cap counts what the zone reports and the search reaches no
+    // further than the caller's range.
+    let at = new Temporal.ZonedDateTime(timeline.toNs, frame.timeZone);
+
+    for (;;) {
+      const next = zonedNextTransition(at, toNs);
+
+      if (next === null) {
+        break;
+      }
+
+      timeline.changes.push(next.epochNanoseconds);
+      timeline.offsets.push(
+        BigInt(next.offsetNanoseconds) + frame.shiftNanoseconds,
+      );
+      at = next;
+
+      if (timeline.changes.length > maxChanges) {
+        return false;
+      }
+    }
+  } else if (isNamedTimeZone(frame.timeZone)) {
     let chunkStart = timeline.toNs;
 
     while (chunkStart < toNs) {
@@ -73,13 +115,10 @@ function extendTimeline(timeline: OffsetTimeline, toNs: bigint): void {
         toNs - chunkStart > MAX_SEARCH_SPAN
           ? chunkStart + MAX_SEARCH_SPAN
           : toNs;
-      let at = chunkStart;
+      let at = new Temporal.ZonedDateTime(chunkStart, frame.timeZone);
 
       for (;;) {
-        const next = zonedNextTransition(
-          new Temporal.ZonedDateTime(at, frame.timeZone),
-          chunkEnd,
-        );
+        const next = zonedNextTransition(at, chunkEnd);
 
         if (next === null) {
           break;
@@ -89,7 +128,7 @@ function extendTimeline(timeline: OffsetTimeline, toNs: bigint): void {
         timeline.offsets.push(
           BigInt(next.offsetNanoseconds) + frame.shiftNanoseconds,
         );
-        at = next.epochNanoseconds;
+        at = next;
       }
 
       chunkStart = chunkEnd;
@@ -97,6 +136,8 @@ function extendTimeline(timeline: OffsetTimeline, toNs: bigint): void {
   }
 
   timeline.toNs = toNs;
+
+  return true;
 }
 
 /**

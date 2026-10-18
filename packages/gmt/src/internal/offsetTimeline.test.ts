@@ -378,3 +378,24 @@ describe("resolveWallNs on a timeline no zone produces", () => {
     );
   });
 });
+
+describe("offsetTimeline with maxChanges", () => {
+  const frame = zoneFrame("Europe/London");
+  if (frame === null) throw new Error("no frame for Europe/London");
+  const from = ns("2024-01-01T00:00:00Z");
+  const to = ns("2026-01-01T00:00:00Z");
+
+  // London changes offset on the last Sundays of March and October: four changes in 2024 and 2025.
+  it("returns null when the range holds more changes than maxChanges", () => {
+    expect(offsetTimeline(frame, from, to, 3)).toBeNull();
+  });
+
+  it("returns the four changes when maxChanges allows them", () => {
+    expect(offsetTimeline(frame, from, to, 4)?.changes).toEqual([
+      ns("2024-03-31T01:00:00Z"),
+      ns("2024-10-27T01:00:00Z"),
+      ns("2025-03-30T01:00:00Z"),
+      ns("2025-10-26T01:00:00Z"),
+    ]);
+  });
+});

@@ -1,7 +1,8 @@
-import { Temporal } from "./temporal";
-import { zonedNextTransition } from "./zonedWallClockOperations";
+import type { Temporal } from "./temporal";
 
-const UNIX_EPOCH_DATE = new Temporal.PlainDate(1970, 1, 1);
+import { floorDivide } from "./floorDivide";
+import { NANOSECONDS_PER_DAY } from "./foreignEpochs";
+import { offsetTimeline } from "./offsetTimeline";
 
 /**
  * Transitions walked while collecting local dates, matching `countZonedBuckets`' cap: roughly
@@ -9,10 +10,9 @@ const UNIX_EPOCH_DATE = new Temporal.PlainDate(1970, 1, 1);
  */
 const MAX_WALKED_TRANSITIONS = 10_000;
 
-function epochDayOf(zoned: Temporal.ZonedDateTime): number {
-  return UNIX_EPOCH_DATE.until(zoned.toPlainDate().withCalendar("iso8601"), {
-    largestUnit: "days",
-  }).days;
+/** The local date, in days from 1970-01-01, of an instant at `offset` east of UTC. */
+function localDay(ns: bigint, offset: bigint): number {
+  return Number(floorDivide(ns + offset, NANOSECONDS_PER_DAY));
 }
 
 /** Size of the union of inclusive integer ranges. */
@@ -50,24 +50,32 @@ export function countZonedLocalDates(
   start: Temporal.ZonedDateTime,
   end: Temporal.ZonedDateTime,
 ): number | null {
-  const ranges: Array<[number, number]> = [];
-  let runStart = start;
+  const timeline = offsetTimeline(
+    { timeZone: start.timeZoneId, shiftNanoseconds: 0n },
+    start.epochNanoseconds,
+    end.epochNanoseconds,
+    MAX_WALKED_TRANSITIONS,
+  );
 
-  for (let i = 0; i <= MAX_WALKED_TRANSITIONS; i++) {
-    const transition = zonedNextTransition(runStart, end.epochNanoseconds);
-    const isLastRun =
-      transition === null ||
-      Temporal.ZonedDateTime.compare(transition, end) > 0;
-    const runEnd = isLastRun ? end : transition.subtract({ nanoseconds: 1 });
-
-    ranges.push([epochDayOf(runStart), epochDayOf(runEnd)]);
-
-    if (isLastRun) {
-      return unionSize(ranges);
-    }
-
-    runStart = transition;
+  if (timeline === null) {
+    return null;
   }
 
-  return null;
+  const { changes, offsets } = timeline;
+  const endNs = end.epochNanoseconds;
+  const ranges: Array<[number, number]> = [];
+  let runStart = start.epochNanoseconds;
+
+  // One stretch per offset change in the span, which the cap above bounds.
+  for (let index = 0; index <= changes.length; index++) {
+    const runEnd = index === changes.length ? endNs : changes[index] - 1n;
+
+    ranges.push([
+      localDay(runStart, offsets[index]),
+      localDay(runEnd, offsets[index]),
+    ]);
+    runStart = changes[index];
+  }
+
+  return unionSize(ranges);
 }
