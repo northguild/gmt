@@ -32,12 +32,12 @@ ask the owner which story they mean.
 | Story | Steps |
 | --- | --- |
 | Realm story (`MAR-*`, `TRAN-*`, `INT-*`, `CORE-*`, …) | 4, then 5 |
-| `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 5 only, as for `DOX-*` |
+| `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 4 only, then `dox: none`. The writer is `dox-architect` for `apps/dox` work (`CORE-86`, `CORE-88`) and `architect` for the package (`CORE-87`); skip 5, there is no tool |
 | `DOX-*` story | 5 only (skip the library index input) |
 
 ## 4. Library spec — `architect` (Opus)
 
-Spawn `architect` with: the story id, the issue number, the tracker row, the path
+Spawn `architect` (or the writer the route table names) with: the story id, the issue number, the tracker row, the path
 `context/domination/issues/<ID>.md`, and this output contract — a spec folder at
 `context/domination/specs/<ID>/`: `index.md` of 150 lines or fewer (scope, signatures, file
 list, authority table, slice table linking each slice) and one slice file per function or slice,
