@@ -28,7 +28,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 71 stories in build order.
+realm. [tracker.md](tracker.md) has the 75 stories in build order.
 
 ---
 
@@ -49,6 +49,7 @@ realm. [tracker.md](tracker.md) has the 71 stories in build order.
 | Authority order             | **International first.** An international treaty or standards body, then a multinational industry body, then national sources only as labelled peers. No national system, agency or convention is a default, the sole authority, or gets its own named function; with no international source, a GMT rule backed by sources from at least two countries. Example: the six GNSS are peers because each is an IMO-recognised WWRNS component, not because any one nation's document says so. Examples are spread across regions (tracker, "Added for this epic"). |
 | Law                         | **GMT tracks no law.** Regulated windows, limits and tables — from legislatures, regulators, treaties and professional bodies alike — are caller parameters with no defaults; nothing names a statute, agency or jurisdiction in code or docs (tracker, "Added for this epic"). |
 | Calendar semantics          | **TC39 Temporal is the authority.** Arithmetic clamps a non-existent day (`overflow: "constrain"`); parsers reject. Matches EU, UK and US law and every major library but date-fns. |
+| Temporal engine             | **The polyfill only.** `@js-temporal/polyfill` is the engine in the published package. CORE-80's seam lets CORE-82 run the suite on native `Temporal` weekly. Host `Temporal` is reconsidered when a stable Safari ships it and CORE-82's leg has stayed green on Node 26, Chromium and Firefox. |
 | Zone-aware boundaries       | **Real boundaries, never truncate-and-re-resolve.** `start ≤ input < next start`, via `internal/zonedBucket.ts`; tested on the probe zones. See [coding-standards § Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics). |
 
 ### Why the build order changed
@@ -225,13 +226,13 @@ leave no trace, so they are described, not named.
 | Not included               | Reason                                                                              |
 | -------------------------- | ------------------------------------------------------------------------------------- |
 | Place registries           | UN/LOCODE, IATA, ICAO, UIC → IANA zone. Real gap, but a data commitment. Parked.     |
-| tzdb version pinning       | Reproducing historical conversions exactly. Temporal exposes no version hook.        |
+| tzdb version pinning       | Reproducing historical conversions exactly. Temporal exposes no version hook. Comparing rules from a caller's TZif file is an Ultimation candidate. |
 | OTel integration           | Precision functions in core serve all telemetry consumers.                            |
 | Weather/climate timestamps | netCDF, GRIB files. Domain expertise beyond time math.                                |
 | Legal timestamps           | Certificate-based, PKI, court filing. Future realm.                                   |
 | Gaming timestamps          | Frame-relative time, lag compensation. Separate domain.                               |
 | Historical dates           | Julian calendars, pre-1582. Complex localization. Future work.                        |
-| Recurrence / iCal          | RFC 5545. Different concern from point-in-time math.                                  |
+| iCalendar files            | `VCALENDAR`, `VTIMEZONE`, alarms. CORE-84 covers the `RRULE` value and cron in a zone. |
 | Routing and optimisation   | GMT does time math. Route selection is the consumer's problem.                        |
 
 See [painpoints.md](painpoints.md) for the full parked list with reasons.
@@ -242,7 +243,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (71 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (75 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | Bulletin A ships at build and `isUt1Stale` surfaces its expiry. The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
@@ -259,7 +260,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 71 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 75 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID

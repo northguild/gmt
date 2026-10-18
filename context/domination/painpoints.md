@@ -43,6 +43,10 @@ These bite in every realm. They are why Phase 1 grew from 2 stories to 7.
 | Storage precision truncation | Postgres stores microseconds. Writing nanoseconds and reading back silently breaks round-trip equality. | CORE-1 |
 | Foreign epochs | NTP (1900 epoch, rolls over 2036), Windows FILETIME (100 ns since 1601), .NET ticks, Excel serial, Postgres microseconds-since-2000. Every integration re-derives these. | CORE-3 |
 | Days that do not exist | "One year after 29 February", "one month after 31 January". Libraries disagree silently, and contracts, filings and fiscal calendars depend on the answer. | CORE-5, CORE-6 |
+| Same code, different `Temporal` | Native `Temporal` is on by default in Firefox 139, Chrome 144 and Node 26.0.0 ([Firefox](https://www.firefox.com/en-US/firefox/139.0/releasenotes/), [Chrome](https://developer.chrome.com/release-notes/144), [Node](https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V26.md#26.0.0)). GMT's suite runs only on the polyfill, and the weekly oracle probes `Temporal` itself, not GMT's functions. A GMT answer that differs on a native engine is found by nobody. | CORE-82 |
+| A stored zoned time after a rule change | A future event stored as `…-08:00[America/Vancouver]` is wrong once the zone's rule changes between writing and reading, and `toOffsetInstant` returns the sentinel without saying why. Hosts lag the rules: on 2026-10-17 Node 24 and 26 carried tzdb 2026c, Node 22 carried 2025c, and IANA was at 2026e, with four 2026 releases each moving a future offset ([tzdb NEWS](https://data.iana.org/time-zones/tzdb/NEWS)). RFC 9557 §4.1 leaves the disagreement to the reader. | CORE-83 |
+| A recurrence or cron line across a transition | rrule 3.1M, cron-parser 23.0M, croner 10.0M and node-cron 5.0M weekly npm downloads (2026-10-17). A local rule expanded across a daylight-saving transition gives a time that does not exist or occurs twice. RFC 5545 §3.3.10, as amended by Erratum 4271, states the rule for a recurrence ([RFC 5545](https://www.rfc-editor.org/rfc/rfc5545.txt), [Erratum 4271](https://www.rfc-editor.org/errata/eid4271)). Nothing states one for cron: POSIX is silent, and the two main crontab(5) lineages resolve the same line in opposite ways ([cronie](https://github.com/cronie-crond/cronie/blob/master/man/crontab.5), [Debian cron(8)](https://manpages.debian.org/trixie/cron/cron.8.en.html)). | CORE-84 |
+| The duration strings people write | `ms` has 557.6M weekly npm downloads (2026-10-17) and no published grammar; in its strings `1m` is a minute, while ISO 8601's `P1M` is a month. `parseDuration` accepts ISO 8601 only, so every caller writes a parser and decides alone. | CORE-85 |
 
 ### Non-existent days: the law and the libraries agree on clamping
 
@@ -490,12 +494,12 @@ Researched, deliberately unscheduled. Do not re-propose without new evidence.
 | Item | Why parked |
 | --- | --- |
 | Place registries (UN/LOCODE, IATA, ICAO, UIC → IANA zone) | Real and unsolved in JS, but data-heavy and a maintenance commitment. GMT takes zones as parameters instead. Revisit as a separate package. |
-| tzdb version pinning | Reproducing a historical conversion exactly needs the tzdb version in force at the time. Deep change; Temporal exposes no version hook. |
+| tzdb version pinning | Reproducing a historical conversion exactly needs the tzdb version in force at the time. Deep change; Temporal exposes no version hook. Reading a caller-supplied TZif file (RFC 9636) to compare rules is an Ultimation candidate. |
 | Full Fairhead & Bretagnon TDB−TT model | Simplified formula first; sub-10 ns accuracy is a later story. |
 | Weather / climate timestamps | netCDF, GRIB. Domain expertise beyond time math. |
 | Legal timestamps | PKI and court filing. Certificate-based, not time math. |
 | Historical calendars | Julian calendar, pre-1582. Complex localisation. |
-| Recurrence / iCal RFC 5545 | Different concern from point-in-time math. CORE-55's weekly windows with dated exceptions cover every consumer in the epic without becoming a recurrence engine. |
+| iCalendar files (`VCALENDAR`, `VTIMEZONE`, alarms) | CORE-84 takes an `RRULE` value and an IANA zone; the file format around it is a different concern. |
 | Polar motion (Bulletin A x, y) | Needed for full terrestrial-to-celestial transformation; SPA-50 delivers rotation about the pole only. |
 | Lunar phases and rise/set | Deterministic (Meeus ch. 49) but no consumer in the epic; revisit if a maritime or religious-calendar story needs them. |
 | UIC 406 blocking-time components as GMT text | The leaflet is paid; RAI-23 takes the components from the caller. Add them only from the primary text. |

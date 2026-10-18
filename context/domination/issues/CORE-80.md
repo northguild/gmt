@@ -31,8 +31,12 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 5. **Zone transitions.** Pass `until` in `certainlyTouchesMoreBuckets`. Keep a per-zone memo of transitions found and of stretches verified to have none. Read the clock once per public call.
 6. **Epoch-day walks.** `walkSchedule` and `walkFreeTime` work in epoch days and epoch nanoseconds inside each stretch with no offset change. Counts use whole weeks times the weekly total, plus the leftover days, minus holidays found by binary search. Wall times resolve straight to epoch nanoseconds, with no string round-trip.
 7. **Calendar resolution and formatter caches.** Holidays parsed once, by integer arithmetic, into a sorted array of epoch days. Calendars, schedules and zones resolved once per public call and handed to an internal core. Formatters cached by locale and resolved options.
-8. **Polyfill strategy**, after the owner decision below.
+8. **Polyfill strategy.** `@js-temporal/polyfill` stays the only engine in the published package. The seam from part 2 exists so CORE-82 can run the suite on native `Temporal`, not to switch engines. Host `Temporal` is reconsidered only when both hold: a stable Safari release ships `Temporal`, and CORE-82's weekly leg has stayed green on Node 26, Chromium and Firefox. Until then a host engine would change GMT's answers by browser, and the bundle saving would reach only some users.
 9. **Agent and rule changes.** A *Performance shape* section in `.agents/tdd-dev.md`, a *Cost* step in `.agents/gmt-reviewer.md`, three items in `context/code-review-checklist.md`, and a *Loop cost* paragraph in `context/coding-standards.md § Loop Style`. The text is in Part 3 of the audit.
+
+## Tool
+
+None. The story changes no output and adds no function. The size budgets and benchmark results are reported by `validate` and the PR, not by a widget.
 
 ## Design notes
 
@@ -43,11 +47,10 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 - **Size is measured without building.** The script bundles in memory, so `dist` and the Dox dev server are untouched.
 - **Removing the root polyfill re-export is a breaking change.** It takes a `minor` changeset with a **Breaking changes** section, per the changeset rule. GMT's contract is string-in, string-out, so no public function changes.
 
-## Decisions needed before building part 8
+## Decisions needed before building
 
-1. **Polyfill strategy.** Keep `@js-temporal/polyfill`. Or use the host's built-in `Temporal` where it exists, with a polyfilled entry as the fallback. Or move to a smaller polyfill. The audit lists the trade-offs.
-2. **Size budgets.** The figures that fail `validate` for the root entry and for single-function imports.
-3. **Whether cost findings block** new code in review.
+1. **Size budgets.** The figures that fail `validate` for the root entry and for single-function imports.
+2. **Whether cost findings block** new code in review.
 
 ## What gmt provides (do not re-implement)
 
