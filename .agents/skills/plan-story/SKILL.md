@@ -37,7 +37,8 @@ ask the owner which story they mean.
 
 ## 4. Library spec — `architect` (Opus)
 
-Spawn `architect` (or the writer the route table names) with: the story id, the issue number, the tracker row, the path
+Spawn `architect` (or the writer the route table names) with: the story id, the issue number,
+the tracker row, the path
 `context/domination/issues/<ID>.md`, and this output contract — a spec folder at
 `context/domination/specs/<ID>/`: `index.md` of 150 lines or fewer (scope, signatures, file
 list, authority table, slice table linking each slice) and one slice file per function or slice,
