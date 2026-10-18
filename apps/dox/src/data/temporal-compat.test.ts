@@ -196,10 +196,10 @@ describe("temporal compat snapshot", () => {
 
   describe("shortRef", () => {
     it.each`
-      repo                              | number  | label
-      ${"tc39/proposal-temporal"}       | ${3292} | ${"tc39 #3292"}
+      repo                               | number  | label
+      ${"tc39/proposal-temporal"}        | ${3292} | ${"tc39 #3292"}
       ${"js-temporal/temporal-polyfill"} | ${369}  | ${"polyfill #369"}
-      ${"whatwg/html"}                  | ${12}   | ${"whatwg/html #12"}
+      ${"whatwg/html"}                   | ${12}   | ${"whatwg/html #12"}
     `("labels $repo#$number as '$label'", ({ repo, number, label }) => {
       expect(shortRef(repo, number)).toBe(label);
     });
@@ -221,14 +221,61 @@ describe("temporal compat snapshot", () => {
       ]);
     });
 
+    const hrefs = (parts: ReturnType<typeof reasonParts>) =>
+      parts.flatMap((p) => ("href" in p ? [p.href] : []));
+    const TC39 = "tc39/proposal-temporal";
+    const POLYFILL = "js-temporal/temporal-polyfill";
+
     it("links every reference and keeps text between them", () => {
       expect(
-        reasonParts("a/b#1 and c/d#2").map((p) => ("href" in p ? p.href : p.text)),
+        reasonParts(`${TC39}#1 and ${POLYFILL}#2`).map((p) =>
+          "href" in p ? p.href : p.text,
+        ),
       ).toEqual([
-        "https://github.com/a/b/issues/1",
+        `https://github.com/${TC39}/issues/1`,
         " and ",
-        "https://github.com/c/d/issues/2",
+        `https://github.com/${POLYFILL}/issues/2`,
       ]);
+    });
+
+    it("links a reference at the end of a sentence and one in parentheses", () => {
+      expect(hrefs(reasonParts(`Tracked in ${TC39}#3292.`))).toEqual([
+        `https://github.com/${TC39}/issues/3292`,
+      ]);
+      expect(reasonParts(`Tracked in ${TC39}#3292.`).at(-1)).toEqual({
+        text: ".",
+      });
+      expect(hrefs(reasonParts(`(${TC39}#7)`))).toEqual([
+        `https://github.com/${TC39}/issues/7`,
+      ]);
+    });
+
+    it("links only the repositories the site knows, so `and/or#1` stays text", () => {
+      expect(reasonParts("pass and/or#1 here")).toEqual([
+        { text: "pass and/or#1 here" },
+      ]);
+      expect(reasonParts("a/b#1")).toEqual([{ text: "a/b#1" }]);
+    });
+
+    it("does not link a reference that is part of a URL or a longer name", () => {
+      for (const text of [
+        `https://github.com/${TC39}/issues/3292#3`,
+        `https://github.com/${TC39}#3`,
+        `x-${TC39}#3`,
+        `${TC39}#3abc`,
+      ]) {
+        expect(reasonParts(text), text).toEqual([{ text }]);
+      }
+    });
+
+    it("links nothing when no repository is known", () => {
+      expect(reasonParts(`${TC39}#1`, [])).toEqual([{ text: `${TC39}#1` }]);
+    });
+
+    it("matches a repository name with dots when the site knows it", () => {
+      expect(
+        hrefs(reasonParts("fixed in a.b/c.d#1 and not axb/cxd#2", ["a.b/c.d"])),
+      ).toEqual(["https://github.com/a.b/c.d/issues/1"]);
     });
 
     it("leaves a reason with no reference as one text part", () => {
@@ -238,8 +285,8 @@ describe("temporal compat snapshot", () => {
     });
 
     it("does not link a bare #number or an owner/repo with no number", () => {
-      expect(reasonParts("see #12 in tc39/proposal-temporal")).toEqual([
-        { text: "see #12 in tc39/proposal-temporal" },
+      expect(reasonParts(`see #12 in ${TC39}`)).toEqual([
+        { text: `see #12 in ${TC39}` },
       ]);
     });
 

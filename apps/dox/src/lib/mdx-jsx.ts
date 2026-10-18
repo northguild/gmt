@@ -234,6 +234,18 @@ function renderLibraryCompare(props: Record<string, string>): string {
 }
 
 /**
+ * Free text for one cell of a Markdown pipe table, so it reads the way the HTML page shows it.
+ *
+ * A backslash goes before each character Markdown would act on inside a cell: `\`, `` ` ``, `*`,
+ * `_`, `~`, `[`, `]`, `<`, `&` and the `|` that ends a cell. Without it a reason such as
+ * `a_b_c` or `[x](y)` becomes emphasis or a link in the `.md`, `llms.txt` and retrieval-chunk
+ * output while the page prints the same words literally. Plain prose, digits, parentheses, `.`
+ * and `#` pass through unchanged.
+ */
+export const escapeMarkdownInline = (text: string): string =>
+  text.replace(/[\\`*_~[\]<&|]/g, "\\$&");
+
+/**
  * `<UpstreamDefects />` as a Markdown table.
  *
  * The page's whole argument is the table — which polyfill bugs GMT works around, and whether it
@@ -253,13 +265,14 @@ function renderUpstreamDefects(): string {
       )
       .join(", ");
     const { badge, count } = stateLine(group);
-    // A guard row continues with why it is kept; a `|` in that reason would end the cell early.
+    // A guard row continues with why it is kept. The reason is free text, so it is escaped: a `|`
+    // would end the cell early and `_` or `[` would turn into Markdown the page never shows.
     const reason =
       group.state === "guard" && group.guard
-        ? `. ${group.guard.reason.replaceAll("|", "\\|")}`
+        ? `. ${escapeMarkdownInline(group.guard.reason)}`
         : "";
     const state = `${badge} — ${count}${reason}`;
-    return `| **${groupLabel(group)}** — ${groupWhatBreaks(group)} | ${state} | ${sent || "—"} |`;
+    return `| **${escapeMarkdownInline(groupLabel(group))}** — ${escapeMarkdownInline(groupWhatBreaks(group))} | ${state} | ${sent || "—"} |`;
   });
 
   return [

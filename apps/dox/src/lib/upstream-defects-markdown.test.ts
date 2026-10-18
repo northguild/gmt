@@ -1,5 +1,9 @@
-import { compatGroups, groupLabel } from "../data/temporal-compat";
-import { renderMdxComponents } from "./mdx-jsx";
+import {
+  compatGroups,
+  groupLabel,
+  groupWhatBreaks,
+} from "../data/temporal-compat";
+import { escapeMarkdownInline, renderMdxComponents } from "./mdx-jsx";
 
 /**
  * The Markdown twin of the `/upstream/` table (`.md`, `llms.txt`, retrieval chunks).
@@ -66,5 +70,69 @@ describe("<UpstreamDefects /> as Markdown", () => {
     for (const row of rows) {
       expect(row.replaceAll("\\|", "").split("|").length - 1, row).toBe(4);
     }
+  });
+});
+
+describe("escapeMarkdownInline", () => {
+  it.each`
+    char    | name
+    ${"*"}  | ${"asterisk"}
+    ${"_"}  | ${"underscore"}
+    ${"["}  | ${"opening bracket"}
+    ${"]"}  | ${"closing bracket"}
+    ${"`"}  | ${"backtick"}
+    ${"<"}  | ${"less-than"}
+    ${"\\"} | ${"backslash"}
+    ${"|"}  | ${"pipe"}
+    ${"&"}  | ${"ampersand"}
+    ${"~"}  | ${"tilde"}
+  `("puts a backslash before a $name", ({ char }) => {
+    expect(escapeMarkdownInline(`a${char}b`)).toBe(`a\\${char}b`);
+  });
+
+  it("leaves plain prose, digits, parentheses, dots and # alone", () => {
+    const text =
+      "Polyfill 0.5.1 is older (tc39/proposal-temporal#3292), so it passes.";
+    expect(escapeMarkdownInline(text)).toBe(text);
+  });
+
+  it("escapes a backslash once, so an escape it adds is not itself escaped again", () => {
+    expect(escapeMarkdownInline("a\\*b")).toBe("a\\\\\\*b");
+  });
+});
+
+describe("<UpstreamDefects /> free text as Markdown", () => {
+  it("leaves every real guard reason unchanged apart from its pipes", () => {
+    for (const g of compatGroups.filter((g) => g.guard)) {
+      expect(escapeMarkdownInline(g.guard!.reason)).toBe(
+        g.guard!.reason.replaceAll("|", "\\|"),
+      );
+    }
+  });
+
+  it("escapes Markdown in a guard reason", () => {
+    const hostile = "a*b_c[d](e) `f` <g> h\\i | j";
+    const guard = compatGroups.find((g) => g.guard)!;
+    const saved = guard.guard!.reason;
+    try {
+      guard.guard!.reason = hostile;
+      const row = renderMdxComponents("<UpstreamDefects />")
+        .split("\n")
+        .filter((line) => line.startsWith("| **"))[
+        compatGroups.indexOf(guard)
+      ]!;
+      expect(stateCell(row)).toContain(escapeMarkdownInline(hostile));
+      expect(row).not.toContain(hostile);
+    } finally {
+      guard.guard!.reason = saved;
+    }
+  });
+
+  it("escapes every what-breaks cell the way the helper does", () => {
+    compatGroups.forEach((group, i) => {
+      expect(rows[i]).toContain(
+        `**${escapeMarkdownInline(groupLabel(group))}** — ${escapeMarkdownInline(groupWhatBreaks(group))} |`,
+      );
+    });
   });
 });

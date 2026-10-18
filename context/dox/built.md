@@ -374,10 +374,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   version to choose a badge, and `toCompatGroup` fails the build on an unknown state or an
   incomplete guard. The badge has a full `--gmt-ice-dim-fill` border (`--gmt-border-strong`
   measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum;
-  the wrapper that scrolls the table is a focusable, named region. The label is "Kept on purpose"
+  the wrapper that scrolls the table is a named region that ships `tabindex="0"`, and
+  `mountOverflowFocus` (`src/lib/overflow-focus.ts`) drops the tab stop while the table fits
+  (role and label stay), so a desktop reader never lands on a box that cannot scroll. The Markdown
+  twin runs every free-text cell (reason, what-breaks text, label) through `escapeMarkdownInline`
+  so `_`, `*`, `[`, `<` and the rest read the way the HTML shows them. The label is "Kept on purpose"
   because it answers the column's question in familiar words, and "Guarded" already means the
   `gmtGuard` join of filings on the same page. A reason never says "probe" (a test rejects it), and
-  `owner/repo#n` in a reason renders as a short link (`reasonParts`). Both "ok" badges
+  `owner/repo#n` in a reason renders as a short link (`reasonParts`) only for a repository the
+  site knows (`tc39/proposal-temporal`, `js-temporal/temporal-polyfill`), never inside a URL or
+  after a word character, so `and/or#1` and `…/issues/3292#3` stay text. Both "ok" badges
   (`.gmt-defects-badge--ok`, `.gmt-upstream-badge--ok`) use `--gmt-cyan-ink`, not Starlight green
   (1.69:1 in light).
 

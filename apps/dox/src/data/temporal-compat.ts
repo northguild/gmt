@@ -120,34 +120,50 @@ export const stateLine = (g: CompatGroup): { badge: string; count: string } => {
   }
 };
 
+/** The repositories the `/upstream/` page knows by name, and the short label each one prints as. */
+const KNOWN_REPOS: Readonly<Record<string, string>> = {
+  "tc39/proposal-temporal": "tc39",
+  "js-temporal/temporal-polyfill": "polyfill",
+};
+
 /**
  * The short form the `/upstream/` tables print for a GitHub reference: `tc39 #3292`,
  * `polyfill #369`, or `owner/repo #n` for any other repository.
  */
-export const shortRef = (repo: string, number: number): string => {
-  const name =
-    repo === "tc39/proposal-temporal"
-      ? "tc39"
-      : repo === "js-temporal/temporal-polyfill"
-        ? "polyfill"
-        : repo;
-  return `${name} #${number}`;
-};
+export const shortRef = (repo: string, number: number): string =>
+  `${KNOWN_REPOS[repo] ?? repo} #${number}`;
 
 /** A run of plain text in a guard reason, or a reference the page prints as a link. */
 export type ReasonPart = { text: string } | { text: string; href: string };
 
-const GITHUB_REF = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/g;
+const escapeRegExp = (text: string): string =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * A guard reason split for the page. Each `owner/repo#n` becomes a short link, so the narrow
  * state column never has to break a 27-character token mid-word. The snapshot, the Markdown twin
  * and the canary issue keep the full reference.
+ *
+ * A reference links only when its repository is one the site knows (`repos`, by default the two
+ * repositories `shortRef` names). Syntax alone cannot tell `tc39/proposal-temporal#3292` from
+ * `and/or#1`: both are a legal owner and repository, and a link to a repository nobody chose to
+ * track is a wrong guess presented as a fact. A name that is not listed stays text. The match
+ * must also start at a boundary, not after a word, `.`, `/`, `:` or `-` character, so a number
+ * anchor on a URL (`…/issues/3292#3`) or a longer name (`x-owner/repo#1`) is never read as a
+ * reference, and it must end at the digits, so `#3abc` is not one either.
  */
-export const reasonParts = (reason: string): readonly ReasonPart[] => {
+export const reasonParts = (
+  reason: string,
+  repos: readonly string[] = Object.keys(KNOWN_REPOS),
+): readonly ReasonPart[] => {
+  if (repos.length === 0) return reason ? [{ text: reason }] : [];
+  const ref = new RegExp(
+    `(?<![\\w.:/-])(${repos.map(escapeRegExp).join("|")})#(\\d+)(?!\\w)`,
+    "g",
+  );
   const parts: ReasonPart[] = [];
   let last = 0;
-  for (const m of reason.matchAll(GITHUB_REF)) {
+  for (const m of reason.matchAll(ref)) {
     const [whole, repo, number] = m;
     if (m.index > last) parts.push({ text: reason.slice(last, m.index) });
     parts.push({
