@@ -13,14 +13,19 @@ Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`
 ## Scope
 
 1. **Node leg.** A Vitest configuration that points CORE-80's Temporal seam at `globalThis.Temporal` and runs the whole `packages/gmt` suite on Node 26.
-2. **Browser leg.** The same suite in Chromium and Firefox through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`. Playwright is already installed for the oracle.
-3. **Weekly job.** A job in `temporal-oracle.yml`, on the weekly schedule and on `workflow_dispatch`, never on pull requests. It writes a verdict file under `artifacts/` in CORE-81's shape (`{ source, status: "ran" | "could-not-run", … }`), one source per runtime, which CORE-81's report step turns into issues under its finding keys.
-4. **Upstream page.** The Dox upstream page shows each runtime with its engine version and the date of the last green run, from the same data path CORE-81's results use. No new page.
-5. **Triage.** A divergence is one of three things, and each is closed in the story that finds it: a GMT defect, fixed; a polyfill defect, recorded in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md) with its upstream link; an engine defect, recorded the same way with the engine's bug link. No test is skipped to make a leg green.
+2. **Browser leg.** The same suite in Chromium and Firefox through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`. The oracle job already installs Playwright's Chromium; this leg adds Firefox.
+3. **Weekly job.** A job in `temporal-oracle.yml`, on the weekly schedule and on `workflow_dispatch`, never on pull requests. It writes a verdict file under `artifacts/` in CORE-81's shape (`{ source, status: "ran" | "could-not-run", … }`).
+4. **A new canary source.** CORE-81's reporter knows only its own three sources, so this story adds one:
+   - its verdict builder and file in `scripts/lib/canary-verdict.mjs`;
+   - the source in the `temporal-oracle` entry of `WORKFLOW_SOURCES`, so a leg that writes no verdict is listed in the workflow's could-not-run issue;
+   - a finding builder in `scripts/lib/canary-issues.mjs`, with its marker key;
+   - a `force_*` dispatch input for the dry run, read only through `env:` like the existing ones.
+5. **Upstream page.** The Dox upstream page names the three runtimes the suite runs on and links to the workflow's runs; each run's job summary names the engine versions. No new page and no new data file: a divergence reaches an issue, not the page.
+6. **Triage.** A divergence is one of three things, and each is closed in the story that finds it: a GMT defect, fixed; a polyfill defect, recorded in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md) with its upstream link; an engine defect, recorded the same way with the engine's bug link. No test is skipped to make a leg green.
 
 ## Tool
 
-None. The story adds no public function. Its result is shown on the existing upstream page.
+None. The story adds no public function. The existing upstream page names the runtimes it runs on.
 
 ## Design notes
 
@@ -33,7 +38,7 @@ None. The story adds no public function. Its result is shown on the existing ups
 ## What gmt provides (do not re-implement)
 
 - CORE-80 — the single internal module every `Temporal` import goes through
-- CORE-81 — the verdict JSON, the finding keys and the report step in `temporal-oracle.yml`
+- CORE-81 — the verdict files, the reporter (`scripts/canary-report.mjs`, `scripts/lib/canary-issues.mjs`, `scripts/lib/canary-verdict.mjs`) and the `report` job in `temporal-oracle.yml`
 - `scripts/temporal-compat.mjs` — the oracle's tagged-mismatch list, so a known polyfill or engine defect is not reported twice
 
 ## Verification
@@ -41,5 +46,5 @@ None. The story adds no public function. Its result is shown on the existing ups
 - A `workflow_dispatch` run is green on Node 26, Chromium and Firefox, and its job summary names each engine version.
 - A dry run with one forced failure opens one `[dry run]` issue through CORE-81's path; a second dry run comments on it.
 - A runtime that cannot start writes `could-not-run`, which files CORE-81's could-not-run issue.
-- The upstream page lists the three runtimes and their last green run.
+- The upstream page names the three runtimes and links to the workflow's runs.
 - `pnpm run validate` stays green and takes no longer than before.
