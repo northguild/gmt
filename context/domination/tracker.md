@@ -183,6 +183,13 @@ change. `CORE-56` (identifiers, which no story consumes), `CORE-54` (holiday rul
 (recurrence and cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human
 durations) are the second release. Every realm after them can draw on all eight.
 
+**Site work has no row here.** It is tracked as `DOX-*` stories in
+[../dox/tracker.md](../dox/tracker.md). Two of them sit between the rows above in time:
+`DOX-A7` (#317) moves the docs site to `northguild.dev/gmt` and comes before `CORE-80`, so every
+later story's pages are built for the new paths; `DOX-A8` (#328) ships the reference corpus and
+the tool schemas from the package before more stories add to them. `DOX-A9` (#329) links the
+hosted server once it exists.
+
 **Demurrage comes straight after `TRAN-8`.** `INT-12` is the first consumer of
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller
 parameter, on top of it, so the two follow the primitive they test before the rest of Transport.

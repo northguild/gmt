@@ -1,6 +1,7 @@
 # Dox: the documentation site for `@northguild/gmt`
 
-Every tier is done, the chat included. Load only what the task needs:
+Tiers 0 to 6 are done, the chat included; Tier 7, the domain and the hosted server, is open.
+Load only what the task needs:
 
 - [overview.md](overview.md) — architecture, decisions, tier table. Start here.
 - [built.md](built.md) — what each tier ships, the rules that bind it, traps and runbooks.

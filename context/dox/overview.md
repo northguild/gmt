@@ -74,6 +74,8 @@ code, tables and plotted widget values stay high-contrast and plain. Spec:
 | 4    | `DOX-E1a`–`E1d`        | Interactive globe on the GPU with Earth imagery, multi-zone scrubber             |
 | 5    | `DOX-A4b`–`d`          | Scenarios, ported pitfalls, guides index                                         |
 | 6    | `DOX-C0`–`C4`          | Dox, the chat that mounts widgets                                                |
+| 7    | `DOX-A7`–`A9`          | The domain: Dox at `northguild.dev/gmt`, a landing page, the corpus shipped, the server linked |
 
-Every tier is done; statuses and issue numbers are in [tracker.md](tracker.md). `apps/dox` is
-private, so no changesets unless a change also touches `packages/gmt`.
+Tiers 0 to 6 are done and Tier 7 is open; statuses and issue numbers are in
+[tracker.md](tracker.md). `apps/dox` is private, so no changesets unless a change also touches
+`packages/gmt`.
