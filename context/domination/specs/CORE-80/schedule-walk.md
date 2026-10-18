@@ -138,8 +138,8 @@ expected instants from `zdump -v` (tz 2026c) and the `resolveLocal` JSDoc exampl
 | `Australia/Lord_Howe` 2024-10-06T02:15 (30-minute change) | `"compatible"` 2024-10-05T15:45:00Z; `"earlier"` 15:15:00Z |
 | `startOfDayNs`, `America/Sao_Paulo` 2018-11-04 (midnight skipped) | 2018-11-04T03:00:00Z, the change |
 | `operatingTimeBetween("2011-12-29T00:00:00-10:00", "2012-01-01T00:00:00+14:00")`, `Pacific/Apia`, 09:00–17:00 every day | `"PT16H"`: 2011-12-29 and 2011-12-31 at 8 h; 2011-12-30 never happened in that zone |
-| `openTimeWithin` over 10 years in `Europe/London` | equals the hand sum: weeks x 39 h (Mon, Tue, Thu, Fri 8 h; Wed 7 h), minus each holiday's hours (state the arithmetic) |
-| `openTimeWithin` on `UTC` and on `+05:45` | the same closed form with no piece walks (spy: `scheduleRunsWithin` called only for the range ends) |
+| `openTimeWithin` over 10 years in `Europe/London` | equals the hand sum: weeks x 39 h (Mon to Thu 8 h; Fri 7 h), minus each holiday's hours (state the arithmetic) |
+| `openTimeWithin` on `UTC` and on `+05:45` | the same closed form with no piece walks; pinned by the hand-sum value rows on both zones, not by a read-count spy, because a count of `offsetNanoseconds` reads would pin how the code reads the zone, not what it returns |
 | `addOperatingTime` 400 h from a Monday 09:00 in `Europe/London` | the instant worked from weeks of 39 h |
 | `"reject"` with a window edge at 01:30 on 2024-03-31, London, range across it | `""`, as today |
 
@@ -152,7 +152,7 @@ override days. Old against new, JSON diffed. A difference is a defect in the new
 ## Bench
 
 `operatingTimeBetween.bench.ts` 1 week, 1 year, 10 years, before and after (baselines 2.69,
-44.9, 408 ms). Add a cold row (memos cleared in `setup`) and an `addOperatingTime` 400 h row.
+44.9, 408 ms). Add a cold row and an `addOperatingTime` 400 h row. The cold row clears the transition memo inside the timed function, not in setup, so every search of a timed call runs uncached.
 
 ## Done when
 

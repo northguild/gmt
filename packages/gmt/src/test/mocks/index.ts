@@ -11,3 +11,4 @@ export { mockTemporalPlainDateFromThrow } from "./mockTemporalPlainDateFromThrow
 export { mockTemporalPlainDateTimeFromThrow } from "./mockTemporalPlainDateTimeFromThrow";
 export { mockTemporalPlainTimeFromThrow } from "./mockTemporalPlainTimeThrow";
 export { mockTemporalZonedDateTimeFromThrow } from "./mockTemporalZonedDateTimeFromThrow";
+export { mockTemporalZonedDateTimeOffsetThrow } from "./mockTemporalZonedDateTimeOffsetThrow";

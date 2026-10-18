@@ -2,7 +2,7 @@ import { formatHourDuration, parseIntervalNanoseconds } from "../../internal";
 import {
   parseOperatingSchedule,
   parseScheduleDisambiguation,
-  scheduleRunsWithin,
+  openTimeWithin,
 } from "../../internal/operatingSchedule";
 import type { Disambiguation, OperatingSchedule } from "../../types";
 
@@ -64,13 +64,9 @@ export function operatingTimeBetween(
       return "";
     }
 
-    const runs = scheduleRunsWithin(resolved, range, disambiguation);
+    const open = openTimeWithin(resolved, range, disambiguation);
 
-    return runs === null
-      ? ""
-      : formatHourDuration(
-          runs.reduce((total, run) => total + (run.end - run.start), 0n),
-        );
+    return open === null ? "" : formatHourDuration(open);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

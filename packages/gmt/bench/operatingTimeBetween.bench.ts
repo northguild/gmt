@@ -1,5 +1,6 @@
 import { bench, describe } from "vitest";
-import { operatingTimeBetween } from "../src/calendar";
+import { addOperatingTime, operatingTimeBetween } from "../src/calendar";
+import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { londonSchedule, utcMidnight } from "./fixtures";
 
 describe("operatingTimeBetween, Europe/London", () => {
@@ -18,4 +19,26 @@ describe("operatingTimeBetween, Europe/London", () => {
       { time: 500 },
     );
   }
+
+  // Cold clears the transition memo at the start of each call, so every search runs uncached;
+  // the rows above reuse what the previous call left.
+  const coldEnd = utcMidnight("2024-01-01", 3652);
+  bench(
+    "10 years cold",
+    () => {
+      clearTransitionMemo();
+      operatingTimeBetween("2024-01-01T00:00:00Z", coldEnd, londonSchedule);
+    },
+    { time: 500 },
+  );
+});
+
+describe("addOperatingTime, Europe/London", () => {
+  bench(
+    "400 hours",
+    () => {
+      addOperatingTime("2024-01-01T09:00:00Z", "PT400H", londonSchedule);
+    },
+    { time: 500 },
+  );
 });
