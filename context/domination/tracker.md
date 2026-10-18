@@ -12,9 +12,11 @@
 Reading the table top to bottom is the build order, and the `#` column is that order. A story
 ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
 and it never changes. The `#` and the number in the ID do not match: Core primitives sit just
-before their first consumer whatever their ID. **The first row that is not `Done` is the next
-story to build.** Done rows stay at the top in
-the order they shipped. `pnpm deps -- check` reads build order from row position, not from the ID.
+before their first consumer whatever their ID. **The first row that is not `Done` or `Waiting`
+is the next story to build.** A `Waiting` row waits on something outside this repo, named in its
+spec; `pnpm deps:ready` lists it apart from the startable rows, and it is picked up when the wait
+ends. Done rows stay at the top in the order they shipped. `pnpm deps -- check` reads build order
+from row position, not from the ID.
 
 ### Blocked by
 
@@ -55,23 +57,26 @@ end of a realm, and never more than about seven stories, so the docs site is nev
 npm. A Core primitive ships with the realm that first uses it. The second Core round is the
 exception: it ships as two Core releases of its own, ahead of the remaining realms.
 
-| Cut after     | Ships                                      | Why here                                                                                             |
-| ------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| INT-58 (#11)  | TRAN-8, INT-12, INT-58                     | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete |
-| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77 | The rest of the transport primitives, with operating hours                                           |
-| CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76           | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on     |
+| Cut after     | Ships                                        | Why here                                                                                                 |
+| ------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| INT-58 (#11)  | TRAN-8, INT-12, INT-58                       | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete     |
+| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77   | The rest of the transport primitives, with operating hours                                               |
+| CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76             | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on         |
 | CORE-83 (#28) | CORE-81, CORE-86, CORE-87, CORE-80 … CORE-83 | The site on its domain, the corpus shipped, the `Temporal` seam, the native suite, the stored-time audit |
-| CORE-85 (#33) | CORE-56, CORE-54, CORE-84, CORE-85, CORE-88 | The second Core round: identifiers, holiday rules, recurrence and cron, human durations; the server linked |
-| MAR-59 (#38)  | CORE-79, MAR-17 … MAR-19, MAR-59           | Maritime complete, laytime included                                                                  |
-| AV-64 (#43)   | AV-25 … AV-28, AV-64                       | Aviation complete                                                                                    |
-| RAI-24 (#46)  | RAI-22 … RAI-24                            | Rail complete; Phase 2 done                                                                          |
-| IOT-66 (#51)  | IOT-29 … IOT-32, IOT-66                    | IoT complete                                                                                         |
-| HLTH-39 (#58) | HLTH-33 … HLTH-39                          | The clinical date and time foundations                                                               |
-| HLTH-68 (#60) | HLTH-67, HLTH-68                           | Immunisation and adherence                                                                           |
-| FIN-45 (#66)  | FIN-40 … FIN-45                            | Sessions, day counts, settlement, tenors, 24/7 markets                                               |
-| FIN-73 (#69)  | FIN-71 … FIN-73                            | Schedules, RFR conventions, message timestamps                                                       |
-| SPA-74 (#73)  | SPA-46 … SPA-49, SPA-74                    | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                        |
-| SPA-75 (#78)  | SPA-50 … SPA-53, SPA-75                    | UT1, mission clocks, CCSDS, Mars time, solar events                                                  |
+| CORE-85 (#33) | CORE-56, CORE-54, CORE-84, CORE-85           | The second Core round: identifiers, holiday rules, recurrence and cron, human durations                  |
+| MAR-59 (#38)  | CORE-79, MAR-17 … MAR-19, MAR-59             | Maritime complete, laytime included                                                                      |
+| AV-64 (#43)   | AV-25 … AV-28, AV-64                         | Aviation complete                                                                                        |
+| RAI-24 (#46)  | RAI-22 … RAI-24                              | Rail complete; Phase 2 done                                                                              |
+| IOT-66 (#51)  | IOT-29 … IOT-32, IOT-66                      | IoT complete                                                                                             |
+| HLTH-39 (#58) | HLTH-33 … HLTH-39                            | The clinical date and time foundations                                                                   |
+| HLTH-68 (#60) | HLTH-67, HLTH-68                             | Immunisation and adherence                                                                               |
+| FIN-45 (#66)  | FIN-40 … FIN-45                              | Sessions, day counts, settlement, tenors, 24/7 markets                                                   |
+| FIN-73 (#69)  | FIN-71 … FIN-73                              | Schedules, RFR conventions, message timestamps                                                           |
+| SPA-74 (#73)  | SPA-46 … SPA-49, SPA-74                      | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                            |
+| SPA-75 (#78)  | SPA-50 … SPA-53, SPA-75                      | UT1, mission clocks, CCSDS, Mars time, solar events                                                      |
+
+`CORE-88` is in no cut row: its Status is `Waiting` until the hosted server is live, and it ships
+with the first cut after that.
 
 ---
 
@@ -107,7 +112,7 @@ exception: it ships as two Core releases of its own, ahead of the remaining real
 | 26 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
 | 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | CORE-80                 | #322  | —       | Not started |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |
-| 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | CORE-86, CORE-87        | #329  | —       | Not started |
+| 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | CORE-86, CORE-87        | #329  | —       | Waiting     |
 | 30 | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
 | 31 | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |
 | 32 | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | CORE-54                 | #324  | —       | Not started |
@@ -178,18 +183,20 @@ first open slot.
 issues) adds no function. It comes first, so a removable workaround or an oracle mismatch reaches
 an issue before more realms build on the workarounds. `CORE-80` (speed and bundle size, measured in
 the [audit](../perf-and-bundle-size-audit.md)) adds no function and changes no output. It sits
-straight after `CORE-81`, so every later story is built on the closed-form internals, under its
+straight after `CORE-87`, so every later story is built on the closed-form internals, under its
 size budget and through its single `Temporal` import. `CORE-82` runs the suite on native
 `Temporal` through that import, and `CORE-83` says why a stored zoned time no longer resolves.
-Those four are one release, because `CORE-80` removes the root polyfill re-export, a breaking
-change. `CORE-86` (the docs site on `northguild.dev/gmt`, with the landing page) and `CORE-87`
-(the reference corpus and tool schemas shipped from the package) sit between `CORE-81` and
-`CORE-80`: neither adds a function, and every later story's pages, links and corpus entries are
-then built for the new paths and the shipped file. `CORE-88` links the hosted server from the
-READMEs and the docs; it follows `CORE-83` and waits on a repo outside this one, so it ships with
-whichever cut comes after the server is live. `CORE-56` (identifiers, which no story consumes), `CORE-54` (holiday rules), `CORE-84`
-(recurrence and cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human
-durations) are the second release. Every realm after them can draw on all eight.
+`CORE-86` (the docs site on `northguild.dev/gmt`, with the landing page) and `CORE-87` (the
+reference corpus and tool schemas shipped from the package) sit between `CORE-81` and `CORE-80`.
+Neither adds a function. After `CORE-86`, a later story's URLs in code go through `withBase` and
+the dist guard checks them; content links and corpus entries stay base-less. After `CORE-87`, a
+later story's corpus entries land in the shipped file through the same generator. Those six are
+one release, because `CORE-80` removes the root polyfill re-export, a breaking change. `CORE-88`
+links the hosted server from the READMEs and the docs; it follows `CORE-83`, its Status is
+`Waiting` until the server is live, and it ships with the first cut after that. `CORE-56`
+(identifiers, which no story consumes), `CORE-54` (holiday rules), `CORE-84` (recurrence and
+cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human durations) are the
+second release. Every realm after them can draw on all eight.
 
 **Demurrage comes straight after `TRAN-8`.** `INT-12` is the first consumer of
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller
@@ -254,16 +261,15 @@ Highest commercial value and the thinnest coverage in the original plan.
   `MAR-16`. A removable workaround or an oracle mismatch reaches an issue, not just a run log.
 - **CORE-86, CORE-87** — the docs site, unchanged, on `northguild.dev/gmt` with the landing page
   at `northguild.dev`, and the reference corpus and tool schemas shipped from the package.
-  Neither adds a function; both come before `CORE-80` so everything after is built for the
-  new paths and the shipped file.
-- **CORE-80** — faster span arithmetic and a smaller bundle, straight after `CORE-86` and
-  `CORE-87`. It adds
+  Neither adds a function. After them, a later story's URLs in code go through `withBase` and
+  the dist guard, and its corpus entries land in the shipped file; content links stay base-less.
+- **CORE-80** — faster span arithmetic and a smaller bundle, straight after `CORE-87`. It adds
   the benchmarks and the size budget every later story is held to, and the single `Temporal`
   import.
 - **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium and Firefox, weekly;
   and why a stored zoned time no longer resolves. With the three above, one release.
-- **CORE-88** — the hosted server linked from the READMEs and the docs. It waits on a repo
-  outside this one and ships with the first cut after the server is live.
+- **CORE-88** — the hosted server linked from the READMEs and the docs. Its Status is `Waiting`
+  until the server, built in a repo outside this one, is live; it ships with the first cut after.
 - **CORE-56, CORE-54, CORE-84, CORE-85** — time-ordered identifiers, holiday rules, recurrence
   and cron in a zone, and human duration strings: the second Core release. `CORE-54` comes
   before `CORE-84`, whose ordinal `BYDAY` uses it, and before `AV-26`'s season boundaries.

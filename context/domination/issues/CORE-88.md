@@ -15,7 +15,7 @@ The library's READMEs and docs link the docs site, the API reference and the too
 
 ## Design notes
 
-- **It waits on a repo outside this one.** The server is built elsewhere, from the corpus and schemas `CORE-87` ships, on the paths `CORE-86` reserves. Nothing in this story starts before a live URL answers; the `Blocked by` column shows only the two gmt stories.
+- **It waits on a repo outside this one.** The server is built elsewhere, from the corpus and schemas `CORE-87` ships, on the paths `CORE-86` reserves. Nothing in this story starts before a live URL answers. The `Blocked by` column shows only the two gmt stories, so the row's Status is `Waiting`, which keeps it out of `pnpm deps:ready` until the server is live; flip it to `Not started` then.
 - **One link per place, no copy.** The READMEs describe what the server is in one line and link it; no server documentation moves into this repo.
 - **No tool.** The story ships links, not a function.
 

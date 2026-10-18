@@ -16,7 +16,7 @@ The reference corpus (`apps/dox/src/generated/reference/gmt-corpus.json`) and th
 ## Design notes
 
 - **A consumer reads, this repo writes.** No part of the server repo's generation runs here. The story ends at a file another repo can read.
-- **Size is a budget question.** If the corpus goes into the package, it goes behind a subpath so the default import path carries none of it, and the size budget from `CORE-80` counts it on its own line.
+- **Size is a budget question.** If the corpus goes into the package, it goes behind a subpath so the default import path carries none of it. `CORE-80` comes after this story, so this story measures the subpath itself: a bundled size for the subpath and for the default import path, reported in the PR, with the figure recorded in the spec. `CORE-80`'s budget then adopts that line when it lands. The build-step route needs no measurement, which counts for it when the route is picked.
 - **No tool.** The story ships a file, not a function.
 
 ## What gmt provides (do not re-implement)
@@ -28,5 +28,5 @@ The reference corpus (`apps/dox/src/generated/reference/gmt-corpus.json`) and th
 
 - The shipped corpus and schemas are byte-equal to the generated ones, and CI fails when they are not.
 - A clean checkout of another repo can read them by the documented route with no copy from `apps/dox/src/generated`.
-- If the package route is chosen, the default import path's size is unchanged and the subpath's size is on its own budget line.
+- If the package route is chosen, the default import path's bundled size is unchanged, and the subpath's bundled size is reported in the PR and recorded here for `CORE-80`'s budget.
 - `pnpm run validate` stays green.

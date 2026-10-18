@@ -20,7 +20,7 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 ## Design notes
 
 - **The site moves unchanged.** No page is rewritten, no tool changes, and the homepage stays the globe. A URL change that also changes content cannot be verified against the old site.
-- **Static assets never run the Worker.** `run_worker_first` excludes `/gmt/*`, so only the legacy `workers.dev` paths and the bare `/gmt` path reach the Worker; the rest is served as assets and costs nothing.
+- **Static assets never run the Worker.** `run_worker_first` excludes `/gmt/*`, so only the legacy `workers.dev` paths and the bare `/gmt` path run the Worker first. `/gmt/api/*` has no matching asset, so it still reaches the Worker, as `/api/*` does today; every other path under `/gmt/` is served as an asset and costs nothing.
 - **`workers_dev` stays on explicitly.** Adding Routes turns it off by default, and every old link would 404 rather than redirect.
 - **The two Workers share `localStorage` and cookies.** The Dox dev cookie gets `Path=/gmt/`; a key audit is owed when a second app moves onto the domain.
 - **No tool.** The story ships a URL, not a function.

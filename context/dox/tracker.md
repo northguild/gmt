@@ -9,7 +9,8 @@ which generates `Blocked by`, only for Dox work that belongs to no realm story. 
 tools of a realm story (`TRAN-*`, `INT-*`, `CORE-*` and the rest) add no row here: that story's
 row in [../domination/tracker.md](../domination/tracker.md) tracks them, and what they shipped is
 in [built.md](built.md). Work on the site after Tier 6, such as its domain, the shipped corpus and
-the hosted server, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here.
+the hosted server, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here;
+`/plan-story` sends such a story to `dox-architect` alone, as it does a `DOX-*` row.
 
 `apps/dox` is private, so no changesets unless a change also touches `packages/gmt`.
 

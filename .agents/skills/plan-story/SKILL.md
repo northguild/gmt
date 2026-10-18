@@ -32,6 +32,7 @@ ask the owner which story they mean.
 | Story | Steps |
 | --- | --- |
 | Realm story (`MAR-*`, `TRAN-*`, `INT-*`, `CORE-*`, …) | 4, then 5 |
+| `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 5 only, as for `DOX-*` |
 | `DOX-*` story | 5 only (skip the library index input) |
 
 ## 4. Library spec — `architect` (Opus)
