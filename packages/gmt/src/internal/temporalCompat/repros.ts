@@ -10,7 +10,7 @@ import { Temporal } from "@js-temporal/polyfill";
  * Hebrew arithmetic — never the polyfill or GMT. See README.md for each defect.
  */
 
-/** Defect ids from the CORE-6 calendar-correctness spec §1.2. */
+/** Defect ids from the temporalCompat README's workaround table. */
 export type DefectId =
   | "D1"
   | "D2"

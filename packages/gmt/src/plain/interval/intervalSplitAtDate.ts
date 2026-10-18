@@ -29,7 +29,7 @@ import { isValidDateInterval } from "./validate";
  *   string, or on invalid input (unparseable start/end, `start > end`).
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
  *   every element of `points` must carry the *same* calendar tag (or all be bare ISO); any
- *   mismatch returns `[]` (E5 decision of record D4) — this also makes `.equals()`'s dedup of
+ *   mismatch returns `[]` — this also makes `.equals()`'s dedup of
  *   duplicate points safe, since same-calendar `PlainDate`s compare equal correctly.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated

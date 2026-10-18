@@ -48,8 +48,8 @@ describe("fromTAI", () => {
     expect(fromTAI(taiString)).toBe("");
   });
 
-  // The fixed time-scale grammar (D5): extended date-time, seconds required, 1-9 fraction digits
-  // after ".", one space, the token.
+  // The time-scale string format (MAR-16.md, String format): extended date-time, seconds
+  // required, 1-9 fraction digits after ".", one space, the token.
   it.each`
     taiString
     ${"2026-01-01t00:00:37 TAI"}

@@ -4,8 +4,12 @@
  *
  * One row per canary group, rendered by `UpstreamDefectRow.astro`. The filings for each row are
  * joined by `gmtGuard`, so a defect's paper trail follows it without anyone maintaining a second
- * list. Styles live in `src/styles/gmt-upstream.css` — see its header for why they cannot be a
- * scoped `<style>` block here.
+ * list. The wrapper scrolls the table sideways on a narrow screen, so it is a focusable, named
+ * region and the arrow keys reach the columns that are off screen. It ships with `tabindex="0"`,
+ * so it works with no script and on a narrow screen; the script below drops the tab stop while the
+ * table fits, so a desktop reader does not land on a box that cannot scroll. Styles live in
+ * `src/styles/gmt-upstream.css` — see its header for why they cannot be a scoped `<style>` block
+ * here.
  */
 import { compatGroups } from "../data/temporal-compat";
 import { filings } from "../data/upstream-filings";
@@ -16,7 +20,12 @@ const filingsFor = (defects: readonly string[]) =>
   filings.filter((f) => f.gmtGuard && defects.includes(f.gmtGuard));
 ---
 
-<div class="gmt-defects-scroll">
+<div
+  class="gmt-defects-scroll"
+  tabindex="0"
+  role="region"
+  aria-label="Bugs GMT works around"
+>
   <table class="gmt-defects">
     <thead>
       <tr>
@@ -34,3 +43,9 @@ const filingsFor = (defects: readonly string[]) =>
     </tbody>
   </table>
 </div>
+
+<script>
+  import { mountOverflowFocus } from "../lib/overflow-focus";
+
+  mountOverflowFocus(document, ".gmt-defects-scroll");
+</script>

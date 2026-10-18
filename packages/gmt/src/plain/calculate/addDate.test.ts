@@ -255,7 +255,7 @@ describe("addDate", () => {
     },
   );
 
-  // CORE-6 modern grid subset (spec §4.4): +1 month (constrain and reject), +1 year and -13 months
+  // CORE-6 modern grid subset: +1 month (constrain and reject), +1 year and -13 months
   // from the same starts as diffDateAsDuration.test.ts. Expected values: Chromium 152 native
   // Temporal (q2-grid-chromium152.json); "" where Chromium throws.
   it.each`

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Readouts-hold-still gate (context/dox/specs/tran-57-charts-restyle.md § 9.1,
- * and context/dox/specs/timetable-reader.md § F9).
+ * Readouts-hold-still gate (context/dox/reference/visual-design.md, "Layout stability",
+ * and the Timetable Reader's rules in context/dox/built.md).
  *
  * Dragging a handle must move nothing except the values themselves. For each of
  * the seven tool pages (Departure Board, Punctuality Board, ETA Drift Chart,

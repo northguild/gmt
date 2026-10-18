@@ -6,13 +6,13 @@ the quotes and sources, and what could not be verified.
 ## Standards and definitions
 
 - [calendar-standards-decisions.md](calendar-standards-decisions.md) — the open calendar
-  questions from the CORE-6 calendar spec, decided by authority
+  questions from the CORE-6 calendar correctness work, decided by authority
 - [daylight-time-definition.md](daylight-time-definition.md) — what "in daylight saving time"
   means and how close GMT can get
 - [mar-16-gnss-icd-clauses.md](mar-16-gnss-icd-clauses.md) — GNSS time-scale clauses, the
   leap-second table and scale designators
 - [spacetime-reference-frames.md](spacetime-reference-frames.md) — space and satellite time
-  standards (superseded by the MAR-16 spec)
+  standards (superseded by the MAR-16 issue)
 
 ## Conventions and audits
 

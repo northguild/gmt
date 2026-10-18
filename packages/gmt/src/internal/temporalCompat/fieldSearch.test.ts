@@ -1,7 +1,7 @@
 import { floorDateForFields, isoForFields } from "./fieldSearch";
 
 // The search algorithm is called directly so it stays covered whether or not the installed
-// polyfill still needs it (CORE-6 spec §4.5). Expected ISO dates are Chromium 152 native reads
+// polyfill still needs it. Expected ISO dates are Chromium 152 native reads
 // (q2-xscan-chromium152.json edge rows) and test262 extreme-dates.js.
 describe("isoForFields", () => {
   it.each`

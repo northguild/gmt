@@ -139,7 +139,7 @@ describe("gnssWeekToUtc", () => {
     ${"current"}                | ${"not the name rolling"}
     ${null}                     | ${"null"}
     ${Number.MAX_SAFE_INTEGER}  | ${"past Temporal's range"}
-    ${undefined}                | ${"omitted: the era is required (D7)"}
+    ${undefined}                | ${"omitted: the era is required"}
     ${1n}                       | ${"a bigint"}
     ${true}                     | ${"a boolean"}
     ${Number.NaN}               | ${"NaN"}

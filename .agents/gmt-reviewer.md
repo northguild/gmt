@@ -203,7 +203,8 @@ the one that reproduced it.
   bug. Run it for any change under `internal/temporalCompat/`, `internal/zonedWallClock*`, or a
   non-ISO calendar path. Never wired into `validate` or `ci.yml`, so nobody else will run it.
 - **`pnpm compat`** — which polyfill workarounds the installed runtime still needs, with the
-  Node, ICU and polyfill versions it measured.
+  Node, ICU and polyfill versions it measured. A group whose probes all pass prints `REMOVABLE`
+  unless it declares a guard, which prints `GUARD` until its package moves past the guarded version.
 - **A plain `@js-temporal/polyfill` computation** (`node -e`) — a check, never the answer. Read
   its defect list before trusting a value near a range limit or in a non-ISO calendar.
 - **The runtime's own `Intl` data**, read the way `src/test/runtimeWeekInfo.ts` reads it —

@@ -88,7 +88,7 @@ describe("gnssToUtc", () => {
     expect(gnssToUtc("GPS", value)).toBe("");
   });
 
-  // The fixed time-scale grammar (D5), with the GPS token.
+  // The time-scale string format (MAR-16.md, String format), with the GPS token.
   it.each`
     value
     ${"2026-01-01t00:00:18 GPS"}
@@ -118,7 +118,7 @@ describe("gnssToUtc", () => {
     },
   );
 
-  // The fixed time-scale grammar (D5), with the GAL token.
+  // The time-scale string format (MAR-16.md, String format), with the GAL token.
   it.each`
     value
     ${"2026-01-01t00:00:18 GAL"}

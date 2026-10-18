@@ -680,7 +680,7 @@ describe("lifecycle", () => {
   });
 });
 
-describe("the links row (D13)", () => {
+describe("the links row", () => {
   const TIMELINE = "See these dates on the timeline";
   const CLOCKS = "Every clock at the start";
   async function mountPreset(id: string) {

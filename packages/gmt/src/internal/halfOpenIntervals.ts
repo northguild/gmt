@@ -3,7 +3,7 @@
  *
  * `t ∈ [start, end) ⇔ start ≤ t < end` — EWD831, SQL:2011 closed-open `PERIOD`
  * (ISO/IEC 9075-2:2011) and RFC 5545 §3.6.1 non-inclusive `DTEND`. These helpers carry the same
- * rules as the CORE-6 `interval/` namespace (see `context/domination/specs/CORE-6-spec.md` §3)
+ * rules as the CORE-6 `interval/` namespace (see `context/coding-standards.md` § 8, half-open intervals)
  * for the positional families whose values are not instants (`PlainDate`, `PlainDateTime`,
  * `PlainTime`) and for the relations `interval/` has no function for.
  *

@@ -51,7 +51,8 @@ gh api repos/unicode-org/icu/compare/release-<version>...5267bb5778 --jq .status
 ```
 
 To confirm a removal, bump `@js-temporal/polyfill` in `packages/gmt/package.json`, install, and run
-`pnpm compat`. A group whose probes all pass prints `REMOVABLE` with its removal steps; follow them,
+`pnpm compat`. A group whose probes all pass prints `REMOVABLE` with its removal steps, unless it declares a
+guard, which prints `GUARD` until its package moves past the guarded version; follow the steps,
 then run `pnpm compat:snapshot`. For `D4`, run `pnpm compat` on the Node release that bundles the
 ICU fix. A group that still prints `STILL NEEDED` stays, whatever this table says: the canary
 decides, not the commit list.
@@ -114,7 +115,8 @@ saying it again in the PR costs nothing and keeps the claim honest.
 **3. Then wait, and let the canary tell you.** Every remaining item is somebody else's clock:
 
 - [ ] **A polyfill release** is the single event that retires workarounds. When one ships, run
-      `pnpm compat`; any group whose probes all pass is removable, and its removal steps are printed.
+      `pnpm compat`; any group whose probes all pass is removable (unless it declares a guard, which
+      prints `GUARD` until its package moves past the guarded version), and its removal steps are printed.
       Then `pnpm compat:snapshot` and commit the updated `apps/dox/src/data/temporal-compat.json`.
 - [ ] **D4 (ICU)** — nothing to file. It needs an ICU4C release containing `5267bb5778` and a Node
       release bundling it. GMT must never own calendar data, so this one only ever waits.
@@ -377,7 +379,7 @@ Release request: `main` fixes ZonedDateTime work at both Instant limits (`05ce7a
 ### Correction to earlier GMT notes
 
 GMT's canary comment, `temporalCompat/README.md`, `zonedWallClock.ts`, `zonedWallClockOperations.ts`,
-`scripts/temporal-compat.mjs` and CORE-6 spec §6.5 all say the minimum edge is "still broken
+`scripts/temporal-compat.mjs` all say the minimum edge is "still broken
 upstream" and needs "a separate fix". **That is wrong for current `main`.** It was measured on
 0.5.1 + `05ce7a3` only. Two commits on `main` are needed, and both are there:
 
@@ -674,7 +676,7 @@ month suffix: Mo11` / `Mo5`), because ICU now formats months as `Mo11`. Fixed on
   `b6c9844` and `79fb327`, not on `main`.
 - D1 (`a41eb67`, `af0cb4b`) is on neither `main` nor #361. On a `main` build the canary D1 group
   still fails 19/27 probes, including **hebrew `fieldsMin`**
-  (`Invalid ISO date: -271821-03-20T00:00Z`), a failure the CORE-6 spec did not list.
+  (`Invalid ISO date: -271821-03-20T00:00Z`), a failure the first CORE-6 calendar plan did not list.
 - **Two new fixes found and verified**, needed on top of every upstream port:
   - **C-D1b** (new; no upstream equivalent): with D1 + D3 + D5 + D7 + D8 ported, `untilCalendar` still threw for
     hebrew/persian near both limits. C-D1b alone on `main` fixes `D1.untilNearMax persian` and
@@ -714,7 +716,7 @@ month suffix: Mo11` / `Mo5`), because ICU now formats months as `Mo11`. Fixed on
   (islamic, indian, orthodox), whose `isoToCalendarDate` formats them safely after `af0cb4b`; hebrew and persian
   field conversions showed no failure in 72 000 operations. The one probe that did throw from the bisection step
   (`D1.fieldsMin hebrew`, `-271821-04-11`) was caused by D3 and passes once D3 is ported. **So the extra clamp is
-  not needed; the CORE-6 spec §2.1 diff should drop it** (proposal-temporal did not add it either).
+  not needed; the compat layer does not add it** (proposal-temporal did not add it either).
 - **Month-arithmetic regression oracle** (`q2-grid-*` from the earlier research: 11 calendars × 401 start days ×
   15 spans, `until` months/years both directions, `add`/`subtract`, against Chromium 152 native Temporal):
 
@@ -1675,7 +1677,7 @@ change, since they already took this path. Fixed by the `progress === 0n` branch
 
 1. **`zoned.A` min edge is already fixed on `main`.** `temporalCompat/README.md`, `temporalCompat/repros.ts`
    (zoned.A comment), `internal/zonedWallClock.ts`, `internal/zonedWallClockOperations.ts`,
-   `scripts/temporal-compat.mjs` and CORE-6 spec §6.5 say the minimum edge needs a separate upstream fix. It
+   `scripts/temporal-compat.mjs` say the minimum edge needs a separate upstream fix. It
    does not: `95237e0` (on `main`) fixes it; the claim was measured on 0.5.1 + `05ce7a3` only. New trigger:
    "a release containing `05ce7a3` and `95237e0`". The canary's expected values are right; only the notes are wrong.
 2. **D1 trigger is insufficient.** "ports `a41eb67` (+ `af0cb4b`)" leaves `D1.untilNearMax persian`,
@@ -1705,14 +1707,14 @@ change, since they already took this path. Fixed by the `progress === 0n` branch
 - "Run `npm test` and `npm run test262` before opening the PRs": the six js-temporal PRs state they did (see
   "Not verified").
 
-**Corrections to the CORE-6 spec and the earlier draft:**
+**Corrections to the first CORE-6 calendar plan and the earlier draft:**
 
-- §1.2 D1: on `main` hebrew also fails at the **min** (`D1.fieldsMin hebrew`), via D3; the spec lists hebrew max only.
-- §2.1: drop the bisection-step clamp from the proposed diff (reachable as an estimate, never an error; see C).
+- D1: on `main` hebrew also fails at the **min** (`D1.fieldsMin hebrew`), via D3; the plan listed hebrew max only.
+- Bisection step: drop the clamp from the proposed diff (reachable as an estimate, never an error; see C).
   The D1 fix also needs C-D1b.
-- §2.7: the D7 port is complete in #361 as `79fb327` (it does re-derive `next`); it still needs C-D7b.
-- §2.8: D8 needs `977d11e0` + `993e6322`, not only `2bb6ba1`.
-- §6.5: see contradictions 1–4.
+- D7: the port is complete in #361 as `79fb327` (it does re-derive `next`); it still needs C-D7b.
+- D8 needs `977d11e0` + `993e6322`, not only `2bb6ba1`.
+- Removal triggers: see contradictions 1–4.
 - Draft A: not "release + min-edge fix" but release only. Draft B: exact patch now verified; `castExists` is
   stripped in production so the symptom is a TypeError. Draft D: already fixed in proposal-temporal (#3205), so
   it is a port request. Appendix: coptic/ethiopic throw only on 0.5.1; chinese/dangi still throw on `main`

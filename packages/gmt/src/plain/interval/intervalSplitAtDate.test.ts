@@ -98,9 +98,9 @@ describe("intervalSplitAtDate", () => {
       intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-05"]),
     ).toEqual([]);
   });
-  // E5 (issue #78): start, end, and every element of points must share the same calendar tag
-  // (D4) -- this also keeps the .equals() dedup of duplicate points safe. Golden verified
-  // directly against @js-temporal/polyfill.
+  // E5 (issue #78): start, end, and every element of points must share the same calendar tag --
+  // this also keeps the .equals() dedup of duplicate points safe. Golden verified directly against
+  // @js-temporal/polyfill.
   it("splits in the shared calendar when start, end, and every point carry the same tag", () => {
     expect(
       intervalSplitAtDate(

@@ -1,8 +1,8 @@
 import { fixedFromIso, isIsoLeapYear, mod } from "./fixedDay";
 import { indianFieldsFromIso } from "./indianArithmetic";
 
-// Called directly so the arithmetic stays covered whether or not the runtime still needs it
-// (CORE-6 spec §4.5). Expected fields: Chromium 152 native reads and test262 extreme-dates.js,
+// Called directly so the arithmetic stays covered whether or not the runtime still needs it.
+// Expected fields: Chromium 152 native reads and test262 extreme-dates.js,
 // or a one-line derivation from the rule where noted.
 describe("indianFieldsFromIso", () => {
   it.each`

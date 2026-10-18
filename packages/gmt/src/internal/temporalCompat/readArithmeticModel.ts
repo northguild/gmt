@@ -19,7 +19,7 @@ import type { ArithmeticModel, YearMonth } from "./nonIsoArithmetic";
  * - reads through `calendarFieldsOf` (correct for every in-range date),
  * - fields → ISO through `calendarDateFromFields` (the polyfill, or the field search near a limit),
  * - polyfill month arithmetic between **day-1** dates, which never constrains a day and so is
- *   correct in 0.5.1 wherever it does not throw (spec §3.5).
+ *   correct in 0.5.1 wherever it does not throw.
  *
  * The polyfill throws within about a year of a range limit (D1). There, months are stepped one at
  * a time from the field search, and the polyfill only counts or jumps between month starts away
@@ -32,7 +32,7 @@ const LAST = Number.MAX_SAFE_INTEGER;
 const MONTH_SEARCH_DAYS = 64;
 /**
  * Months stepped one at a time next to a limit. The polyfill's D1 windows reach at most 357 days
- * from a limit (persian at the minimum, CORE-6 spec §1.3), which 14 months always clear.
+ * from a limit (persian at the minimum), which 14 months always clear.
  */
 const EDGE_WALK_MONTHS = 14;
 const JUMP_BACKOFF_MONTHS = [

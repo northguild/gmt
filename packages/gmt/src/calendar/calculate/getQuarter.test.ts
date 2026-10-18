@@ -290,7 +290,9 @@ describe("getQuarter", () => {
       expect(getQuarter(value)).toEqual(expected);
     },
   );
-  // §6.4 of the fiscal spec. The fiscal year runs from day 1 of the start month for a year;
+  // The caller states the year label: the calendar year the fiscal year starts in, ends in, or
+  // holds most of its days in (CORE-5.md, Corrections). The fiscal year runs from day 1 of the
+  // start month for a year;
   // the day counts are worked by month length in each row's description.
   it.each`
     value           | fiscalYearStartMonth | yearLabel         | expected                      | description

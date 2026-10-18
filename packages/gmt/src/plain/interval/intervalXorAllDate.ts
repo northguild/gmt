@@ -28,7 +28,7 @@ import { isObject } from "../../internal/isObject";
  *   `start > end`.
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
  *   date *values*, every `start`/`end` across the whole list must carry the *same* calendar tag
- *   (or all be bare ISO); any mismatch returns `[]` (E5 decision of record D4). Coincident sweep events are
+ *   (or all be bare ISO); any mismatch returns `[]`. Coincident sweep events are
  *   grouped with `Temporal.PlainDate.compare`, which orders by ISO date and ignores the calendar.
  *
  * @param intervals array of `{ start, end }` records, optionally calendar-annotated
