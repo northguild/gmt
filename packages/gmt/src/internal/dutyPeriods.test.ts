@@ -154,3 +154,66 @@ describe("periodsEndingAt", () => {
     });
   });
 });
+
+describe("calendarScale containing keeps its cache in order", () => {
+  const day = (date: string): UnitSpan => ({
+    start: ns(`${date}T00:00:00Z`),
+    end: ns(`${date}T00:00:00Z`) + 86_400_000_000_000n,
+  });
+  const utcDays = () => calendarScale(zoneFrame("UTC") as ZoneFrame, "day");
+
+  // Each order ends with every day from the 1st to the 5th asked for again: a cache that kept
+  // spans out of order, or lost one, answers one of them wrongly.
+  it.each`
+    order                                  | days
+    ${"ascending, each appended"}          | ${[1, 2, 3, 4, 5]}
+    ${"descending, each put at the start"} | ${[5, 4, 3, 2, 1]}
+    ${"the middle last"}                   | ${[1, 5, 3]}
+    ${"the ends after the middle"}         | ${[3, 5, 1]}
+    ${"the same day twice"}                | ${[2, 2, 4, 4]}
+  `("answers every day after asking $order", ({ days }) => {
+    const scale = utcDays();
+
+    for (const asked of days as number[]) {
+      expect(scale.containing(ns(`2024-03-0${asked}T12:00:00Z`))).toEqual(
+        day(`2024-03-0${asked}`),
+      );
+    }
+    for (const date of [1, 2, 3, 4, 5]) {
+      expect(scale.containing(ns(`2024-03-0${date}T06:00:00Z`))).toEqual(
+        day(`2024-03-0${date}`),
+      );
+    }
+  });
+
+  // A day is [start, end): its first instant is in it, its last instant is the one before the end,
+  // and the end itself is the next day's start.
+  it.each`
+    instant                   | date
+    ${"2024-03-03T00:00:00Z"} | ${"2024-03-03"}
+    ${"2024-03-03T23:59:59Z"} | ${"2024-03-03"}
+    ${"2024-03-04T00:00:00Z"} | ${"2024-03-04"}
+    ${"2024-03-02T23:59:59Z"} | ${"2024-03-02"}
+  `("puts $instant in the day of $date, cached or not", ({ instant, date }) => {
+    const scale = utcDays();
+    const expected = day(date);
+
+    // Cache the day either side first, so the instant meets neighbours that touch its day.
+    scale.containing(ns("2024-03-02T12:00:00Z"));
+    scale.containing(ns("2024-03-04T12:00:00Z"));
+    expect(scale.containing(ns(instant))).toEqual(expected);
+    expect(scale.containing(ns(instant))).toEqual(expected);
+  });
+
+  it("caches nothing for a period it cannot represent", () => {
+    const scale = calendarScale(zoneFrame("UTC") as ZoneFrame, "year");
+    const last = 8_640_000_000_000_000_000_000n;
+
+    expect(scale.containing(last)).toBeNull();
+    expect(scale.containing(ns("2024-06-01T00:00:00Z"))).toEqual({
+      start: ns("2024-01-01T00:00:00Z"),
+      end: ns("2025-01-01T00:00:00Z"),
+    });
+    expect(scale.containing(last)).toBeNull();
+  });
+});

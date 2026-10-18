@@ -87,6 +87,46 @@ describe("dutyViolations — every failed window is found", () => {
     ).toBeGreaterThan(0);
   });
 
+  // Five compliant days first, 12 hours off then 12 at work from 0 h; then off 120-130 h, work
+  // 130-144 h, off 144-162 h. Every window to 144 h holds the first rest whole (10 hours, the
+  // longest) or the days' 12. A 24-hour window ending at t after that holds 154 - t hours of the
+  // first rest and t - 144 of the second: the longest is under 6 only for t between 148 h and
+  // 150 h, and is least, 5 hours, at 149 h where the 5 and 5 meet: [125 h, 149 h). The sum, 10, is
+  // enough, so only the longest-rest floor (6 hours) fails. The days before are compliant, so the
+  // one violation is the crossing's, and it is the same with the range cut to open after them.
+  it("finds the window where two rests cross as the longest, deep into a log", () => {
+    const rule: DutyRule = {
+      label: "10 in 24",
+      kind: "restRequirement",
+      restStatuses: ["off"],
+      per: { elapsed: "PT24H" },
+      minimum: "PT10H",
+      composition: { maxPeriods: 2, longestAtLeast: "PT6H" },
+    };
+    const day: DutyStep[] = [
+      ["off", "PT12H"],
+      ["work", "PT12H"],
+    ];
+    const days = Array.from({ length: 5 }, () => day).flat();
+    const log = dutySequence(START, [
+      ...days,
+      ["off", "PT10H"],
+      ["work", "PT14H"],
+      ["off", "PT18H"],
+    ]);
+    const expected = [
+      {
+        label: "10 in 24",
+        window: { start: hour(125), end: hour(149) },
+        used: "PT5H",
+        limit: "PT6H",
+      },
+    ];
+
+    expect(dutyViolations(log, range(0, 162), [rule], UTC)).toEqual(expected);
+    expect(dutyViolations(log, range(121, 162), [rule], UTC)).toEqual(expected);
+  });
+
   // Off 10 h, driving 8, off 7:45, driving 10:15, sleeper 0:30, driving 8:30, sleeper 10. The 7:45
   // and the last sleeper pair up once the sleeper reaches 2:15, at 23:15 on the 2nd: the 30 minutes
   // between them are too short to be half of a pair. The window counted again from 01:45 closes at
@@ -568,4 +608,46 @@ describe("dutyViolations — the record does not depend on how a status is split
       }
     },
   );
+});
+
+// Three rests a, b and c, 10 hours in 24 with a longest of 6. Off a to `aEnd`, work, off b 22–40 h,
+// work, off c 53–80 h. Between b and c the window [t-24, t] holds 64-t hours of b and t-53 of c: 11
+// together for t in 53–64, and a longest under 6 only in (58, 59), worst where the two are equal,
+// at 58:30 with 5:30 each, against the longest of 6 hours the rule asks. Rest a ends 47 to 49
+// hours before c starts, too far for one window to hold both, and the pairs of a with b fail
+// earlier than the range. The crossing of b and c is the only place that
+// finds the worst window, so a pairing that stopped at a, or skipped c, would report another.
+describe("dutyViolations — three rests, the last crossing only the one before it", () => {
+  const rule: DutyRule = {
+    label: "10 in 24",
+    kind: "restRequirement",
+    restStatuses: ["off"],
+    per: { elapsed: "PT24H" },
+    minimum: "PT10H",
+    composition: { maxPeriods: 2, longestAtLeast: "PT6H" },
+  };
+
+  it.each`
+    case                                  | aHours
+    ${"a ends 49 hours before c starts"}  | ${4}
+    ${"a ends exactly 48 hours before c"} | ${5}
+    ${"a ends 47 hours before c starts"}  | ${6}
+  `("reports the b and c crossing when $case", ({ aHours }) => {
+    const log = dutySequence(START, [
+      ["off", `PT${aHours}H`],
+      ["work", `PT${22 - aHours}H`],
+      ["off", "PT18H"],
+      ["work", "PT13H"],
+      ["off", "PT27H"],
+    ]);
+
+    expect(dutyViolations(log, range(50, 70), [rule], UTC)).toEqual([
+      {
+        label: "10 in 24",
+        window: { start: hour(34.5), end: hour(58.5) },
+        used: "PT5H30M",
+        limit: "PT6H",
+      },
+    ]);
+  });
 });

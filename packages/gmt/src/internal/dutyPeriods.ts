@@ -209,7 +209,12 @@ function cachedScale(
       const span = resolve(x);
 
       if (span !== null) {
-        spans.splice(index, 0, span);
+        // The forward walk resolves each span after the last one: an append, not an insert.
+        if (index === spans.length) {
+          spans.push(span);
+        } else {
+          spans.splice(index, 0, span);
+        }
       }
 
       return span;

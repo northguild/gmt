@@ -145,6 +145,7 @@ type ResolvedRuleBody =
     }
   | {
       kind: "usageLookback";
+      /** Ascending. */
       uses: bigint[];
       notWithin: ResolvedPeriod;
       reset: ResolvedReset;
