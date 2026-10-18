@@ -28,7 +28,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 75 stories in build order.
+realm. [tracker.md](tracker.md) has the 78 stories in build order.
 
 ---
 
@@ -243,7 +243,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (75 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (78 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | Bulletin A ships at build and `isUt1Stale` surfaces its expiry. The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
@@ -260,7 +260,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 75 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 78 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID

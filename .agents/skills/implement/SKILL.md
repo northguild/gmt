@@ -32,7 +32,8 @@ fold it into the work and say so. `pnpm deps:ready` lists what is startable.
 
 Follow [`/pipeline`](../pipeline/SKILL.md) from "Find the spec": tdd-dev, tester and gmt-reviewer
 per library slice, then dox-builder and dox-tester per Dox slice, then finalizer. Each worker gets
-the index plus its own slice.
+the index plus its own slice. A docs-site Core story (`CORE-86` … `CORE-88`) has no library
+slice: `/pipeline` says who builds instead.
 
 ## 4. Finish
 
