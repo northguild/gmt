@@ -5,6 +5,7 @@ import {
   reproPasses,
   runRepro,
 } from "./capabilities";
+import { probeRepros } from "./probeRepros";
 import { type DefectId, findRepro, repros } from "./repros";
 
 // Probe tests never assert the probe's outcome against the installed polyfill: that would fail CI
@@ -345,5 +346,41 @@ describe("isCalendarArithmeticCompatNeeded", () => {
     ${"chinese"} | ${"a calendar id with no repro has no defect to work around"}
   `("returns false for $calendar ($reason)", ({ calendar }) => {
     expect(isCalendarArithmeticCompatNeeded(calendar)).toBe(false);
+  });
+});
+
+describe("repro split", () => {
+  // DefectId (D1-D8, D10-D13) is the type the shipped probes can ask about; the canary-only
+  // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
+  const probeDefects = new Set([
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8",
+    "D10",
+    "D11",
+    "D12",
+    "D13",
+  ]);
+
+  it("holds every probe-defect repro of the full table in probeRepros", () => {
+    const expected = repros.filter((repro) => probeDefects.has(repro.defect));
+
+    expect(expected.length).toBeGreaterThan(0);
+    expect(probeRepros).toHaveLength(expected.length);
+    const probes = new Set<unknown>(probeRepros);
+    expect(expected.every((repro) => probes.has(repro))).toBe(true);
+  });
+
+  it("holds no zoned.* or D9 repro in probeRepros", () => {
+    const canaryOnly = probeRepros.filter(
+      (repro) => !probeDefects.has(repro.defect),
+    );
+
+    expect(canaryOnly).toEqual([]);
   });
 });

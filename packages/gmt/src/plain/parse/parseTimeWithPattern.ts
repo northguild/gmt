@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
 
 /**

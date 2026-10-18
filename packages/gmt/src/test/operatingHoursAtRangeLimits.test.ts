@@ -12,7 +12,7 @@
  * local time of the limit it starts from. For a named zone the offset is the zone's local mean
  * time, read from plain Temporal and asserted before it is used.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { addOperatingTime } from "../calendar/hours/addOperatingTime";
 import { isOpenAt } from "../calendar/hours/isOpenAt";
 import { nextCloseAt } from "../calendar/hours/nextCloseAt";

@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /**
  * Return the 1-based calendar-grid week row that `dayInMonth` falls on for

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isObject } from "./isObject";
 
 /** `TwoDigitYearOptions.yearWindow` as a number: the first year of the window, 0–9900. */

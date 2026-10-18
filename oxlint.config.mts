@@ -52,4 +52,27 @@ export default defineConfig({
     // into the weaker of them.
     "no-unused-vars": "warn",
   },
+  overrides: [
+    {
+      // CORE-80: `internal/temporal.ts` is the one library file that names the Temporal implementation.
+      files: ["packages/gmt/src/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: [
+              {
+                name: "@js-temporal/polyfill",
+                message: "Import Temporal from internal/temporal",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ["packages/gmt/src/internal/temporal.ts"],
+      rules: { "no-restricted-imports": "off" },
+    },
+  ],
 });

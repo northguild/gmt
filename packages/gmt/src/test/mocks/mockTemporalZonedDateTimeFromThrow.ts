@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 export function mockTemporalZonedDateTimeFromThrow() {
   vi.spyOn(Temporal.ZonedDateTime, "from").mockImplementation(() => {

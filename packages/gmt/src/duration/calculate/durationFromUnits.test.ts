@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import type { DateTimeDurationUnit } from "../../types";
 import { addUtc } from "../../utc/calculate/addUtc";

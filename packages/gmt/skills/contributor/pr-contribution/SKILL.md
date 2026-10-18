@@ -78,7 +78,7 @@ Follow the `new-method-implementation` skill guidelines:
 
 ```ts
 // packages/gmt/src/plain/calculate/getHalfYear.ts
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidDate } from "../validate";
 
 /**

@@ -60,7 +60,7 @@ ask in plain words.
 
 These are the non-negotiables. Full detail is in the context files above.
 
-1. **No `Date` object.** Use `@js-temporal/polyfill` exclusively.
+1. **No `Date` object.** Use `@js-temporal/polyfill` exclusively, imported only through `packages/gmt/src/internal/temporal.ts`.
 2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, arrays, `bigint`, or plain objects — never Temporal objects.
 3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers and objects, `false` for booleans, `[]` for arrays — the full table (bigint, span, exceptions) is [coding-standards § API Contract](./context/coding-standards.md#api-contract).
 4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input. One exception: a zero-argument reader that calls only `Temporal.Now.instant()`, then reads a field through an explicit `"UTC"` conversion or calls `.toString()` with no options, cannot fail, so it has no catch and no sentinel. The exception does not cover a read of the system time zone — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards.md#scoped-exception-the-utc-clock-readers).

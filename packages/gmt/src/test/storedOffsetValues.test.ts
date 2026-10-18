@@ -14,7 +14,7 @@
  * Temporal's last instant is `+275760-09-13T00:00:00Z` (8.64e15 ms). The rows at that limit read
  * the local wall clock, which reaches a day past it.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { bucketRange } from "../calendar/calculate/bucketRange";
 import { floorToZone } from "../calendar/calculate/floorToZone";
 import { addOperatingTime } from "../calendar/hours/addOperatingTime";

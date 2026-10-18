@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
 import { isValidDateTimeInterval } from "./validate";
 import { isObject } from "../../internal/isObject";

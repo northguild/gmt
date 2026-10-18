@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { gnssWeekToUtc } from "./gnssWeekToUtc";
 import { utcToGnssWeek } from "./utcToGnssWeek";

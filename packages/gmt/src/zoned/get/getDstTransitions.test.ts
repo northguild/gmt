@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, dateLineCrossingTimeZones } from "../../test";
 import { isValidTimeZone } from "../validate";
 import { getDstTransitions } from ".";

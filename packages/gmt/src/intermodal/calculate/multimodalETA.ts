@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { exactDurationNanoseconds } from "../../internal";
 import { formatHourDuration } from "../../internal/hourDurationString";
 import {

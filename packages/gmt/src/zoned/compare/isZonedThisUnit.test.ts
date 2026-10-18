@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { MustTestLocales, MustTestLocaleTimezones } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";

@@ -16,7 +16,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import * as gmt from "../index";
 import { battleTestTimeZones } from "./timeZoneMatrix";
 import {

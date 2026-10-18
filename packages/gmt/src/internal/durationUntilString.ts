@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { DurationStringOptions, RoundingOptions } from "../types";
 import { plainDateUntil } from "./plainDateUntil";
 import { zonedUntil } from "./zonedWallClockDifference";

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { TRANSITION_SEARCH_STEP_NANOSECONDS } from "./zonedTransitionSearch";
 import {
   zonedNextTransition,

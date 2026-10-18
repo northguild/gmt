@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { durationTotal, readDurationUnits } from "../../internal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { isValidTimeDurationUnit } from "../../plain/validate";

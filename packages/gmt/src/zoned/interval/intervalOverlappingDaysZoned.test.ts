@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { intervalOverlappingDaysZoned } from "./intervalOverlappingDaysZoned";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import {

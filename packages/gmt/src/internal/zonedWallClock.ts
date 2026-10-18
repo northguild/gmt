@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { Disambiguation, Offset, Overflow } from "../types";
 import {
   MAX_EPOCH_NANOSECONDS,

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { mockTemporalDurationFromThrow } from "../../test/mocks";
 import type { Interval } from "../../types";
 import { sumIntervals } from "./sumIntervals";

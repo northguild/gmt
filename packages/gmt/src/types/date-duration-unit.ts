@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * A date field of an ISO 8601 duration, in the plural: `"years"`, `"months"`, `"weeks"` or

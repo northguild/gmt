@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { RoundingOptions } from "../types";
 import {
   type CalendarDateUnit,

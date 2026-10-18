@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * How a difference is rounded, as the rounding options of Temporal's `until()` and `since()`

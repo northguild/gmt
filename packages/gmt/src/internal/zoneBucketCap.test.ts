@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { certainlyTouchesMoreBuckets } from "./zoneBucketCap";
 
 const at = (instant: string, zone: string) =>

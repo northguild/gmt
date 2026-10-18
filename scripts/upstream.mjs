@@ -13,7 +13,7 @@
  * upstream (`context/domination/js-temporal-polyfill-bugs.md`), and the docs site's `/upstream/`
  * page tracks every filing's status live. This is `stats.mjs` applied to that tracker: a
  * generator plus an offline check, so the published numbers can never drift from GitHub's own
- * or from `packages/gmt/src/internal/temporalCompat/repros.ts`'s guard groups.
+ * or from the guard groups in `packages/gmt/src/internal/temporalCompat/{probeRepros,repros}.ts`.
  *
  * Each filing has two kinds of field:
  *
@@ -69,7 +69,10 @@ import { loadGmt, tryLoadGmt } from "./lib/gmt.mjs";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FILE = "apps/dox/src/data/upstream-filings.json";
 const LIVE_FILE = "apps/dox/src/generated/upstream-filings.live.json";
-const REPROS = "packages/gmt/src/internal/temporalCompat/repros.ts";
+const REPROS = [
+  "packages/gmt/src/internal/temporalCompat/probeRepros.ts",
+  "packages/gmt/src/internal/temporalCompat/repros.ts",
+];
 const AUTHOR = "craig-o-curtis";
 const REPOS = ["js-temporal/temporal-polyfill", "tc39/proposal-temporal"];
 
@@ -306,9 +309,9 @@ async function fetchSyncedAsync(repo, number, kind, timeout) {
 
 // ---------------------------------------------------------------- guard groups
 
-/** Every `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` literal `repros.ts` declares. */
+/** Every `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` literal `probeRepros.ts` and `repros.ts` declare. */
 function knownGuards() {
-  const src = readFileSync(`${ROOT}${REPROS}`, "utf8");
+  const src = REPROS.map((path) => readFileSync(`${ROOT}${path}`, "utf8")).join("\n");
   const guards = new Set();
   for (const m of src.matchAll(
     /export type (?:DefectId|ZonedDefectId|BoundedWorkDefectId) =([^;]+);/g,

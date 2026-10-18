@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { diffUnixAsDuration } from "./diffUnixAsDuration";

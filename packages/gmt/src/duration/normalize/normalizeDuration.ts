@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";

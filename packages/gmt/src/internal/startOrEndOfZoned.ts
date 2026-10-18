@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";

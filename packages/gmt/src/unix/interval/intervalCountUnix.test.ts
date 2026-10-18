@@ -3,7 +3,7 @@ import {
   dateLineCrossingTimeZones,
   mockSystemTimeZone,
 } from "../../test";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { intervalCountUnix } from "./intervalCountUnix";

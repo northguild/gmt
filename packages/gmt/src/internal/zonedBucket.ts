@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { DateTimeUnit } from "../types";
 import { DURATION_FIELD_BY_UNIT, getUnitSpan } from "./intervalCountHelpers";
 import {

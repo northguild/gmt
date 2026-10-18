@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { ZoneBucketUnit } from "../types";
 import { zonedNextTransition } from "./zonedWallClockOperations";
 

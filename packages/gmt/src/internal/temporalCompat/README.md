@@ -15,16 +15,17 @@ Decisions: `context/domination/issues/CORE-6.md` § Decisions. Owner choices:
    `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
    `isNudgeWindowCompatNeeded`, `isSecondsOffsetMatchCompatNeeded` and
    `isTransitionSearchCompatNeeded`, never the files behind them.
-2. **Dormant unless needed.** Each defect has a repro in `repros.ts`, probed lazily in
-   `capabilities.ts`: once per process, per calendar, memoized. If the installed runtime passes, that
-   workaround never runs. When a probe fails, a per-call guard (a range check, a polyfill throw, a
-   failed read-back, or a result that is not the spec's) decides whether this call needs it.
-   `iso8601` values always pass straight through.
+2. **Dormant unless needed.** Each defect has a repro in `probeRepros.ts` (or, for the canary-only
+   groups, `repros.ts`), probed lazily in `capabilities.ts`: once per process, per calendar,
+   memoized. If the installed runtime passes, that workaround never runs. When a probe fails, a
+   per-call guard (a range check, a polyfill throw, a failed read-back, or a result that is not the
+   spec's) decides whether this call needs it. `iso8601` values always pass straight through.
 3. **Same answer after removal.** Every workaround computes the spec's answer, so deleting it on a
    fixed runtime changes no output and no test row. If a row would have to change, the workaround was
    wrong.
-4. **`repros.ts` imports only the polyfill.** A canary script can then load the compiled file from
-   `dist`.
+4. **`repros.ts` and `probeRepros.ts` import only the polyfill**, through `../temporal` (`repros.ts`
+   also imports `probeRepros.ts`). A canary script can then load the compiled file from `dist`. A
+   repro the shipped probes do not read lives in `repros.ts`, which no shipped module imports.
 5. **Tests never mock Temporal or force a probe.** Public rows assert spec values that hold either
    way. The algorithms (`fieldSearch`, `nonIsoArithmetic`, `hebrewArithmetic`, `indianArithmetic`)
    are also tested directly.
@@ -170,7 +171,7 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
 
 ## Removal steps
 
-1. **D1:** delete the `D1` entries in `repros.ts`, the D1 term of `needsFieldSearch` in
+1. **D1:** delete the `D1` entries in `probeRepros.ts`, the D1 term of `needsFieldSearch` in
    `calendarDateFromFields.ts`, and the D1 fallbacks in `calendarDateArithmetic.ts` (the `catch`
    branch of `calendarDateAdd`, and the D1 term of `untilWorkaroundNeeded`). When no range guard is
    left (see D2–D5), delete `fieldSearch.ts` + test. `calendarDateFromFields` then becomes

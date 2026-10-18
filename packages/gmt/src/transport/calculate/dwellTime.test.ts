@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { dwellTime } from "./dwellTime";

@@ -1,5 +1,5 @@
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { getLocaleFirstDayOfWeek } from "../../internal/getLocaleFirstDayOfWeek";
 import type { LocaleNameStyle } from "./getLocaleMonthNames";
 

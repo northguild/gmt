@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";

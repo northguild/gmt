@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * The calendar-name styles supported by GMT's locale name lookups.

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { zonedDateTimeFrom } from "../../internal";
 import { formatCalendarDays } from "../../internal/formatCalendarDays";
 import { isValidUtc } from "../../utc/validate";

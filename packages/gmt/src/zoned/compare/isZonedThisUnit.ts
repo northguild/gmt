@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { getLocaleStartOfWeek } from "../../plain/calculate/getLocaleStartOfWeek";
 import { areDatesEqualBy } from "../../plain/compare/areDatesEqualBy";
 import { isValidDateUnit } from "../../plain/validate";

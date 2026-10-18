@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { bucketRange } from "../calendar/calculate/bucketRange";
 import { floorToZone } from "../calendar/calculate/floorToZone";
 import { addOperatingTime } from "../calendar/hours/addOperatingTime";

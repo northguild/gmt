@@ -18,15 +18,20 @@ import {
 import { getUtcNow, isAfterUtc, isValidUtc } from "@northguild/gmt";
 
 // The literal `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` union members
-// `repros.ts` declares — the same set `scripts/upstream.mjs check` parses out of
+// `probeRepros.ts` and `repros.ts` declare — the same set `scripts/upstream.mjs check` parses out of
 // the same file, so a filing's `gmtGuard` can never name a group that doesn't exist.
-const reprosSrc = readFileSync(
-  resolve(
-    import.meta.dirname,
-    "../../../../packages/gmt/src/internal/temporalCompat/repros.ts",
-  ),
-  "utf8",
-);
+const reprosSrc = ["probeRepros.ts", "repros.ts"]
+  .map((file) =>
+    readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../../../../packages/gmt/src/internal/temporalCompat",
+        file,
+      ),
+      "utf8",
+    ),
+  )
+  .join("\n");
 const knownGuards = new Set<string>();
 for (const m of reprosSrc.matchAll(
   /export type (?:DefectId|ZonedDefectId|BoundedWorkDefectId) =([^;]+);/g,

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   MAX_EPOCH_NANOSECONDS,
   MIN_EPOCH_NANOSECONDS,

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { intersectIntervals, sumIntervals } from "../../interval/calculate";
 import { battleTestTimeZones } from "../../test";
 import {

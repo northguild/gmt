@@ -1,5 +1,5 @@
 import { normalizeDateTime } from "../../internal";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { MustTestLocales, expectDateTimeEqual } from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
 import { formatCalendar } from "./formatCalendar";

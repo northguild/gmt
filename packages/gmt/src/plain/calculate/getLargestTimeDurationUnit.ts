@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../../internal/temporal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import type { TimeDurationUnit } from "../../types";
 import { isValidTimeDurationUnit } from "../validate/isValidTimeDurationUnit";

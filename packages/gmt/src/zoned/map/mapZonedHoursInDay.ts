@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidZonedDateTime } from "../validate";
 import { addToZoned, zonedDateTimeFrom, zonedStartOfDay } from "../../internal";
 

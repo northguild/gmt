@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 import { hasSecond60 } from "../plain/validate/hasSecond60";
 import type { CalendarSystem, Disambiguation, Offset } from "../types";
 import {

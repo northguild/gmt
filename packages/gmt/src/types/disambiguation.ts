@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * How a local wall time that a time zone's clock shows twice or never is resolved to an instant,

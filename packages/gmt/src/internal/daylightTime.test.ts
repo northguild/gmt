@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 import { isInDaylightTime, observesDaylightTime } from "./daylightTime";
 
 const DAY = 86_400_000_000_000n;

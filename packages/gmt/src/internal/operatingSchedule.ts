@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { resolveLocal } from "../instant/convert/resolveLocal";
 import { isValidDate } from "../plain/validate/isValidDate";
 import { isValidTime } from "../plain/validate/isValidTime";

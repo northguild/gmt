@@ -1,0 +1,45 @@
+{
+  "measuredAt": "2026-10-18T10:08:16Z",
+  "node": "v24.21.0",
+  "esbuild": "0.28.2",
+  "commit": "bc53b3e7ff8e76b68cbf5f7d67db3ceea6600f40",
+  "dirty": true,
+  "entries": {
+    "root": {
+      "minified": 487105,
+      "gzipped": 127920
+    },
+    "polyfill": {
+      "minified": 152539,
+      "gzipped": 44188
+    },
+    "isValidDate": {
+      "minified": 153308,
+      "gzipped": 44565
+    },
+    "formatDate": {
+      "minified": 155366,
+      "gzipped": 45224
+    },
+    "businessDaysBetween": {
+      "minified": 172456,
+      "gzipped": 50109
+    },
+    "addBusinessDays": {
+      "minified": 173617,
+      "gzipped": 50586
+    },
+    "chargeableDays": {
+      "minified": 197314,
+      "gzipped": 57811
+    },
+    "operatingTimeBetween": {
+      "minified": 200803,
+      "gzipped": 58803
+    },
+    "dutyViolations": {
+      "minified": 226744,
+      "gzipped": 67101
+    }
+  }
+}

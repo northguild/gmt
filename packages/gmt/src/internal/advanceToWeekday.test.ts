@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { advanceToWeekday } from "./advanceToWeekday";
 
 describe("advanceToWeekday", () => {

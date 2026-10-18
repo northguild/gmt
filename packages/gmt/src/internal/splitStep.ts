@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 
 const EXACT_DURATION_UNITS: ReadonlySet<string> = new Set([
   "hours",

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import type { DutyEntry } from "../types";
 
 /** One step of a duty sequence: a status (or `null` for an unlogged gap) and its length. */

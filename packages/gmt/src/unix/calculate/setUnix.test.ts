@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, utcMs } from "../../test";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { setUnix } from "./setUnix";

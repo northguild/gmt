@@ -1,0 +1,32 @@
+{
+  "entries": {
+    "root": {
+      "minified": 492000
+    },
+    "isValidDate": {
+      "minified": 154900
+    },
+    "formatDate": {
+      "minified": 157000
+    },
+    "businessDaysBetween": {
+      "minified": 174200
+    },
+    "addBusinessDays": {
+      "minified": 175400
+    },
+    "chargeableDays": {
+      "minified": 199300
+    },
+    "operatingTimeBetween": {
+      "minified": 202900
+    },
+    "dutyViolations": {
+      "minified": 229100
+    }
+  },
+  "absent": {
+    "addBusinessDays": ["src/internal/temporalCompat/repros.ts"],
+    "businessDaysBetween": ["src/internal/temporalCompat/repros.ts"]
+  }
+}

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidDate } from "../validate/isValidDate";
 import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";

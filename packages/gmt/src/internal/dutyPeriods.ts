@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isValidTime } from "../plain/validate/isValidTime";
 import type { Disambiguation } from "../types";
 import { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";

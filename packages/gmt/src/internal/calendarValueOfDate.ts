@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { CalendarSystem } from "../types";
 import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { hasCalendarAnnotation } from "./hasCalendarAnnotation";

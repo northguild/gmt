@@ -9,7 +9,7 @@
  * - `timeZone`: omitted → UTC; `"local"` → the system zone; an unknown zone → the sentinel
  *   (ECMA-402 / Temporal throw RangeError for it).
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { mockSystemTimeZone } from "../test";
 import {
   addUnix,

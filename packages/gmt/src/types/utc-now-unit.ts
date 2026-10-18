@@ -3,7 +3,7 @@
  * Defined as `DateTimeUnit | "dayOfWeek"`.
  */
 export type UtcNowUnit =
-  | import("@js-temporal/polyfill").Temporal.SmallestUnit<
+  | import("../internal/temporal").Temporal.SmallestUnit<
       import("./date-time-unit").DateTimeUnit
     >
   | "dayOfWeek";

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { plainDate } from "../regex/date";
 import { plainDateTime } from "../regex/date-time";
 import {

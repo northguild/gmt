@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { instantFrom } from "../../internal";
 import { isObject } from "../../internal/isObject";
 import { type CutoffOptions, cutoffAt } from "./cutoffAt";

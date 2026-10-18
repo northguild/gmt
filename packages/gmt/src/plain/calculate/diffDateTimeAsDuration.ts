@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
 import type {

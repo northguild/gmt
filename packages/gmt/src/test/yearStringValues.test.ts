@@ -13,7 +13,7 @@
  * the first that does not (1000). Every clock and instant is 12:00:00Z on 15 June, which is
  * inside the instant range in the first and last years too.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { getNowUnit } from "../plain/get/getNowUnit";
 import { getToday } from "../plain/get/getToday";
 import { getYear } from "../plain/get/getYear";

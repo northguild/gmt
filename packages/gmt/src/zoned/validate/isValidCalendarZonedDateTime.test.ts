@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, MustTestCalendars } from "../../test";
 import type { CalendarSystem } from "../../types";
 import {

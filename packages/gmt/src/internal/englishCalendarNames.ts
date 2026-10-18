@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 // RFC 5322 §3.3 (which obsoletes RFC 2822) and RFC 9110 §5.6.7 (which obsoletes
 // RFC 7231) mandate English weekday/month

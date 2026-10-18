@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { instantFrom, isObject } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { Interval } from "../../types";

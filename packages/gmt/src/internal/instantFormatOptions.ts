@@ -4,7 +4,7 @@
 // and GetDateTimeFormat with required ~any~ and inherit ~all~, so every caller
 // field, including `era` and `timeZoneName`, is passed on unchanged.
 
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 import { plainDateTimeFormatOptions } from "./plainFormatOptions";
 import { optionOrDefault } from "./optionOrDefault";
 

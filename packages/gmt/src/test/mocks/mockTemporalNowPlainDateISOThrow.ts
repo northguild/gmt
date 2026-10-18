@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 export function mockTemporalNowPlainDateISOThrow() {
   vi.spyOn(Temporal.Now, "plainDateISO").mockImplementation(() => {

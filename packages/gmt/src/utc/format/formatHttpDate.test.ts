@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { httpDate } from "../../regex";
 import { localeZonedDateTimeInputByLocale, MustTestLocales } from "../../test";
 import { formatHttpDate } from "./formatHttpDate";

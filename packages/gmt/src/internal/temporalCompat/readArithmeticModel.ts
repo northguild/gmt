@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../temporal";
 import { calendarDateFromFields } from "./calendarDateFromFields";
 import { calendarFieldsOf } from "./calendarFields";
 import {

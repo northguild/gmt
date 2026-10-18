@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { FiscalExtraWeek, FiscalPattern, FiscalYearLabel } from "../types";
 
 /** Weeks per period within one quarter, by pattern. */

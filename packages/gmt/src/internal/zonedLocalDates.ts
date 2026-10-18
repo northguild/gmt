@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { zonedNextTransition } from "./zonedWallClockOperations";
 
 const UNIX_EPOCH_DATE = new Temporal.PlainDate(1970, 1, 1);

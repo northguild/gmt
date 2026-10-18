@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { taiMinusUtc } from "../timescale/calculate/taiMinusUtc";
 import { LEAP_SECOND_STEPS } from "./leapSeconds";
 import {

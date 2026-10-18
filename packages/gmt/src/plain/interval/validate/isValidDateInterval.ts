@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../../internal/temporal";
 import { parseCalendarDateValue } from "../../../internal";
 import { isValidCalendarDate } from "../../validate";
 

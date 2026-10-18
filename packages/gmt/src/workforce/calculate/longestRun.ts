@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { formatHourDuration, parseIntervalNanoseconds } from "../../internal";
 import { parseDutyLog } from "../../internal/dutyLog";
 import { clipRuns, readStatusList, runsOf } from "../../internal/dutyEngine";

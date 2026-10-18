@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /**
  * Return the PlainDate for the next/previous occurrence of `dayOfWeek` relative to `date`.

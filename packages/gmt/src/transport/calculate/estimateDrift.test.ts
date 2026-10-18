@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import type { TimestampEvent } from "../../types";
 import { battleTestTimeZones } from "../../test";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";

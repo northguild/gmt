@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 import { parseInstantNanoseconds } from "./instantNanoseconds";
 import { EXTENDED_UTC_OFFSET, TIME_ZONE_ANNOTATION } from "./isoStringBody";

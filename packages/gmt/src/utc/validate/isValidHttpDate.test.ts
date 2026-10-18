@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { httpDate } from "../../regex";
 import { NON_STRINGS } from "../../test/ediCodes";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";

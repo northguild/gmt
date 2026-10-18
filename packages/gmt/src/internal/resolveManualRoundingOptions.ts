@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /** The nine rounding modes of Temporal's GetRoundingModeOption (Temporal §14.5.2.2). */
 const ROUNDING_MODES: readonly unknown[] = [

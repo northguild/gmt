@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isoStringBody } from "../../internal/isoStringBody";
 import { hasSecond60 } from "../../plain/validate";
 import { utcDateTime } from "../../regex/utc-date-time";

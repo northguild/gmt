@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { utcOffset } from "../regex/utc-offset";
 
 const NANOSECONDS_PER_SECOND = 1_000_000_000n;

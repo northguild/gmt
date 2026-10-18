@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { type DutyStep, dutySequence } from "../../test";
 import type { DutyEntry, DutyRule } from "../../types";
 import { dutyViolations } from "./dutyViolations";

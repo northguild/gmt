@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../temporal";
 import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { hebrewArithmeticModel } from "./hebrewArithmetic";

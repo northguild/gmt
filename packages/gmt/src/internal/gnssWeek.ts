@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { GnssSystem, GnssWeek, GnssWeekCounter } from "../types/gnss";
 import { NANOSECONDS_PER_SECOND, NANOSECONDS_PER_WEEK } from "./foreignEpochs";
 import { GNSS_TIME_SCALES, scaleLabelOfUtc } from "./gnssTimeScales";

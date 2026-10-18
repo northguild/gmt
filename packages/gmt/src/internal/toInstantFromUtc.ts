@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 
 // Convert a UTC ISO datetime string to a Temporal.Instant.
 // Returns null on failure (caller should have already validated with isValidUtc).

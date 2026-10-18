@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isValidDate } from "../plain/validate/isValidDate";
 import type { BusinessCalendar } from "../types";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
