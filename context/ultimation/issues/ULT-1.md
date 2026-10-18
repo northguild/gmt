@@ -18,7 +18,7 @@ Nobody, including GMT, can say which calculations other ecosystems offer that GM
    - Go: `time`.
    - Reference implementations: SOFA and ERFA, NAIF SPICE, ICU4C and ICU4X, tzdb.
    - Finance: QuantLib and OpenGamma Strata.
-   - Standards: ISO 8601-1 and 8601-2, RFC 3339, RFC 9557, RFC 5545, RFC 7529, RFC 9636, RFC 2822, RFC 9562, CLDR.
+   - Standards: ISO 8601-1 and 8601-2, RFC 3339, RFC 9557, RFC 5545, RFC 7529, RFC 9636, RFC 5322 §3.3, RFC 9562, CLDR.
 3. **Every `none` in GMT's column is resolved.** It becomes a painpoint with a non-peer source and a candidate in [../candidates.md](../candidates.md), or a documented non-goal with its reason.
 4. **Docs site page.** A comparison page generated from `parity.md`, with every cell's link, the date each target was read, and the target versions.
 5. **Upkeep.** A target's major release is a reason to re-read its column. The page shows each column's read date, so a stale column is visible.
