@@ -4,6 +4,7 @@ import { isValidDate } from "../plain/validate/isValidDate";
 import { isValidTime } from "../plain/validate/isValidTime";
 import type { Disambiguation } from "../types";
 import { parseBusinessCalendar, parseHolidays } from "./businessCalendar";
+import { epochDayOfDate, hasEpochDay } from "./epochDay";
 import {
   coalesceIntervalNanoseconds,
   type IntervalNanoseconds,
@@ -29,7 +30,8 @@ export type ResolvedSchedule = {
   frame: ZoneFrame;
   /** Windows by ISO weekday; index 0 is unused. */
   weekly: readonly (readonly ResolvedWindow[])[];
-  holidays: ReadonlySet<string>;
+  /** Holiday epoch days, sorted ascending; never mutated. */
+  holidays: Readonly<Int32Array>;
   overrides: ReadonlyMap<string, readonly ResolvedWindow[]>;
 };
 
@@ -172,9 +174,9 @@ export function parseWeeklyPattern(value: unknown): ResolvedWindow[][] | null {
 }
 
 /** `holidays` as a date list or a `BusinessCalendar` (only its `holidays` are read). */
-function parseScheduleHolidays(value: unknown): Set<string> | null {
+function parseScheduleHolidays(value: unknown): Int32Array | null {
   if (value === undefined) {
-    return new Set();
+    return new Int32Array(0);
   }
 
   if (Array.isArray(value)) {
@@ -440,7 +442,9 @@ function windowsOn(
     return override;
   }
 
-  return schedule.holidays.has(key) ? [] : schedule.weekly[date.dayOfWeek];
+  return hasEpochDay(schedule.holidays, epochDayOfDate(date))
+    ? []
+    : schedule.weekly[date.dayOfWeek];
 }
 
 /** A window whose edge did not resolve under `"reject"`: the widest span it could cover. */

@@ -2,7 +2,7 @@ import { bench, describe } from "vitest";
 import { dutyViolations } from "../src/workforce";
 import { type DutyStep, dutySequence } from "../src/test";
 import type { DutyEntry, DutyRule } from "../src/types";
-import { drivingCap, dutyLog, dutyRange } from "./fixtures";
+import { drivingCap, dutyLog, dutyRange, utcMidnight } from "./fixtures";
 
 const label = (days: number) => (days === 3650 ? "10 y log" : `${days} d log`);
 
@@ -64,6 +64,36 @@ describe("dutyViolations, split sleeper", () => {
       label(days),
       () => {
         dutyViolations(log, range, splitSleeperRule, { timeZone: "UTC" });
+      },
+      { time: 500 },
+    );
+  }
+});
+
+/** One use a day, at midnight: every 7-day window holds seven, and no 34 h rest restores it. */
+function usageRule(days: number): DutyRule[] {
+  return [
+    {
+      label: "one use in 7 days",
+      kind: "usageLookback",
+      uses: Array.from({ length: days }, (_, d) =>
+        utcMidnight("2024-01-01", d),
+      ),
+      notWithin: { calendarDays: 7 },
+      reset: { statuses: ["off"], consecutive: "PT34H" },
+    },
+  ];
+}
+
+describe("dutyViolations, usage lookback", () => {
+  for (const days of [90, 365, 3650]) {
+    const log = dutyLog(days);
+    const range = dutyRange(days);
+    const rules = usageRule(days);
+    bench(
+      label(days),
+      () => {
+        dutyViolations(log, range, rules, { timeZone: "UTC" });
       },
       { time: 500 },
     );

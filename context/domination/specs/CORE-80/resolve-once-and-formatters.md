@@ -65,6 +65,14 @@ returns `true` without either. A failure is not stored, so hostile strings
 cannot grow it. Bound: 1,024 ids; clear on overflow. Sound for the same reason as the zone memo:
 whether an id names a zone is fixed by the host data loaded once.
 
+It also calls `Temporal.ZonedDateTime.from` (from `internal/temporal`) in place of
+`zonedDateTimeFrom`. The fixed 2020 bag is never near the range edge, so the wrapper's only
+workaround never applies and the output is the same. That one import is what pulls
+`internal/zonedWallClock.ts` and `internal/temporalCompat/` into every business-day entry (about
+13.7 kB minified each). Add `internal/zonedWallClock.ts` and
+`internal/temporalCompat/probeRepros.ts` to the `absent` lists of `addBusinessDays` and
+`businessDaysBetween` in `scripts/bundle-size.budgets.json`.
+
 ## D. `cutoffSchedule` resolves once
 
 Today each entry calls the public `cutoffAt`, which re-reads `options` and revalidates the zone
@@ -111,4 +119,5 @@ All format, locale, cutoff and zone-validation rows stay green unchanged. Add:
 - `rg 'new Intl\.(DateTimeFormat|NumberFormat|ListFormat|RelativeTimeFormat)' packages/gmt/src
   --glob '!*.test.ts'` matches only `internal/formatterCache.ts` and `internal/resolveLocale.ts`.
 - `cutoffAt` and `cutoffSchedule` call no other public function.
+- `pnpm size --files addBusinessDays` lists nothing under `internal/temporalCompat/`.
 - `pnpm run validate` green. (Slice 10 sets the final budgets.)

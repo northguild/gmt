@@ -99,7 +99,7 @@ export function recurringWindows(
         timeZone,
         frame,
         weekly: weeklyWindows,
-        holidays: new Set(),
+        holidays: new Int32Array(0),
         overrides: new Map(),
       },
       bounds,

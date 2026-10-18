@@ -1,5 +1,5 @@
-import { Temporal } from "../../internal/temporal";
 import { parseBusinessCalendar } from "../../internal/businessCalendar";
+import { isoDateString, sortedUnique } from "../../internal/epochDay";
 import type { BusinessCalendar } from "../../types";
 
 /**
@@ -42,7 +42,7 @@ export function mergeCalendars(
     }
 
     const weekend = new Set<number>();
-    const holidays = new Set<string>();
+    const holidayLists: Int32Array[] = [];
 
     for (const calendar of calendars) {
       const resolved = parseBusinessCalendar(calendar);
@@ -55,16 +55,18 @@ export function mergeCalendars(
         weekend.add(day);
       }
 
-      for (const holiday of resolved.holidays) {
-        holidays.add(holiday);
-      }
+      holidayLists.push(resolved.holidays);
     }
+
+    const holidays = sortedUnique(
+      Int32Array.from(holidayLists.flatMap((list) => Array.from(list))),
+    );
 
     const merged = {
       weekend: [...weekend].sort((a, b) => a - b),
-      // Chronological, not lexicographic: a bare `.sort()` compares as strings, which puts the
-      // "+" and "-" of an expanded year below every digit.
-      holidays: [...holidays].sort((a, b) => Temporal.PlainDate.compare(a, b)),
+      // Epoch days sort chronologically, which a string sort would not: it puts the "+" and "-"
+      // of an expanded year below every digit.
+      holidays: Array.from(holidays, (day) => isoDateString(day)),
       timeZone: calendars[0].timeZone,
     };
 

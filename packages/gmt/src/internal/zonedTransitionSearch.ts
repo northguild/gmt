@@ -309,6 +309,7 @@ function sampledNext(
       throw outOfSteps(timeZone);
     }
     low = known.high;
+    if (low >= cutoff) throw outOfSteps(timeZone);
   }
 
   const searchStart = low;
@@ -367,7 +368,8 @@ function lastChangeBack(
   }
 
   const searchStart = high;
-  const highOffset = offsetAt(timeZone, high);
+  // Read only once a step is taken: a start the memo carried to `since` or `cutoff` needs none.
+  let highOffset: bigint | undefined;
 
   for (;;) {
     if (high <= since) {
@@ -376,6 +378,7 @@ function lastChangeBack(
       return null;
     }
     if (high <= cutoff) throw outOfSteps(timeZone);
+    highOffset ??= offsetAt(timeZone, searchStart);
     const low = maximum(
       maximum(high - TRANSITION_SEARCH_STEP_NANOSECONDS, since),
       cutoff,

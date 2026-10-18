@@ -1,3 +1,4 @@
+import { clearHolidayMemo } from "../../internal/businessCalendar";
 import { isBusinessDay } from "../../plain/compare";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
@@ -161,6 +162,8 @@ describe("mergeCalendars", () => {
   });
 
   it("returns null when Temporal.PlainDate.from throws", () => {
+    // The holiday memo would answer without calling `from`; start it empty.
+    clearHolidayMemo();
     mockTemporalPlainDateFromThrow();
     expect(mergeCalendars([unitedStates, unitedKingdom])).toBe(null);
   });

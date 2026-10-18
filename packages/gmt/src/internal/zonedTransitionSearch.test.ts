@@ -686,6 +686,41 @@ describe("the transition memo at its edges", () => {
       },
       30_000,
     );
+    it("throws after 1950 without reading an offset when two remembered searches reach past the bound", async () => {
+      setNow("5000-01-01T00:00:00Z");
+      await withFlatOffsets(() => {
+        const from = epochOf("1950-01-01T00:00:00Z");
+        const middle = epochOf("3500-01-01T00:00:00Z");
+        // Two adjacent spans, (1950, 3500] and (3500, 5000], merge into one longer than the bound.
+        expect(nextTransitionAfter("UTC", from, middle)).toBeNull();
+        expect(
+          nextTransitionAfter("UTC", middle, epochOf("5000-01-01T00:00:00Z")),
+        ).toBeNull();
+        reads.mockClear();
+        expect(() => nextTransitionAfter("UTC", from)).toThrow(RangeError);
+        expect(reads).not.toHaveBeenCalled();
+      });
+    }, 30_000);
+
+    it("throws before 5001 without reading an offset when two remembered searches reach past the bound", async () => {
+      setNow("5000-01-01T00:00:00Z");
+      await withFlatOffsets(() => {
+        const from = epochOf("5001-01-01T00:00:00Z");
+        const middle = epochOf("3800-01-01T00:00:00Z");
+        // Two adjacent spans, (3800, 5001) and (2200, 3800], merge into one longer than the bound.
+        expect(previousTransitionBefore("UTC", from, middle)).toBeNull();
+        expect(
+          previousTransitionBefore(
+            "UTC",
+            middle + 1n,
+            epochOf("2200-01-01T00:00:00Z"),
+          ),
+        ).toBeNull();
+        reads.mockClear();
+        expect(() => previousTransitionBefore("UTC", from)).toThrow(RangeError);
+        expect(reads).not.toHaveBeenCalled();
+      });
+    }, 30_000);
   });
 
   it("gives the same answer after its zone is evicted and searched again", () => {

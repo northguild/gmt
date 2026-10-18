@@ -161,9 +161,9 @@ the new code.
 
 ## Bench and size
 
-`businessDays.bench.ts` rows from slice 1, before and after. Record whether
-`internal/temporalCompat/` still appears in `pnpm size --files addBusinessDays`: with no
-`PlainDate#add` left in the walk it is expected to drop out. Report what remains either way.
+`businessDays.bench.ts` rows from slice 1, before and after. `internal/temporalCompat/` stays in
+`pnpm size --files addBusinessDays` after this slice: `isValidTimeZone` pulls it in through
+`zonedDateTimeFrom`, not the walk. Slice 9 § C removes that import.
 
 ## Done when
 

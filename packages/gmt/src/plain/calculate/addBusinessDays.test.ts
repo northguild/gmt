@@ -1,6 +1,22 @@
+import { clearHolidayMemo } from "../../internal/businessCalendar";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { addBusinessDays } from "./addBusinessDays";
+
+// 30 years, 480 holidays: 2000-01-03 is a Monday and 2029-11-26 the Monday 1,560 weeks on, so
+// (start, end] holds 1,560 * 5 = 7,800 weekdays. The holidays are every third Tuesday from
+// 2000-01-04 (offsets 1, 22, ... 10,060 days), all inside the range and all on weekdays, so
+// the count is 7,800 - 480 = 7,320.
+const thirtyYearCalendar = {
+  weekend: [6, 7],
+  holidays: Array.from({ length: 480 }, (_, index) =>
+    Temporal.PlainDate.from("2000-01-04")
+      .add({ days: 21 * index })
+      .toString(),
+  ),
+  timeZone: "UTC",
+};
 
 const testDay = "2024-02-29";
 
@@ -237,6 +253,58 @@ describe("addBusinessDays", () => {
     ${"2024-03-15[!foo=bar]"}     | ${1}   | ${""}
   `(
     "reads the annotations of $value as Temporal does (amount $amount) → $expected",
+    ({ value, amount, expected }) => {
+      expect(addBusinessDays(value, amount)).toBe(expected);
+    },
+  );
+
+  it("lands 7,320 business days on with 480 holidays over thirty years on the Monday 1,560 weeks later", () => {
+    expect(addBusinessDays("2000-01-03", 7320, thirtyYearCalendar)).toBe(
+      "2029-11-26",
+    );
+  });
+  // July 2024: 1 Mon, 2 Tue, 3 Wed, 4 Thu, 5 Fri, 6 Sat, 7 Sun, 8 Mon, 9 Tue.
+  it.each`
+    value           | amount | holidays                                      | expected        | description
+    ${"2024-07-05"} | ${1}   | ${["2024-07-06"]}                             | ${"2024-07-08"} | ${"a Saturday holiday changes nothing"}
+    ${"2024-07-05"} | ${-1}  | ${["2024-07-06", "2024-07-07"]}               | ${"2024-07-04"} | ${"weekend holidays change nothing backwards"}
+    ${"2024-07-03"} | ${1}   | ${["2024-07-05", "2024-07-04", "2024-07-04"]} | ${"2024-07-08"} | ${"unsorted, repeated holidays bridge Thu and Fri"}
+    ${"2024-07-08"} | ${-1}  | ${["2024-07-05", "+002024-07-04"]}            | ${"2024-07-03"} | ${"unsorted holidays bridged backwards over the weekend"}
+    ${"2024-07-03"} | ${1}   | ${["2024-07-03"]}                             | ${"2024-07-04"} | ${"a holiday on the start day is never counted"}
+    ${"2024-07-03"} | ${1}   | ${["2024-07-04"]}                             | ${"2024-07-05"} | ${"a holiday on the first stepped day is skipped"}
+    ${"2024-07-02"} | ${2}   | ${["2024-07-04"]}                             | ${"2024-07-05"} | ${"a holiday on the last stepped day is skipped"}
+    ${"2024-07-01"} | ${3}   | ${["2024-06-28", "2024-07-12"]}               | ${"2024-07-04"} | ${"holidays outside the walk change nothing"}
+  `(
+    "returns $expected for $value + $amount with holidays $holidays — $description",
+    ({ value, amount, holidays, expected }) => {
+      expect(
+        addBusinessDays(value, amount, {
+          weekend: [6, 7],
+          holidays,
+          timeZone: "UTC",
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("gives the same date on a cold holiday memo as on a warm one", () => {
+    clearHolidayMemo();
+    const cold = addBusinessDays("2000-01-03", 7320, thirtyYearCalendar);
+    const warm = addBusinessDays("2000-01-03", 7320, thirtyYearCalendar);
+
+    expect(cold).toBe("2029-11-26");
+    expect(warm).toBe("2029-11-26");
+  });
+});
+
+// Temporal's PlainDate holds -271821-04-19 to +275760-09-13; a walk that would leave it is invalid.
+describe("addBusinessDays at the Temporal range limit", () => {
+  it.each`
+    value              | amount | expected
+    ${"+275760-09-05"} | ${10}  | ${""}
+    ${"+275760-09-05"} | ${5}   | ${"+275760-09-12"}
+  `(
+    "returns $expected for $value + $amount business days",
     ({ value, amount, expected }) => {
       expect(addBusinessDays(value, amount)).toBe(expected);
     },
