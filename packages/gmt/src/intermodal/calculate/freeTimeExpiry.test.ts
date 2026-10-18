@@ -307,4 +307,48 @@ describe("freeTimeExpiry", () => {
     expect(() => freeTimeExpiry(friday, 3, make() as never)).not.toThrow();
     expect(freeTimeExpiry(friday, 3, make() as never)).toBeNull();
   });
+
+  it.each`
+    days     | lastFreeDay     | expiresAt
+    ${10000} | ${"2051-05-18"} | ${"2051-05-19T00:00:00Z"}
+    ${10001} | ${null}         | ${null}
+  `(
+    "walks $days free days by closed form: $lastFreeDay",
+    ({ days, lastFreeDay, expiresAt }) => {
+      const result = freeTimeExpiry("2024-01-01T10:00:00Z", days, {
+        basis: "calendar",
+        timeZone: "UTC",
+        firstDay: "eventDay",
+      });
+      expect(result?.lastFreeDay ?? null).toBe(lastFreeDay);
+      expect(result?.expiresAt ?? null).toBe(expiresAt);
+    },
+  );
+
+  const holidayDays = {
+    weekend: [6, 7],
+    holidays: ["2024-06-13", "2024-06-17"],
+    timeZone: "Europe/London",
+  };
+
+  it.each`
+    name                                                  | from                         | free | options                                                                                                     | freeTimeStart      | lastFreeDay        | expiresAt
+    ${"Sao_Paulo: free day before the skipped midnight"}  | ${"2018-11-03T12:00:00Z"}    | ${1} | ${{ ...calendar, timeZone: "America/Sao_Paulo" }}                                                           | ${"2018-11-03"}    | ${"2018-11-03"}    | ${"2018-11-04T03:00:00Z"}
+    ${"Santiago: free day before the skipped midnight"}   | ${"2024-09-07T12:00:00Z"}    | ${1} | ${{ ...calendar, timeZone: "America/Santiago" }}                                                            | ${"2024-09-07"}    | ${"2024-09-07"}    | ${"2024-09-08T04:00:00Z"}
+    ${"Havana: free day before the repeated midnight"}    | ${"2024-11-02T12:00:00Z"}    | ${1} | ${{ ...calendar, timeZone: "America/Havana" }}                                                              | ${"2024-11-02"}    | ${"2024-11-02"}    | ${"2024-11-03T04:00:00Z"}
+    ${"+05:45:30: 23:59:59 local is still day one"}       | ${"2024-03-09T18:14:29Z"}    | ${1} | ${{ ...calendar, timeZone: "+05:45:30" }}                                                                   | ${"2024-03-09"}    | ${"2024-03-09"}    | ${"2024-03-09T18:14:30Z"}
+    ${"+05:45:30: 00:00:00 local is the next day"}        | ${"2024-03-09T18:14:30Z"}    | ${1} | ${{ ...calendar, timeZone: "+05:45:30" }}                                                                   | ${"2024-03-10"}    | ${"2024-03-10"}    | ${"2024-03-10T18:14:30Z"}
+    ${"working, nextDay: holidays and weekend not free"}  | ${"2024-06-12T10:00:00Z"}    | ${3} | ${{ ...calendar, basis: "working", timeZone: "Europe/London", firstDay: "nextDay", calendar: holidayDays }} | ${"2024-06-14"}    | ${"2024-06-19"}    | ${"2024-06-19T23:00:00Z"}
+    ${"near the last instant: day-by-day walk"}           | ${"+275760-09-10T12:00:00Z"} | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                         | ${"+275760-09-10"} | ${"+275760-09-10"} | ${"+275760-09-11T00:00:00Z"}
+    ${"near the first instant, nextDay: day-by-day walk"} | ${"-271821-04-20T12:00:00Z"} | ${2} | ${{ ...calendar, timeZone: "UTC", firstDay: "nextDay" }}                                                    | ${"-271821-04-21"} | ${"-271821-04-22"} | ${"-271821-04-23T00:00:00Z"}
+  `(
+    "$name",
+    ({ from, free, options, freeTimeStart, lastFreeDay, expiresAt }) => {
+      expect(freeTimeExpiry(from, free, options)).toEqual({
+        freeTimeStart,
+        lastFreeDay,
+        expiresAt,
+      });
+    },
+  );
 });

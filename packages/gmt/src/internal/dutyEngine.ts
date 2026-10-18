@@ -57,14 +57,12 @@ import {
   timeInBefore,
   viewRun,
 } from "./dutyRunIndex";
+import { MIN_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import { isObject } from "./isObject";
 import { parseScheduleDisambiguation } from "./operatingSchedule";
 import { formatHourDuration } from "./hourDurationString";
 import { type ZoneFrame, zoneFrame } from "./zoneFrame";
 import { parseDayStartTime } from "./dutyPeriods";
-
-/** TC39 `nsMinInstant`: a window never reaches back past the first instant. */
-const MIN_INSTANT_NANOSECONDS = -8_640_000_000_000_000_000_000n;
 
 /** Everything one call evaluates its rules against. */
 export type DutyContext = {
@@ -411,7 +409,7 @@ function windowOf(
   if (period.kind === "elapsed") {
     return {
       span: {
-        start: max(at - period.length, MIN_INSTANT_NANOSECONDS),
+        start: max(at - period.length, MIN_EPOCH_NANOSECONDS),
         end: at,
       },
       basis: "elapsed",
@@ -1157,7 +1155,7 @@ function restBeforeDutyWithin(
   rule: Extract<ResolvedRule, { kind: "restBeforeDuty" }>,
   { rests, dutyStart, onDuty }: DutyStart,
 ): Evaluation {
-  const windowStart = max(dutyStart - rule.within, MIN_INSTANT_NANOSECONDS);
+  const windowStart = max(dutyStart - rule.within, MIN_EPOCH_NANOSECONDS);
   const rest = longestRestInside(rests, windowStart, dutyStart);
   const used = rest?.inside ?? 0n;
 

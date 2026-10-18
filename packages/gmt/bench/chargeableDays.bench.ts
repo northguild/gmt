@@ -1,5 +1,6 @@
 import { bench, describe } from "vitest";
 import { chargeableDays } from "../src/intermodal";
+import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import {
   businessCalendar,
   freeTimeStart,
@@ -52,4 +53,39 @@ describe("chargeableDays, working basis, 480 holidays", () => {
       { time: 500 },
     );
   }
+});
+
+// chargedDates returns one ISO string per charged day, so the rows above grow with their output.
+// With 3,640 free days a 10-year dwell charges about a dozen, which times the walk alone.
+describe("chargeableDays, near-empty output", () => {
+  const end = utcMidnight("2024-06-14", 3652);
+  bench(
+    "Europe/London, 10 years, 3,640 free days",
+    () => {
+      chargeableDays(freeTimeStart, end, 3640, {
+        basis: "calendar",
+        chargeBasis: "calendar",
+        timeZone: "Europe/London",
+        firstDay: "eventDay",
+      });
+    },
+    { time: 500 },
+  );
+});
+
+describe("chargeableDays, cold", () => {
+  const end = utcMidnight("2024-06-14", 3652);
+  bench(
+    "Europe/London, 10 years cold",
+    () => {
+      clearTransitionMemo();
+      chargeableDays(freeTimeStart, end, 3, {
+        basis: "calendar",
+        chargeBasis: "calendar",
+        timeZone: "Europe/London",
+        firstDay: "eventDay",
+      });
+    },
+    { time: 500 },
+  );
 });

@@ -15,6 +15,10 @@ import {
   coalesceIntervalNanoseconds,
   type IntervalNanoseconds,
 } from "./intervalNanoseconds";
+import {
+  MAX_EPOCH_NANOSECONDS,
+  MIN_EPOCH_NANOSECONDS,
+} from "./epochNanoseconds";
 import { isObject, isOptionsArgument } from "./isObject";
 import { NANOSECONDS_PER_DAY } from "./foreignEpochs";
 import {
@@ -93,16 +97,12 @@ const MAX_SCHEDULE_BUCKETS = 2 * MAX_SCHEDULE_DAYS;
  */
 const LOOKBACK_NANOSECONDS = 259_200_000_000_000n;
 
-/** TC39 `nsMinInstant` and `nsMaxInstant`: ±10^8 days from the epoch. */
-const MIN_INSTANT_NANOSECONDS = -8_640_000_000_000_000_000_000n;
-const MAX_INSTANT_NANOSECONDS = 8_640_000_000_000_000_000_000n;
-
 /**
  * Where an edge whose wall time lies past Temporal's range resolves: just outside it. Such an
  * edge has no string, so it is only ever clipped to a range or compared, never returned.
  */
-const PAST_LAST_INSTANT = MAX_INSTANT_NANOSECONDS + 1n;
-const BEFORE_FIRST_INSTANT = MIN_INSTANT_NANOSECONDS - 1n;
+const PAST_LAST_INSTANT = MAX_EPOCH_NANOSECONDS + 1n;
+const BEFORE_FIRST_INSTANT = MIN_EPOCH_NANOSECONDS - 1n;
 
 /**
  * The search horizon of `nextOpenAt`, `nextCloseAt` and `addOperatingTime` when the caller
@@ -399,12 +399,12 @@ function clampedToRange(instant: () => bigint): bigint {
 
     // At a seconds offset west of UTC the instant is later than the stand-in it was computed
     // on (`frameZoned`), so it can pass the last instant without Temporal throwing.
-    return nanoseconds > MAX_INSTANT_NANOSECONDS
-      ? MAX_INSTANT_NANOSECONDS
+    return nanoseconds > MAX_EPOCH_NANOSECONDS
+      ? MAX_EPOCH_NANOSECONDS
       : nanoseconds;
   } catch (error) {
     if (error instanceof RangeError) {
-      return MAX_INSTANT_NANOSECONDS;
+      return MAX_EPOCH_NANOSECONDS;
     }
     throw error;
   }
@@ -461,7 +461,7 @@ function firstWalkBucket(
 ): { bucket: Temporal.ZonedDateTime | null; atRangeStart: boolean } {
   const shift = schedule.frame.shiftNanoseconds;
   const earliestNs =
-    shift < 0n ? MIN_INSTANT_NANOSECONDS - shift : MIN_INSTANT_NANOSECONDS;
+    shift < 0n ? MIN_EPOCH_NANOSECONDS - shift : MIN_EPOCH_NANOSECONDS;
 
   if (fromNs < earliestNs) {
     throw new RangeError("the instant is before the first the frame can place");
@@ -1023,11 +1023,11 @@ const LIMIT_MARGIN = 30n * NANOSECONDS_PER_DAY;
 /** True when a walk from `fromNs` could reach within `LIMIT_MARGIN` of Temporal's range. */
 function walkNearsLimits(fromNs: bigint): boolean {
   return (
-    fromNs - LOOKBACK_NANOSECONDS - LIMIT_MARGIN < MIN_INSTANT_NANOSECONDS ||
+    fromNs - LOOKBACK_NANOSECONDS - LIMIT_MARGIN < MIN_EPOCH_NANOSECONDS ||
     fromNs +
       BigInt(MAX_SCHEDULE_DAYS + 3) * NANOSECONDS_PER_DAY +
       LIMIT_MARGIN >
-      MAX_INSTANT_NANOSECONDS
+      MAX_EPOCH_NANOSECONDS
   );
 }
 
