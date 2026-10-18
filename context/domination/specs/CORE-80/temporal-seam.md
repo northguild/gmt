@@ -30,8 +30,9 @@ files alike (about 500 shipped files, 244 test files), to the relative path of
 Do it with a script run once (`node` + `path.relative`), not by hand, and keep the import's
 position in the file. Files inside `internal/` use `./temporal`; inside
 `internal/temporalCompat/`, `../temporal`. No source file other than `internal/temporal.ts`
-names the package afterwards: `rg '@js-temporal/polyfill' packages/gmt/src` matches that file
-and nothing else.
+imports the package afterwards: ``rg "(from|import\(|require\()\s*[\"'\`]@js-temporal/polyfill" packages/gmt/src``
+matches that file and nothing else. Comments may still name the package, and the seam test in
+`internal/temporal.test.ts` skips comment lines too.
 
 **Enforce it.** In `packages/gmt/oxlint.config.mts`, add `no-restricted-imports` with
 `paths: [{ name: "@js-temporal/polyfill", message: "Import Temporal from internal/temporal" }]`,

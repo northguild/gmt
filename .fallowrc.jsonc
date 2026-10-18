@@ -1,4 +1,6 @@
 {
+  // `vitest bench` runs these; no plugin finds them.
+  "entry": ["packages/gmt/bench/*.bench.ts"],
   "ignoreDependencies": ["@tanstack/intent", "@northguild/gmt-oxlint"],
   "ignorePatterns": ["oxlint.config.js"],
   "ignoreUnresolvedImports": ["./packages/gmt-oxlint/dist/index.js"],

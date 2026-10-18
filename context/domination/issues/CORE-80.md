@@ -24,7 +24,7 @@
 
 In build order. Each part leaves `pnpm run validate` green on its own.
 
-1. **Harness.** `*.bench.ts` (Vitest bench) for every function in the speed table, each at a short, a 1-year and a 10-year input. `scripts/bundle-size.mjs` bundles in memory with esbuild (`write: false`) and reports the root entry, the polyfill floor and a fixed set of single-function imports. If `CORE-87` chose the package route, its subpath joins the set, with the budget set from the figure `CORE-87` recorded. `validate` fails when one grows past its budget.
+1. **Harness.** `*.bench.ts` (Vitest bench) for every function in the speed table, each at a short, a 1-year and a 10-year input. `scripts/bundle-size.mjs` bundles in memory with esbuild (`write: false`) and reports the root entry, the polyfill floor and a fixed set of single-function imports. `validate` fails when one grows past its budget.
 2. **Temporal seam.** Every `Temporal` import goes through one internal module. Remove `export * from "@js-temporal/polyfill"` from `src/index.ts`.
 3. **Repro split.** Canary-only repros (`zoned.A`, `zoned.B`, `zoned.D`, `zoned.E`, `D9`) move to a module only the canary loads. Each probe imports only its own repros.
 4. **Duty engine.** Per-status runs and prefix sums built once per context. Time in a status between two instants is a difference of two prefix sums found by binary search. Drop the per-candidate `clip`. Target O((N + C) log N).

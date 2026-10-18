@@ -107,9 +107,9 @@ with the first cut after that.
 | 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
 | 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
 | 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
-| 24 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Not started |
-| 25 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Not started |
-| 26 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
+| 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
+| 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Not started |
+| 26 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Not started |
 | 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | CORE-80                 | #322  | —       | Not started |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |
 | 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | CORE-86, CORE-87        | #329  | —       | Waiting     |
@@ -183,11 +183,11 @@ first open slot.
 issues) adds no function. It comes first, so a removable workaround or an oracle mismatch reaches
 an issue before more realms build on the workarounds. `CORE-80` (speed and bundle size, measured in
 the [audit](../perf-and-bundle-size-audit.md)) adds no function and changes no output. It sits
-straight after `CORE-87`, so every later story is built on the closed-form internals, under its
+straight after `CORE-81`, so every later story is built on the closed-form internals, under its
 size budget and through its single `Temporal` import. `CORE-82` runs the suite on native
 `Temporal` through that import, and `CORE-83` says why a stored zoned time no longer resolves.
 `CORE-86` (the docs site on `northguild.dev/gmt`, with the landing page) and `CORE-87` (the
-reference corpus and tool schemas shipped from the package) sit between `CORE-81` and `CORE-80`.
+reference corpus and tool schemas shipped from the package) come after `CORE-80`.
 Neither adds a function. After `CORE-86`, a later story's URLs in code go through `withBase` and
 the dist guard checks them; content links and corpus entries stay base-less. After `CORE-87`, a
 later story's corpus entries land in the shipped file through the same generator. Those six are
@@ -259,13 +259,13 @@ Highest commercial value and the thinnest coverage in the original plan.
 - **MAR-16** — GNSS time scales and week rollover, with `SPA-48`'s leap-second table.
 - **CORE-81** — the weekly Temporal oracle and leap-second canary open issues, straight after
   `MAR-16`. A removable workaround or an oracle mismatch reaches an issue, not just a run log.
+- **CORE-80** — faster span arithmetic and a smaller bundle, straight after `CORE-81`. It adds
+  the benchmarks and the size budget every later story is held to, and the single `Temporal`
+  import.
 - **CORE-86, CORE-87** — the docs site, unchanged, on `northguild.dev/gmt` with the landing page
   at `northguild.dev`, and the reference corpus and tool schemas shipped from the package.
   Neither adds a function. After them, a later story's URLs in code go through `withBase` and
   the dist guard, and its corpus entries land in the shipped file; content links stay base-less.
-- **CORE-80** — faster span arithmetic and a smaller bundle, straight after `CORE-87`. It adds
-  the benchmarks and the size budget every later story is held to, and the single `Temporal`
-  import.
 - **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium and Firefox, weekly;
   and why a stored zoned time no longer resolves. With the three above, one release.
 - **CORE-88** — the hosted server linked from the READMEs and the docs. Its Status is `Waiting`
