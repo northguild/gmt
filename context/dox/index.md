@@ -6,7 +6,7 @@ Every tier is done, the chat included. Load only what the task needs:
 - [built.md](built.md) — what each tier ships, the rules that bind it, traps and runbooks.
   The chat (Tier 6) is its largest section.
 - [tracker.md](tracker.md) — stories, GitHub issues, status.
-- [specs/index.md](specs/index.md) — one execution spec per Dox change.
+- [specs/index.md](specs/index.md) — the execution spec of a story in progress; deleted when the story is Done.
 - [reference/design-system.md](reference/design-system.md) — theme implementation rules,
   Tailwind in the chat island, the visual gate. Load when styling.
 - [reference/visual-design.md](reference/visual-design.md) — the visual language. Load when

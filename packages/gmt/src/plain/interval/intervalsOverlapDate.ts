@@ -15,7 +15,7 @@ import { isValidCalendarDate } from "../validate";
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
- *   calendar-independent, so arguments may carry different or no calendar tags (D4).
+ *   calendar-independent, so arguments may carry different or no calendar tags.
  * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
  *   calendar ids); see `isValidCalendarDate`.
  *

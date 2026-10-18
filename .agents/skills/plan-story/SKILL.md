@@ -76,7 +76,7 @@ Every index starts with frontmatter the architects write as a draft:
 story: MAR-16
 issue: 197
 status: draft        # approved only after grilling ends and the owner approves
-dox: none            # or context/dox/specs/mar-16/index.md
+dox: none            # or context/dox/specs/<id>/index.md
 ---
 ```
 
@@ -87,6 +87,7 @@ library index, then run `python3 .agents/skills/plan-story/scripts/plan_gate.py`
 
 ## Rules
 
+- A spec is temporary. It exists while the story is in progress; `finalizer` folds its decisions into `issues/<ID>.md` (or Dox `built.md`) and deletes it. Write nothing in it that code, comments or other context files will need to cite.
 - Planning writes only spec files. No source, tests, tracker `Status` or changesets.
 - Nothing is staged or committed ([Git rule](../../../AGENTS.md#git--only-on-an-explicit-instruction)).
 - Pass agents paths, not pasted file content.

@@ -3,12 +3,20 @@
  * One defect in the `/upstream/` table: what it breaks, whether GMT still works around it, and
  * what we sent about it.
  *
- * The "still needed" numbers come from `temporal-compat.json`, which `pnpm compat:snapshot`
- * writes from the same probes `pnpm compat` runs, so the column is a measurement rather than a
- * sentence anyone typed.
+ * The "still needed" column is the canary's `state`, which `pnpm compat:snapshot` writes into
+ * `temporal-compat.json` from the same probes `pnpm compat` runs. The row reads it and never works
+ * it out again from the probe counts, so the column is a measurement rather than a sentence
+ * anyone typed. A `guard` row passes its probes by design, so it says "Kept on purpose" and
+ * prints the reason the snapshot recorded, with each GitHub reference as a short link.
  */
 import type { CompatGroup } from "../data/temporal-compat";
-import { groupLabel, groupWhatBreaks } from "../data/temporal-compat";
+import {
+  groupLabel,
+  groupWhatBreaks,
+  reasonParts,
+  shortRef,
+  stateLine,
+} from "../data/temporal-compat";
 import type { UpstreamFiling } from "../data/upstream-filings";
 
 interface Props {
@@ -20,13 +28,7 @@ interface Props {
 // See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
 const { group, filings } = Astro.props as Props;
 
-const shortRef = (repo: string, number: number): string =>
-  `${repo === "tc39/proposal-temporal" ? "tc39" : "polyfill"} #${number}`;
-
-const stillNeeded = group.failing > 0;
-const probeCount = stillNeeded
-  ? `${group.failing} of ${group.probes} checks fail`
-  : `${group.probes} of ${group.probes} checks pass`;
+const { badge, count } = stateLine(group);
 ---
 
 <tr>
@@ -35,10 +37,23 @@ const probeCount = stillNeeded
     <p>{groupWhatBreaks(group)}</p>
   </td>
   <td class="gmt-defects-state">
-    <span class:list={["gmt-defects-badge", stillNeeded && "gmt-defects-badge--ok"]}>
-      {stillNeeded ? "✓ Yes" : "No"}
+    <span
+      class:list={[
+        "gmt-defects-badge",
+        group.state === "still-needed" && "gmt-defects-badge--ok",
+        group.state === "guard" && "gmt-defects-badge--guard",
+      ]}
+    >
+      {badge}
     </span>
-    <p>{probeCount}</p>
+    <p>{count}</p>
+    {group.state === "guard" && group.guard && (
+      <p class="gmt-defects-reason">
+        {reasonParts(group.guard.reason).map((part) =>
+          "href" in part ? <a href={part.href}>{part.text}</a> : part.text,
+        )}
+      </p>
+    )}
   </td>
   <td class="gmt-defects-sent">
     {filings.length === 0 ? (

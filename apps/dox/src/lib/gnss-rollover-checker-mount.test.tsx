@@ -955,7 +955,7 @@ describe("lifecycle", () => {
   });
 });
 
-describe("the links row (D13)", () => {
+describe("the links row", () => {
   const ERAS = "See every era of this reading";
   const link = (root: HTMLElement) => q<HTMLAnchorElement>(root, "link-eras");
   const state = (root: HTMLElement) => ({

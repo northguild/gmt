@@ -57,8 +57,8 @@ describe("intervalDivideEquallyDate", () => {
       [],
     );
   });
-  // E5 (issue #78): start and end must share the same calendar tag (or both be bare ISO)
-  // (D4). Golden verified directly against @js-temporal/polyfill.
+  // E5 (issue #78): start and end must share the same calendar tag (or both be bare ISO). Golden
+  // verified directly against @js-temporal/polyfill.
   it("divides in the shared calendar when start and end carry the same tag", () => {
     expect(
       intervalDivideEquallyDate(

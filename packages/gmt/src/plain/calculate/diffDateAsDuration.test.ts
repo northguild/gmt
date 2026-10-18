@@ -243,7 +243,7 @@ describe("diffDateAsDuration", () => {
     ).toBe("P5D");
   });
 
-  // CORE-6 modern grid subset (spec §4.4): every calendar, from a mid-month start and two
+  // CORE-6 modern grid subset: every calendar, from a mid-month start and two
   // calendar month-end starts, across 29, 30, 59 and 384 days. Expected values: Chromium 152 native
   // Temporal (q2-grid-chromium152.json, base 2023-06-01 + i days); gregory rows are bare ISO.
   it.each`

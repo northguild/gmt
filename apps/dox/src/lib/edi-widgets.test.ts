@@ -400,7 +400,7 @@ describe("resolveInZone", () => {
     });
   });
 
-  it("gives a reason, and no instant or offset, for a time the clock shows twice (D16)", () => {
+  it("gives a reason, and no instant or offset, for a time the clock shows twice", () => {
     const row = resolveInZone("2024-11-03T01:30:00", "America/New_York", lib);
     expect(row.instant).toBe("");
     expect(row.offset).toBe("");

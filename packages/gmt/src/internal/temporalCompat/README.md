@@ -6,7 +6,7 @@ TC39 Temporal and the Intl era/monthCode proposal. It also lets each workaround 
 upstream ships the fix. The upstream filings for these defects, and their status, are tracked on the
 docs site at `/upstream/` (data: `apps/dox/src/data/upstream-filings.json`).
 
-Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner decisions:
+Decisions: `context/domination/issues/CORE-6.md` § Decisions. Owner choices:
 `context/domination/research/calendar-standards-decisions.md`.
 
 ## Rules

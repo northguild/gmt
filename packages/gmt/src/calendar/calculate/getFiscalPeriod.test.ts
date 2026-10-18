@@ -363,7 +363,7 @@ describe("getFiscalPeriod", () => {
     ).toBeNull();
   });
 
-  // A function is an ECMAScript Object (ECMA-262 §6.1.7), and spec §3.5 reads the calendar
+  // A function is an ECMAScript Object (ECMA-262 §6.1.7), and the calendar is read
   // with `isObject`, so its four fields are read like a plain object's.
   it("reads a function carrying the four NRF fields as the NRF calendar", () => {
     expect(

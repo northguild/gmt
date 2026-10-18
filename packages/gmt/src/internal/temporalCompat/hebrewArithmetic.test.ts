@@ -5,8 +5,8 @@ import {
   isHebrewLeapYear,
 } from "./hebrewArithmetic";
 
-// Called directly so the arithmetic stays covered whether or not the runtime still needs it
-// (CORE-6 spec §4.5). Expected fields: Chromium 152 native reads (q2-xscan-chromium152.json,
+// Called directly so the arithmetic stays covered whether or not the runtime still needs it.
+// Expected fields: Chromium 152 native reads (q2-xscan-chromium152.json,
 // q2-spec-probe) and test262 extreme-dates.js — never the polyfill or Node's ICU4C.
 describe("hebrewFieldsFromFixed", () => {
   it.each`

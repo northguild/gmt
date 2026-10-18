@@ -8,7 +8,7 @@ import {
 import { type DefectId, findRepro, repros } from "./repros";
 
 // Probe tests never assert the probe's outcome against the installed polyfill: that would fail CI
-// the day upstream ships the fix, which is the canary's job (CORE-6 spec §4.5, §6.3). They pin the
+// the day upstream ships the fix, which is the canary's job (temporalCompat README, "Canary and native oracle"). They pin the
 // spec-correct expected constants to their quoted sources, and show that the output polyfill 0.5.1
 // was recorded producing (`q2-spec-probe*-0.5.1.txt`) reads as "defect present".
 describe("repros", () => {
@@ -336,7 +336,7 @@ describe("isDefectPresent", () => {
   });
 });
 
-// Only the outcomes that hold on every runtime are pinned (spec §4.5): whether a non-ISO calendar
+// Only the outcomes that hold on every runtime are pinned: whether a non-ISO calendar
 // needs the compat layer is the installed polyfill's business.
 describe("isCalendarArithmeticCompatNeeded", () => {
   it.each`

@@ -5,9 +5,9 @@ import { convertDateToCalendar } from "./convertDateToCalendar";
 // .withCalendar("islamic-umalqura").toString()`, the ISO date plus `[u-ca=islamic-umalqura]`
 // (RFC 9557). The source column names the Umm al-Qura date each ISO date is.
 
-// CORE-6 spec §8 risk 2: every month start and month end of AH 1440-1450. Month lengths come from
+// Every month start and month end of AH 1440-1450. Month lengths come from
 // the Umm al-Qura table, so these are the month boundaries of the table.
-describe("convertDateToCalendar inside the Umm al-Qura table (CORE-6 §8 risk 2)", () => {
+describe("convertDateToCalendar inside the Umm al-Qura table (every month boundary)", () => {
   it.each`
     value           | expected                               | source
     ${"2018-09-11"} | ${"2018-09-11[u-ca=islamic-umalqura]"} | ${"AH 1440 month 1 start"}

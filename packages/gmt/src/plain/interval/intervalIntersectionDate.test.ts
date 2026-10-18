@@ -123,7 +123,7 @@ describe("intervalIntersectionDate", () => {
       ),
     ).toBeNull();
   });
-  // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate (D4). Goldens
+  // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate. Goldens
   // verified directly against @js-temporal/polyfill.
   it("intersects in the shared calendar when all four arguments carry the same tag", () => {
     expect(

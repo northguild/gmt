@@ -29,6 +29,19 @@
   overflow-x: auto;
 }
 
+/*
+ * The wrapper is a focusable, named region (`UpstreamDefects.astro`), so a keyboard reader can
+ * scroll the table sideways where it overflows. The ring is the site's cyan box-shadow focus
+ * style, drawn only for keyboard focus. The transparent outline is what forced-colors mode paints.
+ */
+.gmt-defects-scroll:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+}
+
 .sl-markdown-content .gmt-defects {
   display: table;
   width: 100%;
@@ -56,9 +69,14 @@
   width: 26%;
 }
 
+/*
+ * `--gmt-ice-dim` is the muted text tier that holds the 7:1 floor. `--sl-color-gray-3` measured
+ * 4.39:1 on the dark page and 2.49:1 in the light cell, so every line here (the description, the
+ * check count and a guard row's reason) used to sit under it.
+ */
 .sl-markdown-content .gmt-defects td p {
   margin-top: 0.25rem;
-  color: var(--sl-color-gray-3);
+  color: var(--gmt-ice-dim);
   font-size: var(--sl-text-xs);
 }
 
@@ -67,8 +85,43 @@
   font-weight: 600;
 }
 
+/*
+ * `--gmt-cyan-ink`, the house accent for text. Starlight's `--sl-color-green` measured 1.69:1 in
+ * the light cell, far under the 7:1 floor; cyan-ink clears it in both themes. The `✓` carries the
+ * meaning, so the badge does not rely on its colour.
+ */
 .gmt-defects-badge--ok {
-  color: var(--sl-color-green);
+  color: var(--gmt-cyan-ink);
+}
+
+/*
+ * "Kept on purpose": every check passes only because the installed polyfill cannot show the bug
+ * yet, so the badge claims neither "needed" (green) nor "fixed". It is a full bevelled border on
+ * all four sides with ice text, never a one-sided accent.
+ *
+ * The label is wider than the state cell's content box at the table's 34rem minimum, so it wraps
+ * between words inside its own border. The column widths come from `table-layout: fixed` and the
+ * percentages above, so a taller row never moves a column.
+ *
+ * Border: `--gmt-border-strong` measures 2.19:1 on the dark page and 1.54:1 on the light one,
+ * short of the 3:1 non-text bar (WCAG 2.2 SC 1.4.11). `--gmt-ice-dim-fill` is the first token that
+ * clears it in both themes (6.80:1 dark, 5.74:1 light).
+ */
+.gmt-defects-badge--guard {
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-ice-dim-fill);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+  white-space: normal;
+}
+
+/* A short reference such as `tc39 #3292` reads as one token, so it never splits at its space. */
+.gmt-defects-reason a {
+  white-space: nowrap;
 }
 
 .sl-markdown-content .gmt-defects-refs {
@@ -127,6 +180,7 @@
   font-weight: 600;
 }
 
+/* `--gmt-cyan-ink` for the same reason as `.gmt-defects-badge--ok`. */
 .gmt-upstream-badge--ok {
-  color: var(--sl-color-green);
+  color: var(--gmt-cyan-ink);
 }

@@ -41,8 +41,8 @@ describe("rinexWeekToUtc", () => {
     expect(utcToGnss("BDT", utc)).toBe("2021-07-05T22:00:00 BDT");
   });
 
-  // D12: a RINEX NavIC week counts from 1980; a NavIC broadcast week counts from 1999. The same
-  // number through the broadcast counter lands 1024 weeks later.
+  // A RINEX NavIC week counts from 1980 (RINEX 4.02 Table A30); a NavIC broadcast week counts
+  // from 1999. The same number through the broadcast counter lands 1024 weeks later.
   it("reads RINEX NavIC week 2295 as 2024-01-01, where the L1NV broadcast counter reads 2043-08-17", () => {
     expect(rinexWeekToUtc("IRN", 2295, 86418)).toBe("2024-01-01T00:00:00Z");
     expect(gnssWeekToUtc("IRN-L1NV", 2295, 86418, 0)).toBe(

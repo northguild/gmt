@@ -84,7 +84,7 @@ describe("intervalAbutsDate", () => {
     expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; ordering is calendar-
-  // independent so mixed calendars are accepted (D4). Golden verified directly against
+  // independent so mixed calendars are accepted. Golden verified directly against
   // @js-temporal/polyfill: 2024-10-03 = Hebrew 5785-01-01, so [09-01, 10-03) meets it.
   it("accepts mixed calendars since abutting is an ordering check, not a value", () => {
     expect(

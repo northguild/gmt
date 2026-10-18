@@ -101,7 +101,7 @@ exception: it ships as two Core releases of its own, ahead of the remaining real
 | 20 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                       | #283  | 1.19.0  | Done        |
 | 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
 | 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
-| 23 | CORE-81 | Core       | Weekly canaries open issues: guard<br>state, JSON result, issue step                | —                       | #319  | —       | Not started |
+| 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
 | 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
 | 25 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | CORE-81, CORE-80        | #322  | —       | Not started |
 | 26 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |

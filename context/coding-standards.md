@@ -208,13 +208,13 @@ which records the native Temporal evidence for each rule below.
   `splitIntervalByUnit*`, `intervalOverlappingDays*`; `internal/calendarDatePairPolicy.ts`,
   `calendarZonedPairPolicy.ts`), as Temporal's `until` throws. Ordering (`compare`) has no calendar
   check, so the ordering-only interval functions accept mixed calendars; value-returning interval
-  set operations reject the mismatch (D4). A bare ISO string names `iso8601`. This rule
-  (2026-09-17) replaces E5/E7 decision D5, which measured mixed calendars in ISO.
+  set operations reject the mismatch, since their result must be written in one calendar. A bare
+  ISO string names `iso8601`.
 
 Every Temporal call keeps the try-catch and sentinel rules above. This is not a manual-parsing
 exception: the regex restricts the shape and Temporal parses the string itself.
 
-Do not extend the calendar grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story — see E5's decision D1 and E7's explicit "not in scope" list.
+Do not extend the calendar grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story.
 
 ## Loop Style
 
@@ -316,8 +316,9 @@ An instant, date or time `t` is inside an interval when `start ≤ t < end`: SQL
 application-time `PERIOD` (ISO/IEC 9075-2:2011), RFC 5545 §3.6.1's non-inclusive `DTEND` and
 EWD831. This holds for `interval/` and for every positional `plain|utc|zoned|unix/interval`
 function (all since 1.16.0). Tie-breaks and empty-interval edges follow the
-[CORE-6 spec](./domination/specs/CORE-6-spec.md) §3; the rules below derive the relations that
-spec has no function for.
+[CORE-6 Design notes](./domination/issues/CORE-6.md#design-notes) and
+[Decisions](./domination/issues/CORE-6.md#decisions); the rules below derive the relations that
+those notes have no function for.
 
 - **No one-unit steps.** Pieces end and start exactly at a cut: no nanosecond, day or `epochUnit`
   step in `intervalDifference*`/`intervalXor*`, and no one-unit gap in `intervalAbuts*`.

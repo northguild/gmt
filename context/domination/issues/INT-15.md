@@ -116,7 +116,7 @@ Each is a fact about the value, stated in the function's JSDoc:
 - The Standards guide (`guides/concepts/standards.mdx`): sections for UN/EDIFACT, X12 and GS1 EPCIS, and for the database and system-clock formats the library already converts.
 - Home page (`index.mdx`): the three standards join the "Every standard, in one place" card, and one card covers the formats freight sends.
 - Why GMT (`why-gmt.mdx`): one sentence in the industry section naming the three standards.
-- Tools: **DTM Decoder** (`/tools/dtm-decoder/`) and **X12 Time Reader** (`/tools/x12-time-reader/`). Each classifies the code, calls the function for its kind, says whether the value's offset is stated, and resolves an offsetless value once the reader picks a zone. Spec: [context/dox/specs/int-15-edi-timestamp-tools.md](../../dox/specs/int-15-edi-timestamp-tools.md).
+- Tools: **DTM Decoder** (`/tools/dtm-decoder/`) and **X12 Time Reader** (`/tools/x12-time-reader/`). Each classifies the code, calls the function for its kind, says whether the value's offset is stated, and resolves an offsetless value once the reader picks a zone. The tools' rules are in [built.md](../../dox/built.md).
 
 ## UN/EDIFACT DTM format codes (data element 2379)
 

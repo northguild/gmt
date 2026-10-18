@@ -34,6 +34,39 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
 - **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.
+- **A widget draws the library's results and computes none of them.** Every date, duration,
+  verdict, class and total on screen is a library call, and the printed call is the call made. The
+  polyfill is imported for drawing only (where a mark sits, formatting a returned duration). The
+  site holds no table of the library's rules and guesses no zone: a zone, an offset or a code's
+  kind comes from the reader or from the library, never from a place name, a port, an abbreviation
+  or a lookup the site keeps. A preset is an example, and it carries its zones as literal fields.
+- **GMT tracks no law, and the UI names no body.** No statute, regulation, regulator, court,
+  docket, carrier rule or jurisdiction label appears in a widget string, preset, chat doc, page or
+  test name; examples are labelled by their numbers ("30-day windows", "a 14/14/45 contract").
+  Standards are named as data: DCSA field names, GS1 EPCIS 2.0, ISO/IEC 19987, UN/EDIFACT, ANSI
+  X12, GTFS `frequencies.txt`. GMT computes dates, not liability: copy says "on or before the
+  deadline" or "after the deadline", never `timely`, `late` as a finding, `void`, `payable` or
+  `compliant`. A window has no default, so a blank window input is left out of the call, has no
+  `placeholder`, and is never filled from a preset.
+- **International authority first, no national lead.** Cite ISO, IEC, ITU, BIPM, IERS, IAU, IMO,
+  CGPM and IGS/RINEX first, multinational industry bodies next, and a national source only as one
+  labelled peer. No tool, preset or starter opens on `America/New_York`, `en-US` or a US-only
+  example: rotate through `Europe/London`, `Asia/Tokyo`, `Australia/Sydney`,
+  `America/Sao_Paulo`, `Africa/Johannesburg` and `Asia/Kolkata`, and keep a zone only where the
+  example needs its DST shape or a standard's own code names it (an X12 time code such as `ET`).
+  A locale, where one is needed, is regionless (`"en"`). A page that introduces X12 says it is a
+  United States standard, and that GMT reads its code lists through an X12-licensed dictionary and
+  not the X12 text.
+- **Verdicts are words and patterns.** Early, late, on time, open, closed and moved are never
+  amber, green or red. Amber is `NO SIGNAL` alone. A series colour goes on a mark, stem, edge,
+  swatch or border and never on text (the `-ink` tokens measure only 5.7 to 6.7:1 on a light
+  surface). Every text label inside a chart sits on an opaque plate (a chip or header strip on
+  `--gmt-surface`, text in `--gmt-ice` or `--gmt-ice-dim`), never on a gradient, hatch, glow or
+  line. Glow is a shadow on a mark, never on text, and there is no `backdrop-filter` inside a chart.
+- **Helpers follow the zero-bug house rules.** No catch-all helper: split by kind with narrow
+  unions and return one shape. No constant that ages: no fixed year window, century pivot, era
+  count or "current era"; a preset's dates carry their year, and the eras to draw come from the
+  library at the reader's today.
 
 ---
 
@@ -333,6 +366,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **`agent-prompt.test.ts` keeps `AGENT_PROMPT` (`src/lib/agent-prompt.ts`) equal to the
   fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
   is the source; a change to it goes into all three files in the same edit.
+- **The `/upstream/` defect table reads each group's `state` from `temporal-compat.json`.**
+  `stateLine` in `src/data/temporal-compat.ts` turns the state into the badge and count line for
+  both the Astro row and the Markdown twin (`renderUpstreamDefects` in `src/lib/mdx-jsx.ts`). A
+  `guard` row shows "Kept on purpose", its check count and the snapshot's `guard.reason`, because
+  the canary (`pnpm compat:snapshot`) owns state: the page never reads `failing`, `through` or a
+  version to choose a badge, and `toCompatGroup` fails the build on an unknown state or an
+  incomplete guard. The badge has a full `--gmt-ice-dim-fill` border (`--gmt-border-strong`
+  measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum;
+  the wrapper that scrolls the table is a named region that ships `tabindex="0"`, and
+  `mountOverflowFocus` (`src/lib/overflow-focus.ts`) drops the tab stop while the table fits
+  (role and label stay), so a desktop reader never lands on a box that cannot scroll. The Markdown
+  twin runs every free-text cell (reason, what-breaks text, label) through `escapeMarkdownInline`
+  so `_`, `*`, `[`, `<` and the rest read the way the HTML shows them. The label is "Kept on purpose"
+  because it answers the column's question in familiar words, and "Guarded" already means the
+  `gmtGuard` join of filings on the same page. A reason never says "probe" (a test rejects it), and
+  `owner/repo#n` in a reason renders as a short link (`reasonParts`) only for a repository the
+  site knows (`tc39/proposal-temporal`, `js-temporal/temporal-polyfill`), never inside a URL or
+  after a word character, so `and/or#1` and `…/issues/3292#3` stay text. Both "ok" badges
+  (`.gmt-defects-badge--ok`, `.gmt-upstream-badge--ok`) use `--gmt-cyan-ink`, not Starlight green
+  (1.69:1 in light).
 
 ## Tier 2 · Widget platform
 
@@ -402,7 +455,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
-  The Timetable Reader's rules (spec: [specs/timetable-reader.md](specs/timetable-reader.md)):
+  The Timetable Reader's rules:
   - **Three full-width sections, stacked:** the timetable, what each printed time means, and
     the call. Each carries `gmt-widget-section--wide`, because a day track and a chart need
     the whole row.
@@ -446,6 +499,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     and column width is fixed, and a cell whose content comes and goes holds its size with a
     hidden sizer ([design-system.md § Drawn charts](reference/design-system.md#drawn-charts)).
     `readout:still` and `grow:measure` gate it (§ Gates below).
+  - **Smaller choices that stay fixed.**
+    - A row on another date than the track's gets no handle, and its lane and the summary say so.
+    - Arrow keys step 5 minutes; Shift, PageUp and PageDown step 60. The pointer snaps to the
+      finest of 5, 10, 15 or 30 minutes that is at least 2.5px wide, so every preset time stays
+      reachable.
+    - A repeated hour is purple and a skipped hour gold (the DST Inspector's pair, which the
+      Cut-off Ruler also follows). A band differs from row 3's purple marks by edge, pattern and
+      words, and the legend has one swatch for each kind of band.
+    - A band's edges are `etaAtZone` at the transition's two offsets, which holds for 30-minute
+      shifts, midnight changes and a skipped whole day.
+    - The exact axis is labelled in UTC, so "exact" never depends on a zone's clock. The chart
+      draws a fitted window (a few hours of a 26-hour domain) and refits on settle.
+    - An Offset option's label is at most `OFFSET_LABEL_MAX` characters, because the narrowest
+      frame's select cuts off anything longer. Offset chips are placed by the mount, by
+      measurement. The table is a real table only where every column holds its value on two
+      lines; under that it is stacked rows, and the note sits in the table, not the frames.
+    - `reason-aside` is the last element of section 3, because it can appear while a handle moves.
 
   Three more (TRAN-10): the Cut-off Stack, a sailing's cut-offs from `cutoffSchedule` on a
   day timeline, closed days shaded, each rolled cut-off drawn where it landed with a line
@@ -525,6 +595,41 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `cutoff-widgets.ts`'s `callSource` prints only cut-off shapes (its key table drops any other
   key), so these three print calls and results with `formatValue`/`callArgs` from
   `punctuality-widgets.ts`.
+  Rules these transport tools keep:
+  - **A permalink that carries a list uses flat, numbered string keys** (`legCount` and
+    numbered leg keys, numbered departures), because `seedFromLocation` keeps only top-level
+    strings. `readArgs` accepts both shapes, and the content-permalink test covers every MDX
+    link. A content link uses the preset form; the flat list form exists only for state that no
+    preset holds, such as a chat-seeded list. Radio groups carry a per-mount suffix on every
+    `name`, because a tool page and the `/dox` rail can both hold one.
+  - **Delivery Scheduler's `diagnose` mirrors the library's check order**, and its test asserts
+    for each reason that the real library returns `null` for that state, so a reorder in the
+    library fails there. Writing an offset picks the other pass only in a repeated hour; in a
+    skipped hour every offset returns `null`, and the Timetable Reader says both. The Connection
+    Checker's onward leg falls back to `PT0S` in the port zone when the chat omits it, which
+    cannot change the verdict, and the hint and printed call say so. Four tools, not one: the
+    Crossing Clock draws hours on an hour ruler and links the Dwell Ledger for the day count.
+    A 2-hour dwell on a 15-day axis is under 1% wide, so a bar has a minimum visible width,
+    labels sit outside bars, and the leg list carries every value.
+  - **Cut-off Countdown is live only when `now` is absent.** The bare page opens pinned on the
+    pill preset, and the template never reads the clock. The Stack maps each schedule row back to
+    an entry by the first unused entry with the same name and the same per-entry `cutoffAt`
+    result, and shades a closed day when `rollDate(date, "following", calendar) === date`.
+    `cutoffAt` does not check order, so a row out of order says so from `isPastCutoff` and is not
+    drawn as an error.
+  - **Punctuality tools:** `nextDeparture` returns `""` for invalid input and for "no departure
+    qualifies", and the probes in `…NullReason` decide which one a state is, never a guess.
+    `estimateDrift` returns `null` with one estimate (EST) record, which renders `NO SIGNAL`
+    with the `one-estimate` reason. Rows on the Punctuality Board are not editable: the
+    tolerance is the manipulation, and a reader's own data arrives through the chat or a
+    permalink. A tolerance is labelled by its number only ("15-minute", "60/120-minute",
+    "day-based"), and the words "regulation" and "regulator" never appear. Each of the three
+    shows one labelled naive value of its own, never presented as a result.
+  - **Billing Deadlines' day strip** caps at `MAX_STRIP_CELLS` 120 and collapses by ISO week
+    (at most 63 cells) because 90 day cells in one row would be under 8px wide. The widget's
+    date schema is its own `plainDateSchema`, so the date-time schema is untouched, and a window
+    reaches the widget as a string in a permalink. The jurisdiction mapping table lives once, in
+    the INT-12 guide's closing section, and the billing guide links to it.
   Two more (INT-15): the DTM Decoder, a pasted UN/EDIFACT `DTM` segment, or a value and its
   2379 format code. It calls `classifyEdifactDtmFormat` on the code, then the parser of the kind
   that came back (`parseEdifactDate`, `…Time`, `…DateTime`, `…OffsetDateTime`, `…DatePeriod` or
@@ -665,6 +770,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
   to the converter; `gnss-tool-links.test.ts` runs each link through `seedFromLocation` into its
   target. States are words and patterns, never a verdict colour.
+  - **The six constellations are peers, with the scope said once.** The short form is "IMO
+    recognises GPS, GLONASS, BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the
+    Worldwide Radionavigation System" (the Maritime Safety Committee, 104th session, October
+    2021). The full citation is the policy of IMO resolution A.1046(27) (2011), whose annex
+    MSC.599(111) (2026) revised, with GPS and GLONASS by A.860(20), BeiDou by SN.1/Circ.329,
+    Galileo by SN.1/Circ.334, IRNSS by SN.1/Circ.340 and QZSS by SN.1/Circ.341. A.1046(27) names
+    no system, so it is never cited alone for the six. Wherever a page or tool says "peers" it
+    says recognition is not equal everywhere: BeiDou and IRNSS are recognised for ocean waters,
+    and IRNSS only within 55°E to 110°E and 50°N to 5°S. IEC 61108 is cited per system only
+    (parts 1, 2, 3, 5 and 6; it has no QZSS part), and IEC 61162-1:2024 only for the sentence
+    format shipboard equipment uses. No market report is cited for the GNSS layer.
+  - **GLONASS is the RINEX and BIPM `GLO` scale only.** Where a page says what `GLO` is, it says
+    "GLONASS time as RINEX and the BIPM report it, in UTC's own hours, and the library reads no
+    other GLONASS scale". No string on the site mentions UTC+3, Moscow time, MSK or a three-hour
+    shift, and there is no GLONASS week mode. A RINEX `BDT` week counts from 2006-01-01 BDT;
+    `GPS`, `QZS`, `GAL` and `IRN` count from 1980-01-06.
+  - **Firmware is modelled as a build-date pivot** (`{ notBefore }`, the default, as real
+    receivers behave) or as a fixed era, and the Rollover Checker shows when it starts
+    reporting wrong dates. The decoder's era input accepts the pivot too. The two dates the site
+    holds are cited constants: `1972-01-01T00:00:00Z` (whole-second UTC from 1972, BIPM and
+    ITU-R TF.460-6) and `2027-05-20` (continuous UTC, CGPM 2026 Resolution 5).
+  - **Tags and tool placement.** The Leap Second Timeline and Elapsed vs. Clock Difference are
+    tagged Core, in the chat area "Leap seconds and TAI"; the three GNSS tools and the GNSS
+    scenarios are `gnss`; the duty scenarios are `workforce`. `mistakes/duty` is
+    `mistakes/workforce`, with a redirect. Maritime and Transport link the `gnss` pages from their
+    hub's `solves` list. The "By industry" chart is stacked: each industry's own functions solid,
+    the layers it draws on lighter and named, and no function counted twice in any total. The
+    industry order follows what builds on what: Workforce, Transport, Intermodal, GNSS, Maritime.
+    Maritime owns no namespace yet and draws on `gnss` and `timescale`; Intermodal draws on
+    `transport`.
+  - **Industry overview text lives on `/industries/<id>/`**, in a top-level "Industries" sidebar
+    group after "Start here", and each namespace index under `/reference/` keeps a one-line
+    pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
+    expansion takes the word.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -894,7 +1033,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
   calendar-year scale, because switching presets is only comparable against a still frame.
   Seeded and typed values fit their own scale with 10% padding, and drag snap and keyboard
-  step derive from the span.
+  step derive from the span. The adjacent preset's copy follows the closed `*Zoned` functions: a
+  shared instant overlaps.
+- **`/why-gmt` "Correct at the edges":** every claim links at least one named `packages/gmt` test
+  and claims nothing beyond what those rows exercise. Its only figure comes from `gmtStats`
+  (`formatCount`); no count is typed. It justifies with specs only (TC39 Temporal, ISO 8601, RFC
+  9557, RFC 5545, SQL:2011, EWD831, ECMA-262), names no peer library and calls no library buggy.
+  It does not say "every time zone", and names only the zones the cited tests cover.
 - **DST inspector:** opens on `Europe/London` 2024 (a spring gap and an autumn overlap).
   `getDstTransitions` returns `…Z` instants.
   `buildZonedValueFromMinutes` deliberately omits an offset — resolving the ambiguity is
@@ -1732,8 +1877,25 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `html-diff.mjs compare`, `visual:after` and `visual:diff` run in the branch. It is not the
   local `main` branch, which can lag `origin/main`, and it is not the working tree with changes
   set aside: a stash is shared by every worktree, and a baseline built over leftover generated
-  files is not clean. The commands are in
-  [specs/int-15-edi-timestamp-tools.md](specs/int-15-edi-timestamp-tools.md), step G7.
+  files is not clean. Build the baseline and the branch in private trees under the session
+  scratchpad (`$SP`; `$W` is the worktree) and never touch port 4321, `apps/dox/dist` or the
+  worktree's own `packages/gmt/dist`:
+
+  ```bash
+  BASE=$(git -C "$W" merge-base HEAD origin/main)
+  mkdir -p "$SP/base" && git -C "$W" archive "$BASE" | tar -x -C "$SP/base"
+  mkdir -p "$SP/after" && rsync -a --exclude node_modules --exclude dist --exclude .git \
+    --exclude .astro --exclude .visual --exclude .wrangler "$W"/ "$SP/after"/
+  # In each tree (the branch's library may be rsynced from "$W/packages/gmt/dist" instead):
+  cd "$SP/<tree>" && eval "$(fnm env)" && fnm use && pnpm install --frozen-lockfile \
+    && pnpm --filter @northguild/gmt build \
+    && DOX_VITE_CACHE_DIR="$SP/vite-<tree>" pnpm --filter @gmt/dox build
+  # Serve the branch build for the browser gates, then stop the server:
+  python3 -m http.server 48391 --bind 127.0.0.1 --directory "$SP/after/apps/dox/dist"
+  ```
+
+  Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
+  launch on the author's machine; record it as blocked and do not bypass the sandbox.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only).
   A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls

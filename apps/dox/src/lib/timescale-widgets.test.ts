@@ -130,8 +130,8 @@ describe("secondAfter", () => {
   });
 });
 
-/** Every from/to pair of the Leap Second Timeline's (D11) and Elapsed vs.
- *  Clock's (D12) presets, plus the one where the library counts nothing. */
+/** Every from/to pair of the Leap Second Timeline's and Elapsed vs.
+ *  Clock's presets, plus the one where the library counts nothing. */
 const PRESET_PAIRS: readonly (readonly [string, string])[] = [
   ["2000-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
   ["2024-01-01T00:00:00Z", "2000-01-01T00:00:00Z"],

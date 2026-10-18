@@ -1,7 +1,7 @@
 # Calendar Standards Decisions (CORE-6 calendar correctness)
 
 **Research Date:** 2026-09-14  
-**Purpose:** Decide the four open calendar questions from the CORE-6 calendar spec (§9) by authority, not preference, following the owner rule "use the absolute authoritative way".
+**Purpose:** Decide the four open calendar questions from the CORE-6 calendar correctness work by authority, not preference, following the owner rule "use the absolute authoritative way".
 
 **Authority order (highest first):**
 
@@ -223,4 +223,4 @@ an error. GMT surfaces both as its `""`/`null` sentinel. Recorded as section G o
 - UTS 35 §3.2 `unicode_locale_extensions` (a `type` subtag is 3–8 alphanumerics): https://unicode.org/reports/tr35/#Unicode_locale_identifier
 - ECMA-402 `AvailableCanonicalCalendars`, `CanonicalizeCalendar`: https://tc39.es/ecma402/
 - test262 `intl402/Temporal/PlainDate/from/{extreme-dates,japanese-pre-meiji,non-positive-single-era-year}.js` and `prototype/add/proleptic-buddhist.js`: https://github.com/tc39/test262/tree/main/test/intl402/Temporal/PlainDate
-- Related: [CORE-6 calendar correctness spec](../specs/CORE-6-calendar-correctness-spec.md), [range-edge correctness audit](./range-edge-correctness-audit.md)
+- Related: [CORE-6 Decisions](../issues/CORE-6.md#decisions), the [temporalCompat README](../../../packages/gmt/src/internal/temporalCompat/README.md), [range-edge correctness audit](./range-edge-correctness-audit.md)

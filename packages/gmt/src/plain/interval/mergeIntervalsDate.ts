@@ -24,7 +24,7 @@ import { isObject } from "../../internal/isObject";
  *   `start > end`.
  * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
  *   date *values*, every `start`/`end` across the whole list must carry the *same* calendar tag
- *   (or all be bare ISO); any mismatch returns `[]` (E5 decision of record D4).
+ *   (or all be bare ISO); any mismatch returns `[]`.
  *
  * @param intervals array of `{ start, end }` records, optionally calendar-annotated
  * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input / mismatched calendars

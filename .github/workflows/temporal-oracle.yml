@@ -1,13 +1,30 @@
 name: Temporal oracle
 
-# Compares GMT's calendar results against Chromium's native Temporal (CORE-6 spec §6.3) and
-# reports which @js-temporal/polyfill workarounds are still needed. Manual and weekly only:
+# Compares GMT's calendar results against Chromium's native Temporal (test262 is the final
+# authority where they disagree) and reports which @js-temporal/polyfill workarounds are still
+# needed. Manual and weekly only:
 # never part of ci.yml, because Node has no native Temporal and "upstream still broken" must
 # never fail CI. A failing run means a GMT result differs from native Temporal on a row that
 # the script's tag list does not explain — a GMT bug to fix.
+#
+# A final job (CORE-81) files issues from the verdicts the oracle job wrote: one per removable
+# workaround, one `bug` for untagged mismatches, and one when the canary could not run. The
+# dispatch inputs are dry runs: they file a clearly marked [dry run] issue and change no probe,
+# tally or exit code.
 
 on:
   workflow_dispatch:
+    inputs:
+      force_removable:
+        description: "Dry run: file a [dry run] issue as if this workaround (e.g. D2, D3+D4) were removable"
+        type: string
+        required: false
+        default: ""
+      force_mismatch:
+        description: "Dry run: file a [dry run] bug issue for one synthetic untagged mismatch"
+        type: boolean
+        required: false
+        default: false
   schedule:
     # Mondays 06:17 UTC
     - cron: "17 6 * * 1"
@@ -49,9 +66,11 @@ jobs:
         run: pnpm build
 
       - name: Workaround canary
+        id: compat
         run: pnpm compat
 
       - name: Native oracle
+        id: oracle
         run: pnpm compat:oracle
 
       - uses: actions/upload-artifact@v4
@@ -60,3 +79,42 @@ jobs:
           name: temporal-oracle-${{ github.run_id }}
           path: artifacts/
           if-no-files-found: warn
+
+  # Its own job so that the oracle job, which installs the whole workspace with build scripts
+  # approved and runs Chromium, never holds a write token. This one runs only first-party Node and
+  # `gh`. `!cancelled()` runs it after a failed `oracle` job (the could-not-run case) and not after
+  # a person cancels the run (GitHub Docs, "Contexts", status check functions).
+  report:
+    name: Report to issues
+    needs: oracle
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true # no artifact = no verdicts = a could-not-run issue
+        with:
+          name: temporal-oracle-${{ github.run_id }}
+          path: artifacts/
+
+      - name: Open or update canary issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_REMOVABLE: ${{ inputs.force_removable }}
+          FORCE_MISMATCH: ${{ inputs.force_mismatch }}
+        run: |
+          args=(temporal-oracle)
+          if [ -n "$FORCE_REMOVABLE" ]; then args+=("--force-removable=$FORCE_REMOVABLE"); fi
+          if [ "$FORCE_MISMATCH" = "true" ]; then args+=(--force-mismatch); fi
+          node scripts/canary-report.mjs "${args[@]}"

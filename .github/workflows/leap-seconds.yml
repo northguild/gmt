@@ -1,16 +1,25 @@
 name: Leap-second canary
 
 # Compares GMT's built-in leap-second table (packages/gmt/src/internal/leapSeconds.ts) with the
-# IERS Leap_Second.dat file (MAR-16 spec §5.8). Manual and weekly only: never part of ci.yml or
-# `pnpm run validate`, because those runs have no network. A failing run means IERS lists a row
-# GMT does not, or a row differs: the log prints the IERS header line ("Updated through IERS
-# Bulletin …") and each difference. A new row is a data edit plus a `patch` changeset.
+# IERS Leap_Second.dat file. Manual and weekly only: never part of ci.yml or
+# `pnpm run validate`, because those runs have no network. A difference (IERS lists a row GMT does
+# not, or a row differs) opens or updates one `canary` issue carrying the IERS header line
+# ("Updated through IERS Bulletin …"); a run that cannot reach IERS opens or updates one
+# could-not-run issue (CORE-81). The run still fails on either, as before. A new row is a data edit
+# plus a `patch` changeset. The dispatch input is a dry run: it files a clearly marked [dry run]
+# issue and changes no comparison or exit code.
 #
 # The table is closed (CGPM 2026 Resolution 5: continuous UTC from 20 May 2027). Retire this
 # workflow and scripts/leap-seconds.mjs once IERS publishes its file format for continuous UTC.
 
 on:
   workflow_dispatch:
+    inputs:
+      force_difference:
+        description: "Dry run: file a [dry run] issue for one synthetic table difference"
+        type: boolean
+        required: false
+        default: false
   schedule:
     # Mondays 06:43 UTC
     - cron: "43 6 * * 1"
@@ -27,8 +36,13 @@ jobs:
     name: IERS leap-second table
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # The script uses only Node built-ins and reads the source as text: no install, no build.
       - uses: actions/setup-node@v4
@@ -36,4 +50,18 @@ jobs:
           node-version: 24
 
       - name: Compare with IERS Leap_Second.dat
+        id: check
         run: node scripts/leap-seconds.mjs check
+
+      # One job: it installs nothing and runs only first-party Node and `gh`, so there is no
+      # third-party code to keep away from the write token. `!cancelled()` runs this after the
+      # comparison's exit 1 or 2, so the run fails and the issue opens.
+      - name: Open or update canary issues
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_DIFFERENCE: ${{ inputs.force_difference }}
+        run: |
+          args=(leap-seconds)
+          if [ "$FORCE_DIFFERENCE" = "true" ]; then args+=(--force-leap-difference); fi
+          node scripts/canary-report.mjs "${args[@]}"

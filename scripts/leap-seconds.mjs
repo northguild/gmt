@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Leap-second canary (MAR-16 spec §5.8).
+ * Leap-second canary.
  *
  *   node scripts/leap-seconds.mjs check [--file=<path>]
  *     Fetches IERS `Leap_Second.dat`, parses its data rows (MJD, day, month, year, TAI − UTC) and
@@ -10,6 +10,12 @@
  *     added or removed, or the file no longer reads as rows. Exit 2 when it cannot run (the
  *     network or the source file). `--file` reads a local copy instead of fetching, for offline
  *     debugging.
+ *
+ * Every run that gets as far as reading the two tables writes `artifacts/leap-seconds.json`
+ * (CORE-81) before it prints or exits: a verdict of what it found, or a could-not-run note ahead of
+ * exit 2. The workflow files an issue from that file with `scripts/canary-report.mjs`. A usage
+ * error writes nothing: no canary ran. A file that cannot be written is reported on stderr and
+ * changes neither the console text nor the exit code.
  *
  * The leap-second table is closed and built in: CGPM 2026 Resolution 5 makes UTC continuous from
  * 20 May 2027, and IERS Bulletin C 72 rules out an insertion at the end of December 2026. ITU-R
@@ -28,6 +34,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  couldNotRunVerdict,
+  leapSecondsVerdict,
+  saveVerdict,
+} from "./lib/canary-verdict.mjs";
 
 // fileURLToPath, not `.pathname`: see scripts/test-markers.mjs — a percent-encoded path breaks
 // any checkout whose directory name contains a space.
@@ -176,6 +187,11 @@ async function readIers(file) {
   return await response.text();
 }
 
+/** Writes the verdict file; a failure is only reported (see `saveVerdict`). */
+function saveLeapVerdict(verdict) {
+  saveVerdict(ROOT, verdict, "leap-seconds");
+}
+
 async function loadTables(file) {
   try {
     const sourceText = readFileSync(join(ROOT, SOURCE), "utf8");
@@ -186,6 +202,9 @@ async function loadTables(file) {
     };
   } catch (error) {
     console.error(`leap-seconds: cannot run: ${error.message}`);
+    saveLeapVerdict(
+      couldNotRunVerdict("leap-seconds", `cannot run: ${error.message}`),
+    );
     process.exit(2);
   }
 }
@@ -197,6 +216,14 @@ async function check(options) {
     ...iers.problems,
     ...compareRows(source.rows, iers.rows),
   ];
+  saveLeapVerdict(
+    leapSecondsVerdict({
+      header: iers.header,
+      gmtRows: source.rows.length,
+      iersRows: iers.rows.length,
+      differences: problems,
+    }),
+  );
   const header = iers.header ?? "(no header line)";
   if (problems.length > 0) {
     console.error(
