@@ -222,6 +222,18 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 
 **A bounded loop that runs out returns the sentinel, never a partial value.** When a walker, stepper or search hits its cap without converging (e.g. `zonedUnitStart`'s transition walk-back, `bucketRange`'s 10,000-boundary cap), the function returns `""` / `null` / `[]`. A plausible-looking wrong answer is worse than the documented sentinel.
 
+### Loop cost
+
+- **Name what bounds every loop.** A loop bounded by a constant, or by the output size, needs no more. A count that grows with the input span, a log's length or a holiday list's length needs a stated reason no closed form exists, in a comment beside the loop.
+- **Formula first.** Before stepping day by day, use epoch-day arithmetic (`epochDayOf`, `isoFieldsOf`, `isoWeekdayOf` in `internal/epochDay.ts`), whole-week jumps, and binary search over sorted arrays (`lowerBound`, `countWithin`). Walk only the remainder, at most a week, and only the dates near a zone transition.
+- **Temporal at the edges.** Parse inputs once on the way in; format once on the way out. Build or parse no Temporal object per loop step or inside a sort comparator.
+- **Resolve once.** Validate and resolve a calendar, schedule, zone or rule set once per public call, and pass it in resolved form to an `internal/` core. A public function never calls another public function; both call the core.
+- **Remember only what is pure.** A module-level memo holds only facts that are a pure function of their key for the life of the process (zone transitions, parsed holiday strings, validated zone ids, `Intl` formatters built from explicit arguments). It is bounded and cleared on overflow, stores no answer that depends on the clock or on process defaults, and does no work at import time. The existing memos are in `internal/zonedTransitionSearch.ts`, `internal/businessCalendar.ts`, `internal/offsetTimeline.ts` and `internal/formatterCache.ts`; reuse them before adding one.
+- **No `new Intl.*Format` outside `internal/formatterCache.ts`**, except the default-locale read in `internal/resolveLocale.ts`.
+- **Nothing runs at import, and no fixtures ship.** No top-level Temporal or `Intl` call. Test data, repros and canary tables never live in a module that shipped code imports.
+- **Measure what you add.** A function with a span-dependent loop gets a `packages/gmt/bench/` row for a short, a 1-year and a 10-year input. The handoff gives the numbers and the size delta of each touched entry from `pnpm size --files <entry>`. Put no timing assertion in an `it` row: it is flaky across the CI matrix.
+- **The existing rows are the contract when optimising.** A rewrite keeps every row green on the full zone matrix. Old against new over random inputs is a check, never an expected value.
+
 ## Plain / Zoned Separation
 
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
@@ -419,6 +431,7 @@ The one rule; other docs link here.
 | Change                                                         | Changeset                                              |
 | -------------------------------------------------------------- | ------------------------------------------------------ |
 | Bug fix, including a behaviour correction to shipped API       | `patch`                                                |
+| Speed or size gain; no output, option or signature change      | `patch`                                                |
 | Refactor, docs, tests or agent config with no behaviour change | none                                                   |
 | New public API (function, option, namespace)                   | `minor`                                                |
 | Breaking change (removed option, changed output or signature)  | `minor`, with a **Breaking changes** migration section |
@@ -427,6 +440,8 @@ The one rule; other docs link here.
 release (owner decision, 2026-09-17). Fix to the standard: no compatibility shim, no deprecation
 period, and no "removed in a later version" wording. The changeset's **Breaking changes** section
 names every affected function and shows each old call or output next to its replacement.
+
+A speed or size changeset states the savings: before → after for size (minified and gzipped) and for speed.
 
 Every epic story so far adds API, so its changeset is `minor`. A fix to an earlier story is still `patch`. Run `pnpm changeset:status` to prove coverage. See `PUBLISHING.md` for the release flow.
 

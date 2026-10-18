@@ -21,6 +21,9 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
 - [ ] Repeated calendar steps are computed from the anchor (`start.add(amount × k)`), not by compounding the previous result
 - [ ] Calendar arithmetic clamps (TC39 `overflow: "constrain"`) unless the function is a parser
+- [ ] No loop's count grows with the input span where a closed form exists; no Temporal parse or construction per iteration or in a comparator ([§ Loop cost](./coding-standards.md#loop-cost))
+- [ ] Calendars, schedules and zones resolved once per call; no public function calls another; no `new Intl.*Format` outside the formatter cache
+- [ ] No module-level work and no test data in shipped modules; `pnpm size` within budget
 
 ## Tests
 
