@@ -42,6 +42,10 @@ The shared 30/360 numerator is `360 × (Y2 − Y1) + 30 × (M2 − M1) + (D2 −
 | `RBA` | §4.16(j)–(l), Supplement 43 | (xi) | "RBA Bond Basis (quarter)" is `0.25`, half-year `0.5`, annual `1`; `ACT/ACT.ISDA` applies to a first or final period shorter than the regular length |
 | `ACT/ACT.AFB` | FpML (AFB 1994) | — | Actual days over 366 if a 29 February falls in the period, else 365, walking back whole years for periods over one year |
 
+## Tool
+
+**Day Count Comparator.** Enter two dates and see the year fraction under every FpML convention side by side. The February and 31st rules are highlighted. Calls `yearFraction`, `dayCount`, `daysInYearBasis`.
+
 ## Design notes
 
 - **Names are the FpML codes, verbatim.** They are what confirmations, FpML messages and term sheets carry, so a reader matches them without a lookup table, and there is exactly one governing paragraph per code. GMT does not normalise them or invent aliases beyond the one FpML itself carries.

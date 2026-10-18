@@ -35,6 +35,10 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 
 ([CCSDS 301.0-B-4](https://ccsds.org/Pubs/301x0b4e1.pdf))
 
+## Tool
+
+**CCSDS Time Code Decoder.** Paste an ASCII A or B string, or the bytes of a CUC or CDS code, and see the instant. The tool writes the instant back in each form. Calls `parseCcsdsAsciiA`, `parseCuc`, `parseCds`, `formatCcsdsAsciiB`.
+
 ## Design notes
 
 - **The 1958 TAI epoch is the trap.** CUC and CDS count from it by default, and treating those counts as seconds since 1970 or as UTC produces an error of twelve years plus the leap-second offset. The epoch is a required parameter on `parseCuc` for that reason, and defaulted-but-documented on `parseCds`.

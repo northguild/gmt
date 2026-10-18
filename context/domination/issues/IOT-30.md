@@ -32,6 +32,10 @@ true offset ∈ [theta - lambda, theta + lambda] RFC 5905 §11.2.1
 
 Offset assumes the network path is symmetric. Delay quantifies the round trip, and a large delay means low confidence in the offset — which is why both are returned together and neither is useful alone. The interval bound needs no symmetry assumption, but it does need the dispersion term to be the RFC's bound rather than an optimistic one.
 
+## Tool
+
+**Extends Clock Offset Estimator** with offset and drift: enter the four NTP timestamps to see the offset, the delay and the uncertainty interval, then feed a sample series to see the drift and any detected step. Calls `clockOffset`, `uncertaintyInterval`, `clockDrift`, `detectClockStep`. Teaches: two timestamps cannot give offset and drift.
+
 ## Design notes
 
 - **Drift requires at least two samples**, and honest failure below that is the entire point of this rewrite. Returning a drift from one measurement is fabrication.

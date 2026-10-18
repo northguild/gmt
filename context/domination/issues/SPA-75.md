@@ -33,6 +33,10 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 | Nautical twilight | −12° |
 | Astronomical twilight | −18° |
 
+## Tool
+
+**Solar Events Map.** Enter a position, a date and a zone. The tool shows sunrise, sunset, the three twilights and solar noon, names the polar cases, and builds a night interval from the events and offsets the caller picks. The day-night terminator is drawn on the Zoned Earth globe. Calls `solarEvents`, `sunEventAt`, `nightInterval`, `solarPosition`, `subsolarPoint`. It also extends NOTAM Schedule Expander with sunrise- and sunset-relative times. Teaches: night is the caller's definition.
+
 ## Design notes
 
 - **Accuracy is a number in the JSDoc, stated as a GMT rule.** No international body publishes an accuracy for this method; NOAA (US) states one for its implementation and is cited as a source, not as the authority. Within ±72° latitude the method is good to about a minute; outside it, to about ten; the functions say so and never claim better than the method delivers. The 0.01° figure often quoted for Meeus's low-accuracy solar position was not verified against the book and is not claimed.

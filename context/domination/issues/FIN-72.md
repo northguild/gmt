@@ -25,6 +25,10 @@ One national body's guide, the ARRC's (United States, for SOFR), states the same
   - `rateApplicationDays(period, fixingCalendar): { date: string, weightDays: number }[]` — The `standard` case alone: each fixing business day and the calendar days until the next.
   - `lockoutDates(period, days, fixingCalendar, options: { countFrom: 'periodEndDate' | 'lastBusinessDay' }): { lockedFrom: string, lockedRateDate: string, fixingsRepeated: number }` — Where the lockout begins and which fixing it repeats. ISDA's memo notes (footnote 4) that a five-business-day lockout "by reference to the Period End Date" means "the same fixing being used 5 times but having a lockout period that is strictly only 4 Business Days"; `countFrom` makes the confirmation's wording explicit rather than guessed.
 
+## Tool
+
+**Extends Schedule Generator** with observation: choose an observation method to see its shift, lookback or lockout drawn against each calculation period. Calls `observationSchedule`, `lockoutDates`.
+
 ## Design notes
 
 - **Weights are calendar days between fixing business days.** A Friday's rate applies for three days over an ordinary weekend and four over a bank-holiday weekend; that is what makes the fixing calendar load-bearing and why the schedule, not the caller, computes it.

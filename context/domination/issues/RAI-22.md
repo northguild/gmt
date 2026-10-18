@@ -21,6 +21,10 @@ Timetable data — railML, HAFAS and their kin — encodes when a train runs as 
   - `formatOperatingBitmask(dates: string[], range: { from: string, to: string }): string` — Inverse.
   - `bitmaskFromDaysOfOperation(days: number[], range, options?: { exceptions?: string[] }): string` — Weekly pattern plus exceptions to a bitmask, built on AV-26's `operatingDatesBetween` so rail and air agree about a weekday.
 
+## Tool
+
+**Operating Bitmask Reader.** Enter a bitmask and its period and see the dates it stands for. A cross-border schedule is split into segments by zone. Calls `parseOperatingBitmask`, `formatOperatingBitmask`, `crossBorderSchedule`.
+
 ## Design notes
 
 - **`offsetChange` replaces `zonesCrossed`.** The original spec counted "timezone transitions", which is not a well-defined quantity for a train: a service may pass through zones it never stops in, and offset changes are what actually affect the schedule. The offset difference between endpoints is unambiguous and is what a timetable needs.

@@ -34,6 +34,10 @@ The authorities are the IAU Working Group on Cartographic Coordinates and Rotati
 
 ([NASA GISS Mars24 technical notes](https://www.giss.nasa.gov/tools/mars24/help/notes.html) — test oracle)
 
+## Tool
+
+**Mars Clock.** Enter an instant and a longitude to see the Mars Sol Date, Airy Mean Time and local mean solar time. Enter a mission's landing to see its sol number. Calls `toMarsSolDate`, `airyMeanTime`, `localMeanSolarTime`, `missionSolNumber`.
+
 ## Design notes
 
 - **A Mars hour is not an Earth hour.** LMST divides the sol into 24 equal parts, so a Mars second is about 1.027 Earth seconds. Returning `{ hours, minutes, seconds }` rather than a duration or an ISO string keeps that distinction visible — an ISO time string would imply Earth seconds and be quietly wrong.

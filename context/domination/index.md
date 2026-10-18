@@ -6,7 +6,7 @@ This file is a progressive-disclosure entry point. Read what you need:
   table, risks, and the verified standards list. **The entry file.**
 - [painpoints.md](painpoints.md) — Researched domain evidence per realm, with primary-source
   citations. **Read this before adding or changing any realm function.**
-- [tracker.md](tracker.md) — The 71 stories in build order, the `Blocked by` column, and
+- [tracker.md](tracker.md) — The 75 stories in build order, the `Blocked by` column, and
   the Definition of Done binding every story.
 - [issues/index.md](issues/index.md) — Full specs, one file per story, named by story ID.
 - [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on
@@ -14,6 +14,8 @@ This file is a progressive-disclosure entry point. Read what you need:
 - [specs/index.md](specs/index.md) — The spec of a story in progress; deleted when the story is Done (its decisions move to the issue file).
 - [research/index.md](research/index.md) — Research records: the primary-source evidence behind specs, including the
   verification files in `research/spike-2026-09/`.
+- [../ultimation/index.md](../ultimation/index.md) — The epic after this one: parity with every other
+  date and time platform, and the rule that decides when a parity gap becomes a story.
 
 ## Orientation
 

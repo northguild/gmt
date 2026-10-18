@@ -34,6 +34,10 @@ The draft also assumed one data type. Interfaces in production are overwhelmingl
 | `TS`: `DTM^D` etc. | v2.3.1–v2.5.1 composite; second component is the deprecated degree of precision |
 | `""` (double quotes) | Explicit null in HL7, distinct from absent |
 
+## Tool
+
+**Clinical Timestamp Decoder.** Paste an HL7 v2 TS or DTM value. The tool shows its precision, whether it states an offset, and the instant it resolves to under a facility zone you choose. Calls `parseHL7`, `resolveHL7Local`. Teaches: offset-absent means local to the sender, never UTC.
+
 ## Design notes
 
 - **Offset-absent must not become UTC.** The union return type makes it impossible to use an offset-absent value as an instant without acknowledging it, which is the entire point. This mirrors the EDIFACT DTM format-code handling in INT-15 — the same defect in a different industry.

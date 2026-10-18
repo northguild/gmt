@@ -28,6 +28,10 @@ A third case the draft did not consider: **the trade date is not the calendar da
 - `SessionPhase` is `'preMarket' | 'openingAuction' | 'continuous' | 'lunch' | 'closingAuction' | 'postMarket'`.
 - `MarketCalendar` is `{ timeZone: string, weekend: number[], sessions: SessionTemplate[], holidays: string[], halfDays: { date: string, sessions: SessionTemplate[] }[], sessionRollover?: string }`. `sessionRollover` is the local time of day at which the trade date advances; absent, the trade date is the local calendar date.
 
+## Tool
+
+**Market Session Clock.** Pick a market calendar and a moment. The tool shows the sessions of the day with lunch breaks and half days, the current phase, and the trade date the moment belongs to. Calls `tradingSessions`, `currentPhase`, `tradeDateFor`.
+
 ## Design notes
 
 - **`isMarketOpen` defaults to continuous trading**, because that is what the question almost always means, but the phase list makes the alternative reachable. A boolean with no phase concept cannot distinguish "open" from "quotable".

@@ -21,6 +21,10 @@ The authority is IEC 61162-1:2024, Edition 6.0 (maritime navigation and radiocom
   - `parseGgaTime(sentence: string, referenceDate: string): string` and `parseGllTime(sentence: string, referenceDate: string): string` — Time-only sentences resolved against a caller-supplied UTC date, choosing the nearest candidate day so a fix at 23:59:59 received at 00:00:01 lands on the right side of midnight.
   - `nmeaChecksumValid(sentence: string): boolean` — The XOR checksum; a corrupted sentence must not yield a plausible time.
 
+## Tool
+
+**NMEA Sentence Reader.** Paste an RMC, ZDA, GGA or GLL sentence. The tool shows the instant, the century the caller's year window chose for a two-digit year, the sign of the zone description and whether the checksum holds. Calls `parseRmcDateTime`, `parseZdaDateTime`, `parseGgaTime`, `parseGllTime`, `nmeaChecksumValid`.
+
 ## Design notes
 
 - **No century is inferred.** As for TLE epochs (SPA-51), no century is built in; the caller states the 100-year window with `yearWindow`, the option INT-15 defines as `TwoDigitYearOptions` (`"rolling"`, or the first year of a fixed window), and the JSDoc explains the GPS week-rollover failure that produces 1999- and 2019-dated fixes from old receivers, which MAR-16 handles at the week level.

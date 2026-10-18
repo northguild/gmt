@@ -22,6 +22,10 @@ The tension is real: bundled calendar data is genuinely useful and genuinely goe
 
 Exchanges by ISO 10383 MIC, spread across regions: `XNYS`, `XNAS`, `XLON`, `XPAR`, `XTKS`, `XHKG`, `XNSE`, `BVMF` (each MIC confirmed against the ISO 10383 registry at implementation — not reached — marked, not asserted here); TARGET plus the operators of the USD, GBP and JPY large-value payment systems for payment systems — codes to be confirmed against each operator's published calendar.
 
+## Tool
+
+**Extends Market Session Clock** with reference calendars: pick an exchange by its code to load its calendar. The tool shows where the calendar came from and says when a date falls past its coverage. Calls `exchangeCalendar`, `dataProvenance`, `isCalendarStale`.
+
 ## Design notes
 
 - **Subpath isolation is the architectural point.** Bundled data is opt-in and tree-shakeable, so importing `@northguild/gmt/finance` never pulls calendar tables into a bundle. This is the epic-wide rule stated in the tracker's Definition of Done, and finance is where it is most tempting to break.

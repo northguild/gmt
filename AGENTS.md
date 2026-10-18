@@ -18,6 +18,7 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                                                                             |
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                                                                 |
 | [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first                                                                         |
+| [context/ultimation/index.md](./context/ultimation/index.md)                                     | When proposing a capability another platform or language has — the parity rule decides whether it becomes a story                              |
 
 ## Git — Only on an Explicit Instruction
 

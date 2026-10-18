@@ -30,6 +30,10 @@ Medical imaging is a large share of all clinical timestamps, and DICOM uses its 
 The offset suffix uses the same `&ZZXX` encoding as the *Timezone Offset From UTC* attribute.
 ([DICOM PS3.5 §6.2](https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html); DICOM is also published internationally as ISO 12052, not reached — marked, not asserted)
 
+## Tool
+
+**Extends Clinical Timestamp Decoder** with DICOM: paste a DA, TM or DT value, or a date and a time, to see the precision and the instant under the facility zone. Calls `parseDicomDateTime`, `combineDicomDateAndTime`.
+
 ## Design notes
 
 - **`&ZZXX` is not ISO 8601.** `+0500` has no colon, and the sign is part of the composite. It must be translated, not passed through.

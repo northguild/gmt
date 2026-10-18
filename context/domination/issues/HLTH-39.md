@@ -18,6 +18,10 @@ Two constraints make it non-trivial. The shift must be **identical within a pati
 - `packages/gmt/src/health/validate/shiftConsistency.ts`:
   - `intervalsPreserved(original: Interval[], shifted: Interval[]): boolean` — Verifies a shift preserved every interval. For validating a de-identification pipeline.
 
+## Tool
+
+**De-identification Shifter.** Shift a record set by a per-subject offset. The tool shows that intervals between dates survive and that ages are capped at the caller's value. Calls `shiftDate`, `shiftInterval`, `capAge`, `intervalsPreserved`.
+
 ## Design notes
 
 - **GMT does not generate the shift offset and does not manage patient keys.** Deriving a per-patient offset requires a keyed pseudonymous identifier and a cryptographic function, which is a security concern with a security review, not time math. Generating one here would produce an offset that looks random and is not — the worst outcome for a de-identification tool. `shiftDays` is supplied by the caller.

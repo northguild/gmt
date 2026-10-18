@@ -19,6 +19,10 @@ Perpetual futures accrue funding at fixed UTC intervals, dated instruments expir
 - `packages/gmt/src/finance/get/tradingDayBoundary.ts`:
   - `tradingDayBoundary(isoString: string, options: { boundary: 'utc' | 'exchangeLocal', timeZone?: string }): Interval` — The 24-hour window a timestamp belongs to, under an explicit boundary definition.
 
+## Tool
+
+**Funding and Expiry Clock.** Pick a continuous market and see its next funding time, the funding times in a range, and the next expiry. The tool also shows where the trading day begins. Calls `nextFundingTime`, `fundingTimesBetween`, `nextExpiry`, `tradingDayBoundary`.
+
 ## Design notes
 
 - **Schedules are parameters, not constants.** Eight-hourly funding at 00:00, 08:00 and 16:00 UTC is the most common convention, not a standard — venues differ, and some have changed theirs. Hardcoding a venue's schedule would make GMT wrong without warning when that venue changes.

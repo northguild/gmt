@@ -50,6 +50,10 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 | 2050 … 2150 | `−20 + 32((y − 1820) / 100)² − 0.5628(2150 − y)` |
 | y > 2150 | `−20 + 32u²`, `u = (y − 1820) / 100` |
 
+## Tool
+
+**Sidereal Clock.** Enter an instant and a longitude to see Greenwich and local sidereal time. The tool shows where the UT1 and delta T values come from and says when they are stale. Calls `greenwichMeanSiderealTime`, `localSiderealTime`, `dut1At`, `deltaT`, `isUt1Stale`.
+
 ## Design notes
 
 - **DUT1 is predicted, not derived.** Bulletin A publishes measurements and short-term predictions; beyond the prediction horizon there is no correct value. `isUt1Stale` and an overridable `dut1` exist because the bundled table is guaranteed to go out of date, and a silently stale DUT1 is a silently mispointed antenna.

@@ -48,6 +48,10 @@ So `24001.50000000` is 2024-01-01 12:00 UTC.
 
 ([AMSAT keplerian formats](https://www.amsat.org/keplerian-elements-formats/), [Project Pluto TLE notes](https://www.projectpluto.com/tle_info.htm))
 
+## Tool
+
+**TLE Epoch and Light Time.** Paste a TLE and see its epoch decoded. Enter a distance to see the spacecraft event time, the Earth received time and the one-way light time. Calls `parseTleEpoch`, `spacecraftEventTime`, `earthReceivedTime`, `oneWayLightTime`.
+
 ## Design notes
 
 - **No century is built in, not even the TLE convention's.** A fixed pivot is right today and wrong later: the publishers' 1957–2056 window stops working in 2057. So the year is read the way every GMT two-digit year is (`TwoDigitYearOptions` and `internal/twoDigitYear.ts`, from INT-15): the caller names a fixed window (`{ yearWindow: 1957 }` reproduces the publishers' convention, for archives) or `"rolling"` (the 100 years from 50 before the current UTC year to 49 after, for live element sets), and the function returns the sentinel without one. The JSDoc shows both and says why a historical archive should not use `"rolling"`.

@@ -36,6 +36,10 @@ Credit default swaps have their own fixed dates. Coupons fall on the 20th of Mar
 | `SN` | Spot/next — spot date to the following business day |
 | `1D`, `1W`, `3M`, `2Y` | Count plus unit |
 
+## Tool
+
+**Extends Settlement and Tenor Calculator** with tenors and standard dates: enter a tenor to see its date, and see the IMM dates and the next CDS roll date on the calendar. Calls `tenorDate`, `immDatesBetween`, `nextCdsRollDate`.
+
 ## Design notes
 
 - **`ON`, `TN` and `SN` are not durations** and cannot be parsed as count-plus-unit. They are relative to today or to spot, which is why `parseTenor` returns a union rather than always yielding a count. Treating `ON` as `1D` is wrong across a weekend.

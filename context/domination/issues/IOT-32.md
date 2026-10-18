@@ -24,6 +24,10 @@ Every mature telemetry system separates the two, and GMT has no primitive for it
   - `sessionWindows(observations: { observedAt: string }[], options: { gap: string }): { window: Interval, count: number }[]` — Gap-based sessions: each observation opens a window of length `gap`, overlapping windows merge.
   - `detectGaps(observations: { observedAt: string }[], options: { period: string, tolerance: string }): { from: string, to: string, missed: number }[]` — Runs of missing samples in a series that should tick every `period`.
 
+## Tool
+
+**Watermark Playground.** Enter events with observed and received times. The tool marks each one on time, late or future, draws sliding and session windows, and shows gaps in the series. Calls `classifyArrival`, `watermark`, `slidingWindowsFor`, `sessionWindows`, `detectGaps`.
+
 ## Design notes
 
 - **`observedAt` and `receivedAt` are both required.** Deriving one from the other is what this story exists to prevent. `lagMs` is derived and may legitimately be large.

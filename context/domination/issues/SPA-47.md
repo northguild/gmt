@@ -34,6 +34,10 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 '2026-01-01T00:00:00 TCG'
 ```
 
+## Tool
+
+**Extends Satellite Clock Converter** with Terrestrial Time and Geocentric Coordinate Time: each appears as another row, with its gap from UTC. Calls `toTT`, `fromTT`, `toTCG`, `fromTCG`.
+
 ## Design notes
 
 - **No Julian Date is needed here.** Eq. (10.1) is linear in elapsed TT from a fixed epoch; `(JD_TT − T₀) × 86400` is simply TT seconds since 1977-01-01T00:00:32.184 TT, and that is computed from nanoseconds since the epoch (CORE-1), which is exact, not from a JD, which is not. That is what lets SPA-49 depend on this story without a cycle. The `1 / (1 − L_G)` factor is kept, not dropped: the IERS note that it "may be approximated" away is a 10⁻¹⁸ rate statement, and an exact formula costs nothing.

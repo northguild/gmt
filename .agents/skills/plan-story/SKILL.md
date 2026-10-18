@@ -55,7 +55,8 @@ owner. Then resume the same `architect` (`SendMessage`) with the answers to fina
 **5a. Shortlist.** Spawn `dox-architect` in shortlist mode with the story id, the tracker row and
 (for a realm story) `context/domination/specs/<ID>/index.md`. It returns 2–4 candidate tools,
 ranked, each with: name, what the reader does with it, the library functions it calls, why it
-fits this story's painpoint, and rough size. It marks one as recommended. No spec yet.
+fits this story's painpoint, and rough size. The issue file's `## Tool` candidates come first; it
+may add others or replace them. It marks one as recommended. No spec yet.
 
 **5b. Owner chooses** — the first grilling round for Dox. Ask with `AskUserQuestion`
 (`multiSelect: true`), recommended tool first with "(Recommended)" in its label, one option per

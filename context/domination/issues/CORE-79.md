@@ -21,6 +21,10 @@ Without one shape, each story invents its own field names, axis order, range rul
 - `packages/gmt/src/internal/position.ts` (not exported from any public barrel):
   - `readPosition(value: unknown): Position | null` — the one check consuming functions call. It returns a fresh `{ latitude, longitude, height? }` when `value` is an object (`internal/isObject.ts`) with a finite `latitude` in [−90, 90], a finite `longitude` in [−180, 180], and either no `height` or a finite `height`; otherwise `null`. Each member is read once; extra keys are ignored. A consumer that receives `null` returns its own sentinel.
 
+## Tool
+
+This story adds the `Position` input type and no function a reader could try. MAR-18's Ship's Clock is the first tool to take it.
+
 ## Design notes
 
 - **Type only; each consumer validates through the internal helper.** A consuming function calls `readPosition` and returns the sentinel its own return type takes (`""`, `null`, `false`, `[]`) when it gets `null`. No public `isValidPosition` ships here.
