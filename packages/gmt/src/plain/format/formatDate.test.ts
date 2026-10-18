@@ -496,7 +496,7 @@ describe("formatDate with an option that is an object", () => {
     expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
   });
 
-  // Spec CORE-80 slice 9 § A: formatters are shared only when their arguments are fully plain.
+  // Formatters are shared only when their arguments are fully plain.
   describe("formatter cache", () => {
     function countConstructions(run: () => void): number {
       const spy = vi.spyOn(Intl, "DateTimeFormat");

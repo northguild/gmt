@@ -107,10 +107,10 @@ with the first cut after that.
 | 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
 | 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
 | 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
-| 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Not started |
+| 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Done        |
 | 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Not started |
 | 26 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Not started |
-| 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | CORE-80                 | #322  | —       | Not started |
+| 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Not started |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |
 | 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | CORE-86, CORE-87        | #329  | —       | Waiting     |
 | 30 | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
@@ -191,7 +191,7 @@ reference corpus and tool schemas shipped from the package) come after `CORE-80`
 Neither adds a function. After `CORE-86`, a later story's URLs in code go through `withBase` and
 the dist guard checks them; content links and corpus entries stay base-less. After `CORE-87`, a
 later story's corpus entries land in the shipped file through the same generator. Those six are
-one release, because `CORE-80` removes the root polyfill re-export, a breaking change. `CORE-88`
+one release; `CORE-80` is a `patch` that changes no output, option or signature. `CORE-88`
 links the hosted server from the READMEs and the docs; it follows `CORE-83`, its Status is
 `Waiting` until the server is live, and it ships with the first cut after that. `CORE-56`
 (identifiers, which no story consumes), `CORE-54` (holiday rules), `CORE-84` (recurrence and

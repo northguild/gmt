@@ -174,7 +174,7 @@ describe("cutoffSchedule", () => {
     });
   });
 
-  // Spec CORE-80 slice 9 § D: one parse of the calendar and one read of the options per call.
+  // One parse of the calendar and one read of the options per call.
   describe("resolves once per call", () => {
     it("keeps input order for two entries on the same instant", () => {
       const tied = [
