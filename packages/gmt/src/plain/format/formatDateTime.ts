@@ -4,6 +4,10 @@ import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Return a localized string for a PlainDateTime ISO input using Intl options.
@@ -56,15 +60,17 @@ export function formatDateTime(
     // surfaces the TypeError or RangeError Intl.DateTimeFormat raises for
     // invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
+    checkFormatterArguments("DateTimeFormat", locale, read);
     const epochMilliseconds =
       Temporal.PlainDateTime.from(value).toZonedDateTime(
         "UTC",
       ).epochMilliseconds;
     return normalizeDateTime(
-      new Intl.DateTimeFormat(locale, plainDateTimeFormatOptions(read)).format(
-        epochMilliseconds,
-      ),
+      cachedFormatter(
+        "DateTimeFormat",
+        locale,
+        plainDateTimeFormatOptions(read),
+      ).format(epochMilliseconds),
     );
   } catch {
     return "";

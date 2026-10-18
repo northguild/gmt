@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import type { LocaleNameStyle } from "./getLocaleMonthNames";
@@ -47,7 +48,7 @@ export function getLocaleEraNames(
       const resolved: "long" | "short" | "narrow" =
         style === "short" || style === "narrow" ? style : "long";
 
-      const formatter = new Intl.DateTimeFormat(resolvedLocale, {
+      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
         calendar: "gregory",
         era: resolved,
         timeZone: "UTC",

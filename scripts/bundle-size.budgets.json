@@ -26,7 +26,15 @@
     }
   },
   "absent": {
-    "addBusinessDays": ["src/internal/temporalCompat/repros.ts"],
-    "businessDaysBetween": ["src/internal/temporalCompat/repros.ts"]
+    "addBusinessDays": [
+      "src/internal/temporalCompat/repros.ts",
+      "src/internal/zonedWallClock.ts",
+      "src/internal/temporalCompat/probeRepros.ts"
+    ],
+    "businessDaysBetween": [
+      "src/internal/temporalCompat/repros.ts",
+      "src/internal/zonedWallClock.ts",
+      "src/internal/temporalCompat/probeRepros.ts"
+    ]
   }
 }

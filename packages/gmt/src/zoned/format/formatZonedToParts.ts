@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
@@ -93,7 +94,7 @@ export function formatZonedToParts(
     if (resolved === null) {
       return [];
     }
-    return new Intl.DateTimeFormat(locale, resolved)
+    return cachedFormatter("DateTimeFormat", locale, resolved)
       .formatToParts(zonedDateTime.epochMilliseconds)
       .map((p) => ({ type: p.type, value: p.value }));
   } catch {

@@ -1,9 +1,19 @@
+import { parseBusinessCalendar } from "../../internal/businessCalendar";
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { BusinessCalendar } from "../../types";
 import { cutoffAt } from "./cutoffAt";
 import { cutoffSchedule } from "./cutoffSchedule";
+
+vi.mock("../../internal/businessCalendar", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../internal/businessCalendar")>();
+  return {
+    ...actual,
+    parseBusinessCalendar: vi.fn(actual.parseBusinessCalendar),
+  };
+});
 
 /** A vessel leaving Friday 14 June 2024 at 18:00 in Amsterdam (+02:00, summer time). */
 const departure = "2024-06-14T16:00:00Z";
@@ -160,6 +170,65 @@ describe("cutoffSchedule", () => {
       mockTemporalInstantFromThrow();
       expect(cutoffSchedule(departure, stack, { timeZone: amsterdam })).toEqual(
         [],
+      );
+    });
+  });
+
+  // Spec CORE-80 slice 9 § D: one parse of the calendar and one read of the options per call.
+  describe("resolves once per call", () => {
+    it("keeps input order for two entries on the same instant", () => {
+      const tied = [
+        { name: "second-listed-first", offset: "P1D" },
+        { name: "first-listed-second", offset: "PT24H" },
+      ];
+      expect(
+        cutoffSchedule(departure, tied, { timeZone: "UTC" }).map(
+          (entry) => entry.name,
+        ),
+      ).toEqual(["second-listed-first", "first-listed-second"]);
+    });
+
+    it("equals 50 cutoffAt calls and parses the calendar once", () => {
+      const calendar: BusinessCalendar = {
+        weekend: [6, 7],
+        holidays: ["2024-06-17"],
+        timeZone: amsterdam,
+      };
+      const options = {
+        timeZone: amsterdam,
+        calendar,
+        roll: "preceding" as const,
+      };
+      const entries = Array.from({ length: 50 }, (_, index) =>
+        index % 3 === 0
+          ? {
+              name: `entry-${index}`,
+              offset: `P${index}D`,
+              atLocalTime: "17:00",
+            }
+          : { name: `entry-${index}`, offset: `PT${index * 7 + 1}H` },
+      );
+      const expected = entries.map((entry) => ({
+        name: entry.name,
+        at: cutoffAt(departure, entry.offset, {
+          ...options,
+          atLocalTime: entry.atLocalTime,
+        }),
+      }));
+      vi.mocked(parseBusinessCalendar).mockClear();
+      const actual = cutoffSchedule(departure, entries, options);
+      expect(vi.mocked(parseBusinessCalendar)).toHaveBeenCalledTimes(1);
+      expect(actual).toEqual(
+        [...expected].sort((a, b) => {
+          const left = Temporal.ZonedDateTime.from(
+            a.at as string,
+          ).epochNanoseconds;
+          const right = Temporal.ZonedDateTime.from(
+            b.at as string,
+          ).epochNanoseconds;
+          // Zero on equal instants, so the sort is stable like the one under test.
+          return left > right ? 1 : left < right ? -1 : 0;
+        }),
       );
     });
   });

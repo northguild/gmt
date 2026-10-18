@@ -1,3 +1,4 @@
+import { cachedFormatter, checkFormatterArguments } from "./formatterCache";
 // Option resolution for formatting an exact time (a ZonedDateTime, or an
 // Instant in a given zone) through the runtime's `Intl.DateTimeFormat`. The
 // rules are the Temporal proposal's ECMA-402 amendments: CreateDateTimeFormat
@@ -102,7 +103,7 @@ export function formatWallClockOrZoned(
   options: Options,
   includeTimeZoneName: boolean,
 ): string {
-  new Intl.DateTimeFormat(locale, options);
+  checkFormatterArguments("DateTimeFormat", locale, options);
   if (includeTimeZoneName) {
     const resolved = instantFormatOptions(
       options,
@@ -111,14 +112,15 @@ export function formatWallClockOrZoned(
     );
     return resolved === null
       ? ""
-      : new Intl.DateTimeFormat(locale, resolved).format(
+      : cachedFormatter("DateTimeFormat", locale, resolved).format(
           zonedDateTime.epochMilliseconds,
         );
   }
   const wallClockMilliseconds = zonedDateTime
     .toPlainDateTime()
     .toZonedDateTime("UTC").epochMilliseconds;
-  return new Intl.DateTimeFormat(
+  return cachedFormatter(
+    "DateTimeFormat",
     locale,
     plainDateTimeFormatOptions(options),
   ).format(wallClockMilliseconds);

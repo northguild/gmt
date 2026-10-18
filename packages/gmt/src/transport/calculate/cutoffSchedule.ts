@@ -1,7 +1,14 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom } from "../../internal";
+import {
+  cutoffAtResolved,
+  resolveCutoffTime,
+  resolveSharedCutoffOptions,
+  type SharedCutoffOptions,
+} from "../../internal/cutoffAtResolved";
+import { instantFrom, parseInstantNanoseconds } from "../../internal";
+import { isDurationString } from "../../internal/inputChecks";
 import { isObject } from "../../internal/isObject";
-import { type CutoffOptions, cutoffAt } from "./cutoffAt";
+import type { CutoffOptions } from "./cutoffAt";
 
 /** One named deadline in a cut-off stack: how long before the anchor, and at what local time. */
 export interface Cutoff {
@@ -47,6 +54,60 @@ export interface CutoffScheduleOptions {
   roll?: CutoffOptions["roll"];
 }
 
+/** What a whole stack shares; the zone, calendar and anchor are resolved at the first entry. */
+type StackState = {
+  anchor: string;
+  options: { timeZone: unknown; calendar: unknown; roll: unknown };
+  shared: SharedCutoffOptions | null;
+  anchorInstant: Temporal.Instant | null;
+};
+
+/** The shared options and the anchor, resolved once; `null` when either is invalid. */
+function stackContext(
+  state: StackState,
+): { shared: SharedCutoffOptions; anchorInstant: Temporal.Instant } | null {
+  const { timeZone, calendar, roll } = state.options;
+  state.shared ??= resolveSharedCutoffOptions(timeZone, calendar, roll);
+  if (state.shared === null) {
+    return null;
+  }
+  if (state.anchorInstant === null) {
+    if (parseInstantNanoseconds(state.anchor) === null) {
+      return null;
+    }
+    state.anchorInstant = instantFrom(state.anchor);
+  }
+  return { shared: state.shared, anchorInstant: state.anchorInstant };
+}
+
+/** One entry's cut-off, or `null` when the entry or its cut-off is invalid. */
+function scheduleEntry(
+  cutoff: unknown,
+  state: StackState,
+): { name: string; at: string; ns: bigint } | null {
+  if (!isObject(cutoff)) {
+    return null;
+  }
+  const { name, offset, atLocalTime } = cutoff as Cutoff;
+  if (typeof name !== "string") {
+    return null;
+  }
+  // The entry's own time of day is checked before the stack's options are read, so an invalid
+  // entry never reads the calendar.
+  const local = resolveCutoffTime(atLocalTime);
+  const context = local === null ? null : stackContext(state);
+  if (local === null || context === null || !isDurationString(offset)) {
+    return null;
+  }
+  const found = cutoffAtResolved(
+    context.anchorInstant,
+    Temporal.Duration.from(offset),
+    local.time,
+    context.shared,
+  );
+  return found === null ? null : { name, at: found.text, ns: found.ns };
+}
+
 /**
  * Compute a whole stack of cut-offs against one anchor event, earliest first.
  *
@@ -88,33 +149,29 @@ export function cutoffSchedule(
     if (!Array.isArray(cutoffs) || !isObject(options)) {
       return [];
     }
+    // Every read of `options` happens here, once. The zone, the calendar and the anchor are
+    // validated and parsed once for the whole stack, at the first entry: an empty list reads
+    // none of them.
     const { timeZone, calendar, roll } = options;
+    const state: StackState = {
+      anchor,
+      options: { timeZone, calendar, roll },
+      shared: null,
+      anchorInstant: null,
+    };
 
-    const schedule: { name: string; at: string; instant: Temporal.Instant }[] =
-      [];
+    const schedule: { name: string; at: string; ns: bigint }[] = [];
     for (const cutoff of cutoffs) {
-      if (!isObject(cutoff)) {
+      const entry = scheduleEntry(cutoff, state);
+      if (entry === null) {
         return [];
       }
-      const { name, offset, atLocalTime } = cutoff as Cutoff;
-      if (typeof name !== "string") {
-        return [];
-      }
-      const at = cutoffAt(anchor, offset, {
-        timeZone,
-        atLocalTime,
-        calendar,
-        roll,
-      });
-      if (at === "") {
-        return [];
-      }
-      schedule.push({ name, at, instant: instantFrom(at) });
+      schedule.push(entry);
     }
 
     // Array.prototype.sort is stable, so entries on the same instant keep their input order.
     return schedule
-      .sort((a, b) => Temporal.Instant.compare(a.instant, b.instant))
+      .sort((a, b) => (a.ns < b.ns ? -1 : a.ns > b.ns ? 1 : 0))
       .map(({ name, at }) => ({ name, at }));
   } catch {
     // Never throws (Core Rule 3): a hostile

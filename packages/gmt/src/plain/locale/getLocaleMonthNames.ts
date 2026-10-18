@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { Temporal } from "../../internal/temporal";
 
@@ -51,16 +52,21 @@ export function getLocaleMonthNames(
     try {
       const resolved: "long" | "short" | "narrow" =
         style === "short" || style === "narrow" ? style : "long";
+      // One formatter for the twelve dates. A PlainDate formats its own wall-clock fields
+      // (Temporal `PlainDate.prototype.toLocaleString`); the same date's UTC midnight in a
+      // `timeZone: "UTC"` formatter shows the same fields.
+      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
+        month: resolved,
+        calendar: "gregory",
+        timeZone: "UTC",
+      });
       const names: string[] = [];
       for (let month = 1; month <= 12; month++) {
         const date = Temporal.PlainDate.from(
           `2024-${String(month).padStart(2, "0")}-15`,
         );
         names.push(
-          date.toLocaleString(resolvedLocale, {
-            month: resolved,
-            calendar: "gregory",
-          }),
+          formatter.format(date.toZonedDateTime("UTC").epochMilliseconds),
         );
       }
       return names;

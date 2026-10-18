@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { Temporal } from "../../internal/temporal";
 import { getLocaleFirstDayOfWeek } from "../../internal/getLocaleFirstDayOfWeek";
@@ -49,13 +50,19 @@ export function getLocaleWeekdayNames(
         style === "short" || style === "narrow" ? style : "long";
       // Build the names in ISO order (Monday-first), then rotate so the
       // locale's first day of week sits at index 0.
+      // One formatter for the seven dates: a PlainDate formats its own wall-clock fields, and
+      // the same date's UTC midnight in a `timeZone: "UTC"` formatter shows the same fields.
+      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
+        weekday: resolved,
+        timeZone: "UTC",
+      });
       const isoOrder: string[] = [];
       for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
         const date = Temporal.PlainDate.from("2024-01-15").add({
           days: dayOfWeek - 1,
         });
         isoOrder.push(
-          date.toLocaleString(resolvedLocale, { weekday: resolved }),
+          formatter.format(date.toZonedDateTime("UTC").epochMilliseconds),
         );
       }
       return isoOrder

@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 /**
  * Return a locale's AM/PM (day-period) labels as `[AM-label, PM-label]`.
@@ -26,7 +27,7 @@ export function getLocaleMeridiems(locale: string | string[]): string[] {
     if (resolvedLocale === null) return [];
 
     try {
-      const formatter = new Intl.DateTimeFormat(resolvedLocale, {
+      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
         timeZone: "UTC",
         hour: "numeric",
         hour12: true,

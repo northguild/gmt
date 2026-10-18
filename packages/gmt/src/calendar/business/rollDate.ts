@@ -1,62 +1,8 @@
 import { Temporal } from "../../internal/temporal";
-import {
-  businessDateFrom,
-  parseBusinessCalendar,
-  type ResolvedBusinessCalendar,
-} from "../../internal/businessCalendar";
-import { isValidDate } from "../../plain/validate";
+import { parseBusinessCalendar } from "../../internal/businessCalendar";
+import { rollBusinessDate } from "../../internal/rollBusinessDate";
+import { isDateString, isRollConventionName } from "../../internal/inputChecks";
 import type { BusinessCalendar, RollConvention } from "../../types";
-import { isValidRollConvention } from "../validate";
-
-function sameMonth(a: Temporal.PlainDate, b: Temporal.PlainDate): boolean {
-  return a.year === b.year && a.month === b.month;
-}
-
-/**
- * Roll in `direction`, and if that leaves the date's month, roll the other way instead.
- */
-function modifiedRoll(
-  date: Temporal.PlainDate,
-  direction: 1 | -1,
-  calendar: ResolvedBusinessCalendar,
-): Temporal.PlainDate | null {
-  const rolled = businessDateFrom(date, direction, calendar);
-
-  // An exhausted walk is a sentinel, not a "left the month" answer: turning round here would
-  // report the opposite direction's date as though the first walk had succeeded.
-  if (rolled === null) {
-    return null;
-  }
-
-  return sameMonth(rolled, date)
-    ? rolled
-    : businessDateFrom(date, direction === 1 ? -1 : 1, calendar);
-}
-
-function rollTo(
-  date: Temporal.PlainDate,
-  convention: RollConvention,
-  calendar: ResolvedBusinessCalendar,
-): Temporal.PlainDate | null {
-  switch (convention) {
-    case "following":
-      return businessDateFrom(date, 1, calendar);
-    case "preceding":
-      return businessDateFrom(date, -1, calendar);
-    case "modifiedFollowing":
-      return modifiedRoll(date, 1, calendar);
-    case "modifiedPreceding":
-      return modifiedRoll(date, -1, calendar);
-    case "endOfMonth":
-      return businessDateFrom(
-        date.with({ day: date.daysInMonth }),
-        -1,
-        calendar,
-      );
-    case "none":
-      return date;
-  }
-}
 
 /**
  * Move a local date onto a working day according to `convention`.
@@ -124,15 +70,15 @@ export function rollDate(
     const resolved = parseBusinessCalendar(calendar);
 
     if (
-      !isValidDate(value) ||
-      !isValidRollConvention(convention) ||
+      !isDateString(value) ||
+      !isRollConventionName(convention) ||
       resolved === null
     ) {
       return "";
     }
 
     try {
-      const rolled = rollTo(
+      const rolled = rollBusinessDate(
         Temporal.PlainDate.from(value),
         convention,
         resolved,

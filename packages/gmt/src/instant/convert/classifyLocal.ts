@@ -1,11 +1,7 @@
 import { Temporal } from "../../internal/temporal";
+import { classifyWall } from "../../internal/earlierOccurrence";
 import { isValidDateTime } from "../../plain/validate";
-import {
-  instantOfWallClock,
-  isoStringBody,
-  plainToZoned,
-  zoneFrame,
-} from "../../internal";
+import { instantOfWallClock, isoStringBody, zoneFrame } from "../../internal";
 
 /**
  * What a zoneless wall time turns out to be once a zone is attached to it.
@@ -79,21 +75,10 @@ export function classifyLocal(
       return "unique";
     }
 
-    const wallClock = Temporal.PlainDateTime.from(localDateTime);
-    const earliest = plainToZoned(wallClock, frame.timeZone, "earlier");
-    const latest = plainToZoned(wallClock, frame.timeZone, "later");
-
-    if (earliest.epochNanoseconds === latest.epochNanoseconds) {
-      return "unique";
-    }
-
-    // Two instants, so the wall time is either repeated or skipped. Temporal separates them
-    // the same way for both, and only the wall clock it lands on tells them apart: for an
-    // overlap both instants read back as the requested time, and for a gap neither does —
-    // "earlier"/"later" resolve a gap by moving off the requested time entirely.
-    return earliest.toPlainDateTime().equals(wallClock)
-      ? "ambiguous"
-      : "nonexistent";
+    return classifyWall(
+      Temporal.PlainDateTime.from(localDateTime),
+      frame.timeZone,
+    ).kind;
   } catch {
     return null;
   }

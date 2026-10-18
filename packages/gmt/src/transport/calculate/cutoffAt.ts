@@ -1,16 +1,13 @@
 import { Temporal } from "../../internal/temporal";
-import { rollDate } from "../../calendar/business/rollDate";
-import { isValidBusinessCalendar } from "../../calendar/validate/isValidBusinessCalendar";
-import { isValidRollConvention } from "../../calendar/validate/isValidRollConvention";
-import { isValidDuration } from "../../duration/validate/isValidDuration";
-import { classifyLocal } from "../../instant/convert/classifyLocal";
-import { resolveLocal } from "../../instant/convert/resolveLocal";
-import { instantFrom } from "../../internal";
+import {
+  cutoffAtResolved,
+  resolveCutoffTime,
+  resolveSharedCutoffOptions,
+} from "../../internal/cutoffAtResolved";
+import { instantFrom, parseInstantNanoseconds } from "../../internal";
+import { isDurationString } from "../../internal/inputChecks";
 import { isObject } from "../../internal/isObject";
-import { isValidTime } from "../../plain/validate/isValidTime";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
 import type { BusinessCalendar, RollConvention } from "../../types";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 
 /** Options for `cutoffAt`. */
 export interface CutoffOptions {
@@ -39,123 +36,6 @@ export interface CutoffOptions {
    * @defaultValue None. The cut-off's date is not rolled; a `calendar` without it returns `""`.
    */
   roll?: RollConvention;
-}
-
-/** The validated options. `rolling` is present exactly when a calendar and a convention are. */
-type ResolvedCutoffOptions = {
-  timeZone: string;
-  atLocalTime: Temporal.PlainTime | null;
-  rolling: { calendar: BusinessCalendar; roll: RollConvention } | null;
-};
-
-function resolveOptions(options: unknown): ResolvedCutoffOptions | null {
-  if (!isObject(options)) {
-    return null;
-  }
-  const { timeZone, atLocalTime, calendar, roll } =
-    options as Partial<CutoffOptions>;
-  if (typeof timeZone !== "string" || !isValidTimeZone(timeZone)) {
-    return null;
-  }
-  if (atLocalTime !== undefined && !isValidTime(atLocalTime)) {
-    return null;
-  }
-  if (calendar !== undefined && !isValidBusinessCalendar(calendar)) {
-    return null;
-  }
-  if (roll !== undefined && !isValidRollConvention(roll)) {
-    return null;
-  }
-  // Rolling needs both a calendar and a direction, and no standard supplies either one by
-  // default: a calendar without a roll, or a roll without a calendar, is a missing term.
-  if ((calendar === undefined) !== (roll === undefined)) {
-    return null;
-  }
-  return {
-    timeZone,
-    atLocalTime:
-      atLocalTime === undefined ? null : Temporal.PlainTime.from(atLocalTime),
-    rolling:
-      calendar === undefined || roll === undefined ? null : { calendar, roll },
-  };
-}
-
-/**
- * The instant a local wall time names: the first occurrence of a repeated hour, as RFC 5545
- * §3.3.5 reads a local time that "occurs more than once", and `null` for a skipped one, which
- * is never shifted.
- */
-function resolveWallTime(
-  wall: Temporal.PlainDateTime,
-  timeZone: string,
-): Temporal.ZonedDateTime | null {
-  const local = wall.toString();
-  const kind = classifyLocal(local, timeZone);
-  if (kind === null || kind === "nonexistent") {
-    return null;
-  }
-  const instant = resolveLocal(local, timeZone, { disambiguation: "earlier" });
-  return instant === ""
-    ? null
-    : Temporal.Instant.from(instant).toZonedDateTimeISO(timeZone);
-}
-
-/** The calendar part of a duration — years, months, weeks and days. */
-function datePart(offset: Temporal.Duration): Temporal.Duration {
-  return Temporal.Duration.from({
-    years: offset.years,
-    months: offset.months,
-    weeks: offset.weeks,
-    days: offset.days,
-  });
-}
-
-/** The exact part of a duration — hours and smaller. */
-function timePart(offset: Temporal.Duration): Temporal.Duration {
-  return Temporal.Duration.from({
-    hours: offset.hours,
-    minutes: offset.minutes,
-    seconds: offset.seconds,
-    milliseconds: offset.milliseconds,
-    microseconds: offset.microseconds,
-    nanoseconds: offset.nanoseconds,
-  });
-}
-
-/**
- * The offset taken off the anchor with no pinning: the calendar part moves the local wall
- * clock, then the exact part comes off in exact time — Temporal's `ZonedDateTime#subtract`,
- * except that a wall clock landing in a skipped hour is `null` rather than moved forward.
- */
-function subtractOffset(
-  anchor: Temporal.ZonedDateTime,
-  offset: Temporal.Duration,
-): Temporal.ZonedDateTime | null {
-  const calendarPart = datePart(offset);
-  if (calendarPart.blank) {
-    return anchor.subtract(timePart(offset));
-  }
-  const wall = resolveWallTime(
-    anchor.toPlainDateTime().subtract(calendarPart),
-    anchor.timeZoneId,
-  );
-  return wall === null ? null : wall.subtract(timePart(offset));
-}
-
-/**
- * The local date the cut-off falls on after rolling, or `null` when the roll fails. With no
- * calendar the date is left as it is.
- */
-function rolledDate(
-  date: Temporal.PlainDate,
-  options: ResolvedCutoffOptions,
-): Temporal.PlainDate | null {
-  if (options.rolling === null) {
-    return date;
-  }
-  const { calendar, roll } = options.rolling;
-  const rolled = rollDate(date.toString(), roll, calendar);
-  return rolled === "" ? null : Temporal.PlainDate.from(rolled);
 }
 
 /**
@@ -229,53 +109,35 @@ export function cutoffAt(
   options: CutoffOptions,
 ): string {
   try {
-    const resolved = resolveOptions(options);
+    if (!isObject(options)) {
+      return "";
+    }
+    // Every read of `options` happens here, once.
+    const { timeZone, atLocalTime, calendar, roll } =
+      options as Partial<CutoffOptions>;
+    // The time of day is checked before the calendar is read, so an invalid one never reads it.
+    const local = resolveCutoffTime(atLocalTime);
+    const shared =
+      local === null
+        ? null
+        : resolveSharedCutoffOptions(timeZone, calendar, roll);
     if (
-      resolved === null ||
-      !isValidInstant(anchor) ||
-      !isValidDuration(offset)
+      shared === null ||
+      local === null ||
+      parseInstantNanoseconds(anchor) === null ||
+      !isDurationString(offset)
     ) {
       return "";
     }
 
     try {
-      const start = instantFrom(anchor).toZonedDateTimeISO(resolved.timeZone);
-      const duration = Temporal.Duration.from(offset);
-
-      if (resolved.atLocalTime !== null) {
-        const day = rolledDate(
-          start
-            .subtract(timePart(duration))
-            .toPlainDate()
-            .subtract(datePart(duration)),
-          resolved,
-        );
-        const pinned =
-          day === null
-            ? null
-            : resolveWallTime(
-                day.toPlainDateTime(resolved.atLocalTime),
-                resolved.timeZone,
-              );
-        return pinned === null ? "" : pinned.toString();
-      }
-
-      const cutoff = subtractOffset(start, duration);
-      if (cutoff === null) {
-        return "";
-      }
-      const day = rolledDate(cutoff.toPlainDate(), resolved);
-      if (day === null) {
-        return "";
-      }
-      if (day.equals(cutoff.toPlainDate())) {
-        return cutoff.toString();
-      }
-      const rolled = resolveWallTime(
-        day.toPlainDateTime(cutoff.toPlainTime()),
-        resolved.timeZone,
+      const found = cutoffAtResolved(
+        instantFrom(anchor),
+        Temporal.Duration.from(offset),
+        local.time,
+        shared,
       );
-      return rolled === null ? "" : rolled.toString();
+      return found === null ? "" : found.text;
     } catch {
       return "";
     }

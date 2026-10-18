@@ -1,3 +1,4 @@
+import { cachedFormatter } from "./formatterCache";
 import type { Temporal } from "./temporal";
 import { joinDateTimeConnector } from "./joinDateTimeConnector";
 import { normalizeDateTime } from "./normalizeDateTime";
@@ -29,7 +30,7 @@ export function formatCalendarDays(
 ): string {
   if (Math.abs(diffDays) > ABS_DAY_THRESHOLD) {
     return normalizeDateTime(
-      new Intl.DateTimeFormat(locale, {
+      cachedFormatter("DateTimeFormat", locale, {
         dateStyle: "long",
         timeStyle,
         timeZone,
@@ -37,7 +38,7 @@ export function formatCalendarDays(
     );
   }
 
-  const dayLabel = new Intl.RelativeTimeFormat(locale, {
+  const dayLabel = cachedFormatter("RelativeTimeFormat", locale, {
     numeric: "auto",
   }).format(diffDays, "day");
 

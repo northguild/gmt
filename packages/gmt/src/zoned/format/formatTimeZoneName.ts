@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import { Temporal } from "../../internal/temporal";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
@@ -98,7 +99,7 @@ export function formatTimeZoneName(
 
     try {
       const style = optionOrDefault(options?.style, "long");
-      const formatter = new Intl.DateTimeFormat(resolvedLocale, {
+      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
         timeZone,
         timeZoneName: style,
         hour: "numeric",

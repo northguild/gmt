@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import { Temporal } from "../../internal/temporal";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
@@ -154,7 +155,7 @@ export function formatDuration(
     const parts = UNITS_IN_ORDER.filter(
       (unit) => includeZero || !isZeroAmount(amounts[unit]),
     ).map((unit) =>
-      new Intl.NumberFormat(locale, {
+      cachedFormatter("NumberFormat", locale, {
         style: "unit",
         unit: UNIT_TO_INTL[unit],
         unitDisplay: style,
@@ -164,7 +165,7 @@ export function formatDuration(
 
     if (parts.length === 0) {
       parts.push(
-        new Intl.NumberFormat(locale, {
+        cachedFormatter("NumberFormat", locale, {
           style: "unit",
           unit: "second",
           unitDisplay: style,
@@ -172,7 +173,7 @@ export function formatDuration(
       );
     }
 
-    return new Intl.ListFormat(locale, {
+    return cachedFormatter("ListFormat", locale, {
       style: style === "long" ? "long" : "short",
       type: "conjunction",
     }).format(parts);

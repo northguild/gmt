@@ -7,9 +7,9 @@ Read with [index.md](./index.md). Story scope part 7 (calendars, zones and forma
 ```ts
 type FormatterKind = "DateTimeFormat" | "NumberFormat" | "ListFormat" | "RelativeTimeFormat";
 /** A shared, read-only formatter for these arguments; built on the first call with them. */
-export function cachedFormatter<K extends FormatterKind>(kind: K, locale: string | string[] | undefined, options: Record<string, unknown>): InstanceType<(typeof Intl)[K]>;
+export function cachedFormatter<K extends FormatterKind>(kind: K, locale: string | string[] | undefined, options: object): InstanceType<(typeof Intl)[K]>;
 /** Construct once to raise the error Intl raises for these arguments; a repeat is a no-op. */
-export function checkFormatterArguments(kind: FormatterKind, locale: string | string[] | undefined, options: Record<string, unknown>): void;
+export function checkFormatterArguments(kind: FormatterKind, locale: string | string[] | undefined, options: object): void;
 ```
 
 **What may be cached** (GMT rule; index authority row "cache bounds and key"). A formatter's
@@ -17,10 +17,19 @@ output is fixed by its constructor arguments and the host's locale data, which i
 It also depends on two pieces of process state: the default locale and the default time zone.
 `process.env.TZ` and test stubs can change either. So a formatter is cached only when:
 
-- `locale` is a string or an array of strings, never `undefined`;
+- `locale` is a string or a non-empty array, never `undefined` or `[]` (both answer from the
+  default locale). An array is read once, first, through `Intl.getCanonicalLocales` (ECMA-402
+  CanonicalizeLocaleList, which `Intl` itself runs through `HasProperty` and `Get`); the key and the
+  constructor both use the canonical result. A Proxy that answers each read differently therefore
+  cannot make the key and the formatter disagree, and a bad list throws before the options are
+  read, as in the constructors;
 - the options carry a `timeZone` string (for `DateTimeFormat`; the other kinds read no zone);
 - every option value is a string, number, boolean or `undefined`. A value that is an object would
   be coerced by Intl, running caller code, so it is constructed fresh every time.
+
+`options` is typed `object`, not `Record<string, unknown>`: callers pass a typed options
+interface, and the cache reads it only through property descriptors (an accessor is never run
+by the key, and makes the arguments uncacheable).
 
 Anything else is constructed exactly as today, uncached. The key is
 `kind + JSON.stringify([locale, options])`, with options built by GMT code in a fixed key order.
@@ -31,6 +40,9 @@ on the default zone. It never caches a failure, so an invalid call throws every 
 
 Formatters have no setters, and `format`, `formatToParts` and `formatRange` return new values,
 so sharing one is safe. Test seam: `clearFormatterCache()`.
+
+A change to `Object.prototype` (or any other intrinsic) between calls is global state, not an
+input. The cache does not see it.
 
 ## B. Sites
 
@@ -45,8 +57,21 @@ locale and must not be cached. Today (verified with `rg`):
 | One formatter per name | `plain/locale/getLocaleMonthNames.ts:60` (2024-MM-15, `calendar: "gregory"`) and `getLocaleWeekdayNames.ts:58` (2024-01-15 to 21) call `PlainDate#toLocaleString` 12 and 7 times: build one cached `DateTimeFormat` with the same fields plus `timeZone: "UTC"` and format each date's UTC-midnight epoch milliseconds |
 
 The validation step becomes `checkFormatterArguments(...)`, the format step `cachedFormatter(...)`.
-A site whose options lack `timeZone` keeps working, uncached; record in the handoff which sites
-those are.
+These sites stay uncached, by name:
+
+- Any site called with `locale` omitted (or `[]`): `formatDate`, `formatTime`, `formatDateTime`,
+  `formatDateRange`, `formatDateTimeRange`, `formatDateToParts`, `formatDateTimeToParts`,
+  `formatCalendar`, `formatZonedDateTime`, `formatZonedRange`, `formatZonedToParts`,
+  `formatDuration`, and the relative and calendar formatters that share `internal/formatCalendarDays.ts`,
+  `internal/formatRelativeDuration.ts` and `internal/instantFormatOptions.ts`. The default locale
+  can change, so each call builds its formatter as `new Intl.X(undefined, options)` would.
+  `formatTimeZoneName`, `getLocale*Names` and `getLocaleMeridiems` resolve the default locale to a
+  string first (`internal/resolveLocale.ts`), so they are cached under that string.
+- Any site given an option value that is an object, because `Intl` would coerce it by running
+  caller code.
+- A `DateTimeFormat` built without a `timeZone` string. No GMT site does this: every format step
+  passes the value's own zone, or `"UTC"` for a plain value. The validation step
+  (`checkFormatterArguments`) needs no zone.
 
 For the name lists, `PlainDate#toLocaleString` formats the date's own wall-clock fields
 (TC39 Temporal `PlainDate.prototype.toLocaleString`, `CreateDateTimeFormat` with the `~date~`
@@ -73,17 +98,26 @@ workaround never applies and the output is the same. That one import is what pul
 `internal/temporalCompat/probeRepros.ts` to the `absent` lists of `addBusinessDays` and
 `businessDaysBetween` in `scripts/bundle-size.budgets.json`.
 
+The validators `isValidTimeZone`, `isValidTime`, `isValidDate`, `isValidDuration` and
+`isValidRollConvention` are one-line wrappers over cores in `internal/inputChecks.ts` (`isZoneId`
+holds the memo). Internal code and the cut-off entries call the cores, so no public function calls
+another.
+
 ## D. `cutoffSchedule` resolves once
 
 Today each entry calls the public `cutoffAt`, which re-reads `options` and revalidates the zone
 and the calendar. `cutoffAt` then calls the public `rollDate` with a date string, which parses the
 calendar again. Then the result is parsed again (`instantFrom`) for the sort.
 
-- In `transport/calculate/cutoffAt.ts`, split out `cutoffAtResolved(anchor: Temporal.Instant,
+- In `internal/cutoffAtResolved.ts` (internal, so both `cutoffAt` and `cutoffSchedule` import it
+  without one public function importing another), put `cutoffAtResolved(anchor: Temporal.Instant,
   duration: Temporal.Duration, atLocalTime: Temporal.PlainTime | null, shared: SharedCutoffOptions):
   { text: string; ns: bigint } | null`, where `SharedCutoffOptions` holds the zone and a
-  `ResolvedBusinessCalendar` with the roll (from `parseBusinessCalendar`; `isValidBusinessCalendar`
+  `ResolvedBusinessCalendar` with the roll, and the zone's `ZoneFrame` built once (from `parseBusinessCalendar`; `isValidBusinessCalendar`
   is exactly `parseBusinessCalendar(…) !== null`). It is not exported from any `index.ts`.
+- A local wall time in the zone resolves through `internal/earlierOccurrence.ts`
+  (`earlierOccurrence(wall: PlainDateTime, frame): ZonedDateTime | null`: the first occurrence of
+  a repeated hour, `null` for a skipped one). `classifyLocal` shares its `classifyWall` core.
 - Move `rollDate`'s core (`sameMonth`, `modifiedRoll`, `rollTo` over a `PlainDate` and a
   `ResolvedBusinessCalendar`) into `internal/rollBusinessDate.ts`; `rollDate` and
   `cutoffAtResolved` both call it, so no public function calls another.
@@ -93,6 +127,9 @@ calendar again. Then the result is parsed again (`instantFrom`) for the sort.
 - Reading `options` once instead of once per entry changes no answer for a plain object. A getter
   that answers differently on each read is hostile input; reading once is the house rule
   (`freeTimeLedger.ts` "every read of `options` happens here").
+- `cutoffSchedule` resolves the zone, calendar and anchor lazily at the first entry, after that
+  entry's own reads, so an empty list reads none of them and an invalid entry fails before the
+  calendar is read.
 
 ## Tests
 
@@ -102,7 +139,11 @@ All format, locale, cutoff and zone-validation rows stay green unchanged. Add:
 | --- | -------- |
 | `formatDate("2024-07-04", "en-GB", { dateStyle: "long" })` twice, cache cleared first | the same string; the second call constructs no `DateTimeFormat` (spy on the constructor) |
 | `formatDate` with `locale` omitted | constructs on every call (not cached) |
-| an option value that is an object with a `toString` | constructs on every call; its `toString` runs each time, as today |
+| an option value that is an object with a `toString` | constructs on every call; its `toString` runs once per call, as today, and the formatter built from the coerced strings is cached |
+| a Proxy locale array that answers each read differently, then a plain `["de-DE"]` | the plain call formats in German; the Proxy poisons nothing |
+| a Proxy locale array whose `has` trap throws, on a cache hit | the call throws what `Intl` throws, as today |
+| each format family's site called twice | the second call constructs no `Intl` formatter |
+| 1,100 distinct valid zone ids, then the first and last again | `true`; the first is parsed again, the last is not |
 | `formatDate` with an invalid `timeZoneName` value, twice | `""` both times (the failure is never cached) |
 | 257 distinct cacheable `formatDate` calls, then the first again | correct output after the clear |
 | `isValidTimeZone("Europe/London")` twice | `true`; the second builds no `ZonedDateTime` (spy through the seam) |

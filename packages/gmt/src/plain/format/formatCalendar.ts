@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
@@ -101,7 +102,7 @@ export function formatCalendar(
 
       if (Math.abs(diffDays) > ABS_DAY_THRESHOLD) {
         return normalizeDateTime(
-          new Intl.DateTimeFormat(locale, {
+          cachedFormatter("DateTimeFormat", locale, {
             dateStyle: "long",
             timeStyle,
             timeZone: "UTC",
@@ -109,7 +110,7 @@ export function formatCalendar(
         );
       }
 
-      const dayLabel = new Intl.RelativeTimeFormat(locale, {
+      const dayLabel = cachedFormatter("RelativeTimeFormat", locale, {
         numeric: "auto",
       }).format(diffDays, "day");
 
