@@ -14,6 +14,8 @@
  * matrix is unit-testable in isolation.
  */
 
+import { SITE_ORIGIN, isUnderBase, stripBase, withBase } from "~/lib/site";
+
 export type ResolvedHref =
   /** Render a real anchor pointing at `href`. */
   | { kind: "link"; href: string }
@@ -28,7 +30,7 @@ export interface ResolveHrefOptions {
    * for why the manifest alone isn't sufficient). Compared by pathname, so
    * entries may be stored with or without a fragment. */
   knownRoutes: ReadonlySet<string>;
-  /** This site's own origin, e.g. `https://gmt-dox.northguild.workers.dev`. */
+  /** This site's own origin, e.g. `https://northguild.dev/gmt`. */
   siteOrigin: string;
   /** External origins allowed to render as real links. Empty by default —
    * nothing external is trusted unless it's named here. */
@@ -76,9 +78,14 @@ export function resolveHref(
   // so it degrades rather than pointing somewhere arbitrary.
   if (href.startsWith("#")) return { kind: "text" };
 
+  // The model writes base-less site paths (`/reference/...`, as the corpus
+  // does). Put them under the base before the origin check.
+  const target =
+    href.startsWith("/") && !href.startsWith("//") ? withBase(href) : href;
+
   let url: URL;
   try {
-    url = new URL(href, siteOrigin);
+    url = new URL(target, siteOrigin);
   } catch {
     return { kind: "drop" };
   }
@@ -89,12 +96,18 @@ export function resolveHref(
   // is the whole check.
   if (url.protocol === "mailto:") return { kind: "link", href };
 
-  if (url.origin === siteOrigin) {
+  if (url.origin === siteOrigin || url.origin === SITE_ORIGIN) {
     // Own origin, whether the model wrote it as a relative path or a full
     // production URL. Either way it's re-checked as a path, and the origin is
     // stripped so the rendered link stays relative.
-    if (!isKnownRoute(url.pathname, knownRoutes)) return { kind: "text" };
-    return { kind: "link", href: `${url.pathname}${url.search}${url.hash}` };
+    // An own-origin path outside the base is not a Dox page.
+    if (!isUnderBase(url.pathname)) return { kind: "text" };
+    const route = stripBase(url.pathname);
+    if (!isKnownRoute(route, knownRoutes)) return { kind: "text" };
+    return {
+      kind: "link",
+      href: `${withBase(route)}${url.search}${url.hash}`,
+    };
   }
 
   if (allowedExternalOrigins.includes(url.origin)) {

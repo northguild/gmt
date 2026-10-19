@@ -8,6 +8,13 @@ import {
   type Brain,
 } from "../src/lib/chat-constants";
 import { nextVisitorMidnightMs } from "../src/lib/pt-day";
+import {
+  SITE_BASE,
+  SITE_ORIGIN,
+  SITE_URL,
+  isUnderBase,
+  stripBase,
+} from "../src/lib/site";
 import { chooseBrain, remainingFor } from "./brains";
 import { getUnixNowMs } from "./clock";
 import { createChatHandler } from "./chat-handler";
@@ -98,9 +105,10 @@ function configuredBrains(env: Env): Brain[] {
  * Verified here, exchanged for a signed HttpOnly cookie, then redirected to a
  * clean URL so the secret never lingers in history, a bookmark, or a referrer.
  *
- * **Use `/api/brains?key=<secret>`.** A URL that matches a static asset —
- * `/dox/`, or any page — is served before the Worker runs (`wrangler.jsonc`
- * has no `run_worker_first`), so `?key=` on a page never gets here.
+ * **Use `/gmt/api/brains?key=<secret>`.** A page URL (`/gmt/`, a trailing
+ * slash) or a file (a dot after `/gmt/`) is served as an asset before the
+ * Worker runs (`run_worker_first` in `wrangler.jsonc`), so `?key=` on a page
+ * never gets here.
  */
 async function handleDevKey(url: URL, env: Env): Promise<Response> {
   const candidate = url.searchParams.get("key") ?? "";
@@ -194,83 +202,128 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
   );
 }
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-
-    if (url.searchParams.has("key")) {
-      return handleDevKey(url, env);
-    }
-
-    if (url.pathname === "/api/brains") {
-      if (request.method !== "GET") {
-        return Response.json(
-          { error: "Method not allowed.", retryable: false },
-          { status: 405 },
-        );
-      }
-      return handleBrains(request, env);
-    }
-
-    if (url.pathname !== "/api/chat") {
-      return env.ASSETS.fetch(request);
-    }
-
-    if (request.method !== "POST") {
+/**
+ * The two API routes, by base-less path. `undefined` for any other path, so the
+ * caller decides what happens next.
+ */
+async function routeApi(
+  path: string,
+  request: Request,
+  env: Env,
+): Promise<Response | undefined> {
+  if (path === "/api/brains") {
+    if (request.method !== "GET") {
       return Response.json(
         { error: "Method not allowed.", retryable: false },
         { status: 405 },
       );
     }
+    return handleBrains(request, env);
+  }
 
-    const brains = configuredBrains(env);
-    if (brains.length === 0) {
-      // Neither a Gemini key nor the Workers AI binding: a misconfigured
-      // deploy, not a runtime fault.
-      return Response.json(
-        { error: "The assistant is not configured.", retryable: false },
-        { status: 500 },
-      );
+  if (path !== "/api/chat") return undefined;
+
+  if (request.method !== "POST") {
+    return Response.json(
+      { error: "Method not allowed.", retryable: false },
+      { status: 405 },
+    );
+  }
+
+  const brains = configuredBrains(env);
+  if (brains.length === 0) {
+    // Neither a Gemini key nor the Workers AI binding: a misconfigured
+    // deploy, not a runtime fault.
+    return Response.json(
+      { error: "The assistant is not configured.", retryable: false },
+      { status: 500 },
+    );
+  }
+
+  const google = env.NORTHGUILD_GMT_GEMINI_API_KEY
+    ? createGoogleGenerativeAI({ apiKey: env.NORTHGUILD_GMT_GEMINI_API_KEY })
+    : undefined;
+  const workersAI = env.AI
+    ? createWorkersAI({ binding: env.AI as never })
+    : undefined;
+
+  const handleChat = createChatHandler({
+    // A factory, not a model: the handler picks a brain from the ledger and
+    // resolves it here, which is what lets Dox move between models as their
+    // separate daily budgets run out.
+    resolveModel: (brainId) => {
+      const brain = findBrain(brainId);
+      const model = brain?.model ?? brainId;
+      if (brain?.provider === "workers-ai" && workersAI) {
+        return workersAI(
+          model,
+          // `!== undefined`, not truthiness: `null` is a real setting
+          // ("thinking off"), distinct from leaving the model's default.
+          brain.reasoningEffort !== undefined
+            ? { reasoning_effort: brain.reasoningEffort }
+            : {},
+        );
+      }
+      if (brain?.provider === "google" && google) return google(model);
+      // Unreachable while `brains` is `configuredBrains(env)`: the handler
+      // only ever resolves a brain from that list.
+      throw new Error(`brain ${brainId} has no configured provider`);
+    },
+    brains,
+    usage: env.DOX_USAGE,
+    isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNowMs()),
+    vocabulary: VOCABULARY_CONTENT,
+    coreRules: CORE_RULES_CONTENT,
+    fetchImpl: corpusFetcher(env),
+    cache: caches.default,
+  });
+
+  return handleChat(request);
+}
+
+function redirect(location: string): Response {
+  return new Response(null, { status: 301, headers: { location } });
+}
+
+/*
+ * Branches are by path, never by hostname, so `wrangler dev` runs the code
+ * production runs.
+ *
+ *  1. Not under the base: a legacy `workers.dev` path, or `northguild.dev/gmtx`.
+ *     The two API routes are served in place — a 301 turns a `fetch` POST into
+ *     a GET, and the hop to another origin has no CORS, so a tab opened before
+ *     the move would lose its chat. Everything else is a 301 into the base.
+ *  2. Exactly `/gmt`: a 301 to `/gmt/`.
+ *  3. Under the base: the dev key, the API, then the assets binding.
+ */
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (!isUnderBase(url.pathname)) {
+      const api = await routeApi(url.pathname, request, env);
+      if (api) return api;
+      if (url.pathname === "/robots.txt") {
+        return redirect(`${SITE_ORIGIN}/robots.txt`);
+      }
+      return redirect(`${SITE_URL}${url.pathname}${url.search}`);
     }
 
-    const google = env.NORTHGUILD_GMT_GEMINI_API_KEY
-      ? createGoogleGenerativeAI({ apiKey: env.NORTHGUILD_GMT_GEMINI_API_KEY })
-      : undefined;
-    const workersAI = env.AI
-      ? createWorkersAI({ binding: env.AI as never })
-      : undefined;
+    if (url.pathname === SITE_BASE) {
+      return redirect(`${SITE_URL}/${url.search}`);
+    }
 
-    const handleChat = createChatHandler({
-      // A factory, not a model: the handler picks a brain from the ledger and
-      // resolves it here, which is what lets Dox move between models as their
-      // separate daily budgets run out.
-      resolveModel: (brainId) => {
-        const brain = findBrain(brainId);
-        const model = brain?.model ?? brainId;
-        if (brain?.provider === "workers-ai" && workersAI) {
-          return workersAI(
-            model,
-            // `!== undefined`, not truthiness: `null` is a real setting
-            // ("thinking off"), distinct from leaving the model's default.
-            brain.reasoningEffort !== undefined
-              ? { reasoning_effort: brain.reasoningEffort }
-              : {},
-          );
-        }
-        if (brain?.provider === "google" && google) return google(model);
-        // Unreachable while `brains` is `configuredBrains(env)`: the handler
-        // only ever resolves a brain from that list.
-        throw new Error(`brain ${brainId} has no configured provider`);
-      },
-      brains,
-      usage: env.DOX_USAGE,
-      isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNowMs()),
-      vocabulary: VOCABULARY_CONTENT,
-      coreRules: CORE_RULES_CONTENT,
-      fetchImpl: corpusFetcher(env),
-      cache: caches.default,
-    });
+    if (url.searchParams.has("key")) {
+      return handleDevKey(url, env);
+    }
 
-    return handleChat(request);
+    const api = await routeApi(stripBase(url.pathname), request, env);
+    if (api) return api;
+
+    // Only a page path without its slash, or a missing extension-less path,
+    // gets here. Assets mirror the full path (`dist/gmt/…`), `html_handling`
+    // adds the slash and `404-page` finds `dist/gmt/404.html`. The request
+    // is passed on unmodified.
+    return env.ASSETS.fetch(request);
   },
 };

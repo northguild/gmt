@@ -227,7 +227,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
     standard time.
 18. **Read the docs site.** This skill is a routing pointer. The map of the
-    docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+    docs is `https://northguild.dev/gmt/llms.txt`, and each page
     has a `.md` twin that holds its text. The JSDoc ships in the installed
     package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -259,5 +259,5 @@ converting between time zones, or doing arithmetic that must respect DST.
 
 ## References
 
-- [Zoned operations guide](https://gmt-dox.northguild.workers.dev/guides/zoned-date-operations/zoned-operations/)
-- [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/guides/concepts/dst-disambiguation/)
+- [Zoned operations guide](https://northguild.dev/gmt/guides/zoned-date-operations/zoned-operations/)
+- [DST Disambiguation guide](https://northguild.dev/gmt/guides/concepts/dst-disambiguation/)

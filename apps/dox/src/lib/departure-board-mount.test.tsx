@@ -14,6 +14,7 @@ import {
   renderDepartureBoardTemplate,
 } from "./departure-board-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { withBase } from "./site";
 
 installJsdomShims();
 
@@ -231,9 +232,9 @@ describe("mountDepartureBoard: every preset", () => {
       expect(link.getAttribute("aria-disabled")).toBe("true");
     } else {
       const href = link.getAttribute("href")!;
-      expect(href.startsWith("/tools/delivery-scheduler/?w=delivery&wa=")).toBe(
-        true,
-      );
+      expect(
+        href.startsWith(withBase("/tools/delivery-scheduler/?w=delivery&wa=")),
+      ).toBe(true);
       const decoded = JSON.parse(
         new URL(href, "http://x").searchParams.get("wa")!,
       );

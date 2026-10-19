@@ -98,6 +98,7 @@ import {
   setControlValue,
   wireCopyButtons,
 } from "./widget-ui";
+import { withBase } from "./site";
 
 export type { TimetableReaderArgs } from "./timetable-reader";
 
@@ -322,7 +323,7 @@ export function renderTimetableReaderTemplate(
     `<thead role="rowgroup"><tr role="row"><th role="columnheader">Printed</th><th role="columnheader">Leaves (exact)</th><th role="columnheader">Note</th><th role="columnheader">Local arrival</th></tr></thead>` +
     `<tbody data-role="rows-body" role="rowgroup"></tbody>` +
     `</table>` +
-    `<p class="gmt-widget-hint">For the general rule behind a repeated or skipped hour, see the <a href="/tools/dst-inspector/">DST Inspector</a>.</p>` +
+    `<p class="gmt-widget-hint">For the general rule behind a repeated or skipped hour, see the <a href="${withBase("/tools/dst-inspector/")}">DST Inspector</a>.</p>` +
     `</div>` +
     `</div>` +
     `</div>` +

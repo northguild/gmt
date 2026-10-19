@@ -406,7 +406,7 @@ WHEN HELPING THE USER:
    them to the right task area (basics, arithmetic, timezone, integration).
 
 2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
-   For API details, read https://gmt-dox.northguild.workers.dev/llms.txt and the
+   For API details, read https://northguild.dev/gmt/llms.txt and the
    JSDoc in the installed package.
 
 3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:

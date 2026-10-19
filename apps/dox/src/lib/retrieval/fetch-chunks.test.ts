@@ -27,13 +27,13 @@ describe("fetchChunks", () => {
   beforeEach(() => resetChunksMemo());
   afterEach(() => vi.restoreAllMocks());
 
-  it("fetches /retrieval-chunks.json relative to the given origin", async () => {
+  it("fetches /gmt/retrieval-chunks.json relative to the given origin", async () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
     );
     const chunks = await fetchChunks("https://gmt-dox.example/", { fetchImpl });
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://gmt-dox.example/retrieval-chunks.json",
+      "https://gmt-dox.example/gmt/retrieval-chunks.json",
     );
     expect(chunks).toEqual(SAMPLE);
   });
@@ -51,7 +51,7 @@ describe("fetchChunks", () => {
   it("serves a cache hit without calling fetch", async () => {
     const cache = mockCache();
     await cache.put(
-      new Request("https://gmt-dox.example/retrieval-chunks.json"),
+      new Request("https://gmt-dox.example/gmt/retrieval-chunks.json"),
       new Response(JSON.stringify(SAMPLE)),
     );
     const fetchImpl = vi.fn();

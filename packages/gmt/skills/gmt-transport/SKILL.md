@@ -112,7 +112,7 @@ the `gmt-timezone` skill.
     in the half-open `[from, to)`, written the way `from` was. Every moment
     must carry its offset; a wall time without one is `""`.
 4. **Read the docs site.** This skill is a routing pointer. The map of the
-   docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+   docs is `https://northguild.dev/gmt/llms.txt`, and each page
    has a `.md` twin that holds its text. The JSDoc ships in the installed
    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -128,7 +128,7 @@ the `gmt-timezone` skill.
 
 ## References
 
-- [transport reference](https://gmt-dox.northguild.workers.dev/reference/transport/)
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [transport reference](https://northguild.dev/gmt/reference/transport/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
 - [GMT Timezone skill](../gmt-timezone/SKILL.md)
 - [GMT Intermodal skill](../gmt-intermodal/SKILL.md)

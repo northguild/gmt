@@ -1,4 +1,5 @@
-import type { APIContext, APIRoute } from "astro";
+import type { APIRoute } from "astro";
+import { SITE_URL } from "~/lib/site";
 import { gmtVersion } from "~/generated/versions";
 import { isReferenceIndex, renderLlmsFull } from "~/lib/llms";
 import {
@@ -18,10 +19,8 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   eager: true,
 }) as Record<string, string>;
 
-export const GET: APIRoute = ({ site }: APIContext) => {
-  const base =
-    site?.toString().replace(/\/$/, "") ??
-    "https://gmt-dox.northguild.workers.dev";
+export const GET: APIRoute = () => {
+  const base = SITE_URL;
 
   // Build guide pages: every non-index page under content/docs/guides/
   const guidePages = Object.entries(RAW)

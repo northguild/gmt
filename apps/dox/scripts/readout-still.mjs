@@ -96,11 +96,11 @@
  *
  * Serve a build statically first (never `astro dev` on 4321, never the owner's
  * dev server), for example:
- *   pnpm exec astro build --outDir /tmp/dist-x
+ *   pnpm exec astro build --outDir /tmp/dist-x/gmt
  *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
  *
  * Usage:
- *   node scripts/readout-still.mjs --base http://127.0.0.1:4351
+ *   node scripts/readout-still.mjs --base http://127.0.0.1:4351/gmt
  *     [--browsers chromium,webkit] [--widths 1440,390] [--only <slug,...>]
  *     [--keyboard-only] [--all]
  *

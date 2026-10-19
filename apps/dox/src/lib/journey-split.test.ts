@@ -27,6 +27,7 @@ import {
   type JourneyState,
 } from "./journey-split";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { withBase } from "./site";
 
 /**
  * What a real run of the library gave for each preset, run against
@@ -583,9 +584,9 @@ describe("the hand-off to the Delivery Scheduler", () => {
       const args = permalinkOf(state);
       expect(args).toEqual(deliveryPermalink(state));
       const href = encodeWidgetPermalink("delivery", args);
-      expect(href.startsWith("/tools/delivery-scheduler/?w=delivery&wa=")).toBe(
-        true,
-      );
+      expect(
+        href.startsWith(withBase("/tools/delivery-scheduler/?w=delivery&wa=")),
+      ).toBe(true);
       const seeded = seedFromLocation(
         "delivery",
         new URL(href, "https://example.test").search,
@@ -598,9 +599,9 @@ describe("the hand-off to the Delivery Scheduler", () => {
     const state = presetState(JOURNEY_PRESETS[0]!);
     const args = permalinkOf(state);
     const href = encodeWidgetPermalink("journeysplit", args);
-    expect(href.startsWith("/tools/journey-split/?w=journeysplit&wa=")).toBe(
-      true,
-    );
+    expect(
+      href.startsWith(withBase("/tools/journey-split/?w=journeysplit&wa=")),
+    ).toBe(true);
     const seeded = seedFromLocation(
       "journeysplit",
       new URL(href, "https://example.test").search,

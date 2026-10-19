@@ -384,8 +384,62 @@ describe("buildRedirects, moved pages", () => {
   });
 });
 
+describe("buildRedirects with a base", () => {
+  it("prefixes both sides of every rule and leaves the base-less output alone", () => {
+    const plain = rules(buildRedirects(TYPES, USAGE));
+    const based = rules(
+      buildRedirects(TYPES, USAGE, [], [], new Set(), "/gmt"),
+    );
+    expect(based).toEqual(
+      plain.map(([source, target, status]) => [
+        `/gmt${source}`,
+        `/gmt${target}`,
+        status,
+      ]),
+    );
+  });
+
+  it("validates on the base-less routes: a moved page is still checked against them", () => {
+    const moved = [{ from: "/old", to: "/new" }];
+    expect(() =>
+      buildRedirects([], usageOf([]), [], moved, new Set(["/new"]), "/gmt"),
+    ).not.toThrow();
+    // `/gmt/new` is not a route; the base is not part of the route set.
+    expect(() =>
+      buildRedirects([], usageOf([]), [], moved, new Set(["/gmt/new"]), "/gmt"),
+    ).toThrow(/not a page or route/);
+  });
+
+  it("counts the base toward the 1,000-character limit", () => {
+    const longTo = `/${"a".repeat(480)}`;
+    const moved = [{ from: `/${"b".repeat(480)}`, to: longTo }];
+    const routes = new Set([longTo]);
+    // 481 + 482 + 11 = 974 without a base; the base adds 8 and the slash form pushes past 1,000.
+    expect(() =>
+      buildRedirects([], usageOf([]), [], moved, routes, ""),
+    ).not.toThrow();
+    expect(() =>
+      buildRedirects(
+        [],
+        usageOf([]),
+        [],
+        moved,
+        routes,
+        "/".concat("g".repeat(30)),
+      ),
+    ).toThrow(/over 1000 characters/);
+  });
+});
+
 describe("the generated _redirects", () => {
-  const file = resolve(import.meta.dirname, "..", "..", "public", "_redirects");
+  const file = resolve(
+    import.meta.dirname,
+    "..",
+    "..",
+    "src",
+    "generated",
+    "_redirects",
+  );
   const contentDir = resolve(
     import.meta.dirname,
     "..",
@@ -410,7 +464,17 @@ describe("the generated _redirects", () => {
       readFileSync(corpusFile, "utf8"),
     ) as CorpusEntry[];
     const types = corpus.filter((e) => e.kind === "type");
-    const out = rules(readFileSync(file, "utf8"));
+    // Every emitted path sits under the base; the checks below are on the base-less routes.
+    const emitted = rules(readFileSync(file, "utf8"));
+    for (const [source, target] of emitted) {
+      expect(source.startsWith("/gmt/"), source).toBe(true);
+      expect(target.startsWith("/gmt/"), target).toBe(true);
+    }
+    const out = emitted.map(([source, target, status]) => [
+      source.slice("/gmt".length),
+      target.slice("/gmt".length),
+      status,
+    ]);
     // Both slash forms and the .md twin of each type, each renamed function and each moved page.
     expect(out).toHaveLength(
       (types.length + RENAMED_FUNCTIONS.length + MOVED_PAGES.length) * 3,

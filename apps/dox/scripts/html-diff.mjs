@@ -12,7 +12,7 @@
  * So this compares the built markup instead.
  *
  *   node scripts/html-diff.mjs capture <dir>   # save the widget pages
- *   node scripts/html-diff.mjs compare <dir>   # compare dist/ against them
+ *   node scripts/html-diff.mjs compare <dir>   # compare dist/gmt/ against them
  *
  * Two verdicts, deliberately distinct:
  *
@@ -212,7 +212,7 @@ if (mode === "capture") {
   for (const p of PAGES) {
     writeFileSync(
       path.join(dir, slug(p.path)),
-      readFileSync(`dist/${p.path}/index.html`, "utf8"),
+      readFileSync(`dist/gmt/${p.path}/index.html`, "utf8"),
     );
   }
   console.log(`captured ${PAGES.length} widget pages to ${dir}`);
@@ -231,7 +231,7 @@ for (const p of PAGES) {
     continue;
   }
   const beforeRaw = readFileSync(path.join(dir, slug(p.path)), "utf8");
-  const afterRaw = readFileSync(`dist/${p.path}/index.html`, "utf8");
+  const afterRaw = readFileSync(`dist/gmt/${p.path}/index.html`, "utf8");
 
   const beforeWidget = widgetSubtree(beforeRaw, p.widget);
   const afterWidget = widgetSubtree(afterRaw, p.widget);

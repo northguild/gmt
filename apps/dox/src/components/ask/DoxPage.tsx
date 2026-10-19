@@ -31,6 +31,7 @@ import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
+import { withBase } from "~/lib/site";
 
 /** Which Worker this page is talking to.
  *
@@ -152,7 +153,7 @@ export default function DoxPage() {
   return (
     <div className="gmt-ask gmt-hive-shell">
       <header className="gmt-hive-strip">
-        <a className="gmt-hive-back" href="/">
+        <a className="gmt-hive-back" href={withBase("/")}>
           ← @northguild/gmt
         </a>
         <div className="gmt-hive-strip-end">

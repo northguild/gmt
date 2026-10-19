@@ -46,6 +46,7 @@ import { listResets, nextReset } from "~/lib/quota-resets";
 import { RESET_FORMATS, findResetFormat } from "~/lib/reset-formats";
 import type { BrainsInfo } from "./use-brains";
 import type { ResetClockState } from "./use-reset-clock";
+import { withBase } from "~/lib/site";
 
 export function ResetClock({
   info,
@@ -173,7 +174,7 @@ export function ResetClock({
             conversation. */}
         <a
           className="gmt-hive-clock-call gmt-sonar-focus"
-          href={preset.route}
+          href={withBase(preset.route)}
           target="_blank"
           rel="noopener"
         >

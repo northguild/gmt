@@ -19,6 +19,7 @@ import {
 import { readArgs as readFreeTimeArgs } from "./free-time-ledger";
 import { renderFreeTimeLedgerTemplate } from "./free-time-ledger-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -709,7 +710,9 @@ describe("permalinks", () => {
         ),
       ).toBe(true);
       const url = encodeWidgetPermalink("demclock", state);
-      expect(url).toMatch(/^\/tools\/demurrage-clock\/\?w=demclock&wa=/);
+      expect(url).toMatch(
+        new RegExp(`^${SITE_BASE}/tools/demurrage-clock/\\?w=demclock&wa=`),
+      );
       const seeded = seedFromLocation("demclock", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const output = text(first.root, "clock-output");

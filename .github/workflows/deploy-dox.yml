@@ -75,3 +75,8 @@ jobs:
           workingDirectory: apps/dox
           command: deploy
           wranglerVersion: "4.126.0"
+
+      # The redirect and routing rows of the live site (apps/dox/scripts/deploy-smoke.mjs).
+      # Retries for route propagation; a failure marks the run red and does not roll back.
+      - name: Smoke-test the deployed routes
+        run: node apps/dox/scripts/deploy-smoke.mjs

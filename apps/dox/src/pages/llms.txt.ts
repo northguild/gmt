@@ -1,4 +1,5 @@
-import type { APIContext, APIRoute } from "astro";
+import type { APIRoute } from "astro";
+import { SITE_URL } from "~/lib/site";
 import { corpus } from "~/generated/reference/corpus";
 import { referenceSections, renderLlmsTxt, type LlmsSection } from "~/lib/llms";
 import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
@@ -14,10 +15,8 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   eager: true,
 }) as Record<string, string>;
 
-export const GET: APIRoute = ({ site }: APIContext) => {
-  const base =
-    site?.toString().replace(/\/$/, "") ??
-    "https://gmt-dox.northguild.workers.dev";
+export const GET: APIRoute = () => {
+  const base = SITE_URL;
 
   // Reference sections grouped by namespace
   const sections: LlmsSection[] = referenceSections(corpus, base);

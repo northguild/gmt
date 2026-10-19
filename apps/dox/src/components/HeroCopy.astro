@@ -7,6 +7,7 @@
  */
 import DoxMark from './DoxMark.astro';
 import LinkButton from './LinkButton.astro';
+import { withBase } from '~/lib/site';
 
 // Mirrors Starlight's internal PAGE_TITLE_ID — not exported publicly.
 const PAGE_TITLE_ID = '_top';
@@ -34,6 +35,12 @@ const {
 function isExternal(href: string) {
 	return href.startsWith('http://') || href.startsWith('https://');
 }
+
+// Hero links are written base-less in the front matter; only a root-absolute
+// path gets the base (a `#` hash or an absolute URL stays as written).
+function withSiteBase(href: string) {
+	return href.startsWith('/') && !href.startsWith('//') ? withBase(href) : href;
+}
 ---
 
 <div class="sl-flex stack">
@@ -44,7 +51,8 @@ function isExternal(href: string) {
 	{
 		actions.length > 0 && (
 			<div class="sl-flex actions">
-				{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => {
+				{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }) => {
+					const href = withSiteBase(link);
 					const external = isExternal(href);
 					// The Dox CTA carries the crystal itself rather than a Starlight
 					// icon name — same mark as the header button and the chat, so the

@@ -1,6 +1,6 @@
 import { resolveHref } from "./resolve-href";
 
-const SITE = "https://gmt-dox.northguild.workers.dev";
+const SITE = "https://northguild.dev";
 
 const OPTIONS = {
   knownRoutes: new Set([
@@ -17,7 +17,7 @@ describe("resolveHref", () => {
       resolveHref("/reference/zoned/convert/convertZonedToZoned", OPTIONS),
     ).toEqual({
       kind: "link",
-      href: "/reference/zoned/convert/convertZonedToZoned",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
     });
   });
 
@@ -26,19 +26,19 @@ describe("resolveHref", () => {
       resolveHref("/reference/zoned/convert/convertZonedToZoned/", OPTIONS),
     ).toEqual({
       kind: "link",
-      href: "/reference/zoned/convert/convertZonedToZoned/",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned/",
     });
   });
 
   it("strips our own origin off a full production URL and re-checks it as a path", () => {
     expect(
       resolveHref(
-        `${SITE}/reference/zoned/convert/convertZonedToZoned`,
+        `${SITE}/gmt/reference/zoned/convert/convertZonedToZoned`,
         OPTIONS,
       ),
     ).toEqual({
       kind: "link",
-      href: "/reference/zoned/convert/convertZonedToZoned",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
     });
   });
 
@@ -53,7 +53,7 @@ describe("resolveHref", () => {
 
   it("degrades a hallucinated path even on our own full origin", () => {
     expect(
-      resolveHref(`${SITE}/reference/plain/calculate/notAReal`, OPTIONS),
+      resolveHref(`${SITE}/gmt/reference/plain/calculate/notAReal`, OPTIONS),
     ).toEqual({ kind: "text" });
   });
 
@@ -66,11 +66,11 @@ describe("resolveHref", () => {
     for (const href of [
       "/reference/transport/calculate/dwellTime#dwell",
       "/reference/transport/calculate/dwellTime/#dwell",
-      `${SITE}/reference/transport/calculate/dwellTime#dwell`,
+      `${SITE}/gmt/reference/transport/calculate/dwellTime#dwell`,
     ]) {
       expect(resolveHref(href, options), href).toEqual({
         kind: "link",
-        href: href.replace(SITE, ""),
+        href: href.replace(SITE, "").replace(/^\/(?!gmt\/)/, "/gmt/"),
       });
     }
     // The fragment does not rescue a page that is not known.
@@ -86,7 +86,7 @@ describe("resolveHref", () => {
     );
     expect(result).toEqual({
       kind: "link",
-      href: "/guides/conversion/converting-types/#zoned-to-utc-and-back",
+      href: "/gmt/guides/conversion/converting-types/#zoned-to-utc-and-back",
     });
   });
 
@@ -95,7 +95,7 @@ describe("resolveHref", () => {
       resolveHref("/guides/conversion/converting-types/", OPTIONS),
     ).toEqual({
       kind: "link",
-      href: "/guides/conversion/converting-types/",
+      href: "/gmt/guides/conversion/converting-types/",
     });
   });
 
@@ -147,6 +147,32 @@ describe("resolveHref", () => {
       kind: "link",
       href: "mailto:hi@example.com",
     });
+  });
+
+  it("accepts a path already under the base, and a full URL under it", () => {
+    const expected = {
+      kind: "link",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
+    };
+    expect(
+      resolveHref("/gmt/reference/zoned/convert/convertZonedToZoned", OPTIONS),
+    ).toEqual(expected);
+    expect(
+      resolveHref(
+        `${SITE}/gmt/reference/zoned/convert/convertZonedToZoned#a`,
+        OPTIONS,
+      ),
+    ).toEqual({ ...expected, href: `${expected.href}#a` });
+  });
+
+  it("links the site root under the base when it is known", () => {
+    const options = { ...OPTIONS, knownRoutes: new Set(["/"]) };
+    expect(resolveHref("/", options)).toEqual({ kind: "link", href: "/gmt/" });
+  });
+
+  it("degrades an unknown path under the base and any own-origin path outside it", () => {
+    expect(resolveHref("/gmt/nope/", OPTIONS)).toEqual({ kind: "text" });
+    expect(resolveHref(`${SITE}/other/`, OPTIONS)).toEqual({ kind: "text" });
   });
 
   it("degrades everything when nothing has been retrieved yet", () => {

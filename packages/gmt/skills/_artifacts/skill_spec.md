@@ -79,7 +79,7 @@ examples of industry functions.
 
 Consumer-facing skills are deliberately slim routing pointers. They carry core
 rules and point agents to two places for API signatures, locale matrices, and
-code examples. The first is the docs site: `https://gmt-dox.northguild.workers.dev/llms.txt`
+code examples. The first is the docs site: `https://northguild.dev/gmt/llms.txt`
 is the map, and the `.md` twin of a page holds its text. The second is the
 JSDoc in the installed package (`node_modules/@northguild/gmt/dist/**/*.d.ts`).
 The package README is a landing page and holds no API detail. Each skill lists

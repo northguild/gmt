@@ -157,7 +157,7 @@ and EPCIS timestamps. The time zone rules it builds on are in the
     `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset` together: the
     `epcisEventTime` regex matches `2024-02-30`, the validator does not.
 5. **Read the docs site.** This skill is a routing pointer. The map of the
-   docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+   docs is `https://northguild.dev/gmt/llms.txt`, and each page
    has a `.md` twin that holds its text. The JSDoc ships in the installed
    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -183,7 +183,7 @@ and EPCIS timestamps. The time zone rules it builds on are in the
 
 ## References
 
-- [intermodal reference](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [intermodal reference](https://northguild.dev/gmt/reference/intermodal/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
 - [GMT Timezone skill](../gmt-timezone/SKILL.md)
 - [GMT Transport skill](../gmt-transport/SKILL.md)

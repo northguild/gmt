@@ -16,6 +16,7 @@ import SocialIcons from "virtual:starlight/components/SocialIcons";
 import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
 import DoxMark from "./DoxMark.astro";
+import { withBase } from "~/lib/site";
 
 const shouldRenderSearch =
   config.pagefind ||
@@ -38,7 +39,7 @@ const shouldRenderSearch =
           flex group as SocialIcons so it shares one gap value instead of
           stacking `right-group`'s gap on top of `social-icons`' own. */}
       <ButtonLink
-        href="/dox/"
+        href={withBase("/dox/")}
         class="gmt-ask-dox-link"
         label="Chat with Dox"
         title="Chat with Dox"

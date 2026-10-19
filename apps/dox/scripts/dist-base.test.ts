@@ -1,0 +1,165 @@
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import {
+  badJsLiterals,
+  badLinksInMarkdown,
+  badRedirectRules,
+  badSitemapLocs,
+  badUrlsInCss,
+  badUrlsInHtml,
+  type BaseFailure,
+} from "./build-utils/dist-base";
+import { distDirOrSkip } from "./dist-dir";
+import { referenceRoutes } from "../src/generated/reference/route-manifest";
+
+/**
+ * The /gmt base, read off the built site (CORE-86).
+ *
+ * Dox serves under `northguild.dev/gmt`; its routes are base-less in code and `/gmt` is added where
+ * a URL leaves it. One bug class — a root-absolute URL that reaches a reader without the base — can
+ * come in through HTML, CSS, JS, the `.md` twins, `llms*.txt`, the sitemap and `_redirects`. This
+ * reads each of them. A root URL without `/gmt` anywhere in `dist/` fails here.
+ *
+ * Needs a build; `distDirOrSkip` skips without one and throws under `DOX_DIST_REQUIRED`.
+ */
+
+const dist = distDirOrSkip();
+const site = dist === null ? null : resolve(dist, "gmt");
+
+/** Every file under `dir` whose name satisfies `keep`, as absolute paths. */
+function walk(dir: string, keep: (name: string) => boolean): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) found.push(...walk(full, keep));
+    else if (keep(entry.name)) found.push(full);
+  }
+  return found;
+}
+
+/** At most 20 failures with file and value, then the total. */
+function report(
+  root: string,
+  failures: Array<BaseFailure & { file: string }>,
+): string[] {
+  const lines = failures
+    .slice(0, 20)
+    .map((f) => `${relative(root, f.file)}: ${f.value} — ${f.where}`);
+  if (failures.length > 20)
+    lines.push(`… ${failures.length} failures in total`);
+  return lines;
+}
+
+function scan(
+  root: string,
+  files: string[],
+  scanner: (text: string) => BaseFailure[],
+): string[] {
+  const failures: Array<BaseFailure & { file: string }> = [];
+  for (const file of files)
+    for (const f of scanner(readFileSync(file, "utf8")))
+      failures.push({ ...f, file });
+  return report(root, failures);
+}
+
+describe.skipIf(dist === null)("the built site keeps the /gmt base", () => {
+  const root = dist as string;
+  const pages = site as string;
+
+  it("dist holds exactly gmt/ and _redirects", () => {
+    expect(readdirSync(root).sort()).toEqual(["_redirects", "gmt"]);
+    expect(existsSync(resolve(pages, "index.html"))).toBe(true);
+    expect(existsSync(resolve(pages, "404.html"))).toBe(true);
+    expect(existsSync(resolve(root, "_redirects"))).toBe(true);
+    expect(existsSync(resolve(pages, "_redirects"))).toBe(false);
+  });
+
+  it("no HTML page carries a URL without the base", () => {
+    const html = walk(pages, (n) => n.endsWith(".html"));
+    expect(html.length).toBeGreaterThan(100);
+    expect(scan(pages, html, badUrlsInHtml)).toEqual([]);
+  });
+
+  it("no stylesheet carries a URL without the base, and the Michroma font resolves under it", () => {
+    const astro = resolve(pages, "_astro");
+    const css = readdirSync(astro)
+      .filter((n) => n.endsWith(".css"))
+      .map((n) => resolve(astro, n));
+    expect(css.length).toBeGreaterThan(0);
+    expect(scan(pages, css, badUrlsInCss)).toEqual([]);
+
+    const sheets = css.map((f) => readFileSync(f, "utf8")).join("\n");
+    const face = sheets.match(
+      /@font-face\{[^}]*font-family:\s*["']?Michroma[^}]*\}/i,
+    );
+    expect(
+      face,
+      "the Michroma @font-face is in a built stylesheet",
+    ).not.toBeNull();
+    const src = face?.[0].match(/url\(\s*["']?([^)"']+)/i)?.[1];
+    expect(src, "the Michroma @font-face has a url()").toBeDefined();
+    expect(src?.startsWith("/gmt/")).toBe(true);
+    // And the file it names is really there.
+    expect(existsSync(resolve(root, (src as string).replace(/^\//, "")))).toBe(
+      true,
+    );
+  });
+
+  it("no .md twin, llms.txt or llms-full.txt carries a link without the base", () => {
+    const text = [
+      ...walk(pages, (n) => n.endsWith(".md")),
+      resolve(pages, "llms.txt"),
+      resolve(pages, "llms-full.txt"),
+    ];
+    expect(scan(pages, text, badLinksInMarkdown)).toEqual([]);
+  });
+
+  it("_redirects has rules and every one sits under /gmt/", () => {
+    const rules = readFileSync(resolve(root, "_redirects"), "utf8");
+    expect(
+      rules.split("\n").filter((l) => l.trim() && !l.startsWith("#")).length,
+    ).toBeGreaterThan(0);
+    expect(badRedirectRules(rules)).toEqual([]);
+  });
+
+  it("every sitemap <loc> is a northguild.dev/gmt URL", () => {
+    const maps = readdirSync(pages)
+      .filter((n) => /^sitemap-.*\.xml$/.test(n))
+      .map((n) => resolve(pages, n));
+    expect(maps.length).toBeGreaterThan(0);
+    expect(scan(pages, maps, badSitemapLocs)).toEqual([]);
+  });
+
+  it("no bundled script requests the site root", () => {
+    // The non-page top-level entries: files, and directories that hold no index.html. Derived,
+    // never listed. `_astro` is Vite's own and rewrites its references itself.
+    const publicNames = readdirSync(pages).filter((name) => {
+      if (name === "_astro") return false;
+      const full = resolve(pages, name);
+      return (
+        !statSync(full).isDirectory() ||
+        !existsSync(resolve(full, "index.html"))
+      );
+    });
+    expect(publicNames).toContain("pagefind");
+    const js = walk(resolve(pages, "_astro"), (n) => n.endsWith(".js"));
+    expect(js.length).toBeGreaterThan(0);
+    expect(scan(pages, js, (t) => badJsLiterals(t, publicNames))).toEqual([]);
+  });
+
+  it("no route begins with /gmt, so withBase leaves a /gmt/… path alone", () => {
+    const routes = [...referenceRoutes].filter(
+      (r) => r === "/gmt" || r.startsWith("/gmt/"),
+    );
+    expect(routes).toEqual([]);
+    const content = walk(
+      resolve(import.meta.dirname, "..", "src", "content", "docs"),
+      (n) => /\.mdx?$/.test(n),
+    ).map((f) =>
+      relative(resolve(import.meta.dirname, "..", "src", "content", "docs"), f),
+    );
+    expect(
+      content.filter((f) => f === "gmt.mdx" || f.startsWith("gmt/")),
+    ).toEqual([]);
+  });
+});

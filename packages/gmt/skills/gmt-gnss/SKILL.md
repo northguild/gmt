@@ -75,7 +75,7 @@ file week. TAI and the leap-second table are in the `gmt-integration` skill.
    and back on the way out. Store the era rule you used with any week you
    decode.
 5. **Read the docs site.** This skill is a routing pointer. The map of the
-   docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+   docs is `https://northguild.dev/gmt/llms.txt`, and each page
    has a `.md` twin that holds its text. The JSDoc ships in the installed
    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -88,6 +88,6 @@ file week. TAI and the leap-second table are in the `gmt-integration` skill.
 
 ## References
 
-- [gnss reference](https://gmt-dox.northguild.workers.dev/reference/gnss/)
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [gnss reference](https://northguild.dev/gmt/reference/gnss/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
 - [GMT Integration skill](../gmt-integration/SKILL.md)

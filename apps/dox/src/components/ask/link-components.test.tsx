@@ -21,7 +21,7 @@ import { installJsdomShims } from "~/test/jsdom-shims";
 
 installJsdomShims();
 
-const SITE = "https://gmt-dox.northguild.workers.dev";
+const SITE = "https://northguild.dev";
 
 /** A path with exactly the shape the model invents: a plausible namespace, a
  *  plausible verb, and a function that does not exist. */
@@ -65,7 +65,7 @@ describe("the rendered link-hardening path", () => {
     renderAnswer(`See [convert](${REAL}).`);
 
     const link = screen.getByRole("link", { name: "convert" });
-    expect(link.getAttribute("href")).toBe(REAL);
+    expect(link.getAttribute("href")).toBe(`/gmt${REAL}`);
   });
 
   it("keeps both behaviours straight inside one answer", () => {
@@ -87,7 +87,7 @@ describe("the rendered link-hardening path", () => {
     renderAnswer(`Read [the guide](${guide}).`, [guide]);
     expect(
       screen.getByRole("link", { name: "the guide" }).getAttribute("href"),
-    ).toBe(guide);
+    ).toBe(`/gmt${guide}`);
   });
 
   it("opens an allowlisted off-site link in a new tab, and a site link in the same tab", () => {

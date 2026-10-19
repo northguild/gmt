@@ -78,7 +78,7 @@ describe("mountZonePlanner", () => {
     root.querySelector<HTMLButtonElement>('[data-role="share"]')!.click();
     await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
     const url = String((writeText.mock.calls[0] as unknown[])[0]);
-    expect(new URL(url).pathname).toBe("/tools/zone-planner/");
+    expect(new URL(url).pathname).toBe("/gmt/tools/zone-planner/");
     expect(url).toContain("tz=Asia%2FTokyo");
   });
 

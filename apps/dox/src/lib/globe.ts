@@ -59,6 +59,7 @@ import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
+import { withBase } from "./site";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -97,14 +98,14 @@ const SELECTION_RING_WIDTH = 1.5;
 const REGION_STROKE_WIDTH = 1.5;
 
 /** The boundary dataset, fetched after the globe is already interactive. */
-const BOUNDARIES_URL = "/timezone-boundaries-globe.json";
+const BOUNDARIES_URL = withBase("/timezone-boundaries-globe.json");
 
 /**
  * NASA's Blue Marble, prepared by `scripts/prepare-globe-imagery.py`. Only the
  * WebGPU renderer fetches it, and only while `--gmt-globe-imagery-alpha` is
  * above 0.
  */
-const IMAGERY_URL = "/earth-blue-marble.webp";
+const IMAGERY_URL = withBase("/earth-blue-marble.webp");
 
 export async function initGlobe(
   host: HTMLElement,

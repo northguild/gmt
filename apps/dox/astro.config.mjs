@@ -11,13 +11,15 @@ import { toolsSidebar } from "./src/generated/tools-sidebar.ts";
 import { scenariosSidebar } from "./src/generated/scenarios-sidebar.ts";
 import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
 import { guidesIndustriesSidebar } from "./src/generated/guides-industries-sidebar.ts";
+import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
+import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
+import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
 
-// DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
-// custom domain yet). `site` must be set or @astrojs/sitemap (a Starlight
-// dependency) warns on every build.
-const SITE = "https://gmt-dox.northguild.workers.dev";
+// `site` + `base` make every Starlight link, the canonical tag, the sitemap
+// and Pagefind resolve under /gmt/. One module holds both, for the Worker and
+// the scripts too.
 
 const gmtPkg = fileURLToPath(
   new URL("../../packages/gmt/dist", import.meta.url),
@@ -56,10 +58,16 @@ const guidesSidebar = [
 ];
 
 export default defineConfig({
-  site: SITE,
+  site: SITE_ORIGIN,
+  base: SITE_BASE,
+  // Cloudflare looks assets up by the full request path (serving a
+  // subdirectory: developers.cloudflare.com/workers/static-assets/routing/
+  // advanced/serving-a-subdirectory/), so the files must sit at dist/gmt/…
+  // while wrangler.jsonc keeps `directory: "./dist"`.
+  outDir: "./dist/gmt",
   markdown: {
     // External links in Markdown and MDX open in a new tab, like ButtonLink's do.
-    rehypePlugins: [rehypeExternalLinks],
+    rehypePlugins: [rehypeBaseLinks, rehypeExternalLinks],
   },
   vite: {
     server: {
@@ -68,9 +76,10 @@ export default defineConfig({
       // 404s here. Proxying that one route to a local `wrangler dev` gives a
       // single URL with both: hot reload for the UI *and* a real backend.
       // Everything else is still served by Astro, so this changes nothing for
-      // any other page. `pnpm dev` starts both; see package.json.
+      // any other page. `pnpm dev` starts both; see package.json. The Worker
+      // receives the full /gmt/api/… path and strips the base itself.
       proxy: {
-        "/api": {
+        [`${SITE_BASE}/api`]: {
           target: "http://localhost:8787",
           changeOrigin: true,
         },
@@ -113,6 +122,8 @@ export default defineConfig({
     // Dev only (its hook is `astro:server:setup`): regenerates the API reference
     // when gmt source changes, so a JSDoc edit shows up without a restart.
     gmtReferenceWatch(),
+    // Build only: puts src/generated/_redirects at dist/_redirects, above outDir.
+    copyRedirects(),
     react(),
     starlight({
       title: "@northguild/gmt",
@@ -152,7 +163,7 @@ export default defineConfig({
           tag: "link",
           attrs: {
             rel: "preload",
-            href: "/fonts/michroma-latin-400-normal.woff2",
+            href: withBase("/fonts/michroma-latin-400-normal.woff2"),
             as: "font",
             type: "font/woff2",
             crossorigin: "anonymous",
@@ -180,7 +191,7 @@ export default defineConfig({
           attrs: {
             rel: "alternate",
             type: "text/plain",
-            href: "/llms.txt",
+            href: withBase("/llms.txt"),
           },
         },
         /* Raster fallbacks for the SVG favicon above, generated from it by
@@ -195,7 +206,7 @@ export default defineConfig({
             rel: "icon",
             type: "image/png",
             sizes: "32x32",
-            href: "/favicon-32.png",
+            href: withBase("/favicon-32.png"),
           },
         },
         {
@@ -203,7 +214,7 @@ export default defineConfig({
           attrs: {
             rel: "apple-touch-icon",
             sizes: "180x180",
-            href: "/apple-touch-icon.png",
+            href: withBase("/apple-touch-icon.png"),
           },
         },
         {

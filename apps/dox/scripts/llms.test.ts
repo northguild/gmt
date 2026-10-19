@@ -29,7 +29,7 @@ import {
 } from "../src/lib/llms";
 import type { CorpusEntry } from "../src/reference-types";
 
-const BASE = "https://gmt-dox.northguild.workers.dev";
+const BASE = "https://northguild.dev/gmt";
 
 function readCorpus(): CorpusEntry[] {
   return JSON.parse(
@@ -38,31 +38,12 @@ function readCorpus(): CorpusEntry[] {
 }
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
 
-/**
- * The built site, or a reason to stop.
- *
- * These gates read `dist`, so without a build they have nothing to check — and a test that checks
- * nothing still reports as passing. That is not hypothetical: the CI Tests job builds only
- * `@northguild/gmt`, so all three of them had never run there, and a raw `<UpstreamDefects />`
- * reached every text surface with the suite green (CORE-8 review, #253). Locally a skip is the
- * right call, because requiring a 45-second build before `vitest` would be hostile. The same is
- * true of the CI Tests job, which runs this suite across three Node versions and has no reason to
- * build the site three times.
- *
- * So the failure is keyed to `DOX_DIST_REQUIRED`, which `Story consistency` sets on the one step
- * that builds the site first — not to `CI`, which is set everywhere and would turn a legitimate
- * skip into a failure in every other job.
- */
+import { distDirOrSkip as distRootOrSkip } from "./dist-dir";
+
+/** The built pages: `dist/gmt`, or null without a build. */
 function distDirOrSkip(): string | null {
-  const distDir = resolve(import.meta.dirname, "..", "dist");
-  if (existsSync(distDir)) return distDir;
-  if (process.env.DOX_DIST_REQUIRED) {
-    throw new Error(
-      "apps/dox/dist is missing, so the text-surface gates would silently pass. " +
-        "The step that sets DOX_DIST_REQUIRED must run `pnpm --filter dox run build` first.",
-    );
-  }
-  return null;
+  const root = distRootOrSkip();
+  return root === null ? null : resolve(root, "gmt");
 }
 
 describe("llms.txt surface", () => {
@@ -170,7 +151,7 @@ describe("llms.txt surface", () => {
         const { data } = stripFrontmatter(raw);
         return {
           title: data.title ?? rel,
-          url: `https://gmt-dox.northguild.workers.dev/${rel}.md`,
+          url: `https://northguild.dev/gmt/${rel}.md`,
           description: data.title ?? "",
         };
       })
@@ -215,24 +196,18 @@ describe("llms.txt surface", () => {
       if (/\/reference(\/|\.md$)/.test(url)) {
         // Strip leading site origin and .md suffix
         const slug = url
-          .replace(/^https:\/\/gmt-dox\.northguild\.workers\.dev/, "")
+          .replace(/^https:\/\/northguild\.dev\/gmt/, "")
           .replace(/\.md$/, "");
         expect(routes.has(slug), `manifest has ${slug}`).toBe(true);
       } else if (url.includes("/mistakes/")) {
-        const slug = url.replace(
-          /^https:\/\/gmt-dox\.northguild\.workers\.dev/,
-          "",
-        );
+        const slug = url.replace(/^https:\/\/northguild\.dev\/gmt/, "");
         expect(
           mistakeAllowList.has(slug),
           `mistake allow-list has ${slug}`,
         ).toBe(true);
       } else {
         // Guide URLs checked against allow-list (keep .md for guides)
-        const slug = url.replace(
-          /^https:\/\/gmt-dox\.northguild\.workers\.dev/,
-          "",
-        );
+        const slug = url.replace(/^https:\/\/northguild\.dev\/gmt/, "");
         expect(guideAllowList.has(slug), `guide allow-list has ${slug}`).toBe(
           true,
         );
@@ -249,11 +224,11 @@ describe("llms.txt surface", () => {
       links: [
         {
           title: "Install",
-          url: "https://gmt-dox.northguild.workers.dev/install.md",
+          url: "https://northguild.dev/gmt/install.md",
         },
         {
           title: "Core Rules",
-          url: "https://gmt-dox.northguild.workers.dev/core-rules.md",
+          url: "https://northguild.dev/gmt/core-rules.md",
         },
       ],
     });
@@ -424,7 +399,7 @@ Note about installation.
       const result = stripMdx(input, { gmtVersion: "1.0.0" }).trim();
       expect(result).not.toMatch(/<Icon|import/);
       expect(result.replace(/\s+/g, " ")).toBe(
-        "- [Transport](/reference/transport): Legs and dwell.",
+        "- [Transport](/gmt/reference/transport): Legs and dwell.",
       );
     });
 
@@ -534,11 +509,18 @@ Body text here.`;
   // Optional: dist-file checks (only when build output exists)
   describe("dist files (build-only)", () => {
     it("llms.txt and llms-full.txt exist in dist", () => {
-      const distLlms = resolve(import.meta.dirname, "..", "dist", "llms.txt");
+      const distLlms = resolve(
+        import.meta.dirname,
+        "..",
+        "dist",
+        "gmt",
+        "llms.txt",
+      );
       const distLlmsFull = resolve(
         import.meta.dirname,
         "..",
         "dist",
+        "gmt",
         "llms-full.txt",
       );
       if (!existsSync(distLlms) || !existsSync(distLlmsFull)) {
@@ -558,6 +540,7 @@ Body text here.`;
         import.meta.dirname,
         "..",
         "dist",
+        "gmt",
         "reference",
         "zoned",
         "calculate",
@@ -574,6 +557,7 @@ Body text here.`;
         import.meta.dirname,
         "..",
         "dist",
+        "gmt",
         "reference",
         "zoned",
         "calculate",
@@ -640,7 +624,7 @@ Body text here.`;
       // braces. The counts now live in `UpstreamTracker.astro`, computed
       // from the same `upstream-filings.ts` data and rendered live; the MDX
       // body carries no expression beyond the supported `{gmtVersion}`.
-      const distDir = resolve(import.meta.dirname, "..", "dist");
+      const distDir = resolve(import.meta.dirname, "..", "dist", "gmt");
       const placeholderRe = /\{(totalFilings|prs|coversAll)\b/;
 
       const distMd = resolve(distDir, "upstream.md");
@@ -785,6 +769,7 @@ Body text here.`;
         import.meta.dirname,
         "..",
         "dist",
+        "gmt",
         "llms-full.txt",
       );
       if (!existsSync(llmsFull)) return;

@@ -1,6 +1,7 @@
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
+  handoffHref,
   seedFromLocation,
   WIDGET_PAGE_PATHS,
   type WidgetKind,
@@ -20,6 +21,14 @@ describe("widget permalinks", () => {
       expect(url.startsWith("/")).toBe(true);
       expect(url).not.toContain("/dox");
     }
+  });
+
+  it("puts the permalink under the site base", () => {
+    expect(encodeWidgetPermalink("dst", {}).startsWith("/gmt/tools/")).toBe(
+      true,
+    );
+    expect(encodeWidgetPermalink("dst", {})).toContain("?w=dst&");
+    expect(handoffHref(null)).toBeNull();
   });
 
   it("targets /tools pages that actually exist", () => {
