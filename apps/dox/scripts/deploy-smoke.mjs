@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Live redirect and routing checks for Dox after a deploy: the L rows of the redirect matrix
- * in context/domination/specs/CORE-86/worker-and-wrangler.md. Run by
+ * Live redirect and routing checks for Dox after a deploy: the live rows of the redirect matrix
+ * (context/domination/issues/CORE-86.md, Decisions D3 to D5). Run by
  * .github/workflows/deploy-dox.yml after `wrangler-action`; run it by hand with
  *
  *     node apps/dox/scripts/deploy-smoke.mjs

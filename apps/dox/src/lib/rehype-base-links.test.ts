@@ -1,6 +1,6 @@
-import rehypeBaseLinks from "./rehype-base-links";
+import rehypeBaseLinks, { type HastNode } from "./rehype-base-links";
 
-function run(node: Record<string, unknown>) {
+function run<T extends HastNode>(node: T): T {
   rehypeBaseLinks()({ type: "root", children: [node] });
   return node;
 }

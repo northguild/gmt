@@ -207,36 +207,83 @@ export function badSitemapLocs(xml: string): BaseFailure[] {
   return out;
 }
 
-/** Calls that send the string they are given straight to the network or the address bar. */
-const REQUESTERS = new Set([
-  "fetch",
-  "URL",
-  "Request",
-  "EventSource",
-  "Worker",
-  "sendBeacon",
-  "open",
-  "assign",
-  "replace",
-  "import",
-]);
+/**
+ * The names the base helper (`withBase`) goes by in each bundled file.
+ *
+ * The minifier renames it: it is `r` where it is defined, exported as `i`, and imported as `a` or
+ * `n` elsewhere. So the helper is found by its body, whose `withBase expects …` message survives
+ * minification, and followed through the `import{i as a}from"./site.<hash>.js"` lines. A call
+ * through any other function name is not the helper and is not exempt.
+ *
+ * `files` maps a bundle file name (`site.DDZq-i5k.js`) to its text. The result has an entry for
+ * every file that names the helper, local or imported.
+ */
+export function baseHelperNames(
+  files: Readonly<Record<string, string>>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  const add = (file: string, name: string) => {
+    (result[file] ??= []).push(name);
+  };
+  const exported = new Map<string, Set<string>>();
+  const defRe =
+    /function\s+([\w$]+)\(([\w$]+)\)\{if\(!\2\.startsWith\([`"']\/[`"']\)\|\|\2\.startsWith\([`"']\/\/[`"']\)\)throw[^;]*?withBase expects/;
+  for (const [file, text] of Object.entries(files)) {
+    const local = text.match(defRe)?.[1];
+    if (local === undefined) continue;
+    add(file, local);
+    const names = new Set<string>();
+    for (const block of text.matchAll(/export\s*\{([^}]*)\}/g))
+      for (const spec of block[1].split(",")) {
+        const m = spec.trim().match(/^([\w$]+)(?:\s+as\s+([\w$]+))?$/);
+        if (m !== null && m[1] === local) names.add(m[2] ?? m[1]);
+      }
+    exported.set(file.replace(/\.js$/, ""), names);
+  }
+  for (const [file, text] of Object.entries(files))
+    for (const imp of text.matchAll(
+      /import\s*\{([^}]*)\}\s*from\s*[`"']\.\/([^`"']+?)(?:\.js)?[`"']/g,
+    )) {
+      const names = exported.get(imp[2]);
+      if (names === undefined) continue;
+      for (const spec of imp[1].split(",")) {
+        const m = spec.trim().match(/^([\w$]+)(?:\s+as\s+([\w$]+))?$/);
+        if (m !== null && names.has(m[1])) add(file, m[2] ?? m[1]);
+      }
+    }
+  return result;
+}
 
 /**
  * Whether the text before a literal shows the literal is not a request path as it stands.
  *
- * - `helper(` where `helper` is not a requester: the site's `withBase` (minified to a one-letter
- *   name) takes the base-less route and returns the URL. `fetch(`/`new URL(` and friends are
- *   requesters, so the same literal inside them is still a hit.
- * - `+` before the literal: it is the tail of a concatenation whose head carries the base
- *   (Starlight's `"/gmt".replace(…)+"/pagefind/"`).
- * - a destructuring default (`{base_path:o="/pagefind/"}`) or a `catch{x="/pagefind/"}` fallback:
- *   vendor defaults that the caller overrides; the Pagefind UI is handed `bundlePath` under the base.
+ * Narrow on purpose. A quoted string starting `/api/` or `/<publicName>` fails unless one of these
+ * holds, and each is an exact shape, not a class of calls:
+ *
+ * - it is the argument of the base helper (`helpers`, see `baseHelperNames`);
+ * - it is the tail of `"/gmt"+…` or `"/gmt".replace(/\/$/,"")+…` (Starlight's Pagefind
+ *   `bundlePath`), whose head is the base itself;
+ * - it is a vendor default no caller reads as a URL, matched by shape and exact value. The ai-sdk
+ *   transport's `{api:e="/api/chat"}` is overridden by Dox's `api: withBase("/api/chat")`;
+ *   Pagefind UI's `{base_path:o="/pagefind/"}` and `catch{x="/pagefind/"}` fallbacks are
+ *   overridden by the `bundlePath` above. Dox source never writes these destructuring defaults
+ *   (`dist-base.test.ts` checks), so the shape matches only the vendor code.
  */
-function isGuarded(before: string): boolean {
-  if (/\+\s*$/.test(before)) return true;
-  if (/(?:[{,][\w$]+:[\w$]+=|catch\{[\w$]+=)$/.test(before)) return true;
-  const call = before.match(/([\w$]+)\($/);
-  return call !== null && !REQUESTERS.has(call[1]);
+function isGuarded(
+  before: string,
+  value: string,
+  helpers: readonly string[],
+): boolean {
+  if (
+    /(["'`])\/gmt\1(?:\.replace\(\/\\\/\$\/,(["'`])\2\))?\s*\+\s*$/.test(before)
+  )
+    return true;
+  if (value === "/api/chat" && /\{api:[\w$]+=$/.test(before)) return true;
+  if (value === "/pagefind/" && /(?:\{base_path:|catch\{)[\w$]+=$/.test(before))
+    return true;
+  return helpers.some((h) =>
+    new RegExp(`(?<![\\w$.])${h.replace(/\$/g, "\\$")}\\($`).test(before),
+  );
 }
 
 /**
@@ -245,12 +292,13 @@ function isGuarded(before: string): boolean {
  * `publicNames` are the non-page top-level entries of the built site (files, and directories with
  * no `index.html`). A string starting `/<name>` for one of them asks for a public file and needs
  * the base. Page routes are left out on purpose: the route manifest and permalink tables hold
- * base-less routes by design. `/api/` is always checked. A literal passed to the base helper is
- * not a hit (see `isGuarded`); a bare one or one handed to `fetch` is.
+ * base-less routes by design. `/api/` is always checked. `helpers` are this file's names for the
+ * base helper (`baseHelperNames`); see `isGuarded` for the only exemptions.
  */
 export function badJsLiterals(
   js: string,
   publicNames: readonly string[],
+  helpers: readonly string[] = [],
 ): BaseFailure[] {
   const out: BaseFailure[] = [];
   const escaped = publicNames.map((n) =>
@@ -263,8 +311,8 @@ export function badJsLiterals(
     "g",
   );
   for (const m of js.matchAll(re)) {
-    const before = js.slice(Math.max(0, m.index - 40), m.index);
-    if (!isGuarded(before))
+    const before = js.slice(Math.max(0, m.index - 60), m.index);
+    if (!isGuarded(before, m[2], helpers))
       out.push({ value: m[2], where: "JS string literal" });
   }
   if (js.includes(LEGACY_HOST))

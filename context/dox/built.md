@@ -117,6 +117,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `dist/gmt/`.
   - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix after each deploy.
   - **`robots.txt`** is served by the landing Worker; crawlers read only the host root.
+  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links) is
+    in `context/domination/issues/CORE-86/runbook.md`.
 - **Base `/gmt`.** Routes are base-less inside the site (generators, route manifest, corpus
   `page` and `url`, sidebar slugs). `src/lib/site.ts` holds `SITE_ORIGIN`, `SITE_BASE`,
   `SITE_URL` and `LEGACY_ORIGIN`, with `withBase`, `stripBase` and `isUnderBase`. `/gmt` is
@@ -129,7 +131,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `href`/`src`/`srcset`/social `content`/`data-*` URL in the HTML, every `url()` in the CSS
   (the Michroma `@font-face` included), the `.md` twins and `llms*.txt`, the sitemap `<loc>`s,
   `dist/_redirects` and the `/api/` and public-file strings in the bundled JS. A root URL
-  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/` and `_redirects`. The dev server serves `/gmt/` and proxies `/gmt/api` with no rewrite.
+  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/` and `_redirects`.
+  `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
+  `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
+  with no rewrite.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
   (`static.cloudflareinsights.com/beacon.min.js`) from the `Head` override
   (`src/components/Head.astro`), in production builds only. The site is registered by

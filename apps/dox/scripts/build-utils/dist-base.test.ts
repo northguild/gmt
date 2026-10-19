@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   badJsLiterals,
@@ -6,6 +8,7 @@ import {
   badSitemapLocs,
   badUrlsInCss,
   badUrlsInHtml,
+  baseHelperNames,
 } from "./dist-base";
 
 const values = (found: Array<{ value: string }>) => found.map((f) => f.value);
@@ -175,11 +178,12 @@ describe("badJsLiterals", () => {
     ).toEqual([]);
   });
 
-  it("passes a literal handed to the base helper, a concatenation tail and a vendor default", () => {
+  it("passes a literal handed to the base helper, a /gmt concatenation tail and a vendor default", () => {
     expect(
       badJsLiterals(
-        "new Ap({api:a(`/api/chat`)});b=`/gmt`+`/pagefind/`;let{base_path:o=`/pagefind/`}=n;try{}catch{x=`/pagefind/`}",
+        "new Ap({api:a(`/api/chat`)});b=`/gmt`.replace(/\\/$/,``)+`/pagefind/`;let{base_path:o=`/pagefind/`}=n;try{}catch{x=`/pagefind/`}class k{constructor({api:e=`/api/chat`}){}}",
         ["pagefind"],
+        ["a"],
       ),
     ).toEqual([]);
   });
@@ -190,6 +194,25 @@ describe("badJsLiterals", () => {
         badJsLiterals('fetch("/api/chat");new URL("/fonts/a.woff2",l)', names),
       ),
     ).toEqual(["/api/chat", "/fonts/a.woff2"]);
+  });
+
+  it.each([
+    'q("/api/chat")',
+    'load("/timezone-boundaries.json")',
+    'location.origin+"/api/chat"',
+    '{url:u="/api/chat"}',
+    'a("/api/chat")', // a call is exempt only by the helper's own name
+    '{api:x="/fonts/a.woff2"}', // a vendor-default shape is exempt only for the vendor's value
+    '{api:x="/api/brains"}',
+    '{base_path:o="/fonts/"}',
+    'catch{x="/api/chat"}',
+  ])("flags %s", (code) => {
+    expect(badJsLiterals(code, names)).toHaveLength(1);
+  });
+
+  it("flags a call through an alias that is not this file's base helper", () => {
+    expect(badJsLiterals('q("/api/chat")', names, ["a"])).toHaveLength(1);
+    expect(badJsLiterals('a("/api/chat")', names, ["a"])).toEqual([]);
   });
 
   it("flags /api/ and a public file", () => {
@@ -208,5 +231,47 @@ describe("badJsLiterals", () => {
     expect(values(badJsLiterals('fetch("/fonts/a.woff2")', names))).toEqual([
       "/fonts/a.woff2",
     ]);
+  });
+});
+
+describe("baseHelperNames", () => {
+  // The shape the minifier gives site.ts: `r` defined, exported as `i`, imported as `a`.
+  const site =
+    "var t=`/gmt`;function n(e){return e===`/gmt`||e.startsWith(`/gmt/`)}function r(e){if(!e.startsWith(`/`)||e.startsWith(`//`))throw TypeError(`withBase expects a root-absolute path`);return n(e)?e:`${t}${e}`}export{r as i,n};";
+
+  it("finds the helper where it is defined and where it is imported", () => {
+    const files = {
+      "site.X.js": site,
+      "page.Y.js": "import{i as a}from`./site.X.js`;a(`/api/chat`);",
+      "other.Z.js": 'import{n as m}from"./site.X.js";m("/x");',
+      "plain.W.js": "q(`/api/chat`)",
+    };
+    expect(baseHelperNames(files)).toEqual({
+      "site.X.js": ["r"],
+      "page.Y.js": ["a"],
+    });
+  });
+
+  it("makes the real minified shape pass end to end", () => {
+    const page =
+      "import{i as a}from`./site.X.js`;new Ap({api:a(`/api/chat`)});";
+    const helpers = baseHelperNames({ "site.X.js": site, "page.Y.js": page });
+    expect(badJsLiterals(page, [], helpers["page.Y.js"])).toEqual([]);
+  });
+});
+
+describe("the vendor-default exemption", () => {
+  // `isGuarded` exempts `{api:x="/api/chat"}`, `{base_path:x="/pagefind/"}` and
+  // `catch{x="/pagefind/"}` as vendor code. That holds only while Dox source never writes the shape.
+  it("matches no destructuring default in Dox source", () => {
+    const src = join(import.meta.dirname, "../../src");
+    const hits = readdirSync(src, { recursive: true, encoding: "utf8" })
+      .filter((f) => /\.(?:ts|tsx|astro|mjs|js)$/.test(f))
+      .filter((f) =>
+        /\b(?:api|base_path)\s*=\s*["'`]\//.test(
+          readFileSync(join(src, f), "utf8"),
+        ),
+      );
+    expect(hits).toEqual([]);
   });
 });

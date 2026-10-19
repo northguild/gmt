@@ -919,7 +919,9 @@ function addPageRelativeLinks(found, text, pageUrl) {
     if (/^(?:[a-z][\w+.-]*:|#|\/\/|\{)/i.test(target)) continue;
     const index = m.index + m[0].indexOf(target);
     if (found.has(index)) continue;
-    found.set(index, [target, new URL(target, `${SITE}${pageUrl}`).pathname]);
+    // `siteRoutes` is base-less: resolve under the real base, then drop it.
+    const resolved = new URL(target, `${SITE}${pageUrl}`).pathname;
+    found.set(index, [target, resolved.replace(/^\/gmt(?=\/|$)/, "") || "/"]);
   }
 }
 

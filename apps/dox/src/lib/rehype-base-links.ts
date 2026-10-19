@@ -13,10 +13,10 @@
  */
 import { withBase } from "./site";
 
-interface HastNode {
+export interface HastNode {
   type: string;
   tagName?: string;
-  name?: string;
+  name?: string | null;
   properties?: Record<string, unknown>;
   attributes?: { type: string; name?: string; value?: unknown }[];
   children?: HastNode[];
