@@ -1,4 +1,5 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import { cachedFormatter } from "../../internal/formatterCache";
+import type { Temporal } from "../../internal/temporal";
 import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
@@ -82,10 +83,11 @@ export function formatZonedRange(
     }
 
     try {
-      const out = new Intl.DateTimeFormat(locale, formatOptions).formatRange(
-        zdt1.epochMilliseconds,
-        zdt2.epochMilliseconds,
-      );
+      const out = cachedFormatter(
+        "DateTimeFormat",
+        locale,
+        formatOptions,
+      ).formatRange(zdt1.epochMilliseconds, zdt2.epochMilliseconds);
       return normalizeDateTime(out);
     } catch {
       return "";

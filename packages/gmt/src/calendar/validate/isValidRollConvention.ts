@@ -1,13 +1,5 @@
+import { isRollConventionName } from "../../internal/inputChecks";
 import type { RollConvention } from "../../types";
-
-const ROLL_CONVENTIONS: readonly RollConvention[] = [
-  "following",
-  "modifiedFollowing",
-  "preceding",
-  "modifiedPreceding",
-  "endOfMonth",
-  "none",
-];
 
 /**
  * Return true when `convention` is a `RollConvention` that `rollDate` implements.
@@ -38,8 +30,5 @@ const ROLL_CONVENTIONS: readonly RollConvention[] = [
 export function isValidRollConvention(
   convention: unknown,
 ): convention is RollConvention {
-  return (
-    typeof convention === "string" &&
-    ROLL_CONVENTIONS.includes(convention as RollConvention)
-  );
+  return isRollConventionName(convention);
 }

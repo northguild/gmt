@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current month from the Unix timestamp in UTC as a zero-padded string.

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";

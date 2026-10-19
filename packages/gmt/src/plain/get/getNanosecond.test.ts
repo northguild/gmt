@@ -1,4 +1,8 @@
-import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
+import {
+  setFakeSystemTime,
+  TomorrowTimeZone,
+  YesterdayTimeZone,
+} from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { getNanosecond } from "./getNanosecond";
@@ -9,7 +13,7 @@ describe("getNanosecond", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(systemTime);
+    setFakeSystemTime(systemTime);
 
     timeZoneSpy = vi
       .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")

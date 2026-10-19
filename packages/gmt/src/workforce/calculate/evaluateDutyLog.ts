@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { parseInstantNanoseconds } from "../../internal";
 import { evaluateDutyRules, prepareDutyCall } from "../../internal/dutyEngine";
 import type {

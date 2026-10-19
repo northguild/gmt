@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import {
   battleTestTimeZones,
   dateLineCrossingAt,
@@ -258,6 +258,26 @@ describe("addZonedBusinessDays across the 1844 date-line crossings (zoned.E)", (
       expect(addZonedBusinessDays(friday.toString(), 2)).toBe(
         dateLineCrossingAt(crossing, 12).toString(),
       );
+    },
+  );
+});
+
+// A business-day count is a whole number of days. A fraction, NaN or an infinity has no date, so
+// the answer is the invalid-input sentinel, as the day-by-day walk this replaced gave.
+describe("addZonedBusinessDays with a count that is not a whole number", () => {
+  it.each`
+    value                                      | amount       | expected
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${1.5}       | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${0.5}       | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${-0.5}      | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${1e-300}    | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${Infinity}  | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${-Infinity} | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${NaN}       | ${""}
+  `(
+    "returns an empty string for $value with amount $amount",
+    ({ value, amount, expected }) => {
+      expect(addZonedBusinessDays(value, amount)).toBe(expected);
     },
   );
 });

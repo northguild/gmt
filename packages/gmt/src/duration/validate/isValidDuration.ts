@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { isDurationString } from "../../internal/inputChecks";
 
 /**
  * Return true if `value` is a valid ISO 8601 duration string.
@@ -16,14 +16,5 @@ import { Temporal } from "@js-temporal/polyfill";
  * @example isValidDuration("") // false
  */
 export function isValidDuration(value: string): boolean {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  try {
-    Temporal.Duration.from(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return isDurationString(value);
 }

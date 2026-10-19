@@ -1,3 +1,4 @@
+import { clearHolidayMemo } from "../../internal/businessCalendar";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { isValidBusinessCalendar } from "./isValidBusinessCalendar";
@@ -116,6 +117,8 @@ describe("isValidBusinessCalendar", () => {
   });
 
   it("returns false when Temporal.PlainDate.from throws", () => {
+    // The holiday memo would answer without calling `from`; start it empty.
+    clearHolidayMemo();
     mockTemporalPlainDateFromThrow();
     expect(
       isValidBusinessCalendar({

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { DurationRelativeTo } from "../types";
 import { TIME_ZONE_ANNOTATION } from "./isoStringBody";
 import {
@@ -87,7 +87,7 @@ import { isObject } from "./isObject";
  *      Not on js-temporal `main` either, so no release alone will do it.
  *    - Removal: delete the `isNudgeWindowCompatNeeded` terms in `durationTotal`, `durationRound`,
  *      `zonedUntil`, `plainUntilWithRounding` and `internal/plainDateUntil.ts`, and the D11 rows in
- *      `./temporalCompat/repros.ts`. Keep the `progress === 0n` branch in `nudgeToCalendarUnit`:
+ *      `./temporalCompat/probeRepros.ts`. Keep the `progress === 0n` branch in `nudgeToCalendarUnit`:
  *      that is GMT's own bug, not the polyfill's.
  * ---------------------------------------------------------------------------------------------
  */

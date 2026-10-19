@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import { MustTestLocales } from "./localeMatrix";
 
 // Absolute must test timezones

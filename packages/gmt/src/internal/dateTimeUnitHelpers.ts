@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /**
  * Return the start of the specified date-time `unit` for a `Temporal.PlainDateTime`.

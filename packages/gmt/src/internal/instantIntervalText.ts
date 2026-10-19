@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 
 /**
  * Re-serialise instant intervals to `Temporal.Instant.prototype.toString()` spelling.

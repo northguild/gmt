@@ -1,5 +1,5 @@
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { isWeekend } from "./isWeekend";

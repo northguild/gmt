@@ -1,5 +1,5 @@
 import { calendarZonedFixtures } from "../../test";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, localNoonBattleCases } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { intervalFromDurationZoned } from "./intervalFromDurationZoned";

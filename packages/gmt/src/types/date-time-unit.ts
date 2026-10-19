@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * A date or time unit in the singular, from `"year"` down to `"nanosecond"`, as Temporal's

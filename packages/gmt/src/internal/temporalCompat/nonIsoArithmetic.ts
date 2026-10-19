@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../temporal";
 
 /*
  * The Intl era/monthCode proposal's non-ISO date arithmetic, written literally over an integer

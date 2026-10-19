@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   isExactDurationUnit,
   MAX_STALLED_SPLIT_STEPS,

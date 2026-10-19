@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import {
-  mockTemporalInstantFromEpochNanosecondsThrow,
+  mockTemporalZonedDateTimeOffsetThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
@@ -280,11 +280,200 @@ describe("addOperatingTime when Temporal throws", () => {
   };
 
   it.each`
-    mock                                            | reads
-    ${mockTemporalPlainTimeFromThrow}               | ${"reading a window"}
-    ${mockTemporalInstantFromEpochNanosecondsThrow} | ${"walking the local days"}
+    mock                                    | reads
+    ${mockTemporalPlainTimeFromThrow}       | ${"reading a window"}
+    ${mockTemporalZonedDateTimeOffsetThrow} | ${"walking the local days"}
   `("returns the sentinel when $reads throws", ({ mock }) => {
     mock();
     expect(addOperatingTime("2024-06-10T14:00:00Z", "PT1H", schedule)).toBe("");
+  });
+});
+
+describe("addOperatingTime over many weeks", () => {
+  // 39 h weeks (Monday to Thursday 8 h, Friday 09:00-16:00 7 h). Starting Monday 2024-01-08
+  // 09:00, ten weeks use 390 h and end Friday 2024-03-15 16:00. The last 10 h are 8 h on Monday
+  // 03-18 and 2 h on Tuesday 03-19, ending 11:00 GMT (summer time starts on 03-31).
+  const weekly = {
+    1: nineToFive,
+    2: nineToFive,
+    3: nineToFive,
+    4: nineToFive,
+    5: [{ from: "09:00", to: "16:00" }],
+  };
+
+  it.each`
+    start                     | duration    | expected
+    ${"2024-01-08T09:00:00Z"} | ${"PT400H"} | ${"2024-03-19T11:00:00Z"}
+    ${"2024-01-08T09:00:00Z"} | ${"PT390H"} | ${"2024-03-15T16:00:00Z"}
+  `(
+    "$duration from $start ends at $expected",
+    ({ start, duration, expected }) => {
+      expect(
+        addOperatingTime(start, duration, {
+          timeZone: "Europe/London",
+          weekly,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+describe("addOperatingTime next to Temporal's first and last instant", () => {
+  it.each`
+    timeZone           | start                        | amount      | within    | expected
+    ${"UTC"}           | ${"-271821-04-20T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-08-10T13:00:00Z"}
+    ${"UTC"}           | ${"+275760-08-04T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-08-15T11:00:00Z"}
+    ${"UTC"}           | ${"-271821-05-19T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-08T13:00:00Z"}
+    ${"UTC"}           | ${"+275760-07-06T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-17T11:00:00Z"}
+    ${"UTC"}           | ${"-271821-05-20T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-09T13:00:00Z"}
+    ${"UTC"}           | ${"+275760-07-05T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-16T11:00:00Z"}
+    ${"UTC"}           | ${"-271821-05-21T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-10T13:00:00Z"}
+    ${"UTC"}           | ${"+275760-07-04T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-15T11:00:00Z"}
+    ${"Europe/London"} | ${"-271821-04-20T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-08-10T13:01:15Z"}
+    ${"Europe/London"} | ${"+275760-08-04T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-08-15T10:00:00Z"}
+    ${"Europe/London"} | ${"-271821-05-19T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-08T13:01:15Z"}
+    ${"Europe/London"} | ${"+275760-07-06T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-17T10:00:00Z"}
+    ${"Europe/London"} | ${"-271821-05-20T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-09T13:01:15Z"}
+    ${"Europe/London"} | ${"+275760-07-05T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-16T10:00:00Z"}
+    ${"Europe/London"} | ${"-271821-05-21T00:00:00Z"} | ${"PT900H"} | ${"P1Y"}  | ${"-271821-09-10T13:01:15Z"}
+    ${"Europe/London"} | ${"+275760-07-04T00:00:00Z"} | ${"PT90H"}  | ${"P40D"} | ${"+275760-07-15T10:00:00Z"}
+  `(
+    "$amount from $start in $timeZone within $within ends at $expected",
+    ({ timeZone, start, amount, within, expected }) => {
+      const window = [{ from: "09:00", to: "17:00" }];
+      const schedule = {
+        timeZone,
+        weekly: {
+          1: window,
+          2: window,
+          3: window,
+          4: window,
+          5: window,
+          6: window,
+          7: window,
+        },
+      };
+      expect(addOperatingTime(start, amount, schedule, { within })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("counts overlapping and unsorted windows once", () => {
+    const schedule = {
+      timeZone: "UTC",
+      weekly: {
+        1: [
+          { from: "10:00", to: "12:00" },
+          { from: "09:00", to: "11:00" },
+          { from: "09:30", to: "10:00" },
+        ],
+        2: [
+          { from: "22:00", to: "03:00" },
+          { from: "01:00", to: "02:00" },
+        ],
+      },
+      holidays: ["2024-03-12"],
+      overrides: [
+        {
+          date: "2024-03-05",
+          windows: [
+            { from: "12:00", to: "14:00" },
+            { from: "08:00", to: "13:00" },
+          ],
+        },
+        {
+          date: "2024-03-06",
+          windows: [
+            { from: "12:00", to: "14:00" },
+            { from: "08:00", to: "13:00" },
+            { from: "20:00", to: "23:00" },
+          ],
+        },
+      ],
+    };
+    expect(addOperatingTime("2024-01-01T00:00:00Z", "PT400H", schedule)).toBe(
+      "2024-11-04T10:00:00Z",
+    );
+  });
+});
+
+describe("addOperatingTime from the instant a clock change repeats the start of an all-day window", () => {
+  // Goose_Bay fell back at 2010-11-07T03:01:00Z, repeating 23:01-00:01. Sunday's window is
+  // 00:00 to 00:00; "compatible" and "earlier" open it at its first 00:00, 03:00Z, so it is
+  // already open at 03:01Z and one hour later is 04:01Z.
+  it.each`
+    disambiguation
+    ${"compatible"}
+    ${"earlier"}
+  `(
+    "$disambiguation: one open hour from 2010-11-07T03:01:00Z ends at 2010-11-07T04:01:00Z",
+    ({ disambiguation }) => {
+      const schedule = {
+        timeZone: "America/Goose_Bay",
+        weekly: {
+          1: [{ from: "22:00", to: "02:00" }],
+          3: [{ from: "23:00", to: "06:00" }],
+          5: [{ from: "20:00", to: "03:00" }],
+          7: [{ from: "00:00", to: "00:00" }],
+        },
+      };
+      expect(
+        addOperatingTime("2010-11-07T03:01:00Z", "PT1H", schedule, {
+          disambiguation,
+        }),
+      ).toBe("2010-11-07T04:01:00Z");
+    },
+  );
+});
+
+describe("addOperatingTime when a clock change repeats local midnight and the window never closes", () => {
+  // Every day is open 00:00 to 00:00, so open time is elapsed time. The fall-back repeats
+  // midnight, so the next date starts at or before the start instant; the count must still
+  // begin at the start instant, never earlier.
+  const allDay = Object.fromEntries(
+    [1, 2, 3, 4, 5, 6, 7].map((day) => [day, [{ from: "00:00", to: "00:00" }]]),
+  );
+
+  it.each`
+    timeZone               | start                     | amount     | expected
+    ${"America/St_Johns"}  | ${"2010-11-07T03:00:00Z"} | ${"PT1H"}  | ${"2010-11-07T04:00:00Z"}
+    ${"America/St_Johns"}  | ${"2010-11-07T03:00:00Z"} | ${"PT20H"} | ${"2010-11-07T23:00:00Z"}
+    ${"America/St_Johns"}  | ${"2010-11-07T02:45:00Z"} | ${"PT1H"}  | ${"2010-11-07T03:45:00Z"}
+    ${"America/Goose_Bay"} | ${"2010-11-07T03:30:00Z"} | ${"PT1H"}  | ${"2010-11-07T04:30:00Z"}
+    ${"America/Moncton"}   | ${"2005-10-30T03:30:00Z"} | ${"PT1H"}  | ${"2005-10-30T04:30:00Z"}
+  `(
+    "$timeZone: $amount from $start ends at $expected",
+    ({ timeZone, start, amount, expected }) => {
+      expect(
+        addOperatingTime(start, amount, { timeZone, weekly: allDay }),
+      ).toBe(expected);
+    },
+  );
+});
+
+describe("addOperatingTime when a rejected window lies beyond the last whole-day probe", () => {
+  // New York springs forward on Sunday 2024-03-10, so the Sunday 02:30-03:30 window has a
+  // nonexistent start and `"reject"` refuses to guess it. Starting Saturday 03-02, the day jumps
+  // read the days before 03-10 as clean (8 h on each of Mon to Fri) and the one after as refused;
+  // the answer is unknowable either way, so the sentinel.
+  it("returns the sentinel for 100 open hours from 2024-03-02 under reject", () => {
+    const schedule = {
+      timeZone: "America/New_York",
+      weekly: {
+        1: [{ from: "09:00", to: "17:00" }],
+        2: [{ from: "09:00", to: "17:00" }],
+        3: [{ from: "09:00", to: "17:00" }],
+        4: [{ from: "09:00", to: "17:00" }],
+        5: [{ from: "09:00", to: "17:00" }],
+        7: [{ from: "02:30", to: "03:30" }],
+      },
+    };
+    expect(
+      addOperatingTime("2024-03-02T12:00:00Z", "PT100H", schedule, {
+        disambiguation: "reject",
+        within: "P12D",
+      }),
+    ).toBe("");
   });
 });

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { getUtcNanosecond } from "./getUtcNanosecond";
 
 describe("getUtcNanosecond", () => {

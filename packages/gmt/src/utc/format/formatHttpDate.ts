@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { englishDateTimeStem } from "../../internal/englishCalendarNames";
 import { isValidUtc } from "../validate";
 

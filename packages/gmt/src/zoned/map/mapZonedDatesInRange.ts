@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";

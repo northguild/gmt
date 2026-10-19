@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidDateTime } from "../../plain/validate/isValidDateTime";
 import { convertUtcToPlainDateTime } from "./convertUtcToPlainDateTime";
 

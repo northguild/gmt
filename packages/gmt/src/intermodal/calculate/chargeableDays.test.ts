@@ -485,4 +485,99 @@ describe("chargeableDays", () => {
     ).not.toThrow();
     expect(chargeableDays(friday, expiry, 3, make() as never)).toBeNull();
   });
+
+  // Counts come from closed forms, so each row states the count it must give.
+  const london = {
+    basis: "calendar",
+    chargeBasis: "calendar",
+    timeZone: "Europe/London",
+    firstDay: "eventDay",
+  } as const;
+  const goose = { ...calendar, timeZone: "America/Goose_Bay" } as const;
+  const apia = { ...calendar, timeZone: "Pacific/Apia" } as const;
+
+  it.each`
+    name                                                           | from                      | to                        | free | options                                                                                                                         | expiresAt                 | charged
+    ${"Apia skips 2011-12-30, which the zone deleted"}             | ${"2011-12-27T12:00:00Z"} | ${"2012-01-03T12:00:00Z"} | ${1} | ${apia}                                                                                                                         | ${"2011-12-28T10:00:00Z"} | ${["2011-12-28", "2011-12-29", "2011-12-31", "2012-01-01", "2012-01-02", "2012-01-03", "2012-01-04"]}
+    ${"Goose_Bay counts the repeated 2010-11-06 once"}             | ${"2010-11-04T12:00:00Z"} | ${"2010-11-10T12:00:00Z"} | ${1} | ${goose}                                                                                                                        | ${"2010-11-05T03:00:00Z"} | ${["2010-11-05", "2010-11-06", "2010-11-07", "2010-11-08", "2010-11-09", "2010-11-10"]}
+    ${"Goose_Bay clock inside the repeated pass of its date"}      | ${"2010-11-07T03:30:00Z"} | ${"2010-11-07T08:00:00Z"} | ${0} | ${goose}                                                                                                                        | ${"2010-11-07T03:01:00Z"} | ${["2010-11-06", "2010-11-07"]}
+    ${"nextDay, no free days, Saturday event: Sunday is skipped"}  | ${"2024-06-15T14:00:00Z"} | ${"2024-06-18T12:00:00Z"} | ${0} | ${{ ...london, basis: "working", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/London" }, firstDay: "nextDay" }} | ${"2024-06-16T23:00:00Z"} | ${["2024-06-17", "2024-06-18"]}
+    ${"zero-length dwell exactly at a day start charges that day"} | ${"2024-06-16T23:00:00Z"} | ${"2024-06-16T23:00:00Z"} | ${0} | ${london}                                                                                                                       | ${"2024-06-16T23:00:00Z"} | ${["2024-06-17"]}
+  `("$name", ({ from, to, free, options, expiresAt, charged }) => {
+    const result = chargeableDays(from, to, free, options);
+    expect(result?.expiresAt).toBe(expiresAt);
+    expect(result?.chargedDates).toEqual(charged);
+    expect(result?.chargeableDays).toBe(charged.length);
+  });
+
+  it("counts a ten-year working dwell with 21 weekday holidays: 2584 days", () => {
+    // 2014-01-07 (Tue) to 2024-01-01: 3647 days, 2605 weekdays, minus 21 weekday holidays.
+    const holidays: string[] = [];
+    for (let year = 2014; year <= 2024; year++)
+      for (const day of ["01-01", "12-25", "12-26"])
+        holidays.push(`${year}-${day}`);
+    const result = chargeableDays(
+      "2014-01-01T12:00:00Z",
+      "2024-01-01T12:00:00Z",
+      3,
+      {
+        ...working,
+        chargeBasis: "working",
+        timeZone: "Europe/London",
+        calendar: { weekend: [6, 7], holidays, timeZone: "Europe/London" },
+      },
+    );
+    expect(result?.chargeableDays).toBe(2584);
+    expect(result?.chargedDates[0]).toBe("2014-01-07");
+  });
+
+  it("returns the sentinel for a dwell of 10001 local days", () => {
+    expect(
+      chargeableDays("2024-01-01T10:00:00Z", "2051-05-20T10:00:00Z", 0, {
+        ...calendar,
+        timeZone: "UTC",
+      }),
+    ).toBeNull();
+  });
+
+  // Zones whose midnight is skipped or repeated, an offset zone, and Temporal's
+  // limits (the day-by-day walk). Each row's value was checked against the day-by-day walk.
+  // The day-by-day walk takes over within 10,100 days of a limit: -271794-12-15T00:00:00Z
+  // and a last instant of +275733-01-18T00:00:00Z sit exactly that far out, one day
+  // further in is past it.
+  const holidayCalendar = (timeZone: string, holidays: string[]) => ({
+    weekend: [6, 7],
+    holidays,
+    timeZone,
+  });
+  const londonHolidays = holidayCalendar("Europe/London", [
+    "2024-06-13",
+    "2024-06-17",
+  ]);
+
+  it.each`
+    name                                                    | from                         | to                                     | free | options                                                                                                                                             | expiresAt                    | used | charged
+    ${"Sao_Paulo midnight gap: 2018-11-04 starts 01:00"}    | ${"2018-11-03T12:00:00Z"}    | ${"2018-11-06T12:00:00Z"}              | ${1} | ${{ ...calendar, timeZone: "America/Sao_Paulo" }}                                                                                                   | ${"2018-11-04T03:00:00Z"}    | ${1} | ${["2018-11-04", "2018-11-05", "2018-11-06"]}
+    ${"Sao_Paulo gap day, no free days"}                    | ${"2018-11-04T03:00:00Z"}    | ${"2018-11-05T02:59:59Z"}              | ${0} | ${{ ...calendar, timeZone: "America/Sao_Paulo" }}                                                                                                   | ${"2018-11-04T03:00:00Z"}    | ${0} | ${["2018-11-04", "2018-11-05"]}
+    ${"Santiago midnight gap: 2024-09-08 starts 01:00"}     | ${"2024-09-06T12:00:00Z"}    | ${"2024-09-10T12:00:00Z"}              | ${1} | ${{ ...calendar, timeZone: "America/Santiago" }}                                                                                                    | ${"2024-09-07T04:00:00Z"}    | ${1} | ${["2024-09-07", "2024-09-08", "2024-09-09", "2024-09-10"]}
+    ${"Havana midnight repeat: 2024-11-03 00:00 twice"}     | ${"2024-11-02T12:00:00Z"}    | ${"2024-11-05T12:00:00Z"}              | ${1} | ${{ ...calendar, timeZone: "America/Havana" }}                                                                                                      | ${"2024-11-03T04:00:00Z"}    | ${1} | ${["2024-11-03", "2024-11-04", "2024-11-05"]}
+    ${"Havana midnight gap: 2024-03-10 starts 01:00"}       | ${"2024-03-09T12:00:00Z"}    | ${"2024-03-12T12:00:00Z"}              | ${1} | ${{ ...calendar, timeZone: "America/Havana" }}                                                                                                      | ${"2024-03-10T05:00:00Z"}    | ${1} | ${["2024-03-10", "2024-03-11", "2024-03-12"]}
+    ${"+05:45:30 offset zone, 23:45:30 local start"}        | ${"2024-03-09T18:00:00Z"}    | ${"2024-03-13T12:00:00Z"}              | ${1} | ${{ ...calendar, timeZone: "+05:45:30" }}                                                                                                           | ${"2024-03-09T18:14:30Z"}    | ${1} | ${["2024-03-10", "2024-03-11", "2024-03-12", "2024-03-13"]}
+    ${"working basis, calendar charge: holiday not free"}   | ${"2024-06-12T10:00:00Z"}    | ${"2024-06-26T10:00:00Z"}              | ${2} | ${{ ...calendar, basis: "working", timeZone: "Europe/London", calendar: londonHolidays }}                                                           | ${"2024-06-14T23:00:00Z"}    | ${2} | ${["2024-06-15", "2024-06-16", "2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26"]}
+    ${"working both ways: weekend and holidays skipped"}    | ${"2024-06-12T10:00:00Z"}    | ${"2024-06-26T10:00:00Z"}              | ${2} | ${{ ...calendar, basis: "working", chargeBasis: "working", timeZone: "Europe/London", calendar: londonHolidays }}                                   | ${"2024-06-14T23:00:00Z"}    | ${2} | ${["2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-24", "2024-06-25", "2024-06-26"]}
+    ${"working, no free days, event day is a holiday"}      | ${"2024-06-12T10:00:00Z"}    | ${"2024-06-15T10:00:00Z"}              | ${0} | ${{ ...calendar, basis: "working", chargeBasis: "working", timeZone: "Europe/London", calendar: holidayCalendar("Europe/London", ["2024-06-12"]) }} | ${"2024-06-12T23:00:00Z"}    | ${0} | ${["2024-06-13", "2024-06-14"]}
+    ${"near the last instant: day-by-day walk"}             | ${"+275760-09-05T12:00:00Z"} | ${"+275760-09-12T12:00:00Z"}           | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"+275760-09-06T00:00:00Z"} | ${1} | ${["+275760-09-06", "+275760-09-07", "+275760-09-08", "+275760-09-09", "+275760-09-10", "+275760-09-11", "+275760-09-12"]}
+    ${"near the last instant, empty dwell on the last day"} | ${"+275760-09-11T12:00:00Z"} | ${"+275760-09-12T12:00:00Z"}           | ${0} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"+275760-09-11T00:00:00Z"} | ${0} | ${["+275760-09-11", "+275760-09-12"]}
+    ${"near the first instant: day-by-day walk"}            | ${"-271821-04-20T12:00:00Z"} | ${"-271821-04-25T12:00:00Z"}           | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"-271821-04-21T00:00:00Z"} | ${1} | ${["-271821-04-21", "-271821-04-22", "-271821-04-23", "-271821-04-24", "-271821-04-25"]}
+    ${"at the margin from the first instant"}               | ${"-271794-12-15T00:00:00Z"} | ${"-271794-12-18T12:00:00Z"}           | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"-271794-12-16T00:00:00Z"} | ${1} | ${["-271794-12-16", "-271794-12-17", "-271794-12-18"]}
+    ${"one day inside the margin from the first instant"}   | ${"-271794-12-14T00:00:00Z"} | ${"-271794-12-17T12:00:00Z"}           | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"-271794-12-15T00:00:00Z"} | ${1} | ${["-271794-12-15", "-271794-12-16", "-271794-12-17"]}
+    ${"at the margin from the last instant"}                | ${"+275733-01-15T12:00:00Z"} | ${"+275733-01-18T00:00:00.000000001Z"} | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"+275733-01-16T00:00:00Z"} | ${1} | ${["+275733-01-16", "+275733-01-17", "+275733-01-18"]}
+    ${"one day inside the margin from the last instant"}    | ${"+275733-01-16T12:00:00Z"} | ${"+275733-01-19T00:00:00.000000001Z"} | ${1} | ${{ ...calendar, timeZone: "UTC" }}                                                                                                                 | ${"+275733-01-17T00:00:00Z"} | ${1} | ${["+275733-01-17", "+275733-01-18", "+275733-01-19"]}
+  `("$name", ({ from, to, free, options, expiresAt, used, charged }) => {
+    const result = chargeableDays(from, to, free, options);
+    expect(result?.expiresAt).toBe(expiresAt);
+    expect(result?.freeDaysUsed).toBe(used);
+    expect(result?.chargedDates).toEqual(charged);
+    expect(result?.chargeableDays).toBe(charged.length);
+  });
 });

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type {
   Disambiguation,
   DutyViolation,
@@ -30,15 +30,39 @@ import {
   type StatusSet,
   usesOperatorDays,
 } from "./dutyRules";
+import {
+  countEvents,
+  countInRange,
+  latestPairFrom,
+  createRunStore,
+  endingAtOrBefore,
+  entryHolding,
+  firstEndingAfter,
+  firstEntryIn,
+  firstStartingAtOrAfter,
+  firstWhere,
+  interruptionResetAt,
+  lastAtLeastUntil,
+  lastEntryBefore,
+  latestAtLeast,
+  logStartBefore,
+  runEndingAt,
+  runIndex,
+  runsMatching,
+  type RunIndex,
+  type RunStore,
+  type RunView,
+  runsUntil,
+  type StatusKey,
+  timeInBefore,
+  viewRun,
+} from "./dutyRunIndex";
+import { MIN_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import { isObject } from "./isObject";
 import { parseScheduleDisambiguation } from "./operatingSchedule";
 import { formatHourDuration } from "./hourDurationString";
-import { coalesceIntervalNanoseconds } from "./intervalNanoseconds";
 import { type ZoneFrame, zoneFrame } from "./zoneFrame";
 import { parseDayStartTime } from "./dutyPeriods";
-
-/** TC39 `nsMinInstant`: a window never reaches back past the first instant. */
-const MIN_INSTANT_NANOSECONDS = -8_640_000_000_000_000_000_000n;
 
 /** Everything one call evaluates its rules against. */
 export type DutyContext = {
@@ -55,8 +79,8 @@ export type DutyContext = {
    * with the span it covers.
    */
   windowInstances: Map<string, WindowInstances[]>;
-  /** The runs of the whole log in a set of statuses, found once per call. */
-  runs: Map<StatusSet, DutyRun[]>;
+  /** The whole log and the run index of each status test, built once per call. */
+  store: RunStore;
 };
 
 /** A duration or a count, before it is written into an outcome. */
@@ -169,7 +193,7 @@ export function prepareDutyCall(
       scales: new Map(),
       wallClocks: new Map(),
       windowInstances: new Map(),
-      runs: new Map(),
+      store: createRunStore(entries),
     },
     rules: resolved,
   };
@@ -204,25 +228,6 @@ function scaleFor(
   return scale;
 }
 
-/** The log as it stands at `at`: later entries dropped, one straddling `at` cut there. */
-function clip(entries: readonly DutyLogEntry[], at: bigint): DutyLogEntry[] {
-  const clipped: DutyLogEntry[] = [];
-
-  for (const entry of entries) {
-    if (entry.start >= at) {
-      break;
-    }
-    clipped.push(entry.end > at ? { ...entry, end: at } : entry);
-  }
-
-  return clipped;
-}
-
-type StatusTest = StatusSet | ((status: string) => boolean);
-
-const matches = (test: StatusTest, status: string) =>
-  typeof test === "function" ? test(status) : test.has(status);
-
 /**
  * Read a status list a helper takes: an array of strings, `[]` allowed. Each element is read once.
  *
@@ -256,26 +261,9 @@ export function readStatusList(value: unknown): StatusSet | null {
  */
 export function runsOf(
   log: readonly DutyLogEntry[],
-  test: StatusTest,
+  test: StatusSet,
 ): DutyRun[] {
-  return coalesceIntervalNanoseconds(
-    log
-      .filter((entry) => matches(test, entry.status))
-      .map(({ start, end }) => ({ start, end, startText: "", endText: "" })),
-  ).map(({ start, end }) => ({ start, end }));
-}
-
-/** The runs of the whole log in a set of statuses, found once per call and kept. */
-function logRuns(context: DutyContext, statuses: StatusSet): DutyRun[] {
-  const known = context.runs.get(statuses);
-
-  if (known !== undefined) {
-    return known;
-  }
-
-  const found = runsOf(context.entries, statuses);
-  context.runs.set(statuses, found);
-  return found;
+  return runsMatching(log, (status) => test.has(status));
 }
 
 /**
@@ -334,14 +322,14 @@ export function clipRuns(runs: readonly DutyRun[], from: bigint, to: bigint) {
 /** Time in `statuses` inside `[from, to)`. */
 export function timeIn(
   log: readonly DutyLogEntry[],
-  statuses: StatusTest,
+  statuses: StatusSet,
   from: bigint,
   to: bigint,
 ): bigint {
   let total = 0n;
 
   for (const entry of log) {
-    if (matches(statuses, entry.status)) {
+    if (statuses.has(entry.status)) {
       const start = max(entry.start, from);
       const end = min(entry.end, to);
       total += end > start ? end - start : 0n;
@@ -349,17 +337,6 @@ export function timeIn(
   }
 
   return total;
-}
-
-/** The latest run at least `minimum` long. */
-function lastAtLeast(runs: readonly DutyRun[], minimum: bigint) {
-  for (let index = runs.length - 1; index >= 0; index--) {
-    const run = runs[index] as DutyRun;
-    if (length(run) >= minimum) {
-      return run;
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -432,7 +409,7 @@ function windowOf(
   if (period.kind === "elapsed") {
     return {
       span: {
-        start: max(at - period.length, MIN_INSTANT_NANOSECONDS),
+        start: max(at - period.length, MIN_EPOCH_NANOSECONDS),
         end: at,
       },
       basis: "elapsed",
@@ -856,7 +833,7 @@ function evaluateFreePeriod(
   const window = windowOf(context, rule.within, at, anchor);
   // Every count below ends at or before `at`, so the runs of the whole log, cut to the count's
   // span, are the runs of the log as it stands at `at`.
-  const rests = logRuns(context, rule.restStatuses);
+  const rests = runIndex(context.store, rule.restStatuses).runs;
   const countIn = (from: bigint, to: bigint, extendTo?: bigint) => {
     const inside = runsBetween(rests, from, to);
     const runs =
@@ -947,17 +924,102 @@ function evaluateFreePeriod(
   };
 }
 
+/**
+ * The stretches without rest in the log as it stood at `at`: each runs from the end of one rest to
+ * the start of the next, the last to `at` (or nowhere, when a rest reaches `at`). The log's first
+ * entry starts one too, as a rest ending there would: time before the log is unknown, but the work
+ * logged before the first rest is a stretch without rest like any other.
+ */
+function restGaps(rests: RunView, logStart: bigint | undefined, at: bigint) {
+  const taken = rests.count;
+  const resting = rests.last !== undefined && rests.last.end === at;
+  const prepended =
+    logStart !== undefined &&
+    (taken === 0 || viewRun(rests, 0).start !== logStart);
+  const startAt = (gap: number): bigint =>
+    prepended
+      ? gap === 0
+        ? (logStart as bigint)
+        : viewRun(rests, gap - 1).end
+      : viewRun(rests, gap).end;
+  const endAt = (gap: number): bigint => {
+    const next = prepended ? gap : gap + 1;
+
+    return next < taken
+      ? viewRun(rests, next).start
+      : resting
+        ? startAt(gap)
+        : at;
+  };
+
+  return {
+    count: prepended ? taken + 1 : taken,
+    resting,
+    startAt,
+    endAt,
+  };
+}
+
+/**
+ * The longest stretch without rest touching `[from, to)`, found from the first that ends after
+ * `from`.
+ */
+function widestGap(
+  gaps: ReturnType<typeof restGaps>,
+  from: bigint,
+  to: bigint,
+): bigint {
+  let widest = 0n;
+
+  for (
+    let gap = firstWhere(gaps.count, (position) => gaps.endAt(position) > from);
+    gap < gaps.count && gaps.startAt(gap) < to;
+    gap++
+  ) {
+    widest = max(widest, gaps.endAt(gap) - gaps.startAt(gap));
+  }
+
+  return widest;
+}
+
+/** The widest stretch without rest in `[from, upper)` at `at`, and when the next rest falls due. */
+function widestRestGap(
+  context: DutyContext,
+  index: RunIndex,
+  at: bigint,
+  from: bigint,
+  upper: bigint,
+  maxGap: bigint,
+): { widest: bigint; dueBy: bigint | null } {
+  const gaps = restGaps(
+    runsUntil(index, at),
+    logStartBefore(context.store, at),
+    at,
+  );
+
+  return {
+    widest: widestGap(gaps, from, upper),
+    dueBy:
+      gaps.count > 0 && !gaps.resting
+        ? gaps.startAt(gaps.count - 1) + maxGap
+        : null,
+  };
+}
+
 function evaluateRestRequirement(
   context: DutyContext,
   rule: Extract<ResolvedRule, { kind: "restRequirement" }>,
-  log: readonly DutyLogEntry[],
   at: bigint,
   anchor: bigint,
 ): Evaluation {
   const window = windowOf(context, rule.per, at, anchor);
   const { span } = window;
-  const rests = runsOf(log, rule.restStatuses);
-  const inside = clipRuns(rests, span.start, min(span.end, at));
+  const index = runIndex(context.store, rule.restStatuses);
+  const upper = min(span.end, at);
+  // The count ends at or before `at`, so the runs of the whole log, cut to it, are the runs of
+  // the log as it stands at `at`.
+  const inside =
+    span.start < upper ? runsBetween(index.runs, span.start, upper) : [];
   const actual = restChecks(rule, inside.map(length));
   const met =
     actual.met ||
@@ -974,36 +1036,14 @@ function evaluateRestRequirement(
   };
 
   if (rule.maxGap !== null) {
-    const last = rests[rests.length - 1];
-    const resting = last !== undefined && last.end === at;
-    // A stretch without rest runs from the end of one rest to the start of the next. The log's
-    // first entry starts one too, as a rest ending there would: time before the log is unknown,
-    // but the work logged before the first rest is a stretch without rest like any other.
-    const logStart = log[0]?.start;
-    const gapStarts =
-      logStart === undefined || rests[0]?.start === logStart
-        ? rests.map((run) => run.end)
-        : [logStart, ...rests.map((run) => run.end)];
-    const gapEnds =
-      gapStarts.length > rests.length
-        ? rests.map((run) => run.start)
-        : rests.slice(1).map((run) => run.start);
-    let widest = 0n;
-
-    for (let index = 0; index < gapStarts.length; index++) {
-      const gapStart = gapStarts[index] as bigint;
-      const gapEnd = gapEnds[index] ?? (resting ? gapStart : at);
-
-      if (gapEnd > span.start && gapStart < min(span.end, at)) {
-        widest = max(widest, gapEnd - gapStart);
-      }
-    }
-
-    const lastGapStart = gapStarts[gapStarts.length - 1];
-    const dueBy =
-      lastGapStart !== undefined && !resting
-        ? lastGapStart + rule.maxGap
-        : null;
+    const { widest, dueBy } = widestRestGap(
+      context,
+      index,
+      at,
+      span.start,
+      upper,
+      rule.maxGap,
+    );
 
     if (widest > rule.maxGap) {
       return {
@@ -1029,61 +1069,77 @@ function evaluateRestRequirement(
   });
 }
 
-function evaluateRestBeforeDuty(
+/** What `evaluateRestBeforeDuty` has worked out before it judges the rest by either rule. */
+type DutyStart = {
+  rests: RunView;
+  dutyStart: bigint;
+  onDuty: boolean;
+  logStart: bigint;
+};
+
+/** The rest right before a duty, measured whole, against the duty before it (`orFactor`). */
+function restBeforeDutyScaled(
   rule: Extract<ResolvedRule, { kind: "restBeforeDuty" }>,
-  log: readonly DutyLogEntry[],
-  at: bigint,
+  orFactor: NonNullable<
+    Extract<ResolvedRule, { kind: "restBeforeDuty" }>["orFactor"]
+  >,
+  { rests, dutyStart, onDuty, logStart }: DutyStart,
 ): Evaluation {
-  const isRest = (status: string) => rule.restStatuses.has(status);
-  const rests = runsOf(log, isRest);
-  const last = log[log.length - 1];
-  const onDuty = last !== undefined && last.end === at && !isRest(last.status);
-  // On duty, the duty started where the run outside rest reaching `at` began; resting, a duty
-  // starting now is the one to be ready for.
-  const dutyStart = onDuty
-    ? (runsOf(log, (status) => !isRest(status)).at(-1) as DutyRun).start
-    : at;
-  const logStart = log[0]?.start ?? at;
+  // The rest judged is the one right before the duty, measured whole, against the duty it
+  // ends: from the end of the last rest of at least `minimum` before it, breaks included, to
+  // where it starts. A duty between an earlier rest and this one is never skipped, and more
+  // rest before the duty only lengthens the rest or shortens the duty before it.
+  const rest = runEndingAt(rests, dutyStart);
+  const restStart = rest?.start ?? dutyStart;
+  const fullRest = latestAtLeast(
+    rests,
+    endingAtOrBefore(rests, restStart),
+    rule.minimum,
+  );
+  const dutyFrom = fullRest?.end ?? min(logStart, restStart);
+  const previousDuty = restStart - dutyFrom;
+  const { numerator, denominator } = orFactor.k;
+  // k × the duty, rounded up to the nanosecond, exactly.
+  const scaled = (previousDuty * numerator + denominator - 1n) / denominator;
+  const limit = max(rule.minimum, max(scaled, orFactor.floor));
+  const used = rest === undefined ? 0n : length(rest);
 
-  if (rule.orFactor !== null) {
-    // The rest judged is the one right before the duty, measured whole, against the duty it
-    // ends: from the end of the last rest of at least `minimum` before it, breaks included, to
-    // where it starts. A duty between an earlier rest and this one is never skipped, and more
-    // rest before the duty only lengthens the rest or shortens the duty before it.
-    const rest = rests.find((run) => run.end === dutyStart);
-    const restStart = rest?.start ?? dutyStart;
-    const fullRest = rests
-      .filter((run) => run.end <= restStart && length(run) >= rule.minimum)
-      .at(-1);
-    const dutyFrom = fullRest?.end ?? min(logStart, restStart);
-    const previousDuty = restStart - dutyFrom;
-    const { numerator, denominator } = rule.orFactor.k;
-    // k × the duty, rounded up to the nanosecond, exactly.
-    const scaled = (previousDuty * numerator + denominator - 1n) / denominator;
-    const limit = max(rule.minimum, max(scaled, rule.orFactor.floor));
-    const used = rest === undefined ? 0n : length(rest);
+  return {
+    ...floored(used, limit, !onDuty || used >= limit, {
+      window: { start: dutyFrom, end: dutyStart },
+      periodBasis: "elapsed",
+      dueBy: null,
+      resetAt: null,
+      grouping: "start",
+    }),
+    // A rest that starts with the log, or a duty with none logged before it, may have more
+    // rest before the log: the record does not judge it.
+    beforeLog: restStart <= logStart,
+    key: restStart,
+  };
+}
 
-    return {
-      ...floored(used, limit, !onDuty || used >= limit, {
-        window: { start: dutyFrom, end: dutyStart },
-        periodBasis: "elapsed",
-        dueBy: null,
-        resetAt: null,
-        grouping: "start",
-      }),
-      // A rest that starts with the log, or a duty with none logged before it, may have more
-      // rest before the log: the record does not judge it.
-      beforeLog: restStart <= logStart,
-      key: restStart,
-    };
-  }
-
-  const windowStart = max(dutyStart - rule.within, MIN_INSTANT_NANOSECONDS);
-
-  // The rest before the duty: the longest run of rest inside the window, the latest on a tie.
+/** The longest run of rest inside `[windowStart, dutyStart)`, the latest on a tie. */
+function longestRestInside(
+  rests: RunView,
+  windowStart: bigint,
+  dutyStart: bigint,
+): { run: DutyRun; inside: bigint } | undefined {
+  // Only the runs reaching into the window are read, and dutyStart is at most `at`, so the cut
+  // last run reads as it does whole.
   let rest: { run: DutyRun; inside: bigint } | undefined;
 
-  for (const run of rests) {
+  for (
+    let position = firstEndingAfter(rests, windowStart);
+    position < rests.count;
+    position++
+  ) {
+    const run = viewRun(rests, position);
+
+    if (run.start >= dutyStart) {
+      break;
+    }
+
     const inside = min(run.end, dutyStart) - max(run.start, windowStart);
 
     if (inside > 0n && (rest === undefined || inside >= rest.inside)) {
@@ -1091,6 +1147,16 @@ function evaluateRestBeforeDuty(
     }
   }
 
+  return rest;
+}
+
+/** The rest before a duty: the longest inside the window, against the minimum. */
+function restBeforeDutyWithin(
+  rule: Extract<ResolvedRule, { kind: "restBeforeDuty" }>,
+  { rests, dutyStart, onDuty }: DutyStart,
+): Evaluation {
+  const windowStart = max(dutyStart - rule.within, MIN_EPOCH_NANOSECONDS);
+  const rest = longestRestInside(rests, windowStart, dutyStart);
   const used = rest?.inside ?? 0n;
 
   return {
@@ -1106,6 +1172,38 @@ function evaluateRestBeforeDuty(
   };
 }
 
+function evaluateRestBeforeDuty(
+  context: DutyContext,
+  rule: Extract<ResolvedRule, { kind: "restBeforeDuty" }>,
+  at: bigint,
+): Evaluation {
+  const { store } = context;
+  const rests = runsUntil(runIndex(store, rule.restStatuses), at);
+  const last = lastEntryBefore(store, at);
+  const onDuty =
+    last !== undefined &&
+    last.end === at &&
+    !rule.restStatuses.has(last.status);
+  // On duty, the duty started where the run outside rest reaching `at` began; resting, a duty
+  // starting now is the one to be ready for.
+  const dutyStart = onDuty
+    ? (
+        runsUntil(runIndex(store, { not: rule.restStatuses }), at)
+          .last as DutyRun
+      ).start
+    : at;
+  const started = {
+    rests,
+    dutyStart,
+    onDuty,
+    logStart: logStartBefore(store, at) ?? at,
+  };
+
+  return rule.orFactor === null
+    ? restBeforeDutyWithin(rule, started)
+    : restBeforeDutyScaled(rule, rule.orFactor, started);
+}
+
 function evaluateRule(
   context: DutyContext,
   rule: ResolvedRule,
@@ -1117,19 +1215,23 @@ function evaluateRule(
     return evaluateFreePeriod(context, rule, at, anchor);
   }
 
-  const log = clip(context.entries, at);
-  const first = log[0]?.start ?? at;
+  // The log as it stands at `at` is the whole log read up to `at`: no copy is made.
+  const { store } = context;
+  const first = logStartBefore(store, at) ?? at;
+  const viewOf = (test: StatusKey) => runsUntil(runIndex(store, test), at);
+  const timeOf = (test: StatusKey, from: bigint, to: bigint) =>
+    timeInBefore(runIndex(store, test), from, to, at);
 
   switch (rule.kind) {
     case "cumulativeCap": {
-      const reset = lastAtLeast(
-        runsOf(log, rule.since.statuses),
+      const reset = lastAtLeastUntil(
+        viewOf(rule.since.statuses),
         rule.since.consecutive,
       );
       const from = reset?.end ?? first;
 
       return capped(
-        duration(timeIn(log, rule.statuses, from, at)),
+        duration(timeOf(rule.statuses, from, at)),
         duration(rule.cap),
         {
           window: { start: from, end: at },
@@ -1142,14 +1244,10 @@ function evaluateRule(
     }
 
     case "elapsedWindow": {
-      const rests = runsOf(log, rule.since.statuses);
-      const reset = lastAtLeast(rests, rule.since.consecutive);
+      const rests = viewOf(rule.since.statuses);
+      const reset = lastAtLeastUntil(rests, rule.since.consecutive);
       const after = reset?.end ?? null;
-      const opener = log.find(
-        (entry) =>
-          (after === null || entry.start >= after) &&
-          rule.startStatuses.has(entry.status),
-      );
+      const opener = firstEntryIn(store, rule.startStatuses, after, at);
 
       if (opener === undefined) {
         return {
@@ -1170,12 +1268,12 @@ function evaluateRule(
       let second: DutyRun | undefined;
 
       if (rule.exclude !== null) {
-        const pairs = restPairs(
-          rests.filter((run) => run.start >= opener.start),
+        const latest = latestPairFrom(
+          rests,
+          firstStartingAtOrAfter(rests, opener.start),
           rule.since.consecutive,
           rule.exclude,
         );
-        const latest = pairs[pairs.length - 1];
 
         if (latest !== undefined) {
           opensAt = latest.first.end;
@@ -1214,7 +1312,7 @@ function evaluateRule(
         }
       }
 
-      const late = timeIn(log, rule.restrictedStatuses, closesAt, at);
+      const late = timeOf(rule.restrictedStatuses, closesAt, at);
 
       return {
         satisfied: late === 0n,
@@ -1231,36 +1329,19 @@ function evaluateRule(
     }
 
     case "requiredInterruption": {
-      const outside = rule.outsideStatuses;
-      const breaks = runsOf(
-        log,
-        (status) =>
-          !rule.countedStatuses.has(status) &&
-          (outside === null || outside.has(status)),
+      const breaks = viewOf({
+        not: rule.countedStatuses,
+        within: rule.outsideStatuses,
+      });
+      const resetAt = interruptionResetAt(
+        breaks,
+        rule.minimum,
+        rule.orderedSplit,
       );
-      let resetAt: bigint | null = null;
-      let part = 0;
-
-      for (const pause of breaks) {
-        const taken = length(pause);
-        const split = rule.orderedSplit;
-
-        if (taken >= rule.minimum) {
-          resetAt = pause.end;
-          part = 0;
-        } else if (split !== null && taken >= (split[part] as bigint)) {
-          part++;
-          if (part === split.length) {
-            resetAt = pause.end;
-            part = 0;
-          }
-        }
-      }
-
       const from = resetAt ?? first;
 
       return capped(
-        duration(timeIn(log, rule.countedStatuses, from, at)),
+        duration(timeOf(rule.countedStatuses, from, at)),
         duration(rule.after),
         {
           window: { start: from, end: at },
@@ -1277,8 +1358,8 @@ function evaluateRule(
       const reset =
         rule.reset === null
           ? undefined
-          : lastAtLeast(
-              runsOf(log, rule.reset.statuses),
+          : lastAtLeastUntil(
+              viewOf(rule.reset.statuses),
               rule.reset.consecutive,
             );
       const from =
@@ -1286,18 +1367,19 @@ function evaluateRule(
           ? reset.end
           : window.span.start;
       const to = min(window.span.end, at);
-      let used = timeIn(log, rule.statuses, from, to);
+      let used = timeOf(rule.statuses, from, to);
       let limit = rule.cap;
 
       if (rule.precondition !== null) {
         const { restStatuses, minimum, beforeHours } = rule.precondition;
-        const rest = clipRuns(runsOf(log, restStatuses), from, to).find(
-          (run) => length(run) >= minimum,
-        );
+        // `to` is at most `at`, so the runs of the whole log, cut to it, are the log's.
+        const rest = (
+          from < to
+            ? runsBetween(runIndex(store, restStatuses).runs, from, to)
+            : []
+        ).find((run) => length(run) >= minimum);
         const before =
-          rest === undefined
-            ? used
-            : timeIn(log, rule.statuses, from, rest.start);
+          rest === undefined ? used : timeOf(rule.statuses, from, rest.start);
 
         if (rest === undefined || before > beforeHours) {
           limit = beforeHours;
@@ -1321,8 +1403,7 @@ function evaluateRule(
         at,
         anchor,
       );
-      const total = timeIn(
-        log,
+      const total = timeOf(
         rule.statuses,
         window.span.start,
         min(window.span.end, at),
@@ -1353,31 +1434,29 @@ function evaluateRule(
     }
 
     case "restRequirement":
-      return evaluateRestRequirement(context, rule, log, at, anchor);
+      return evaluateRestRequirement(context, rule, at, anchor);
 
     case "restBeforeDuty":
-      return evaluateRestBeforeDuty(rule, log, at);
+      return evaluateRestBeforeDuty(context, rule, at);
 
     case "quota": {
-      const continuing = context.entries.some(
-        (entry) =>
-          rule.statuses.has(entry.status) &&
-          entry.start <= at &&
-          entry.end > at,
-      );
-      const events = runsOf(log, rule.statuses).filter(
-        (run) =>
-          !(continuing && run.end === at) &&
-          length(run) >= rule.minimum &&
-          length(run) < rule.maximum,
-      );
+      const continuing = entryHolding(store, at);
+      const running =
+        continuing !== undefined && rule.statuses.has(continuing.status);
+      const runs = viewOf(rule.statuses);
+      const sizes = { minimum: rule.minimum, maximum: rule.maximum };
+      // A run going on at `at` is not an event yet.
+      const skipEndingAt = running ? at : null;
 
       if ("every" in rule.reset) {
         const window = windowOf(context, rule.reset.every, at, anchor);
         const to = min(window.span.end, at);
-        const found = events.filter(
-          (run) => run.start >= window.span.start && run.start < to,
-        ).length;
+        const found = countEvents(
+          runs,
+          sizes,
+          { from: window.span.start, to },
+          skipEndingAt,
+        );
 
         return capped(tally(found), tally(rule.count), {
           window: window.span,
@@ -1388,14 +1467,14 @@ function evaluateRule(
         });
       }
 
-      const reset = lastAtLeast(
-        runsOf(log, rule.reset.statuses),
+      const reset = lastAtLeastUntil(
+        viewOf(rule.reset.statuses),
         rule.reset.consecutive,
       );
       const from = reset?.end ?? first;
 
       return capped(
-        tally(events.filter((run) => run.start >= from).length),
+        tally(countEvents(runs, sizes, { from, to: null }, skipEndingAt)),
         tally(rule.count),
         {
           window: { start: from, end: at },
@@ -1408,13 +1487,13 @@ function evaluateRule(
     }
 
     case "dueBy": {
-      const events = runsOf(log, rule.statuses);
-      const event = lastAtLeast(events, rule.minimum);
+      const events = viewOf(rule.statuses);
+      const event = lastAtLeastUntil(events, rule.minimum);
       const reset =
         rule.reset === null
           ? undefined
-          : lastAtLeast(
-              runsOf(log, rule.reset.statuses),
+          : lastAtLeastUntil(
+              viewOf(rule.reset.statuses),
               rule.reset.consecutive,
             );
       const clock =
@@ -1425,7 +1504,7 @@ function evaluateRule(
             : max(event.end, reset.end);
       const from = clock ?? first;
       const due = boundaryAfter(context, rule.period, rule.periods, from);
-      const latest = events[events.length - 1];
+      const latest = events.last;
       const pending =
         latest !== undefined && latest.end === at && latest.start <= due;
 
@@ -1459,13 +1538,18 @@ function evaluateRule(
       const counts = new Map<string, { found: number; best: number }>();
 
       for (const named of rule.classes) {
-        const runs = runsOf(log, named.statuses);
+        const runs = viewOf(named.statuses);
         const qualifies = (run: DutyRun) =>
           run.start >= span.start &&
           run.start < to &&
           length(run) >= named.minimum;
-        const found = runs.filter(qualifies).length;
-        const last = runs[runs.length - 1];
+        const found = countEvents(
+          runs,
+          { minimum: named.minimum, maximum: null },
+          { from: span.start, to },
+          null,
+        );
+        const last = runs.last;
         let best = found;
 
         if (unfinished) {
@@ -1536,7 +1620,7 @@ function evaluateRule(
 
     case "occurrenceCap": {
       const scale = scaleFor(context, rule.per.unit);
-      const runs = runsOf(log, rule.statuses);
+      const runs = viewOf(rule.statuses);
       const blocks: UnitSpan[] = [];
       let blockAnchor = anchor;
 
@@ -1553,11 +1637,12 @@ function evaluateRule(
 
       const occupied = blocks.filter((block) => {
         const to = min(block.end, at);
-        return runs.some((run) =>
-          rule.byInitiationDate
-            ? run.start >= block.start && run.start < to
-            : run.start < to && run.end > block.start,
-        );
+        // The first run that can count: starting in the block, or ending after it starts.
+        const position = rule.byInitiationDate
+          ? firstStartingAtOrAfter(runs, block.start)
+          : firstEndingAfter(runs, block.start);
+
+        return position < runs.count && viewRun(runs, position).start < to;
       }).length;
       const earliest = blocks[blocks.length - 1] as UnitSpan;
       const latest = blocks[0] as UnitSpan;
@@ -1573,8 +1658,8 @@ function evaluateRule(
 
     case "usageLookback": {
       const window = windowOf(context, rule.notWithin, at, anchor);
-      const reset = lastAtLeast(
-        runsOf(log, rule.reset.statuses),
+      const reset = lastAtLeastUntil(
+        viewOf(rule.reset.statuses),
         rule.reset.consecutive,
       );
       const from =
@@ -1584,14 +1669,15 @@ function evaluateRule(
       // A use is an instant, and each window holds it once. An elapsed window runs up to and
       // including the use being made at `at`, so one exactly its length earlier is outside it; a
       // window of local periods holds only its own, so one on its end is the next's.
-      const found = rule.uses.filter(
-        (use) =>
-          use >= from &&
-          use <= at &&
-          (rule.notWithin.kind === "elapsed"
-            ? use > at - rule.notWithin.length
-            : use < window.span.end),
-      ).length;
+      const found = countInRange(
+        rule.uses,
+        rule.notWithin.kind === "elapsed"
+          ? max(from, at - rule.notWithin.length + 1n)
+          : from,
+        rule.notWithin.kind === "elapsed"
+          ? at + 1n
+          : min(at + 1n, window.span.end),
+      );
 
       return capped(tally(found), tally(1), {
         window: { start: from, end: window.span.end },
@@ -1802,7 +1888,7 @@ export function walkBoundaries(
  */
 function runFloors(
   rule: ResolvedRule,
-): { test: StatusTest; floors: bigint[]; sliding: boolean }[] {
+): { test: StatusKey; floors: bigint[]; sliding: boolean }[] {
   switch (rule.kind) {
     case "cumulativeCap":
       return [
@@ -1826,12 +1912,9 @@ function runFloors(
         },
       ];
     case "requiredInterruption": {
-      const outside = rule.outsideStatuses;
       return [
         {
-          test: (status: string) =>
-            !rule.countedStatuses.has(status) &&
-            (outside === null || outside.has(status)),
+          test: { not: rule.countedStatuses, within: rule.outsideStatuses },
           floors: [rule.minimum, ...(rule.orderedSplit ?? [])],
           sliding: false,
         },
@@ -1990,7 +2073,7 @@ function candidateInstants(
   }
 
   for (const { test, floors, sliding } of runFloors(rule)) {
-    for (const run of runsOf(context.entries, test)) {
+    for (const run of runIndex(context.store, test).runs) {
       for (const floor of floors) {
         around(run.start + floor);
         if (sliding) {
@@ -2009,7 +2092,7 @@ function candidateInstants(
     const fullRest = rule.since.consecutive;
     let partner: DutyRun | undefined;
 
-    for (const run of runsOf(context.entries, rule.since.statuses)) {
+    for (const run of runIndex(context.store, rule.since.statuses).runs) {
       if (partner !== undefined) {
         around(run.start + rule.exclude.combined - length(partner));
       }
@@ -2025,7 +2108,7 @@ function candidateInstants(
   }
 
   if (rule.kind === "restRequirement") {
-    const rests = runsOf(context.entries, rule.restStatuses);
+    const rests = runIndex(context.store, rule.restStatuses).runs;
     const ranks = rule.composition !== null || rule.composite !== null;
 
     if (rule.maxGap !== null) {
@@ -2051,14 +2134,22 @@ function candidateInstants(
         const earlier = near[index] as DutyRun;
 
         // A rest shrinking out of the window crosses one growing at its end, or one held whole.
-        for (let other = 0; other < near.length; other++) {
+        // The rests are ordered and separate, so those within two window lengths of `earlier`
+        // are one stretch of them: from the first that ends within reach to the first that
+        // starts out of it.
+        for (
+          let other = firstWhere(
+            near.length,
+            (position) =>
+              (near[position] as DutyRun).end > earlier.start - 2n * shift,
+          );
+          other < near.length;
+          other++
+        ) {
           const later = near[other] as DutyRun;
 
-          if (
-            later.start - earlier.end >= 2n * shift ||
-            earlier.start - later.end >= 2n * shift
-          ) {
-            continue;
+          if (later.start - earlier.end >= 2n * shift) {
+            break;
           }
 
           const crossing = (earlier.end + shift + later.start) / 2n;
@@ -2078,7 +2169,7 @@ function candidateInstants(
     const farthest =
       (BigInt(rule.atLeast) + 1n) * minimum +
       shifts.reduce((longest, shift) => max(longest, shift), 0n);
-    const rests = runsOf(context.entries, rule.restStatuses).filter(
+    const rests = runIndex(context.store, rule.restStatuses).runs.filter(
       (run) => run.end + farthest >= range.start && run.start <= until + 1n,
     );
     // A window fails only while it holds fewer than `atLeast` free periods, so a run's count
@@ -2132,13 +2223,13 @@ function candidateInstants(
     // and the log's start, set one.
     const clocks = [
       context.entries[0]?.start,
-      ...runsOf(context.entries, rule.statuses)
-        .filter((run) => length(run) >= rule.minimum)
+      ...runIndex(context.store, rule.statuses)
+        .runs.filter((run) => length(run) >= rule.minimum)
         .map((run) => run.end),
       ...(rule.reset === null
         ? []
-        : runsOf(context.entries, rule.reset.statuses)
-            .filter(
+        : runIndex(context.store, rule.reset.statuses)
+            .runs.filter(
               (run) =>
                 length(run) >=
                 (rule.reset as { consecutive: bigint }).consecutive,

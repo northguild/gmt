@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * The anchor a calendar-unit duration operation is measured from, as Temporal's `relativeTo`

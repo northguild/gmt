@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { DATE_FIELDS, readSetFields, resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidDate } from "../validate";

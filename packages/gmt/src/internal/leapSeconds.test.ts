@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   LEAP_SECOND_STEPS,
   type LeapSecondSteps,

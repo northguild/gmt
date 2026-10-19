@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   DATE_FIELDS,
   DATE_TIME_FIELDS,

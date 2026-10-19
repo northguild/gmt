@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../temporal";
 import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { type FieldKey, isoForFields } from "./fieldSearch";

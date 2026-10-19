@@ -1,4 +1,5 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import { cachedFormatter } from "./formatterCache";
+import type { Temporal } from "./temporal";
 import type {
   RelativeRoundingMethod,
   RelativeTimeFormatOptions,
@@ -114,7 +115,7 @@ export function formatRelativeAmount(
   const amount = resolveRelativeRounding(total, roundingMethod);
 
   return normalizeDateTime(
-    new Intl.RelativeTimeFormat(locale, {
+    cachedFormatter("RelativeTimeFormat", locale, {
       numeric: optionOrDefault(options.numeric, "auto"),
       style: optionOrDefault(options.style, "long"),
     }).format(amount, unit),

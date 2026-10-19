@@ -21,7 +21,7 @@ Temporal is the TC39 Stage 3 proposal that replaces `Date`. It introduces distin
 | `@js-temporal/polyfill` (npm)    | https://www.npmjs.com/package/@js-temporal/polyfill                                       |
 | `@js-temporal/polyfill` (GitHub) | https://github.com/js-temporal/temporal-polyfill                                          |
 
-GMT imports exclusively from `@js-temporal/polyfill`. When Temporal ships natively in all target environments, the polyfill import will be the only thing that needs to change.
+GMT uses `@js-temporal/polyfill` exclusively, and names it in one module, `packages/gmt/src/internal/temporal.ts`. Every other file imports `Temporal` from there, so moving to native Temporal changes that one file.
 
 Key Temporal types used in GMT:
 

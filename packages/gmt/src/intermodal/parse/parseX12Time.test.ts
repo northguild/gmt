@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import {
   CUT_X12_FORMATS,
   NON_STRINGS,

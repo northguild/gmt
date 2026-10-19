@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalSplitAtZoned } from "./intervalSplitAtZoned";
@@ -301,4 +301,66 @@ describe("intervalSplitAtZoned on a zero-length interval", () => {
       ]);
     },
   );
+});
+
+describe("intervalSplitAtZoned point order", () => {
+  const start = "2024-01-01T00:00:00+00:00[UTC]";
+  const end = "2024-01-10T00:00:00+00:00[UTC]";
+  const inUtc = "2024-01-05T05:00:00+00:00[UTC]";
+  const inNewYork = "2024-01-05T00:00:00-05:00[America/New_York]";
+
+  // Both name the instant 2024-01-05T05:00Z; the sort is stable, so the first in input order is
+  // the boundary.
+  it.each`
+    points                | boundary
+    ${[inUtc, inNewYork]} | ${inUtc}
+    ${[inNewYork, inUtc]} | ${inNewYork}
+  `("keeps $boundary for points $points", ({ points, boundary }) => {
+    expect(intervalSplitAtZoned(start, end, points)).toEqual([
+      { start, end: boundary },
+      { start: boundary, end },
+    ]);
+  });
+
+  // Equal instants that are not adjacent in the input still sort together and collapse to the
+  // first of them in input order; a point one nanosecond later stays a boundary of its own.
+  it("keeps the first of three equal instants separated in the input by other points", () => {
+    const later = "2024-01-08T00:00:00+00:00[UTC]";
+    const oneNanosecondLater = "2024-01-05T05:00:00.000000001+00:00[UTC]";
+
+    expect(
+      intervalSplitAtZoned(start, end, [
+        inNewYork,
+        later,
+        oneNanosecondLater,
+        inUtc,
+        "2024-01-05T06:00:00+01:00[Europe/Paris]",
+      ]),
+    ).toEqual([
+      { start, end: inNewYork },
+      { start: inNewYork, end: oneNanosecondLater },
+      { start: oneNanosecondLater, end: later },
+      { start: later, end },
+    ]);
+  });
+
+  it("sorts 1000 points without building an Instant per comparison", () => {
+    const points = Array.from({ length: 1000 }, (_, index) =>
+      new Temporal.ZonedDateTime(
+        BigInt(1704067200 + (1000 - index) * 600) * 1_000_000_000n,
+        "UTC",
+      ).toString(),
+    );
+    const toInstant = vi.spyOn(Temporal.ZonedDateTime.prototype, "toInstant");
+
+    try {
+      const result = intervalSplitAtZoned(start, end, points);
+
+      expect(result).toHaveLength(1001);
+      // The two calls are the interval's own validation, not one per point or comparison.
+      expect(toInstant).toHaveBeenCalledTimes(2);
+    } finally {
+      toInstant.mockRestore();
+    }
+  });
 });

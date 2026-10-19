@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { getWeekNumber } from "../calculate/getWeekNumber";
 import { isValidDateTime } from "../validate";

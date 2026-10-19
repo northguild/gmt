@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 import { endOfZoned } from "./endOfZoned";
 

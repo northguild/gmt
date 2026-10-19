@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { getLocaleWeekendDays } from "../../internal";
 import { isValidDate } from "../validate";
 

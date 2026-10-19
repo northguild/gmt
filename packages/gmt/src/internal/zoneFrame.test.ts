@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isValidUtcOffset } from "../instant/validate/isValidUtcOffset";
 import { battleTestTimeZones, mockSystemTimeZone } from "../test";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { splitIntervalByUnitUtc } from "./splitIntervalByUnitUtc";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 

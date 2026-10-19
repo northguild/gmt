@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { instantLeapSecond } from "../regex/leap-second";
 import { hasInstantShape, isoStringBody } from "./isoStringBody";
 import { parseUtcOffsetNanoseconds } from "./utcOffsetString";

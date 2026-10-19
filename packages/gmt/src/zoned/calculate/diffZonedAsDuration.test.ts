@@ -1,5 +1,5 @@
 import { calendarZonedFixtures } from "../../test";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { localNoonBattleCases } from "../../test";
 import { diffZonedAsDuration } from "./diffZonedAsDuration";
 

@@ -1,5 +1,4 @@
-import { timeZoneLike } from "../../regex";
-import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
+import { isZoneId } from "../../internal/inputChecks";
 
 /**
  * Validate whether a string is a valid time zone identifier: an IANA name or a UTC offset.
@@ -33,18 +32,5 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * @example "Japan".includes("/") // false (the earlier slash-only rule)
  */
 export function isValidTimeZone(timeZone: string): boolean {
-  try {
-    zonedDateTimeFrom({
-      year: 2020,
-      month: 2,
-      day: 28,
-      hour: 0,
-      minute: 0,
-      second: 0,
-      timeZone,
-    });
-    return timeZoneLike.test(timeZone) && true;
-  } catch {
-    return false;
-  }
+  return isZoneId(timeZone);
 }

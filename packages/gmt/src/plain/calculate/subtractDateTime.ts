@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { readDurationUnits, resolveOverflow } from "../../internal";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";

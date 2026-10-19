@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { DateTimeUnit } from "../types";
 import { DURATION_FIELD_BY_UNIT, getUnitSpan } from "./intervalCountHelpers";
 import {
@@ -8,6 +8,10 @@ import {
   calendarFieldsOf,
   isCalendarArithmeticCompatNeeded,
 } from "./temporalCompat";
+import { floorDivide } from "./floorDivide";
+import { NANOSECONDS_PER_DAY } from "./foreignEpochs";
+import { ISO_WEEKDAYS, isoFieldsOf, isoWeekdayOf } from "./epochDay";
+import { offsetTimeline } from "./offsetTimeline";
 import {
   zonedNextTransition,
   zonedPreviousTransition,
@@ -555,6 +559,114 @@ function countFromBucketBeforeRange(
   return rest === null ? null : rest + 1;
 }
 
+/** Nanoseconds in each unit below a day. */
+const SUB_DAY_NANOSECONDS: Partial<Record<DateTimeUnit, bigint>> = {
+  hour: 3_600_000_000_000n,
+  minute: 60_000_000_000n,
+  second: 1_000_000_000n,
+  millisecond: 1_000_000n,
+  microsecond: 1_000n,
+  nanosecond: 1n,
+};
+
+/**
+ * Which bucket a wall clock (nanoseconds, read as UTC) falls in, as an integer that rises by one
+ * per bucket: the unit's count since the epoch, so a difference is the whole units between two
+ * labels. Months and years are ISO; a calendar period of another calendar has no integer form.
+ */
+function bucketIndexOf(
+  unit: DateTimeUnit,
+  weekStartsOn: WeekStartDay,
+): (wall: bigint) => bigint {
+  const fixed = SUB_DAY_NANOSECONDS[unit];
+
+  if (fixed !== undefined) {
+    return (wall) => floorDivide(wall, fixed);
+  }
+
+  if (unit === "day") {
+    return (wall) => floorDivide(wall, NANOSECONDS_PER_DAY);
+  }
+
+  if (unit === "week") {
+    // Every week start falls on the same weekday, so `(start - anchor) / 7` is whole.
+    const anchor = -(
+      (isoWeekdayOf(0) - weekStartsOn + ISO_WEEKDAYS) %
+      ISO_WEEKDAYS
+    );
+
+    return (wall) => {
+      const day = Number(floorDivide(wall, NANOSECONDS_PER_DAY));
+      const weekStart =
+        day -
+        ((isoWeekdayOf(day) - weekStartsOn + ISO_WEEKDAYS) % ISO_WEEKDAYS);
+
+      return BigInt((weekStart - anchor) / ISO_WEEKDAYS);
+    };
+  }
+
+  return (wall) => {
+    const [year, month] = isoFieldsOf(
+      Number(floorDivide(wall, NANOSECONDS_PER_DAY)),
+    );
+
+    return BigInt(unit === "year" ? year : year * 12 + month - 1);
+  };
+}
+
+/**
+ * The two questions `countZonedBuckets` asks of an offset change, in integers where the unit
+ * allows: whether a change opens a bucket (`startsNewBucketAt`'s rule), and how many whole units
+ * lie between the buckets two instants fall in. A month or year of a non-ISO calendar asks
+ * Temporal, and only at a change that crosses a date.
+ */
+function bucketWalker(
+  start: Temporal.ZonedDateTime,
+  unit: DateTimeUnit,
+  weekStartsOn: WeekStartDay,
+): {
+  opensBucket: (transition: bigint, before: bigint, after: bigint) => boolean;
+  unitsBetween: (
+    fromNs: bigint,
+    fromOffset: bigint,
+    toNs: bigint,
+    toOffset: bigint,
+  ) => number;
+} {
+  const sinceMidnight = (wall: bigint) =>
+    floorDivide(wall, NANOSECONDS_PER_DAY);
+
+  if (start.calendarId !== "iso8601" && (unit === "month" || unit === "year")) {
+    const zonedAt = (ns: bigint) =>
+      new Temporal.ZonedDateTime(ns, start.timeZoneId, start.calendarId);
+    const label = (ns: bigint) =>
+      truncateLocal(zonedAt(ns).toPlainDateTime(), unit, weekStartsOn);
+
+    return {
+      opensBucket: (transition, before, after) =>
+        sinceMidnight(transition - 1n + before) !==
+          sinceMidnight(transition + after) &&
+        startsNewBucketAt(zonedAt(transition), unit, weekStartsOn),
+      unitsBetween: (fromNs, _fromOffset, toNs) =>
+        getUnitSpan(
+          truncatedWallClockUntil(label(fromNs), label(toNs), unit),
+          unit,
+        ),
+    };
+  }
+
+  const index = bucketIndexOf(unit, weekStartsOn);
+  const length = SUB_DAY_NANOSECONDS[unit];
+
+  return {
+    opensBucket: (transition, before, after) =>
+      index(transition - 1n + before) !== index(transition + after) ||
+      (length !== undefined && (transition + after) % length === 0n),
+    unitsBetween: (fromNs, fromOffset, toNs, toOffset) =>
+      Number(index(toNs + toOffset) - index(fromNs + fromOffset)),
+  };
+}
+
 /**
  * Count the local `unit` buckets the half-open interval `[start, end)` touches, in `start`'s
  * zone and calendar. `end` must already be expressed in both.
@@ -592,48 +704,49 @@ export function countZonedBuckets(
 
   if (!startOfStart || !startOfEnd) return null;
 
-  const label = (zoned: Temporal.ZonedDateTime) =>
-    truncateLocal(zoned.toPlainDateTime(), unit, weekStartsOn);
-  // Whole `unit`s between two wall clocks already truncated to `unit`.
-  const unitsBetween = (
-    from: Temporal.PlainDateTime,
-    to: Temporal.PlainDateTime,
-  ) => getUnitSpan(truncatedWallClockUntil(from, to, unit), unit);
+  const timeline = offsetTimeline(
+    { timeZone: start.timeZoneId, shiftNanoseconds: 0n },
+    startOfStart.epochNanoseconds,
+    startOfEnd.epochNanoseconds,
+    MAX_COUNTED_TRANSITIONS - 1,
+  );
+
+  if (timeline === null) return null;
+
+  const { changes, offsets } = timeline;
+  const walker = bucketWalker(start, unit, weekStartsOn);
+  const endNs = startOfEnd.epochNanoseconds;
   const reachesIntoEndBucket =
-    Temporal.ZonedDateTime.compare(startOfEnd, end) === 0 ? 0 : 1;
+    startOfEnd.epochNanoseconds === end.epochNanoseconds ? 0 : 1;
 
   let spanned = 0;
-  let runStart = startOfStart;
-  let cursor = startOfStart;
+  let runStart = startOfStart.epochNanoseconds;
+  let runStartOffset = offsets[0];
+  let runOffset = offsets[0];
 
-  for (let i = 0; i < MAX_COUNTED_TRANSITIONS; i++) {
-    const transition =
-      zonedNextTransition(cursor, startOfEnd.epochNanoseconds)?.withCalendar(
-        start.calendarId,
-      ) ?? null;
+  // One pass over the offset changes in the span, which the cap above bounds.
+  for (let index = 0; index < changes.length; index++) {
+    const transition = changes[index];
+    const after = offsets[index + 1];
 
-    if (
-      !transition ||
-      Temporal.ZonedDateTime.compare(transition, startOfEnd) > 0
-    ) {
-      return (
-        spanned +
-        unitsBetween(label(runStart), label(startOfEnd)) +
-        reachesIntoEndBucket
-      );
-    }
-
-    if (startsNewBucketAt(transition, unit, weekStartsOn)) {
+    if (walker.opensBucket(transition, runOffset, after)) {
       spanned +=
-        unitsBetween(
-          label(runStart),
-          label(transition.subtract({ nanoseconds: 1 })),
+        walker.unitsBetween(
+          runStart,
+          runStartOffset,
+          transition - 1n,
+          runOffset,
         ) + 1;
       runStart = transition;
+      runStartOffset = after;
     }
 
-    cursor = transition;
+    runOffset = after;
   }
 
-  return null;
+  return (
+    spanned +
+    walker.unitsBetween(runStart, runStartOffset, endNs, runOffset) +
+    reachesIntoEndBucket
+  );
 }

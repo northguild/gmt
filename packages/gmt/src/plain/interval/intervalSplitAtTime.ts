@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidTimeInterval } from "./validate";
 import { isValidTime } from "../validate";
 

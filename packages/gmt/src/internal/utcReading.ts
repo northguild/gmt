@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { plainDate } from "../regex/date";
 import { instantLeapSecond } from "../regex/leap-second";
 import { NANOSECONDS_PER_SECOND } from "./foreignEpochs";

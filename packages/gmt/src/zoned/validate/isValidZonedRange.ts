@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { hasSecond60 } from "../../plain/validate/hasSecond60";
 import { isObject, isOptionsArgument, zonedDateTimeFrom } from "../../internal";
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";

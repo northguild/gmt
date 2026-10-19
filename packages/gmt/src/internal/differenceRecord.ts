@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /** Temporal's duration fields, largest first (Temporal Table 21, the unit ladder). */
 const DURATION_FIELDS = [

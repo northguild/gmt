@@ -1,7 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isoStringBody } from "../../internal/isoStringBody";
-import { plainTime } from "../../regex";
-import { hasSecond60 } from "./hasSecond60";
+import { isTimeString } from "../../internal/inputChecks";
 
 /**
  * Return true when `value` is a valid ISO PlainTime string.
@@ -24,20 +21,5 @@ import { hasSecond60 } from "./hasSecond60";
  * @example isValidTime("23:59:60") // false (leap second)
  */
 export function isValidTime(value: string): boolean {
-  const body = isoStringBody(value);
-
-  if (hasSecond60(body)) {
-    return false;
-  }
-
-  if (!plainTime.test(body)) {
-    return false;
-  }
-
-  try {
-    Temporal.PlainTime.from(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return isTimeString(value);
 }

@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../../internal/temporal";
 import { startOfUnix } from "../calculate/startOfUnix";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";

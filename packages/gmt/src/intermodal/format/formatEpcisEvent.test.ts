@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import { epcisEventTime, epcisTimeZoneOffset } from "../../regex";
 import { sameInstantBattleCases, unixEpochBattleCases } from "../../test";

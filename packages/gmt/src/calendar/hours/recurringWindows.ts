@@ -2,6 +2,7 @@ import { parseIntervalNanoseconds, zoneFrame } from "../../internal";
 import {
   parseScheduleDisambiguation,
   parseWeeklyPattern,
+  runText,
   scheduleRunsWithin,
 } from "../../internal/operatingSchedule";
 import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
@@ -99,16 +100,15 @@ export function recurringWindows(
         timeZone,
         frame,
         weekly: weeklyWindows,
-        holidays: new Set(),
+        holidays: new Int32Array(0),
         overrides: new Map(),
+        specials: new Int32Array(0),
       },
       bounds,
       disambiguation,
     );
 
-    return runs === null
-      ? []
-      : runs.map((run) => ({ start: run.startText, end: run.endText }));
+    return runs === null ? [] : runs.map(runText);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

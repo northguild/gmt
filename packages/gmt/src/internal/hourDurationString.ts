@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   NANOSECONDS_PER_MICROSECOND,
   NANOSECONDS_PER_MILLISECOND,

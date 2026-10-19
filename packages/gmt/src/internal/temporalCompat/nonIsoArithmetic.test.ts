@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../temporal";
 import { hebrewArithmeticModel } from "./hebrewArithmetic";
 import { indianArithmeticModel } from "./indianArithmetic";
 import {

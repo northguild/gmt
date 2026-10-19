@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { formatHttpDate } from "../format/formatHttpDate";
 import { parseHttpDate } from "./parseHttpDate";

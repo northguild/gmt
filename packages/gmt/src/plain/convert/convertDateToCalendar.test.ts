@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { calendarFieldsOf } from "../../internal/temporalCompat";
 import { MustTestCalendars } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";

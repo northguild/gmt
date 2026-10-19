@@ -1,9 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Format a plain datetime range using the Temporal Intl.DateTimeFormat formatRange API.
@@ -56,8 +60,9 @@ export function formatDateTimeRange(
     // caller's options first surfaces the TypeError or RangeError
     // Intl.DateTimeFormat raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
-    const out = new Intl.DateTimeFormat(
+    checkFormatterArguments("DateTimeFormat", locale, read);
+    const out = cachedFormatter(
+      "DateTimeFormat",
       locale,
       plainDateTimeFormatOptions(read),
     ).formatRange(

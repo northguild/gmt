@@ -1,9 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Return a localized string for a PlainDate ISO input using Intl options.
@@ -54,7 +58,7 @@ export function formatDate(
     // widths are kept. Constructing with the caller's options first surfaces
     // the TypeError or RangeError Intl.DateTimeFormat raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
+    checkFormatterArguments("DateTimeFormat", locale, read);
     // CreateDateTimeFormat: required ~date~ with a timeStyle is a TypeError.
     if (read.timeStyle !== undefined) {
       return "";
@@ -66,7 +70,9 @@ export function formatDate(
     const epochMilliseconds =
       Temporal.PlainDate.from(value).toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
-      new Intl.DateTimeFormat(locale, resolved).format(epochMilliseconds),
+      cachedFormatter("DateTimeFormat", locale, resolved).format(
+        epochMilliseconds,
+      ),
     );
   } catch {
     return "";

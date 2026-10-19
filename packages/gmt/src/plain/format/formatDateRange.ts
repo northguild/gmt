@@ -1,9 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Format a plain date range using the Temporal Intl.DateTimeFormat formatRange API.
@@ -53,12 +57,12 @@ export function formatDateRange(
     // caller's options first surfaces the TypeError or RangeError
     // Intl.DateTimeFormat raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
+    checkFormatterArguments("DateTimeFormat", locale, read);
     const resolved = plainDateFormatOptions(read);
     if (resolved === null) {
       return "";
     }
-    const out = new Intl.DateTimeFormat(locale, resolved).formatRange(
+    const out = cachedFormatter("DateTimeFormat", locale, resolved).formatRange(
       Temporal.PlainDate.from(start).toZonedDateTime("UTC").epochMilliseconds,
       Temporal.PlainDate.from(end).toZonedDateTime("UTC").epochMilliseconds,
     );

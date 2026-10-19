@@ -1,5 +1,7 @@
+import { clearFormatterCache } from "../../internal/formatterCache";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
+import { countIntlConstructions } from "../../test/countIntlConstructions";
 import { formatDate } from "./formatDate";
 
 describe("formatDate", () => {
@@ -493,5 +495,93 @@ describe("formatDate with an option that is an object", () => {
       day: "numeric",
     } as never);
     expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+  });
+
+  // Formatters are shared only when their arguments are fully plain.
+  describe("formatter cache", () => {
+    function countConstructions(run: () => void, warmUp?: () => void): number {
+      return countIntlConstructions(["DateTimeFormat"], run, warmUp);
+    }
+
+    beforeEach(() => {
+      clearFormatterCache();
+    });
+
+    it("builds nothing the second time for the same locale and options", () => {
+      let first = "";
+      const built = countConstructions(
+        () => {
+          expect(formatDate("2024-07-04", "en-GB", { dateStyle: "long" })).toBe(
+            first,
+          );
+        },
+        () => {
+          first = formatDate("2024-07-04", "en-GB", { dateStyle: "long" });
+        },
+      );
+      expect(first).toBe("4 July 2024");
+      expect(built).toBe(0);
+    });
+
+    it("answers from a replaced Intl.DateTimeFormat, never a formatter it built before", () => {
+      const args = ["2024-07-04", "en-GB", { dateStyle: "long" }] as const;
+      expect(formatDate(...args)).toBe("4 July 2024");
+      const Native = Intl.DateTimeFormat;
+      Intl.DateTimeFormat = class extends Native {
+        override format(date?: Date | number): string {
+          return `PATCHED ${super.format(date)}`;
+        }
+      } as typeof Intl.DateTimeFormat;
+      try {
+        expect(formatDate(...args)).toBe("PATCHED 4 July 2024");
+      } finally {
+        Intl.DateTimeFormat = Native;
+      }
+      expect(formatDate(...args)).toBe("4 July 2024");
+    });
+
+    it("constructs on every call when the locale is omitted", () => {
+      const built = countConstructions(() => {
+        formatDate("2024-07-04", undefined, { dateStyle: "long" });
+        formatDate("2024-07-04", undefined, { dateStyle: "long" });
+      });
+      expect(built).toBeGreaterThanOrEqual(2);
+    });
+
+    it("runs an object option's toString on every call, as before", () => {
+      // The options are read (and coerced) once per call before any cache lookup, so the
+      // caller's code runs each time even though the coerced strings can share a formatter.
+      let coercions = 0;
+      const options = {
+        month: { toString: () => ((coercions += 1), "long") },
+        day: "numeric",
+      } as never;
+      expect(formatDate("2024-03-15", "en-US", options)).toBe("March 15");
+      expect(formatDate("2024-03-15", "en-US", options)).toBe("March 15");
+      expect(coercions).toBe(2);
+    });
+
+    it("returns an empty string twice for an invalid timeZoneName", () => {
+      const options = { timeZoneName: "nonsense" } as never;
+      expect(formatDate("2024-07-04", "en-US", options)).toBe("");
+      expect(formatDate("2024-07-04", "en-US", options)).toBe("");
+    });
+
+    it("stays correct across the 256-per-kind clear", () => {
+      const zones = Array.from({ length: 257 }, (_, index) => index);
+      const first = formatDate("2024-07-04", "en-US", { dateStyle: "short" });
+      for (const index of zones) {
+        formatDate("2024-07-04", `en-US-u-nu-latn-x-t${index}`.slice(0, 5), {
+          dateStyle: "short",
+          timeZone: `Etc/GMT+${(index % 12) + 1}`,
+          hour12: index % 2 === 0,
+          minute: index > 128 ? "2-digit" : undefined,
+        } as never);
+      }
+      expect(formatDate("2024-07-04", "en-US", { dateStyle: "short" })).toBe(
+        first,
+      );
+      expect(first).toBe("7/4/24");
+    });
   });
 });

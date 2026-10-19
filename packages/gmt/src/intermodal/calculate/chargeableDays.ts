@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { isoDateString } from "../../internal/epochDay";
+import { Temporal } from "../../internal/temporal";
 import {
   bandsByTier,
-  frameInstant,
   frameZoned,
   instantFrom,
   parseFreeDays,
@@ -157,8 +157,10 @@ export function chargeableDays(
     return {
       freeDaysUsed: ledger.used,
       chargeableDays: ledger.charged.length,
-      expiresAt: frameInstant(ledger.expiresAt, frame).toString(),
-      chargedDates: ledger.charged.map((day) => day.date),
+      expiresAt: Temporal.Instant.fromEpochNanoseconds(
+        ledger.expiresAtNs,
+      ).toString(),
+      chargedDates: ledger.charged.map(isoDateString),
       byTier: bandsByTier(tiers, ledger.charged.length),
     };
   } catch {

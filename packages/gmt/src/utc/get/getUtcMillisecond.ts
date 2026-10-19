@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current millisecond from UTC as a zero-padded string.

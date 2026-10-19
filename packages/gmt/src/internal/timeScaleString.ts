@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import type { GnssSystem } from "../types/gnss";
 import { MAX_FOUR_DIGIT_YEAR, secondSixtyWallClock } from "./utcReading";
 

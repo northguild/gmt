@@ -1,47 +1,11 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { parseBusinessCalendar } from "../../internal/businessCalendar";
+import { Temporal } from "../../internal/temporal";
+import {
+  businessDaysWithin,
+  parseBusinessCalendar,
+} from "../../internal/businessCalendar";
+import { epochDayOfDate } from "../../internal/epochDay";
 import { isValidDate } from "../../plain/validate";
 import type { BusinessCalendar } from "../../types";
-
-const DAYS_PER_WEEK = 7;
-
-/**
- * Count the business days in `(from, to]`, given `from` is not after `to`.
- *
- * Whole weeks contribute one of each weekday, so only the remainder is walked and the count
- * costs the same for a range of days as for one of centuries.
- */
-function countBusinessDates(
-  from: Temporal.PlainDate,
-  to: Temporal.PlainDate,
-  weekend: Set<number>,
-  holidays: Set<string>,
-): number {
-  const days = from.until(to, { largestUnit: "day" }).days;
-  const wholeWeeks = Math.floor(days / DAYS_PER_WEEK);
-  const businessDaysPerWeek = DAYS_PER_WEEK - weekend.size;
-
-  let count = wholeWeeks * businessDaysPerWeek;
-
-  for (let offset = wholeWeeks * DAYS_PER_WEEK + 1; offset <= days; offset++) {
-    if (!weekend.has(from.add({ days: offset }).dayOfWeek)) {
-      count += 1;
-    }
-  }
-
-  for (const holiday of holidays) {
-    const date = Temporal.PlainDate.from(holiday);
-    const insideRange =
-      Temporal.PlainDate.compare(date, from) > 0 &&
-      Temporal.PlainDate.compare(date, to) <= 0;
-
-    if (insideRange && !weekend.has(date.dayOfWeek)) {
-      count -= 1;
-    }
-  }
-
-  return count;
-}
 
 /**
  * Count the working days between two local dates, **excluding `start` and including `end`**.
@@ -91,15 +55,12 @@ export function businessDaysBetween(
     }
 
     try {
-      const startDate = Temporal.PlainDate.from(start);
-      const endDate = Temporal.PlainDate.from(end);
-      const reversed = Temporal.PlainDate.compare(startDate, endDate) > 0;
-      const count = countBusinessDates(
-        reversed ? endDate : startDate,
-        reversed ? startDate : endDate,
-        resolved.weekend,
-        resolved.holidays,
-      );
+      const startDay = epochDayOfDate(Temporal.PlainDate.from(start));
+      const endDay = epochDayOfDate(Temporal.PlainDate.from(end));
+      const reversed = startDay > endDay;
+      const count = reversed
+        ? businessDaysWithin(endDay + 1, startDay, resolved)
+        : businessDaysWithin(startDay + 1, endDay, resolved);
 
       // `0 - count` rather than `-count`: an empty reversed range must be 0, not -0.
       return reversed ? 0 - count : count;

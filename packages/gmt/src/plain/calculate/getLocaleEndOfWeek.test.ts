@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getLocaleEndOfWeek } from "./getLocaleEndOfWeek";

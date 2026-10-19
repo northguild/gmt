@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { durationTotal, zonedDateTimeFrom } from "../../internal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";

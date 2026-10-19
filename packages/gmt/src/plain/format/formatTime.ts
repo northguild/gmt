@@ -1,9 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { normalizeDateTime } from "../../internal";
 import { plainTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Return a localized string for a PlainTime ISO input using Intl options.
@@ -51,7 +55,7 @@ export function formatTime(
     // options first surfaces the TypeError or RangeError Intl.DateTimeFormat
     // raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
+    checkFormatterArguments("DateTimeFormat", locale, read);
     const resolved = plainTimeFormatOptions(read);
     if (resolved === null) {
       return "";
@@ -60,7 +64,9 @@ export function formatTime(
       .toPlainDateTime(Temporal.PlainTime.from(value))
       .toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
-      new Intl.DateTimeFormat(locale, resolved).format(epochMilliseconds),
+      cachedFormatter("DateTimeFormat", locale, resolved).format(
+        epochMilliseconds,
+      ),
     );
   } catch {
     return "";

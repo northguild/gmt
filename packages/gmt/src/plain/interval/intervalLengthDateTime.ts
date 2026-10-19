@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { durationTotal, resolveDateTimeUnit } from "../../internal";
 import { isValidDateTimeUnit } from "../validate";
 import { isValidDateTimeInterval } from "./validate";

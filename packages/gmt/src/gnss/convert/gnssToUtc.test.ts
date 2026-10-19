@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { LEAP_SECOND_STEPS } from "../../internal/leapSeconds";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,

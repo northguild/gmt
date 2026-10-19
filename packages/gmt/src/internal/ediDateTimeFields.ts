@@ -1,7 +1,7 @@
 // Not re-exported from `internal/index.ts`: `toOffsetInstant` reads that barrel at module top
 // level (`TIME_ZONE_ANNOTATION`), so a barrel entry for this module would close a cycle and leave
 // the constant undefined when `toOffsetInstant` evaluates. Import this file directly.
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { fromOffsetInstant } from "../instant/convert/fromOffsetInstant";
 import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
 import {

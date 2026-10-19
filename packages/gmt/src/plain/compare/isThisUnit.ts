@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
 import { getLocaleStartOfWeek } from "../calculate/getLocaleStartOfWeek";

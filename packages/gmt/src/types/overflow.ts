@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * What to do when a date or time field is out of range, as Temporal's `overflow` option

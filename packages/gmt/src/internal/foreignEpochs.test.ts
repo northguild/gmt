@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   DOT_NET_TICKS_EPOCH_OFFSET,
   EXCEL_1900_EPOCH_NANOSECONDS,

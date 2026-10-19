@@ -1,4 +1,6 @@
 import { addBusinessDays } from "../../plain/calculate";
+import { clearHolidayMemo } from "../../internal/businessCalendar";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { businessDaysBetween } from "./businessDaysBetween";
@@ -21,6 +23,19 @@ const noWeeklyClosure = {
   timeZone: "UTC",
 };
 const satSunNoHolidays = { weekend: [6, 7], holidays: [], timeZone: "UTC" };
+// 30 years, 480 holidays: 2000-01-03 is a Monday and 2029-11-26 the Monday 1,560 weeks on, so
+// (start, end] holds 1,560 * 5 = 7,800 weekdays. The holidays are every third Tuesday from
+// 2000-01-04 (offsets 1, 22, ... 10,060 days), all inside the range and all on weekdays, so
+// the count is 7,800 - 480 = 7,320.
+const thirtyYearCalendar = {
+  weekend: [6, 7],
+  holidays: Array.from({ length: 480 }, (_, index) =>
+    Temporal.PlainDate.from("2000-01-04")
+      .add({ days: 21 * index })
+      .toString(),
+  ),
+  timeZone: "UTC",
+};
 
 describe("businessDaysBetween", () => {
   // `start` is excluded and `end` included, so each row counts the dates after start up to
@@ -199,4 +214,52 @@ describe("businessDaysBetween", () => {
       ).toBe(3);
     },
   );
+
+  it("counts 480 holidays over thirty years as weeks times five less the weekday holidays", () => {
+    expect(
+      businessDaysBetween("2000-01-03", "2029-11-26", thirtyYearCalendar),
+    ).toBe(7320);
+  });
+  // July 2024: 1 Mon, 2 Tue, 3 Wed, 4 Thu, 5 Fri, 6 Sat, 7 Sun, 8 Mon. Sat–Sun weekend unless
+  // the row says otherwise; (1 Jul, 5 Jul] holds Tue, Wed, Thu, Fri and (1 Jul, 8 Jul] adds Mon.
+  it.each`
+    start           | end             | holidays                                         | weekend   | expected | description
+    ${"2024-07-01"} | ${"2024-07-08"} | ${["2024-07-06"]}                                | ${[6, 7]} | ${5}     | ${"a Saturday holiday is already closed, so nothing is taken off"}
+    ${"2024-07-01"} | ${"2024-07-08"} | ${["2024-07-06", "2024-07-07"]}                  | ${[6, 7]} | ${5}     | ${"holidays on both weekend days take nothing off"}
+    ${"2024-07-01"} | ${"2024-07-05"} | ${["2024-07-04", "+002024-07-04", "2024-07-04"]} | ${[6, 7]} | ${3}     | ${"three spellings of one holiday take off one day"}
+    ${"2024-07-01"} | ${"2024-07-08"} | ${["2024-07-05", "2024-07-02"]}                  | ${[6, 7]} | ${3}     | ${"holidays listed out of date order: Tue and Fri off"}
+    ${"2024-07-01"} | ${"2024-07-05"} | ${["2024-06-28", "2024-07-12", "2024-07-01"]}    | ${[6, 7]} | ${4}     | ${"holidays before the range, after it, and on the excluded start take nothing off"}
+    ${"2024-07-01"} | ${"2024-07-05"} | ${["2024-07-05"]}                                | ${[6, 7]} | ${3}     | ${"a holiday on the included end is taken off"}
+    ${"2024-07-01"} | ${"2024-07-08"} | ${["2024-07-05"]}                                | ${[5, 6]} | ${5}     | ${"a Friday holiday under a Friday–Saturday weekend takes nothing off"}
+    ${"2024-07-01"} | ${"2024-07-08"} | ${["2024-07-07"]}                                | ${[5, 6]} | ${4}     | ${"a Sunday holiday under a Friday–Saturday weekend is taken off"}
+    ${"2024-07-08"} | ${"2024-07-01"} | ${["2024-07-05", "2024-07-02", "2024-07-06"]}    | ${[6, 7]} | ${-3}    | ${"reversed range, unsorted holidays, one on the weekend"}
+  `(
+    "counts $expected in ($start, $end] with holidays $holidays and weekend $weekend — $description",
+    ({ start, end, holidays, weekend, expected }) => {
+      expect(
+        businessDaysBetween(start, end, {
+          weekend,
+          holidays,
+          timeZone: "UTC",
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("gives the same count on a cold holiday memo as on a warm one", () => {
+    clearHolidayMemo();
+    const cold = businessDaysBetween(
+      "2000-01-03",
+      "2029-11-26",
+      thirtyYearCalendar,
+    );
+    const warm = businessDaysBetween(
+      "2000-01-03",
+      "2029-11-26",
+      thirtyYearCalendar,
+    );
+
+    expect(cold).toBe(7320);
+    expect(warm).toBe(7320);
+  });
 });

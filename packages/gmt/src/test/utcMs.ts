@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 
 /**
  * Epoch milliseconds for a UTC instant string — how a fixture names a moment.

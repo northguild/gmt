@@ -1,3 +1,4 @@
+import { cachedFormatter } from "./formatterCache";
 // `Intl.DateTimeFormat`'s part types that belong to the *date* half of a
 // combined `dateStyle` + `timeStyle` format. Everything else (`hour`,
 // `minute`, `second`, `fractionalSecond`, `dayPeriod`, `timeZoneName`, and
@@ -55,7 +56,7 @@ export function joinDateTimeConnector(
   dayLabel: string,
   timeStyle: "short" | "medium" | "long" | "full",
 ): string {
-  const parts = new Intl.DateTimeFormat(locale, {
+  const parts = cachedFormatter("DateTimeFormat", locale, {
     dateStyle: "full",
     timeStyle,
     timeZone,
@@ -70,7 +71,7 @@ export function joinDateTimeConnector(
   // dateStyle-only format would still produce with no time present — it
   // belongs to the date field, not the connector, even though the combined
   // format fuses it into the same literal token as the real connector.
-  const dateOnlyParts = new Intl.DateTimeFormat(locale, {
+  const dateOnlyParts = cachedFormatter("DateTimeFormat", locale, {
     dateStyle: "full",
     timeZone,
   }).formatToParts(epochMilliseconds);

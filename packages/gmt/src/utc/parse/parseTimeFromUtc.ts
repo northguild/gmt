@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { isValidUtc } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";

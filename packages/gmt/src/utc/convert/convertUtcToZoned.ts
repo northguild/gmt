@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { isValidTimeZone } from "../../zoned/validate";
 import { isValidUtc } from "../validate";
 

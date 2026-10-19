@@ -230,3 +230,16 @@ describe("subtractBusinessDays", () => {
     },
   );
 });
+
+// Temporal's PlainDate holds -271821-04-19 to +275760-09-13; a walk that would leave it is invalid.
+describe("subtractBusinessDays at the Temporal range limit", () => {
+  it.each`
+    value              | amount | expected
+    ${"-271821-04-25"} | ${10}  | ${""}
+  `(
+    "returns an empty string for $value - $amount business days",
+    ({ value, amount, expected }) => {
+      expect(subtractBusinessDays(value, amount)).toBe(expected);
+    },
+  );
+});

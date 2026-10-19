@@ -65,7 +65,7 @@ const WORKAROUNDS = [
     trigger:
       "a js-temporal release ports proposal-temporal a41eb67 (+ af0cb4b) and becomes GMT's @js-temporal/polyfill floor (upstream-issue draft C)",
     steps: [
-      "Delete the D1 entries in repros.ts, the D1 term of needsFieldSearch in calendarDateFromFields.ts, and the D1 fallbacks in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, the D1 term of untilWorkaroundNeeded).",
+      "Delete the D1 entries in probeRepros.ts, the D1 term of needsFieldSearch in calendarDateFromFields.ts, and the D1 fallbacks in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, the D1 term of untilWorkaroundNeeded).",
       "Delete fieldSearch.ts + test once no range guard (D2–D5) is left.",
       `Full wording: ${COMPAT_README} § Removal steps 1.`,
     ],
@@ -134,7 +134,7 @@ const WORKAROUNDS = [
     trigger:
       "js-temporal ports tc39 #3292 together with the #3329 fix (0.5.1 predates #3292, so this group passes today: it guards against a port of #3292 alone)",
     steps: [
-      "Delete the D10 repros in repros.ts, the D10 term of needsFieldSearch in calendarDateFromFields.ts, the D10 terms in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, untilWorkaroundNeeded) and D10 in ARITHMETIC_DEFECTS (capabilities.ts).",
+      "Delete the D10 repros in probeRepros.ts, the D10 term of needsFieldSearch in calendarDateFromFields.ts, the D10 terms in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, untilWorkaroundNeeded) and D10 in ARITHMETIC_DEFECTS (capabilities.ts).",
       "Keep the non-RangeError fallbacks and the far-year month-13 rows in addDate, intervalCountDate and convertDateToCalendar tests: no expected value changes.",
       `Full wording: ${COMPAT_README} § Removal steps 10.`,
     ],
@@ -152,7 +152,7 @@ const WORKAROUNDS = [
     trigger:
       "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
     steps: [
-      "Delete the D11 repros in repros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
+      "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
       "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",
       `Full wording: ${COMPAT_README} § Removal steps 11.`,
     ],
@@ -176,7 +176,7 @@ const WORKAROUNDS = [
     trigger:
       "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
     steps: [
-      "Delete internal/zonedTransitionSearch.ts and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
+      "Delete internal/zonedTransitionSearch.ts (its per-zone transition memo goes with it) and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
       "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
       "Keep internal/zonedTransitionSearch.test.ts apart from its step guard, and every Boa_Vista, Riga and Simferopol row: their values are native Temporal's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 14.`,

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, type DutyStep, dutySequence } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { DutyRule } from "../../types";

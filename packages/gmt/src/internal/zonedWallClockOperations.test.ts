@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { dateLineCrossingTimeZones } from "../test/timeZoneMatrix";
 import {
   addToZoned,

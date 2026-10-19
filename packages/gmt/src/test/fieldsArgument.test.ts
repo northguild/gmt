@@ -13,7 +13,7 @@
  *
  * GMT hands Temporal a fresh object of the values it checked.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../internal/temporal";
 import {
   setDate,
   setDateTime,

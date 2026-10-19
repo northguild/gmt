@@ -1,3 +1,3 @@
-// Re-export the Temporal polyfill (`Temporal`, `Intl`, `toTemporalInstant`) so every namespace subpath offers it
-export * from "@js-temporal/polyfill";
+// Re-export `Temporal`, `Intl` and `toTemporalInstant` from the internal seam so every namespace subpath offers them
+export { Intl, Temporal, toTemporalInstant } from "../internal/temporal";
 export * from "./convert";

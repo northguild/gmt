@@ -1,8 +1,12 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import {
+  cachedFormatter,
+  checkFormatterArguments,
+} from "../../internal/formatterCache";
 
 /**
  * Return the locale-formatted parts of a PlainDateTime.
@@ -85,12 +89,16 @@ export function formatDateTimeToParts(
     // Constructing with the caller's options first surfaces the TypeError or
     // RangeError Intl.DateTimeFormat raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
-    new Intl.DateTimeFormat(locale, read);
+    checkFormatterArguments("DateTimeFormat", locale, read);
     const epochMilliseconds =
       Temporal.PlainDateTime.from(value).toZonedDateTime(
         "UTC",
       ).epochMilliseconds;
-    return new Intl.DateTimeFormat(locale, plainDateTimeFormatOptions(read))
+    return cachedFormatter(
+      "DateTimeFormat",
+      locale,
+      plainDateTimeFormatOptions(read),
+    )
       .formatToParts(epochMilliseconds)
       .map((p) => ({ type: p.type, value: p.value }));
   } catch {

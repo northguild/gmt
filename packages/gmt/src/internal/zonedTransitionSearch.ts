@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import {
   MAX_EPOCH_NANOSECONDS,
   MIN_EPOCH_NANOSECONDS,
@@ -132,6 +132,109 @@ function changeBetween(
   return transitionBetween(timeZone, low, high, highOffset);
 }
 
+/*
+ * The per-zone memo: spans of a zone's timeline where this search has proved
+ * which instants carry an offset change. An offset is a pure function of zone and instant for the
+ * life of the process, so a memo holds observations of it and never a conclusion about the clock:
+ * a "none up to the horizon" answer is not stored, only the stretch that was actually searched.
+ * Removed with the D13 workaround: see `temporalCompat/README.md`.
+ */
+
+/** Proven: within (low, high] the zone changes offset exactly at `changes` (sorted), nowhere else. */
+type KnownSpan = { low: bigint; high: bigint; changes: bigint[] };
+type ZoneFacts = { spans: KnownSpan[] };
+
+/** Zones remembered; the oldest is dropped past this. */
+const MAX_MEMO_ZONES = 64;
+/** Changes remembered per zone; past this the zone's facts are cleared. */
+const MAX_MEMO_CHANGES = 4_096;
+/** Spans remembered per zone; past this the zone's facts are cleared. */
+const MAX_MEMO_SPANS = 256;
+
+const transitionMemo = new Map<string, ZoneFacts>();
+
+/** Forget every remembered span. Internal; tests call it to start from a cold memo. */
+export function clearTransitionMemo(): void {
+  transitionMemo.clear();
+}
+
+/** Two sorted arrays merged into one sorted array, a value in both kept once. */
+function mergeSorted(a: bigint[], b: bigint[]): bigint[] {
+  const merged: bigint[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const left = a[i] as bigint;
+    const right = b[j] as bigint;
+    if (left < right) {
+      merged.push(left);
+      i++;
+    } else if (left > right) {
+      merged.push(right);
+      j++;
+    } else {
+      merged.push(left);
+      i++;
+      j++;
+    }
+  }
+  while (i < a.length) merged.push(a[i++] as bigint);
+  while (j < b.length) merged.push(b[j++] as bigint);
+  return merged;
+}
+
+/** Remember that (low, high] changes offset exactly at `changes` and nowhere else. */
+function recordSpan(
+  timeZone: string,
+  low: bigint,
+  high: bigint,
+  changes: bigint[],
+): void {
+  if (low >= high) return;
+  let facts = transitionMemo.get(timeZone);
+  if (facts === undefined) {
+    if (transitionMemo.size >= MAX_MEMO_ZONES) {
+      const oldest = transitionMemo.keys().next();
+      if (!oldest.done) transitionMemo.delete(oldest.value);
+    }
+    facts = { spans: [] };
+    transitionMemo.set(timeZone, facts);
+  }
+
+  // Spans are sorted and disjoint, so those this one overlaps or touches are one run.
+  let mergedLow = low;
+  let mergedHigh = high;
+  let mergedChanges = changes;
+  const kept: KnownSpan[] = [];
+  const after: KnownSpan[] = [];
+  for (const span of facts.spans) {
+    if (span.high < low) {
+      kept.push(span);
+    } else if (span.low > high) {
+      after.push(span);
+    } else {
+      mergedLow = minimum(mergedLow, span.low);
+      mergedHigh = maximum(mergedHigh, span.high);
+      mergedChanges = mergeSorted(mergedChanges, span.changes);
+    }
+  }
+  kept.push({ low: mergedLow, high: mergedHigh, changes: mergedChanges });
+  kept.push(...after);
+
+  const total = kept.reduce((sum, span) => sum + span.changes.length, 0);
+  facts.spans =
+    kept.length > MAX_MEMO_SPANS || total > MAX_MEMO_CHANGES
+      ? [{ low, high, changes: [...changes] }]
+      : kept;
+}
+
+function spanAround(
+  timeZone: string,
+  holds: (span: KnownSpan) => boolean,
+): KnownSpan | undefined {
+  return transitionMemo.get(timeZone)?.spans.find(holds);
+}
+
 function currentEpochNanoseconds(): bigint {
   return Temporal.Now.instant().epochNanoseconds;
 }
@@ -152,13 +255,18 @@ export function nextTransitionAfter(
   until?: bigint,
 ): bigint | null {
   // The horizon holds with or without a limit, as it does when the polyfill answers and the
-  // limit only filters its result.
-  const horizon =
-    maximum(from, currentEpochNanoseconds()) +
-    NO_FURTHER_TRANSITION_HORIZON_NANOSECONDS;
+  // limit only filters its result. It is at least `from` plus the horizon span, so a limit within
+  // that span is never cut by it and the clock is not read.
   const end = minimum(
     MAX_EPOCH_NANOSECONDS,
-    until === undefined ? horizon : minimum(until, horizon),
+    until !== undefined &&
+      until <= from + NO_FURTHER_TRANSITION_HORIZON_NANOSECONDS
+      ? until
+      : minimum(
+          until ?? MAX_EPOCH_NANOSECONDS,
+          maximum(from, currentEpochNanoseconds()) +
+            NO_FURTHER_TRANSITION_HORIZON_NANOSECONDS,
+        ),
   );
   if (from >= end) return null;
 
@@ -170,18 +278,65 @@ export function nextTransitionAfter(
     low = POLYFILL_TRANSITION_SEARCH_FLOOR;
   }
 
+  return sampledNext(timeZone, low, end);
+}
+
+/** The first change in `(low, end]`, answered from the memo where it can be, else sampled. */
+function sampledNext(
+  timeZone: string,
+  from: bigint,
+  end: bigint,
+): bigint | null {
+  // A cold search takes at most MAX_SEARCH_STEPS steps from `from`, so it reaches `cutoff`, and
+  // throws when `end` lies past it with no change before it. The memo answers the same: what it
+  // knows is never allowed to carry a search past a bound the cold search would stop at.
+  const cutoff =
+    from + BigInt(MAX_SEARCH_STEPS) * TRANSITION_SEARCH_STEP_NANOSECONDS;
+  let low = from;
+  const known = spanAround(
+    timeZone,
+    (span) => span.low <= low && low < span.high,
+  );
+  if (known !== undefined) {
+    const change = known.changes.find((c) => c > low);
+    if (change !== undefined) {
+      if (change <= minimum(end, cutoff)) return change;
+      if (end <= cutoff) return null;
+      throw outOfSteps(timeZone);
+    }
+    if (known.high >= end) {
+      if (end <= cutoff) return null;
+      throw outOfSteps(timeZone);
+    }
+    low = known.high;
+    if (low >= cutoff) throw outOfSteps(timeZone);
+  }
+
+  const searchStart = low;
   const lowOffset = offsetAt(timeZone, low);
-  for (let i = 0; i < MAX_SEARCH_STEPS; i++) {
-    const high = minimum(low + TRANSITION_SEARCH_STEP_NANOSECONDS, end);
+  while (low < cutoff) {
+    const high = minimum(
+      minimum(low + TRANSITION_SEARCH_STEP_NANOSECONDS, end),
+      cutoff,
+    );
     const highOffset = offsetAt(timeZone, high);
     if (highOffset !== lowOffset) {
-      return changeBetween(timeZone, low, high, lowOffset, highOffset);
+      const change = changeBetween(timeZone, low, high, lowOffset, highOffset);
+      recordSpan(timeZone, searchStart, change, [change]);
+      return change;
     }
-    if (high >= end) return null;
+    if (high >= end) {
+      recordSpan(timeZone, searchStart, end, []);
+      return null;
+    }
     low = high;
   }
 
-  throw new RangeError(`Transition search in ${timeZone} ran past its bound`);
+  throw outOfSteps(timeZone);
+}
+
+function outOfSteps(timeZone: string): RangeError {
+  return new RangeError(`Transition search in ${timeZone} ran past its bound`);
 }
 
 /** The last change in `(since, start]`, scanning back from `start`; null when there is none. */
@@ -190,20 +345,52 @@ function lastChangeBack(
   start: bigint,
   since: bigint,
 ): bigint | null {
+  // As in `sampledNext`: a cold search runs MAX_SEARCH_STEPS steps down from `start`, and reaches
+  // `since` (null) only if that takes fewer than MAX_SEARCH_STEPS of them.
+  const cutoff =
+    start - BigInt(MAX_SEARCH_STEPS) * TRANSITION_SEARCH_STEP_NANOSECONDS;
+  const reachesSince =
+    start - since <=
+    BigInt(MAX_SEARCH_STEPS - 1) * TRANSITION_SEARCH_STEP_NANOSECONDS;
   let high = start;
-  const highOffset = offsetAt(timeZone, high);
+  const known = spanAround(
+    timeZone,
+    (span) => span.low < start && start <= span.high,
+  );
+  if (known !== undefined) {
+    const change = known.changes.filter((c) => c <= start).pop();
+    if (change !== undefined && change > maximum(since, cutoff)) return change;
+    if (change !== undefined || known.low <= since) {
+      if (reachesSince) return null;
+      throw outOfSteps(timeZone);
+    }
+    high = known.low;
+  }
 
-  for (let i = 0; i < MAX_SEARCH_STEPS; i++) {
-    if (high <= since) return null;
-    const low = maximum(high - TRANSITION_SEARCH_STEP_NANOSECONDS, since);
+  const searchStart = high;
+  // Read only once a step is taken: a start the memo carried to `since` or `cutoff` needs none.
+  let highOffset: bigint | undefined;
+
+  for (;;) {
+    if (high <= since) {
+      if (!reachesSince) throw outOfSteps(timeZone);
+      recordSpan(timeZone, since, searchStart, []);
+      return null;
+    }
+    if (high <= cutoff) throw outOfSteps(timeZone);
+    highOffset ??= offsetAt(timeZone, searchStart);
+    const low = maximum(
+      maximum(high - TRANSITION_SEARCH_STEP_NANOSECONDS, since),
+      cutoff,
+    );
     const lowOffset = offsetAt(timeZone, low);
     if (lowOffset !== highOffset) {
-      return changeBetween(timeZone, low, high, lowOffset, highOffset);
+      const change = changeBetween(timeZone, low, high, lowOffset, highOffset);
+      recordSpan(timeZone, change - 1n, searchStart, [change]);
+      return change;
     }
     high = low;
   }
-
-  throw new RangeError(`Transition search in ${timeZone} ran past its bound`);
 }
 
 /**

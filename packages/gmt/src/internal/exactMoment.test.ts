@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { battleTestTimeZones } from "../test";
 import {
   mockTemporalInstantFromEpochNanosecondsThrow,

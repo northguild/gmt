@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsSpan } from "../../internal";
 import { intervalContains } from "../../interval/compare";
 import { isValidUtc } from "../validate";

@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling of parseDateWithPattern; each keeps its own guard, options check and try/catch, by design
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import {
   DATE_TIME_PATTERN_FIELDS,
   isOptionsArgument,

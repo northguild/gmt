@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { parseDateWithPattern } from "../../plain/parse/parseDateWithPattern";

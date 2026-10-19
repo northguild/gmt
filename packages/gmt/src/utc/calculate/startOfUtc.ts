@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../../internal/temporal";
 import type { FractionalDigit } from "../../types";
 import { startOrEndOfUtc } from "../../internal/startOrEndOfUtc";
 import { isOptionsArgument } from "../../internal/isObject";

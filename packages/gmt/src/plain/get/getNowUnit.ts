@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
 import type { NowUnit } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";

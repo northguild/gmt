@@ -1,4 +1,4 @@
-export * from "@js-temporal/polyfill";
+export { Intl, Temporal, toTemporalInstant } from "./internal/temporal";
 export * from "./calendar";
 export * from "./duration";
 export * from "./gnss";

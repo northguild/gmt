@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { readRfc5322DateTime } from "../../internal/rfc5322DateTime";
 
 /**

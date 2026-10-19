@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";

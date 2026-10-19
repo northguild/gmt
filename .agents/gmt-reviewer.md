@@ -298,13 +298,21 @@ on several cases; and memory.
    - **Version-dependent rows.** An `oneOfIcu` variant names the ICU version that produced it;
      a row that depends on a recent tzdb change names the release it assumes. A one-variant
      `expectOneOfIcu`, or a variant nobody ran, is masking rather than tolerance.
-10. **Check the closing artifacts.** `## What gmt provides (do not re-implement)` names what the
+10. **Check the cost.** Apply [§ Loop cost](../context/coding-standards.md#loop-cost) to each
+    loop in the diff: find what bounds it. Flag a count that grows with span, log or holiday
+    count where a closed form or binary search exists; a nested loop over the same input; a
+    Temporal parse or construction per iteration or in a comparator; a public function called
+    from another; an `Intl` constructor outside the formatter cache; module-level work or
+    shipped test data; a new static import that pulls a large internal module into a small
+    entry. Run `pnpm size` and report the delta of every entry the diff touches. The finding's
+    oracle is the measurement: input sizes and times, before and after.
+11. **Check the closing artifacts.** `## What gmt provides (do not re-implement)` names what the
     story actually consumed (the tracker's `Blocked by` column is generated from it), and the
     changeset carries the bump the [changeset rule](../context/coding-standards.md#changesets)
     requires.
-11. **Check the READMEs are up to date.** Every review runs the six checks in
+12. **Check the READMEs are up to date.** Every review runs the six checks in
     [§ Reviewing the READMEs](#reviewing-the-readmes), whatever the story changed.
-12. **Report.**
+13. **Report.**
 
 ## Reviewing a realm you have not seen before
 
@@ -384,9 +392,10 @@ Findings ranked most-severe first. Each carries:
   finding whose value you could not reproduce is still worth reporting; say so plainly.
 - **The failure** — concrete inputs, the actual output, and the correct output.
 - **Blocking or not** — a defect blocks under Core Rule 12; a coverage gap or a docs mismatch
-  usually does not.
+  usually does not. A Cost finding blocks in new or changed code. One in code the diff did not
+  touch is reported, not blocking.
 
-Then a short **what was checked and found clean** list, so the review's depth is visible.
+Then a short **what was checked and found clean** list (including cost), so the review's depth is visible.
 
 Tone follows [the checklist's Tone section](../context/code-review-checklist.md): phrase
 uncertainty as a question, approve when only minor issues remain, and do not block on style.

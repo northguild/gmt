@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
@@ -84,34 +83,25 @@ export function intervalSplitAtZoned(
     try {
       const startVal = parseCalendarZonedValue(start);
       const endVal = parseCalendarZonedValue(end);
-      const startInstant = startVal.toInstant();
-      const endInstant = endVal.toInstant();
+      const startNs = startVal.epochNanoseconds;
+      const endNs = endVal.epochNanoseconds;
 
-      const parsedPoints = points.map((point) =>
-        parseCalendarZonedValue(point),
-      );
+      // Each point's instant is read once; filter, sort and dedupe compare the bigints. `sort`
+      // is stable, so points on one instant keep input order and the dedupe keeps the first.
+      const timedPoints = points
+        .map((point) => {
+          const value = parseCalendarZonedValue(point);
+          return { value, ns: value.epochNanoseconds };
+        })
+        .filter(({ ns }) => ns > startNs && ns < endNs);
 
-      const inRangePoints = parsedPoints.filter((point) => {
-        const instant = point.toInstant();
-        return (
-          Temporal.Instant.compare(instant, startInstant) > 0 &&
-          Temporal.Instant.compare(instant, endInstant) < 0
-        );
-      });
+      timedPoints.sort((a, b) => (a.ns < b.ns ? -1 : a.ns > b.ns ? 1 : 0));
 
-      inRangePoints.sort((a, b) =>
-        Temporal.Instant.compare(a.toInstant(), b.toInstant()),
-      );
-
-      // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
-      // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
-      // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
-      // reaching `zoned/` at all.
-      const uniquePoints = inRangePoints.filter(
-        (point, index) =>
-          index === 0 ||
-          !point.toInstant().equals(inRangePoints[index - 1].toInstant()),
-      );
+      const uniquePoints = timedPoints
+        .filter(
+          ({ ns }, index) => index === 0 || ns !== timedPoints[index - 1].ns,
+        )
+        .map(({ value }) => value);
 
       const boundaries = [startVal, ...uniquePoints, endVal];
 

@@ -180,6 +180,9 @@ jobs:
       - name: Public API surface — reachability, examples, doc imports and links
         run: node scripts/api-surface.mjs check
 
+      - name: Bundle size budgets
+        run: node scripts/bundle-size.mjs check
+
       # `llms.test.ts`'s three text-surface gates all early-return when `apps/dox/dist` is absent,
       # and the Tests job never builds the site — it is a separate runner that builds only
       # `@northguild/gmt`. So those gates had never run in CI, which is how a raw `<UpstreamDefects />`

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current UTC instant as an ISO Instant string.

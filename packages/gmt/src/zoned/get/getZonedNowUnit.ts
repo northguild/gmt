@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../../internal/temporal";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
 import { parseWeekFromDate } from "../../plain/parse";
 import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";

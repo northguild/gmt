@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 
 describe("getLocaleWeekYearBounds", () => {

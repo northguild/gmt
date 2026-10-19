@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * Precision options for the ISO 8601 duration string a `diff*AsDuration` function writes, passed

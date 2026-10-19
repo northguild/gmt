@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { resolveLocal } from "../../instant/convert/resolveLocal";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import { NON_STRINGS } from "../../test/ediCodes";

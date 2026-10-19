@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * What to do when the UTC offset written in a zoned value disagrees with its time zone, as

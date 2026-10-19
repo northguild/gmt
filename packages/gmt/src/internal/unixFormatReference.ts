@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isValidUtc } from "../utc/validate/isValidUtc";
 import { type UnixEpochUnit, unixEpochToInstant } from "./unixEpochValue";
 

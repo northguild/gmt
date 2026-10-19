@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 export interface LocaleWeekYearBounds {
   weekYear: number;

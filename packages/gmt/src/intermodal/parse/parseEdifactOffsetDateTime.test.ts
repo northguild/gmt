@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { fromOffsetInstant } from "../../instant/convert/fromOffsetInstant";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";

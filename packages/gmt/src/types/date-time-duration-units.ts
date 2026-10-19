@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "../internal/temporal";
 
 /**
  * Any field of an ISO 8601 duration, in the plural, from `"years"` down to `"nanoseconds"`. It

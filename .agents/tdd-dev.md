@@ -65,6 +65,12 @@ unstaged and report it ready; the user decides when it is committed.
   computing the spec's answer so removal changes no output, and a removal trigger naming the
   upstream commit that retires it.
 
+## Performance shape
+
+- Follow [§ Loop cost](../context/coding-standards.md#loop-cost) for every loop you write.
+- In the handoff, name what bounds each loop, and give the bench rows and the `pnpm size --files` delta it asks for.
+- An optimisation that changes any output is a defect, not a trade-off.
+
 ## Duplication discipline
 
 - Prefer **one parameterized function per axis** over near-duplicate named variants (precedent: `isRelativeDay`, `isThisUnit`, `parseUnitFromUnix`).
@@ -110,5 +116,6 @@ Suppression IDs (check with `npx fallow explain <issue-type>`):
 - The handoff lists every disagreement found (rule vs polyfill vs spec vs implementation) and how each was resolved.
 - Every public type, member and option property has a description, every optional input property has `@defaultValue` matching the implementation, and `pnpm dox:docs-check` reports no gaps.
 - A public type is reached by at least one public function. A type only private code uses is not exported.
+- Loop bounds named; bench and size figures included where a loop grows with the input.
 - Typecheck and the full gmt test suite pass; the fallow gate is clean or every suppression carries a reason.
 - Nothing staged, committed, or pushed.

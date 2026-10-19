@@ -1,5 +1,6 @@
+import { isoDateString } from "../../internal/epochDay";
+import { Temporal } from "../../internal/temporal";
 import {
-  frameInstant,
   frameZoned,
   instantFrom,
   parseFreeDays,
@@ -103,14 +104,20 @@ export function freeTimeExpiry(
 
     const start = frameZoned(instantFrom(clockStart), frame);
     const ledger = walkFreeTime(start, allowed, terms);
-    if (ledger === null) {
+    if (
+      ledger === null ||
+      ledger.firstFree === null ||
+      ledger.lastFree === null
+    ) {
       return null;
     }
 
     return {
-      freeTimeStart: ledger.free[0].date,
-      lastFreeDay: ledger.free[allowed - 1].date,
-      expiresAt: frameInstant(ledger.expiresAt, frame).toString(),
+      freeTimeStart: isoDateString(ledger.firstFree),
+      lastFreeDay: isoDateString(ledger.lastFree),
+      expiresAt: Temporal.Instant.fromEpochNanoseconds(
+        ledger.expiresAtNs,
+      ).toString(),
     };
   } catch {
     // Never throws (Core Rule 3): a hostile

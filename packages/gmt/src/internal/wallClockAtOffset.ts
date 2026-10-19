@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "./temporal";
 
 /**
  * The wall clock an instant reads at a fixed UTC offset, including a sub-minute or fractional

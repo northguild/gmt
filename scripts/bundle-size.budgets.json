@@ -1,0 +1,40 @@
+{
+  "entries": {
+    "root": {
+      "minified": 505900
+    },
+    "isValidDate": {
+      "minified": 154900
+    },
+    "formatDate": {
+      "minified": 158300
+    },
+    "businessDaysBetween": {
+      "minified": 157500
+    },
+    "addBusinessDays": {
+      "minified": 158600
+    },
+    "chargeableDays": {
+      "minified": 198400
+    },
+    "operatingTimeBetween": {
+      "minified": 206100
+    },
+    "dutyViolations": {
+      "minified": 230800
+    }
+  },
+  "absent": {
+    "addBusinessDays": [
+      "src/internal/temporalCompat/repros.ts",
+      "src/internal/zonedWallClock.ts",
+      "src/internal/temporalCompat/probeRepros.ts"
+    ],
+    "businessDaysBetween": [
+      "src/internal/temporalCompat/repros.ts",
+      "src/internal/zonedWallClock.ts",
+      "src/internal/temporalCompat/probeRepros.ts"
+    ]
+  }
+}

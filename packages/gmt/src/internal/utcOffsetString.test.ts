@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { battleTestTimeZones } from "../test";
 import { mockTemporalInstantFromThrow } from "../test/mocks";
 import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";

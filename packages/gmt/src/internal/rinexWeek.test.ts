@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isRinexWeekSystem, RINEX_WEEK_EPOCHS } from "./rinexWeek";
 
 function labelNs(label: string): bigint {

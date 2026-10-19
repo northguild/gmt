@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { isObject } from "./isObject";
 
 /** The date fields `setDate` takes. */

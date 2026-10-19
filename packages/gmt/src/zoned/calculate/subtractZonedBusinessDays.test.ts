@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { subtractZonedBusinessDays } from "./subtractZonedBusinessDays";
 
@@ -203,6 +203,26 @@ describe("subtractZonedBusinessDays", () => {
     ${"2024-03-18T14:30:00-04:00[America/New_York][u-ca=iso8601]"} | ${1}   | ${"2024-03-15T14:30:00-04:00[America/New_York]"}
   `(
     "reads the annotations of $value as Temporal does (amount $amount) → $expected",
+    ({ value, amount, expected }) => {
+      expect(subtractZonedBusinessDays(value, amount)).toBe(expected);
+    },
+  );
+});
+
+// A business-day count is a whole number of days. A fraction, NaN or an infinity has no date, so
+// the answer is the invalid-input sentinel, as the day-by-day walk this replaced gave.
+describe("subtractZonedBusinessDays with a count that is not a whole number", () => {
+  it.each`
+    value                                      | amount       | expected
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${2.25}      | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${1.5}       | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${0.5}       | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${1e-300}    | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${Infinity}  | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${-Infinity} | ${""}
+    ${"2024-03-15T14:30:00+09:00[Asia/Tokyo]"} | ${NaN}       | ${""}
+  `(
+    "returns an empty string for $value with amount $amount",
     ({ value, amount, expected }) => {
       expect(subtractZonedBusinessDays(value, amount)).toBe(expected);
     },

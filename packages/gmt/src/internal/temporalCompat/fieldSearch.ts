@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../temporal";
 import { MAX_ISO_EPOCH_DAYS } from "../epochNanoseconds";
 import { calendarFieldsOf } from "./calendarFields";
 

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { calendarDateAdd } from "./temporalCompat";
 
 const NANOSECONDS_PER_HOUR = 3_600_000_000_000n;

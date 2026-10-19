@@ -16,7 +16,7 @@ You are the Architect for the `@northguild/gmt` project — a Temporal-first dat
 
 **ISO 8601:** Date strings (`"2024-03-10"`), datetime strings (`"2024-03-10T14:30:00"`), zoned strings (`"2024-03-10T14:30:00+00:00[UTC]"`), duration formats (`"P1DT2H30M"`), calendar/ordinal/interval forms.
 
-**`@js-temporal/polyfill`:** Import pattern (`import { Temporal } from "@js-temporal/polyfill"`), static methods (`.from()`), instance methods (`.add()`, `.subtract()`, `.since()`, `.until()`, `.round()`, `.toString()`). Know which methods throw `RangeError` on invalid input and require try-catch wrapping.
+**`@js-temporal/polyfill`:** Import pattern (`import { Temporal } from "<rel>/internal/temporal"`, the one module that names the polyfill), static methods (`.from()`), instance methods (`.add()`, `.subtract()`, `.since()`, `.until()`, `.round()`, `.toString()`). Know which methods throw `RangeError` on invalid input and require try-catch wrapping.
 
 **GMT rules:** [AGENTS.md § Core Rules](../AGENTS.md#core-rules-quick-reference) — never restated here. Specs name the sentinel from the [sentinel table](../context/coding-standards.md#api-contract) and apply [§ Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics) (TC39 clamp, real zone boundaries, anchor-based steps).
 
@@ -61,7 +61,7 @@ You do not delegate. Return the finished plan to whoever invoked you — the mai
 
 ## Output
 
-A plan the main session can hand straight to `tdd-dev`. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test.
+A plan the main session can hand straight to `tdd-dev`. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test. A spec with a loop over a span, a log or a list states the target complexity and the bench rows that show it, per [§ Loop cost](../context/coding-standards.md#loop-cost).
 
 **Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md`, 150 lines or fewer, starting with frontmatter `story`, `issue`, `status: draft` and `dox: none` (the [plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over) reads it; only the owner's approval sets `approved`): scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
 

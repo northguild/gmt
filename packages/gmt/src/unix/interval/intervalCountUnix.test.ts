@@ -3,7 +3,7 @@ import {
   dateLineCrossingTimeZones,
   mockSystemTimeZone,
 } from "../../test";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { intervalCountUnix } from "./intervalCountUnix";
@@ -201,18 +201,26 @@ describe("intervalCountUnix", () => {
 // 1325282400000 is 2011-12-31T12:00:00+14:00[Pacific/Apia]
 // 1289097000000 is 2010-11-06T23:30:00-03:00[America/Goose_Bay]
 // 1289104200000 is 2010-11-07T00:30:00-04:00[America/Goose_Bay]
+// 1712412000000 is 2024-04-07T01:00:00+11:00[Australia/Lord_Howe]; +7,800,000 ms is 02:40:00+10:30 (130 minutes)
+// 1728141600000 is 2024-10-06T01:50:00+10:30[Australia/Lord_Howe]; +1,200,000 ms is 02:40:00+11:00 (20 minutes)
+// -306979800000 is 1960-04-09T23:50:00+00:00[Europe/London]; +8,400,000 ms is 03:10:00+01:00 (140 minutes)
+// 788824800000 is 1994-12-30T12:00:00-10:00[Pacific/Kiritimati]; +86,400,000 ms is 1995-01-01T12:00:00+14:00
 // 8639997552000000 is +275760-08-15T12:00:00-04:00[America/Santiago]
 // 8640000000000000 is +275760-09-12T21:00:00-03:00[America/Santiago], the last representable instant
 describe("intervalCountUnix across zone transitions", () => {
   it.each`
-    start               | end                 | unit       | timeZone               | expected
-    ${1727532300000}    | ${1727533500000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${2}
-    ${1712408700000}    | ${1712412300000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${3}
-    ${1727522100000}    | ${1727608500000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${25}
-    ${1601740830000}    | ${1601742600000}    | ${"hour"}  | ${"Antarctica/Casey"}  | ${2}
-    ${1325196000000}    | ${1325282400000}    | ${"day"}   | ${"Pacific/Apia"}      | ${2}
-    ${1289097000000}    | ${1289104200000}    | ${"hour"}  | ${"America/Goose_Bay"} | ${4}
-    ${8639997552000000} | ${8640000000000000} | ${"month"} | ${"America/Santiago"}  | ${2}
+    start               | end                 | unit        | timeZone                 | expected
+    ${1727532300000}    | ${1727533500000}    | ${"hour"}   | ${"Pacific/Chatham"}     | ${2}
+    ${1712408700000}    | ${1712412300000}    | ${"hour"}   | ${"Pacific/Chatham"}     | ${3}
+    ${1727522100000}    | ${1727608500000}    | ${"hour"}   | ${"Pacific/Chatham"}     | ${25}
+    ${1601740830000}    | ${1601742600000}    | ${"hour"}   | ${"Antarctica/Casey"}    | ${2}
+    ${1325196000000}    | ${1325282400000}    | ${"day"}    | ${"Pacific/Apia"}        | ${2}
+    ${1289097000000}    | ${1289104200000}    | ${"hour"}   | ${"America/Goose_Bay"}   | ${4}
+    ${8639997552000000} | ${8640000000000000} | ${"month"}  | ${"America/Santiago"}    | ${2}
+    ${1712412000000}    | ${1712419800000}    | ${"minute"} | ${"Australia/Lord_Howe"} | ${130}
+    ${1728141600000}    | ${1728142800000}    | ${"minute"} | ${"Australia/Lord_Howe"} | ${20}
+    ${-306979800000}    | ${-306971400000}    | ${"minute"} | ${"Europe/London"}       | ${140}
+    ${788824800000}     | ${788911200000}     | ${"year"}   | ${"Pacific/Kiritimati"}  | ${2}
   `(
     "returns $expected $unit buckets for $start to $end in timeZone $timeZone",
     ({ start, end, unit, timeZone, expected }) => {

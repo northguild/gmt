@@ -60,7 +60,7 @@ Derive at test time by mapping the unix timestamps over `battleTestTimeZones`:
 
 ```ts
 import { battleTestTimeZones } from "../../test"; // relative — there is no @gmt/test alias
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 
 const zonedStartCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,

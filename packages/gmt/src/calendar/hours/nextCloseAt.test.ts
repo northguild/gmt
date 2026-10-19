@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import {
-  mockTemporalInstantFromEpochNanosecondsThrow,
+  mockTemporalZonedDateTimeOffsetThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
@@ -251,9 +251,9 @@ describe("nextCloseAt when Temporal throws", () => {
   };
 
   it.each`
-    mock                                            | reads
-    ${mockTemporalPlainTimeFromThrow}               | ${"reading a window"}
-    ${mockTemporalInstantFromEpochNanosecondsThrow} | ${"walking the local days"}
+    mock                                    | reads
+    ${mockTemporalPlainTimeFromThrow}       | ${"reading a window"}
+    ${mockTemporalZonedDateTimeOffsetThrow} | ${"walking the local days"}
   `("returns the sentinel when $reads throws", ({ mock }) => {
     mock();
     expect(nextCloseAt("2024-06-10T14:00:00Z", schedule)).toBe("");

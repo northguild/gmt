@@ -1,11 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { battleTestTimeZones } from "../test";
 import {
   businessDateFrom,
+  clearHolidayMemo,
   DEFAULT_BUSINESS_CALENDAR,
   isBusinessDate,
   MAX_BUSINESS_DAY_STEPS,
   parseBusinessCalendar,
+  parseHolidays,
   resolveBusinessCalendar,
   stepBusinessDates,
 } from "./businessCalendar";
@@ -42,7 +44,8 @@ describe("parseBusinessCalendar", () => {
   it("reduces a calendar to its two lookups and drops timeZone", () => {
     expect(parseBusinessCalendar(usIndependence)).toEqual({
       weekend: new Set([6, 7]),
-      holidays: new Set(["2024-07-04"]),
+      holidays: new Int32Array([19_908]),
+      closures: new Int32Array([19_908]),
     });
   });
 
@@ -53,7 +56,7 @@ describe("parseBusinessCalendar", () => {
         holidays: ["+002024-07-04", "2024-07-04"],
         timeZone: "UTC",
       }).holidays,
-    ).toEqual(new Set(["2024-07-04"]));
+    ).toEqual(new Int32Array([19_908]));
   });
 
   it("de-duplicates a repeated weekend day", () => {
@@ -100,14 +103,16 @@ describe("resolveBusinessCalendar", () => {
     expect(resolveBusinessCalendar(undefined)).toBe(DEFAULT_BUSINESS_CALENDAR);
     expect(DEFAULT_BUSINESS_CALENDAR).toEqual({
       weekend: new Set([6, 7]),
-      holidays: new Set(),
+      holidays: new Int32Array(0),
+      closures: new Int32Array(0),
     });
   });
 
   it("parses anything else, sentinel included", () => {
     expect(resolveBusinessCalendar(usIndependence)).toEqual({
       weekend: new Set([6, 7]),
-      holidays: new Set(["2024-07-04"]),
+      holidays: new Int32Array([19_908]),
+      closures: new Int32Array([19_908]),
     });
     expect(resolveBusinessCalendar({} as never)).toBe(null);
   });
@@ -282,6 +287,25 @@ describe("stepBusinessDates", () => {
     },
   );
 
+  // A negative count names no walk: it gives up with the sentinel, as the day-by-day loop did.
+  it.each`
+    direction | count
+    ${1}      | ${-1}
+    ${-1}     | ${-3}
+  `(
+    "returns null for a count of $count in direction $direction",
+    ({ direction, count }) => {
+      expect(
+        stepBusinessDates(
+          date("2024-07-03"),
+          direction,
+          count,
+          DEFAULT_BUSINESS_CALENDAR,
+        ),
+      ).toBe(null);
+    },
+  );
+
   it("skips the calendar's holidays as well as its weekend", () => {
     expect(
       stepBusinessDates(
@@ -396,5 +420,170 @@ describe("stepBusinessDates", () => {
         DEFAULT_BUSINESS_CALENDAR,
       ),
     ).toBe(null);
+  });
+});
+
+// 2024-01-01 is epoch day 19,723 (Monday); 2024-07-04 is 185 days on, 19,908 (Thursday).
+describe("parseHolidays", () => {
+  it("reads one epoch day for three spellings of the same ISO date", () => {
+    expect(
+      parseHolidays([
+        "2024-07-04",
+        "+002024-07-04",
+        "2024-07-04[u-ca=iso8601]",
+      ]),
+    ).toEqual(new Int32Array([19_908]));
+  });
+
+  // 2024-12-25 is day 359 of a leap year: 19,723 + 359.
+  it("sorts a list written out of date order", () => {
+    expect(parseHolidays(["2024-12-25", "2024-01-01"])).toEqual(
+      new Int32Array([19_723, 20_082]),
+    );
+  });
+
+  it.each`
+    holidays                        | description
+    ${["2024-07-04[u-ca=hebrew]"]}  | ${"a holiday in another calendar"}
+    ${["2024-07-04T10:00"]}         | ${"a holiday with a time"}
+    ${[20_240_704]}                 | ${"a numeric holiday"}
+    ${"2024-07-04"}                 | ${"holidays that are not an array"}
+    ${["2024-07-04", "not a date"]} | ${"one bad holiday after a good one"}
+  `("returns null for $description", ({ holidays }) => {
+    expect(parseHolidays(holidays)).toBe(null);
+  });
+
+  it("reaches Temporal.PlainDate.from zero times for a list it has already read", () => {
+    const list = ["2024-12-25", "2024-01-01", "2024-07-04"];
+
+    clearHolidayMemo();
+
+    const first = parseHolidays(list);
+    const from = vi.spyOn(Temporal.PlainDate, "from");
+    const second = parseHolidays(list);
+
+    expect(second).toEqual(first);
+    expect(from).not.toHaveBeenCalled();
+    from.mockRestore();
+  });
+
+  // 65,536 strings fit; the 65,537th clears the memo before it is stored, so only then is the
+  // first string parsed again.
+  it("keeps 65,536 strings and clears on the 65,537th", () => {
+    clearHolidayMemo();
+
+    const epoch = Temporal.PlainDate.from("1970-01-01");
+    const dates = Array.from({ length: 65_537 }, (_, day) =>
+      epoch.add({ days: day }).toString(),
+    );
+
+    parseHolidays(dates.slice(0, 65_536));
+
+    const from = vi.spyOn(Temporal.PlainDate, "from");
+
+    try {
+      expect(parseHolidays([dates[0], dates[65_535]])).toEqual(
+        new Int32Array([0, 65_535]),
+      );
+      expect(from).not.toHaveBeenCalled();
+
+      parseHolidays([dates[65_536]]);
+      from.mockClear();
+
+      expect(parseHolidays([dates[65_536]])).toEqual(new Int32Array([65_536]));
+      expect(from).not.toHaveBeenCalled();
+      expect(parseHolidays([dates[0]])).toEqual(new Int32Array([0]));
+      expect(from).toHaveBeenCalled();
+    } finally {
+      from.mockRestore();
+    }
+  });
+
+  // Epoch days 0 .. 65,536 are 65,537 distinct ISO dates; the first is evicted by the clear.
+  it("still answers correctly after the memo is cleared at its bound", () => {
+    clearHolidayMemo();
+
+    const epoch = Temporal.PlainDate.from("1970-01-01");
+    const dates = Array.from({ length: 65_537 }, (_, day) =>
+      epoch.add({ days: day }).toString(),
+    );
+
+    expect(parseHolidays(dates)?.[65_536]).toBe(65_536);
+    expect(parseHolidays(["1970-01-01"])).toEqual(new Int32Array([0]));
+  });
+});
+
+describe("closures", () => {
+  // Saturday 2024-07-06 is already closed by the weekend; Thursday 2024-07-04 is not.
+  it("keeps only the holidays that fall on a working weekday", () => {
+    expect(
+      resolved({
+        weekend: [6, 7],
+        holidays: ["2024-07-06", "2024-07-04"],
+        timeZone: "UTC",
+      }).closures,
+    ).toEqual(new Int32Array([19_908]));
+  });
+});
+
+describe("walks at the cap and the limits", () => {
+  const sundayOnlyOpen = { weekend: [1, 2, 3, 4, 5, 6], timeZone: "UTC" };
+  // 2024-06-30 is a Sunday, epoch day 19,904. Sundays within the next 200,000 days are
+  // 7k for k = 1 .. 28,571 (7 * 28,571 = 199,997), so 28,571 dates.
+  const sundays = Array.from({ length: 28_571 }, (_, index) =>
+    date("2024-06-30")
+      .add({ days: 7 * (index + 1) })
+      .toString(),
+  );
+
+  it("steps off the end of the Temporal range with a RangeError", () => {
+    expect(() =>
+      stepBusinessDates(
+        date("+275760-09-05"),
+        1,
+        10,
+        DEFAULT_BUSINESS_CALENDAR,
+      ),
+    ).toThrow(RangeError);
+  });
+
+  it("gives up at the cap when every reachable Sunday is a holiday", () => {
+    expect(
+      stepBusinessDates(
+        date("2024-06-30"),
+        1,
+        1,
+        resolved({ ...sundayOnlyOpen, holidays: sundays }),
+      ),
+    ).toBe(null);
+  });
+
+  // The last reachable day is 19,904 + 200,000; the final Sunday, 19,904 + 199,997, is
+  // 2572-01-26 (a Sunday), and still counts.
+  it("counts the last reachable Sunday when it is the one open day", () => {
+    expect(
+      stepBusinessDates(
+        date("2024-06-30"),
+        1,
+        1,
+        resolved({ ...sundayOnlyOpen, holidays: sundays.slice(0, -1) }),
+      )?.toString(),
+    ).toBe("2572-01-26");
+  });
+
+  // 2024-07-01 .. 2024-08-09 is 40 days; the next day, Monday 2024-08-12, is the first
+  // weekday after the run (08-10 and 08-11 are the weekend).
+  it("rolls past a run of 40 consecutive holidays", () => {
+    const run = Array.from({ length: 40 }, (_, index) =>
+      date("2024-07-01").add({ days: index }).toString(),
+    );
+
+    expect(
+      businessDateFrom(
+        date("2024-07-01"),
+        1,
+        resolved({ weekend: [6, 7], holidays: run, timeZone: "UTC" }),
+      )?.toString(),
+    ).toBe("2024-08-12");
   });
 });

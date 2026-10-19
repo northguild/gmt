@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { X12_TIME_CODES } from "../../internal";
 import { hostileProxy, revokedProxy } from "../../test/noThrow";
 import { X12_TIME_CODE_EXPECTATIONS } from "../../test/x12TimeCodeMatrix";

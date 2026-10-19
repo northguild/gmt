@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../temporal";
 
 /** `fixedFromIso(1970, 1, 1)`. */
 const UNIX_EPOCH_FIXED_DAY = 719_163;

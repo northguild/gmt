@@ -1,4 +1,4 @@
-import { type DefectId, type Repro, repros } from "./repros";
+import { type DefectId, type ProbeRepro, probeRepros } from "./probeRepros";
 
 /*
  * Lazy, memoized capability probes: one answer per (defect, calendar), computed the first time a
@@ -10,7 +10,7 @@ import { type DefectId, type Repro, repros } from "./repros";
  */
 
 /** The repro's output, or `ERR <name>: <message>` when it throws. */
-export function runRepro(repro: Pick<Repro, "run">): string {
+export function runRepro(repro: Pick<ProbeRepro, "run">): string {
   try {
     return repro.run();
   } catch (error) {
@@ -22,7 +22,7 @@ export function runRepro(repro: Pick<Repro, "run">): string {
 
 /** True when a repro's output is the spec-correct value, i.e. the installed runtime is fixed. */
 export function reproPasses(
-  repro: Pick<Repro, "expected">,
+  repro: Pick<ProbeRepro, "expected">,
   output: string,
 ): boolean {
   return output === repro.expected;
@@ -33,7 +33,7 @@ export function reproPasses(
  * failure, so the order of a defect's repros is the order they are tried in.
  */
 export function anyReproFails(
-  candidates: readonly Repro[],
+  candidates: readonly (Omit<ProbeRepro, "defect"> & { defect: string })[],
   defect: DefectId,
   calendar: string,
 ): boolean {
@@ -57,7 +57,7 @@ export function isDefectPresent(defect: DefectId, calendar: string): boolean {
   if (cached !== undefined) {
     return cached;
   }
-  const present = anyReproFails(repros, defect, calendar);
+  const present = anyReproFails(probeRepros, defect, calendar);
   cache.set(key, present);
   return present;
 }

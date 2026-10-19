@@ -3,6 +3,7 @@ import {
   utcMs,
   validOnlyBattleTestTimeZones,
 } from "../../test";
+import { Temporal } from "../../internal/temporal";
 import { formatUtc } from "../../utc/format/formatUtc";
 import { isValidTimeZone } from ".";
 
@@ -104,5 +105,67 @@ describe("isValidTimeZone", () => {
     ${true}
   `("returns false for invalid timeZone $timeZone", ({ timeZone }) => {
     expect(isValidTimeZone(timeZone as never)).toBe(false);
+  });
+
+  describe("remembers ids that passed", () => {
+    it("builds no ZonedDateTime for Europe/London the second time", () => {
+      expect(isValidTimeZone("Europe/London")).toBe(true);
+      const spy = vi.spyOn(Temporal.ZonedDateTime, "from");
+      expect(isValidTimeZone("Europe/London")).toBe(true);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      timeZone
+      ${"europe/paris"}
+      ${"EUROPE/PARIS"}
+      ${"Europe/Paris"}
+      ${"+05:00"}
+      ${"UTC"}
+      ${"utc"}
+    `(
+      "answers true every time for $timeZone, whatever the case",
+      ({ timeZone }) => {
+        expect(isValidTimeZone(timeZone)).toBe(true);
+        expect(isValidTimeZone(timeZone)).toBe(true);
+        expect(isValidTimeZone(timeZone)).toBe(true);
+      },
+    );
+
+    it.each`
+      timeZone
+      ${"+05:00:00"}
+      ${"-00:44:30"}
+      ${"Not/AZone"}
+      ${""}
+    `("answers false every time for $timeZone", ({ timeZone }) => {
+      expect(isValidTimeZone(timeZone)).toBe(false);
+      expect(isValidTimeZone(timeZone)).toBe(false);
+      expect(isValidTimeZone(timeZone)).toBe(false);
+    });
+
+    it("never remembers a failure: Not/AZone is false twice and still parsed", () => {
+      const spy = vi.spyOn(Temporal.ZonedDateTime, "from");
+      expect(isValidTimeZone("Not/AZone")).toBe(false);
+      expect(isValidTimeZone("Not/AZone")).toBe(false);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it("clears the remembered ids past 1,024 and still answers true for every one", () => {
+      const offsets = Array.from({ length: 1100 }, (_, index) => {
+        const hours = String(Math.floor(index / 60)).padStart(2, "0");
+        const minutes = String(index % 60).padStart(2, "0");
+        return `+${hours}:${minutes}`;
+      });
+      for (const offset of offsets) {
+        expect(isValidTimeZone(offset)).toBe(true);
+      }
+      const spy = vi.spyOn(Temporal.ZonedDateTime, "from");
+      // The first id went in before the clear, so it is parsed again; the last went in after.
+      expect(isValidTimeZone("+00:00")).toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(isValidTimeZone("+18:19")).toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
   });
 });

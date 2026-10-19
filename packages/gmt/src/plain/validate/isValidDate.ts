@@ -1,7 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isoStringBody } from "../../internal/isoStringBody";
-import { plainDate } from "../../regex";
-import { hasSecond60 } from "./hasSecond60";
+import { isDateString } from "../../internal/inputChecks";
 
 /**
  * Return true if `value` is a valid ISO PlainDate string.
@@ -27,19 +24,5 @@ import { hasSecond60 } from "./hasSecond60";
  * @example isValidDate("2024-12-31T23:59:60") // false (leap second - not a valid date)
  */
 export function isValidDate(value: string): boolean {
-  const body = isoStringBody(value);
-
-  if (hasSecond60(body)) {
-    return false;
-  }
-
-  if (!plainDate.test(body)) {
-    return false;
-  }
-
-  try {
-    return Temporal.PlainDate.from(value).calendarId === "iso8601";
-  } catch {
-    return false;
-  }
+  return isDateString(value);
 }

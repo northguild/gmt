@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { measureNearRangeEnd } from "./measureNearRangeEnd";
 
 // Days from a date to the first day of the month after it; throws past +275760-09-13.

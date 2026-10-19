@@ -1,5 +1,5 @@
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, MustTestLocales } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { isZonedWeekend } from "./isZonedWeekend";

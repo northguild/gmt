@@ -1,7 +1,7 @@
 // Not re-exported from `internal/index.ts`, for the reason `ediDateTimeFields.ts` gives:
 // `toOffsetInstant` reads that barrel at module top level, and the `plain/validate` functions
 // import it too, so a barrel entry for this module would close a cycle. Import this file directly.
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
 import { isValidDate } from "../plain/validate/isValidDate";
 import { isValidDateTime } from "../plain/validate/isValidDateTime";

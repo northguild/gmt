@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "./temporal";
 import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import { instantFrom } from "./instantNanoseconds";

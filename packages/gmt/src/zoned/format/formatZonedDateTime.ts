@@ -1,3 +1,4 @@
+import { cachedFormatter } from "../../internal/formatterCache";
 import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
@@ -68,7 +69,7 @@ export function formatZonedDateTime(
       return "";
     }
     return normalizeDateTime(
-      new Intl.DateTimeFormat(locale, resolved).format(
+      cachedFormatter("DateTimeFormat", locale, resolved).format(
         zonedDateTime.epochMilliseconds,
       ),
     );
