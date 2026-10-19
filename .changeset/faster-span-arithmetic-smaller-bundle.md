@@ -2,7 +2,7 @@
 "@northguild/gmt": patch
 ---
 
-Long spans and long logs are much faster, and the business-day functions are smaller. No result, option or signature changes: every function returns what it returned before.
+Long spans and long logs are much faster, and the business-day functions are smaller. No option or signature changes, and every function returns what it returned before, with one exception: a holiday array with its own `Symbol.iterator` is now read by index in `rollDate` and `isBusinessDay`, as `businessDaysBetween` already read it.
 
 **Speed** (Node 24, warm, before → after):
 
@@ -32,9 +32,10 @@ The cost of the day-count and operating-hours functions no longer grows with the
 | --- | --- | --- |
 | `businessDaysBetween` | 172.5 / 50.1 | 155.9 / 45.6 |
 | `addBusinessDays` | 173.6 / 50.6 | 157.0 / 46.0 |
+| `formatDate` | 155.4 / 45.2 | 156.8 / 45.7 |
 | `chargeableDays` | 197.3 / 57.8 | 196.4 / 58.5 |
 | `operatingTimeBetween` | 200.8 / 58.8 | 204.0 / 60.6 |
 | `dutyViolations` | 226.7 / 67.1 | 228.5 / 68.2 |
 | the whole package (root) | 487.1 / 127.9 | 500.9 / 133.6 |
 
-`@js-temporal/polyfill` alone is 152.5 / 44.2 kB, so it is most of every figure. The business-day functions are smaller because checking a time zone no longer loads the Temporal workarounds. `operatingTimeBetween`, `dutyViolations` and the root are a little larger, and `chargeableDays` a little larger gzipped: they hold the new methods and keep the day-by-day one for spans near the limits of Temporal's range.
+`@js-temporal/polyfill` alone is 152.5 / 44.2 kB, so it is most of every figure. The business-day functions are smaller because checking a time zone no longer loads the Temporal workarounds. `operatingTimeBetween`, `dutyViolations` and the root are a little larger, and `chargeableDays` a little larger gzipped: they hold the new methods and keep the day-by-day one for spans near the limits of Temporal's range. `formatDate` is 1.4 kB larger for its formatter cache.

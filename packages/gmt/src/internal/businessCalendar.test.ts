@@ -467,6 +467,38 @@ describe("parseHolidays", () => {
     from.mockRestore();
   });
 
+  // 65,536 strings fit; the 65,537th clears the memo before it is stored, so only then is the
+  // first string parsed again.
+  it("keeps 65,536 strings and clears on the 65,537th", () => {
+    clearHolidayMemo();
+
+    const epoch = Temporal.PlainDate.from("1970-01-01");
+    const dates = Array.from({ length: 65_537 }, (_, day) =>
+      epoch.add({ days: day }).toString(),
+    );
+
+    parseHolidays(dates.slice(0, 65_536));
+
+    const from = vi.spyOn(Temporal.PlainDate, "from");
+
+    try {
+      expect(parseHolidays([dates[0], dates[65_535]])).toEqual(
+        new Int32Array([0, 65_535]),
+      );
+      expect(from).not.toHaveBeenCalled();
+
+      parseHolidays([dates[65_536]]);
+      from.mockClear();
+
+      expect(parseHolidays([dates[65_536]])).toEqual(new Int32Array([65_536]));
+      expect(from).not.toHaveBeenCalled();
+      expect(parseHolidays([dates[0]])).toEqual(new Int32Array([0]));
+      expect(from).toHaveBeenCalled();
+    } finally {
+      from.mockRestore();
+    }
+  });
+
   // Epoch days 0 .. 65,536 are 65,537 distinct ISO dates; the first is evicted by the clear.
   it("still answers correctly after the memo is cleared at its bound", () => {
     clearHolidayMemo();

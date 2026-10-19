@@ -1,4 +1,5 @@
 import { clearFormatterCache } from "./formatterCache";
+import { countIntlConstructions } from "../test/countIntlConstructions";
 import { formatDuration } from "../duration/format/formatDuration";
 import { formatCalendar } from "../plain/format/formatCalendar";
 import { formatDateRange } from "../plain/format/formatDateRange";
@@ -48,18 +49,18 @@ describe("every format site reuses its formatter", () => {
     ${"getLocaleEraNames"}     | ${() => getLocaleEraNames("en-GB")}
     ${"getLocaleMeridiems"}    | ${() => getLocaleMeridiems("en-GB")}
   `("$site builds no formatter on the second call", ({ call }) => {
-    const first: unknown = call();
+    let first: unknown;
+    let second: unknown;
+    const built = countIntlConstructions(
+      ["DateTimeFormat", "NumberFormat", "ListFormat", "RelativeTimeFormat"],
+      () => {
+        second = call();
+      },
+      () => {
+        first = call();
+      },
+    );
     expect(first).not.toBe("");
-    const spies = (
-      [
-        "DateTimeFormat",
-        "NumberFormat",
-        "ListFormat",
-        "RelativeTimeFormat",
-      ] as const
-    ).map((name) => vi.spyOn(Intl, name));
-    const second: unknown = call();
-    const built = spies.reduce((sum, spy) => sum + spy.mock.calls.length, 0);
     expect({ second, built }).toEqual({ second: first, built: 0 });
   });
 });

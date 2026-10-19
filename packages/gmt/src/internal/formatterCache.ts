@@ -12,6 +12,22 @@ const MAX_ENTRIES_PER_KIND = 256;
 
 const formatters = new Map<FormatterKind, Map<string, object>>();
 const checked = new Map<FormatterKind, Set<string>>();
+/** The `Intl[kind]` constructor each kind's entries were built with. */
+const builtWith = new Map<FormatterKind, unknown>();
+
+/**
+ * Forget a kind's formatters and checked argument sets when `Intl[kind]` is no longer the
+ * constructor they were built with (a polyfill loaded later, a test stub), so every answer comes
+ * from the constructor installed now.
+ */
+function forgetIfReplaced(kind: FormatterKind): void {
+  const current: unknown = Intl[kind];
+  if (builtWith.get(kind) !== current) {
+    formatters.delete(kind);
+    checked.delete(kind);
+    builtWith.set(kind, current);
+  }
+}
 
 function construct(
   kind: FormatterKind,
@@ -127,7 +143,8 @@ function canonicalLocale(locale: FormatterLocale): FormatterLocale {
  * `DateTimeFormat` also reads the default locale and default time zone, so it is cached only
  * with a `locale` string (or array of strings) and a `timeZone` string; any other argument
  * set is constructed fresh, exactly as `new Intl[kind](locale, options)` would. A construction
- * failure throws and is never cached.
+ * failure throws and is never cached. A formatter is kept only while `Intl[kind]` is the
+ * constructor that built it.
  *
  * @param kind which `Intl` formatter class to build
  * @param locale BCP 47 locale or locales, or `undefined` for the runtime default
@@ -148,6 +165,7 @@ export function cachedFormatter<K extends FormatterKind>(
   if (key === null) {
     return construct(kind, locale, options) as InstanceType<(typeof Intl)[K]>;
   }
+  forgetIfReplaced(kind);
   let byKey = formatters.get(kind);
   const hit = byKey?.get(key);
   if (hit !== undefined) {
@@ -188,6 +206,7 @@ export function checkFormatterArguments(
     construct(kind, locale, options);
     return;
   }
+  forgetIfReplaced(kind);
   let seen = checked.get(kind);
   if (seen?.has(key)) {
     return;
@@ -206,4 +225,5 @@ export function checkFormatterArguments(
 export function clearFormatterCache(): void {
   formatters.clear();
   checked.clear();
+  builtWith.clear();
 }

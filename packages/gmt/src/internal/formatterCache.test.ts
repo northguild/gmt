@@ -188,6 +188,29 @@ describe("cachedFormatter", () => {
     );
   });
 
+  it("builds anew once Intl.DateTimeFormat is replaced, and keeps the other kinds", () => {
+    const options = { dateStyle: "long", timeZone: "UTC" } as const;
+    const before = cachedFormatter("DateTimeFormat", "en-GB", options);
+    const list = cachedFormatter("ListFormat", "en", { type: "conjunction" });
+    const Native = Intl.DateTimeFormat;
+    class Patched extends Native {}
+    Intl.DateTimeFormat = Patched as typeof Intl.DateTimeFormat;
+    try {
+      const after = cachedFormatter("DateTimeFormat", "en-GB", options);
+      expect(after).not.toBe(before);
+      expect(after).toBeInstanceOf(Patched);
+      expect(cachedFormatter("DateTimeFormat", "en-GB", options)).toBe(after);
+      expect(cachedFormatter("ListFormat", "en", { type: "conjunction" })).toBe(
+        list,
+      );
+    } finally {
+      Intl.DateTimeFormat = Native;
+    }
+    expect(
+      cachedFormatter("DateTimeFormat", "en-GB", options),
+    ).not.toBeInstanceOf(Patched);
+  });
+
   it("clears a kind past 256 entries and still answers correctly", () => {
     const first = cachedFormatter("NumberFormat", "en", {
       minimumFractionDigits: 0,
@@ -219,6 +242,26 @@ describe("checkFormatterArguments", () => {
           timeZone: "Not/AZone",
         }),
       ).toThrow(RangeError);
+    }
+  });
+
+  it("constructs again once Intl.DateTimeFormat is replaced", () => {
+    checkFormatterArguments("DateTimeFormat", "en-US", { dateStyle: "long" });
+    const Native = Intl.DateTimeFormat;
+    Intl.DateTimeFormat = class extends Native {
+      constructor() {
+        super();
+        throw new RangeError("replaced");
+      }
+    } as typeof Intl.DateTimeFormat;
+    try {
+      expect(() =>
+        checkFormatterArguments("DateTimeFormat", "en-US", {
+          dateStyle: "long",
+        }),
+      ).toThrow("replaced");
+    } finally {
+      Intl.DateTimeFormat = Native;
     }
   });
 

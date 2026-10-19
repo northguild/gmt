@@ -83,7 +83,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - No output changes. Old against new over random inputs is a check, never an expected value: GMT is never its own oracle.
 - Closed forms hold only between offset changes. Find the changes first (the runtime finds them, never inference), then apply the formula to each stretch. Every transition search a closed form makes passes a limit, because a search with none may stop at an implementation horizon.
 - Holidays are parsed by Temporal once per distinct string and memoised, never by hand-written string parsing. What stops growing with the holiday count is the Temporal work and every lookup.
-- A per-process memo is sound only for a pure function of its key for the life of the process: zone transitions, parsed holiday strings, validated zone ids, formatters built from explicit arguments. Each is bounded and cleared on overflow. A horizon-dependent `null` is never stored.
+- A per-process memo is sound only for a pure function of its key for the life of the process: zone transitions, parsed holiday strings, validated zone ids, formatters built from explicit arguments. Each is bounded and cleared on overflow. A horizon-dependent `null` is never stored. The formatter cache drops a kind once `Intl[kind]` is replaced, so a polyfill loaded later or a test stub is always the one that answers.
 - Caps return the sentinel, never a partial value.
 - Timing is never asserted in an `it` row; benchmarks report and the size budget fails `validate`.
 

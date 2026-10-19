@@ -147,12 +147,12 @@ describe("countEvents", () => {
   const sizes = { minimum: 1n, maximum: 6n };
 
   it.each`
-    case                                 | at     | from   | to      | skip    | expected
-    ${"whole runs and a cut last one"}   | ${27n} | ${0n}  | ${null} | ${null} | ${2}
-    ${"the last run is going on"}        | ${27n} | ${0n}  | ${null} | ${27n}  | ${1}
-    ${"a start range excludes the last"} | ${27n} | ${0n}  | ${20n}  | ${null} | ${1}
-    ${"a start range from a start"}      | ${99n} | ${16n} | ${25n}  | ${null} | ${1}
-    ${"the cut last run is too short"}   | ${25n} | ${0n}  | ${null} | ${null} | ${1}
+    case                                              | at     | from   | to      | skip    | expected
+    ${"whole runs and a cut last one"}                | ${27n} | ${0n}  | ${null} | ${null} | ${2}
+    ${"the last run is going on"}                     | ${27n} | ${0n}  | ${null} | ${27n}  | ${1}
+    ${"a start range excludes the last"}              | ${27n} | ${0n}  | ${20n}  | ${null} | ${1}
+    ${"a start range from a start"}                   | ${99n} | ${16n} | ${25n}  | ${null} | ${1}
+    ${"a whole last run, before the next one starts"} | ${25n} | ${0n}  | ${null} | ${null} | ${1}
   `("$case: at $at from $from", (row) => {
     const { at, from, to, skip, expected } = row as {
       at: bigint;
@@ -163,6 +163,24 @@ describe("countEvents", () => {
     };
     expect(
       countEvents(runsUntil(offIndex, at), sizes, { from, to }, skip),
+    ).toBe(expected);
+  });
+
+  // At least 3 units: [0,10) is too long and [16,17) too short at any time. The run from 25 is
+  // 5 units whole, but only 2 when cut at 27.
+  it.each`
+    case                                     | at     | expected
+    ${"the cut last run is too short"}       | ${27n} | ${0}
+    ${"the same run, whole, is long enough"} | ${99n} | ${1}
+  `("$case: at $at, 3 to 6 units", (row) => {
+    const { at, expected } = row as { at: bigint; expected: number };
+    expect(
+      countEvents(
+        runsUntil(offIndex, at),
+        { minimum: 3n, maximum: 6n },
+        { from: 0n, to: null },
+        null,
+      ),
     ).toBe(expected);
   });
 

@@ -607,7 +607,7 @@ describe("intervalCountZoned bucket rule across half-hour and sub-minute offset 
     start                                               | end                                                 | unit        | expected | description
     ${"2024-04-07T01:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:40:00+10:30[Australia/Lord_Howe]"} | ${"minute"} | ${130}   | ${"60 minutes of 01:00 +11:00, then 01:30 to 02:39 +10:30"}
     ${"2024-04-07T01:50:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:10:00+10:30[Australia/Lord_Howe]"} | ${"minute"} | ${50}    | ${"10 minutes before the fall-back, 40 after"}
-    ${"2024-04-07T01:59:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T01:31:00+10:30[Australia/Lord_Howe]"} | ${"second"} | ${120}   | ${"01:59:00 to 01:59:59 twice over: 60 seconds each pass"}
+    ${"2024-04-07T01:59:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T01:31:00+10:30[Australia/Lord_Howe]"} | ${"second"} | ${120}   | ${"01:59:00 to 01:59:59 at +11:00, then 01:30:00 to 01:30:59 at +10:30: 60 seconds each"}
     ${"2024-10-06T01:50:00+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T02:40:00+11:00[Australia/Lord_Howe]"} | ${"minute"} | ${20}    | ${"01:50 to 01:59, then 02:30 to 02:39: 02:00 to 02:29 never happened"}
     ${"2024-10-06T01:59:30+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T02:30:30+11:00[Australia/Lord_Howe]"} | ${"second"} | ${60}    | ${"30 seconds before the jump, 30 after"}
     ${"2024-10-06T01:00:00+10:30[Australia/Lord_Howe]"} | ${"2024-10-06T04:00:00+11:00[Australia/Lord_Howe]"} | ${"hour"}   | ${3}     | ${"hours 01, the half hour starting 02:30, and 03"}

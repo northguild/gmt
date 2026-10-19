@@ -1,6 +1,7 @@
 import { clearFormatterCache } from "../../internal/formatterCache";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
+import { countIntlConstructions } from "../../test/countIntlConstructions";
 import { formatDate } from "./formatDate";
 
 describe("formatDate", () => {
@@ -498,14 +499,8 @@ describe("formatDate with an option that is an object", () => {
 
   // Formatters are shared only when their arguments are fully plain.
   describe("formatter cache", () => {
-    function countConstructions(run: () => void): number {
-      const spy = vi.spyOn(Intl, "DateTimeFormat");
-      try {
-        run();
-        return spy.mock.calls.length;
-      } finally {
-        spy.mockRestore();
-      }
+    function countConstructions(run: () => void, warmUp?: () => void): number {
+      return countIntlConstructions(["DateTimeFormat"], run, warmUp);
     }
 
     beforeEach(() => {
@@ -513,14 +508,36 @@ describe("formatDate with an option that is an object", () => {
     });
 
     it("builds nothing the second time for the same locale and options", () => {
-      const first = formatDate("2024-07-04", "en-GB", { dateStyle: "long" });
-      const built = countConstructions(() => {
-        expect(formatDate("2024-07-04", "en-GB", { dateStyle: "long" })).toBe(
-          first,
-        );
-      });
+      let first = "";
+      const built = countConstructions(
+        () => {
+          expect(formatDate("2024-07-04", "en-GB", { dateStyle: "long" })).toBe(
+            first,
+          );
+        },
+        () => {
+          first = formatDate("2024-07-04", "en-GB", { dateStyle: "long" });
+        },
+      );
       expect(first).toBe("4 July 2024");
       expect(built).toBe(0);
+    });
+
+    it("answers from a replaced Intl.DateTimeFormat, never a formatter it built before", () => {
+      const args = ["2024-07-04", "en-GB", { dateStyle: "long" }] as const;
+      expect(formatDate(...args)).toBe("4 July 2024");
+      const Native = Intl.DateTimeFormat;
+      Intl.DateTimeFormat = class extends Native {
+        override format(date?: Date | number): string {
+          return `PATCHED ${super.format(date)}`;
+        }
+      } as typeof Intl.DateTimeFormat;
+      try {
+        expect(formatDate(...args)).toBe("PATCHED 4 July 2024");
+      } finally {
+        Intl.DateTimeFormat = Native;
+      }
+      expect(formatDate(...args)).toBe("4 July 2024");
     });
 
     it("constructs on every call when the locale is omitted", () => {
