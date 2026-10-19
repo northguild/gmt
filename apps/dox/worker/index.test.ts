@@ -346,6 +346,23 @@ describe("worker entry — the legacy host (matrix rows 1-17, 31-33)", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toBeNull();
   });
+  it("drops a dev key from the legacy 301 and keeps the rest of the query", async () => {
+    for (const [path, to] of [
+      ["/tools/x/?key=s", "https://northguild.dev/gmt/tools/x/"],
+      [
+        "/tools/x/?z=Europe/Paris&key=s&keyring=b",
+        "https://northguild.dev/gmt/tools/x/?z=Europe/Paris&keyring=b",
+      ],
+    ]) {
+      const response = await worker.fetch(
+        legacy(path),
+        makeEnv({ DOX_DEV_KEY: "s" }),
+      );
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(to);
+      expect(response.headers.get("set-cookie")).toBeNull();
+    }
+  });
 });
 
 describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
@@ -426,6 +443,20 @@ describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
       "https://northguild.dev/gmt/api/brains",
     );
     expect(right.headers.get("set-cookie")).toContain("Path=/gmt/");
+  });
+
+  it("takes ?key= on exactly /gmt before the slash 301, so the key never reaches a page URL", async () => {
+    const response = await worker.fetch(
+      nd("/gmt?key=right-secret"),
+      makeEnv({ DOX_DEV_KEY: "right-secret" }),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://northguild.dev/gmt");
+    expect(response.headers.get("set-cookie")).toContain("Path=/gmt/");
+
+    const next = await worker.fetch(nd("/gmt"), makeEnv());
+    expect(next.status).toBe(301);
+    expect(next.headers.get("location")).toBe("https://northguild.dev/gmt/");
   });
 
   it("row 25: /gmtx is not under the base; it is a 301 to /gmt/gmtx", async () => {

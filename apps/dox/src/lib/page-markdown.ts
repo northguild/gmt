@@ -197,14 +197,14 @@ const rootAbsolute = (url: string) =>
 function prefixProse(part: string): string {
   return (
     part
-      // Inline links and images: `](/x "title")`. A title after the URL is left as written.
+      // Inline links and images: `](/x "title")`, `](</x>)`. A title after the URL is left as written.
       .replace(
-        /\]\((\/[^)\s]*)/g,
-        (_m, url: string) => `](${rootAbsolute(url)}`,
+        /\]\((<?)(\/[^)\s>]*)/g,
+        (_m, open: string, url: string) => `](${open}${rootAbsolute(url)}`,
       )
-      // Reference definitions at line start: `[id]: /x`.
+      // Reference definitions at line start: `[id]: /x`, `[id]: </x>`.
       .replace(
-        /^([ \t]{0,3}\[[^\]\n]+\]:[ \t]+)(\/\S*)/gm,
+        /^([ \t]{0,3}\[[^\]\n]+\]:[ \t]+<?)(\/[^\s>]*)/gm,
         (_m, head: string, url: string) => `${head}${rootAbsolute(url)}`,
       )
       // Raw HTML left in the text.

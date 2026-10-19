@@ -111,8 +111,8 @@ function zoomLabel(presses) {
   return `${Number(zoom.toFixed(2))}×`;
 }
 
-/** The Earth imagery, which only the WebGPU renderer fetches. */
-const IMAGERY_PATH = "/earth-blue-marble.webp";
+/** The Earth imagery, which only the WebGPU renderer fetches, under the site base (`globe.ts` wraps it in `withBase`). */
+const IMAGERY_PATH = "/gmt/earth-blue-marble.webp";
 
 /** A reference page, which must load no globe code and no image. */
 const REFERENCE_ROUTE = "/reference/zoned/calculate/addZoned/";

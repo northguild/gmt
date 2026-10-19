@@ -30,7 +30,7 @@ export interface ResolveHrefOptions {
    * for why the manifest alone isn't sufficient). Compared by pathname, so
    * entries may be stored with or without a fragment. */
   knownRoutes: ReadonlySet<string>;
-  /** This site's own origin, e.g. `https://northguild.dev/gmt`. */
+  /** This page's origin (`window.location.origin`), e.g. `https://northguild.dev`. */
   siteOrigin: string;
   /** External origins allowed to render as real links. Empty by default —
    * nothing external is trusted unless it's named here. */

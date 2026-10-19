@@ -57,7 +57,7 @@ const opt = (name, fallback) => {
     : fallback;
 };
 const flag = (name) => args.includes(`--${name}`);
-const BASE = opt("base", "http://127.0.0.1:4381").replace(/\/$/, "");
+const BASE = opt("base", "http://127.0.0.1:4381/gmt").replace(/\/$/, "");
 const ONLY = opt("only", "");
 const THEME = opt("theme", "");
 const JSON_OUT = opt("json", "");

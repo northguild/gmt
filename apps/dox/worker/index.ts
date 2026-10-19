@@ -293,8 +293,10 @@ function redirect(location: string): Response {
  *     The two API routes are served in place — a 301 turns a `fetch` POST into
  *     a GET, and the hop to another origin has no CORS, so a tab opened before
  *     the move would lose its chat. Everything else is a 301 into the base.
- *  2. Exactly `/gmt`: a 301 to `/gmt/`.
- *  3. Under the base: the dev key, the API, then the assets binding.
+ *     A `key` is dropped from the query, never carried to a page URL.
+ *  2. The dev key, anywhere under the base (`/gmt` included).
+ *  3. Exactly `/gmt`: a 301 to `/gmt/`.
+ *  4. Under the base: the API, then the assets binding.
  */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -306,15 +308,25 @@ export default {
       if (url.pathname === "/robots.txt") {
         return redirect(`${SITE_ORIGIN}/robots.txt`);
       }
-      return redirect(`${SITE_URL}${url.pathname}${url.search}`);
+      // A dev key is never carried to the new host: it would land on a page
+      // URL, which assets serve, so the key would stay in the address bar.
+      // The query is filtered as raw text so every other byte is kept as sent.
+      const kept = url.search
+        .slice(1)
+        .split("&")
+        .filter((pair) => pair !== "" && !/^key(?:=|$)/.test(pair));
+      const search = kept.length > 0 ? `?${kept.join("&")}` : "";
+      return redirect(`${SITE_URL}${url.pathname}${search}`);
+    }
+
+    // Ahead of the `/gmt` branch: `/gmt?key=` would otherwise be a 301 to the
+    // page `/gmt/?key=`, which assets serve with the key still in the URL.
+    if (url.searchParams.has("key")) {
+      return handleDevKey(url, env);
     }
 
     if (url.pathname === SITE_BASE) {
       return redirect(`${SITE_URL}/${url.search}`);
-    }
-
-    if (url.searchParams.has("key")) {
-      return handleDevKey(url, env);
     }
 
     const api = await routeApi(stripBase(url.pathname), request, env);

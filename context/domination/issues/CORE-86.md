@@ -8,11 +8,11 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 
 ## Scope
 
-- **One origin, products at sub-paths.** `northguild.dev/` is the landing page; `northguild.dev/gmt/…` is Dox. The landing Worker takes the apex as a Custom Domain; the Dox Worker takes `northguild.dev/gmt` and `northguild.dev/gmt/*` as Routes. `www.` redirects to the apex. Every `workers.dev` path redirects to its `northguild.dev/gmt` twin.
+- **One origin, products at sub-paths.** `northguild.dev/` is the landing page; `northguild.dev/gmt/…` is Dox. The landing Worker takes the apex as a Custom Domain; the Dox Worker takes `northguild.dev/gmt*` as one Route. `www.` redirects to the apex. Every `workers.dev` path redirects to its `northguild.dev/gmt` twin.
 - **`apps/dox/src/lib/site.ts`** is the one source of truth: `SITE_ORIGIN`, `SITE_BASE`, `SITE_URL`, `withBase` and `stripBase`, as plain constants so the Worker, the Node scripts and Vitest share them.
 - **Routes stay base-less inside the site.** The generators, the route manifest, the corpus `page` and `url` fields and the sidebar slugs do not change. `/gmt` is added only where a URL leaves the code: a rehype plugin for content links, the `.md` twins and `llms*.txt`, the `head` entries, the fetches, the widget permalinks and the path readers.
 - **A guard for the bug class.** A test over the built `dist/` fails on any root-absolute URL without `/gmt/` in HTML, CSS, the `.md` twins, `llms*.txt` and `_redirects`.
-- **Every link and text** that names the `workers.dev` host moves to `https://northguild.dev/gmt`: both READMEs, `CONTRIBUTING.md`, the package `homepage`, the four skills and the skill spec, the agent prompt, the install and skills pages, the stats and API-surface scripts, and the test origin constants. Old CHANGELOG entries stay.
+- **Every link and text** that names the `workers.dev` host moves to `https://northguild.dev/gmt`: both READMEs, `CONTRIBUTING.md`, the package `homepage`, the eight skills that name the host and the skill spec, the agent prompt, the install and skills pages, the stats and API-surface scripts, and the test origin constants. Old CHANGELOG entries stay.
 - **Small fixes in the same PR:** the duplicated home `<title>` (D9). `robots.txt` lives in the landing repo (D7); `.github/FUNDING.yml` waits for a Sponsors listing (D11).
 - **Reserved paths.** `northguild.dev/api/*` and `northguild.dev/mcp/*` serve nothing from the landing page but its 404; a separate Worker in its own repo takes them as Routes later. `CORE-88` links that Worker once it is live.
 - **The landing repo** (`northguild/northguild.dev`): a CSS-only `@northguild/theme` package carrying Dox's tokens, primitives and font, and an Astro landing page with a product card per repo. Dark only, full-border cards, WCAG AA on `--gmt-void`, phone width with no horizontal scroll.
@@ -36,7 +36,7 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 - After the build, the dist guard passes, and `dist/gmt/index.html` and `dist/_redirects` exist.
 - In `wrangler dev`, `localhost:8787/gmt/` renders fonts, favicon, search, the globe, and a chat answer whose links start with `/gmt/`; `/reference/` returns 301 to `https://northguild.dev/gmt/reference/`; `/gmt` goes to `/gmt/`.
 - Live: `https://northguild.dev/` is 200; `/gmt` is 301 to `/gmt/`; `/gmt/reference/` is 200; `www.` is 301 to the apex; a `workers.dev` path with a query string is 301 to its `/gmt/` twin with the query kept; `/gmt/llms.txt` lists only `https://northguild.dev/gmt/…` links.
-- `grep -rn "gmt-dox.northguild.workers.dev"` finds only the Worker's redirect code, its test, `built.md` and old CHANGELOG entries.
+- `grep -rn "gmt-dox.northguild.workers.dev"` finds the host only where it is named on purpose: `LEGACY_ORIGIN` in `site.ts` and the Worker tests, `deploy-smoke.mjs`, the `dist` guard and its test, the legacy-host guard in `api-surface.mjs`, the changeset, this file and its runbook, and old CHANGELOG entries.
 - A patch changeset for `@northguild/gmt` covers the homepage, README and skill links.
 
 ## Decisions
@@ -55,7 +55,8 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 - **D4: Legacy `/api/brains` and `/api/chat` are served in place on `workers.dev`, never
   redirected.** A 301 turns a `fetch` POST into a GET, and the hop is cross-origin with no CORS, so a
   tab opened before the deploy would lose its chat. Every other legacy path is a 301. `?key=` is
-  honoured only under `/gmt/`.
+  honoured only under the base, ahead of the bare-`/gmt` 301, and the legacy 301 drops `key`, so
+  the secret never reaches a page URL that assets serve.
 - **D5: An old `_redirects` source on `workers.dev` takes two 301s** (Worker to
   `northguild.dev/gmt/<old>`, then `_redirects` to the new page). `_redirects` keeps the query string
   and emits a relative `Location`. No one-hop map is bundled into the Worker.

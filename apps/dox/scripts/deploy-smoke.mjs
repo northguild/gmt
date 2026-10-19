@@ -199,6 +199,17 @@ async function buildRows() {
       { status: 200 },
     ],
   });
+  // A moved page without its slash: no dot and no slash, so the Worker runs and hands it to the
+  // assets binding, and only `_redirects` stands between it and the 404 page.
+  add({
+    label: "13 no slash",
+    url: `${WD}/reference/duty`,
+    steps: [
+      { status: 301, location: `${ND}/gmt/reference/duty` },
+      { status: 301, location: `${ND}/gmt/reference/workforce/` },
+      { status: 200 },
+    ],
+  });
   add({
     label: "15",
     method: "POST",

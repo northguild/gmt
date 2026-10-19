@@ -17,6 +17,24 @@ describe("prefixMarkdownLinks", () => {
     expect(prefixMarkdownLinks("[id]: /x/\n")).toBe("[id]: /gmt/x/\n");
   });
 
+  it("prefixes angle-bracket link targets", () => {
+    expect(prefixMarkdownLinks('[t](</x/>) ![i](</i.png> "t")')).toBe(
+      '[t](</gmt/x/>) ![i](</gmt/i.png> "t")',
+    );
+    expect(prefixMarkdownLinks("[r]: </x/>\n")).toBe("[r]: </gmt/x/>\n");
+  });
+
+  it("does not double an angle-bracket target already under the base", () => {
+    expect(prefixMarkdownLinks("[t](</gmt/x/>)\n[r]: </gmt/x/>")).toBe(
+      "[t](</gmt/x/>)\n[r]: </gmt/x/>",
+    );
+  });
+
+  it("leaves an angle-bracket target in a fence unchanged", () => {
+    const md = "```md\n[t](</x/>)\n[r]: </x/>\n```\n";
+    expect(prefixMarkdownLinks(md)).toBe(md);
+  });
+
   it("prefixes raw HTML href and src", () => {
     expect(prefixMarkdownLinks('<a href="/x/"><img src="/i.png"></a>')).toBe(
       '<a href="/gmt/x/"><img src="/gmt/i.png"></a>',

@@ -106,11 +106,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     no file exists, so each negative is narrow: a trailing slash (a page) or a dot after
     `/gmt/` (a file). `/gmt/api/*` has neither and so reaches the Worker. A negative like
     `!/gmt/*` would send it to the 404 page.
-  - **Worker.** Under `/gmt/` it does the `?key=` dev exchange, then `/gmt/api/*`, then
-    `ASSETS`. Bare `/gmt` gets a 301 to `/gmt/`. On the legacy `workers.dev` host every path
-    is a 301 to `https://northguild.dev/gmt<path><query>`, except `/api/brains` and
-    `/api/chat`, served in place because a redirect turns a POST into a GET and the hop is
-    cross-origin with no CORS; `/robots.txt` goes to the landing page's `robots.txt`.
+  - **Worker.** Under the base (bare `/gmt` included) it does the `?key=` dev exchange
+    first, then the 301 from bare `/gmt` to `/gmt/`, then `/gmt/api/*`, then `ASSETS`. On
+    the legacy `workers.dev` host every path is a 301 to
+    `https://northguild.dev/gmt<path><query>` with any `key` dropped from the query,
+    except `/api/brains` and `/api/chat`, served in place because a redirect turns a POST
+    into a GET and the hop is cross-origin with no CORS; `/robots.txt` goes to the landing
+    page's `robots.txt`.
   - **`_redirects`.** The generator writes `src/generated/_redirects` and the
     `astro:build:done` hook in `src/lib/copy-redirects.ts` copies it to `dist/_redirects`,
     because Cloudflare reads it only at the assets root and Astro copies `public/` into

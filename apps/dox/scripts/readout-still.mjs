@@ -124,7 +124,7 @@ const opt = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? fallback : (args[i + 1] ?? fallback);
 };
-const BASE = opt("base", "http://127.0.0.1:48291").replace(/\/$/, "");
+const BASE = opt("base", "http://127.0.0.1:48291/gmt").replace(/\/$/, "");
 const BROWSERS = opt("browsers", "chromium,webkit").split(",");
 const WIDTHS = opt("widths", "1440,390").split(",").map(Number);
 const ONLY = opt("only", "").split(",").filter(Boolean);

@@ -55,6 +55,51 @@ function prefixSrcset(value: string): string {
     .join(", ");
 }
 
+const POSTER_TAGS = new Set(["video"]);
+
+/** MDX JSX attribute names whose string value is a URL, and how to rewrite it. */
+const MDX_URL_ATTRS: Record<string, (value: string) => string> = {
+  href: prefix,
+  src: prefix,
+  poster: prefix,
+  srcset: prefixSrcset,
+  srcSet: prefixSrcset,
+};
+
+/** A plain string literal in expression text: `"/x.png"` or `'/x.png'`, no escapes. */
+const STRING_LITERAL = /^(\s*)(["'])([^"'\\\n]*)\2(\s*)$/;
+
+interface EstreeNode {
+  type?: string;
+  value?: unknown;
+  raw?: string;
+  body?: EstreeNode[];
+  expression?: EstreeNode;
+}
+
+/**
+ * Rewrite `{"/x.png"}`: both the expression text and the estree Literal the MDX compiler reads,
+ * so the compiled output carries the prefixed URL. Any other expression is left alone.
+ */
+function prefixExpression(
+  expression: { value?: unknown; data?: unknown },
+  rewrite: (value: string) => string,
+): void {
+  if (typeof expression.value !== "string") return;
+  const m = STRING_LITERAL.exec(expression.value);
+  if (m === null) return;
+  const next = rewrite(m[3]);
+  if (next === m[3]) return;
+  expression.value = `${m[1]}${m[2]}${next}${m[2]}${m[4]}`;
+  const estree = (expression.data as { estree?: EstreeNode } | undefined)
+    ?.estree;
+  const literal = estree?.body?.[0]?.expression;
+  if (literal?.type === "Literal" && typeof literal.value === "string") {
+    literal.value = next;
+    literal.raw = `${m[2]}${next}${m[2]}`;
+  }
+}
+
 function visit(node: HastNode): void {
   if (node.type === "element" && node.tagName && node.properties) {
     const properties = node.properties;
@@ -65,22 +110,34 @@ function visit(node: HastNode): void {
       properties.src = prefix(properties.src);
     }
     if (
-      SRCSET_TAGS.has(node.tagName) &&
-      typeof properties.srcSet === "string"
+      POSTER_TAGS.has(node.tagName) &&
+      typeof properties.poster === "string"
     ) {
-      properties.srcSet = prefixSrcset(properties.srcSet);
+      properties.poster = prefix(properties.poster);
+    }
+    if (SRCSET_TAGS.has(node.tagName)) {
+      for (const key of ["srcSet", "srcset"]) {
+        if (typeof properties[key] === "string") {
+          properties[key] = prefixSrcset(properties[key]);
+        }
+      }
     }
   } else if (
     node.type === "mdxJsxFlowElement" ||
     node.type === "mdxJsxTextElement"
   ) {
     for (const attribute of node.attributes ?? []) {
-      if (
-        attribute.type === "mdxJsxAttribute" &&
-        (attribute.name === "href" || attribute.name === "src") &&
-        typeof attribute.value === "string"
+      if (attribute.type !== "mdxJsxAttribute" || attribute.name === undefined)
+        continue;
+      const rewrite = MDX_URL_ATTRS[attribute.name];
+      if (rewrite === undefined) continue;
+      if (typeof attribute.value === "string") {
+        attribute.value = rewrite(attribute.value);
+      } else if (
+        typeof attribute.value === "object" &&
+        attribute.value !== null
       ) {
-        attribute.value = prefix(attribute.value);
+        prefixExpression(attribute.value, rewrite);
       }
     }
   }

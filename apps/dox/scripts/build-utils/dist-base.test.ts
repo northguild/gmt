@@ -47,6 +47,22 @@ describe("badUrlsInHtml", () => {
     ).toEqual(["/a.png"]);
   });
 
+  it("flags a poster and passes one under the base", () => {
+    expect(values(badUrlsInHtml('<video poster="/p.png"></video>'))).toEqual([
+      "/p.png",
+    ]);
+    expect(badUrlsInHtml('<video poster="/gmt/p.png"></video>')).toEqual([]);
+  });
+
+  it("flags an unprefixed source srcset candidate and passes prefixed ones", () => {
+    expect(
+      values(badUrlsInHtml('<source srcset="/a.webp 1x, /b.webp 2x">')),
+    ).toEqual(["/a.webp", "/b.webp"]);
+    expect(
+      badUrlsInHtml('<img srcset="/gmt/a.png 1x, /gmt/b.png 2x">'),
+    ).toEqual([]);
+  });
+
   it("flags a doubled base", () => {
     expect(values(badUrlsInHtml('<a href="/gmt/gmt/x/">x</a>'))).toEqual([
       "/gmt/gmt/x/",
@@ -129,6 +145,17 @@ describe("badLinksInMarkdown", () => {
 
   it("ignores the same link inside a fence", () => {
     expect(badLinksInMarkdown("```md\n[ref](/reference/)\n```\n")).toEqual([]);
+  });
+
+  it("flags angle-bracket link targets and passes prefixed ones", () => {
+    expect(
+      values(
+        badLinksInMarkdown('[t](</x/>) ![i](</i.png> "t")\n\n[r]: </y/>\n'),
+      ),
+    ).toEqual(["/x/", "/i.png", "/y/"]);
+    expect(badLinksInMarkdown("[t](</gmt/x/>)\n\n[r]: </gmt/y/>\n")).toEqual(
+      [],
+    );
   });
 
   it("flags a reference definition, a raw href and a bare URL", () => {
