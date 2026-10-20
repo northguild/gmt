@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import type { BrainProvider } from "~/lib/chat-constants";
+import { withBase } from "~/lib/site";
 
 export type BrainState = "ok" | "spent" | "unavailable";
 
@@ -52,7 +53,7 @@ export function useBrains() {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/brains", {
+      const response = await fetch(withBase("/api/brains"), {
         headers: { accept: "application/json" },
       });
       if (!response.ok) return;

@@ -474,7 +474,7 @@ const IMPORT =
  * when it has one.
  */
 const REFERENCE_LINK =
-  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/gmt-dox\.northguild\.workers\.dev))\/reference\/[\w/-]*(#[\w-]*)?/g;
+  /(?:(?<=[(\s"'`=<])|(?<=https:\/\/northguild\.dev\/gmt))\/reference\/[\w/-]*(#[\w-]*)?/g;
 /** Every route of the reference: each entry's page, and the index pages above it. */
 const routes = new Set();
 for (const { page } of entries) {
@@ -844,7 +844,9 @@ function judgeDocumentedResults(file, text) {
 
 // ------------------------------------------------------------------------------------ site links
 
-const SITE = "https://gmt-dox.northguild.workers.dev";
+const SITE = "https://northguild.dev/gmt";
+/** The retired docs host. It redirects, but no file this script scans may name it. */
+const LEGACY_HOST = "gmt-dox.northguild.workers.dev";
 const DOX_CONTENT = "apps/dox/src/content/docs";
 /** Every file under a repo directory, as paths relative to it. */
 const filesUnder = (dir, base = dir) =>
@@ -888,12 +890,13 @@ const siteSections = new Set(
 );
 
 const siteLinks = [];
+const legacyHostLinks = [];
 let siteLinksChecked = 0;
 /** Start index → [link as written, root-relative path], for every internal site link in a file. */
 function siteLinksIn(file, text) {
   const found = new Map();
   for (const m of text.matchAll(
-    /https:\/\/gmt-dox\.northguild\.workers\.dev(\/[^\s)"'`<>\]}]*)?/g,
+    /https:\/\/northguild\.dev\/gmt(\/[^\s)"'`<>\]}]*)?/g,
   ))
     found.set(m.index, [m[0], m[1] ?? "/"]);
   for (const m of text.matchAll(
@@ -916,13 +919,21 @@ function addPageRelativeLinks(found, text, pageUrl) {
     if (/^(?:[a-z][\w+.-]*:|#|\/\/|\{)/i.test(target)) continue;
     const index = m.index + m[0].indexOf(target);
     if (found.has(index)) continue;
-    found.set(index, [target, new URL(target, `${SITE}${pageUrl}`).pathname]);
+    // `siteRoutes` is base-less: resolve under the real base, then drop it.
+    const resolved = new URL(target, `${SITE}${pageUrl}`).pathname;
+    found.set(index, [target, resolved.replace(/^\/gmt(?=\/|$)/, "") || "/"]);
   }
 }
 
 /** Check every internal site link in one documentation file. */
 function checkSiteLinks(file, text) {
   const lineOf = (index) => text.slice(0, index).split("\n").length;
+  for (
+    let at = text.indexOf(LEGACY_HOST);
+    at !== -1;
+    at = text.indexOf(LEGACY_HOST, at + 1)
+  )
+    legacyHostLinks.push({ where: `${file}:${lineOf(at)}` });
   for (const [index, [written, path]] of siteLinksIn(file, text)) {
     const route = decodeURI(path.replace(/[?#].*$/, "")).replace(
       /(.)\/+$/,
@@ -1002,6 +1013,11 @@ for (const d of siteLinks) {
     `  site link: ${d.where} ${d.url} names no page (${d.route} is not a content page, src/pages route or public file)`,
   );
 }
+for (const d of legacyHostLinks) {
+  console.log(
+    `  legacy host: ${d.where} names ${LEGACY_HOST}; the docs host is ${SITE}`,
+  );
+}
 for (const d of docLinks) {
   console.log(
     `  doc link: ${d.where} ${d.url} names no reference page or anchor (gmt-corpus.json)`,
@@ -1020,7 +1036,7 @@ console.log(
     `${docResultSkips} skipped (${skipCounts(docResults)}); ` +
     `${documentedImports.length} documented imports, ${docImports.length} unresolved; ` +
     `${linksChecked} reference links, ${docLinks.length} broken; ` +
-    `${siteLinksChecked} site links, ${siteLinks.length} broken`,
+    `${siteLinksChecked} site links, ${siteLinks.length} broken, ${legacyHostLinks.length} on the legacy host`,
 );
 if (exampleSkips !== SKIP_BUDGET.examples) {
   console.log(
@@ -1041,6 +1057,7 @@ if (
   docImports.length > 0 ||
   docLinks.length > 0 ||
   siteLinks.length > 0 ||
+  legacyHostLinks.length > 0 ||
   exampleSkips !== SKIP_BUDGET.examples ||
   docResultSkips !== SKIP_BUDGET.docResults
 )

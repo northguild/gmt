@@ -20,6 +20,7 @@ import {
   renderSatelliteClockConverterTemplate,
 } from "./satellite-clock-converter-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -580,7 +581,9 @@ describe("seeding and permalinks", () => {
       expect((state["value"] as string).length).toBeLessThanOrEqual(64);
       const url = encodeWidgetPermalink("satclock", state);
       expect(url).toMatch(
-        /^\/tools\/satellite-clock-converter\/\?w=satclock&wa=/,
+        new RegExp(
+          `^${SITE_BASE}/tools/satellite-clock-converter/\\?w=satclock&wa=`,
+        ),
       );
       const seeded = seedFromLocation("satclock", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);

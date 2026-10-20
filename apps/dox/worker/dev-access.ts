@@ -21,6 +21,7 @@
  * secret out of reach of any script on the page, including a compromised
  * dependency.
  */
+import { SITE_BASE } from "../src/lib/site";
 
 /** Signed cookie name. */
 export const DEV_COOKIE = "dox_dev";
@@ -149,7 +150,7 @@ export function readCookie(request: Request, name: string): string | undefined {
 export function devCookieHeader(token: string, secure: boolean): string {
   return [
     `${DEV_COOKIE}=${token}`,
-    "Path=/",
+    `Path=${SITE_BASE}/`,
     "HttpOnly",
     "SameSite=Lax",
     secure ? "Secure" : "",

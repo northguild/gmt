@@ -19,7 +19,8 @@
  * on the account's 10,000 Neurons for the day. Default settings ask each
  * Workers AI brain 5 questions: 5 requests and roughly 500 Neurons per brain.
  *
- * Usage, from apps/dox with `dist/` already built:
+ * Usage, from apps/dox with `dist/` already built (the Worker serves the site
+ * and its API under `/gmt`, so `--base` defaults to `http://localhost:8787/gmt`):
  *
  *   npx wrangler dev --var DOX_DEV_KEY:probe --var NORTHGUILD_GMT_GEMINI_API_KEY: \
  *     2>&1 | tee /tmp/dox-wrangler.log
@@ -75,7 +76,7 @@ interface ProbeResult {
 
 const { values } = parseArgs({
   options: {
-    base: { type: "string", default: "http://localhost:8787" },
+    base: { type: "string", default: "http://localhost:8787/gmt" },
     brains: { type: "string" },
     attempts: { type: "string", default: "1" },
     "dev-key": { type: "string", default: "probe" },
@@ -112,10 +113,10 @@ const questions: Question[] = [
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 async function devCookie(): Promise<string> {
-  // Not `/?key=`: a path that matches a static asset is served before the
-  // Worker runs, so the `?key=` exchange never happens there (observed
-  // 2026-09-11 — `/` and `/dox/` answer 200 with no cookie). `/api/*` is never
-  // an asset, so it always reaches the Worker's `?key=` check.
+  // Not `/gmt/?key=`: a path that matches a static asset is served before the
+  // Worker runs, so the `?key=` exchange never happens there (`/gmt/` and
+  // `/gmt/dox/` answer 200 with no cookie). `/gmt/api/*` is never an asset, so
+  // it always reaches the Worker's `?key=` check.
   const response = await fetch(`${base}/api/brains?key=${values["dev-key"]}`, {
     redirect: "manual",
   });

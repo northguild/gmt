@@ -18,6 +18,7 @@ import {
   renderGnssWeekDecoderTemplate,
 } from "./gnss-week-decoder-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -824,7 +825,9 @@ describe("permalinks", () => {
         ),
       ).toBe(true);
       const url = encodeWidgetPermalink("gnssweek", state);
-      expect(url).toMatch(/^\/tools\/gnss-week-decoder\/\?w=gnssweek&wa=/);
+      expect(url).toMatch(
+        new RegExp(`^${SITE_BASE}/tools/gnss-week-decoder/\\?w=gnssweek&wa=`),
+      );
       const seeded = seedFromLocation("gnssweek", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const output = text(first.root, "decoder-output");

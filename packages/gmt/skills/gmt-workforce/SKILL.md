@@ -65,7 +65,7 @@ violations. The interval and duration rules it builds on are in the
       the log as it stood then, so a record only grows as the log does.
     - Nested caps are separate rules, reported separately.
 2. **Read the docs site.** This skill is a routing pointer. The map of the
-   docs is `https://gmt-dox.northguild.workers.dev/llms.txt`, and each page
+   docs is `https://northguild.dev/gmt/llms.txt`, and each page
    has a `.md` twin that holds its text. The JSDoc ships in the installed
    package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -78,7 +78,7 @@ violations. The interval and duration rules it builds on are in the
 
 ## References
 
-- [workforce reference](https://gmt-dox.northguild.workers.dev/reference/workforce/)
-- [Workforce: Hours of Work guide](https://gmt-dox.northguild.workers.dev/guides/industries/workforce-hours-of-work/)
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
+- [workforce reference](https://northguild.dev/gmt/reference/workforce/)
+- [Workforce: Hours of Work guide](https://northguild.dev/gmt/guides/industries/workforce-hours-of-work/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
 - [GMT Arithmetic skill](../gmt-arithmetic/SKILL.md)

@@ -1,5 +1,6 @@
 import { industryLabels } from "./industry-tags";
 import { renderMdxComponents } from "./mdx-jsx";
+import { withBase } from "./site";
 
 /**
  * Pure helpers for converting MDX/Markdown pages to clean Markdown output.
@@ -186,7 +187,51 @@ export function stripMdx(
   // A `.map(…)` block is a generated table or chart, whose figures the prose already states.
   md = outsideFences(md, dropMapBlocks);
 
-  return md;
+  return prefixMarkdownLinks(md);
+}
+
+const rootAbsolute = (url: string) =>
+  url.startsWith("//") ? url : withBase(url);
+
+/** Prefix the links in one stretch of prose that holds no code span. */
+function prefixProse(part: string): string {
+  return (
+    part
+      // Inline links and images: `](/x "title")`, `](</x>)`. A title after the URL is left as written.
+      .replace(
+        /\]\((<?)(\/[^)\s>]*)/g,
+        (_m, open: string, url: string) => `](${open}${rootAbsolute(url)}`,
+      )
+      // Reference definitions at line start: `[id]: /x`, `[id]: </x>`.
+      .replace(
+        /^([ \t]{0,3}\[[^\]\n]+\]:[ \t]+<?)(\/[^\s>]*)/gm,
+        (_m, head: string, url: string) => `${head}${rootAbsolute(url)}`,
+      )
+      // Raw HTML left in the text.
+      .replace(
+        /\b(href|src)=(["'])(\/[^"']*)\2/g,
+        (_m, attr: string, quote: string, url: string) =>
+          `${attr}=${quote}${rootAbsolute(url)}${quote}`,
+      )
+  );
+}
+
+/**
+ * Put the site base in front of every root-absolute link in Markdown text, so the `.md` twins and
+ * `llms*.txt` link to `/gmt/…` like the rendered pages do (the rehype plugin does that for HTML;
+ * both call `withBase`). Code in fences and inline code spans is never rewritten; `//host`, `#…`
+ * and `https:` links are left alone.
+ */
+export function prefixMarkdownLinks(md: string): string {
+  return outsideFences(md, (part) => {
+    let out = "";
+    let last = 0;
+    for (const span of part.matchAll(/(`+)(?:(?!\1)[\s\S])+?\1(?!`)/g)) {
+      out += prefixProse(part.slice(last, span.index)) + span[0];
+      last = span.index + span[0].length;
+    }
+    return out + prefixProse(part.slice(last));
+  });
 }
 
 // ---------------------------------------------------------------------------

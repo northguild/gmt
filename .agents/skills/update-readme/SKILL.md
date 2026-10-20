@@ -33,7 +33,7 @@ The two files are one page, identical byte for byte. The root file adds nothing.
 
 ## What they never hold
 
-No README holds a section for one function or one feature, and none holds a "Quick Start". The docs site (<https://gmt-dox.northguild.workers.dev>) holds that content.
+No README holds a section for one function or one feature, and none holds a "Quick Start". The docs site (<https://northguild.dev/gmt>) holds that content.
 
 | Content                                         | Where it lives                              |
 | ----------------------------------------------- | ------------------------------------------- |

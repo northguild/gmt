@@ -64,9 +64,9 @@ input before you act on it.
    `try`/`catch` around a GMT call is dead code.
 3. **Read the docs site.** This skill is a routing pointer. For full API
    signatures, locale matrices, and code examples, read these:
-   - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+   - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
    - Each page has a `.md` twin that holds its text, for example
-     `https://gmt-dox.northguild.workers.dev/guides/core-date-operations/parsing.md`.
+     `https://northguild.dev/gmt/guides/core-date-operations/parsing.md`.
    - The JSDoc of the function you intend to call ships in the installed
      package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -192,7 +192,7 @@ input before you act on it.
 
 ## References
 
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
-- [API reference](https://gmt-dox.northguild.workers.dev/reference/)
-- [Core date operations guides index](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
+- [API reference](https://northguild.dev/gmt/reference/)
+- [Core date operations guides index](https://northguild.dev/gmt/guides/core-date-operations/)
 - [Core date operations guides](/guides/core-date-operations/get-current/)

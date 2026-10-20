@@ -99,9 +99,9 @@ const PATTERN_NAMESPACE = "regex";
 /** The other libraries' measurements. The docs site's `library-comparison.ts` reads it too. */
 const MEASUREMENTS = "apps/dox/src/data/library-measurements.json";
 /** The docs site's API reference; a namespace's index page is `<REFERENCE><namespace>/`. */
-const REFERENCE = "https://gmt-dox.northguild.workers.dev/reference/";
+const REFERENCE = "https://northguild.dev/gmt/reference/";
 /** The docs site's industry pages; an industry's page is `<INDUSTRY_PAGES><id>/`. */
-const INDUSTRY_PAGES = "https://gmt-dox.northguild.workers.dev/industries/";
+const INDUSTRY_PAGES = "https://northguild.dev/gmt/industries/";
 /** How the line that links the industries' pages starts. */
 const INDUSTRY_LINE = "By industry:";
 /**

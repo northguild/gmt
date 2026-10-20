@@ -17,6 +17,7 @@ import {
   renderBlDateStampTemplate,
 } from "./bl-date-stamp-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -872,7 +873,9 @@ describe("permalinks", () => {
         ),
       ).toBe(true);
       const url = encodeWidgetPermalink("bldate", state);
-      expect(url).toMatch(/^\/tools\/bl-date-stamp\/\?w=bldate&wa=/);
+      expect(url).toMatch(
+        new RegExp(`^${SITE_BASE}/tools/bl-date-stamp/\\?w=bldate&wa=`),
+      );
       const seeded = seedFromLocation("bldate", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const output = text(first.root, "bl-output");

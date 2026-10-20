@@ -115,9 +115,9 @@ which lint package to install for Date-ban enforcement.
    only the one matching the project's existing linter; do not force all three.
 8. **Read the docs site and the lint README.** This skill is a routing pointer.
    For full integration guidance, read these:
-   - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+   - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
    - Each page has a `.md` twin that holds its text, for example
-     `https://gmt-dox.northguild.workers.dev/guides/integration/app-integration.md`.
+     `https://northguild.dev/gmt/guides/integration/app-integration.md`.
    - The JSDoc ships in the installed package:
      `node_modules/@northguild/gmt/dist/**/*.d.ts`.
    - For lint setup, read the matching `@northguild/gmt-eslint` / `gmt-oxlint` /
@@ -162,11 +162,11 @@ the pattern.
 
 ## References
 
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
-- [Install](https://gmt-dox.northguild.workers.dev/install/)
-- [App integration guide](https://gmt-dox.northguild.workers.dev/guides/integration/app-integration/)
-- [Nanosecond precision guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/nanosecond-precision/)
-- [Foreign epoch bridges guide](https://gmt-dox.northguild.workers.dev/guides/conversion/foreign-epoch-bridges/)
-- [timescale reference](https://gmt-dox.northguild.workers.dev/reference/timescale/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
+- [Install](https://northguild.dev/gmt/install/)
+- [App integration guide](https://northguild.dev/gmt/guides/integration/app-integration/)
+- [Nanosecond precision guide](https://northguild.dev/gmt/guides/core-date-operations/nanosecond-precision/)
+- [Foreign epoch bridges guide](https://northguild.dev/gmt/guides/conversion/foreign-epoch-bridges/)
+- [timescale reference](https://northguild.dev/gmt/reference/timescale/)
 - [Lint Package Selection guide](/guides/integration/linting/)
 - [Core Rules](/core-rules/)

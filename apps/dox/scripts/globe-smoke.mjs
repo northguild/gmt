@@ -111,8 +111,8 @@ function zoomLabel(presses) {
   return `${Number(zoom.toFixed(2))}×`;
 }
 
-/** The Earth imagery, which only the WebGPU renderer fetches. */
-const IMAGERY_PATH = "/earth-blue-marble.webp";
+/** The Earth imagery, which only the WebGPU renderer fetches, under the site base (`globe.ts` wraps it in `withBase`). */
+const IMAGERY_PATH = "/gmt/earth-blue-marble.webp";
 
 /** A reference page, which must load no globe code and no image. */
 const REFERENCE_ROUTE = "/reference/zoned/calculate/addZoned/";
@@ -224,7 +224,7 @@ async function launch() {
     await blockOffSite(page, base);
     let adapter = null;
     try {
-      await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base}/gmt/`, { waitUntil: "domcontentloaded" });
       adapter = await page.evaluate(async () => {
         if (!("gpu" in navigator)) return null;
         const found = await navigator.gpu.requestAdapter();
@@ -297,7 +297,7 @@ async function open(
     }, theme);
   }
   await page.clock.install({ time: FIXED_INSTANT });
-  await page.goto(`${base}${route}${query}`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/gmt${route}${query}`, { waitUntil: "networkidle" });
   const stage = page.locator(".gmt-globe-stage").first();
   if (waitForStage) {
     await stage.waitFor({ state: "visible", timeout: 15_000 });
@@ -760,7 +760,9 @@ async function main() {
       localStorage.setItem("starlight-theme", "dark");
     });
     await page.clock.install({ time: FIXED_INSTANT });
-    await page.goto(`${base}/tools/zoned-earth/`, { waitUntil: "networkidle" });
+    await page.goto(`${base}/gmt/tools/zoned-earth/`, {
+      waitUntil: "networkidle",
+    });
     await page
       .locator(".gmt-globe-stage")
       .first()

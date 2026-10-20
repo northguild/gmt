@@ -35,9 +35,9 @@
  *
  * Usage (serve a built `dist` first; `astro preview` or any static server):
  *
- *   pnpm run contrast:measure -- --base http://127.0.0.1:4381
- *   pnpm run contrast:measure -- --base ... --only tools/timetable --theme dark
- *   pnpm run contrast:measure -- --base ... --json out.json --verbose
+ *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt
+ *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt --only tools/timetable --theme dark
+ *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt --json out.json --verbose
  *
  * Exit 1 if any `--gmt-ice-dim` text is under 7:1, any disabled border is under
  * 3:1, or the run measured nothing.
@@ -57,7 +57,7 @@ const opt = (name, fallback) => {
     : fallback;
 };
 const flag = (name) => args.includes(`--${name}`);
-const BASE = opt("base", "http://127.0.0.1:4381").replace(/\/$/, "");
+const BASE = opt("base", "http://127.0.0.1:4381/gmt").replace(/\/$/, "");
 const ONLY = opt("only", "");
 const THEME = opt("theme", "");
 const JSON_OUT = opt("json", "");

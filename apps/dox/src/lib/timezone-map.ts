@@ -16,6 +16,7 @@ import { geoShape } from "@tanstack/charts/geo";
 import { tooltip } from "@tanstack/charts/tooltip";
 import worldAtlas from "world-atlas/countries-110m.json";
 import { TIMEZONES } from "./timezones";
+import { withBase } from "./site";
 
 type TopologyLike = Parameters<typeof feature>[0];
 
@@ -59,7 +60,7 @@ let timezoneFeatures: TimezoneFeature[] = [];
 async function loadTimezoneBoundaries(): Promise<TimezoneFeature[]> {
   if (timezoneFeatures.length > 0) return timezoneFeatures;
   try {
-    const res = await fetch("/timezone-boundaries.json");
+    const res = await fetch(withBase("/timezone-boundaries.json"));
     if (!res.ok) return [];
     const data = (await res.json()) as {
       type: "FeatureCollection";

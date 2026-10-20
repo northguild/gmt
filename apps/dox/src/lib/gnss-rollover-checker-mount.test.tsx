@@ -21,6 +21,7 @@ import {
   renderGnssRolloverCheckerTemplate,
 } from "./gnss-rollover-checker-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -844,7 +845,11 @@ describe("seeding and permalinks", () => {
       >;
       expect(state).toEqual({ preset: id });
       const url = encodeWidgetPermalink("rollover", state);
-      expect(url).toMatch(/^\/tools\/gnss-rollover-checker\/\?w=rollover&wa=/);
+      expect(url).toMatch(
+        new RegExp(
+          `^${SITE_BASE}/tools/gnss-rollover-checker/\\?w=rollover&wa=`,
+        ),
+      );
       const seeded = seedFromLocation("rollover", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const output = text(first.root, "rollover-output");

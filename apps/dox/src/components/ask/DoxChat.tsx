@@ -88,6 +88,7 @@ import { createLinkComponents } from "./link-components";
 import { RetrievalTrace } from "./RetrievalTrace";
 import { WidgetReceipt } from "./WidgetReceipt";
 import { useIdleTimeout } from "./use-idle-timeout";
+import { withBase } from "~/lib/site";
 
 /** Streamdown's code plugin defaults to the theme *names* `github-light` /
  * `github-dark`, which its pinned Shiki can't resolve once bundled for the
@@ -201,7 +202,7 @@ export function DoxChat({
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: "/api/chat",
+        api: withBase("/api/chat"),
         /* Assembled per request rather than declared as a static `body`, because
            the history needs filtering as well as the body needing the page the
            reader came from and the brain. `sendableHistory` drops assistant

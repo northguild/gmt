@@ -21,6 +21,7 @@ import {
   renderElapsedVsClockTemplate,
 } from "./elapsed-vs-clock-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -575,7 +576,9 @@ describe("permalinks", () => {
       ).toBe(true);
       const url = encodeWidgetPermalink("elapsed", state);
       expect(url).toMatch(
-        /^\/tools\/elapsed-vs-clock-difference\/\?w=elapsed&wa=/,
+        new RegExp(
+          `^${SITE_BASE}/tools/elapsed-vs-clock-difference/\\?w=elapsed&wa=`,
+        ),
       );
       const seeded = seedFromLocation("elapsed", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);

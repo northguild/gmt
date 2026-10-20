@@ -88,24 +88,67 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `oxlint.config.js` is never loaded, so lint runs from the app. `.oxfmtrc.json`'s
     overrides are an allow-list that includes `apps/**`.
   - `workerd` needs `allowBuilds`.
-- **Deploy.** Worker `gmt-dox` on `*.workers.dev`, via `cloudflare/wrangler-action`, with
-  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repo secrets. The Worker serves
-  `dist/` through the `ASSETS` binding (`not_found_handling: "404-page"`). A request
-  matching a static asset is served before the Worker script runs, so only `/api/*`
-  reaches it.
+- **Deploy.** Worker `gmt-dox` serves `https://northguild.dev/gmt/`, via
+  `cloudflare/wrangler-action`, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
+  repo secrets. The Worker serves `dist/` through the `ASSETS` binding
+  (`not_found_handling: "404-page"`).
+  - **Route.** `northguild.dev/gmt*` is one pattern, because route matching includes the
+    query string and a bare `northguild.dev/gmt` would miss `/gmt?a=1`. `workers_dev: true`
+    is stated, because it defaults to `false` once `routes` is set. The landing page at `/`
+    is a separate Worker in `northguild/northguild.dev` (Custom Domain); a Route beats a
+    Custom Domain on the same hostname.
+  - **Assets sit under the base.** Astro builds to `dist/gmt/` with `base: "/gmt"`, because
+    Cloudflare looks assets up by full request path.
+  - **`run_worker_first: ["/*", "!/gmt/", "!/gmt/*/", "!/gmt/*.*"]`.** Page URLs and files
+    under `/gmt/` go to assets; everything else runs the Worker. Without an array, a browser
+    navigation that matches no asset gets the 404 page and never reaches the Worker
+    (`assets_navigation_prefers_asset_serving`). A `!` match is served by assets even when
+    no file exists, so each negative is narrow: a trailing slash (a page) or a dot after
+    `/gmt/` (a file). `/gmt/api/*` has neither and so reaches the Worker. A negative like
+    `!/gmt/*` would send it to the 404 page.
+  - **Worker.** Under the base (bare `/gmt` included) it does the `?key=` dev exchange
+    first, then the 301 from bare `/gmt` to `/gmt/`, then `/gmt/api/*`, then `ASSETS`. On
+    the legacy `workers.dev` host every path is a 301 to
+    `https://northguild.dev/gmt<path><query>` with any `key` dropped from the query,
+    except `/api/brains` and `/api/chat`, served in place because a redirect turns a POST
+    into a GET and the hop is cross-origin with no CORS; `/robots.txt` goes to the landing
+    page's `robots.txt`.
+  - **`_redirects`.** The generator writes `src/generated/_redirects` and the
+    `astro:build:done` hook in `src/lib/copy-redirects.ts` copies it to `dist/_redirects`,
+    because Cloudflare reads it only at the assets root and Astro copies `public/` into
+    `dist/gmt/`.
+  - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix after each deploy.
+  - **`robots.txt`** is served by the landing Worker; crawlers read only the host root.
+  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links) is
+    in `context/domination/issues/CORE-86/runbook.md`.
+- **Base `/gmt`.** Routes are base-less inside the site (generators, route manifest, corpus
+  `page` and `url`, sidebar slugs). `src/lib/site.ts` holds `SITE_ORIGIN`, `SITE_BASE`,
+  `SITE_URL` and `LEGACY_ORIGIN`, with `withBase`, `stripBase` and `isUnderBase`. `/gmt` is
+  added where a URL leaves the code: the rehype plugin (`rehype-base-links.ts`),
+  `prefixMarkdownLinks` for the `.md` twins, `llms*.txt`, the hero links, every `fetch`
+  (through `withBase`) and `encodeWidgetPermalink`, which returns a base-prefixed path. It is
+  stripped where code reads a path: `page-context.ts` and `resolve-href.ts`, which also
+  accepts `SITE_ORIGIN`. `scripts/dist-base.test.ts` (scanners in
+  `scripts/build-utils/dist-base.ts`) reads the built `dist` after the CI build: every
+  `href`/`src`/`srcset`/social `content`/`data-*` URL in the HTML, every `url()` in the CSS
+  (the Michroma `@font-face` included), the `.md` twins and `llms*.txt`, the sitemap `<loc>`s,
+  `dist/_redirects` and the `/api/` and public-file strings in the bundled JS. A root URL
+  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/` and `_redirects`.
+  `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
+  `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
+  with no rewrite.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
   (`static.cloudflareinsights.com/beacon.min.js`) from the `Head` override
   (`src/components/Head.astro`), in production builds only. The site is registered by
-  hostname in the NorthGuild Cloudflare account, where the page views and visits are read.
+  hostname (`northguild.dev`) in the NorthGuild Cloudflare account, where the page views and
+  visits are read.
   - The token in the script tag is public: it names the site entry and grants nothing.
   - The beacon sets no cookie and does not identify visitors.
-  - A `workers.dev` hostname is not a zone in the account, so Cloudflare cannot inject the
-    beacon itself; that is why the tag is in the page. On a custom domain, change the
-    hostname of the site entry in the dashboard.
+  - Automatic injection stays off, so the beacon is never loaded twice.
 - **Generator (`A3a`).** `scripts/build-reference.ts` uses the TypeScript compiler API
   (not TypeDoc) and emits one MDX page per exported function and regex, one per shared
   type, index pages, `gmt-corpus.json`, a typed route manifest (`ReadonlySet<string>`),
-  `LIVE_PLAYGROUND_TEMPLATES` and `public/_redirects`. Outputs live under `src/generated/` and are rebuilt by
+  `LIVE_PLAYGROUND_TEMPLATES` and `_redirects`. Outputs live under `src/generated/` and are rebuilt by
   `pnpm run generate`, which runs before `test`, `check` and `build`. The directory is in
   `.gitignore`, but `reference/corpus.ts`, `reference/gmt-corpus.json` and
   `reference/route-manifest.ts` predate that rule and stay tracked, so regenerating them
@@ -273,7 +316,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     names the owner function, `members` feeds retrieval. The route manifest is the unique
     `page` values plus the index routes. `scripts/api-surface.mjs` accepts a
     `/reference/…#fragment` link only when it is a corpus `url`.
-  - **`public/_redirects` is generated and ignored by git.** A type's old URL is a pure
+  - **`src/generated/_redirects` is generated and ignored by git.** A type's old URL is a pure
     function of its source path, so each gets three `301` rules: bare, trailing slash and
     the `.md` twin. A renamed function cannot be derived: `scripts/build-utils/renamed-functions.ts`
     lists each released function that was renamed, and each gets the same three rules to its
@@ -1488,7 +1531,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     has no `@/`.
   - Streamdown renders replies. Code blocks keep copy and drop download.
 - **Tailwind v4** exists only in the island. See [reference/design-system.md](reference/design-system.md).
-- **Worker (`apps/dox/worker/`):** `POST /api/chat`, `GET /api/brains`; everything else goes
+- **Worker (`apps/dox/worker/`):** `POST /gmt/api/chat`, `GET /gmt/api/brains`; everything else goes
   to `ASSETS`.
   - The `.md` prompt sources load as Text modules (a `wrangler.jsonc` rule); Vitest
     mirrors this with a `markdownAsText` plugin.
@@ -1822,7 +1865,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Traps
 
-- `/api/brains` must stay `private, no-store`: it carries one visitor's counts and dev
+- `/gmt/api/brains` must stay `private, no-store`: it carries one visitor's counts and dev
   status.
 - `DoxChat.ssr.test.tsx` is what catches `window` during SSR; `astro check` and jsdom tests
   do not.
@@ -1834,7 +1877,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - A `503 Your worker restarted mid-request` looks like a dead model: two `wrangler dev`
   instances, or a build without `@northguild/gmt`. `pgrep -cf "wrangler dev"` should be 1.
   Port 8787 may be taken; pass `--port`.
-- Static assets bypass the Worker, so `?key=` only works on `/api/*`.
+- Static assets bypass the Worker, so `?key=` only works on `/gmt/api/*`.
 - AI bindings always run remotely: local chat spends the real Workers AI allocation.
 
 ### Runbooks
@@ -1892,15 +1935,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     && DOX_VITE_CACHE_DIR="$SP/vite-<tree>" pnpm --filter @gmt/dox build
   # Serve the branch build for the browser gates, then stop the server:
   python3 -m http.server 48391 --bind 127.0.0.1 --directory "$SP/after/apps/dox/dist"
+  # The site is under the base: open http://127.0.0.1:48391/gmt/
   ```
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
-- **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only).
+- **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
   A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
   while its live file is under 6 h old (`UPSTREAM_REFRESH=force`). No site build is
-  needed — the Worker reads `/retrieval-chunks.json` from `astro dev` through
+  needed — the Worker reads `/gmt/retrieval-chunks.json` from `astro dev` through
   `DOX_ASSETS_ORIGIN`. Content edits hot-reload; gmt source edits regenerate the
   reference in place (`src/lib/gmt-reference-watch.ts`); a new export needs a restart.
   `dev-all.mjs` only ever stops its own children. If another `astro dev` holds this
@@ -1910,7 +1954,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   8799` with `dist/` already built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and
   `DOX_DEV_KEY` (`.dev.vars.example`).
 - **Dev bypass:** `npx wrangler secret put DOX_DEV_KEY` in production, the same value in
-  `.dev.vars` locally, then visit **`/api/brains?key=<secret>`** once per browser. It
+  `.dev.vars` locally, then visit **`/gmt/api/brains?key=<secret>`** once per browser. It
   exempts you from the visitor cap, never from the shared pool.
 - **Probe brains** (spends real quota):
 
@@ -1918,7 +1962,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   cd apps/dox
   npx wrangler dev --port 8799 --var DOX_DEV_KEY:probe --var NORTHGUILD_GMT_GEMINI_API_KEY: \
     > /tmp/dox-wrangler.log 2>&1 &
-  npx tsx scripts/probe-brains.ts --base http://localhost:8799 \
+  npx tsx scripts/probe-brains.ts --base http://localhost:8799/gmt \
     --log /tmp/dox-wrangler.log --out /tmp/probe.json   # --brains <ids> --attempts <n>
   ```
 

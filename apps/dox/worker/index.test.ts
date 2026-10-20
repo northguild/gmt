@@ -172,57 +172,305 @@ describe("worker entry — /api/chat", () => {
   });
 });
 
-describe("worker entry — everything else", () => {
-  it("hands an ordinary page request to the assets binding untouched", async () => {
-    const assets = assetsBinding();
+/** A fake `ASSETS` that serves a small fixture map by pathname and 404s the rest.
+ * It applies no `_redirects` and no `html_handling`. */
+function fixtureAssets(files: Record<string, string> = {}) {
+  const calls: string[] = [];
+  return {
+    calls,
+    binding: {
+      fetch: async (input: RequestInfo | URL) => {
+        const href =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        calls.push(href);
+        const body = files[new URL(href).pathname];
+        return body === undefined
+          ? new Response("Dox 404 page", { status: 404 })
+          : new Response(body, { status: 200 });
+      },
+    },
+  };
+}
+
+const LEGACY = "https://gmt-dox.northguild.workers.dev";
+const ND = "https://northguild.dev";
+const nd = (path: string, init: RequestInit = {}) =>
+  new Request(`${ND}${path}`, {
+    headers: { "cf-connecting-ip": "1.2.3.4" },
+    ...init,
+  });
+const legacy = (path: string, init: RequestInit = {}) =>
+  new Request(`${LEGACY}${path}`, {
+    headers: { "cf-connecting-ip": "1.2.3.4" },
+    ...init,
+  });
+
+describe("worker entry — the legacy host (matrix rows 1-17, 31-33)", () => {
+  const assets = fixtureAssets();
+  const env = () => makeEnv({ ASSETS: assets.binding });
+
+  const redirects: [string, string, string][] = [
+    ["row 1", "/", "https://northguild.dev/gmt/"],
+    ["row 2", "/?a=1&b=2", "https://northguild.dev/gmt/?a=1&b=2"],
+    ["row 3", "/reference/", "https://northguild.dev/gmt/reference/"],
+    [
+      "row 4",
+      "/tools/dst-inspector/?zone=Europe/Paris",
+      "https://northguild.dev/gmt/tools/dst-inspector/?zone=Europe/Paris",
+    ],
+    [
+      "row 5",
+      "/guides/concepts/dst-disambiguation/",
+      "https://northguild.dev/gmt/guides/concepts/dst-disambiguation/",
+    ],
+    ["row 6", "/reference", "https://northguild.dev/gmt/reference"],
+    [
+      "row 7 install.md",
+      "/install.md",
+      "https://northguild.dev/gmt/install.md",
+    ],
+    ["row 7 llms.txt", "/llms.txt", "https://northguild.dev/gmt/llms.txt"],
+    [
+      "row 7 llms-full.txt",
+      "/llms-full.txt",
+      "https://northguild.dev/gmt/llms-full.txt",
+    ],
+    [
+      "row 8",
+      "/_astro/index.abc123.css",
+      "https://northguild.dev/gmt/_astro/index.abc123.css",
+    ],
+    ["row 9", "/_astro/stale.js", "https://northguild.dev/gmt/_astro/stale.js"],
+    [
+      "row 10 favicon",
+      "/favicon.svg",
+      "https://northguild.dev/gmt/favicon.svg",
+    ],
+    [
+      "row 10 font",
+      "/fonts/michroma-latin-400-normal.woff2",
+      "https://northguild.dev/gmt/fonts/michroma-latin-400-normal.woff2",
+    ],
+    [
+      "row 10 pagefind",
+      "/pagefind/pagefind.js",
+      "https://northguild.dev/gmt/pagefind/pagefind.js",
+    ],
+    [
+      "row 10 sitemap",
+      "/sitemap-index.xml",
+      "https://northguild.dev/gmt/sitemap-index.xml",
+    ],
+    ["row 11", "/robots.txt", "https://northguild.dev/robots.txt"],
+    [
+      "row 12 hop 1",
+      "/reference/duty/?a=1",
+      "https://northguild.dev/gmt/reference/duty/?a=1",
+    ],
+  ];
+
+  it.each(redirects)("%s: GET %s is a 301 to %s", async (_row, path, to) => {
+    const response = await worker.fetch(legacy(path), env());
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(to);
+  });
+
+  it("rows 31-33: a browser navigation gets the same 301, never the 404 page", async () => {
+    for (const [path, to] of [
+      ["/", "https://northguild.dev/gmt/"],
+      [
+        "/guides/concepts/dst-disambiguation/",
+        "https://northguild.dev/gmt/guides/concepts/dst-disambiguation/",
+      ],
+      [
+        "/reference/duty/?a=1",
+        "https://northguild.dev/gmt/reference/duty/?a=1",
+      ],
+    ]) {
+      const response = await worker.fetch(
+        legacy(path, {
+          headers: {
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-dest": "document",
+            accept: "text/html",
+          },
+        }),
+        env(),
+      );
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(to);
+    }
+  });
+
+  it("row 14: a POST to a non-API path is a 301", async () => {
     const response = await worker.fetch(
-      get("/reference/zoned/convert/convertZonedToZoned"),
+      legacy("/docs/x", { method: "POST", body: "x" }),
+      env(),
+    );
+    expect(response.status).toBe(301);
+  });
+
+  it("never reaches the assets binding for a legacy path", async () => {
+    expect(assets.calls).toHaveLength(0);
+  });
+
+  it("row 15: POST /api/chat is answered in place by the chat validator, never redirected", async () => {
+    vi.stubGlobal("caches", { default: {} });
+    try {
+      const response = await worker.fetch(
+        legacy("/api/chat", { method: "POST", body: "" }),
+        makeEnv({ AI: fakeAI }),
+      );
+      expect(response.status).toBe(400);
+      expect(response.headers.get("location")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("row 16: GET /api/brains is 200 JSON in place", async () => {
+    const response = await worker.fetch(legacy("/api/brains"), env());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("json");
+  });
+
+  it("row 17: ?key= on a legacy API path is not exchanged (no cookie, no 303)", async () => {
+    const response = await worker.fetch(
+      legacy("/api/brains?key=x"),
+      makeEnv({ DOX_DEV_KEY: "x" }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+  it("drops a dev key from the legacy 301 and keeps the rest of the query", async () => {
+    for (const [path, to] of [
+      ["/tools/x/?key=s", "https://northguild.dev/gmt/tools/x/"],
+      [
+        "/tools/x/?z=Europe/Paris&key=s&keyring=b",
+        "https://northguild.dev/gmt/tools/x/?z=Europe/Paris&keyring=b",
+      ],
+    ]) {
+      const response = await worker.fetch(
+        legacy(path),
+        makeEnv({ DOX_DEV_KEY: "s" }),
+      );
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(to);
+      expect(response.headers.get("set-cookie")).toBeNull();
+    }
+  });
+});
+
+describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
+  it("row 19 and 34: /gmt is a 301 to /gmt/, keeping the query", async () => {
+    for (const [path, to] of [
+      ["/gmt", "https://northguild.dev/gmt/"],
+      ["/gmt?a=1", "https://northguild.dev/gmt/?a=1"],
+    ]) {
+      const response = await worker.fetch(nd(path), makeEnv());
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(to);
+    }
+  });
+
+  it("row 21: a missing page is the Dox 404 page, from the assets binding with the full path", async () => {
+    const assets = fixtureAssets();
+    const response = await worker.fetch(
+      nd("/gmt/nope/"),
+      makeEnv({ ASSETS: assets.binding }),
+    );
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("Dox 404 page");
+    expect(assets.calls).toEqual(["https://northguild.dev/gmt/nope/"]);
+  });
+
+  it("hands a page path to the assets binding untouched, base included", async () => {
+    const assets = fixtureAssets({ "/gmt/reference": "page" });
+    const request = nd("/gmt/reference");
+    const response = await worker.fetch(
+      request,
       makeEnv({ ASSETS: assets.binding }),
     );
     expect(response.status).toBe(200);
-    expect(assets.calls).toHaveLength(1);
-    expect(assets.calls[0]).toContain(
-      "/reference/zoned/convert/convertZonedToZoned",
-    );
+    expect(assets.calls).toEqual(["https://northguild.dev/gmt/reference"]);
   });
 
-  it("redirects a ?key= request to a clean URL instead of echoing the secret", async () => {
-    const response = await worker.fetch(
-      get("/dox?key=wrong-secret"),
-      makeEnv({ DOX_DEV_KEY: "right-secret" }),
-    );
-    // Wrong secret still redirects — an attacker learns nothing from the
-    // status, and the secret is stripped from the URL either way.
-    expect(response.status).toBe(303);
-    const location = response.headers.get("location") ?? "";
-    expect(location).not.toContain("key=");
-    expect(location).not.toContain("wrong-secret");
+  it("row 22: GET /gmt/api/brains is 200 JSON", async () => {
+    const response = await worker.fetch(nd("/gmt/api/brains"), makeEnv());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("json");
   });
 
-  it("sets a dev cookie only for the correct secret", async () => {
-    const right = await worker.fetch(
-      get("/dox?key=right-secret"),
-      makeEnv({ DOX_DEV_KEY: "right-secret" }),
-    );
-    expect(right.headers.get("set-cookie")).toBeTruthy();
+  it("row 23: /gmt/api/chat is 400 on an empty POST and 405 on a GET", async () => {
+    vi.stubGlobal("caches", { default: {} });
+    try {
+      const post = await worker.fetch(
+        nd("/gmt/api/chat", { method: "POST", body: "" }),
+        makeEnv({ AI: fakeAI }),
+      );
+      expect(post.status).toBe(400);
+      const get = await worker.fetch(
+        nd("/gmt/api/chat"),
+        makeEnv({ AI: fakeAI }),
+      );
+      expect(get.status).toBe(405);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 
+  it("row 24: a wrong ?key= is a 303 to the clean /gmt path with no cookie; the right one sets Path=/gmt/", async () => {
     const wrong = await worker.fetch(
-      get("/dox?key=wrong-secret"),
+      nd("/gmt/api/brains?key=wrong"),
       makeEnv({ DOX_DEV_KEY: "right-secret" }),
+    );
+    expect(wrong.status).toBe(303);
+    expect(wrong.headers.get("location")).toBe(
+      "https://northguild.dev/gmt/api/brains",
     );
     expect(wrong.headers.get("set-cookie")).toBeNull();
+
+    const right = await worker.fetch(
+      nd("/gmt/api/brains?key=right-secret"),
+      makeEnv({ DOX_DEV_KEY: "right-secret" }),
+    );
+    expect(right.status).toBe(303);
+    expect(right.headers.get("location")).toBe(
+      "https://northguild.dev/gmt/api/brains",
+    );
+    expect(right.headers.get("set-cookie")).toContain("Path=/gmt/");
   });
 
-  /* Recorded rather than asserted-as-desirable: the `?key=` check sits above
-     the router, so it claims *any* path carrying that param — an asset, a
-     reference page, or `/api/chat` itself. A client that appended `?key=` to
-     its POST would get a 303 instead of an answer. Nothing does that today,
-     and stripping the secret from every URL is the safer default, but the
-     reach is wider than the "on any page" in its docstring suggests. */
-  it("claims ?key= ahead of the router, including on /api/chat", async () => {
+  it("takes ?key= on exactly /gmt before the slash 301, so the key never reaches a page URL", async () => {
+    const response = await worker.fetch(
+      nd("/gmt?key=right-secret"),
+      makeEnv({ DOX_DEV_KEY: "right-secret" }),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://northguild.dev/gmt");
+    expect(response.headers.get("set-cookie")).toContain("Path=/gmt/");
+
+    const next = await worker.fetch(nd("/gmt"), makeEnv());
+    expect(next.status).toBe(301);
+    expect(next.headers.get("location")).toBe("https://northguild.dev/gmt/");
+  });
+
+  it("row 25: /gmtx is not under the base; it is a 301 to /gmt/gmtx", async () => {
+    const response = await worker.fetch(nd("/gmtx"), makeEnv());
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://northguild.dev/gmt/gmtx",
+    );
+  });
+
+  it("claims ?key= under the base ahead of the API router", async () => {
     const assets = assetsBinding();
     const response = await worker.fetch(
-      get("/api/chat?key=right-secret", { method: "POST", body: "{}" }),
+      nd("/gmt/api/chat?key=right-secret", { method: "POST", body: "{}" }),
       makeEnv({ DOX_DEV_KEY: "right-secret", ASSETS: assets.binding }),
     );
     expect(response.status).toBe(303);

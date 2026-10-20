@@ -149,7 +149,7 @@ describe("ResetClock", () => {
     openPanel();
     const link = screen.getByRole("link", { name: /formatCalendarUtc/ });
     expect(link.getAttribute("href")).toBe(
-      "/reference/utc/format/formatCalendarUtc",
+      "/gmt/reference/utc/format/formatCalendarUtc",
     );
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.textContent).toContain(

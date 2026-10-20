@@ -21,6 +21,7 @@ import {
   renderLeapSecondTimelineTemplate,
 } from "./leap-second-timeline-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -579,7 +580,11 @@ describe("permalinks", () => {
         ),
       ).toBe(true);
       const url = encodeWidgetPermalink("leapline", state);
-      expect(url).toMatch(/^\/tools\/leap-second-timeline\/\?w=leapline&wa=/);
+      expect(url).toMatch(
+        new RegExp(
+          `^${SITE_BASE}/tools/leap-second-timeline/\\?w=leapline&wa=`,
+        ),
+      );
       const seeded = seedFromLocation("leapline", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const outputs = ["offset", "between", "check"].map((g) =>

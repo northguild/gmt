@@ -55,7 +55,8 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 // server from an unrelated worktree instead of failing loudly. 48173 is well clear
 // of it.
 const PORT = 48173;
-const BASE_URL = `http://localhost:${PORT}`;
+// `astro preview` serves under the site `base`, so the URL carries `/gmt`; page paths stay base-less.
+const BASE_URL = `http://localhost:${PORT}/gmt`;
 // Sentinel string only this repo's built pages contain — used to confirm the preview
 // server we're talking to is actually serving THIS worktree's dist/, not a stray
 // process left running on the same port by another worktree or a previous run.

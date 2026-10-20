@@ -24,6 +24,7 @@ import {
   encodeWidgetPermalink,
   seedFromLocation,
 } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -351,7 +352,7 @@ describe("every preset, against the real library", () => {
     const link = q<HTMLAnchorElement>(root, "handoff");
     expect(link.hasAttribute("aria-disabled")).toBe(false);
     expect(link.getAttribute("href")).toMatch(
-      /^\/tools\/bl-date-stamp\/\?w=bldate&wa=/,
+      new RegExp(`^${SITE_BASE}/tools/bl-date-stamp/\\?w=bldate&wa=`),
     );
   });
 
@@ -645,7 +646,7 @@ describe("permalinks", () => {
       // A blank offset has no key.
       expect("eventTimeZoneOffset" in state).toBe(id !== "no-offset");
       const url = encodeWidgetPermalink("epcis", state);
-      expect(url).toMatch(/\?w=epcis&wa=[^)"'\s]+$/);
+      expect(url).toMatch(/\\?w=epcis&wa=[^)"'\s]+$/);
       const seeded = seedFromLocation("epcis", url.slice(url.indexOf("?")));
       expect(seeded).toEqual(state);
       const output = text(first.root, "parse-output");

@@ -1,3 +1,4 @@
+import { withBase } from "./site";
 import { MAX_SEEDED_ZONES, permalinkOf, seededZones } from "./zone-planner";
 import {
   decodeWidgetPermalink,
@@ -55,7 +56,7 @@ describe("the planner's permalink", () => {
       expect(value.length).toBeLessThanOrEqual(64);
     }
     const url = encodeWidgetPermalink("planner", state);
-    expect(url.startsWith("/tools/zone-planner/?")).toBe(true);
+    expect(url.startsWith(withBase("/tools/zone-planner/?"))).toBe(true);
     const seeded = seedFromLocation("planner", url.slice(url.indexOf("?")));
     expect(seeded).toEqual(state);
     expect(seededZones(seeded)).toEqual(pinned);

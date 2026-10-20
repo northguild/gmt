@@ -7,6 +7,7 @@
  */
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 import { DELIVERY_PRESETS } from "./delivery-scheduler";
 import {
   mountDeliveryScheduler,
@@ -239,7 +240,7 @@ describe("the hand-off to the Journey Split", () => {
     for (const p of DELIVERY_PRESETS) {
       choosePreset(root, p.id);
       expect(link.getAttribute("href"), p.id).toMatch(
-        /^\/tools\/journey-split\/\?w=journeysplit&wa=/,
+        new RegExp(`^${SITE_BASE}/tools/journey-split/\\?w=journeysplit&wa=`),
       );
     }
   });
@@ -276,7 +277,7 @@ describe("the hand-off to the Journey Split", () => {
     const root = document.createElement("div");
     root.innerHTML = renderDeliverySchedulerTemplate();
     expect(q<HTMLAnchorElement>(root, "handoff").getAttribute("href")).toMatch(
-      /^\/tools\/journey-split\//,
+      new RegExp(`^${SITE_BASE}/tools/journey-split/`),
     );
   });
 });

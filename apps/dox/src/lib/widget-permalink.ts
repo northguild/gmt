@@ -32,6 +32,8 @@
  * fixed object literal. See `widget-registry.ts`.
  */
 
+import { withBase } from "./site";
+
 export type WidgetKind =
   | "globe"
   | "dst"
@@ -127,7 +129,7 @@ export function encodeWidgetPermalink(
   args: Record<string, unknown>,
 ): string {
   const params = new URLSearchParams({ w: kind, wa: JSON.stringify(args) });
-  return `${WIDGET_PAGE_PATHS[kind]}?${params.toString()}`;
+  return `${withBase(WIDGET_PAGE_PATHS[kind])}?${params.toString()}`;
 }
 
 /**

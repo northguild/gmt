@@ -33,11 +33,11 @@
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev
  * server), for example:
- *   pnpm exec astro build --outDir /tmp/dist-x
+ *   pnpm exec astro build --outDir /tmp/dist-x/gmt
  *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
  *
  * Usage:
- *   node scripts/grow-measure.mjs --base http://127.0.0.1:4351 --out <dir>
+ *   node scripts/grow-measure.mjs --base http://127.0.0.1:4351/gmt --out <dir>
  *     [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video]
  *     [--css "<extra css>"] [--only <slug,...>] [--reduce-ref <results.json>]
  *     [--frames]
@@ -620,9 +620,12 @@ async function runOneUnguarded(
   let stat;
   let frames = [];
   try {
-    const response = await page.goto(new URL(def.path, o.base).href, {
-      waitUntil: "domcontentloaded",
-    });
+    const response = await page.goto(
+      `${o.base.replace(/\/$/, "")}${def.path}`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     const status = response ? response.status() : null;
     if (pass === "load") {
       /* At least 4 s, then until the root has held its height for 1 s, so a

@@ -249,9 +249,9 @@ and full interval set operations.
     `isValidRollConvention`.
 13. **Read the docs site.** This skill is a routing pointer. For full option
     shapes, locale matrices, and code examples, read these:
-    - `https://gmt-dox.northguild.workers.dev/llms.txt` is the map of every docs page.
+    - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
     - Each page has a `.md` twin that holds its text, for example
-      `https://gmt-dox.northguild.workers.dev/guides/core-date-operations/plain-arithmetic.md`.
+      `https://northguild.dev/gmt/guides/core-date-operations/plain-arithmetic.md`.
     - The JSDoc of the function you intend to call ships in the installed
       package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
 
@@ -301,10 +301,10 @@ and full interval set operations.
 
 ## References
 
-- [Docs map for agents (llms.txt)](https://gmt-dox.northguild.workers.dev/llms.txt)
-- [Plain arithmetic guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/plain-arithmetic/)
-- [Durations guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/durations/)
-- [Spans guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/spans/)
-- [Business calendars guide](https://gmt-dox.northguild.workers.dev/guides/core-date-operations/business-calendars/)
+- [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
+- [Plain arithmetic guide](https://northguild.dev/gmt/guides/core-date-operations/plain-arithmetic/)
+- [Durations guide](https://northguild.dev/gmt/guides/core-date-operations/durations/)
+- [Spans guide](https://northguild.dev/gmt/guides/core-date-operations/spans/)
+- [Business calendars guide](https://northguild.dev/gmt/guides/core-date-operations/business-calendars/)
 - [Interval algebra reference](/reference/interval/calculate/intersectIntervals)
 - [Interval guides](/guides/intervals/interval-basics/)

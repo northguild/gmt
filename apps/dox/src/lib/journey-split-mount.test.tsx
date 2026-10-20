@@ -22,6 +22,7 @@ import {
   renderJourneySplitTemplate,
 } from "./journey-split-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
@@ -474,7 +475,7 @@ describe("a null result", () => {
     expect(root.querySelectorAll(".gmt-js-lane")).toHaveLength(2);
     expect(q(root, "table-body").children).toHaveLength(3);
     expect(q<HTMLAnchorElement>(root, "handoff").getAttribute("href")).toMatch(
-      /^\/tools\/delivery-scheduler\/\?w=delivery&wa=/,
+      new RegExp(`^${SITE_BASE}/tools/delivery-scheduler/\\?w=delivery&wa=`),
     );
   });
 
@@ -726,7 +727,9 @@ describe("permalinks", () => {
         ),
       ).toBe(true);
       const url = encodeWidgetPermalink("journeysplit", state);
-      expect(url).toMatch(/^\/tools\/journey-split\/\?w=journeysplit&wa=/);
+      expect(url).toMatch(
+        new RegExp(`^${SITE_BASE}/tools/journey-split/\\?w=journeysplit&wa=`),
+      );
       const seeded = seedFromLocation(
         "journeysplit",
         url.slice(url.indexOf("?")),

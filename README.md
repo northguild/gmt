@@ -2,7 +2,7 @@
 
 **The most tested date and time library for JavaScript.** `@northguild/gmt` is one library in place of Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date`. It is built on the TC39 Temporal standard and never touches `Date`.
 
-[Docs](https://gmt-dox.northguild.workers.dev/) · [API reference](https://gmt-dox.northguild.workers.dev/reference/) · [Tools](https://gmt-dox.northguild.workers.dev/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
+[Docs](https://northguild.dev/gmt/) · [API reference](https://northguild.dev/gmt/reference/) · [Tools](https://northguild.dev/gmt/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
 - **61,613 tests, run 1,848,390 times in CI.** Every test runs in 10 time zones on 3 Node versions.
 - **55× the CI test runs** of the six libraries below, combined.
@@ -19,7 +19,7 @@
 | Day.js                    | 794        | 1,034         | `Date`    |
 | `@internationalized/date` | 386        | 386           | own types |
 
-The other libraries were measured from 2026-08-22 to 2026-09-09, each by running its own test suite. [The full comparison and the method](https://gmt-dox.northguild.workers.dev/compare/).
+The other libraries were measured from 2026-08-22 to 2026-09-09, each by running its own test suite. [The full comparison and the method](https://northguild.dev/gmt/compare/).
 
 ## Install
 
@@ -47,11 +47,11 @@ resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "rejec
 ```
 
 Every function has a reference page with a live playground:
-[plain](https://gmt-dox.northguild.workers.dev/reference/plain/) · [zoned](https://gmt-dox.northguild.workers.dev/reference/zoned/) · [utc](https://gmt-dox.northguild.workers.dev/reference/utc/) · [unix](https://gmt-dox.northguild.workers.dev/reference/unix/) · [instant](https://gmt-dox.northguild.workers.dev/reference/instant/) · [calendar](https://gmt-dox.northguild.workers.dev/reference/calendar/) · [duration](https://gmt-dox.northguild.workers.dev/reference/duration/) · [interval](https://gmt-dox.northguild.workers.dev/reference/interval/) · [workforce](https://gmt-dox.northguild.workers.dev/reference/workforce/) · [span](https://gmt-dox.northguild.workers.dev/reference/span/) · [precision](https://gmt-dox.northguild.workers.dev/reference/precision/) · [timescale](https://gmt-dox.northguild.workers.dev/reference/timescale/) · [gnss](https://gmt-dox.northguild.workers.dev/reference/gnss/) · [transport](https://gmt-dox.northguild.workers.dev/reference/transport/) · [intermodal](https://gmt-dox.northguild.workers.dev/reference/intermodal/)
+[plain](https://northguild.dev/gmt/reference/plain/) · [zoned](https://northguild.dev/gmt/reference/zoned/) · [utc](https://northguild.dev/gmt/reference/utc/) · [unix](https://northguild.dev/gmt/reference/unix/) · [instant](https://northguild.dev/gmt/reference/instant/) · [calendar](https://northguild.dev/gmt/reference/calendar/) · [duration](https://northguild.dev/gmt/reference/duration/) · [interval](https://northguild.dev/gmt/reference/interval/) · [workforce](https://northguild.dev/gmt/reference/workforce/) · [span](https://northguild.dev/gmt/reference/span/) · [precision](https://northguild.dev/gmt/reference/precision/) · [timescale](https://northguild.dev/gmt/reference/timescale/) · [gnss](https://northguild.dev/gmt/reference/gnss/) · [transport](https://northguild.dev/gmt/reference/transport/) · [intermodal](https://northguild.dev/gmt/reference/intermodal/)
 
-By industry: [Workforce](https://gmt-dox.northguild.workers.dev/industries/workforce/) · [Transport](https://gmt-dox.northguild.workers.dev/industries/transport/) · [Intermodal](https://gmt-dox.northguild.workers.dev/industries/intermodal/) · [GNSS](https://gmt-dox.northguild.workers.dev/industries/gnss/) · [Maritime](https://gmt-dox.northguild.workers.dev/industries/maritime/)
+By industry: [Workforce](https://northguild.dev/gmt/industries/workforce/) · [Transport](https://northguild.dev/gmt/industries/transport/) · [Intermodal](https://northguild.dev/gmt/industries/intermodal/) · [GNSS](https://northguild.dev/gmt/industries/gnss/) · [Maritime](https://northguild.dev/gmt/industries/maritime/)
 
-Then the [guides](https://gmt-dox.northguild.workers.dev/guides/) show how to do each job, and the [tools](https://gmt-dox.northguild.workers.dev/tools/) let you try it on your own values.
+Then the [guides](https://northguild.dev/gmt/guides/) show how to do each job, and the [tools](https://northguild.dev/gmt/tools/) let you try it on your own values.
 
 ## Agent prompt
 
@@ -79,7 +79,7 @@ WHEN HELPING THE USER:
    them to the right task area (basics, arithmetic, timezone, integration).
 
 2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
-   For API details, read https://gmt-dox.northguild.workers.dev/llms.txt and the
+   For API details, read https://northguild.dev/gmt/llms.txt and the
    JSDoc in the installed package.
 
 3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:

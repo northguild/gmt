@@ -1,5 +1,6 @@
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import type { RetrievalChunk } from "./types";
+import { withBase } from "../site";
 
 /** Minimal subset of the Web Cache API (`caches.default` in a Cloudflare
  * Worker) this file needs — declared locally so this module has no
@@ -28,7 +29,7 @@ export interface FetchChunksOptions {
   now?: () => number;
 }
 
-const CHUNKS_PATH = "/retrieval-chunks.json";
+const CHUNKS_PATH = withBase("/retrieval-chunks.json");
 
 /* The parsed corpus, once per isolate. The Cache API below survives across
    isolates but hands back bytes, and `response.json()` over 750 KB was being

@@ -4,13 +4,15 @@
  *
  * The two servers do different jobs and neither is sufficient alone:
  *   - `astro dev`    serves the site with hot reload, but runs no Worker, so
- *                    `/api/chat` 404s and Dox can't answer.
+ *                    `/gmt/api/chat` 404s and Dox can't answer.
  *   - `wrangler dev` runs the real Worker, but serves the built `dist/`, so
  *                    there's no hot reload and every UI change needs a rebuild.
  *
- * Running both, and proxying `/api` from Astro to the Worker (see
+ * Running both, and proxying `/gmt/api` from Astro to the Worker (see
  * `astro.config.mjs`'s `vite.server.proxy`), gives one URL with both
- * properties. Open the Astro URL; the Worker port only exists to be proxied.
+ * properties. Open the Astro URL, `http://localhost:4321/gmt/`; the Worker
+ * port only exists to be proxied. `DOX_ASSETS_ORIGIN` stays an origin: the
+ * Worker keeps the `/gmt` path when it fetches assets.
  *
  * Spawned here rather than via a `concurrently`-style dependency: the only
  * genuinely fiddly part is making Ctrl+C take both processes down together,
@@ -106,7 +108,7 @@ function start() {
 
   console.log(
     `\n[dev-all] Worker on :${WORKER_PORT}. Astro prints its own URL below —\n` +
-      `[dev-all] open THAT one; it proxies /api/chat through to the Worker.\n` +
+      `[dev-all] open THAT one (http://localhost:${SITE_PORT}/gmt/); it proxies /gmt/api/chat through to the Worker.\n` +
       `[dev-all] Ctrl+C stops both.\n`,
   );
 }

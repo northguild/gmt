@@ -63,8 +63,8 @@ Fix what they report:
 
 Only a namespace that exports functions has a link. `regex` and `types` have none.
 
-1. Add or remove the link `[<namespace>](https://gmt-dox.northguild.workers.dev/reference/<namespace>/)`.
-2. Put the link on the line of namespace links, whoever owns the namespace; the "By industry:" line links each industry's page (`https://gmt-dox.northguild.workers.dev/industries/<id>/`) and changes only when `apps/dox/src/data/industries.json` gains or loses an industry. Separate links with ` · `, as the line does now.
+1. Add or remove the link `[<namespace>](https://northguild.dev/gmt/reference/<namespace>/)`.
+2. Put the link on the line of namespace links, whoever owns the namespace; the "By industry:" line links each industry's page (`https://northguild.dev/gmt/industries/<id>/`) and changes only when `apps/dox/src/data/industries.json` gains or loses an industry. Separate links with ` · `, as the line does now.
 3. Give a new namespace its stub, as step 9 describes. Delete the stub of a removed namespace.
 4. Run `node scripts/stats.mjs check` again.
 

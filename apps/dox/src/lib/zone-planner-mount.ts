@@ -13,6 +13,7 @@
 import { permalinkOf, seededZones, type ZonePlannerArgs } from "./zone-planner";
 import { WIDGET_PAGE_PATHS } from "./widget-permalink";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { withBase } from "./site";
 
 export type { ZonePlannerArgs } from "./zone-planner";
 
@@ -55,7 +56,7 @@ export const mountZonePlanner: MountFn<ZonePlannerArgs> = async (
     // The rail is `/dox`: a `?tz=` there would rewrite a URL no route reads, and
     // the share link has to name the planner's own page.
     syncUrl: false,
-    sharePath: WIDGET_PAGE_PATHS.planner,
+    sharePath: withBase(WIDGET_PAGE_PATHS.planner),
   });
   if (signal.aborted) {
     scrubber.destroy();

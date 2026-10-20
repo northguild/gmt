@@ -81,6 +81,11 @@ describe("devCookieHeader", () => {
     expect(devCookieHeader("t", true)).toContain("HttpOnly");
   });
 
+  it("is scoped to the base path, so it is sent to /gmt/api/* and nowhere else", () => {
+    expect(devCookieHeader("t", true)).toContain("Path=/gmt/");
+    expect(devCookieHeader("t", true)).not.toContain("Path=/;");
+  });
+
   it("is Secure in production and not on plain-http localhost", () => {
     expect(devCookieHeader("t", true)).toContain("Secure");
     expect(devCookieHeader("t", false)).not.toContain("Secure");

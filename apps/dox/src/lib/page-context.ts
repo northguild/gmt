@@ -13,6 +13,7 @@
  * reload, or a conversation started there — has no page to lean toward.
  */
 import { MAX_PAGE_CONTEXT_LENGTH } from "./chat-sanitize";
+import { isUnderBase, stripBase } from "./site";
 
 export function pageContextFromReferrer(
   referrer: string,
@@ -28,10 +29,14 @@ export function pageContextFromReferrer(
   }
 
   if (url.origin !== origin) return undefined;
-  if (/^\/dox(\/|$)/.test(url.pathname)) return undefined;
+  // The Worker and the corpus speak base-less paths. A page outside the base
+  // (the landing page) is not a Dox page.
+  if (!isUnderBase(url.pathname)) return undefined;
+  const path = stripBase(url.pathname);
+  if (/^\/dox(\/|$)/.test(path)) return undefined;
   // The Worker rejects a longer one outright; sending nothing costs only the
   // bias, sending it would cost the answer.
-  if (url.pathname.length > MAX_PAGE_CONTEXT_LENGTH) return undefined;
+  if (path.length > MAX_PAGE_CONTEXT_LENGTH) return undefined;
 
-  return url.pathname;
+  return path;
 }

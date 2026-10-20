@@ -9,7 +9,7 @@
  *   2. src/generated/reference/route-manifest.ts — ReadonlySet<string>
  *   3. content/docs/reference MDX            - one page per function, regex and shared
  *                                              type, plus the index pages
- *   4. public/_redirects                     - the old URL of every type that moved and of
+ *   4. src/generated/_redirects              - the old URL of every type that moved and of
  *                                              every renamed function
  *
  * Which public function uses which public type comes from `build-utils/type-usage.ts`. A
@@ -83,6 +83,7 @@ import {
   type TableContext,
 } from "./build-utils/render-table";
 import { buildRedirects } from "./build-utils/redirects";
+import { SITE_BASE } from "../src/lib/site";
 import { MOVED_PAGES } from "./build-utils/moved-pages";
 import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
@@ -117,9 +118,10 @@ const repoRoot = resolve(appRoot, "..", "..");
 const gmtSrc = resolve(repoRoot, "packages", "gmt", "src");
 const outMdx = resolve(appRoot, "src", "content", "docs", "reference");
 const outGen = resolve(appRoot, "src", "generated", "reference");
-/** Cloudflare's redirect rules. Astro copies `public/` into `dist/`, where the Worker's
- * static assets read it. Gitignored, like the other generated files under `public/`. */
-const outRedirects = resolve(appRoot, "public", "_redirects");
+/** Cloudflare's redirect rules. Not under `public/`: Astro copies that into `outDir`
+ * (`dist/gmt/`), where Cloudflare never reads it. `src/lib/copy-redirects.ts` copies this file
+ * to `dist/_redirects` after the build. */
+const outRedirects = resolve(appRoot, "src", "generated", "_redirects");
 
 const SKIP_DIRS = ["test", "internal"];
 const SKIP_EXTS = [".test.ts", ".spec.ts"];
@@ -3390,6 +3392,7 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
       RENAMED_FUNCTIONS,
       MOVED_PAGES,
       new Set([...routes, ...contentRoutes()]),
+      SITE_BASE,
     ),
   );
 

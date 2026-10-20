@@ -43,6 +43,11 @@ const STATUS = 301;
  * or a second rename fails here instead of redirecting to a 404. A moved page throws when its
  * `to` is not one of `routes` (the site's pages and routes, with no trailing slash) or when its
  * `from` still is one, which would hide the page the redirect is meant to replace.
+ *
+ * Every check runs on the base-less routes. `base` (the site's `/gmt`) is put in front of both
+ * sides of each emitted line, after the checks, because the assets sit under it
+ * (`dist/gmt/…`) and the rule is matched against the full request path. The 1,000-character
+ * limit is checked on the emitted line.
  */
 export function buildRedirects(
   types: readonly RedirectedType[],
@@ -50,6 +55,7 @@ export function buildRedirects(
   renames: readonly RenamedFunction[] = [],
   moved: readonly MovedPage[] = [],
   routes: ReadonlySet<string> = new Set(),
+  base = "",
 ): string {
   const rules: Array<{ source: string; target: string }> = [];
   for (const type of types) {
@@ -117,7 +123,7 @@ export function buildRedirects(
 
   const seen = new Set<string>();
   for (const { source, target } of rules) {
-    const line = `${source} ${target} ${STATUS}`;
+    const line = `${base}${source} ${base}${target} ${STATUS}`;
     if (source === target) problems.push(`${source} redirects to itself`);
     if (seen.has(source)) problems.push(`${source} has two rules`);
     seen.add(source);
@@ -142,7 +148,7 @@ export function buildRedirects(
     "# GENERATED FILE — do not edit by hand.",
     "# Produced by apps/dox/scripts/build-reference.ts (`pnpm dox:generate`).",
     "# The old URL of every public type, renamed function and moved page, redirected to where it is documented now.",
-    ...rules.map((r) => `${r.source} ${r.target} ${STATUS}`),
+    ...rules.map((r) => `${base}${r.source} ${base}${r.target} ${STATUS}`),
     "",
   ].join("\n");
 }
