@@ -15,14 +15,14 @@ The library's READMEs and docs link the docs site, the API reference and the too
 
 ## Design notes
 
-- **It waits on a repo outside this one.** The server is built elsewhere, from the corpus and schemas `CORE-87` ships, on the paths `CORE-86` reserves. Nothing in this story starts before a live URL answers. The `Blocked by` column shows only the gmt stories it waits on, so the row's Status is `Waiting`, which keeps it out of `pnpm deps:ready` until the server is live; flip it to `Not started` then.
+- **It waits on a repo outside this one.** The server is built elsewhere, from the corpus `CORE-87` ships, on the paths `CORE-86` reserves. Nothing in this story starts before a live URL answers. The `Blocked by` column shows only the gmt stories it waits on, so the row's Status is `Waiting`, which keeps it out of `pnpm deps:ready` until the server is live; flip it to `Not started` then.
 - **One link per place, no copy.** The READMEs describe what the server is in one line and link it; no server documentation moves into this repo.
 - **No tool.** The story ships links, not a function.
 
 ## What gmt provides (do not re-implement)
 
 - The site at `northguild.dev/gmt` with `/api/*` and `/mcp/*` reserved (`CORE-86`)
-- The corpus and tool schemas the server is generated from (`CORE-87`)
+- The corpus the server is generated from (`CORE-87`)
 
 ## Verification
 

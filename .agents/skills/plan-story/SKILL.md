@@ -32,7 +32,7 @@ ask the owner which story they mean.
 | Story | Steps |
 | --- | --- |
 | Realm story (`MAR-*`, `TRAN-*`, `INT-*`, `CORE-*`, …) | 4, then 5 |
-| `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 4 only, then `dox: none`. The writer is `dox-architect` for `apps/dox` work (`CORE-86`, `CORE-88`) and `architect` for the package (`CORE-87`); skip 5, there is no tool |
+| `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 4 only, then `dox: none`. The writer is `dox-architect` for `apps/dox` work (`CORE-86`, `CORE-88`) and `architect` for the export step (`CORE-87`); skip 5, there is no tool |
 | `DOX-*` story | 5 only (skip the library index input) |
 
 ## 4. Library spec — `architect` (Opus)
