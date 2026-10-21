@@ -12,8 +12,10 @@ import UpstreamTracker from "../../components/UpstreamTracker.astro";
 import { gmtVersion } from "../../generated/versions";
 
 GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScript date and
-time standard. Until browsers and Node ship Temporal natively, GMT runs on the community
-[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill).
+time standard. Node and some browsers now have Temporal built in, but GMT runs on the community
+[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill) everywhere, so it gives
+the same answer on every runtime. Every week, GMT's whole test suite also runs on the built-in
+engines.
 
 **If you use GMT, there is nothing on this page for you to do.** The polyfill has a handful of bugs
 in rare corners of the calendar. GMT spots each one and gives you the right answer anyway. The rest
@@ -78,13 +80,33 @@ that runs against the installed polyfill, and GMT's answers are compared with th
 into Chrome — date by date, across every calendar GMT supports. For GMT {gmtVersion} that comparison
 found no differences.
 
+## Native engines
+
+Every week, GMT runs its whole test suite on the Temporal built into Node 26, Chromium and
+Firefox, and expects the same answers it gets on the polyfill. A failure that no known bug
+explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
+see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
+
+The built-in engines have a few bugs of their own. Each one we know about is already reported or
+already fixed:
+
+- [`unicode-org/icu4x#8620`](https://github.com/unicode-org/icu4x/issues/8620): Node and Chromium
+  reject a one-letter annotation key, such as `[a=bc]`, which the standard allows.
+- [`boa-dev/temporal#529`](https://github.com/boa-dev/temporal/issues/529): Node and Chromium
+  accept the calendar `islamic`, which the standard says to reject.
+- Node 26 throws when it rounds to the day on a date that starts twice, such as 6 November 2010
+  in `America/Goose_Bay`. Chromium 153 already has the fix, so a later Node will have it too.
+
+GMT gives the standard's answer in all three cases.
+
 ## What kind of bugs are these?
 
 They're rare edge cases. Most only show up:
 
 - near the very first or very last date Temporal can represent (around the year 275,000);
-- in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese; or
-- in time zone history from before the 1850s.
+- in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese;
+- in time zone history from before the 1850s; or
+- in a time zone whose clocks changed twice within a few weeks, such as `Africa/El_Aaiun` in 1976.
 
 Temporal is a large, carefully designed standard, and the polyfill is a big piece of work.
 Finding bugs like these is normal. We found them because GMT tests the unusual corners that
@@ -98,7 +120,9 @@ We sent them to two places:
   bugs other users had already reported.
 - **The Temporal proposal** ([`tc39/proposal-temporal`](https://github.com/tc39/proposal-temporal)),
   which has its own reference copy of the same code. Where a bug exists there too, we reported
-  it with the same fix, so it's corrected at the source.
+  it with the same fix, so it's corrected at the source. We also asked one question about the
+  standard's own text: it refuses a string that it writes itself, for a few hours at the very
+  start of the range.
 
 ## How we check each fix
 

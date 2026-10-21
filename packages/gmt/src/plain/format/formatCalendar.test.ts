@@ -204,6 +204,29 @@ describe("formatCalendar", () => {
       },
     );
 
+    // ECMA-402 GetOption converts the value it reads once (ToString), so a
+    // timeStyle given as an object formats exactly as the plain string does.
+    // A symbol makes ToString throw, so it is invalid input.
+    it.each`
+      timeStyle                      | expected
+      ${new String("long")}          | ${"tomorrow at 2:30:00 PM"}
+      ${new String("full")}          | ${"tomorrow at 2:30:00 PM"}
+      ${new String("medium")}        | ${"tomorrow at 2:30:00 PM"}
+      ${{ toString: () => "full" }}  | ${"tomorrow at 2:30:00 PM"}
+      ${{ toString: () => "short" }} | ${"tomorrow at 2:30 PM"}
+      ${Symbol("short")}             | ${""}
+    `(
+      "timeStyle given as $timeStyle formats tomorrow as $expected",
+      ({ timeStyle, expected }) => {
+        expect(
+          formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS, {
+            reference: REF,
+            timeStyle: timeStyle as never,
+          }),
+        ).toBe(expected);
+      },
+    );
+
     it("defaults to 'short' when timeStyle is omitted (matches explicit 'short')", () => {
       const omitted = formatCalendar(
         "2024-03-16T14:30:00",

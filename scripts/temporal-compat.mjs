@@ -179,6 +179,18 @@ const WORKAROUNDS = [
       "Delete internal/zonedTransitionSearch.ts (its per-zone transition memo goes with it) and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
       "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
       "Keep internal/zonedTransitionSearch.test.ts apart from its step guard, and every Boa_Vista, Riga and Simferopol row: their values are native Temporal's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 13.`,
+    ],
+  },
+  {
+    defects: ["D14"],
+    title:
+      "D14 — ZonedDateTime#round to the day does not clamp an instant in the second piece of a date that starts twice (zonedWallClockOperations.ts roundZonedDateTime)",
+    trigger:
+      "a js-temporal release that ports the day-round clamp of tc39/ecma262#3966 (commit 5f44331e0a11) (tc39/proposal-temporal#3312; reference polyfill commit 59a51ea9d4); Node 26's V8 throws RangeError on the probe. Expected value: test262 intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js",
+    steps: [
+      "Delete the isDayRoundClampCompatNeeded() term in the day branch of roundZonedDateTime (internal/zonedWallClockOperations.ts; the branch stays for D13 and pre-1847), isDayRoundClampCompatNeeded in capabilities.ts and its export in index.ts, and the D14 repros. Keep the min(thisNs, endNs - 1) clamp in roundToDayFromOwnStartOfDay: it is the spec step.",
+      "Keep the same-date-starts-twice rows in roundZoned.test.ts and roundUnix.test.ts: their values are test262's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 14.`,
     ],
   },

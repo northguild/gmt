@@ -1,5 +1,5 @@
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { convertUtcToPlainDate } from "../../utc/convert/convertUtcToPlainDate";
 import { billingTimeline } from "./billingTimeline";
 import { chargeableDays } from "./chargeableDays";

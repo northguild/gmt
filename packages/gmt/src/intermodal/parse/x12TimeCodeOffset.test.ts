@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { X12_TIME_CODES } from "../../internal";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { X12_TIME_CODE_EXPECTATIONS } from "../../test/x12TimeCodeMatrix";
 import type {
   X12OffsetTimeCode,

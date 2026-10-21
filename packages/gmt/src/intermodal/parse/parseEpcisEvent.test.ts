@@ -1,5 +1,5 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { parseEpcisEvent } from "./parseEpcisEvent";
 
 /** A valid event: 14:30Z on 15 June 2024, where the local clock ran five hours behind UTC. */

@@ -15,7 +15,7 @@ import {
   timeToCutoff,
   transitTime,
 } from "./index";
-import { hostileProxy, revokedProxy } from "../test/noThrow";
+import { hostileProxy, revokedProxy } from "../test/hostileValues";
 
 /**
  * RFC 9557 annotations on a transport instant, read by every transport function.

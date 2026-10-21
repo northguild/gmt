@@ -14,17 +14,10 @@
  * type and the parameter count are read from the function's own source signature,
  * because the corpus signature drops `| null`.
  */
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import * as gmt from "../index";
-
-const PACKAGE_ROOT = path.resolve(import.meta.dirname, "../..");
-const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
-const CORPUS_PATH = path.join(
-  REPO_ROOT,
-  "apps/dox/src/generated/reference/gmt-corpus.json",
-);
+import { repoFile, sourceTree } from "./sourceTree";
+import { deepEqual } from "./deepEqual";
+import { hostileProxy, revokedProxy } from "./hostileValues";
 
 type CorpusEntry = {
   name: string;
@@ -73,30 +66,6 @@ export type NoThrowCase = {
  * `ToString` rejects outright per ECMA-262 §7.1.17). A guard that coerces before it validates
  * turns invalid input into a thrown `TypeError` instead of the sentinel.
  */
-/** A proxy whose every trap throws: hostile to reads, key enumeration and `Array.isArray` alike. */
-export function hostileProxy(): unknown {
-  const trap = (): never => {
-    throw new TypeError("hostile proxy");
-  };
-  return new Proxy(
-    {},
-    {
-      get: trap,
-      has: trap,
-      ownKeys: trap,
-      getOwnPropertyDescriptor: trap,
-      getPrototypeOf: trap,
-    },
-  );
-}
-
-/** A revoked proxy: every internal method throws, including the ones a `typeof` guard cannot see. */
-export function revokedProxy(): unknown {
-  const { proxy, revoke } = Proxy.revocable({}, {});
-  revoke();
-  return proxy;
-}
-
 const GARBAGE: [string, unknown][] = [
   ["null", null],
   ["undefined", undefined],
@@ -132,17 +101,17 @@ const GARBAGE: [string, unknown][] = [
   ["revoked Proxy", revokedProxy()],
 ];
 
-const SOURCE_ROOT = path.resolve(import.meta.dirname, "..");
+/** Every non-test source file of the package, as `[package-relative path, text]`. */
+function libraryFiles(): [string, string][] {
+  return [...sourceTree("src")].filter(
+    ([file]) => file.endsWith(".ts") && !file.endsWith(".test.ts"),
+  );
+}
 
 /** Right-hand sides of every named type in the source tree (`interface` maps to an object literal). */
 function namedTypes(): Map<string, string> {
   const types = new Map<string, string>();
-  const files = readdirSync(SOURCE_ROOT, {
-    recursive: true,
-    encoding: "utf8",
-  }).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"));
-  for (const file of files) {
-    const source = readFileSync(path.join(SOURCE_ROOT, file), "utf8");
+  for (const [, source] of libraryFiles()) {
     for (const match of source.matchAll(/^(?:export )?interface (\w+)/gm)) {
       types.set(match[1], "{}");
     }
@@ -259,7 +228,12 @@ function returnTypeLength(rest: string): number {
 }
 
 function readSignature(entry: CorpusEntry): Signature {
-  const source = readFileSync(path.join(REPO_ROOT, entry.sourcePath), "utf8");
+  const source = sourceTree("src").get(
+    entry.sourcePath.replace(/^packages\/gmt\//, ""),
+  );
+  if (source === undefined) {
+    throw new Error(`noThrow: no source file for ${entry.name}`);
+  }
   const header = new RegExp(
     `export (?:function ${entry.name}\\s*|const ${entry.name}\\s*=\\s*)(<[^(]*>)?\\(`,
   ).exec(source);
@@ -292,12 +266,7 @@ function readSignature(entry: CorpusEntry): Signature {
  */
 function namedObjectTypes(): Map<string, string> {
   const bodies = new Map<string, string>();
-  const files = readdirSync(SOURCE_ROOT, {
-    recursive: true,
-    encoding: "utf8",
-  }).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"));
-  for (const file of files) {
-    const source = readFileSync(path.join(SOURCE_ROOT, file), "utf8");
+  for (const [, source] of libraryFiles()) {
     for (const match of source.matchAll(
       /^(?:export )?interface (\w+)(?:<[^{]*?>)?(?:\s+extends\s+([^{]+?))?\s*\{/gm,
     )) {
@@ -458,7 +427,9 @@ function garbageCalls(
 
 function loadCorpus(): CorpusEntry[] {
   return (
-    JSON.parse(readFileSync(CORPUS_PATH, "utf8")) as CorpusEntry[]
+    JSON.parse(
+      repoFile("apps/dox/src/generated/reference/gmt-corpus.json"),
+    ) as CorpusEntry[]
   ).filter((entry) => entry.kind === "function");
 }
 
@@ -518,7 +489,7 @@ export function optionsCases(): OptionsCase[] {
     const fn = exports[entry.name] as (...args: unknown[]) => unknown;
     const valid = (args: unknown[]) => {
       try {
-        return !isDeepStrictEqual(fn(...args), sentinel.value);
+        return !deepEqual(fn(...args), sentinel.value);
       } catch {
         return false;
       }
@@ -666,7 +637,7 @@ export function noThrowFailures(testCase: NoThrowCase): string[] {
       missingRequired &&
       sentinel.known &&
       !DOCUMENTED_DEFAULT_RESULT.has(testCase.name) &&
-      !isDeepStrictEqual(result, sentinel.value)
+      !deepEqual(result, sentinel.value)
     ) {
       failures.push(
         `${label}: returned ${show(result)}, expected the sentinel ${show(sentinel.value)}`,

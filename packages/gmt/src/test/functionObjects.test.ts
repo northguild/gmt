@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from "node:util";
+import { deepEqual } from "./deepEqual";
 import {
   addDate,
   addDateTime,
@@ -143,9 +143,7 @@ describe("an Object argument that is a function is read as the object it is", ()
   `("$name reads a function as the object", ({ call }) => {
     const plain = (call as (w: Wrap) => unknown)(asIs);
     expect(
-      [null, "", false, []].some((sentinel) =>
-        isDeepStrictEqual(plain, sentinel),
-      ),
+      [null, "", false, []].some((sentinel) => deepEqual(plain, sentinel)),
     ).toBe(false);
     expect((call as (w: Wrap) => unknown)(asFunction)).toEqual(plain);
   });

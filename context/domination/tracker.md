@@ -55,25 +55,25 @@ adding or removing a `Cut` is an owner decision; nothing generates this column.
 **Where the cuts sit, and why.** A release ships a whole capability someone can adopt, usually the
 end of a realm, and never more than about seven stories, so the docs site is never far ahead of
 npm. A Core primitive ships with the realm that first uses it. The second Core round is the
-exception: it ships as two Core releases of its own, ahead of the remaining realms.
+exception: it ships as one release of its own, with `MAR-16`, `SPA-48` and the `Position` type,
+ahead of the remaining realms.
 
-| Cut after     | Ships                                        | Why here                                                                                                 |
-| ------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| INT-58 (#11)  | TRAN-8, INT-12, INT-58                       | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete     |
-| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77   | The rest of the transport primitives, with operating hours                                               |
-| CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76             | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on         |
-| CORE-83 (#28) | CORE-81, CORE-86, CORE-87, CORE-80 … CORE-83 | The site on its domain, the corpus exported, the `Temporal` seam, the native suite, the stored-time audit |
-| CORE-85 (#33) | CORE-56, CORE-54, CORE-84, CORE-85           | The second Core round: identifiers, holiday rules, recurrence and cron, human durations                  |
-| MAR-59 (#38)  | CORE-79, MAR-17 … MAR-19, MAR-59             | Maritime complete, laytime included                                                                      |
-| AV-64 (#43)   | AV-25 … AV-28, AV-64                         | Aviation complete                                                                                        |
-| RAI-24 (#46)  | RAI-22 … RAI-24                              | Rail complete; Phase 2 done                                                                              |
-| IOT-66 (#51)  | IOT-29 … IOT-32, IOT-66                      | IoT complete                                                                                             |
-| HLTH-39 (#58) | HLTH-33 … HLTH-39                            | The clinical date and time foundations                                                                   |
-| HLTH-68 (#60) | HLTH-67, HLTH-68                             | Immunisation and adherence                                                                               |
-| FIN-45 (#66)  | FIN-40 … FIN-45                              | Sessions, day counts, settlement, tenors, 24/7 markets                                                   |
-| FIN-73 (#69)  | FIN-71 … FIN-73                              | Schedules, RFR conventions, message timestamps                                                           |
-| SPA-74 (#73)  | SPA-46 … SPA-49, SPA-74                      | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                            |
-| SPA-75 (#78)  | SPA-50 … SPA-53, SPA-75                      | UT1, mission clocks, CCSDS, Mars time, solar events                                                      |
+| Cut after     | Ships                                            | Why here                                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| INT-58 (#11)  | TRAN-8, INT-12, INT-58                           | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete                                                                                                              |
+| TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77       | The rest of the transport primitives, with operating hours                                                                                                                                                        |
+| CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76                 | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on                                                                                                                  |
+| CORE-79 (#34) | MAR-16 … CORE-79 (#21–#34); CORE-88 only if Done | GNSS time and leap seconds, then the second Core round: the site on its domain, the `Temporal` seam, the native suite, stored times, identifiers, holiday rules, recurrence and cron, human durations, `Position` |
+| MAR-59 (#38)  | MAR-17 … MAR-19, MAR-59                          | Maritime complete, laytime included                                                                                                                                                                               |
+| AV-64 (#43)   | AV-25 … AV-28, AV-64                             | Aviation complete                                                                                                                                                                                                 |
+| RAI-24 (#46)  | RAI-22 … RAI-24                                  | Rail complete; Phase 2 done                                                                                                                                                                                       |
+| IOT-66 (#51)  | IOT-29 … IOT-32, IOT-66                          | IoT complete                                                                                                                                                                                                      |
+| HLTH-39 (#58) | HLTH-33 … HLTH-39                                | The clinical date and time foundations                                                                                                                                                                            |
+| HLTH-68 (#60) | HLTH-67, HLTH-68                                 | Immunisation and adherence                                                                                                                                                                                        |
+| FIN-45 (#66)  | FIN-40 … FIN-45                                  | Sessions, day counts, settlement, tenors, 24/7 markets                                                                                                                                                            |
+| FIN-73 (#69)  | FIN-71 … FIN-73                                  | Schedules, RFR conventions, message timestamps                                                                                                                                                                    |
+| SPA-74 (#73)  | SPA-46 … SPA-49, SPA-74                          | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                                                                                                                                     |
+| SPA-75 (#78)  | SPA-50 … SPA-53, SPA-75                          | UT1, mission clocks, CCSDS, Mars time, solar events                                                                                                                                                               |
 
 `CORE-88` is in no cut row: its Status is `Waiting` until the hosted server is live, and it ships
 with the first cut after that.
@@ -104,20 +104,20 @@ with the first cut after that.
 | 18 | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                       | #307  | 1.19.0  | Done        |
 | 19 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                       | #195  | 1.19.0  | Done        |
 | 20 | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                       | #283  | 1.19.0  | Done        |
-| 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
-| 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
+| 21 | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | —       | Done        |
+| 22 | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | —       | Done        |
 | 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
 | 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Done        |
 | 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Done        |
 | 26 | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | —       | Done        |
-| 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Not started |
+| 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Done        |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Done        |
 | 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | —                       | #329  | —       | Waiting     |
 | 30 | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
 | 31 | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |
 | 32 | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | CORE-54                 | #324  | —       | Not started |
-| 33 | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                       | #325  | Cut     | Not started |
-| 34 | CORE-79 | Core       | `Position` input type                                                               | —                       | #314  | —       | Not started |
+| 33 | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                       | #325  | —       | Not started |
+| 34 | CORE-79 | Core       | `Position` input type                                                               | —                       | #314  | Cut     | Not started |
 | 35 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                       | #198  | —       | Not started |
 | 36 | MAR-18  | Maritime   | Ship's time, clock changes, zone<br>descriptions, DTG, date line<br>crossing        | CORE-79                 | #199  | —       | Not started |
 | 37 | MAR-19  | Maritime   | Laytime, laycan, NOR, BIMCO 2013<br>definitions, laytime statement                  | —                       | #200  | —       | Not started |
@@ -267,11 +267,11 @@ Highest commercial value and the thinnest coverage in the original plan.
   Neither adds a function. After them, a later story's URLs in code go through `withBase` and
   the dist guard, and its corpus entries land in the exported file; content links stay base-less.
 - **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium and Firefox, weekly;
-  and why a stored zoned time no longer resolves. With the three above, one release.
+  and why a stored zoned time no longer resolves.
 - **CORE-88** — the hosted server linked from the READMEs and the docs. Its Status is `Waiting`
   until the server, built in a repo outside this one, is live; it ships with the first cut after.
 - **CORE-56, CORE-54, CORE-84, CORE-85** — time-ordered identifiers, holiday rules, recurrence
-  and cron in a zone, and human duration strings: the second Core release. `CORE-54` comes
+  and cron in a zone, and human duration strings. `CORE-54` comes
   before `CORE-84`, whose ordinal `BYDAY` uses it, and before `AV-26`'s season boundaries.
 - **CORE-79, MAR-17 … MAR-19, MAR-59** — the `Position` type, then AIS, ship's time, laytime and
   NMEA.

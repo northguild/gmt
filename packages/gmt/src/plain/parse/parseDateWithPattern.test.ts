@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
 import { getLocaleWeekdayNames } from "../locale/getLocaleWeekdayNames";
 import { parseDateWithPattern } from "./parseDateWithPattern";
