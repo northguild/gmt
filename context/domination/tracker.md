@@ -109,10 +109,10 @@ with the first cut after that.
 | 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
 | 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Done        |
 | 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Done        |
-| 26 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Not started |
+| 26 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Done        |
 | 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Not started |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |
-| 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | CORE-87                 | #329  | —       | Waiting     |
+| 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | —                       | #329  | —       | Waiting     |
 | 30 | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
 | 31 | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |
 | 32 | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | CORE-54                 | #324  | —       | Not started |
