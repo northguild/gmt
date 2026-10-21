@@ -1,26 +1,27 @@
+import type { MockedFunction } from "vitest";
 import {
   battleTestLeapYearUnix,
   battleTestLeapYearUnixSeconds,
 } from "../../test";
 import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { parseDayFromUnix } from "./parseDayFromUnix";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 describe("parseDayFromUnix", () => {
   const systemTime = "2024-02-29T00:00:00.000Z";
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(systemTime);
 
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
     vi.useRealTimers();
   });
 
@@ -89,5 +90,24 @@ describe("parseDayFromUnix with a blank epoch string", () => {
 describe("parseDayFromUnix invalid-input @example", () => {
   it('returns "" for parseDayFromUnix("")', () => {
     expect(parseDayFromUnix("")).toBe("");
+  });
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
   });
 });

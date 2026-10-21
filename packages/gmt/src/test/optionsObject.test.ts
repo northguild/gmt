@@ -16,7 +16,7 @@
  *   `fractionalSecondDigits`, `timeZoneName`, `style` and `timeStyle`). `numberingSystem` is the
  *   exception both engines make: `"null"` is a well-formed subtag, so it is accepted and ignored.
  */
-import { isDeepStrictEqual } from "node:util";
+import { deepEqual } from "./deepEqual";
 import {
   formatCalendar,
   formatCalendarUnix,
@@ -88,7 +88,7 @@ describe("options-object contract coverage", () => {
     "$name baseline call is not the sentinel, so a sentinel for bad options is meaningful",
     (testCase) => {
       expect(
-        isDeepStrictEqual(testCase.fn(...testCase.baseline), testCase.sentinel),
+        deepEqual(testCase.fn(...testCase.baseline), testCase.sentinel),
       ).toBe(false);
     },
   );
@@ -162,8 +162,8 @@ describe("an options bag that is a function is read as the object it is", () => 
     "$name accepts a function carrying the baseline options as it accepts the object",
     (testCase) => {
       const { object, fn } = asFunction(testCase);
-      expect(isDeepStrictEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
-        isDeepStrictEqual(callWith(testCase, object), testCase.sentinel),
+      expect(deepEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
+        deepEqual(callWith(testCase, object), testCase.sentinel),
       );
     },
   );
@@ -304,9 +304,9 @@ describe("option members: an explicit null is a value to validate, not an omissi
       const disagreed: string[] = [];
       for (const member of testCase.members) {
         const bogus = callWith(testCase, { [member]: "zzbogus" });
-        if (!isDeepStrictEqual(bogus, testCase.sentinel)) continue;
+        if (!deepEqual(bogus, testCase.sentinel)) continue;
         const explicitNull = callWith(testCase, { [member]: null });
-        if (isDeepStrictEqual(explicitNull, testCase.sentinel)) continue;
+        if (deepEqual(explicitNull, testCase.sentinel)) continue;
         disagreed.push(`${member}: null gave ${show(explicitNull)}`);
       }
       expect(disagreed).toEqual([]);
@@ -470,7 +470,7 @@ describe("option members: each is read once and converted once per call", () => 
           },
         },
       }),
-      (result) => !isDeepStrictEqual(result, testCase.sentinel),
+      (result) => !deepEqual(result, testCase.sentinel),
     );
   }
 
@@ -502,5 +502,157 @@ describe("option members: each is read once and converted once per call", () => 
         );
       expect(repeated.join("; ")).toBe("");
     },
+  );
+});
+
+describe("option members given as objects", () => {
+  // GetOption converts the value it read: ToString for a string option, ToNumber for a number
+  // option. So `new String("floor")` is "floor" to Temporal and to Intl. A function may accept
+  // only primitives and return its sentinel for an object, but it must never give a third answer:
+  // a branch that compares the object itself with `===` or `Set#has` would skip the right branch
+  // and still return a result.
+  //
+  // A member's branch can depend on another member (a mode on GMT's own day-rounding path, a
+  // style only within a format), so each member is wrapped with every other member set to each
+  // value it accepts.
+  //
+  // A boolean option is read with ToBoolean, and every object is `true`, so a wrapped `0` is meant
+  // to differ from `0`. Those members are left out.
+  const TO_BOOLEAN = new Set([
+    "hour12",
+    "includeTimeZoneName",
+    "inclusive",
+    "inclusiveEnd",
+    "inclusiveStart",
+    "round",
+    "zero",
+  ]);
+  const VALUES: unknown[] = [
+    "x",
+    0,
+    2,
+    3,
+    15,
+    "compatible",
+    "later",
+    "earlier",
+    "reject",
+    "use",
+    "prefer",
+    "ignore",
+    "constrain",
+    "year",
+    "month",
+    "week",
+    "day",
+    "days",
+    "hour",
+    "minute",
+    "second",
+    "nanosecond",
+    "short",
+    "long",
+    "full",
+    "medium",
+    "narrow",
+    "auto",
+    "always",
+    "numeric",
+    "trunc",
+    "ceil",
+    "floor",
+    "expand",
+    "halfExpand",
+    "halfEven",
+    "halfTrunc",
+    "monday",
+    "sunday",
+    "seconds",
+    "milliseconds",
+    "UTC",
+    "America/New_York",
+    "1904",
+    "discharged",
+    "gregory",
+    "hebrew",
+    "latn",
+    "h23",
+    "h12",
+    "longOffset",
+    "shortGeneric",
+  ];
+
+  function wrap(value: unknown): object {
+    return {
+      toString: () => String(value),
+      valueOf: () => value,
+    };
+  }
+
+  /** Each `member` set to a value the call accepts, the other members as in the baseline. */
+  function accepted(
+    testCase: OptionsCase,
+    others: Record<string, unknown>,
+    member: string,
+  ): unknown[] {
+    const own = member in others ? [others[member]] : [];
+    return [...own, ...VALUES].filter(
+      (value) =>
+        !deepEqual(
+          callWith(testCase, { ...others, [member]: value }),
+          testCase.sentinel,
+        ),
+    );
+  }
+
+  it.each(CASES.filter(({ readsClock }) => !readsClock))(
+    "$name gives the plain answer or the sentinel for a member given as an object",
+    (testCase) => {
+      const baseline = testCase.baseline[testCase.position];
+      const others: Record<string, unknown> =
+        baseline !== null && typeof baseline === "object"
+          ? { ...baseline }
+          : {};
+      const members = testCase.members.filter(
+        (member) => !TO_BOOLEAN.has(member),
+      );
+      const valid = new Map(
+        members.map((member) => [member, accepted(testCase, others, member)]),
+      );
+      // The baseline, then the baseline with one member changed. Wrapping that same member would
+      // overwrite the change, so each context names the member it set.
+      const contexts: { set?: string; options: Record<string, unknown> }[] = [
+        { options: others },
+        ...members.flatMap((set) =>
+          (valid.get(set) ?? []).map((value) => ({
+            set,
+            options: { ...others, [set]: value },
+          })),
+        ),
+      ];
+      const wrong = new Set<string>();
+      for (const { set, options } of contexts) {
+        for (const member of members) {
+          if (member === set) continue;
+          for (const value of valid.get(member) ?? []) {
+            const plain = callWith(testCase, { ...options, [member]: value });
+            if (deepEqual(plain, testCase.sentinel)) continue;
+            const wrapped = callWith(testCase, {
+              ...options,
+              [member]: wrap(value),
+            });
+            if (
+              !deepEqual(wrapped, plain) &&
+              !deepEqual(wrapped, testCase.sentinel)
+            ) {
+              wrong.add(`${member}: ${String(value)}`);
+            }
+          }
+        }
+      }
+      expect([...wrong].join("; ")).toBe("");
+    },
+    // The formatters with many members make the most calls: up to 2.3 s locally, over 5 s on CI.
+    30_000,
   );
 });

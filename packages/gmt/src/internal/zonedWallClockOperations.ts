@@ -4,6 +4,7 @@ import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import {
   calendarDateAdd,
   isCalendarArithmeticCompatNeeded,
+  isDayRoundClampCompatNeeded,
   isTransitionSearchCompatNeeded,
 } from "./temporalCompat";
 import {
@@ -859,7 +860,14 @@ function roundToDayFromOwnStartOfDay(
     zoned.timeZoneId,
     date.add({ days: 1 }),
   );
-  const progress = zoned.epochNanoseconds - start;
+  // An instant in the second piece of a date that starts twice lies at or past `end`. The spec
+  // step is "Set thisNs to min(thisNs, endNs - 1)" in Temporal.ZonedDateTime.prototype.round
+  // (tc39/ecma262#3966, commit 5f44331e0a11; test262
+  // intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js). It stays when the
+  // probe-gated routing is removed.
+  const thisNs =
+    zoned.epochNanoseconds < end ? zoned.epochNanoseconds : end - 1n;
+  const progress = thisNs - start;
 
   return inZoneOf(
     start + roundDayProgress(progress, end - start, roundingMode),
@@ -908,6 +916,36 @@ function roundAtEdge(
 }
 
 /**
+ * Convert `roundingIncrement` and `roundingMode` once, in the order `ZonedDateTime#round` reads them.
+ *
+ * - Temporal GetOption converts the value it reads: ToNumber for `roundingIncrement`, ToString for
+ *   `roundingMode`. The steps after this compare the mode with `===`, so a mode given as an object
+ *   (`new String("floor")`) must reach them as the plain string, or it falls through to another
+ *   mode's branch.
+ * - The unary plus and the template literal are ToNumber and ToString exactly, so a symbol or a
+ *   bigint throws the TypeError Temporal throws. `undefined` stays `undefined` (the default).
+ * - `smallestUnit` is left as it is: both callers pass a unit they have already checked is one of
+ *   the unit strings.
+ *
+ * @param options the caller's options, each member read once
+ * @returns the same options, increment and mode as primitives
+ */
+function convertRoundTo(options: ZonedRoundTo): ZonedRoundTo {
+  const { roundingIncrement, roundingMode, smallestUnit } = options;
+  const increment =
+    roundingIncrement === undefined ? undefined : +roundingIncrement;
+  const mode =
+    roundingMode === undefined
+      ? undefined
+      : (`${roundingMode}` as Temporal.RoundingMode);
+  return {
+    smallestUnit,
+    ...(increment === undefined ? {} : { roundingIncrement: increment }),
+    ...(mode === undefined ? {} : { roundingMode: mode }),
+  };
+}
+
+/**
  * `ZonedDateTime#round`, correct at the range limits and, by day, before 1847.
  *
  * @param zoned the value to round
@@ -916,16 +954,29 @@ function roundAtEdge(
  */
 export function roundZonedDateTime(
   zoned: Temporal.ZonedDateTime,
-  roundTo: ZonedRoundTo,
+  options: ZonedRoundTo,
 ): Temporal.ZonedDateTime {
-  if (isDayUnit(roundTo.smallestUnit) && needsOwnDayBounds(zoned)) {
+  const roundTo = convertRoundTo(options);
+  if (
+    isDayUnit(roundTo.smallestUnit) &&
+    isNamedTimeZone(zoned.timeZoneId) &&
+    (isDayRoundClampCompatNeeded() || needsOwnDayBounds(zoned))
+  ) {
     // Validates the options exactly as ZonedDateTime#round does, throwing where it throws.
     zoned.toPlainDateTime().round(roundTo);
-    return roundToDayFromOwnStartOfDay(
-      zoned,
-      zoned.toPlainDate(),
-      roundTo.roundingMode ?? "halfExpand",
-    );
+    try {
+      return roundToDayFromOwnStartOfDay(
+        zoned,
+        zoned.toPlainDate(),
+        roundTo.roundingMode ?? "halfExpand",
+      );
+    } catch (error) {
+      // Only at the range limits, where the next date is not representable, does the path
+      // below answer; any other error propagates.
+      if (!isAtRangeEdge(zoned.timeZoneId, zoned.toPlainDate())) {
+        throw error;
+      }
+    }
   }
 
   try {

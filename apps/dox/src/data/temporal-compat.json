@@ -94,6 +94,14 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D14"],
+      "title": "D14 — ZonedDateTime#round to the day does not clamp an instant in the second piece of a date that starts twice (zonedWallClockOperations.ts roundZonedDateTime)",
+      "trigger": "a js-temporal release that ports the day-round clamp of tc39/ecma262#3966 (commit 5f44331e0a11) (tc39/proposal-temporal#3312; reference polyfill commit 59a51ea9d4); Node 26's V8 throws RangeError on the probe. Expected value: test262 intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

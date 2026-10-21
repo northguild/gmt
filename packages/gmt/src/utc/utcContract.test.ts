@@ -8,7 +8,7 @@
  * - An IANA name or a UTC offset → that zone.
  * - Anything else → the sentinel (ECMA-402 and Temporal throw RangeError for an unknown zone).
  */
-import { isDeepStrictEqual } from "node:util";
+import { deepEqual } from "../test/deepEqual";
 import { mockSystemTimeZone } from "../test";
 import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
 import {
@@ -208,7 +208,7 @@ describe("utc/ timeZone local on the host's own zone", () => {
 
       // A valid host zone gives a real answer; an invalid one gives the sentinel. Either way
       // "local" is the host zone.
-      expect(isDeepStrictEqual(system, sentinel)).toBe(!hostZoneIsValid);
+      expect(deepEqual(system, sentinel)).toBe(!hostZoneIsValid);
       expect(call({ timeZone: "local" })).toEqual(system);
     },
   );

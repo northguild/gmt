@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { scheduleDelivery } from "../../transport/calculate/scheduleDelivery";
 import { multimodalETA } from "./multimodalETA";
 

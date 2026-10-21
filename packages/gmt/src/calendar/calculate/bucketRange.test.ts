@@ -491,8 +491,8 @@ describe("bucketRange over the cap without walking it", () => {
     ${"1000-01-01T00:00:00Z"}    | ${"2000-01-01T00:00:00Z"} | ${"month"} | ${"America/New_York"} | ${"1,000 years of months"}
   `(
     "returns [] for $unit buckets from $start to $end in $timeZone without walking them ($why)",
-    ({ start, end, unit, timeZone }) => {
-      const run = runInBoundedChild([
+    async ({ start, end, unit, timeZone }) => {
+      const run = await runInBoundedChild([
         `gmt.bucketRange(${JSON.stringify(start)}, ${JSON.stringify(end)}, ${JSON.stringify(unit)}, ${JSON.stringify(timeZone)})`,
       ]);
       expect(

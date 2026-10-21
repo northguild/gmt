@@ -1,7 +1,7 @@
-import * as getLocaleEraNamesModule from "../plain/locale/getLocaleEraNames";
-import * as getLocaleMeridiemsModule from "../plain/locale/getLocaleMeridiems";
-import * as getLocaleMonthNamesModule from "../plain/locale/getLocaleMonthNames";
-import * as getLocaleWeekdayNamesModule from "../plain/locale/getLocaleWeekdayNames";
+import { getLocaleEraNames } from "../plain/locale/getLocaleEraNames";
+import { getLocaleMeridiems } from "../plain/locale/getLocaleMeridiems";
+import { getLocaleMonthNames } from "../plain/locale/getLocaleMonthNames";
+import { getLocaleWeekdayNames } from "../plain/locale/getLocaleWeekdayNames";
 import { MustTestLocales } from "../test/localeMatrix";
 import {
   DATE_PATTERN_FIELDS,
@@ -9,6 +9,11 @@ import {
   parseValueWithPattern,
   TIME_PATTERN_FIELDS,
 } from "./patternToken";
+
+vi.mock("../plain/locale/getLocaleEraNames", { spy: true });
+vi.mock("../plain/locale/getLocaleMeridiems", { spy: true });
+vi.mock("../plain/locale/getLocaleMonthNames", { spy: true });
+vi.mock("../plain/locale/getLocaleWeekdayNames", { spy: true });
 
 describe("parseValueWithPattern", () => {
   describe("field sets", () => {
@@ -150,7 +155,7 @@ describe("parseValueWithPattern", () => {
   describe("meridiem/era label coincidence guard", () => {
     it("does not treat the match as PM when a locale's AM and PM labels are identical", () => {
       const spy = vi
-        .spyOn(getLocaleMeridiemsModule, "getLocaleMeridiems")
+        .mocked(getLocaleMeridiems)
         .mockReturnValue(["Period", "Period"]);
       try {
         expect(
@@ -162,14 +167,12 @@ describe("parseValueWithPattern", () => {
           ),
         ).toEqual({ hour: 2, minute: 30, second: 45 });
       } finally {
-        spy.mockRestore();
+        spy.mockReset();
       }
     });
 
     it("does not treat the match as BCE when a locale's BCE and CE labels are identical", () => {
-      const spy = vi
-        .spyOn(getLocaleEraNamesModule, "getLocaleEraNames")
-        .mockReturnValue(["Era", "Era"]);
+      const spy = vi.mocked(getLocaleEraNames).mockReturnValue(["Era", "Era"]);
       try {
         expect(
           parseValueWithPattern(
@@ -180,7 +183,7 @@ describe("parseValueWithPattern", () => {
           ),
         ).toEqual({ year: 44, month: 1, day: 1 });
       } finally {
-        spy.mockRestore();
+        spy.mockReset();
       }
     });
   });
@@ -206,11 +209,13 @@ describe("parseValueWithPattern", () => {
       "looks up $token names in en when the locale is $locale",
       ({ token, locale }: { token: string; locale: undefined | [] }) => {
         const spies = [
-          vi.spyOn(getLocaleMonthNamesModule, "getLocaleMonthNames"),
-          vi.spyOn(getLocaleWeekdayNamesModule, "getLocaleWeekdayNames"),
-          vi.spyOn(getLocaleMeridiemsModule, "getLocaleMeridiems"),
-          vi.spyOn(getLocaleEraNamesModule, "getLocaleEraNames"),
+          vi.mocked(getLocaleMonthNames),
+          vi.mocked(getLocaleWeekdayNames),
+          vi.mocked(getLocaleMeridiems),
+          vi.mocked(getLocaleEraNames),
         ];
+        // The spies are file-wide, so calls from earlier rows are still on them.
+        for (const spy of spies) spy.mockClear();
         try {
           parseValueWithPattern("x", token, locale, DATE_TIME_PATTERN_FIELDS);
           const locales = spies.flatMap((spy) =>
@@ -218,7 +223,7 @@ describe("parseValueWithPattern", () => {
           );
           expect(locales).toEqual(["en"]);
         } finally {
-          for (const spy of spies) spy.mockRestore();
+          for (const spy of spies) spy.mockReset();
         }
       },
     );
@@ -361,5 +366,22 @@ describe("parseValueWithPattern", () => {
       ).toBeNull();
       expect(reads).toBe(0);
     });
+  });
+});
+
+// The four locale lookups are spies for the whole file; Vitest restores only the spies it
+// created itself, so a row that replaces one must reset it explicitly.
+describe("a locale lookup after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getLocaleMonthNames).mockReset();
+  });
+
+  it("returns the mocked names while a row replaces them", () => {
+    vi.mocked(getLocaleMonthNames).mockReturnValue(["Period"]);
+    expect(getLocaleMonthNames("en")).toEqual(["Period"]);
+  });
+
+  it("returns the real names again in the next row", () => {
+    expect(getLocaleMonthNames("en")[0]).toBe("January");
   });
 });

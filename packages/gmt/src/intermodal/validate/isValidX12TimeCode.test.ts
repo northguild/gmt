@@ -1,4 +1,4 @@
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type { X12TimeCode } from "../../types/edi";
 import { x12TimeCodeOffset } from "../parse/x12TimeCodeOffset";
 import { x12TimeCodeZone } from "../parse/x12TimeCodeZone";

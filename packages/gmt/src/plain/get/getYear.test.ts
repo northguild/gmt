@@ -1,25 +1,26 @@
+import type { MockedFunction } from "vitest";
 import { Temporal } from "../../internal/temporal";
 import { isValidDate } from "../validate/isValidDate";
 import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { getYear } from "./getYear";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 describe("getYear", () => {
   const systemTime = "2024-02-29T00:00:00.000Z";
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(systemTime);
 
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
     vi.useRealTimers();
   });
 
@@ -58,6 +59,7 @@ describe("getYear", () => {
 // `<year>-06-15` is the date `Temporal.PlainDate` writes and `isValidDate` reads.
 describe("getYear with the clock outside years 0000 to 9999", () => {
   afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
     vi.useRealTimers();
   });
 
@@ -72,9 +74,7 @@ describe("getYear with the clock outside years 0000 to 9999", () => {
   `("returns $expected when the clock reads $clock", ({ clock, expected }) => {
     vi.useFakeTimers();
     vi.setSystemTime(Temporal.Instant.from(clock).epochMilliseconds);
-    vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
-      "UTC",
-    );
+    vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
 
     const year = getYear();
 
@@ -86,5 +86,24 @@ describe("getYear with the clock outside years 0000 to 9999", () => {
         .toString(),
     ).toBe(`${year}-06-15`);
     expect(isValidDate(`${year}-06-15`)).toBe(true);
+  });
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
   });
 });

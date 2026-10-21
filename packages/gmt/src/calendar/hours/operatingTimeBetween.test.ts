@@ -5,7 +5,7 @@ import {
   mockTemporalZonedDateTimeOffsetThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type { Interval, OperatingSchedule } from "../../types";
 import { operatingIntervals } from "./operatingIntervals";
 import { operatingTimeBetween } from "./operatingTimeBetween";

@@ -3,7 +3,7 @@ import {
   EDIFACT_FORMAT_KINDS,
   NOT_EDIFACT_FORMATS,
 } from "../../test/ediCodes";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type {
   EdifactDateFormat,
   EdifactDatePeriodFormat,

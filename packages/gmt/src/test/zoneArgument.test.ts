@@ -14,8 +14,7 @@
  * The calls are in `./zoneArgumentCalls.ts`. Where a block compares two results, the offset it
  * passes comes from plain Temporal, never from the library.
  */
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import baselineJson from "./zoneArgumentBaseline.json";
 import { Temporal } from "../internal/temporal";
 import * as gmt from "../index";
 import { battleTestTimeZones } from "./timeZoneMatrix";
@@ -176,12 +175,7 @@ interface Baseline {
 // What every function returned before stored offsets were read, recorded from the published
 // build by a script that ran the same call table. It is the expectation, never regenerated from
 // the code under test.
-const baseline = JSON.parse(
-  readFileSync(
-    path.join(import.meta.dirname, "zoneArgumentBaseline.json"),
-    "utf8",
-  ),
-) as Baseline;
+const baseline = baselineJson as Baseline;
 
 /** Pin the clock for the `getZoned…` readers. */
 function pinClock(at: string): void {

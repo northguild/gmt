@@ -124,6 +124,84 @@ const cleanCheck = () =>
     workaround("D10", "guard", { guard: { ...GUARD, lapsed: false } }),
   ]);
 
+const NATIVE_LEGS = ["node", "chromium", "firefox"] as const;
+const ENGINES = {
+  node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
+  chromium: "Chromium 153.0.8010.12",
+  firefox: "Firefox 155.0",
+};
+
+interface NativeOptions {
+  untagged?: number;
+  hostUntagged?: number;
+  staleTags?: unknown[];
+  hostTagged?: { group: string; count: number; reason: string }[];
+  untaggedTruncated?: boolean;
+  message?: string;
+}
+
+const nativeRow = (leg: string, n: number, message = `message ${n}`) => ({
+  file: `src/${leg}/file${n}.test.ts`,
+  test: `${leg} test ${n}`,
+  message,
+});
+
+/** A native-suite verdict that ran; every count is derived from the rows given. */
+const native = (
+  leg: (typeof NATIVE_LEGS)[number],
+  {
+    untagged = 0,
+    hostUntagged = 0,
+    staleTags = [],
+    hostTagged = [],
+    untaggedTruncated = false,
+    message,
+  }: NativeOptions = {},
+) => ({
+  source: `native-suite-${leg}`,
+  status: "ran" as const,
+  leg,
+  engine: ENGINES[leg],
+  runtime: { node: "26.10.0", vitest: "4.1.4", playwright: null },
+  counts: {
+    files: 828,
+    tests: 61613,
+    passed: 61000,
+    tagged: 0,
+    untagged,
+    hostTagged: hostTagged.reduce((n, g) => n + g.count, 0),
+    hostUntagged,
+    staleTags: staleTags.length,
+  },
+  tagged: [],
+  untagged: Array.from({ length: Math.min(untagged, 50) }, (_, i) =>
+    nativeRow(leg, i + 1, message),
+  ),
+  untaggedTruncated: untaggedTruncated || untagged > 50,
+  hostTagged,
+  hostUntagged: Array.from({ length: Math.min(hostUntagged, 50) }, (_, i) =>
+    nativeRow(leg, i + 1, message),
+  ),
+  hostUntaggedTruncated: hostUntagged > 50,
+  staleTags,
+});
+
+/** The three legs, all clean. */
+const cleanNative = () =>
+  Object.fromEntries(
+    NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
+  );
+
+/** `verdicts` with three clean native legs added when it names no native leg at all. */
+const withNative = (verdicts: unknown) => {
+  const given = verdicts as Record<string, unknown>;
+  return (
+    Object.keys(given).some((k) => k.startsWith("native-suite-"))
+      ? given
+      : { ...given, ...cleanNative() }
+  ) as never;
+};
+
 const issue = (number: number, body: string, labels = [CANARY_LABEL]) => ({
   number,
   body,
@@ -153,7 +231,7 @@ const removableD2 = () =>
   }) as never;
 
 const plan = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
-  planIssueActions(verdicts as never, open, ORACLE_CONTEXT);
+  planIssueActions(withNative(verdicts), open, ORACLE_CONTEXT);
 
 const rowsSection = (body: string) => {
   const start = body.indexOf("### Rows");
@@ -166,7 +244,13 @@ describe("constants and marker", () => {
     expect(CANARY_LABEL).toBe("canary");
     expect(DRY_RUN_LABEL).toBe("canary-dry-run");
     expect(WORKFLOW_SOURCES).toEqual({
-      "temporal-oracle": ["temporal-compat-check", "temporal-oracle"],
+      "temporal-oracle": [
+        "temporal-compat-check",
+        "temporal-oracle",
+        "native-suite-node",
+        "native-suite-chromium",
+        "native-suite-firefox",
+      ],
       "leap-seconds": ["leap-seconds"],
     });
   });
@@ -566,10 +650,10 @@ describe("could not run", () => {
   it("comments with the same list while the finding persists", () => {
     const key = "temporal-oracle/could-not-run";
     const [action] = planIssueActions(
-      {
+      withNative({
         "temporal-compat-check": cleanCheck(),
         "temporal-oracle": null,
-      } as never,
+      }),
       [issue(12, `<!-- gmt-canary key="${key}" -->\nold`)],
       ORACLE_CONTEXT,
     );
@@ -1019,14 +1103,30 @@ describe("applyForce and forced findings", () => {
 });
 
 describe("findings", () => {
-  it("orders removable, mismatch, then could-not-run", () => {
+  it("orders removable, mismatch, native, then could-not-run", () => {
     const verdicts = {
       "temporal-compat-check": check([workaround("D2", "removable")]),
       "temporal-oracle": oracle(1),
+      "native-suite-node": native("node", {
+        untagged: 1,
+        hostUntagged: 1,
+        staleTags: [
+          { kind: "host", group: "old-group", reason: "Old reason." },
+        ],
+      }),
+      "native-suite-chromium": native("chromium"),
+      "native-suite-firefox": null,
     };
     expect(
       findings(verdicts as never, ORACLE_CONTEXT).map((f) => f.key),
-    ).toEqual([D2_KEY, "temporal-oracle/untagged-mismatch"]);
+    ).toEqual([
+      D2_KEY,
+      "temporal-oracle/untagged-mismatch",
+      "native-suite/untagged-failure",
+      "native-suite/untagged-host-failure",
+      "native-suite/stale-tag",
+      "temporal-oracle/could-not-run",
+    ]);
   });
 
   it("reads only the sources of its own workflow", () => {
@@ -1035,5 +1135,442 @@ describe("findings", () => {
         (f) => f.key,
       ),
     ).toEqual(["temporal-oracle/could-not-run"]);
+  });
+});
+
+/** The two fixed paragraphs, written out here word for word. */
+const TRIAGE =
+  "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
+const HOST =
+  "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
+
+const FAILURE_KEY = "native-suite/untagged-failure";
+const HOST_KEY = "native-suite/untagged-host-failure";
+const STALE_KEY = "native-suite/stale-tag";
+
+/** An oracle-clean verdict set with the given native legs (the others clean). */
+const withLegs = (legs: Partial<Record<string, unknown>>) =>
+  ({
+    "temporal-compat-check": cleanCheck(),
+    "temporal-oracle": oracle(),
+    ...cleanNative(),
+    ...Object.fromEntries(
+      Object.entries(legs).map(([leg, v]) => [`native-suite-${leg}`, v]),
+    ),
+  }) as never;
+
+const only = (verdicts: unknown, key: string) =>
+  findings(verdicts as never, ORACLE_CONTEXT).filter((f) => f.key === key);
+
+describe("native suite findings", () => {
+  it("all three legs ran with nothing untagged and nothing stale: no native finding", () => {
+    expect(plan(withLegs({}))).toEqual([]);
+  });
+
+  it("Chromium with 2 untagged rows: one finding naming Chromium only, one section", () => {
+    const actions = plan(
+      withLegs({ chromium: native("chromium", { untagged: 2 }) }),
+    );
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe(FAILURE_KEY);
+    expect(action.title).toBe(
+      "Native Temporal: GMT tests fail on Chromium 153",
+    );
+    expect(action.labels).toEqual(["canary", "bug"]);
+    expect(action.body.split("\n")[0]).toBe(
+      `<!-- gmt-canary key="${FAILURE_KEY}" -->`,
+    );
+    expect(action.body.match(/^### /gm)).toHaveLength(1);
+    expect(action.body).toContain(
+      "### Chromium 153.0.8010.12\n\n| file | test | message |",
+    );
+    expect(action.body).toContain(
+      "| `src/chromium/file1.test.ts` | `chromium test 1` | `message 1` |",
+    );
+    expect(action.body).toContain(
+      "| `src/chromium/file2.test.ts` | `chromium test 2` | `message 2` |",
+    );
+    expect(action.body).toContain(`\n\n${TRIAGE}\n\nRun: ${RUN}`);
+  });
+
+  it("two legs untagged: both sections, titled in leg order, one finding", () => {
+    const [finding] = findings(
+      withLegs({
+        chromium: native("chromium", { untagged: 1 }),
+        node: native("node", { untagged: 1 }),
+      }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.title).toBe(
+      "Native Temporal: GMT tests fail on Node 26, Chromium 153",
+    );
+    expect(finding.body.match(/^### /gm)).toHaveLength(2);
+    expect(finding.body.indexOf(`### ${ENGINES.node}`)).toBeLessThan(
+      finding.body.indexOf(`### ${ENGINES.chromium}`),
+    );
+  });
+
+  it("a truncated leg says first N of M", () => {
+    const [finding] = findings(
+      withLegs({ node: native("node", { untagged: 60 }) }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.body).toContain(`### ${ENGINES.node} (first 50 of 60)`);
+    expect(finding.body.match(/chromium test|node test \d+/g)).toHaveLength(50);
+  });
+
+  it("the comment holds the same tables and not the paragraph", () => {
+    const [finding] = findings(
+      withLegs({ firefox: native("firefox", { untagged: 1 }) }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.comment).toBe(
+      `### Firefox 155.0\n\n| file | test | message |\n| --- | --- | --- |\n| \`src/firefox/file1.test.ts\` | \`firefox test 1\` | \`message 1\` |\n\nRun: ${RUN}`,
+    );
+  });
+
+  it("a message with a pipe, a newline and a backtick stays inside its cell", () => {
+    const [finding] = findings(
+      withLegs({ node: native("node", { untagged: 1, message: "a|b\nc`d" }) }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.body).toContain("| `a\\|b c'd` |");
+  });
+
+  it("Firefox verdict missing: could-not-run lists native-suite-firefox with the no-verdict message", () => {
+    const verdicts = withLegs({}) as Record<string, unknown>;
+    delete verdicts["native-suite-firefox"];
+    const [finding] = findings(verdicts as never, ORACLE_CONTEXT);
+    expect(finding.key).toBe("temporal-oracle/could-not-run");
+    expect(finding.body).toContain(
+      "- **native-suite-firefox**: no verdict file: an earlier step or job failed",
+    );
+  });
+
+  it("Node leg could-not-run: could-not-run lists it with its message", () => {
+    const [finding] = findings(
+      withLegs({ node: couldNotRun("native-suite-node", "needs Node 26") }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.key).toBe("temporal-oracle/could-not-run");
+    expect(finding.body).toContain("- **native-suite-node**: needs Node 26");
+  });
+
+  it("an open issue carrying the marker gets a comment, not a new issue", () => {
+    const verdicts = withLegs({ node: native("node", { untagged: 1 }) });
+    const [action] = plan(verdicts, [
+      issue(70, `<!-- gmt-canary key="${FAILURE_KEY}" -->\nold`),
+    ]);
+    expect(action.kind).toBe("comment");
+    if (action.kind !== "comment") return;
+    expect(action.issue).toBe(70);
+    expect(action.key).toBe(FAILURE_KEY);
+  });
+
+  it("--force-native-failure with node ran: a dry-run finding on node with the synthetic row", () => {
+    const { verdicts, skipped } = applyForce(withLegs({}), {
+      nativeFailure: true,
+    });
+    expect(skipped).toEqual([]);
+    expect(
+      (verdicts["native-suite-node"] as { forced?: unknown }).forced,
+    ).toEqual({
+      nativeFailure: true,
+    });
+    const [finding] = findings(verdicts, ORACLE_CONTEXT);
+    expect(finding.key).toBe(`dry-run/${FAILURE_KEY}`);
+    expect(finding.title).toBe(
+      "[dry run] Native Temporal: GMT tests fail on Node 26",
+    );
+    expect(finding.labels).toEqual(["canary", "bug", "canary-dry-run"]);
+    expect(finding.body).toContain(
+      "**Dry run.** Forced by a manual dispatch (--force-native-failure); nothing here is a real finding. Close this issue once checked.",
+    );
+    expect(finding.body).toContain(
+      `### ${ENGINES.node}\n\n| file | test | message |\n| --- | --- | --- |\n| \`src/dry-run.test.ts\` | \`dry run: forced failure (no real test failed)\` | \`forced\` |`,
+    );
+    expect(finding.body).toContain(TRIAGE);
+  });
+
+  it("--force-native-failure forces the first leg that ran, in leg order", () => {
+    const { verdicts } = applyForce(
+      withLegs({ node: couldNotRun("native-suite-node", "x") }),
+      { nativeFailure: true },
+    );
+    expect(
+      (verdicts["native-suite-chromium"] as { forced?: unknown }).forced,
+    ).toEqual({
+      nativeFailure: true,
+    });
+    expect(
+      (verdicts["native-suite-node"] as { forced?: unknown }).forced,
+    ).toBeUndefined();
+  });
+
+  it("a forced run comes after a real untagged finding and never touches its key", () => {
+    const { verdicts } = applyForce(
+      withLegs({ chromium: native("chromium", { untagged: 1 }) }),
+      { nativeFailure: true },
+    );
+    expect(findings(verdicts, ORACLE_CONTEXT).map((f) => f.key)).toEqual([
+      FAILURE_KEY,
+      `dry-run/${FAILURE_KEY}`,
+    ]);
+  });
+
+  it("--force-native-failure with no leg run: skipped with the reason, could-not-run still filed", () => {
+    const input = {
+      "temporal-compat-check": cleanCheck(),
+      "temporal-oracle": oracle(),
+      "native-suite-node": couldNotRun("native-suite-node", "Node 24"),
+      "native-suite-chromium": null,
+      "native-suite-firefox": null,
+    };
+    const { verdicts, skipped } = applyForce(input as never, {
+      nativeFailure: true,
+    });
+    expect(skipped).toEqual([
+      {
+        flag: "--force-native-failure",
+        reason:
+          "no native-suite verdict ran, so there is nothing to force against",
+      },
+    ]);
+    expect(findings(verdicts, ORACLE_CONTEXT).map((f) => f.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+  });
+
+  it("applyForce leaves the input untouched when forcing a native failure", () => {
+    const input = withLegs({}) as Record<string, any>;
+    applyForce(input as never, { nativeFailure: true });
+    expect(input["native-suite-node"].forced).toBeUndefined();
+  });
+
+  it("a stale tag on node: the stale-tag finding with label canary only", () => {
+    const [finding] = findings(
+      withLegs({
+        node: native("node", {
+          staleTags: [
+            {
+              kind: "divergence",
+              file: "src/a.test.ts",
+              test: "a > b",
+              defect: "d14-day-rounding",
+            },
+          ],
+        }),
+      }),
+      ORACLE_CONTEXT,
+    );
+    expect(finding.key).toBe(STALE_KEY);
+    expect(finding.title).toBe("Native suite: known failures no longer fail");
+    expect(finding.labels).toEqual(["canary"]);
+    expect(finding.body).toContain(
+      "### Divergence rows\n\n| leg | file | test | defect |\n| --- | --- | --- | --- |\n| node | `src/a.test.ts` | `a > b` | d14-day-rounding |",
+    );
+    expect(finding.body).toContain(
+      "Remove each row from KNOWN_NATIVE_FAILURES and update its record in context/domination/js-temporal-polyfill-bugs.md.",
+    );
+    expect(finding.body).not.toContain("### Host groups");
+  });
+
+  it("a stale divergence row and a stale host group: one finding, both tables", () => {
+    const [finding, ...rest] = findings(
+      withLegs({
+        node: native("node", {
+          staleTags: [
+            {
+              kind: "divergence",
+              file: "src/a.test.ts",
+              test: "a > b",
+              defect: "d1",
+            },
+          ],
+        }),
+        chromium: native("chromium", {
+          staleTags: [
+            {
+              kind: "host",
+              group: "chromium-icelandic-locale-data",
+              reason: "Chromium ships no Icelandic data.",
+            },
+          ],
+        }),
+      }),
+      ORACLE_CONTEXT,
+    );
+    expect(rest).toEqual([]);
+    expect(finding.body).toContain("### Divergence rows");
+    expect(finding.body).toContain(
+      "### Host groups\n\n| leg | group | reason |\n| --- | --- | --- |\n| chromium | chromium-icelandic-locale-data | Chromium ships no Icelandic data. |",
+    );
+    expect(finding.body).toContain(
+      "Remove the group from KNOWN_HOST_FAILURES, or narrow its legs.",
+    );
+  });
+
+  it("Chromium with 3 host-untagged rows and none untagged: one host finding, labels canary, no divergence finding", () => {
+    const actions = plan(
+      withLegs({ chromium: native("chromium", { hostUntagged: 3 }) }),
+    );
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe(HOST_KEY);
+    expect(action.title).toBe(
+      "Native suite: tests fail on both engines in Chromium 153",
+    );
+    expect(action.labels).toEqual(["canary"]);
+    expect(action.body).toContain(
+      `### ${ENGINES.chromium}\n\n| file | test | message |`,
+    );
+    expect(action.body).toContain(`\n\n${HOST}\n\nRun: ${RUN}`);
+    expect(action.body).not.toContain(TRIAGE);
+  });
+
+  it("both kinds on one leg: two findings, two keys", () => {
+    const keys = findings(
+      withLegs({ node: native("node", { untagged: 1, hostUntagged: 1 }) }),
+      ORACLE_CONTEXT,
+    ).map((f) => f.key);
+    expect(keys).toEqual([FAILURE_KEY, HOST_KEY]);
+  });
+
+  it("host-untagged rows never appear in the divergence finding", () => {
+    const [failure] = only(
+      withLegs({ node: native("node", { untagged: 1, hostUntagged: 2 }) }),
+      FAILURE_KEY,
+    );
+    expect(failure.body).not.toContain("`src/node/file2.test.ts`");
+  });
+
+  it.each`
+    key
+    ${FAILURE_KEY}
+    ${HOST_KEY}
+  `(
+    "body size: 3 legs of 50 rows with 300-character messages stay under 65,536 for $key",
+    ({ key }) => {
+      const message = "m".repeat(300);
+      const options =
+        key === FAILURE_KEY
+          ? { untagged: 60, message }
+          : { hostUntagged: 60, message };
+      const [finding] = only(
+        withLegs({
+          node: native("node", options),
+          chromium: native("chromium", options),
+          firefox: native("firefox", options),
+        }),
+        key,
+      );
+      expect(finding.body.match(/m{300}/g)).toHaveLength(150);
+      expect(finding.body.length).toBeLessThan(65_536);
+      expect(finding.comment.length).toBeLessThan(65_536);
+    },
+  );
+
+  it.each`
+    key
+    ${FAILURE_KEY}
+    ${HOST_KEY}
+  `(
+    "body size: 3 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
+    ({ key }) => {
+      const longName = (
+        leg: (typeof NATIVE_LEGS)[number],
+        options: NativeOptions,
+      ) => {
+        const v = native(leg, options);
+        const name = (r: { file: string; test: string }, i: number) => ({
+          ...r,
+          file: `src/${leg}/${"d".repeat(120)}${i}.test.ts`,
+          test: `${i} ${"t".repeat(365 - String(i).length - 1)}`,
+        });
+        return {
+          ...v,
+          untagged: v.untagged.map(name),
+          hostUntagged: v.hostUntagged.map(name),
+        };
+      };
+      const message = "m".repeat(300);
+      const options =
+        key === FAILURE_KEY
+          ? { untagged: 60, message }
+          : { hostUntagged: 60, message };
+      const [finding] = only(
+        withLegs({
+          node: longName("node", options),
+          chromium: longName("chromium", options),
+          firefox: longName("firefox", options),
+        }),
+        key,
+      );
+      expect(finding.body.length).toBeLessThan(65_536);
+      expect(finding.comment.length).toBeLessThan(65_536);
+      expect(finding.body).toMatch(
+        /### Node v26.10.0[^\n]* \(first \d+ of 60\)/,
+      );
+      expect(finding.body).toMatch(/### Firefox 155.0 \(first \d+ of 60\)/);
+    },
+  );
+
+  it("body size: stale tags with 365-character names stay under 65,536 and say how many rows were left out", () => {
+    const stale = (leg: (typeof NATIVE_LEGS)[number]) =>
+      native(leg, {
+        staleTags: Array.from({ length: 200 }, (_, i) => ({
+          kind: "divergence",
+          file: `src/${leg}/${"d".repeat(120)}${i}.test.ts`,
+          test: `${i} ${"t".repeat(360)}`,
+          defect: "d14-day-rounding",
+        })),
+      });
+    const [finding] = only(
+      withLegs({
+        node: stale("node"),
+        chromium: stale("chromium"),
+        firefox: stale("firefox"),
+      }),
+      STALE_KEY,
+    );
+    expect(finding.body.length).toBeLessThan(65_536);
+    expect(finding.comment.length).toBeLessThan(65_536);
+    expect(finding.body).toMatch(/### Divergence rows \(first \d+ of 600\)/);
+    expect(finding.body).toContain(
+      "Remove each row from KNOWN_NATIVE_FAILURES",
+    );
+  });
+
+  it("a test name with a mention and an issue reference renders as code, not as a link", () => {
+    const v = native("node", { untagged: 1 });
+    const tricky = {
+      ...v,
+      untagged: [
+        {
+          file: "src/a@example.test.ts",
+          test: "see @example and UTS #35 | x",
+          message: "m",
+        },
+      ],
+    };
+    const [finding] = only(withLegs({ node: tricky }), FAILURE_KEY);
+    expect(finding.body).toContain(
+      "| `src/a@example.test.ts` | `see @example and UTS #35 \\| x` | `m` |",
+    );
+    const stale = native("node", {
+      staleTags: [
+        {
+          kind: "divergence",
+          file: "src/a.test.ts",
+          test: "see @example #35",
+          defect: "d1",
+        },
+      ],
+    });
+    const [staleFinding] = only(withLegs({ node: stale }), STALE_KEY);
+    expect(staleFinding.body).toContain("`src/a.test.ts` | `see @example #35`");
   });
 });

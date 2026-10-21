@@ -1,5 +1,5 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { parseEpcisEvent } from "../parse/parseEpcisEvent";
 import { isValidEpcisEvent } from "./isValidEpcisEvent";
 import { isValidEpcisEventTime } from "./isValidEpcisEventTime";

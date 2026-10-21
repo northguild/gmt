@@ -19,8 +19,8 @@ import { runInBoundedChild } from "../../test/boundedChild";
 /** Generous per-call ceiling: the defect is minutes or an abort, the fix is milliseconds. */
 const MAX_CALL_MS = 1_000;
 
-function expectBoundedValue(expression: string, expected: unknown) {
-  const run = runInBoundedChild([expression]);
+async function expectBoundedValue(expression: string, expected: unknown) {
+  const run = await runInBoundedChild([expression]);
   expect({ timedOut: run.timedOut, crashed: run.crashed }, run.stderr).toEqual({
     timedOut: false,
     crashed: false,
@@ -51,8 +51,8 @@ describe("D9 large non-ISO month arithmetic — addDate / subtractDate", () => {
     ${'gmt.subtractDate("2023-03-28[u-ca=persian]", { months: 3286128 })'}       | ${""}                                  | ${"one day before the persian minimum"}
     ${'gmt.addDate("2024-06-17[u-ca=hebrew]", { months: 3385645 })'}             | ${"+275760-09-13[u-ca=hebrew]"}        | ${"lands exactly on the hebrew maximum; both years leap, ordinal 10 = M09"}
     ${'gmt.addDate("2024-06-18[u-ca=hebrew]", { months: 3385645 })'}             | ${""}                                  | ${"one day past the hebrew maximum"}
-  `("$expression → $expected ($why)", ({ expression, expected }) => {
-    expectBoundedValue(expression, expected);
+  `("$expression → $expected ($why)", async ({ expression, expected }) => {
+    await expectBoundedValue(expression, expected);
   });
 });
 
@@ -77,7 +77,7 @@ describe("D9 large non-ISO month arithmetic — differences, Duration relativeTo
     ${'gmt.addZoned("2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]", { months: 4294967295 })'}                                          | ${""}                                                        | ${"far past the maximum"}
     ${'gmt.diffDate("2024-01-15[u-ca=hebrew]", "+244580-02-07[u-ca=hebrew]", "years")'}                                                             | ${242_553}                                                   | ${"years stay cheap: M07 follows M05"}
     ${'gmt.diffZoned("2024-01-15T12:00:00+03:30[Asia/Tehran][u-ca=persian]", "+252023-12-27T12:00:00+03:30[Asia/Tehran][u-ca=persian]", "months")'} | ${3_000_000}                                                 | ${"zoned difference in months"}
-  `("$expression → $expected ($why)", ({ expression, expected }) => {
-    expectBoundedValue(expression, expected);
+  `("$expression → $expected ($why)", async ({ expression, expected }) => {
+    await expectBoundedValue(expression, expected);
   });
 });

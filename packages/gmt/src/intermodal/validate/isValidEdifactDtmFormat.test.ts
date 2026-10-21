@@ -1,6 +1,6 @@
 import { EDIFACT_DTM_FORMATS } from "../../internal";
 import { CUT_EDIFACT_FORMATS } from "../../test/ediCodes";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { isValidEdifactDate } from "./isValidEdifactDate";
 import { isValidEdifactDtmFormat } from "./isValidEdifactDtmFormat";
 

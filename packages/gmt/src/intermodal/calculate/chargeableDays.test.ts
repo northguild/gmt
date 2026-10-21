@@ -2,7 +2,7 @@ import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { dwellTime } from "../../transport/calculate/dwellTime";
 import { chargeableDays } from "./chargeableDays";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 
 /** A Friday afternoon discharge in New York: 15:00 EDT on 14 June 2024. Free time ends Monday 00:00. */
 const friday = "2024-06-14T19:00:00Z";

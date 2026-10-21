@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type { ExactDurationUnit } from "../../types";
 import { addUtc } from "../../utc/calculate/addUtc";
 import { totalUnits } from "./totalUnits";

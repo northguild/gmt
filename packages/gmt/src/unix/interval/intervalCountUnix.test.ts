@@ -1,3 +1,4 @@
+import type { MockedFunction } from "vitest";
 import {
   dateLineCrossingAt,
   dateLineCrossingTimeZones,
@@ -5,8 +6,10 @@ import {
 } from "../../test";
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { intervalCountUnix } from "./intervalCountUnix";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 // Epoch values used below, in ISO 8601 UTC:
 // 0             is 1970-01-01T00:00:00Z
@@ -23,16 +26,14 @@ import { intervalCountUnix } from "./intervalCountUnix";
 // 1710129600000 is 2024-03-11T00:00:00-04:00[America/New_York]
 
 describe("intervalCountUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   it.each`
@@ -291,4 +292,23 @@ describe("intervalCountUnix across the 1844 date-line crossings (zoned.E)", () =
       ).toBe(61);
     },
   );
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
 });

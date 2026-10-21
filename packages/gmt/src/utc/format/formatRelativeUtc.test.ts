@@ -1,10 +1,12 @@
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import {
   formatRelativeUtc,
   type FormatRelativeUtcOptions,
 } from "./formatRelativeUtc";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 // All tests use a fixed reference so output is deterministic regardless of
 // when the suite runs.
@@ -13,6 +15,7 @@ const REF = "2024-03-15T12:00:00Z";
 describe("formatRelativeUtc", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(getSystemTimeZone).mockReset();
   });
 
   // ---------------------------------------------------------------------------
@@ -399,9 +402,7 @@ describe("formatRelativeUtc", () => {
     });
 
     it("uses getSystemTimeZone() when timeZone is 'local'", () => {
-      vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
-        "America/New_York",
-      );
+      vi.mocked(getSystemTimeZone).mockReturnValue("America/New_York");
       expect(
         formatRelativeUtc(value, MustTestLocales.enUS, {
           reference: REF,
@@ -719,5 +720,24 @@ describe("formatRelativeUtc largestUnit", () => {
         largestUnit: undefined,
       }),
     ).toBe(picked);
+  });
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
   });
 });

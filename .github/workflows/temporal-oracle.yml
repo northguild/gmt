@@ -2,15 +2,19 @@ name: Temporal oracle
 
 # Compares GMT's calendar results against Chromium's native Temporal (test262 is the final
 # authority where they disagree) and reports which @js-temporal/polyfill workarounds are still
-# needed. Manual and weekly only:
-# never part of ci.yml, because Node has no native Temporal and "upstream still broken" must
-# never fail CI. A failing run means a GMT result differs from native Temporal on a row that
-# the script's tag list does not explain — a GMT bug to fix.
+# needed. Manual and weekly only: never part of ci.yml, because "upstream still broken" must
+# never fail a build. A failing oracle job means a GMT result differs from native Temporal on a
+# row that the script's tag list does not explain — a GMT bug to fix.
 #
 # A final job (CORE-81) files issues from the verdicts the oracle job wrote: one per removable
 # workaround, one `bug` for untagged mismatches, and one when the canary could not run. The
 # dispatch inputs are dry runs: they file a clearly marked [dry run] issue and change no probe,
 # tally or exit code.
+#
+# The native-suite job runs the whole packages/gmt suite on native Temporal in Node 26,
+# Chromium and Firefox, one matrix leg each. A failing leg means an untagged failure of either
+# kind: a divergence (fails natively, passes on the polyfill in the same runtime) or a host
+# failure (fails on both) that no host group covers. The report job files it as an issue.
 
 on:
   workflow_dispatch:
@@ -22,6 +26,11 @@ on:
         default: ""
       force_mismatch:
         description: "Dry run: file a [dry run] bug issue for one synthetic untagged mismatch"
+        type: boolean
+        required: false
+        default: false
+      force_native_failure:
+        description: "Dry run: file a [dry run] bug issue for one synthetic native-suite failure"
         type: boolean
         required: false
         default: false
@@ -80,13 +89,75 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
 
+  native-suite:
+    name: Native Temporal suite (${{ matrix.leg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [node, chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright ${{ matrix.leg }}
+        if: matrix.leg != 'node'
+        env:
+          LEG: ${{ matrix.leg }}
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps "$LEG"
+
+      - name: Native suite
+        env:
+          LEG: ${{ matrix.leg }}
+        run: node scripts/native-suite.mjs "$LEG"
+
+      - name: Job summary
+        if: always()
+        env:
+          LEG: ${{ matrix.leg }}
+        run: node scripts/native-suite.mjs summary "$LEG" >> "$GITHUB_STEP_SUMMARY"
+
+      # The verdict goes in the artifact the report job downloads; the full pass reports
+      # (tens of MB) go in a separate one, kept only for reading a failure by hand.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-suite-${{ matrix.leg }}-${{ github.run_id }}
+          path: |
+            artifacts/native-suite-*.json
+            !artifacts/native-suite-*.vitest.json
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-suite-${{ matrix.leg }}-reports
+          path: artifacts/native-suite-*.vitest.json
+          retention-days: 14
+          if-no-files-found: ignore
+
   # Its own job so that the oracle job, which installs the whole workspace with build scripts
   # approved and runs Chromium, never holds a write token. This one runs only first-party Node and
   # `gh`. `!cancelled()` runs it after a failed `oracle` job (the could-not-run case) and not after
   # a person cancels the run (GitHub Docs, "Contexts", status check functions).
   report:
     name: Report to issues
-    needs: oracle
+    needs: [oracle, native-suite]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -105,7 +176,8 @@ jobs:
       - uses: actions/download-artifact@v4
         continue-on-error: true # no artifact = no verdicts = a could-not-run issue
         with:
-          name: temporal-oracle-${{ github.run_id }}
+          pattern: "*-${{ github.run_id }}"
+          merge-multiple: true
           path: artifacts/
 
       - name: Open or update canary issues
@@ -113,8 +185,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FORCE_REMOVABLE: ${{ inputs.force_removable }}
           FORCE_MISMATCH: ${{ inputs.force_mismatch }}
+          FORCE_NATIVE_FAILURE: ${{ inputs.force_native_failure }}
         run: |
           args=(temporal-oracle)
           if [ -n "$FORCE_REMOVABLE" ]; then args+=("--force-removable=$FORCE_REMOVABLE"); fi
           if [ "$FORCE_MISMATCH" = "true" ]; then args+=(--force-mismatch); fi
+          if [ "$FORCE_NATIVE_FAILURE" = "true" ]; then args+=(--force-native-failure); fi
           node scripts/canary-report.mjs "${args[@]}"

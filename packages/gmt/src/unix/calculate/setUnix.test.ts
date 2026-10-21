@@ -1,19 +1,20 @@
+import type { MockedFunction } from "vitest";
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, utcMs } from "../../test";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { setUnix } from "./setUnix";
 
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+
 describe("setUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   it.each`
@@ -181,5 +182,24 @@ describe("setUnix with an unrecognised epochUnit", () => {
         { epochUnit: epochUnit as never, timeZone: "UTC" },
       ),
     ).toBe(null);
+  });
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
   });
 });

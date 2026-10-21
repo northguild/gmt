@@ -1,6 +1,9 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import type { MockedFunction } from "vitest";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 import { startOfUnix } from "./startOfUnix";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 // Epoch values used below, in ISO 8601 UTC:
 // 1704067200    is 2024-01-01T00:00:00Z
@@ -18,16 +21,14 @@ import { startOfUnix } from "./startOfUnix";
 // 1541340000000 is 2018-11-04T14:00:00.000Z (2018-11-04T12:00:00-02:00[America/Sao_Paulo])
 
 describe("startOfUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   it.each`
@@ -270,4 +271,23 @@ describe("startOfUnix across the 1844 date-line crossings (zoned.E)", () => {
       ).toBe(dateLineCrossingAt(crossing, -24).epochMilliseconds);
     },
   );
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
 });

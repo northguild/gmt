@@ -13,6 +13,9 @@ export const VERDICT_FILES = {
   "temporal-compat-check": "artifacts/temporal-compat-check.json",
   "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
   "leap-seconds": "artifacts/leap-seconds.json",
+  "native-suite-node": "artifacts/native-suite-node.json",
+  "native-suite-chromium": "artifacts/native-suite-chromium.json",
+  "native-suite-firefox": "artifacts/native-suite-firefox.json",
 };
 
 /**
@@ -99,6 +102,65 @@ export function oracleVerdict({
     untagged,
     untaggedTruncated: counts.untagged > untagged.length,
     report,
+  };
+}
+
+/** How many characters of a failure message a native-suite verdict keeps. */
+const MESSAGE_CHARS_IN_VERDICT = 300;
+
+/**
+ * @typedef {{ file: string, test: string, message: string }} NativeFailure
+ * @typedef {{ kind: "divergence", file: string, test: string, defect: string }
+ *   | { kind: "host", group: string, reason: string }} NativeStaleTag
+ */
+
+/**
+ * The verdict of one native-suite leg. `untagged` and `hostUntagged` come in full from
+ * `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
+ * says when it cut. The counts stay the full numbers. Raw Vitest reports stay in `artifacts/`.
+ *
+ * @param {{ leg: "node" | "chromium" | "firefox", engine: string,
+ *           runtime: { node: string, vitest: string, playwright: string | null },
+ *           counts: { files: number, tests: number, passed: number, tagged: number,
+ *                     untagged: number, hostTagged: number, hostUntagged: number,
+ *                     staleTags: number },
+ *           tagged: Array<{ file: string, test: string, defect: string }>,
+ *           untagged: NativeFailure[],
+ *           hostTagged: Array<{ group: string, count: number, reason: string }>,
+ *           hostUntagged: NativeFailure[],
+ *           staleTags: NativeStaleTag[] }} input
+ */
+export function nativeSuiteVerdict({
+  leg,
+  engine,
+  runtime,
+  counts,
+  tagged,
+  untagged,
+  hostTagged,
+  hostUntagged,
+  staleTags,
+}) {
+  const keep = (/** @type {NativeFailure[]} */ rows) =>
+    rows.slice(0, UNTAGGED_ROWS_IN_VERDICT).map(({ file, test, message }) => ({
+      file,
+      test,
+      message: message.slice(0, MESSAGE_CHARS_IN_VERDICT),
+    }));
+  return {
+    source: `native-suite-${leg}`,
+    status: "ran",
+    leg,
+    engine,
+    runtime,
+    counts,
+    tagged,
+    untagged: keep(untagged),
+    untaggedTruncated: untagged.length > UNTAGGED_ROWS_IN_VERDICT,
+    hostTagged,
+    hostUntagged: keep(hostUntagged),
+    hostUntaggedTruncated: hostUntagged.length > UNTAGGED_ROWS_IN_VERDICT,
+    staleTags,
   };
 }
 

@@ -15,7 +15,13 @@ export const CANARY_LABEL = "canary";
 export const DRY_RUN_LABEL = "canary-dry-run";
 /** The verdict sources each workflow reads, in the order its could-not-run message lists them. */
 export const WORKFLOW_SOURCES = {
-  "temporal-oracle": ["temporal-compat-check", "temporal-oracle"],
+  "temporal-oracle": [
+    "temporal-compat-check",
+    "temporal-oracle",
+    "native-suite-node",
+    "native-suite-chromium",
+    "native-suite-firefox",
+  ],
   "leap-seconds": ["leap-seconds"],
 };
 
@@ -30,6 +36,20 @@ const UNTAGGED_GROUPS_IN_BODY = 50;
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
+/** The native-suite legs, in the order their findings and summary rows list them. */
+const NATIVE_LEGS = ["node", "chromium", "firefox"];
+/** @param {string} leg */
+const NATIVE = (leg) => `native-suite-${leg}`;
+
+const TRIAGE_PARAGRAPH =
+  "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
+const HOST_PARAGRAPH =
+  "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
+const FORCED_NATIVE_ROW = {
+  file: "src/dry-run.test.ts",
+  test: "dry run: forced failure (no real test failed)",
+  message: "forced",
+};
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 const FLOOR_STEP =
@@ -79,8 +99,24 @@ const FORCED_ROW = {
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
  * @typedef {{ source: string, status: "could-not-run", message: string }} CouldNotRunVerdict
- * @typedef {CompatCheckVerdict | OracleVerdict | LeapSecondsVerdict | CouldNotRunVerdict} Verdict
- * @typedef {{ removable?: string, mismatch?: boolean, leapDifference?: boolean }} Force
+ * @typedef {{ file: string, test: string, message: string }} NativeFailure
+ * @typedef {{
+ *   source: string, status: "ran", leg: "node" | "chromium" | "firefox", engine: string,
+ *   runtime: { node: string, vitest: string, playwright: string | null },
+ *   counts: { files: number, tests: number, passed: number, skipped: number, tagged: number, untagged: number,
+ *             hostTagged: number, hostUntagged: number, staleTags: number },
+ *   tagged: { file: string, test: string, defect: string }[],
+ *   untagged: NativeFailure[], untaggedTruncated: boolean,
+ *   hostTagged: { group: string, count: number, reason: string }[],
+ *   hostUntagged: NativeFailure[], hostUntaggedTruncated: boolean,
+ *   staleTags: ({ kind: "divergence", file: string, test: string, defect: string }
+ *     | { kind: "host", group: string, reason: string })[],
+ *   forced?: { nativeFailure: true },
+ * }} NativeSuiteVerdict
+ * @typedef {CompatCheckVerdict | OracleVerdict | LeapSecondsVerdict | NativeSuiteVerdict
+ *   | CouldNotRunVerdict} Verdict
+ * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
+ *   leapDifference?: boolean }} Force
  * @typedef {{ workflow: "temporal-oracle" | "leap-seconds", runUrl: string }} Context
  * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string }} Finding
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
@@ -141,30 +177,54 @@ export function applyForce(verdicts, force) {
     });
     return null;
   };
-  if (force.removable !== undefined) {
-    const flag = `--force-removable=${force.removable}`;
-    const verdict = ran(flag, CHECK);
-    if (verdict) {
-      const ids = verdict.workarounds.map(
-        (/** @type {Workaround} */ w) => w.id,
-      );
-      if (!ids.includes(force.removable)) {
-        throw new Error(
-          `${flag}: no workaround has that id; valid ids: ${ids.join(", ")}`,
-        );
-      }
-      verdict.forced = { removable: force.removable };
-    }
-  }
+  forceRemovable(force, ran);
   if (force.mismatch) {
     const verdict = ran("--force-mismatch", ORACLE);
     if (verdict) verdict.forced = { mismatch: true };
   }
+  if (force.nativeFailure) forceNativeFailure(copy, skipped);
   if (force.leapDifference) {
     const verdict = ran("--force-leap-difference", LEAP);
     if (verdict) verdict.forced = { difference: true };
   }
   return { verdicts: copy, skipped };
+}
+
+/**
+ * Marks the check verdict's workaround `force.removable` as forced. Throws when no workaround has
+ * that id.
+ * @param {Force} force
+ * @param {(flag: string, source: string) => any} ran
+ */
+function forceRemovable(force, ran) {
+  if (force.removable === undefined) return;
+  const flag = `--force-removable=${force.removable}`;
+  const verdict = ran(flag, CHECK);
+  if (!verdict) return;
+  const ids = verdict.workarounds.map((/** @type {Workaround} */ w) => w.id);
+  if (!ids.includes(force.removable)) {
+    throw new Error(
+      `${flag}: no workaround has that id; valid ids: ${ids.join(", ")}`,
+    );
+  }
+  verdict.forced = { removable: force.removable };
+}
+
+/**
+ * Marks the first native leg that ran as forced, or records the skip.
+ * @param {Record<string, any>} copy
+ * @param {{ flag: string, reason: string }[]} skipped
+ */
+function forceNativeFailure(copy, skipped) {
+  const first = NATIVE_LEGS.find((leg) => copy[NATIVE(leg)]?.status === "ran");
+  if (first) {
+    copy[NATIVE(first)].forced = { nativeFailure: true };
+    return;
+  }
+  skipped.push({
+    flag: "--force-native-failure",
+    reason: "no native-suite verdict ran, so there is nothing to force against",
+  });
 }
 
 /**
@@ -408,6 +468,208 @@ function mismatchFinding(oracle, isForced, runUrl) {
 }
 
 /**
+ * "Node 26" or "Chromium 153" from a verdict's engine line; the leg name when the line has no
+ * leading name and version.
+ * @param {NativeSuiteVerdict} v
+ */
+function legLabel(v) {
+  const m = /^(\w+) v?(\d+)/.exec(v.engine);
+  return m ? `${m[1]} ${m[2]}` : v.leg;
+}
+
+/** GitHub's limit on an issue body or comment, in characters. */
+const BODY_LIMIT = 65_536;
+/** Room kept for the run line and the paragraphs around the tables. */
+const BODY_MARGIN = 1_500;
+const FILE_CELL_CHARS = 150;
+const TEST_CELL_CHARS = 200;
+
+/**
+ * A value cut to `max` characters, with an ellipsis when it was cut.
+ * @param {string} value
+ * @param {number} max
+ */
+const clip = (value, max) =>
+  value.length > max ? `${value.slice(0, max - 1)}…` : value;
+
+/**
+ * The largest row count (at most `maxRows`) whose parts, joined with blank lines and added to
+ * `fixedChars` of surrounding text, fit in one issue body. Every part list is built by `build(k)`.
+ * @param {number} maxRows
+ * @param {number} fixedChars
+ * @param {(k: number) => string[]} build
+ * @returns {{ k: number, parts: string[] }}
+ */
+function fitRows(maxRows, fixedChars, build) {
+  for (let k = maxRows; k > 1; k--) {
+    const parts = build(k);
+    if (fixedChars + parts.join("\n\n").length + BODY_MARGIN <= BODY_LIMIT)
+      return { k, parts };
+  }
+  return { k: 1, parts: build(1) };
+}
+
+/**
+ * One `### <engine line>` section per leg: the failures as a table, with the "first N of M"
+ * heading when the verdict, or the size of the body, cut them. Test and file cells are code spans,
+ * so a name with `@user` or `#35` in it is not a mention or a link, and are cut to a fixed length.
+ * Every leg shows the same number of rows, the most that fit in one body together with the
+ * `fixedChars` of text around the sections.
+ * @param {NativeSuiteVerdict[]} legs
+ * @param {(leg: NativeSuiteVerdict) => NativeFailure[]} rowsOf  the rows to table
+ * @param {(leg: NativeSuiteVerdict) => number} totalOf  how many the leg really has
+ * @param {number} fixedChars  length of the text that goes in the body besides the sections
+ * @returns {string[]}
+ */
+function failureSections(legs, rowsOf, totalOf, fixedChars) {
+  const maxRows = Math.max(1, ...legs.map((v) => rowsOf(v).length));
+  return fitRows(maxRows, fixedChars, (k) =>
+    legs.map((v) => {
+      const rows = rowsOf(v).slice(0, k);
+      const total = totalOf(v);
+      const heading =
+        total > rows.length
+          ? `### ${v.engine} (first ${rows.length} of ${total})`
+          : `### ${v.engine}`;
+      return `${heading}\n\n${table(
+        ["file", "test", "message"],
+        rows.map((r) => [
+          codeCell(clip(r.file, FILE_CELL_CHARS)),
+          codeCell(clip(r.test, TEST_CELL_CHARS)),
+          codeCell(r.message),
+        ]),
+      )}`;
+    }),
+  ).parts;
+}
+
+/**
+ * Tests that fail on the native engine and pass on the polyfill and have no tag. A forced run
+ * shows one synthetic row on the forced leg instead of its real rows.
+ * @param {NativeSuiteVerdict[]} ranLegs  the native legs that ran, in leg order
+ * @param {boolean} isForced
+ * @param {string} runUrl
+ * @returns {Finding}
+ */
+function nativeFailureFinding(ranLegs, isForced, runUrl) {
+  const legs = isForced
+    ? ranLegs.filter((v) => v.forced).slice(0, 1)
+    : ranLegs.filter((v) => v.counts.untagged > 0);
+  const sections = failureSections(
+    legs,
+    (v) => (isForced ? [FORCED_NATIVE_ROW] : v.untagged),
+    (v) => (isForced ? 1 : v.counts.untagged),
+    TRIAGE_PARAGRAPH.length,
+  );
+  const paragraphs = [...sections, TRIAGE_PARAGRAPH];
+  /** @type {Finding} */
+  const real = {
+    key: "native-suite/untagged-failure",
+    title: `Native Temporal: GMT tests fail on ${legs.map(legLabel).join(", ")}`,
+    labels: [CANARY_LABEL, "bug"],
+    body: withRun(paragraphs.join("\n\n"), runUrl),
+    comment: withRun(sections.join("\n\n"), runUrl),
+  };
+  if (!isForced) return real;
+  return dryRun(real, "--force-native-failure", paragraphs, runUrl);
+}
+
+/**
+ * Tests that fail on the native engine and on the polyfill in the same runtime, with no group.
+ * @param {NativeSuiteVerdict[]} ranLegs
+ * @param {string} runUrl
+ * @returns {Finding}
+ */
+function nativeHostFailureFinding(ranLegs, runUrl) {
+  const legs = ranLegs.filter((v) => v.counts.hostUntagged > 0);
+  const sections = failureSections(
+    legs,
+    (v) => v.hostUntagged,
+    (v) => v.counts.hostUntagged,
+    HOST_PARAGRAPH.length,
+  );
+  return {
+    key: "native-suite/untagged-host-failure",
+    title: `Native suite: tests fail on both engines in ${legs.map(legLabel).join(", ")}`,
+    labels: [CANARY_LABEL],
+    body: withRun([...sections, HOST_PARAGRAPH].join("\n\n"), runUrl),
+    comment: withRun(sections.join("\n\n"), runUrl),
+  };
+}
+
+/**
+ * Known-failure tags that no longer apply.
+ * @param {NativeSuiteVerdict[]} ranLegs
+ * @param {string} runUrl
+ * @returns {Finding}
+ */
+function nativeStaleTagFinding(ranLegs, runUrl) {
+  /** @type {{ leg: string, file: string, test: string, defect: string }[]} */
+  const divergence = [];
+  /** @type {{ leg: string, group: string, reason: string }[]} */
+  const host = [];
+  for (const v of ranLegs) {
+    for (const tag of v.staleTags) {
+      if (tag.kind === "divergence") divergence.push({ leg: v.leg, ...tag });
+      else host.push({ leg: v.leg, group: tag.group, reason: tag.reason });
+    }
+  }
+  /** @type {string[]} */
+  const steps = [];
+  if (divergence.length > 0) {
+    steps.push(
+      "Remove each row from KNOWN_NATIVE_FAILURES and update its record in context/domination/js-temporal-polyfill-bugs.md.",
+    );
+  }
+  if (host.length > 0) {
+    steps.push(
+      "Remove the group from KNOWN_HOST_FAILURES, or narrow its legs.",
+    );
+  }
+  /** @param {number} n @param {number} total @param {string} title */
+  const heading = (title, n, total) =>
+    total > n ? `### ${title} (first ${n} of ${total})` : `### ${title}`;
+  const { parts: tables } = fitRows(
+    Math.max(divergence.length, host.length, 1),
+    steps.join("\n\n").length,
+    (k) => [
+      ...(divergence.length > 0
+        ? [
+            `${heading("Divergence rows", Math.min(k, divergence.length), divergence.length)}\n\n${table(
+              ["leg", "file", "test", "defect"],
+              divergence
+                .slice(0, k)
+                .map((t) => [
+                  cell(t.leg),
+                  codeCell(clip(t.file, FILE_CELL_CHARS)),
+                  codeCell(clip(t.test, TEST_CELL_CHARS)),
+                  cell(t.defect),
+                ]),
+            )}`,
+          ]
+        : []),
+      ...(host.length > 0
+        ? [
+            `${heading("Host groups", Math.min(k, host.length), host.length)}\n\n${table(
+              ["leg", "group", "reason"],
+              host
+                .slice(0, k)
+                .map((t) => [cell(t.leg), cell(t.group), cell(t.reason)]),
+            )}`,
+          ]
+        : []),
+    ],
+  );
+  return {
+    key: "native-suite/stale-tag",
+    title: "Native suite: known failures no longer fail",
+    labels: [CANARY_LABEL],
+    body: withRun([...tables, ...steps].join("\n\n"), runUrl),
+    comment: withRun(tables.join("\n\n"), runUrl),
+  };
+}
+
+/**
  * @param {LeapSecondsVerdict} leap
  * @param {boolean} isForced
  * @param {string} runUrl
@@ -460,62 +722,99 @@ function couldNotRunFinding(workflow, failed, runUrl) {
 }
 
 /**
- * Findings in order: removable (script order), mismatch, leap, could-not-run. A forced finding
- * follows the real one of its kind.
- * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
- * @param {Context} context
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
  * @returns {Finding[]}
  */
-export function findings(verdicts, context) {
-  const { workflow, runUrl } = context;
-  const sources = WORKFLOW_SOURCES[workflow];
-  /** @type {Finding[]} */
+function compatCheckFindings(verdicts, runUrl) {
+  const check = /** @type {CompatCheckVerdict | CouldNotRunVerdict | null} */ (
+    verdictOf(verdicts, CHECK)
+  );
+  if (check?.status !== "ran") return [];
+  const out = check.workarounds
+    .filter((w) => w.state === "removable")
+    .map((w) => removableFinding(check, w, false, runUrl));
+  if (check.forced) {
+    const w = check.workarounds.find((x) => x.id === check.forced?.removable);
+    if (w) out.push(removableFinding(check, w, true, runUrl));
+  }
+  return out;
+}
+
+/**
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
+ * @returns {Finding[]}
+ */
+function oracleFindings(verdicts, runUrl) {
+  const oracle = /** @type {OracleVerdict | CouldNotRunVerdict | null} */ (
+    verdictOf(verdicts, ORACLE)
+  );
+  if (oracle?.status !== "ran") return [];
   const out = [];
-
-  if (sources.includes(CHECK)) {
-    const check =
-      /** @type {CompatCheckVerdict | CouldNotRunVerdict | null} */ (
-        verdictOf(verdicts, CHECK)
-      );
-    if (check?.status === "ran") {
-      for (const w of check.workarounds) {
-        if (w.state === "removable") {
-          out.push(removableFinding(check, w, false, runUrl));
-        }
-      }
-      if (check.forced) {
-        const w = check.workarounds.find(
-          (x) => x.id === check.forced?.removable,
-        );
-        if (w) out.push(removableFinding(check, w, true, runUrl));
-      }
-    }
+  if (oracle.counts.untagged > 0) {
+    out.push(mismatchFinding(oracle, false, runUrl));
   }
+  if (oracle.forced) out.push(mismatchFinding(oracle, true, runUrl));
+  return out;
+}
 
-  if (sources.includes(ORACLE)) {
-    const oracle = /** @type {OracleVerdict | CouldNotRunVerdict | null} */ (
-      verdictOf(verdicts, ORACLE)
-    );
-    if (oracle?.status === "ran") {
-      if (oracle.counts.untagged > 0) {
-        out.push(mismatchFinding(oracle, false, runUrl));
-      }
-      if (oracle.forced) out.push(mismatchFinding(oracle, true, runUrl));
-    }
-  }
+/**
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
+ * @returns {Finding[]}
+ */
+function nativeSuiteFindings(verdicts, runUrl) {
+  const ranLegs = /** @type {NativeSuiteVerdict[]} */ (
+    NATIVE_LEGS.map((leg) => verdictOf(verdicts, NATIVE(leg))).filter(
+      (v) => v?.status === "ran",
+    )
+  );
+  /** @type {[boolean, () => Finding][]} */
+  const candidates = [
+    [
+      ranLegs.some((v) => v.counts.untagged > 0),
+      () => nativeFailureFinding(ranLegs, false, runUrl),
+    ],
+    [
+      ranLegs.some((v) => v.forced),
+      () => nativeFailureFinding(ranLegs, true, runUrl),
+    ],
+    [
+      ranLegs.some((v) => v.counts.hostUntagged > 0),
+      () => nativeHostFailureFinding(ranLegs, runUrl),
+    ],
+    [
+      ranLegs.some((v) => v.staleTags.length > 0),
+      () => nativeStaleTagFinding(ranLegs, runUrl),
+    ],
+  ];
+  return candidates.filter(([applies]) => applies).map(([, make]) => make());
+}
 
-  if (sources.includes(LEAP)) {
-    const leap = /** @type {LeapSecondsVerdict | CouldNotRunVerdict | null} */ (
-      verdictOf(verdicts, LEAP)
-    );
-    if (leap?.status === "ran") {
-      if (leap.differences.length > 0) {
-        out.push(leapFinding(leap, false, runUrl));
-      }
-      if (leap.forced) out.push(leapFinding(leap, true, runUrl));
-    }
-  }
+/**
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
+ * @returns {Finding[]}
+ */
+function leapSecondsFindings(verdicts, runUrl) {
+  const leap = /** @type {LeapSecondsVerdict | CouldNotRunVerdict | null} */ (
+    verdictOf(verdicts, LEAP)
+  );
+  if (leap?.status !== "ran") return [];
+  const out = [];
+  if (leap.differences.length > 0) out.push(leapFinding(leap, false, runUrl));
+  if (leap.forced) out.push(leapFinding(leap, true, runUrl));
+  return out;
+}
 
+/**
+ * The sources with no verdict or a could-not-run one, with the reason for each.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string[]} sources
+ * @returns {{ source: string, message: string }[]}
+ */
+function failedSources(verdicts, sources) {
   const failed = [];
   for (const source of sources) {
     const verdict = verdictOf(verdicts, source);
@@ -528,6 +827,31 @@ export function findings(verdicts, context) {
       });
     }
   }
+  return failed;
+}
+
+/**
+ * Findings in order: removable (script order), mismatch, native (untagged failure, host failure,
+ * stale tag), leap, could-not-run. A forced finding
+ * follows the real one of its kind.
+ * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
+ * @param {Context} context
+ * @returns {Finding[]}
+ */
+export function findings(verdicts, context) {
+  const { workflow, runUrl } = context;
+  const sources = WORKFLOW_SOURCES[workflow];
+  /** @type {[string, (v: Record<string, Verdict | null>, url: string) => Finding[]][]} */
+  const perSource = [
+    [CHECK, compatCheckFindings],
+    [ORACLE, oracleFindings],
+    [NATIVE("node"), nativeSuiteFindings],
+    [LEAP, leapSecondsFindings],
+  ];
+  const out = perSource.flatMap(([source, make]) =>
+    sources.includes(source) ? make(verdicts, runUrl) : [],
+  );
+  const failed = failedSources(verdicts, sources);
   if (failed.length > 0) {
     out.push(couldNotRunFinding(workflow, failed, runUrl));
   }

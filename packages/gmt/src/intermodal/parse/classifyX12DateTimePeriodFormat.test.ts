@@ -3,7 +3,7 @@ import {
   NOT_X12_FORMATS,
   X12_FORMAT_KINDS,
 } from "../../test/ediCodes";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type {
   X12DateFormat,
   X12DateRangeFormat,
