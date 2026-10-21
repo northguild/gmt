@@ -645,8 +645,8 @@ const d13Repros: readonly ProbeRepro[] = [
  * D14 (`internal/zonedWallClockOperations.ts` `roundZonedDateTime`): rounding to the day in a zone
  * where a date starts twice. Antarctica/Casey went from +11 to +08 at 2010-03-05T02:00, so
  * 2010-03-04 runs again from 23:00+08:00. `Temporal.ZonedDateTime.prototype.round` clamps the
- * instant to the end of that date ("Set thisNs to min(thisNs, endNs - 1)", tc39/ecma262
- * c97660929786; tc39/proposal-temporal#3312), so `trunc` gives the first midnight. Expected
+ * instant to the end of that date ("Set thisNs to min(thisNs, endNs - 1)", tc39/ecma262#3966,
+ * commit 5f44331e0a11; tc39/proposal-temporal#3312), so `trunc` gives the first midnight. Expected
  * value: test262
  * `test/intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js`. A runtime that
  * throws (V8 in Node 26) or answers the next date fails the repro.

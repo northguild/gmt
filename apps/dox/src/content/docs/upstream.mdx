@@ -87,14 +87,17 @@ Firefox, and expects the same answers it gets on the polyfill. A failure that no
 explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
 see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
 
-The built-in engines have a few bugs of their own. Each one we know about is already reported:
+The built-in engines have a few bugs of their own. Each one we know about is already reported or
+already fixed:
 
 - [`unicode-org/icu4x#8620`](https://github.com/unicode-org/icu4x/issues/8620): Node and Chromium
   reject a one-letter annotation key, such as `[a=bc]`, which the standard allows.
 - [`boa-dev/temporal#529`](https://github.com/boa-dev/temporal/issues/529): Node and Chromium
   accept the calendar `islamic`, which the standard says to reject.
+- Node 26 throws when it rounds to the day on a date that starts twice, such as 6 November 2010
+  in `America/Goose_Bay`. Chromium 153 already has the fix, so a later Node will have it too.
 
-GMT gives the standard's answer in both cases, because it runs on the polyfill.
+GMT gives the standard's answer in all three cases.
 
 ## What kind of bugs are these?
 
@@ -116,7 +119,9 @@ We sent them to two places:
   bugs other users had already reported.
 - **The Temporal proposal** ([`tc39/proposal-temporal`](https://github.com/tc39/proposal-temporal)),
   which has its own reference copy of the same code. Where a bug exists there too, we reported
-  it with the same fix, so it's corrected at the source.
+  it with the same fix, so it's corrected at the source. We also asked one question about the
+  standard's own text: it refuses a string that it writes itself, for a few hours at the very
+  start of the range.
 
 ## How we check each fix
 

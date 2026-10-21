@@ -187,7 +187,7 @@ const WORKAROUNDS = [
     title:
       "D14 — ZonedDateTime#round to the day does not clamp an instant in the second piece of a date that starts twice (zonedWallClockOperations.ts roundZonedDateTime)",
     trigger:
-      "a js-temporal release that ports the tc39/ecma262 c97660929786 clamp (tc39/proposal-temporal#3312; reference polyfill commit 59a51ea9d4); Node 26's V8 throws RangeError on the probe. Expected value: test262 intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js",
+      "a js-temporal release that ports the day-round clamp of tc39/ecma262#3966 (commit 5f44331e0a11) (tc39/proposal-temporal#3312; reference polyfill commit 59a51ea9d4); Node 26's V8 throws RangeError on the probe. Expected value: test262 intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js",
     steps: [
       "Delete the isDayRoundClampCompatNeeded() term in the day branch of roundZonedDateTime (internal/zonedWallClockOperations.ts; the branch stays for D13 and pre-1847), isDayRoundClampCompatNeeded in capabilities.ts and its export in index.ts, and the D14 repros. Keep the min(thisNs, endNs - 1) clamp in roundToDayFromOwnStartOfDay: it is the spec step.",
       "Keep the same-date-starts-twice rows in roundZoned.test.ts and roundUnix.test.ts: their values are test262's and hold either way.",

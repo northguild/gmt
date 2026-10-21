@@ -862,8 +862,9 @@ function roundToDayFromOwnStartOfDay(
   );
   // An instant in the second piece of a date that starts twice lies at or past `end`. The spec
   // step is "Set thisNs to min(thisNs, endNs - 1)" in Temporal.ZonedDateTime.prototype.round
-  // (tc39/ecma262 c97660929786; test262 intl402/Temporal/ZonedDateTime/prototype/round/
-  // same-date-starts-twice.js). It stays when the probe-gated routing is removed.
+  // (tc39/ecma262#3966, commit 5f44331e0a11; test262
+  // intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js). It stays when the
+  // probe-gated routing is removed.
   const thisNs =
     zoned.epochNanoseconds < end ? zoned.epochNanoseconds : end - 1n;
   const progress = thisNs - start;

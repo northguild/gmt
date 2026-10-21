@@ -109,9 +109,9 @@ export function isTransitionSearchCompatNeeded(): boolean {
  * A fall-back across midnight re-enters a date after the next date has started, as
  * America/Goose_Bay did on 2010-11-06, and America/Sitka on 1867-10-18. TC39
  * `ZonedDateTime#round` clamps an instant in the second piece of that date to the end of the date
- * (tc39/ecma262 c97660929786, test262 `same-date-starts-twice.js`). A runtime without that change
- * answers the next date for `floor` and `trunc`, and in some zones (Sitka 1867) for the half
- * modes, `ceil` and `expand` too, or throws.
+ * (tc39/ecma262#3966, commit 5f44331e0a11; test262 `same-date-starts-twice.js`). A runtime without
+ * that change answers the next date for `floor` and `trunc`, and in some zones (Sitka 1867) for the
+ * half modes, `ceil` and `expand` too, or throws.
  */
 export function isDayRoundClampCompatNeeded(): boolean {
   return isDefectPresent("D14", "iso8601");

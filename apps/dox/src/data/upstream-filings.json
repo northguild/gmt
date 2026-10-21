@@ -1,5 +1,5 @@
 {
-  "checked": "2026-09-22T18:44:27.765656422Z",
+  "checked": "2026-10-21T17:29:12.97374047Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -285,6 +285,29 @@
       "maintainerComments": 0,
       "createdAt": "2026-09-19",
       "updatedAt": "2026-09-19",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "repo": "tc39/proposal-temporal",
+      "number": 3331,
+      "kind": "issue",
+      "work": "report",
+      "title": "ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the local date is -271821-04-19",
+      "url": "https://github.com/tc39/proposal-temporal/issues/3331",
+      "summary": "A zoned date and time in the first hours of the supported range, in a time zone west of Greenwich, prints as a string that reading it back then refuses. The spec checks the local date against the date range before it matches the offset, so the string fails although the moment it names is in range. The issue asks whether that check is meant.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "GMT follows the spec text here, as Chromium and the polyfill do, so there is no workaround to retire. If the spec drops the check, GMT's zoned readers drop it too.",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-10-21",
+      "updatedAt": "2026-10-21",
       "closedAt": null,
       "mergedAt": null
     }

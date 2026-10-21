@@ -1280,17 +1280,17 @@ const polyfill = createRequire(join(REPO_ROOT, "packages/gmt/package.json"))(
 
 /**
  * A realm that stands in for a native engine: the polyfill is its `Temporal`, so the shim's
- * source can run in it the way it runs in a browser page. `delete` the global to make a realm
- * without native Temporal.
+ * source can run in it the way it runs in a browser page. A realm without Temporal deletes both
+ * globals, because a `vm` context on Node 26 starts with V8's own `Temporal`.
  */
 function realm(withTemporal: boolean) {
   const context = vm.createContext({ polyfill });
-  if (withTemporal) {
-    vm.runInContext(
-      "globalThis.Temporal = polyfill.Temporal; Date.prototype.toTemporalInstant = polyfill.toTemporalInstant;",
-      context,
-    );
-  }
+  vm.runInContext(
+    withTemporal
+      ? "globalThis.Temporal = polyfill.Temporal; Date.prototype.toTemporalInstant = polyfill.toTemporalInstant;"
+      : "delete globalThis.Temporal; delete Date.prototype.toTemporalInstant;",
+    context,
+  );
   return context;
 }
 
