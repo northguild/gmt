@@ -2,13 +2,25 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { generateReference } from "./build-reference";
 import {
   EXPORT_FORMAT,
   exportReference,
   parseOutDir,
 } from "./export-reference";
-import { toolSchemaFile } from "./export-tool-schemas";
+
+// Other test files read the generated tree in parallel, so an export inside vitest must never
+// regenerate it. `pnpm test` runs `generate` first; the CLI regenerates on its own.
+vi.mock("./build-reference", () => ({ generateReference: vi.fn() }));
 
 const generatedCorpus = join(
   import.meta.dirname,
@@ -49,12 +61,12 @@ describe("exportReference", () => {
   let out: string;
   let again: string;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     out = mkdtempSync(join(tmpdir(), "gmt-export-"));
     again = mkdtempSync(join(tmpdir(), "gmt-export-"));
-    await exportReference(out);
-    await exportReference(again);
-  }, 120_000);
+    exportReference(out);
+    exportReference(again);
+  });
 
   afterAll(() => {
     rmSync(out, { recursive: true, force: true });
@@ -88,33 +100,23 @@ describe("exportReference", () => {
     }
   });
 
-  it("writes tool-schemas.json as the tool schema file plus one newline", async () => {
-    const text = readFileSync(join(out, "tool-schemas.json"), "utf8");
-    expect(JSON.parse(text)).toEqual(await toolSchemaFile());
+  it("writes the manifest as JSON plus one newline", () => {
+    const version = (
+      JSON.parse(readFileSync(gmtPackage, "utf8")) as { version: string }
+    ).version;
+    const text = readFileSync(join(out, "manifest.json"), "utf8");
+    expect(EXPORT_FORMAT).toBe(1);
+    expect(JSON.parse(text)).toEqual({
+      format: 1,
+      gmtVersion: version,
+      files: { corpus: "gmt-corpus.json" },
+    });
     expect(text.endsWith("}\n")).toBe(true);
     expect(text.endsWith("\n\n")).toBe(false);
   });
 
-  it("writes the manifest", () => {
-    const version = (
-      JSON.parse(readFileSync(gmtPackage, "utf8")) as { version: string }
-    ).version;
-    expect(EXPORT_FORMAT).toBe(1);
-    expect(
-      JSON.parse(readFileSync(join(out, "manifest.json"), "utf8")),
-    ).toEqual({
-      format: 1,
-      gmtVersion: version,
-      files: { corpus: "gmt-corpus.json", toolSchemas: "tool-schemas.json" },
-    });
-  });
-
   it("is deterministic: two exports are byte-equal", () => {
-    for (const file of [
-      "manifest.json",
-      "gmt-corpus.json",
-      "tool-schemas.json",
-    ]) {
+    for (const file of ["manifest.json", "gmt-corpus.json"]) {
       expect(
         readFileSync(join(out, file)).equals(readFileSync(join(again, file))),
         file,
@@ -122,20 +124,26 @@ describe("exportReference", () => {
     }
   });
 
-  it("leaves other files alone and overwrites its own", async () => {
+  it("leaves other files alone and overwrites its own", () => {
     const dir = tempDir();
     writeFileSync(join(dir, "keep.txt"), "mine");
-    writeFileSync(join(dir, "tool-schemas.json"), "stale");
-    await exportReference(dir);
+    writeFileSync(join(dir, "gmt-corpus.json"), "stale");
+    exportReference(dir);
     expect(readFileSync(join(dir, "keep.txt"), "utf8")).toBe("mine");
     expect(
-      JSON.parse(readFileSync(join(dir, "tool-schemas.json"), "utf8")),
-    ).toEqual(await toolSchemaFile());
+      readFileSync(join(dir, "gmt-corpus.json")).equals(
+        readFileSync(generatedCorpus),
+      ),
+    ).toBe(true);
   });
 
-  it("creates a nested directory that does not exist", async () => {
+  it("never regenerates the reference tree", () => {
+    expect(generateReference).not.toHaveBeenCalled();
+  });
+
+  it("creates a nested directory that does not exist", () => {
     const dir = join(tempDir(), "a", "b");
-    await exportReference(dir);
+    exportReference(dir);
     expect(readFileSync(join(dir, "manifest.json"), "utf8")).toContain(
       '"format": 1',
     );

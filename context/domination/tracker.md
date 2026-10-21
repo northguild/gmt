@@ -62,7 +62,7 @@ exception: it ships as two Core releases of its own, ahead of the remaining real
 | INT-58 (#11)  | TRAN-8, INT-12, INT-58                       | Dwell plus free time, demurrage and the billing deadline chain: the demurrage calculations, complete     |
 | TRAN-57 (#15) | CORE-55, TRAN-9, TRAN-10, TRAN-57, CORE-77   | The rest of the transport primitives, with operating hours                                               |
 | CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76             | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on         |
-| CORE-83 (#28) | CORE-81, CORE-86, CORE-87, CORE-80 … CORE-83 | The site on its domain, the corpus shipped, the `Temporal` seam, the native suite, the stored-time audit |
+| CORE-83 (#28) | CORE-81, CORE-86, CORE-87, CORE-80 … CORE-83 | The site on its domain, the corpus exported, the `Temporal` seam, the native suite, the stored-time audit |
 | CORE-85 (#33) | CORE-56, CORE-54, CORE-84, CORE-85           | The second Core round: identifiers, holiday rules, recurrence and cron, human durations                  |
 | MAR-59 (#38)  | CORE-79, MAR-17 … MAR-19, MAR-59             | Maritime complete, laytime included                                                                      |
 | AV-64 (#43)   | AV-25 … AV-28, AV-64                         | Aviation complete                                                                                        |
@@ -109,7 +109,7 @@ with the first cut after that.
 | 23 | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
 | 24 | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Done        |
 | 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Done        |
-| 26 | CORE-87 | Core       | The reference corpus and tool<br>schemas shipped from the package                   | —                       | #328  | —       | Done        |
+| 26 | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | —       | Done        |
 | 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Not started |
 | 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | Cut     | Not started |
 | 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | —                       | #329  | —       | Waiting     |
@@ -187,10 +187,10 @@ straight after `CORE-81`, so every later story is built on the closed-form inter
 size budget and through its single `Temporal` import. `CORE-82` runs the suite on native
 `Temporal` through that import, and `CORE-83` says why a stored zoned time no longer resolves.
 `CORE-86` (the docs site on `northguild.dev/gmt`, with the landing page) and `CORE-87` (the
-reference corpus and tool schemas shipped from the package) come after `CORE-80`.
+reference corpus exported for another repo) come after `CORE-80`.
 Neither adds a function. After `CORE-86`, a later story's URLs in code go through `withBase` and
 the dist guard checks them; content links and corpus entries stay base-less. After `CORE-87`, a
-later story's corpus entries land in the shipped file through the same generator. Those six are
+later story's corpus entries land in the exported file through the same generator. Those six are
 one release; `CORE-80` is a `patch` that changes no output, option or signature. `CORE-88`
 links the hosted server from the READMEs and the docs; it follows `CORE-83`, its Status is
 `Waiting` until the server is live, and it ships with the first cut after that. `CORE-56`
@@ -263,9 +263,9 @@ Highest commercial value and the thinnest coverage in the original plan.
   the benchmarks and the size budget every later story is held to, and the single `Temporal`
   import.
 - **CORE-86, CORE-87** — the docs site, unchanged, on `northguild.dev/gmt` with the landing page
-  at `northguild.dev`, and the reference corpus and tool schemas shipped from the package.
+  at `northguild.dev`, and the reference corpus exported for another repo.
   Neither adds a function. After them, a later story's URLs in code go through `withBase` and
-  the dist guard, and its corpus entries land in the shipped file; content links stay base-less.
+  the dist guard, and its corpus entries land in the exported file; content links stay base-less.
 - **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium and Firefox, weekly;
   and why a stored zoned time no longer resolves. With the three above, one release.
 - **CORE-88** — the hosted server linked from the READMEs and the docs. Its Status is `Waiting`

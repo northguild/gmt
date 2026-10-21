@@ -1,12 +1,12 @@
 /**
- * CORE-87 — export the reference corpus and the chat's tool schemas for another repo.
+ * CORE-87 — export the reference corpus for another repo.
  *
  * Run from a gmt checkout:
  *
  *   pnpm dox:export --out /absolute/dir
  *
- * Writes `manifest.json`, `gmt-corpus.json` and `tool-schemas.json` flat into the directory,
- * creating it if missing and overwriting those three files. Nothing else in it is touched.
+ * Writes `manifest.json` and `gmt-corpus.json` flat into the directory, creating it if missing
+ * and overwriting those two files. Nothing else in it is touched.
  * `--out` must be absolute: pnpm runs this script with `apps/dox` as the working directory, so
  * a relative path would land somewhere the caller did not mean.
  */
@@ -15,7 +15,6 @@ import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { generateReference } from "./build-reference";
-import { toolSchemaFile } from "./export-tool-schemas";
 
 /** Bump when a field is removed or renamed, or a meaning changes. Never for an added field. */
 export const EXPORT_FORMAT = 1;
@@ -23,7 +22,6 @@ export const EXPORT_FORMAT = 1;
 export const EXPORT_FILES = {
   manifest: "manifest.json",
   corpus: "gmt-corpus.json",
-  toolSchemas: "tool-schemas.json",
 } as const;
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
@@ -57,17 +55,14 @@ export function parseOutDir(
   return { outDir: out };
 }
 
-/** Regenerate the corpus, then write the three files into `outDir`. */
-export async function exportReference(outDir: string): Promise<void> {
-  generateReference();
+/**
+ * Write the two files into `outDir` from the corpus already generated. It does not regenerate:
+ * a test that calls it must not rewrite the tree other tests read. `cli()` regenerates first.
+ */
+export function exportReference(outDir: string): void {
   mkdirSync(outDir, { recursive: true });
 
   copyFileSync(generatedCorpus, join(outDir, EXPORT_FILES.corpus));
-
-  writeFileSync(
-    join(outDir, EXPORT_FILES.toolSchemas),
-    JSON.stringify(await toolSchemaFile(), null, 2) + "\n",
-  );
 
   const pkg = JSON.parse(
     readFileSync(join(repoRoot, "packages/gmt/package.json"), "utf8"),
@@ -75,17 +70,14 @@ export async function exportReference(outDir: string): Promise<void> {
   if (!pkg.version) {
     throw new Error("packages/gmt/package.json has no version field");
   }
-  // Last, so a reader that sees a manifest sees the other two.
+  // Last, so a reader that sees a manifest sees the corpus.
   writeFileSync(
     join(outDir, EXPORT_FILES.manifest),
     JSON.stringify(
       {
         format: EXPORT_FORMAT,
         gmtVersion: pkg.version,
-        files: {
-          corpus: EXPORT_FILES.corpus,
-          toolSchemas: EXPORT_FILES.toolSchemas,
-        },
+        files: { corpus: EXPORT_FILES.corpus },
       },
       null,
       2,
@@ -93,19 +85,20 @@ export async function exportReference(outDir: string): Promise<void> {
   );
 }
 
-async function cli(): Promise<void> {
+function cli(): void {
   const parsed = parseOutDir(process.argv.slice(2));
   if ("error" in parsed) {
     console.error("usage: pnpm dox:export --out <absolute directory>");
     console.error(parsed.error);
     process.exit(1);
   }
-  await exportReference(parsed.outDir);
+  generateReference();
+  exportReference(parsed.outDir);
   for (const file of Object.values(EXPORT_FILES)) {
     console.log(`[export] wrote ${join(parsed.outDir, file)}`);
   }
 }
 
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
-  await cli();
+  cli();
 }
