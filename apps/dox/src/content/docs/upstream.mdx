@@ -104,8 +104,9 @@ GMT gives the standard's answer in all three cases.
 They're rare edge cases. Most only show up:
 
 - near the very first or very last date Temporal can represent (around the year 275,000);
-- in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese; or
-- in time zone history from before the 1850s.
+- in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese;
+- in time zone history from before the 1850s; or
+- in a time zone whose clocks changed twice within a few weeks, such as `Africa/El_Aaiun` in 1976.
 
 Temporal is a large, carefully designed standard, and the polyfill is a big piece of work.
 Finding bugs like these is normal. We found them because GMT tests the unusual corners that

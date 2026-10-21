@@ -2,16 +2,16 @@
 
 Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, where noted,
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
-tells an agent in plain words to post a named one: tc39 #3331 (J) was posted that way.
+tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way.
 
-> **Status of this document:** updated 2026-10-21. **Filed:** 12 items by us, plus a comment on the
-> maintainer's own PR #361. The newest is tc39 #3331 (J, 2026-10-21). **All six js-temporal PRs
+> **Status of this document:** updated 2026-10-21. **Filed:** 13 items by us, plus a comment on the
+> maintainer's own PR #361. The newest are tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
-> merged 2026-09-21. The five tc39 issues (#3327–#3331) are open with no maintainer reply.
+> merged 2026-09-21. The six tc39 issues (#3327–#3332) are open with no maintainer reply.
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
 > 17 workarounds, 16 still needed and 1 guard (D10). The newest are § I (D12), fixed on `main` with nothing
-> to file; § K (D13), fixed there only in part; and § N (D14), which arrives with the catch-up. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
+> to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; and § N (D14), which arrives with the catch-up. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
 > contradictions" before changing any GMT trigger.
 
@@ -32,7 +32,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
 | `D11`: the calendar nudge window is never retried | js-temporal `5af905f` (PR #361; `50d66d2` on its branch) | Nothing |
 | `D12`: a seconds offset matched by minutes (§ I) | js-temporal `23d1275` | Nothing |
-| `D13`: the transition search skips or stalls (§ K) | js-temporal `a79c6a1`, in part | A further upstream fix, which is unfiled: `main` still stalls for `Africa/El_Aaiun` in 1976 (§ K). `D13` retires only on a release where every `D13` probe passes |
+| `D13`: the transition search skips or stalls (§ K) | js-temporal `a79c6a1`, in part | A further upstream fix, filed as tc39 #3332: `main` still stalls for `Africa/El_Aaiun` in 1976 (§ K). `D13` retires only on a release where every `D13` probe passes |
 
 `D8` is part-way: `2bb6ba1` fixes two of its three probes, and the third needs tc39 `977d11e0` and
 `993e6322`, which are not on `main`. `D1`, `D9`, `zoned.B`, `zoned.D` and `zoned.E` have no fix on
@@ -167,22 +167,22 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Review and land what is already written**: the port is ptomato's `50d66d2` in js-temporal PR #361. **No filing of our own**, and **no tc39 filing** — tc39 #3168 is already fixed there by #3172 | Comment on js #361 (2026-09-20) adding the reproducer, the scan and the before/after measurements | Yes (Chromium 153 vs 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`. `50d66d2` measured on `main` and verified to flip all three) | `D11`: the defect-4 gates in `internal/zonedWallClockDifference.ts` and `internal/plainDateUntil.ts` | `50d66d2` on `main` **and then** a release |
 | I   | A zoned string's offset written with seconds is matched by minutes, not exactly | **Release** of `23d1275` (on `main`). No new patch and no filing: `main` already has the fix | Not filed: nothing to file. The release is the one already asked for in #373 | Yes, on 0.5.1 (Node 24.21.0): both `D12` probes fail; expected values from test262 `zoneddatetime-sub-minute-offset.js`, and Chromium 153 native Temporal agrees. `main` read, not built: `lib/ecmascript.ts` has `if (offsetSecondsPart) matchMinute = false` | D12: `matchSecondsOffsetExactly` in `internal/zonedWallClock.ts` and its probe | The first release containing `23d1275` |
 | J   | `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses when the local date is −271821-04-19 | **Spec issue** to tc39 only: `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local date before it matches a written offset. Not a polyfill bug: the polyfill and Chromium both follow the spec | tc39 #3331 (2026-10-21) | Yes: polyfill 0.5.1 (Node 24.21.0) and Chromium 153.0.8010.12 native Temporal both throw `RangeError` | None, and none is wanted: a workaround must compute the spec's answer, and this is the spec's answer. GMT's zoned reads return the sentinel; its instant readers read the string | None |
-| K   | The transition search skips, or never returns from, two offset changes inside one 14-day step | **Release** of `a79c6a1` (per-zone search windows, on `main`) fixes the 0.5.1 defect for the zones it lists. **A stall remains on `main`** for `Africa/El_Aaiun` in 1976 (17-day window, three offsets, `bisect` unchanged), which needs a further fix | **Not filed** (the remaining stall) | Yes, on 0.5.1 (Node 22.22.2, 24.21.0, 26.10.0): the `D13` probes fail; expected values from Node 26.10.0's native Temporal and `zdump -v` (tz 2026c). `main` read, not run | `D13`: `internal/zonedTransitionSearch.ts`, gates in `internal/zonedWallClock*.ts` | a release containing `a79c6a1` |
+| K   | The transition search skips, or never returns from, two offset changes inside one 14-day step | **Release** of `a79c6a1` (per-zone search windows, on `main`) fixes the 0.5.1 defect for the zones it lists. **A stall remains on `main`** for `Africa/El_Aaiun` in 1976 (17-day window, three offsets, `bisect` unchanged), which needs a further fix | tc39 #3332 (2026-10-21), for the remaining stall | Yes, on 0.5.1 (Node 22.22.2, 24.21.0, 26.10.0): the `D13` probes fail; expected values from Node 26.10.0's native Temporal and `zdump -v` (tz 2026c). tc39 `main` `e8cc03f` run: the El_Aaiun calls throw the bisection assertion, and a 16-day window fixes them. js-temporal `main` read, not run | `D13`: `internal/zonedTransitionSearch.ts`, gates in `internal/zonedWallClock*.ts` | a release containing `a79c6a1` and the #3332 fix |
 | L   | A one-character annotation key (`[a=bc]`, `[x=y]`) is refused by V8's native Temporal | **Nothing to file**: fixed upstream by unicode-org/icu4x#8623 (merged 2026-10-20), waiting for an `ixdtf` release and a V8 roll | **Not filed** (report: unicode-org/icu4x#8620, closed by #8623) | Yes: Node 26.10.0 (V8 14.6.202.34-node.34) and Chromium 153.0.8010.12 throw `RangeError: Temporal error: Invalid annotation key character.`; the polyfill accepts | None: GMT already follows the spec text | None |
 | M   | `[u-ca=islamic]` is accepted by V8's native Temporal and read as `islamic-civil` | **Nothing to file**: open upstream as boa-dev/temporal#529 | **Not filed** (report: boa-dev/temporal#529, open) | Yes: Node 26.10.0 and Chromium 153.0.8010.12 return `islamic-civil`; the polyfill throws `RangeError` | None: GMT already follows the spec text | None |
 | N   | `ZonedDateTime.prototype.round` to `day` when a date starts twice (V8 throws, the polyfill answers the next day) | **Nothing to file**: the reference polyfill fix `59a51ea9d4` is in proposal-temporal, and js-temporal pulls proposal-temporal commits in order, so the port arrives with that catch-up and its one release (#373) | Not filed: nothing to file | Yes: polyfill 0.5.1 (Node 24.21.0) answers `2010-11-07T00:00:00-03:00`; Node 26.10.0 throws; Chromium 153 and tc39/ecma262#3966 answer `2010-11-06T00:00:00-03:00` | `D14`: `roundZonedDateTime` day branch in `internal/zonedWallClockOperations.ts` and its probe | The first js-temporal release containing `59a51ea9d4` |
 
 ## Filed
 
-12 filed under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331 by an agent on the
-owner's instruction. There is also a thirteenth entry on the `/upstream/` tracker that is
+13 filed under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331 and #3332 by an
+agent on the owner's instruction. There is also a fourteenth entry on the `/upstream/` tracker that is
 **not** a filing of ours: our comment on ptomato's js-temporal PR #361 (§ H), tracked because its
 state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
 "tc39" is tc39/proposal-temporal.
 
 **Status as of 2026-10-21** (`gh pr view` / `gh issue view`, comments included). Nothing has moved
 since 2026-09-21: all six js PRs closed, #373 open, #361 merged, and the four older tc39 issues open
-with our own cross-link as the only comment. tc39 #3331, filed 2026-10-21, has no comments.
+with our own cross-link as the only comment. tc39 #3331 and #3332, filed 2026-10-21, have no comments.
 
 - **All six js PRs (#367–#372) are closed, unmerged — and none was rejected.** ptomato closed #367,
   #368 and #369 with "I'd prefer to keep the commits ported in order — otherwise the rebases become
@@ -192,7 +192,7 @@ with our own cross-link as the only comment. tc39 #3331, filed 2026-10-21, has n
   caught up to the current state of the spec."
 - **#361 merged on 2026-09-21**, which lands `50d66d2` (D11) on the polyfill's `main` along with D3,
   D5, D7 and the ICU 78 calendar fixes. Nothing is released yet, so no GMT workaround retires.
-- **The five tc39 issues (#3327–#3331) are open with no maintainer reply** (checked 2026-10-21); the
+- **The six tc39 issues (#3327–#3332) are open with no maintainer reply** (checked 2026-10-21); the
   only comments are our own cross-links.
 
 | Repository | #    | Kind  | Title                                                                                                         | Carries                                                                       | Pairs with                                                         | Depends on | Closes                                                                                  | Filed      |
@@ -208,7 +208,8 @@ with our own cross-link as the only comment. tc39 #3331, filed 2026-10-21, has n
 | tc39       | 3328 | issue | Polyfill: GetNamedTimeZoneNextTransition misses a transition in the last search window before the max Instant | B                                                                             | js #371                                                            | —          | nothing                                                                                 | 2026-09-18 |
 | tc39       | 3329 | issue | Polyfill: calendarToIsoDate overshoot assertion from #3292 is reachable in coptic/ethiopic/ethioaa month 13   | F (new)                                                                       | none: js-temporal has not ported #3292, so it doesn't have the bug | —          | nothing                                                                                 | 2026-09-18 |
 | tc39       | 3330 | issue | Polyfill: time zone transitions before 1847 are not found (Asia/Manila and four Pacific zones on 1844-12-31)  | E                                                                             | js #372                                                            | —          | nothing                                                                                 | 2026-09-19 |
-| tc39       | 3331 | issue | ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the local date is -271821-04-19    | J (spec question)                                                             | none: not a polyfill defect                                        | —          | nothing                                                                                 | 2026-10-21 |
+| tc39       | 3331 | issue | ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the local date is -271821-04-19     | J (spec question)                                                             | none: not a polyfill defect                                        | —          | nothing                                                                                 | 2026-10-21 |
+| tc39       | 3332 | issue | Polyfill: getTimeZoneTransition throws a bisection assertion for Africa/El_Aaiun in 1976                      | K (the remaining stall; new)                                                  | none: js-temporal gets it with the in-order catch-up               | —          | nothing                                                                                 | 2026-10-21 |
 
 Notes on the filings:
 
@@ -259,9 +260,9 @@ only filings worth making now are in tc39.
    tc39/proposal-temporal only. The polyfill and Chromium agree with the spec, and there is no patch
    to offer. See § J.
 9. **I (D12).** Nothing to file: fixed on js-temporal `main` by `23d1275`, and the release is #373.
-10. **K (D13): the stall that `a79c6a1` leaves.** js-temporal `main` still stalls for
-    `Africa/El_Aaiun` in 1976, so `a79c6a1` alone does not retire `D13`. Not filed. The repro and
-    the detail are in § K.
+10. **K (D13): filed as tc39 #3332 (2026-10-21).** The stall that `a79c6a1` leaves for
+    `Africa/El_Aaiun` in 1976. The issue proposes a 16-day window for that zone. `a79c6a1` alone does
+    not retire `D13`. See § K.
 11. **N (D14).** Nothing to file: the fix is proposal-temporal `59a51ea9d4`, which js-temporal's
     in-order catch-up has not reached yet. It arrives with that catch-up and the release in #373.
 
@@ -1860,17 +1861,27 @@ release, so polyfill 0.5.1 has the defect. **A stall remains on `main`**: `bisec
 window for `Africa/El_Aaiun` holds three offsets in April 1976 (−01:00 → +00:00 at 1976-04-14T01:00:00Z, then
 +00:00 → +01:00 at 1976-05-01T00:00:00Z, 16.958 days apart), so `getTimeZoneTransition("next")` from
 1976-04-14T00:30:00Z or 1976-03-28T00:30:00Z cannot narrow. 0.5.1's 14-day step is unaffected there, so
-`a79c6a1` introduces it. **Not filed.** `main` was read, not built or run here.
+`a79c6a1` introduces it. **Filed as tc39/proposal-temporal#3332 (2026-10-21)**, with a 16-day window for
+`Africa/El_Aaiun` as the fix. js-temporal `main` was read, not built or run here.
 
 The same window fails in the `previous` direction: a search whose 17-day window ends between
 1976-05-01T00:00Z and 01:00Z holds the same three offsets, for example `previous` from
 1976-05-01T00:30:00Z (expected `1976-05-01T01:00:00+01:00[Africa/El_Aaiun]`, Node 26.10.0).
 
 tc39/proposal-temporal `main` `e8cc03f` has the same code: `a79c6a1` ports tc39 `da53e9acea`
-(2025-05-07). tc39's build keeps `bisect`'s `assertNotReached`, which throws, so there the same calls
-should throw `assertion failure: code should not be reached because invalid state in bisection …`
-instead of hanging. That was read in `polyfill/lib/ecmascript.mjs` and `polyfill/lib/assert.mjs`,
-not run.
+(2025-05-07). tc39's build keeps `bisect`'s `assertNotReached`, so there the calls throw
+`assertion failure: code should not be reached because invalid state in bisection -3600000000000 - 0 - 3600000000000`
+instead of hanging. Run on tc39's `polyfill/script.js` at `e8cc03f`, Node 24.21.0:
+
+- `next` throws when a 17-day step starts from 1976-04-14T00:00:00Z up to 01:00:00Z (exclusive);
+  from 1976-04-13T23:59:59Z it answers.
+- `previous` throws from 1976-05-01T00:00:01Z up to 01:00:00Z.
+- With `DAY_MS * 16` for the zone, every El_Aaiun lookup matches Node 26.10.0. That is `next` and
+  `previous` every 90 minutes from 1976-03-01 to 06-01 (2,944 lookups), and every transition from 1800
+  to 2100 walked both ways. Without it, 3 of those lookups throw.
+- On Node 26.10.0 (tz 2026c), no other zone has two transitions from 1800 to 2100 closer together than
+  its tc39 window.
+- The patch was not run against tc39's own test suite.
 
 `D13` retires only on a release where every `D13` probe passes, `stall.nextElAaiun` included. GMT works around it as temporalCompat **D13**
 (`internal/zonedTransitionSearch.ts`, probe `isTransitionSearchCompatNeeded`).
@@ -1904,8 +1915,9 @@ the offset every 14 days (`DAY_MS * 2 * 7`) and calls `bisect` on a step whose e
 | `Temporal.ZonedDateTime.from("2000-10-08T12:00[America/Noronha]").hoursInDay` | `-8881` | `23` |
 | `Temporal.ZonedDateTime.from("1944-04-15T14:00:00+02:00[Europe/Riga]").getTimeZoneTransition("next")` | never returns | `1944-10-02T02:00:00+01:00[Europe/Riga]` |
 | `Temporal.Instant.from("1943-10-15T12:00:00Z").toZonedDateTimeISO("Europe/Simferopol").getTimeZoneTransition("next")` | never returns | `1944-04-03T03:00:00+02:00[Europe/Simferopol]` |
-| `Temporal.Instant.from("1976-04-14T00:30:00Z").toZonedDateTimeISO("Africa/El_Aaiun").getTimeZoneTransition("next")` | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` (correct on 0.5.1); on `main` with `a79c6a1`: never returns (read, not run) | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` |
-| the same from `1976-03-28T00:30:00Z` | correct on 0.5.1; on `main`: never returns (read, not run) | the same value |
+| `Temporal.Instant.from("1976-04-14T00:30:00Z").toZonedDateTimeISO("Africa/El_Aaiun").getTimeZoneTransition("next")` | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` (correct on 0.5.1); on js-temporal `main`: never returns (read, not run); on tc39 `e8cc03f`: throws the bisection assertion (run) | `1976-04-14T01:00:00+00:00[Africa/El_Aaiun]` |
+| the same from `1976-03-28T00:30:00Z` | correct on 0.5.1; on js-temporal `main`: never returns (read, not run); on tc39 `e8cc03f`: throws (run) | the same value |
+| `Temporal.Instant.from("1976-05-01T00:30:00Z").toZonedDateTimeISO("Africa/El_Aaiun").getTimeZoneTransition("previous")` | correct on 0.5.1; on tc39 `e8cc03f`: throws (run) | `1976-05-01T01:00:00+01:00[Africa/El_Aaiun]` |
 
 ### GMT impact and workaround (`D13`)
 
