@@ -619,23 +619,26 @@ describe("option members given as objects", () => {
       const valid = new Map(
         members.map((member) => [member, accepted(testCase, others, member)]),
       );
-      const contexts: Record<string, unknown>[] = [
-        others,
-        ...members.flatMap((member) =>
-          (valid.get(member) ?? []).map((value) => ({
-            ...others,
-            [member]: value,
+      // The baseline, then the baseline with one member changed. Wrapping that same member would
+      // overwrite the change, so each context names the member it set.
+      const contexts: { set?: string; options: Record<string, unknown> }[] = [
+        { options: others },
+        ...members.flatMap((set) =>
+          (valid.get(set) ?? []).map((value) => ({
+            set,
+            options: { ...others, [set]: value },
           })),
         ),
       ];
       const wrong = new Set<string>();
-      for (const context of contexts) {
+      for (const { set, options } of contexts) {
         for (const member of members) {
+          if (member === set) continue;
           for (const value of valid.get(member) ?? []) {
-            const plain = callWith(testCase, { ...context, [member]: value });
+            const plain = callWith(testCase, { ...options, [member]: value });
             if (deepEqual(plain, testCase.sentinel)) continue;
             const wrapped = callWith(testCase, {
-              ...context,
+              ...options,
               [member]: wrap(value),
             });
             if (
@@ -649,5 +652,7 @@ describe("option members given as objects", () => {
       }
       expect([...wrong].join("; ")).toBe("");
     },
+    // The formatters with many members make the most calls: up to 2.3 s locally, over 5 s on CI.
+    30_000,
   );
 });
