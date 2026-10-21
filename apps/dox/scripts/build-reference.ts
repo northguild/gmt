@@ -2861,7 +2861,7 @@ function industryIndex(): IndexedIndustry[] {
  */
 const inputsStamp = join(outGen, ".inputs-hash");
 
-function main() {
+export function generateReference() {
   const outputs = [
     join(outGen, "gmt-corpus.json"),
     join(outGen, "route-manifest.ts"),
@@ -3440,4 +3440,5 @@ export const LIVE_PLAYGROUND_TEMPLATES: Record<string, LivePlaygroundTemplate> =
 
 // Generate only when run as a script. A test that imports this module for its
 // helpers must not regenerate (and delete) the MDX tree another test reads.
-if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) main();
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url))
+  generateReference();

@@ -32,6 +32,7 @@
     "dox:check": "pnpm --filter @gmt/dox check",
     "dox:test": "pnpm --filter @gmt/dox test",
     "dox:lint": "pnpm --filter @gmt/dox lint",
+    "dox:export": "pnpm --filter @gmt/dox reference:export",
     "dox:docs-check": "pnpm --filter @gmt/dox docs-check",
     "format": "oxfmt",
     "format:fix": "oxfmt --write",
