@@ -869,6 +869,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `src/lib/mdx-jsx.ts`, which `scripts/llms.test.ts` checks against the built text surfaces.
   `DOX_TOOLS` reads `DOX_TOOL_DOCS` by position, so a new doc is appended, never inserted: an
   insert gives every later tool its neighbour's description, and no test fails.
+  A cross-field rule (`.refine`) in a new tool's schema carries a message, which the reference
+  export passes on as that tool's `rules`; a rule with no message fails
+  `export-tool-schemas.test.ts` ([reference-export.md](reference-export.md)).
 - **Tools, scenarios, guides and mistakes carry an industry tag.** A page's frontmatter lists
   its `industries` (`src/content.config.ts`), and the `PageTitle` override renders them under
   the title as `IndustryTags.astro`: an icon and a word, one style for every industry, no colour

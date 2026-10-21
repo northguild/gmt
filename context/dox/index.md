@@ -5,6 +5,8 @@ Every tier is done, the chat included. Load only what the task needs:
 - [overview.md](overview.md) — architecture, decisions, tier table. Start here.
 - [built.md](built.md) — what each tier ships, the rules that bind it, traps and runbooks.
   The chat (Tier 6) is its largest section.
+- [reference-export.md](reference-export.md) — the command another repo runs to get the
+  reference corpus and the chat's tool schemas, and the format of the files it writes.
 - [tracker.md](tracker.md) — stories, GitHub issues, status.
 - [specs/index.md](specs/index.md) — the execution spec of a story in progress; deleted when the story is Done.
 - [reference/design-system.md](reference/design-system.md) — theme implementation rules,
