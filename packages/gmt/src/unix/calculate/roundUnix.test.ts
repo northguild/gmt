@@ -251,6 +251,23 @@ describe("roundUnix", () => {
     },
   );
 
+  // Temporal GetOption converts the value it reads once: ToString for roundingMode, ToNumber for
+  // roundingIncrement. An option given as an object therefore rounds exactly as the plain value
+  // does, on GMT's own day-rounding path as well as on Temporal's.
+  it.each`
+    value            | options                                                                                      | expected
+    ${1718483696000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("floor") }}  | ${1718424000000}
+    ${1718427600000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("ceil") }}   | ${1718510400000}
+    ${1289100600000} | ${{ smallestUnit: "day", timeZone: "America/Goose_Bay", roundingMode: new String("floor") }} | ${1289012400000}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingMode: new String("floor") }} | ${1718481600000}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingIncrement: new Number(2) }}  | ${1718481600000}
+  `(
+    "returns $expected for $value with options given as objects",
+    ({ value, options, expected }) => {
+      expect(roundUnix(value, options)).toBe(expected);
+    },
+  );
+
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
     vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
       () => {

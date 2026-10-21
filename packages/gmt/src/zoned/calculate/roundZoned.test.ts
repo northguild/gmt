@@ -540,6 +540,38 @@ describe("roundZoned", () => {
     },
   );
 
+  // Temporal GetOption converts the value it reads once: ToString for roundingMode, ToNumber for
+  // roundingIncrement. An option given as an object therefore rounds exactly as the plain value
+  // does, on GMT's own day-rounding path as well as on Temporal's.
+  it.each`
+    value                                             | options                                                                 | expected
+    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${"2024-06-15T00:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T01:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("ceil") }}            | ${"2024-06-16T00:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("halfTrunc") }}       | ${"2024-06-15T00:00:00-04:00[America/New_York]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${"2010-11-06T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "hour", roundingMode: new String("floor") }}          | ${"2024-06-15T16:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: new Number(15) }}        | ${"2024-06-15T12:30:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: { valueOf: () => 15 } }} | ${"2024-06-15T12:30:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingMode: { toString: () => "ceil" } }} | ${"2024-06-15T12:35:00-04:00[America/New_York]"}
+  `(
+    "rounds $value with options given as objects to $expected",
+    ({ value, options, expected }) => {
+      expect(roundZoned(value, options)).toBe(expected);
+    },
+  );
+
+  // ToString and ToNumber throw a TypeError for a symbol, and ToNumber for a bigint.
+  it.each`
+    options
+    ${{ smallestUnit: "day", roundingMode: Symbol("floor") }}
+    ${{ smallestUnit: "minute", roundingIncrement: Symbol("15") }}
+    ${{ smallestUnit: "minute", roundingIncrement: 15n }}
+  `("returns empty string for the options $options", ({ options }) => {
+    expect(
+      roundZoned("2024-06-15T16:34:56-04:00[America/New_York]", options),
+    ).toBe("");
+  });
+
   // unsupported date units (year, month, week) return ""
   it.each`
     unit

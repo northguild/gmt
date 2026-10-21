@@ -77,7 +77,9 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - Record N covers the day-rounding defect below. Records K, L and M were not used for this story because K was already taken.
 - Firefox has no tags yet. Its triage waits for the first CI run, because Firefox 155 would not launch on the owner's macOS here. Each Firefox failure gets the same three questions in order: does it also fail on the polyfill in Firefox (host group), does the spec disagree with GMT (fix it now), otherwise an engine defect (record it).
 
-**The one GMT defect found**
+**GMT defects found**
 
 - `roundZoned` and `roundUnix` rounded to the day wrongly when a date starts twice (America/Goose_Bay on 6 November 2010, Antarctica/Casey on 4 March 2010). Rounding to the day clamps the instant to the end of the date minus one nanosecond (`endNs - 1`): tc39/ecma262#3966 (commit 5f44331e0a11), tc39/proposal-temporal#3312, and test262 `intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js`. GMT answers this itself on runtimes without the fix, gated by temporalCompat workaround D14, and ships it as a patch changeset.
+- While D14 is active, every day round in a named zone takes GMT's own path, which compares the mode as a string. `roundZonedDateTime` therefore converts `roundingIncrement` (ToNumber) and `roundingMode` (ToString) once, before any path, as GetOption does, so `new String("floor")` rounds as `"floor"` does.
+- The test `option members given as objects` in `src/test/optionsObject.test.ts` holds every function to that rule. A member given as an object gives the plain value's answer or the sentinel, with each other member set to each value it accepts. It found `formatCalendar`'s `timeStyle` too: an object `"long"` printed the UTC zone name. That ships as a patch changeset.
 - Functions built on GMT's own bucket rule (`startOfZoned`, `endOfZoned`, `bucketRange` and the hours and workforce functions) are not affected: the re-entered piece of a date is its own bucket. Duration rounding with a zoned `relativeTo` is not affected either.

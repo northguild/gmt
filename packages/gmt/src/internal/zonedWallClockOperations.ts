@@ -916,6 +916,36 @@ function roundAtEdge(
 }
 
 /**
+ * Convert `roundingIncrement` and `roundingMode` once, in the order `ZonedDateTime#round` reads them.
+ *
+ * - Temporal GetOption converts the value it reads: ToNumber for `roundingIncrement`, ToString for
+ *   `roundingMode`. The steps after this compare the mode with `===`, so a mode given as an object
+ *   (`new String("floor")`) must reach them as the plain string, or it falls through to another
+ *   mode's branch.
+ * - The unary plus and the template literal are ToNumber and ToString exactly, so a symbol or a
+ *   bigint throws the TypeError Temporal throws. `undefined` stays `undefined` (the default).
+ * - `smallestUnit` is left as it is: both callers pass a unit they have already checked is one of
+ *   the unit strings.
+ *
+ * @param options the caller's options, each member read once
+ * @returns the same options, increment and mode as primitives
+ */
+function convertRoundTo(options: ZonedRoundTo): ZonedRoundTo {
+  const { roundingIncrement, roundingMode, smallestUnit } = options;
+  const increment =
+    roundingIncrement === undefined ? undefined : +roundingIncrement;
+  const mode =
+    roundingMode === undefined
+      ? undefined
+      : (`${roundingMode}` as Temporal.RoundingMode);
+  return {
+    smallestUnit,
+    ...(increment === undefined ? {} : { roundingIncrement: increment }),
+    ...(mode === undefined ? {} : { roundingMode: mode }),
+  };
+}
+
+/**
  * `ZonedDateTime#round`, correct at the range limits and, by day, before 1847.
  *
  * @param zoned the value to round
@@ -924,8 +954,9 @@ function roundAtEdge(
  */
 export function roundZonedDateTime(
   zoned: Temporal.ZonedDateTime,
-  roundTo: ZonedRoundTo,
+  options: ZonedRoundTo,
 ): Temporal.ZonedDateTime {
+  const roundTo = convertRoundTo(options);
   if (
     isDayUnit(roundTo.smallestUnit) &&
     isNamedTimeZone(zoned.timeZoneId) &&

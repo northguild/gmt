@@ -504,3 +504,150 @@ describe("option members: each is read once and converted once per call", () => 
     },
   );
 });
+
+describe("option members given as objects", () => {
+  // GetOption converts the value it read: ToString for a string option, ToNumber for a number
+  // option. So `new String("floor")` is "floor" to Temporal and to Intl. A function may accept
+  // only primitives and return its sentinel for an object, but it must never give a third answer:
+  // a branch that compares the object itself with `===` or `Set#has` would skip the right branch
+  // and still return a result.
+  //
+  // A member's branch can depend on another member (a mode on GMT's own day-rounding path, a
+  // style only within a format), so each member is wrapped with every other member set to each
+  // value it accepts.
+  //
+  // A boolean option is read with ToBoolean, and every object is `true`, so a wrapped `0` is meant
+  // to differ from `0`. Those members are left out.
+  const TO_BOOLEAN = new Set([
+    "hour12",
+    "includeTimeZoneName",
+    "inclusive",
+    "inclusiveEnd",
+    "inclusiveStart",
+    "round",
+    "zero",
+  ]);
+  const VALUES: unknown[] = [
+    "x",
+    0,
+    2,
+    3,
+    15,
+    "compatible",
+    "later",
+    "earlier",
+    "reject",
+    "use",
+    "prefer",
+    "ignore",
+    "constrain",
+    "year",
+    "month",
+    "week",
+    "day",
+    "days",
+    "hour",
+    "minute",
+    "second",
+    "nanosecond",
+    "short",
+    "long",
+    "full",
+    "medium",
+    "narrow",
+    "auto",
+    "always",
+    "numeric",
+    "trunc",
+    "ceil",
+    "floor",
+    "expand",
+    "halfExpand",
+    "halfEven",
+    "halfTrunc",
+    "monday",
+    "sunday",
+    "seconds",
+    "milliseconds",
+    "UTC",
+    "America/New_York",
+    "1904",
+    "discharged",
+    "gregory",
+    "hebrew",
+    "latn",
+    "h23",
+    "h12",
+    "longOffset",
+    "shortGeneric",
+  ];
+
+  function wrap(value: unknown): object {
+    return {
+      toString: () => String(value),
+      valueOf: () => value,
+    };
+  }
+
+  /** Each `member` set to a value the call accepts, the other members as in the baseline. */
+  function accepted(
+    testCase: OptionsCase,
+    others: Record<string, unknown>,
+    member: string,
+  ): unknown[] {
+    const own = member in others ? [others[member]] : [];
+    return [...own, ...VALUES].filter(
+      (value) =>
+        !deepEqual(
+          callWith(testCase, { ...others, [member]: value }),
+          testCase.sentinel,
+        ),
+    );
+  }
+
+  it.each(CASES.filter(({ readsClock }) => !readsClock))(
+    "$name gives the plain answer or the sentinel for a member given as an object",
+    (testCase) => {
+      const baseline = testCase.baseline[testCase.position];
+      const others: Record<string, unknown> =
+        baseline !== null && typeof baseline === "object"
+          ? { ...baseline }
+          : {};
+      const members = testCase.members.filter(
+        (member) => !TO_BOOLEAN.has(member),
+      );
+      const valid = new Map(
+        members.map((member) => [member, accepted(testCase, others, member)]),
+      );
+      const contexts: Record<string, unknown>[] = [
+        others,
+        ...members.flatMap((member) =>
+          (valid.get(member) ?? []).map((value) => ({
+            ...others,
+            [member]: value,
+          })),
+        ),
+      ];
+      const wrong = new Set<string>();
+      for (const context of contexts) {
+        for (const member of members) {
+          for (const value of valid.get(member) ?? []) {
+            const plain = callWith(testCase, { ...context, [member]: value });
+            if (deepEqual(plain, testCase.sentinel)) continue;
+            const wrapped = callWith(testCase, {
+              ...context,
+              [member]: wrap(value),
+            });
+            if (
+              !deepEqual(wrapped, plain) &&
+              !deepEqual(wrapped, testCase.sentinel)
+            ) {
+              wrong.add(`${member}: ${String(value)}`);
+            }
+          }
+        }
+      }
+      expect([...wrong].join("; ")).toBe("");
+    },
+  );
+});
