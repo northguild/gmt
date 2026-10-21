@@ -175,6 +175,17 @@ function epochDays(date: Temporal.PlainDate): number {
   }).days;
 }
 
+/**
+ * True when the date part of a wall clock is inside the TC39 `CheckISODaysRange` limit, which
+ * Temporal applies to the local date (not only the instant) under `prefer` and `reject`.
+ *
+ * @example isWithinIsoDaysRange(Temporal.PlainDateTime.from("-271821-04-20T00:00:00")) // true
+ * @example isWithinIsoDaysRange(Temporal.PlainDateTime.from("-271821-04-19T23:59:00")) // false
+ */
+export function isWithinIsoDaysRange(wall: Temporal.PlainDateTime): boolean {
+  return Math.abs(epochDays(wall.toPlainDate())) <= MAX_ISO_EPOCH_DAYS;
+}
+
 /** True for a date within `EDGE_WINDOW_DAYS` of either TC39 date limit. */
 export function isNearRangeEdge(date: Temporal.PlainDate): boolean {
   return Math.abs(epochDays(date)) >= MAX_ISO_EPOCH_DAYS - EDGE_WINDOW_DAYS;

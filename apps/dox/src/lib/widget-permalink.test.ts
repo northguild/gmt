@@ -127,4 +127,14 @@ describe("widget permalinks", () => {
     // than passing on an empty glob.
     expect(checked).toBeGreaterThan(0);
   });
+
+  it("round-trips a multi-line stored-time audit past the 64-character cap", () => {
+    const values = Array.from(
+      { length: 6 },
+      (_, i) => `2016-12-0${i + 1}T09:00:00+02:00[Europe/Istanbul]`,
+    ).join("\n");
+    const url = encodeWidgetPermalink("storedaudit", { values, line: "5" });
+    const seeded = seedFromLocation("storedaudit", url.slice(url.indexOf("?")));
+    expect(seeded).toEqual({ values, line: "5" });
+  });
 });

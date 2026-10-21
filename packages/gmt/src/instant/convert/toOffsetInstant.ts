@@ -1,10 +1,10 @@
 import { Temporal } from "../../internal/temporal";
 import {
-  formatUtcOffset,
   frameOffset,
   isoStringBody,
   parseInstantNanoseconds,
   TIME_ZONE_ANNOTATION,
+  writtenOffset,
   zonedDateTimeFrom,
   zoneFrame,
 } from "../../internal";
@@ -224,27 +224,4 @@ function offsetInstantInZone(
     offset: zoned.offset,
     timeZone: zoned.timeZoneId,
   };
-}
-
-/** The offset the string's own digits were written in, recovered for an unbracketed value. */
-function writtenOffset(instant: Temporal.Instant, body: string): string | null {
-  // With no zone and no bracket, the offset is the distance between two wall clocks: the digits as
-  // written, and the same instant read in UTC. That recovers it without slicing the
-  // string. The subtraction stays on `PlainDateTime` rather than going through an
-  // instant, because a wall clock reaches a day further either side than an instant does
-  // — `+275760-09-13T14:00:00+14:00` names a representable instant whose digits, read as
-  // UTC, are past the end of the range. `PlainDateTime.from` parses every shape this
-  // grammar allows but the `Z` designator, and a `Z` string's wall clock *is* the UTC
-  // one, so its offset is `+00:00` by definition.
-  const utcWallClock = instant.toZonedDateTimeISO("UTC").toPlainDateTime();
-  const writtenWallClock =
-    body.endsWith("Z") || body.endsWith("z")
-      ? utcWallClock
-      : Temporal.PlainDateTime.from(body);
-  return formatUtcOffset(
-    BigInt(
-      utcWallClock.until(writtenWallClock, { largestUnit: "nanosecond" })
-        .nanoseconds,
-    ),
-  );
 }

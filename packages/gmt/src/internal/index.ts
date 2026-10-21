@@ -107,7 +107,11 @@ export {
   parseIntervalNanosecondsList,
 } from "./intervalNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
-export { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
+export {
+  formatUtcOffset,
+  parseUtcOffsetNanoseconds,
+  writtenOffset,
+} from "./utcOffsetString";
 export { formatUtcReading, parseUtcReading } from "./utcReading";
 export {
   isGnssSystem,
@@ -185,7 +189,7 @@ export {
   zonedUnitStart,
 } from "./zonedBucket";
 export { countZonedLocalDates } from "./zonedLocalDates";
-export { zonedDateTimeFrom } from "./zonedWallClock";
+export { isWithinIsoDaysRange, zonedDateTimeFrom } from "./zonedWallClock";
 export { wallClockAtOffset } from "./wallClockAtOffset";
 export {
   durationCompare,

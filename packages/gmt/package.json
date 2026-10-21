@@ -291,6 +291,9 @@
       "zoned/chop": [
         "./dist/zoned/chop/index.d.ts"
       ],
+      "zoned/classify": [
+        "./dist/zoned/classify/index.d.ts"
+      ],
       "zoned/compare": [
         "./dist/zoned/compare/index.d.ts"
       ],
@@ -649,6 +652,10 @@
     "./zoned/chop": {
       "types": "./dist/zoned/chop/index.d.ts",
       "default": "./dist/zoned/chop/index.js"
+    },
+    "./zoned/classify": {
+      "types": "./dist/zoned/classify/index.d.ts",
+      "default": "./dist/zoned/classify/index.js"
     },
     "./zoned/compare": {
       "types": "./dist/zoned/compare/index.d.ts",

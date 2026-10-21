@@ -25,7 +25,7 @@ Rule changes are frequent, and hosts lag them. IANA released 2026b, 2026c, 2026d
 
 ## Tool
 
-**Stored Time Audit.** Paste stored zoned strings, one per line, and see each one's kind and every reading it allows; a mismatched row draws the transition behind it on the DST Inspector's local-day grid. Calls `classifyStoredZoned`, `classifyLocal`. Teaches: an offset stored next to a zone is a claim about the rules, and the rules can change.
+**Stored Time Audit.** Paste stored zoned strings, one per line, and see each one's kind and every reading it allows; a gap or overlap line draws the transition on a local-day strip, and a mismatched line draws the clock change since which the zone has held its offset. Calls `classifyStoredZoned`; `classifyLocal` is not called. Teaches: an offset stored next to a zone is a claim about the rules, and the rules can change.
 
 ## Design notes
 
@@ -49,3 +49,23 @@ Rule changes are frequent, and hosts lag them. IANA released 2026b, 2026c, 2026d
 - Sentinel rows: no offset, no zone, a bracketed offset instead of a zone, an unknown zone, basic format.
 - Full matrix: CI's 10 zones × Node 22, 24 and 26.
 - `pnpm run validate` stays green.
+
+## Decisions
+
+Settled while building the story (2026-10-21). The function's JSDoc and the `StoredZonedClassification` type are the full statement of each kind; these are the choices that shaped them.
+
+- **Five kinds, not four (D1; owner).** An overlap where the stored offset picks one reading is its own kind, `validInOverlap`. It carries `earlier` and `later` as well as `instant`, because `offset: "ignore"` in `2026-11-01T01:30:00-08:00[America/Los_Angeles]` gives `08:30Z` while `reject` gives `09:30Z`. A `valid` that held only the instant could not reproduce `ignore`. The kinds come from two questions: does the stored offset match a candidate instant, and does the local time have one, two or no candidates (a gap with a match cannot happen).
+- **Every kind carries `atStoredOffset` (D2; owner).** `valid` included. It is the instant `offset: "use"` gives, the written wall clock minus the written offset. It differs from `instant` for a minute-rounded match, such as `1960-01-01T00:20:00-00:45[Africa/Monrovia]`, so `use` needs no second parse.
+- **Every reading is a `Z` instant string, every offset `±HH:MM[:SS]` (D3; owner).** Readings are `Temporal.Instant#toString()`, as `resolveLocal` returns. Offsets come from `formatUtcOffset`.
+- **`Z[zone]` is `valid` and `-00:00[zone]` is a numeric offset (D4).** Temporal reads `Z` as exact, and RFC 9557 §3.4 Figure 2 does not call it inconsistent, so it is `valid` even inside a gap or an overlap. Temporal reads `-00:00` as a numeric zero offset (§6.5.2), and it outranks RFC 9557's reading of `-00:00` as `Z`, so that string can be `offsetMismatch`.
+- **The sentinel is `null` (D5).** It covers: no offset, no zone annotation, a bracketed offset in place of a zone (Temporal accepts it, GMT does not), an unknown zone, basic format, an offset finer than a second, a calendar other than `iso8601`, second 60, a stored reading past the instant range, and the local date −271821-04-19, which a zoned read refuses. The function never throws.
+- **The function does not read `process.versions.tz` (D6).** The JSDoc says the answer depends on the host's rules and shows the caller how to read the release on Node. Browsers expose none. GMT pins no tzdb release.
+- **`writtenOffset` moves to `internal/utcOffsetString.ts` (D7).** Its behaviour does not change, and `toOffsetInstant` imports it. Slicing the offset digits a second time is not allowed.
+- **The function lives at `zoned/classify/` (D8)**, a new subpath with the full wiring: `package.json` `exports` and `typesVersions`, the `zoned` barrel and the Dox module list. A verb folder like the other `zoned/` folders; `zoned/validate/` returns booleans, and this returns readings.
+- **The same primitives as `classifyLocal` and `resolveLocal`.** `classifyWall` now also returns `latest`, and a new `isWithinIsoDaysRange` in `internal/zonedWallClock.ts` supports the range check. The temporalCompat corrections stay in force: an offset written with seconds matches exactly (probe D12), and a minute-rounded offset matches by minutes.
+- **The `offset` table is the contract, and the tests enforce it.** For every expected row, all 16 pairs of `offset` and `disambiguation` equal `zonedDateTimeFrom(value, { offset, disambiguation })`, or throw where the table says "refused". The matrix reuses `sameInstantBattleCases` and `localNoonBattleCases`, so there is no literal zone table. Tests use only rule changes that Node 22's 2025c data already has (Istanbul 2016, Casablanca 2018, Sao Paulo 2019). The issue's Vancouver string appears in prose only.
+- **The oracle skips one cell: `Z` with `offset: "ignore"` (owner, 2026-10-21).** TC39 §6.5.1 reads a `Z` string as exact under every `offset` value. Polyfill 0.5.1 and V8 13.6 apply `ignore` first and read the wall clock in the zone: `2022-07-08T00:14:07Z[Europe/London]` gives `2022-07-07T23:14:07Z`. The function follows the specification, and the test's comment cites the clause.
+- **Backlog finding B (pre-existing, not part of this story).** `zonedDateTimeFrom` diverges from the specification for `Z` with `offset: "ignore"`, inherited from polyfill 0.5.1. `calendarSystemOfZonedValue` is affected at the range edge. It is not fixed here.
+- **The Stored Time Audit never calls `classifyLocal`.** The kind that `classifyStoredZoned` returns already says unique, overlap or gap, and a second call would give a second source for one answer. A gap or an overlap draws a day strip; a mismatch draws a since strip. See `context/dox/built.md` for the tool's own decisions.
+- **Upstream.** The −271821-04-19 refusal is filed as tc39/proposal-temporal#3331 (the function follows the spec, so it needs no workaround), and the El_Aaiun transition stall that D13 guards is filed as #3332.
+

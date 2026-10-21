@@ -113,6 +113,10 @@ import {
   mountElapsedVsClock,
   renderElapsedVsClockTemplate,
 } from "./elapsed-vs-clock-mount";
+import {
+  mountStoredTimeAudit,
+  renderStoredTimeAuditTemplate,
+} from "./stored-time-audit-mount";
 
 installJsdomShims();
 
@@ -251,6 +255,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "elapsed vs. clock difference",
     () => renderElapsedVsClockTemplate(),
     mountElapsedVsClock as MountFn<never>,
+  ],
+  [
+    "stored time audit",
+    () => renderStoredTimeAuditTemplate(),
+    mountStoredTimeAudit as MountFn<never>,
   ],
 ];
 

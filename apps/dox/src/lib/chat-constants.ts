@@ -783,6 +783,15 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { start: "2016-12-31T23:59:59Z", end: "2017-01-01T00:00:01Z" },
   },
+  {
+    text: "Why does 2016-12-01T09:00:00+02:00[Europe/Istanbul] no longer resolve?",
+    widget: "showStoredTimeAudit",
+    area: "core",
+    args: {
+      values:
+        "2016-12-01T09:00:00+02:00[Europe/Istanbul]\n2016-12-01T09:00:00+03:00[Europe/Istanbul]",
+    },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

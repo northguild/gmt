@@ -81,3 +81,42 @@ export function formatUtcOffset(offsetNanoseconds: bigint): string | null {
     ? `${sign}${padTwo(hours)}:${padTwo(minutes)}`
     : `${sign}${padTwo(hours)}:${padTwo(minutes)}:${padTwo(seconds)}`;
 }
+
+/**
+ * The offset an instant string's own digits were written in, recovered without slicing them.
+ *
+ * Recovers the offset written in the body from the distance between two wall clocks: the digits
+ * as written, and the same instant read in UTC. A `Z` or `z` body is written in UTC, so its offset is
+ * `+00:00`.
+ *
+ * @param instant the instant `body` names
+ * @param body the ISO 8601 string with any bracketed annotations removed (`isoStringBody`)
+ * @returns the written offset as `±HH:MM[:SS]`, or null when it is finer than a second
+ *
+ * @example writtenOffset(Temporal.Instant.from("2024-07-15T12:00:00+05:30"), "2024-07-15T12:00:00+05:30") // "+05:30"
+ * @example writtenOffset(Temporal.Instant.from("2024-07-15T12:00:00Z"), "2024-07-15T12:00:00Z") // "+00:00"
+ */
+export function writtenOffset(
+  instant: Temporal.Instant,
+  body: string,
+): string | null {
+  // The written offset is the distance between two wall clocks: the digits as written, and the
+  // same instant read in UTC. That recovers it without slicing the
+  // string. The subtraction stays on `PlainDateTime` rather than going through an
+  // instant, because a wall clock reaches a day further either side than an instant does
+  // — `+275760-09-13T14:00:00+14:00` names a representable instant whose digits, read as
+  // UTC, are past the end of the range. `PlainDateTime.from` parses every shape this
+  // grammar allows but the `Z` designator, and a `Z` string's wall clock *is* the UTC
+  // one, so its offset is `+00:00` by definition.
+  const utcWallClock = instant.toZonedDateTimeISO("UTC").toPlainDateTime();
+  const writtenWallClock =
+    body.endsWith("Z") || body.endsWith("z")
+      ? utcWallClock
+      : Temporal.PlainDateTime.from(body);
+  return formatUtcOffset(
+    BigInt(
+      utcWallClock.until(writtenWallClock, { largestUnit: "nanosecond" })
+        .nanoseconds,
+    ),
+  );
+}

@@ -163,6 +163,39 @@ function that only reads a value has no limit, and neither have `resolveLocal`,
 `classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset` and `isBetweenUnix`. An offset to the
 minute has no limit at all.
 
+## Read a stored zoned time after a rule change
+
+A zoned string stored last year was true under the rules of that day. When the zone's rules
+change, the offset in the string and the offset the zone now has can disagree, and
+[`classifyStoredZoned`](/reference/zoned/classify/classifyStoredZoned) says how. It never
+throws and never guesses. It returns a kind, and the instants that kind allows, or `null`
+for a string that is not a stored zoned time.
+
+```typescript
+import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
+
+// Turkey stayed on +03:00 from 2016-09-07, so a winter time stored at +02:00 is an hour off.
+classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]");
+// { kind: "offsetMismatch", storedOffset: "+02:00", zoneOffset: "+03:00",
+//   atStoredOffset: "2016-12-01T07:00:00Z", atZoneOffset: "2016-12-01T06:00:00Z" }
+
+// A time in the hour a clock change skipped.
+classifyStoredZoned("2026-03-08T02:30:00-03:00[America/Los_Angeles]");
+// { kind: "nonexistent", earlier: "2026-03-08T09:30:00Z",
+//   later: "2026-03-08T10:30:00Z", atStoredOffset: "2026-03-08T05:30:00Z" }
+
+// A string with no offset is not a stored zoned time.
+classifyStoredZoned("2016-12-01T09:00:00[Europe/Istanbul]"); // null
+```
+
+The other kinds are `valid`, `validInOverlap` and `ambiguous`. Which instant you take from
+an `offsetMismatch` is your decision. Take `atStoredOffset` when the offset was recorded at
+the event, and `atZoneOffset` when the wall time was. The answer depends on the host's time
+zone database, which a browser does not report. The
+[Stored Time Audit](/tools/stored-time-audit/) shows each kind with the rule behind it, and
+[`getDstTransitions`](/reference/zoned/get/getDstTransitions) lists the clock changes of a
+year.
+
 ## Two notes on the boundaries of this namespace
 
 - **`resolveLocal` returns an instant. `convertPlainDateTimeToZoned` returns a zoned
@@ -181,3 +214,4 @@ minute has no limit at all.
 - [DST Disambiguation](/guides/concepts/dst-disambiguation/): the four strategies behind `resolveLocal`
 - [Nanosecond Precision](/guides/core-date-operations/nanosecond-precision/): how zoned strings with sub-minute offsets are read
 - [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/): the interchange formats that carry an offset
+- [Stored Time Audit](/tools/stored-time-audit/): paste stored zoned times and see which ones a rule change has moved

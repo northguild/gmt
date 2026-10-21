@@ -1,0 +1,635 @@
+/*
+ * Stored Time Audit widget (CORE-83). Root: `.gmt-stored-time-audit`.
+ *
+ * The chip, the series mapping and the chart-surface frame come from the
+ * cut-off sheet, which lists this root and `.gmt-stored-time-frame`. The grid
+ * hold is the ledger sheet's. This sheet holds what only this tool draws: the
+ * line table with its kind badges, the two-lane strip (a day strip for a gap or
+ * an overlap, a since strip for an offset mismatch), the legend and the pasted
+ * strings box.
+ *
+ * Amber belongs to the NO SIGNAL state alone. An accent edge is a bottom edge or
+ * a full border, never one side. Tokens only. Nothing here animates, and a
+ * readout never changes the size of its box: every width is reserved.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Section 1: the pasted strings.
+ * --------------------------------------------------------------------------- */
+
+.gmt-stored-time-audit .gmt-stored-values {
+  inline-size: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-block-size: 9.5rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* The reason slot fills its hold, so its box is the same size and place whether
+   it holds an aside, a hint or nothing. Smooth growth wraps a slot in a flex
+   column; the element has to grow into it, as a hint does in the ledger sheet. */
+.gmt-stored-time-audit .gmt-ledger-hold > [data-role="reason"],
+.gmt-stored-time-audit .gmt-grow-slot > [data-role="reason"] {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-block-size: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Section 2: one row per line. A fixed table, so a new kind or a longer reading
+ * never moves a column. The Kind column reserves the longest label in `ch`.
+ * --------------------------------------------------------------------------- */
+
+.gmt-stored-time-audit .gmt-stored-table-box {
+  container: gmt-stored-table / inline-size;
+  min-inline-size: 0;
+}
+
+.gmt-stored-time-audit .gmt-stored-table {
+  display: table;
+  table-layout: fixed;
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-stored-time-audit .gmt-stored-table th {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  text-align: start;
+  font-weight: 500;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+.gmt-stored-time-audit .gmt-stored-col-line {
+  inline-size: 6rem;
+}
+
+/* The site's `.sl-markdown-content th:first-child, td:first-child` rule
+   (gmt-content.css) sets `width: 1%` and `white-space: nowrap`, which in a fixed
+   table squeezes the Line column to its padding. The doubled class out-ranks it
+   whatever the load order. */
+.gmt-stored-time-audit
+  .gmt-stored-table.gmt-stored-table
+  th.gmt-stored-col-line {
+  width: 6rem;
+  white-space: normal;
+}
+
+.gmt-stored-time-audit .gmt-stored-table.gmt-stored-table td:first-child {
+  width: auto;
+  white-space: normal;
+}
+
+.gmt-stored-time-audit .gmt-stored-col-stored {
+  inline-size: 24%;
+}
+
+.gmt-stored-time-audit .gmt-stored-col-kind {
+  /* The widest label, a badge's padding and its border. */
+  inline-size: calc(var(--kind-ch, 20) * 1ch + 2.25rem);
+}
+
+.gmt-stored-time-audit .gmt-stored-table td {
+  padding: var(--gmt-space-2);
+  vertical-align: top;
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+  overflow-wrap: anywhere;
+}
+
+.gmt-stored-time-audit .gmt-stored-row[data-selected] td {
+  background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  border-block-end: 2px solid var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-row[data-selected] td:first-child {
+  border-start-start-radius: var(--gmt-radius-sm);
+}
+
+.gmt-stored-time-audit .gmt-stored-value {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  background: none;
+  padding: 0;
+}
+
+.gmt-stored-time-audit .gmt-stored-empty td {
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+}
+
+/* The row's radio is the real input, restyled by the shared chip toggle. */
+.gmt-stored-time-audit .gmt-stored-row .gmt-cutoff-chip {
+  cursor: pointer;
+}
+
+/* Kind badges. A shape and a pattern carry each kind as well as its colour. */
+
+.gmt-stored-time-audit .gmt-stored-badge,
+.gmt-stored-time-audit .gmt-stored-nosignal {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--gmt-ice);
+}
+
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="valid"] {
+  border-color: var(--gmt-hairline);
+  color: var(--gmt-ice-dim);
+}
+
+/* nonexistent: the skipped hour, gold, dashed, hatched. */
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="nonexistent"] {
+  border: 1px dashed var(--gmt-dst-gold);
+  color: var(--gmt-dst-gold-ink);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.12);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.28) 4px 5px
+  );
+}
+
+/* ambiguous and valid-in-overlap: the repeated hour, a double purple edge. */
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="ambiguous"],
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="validInOverlap"] {
+  border: 3px double var(--gmt-dst-purple);
+  color: var(--gmt-dst-purple-ink);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.12);
+}
+
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="validInOverlap"] {
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: 0 2px 0 var(--gmt-dst-purple);
+}
+
+/* offsetMismatch: a slashed break through the badge, the rule changed. */
+.gmt-stored-time-audit .gmt-stored-badge[data-kind="offsetMismatch"] {
+  border-color: var(--gmt-ice-dim);
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice-dim) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice-dim) 56% 62%,
+    transparent 62%
+  );
+  background-size: 1.2rem 100%;
+  background-repeat: no-repeat;
+  background-position: right center;
+  padding-inline-end: 1.6rem;
+}
+
+/* The sentinel. A bracketed amber state, never a blank field. */
+.gmt-stored-time-audit .gmt-stored-nosignal {
+  border-color: var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+}
+
+/* Readings: a value breaks only at the `<wbr>` the mount inserts, after the `T`
+   and before the `.` of a fraction, never inside a digit group. A token may also
+   break between its name and its value when the column is narrower than the
+   whole token, as the pair does between its halves. The widest reading (33
+   characters, a 9-digit fraction) does not fit the table at 1440 otherwise. */
+
+.gmt-stored-time-audit .gmt-stored-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+}
+
+.gmt-stored-time-audit .gmt-stored-token {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  /* Breaks only at the space between the name and the value, never inside one. */
+  white-space: normal;
+}
+
+.gmt-stored-time-audit .gmt-stored-token-name {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-stored-time-audit .gmt-stored-token-value {
+  color: var(--gmt-ice);
+  /* The value is made of nowrap `.gmt-stored-seg` spans joined by `<wbr>`, and the
+     `<wbr>` points are the only places it can break. Chromium breaks after a hyphen
+     whatever `word-break` says, so the segments, not this rule, keep the date whole.
+     A segment wider than its column overflows rather than splits. */
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+.gmt-stored-time-audit .gmt-stored-seg {
+  white-space: nowrap;
+}
+
+.gmt-stored-time-audit .gmt-stored-sentence {
+  margin: var(--gmt-space-1) 0 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* Narrow: each row becomes a labelled block, so no column is squeezed. */
+@container gmt-stored-table (max-width: 46rem) {
+  .gmt-stored-time-audit .gmt-stored-table,
+  .gmt-stored-time-audit .gmt-stored-table tbody,
+  .gmt-stored-time-audit .gmt-stored-table tr,
+  .gmt-stored-time-audit .gmt-stored-table td {
+    display: block;
+    inline-size: auto;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-table tr {
+    padding-block: var(--gmt-space-2);
+    border-block-end: 1px solid var(--gmt-hairline);
+  }
+
+  .gmt-stored-time-audit .gmt-stored-table td {
+    border: 0;
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+    background: none;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--gmt-text-xs);
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-stored-time-audit .gmt-stored-table td:first-child::before {
+    content: none;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-row[data-selected] {
+    border: 1px solid var(--gmt-series-1);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  }
+
+  .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
+    border: 0;
+    /* The row carries the tint; the cell must not stack a second one. */
+    background: none;
+  }
+}
+
+.gmt-stored-time-audit .gmt-stored-table-box + .gmt-widget-hint {
+  margin-block-start: var(--gmt-space-2);
+}
+
+.gmt-stored-time-audit [data-role="truncated"][hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Section 3: the two-lane strip. Every lane has a reserved height, so a gap, an
+ * overlap and a since strip are the same size, and so is a line with no strip.
+ * --------------------------------------------------------------------------- */
+
+.gmt-stored-time-audit .gmt-stored-time-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  container: gmt-stored-frame / inline-size;
+}
+
+.gmt-stored-time-audit .gmt-stored-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+}
+
+.gmt-stored-time-audit .gmt-stored-lane {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.gmt-stored-time-audit .gmt-stored-lane-name {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-stored-time-audit .gmt-stored-track {
+  position: relative;
+  min-inline-size: 0;
+}
+
+/* The zone's clock: chip row, the day, tick labels, the stored pin. */
+.gmt-stored-time-audit .gmt-stored-track--clock {
+  block-size: 8.5rem;
+}
+
+.gmt-stored-time-audit .gmt-stored-chiprow,
+.gmt-stored-time-audit .gmt-stored-tickrow,
+.gmt-stored-time-audit .gmt-stored-pinrow {
+  position: absolute;
+  inset-inline: 0;
+  block-size: 1.6rem;
+}
+
+.gmt-stored-time-audit .gmt-stored-chiprow {
+  inset-block-start: 0;
+}
+
+.gmt-stored-time-audit .gmt-stored-daytrack {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 2.2rem;
+  block-size: 1.6rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color(from var(--gmt-series-1) srgb r g b / 0.05);
+}
+
+.gmt-stored-time-audit .gmt-stored-tickrow {
+  inset-block-start: 4rem;
+  block-size: 1.2rem;
+}
+
+.gmt-stored-time-audit .gmt-stored-pinrow {
+  inset-block-start: 5.6rem;
+}
+
+.gmt-stored-time-audit .gmt-stored-band {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: calc(var(--w) * 1%);
+  min-inline-size: 3px;
+  box-sizing: border-box;
+}
+
+.gmt-stored-time-audit .gmt-stored-band[data-kind="gap"] {
+  border: 1px dashed var(--gmt-dst-gold);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.14);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.3) 4px 5px
+  );
+}
+
+.gmt-stored-time-audit .gmt-stored-band[data-kind="overlap"] {
+  border: 3px double var(--gmt-dst-purple);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+}
+
+.gmt-stored-time-audit .gmt-stored-tick {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  block-size: 0.4rem;
+  inline-size: 1px;
+  background: var(--gmt-ice-dim);
+}
+
+.gmt-stored-time-audit .gmt-stored-pin {
+  position: absolute;
+  inset-block: -0.25rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  background: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-ticklabel {
+  position: absolute;
+  inset-block-start: 0.2rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+}
+
+/* Chips and labels hang from their point by an anchor: a point near an edge
+   would push the chip out of the lane. */
+.gmt-stored-time-audit .gmt-stored-chiprow .gmt-stored-chip,
+.gmt-stored-time-audit .gmt-stored-pinrow .gmt-stored-chip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+}
+
+.gmt-stored-time-audit [data-anchor="start"] {
+  translate: 0 0;
+}
+
+.gmt-stored-time-audit [data-anchor="mid"] {
+  translate: -50% 0;
+}
+
+.gmt-stored-time-audit [data-anchor="end"] {
+  translate: -100% 0;
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="gap"] {
+  --series: var(--gmt-dst-gold);
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="overlap"] {
+  --series: var(--gmt-dst-purple);
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="pin"],
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="gate"] {
+  --series: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="mark"][data-series="1"],
+.gmt-stored-time-audit .gmt-stored-plate[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="mark"][data-series="2"],
+.gmt-stored-time-audit .gmt-stored-plate[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+
+.gmt-stored-time-audit .gmt-stored-chip[data-kind="mark"][data-series="3"],
+.gmt-stored-time-audit .gmt-stored-plate[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+
+/* The since strip's two plates: what the zone says now against what was stored. */
+.gmt-stored-time-audit .gmt-stored-plates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+}
+
+/* The exact timeline: four tier rows, one for the clock change and three for
+   readings, then the baseline. */
+.gmt-stored-time-audit .gmt-stored-track--exact {
+  block-size: 8.5rem;
+  --row: 1.75rem;
+}
+
+.gmt-stored-time-audit .gmt-stored-baseline {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0.5rem;
+  block-size: 2px;
+  background: var(--gmt-ice-dim);
+}
+
+.gmt-stored-time-audit .gmt-stored-track--exact .gmt-stored-chip {
+  position: absolute;
+  inset-block-start: calc(var(--tier, 0) * var(--row));
+  inset-inline-start: calc(var(--x) * 1%);
+}
+
+.gmt-stored-time-audit .gmt-stored-gate,
+.gmt-stored-time-audit .gmt-stored-markline {
+  position: absolute;
+  inset-block-start: calc(var(--tier, 0) * var(--row) + 1.3rem);
+  inset-block-end: 0.25rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  background: var(--series, var(--gmt-ice-dim));
+}
+
+.gmt-stored-time-audit .gmt-stored-gate[data-kind="gap"] {
+  --series: var(--gmt-dst-gold);
+}
+
+.gmt-stored-time-audit .gmt-stored-gate[data-kind="overlap"] {
+  --series: var(--gmt-dst-purple);
+}
+
+.gmt-stored-time-audit .gmt-stored-gate[data-kind="since"] {
+  --series: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-markline[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-markline[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+
+.gmt-stored-time-audit .gmt-stored-markline[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+
+/* The time not drawn: two slashes across the baseline. */
+.gmt-stored-time-audit .gmt-stored-break {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: calc(var(--w) * 1%);
+  block-size: 1rem;
+  background-color: var(--gmt-surface);
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice-dim) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice-dim) 56% 62%,
+    transparent 62%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * The legend: always five items. An item that does not apply is hidden from
+ * sight but keeps its place, so the frame never changes size.
+ * --------------------------------------------------------------------------- */
+
+.gmt-stored-time-audit .gmt-stored-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-stored-time-audit .gmt-stored-legend [data-off] {
+  visibility: hidden;
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch {
+  display: inline-block;
+  inline-size: 0.9rem;
+  block-size: 0.7rem;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-ice-dim);
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch[data-swatch="gap"] {
+  border: 1px dashed var(--gmt-dst-gold);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.2);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.4) 3px 4px
+  );
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch[data-swatch="overlap"] {
+  border: 3px double var(--gmt-dst-purple);
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch[data-swatch="gate"] {
+  inline-size: 2px;
+  border: 0;
+  background: var(--gmt-series-1);
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch[data-swatch="mark"] {
+  border: 0;
+  border-block-end: 2px solid var(--gmt-series-2);
+}
+
+.gmt-stored-time-audit .gmt-stored-swatch[data-swatch="break"] {
+  border: 0;
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice-dim) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice-dim) 56% 62%,
+    transparent 62%
+  );
+}
+
+/* Narrow: the day's tick labels thin out in code; the chips may wrap. */
+@container gmt-stored-frame (max-width: 30rem) {
+  .gmt-stored-time-audit .gmt-stored-track--clock,
+  .gmt-stored-time-audit .gmt-stored-track--exact {
+    block-size: 9.5rem;
+  }
+}

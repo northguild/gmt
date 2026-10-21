@@ -38,6 +38,7 @@ import { scheduleDeviation } from "../transport/compare/scheduleDeviation";
 import { areUtcEqual } from "../utc/compare/areUtcEqual";
 import { etaAtZone } from "../transport/convert/etaAtZone";
 import { isValidUtc } from "../utc/validate/isValidUtc";
+import { classifyStoredZoned } from "../zoned/classify/classifyStoredZoned";
 import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 import { getTimeZoneOffset } from "../zoned/get/getTimeZoneOffset";
 
@@ -580,4 +581,35 @@ describe("instant readers read a zoned string written at the range limits", () =
       timeZone: "Asia/Tokyo",
     });
   });
+
+  // The zoned read refuses the local date, so the classifier has no reading to report. In
+  // Tokyo the stored `+09:19` is a minute past the zone's `+09:18:59`, so applying it lands one
+  // second before the first instant, which is out of range as well.
+  it.each`
+    value
+    ${"-271821-04-19T23:59:00-00:01[Europe/London]"}
+    ${"-271821-04-19T19:04:13-04:56[America/New_York]"}
+    ${"-271821-04-20T09:18:59+09:19[Asia/Tokyo]"}
+  `("classifyStoredZoned returns null for $value", ({ value }) => {
+    expect(classifyStoredZoned(value)).toBeNull();
+  });
+});
+
+describe("zoned/classify reads a minute-rounded offset as its zone's real offset", () => {
+  // `instant` is the zone's real reading; `atStoredOffset` is what `offset: "use"` gives, the
+  // written wall clock minus the written minute-rounded offset (09:00 + 4:56 = 13:56:00).
+  it.each`
+    zoned                                            | instant                   | atStoredOffset
+    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T01:04:30Z"} | ${"1960-01-01T01:05:00Z"}
+    ${"1883-11-18T09:00:00-04:56[America/New_York]"} | ${"1883-11-18T13:56:02Z"} | ${"1883-11-18T13:56:00Z"}
+  `(
+    "classifyStoredZoned calls $zoned valid at $instant, and $atStoredOffset at the stored offset",
+    ({ zoned, instant, atStoredOffset }) => {
+      expect(classifyStoredZoned(zoned)).toEqual({
+        kind: "valid",
+        instant,
+        atStoredOffset,
+      });
+    },
+  );
 });

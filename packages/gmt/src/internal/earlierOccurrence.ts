@@ -17,7 +17,7 @@ export type WallClassification = "unique" | "ambiguous" | "nonexistent";
  *
  * @param wall the local wall time
  * @param timeZone a Temporal time zone identifier (a `ZoneFrame`'s `timeZone` with no stored offset)
- * @returns the classification and the earlier reading (for a gap, the one `"earlier"` moves to)
+ * @returns the classification, the earlier reading (for a gap, the one `"earlier"` moves to) and the later one
  *
  * @example classifyWall(Temporal.PlainDateTime.from("2024-11-03T01:30:00"), "America/New_York").kind // "ambiguous"
  * @example classifyWall(Temporal.PlainDateTime.from("2024-03-10T02:30:00"), "America/New_York").kind // "nonexistent"
@@ -25,16 +25,21 @@ export type WallClassification = "unique" | "ambiguous" | "nonexistent";
 export function classifyWall(
   wall: Temporal.PlainDateTime,
   timeZone: string,
-): { kind: WallClassification; earliest: Temporal.ZonedDateTime } {
+): {
+  kind: WallClassification;
+  earliest: Temporal.ZonedDateTime;
+  latest: Temporal.ZonedDateTime;
+} {
   const earliest = plainToZoned(wall, timeZone, "earlier");
   const latest = plainToZoned(wall, timeZone, "later");
 
   if (earliest.epochNanoseconds === latest.epochNanoseconds) {
-    return { kind: "unique", earliest };
+    return { kind: "unique", earliest, latest };
   }
   return {
     kind: earliest.toPlainDateTime().equals(wall) ? "ambiguous" : "nonexistent",
     earliest,
+    latest,
   };
 }
 

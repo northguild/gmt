@@ -789,6 +789,8 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/zoned/chop/chopZonedSeconds",
   "/reference/zoned/chop/chopZonedTime",
   "/reference/zoned/chop/chopZonedTimezone",
+  "/reference/zoned/classify",
+  "/reference/zoned/classify/classifyStoredZoned",
   "/reference/zoned/compare",
   "/reference/zoned/compare/areZonedEqual",
   "/reference/zoned/compare/areZonedEqualBy",

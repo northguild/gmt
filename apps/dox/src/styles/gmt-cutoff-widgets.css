@@ -60,6 +60,7 @@
   .gmt-punct-frame,
   .gmt-ledger-frame,
   .gmt-gnss-frame,
+  .gmt-stored-time-frame,
   .gmt-cutoff-stack-timeline,
   .gmt-cutoff-ruler-overview,
   .gmt-cutoff-ruler-closeup,
@@ -118,7 +119,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   [data-series="1"] {
   --series: var(--gmt-series-1);
@@ -141,7 +143,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   [data-series="2"] {
   --series: var(--gmt-series-2);
@@ -164,7 +167,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   [data-series="3"] {
   --series: var(--gmt-series-3);
@@ -187,7 +191,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   [data-series="4"] {
   --series: var(--gmt-series-4);
@@ -213,7 +218,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-series-swatch {
   display: inline-block;
@@ -248,7 +254,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-chip {
   display: inline-flex;
@@ -285,7 +292,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-chip[hidden] {
   display: none;
@@ -308,7 +316,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-chip--dim {
   color: var(--gmt-ice-dim);
@@ -330,7 +339,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-icon {
   flex: none;
@@ -358,7 +368,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-mark {
   display: inline-block;
@@ -391,7 +402,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-mark--hollow {
   border: 2px dashed var(--series, var(--gmt-ice));
@@ -419,7 +431,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-gate {
   position: absolute;
@@ -447,7 +460,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-gate::before {
   content: "";
@@ -485,7 +499,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-closed {
   background:
@@ -542,7 +557,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-axis-tick {
   padding-top: 9px;
@@ -565,7 +581,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-axis-tick::before {
   content: "";
@@ -594,7 +611,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-axis-tick--day {
   color: var(--gmt-ice);
@@ -617,7 +635,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   .gmt-cutoff-axis-tick--day::before {
   width: 2px;
@@ -641,7 +660,8 @@
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
-    .gmt-elapsed-vs-clock
+    .gmt-elapsed-vs-clock,
+    .gmt-stored-time-audit
   )
   :is(.gmt-cutoff-countdown-ticks, .gmt-cutoff-ruler-ticks, .gmt-punct-ticks) {
   height: 1.9rem;
@@ -911,6 +931,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 .gmt-cutoff-countdown-axis,
 .gmt-punct-frame,
 .gmt-gnss-frame,
+.gmt-stored-time-frame,
 .gmt-cutoff-mark,
 .gmt-cutoff-chip,
 .gmt-cutoff-gate,

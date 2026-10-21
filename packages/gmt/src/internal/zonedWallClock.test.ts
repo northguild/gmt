@@ -1,6 +1,7 @@
 import { Temporal } from "./temporal";
 import { dateLineCrossingTimeZones } from "../test/timeZoneMatrix";
 import {
+  isWithinIsoDaysRange,
   POLYFILL_TRANSITION_SEARCH_FLOOR,
   zonedDateTimeFrom,
 } from "./zonedWallClock";
@@ -180,6 +181,23 @@ describe("zonedDateTimeFrom", () => {
           zonedDateTimeFrom(value, { disambiguation, offset }),
         ).toThrow(RangeError);
       },
+    );
+  });
+});
+
+describe("isWithinIsoDaysRange", () => {
+  // CheckISODaysRange: |epoch days| <= 100_000_000; day 100_000_000 is +275760-09-13, day
+  // -100_000_000 is -271821-04-20 (TC39 §6.5.1 step 7 bounds). A PlainDateTime cannot be built past +275760-09-13,
+  // so only the lower limit has an out-of-range row.
+  it.each`
+    wall                        | expected
+    ${"-271821-04-20T00:00:00"} | ${true}
+    ${"-271821-04-19T23:59:59"} | ${false}
+    ${"+275760-09-13T23:59:59"} | ${true}
+    ${"2024-03-10T12:00:00"}    | ${true}
+  `("returns $expected for $wall", ({ wall, expected }) => {
+    expect(isWithinIsoDaysRange(Temporal.PlainDateTime.from(wall))).toBe(
+      expected,
     );
   });
 });

@@ -96,6 +96,7 @@ skills:
       - fromOffsetInstant
       - isValidUtcOffset
       - classifyLocal
+      - classifyStoredZoned
       - resolveLocal
       - getIsoWeekDate
       - getOrdinalDate
@@ -225,7 +226,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime, and isInDaylightSaving/hasDaylightSaving. Transport legs, intermodal free time and EDI timestamps are in gmt-transport and gmt-intermodal
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, classifyStoredZoned (why a stored offset-plus-zone string no longer resolves), floorToZone/bucketRange, recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime, and isInDaylightSaving/hasDaylightSaving. Transport legs, intermodal free time and EDI timestamps are in gmt-transport and gmt-intermodal
     type: core
     packages:
       - '@northguild/gmt'

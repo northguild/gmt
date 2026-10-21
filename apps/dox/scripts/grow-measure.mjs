@@ -242,6 +242,12 @@ const PAGES = [
     drag: '[data-role="end-slider"]',
   },
   {
+    slug: "stored-time-audit",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

@@ -18636,6 +18636,19 @@
     ]
   },
   {
+    "url": "/reference/zoned/classify/classifyStoredZoned#storedzonedclassification",
+    "page": "/reference/zoned/classify/classifyStoredZoned",
+    "name": "StoredZonedClassification",
+    "namespace": "types",
+    "module": "stored-zoned-classification",
+    "kind": "type",
+    "signature": "",
+    "description": "What `classifyStoredZoned` finds when an RFC 9557 string carries both a UTC offset and a bracketed IANA zone. Every reading is a `Z` instant string (`Temporal.Instant#toString`), and every offset is `±HH:MM[:SS]`. Each kind carries enough readings to reproduce each of Temporal's `offset` values (`use`, `ignore`, `prefer`, `reject`).",
+    "sourcePath": "packages/gmt/src/types/stored-zoned-classification.ts",
+    "examples": [],
+    "inlineOn": "classifyStoredZoned"
+  },
+  {
     "url": "/reference/types/TimeCycleField",
     "page": "/reference/types/TimeCycleField",
     "name": "TimeCycleField",
@@ -25023,6 +25036,35 @@
       {
         "call": "chopZonedTimezone(\"invalid\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/zoned/classify/classifyStoredZoned",
+    "page": "/reference/zoned/classify/classifyStoredZoned",
+    "name": "classifyStoredZoned",
+    "namespace": "zoned",
+    "module": "classify",
+    "kind": "function",
+    "signature": "classifyStoredZoned(value: string): StoredZonedClassification | null",
+    "description": "Says whether a stored RFC 9557 string with both an offset and a zone still names one instant under this host's time zone rules, and gives every reading when it does not.",
+    "sourcePath": "packages/gmt/src/zoned/classify/classifyStoredZoned.ts",
+    "examples": [
+      {
+        "call": "classifyStoredZoned(\"2016-12-01T09:00:00+02:00[Europe/Istanbul]\")",
+        "result": "{ kind: \"offsetMismatch\", storedOffset: \"+02:00\", zoneOffset: \"+03:00\", atStoredOffset: \"2016-12-01T07:00:00Z\", atZoneOffset: \"2016-12-01T06:00:00Z\" }"
+      },
+      {
+        "call": "classifyStoredZoned(\"2026-03-08T02:30:00-03:00[America/Los_Angeles]\")",
+        "result": "{ kind: \"nonexistent\", earlier: \"2026-03-08T09:30:00Z\", later: \"2026-03-08T10:30:00Z\", atStoredOffset: \"2026-03-08T05:30:00Z\" }"
+      },
+      {
+        "call": "classifyStoredZoned(\"2026-11-01T01:30:00-08:00[America/Los_Angeles]\")",
+        "result": "{ kind: \"validInOverlap\", instant: \"2026-11-01T09:30:00Z\", earlier: \"2026-11-01T08:30:00Z\", later: \"2026-11-01T09:30:00Z\", atStoredOffset: \"2026-11-01T09:30:00Z\" }"
+      },
+      {
+        "call": "classifyStoredZoned(\"2026-03-08T02:30:00[America/Los_Angeles]\")",
+        "result": "null"
       }
     ]
   },

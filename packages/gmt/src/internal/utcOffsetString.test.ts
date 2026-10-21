@@ -1,7 +1,11 @@
 import { Temporal } from "./temporal";
 import { battleTestTimeZones } from "../test";
 import { mockTemporalInstantFromThrow } from "../test/mocks";
-import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
+import {
+  formatUtcOffset,
+  parseUtcOffsetNanoseconds,
+  writtenOffset,
+} from "./utcOffsetString";
 
 /**
  * Every battle-test zone's real offset at two instants six months apart, read straight off
@@ -135,5 +139,18 @@ describe("formatUtcOffset", () => {
     expect(formatUtcOffset(parseUtcOffsetNanoseconds(written) as bigint)).toBe(
       canonical,
     );
+  });
+});
+
+describe("writtenOffset", () => {
+  it.each`
+    body                              | expected
+    ${"2024-07-15T12:00:00+05:30"}    | ${"+05:30"}
+    ${"1970-01-01T00:00:00-00:44:30"} | ${"-00:44:30"}
+    ${"2024-07-15T12:00:00Z"}         | ${"+00:00"}
+    ${"2024-07-15T12:00:00z"}         | ${"+00:00"}
+    ${"+275760-09-13T14:00:00+14:00"} | ${"+14:00"}
+  `("reads $expected off $body", ({ body, expected }) => {
+    expect(writtenOffset(Temporal.Instant.from(body), body)).toBe(expected);
   });
 });

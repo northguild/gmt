@@ -2,6 +2,7 @@
 export { Intl, Temporal, toTemporalInstant } from "../internal/temporal";
 export * from "./calculate";
 export * from "./chop";
+export * from "./classify";
 export * from "./compare";
 export * from "./convert";
 export * from "./format";
