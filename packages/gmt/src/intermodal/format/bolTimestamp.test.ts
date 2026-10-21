@@ -1,6 +1,6 @@
 import { battleTestTimeZones, type MustTestDstTimeZones } from "../../test";
 import { mockTemporalInstantFromEpochNanosecondsThrow } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { bolTimestamp } from "./bolTimestamp";
 
 /** A loading at 21:00 EDT on 15 June 2024: 01:00Z on the 16th, so the UTC date is a day late. */

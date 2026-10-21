@@ -80,9 +80,48 @@ const oracleSummary = (
 ) =>
   summaryMarkdown("temporal-oracle", verdicts as never, force, results, reason);
 
+const ENGINES: Record<string, string> = {
+  node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
+  chromium: "Chromium 153.0.8010.12",
+  firefox: "Firefox 155.0",
+};
+
+const native = (leg: string, over: Record<string, unknown> = {}) => ({
+  source: `native-suite-${leg}`,
+  status: "ran",
+  leg,
+  engine: ENGINES[leg],
+  runtime: { node: "26.10.0", vitest: "4.1.4", playwright: null },
+  counts: {
+    files: 828,
+    tests: 61613,
+    passed: 61600,
+    tagged: 3,
+    untagged: 0,
+    hostTagged: 0,
+    hostUntagged: 0,
+    staleTags: 0,
+  },
+  tagged: [],
+  untagged: [],
+  untaggedTruncated: false,
+  hostTagged: [],
+  hostUntagged: [],
+  hostUntaggedTruncated: false,
+  staleTags: [],
+  ...over,
+});
+
+const cleanNative = () => ({
+  "native-suite-node": native("node"),
+  "native-suite-chromium": native("chromium"),
+  "native-suite-firefox": native("firefox"),
+});
+
 const clean = () => ({
   "temporal-compat-check": cleanCheck(),
   "temporal-oracle": oracle(),
+  ...cleanNative(),
 });
 
 const CLEAN_SUMMARY = [
@@ -105,6 +144,14 @@ const CLEAN_SUMMARY = [
   "",
   "Snapshot: current",
   "",
+  "### Native Temporal suite",
+  "",
+  "| Leg | Engine | Tests | Passed | Tagged | Untagged | Host tagged | Host untagged | Stale tags |",
+  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+  "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+  "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+  "",
   "**Issues:** No issues filed.",
   "",
 ].join("\n");
@@ -112,6 +159,88 @@ const CLEAN_SUMMARY = [
 describe("summaryMarkdown: temporal-oracle", () => {
   it("clean oracle run with D10 guard: the whole layout", () => {
     expect(oracleSummary(clean())).toBe(CLEAN_SUMMARY);
+  });
+
+  it("a leg that could not run is a row with the message and empty counts", () => {
+    const text = oracleSummary({
+      ...clean(),
+      "native-suite-chromium": {
+        source: "native-suite-chromium",
+        status: "could-not-run",
+        message: "playwright is not installed | try pnpm install",
+      },
+    });
+    expect(text.split("\n")).toContain(
+      "| chromium | could not run — playwright is not installed \\| try pnpm install |  |  |  |  |  |  |  |",
+    );
+    expect(text.split("\n")).toContain(
+      "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+    );
+  });
+
+  it("a leg with no verdict file is a could-not-run row", () => {
+    const verdicts: Record<string, unknown> = clean();
+    verdicts["native-suite-firefox"] = null;
+    expect(oracleSummary(verdicts).split("\n")).toContain(
+      "| firefox | could not run — no verdict file: an earlier step or job failed |  |  |  |  |  |  |  |",
+    );
+  });
+
+  it("untagged, host and stale counts print as the verdict holds them", () => {
+    const text = oracleSummary({
+      ...clean(),
+      "native-suite-node": native("node", {
+        counts: {
+          files: 828,
+          tests: 61613,
+          passed: 61590,
+          tagged: 3,
+          untagged: 2,
+          hostTagged: 4,
+          hostUntagged: 5,
+          staleTags: 1,
+        },
+      }),
+    });
+    expect(text.split("\n")).toContain(
+      "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61590 | 3 | 2 | 4 | 5 | 1 |",
+    );
+  });
+
+  it("host groups that matched get one line each, with engine, count and reason", () => {
+    const text = oracleSummary({
+      ...clean(),
+      "native-suite-chromium": native("chromium", {
+        hostTagged: [
+          {
+            group: "chromium-icelandic-locale-data",
+            count: 101,
+            reason: "Chromium ships no Icelandic locale data.",
+          },
+          {
+            group: "chromium-other",
+            count: 9,
+            reason: "Chromium lacks another thing.",
+          },
+        ],
+      }),
+    });
+    const lines = text.split("\n");
+    expect(lines).toContain(
+      "Chromium 153.0.8010.12: chromium-icelandic-locale-data — 101 tests (Chromium ships no Icelandic locale data.)",
+    );
+    expect(lines).toContain(
+      "Chromium 153.0.8010.12: chromium-other — 9 tests (Chromium lacks another thing.)",
+    );
+  });
+
+  it("no host line when no group matched", () => {
+    expect(oracleSummary(clean())).not.toContain(" tests (");
+  });
+
+  it("the dry-run line lists --force-native-failure", () => {
+    const text = oracleSummary(clean(), { nativeFailure: true });
+    expect(text.split("\n")).toContain("**Dry run:** --force-native-failure");
   });
 
   it("two removable groups list their ids in script order", () => {

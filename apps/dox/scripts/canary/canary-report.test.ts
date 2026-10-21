@@ -277,6 +277,17 @@ describe("parseArgs", () => {
     });
   });
 
+  it("reads the native flag for the oracle workflow", () => {
+    expect(
+      parseArgs(["temporal-oracle", "--force-native-failure", "--print"]),
+    ).toEqual({
+      ok: true,
+      workflow: "temporal-oracle",
+      force: { nativeFailure: true },
+      print: true,
+    });
+  });
+
   it("reads the leap flag", () => {
     expect(parseArgs(["leap-seconds", "--force-leap-difference"])).toEqual({
       ok: true,
@@ -296,14 +307,15 @@ describe("parseArgs", () => {
   });
 
   it.each`
-    name                                | argv
-    ${"no arguments"}                   | ${[]}
-    ${"an unknown workflow"}            | ${["nonsense"]}
-    ${"an unknown flag"}                | ${["temporal-oracle", "--force-everything"]}
-    ${"a bare --force-removable"}       | ${["temporal-oracle", "--force-removable"]}
-    ${"an oracle flag on leap-seconds"} | ${["leap-seconds", "--force-mismatch"]}
-    ${"a leap flag on the oracle"}      | ${["temporal-oracle", "--force-leap-difference"]}
-    ${"a second positional"}            | ${["temporal-oracle", "leap-seconds"]}
+    name                                 | argv
+    ${"no arguments"}                    | ${[]}
+    ${"an unknown workflow"}             | ${["nonsense"]}
+    ${"an unknown flag"}                 | ${["temporal-oracle", "--force-everything"]}
+    ${"a bare --force-removable"}        | ${["temporal-oracle", "--force-removable"]}
+    ${"an oracle flag on leap-seconds"}  | ${["leap-seconds", "--force-mismatch"]}
+    ${"a leap flag on the oracle"}       | ${["temporal-oracle", "--force-leap-difference"]}
+    ${"the native flag on leap-seconds"} | ${["leap-seconds", "--force-native-failure"]}
+    ${"a second positional"}             | ${["temporal-oracle", "leap-seconds"]}
   `("rejects $name with a usage message", ({ argv }) => {
     const parsed = parseArgs(argv);
     expect(parsed.ok).toBe(false);
@@ -369,9 +381,40 @@ describe("main", () => {
       join(root, "artifacts", file),
       typeof value === "string" ? value : JSON.stringify(value),
     );
+  const nativeVerdict = (leg: string, over: Record<string, unknown> = {}) => ({
+    source: `native-suite-${leg}`,
+    status: "ran",
+    leg,
+    engine: leg === "node" ? "Node v26.10.0 · V8 14.6" : `${leg} 1.0`,
+    runtime: { node: "26.10.0", vitest: "4.1.4", playwright: null },
+    counts: {
+      files: 828,
+      tests: 100,
+      passed: 100,
+      tagged: 0,
+      untagged: 0,
+      hostTagged: 0,
+      hostUntagged: 0,
+      staleTags: 0,
+    },
+    tagged: [],
+    untagged: [],
+    untaggedTruncated: false,
+    hostTagged: [],
+    hostUntagged: [],
+    hostUntaggedTruncated: false,
+    staleTags: [],
+    ...over,
+  });
+  const writeNativeFiles = () => {
+    for (const leg of ["node", "chromium", "firefox"]) {
+      write(`native-suite-${leg}.json`, nativeVerdict(leg));
+    }
+  };
   const writeOracleFiles = (workarounds?: ReturnType<typeof workaround>[]) => {
     write("temporal-compat-check.json", checkVerdict(workarounds));
     write("temporal-oracle-verdict.json", oracleVerdict());
+    writeNativeFiles();
   };
 
   /** Runs `main` with captured streams and a summary file; returns what it produced. */
@@ -420,6 +463,60 @@ describe("main", () => {
     });
     expect(actions[0].title.startsWith("[dry run] Remove workaround D2:")).toBe(
       true,
+    );
+  });
+
+  it("--force-native-failure --print prints the native table and one dry-run action, and files nothing", () => {
+    writeOracleFiles();
+    const { code, out, summary, gh } = run([
+      "temporal-oracle",
+      "--force-native-failure",
+      "--print",
+    ]);
+    expect(code).toBe(0);
+    expect(gh.calls).toEqual([]);
+    expect(summary).toBe("");
+    expect(out).toContain("### Native Temporal suite");
+    expect(out).toContain(
+      "| node | Node v26.10.0 · V8 14.6 | 100 | 100 | 0 | 0 | 0 | 0 | 0 |",
+    );
+    expect(out).toContain("**Dry run:** --force-native-failure");
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      kind: "open",
+      key: "dry-run/native-suite/untagged-failure",
+      labels: ["canary", "bug", "canary-dry-run"],
+    });
+  });
+
+  it("an unreadable native verdict reads as could-not-run and the others still count", () => {
+    writeOracleFiles();
+    write("native-suite-chromium.json", "{ not json");
+    const { code, out } = run(["temporal-oracle", "--print"]);
+    expect(code).toBe(0);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions).toHaveLength(1);
+    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].body).toContain(
+      "- **native-suite-chromium**: unreadable verdict:",
+    );
+  });
+
+  it("--force-native-failure with no native verdict at all exits 2 and still files the could-not-run issue", () => {
+    write("temporal-compat-check.json", checkVerdict());
+    write("temporal-oracle-verdict.json", oracleVerdict());
+    const { code, err, out } = run([
+      "temporal-oracle",
+      "--force-native-failure",
+      "--print",
+    ]);
+    expect(code).toBe(2);
+    expect(err).toContain(
+      "canary-report: --force-native-failure not applied: no native-suite verdict ran, so there is nothing to force against",
+    );
+    expect(out).toContain(
+      "**Dry run:** --force-native-failure not applied: no native-suite verdict ran, so there is nothing to force against",
     );
   });
 

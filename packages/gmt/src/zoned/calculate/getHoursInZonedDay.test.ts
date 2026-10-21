@@ -259,3 +259,21 @@ describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () 
     10_000,
   );
 });
+
+describe("getHoursInZonedDay when a date starts twice", () => {
+  // test262 intl402/Temporal/ZonedDateTime/prototype/hoursInDay/same-date-starts-twice.js: the day
+  // runs from the first midnight to the next date's first midnight, so Antarctica/Casey's
+  // 2010-03-04 is 24 hours and 2010-03-05 is 27, and America/St_Johns's 2010-11-07 is 25.
+  it.each`
+    value                                            | expected
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"} | ${24}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"} | ${27}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"} | ${24}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"} | ${27}
+    ${"2010-11-06T00:00:00-02:30[America/St_Johns]"} | ${24}
+    ${"2010-11-07T23:00:00-03:30[America/St_Johns]"} | ${25}
+    ${"2010-11-08T23:00:00-03:30[America/St_Johns]"} | ${24}
+  `("gives $value $expected hours", ({ value, expected }) => {
+    expect(getHoursInZonedDay(value)).toBe(expected);
+  });
+});

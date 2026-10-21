@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { hostileProxy, revokedProxy } from "../test/noThrow";
+import { hostileProxy, revokedProxy } from "../test/hostileValues";
 import { mockTemporalInstantFromThrow } from "../test/mocks";
 import { parseTimestampEvents } from "./timestampEvents";
 

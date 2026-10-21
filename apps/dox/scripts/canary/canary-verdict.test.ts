@@ -8,6 +8,7 @@ import {
   VERDICT_FILES,
   compatCheckVerdict,
   couldNotRunVerdict,
+  nativeSuiteVerdict,
   oracleVerdict,
   saveVerdict,
   writeVerdict,
@@ -270,12 +271,161 @@ describe("couldNotRunVerdict", () => {
   });
 });
 
+describe("nativeSuiteVerdict", () => {
+  const failure = (n: number, message = `message ${n}`) => ({
+    file: "src/a.test.ts",
+    test: `test ${n}`,
+    message,
+  });
+  const base = {
+    leg: "chromium" as const,
+    engine: "Chromium 153.0.8010.12",
+    runtime: { node: "26.10.0", vitest: "4.1.4", playwright: "1.63.0" },
+    counts: {
+      files: 828,
+      tests: 61613,
+      passed: 61600,
+      tagged: 3,
+      untagged: 2,
+      hostTagged: 5,
+      hostUntagged: 3,
+      staleTags: 1,
+    },
+    tagged: [{ file: "src/a.test.ts", test: "t", defect: "a-defect" }],
+    untagged: [failure(1), failure(2)],
+    hostTagged: [
+      {
+        group: "chromium-icelandic-locale-data",
+        count: 5,
+        reason: "Chromium ships no Icelandic locale data.",
+      },
+    ],
+    hostUntagged: [failure(3), failure(4), failure(5)],
+    staleTags: [
+      { kind: "host" as const, group: "old-group", reason: "Old reason." },
+    ],
+  };
+
+  it("names its per-leg source, the leg and the engine line, and says it ran", () => {
+    const v = nativeSuiteVerdict(base);
+    expect(v.source).toBe("native-suite-chromium");
+    expect(v.status).toBe("ran");
+    expect(v.leg).toBe("chromium");
+    expect(v.engine).toBe("Chromium 153.0.8010.12");
+    expect(v.runtime).toEqual(base.runtime);
+  });
+
+  it("carries counts, tags, host groups and stale tags unchanged and has no timestamp", () => {
+    const v = nativeSuiteVerdict(base);
+    expect(v.counts).toEqual(base.counts);
+    expect(v.tagged).toEqual(base.tagged);
+    expect(v.hostTagged).toEqual(base.hostTagged);
+    expect(v.staleTags).toEqual(base.staleTags);
+    expect(Object.keys(v).sort()).toEqual([
+      "counts",
+      "engine",
+      "hostTagged",
+      "hostUntagged",
+      "hostUntaggedTruncated",
+      "leg",
+      "runtime",
+      "source",
+      "staleTags",
+      "status",
+      "tagged",
+      "untagged",
+      "untaggedTruncated",
+    ]);
+  });
+
+  it("keeps every row and flags no truncation at or under 50", () => {
+    const rows = Array.from({ length: UNTAGGED_ROWS_IN_VERDICT }, (_, i) =>
+      failure(i),
+    );
+    const v = nativeSuiteVerdict({
+      ...base,
+      untagged: rows,
+      hostUntagged: rows,
+    });
+    expect(v.untagged).toHaveLength(50);
+    expect(v.hostUntagged).toHaveLength(50);
+    expect(v.untaggedTruncated).toBe(false);
+    expect(v.hostUntaggedTruncated).toBe(false);
+  });
+
+  it("keeps the first 50 of 60 rows of each kind, in order, and flags the cut", () => {
+    const rows = Array.from({ length: 60 }, (_, i) => failure(i));
+    const v = nativeSuiteVerdict({
+      ...base,
+      counts: { ...base.counts, untagged: 60, hostUntagged: 60 },
+      untagged: rows,
+      hostUntagged: rows,
+    });
+    expect(v.untagged.map((r) => r.test)).toEqual(
+      rows.slice(0, 50).map((r) => r.test),
+    );
+    expect(v.hostUntagged).toHaveLength(50);
+    expect(v.untaggedTruncated).toBe(true);
+    expect(v.hostUntaggedTruncated).toBe(true);
+    expect(v.counts.untagged).toBe(60);
+    expect(v.counts.hostUntagged).toBe(60);
+  });
+
+  it("flags only the kind that was cut", () => {
+    const v = nativeSuiteVerdict({
+      ...base,
+      untagged: Array.from({ length: 51 }, (_, i) => failure(i)),
+    });
+    expect(v.untaggedTruncated).toBe(true);
+    expect(v.hostUntaggedTruncated).toBe(false);
+  });
+
+  it("cuts a message to 300 characters and leaves a shorter one alone", () => {
+    const v = nativeSuiteVerdict({
+      ...base,
+      untagged: [failure(1, "x".repeat(301)), failure(2, "y".repeat(300))],
+      hostUntagged: [failure(3, "z".repeat(1000))],
+    });
+    expect(v.untagged[0].message).toBe("x".repeat(300));
+    expect(v.untagged[1].message).toBe("y".repeat(300));
+    expect(v.hostUntagged[0].message).toBe("z".repeat(300));
+  });
+
+  it("is written to artifacts/native-suite-<leg>.json by writeVerdict", () => {
+    const root = mkdtempSync(join(tmpdir(), "canary-"));
+    try {
+      const v = nativeSuiteVerdict({ ...base, leg: "firefox" });
+      writeVerdict(root, v);
+      expect(
+        readFileSync(join(root, "artifacts/native-suite-firefox.json"), "utf8"),
+      ).toBe(formatJson(v));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("a could-not-run verdict for a leg goes to the same file", () => {
+    const root = mkdtempSync(join(tmpdir(), "canary-"));
+    try {
+      writeVerdict(root, couldNotRunVerdict("native-suite-node", "Node 24"));
+      expect(
+        readFileSync(join(root, "artifacts/native-suite-node.json"), "utf8"),
+      ).toBe(formatJson(couldNotRunVerdict("native-suite-node", "Node 24")));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("VERDICT_FILES", () => {
   it("names one fixed file per source", () => {
     expect(VERDICT_FILES).toEqual({
       "temporal-compat-check": "artifacts/temporal-compat-check.json",
       "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
       "leap-seconds": "artifacts/leap-seconds.json",
+      "native-suite-node": "artifacts/native-suite-node.json",
+      "native-suite-chromium": "artifacts/native-suite-chromium.json",
+      "native-suite-firefox": "artifacts/native-suite-firefox.json",
     });
   });
 });

@@ -2,7 +2,7 @@ import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { freeTimeExpiry } from "./freeTimeExpiry";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 
 /** A Friday afternoon discharge in New York: 15:00 EDT on 14 June 2024. */
 const friday = "2024-06-14T19:00:00Z";

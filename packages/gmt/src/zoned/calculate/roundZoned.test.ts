@@ -555,17 +555,87 @@ describe("roundZoned", () => {
     ).toBe("");
   });
 
-  // Pins TC39 ZonedDateTime.round: it rounds the wall clock and re-resolves, so across a
-  // transition a "trunc" result can land after the input or on another local date.
+  // Pins TC39 ZonedDateTime.round: below the day it rounds the wall clock and re-resolves, so
+  // across a transition a "trunc" result can land after the input or on another local date.
   it.each`
     value                                             | smallestUnit | roundingMode | expected
     ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}   | ${"hour"}    | ${"trunc"}   | ${"2024-09-29T04:00:00+13:45[Pacific/Chatham]"}
     ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"hour"}    | ${"trunc"}   | ${"2010-11-06T23:00:00-03:00[America/Goose_Bay]"}
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"day"}     | ${"trunc"}   | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
   `(
     "follows TC39 round for $value to $smallestUnit with $roundingMode, giving $expected",
     ({ value, smallestUnit, roundingMode, expected }) => {
       expect(roundZoned(value, { smallestUnit, roundingMode })).toBe(expected);
+    },
+  );
+
+  // A fall-back across midnight re-enters a date after the next date has started. Rounding to the
+  // day clamps to the end of that date (tc39/proposal-temporal#3312). Expected values: test262
+  // intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js (Antarctica/Casey,
+  // 2010-03-04 starts at 00:00+11:00 and again from 23:00+08:00) and the same rule in
+  // America/Goose_Bay on 2010-11-06. America/Sitka on 1867-10-18 (the clock went back about 24
+  // hours) is the case where the half modes also have to give the first midnight of the next date.
+  it.each`
+    value                                             | roundingMode    | expected
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"floor"}      | ${"2010-03-04T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"floor"}      | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"floor"}      | ${"2010-03-04T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"floor"}      | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"trunc"}      | ${"2010-03-04T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"trunc"}      | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"trunc"}      | ${"2010-03-04T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"trunc"}      | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"halfCeil"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"halfCeil"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"halfCeil"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"halfCeil"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"halfEven"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"halfEven"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"halfEven"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"halfEven"}   | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"halfExpand"} | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"halfExpand"} | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"halfExpand"} | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"halfExpand"} | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"halfFloor"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"halfFloor"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"halfFloor"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"halfFloor"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"halfTrunc"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"halfTrunc"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"halfTrunc"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"halfTrunc"}  | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"ceil"}       | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"ceil"}       | ${"2010-03-06T00:00:00+08:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"ceil"}       | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"ceil"}       | ${"2010-03-06T00:00:00+08:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+11:00[Antarctica/Casey]"}  | ${"expand"}     | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+11:00[Antarctica/Casey]"}  | ${"expand"}     | ${"2010-03-06T00:00:00+08:00[Antarctica/Casey]"}
+    ${"2010-03-04T23:10:00+08:00[Antarctica/Casey]"}  | ${"expand"}     | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"2010-03-05T00:45:00+08:00[Antarctica/Casey]"}  | ${"expand"}     | ${"2010-03-06T00:00:00+08:00[Antarctica/Casey]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"floor"}      | ${"2010-11-06T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"trunc"}      | ${"2010-11-06T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"halfCeil"}   | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"halfEven"}   | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"halfExpand"} | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"halfFloor"}  | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"halfTrunc"}  | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"ceil"}       | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"expand"}     | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"floor"}      | ${"1867-10-18T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"trunc"}      | ${"1867-10-18T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"halfCeil"}   | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"halfEven"}   | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"halfExpand"} | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"halfFloor"}  | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"halfTrunc"}  | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"ceil"}       | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+    ${"1867-10-18T20:00:00-09:01:13[America/Sitka]"}  | ${"expand"}     | ${"1867-10-19T00:00:00+14:59[America/Sitka]"}
+  `(
+    "rounds $value to the day with $roundingMode, giving $expected, when the date starts twice",
+    ({ value, roundingMode, expected }) => {
+      expect(roundZoned(value, { smallestUnit: "day", roundingMode })).toBe(
+        expected,
+      );
     },
   );
 

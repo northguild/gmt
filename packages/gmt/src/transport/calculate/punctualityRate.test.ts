@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { punctualityRate } from "./punctualityRate";
 

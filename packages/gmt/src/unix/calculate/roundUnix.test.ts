@@ -32,6 +32,74 @@ describe("roundUnix", () => {
     },
   );
 
+  // A date that starts twice (test262 intl402/Temporal/ZonedDateTime/prototype/round/
+  // same-date-starts-twice.js): rounding to the day clamps to the end of that date. The same
+  // inputs as roundZoned, in epoch milliseconds.
+  it.each`
+    value             | timeZone               | roundingMode    | expected
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"floor"}      | ${1267621200000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"floor"}      | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"floor"}      | ${1267621200000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"floor"}      | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"trunc"}      | ${1267621200000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"trunc"}      | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"trunc"}      | ${1267621200000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"trunc"}      | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"halfCeil"}   | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"halfCeil"}   | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"halfCeil"}   | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"halfCeil"}   | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"halfEven"}   | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"halfEven"}   | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"halfEven"}   | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"halfEven"}   | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"halfExpand"} | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"halfExpand"} | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"halfExpand"} | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"halfExpand"} | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"halfFloor"}  | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"halfFloor"}  | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"halfFloor"}  | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"halfFloor"}  | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"halfTrunc"}  | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"halfTrunc"}  | ${1267707600000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"halfTrunc"}  | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"halfTrunc"}  | ${1267707600000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"ceil"}       | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"ceil"}       | ${1267804800000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"ceil"}       | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"ceil"}       | ${1267804800000}
+    ${1267704600000}  | ${"Antarctica/Casey"}  | ${"expand"}     | ${1267707600000}
+    ${1267710300000}  | ${"Antarctica/Casey"}  | ${"expand"}     | ${1267804800000}
+    ${1267715400000}  | ${"Antarctica/Casey"}  | ${"expand"}     | ${1267707600000}
+    ${1267721100000}  | ${"Antarctica/Casey"}  | ${"expand"}     | ${1267804800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"floor"}      | ${1289012400000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"trunc"}      | ${1289012400000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"halfCeil"}   | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"halfEven"}   | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"halfExpand"} | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"halfFloor"}  | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"halfTrunc"}  | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"ceil"}       | ${1289098800000}
+    ${1289100600000}  | ${"America/Goose_Bay"} | ${"expand"}     | ${1289098800000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"floor"}      | ${-3225365927000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"trunc"}      | ${-3225365927000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"halfCeil"}   | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"halfEven"}   | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"halfExpand"} | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"halfFloor"}  | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"halfTrunc"}  | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"ceil"}       | ${-3225279527000}
+    ${-3225207527000} | ${"America/Sitka"}     | ${"expand"}     | ${-3225279527000}
+  `(
+    "rounds $value in $timeZone to the day with $roundingMode, giving $expected, when the date starts twice",
+    ({ value, timeZone, roundingMode, expected }) => {
+      expect(
+        roundUnix(value, { smallestUnit: "day", roundingMode, timeZone }),
+      ).toBe(expected);
+    },
+  );
+
   // rounding modes
   it.each`
     value            | unit        | roundingMode | expected
@@ -168,13 +236,12 @@ describe("roundUnix", () => {
     },
   );
 
-  // Pins TC39 ZonedDateTime.round: it rounds the wall clock and re-resolves, so across a
+  // Pins TC39 ZonedDateTime.round: below the day it rounds the wall clock and re-resolves, so across a
   // transition a "trunc" result can land after the input (Chatham) or an hour early (Goose_Bay).
   it.each`
     value            | timeZone               | smallestUnit | roundingMode | expected
     ${1727532300000} | ${"Pacific/Chatham"}   | ${"hour"}    | ${"trunc"}   | ${1727532900000}
     ${1289100600000} | ${"America/Goose_Bay"} | ${"hour"}    | ${"trunc"}   | ${1289095200000}
-    ${1289100600000} | ${"America/Goose_Bay"} | ${"day"}     | ${"trunc"}   | ${1289098800000}
   `(
     "follows TC39 round for $value in $timeZone to $smallestUnit with $roundingMode, giving $expected",
     ({ value, timeZone, smallestUnit, roundingMode, expected }) => {

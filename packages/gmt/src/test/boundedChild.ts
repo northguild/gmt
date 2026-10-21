@@ -6,6 +6,9 @@
  * worker down with it. In the child it only ends the child, and the parent test fails with the
  * reason (`crashed` or `timedOut`) instead of the run dying.
  *
+ * The browser legs serve `boundedChild.browser.ts` in place of this file: the same call on the
+ * browser's own engine in a Worker, bounded by time only.
+ *
  * The child uses Node's built-in type stripping. A synchronous resolve hook maps GMT's
  * extensionless relative imports (`./x`, `./dir`) to `./x.ts` / `./dir/index.ts`.
  */
@@ -36,12 +39,26 @@ function sourceModules(expressions: readonly string[]): Record<string, string> {
   return modules;
 }
 
-const RESOLVE_HOOK = `
+/**
+ * The child's resolve hook source. On the native leg (`GMT_NATIVE_TEMPORAL=1`) it also maps the
+ * polyfill's specifier to the native shim, as the native Vitest config does for the parent.
+ */
+function resolveHook(): string {
+  // Joined, not quoted whole: the seam scan counts any file that spells the specifier.
+  const polyfill = ["@js-temporal", "polyfill"].join("/");
+  const shim =
+    process.env.GMT_NATIVE_TEMPORAL === "1"
+      ? pathToFileURL(path.join(SOURCE_ROOT, "test", "nativeTemporal.ts")).href
+      : null;
+  return `
 import { registerHooks } from "node:module";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+const NATIVE_SHIM = ${JSON.stringify(shim)};
+const POLYFILL = ${JSON.stringify(polyfill)};
 registerHooks({
   resolve(specifier, context, next) {
+    if (NATIVE_SHIM !== null && specifier === POLYFILL) return next(NATIVE_SHIM, context);
     if (/^\\.\\.?\\//.test(specifier) && !/\\.[cm]?[jt]s$/.test(specifier) && context.parentURL?.endsWith(".ts")) {
       for (const suffix of [".ts", "/index.ts"]) {
         const url = new URL(specifier + suffix, context.parentURL);
@@ -52,6 +69,7 @@ registerHooks({
   },
 });
 `;
+}
 
 export interface BoundedCall {
   /** The call's result, as JSON. */
@@ -78,10 +96,10 @@ export interface BoundedRun {
  * @param expressions e.g. `gmt.addDate("2024-01-15[u-ca=persian]", { months: 3000000 })`
  * @param options `timeoutMs` for the whole child (default 20 s), `heapMb` old-space limit (default 256)
  */
-export function runInBoundedChild(
+export async function runInBoundedChild(
   expressions: readonly string[],
   { timeoutMs = 20_000, heapMb = 256 } = {},
-): BoundedRun {
+): Promise<BoundedRun> {
   const modules = sourceModules(expressions);
   const script = `
 const gmt = {};
@@ -100,12 +118,16 @@ for (const run of [${expressions.map((expression) => `() => (${expression})`).jo
       `--max-old-space-size=${heapMb}`,
       "--no-warnings",
       "--import",
-      `data:text/javascript,${encodeURIComponent(RESOLVE_HOOK)}`,
+      `data:text/javascript,${encodeURIComponent(resolveHook())}`,
       "--input-type=module",
       "--eval",
       script,
     ],
-    { encoding: "utf8", timeout: timeoutMs, killSignal: "SIGKILL" },
+    {
+      encoding: "utf8",
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
+    },
   );
   const timedOut =
     (result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";

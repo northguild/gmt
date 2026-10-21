@@ -1,7 +1,21 @@
 {
-  // `vitest bench` runs these; no plugin finds them.
-  "entry": ["packages/gmt/bench/*.bench.ts"],
-  "ignoreDependencies": ["@tanstack/intent", "@northguild/gmt-oxlint"],
+  // `vitest bench` runs these; no plugin finds them. The browser twins and the worker are served
+  // by name from vitest.browser.config.ts and loaded by URL, which no import graph shows. The
+  // native vitest configs load nativeTemporal.ts through an alias of `@js-temporal/polyfill`, and
+  // vitest loads the native-suite reporter by path.
+  "entry": [
+    "packages/gmt/src/test/nativeTemporal.ts",
+    "scripts/lib/native-suite-reporter.mjs",
+    "packages/gmt/bench/*.bench.ts",
+    "packages/gmt/src/test/*.browser.ts",
+    "packages/gmt/src/test/boundedWorker.ts",
+  ],
+  // The browser provider is a root devDependency used by packages/gmt/vitest.browser.config.ts.
+  "ignoreDependencies": [
+    "@tanstack/intent",
+    "@northguild/gmt-oxlint",
+    "@vitest/browser-playwright",
+  ],
   "ignorePatterns": ["oxlint.config.js"],
   "ignoreUnresolvedImports": ["./packages/gmt-oxlint/dist/index.js"],
   "ignoreExports": [

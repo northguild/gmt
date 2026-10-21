@@ -6,6 +6,7 @@ import {
   intervalCountZoned,
   intervalOverlappingDaysZoned,
   intervalSplitAtZoned,
+  roundZoned,
 } from "../src/zoned";
 
 const ZONE = "Europe/London";
@@ -116,5 +117,17 @@ describe("cold, 100 years", () => {
       dwellTime("2024-01-01T00:00:00Z", "2124-01-01T00:00:00Z", ZONE);
     },
     options,
+  );
+});
+
+describe("roundZoned", () => {
+  const value = "2024-06-15T16:34:56-04:00[America/New_York]";
+
+  bench(
+    "to the day, America/New_York",
+    () => {
+      roundZoned(value, { smallestUnit: "day" });
+    },
+    { time: 500 },
   );
 });

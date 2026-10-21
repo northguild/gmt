@@ -6,7 +6,7 @@ import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
 } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import type { EpcisEventTime } from "../../types";
 import { parseEpcisEvent } from "../parse/parseEpcisEvent";
 import { formatEpcisEvent } from "./formatEpcisEvent";

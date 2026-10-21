@@ -1,6 +1,6 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { type ClockEvent, demurrageClock } from "./demurrageClock";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 
 // An import: discharged Friday, available Saturday, out the next Thursday, empty back a week later.
 const discharged: ClockEvent = {

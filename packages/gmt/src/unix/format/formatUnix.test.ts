@@ -1,6 +1,8 @@
 import { expectDateTimeEqual, MustTestLocales } from "../../test";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { formatUnix } from "./formatUnix";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 // Base: 2024-02-29T00:00:00Z (Thursday — leap day)
 const REF_MS = 1709164800000;
@@ -9,6 +11,7 @@ const REF_S = 1709164800;
 describe("formatUnix", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(getSystemTimeZone).mockReset();
   });
 
   // ---------------------------------------------------------------------------
@@ -89,9 +92,7 @@ describe("formatUnix", () => {
     });
 
     it("defaults to system timezone when no timeZone is provided", () => {
-      vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
-        "UTC",
-      );
+      vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
@@ -101,9 +102,7 @@ describe("formatUnix", () => {
     });
 
     it("uses getSystemTimeZone() when timeZone is 'local'", () => {
-      vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
-        "Europe/Paris",
-      );
+      vi.mocked(getSystemTimeZone).mockReturnValue("Europe/Paris");
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
@@ -307,5 +306,24 @@ describe("formatUnix with an option that is an object", () => {
       day: "numeric",
     } as never);
     expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+  });
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
   });
 });

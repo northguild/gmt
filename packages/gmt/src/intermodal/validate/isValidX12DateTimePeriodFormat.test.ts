@@ -1,6 +1,6 @@
 import { X12_DATE_TIME_PERIOD_FORMATS } from "../../internal";
 import { CUT_X12_FORMATS } from "../../test/ediCodes";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { isValidX12Date } from "./isValidX12Date";
 import { isValidX12DateTimePeriodFormat } from "./isValidX12DateTimePeriodFormat";
 

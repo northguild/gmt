@@ -4,7 +4,7 @@ import {
   mockTemporalZonedDateTimeOffsetThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { nextOpenAt } from "./nextOpenAt";
 
 const nineToFive = [{ from: "09:00", to: "17:00" }];

@@ -1,4 +1,4 @@
-import { hostileProxy, revokedProxy } from "../test/noThrow";
+import { hostileProxy, revokedProxy } from "../test/hostileValues";
 import { parsePunctualityTolerance, punctualityOf } from "./punctuality";
 
 /** Nanoseconds in a minute. */

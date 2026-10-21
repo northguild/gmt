@@ -35,10 +35,12 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   coarser, 3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the
  *   result never hides the precision the unit asked for.
  * - Note: Temporal's `ZonedDateTime.prototype.round` takes no `disambiguation` or `offset` options.
- * - Follows TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the
- *   zone. Across a transition the result can land after the input or on another local date —
- *   `Pacific/Chatham` "2024-09-29T03:50:00+13:45" truncated to the hour gives 04:00+13:45, 15
- *   minutes later. Use `floorToZone` for a boundary that never exceeds the instant.
+ * - Follows TC39 `ZonedDateTime.round`. Below the day it rounds the wall clock and re-resolves it
+ *   in the zone, so across a transition the result can land after the input or on another local
+ *   date — `Pacific/Chatham` "2024-09-29T03:50:00+13:45" truncated to the hour gives 04:00+13:45,
+ *   15 minutes later. To the day it rounds between the start of the input's date and the start of
+ *   the next, so `"floor"` and `"trunc"` never leave the input's date, even when a clock change
+ *   makes that date start twice. Use `floorToZone` for a boundary that never exceeds the instant.
  *
  * @param value ISO 8601 zoned datetime string
  * @param options the unit to round to, with an optional increment and rounding mode

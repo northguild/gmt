@@ -15,7 +15,7 @@ import type {
 } from "../types/edi";
 import type { X12DateTimePeriodKind } from "../internal/ediGrammar";
 import type { EdifactDtmKind } from "../internal/ediGrammar";
-import { hostileProxy, revokedProxy } from "./noThrow";
+import { hostileProxy, revokedProxy } from "./hostileValues";
 
 /**
  * The code tables the EDI tests share, written by hand from UNTDID data element 2379 and X12

@@ -1,7 +1,10 @@
+import type { MockedFunction } from "vitest";
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { intervalLengthUnix } from "./intervalLengthUnix";
+
+vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
 // Epoch values used below, in ISO 8601 UTC:
 // 0             is 1970-01-01T00:00:00Z
@@ -14,16 +17,14 @@ import { intervalLengthUnix } from "./intervalLengthUnix";
 // 1710129600000 is 2024-03-11T00:00:00-04:00[America/New_York]
 
 describe("intervalLengthUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   it.each`
@@ -165,14 +166,14 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
 describe("intervalLengthUnix at the maximum instant", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone");
+    timeZoneSpy = vi.mocked(getSystemTimeZone);
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   // TC39 DifferenceZonedDateTime + NudgeToCalendarUnit: max - 3d5h to max - 1d is P2DT5H, totalled
@@ -211,14 +212,14 @@ describe("intervalLengthUnix at the maximum instant", () => {
 const MIN_MS = -MAX_MS;
 
 describe("intervalLengthUnix at the minimum instant", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
 
   beforeEach(() => {
-    timeZoneSpy = vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone");
+    timeZoneSpy = vi.mocked(getSystemTimeZone);
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    timeZoneSpy.mockReset();
   });
 
   // In a zone behind UTC the minimum's wall clock is on -271821-04-19 (New York LMT -04:56:02 gives
@@ -263,4 +264,23 @@ describe("intervalLengthUnix epochUnit and timeZone options", () => {
       }
     },
   );
+});
+
+// A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
+// restores only spies it created itself, so each file resets this one explicitly.
+describe("getSystemTimeZone after a mocked row", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+  });
+
+  it("returns the mocked zone while a row replaces it", () => {
+    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+  });
+
+  it("returns the host's own zone again in the next row", () => {
+    expect(getSystemTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
 });

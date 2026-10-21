@@ -7,6 +7,7 @@ export {
 export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,
+  isDayRoundClampCompatNeeded,
   isNudgeWindowCompatNeeded,
   isSecondsOffsetMatchCompatNeeded,
   isTransitionSearchCompatNeeded,

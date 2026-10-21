@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8 and
- * D10-D13); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D14); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -25,7 +25,8 @@ export type DefectId =
   | "D10"
   | "D11"
   | "D12"
-  | "D13";
+  | "D13"
+  | "D14";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -640,6 +641,31 @@ const d13Repros: readonly ProbeRepro[] = [
   ),
 ];
 
+/**
+ * D14 (`internal/zonedWallClockOperations.ts` `roundZonedDateTime`): rounding to the day in a zone
+ * where a date starts twice. Antarctica/Casey went from +11 to +08 at 2010-03-05T02:00, so
+ * 2010-03-04 runs again from 23:00+08:00. `Temporal.ZonedDateTime.prototype.round` clamps the
+ * instant to the end of that date ("Set thisNs to min(thisNs, endNs - 1)", tc39/ecma262
+ * c97660929786; tc39/proposal-temporal#3312), so `trunc` gives the first midnight. Expected
+ * value: test262
+ * `test/intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js`. A runtime that
+ * throws (V8 in Node 26) or answers the next date fails the repro.
+ */
+const d14Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D14",
+    calendar: "iso8601",
+    name: "dayRoundClamp",
+    expected: "2010-03-04T00:00:00+11:00[Antarctica/Casey]",
+    run: () =>
+      String(
+        Temporal.ZonedDateTime.from(
+          "2010-03-04T23:10:00+08:00[Antarctica/Casey]",
+        ).round({ smallestUnit: "day", roundingMode: "trunc" }),
+      ),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -648,6 +674,7 @@ export const probeReproGroups = {
   d10: d10Repros,
   d12: d12Repros,
   d13: d13Repros,
+  d14: d14Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */

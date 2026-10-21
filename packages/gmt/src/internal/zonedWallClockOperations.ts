@@ -4,6 +4,7 @@ import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import {
   calendarDateAdd,
   isCalendarArithmeticCompatNeeded,
+  isDayRoundClampCompatNeeded,
   isTransitionSearchCompatNeeded,
 } from "./temporalCompat";
 import {
@@ -859,7 +860,13 @@ function roundToDayFromOwnStartOfDay(
     zoned.timeZoneId,
     date.add({ days: 1 }),
   );
-  const progress = zoned.epochNanoseconds - start;
+  // An instant in the second piece of a date that starts twice lies at or past `end`. The spec
+  // step is "Set thisNs to min(thisNs, endNs - 1)" in Temporal.ZonedDateTime.prototype.round
+  // (tc39/ecma262 c97660929786; test262 intl402/Temporal/ZonedDateTime/prototype/round/
+  // same-date-starts-twice.js). It stays when the probe-gated routing is removed.
+  const thisNs =
+    zoned.epochNanoseconds < end ? zoned.epochNanoseconds : end - 1n;
+  const progress = thisNs - start;
 
   return inZoneOf(
     start + roundDayProgress(progress, end - start, roundingMode),
@@ -918,14 +925,26 @@ export function roundZonedDateTime(
   zoned: Temporal.ZonedDateTime,
   roundTo: ZonedRoundTo,
 ): Temporal.ZonedDateTime {
-  if (isDayUnit(roundTo.smallestUnit) && needsOwnDayBounds(zoned)) {
+  if (
+    isDayUnit(roundTo.smallestUnit) &&
+    isNamedTimeZone(zoned.timeZoneId) &&
+    (isDayRoundClampCompatNeeded() || needsOwnDayBounds(zoned))
+  ) {
     // Validates the options exactly as ZonedDateTime#round does, throwing where it throws.
     zoned.toPlainDateTime().round(roundTo);
-    return roundToDayFromOwnStartOfDay(
-      zoned,
-      zoned.toPlainDate(),
-      roundTo.roundingMode ?? "halfExpand",
-    );
+    try {
+      return roundToDayFromOwnStartOfDay(
+        zoned,
+        zoned.toPlainDate(),
+        roundTo.roundingMode ?? "halfExpand",
+      );
+    } catch (error) {
+      // Only at the range limits, where the next date is not representable, does the path
+      // below answer; any other error propagates.
+      if (!isAtRangeEdge(zoned.timeZoneId, zoned.toPlainDate())) {
+        throw error;
+      }
+    }
   }
 
   try {

@@ -5,7 +5,8 @@
  * force flags, asks the planner what to do and runs that through the GitHub CLI.
  *
  *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds>
- *        [--force-removable=<id>] [--force-mismatch] [--force-leap-difference] [--print]
+ *        [--force-removable=<id>] [--force-mismatch] [--force-native-failure]
+ *        [--force-leap-difference] [--print]
  *
  * Exit 0 when it reported (or had nothing to report), 1 when a `gh` call failed, 2 on a usage
  * error (nothing is filed), on `--force-removable` naming an id the check did not list (nothing is
@@ -37,11 +38,16 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const USAGE =
   "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds> " +
-  "[--force-removable=<id>] [--force-mismatch] [--force-leap-difference] [--print]";
+  "[--force-removable=<id>] [--force-mismatch] [--force-native-failure] " +
+  "[--force-leap-difference] [--print]";
 
 /** Flags each workflow accepts besides `--print`. */
 const FORCE_FLAGS = {
-  "temporal-oracle": ["--force-removable=", "--force-mismatch"],
+  "temporal-oracle": [
+    "--force-removable=",
+    "--force-mismatch",
+    "--force-native-failure",
+  ],
   "leap-seconds": ["--force-leap-difference"],
 };
 
@@ -104,6 +110,8 @@ export function parseArgs(argv) {
       if (id !== "") force.removable = id;
     } else if (flag === "--force-mismatch") {
       force.mismatch = true;
+    } else if (flag === "--force-native-failure") {
+      force.nativeFailure = true;
     } else {
       force.leapDifference = true;
     }

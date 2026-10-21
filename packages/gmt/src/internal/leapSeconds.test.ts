@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import source from "./leapSeconds.ts?raw";
 import { Temporal } from "./temporal";
 import {
   LEAP_SECOND_STEPS,
@@ -43,10 +42,6 @@ const negativeStepSteps: LeapSecondSteps = {
 
 /** Each `[bigint, offset], // date` row of the literal in leapSeconds.ts. */
 function sourceRows(): { at: bigint; offset: bigint; date: string }[] {
-  const source = readFileSync(
-    path.resolve(import.meta.dirname, "leapSeconds.ts"),
-    "utf8",
-  );
   return [...source.matchAll(/^\s*\[(\d+)n, (\d+)n\], \/\/ (\S+)$/gm)].map(
     (match) => ({
       at: BigInt(match[1]),

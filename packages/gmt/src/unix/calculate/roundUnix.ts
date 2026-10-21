@@ -38,10 +38,12 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   GetTemporalUnitValuedOption accepts both (§13.17).
  * - Date units ("year", "month", "week", in either form) return null: Temporal's
  *   ZonedDateTime.prototype.round accepts no unit larger than "day".
- * - Follows TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the
- *   zone. Across a transition the result can land after the input — in `Pacific/Chatham`,
- *   1727532300000 (03:50+13:45) truncated to the hour gives 1727532900000, 15 minutes later.
- *   Use `floorToZone` for a boundary that never exceeds the instant.
+ * - Follows TC39 `ZonedDateTime.round`. Below the day it rounds the wall clock and re-resolves it
+ *   in the zone, so across a transition the result can land after the input — in
+ *   `Pacific/Chatham`, 1727532300000 (03:50+13:45) truncated to the hour gives 1727532900000,
+ *   15 minutes later. To the day it rounds between the start of the input's date and the start of
+ *   the next, so `"floor"` and `"trunc"` never leave the input's date, even when a clock change
+ *   makes that date start twice. Use `floorToZone` for a boundary that never exceeds the instant.
  * - `value` is a safe integer or a digit string (`"1706661000000"`); anything else returns null.
  * - Returns null for invalid input.
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,

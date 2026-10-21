@@ -12,8 +12,10 @@ import UpstreamTracker from "../../components/UpstreamTracker.astro";
 import { gmtVersion } from "../../generated/versions";
 
 GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScript date and
-time standard. Until browsers and Node ship Temporal natively, GMT runs on the community
-[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill).
+time standard. Node and some browsers now have Temporal built in, but GMT runs on the community
+[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill) everywhere, so it gives
+the same answer on every runtime. Every week, GMT's whole test suite also runs on the built-in
+engines.
 
 **If you use GMT, there is nothing on this page for you to do.** The polyfill has a handful of bugs
 in rare corners of the calendar. GMT spots each one and gives you the right answer anyway. The rest
@@ -77,6 +79,22 @@ These checks run on their own, so nobody has to remember them. Every bug on this
 that runs against the installed polyfill, and GMT's answers are compared with the Temporal built
 into Chrome — date by date, across every calendar GMT supports. For GMT {gmtVersion} that comparison
 found no differences.
+
+## Native engines
+
+Every week, GMT runs its whole test suite on the Temporal built into Node 26, Chromium and
+Firefox, and expects the same answers it gets on the polyfill. A failure that no known bug
+explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
+see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
+
+The built-in engines have a few bugs of their own. Each one we know about is already reported:
+
+- [`unicode-org/icu4x#8620`](https://github.com/unicode-org/icu4x/issues/8620): Node and Chromium
+  reject a one-letter annotation key, such as `[a=bc]`, which the standard allows.
+- [`boa-dev/temporal#529`](https://github.com/boa-dev/temporal/issues/529): Node and Chromium
+  accept the calendar `islamic`, which the standard says to reject.
+
+GMT gives the standard's answer in both cases, because it runs on the polyfill.
 
 ## What kind of bugs are these?
 

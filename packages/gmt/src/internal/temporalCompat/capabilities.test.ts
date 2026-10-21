@@ -236,6 +236,14 @@ describe("repros", () => {
     expect(findRepro("D12", "iso8601", name)?.expected).toBe(expected);
   });
 
+  // D14: test262 intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js: with
+  // trunc, 2010-03-04T23:10+08:00 (the second pass of that date) gives the date's first midnight.
+  it("D14 dayRoundClamp expects test262's first midnight of the date", () => {
+    expect(findRepro("D14", "iso8601", "dayRoundClamp")?.expected).toBe(
+      "2010-03-04T00:00:00+11:00[Antarctica/Casey]",
+    );
+  });
+
   // D9: 1,200 months from M03 day 5. Persian: 12 months in every year (Intl era/monthCode proposal
   // §4.1.4 Table 3), so 100 years. Hebrew: the Dershowitz–Reingold count floor((235y − 234) / 19)
   // lands on 5881 ordinal 3, a common year.
@@ -306,6 +314,7 @@ describe("reproPasses", () => {
     ${"D13"}     | ${"iso8601"}       | ${"skip.startOfDayBoaVista"}  | ${"ERR TypeError: Cannot read properties of null (reading 'sign')"}
     ${"D13"}     | ${"iso8601"}       | ${"skip.hoursInDayNoronha"}   | ${"-8881"}
     ${"D13"}     | ${"iso8601"}       | ${"stall.nextRiga"}           | ${"ERR RangeError: more than 20000 offset reads"}
+    ${"D14"}     | ${"iso8601"}       | ${"dayRoundClamp"}            | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
     ${"D9"}      | ${"persian"}       | ${"addMonths"}                | ${"1328 Intl reads for 1200 months"}
     ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}              | ${"1518 Intl reads for 1200 months"}
   `(
@@ -350,7 +359,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D13) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D14) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -365,6 +374,7 @@ describe("repro split", () => {
     "D11",
     "D12",
     "D13",
+    "D14",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {

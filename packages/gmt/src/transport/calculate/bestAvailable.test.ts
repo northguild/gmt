@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import type { TimestampEvent } from "../../types";
 import { battleTestTimeZones } from "../../test";
-import { hostileProxy, revokedProxy } from "../../test/noThrow";
+import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { bestAvailable } from "./bestAvailable";
 

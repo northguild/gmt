@@ -16,7 +16,7 @@
  *   `fractionalSecondDigits`, `timeZoneName`, `style` and `timeStyle`). `numberingSystem` is the
  *   exception both engines make: `"null"` is a well-formed subtag, so it is accepted and ignored.
  */
-import { isDeepStrictEqual } from "node:util";
+import { deepEqual } from "./deepEqual";
 import {
   formatCalendar,
   formatCalendarUnix,
@@ -88,7 +88,7 @@ describe("options-object contract coverage", () => {
     "$name baseline call is not the sentinel, so a sentinel for bad options is meaningful",
     (testCase) => {
       expect(
-        isDeepStrictEqual(testCase.fn(...testCase.baseline), testCase.sentinel),
+        deepEqual(testCase.fn(...testCase.baseline), testCase.sentinel),
       ).toBe(false);
     },
   );
@@ -162,8 +162,8 @@ describe("an options bag that is a function is read as the object it is", () => 
     "$name accepts a function carrying the baseline options as it accepts the object",
     (testCase) => {
       const { object, fn } = asFunction(testCase);
-      expect(isDeepStrictEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
-        isDeepStrictEqual(callWith(testCase, object), testCase.sentinel),
+      expect(deepEqual(callWith(testCase, fn), testCase.sentinel)).toBe(
+        deepEqual(callWith(testCase, object), testCase.sentinel),
       );
     },
   );
@@ -304,9 +304,9 @@ describe("option members: an explicit null is a value to validate, not an omissi
       const disagreed: string[] = [];
       for (const member of testCase.members) {
         const bogus = callWith(testCase, { [member]: "zzbogus" });
-        if (!isDeepStrictEqual(bogus, testCase.sentinel)) continue;
+        if (!deepEqual(bogus, testCase.sentinel)) continue;
         const explicitNull = callWith(testCase, { [member]: null });
-        if (isDeepStrictEqual(explicitNull, testCase.sentinel)) continue;
+        if (deepEqual(explicitNull, testCase.sentinel)) continue;
         disagreed.push(`${member}: null gave ${show(explicitNull)}`);
       }
       expect(disagreed).toEqual([]);
@@ -470,7 +470,7 @@ describe("option members: each is read once and converted once per call", () => 
           },
         },
       }),
-      (result) => !isDeepStrictEqual(result, testCase.sentinel),
+      (result) => !deepEqual(result, testCase.sentinel),
     );
   }
 

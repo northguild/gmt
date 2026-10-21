@@ -11,6 +11,8 @@ const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
 
+const NATIVE_LEGS = ["node", "chromium", "firefox"];
+
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 
 /**
@@ -120,6 +122,75 @@ function oracleBlocks(oracle) {
 }
 
 /**
+ * The native Temporal suite: one table row per leg, then one line per host group that matched, so
+ * nothing known is absorbed silently. The engine cell carries each run's engine version.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @returns {string[]}
+ */
+function nativeBlocks(verdicts) {
+  const header = [
+    "Leg",
+    "Engine",
+    "Tests",
+    "Passed",
+    "Tagged",
+    "Untagged",
+    "Host tagged",
+    "Host untagged",
+    "Stale tags",
+  ];
+  /** @type {string[]} */
+  const lines = [];
+  const rows = NATIVE_LEGS.map((leg) => {
+    const found = sourceOf(verdicts, `native-suite-${leg}`);
+    if (!("ran" in found)) {
+      return [
+        leg,
+        `could not run — ${oneLine(found.message).replace(/\|/g, "\\|")}`,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ];
+    }
+    const v = found.ran;
+    const c = v.counts;
+    return [
+      leg,
+      oneLine(v.engine),
+      String(c.tests),
+      String(c.passed),
+      String(c.tagged),
+      String(c.untagged),
+      String(c.hostTagged),
+      String(c.hostUntagged),
+      String(c.staleTags),
+    ];
+  });
+  for (const leg of NATIVE_LEGS) {
+    const found = sourceOf(verdicts, `native-suite-${leg}`);
+    if (!("ran" in found)) continue;
+    for (const g of found.ran.hostTagged) {
+      lines.push(
+        `${oneLine(found.ran.engine)}: ${g.group} — ${g.count} tests (${oneLine(g.reason)})`,
+      );
+    }
+  }
+  return [
+    "### Native Temporal suite",
+    [
+      `| ${header.join(" | ")} |`,
+      `| ${header.map(() => "---").join(" | ")} |`,
+      ...rows.map((r) => `| ${r.join(" | ")} |`),
+    ].join("\n"),
+    ...(lines.length > 0 ? [lines.join("\n\n")] : []),
+  ];
+}
+
+/**
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {string | null}
  */
@@ -156,6 +227,7 @@ function dryRunLines(workflow, force, skipped) {
       flags.push(`--force-removable=${force.removable}`);
     }
     if (force.mismatch) flags.push("--force-mismatch");
+    if (force.nativeFailure) flags.push("--force-native-failure");
   } else if (force.leapDifference) {
     flags.push("--force-leap-difference");
   }
@@ -225,6 +297,7 @@ export function summaryMarkdown(
     );
     const check = sourceOf(verdicts, CHECK);
     if ("ran" in check) blocks.push(...checkNotes(check.ran));
+    blocks.push(...nativeBlocks(verdicts));
   } else {
     blocks.push("## Leap-second canary");
     const found = sourceOf(verdicts, LEAP);

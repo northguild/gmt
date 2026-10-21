@@ -209,3 +209,15 @@ describe("mapZonedHoursInDay across the 1844 date-line crossings (zoned.E)", () 
     },
   );
 });
+
+describe("mapZonedHoursInDay when a date starts twice", () => {
+  // test262 intl402/Temporal/ZonedDateTime/prototype/hoursInDay/same-date-starts-twice.js:
+  // Antarctica/Casey's 2010-03-05 is 27 hours long.
+  it("lists 27 hours for 2010-03-05 in Antarctica/Casey", () => {
+    const hours = mapZonedHoursInDay(
+      "2010-03-05T00:45:00+11:00[Antarctica/Casey]",
+    );
+    expect(hours).toHaveLength(27);
+    expect(hours[0]).toBe("2010-03-05T00:00:00+11:00[Antarctica/Casey]");
+  });
+});

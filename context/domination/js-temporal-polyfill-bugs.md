@@ -165,6 +165,9 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | I   | A zoned string's offset written with seconds is matched by minutes, not exactly | **Release** of `23d1275` (on `main`). No new patch and no filing: `main` already has the fix | Not filed: nothing to file. The release is the one already asked for in #373 | Yes, on 0.5.1 (Node 24.21.0): both `D12` probes fail; expected values from test262 `zoneddatetime-sub-minute-offset.js`, and Chromium 153 native Temporal agrees. `main` read, not built: `lib/ecmascript.ts` has `if (offsetSecondsPart) matchMinute = false` | D12: `matchSecondsOffsetExactly` in `internal/zonedWallClock.ts` and its probe | The first release containing `23d1275` |
 | J   | `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses when the local date is −271821-04-19 | **Spec issue** to tc39 only: `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local date before it matches a written offset. Not a polyfill bug: the polyfill and Chromium both follow the spec | **Not filed** | Yes: polyfill 0.5.1 (Node 24.21.0) and Chromium 153.0.8010.12 native Temporal both throw `RangeError` | None, and none is wanted: a workaround must compute the spec's answer, and this is the spec's answer. GMT's zoned reads return the sentinel; its instant readers read the string | None |
 | K   | The transition search skips, or never returns from, two offset changes inside one 14-day step | **Release** of `a79c6a1` (per-zone search windows, on `main`) fixes the 0.5.1 defect for the zones it lists. **A stall remains on `main`** for `Africa/El_Aaiun` in 1976 (17-day window, three offsets, `bisect` unchanged), which needs a further fix | **Not filed** (the remaining stall) | Yes, on 0.5.1 (Node 22.22.2, 24.21.0, 26.10.0): the `D13` probes fail; expected values from Node 26.10.0's native Temporal and `zdump -v` (tz 2026c). `main` read, not run | `D13`: `internal/zonedTransitionSearch.ts`, gates in `internal/zonedWallClock*.ts` | a release containing `a79c6a1` |
+| L   | A one-character annotation key (`[a=bc]`, `[x=y]`) is refused by V8's native Temporal | **Nothing to file**: fixed upstream by unicode-org/icu4x#8623 (merged 2026-10-20), waiting for an `ixdtf` release and a V8 roll | **Not filed** (report: unicode-org/icu4x#8620, closed by #8623) | Yes: Node 26.10.0 (V8 14.6.202.34-node.34) and Chromium 153.0.8010.12 throw `RangeError: Temporal error: Invalid annotation key character.`; the polyfill accepts | None: GMT already follows the spec text | None |
+| M   | `[u-ca=islamic]` is accepted by V8's native Temporal and read as `islamic-civil` | **Nothing to file**: open upstream as boa-dev/temporal#529 | **Not filed** (report: boa-dev/temporal#529, open) | Yes: Node 26.10.0 and Chromium 153.0.8010.12 return `islamic-civil`; the polyfill throws `RangeError` | None: GMT already follows the spec text | None |
+| N   | `ZonedDateTime.prototype.round` to `day` when a date starts twice (V8 throws, the polyfill answers the next day) | **Port** tc39/proposal-temporal#3312 (reference polyfill `59a51ea9d4`) to js-temporal + release; a drafted request is under "Draft — not filed" in § N | **Not filed** (draft only) | Yes: polyfill 0.5.1 (Node 24.21.0) answers `2010-11-07T00:00:00-03:00`; Node 26.10.0 throws; Chromium 153 and the current spec answer `2010-11-06T00:00:00-03:00` | `D14`: `roundZonedDateTime` day branch in `internal/zonedWallClockOperations.ts` and its probe | The first release containing the port of #3312 |
 
 ## Filed
 
@@ -1904,3 +1907,124 @@ in a named zone: `internal/zonedTransitionSearch.ts` samples every 5 days (432,0
 closest pair) and bisects the one change a differing step can hold. The assumption is pinned by an all-zones
 guard that reads `Intl.DateTimeFormat`, and on Node 26 the search is compared with native Temporal for every
 change from 1900 to 2040 in every zone.
+
+## L. A one-character annotation key is refused
+
+### Status
+
+Fixed upstream, in no release. unicode-org/icu4x#8620 ("ixdtf: annotation keys and values skip validation of
+some characters and reject one character keys and values") was closed by unicode-org/icu4x#8623 on 2026-10-20.
+Neither an `ixdtf` release nor a V8 roll carries it yet, so Node 26.10.0 and Chromium 153.0.8010.12 have the
+defect. **Not a polyfill defect**: `@js-temporal/polyfill` 0.5.1 accepts the strings. Nothing to file. GMT
+makes no change: it already follows the spec text (CORE-8, "Where GMT follows the spec text over native").
+
+### What goes wrong
+
+The Temporal string grammar writes an annotation key as `AKeyLeadingChar AKeyChar*`, so a key of one
+character is valid (`AKeyLeadingChar` is a lower-case letter or `_`). RFC 9557 §4.1 says the same:
+`suffix-key = key-initial *key-char`. V8 reads annotations with `temporal_rs`, which uses `ixdtf`. Its
+key parser required a second character and stopped with `AnnotationKeyChar`, whose text is `Temporal error:
+Invalid annotation key character.` A string with such an annotation is refused by every operation that reads
+it, although Temporal ignores an annotation it does not know.
+
+### Repro (Node 26.10.0 and Chromium 153.0.8010.12; polyfill 0.5.1 accepts all four)
+
+| Call | Native | Expected |
+| ---- | ------ | -------- |
+| `Temporal.PlainDate.from("2024-03-10[a=bc]")` | `RangeError: Temporal error: Invalid annotation key character.` | `2024-03-10` |
+| `Temporal.PlainTime.from("12:30[a=bc]")` | the same | `12:30:00` |
+| `Temporal.Instant.from("2024-01-01T00:00:00Z[x=T123460Z]")` | the same | `2024-01-01T00:00:00Z` |
+| `Temporal.PlainDate.from("2024-10-03[x=y][u-ca=roc]")` | the same | `2024-10-03[u-ca=roc]` |
+
+### Effect on GMT
+
+None in the library, which reads these strings correctly on the polyfill. The native-suite runner tags the
+ten tests that pin this (`isValidDate`, `isValidDateTime`, `isValidTime`, `isValidInstant` ×2, `isValidUtc`,
+`spanNs`, `getTimeZoneOffset`, `totalDuration`, `parseCalendarDateValue`) to this section. When a V8 roll
+carries the fix the tags go stale and the runner reports it.
+
+## M. `[u-ca=islamic]` is accepted instead of refused
+
+### Status
+
+**Open upstream** as boa-dev/temporal#529 ("handling of 'islamic' and 'islamic-rgsa' calendars", open since
+2025-08-29). Not a polyfill defect: `@js-temporal/polyfill` 0.5.1 throws `RangeError`, as the spec does.
+Nothing to file. GMT makes no change: it follows the spec.
+
+### What goes wrong
+
+`islamic` is not a calendar Temporal supports. The `islamic` to `islamic-tbla` fallback exists only in
+`Intl.DateTimeFormat` (Intl Era and Month Code proposal, `CreateDateTimeFormat`); test262
+`intl402/Temporal/PlainDate/from/islamic.js` and its twins expect `RangeError`. `temporal_rs` canonicalises
+`islamic` to a supported calendar instead. Node 26.10.0 reports `Temporal.PlainDate.from("2024-10-03[u-ca=islamic]").calendarId`
+as `islamic-civil`, and its other errors carry the `Temporal error:` prefix of `temporal_rs`, which is the
+evidence that V8 takes that path for calendar ids.
+
+### Repro (Node 26.10.0 and Chromium 153.0.8010.12)
+
+| Call | Native | Expected (test262) |
+| ---- | ------ | ------------------ |
+| `Temporal.PlainDate.from("2024-10-03[u-ca=islamic]")` | `2024-10-03[u-ca=islamic-civil]` | `RangeError` |
+| the same with `PlainDateTime` and `ZonedDateTime` strings | accepted | `RangeError` |
+
+### Effect on GMT
+
+None in the library. Three tests pin the `RangeError` (`parseCalendarDateValue`, `isValidCalendarDate`,
+`isValidCalendarZonedDateTime`); the native-suite runner tags them to this section.
+
+## N. `ZonedDateTime.prototype.round` to `day` when a date starts twice
+
+### Title
+
+ZonedDateTime.prototype.round: port the day-length clamp from tc39/proposal-temporal#3312
+
+### Status
+
+Fixed in the specification: tc39/proposal-temporal#3312 (closed 2026-05-28) changed `round` to clamp the
+instant to `endNs − 1`, and the change is in tc39/ecma262 (commit `c97660929786`, Temporal merged into
+ecma262). test262 pins it in `intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js`.
+The reference polyfill fix is proposal-temporal `59a51ea9d4` ("Cap day span at <100% of day length").
+`@js-temporal/polyfill` 0.5.1 predates it and no port to js-temporal is open. Node 26.10.0's V8 also predates
+it and throws. Chromium 153 has it. **Not filed**; a draft is below. GMT works around it as temporalCompat
+**D14** (`internal/zonedWallClockOperations.ts`, `roundZonedDateTime` day branch).
+
+### What goes wrong
+
+A fall-back across midnight can start one calendar date twice: `America/Goose_Bay` on 2010-11-06 (at 00:00 −03:00 the
+clocks go back to 23:00 −04:00, so 23:30 happens twice), `Antarctica/Casey` on 2010-03-04. For an instant in the second piece of
+that date, rounding to `day` needs the date's length. Without the clamp the polyfill measures to the next
+date's start, so `trunc` and `floor` answer the next date's midnight and `ceil` and `expand` the end of the
+next date. The half modes are wrong where the clock went back by about a day (`America/Sitka`, 1867-10-18).
+
+### Repro
+
+| Call | polyfill 0.5.1 | Node 26.10.0 | Chromium 153 and the spec |
+| ---- | -------------- | ------------ | ------------------------- |
+| `Temporal.ZonedDateTime.from("2010-11-06T23:30:00-04:00[America/Goose_Bay]").round({ smallestUnit: "day", roundingMode: "trunc" })` | `2010-11-07T00:00:00-03:00` | `RangeError: Temporal error: ZonedDateTime is outside the expected day bounds` | `2010-11-06T00:00:00-03:00` |
+| the same with `roundingMode: "ceil"` | `2010-11-07T23:00:00-04:00` | the same `RangeError` | `2010-11-07T00:00:00-03:00` |
+
+### GMT
+
+Fixed in `roundZoned` and `roundUnix` as **D14**: while the probe fails GMT applies the clamp itself, and
+the rows in `roundZoned.test.ts` and `roundUnix.test.ts` hold test262's values. The workaround retires on the
+first js-temporal release containing the port. No tag in the native-suite lists: GMT answers correctly on
+every runtime.
+
+### Draft — not filed
+
+For `js-temporal/temporal-polyfill`. Title: **Port tc39/proposal-temporal#3312: `ZonedDateTime.prototype.round` to `day` when a date starts twice**
+
+> `ZonedDateTime.prototype.round({ smallestUnit: "day" })` gives the wrong answer for an instant in the
+> second piece of a date that starts twice. tc39/proposal-temporal#3312 (closed 2026-05-28) fixed this in
+> the specification (tc39/ecma262 `c97660929786`) by clamping the instant to `endNs − 1`; test262 covers it in
+> `intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js`; the reference polyfill fix is
+> proposal-temporal `59a51ea9d4`.
+>
+> ```js
+> Temporal.ZonedDateTime.from("2010-11-06T23:30:00-04:00[America/Goose_Bay]")
+>   .round({ smallestUnit: "day", roundingMode: "trunc" }).toString();
+> // @js-temporal/polyfill 0.5.1: 2010-11-07T00:00:00-03:00[America/Goose_Bay]
+> // expected (spec, Chromium 153): 2010-11-06T00:00:00-03:00[America/Goose_Bay]
+> ```
+>
+> Could the change be ported and released? Environment: `@js-temporal/polyfill` 0.5.1, Node 24.21.0, tz 2026c.
