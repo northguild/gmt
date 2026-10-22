@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-10-17'
+generated_at: '2026-10-22'
 
 skills:
   # Consumer-facing core skills
@@ -53,7 +53,7 @@ skills:
     domain: core-date-operations
     path: 'skills/gmt-arithmetic/SKILL.md'
     package: 'packages/gmt'
-    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings (totalDuration for a total in one unit), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), elapsed-versus-wall-clock spans (spanMs/spanNs/spanWallClock), business-day arithmetic against a BusinessCalendar (isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars with the six RollConvention values), half-open [start, end) interval algebra over instants (intervalsOverlap/intervalContains/intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals/isValidInterval) and the positional interval*Date/*Utc/*Zoned/*Unix functions on the same half-open rule, and interval range math — overflow "constrain" month-end and February 29 clamping, splitIntervalByUnit* stepping from the anchor without drift, the maxPieces output limit (default 1,000,000, [] above it) on splitIntervalByUnit*/intervalDivideEqually*/mapDatesInRange/mapZonedDatesInRange, integer intervalDivideEqually* boundaries rounded half up, intervalCount* counting the same local buckets as bucketRange, RFC 9557 calendar strings (ISO digits plus [u-ca=<id>] with canonical BCP 47 ids such as gregory/roc/islamic-tbla/ethioaa, the zone annotation before the calendar, ;era= rejected), correct-at-the-edges guarantees at the first and last representable instant
+    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings (totalDuration for a total in one unit), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), elapsed-versus-wall-clock spans (spanMs/spanNs/spanWallClock), business-day arithmetic against a BusinessCalendar (isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars with the six RollConvention values), holiday rules expanded from HolidayRule values (nthWeekdayOfMonth/easterSunday/observedDate/holidayDates/buildBusinessCalendar/isValidHolidayRule, ObservancePolicy), half-open [start, end) interval algebra over instants (intervalsOverlap/intervalContains/intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals/isValidInterval) and the positional interval*Date/*Utc/*Zoned/*Unix functions on the same half-open rule, and interval range math — overflow "constrain" month-end and February 29 clamping, splitIntervalByUnit* stepping from the anchor without drift, the maxPieces output limit (default 1,000,000, [] above it) on splitIntervalByUnit*/intervalDivideEqually*/mapDatesInRange/mapZonedDatesInRange, integer intervalDivideEqually* boundaries rounded half up, intervalCount* counting the same local buckets as bucketRange, RFC 9557 calendar strings (ISO digits plus [u-ca=<id>] with canonical BCP 47 ids such as gregory/roc/islamic-tbla/ethioaa, the zone annotation before the calendar, ;era= rejected), correct-at-the-edges guarantees at the first and last representable instant
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -74,6 +74,9 @@ skills:
       - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
       - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
+      - 'northguild/gmt:packages/gmt/src/calendar/rules/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/holiday-rule.ts'
+      - 'northguild/gmt:packages/gmt/src/types/observance-policy.ts'
 
   - name: GMT Timezone
     slug: gmt-timezone

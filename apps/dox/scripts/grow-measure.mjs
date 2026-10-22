@@ -248,6 +248,24 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "holiday-rule-builder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="year"]',
+  },
+  {
+    slug: "observance-comparator",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="to"]',
+  },
+  {
+    slug: "moving-feasts",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="year-slider"]',
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,
@@ -518,6 +536,20 @@ async function drag(page, selector) {
       )
       .catch(() => null);
   const before = await readValue();
+  /* A number field is not dragged: it is stepped with the arrow keys, the way
+     a reader steps a year. */
+  const isNumber = await el.evaluate(
+    (node) => node instanceof HTMLInputElement && node.type === "number",
+  );
+  if (isNumber) {
+    await el.focus();
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("ArrowUp");
+      await sleep(40);
+    }
+    const stepped = dragProblem(before, await readValue());
+    return stepped.length ? stepped[0] : null;
+  }
   const info = await el.evaluate((node) => {
     const rect = node.getBoundingClientRect();
     if (node instanceof HTMLInputElement && node.type === "range") {

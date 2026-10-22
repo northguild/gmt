@@ -41,7 +41,6 @@ The observance shift is where implementations diverge. One policy moves a Saturd
 
 - `BusinessCalendar` / `isBusinessDay` / `nextBusinessDay` from CORE-7 — the target shape and the working-day walk for `nextWorkingDay`
 - `CalendarSystem` and the calendar-id canonicalisation (`internal/calendarSystemIds.ts`) — the CLDR calendars `calendarFixed` accepts
-- `getWeekOfMonth` / `nextWeekday` / `previousWeekday` / `getDayOfWeek` from `plain/` — weekday arithmetic
 - `isValidDate` — rule output validation
 
 ## Verification
@@ -56,3 +55,64 @@ The observance shift is where implementations diverge. One policy moves a Saturd
 - `buildBusinessCalendar` from the six TARGET closing-day rules matches the ECB's published 2026 list
 - Invalid month, weekday or year range returns the sentinel
 - `pnpm run validate` stays green
+
+## Decisions
+
+- **Source of the six-rule example.** The closing days 1 January, Good Friday, Easter Monday,
+  1 May, 25 December and 26 December, with Monday to Friday open, are the ECB's T2 operating days
+  ([ecb.europa.eu/paym/target/t2](https://www.ecb.europa.eu/paym/target/t2/html/index.en.html),
+  fetched 2026-10-22). This is the only place the source is named: code, JSDoc, tests and docs
+  describe the rules by what they compute and name no body, institution or country.
+
+### Library (`calendar/rules`)
+
+- **No rule set ships.** The six-rule example is labelled by what it computes. Observance has no
+  default: a `fixed` or `calendarFixed` rule without `observed` is not shifted.
+- **A moved holiday closes only its observed date.** The date it moved away from stays open. To
+  close both, list the rule twice, once without `observed`.
+- **`holidayDates(rule, Y)` returns the occurrences whose unshifted date lies in ISO year Y**,
+  as their observed dates, even when a move crosses into another year. One year meaning for every
+  rule kind; a rule yields 0, 1 or 2 dates. `buildBusinessCalendar` collects the window.
+- **Rules expand in list order**, each shift seeing the calendar built so far. A year span is
+  capped at 400 years, and a `nextWorkingDay` shift of more than 31 days fails the build.
+- **A date a year lacks is skipped, never clamped** (29 February, `M05L` in a common Hebrew year,
+  day 30 of a 29-day month). `chinese` and `dangi` are not accepted calendars.
+- **Accepted deviations from the story:**
+  1. `ObservancePolicy` is keyed by ISO weekday, not `saturday`/`sunday`. It covers a
+     Friday-Saturday weekend and mid-week moves with no list of named conventions. Mapping:
+     `previousFriday` is `6: { previous: 5 }`, `nextMonday` is `{ next: 1 }`, `nextTuesday` is
+     `7: { next: 2 }`, `nextWorkingDay` is the string.
+  2. The ordinal `n` also accepts `-1..-5`; `"last"` is an alias of `-1`.
+  3. The Easter option is `computus`, not `calendar`.
+  4. New guard `isValidHolidayRule`, because `holidayDates` returns `[]` both for a bad rule and
+     for a year with no occurrence.
+  5. The story's Christmas 2021 verification row is corrected: the two rules give 27 and 28 December.
+  6. The `plain/` weekday helpers are not called (no public-to-public calls; the epoch-day
+     formulas are closed form), so `Blocked by` is unchanged by that bullet.
+  7. A shifted holiday closes only its observed date, not both.
+- **Authorities:** nth weekday follows RFC 5545 section 3.3.10 (`BYDAY`); Easter follows Meeus,
+  *Astronomical Algorithms*, chapter 8 (Gregorian and Julian methods, the Gregorian one applied
+  proleptically before 1583); a Julian date becomes ISO by adding the century offset; absent
+  dates follow RFC 5545 and RFC 7529 (skip, never clamp).
+- **Sentinels:** `""` for the three string functions, `[]` for `holidayDates`, `null` for
+  `buildBusinessCalendar`, `false` for the guard.
+
+### Dox (Holiday Rule Builder, Observance Comparator, Moving Feasts)
+
+The tools' conventions are recorded in [built.md](../../dox/built.md) (the holiday family).
+Decisions of the story:
+
+- The Comparator links to the Builder and the Builder links back, each by one call to the shared
+  codec. The Builder's one hand-off out of the family is the Free Time Ledger, with
+  `basis: "working"`.
+- `holidays` and `rules` permalink values have a 1000-character cap in `LONG_STRING_KEYS`.
+- Easter offsets are labelled with the offset and the feast name ("Easter -2 (Good Friday)").
+  `MAX_RULES` is 12. Moving Feasts' slider covers the reader's year plus or minus 100.
+- No site string, preset, fixture or page names a country, a statute or a body.
+- The compare link on a Builder row appears only for a valid `fixed` rule, decided by the
+  library's validity check.
+- The Comparator says why a seeded holiday is not a date: a `holiday-note` line names the
+  holidays that are not a month from 1 to 12 and a day that month has.
+- Accepted deviations: months never collapse in the grid, and the empty-month line is reserved
+ ; Comparator cells are two lines with a 34rem
+  stacking point; an extra `year` permalink key and repeatable custom columns on the Comparator.

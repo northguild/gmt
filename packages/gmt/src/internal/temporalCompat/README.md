@@ -12,7 +12,7 @@ Decisions: `context/domination/issues/CORE-6.md` § Decisions. Owner choices:
 ## Rules
 
 1. **Import surface.** `index.ts` is the only import surface. Call sites use `calendarDateFromFields`,
-   `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
+   `calendarDateFromMonthCode`, `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
    `isNudgeWindowCompatNeeded`, `isSecondsOffsetMatchCompatNeeded`,
    `isTransitionSearchCompatNeeded`, `isDayRoundClampCompatNeeded` and `isZIgnoreExactCompatNeeded`, never the files behind them.
 2. **Dormant unless needed.** Each defect has a repro in `probeRepros.ts` (or, for the canary-only
@@ -75,6 +75,13 @@ live in `nonIsoArithmetic.ts`, over an integer model:
   a mean month length measured from Temporal's own reads, accepted only within a third of a month of
   a whole count.
 - `hebrewArithmeticModel` and `indianArithmeticModel` answer from the owned arithmetic.
+
+Month code + day → ISO (`calendarDateFromMonthCode`, CORE-54): the date of a month code and day in a
+calendar year, `null` when that year lacks the month (hebrew `M05L`) or the month lacks the day, a
+`RangeError` when the calendar cannot be read or the date is out of range. It adds no workaround of
+its own: it runs `monthOrdinal`, `daysInMonth` and `toDate` of `arithmeticModelFor(calendarId)` (the
+owned Hebrew or Indian model where its read correction is active, else `readArithmeticModel`), so it
+is correct exactly where those are and needs no probe. Used by `internal/holidayRules.ts`.
 
 Whole operations (CORE-6 slices S5–S7). A wrong calendar `until` (D6) is returned, not thrown, so
 code that owns a TC39 algorithm for a whole operation checks `isCalendarArithmeticCompatNeeded(id)`

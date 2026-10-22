@@ -142,6 +142,18 @@ const PAGES = [
     path: "tools/stored-time-audit",
     widget: "gmt-stored-time-audit gmt-widget",
   },
+  {
+    path: "tools/holiday-rule-builder",
+    widget: "gmt-holiday-rule-builder gmt-widget",
+  },
+  {
+    path: "tools/observance-comparator",
+    widget: "gmt-observance-comparator gmt-widget",
+  },
+  {
+    path: "tools/moving-feasts",
+    widget: "gmt-moving-feasts gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

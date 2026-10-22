@@ -63,6 +63,10 @@
  *                 (default 400). A ledger handle has no far end: the canvas
  *                 widens when a handle reaches its edge, so its value never stops
  *                 changing and the sweep ends here;
+ *   step          per control, a number: the control is a number field the
+ *                 reader steps with the arrow keys, not a handle. The script
+ *                 presses ArrowUp that many times, then ArrowDown back, and
+ *                 compares after each press. There is no pointer pass;
  *   value         per control, the `data-role` of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
@@ -169,6 +173,11 @@ const CODE_TEXT = ".gmt-codeframe code, .gmt-codeframe code *";
 /** An instant's unbreakable date and time pieces, which are as wide as their
  *  digits inside a plate that holds its own width. */
 const INSTANT_TEXT = CODE_TEXT + ", .gmt-gnss-nb, .gmt-punct-hero-value > span";
+
+/** What may move inside a holiday tool: the insides of a month grid (its cells
+ *  carry the marks of the year) and a hold's live wrapper. The grid's own box
+ *  is still measured. */
+const HOLIDAY_DRAWN = ".gmt-holiday-grid, .gmt-ledger-hold > :first-child";
 
 const TOOLS = [
   {
@@ -370,6 +379,53 @@ const TOOLS = [
     frame: ".gmt-gnss-frame",
     scope: "widget",
     drawn: GNSS_DRAWN + ", .gmt-elapsed-list",
+    riders: RANGE_CHIP,
+    textBoxes: CODE_TEXT,
+  },
+  {
+    slug: "holiday-rule-builder",
+    root: ".gmt-holiday-rule-builder",
+    presets: [
+      "chain",
+      "closing",
+      "friday-monday",
+      "fri-sat",
+      "midweek",
+      "lunisolar",
+    ],
+    // The year field, stepped 20 times each way. The twelve month grids hold
+    // six week rows, so no year changes a box; the calendar output and the
+    // year sentence hold the height of their longest text.
+    controls: [{ sel: '[data-role="year"]', step: 20 }],
+    track: null,
+    frame: ".gmt-holiday-frame",
+    scope: "widget",
+    drawn: HOLIDAY_DRAWN + ", .gmt-hrb-rules",
+    textBoxes: CODE_TEXT,
+  },
+  {
+    slug: "observance-comparator",
+    root: ".gmt-observance-comparator",
+    presets: ["adjacent"],
+    // The last year, stepped ten times each way: the plates and the table
+    // header hold still. The table body reserves its rows, so its box holds
+    // too; only the cells' text moves.
+    controls: [{ sel: '[data-role="to"]', step: 10 }],
+    track: null,
+    frame: ".gmt-holiday-frame",
+    scope: "widget",
+    drawn: HOLIDAY_DRAWN + ", .gmt-obs-table tbody, .gmt-obs-strip",
+    textBoxes: CODE_TEXT,
+  },
+  {
+    slug: "moving-feasts",
+    root: ".gmt-moving-feasts",
+    presets: ["third-wednesday", "last-sunday-march", "fifth-friday"],
+    controls: [{ sel: '[data-role="year-slider"]' }],
+    track: null,
+    frame: ".gmt-holiday-frame",
+    scope: "widget",
+    drawn: HOLIDAY_DRAWN,
     riders: RANGE_CHIP,
     textBoxes: CODE_TEXT,
   },
@@ -600,6 +656,7 @@ async function run() {
             sel,
             optional,
             requiredIn,
+            step,
             value: field,
           } of tool.controls) {
             const visible = await page.evaluate((s) => {
@@ -624,6 +681,51 @@ async function run() {
                 result.problems.push(`${step}: ${p}`);
               }
             };
+
+            if (step) {
+              // A number field: step it up and back down, one key at a time.
+              await page.locator(sel).focus();
+              const base = await snapshot(page, sel, tool);
+              const start = await valueOf(page, sel, field);
+              const seen = { up: [], down: [] };
+              for (const key of ["ArrowUp", "ArrowDown"]) {
+                for (let i = 0; i < step; i++) {
+                  await page.keyboard.press(key);
+                  await page.waitForTimeout(40);
+                  const value = await valueOf(page, sel, field);
+                  const now = await snapshot(page, sel, tool);
+                  for (const p of diffSnapshots(base, now, false)) {
+                    result.problems.push(
+                      `${key} #${i + 1} (value ${value}): ${p}`,
+                    );
+                  }
+                  result.keyboard++;
+                  seen[key === "ArrowUp" ? "up" : "down"].push(value);
+                }
+              }
+              if (!seen.up.some((v) => v !== start)) {
+                result.problems.push(
+                  `ArrowUp never moved the value off ${start}`,
+                );
+              }
+              const end = seen.up[seen.up.length - 1];
+              if (!seen.down.some((v) => v !== end)) {
+                result.problems.push(
+                  `ArrowDown never moved the value off ${end}`,
+                );
+              }
+              const ok = result.problems.length === 0;
+              if (!ok) failures++;
+              summary.push({ id, ...result, ok });
+              console.log(
+                `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
+                  (ok ? "" : `, ${result.problems.length} problem(s)`),
+              );
+              for (const p of result.problems.slice(0, ALL ? undefined : 6)) {
+                console.log(`       ${p}`);
+              }
+              continue;
+            }
 
             const maxKeys = tool.maxKeys ?? MAX_KEYS;
 

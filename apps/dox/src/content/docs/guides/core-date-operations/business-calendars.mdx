@@ -1,6 +1,6 @@
 ---
 title: Business Calendars and Roll Conventions
-description: The BusinessCalendar shape, business-day counting and stepping, roll conventions, and merging calendars across jurisdictions.
+description: The BusinessCalendar shape, business-day counting and stepping, roll conventions, merging calendars across jurisdictions, and building a calendar from holiday rules.
 sidebar:
   order: 10
 industries: [core]
@@ -21,9 +21,10 @@ A `BusinessCalendar` is `{ weekend: number[], holidays: string[], timeZone: stri
 - **The weekend is explicit.** It is a list of ISO weekday numbers, because Saturday and
   Sunday are not universal. Much of the Middle East is Friday and Saturday, and some
   markets keep a one-day weekend.
-- **Holidays are yours to supply.** The default entry point of the library bundles no
-  holiday table. Holiday data belongs to a jurisdiction and changes every year, sometimes
-  with days of notice.
+- **Holidays are yours to supply.** The library bundles no holiday table, because holiday
+  data belongs to a jurisdiction and changes every year, sometimes with days of notice.
+  [`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar) builds a
+  calendar from the rules you supply (see [Build a calendar from rules](#build-a-calendar-from-rules)).
 - **`timeZone` records which locality the calendar describes.** The business-day functions
   take and return local dates and never read it. If you hold an instant, reduce it to a
   local date with [`floorToZone`](/reference/calendar/calculate/floorToZone) first.
@@ -107,18 +108,80 @@ that may disagree. An empty list has no calendar to return, so `mergeCalendars([
 `null`.
 
 ```typescript
-const newYork = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" };
+const tokyo = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "Asia/Tokyo" };
 
-const both = mergeCalendars([london, newYork]);
+const both = mergeCalendars([london, tokyo]);
 // { weekend: [6, 7], holidays: ["2024-05-31", "2024-07-04", "2024-12-25"], timeZone: "Europe/London" }
 // timeZone is the first calendar's; the merged set spans localities that may disagree
 
 isBusinessDay("2024-07-04", both);
-// false — a US holiday closes the merged calendar too
+// false — a holiday of either calendar closes the merged one
 
 mergeCalendars([]);
 // null
 ```
+
+## Build a calendar from rules
+
+A holiday list is a set of dates, but a holiday is a rule: "1 January", "the second Monday
+of October", "two days before Easter". [`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar)
+takes a zone, a weekend, a list of rules and the years to expand them over, and returns a
+`BusinessCalendar`. It returns `null` when any part is invalid. A [`HolidayRule`](/reference/types/HolidayRule)
+has one of five kinds:
+
+- `fixed`: a month and a day in the ISO calendar.
+- `calendarFixed`: a month code and a day in another calendar, such as `M01` in the Hebrew calendar.
+- `nthWeekday`: the first to fifth or last weekday of a month.
+- `easterRelative`: a number of days before or after Easter, by the Gregorian or the Julian method.
+- `dates`: a list of dates you give, for a day that no rule produces.
+
+A `fixed` or `calendarFixed` rule can also carry an `observed` policy: for each weekday it
+names where the holiday moves, to a given weekday before or after, or to the next working
+day. **Observance has no default.** A rule with no policy closes its own date, and the
+library never fills one in for you.
+
+Rules apply in list order, and each shift sees the calendar built so far. Two holidays on
+a Saturday and a Sunday, each moved to the next working day, close Monday and then
+Tuesday, because the second one finds Monday already closed.
+
+```typescript
+import { buildBusinessCalendar } from "@northguild/gmt";
+
+const nextWorking = { 6: "nextWorkingDay", 7: "nextWorkingDay" } as const;
+
+buildBusinessCalendar({
+  timeZone: "UTC",
+  weekend: [6, 7],
+  years: { from: 2021, to: 2021 },
+  rules: [
+    { name: "a", kind: "fixed", month: 12, day: 25, observed: nextWorking },
+    { name: "b", kind: "fixed", month: 12, day: 26, observed: nextWorking },
+  ],
+})?.holidays;
+// ["2021-12-27", "2021-12-28"] — the second shift sees the first
+```
+
+**A moved holiday closes one day.** The calendar closes the observed date, not the date the
+holiday started on. To close both days, list the rule twice, once with no policy:
+
+```typescript
+buildBusinessCalendar({
+  timeZone: "UTC",
+  weekend: [6, 7],
+  years: { from: 2021, to: 2021 },
+  rules: [
+    { name: "a", kind: "fixed", month: 12, day: 25, observed: nextWorking },
+    { name: "a", kind: "fixed", month: 12, day: 25 },
+  ],
+})?.holidays;
+// ["2021-12-25", "2021-12-27"] — the moved day and the day itself
+```
+
+Three tools draw the same calls on a calendar:
+
+- [Holiday Rule Builder](/tools/holiday-rule-builder/): write the rules and see which rule closed which day.
+- [Observance Comparator](/tools/observance-comparator/): put one holiday under several policies side by side.
+- [Moving Feasts](/tools/moving-feasts/): the Gregorian and Julian Easter, and the n-th weekday of a month.
 
 ## Tell a bad calendar from bad input
 
@@ -132,3 +195,6 @@ calendar or contract term apart from bad date input.
 - [Comparisons](../comparisons/): weekends, business days and now-relative predicates
 - [Plain Arithmetic](../plain-arithmetic/): adding and subtracting business days
 - [Operating Hours and Open-Time SLAs](../operating-hours/): hours of the day, not only days
+- [Holiday Rule Builder](/tools/holiday-rule-builder/): holidays as rules, and which day each one closes
+- [Observance Comparator](/tools/observance-comparator/): where one holiday is observed under different policies
+- [Moving Feasts](/tools/moving-feasts/): Easter by two methods, and the n-th weekday of a month

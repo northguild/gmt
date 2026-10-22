@@ -1452,3 +1452,157 @@
     }
   }
 }
+
+/* =======================================================================
+ * Holiday family, forced-colors (gmt-holiday-widgets.css)
+ *
+ * A cell carries its meaning by pattern and by the word on a chip, and forced
+ * colours drops the fills that also tint it. Each mark keeps a system colour:
+ * a closed cell is a Highlight fill, a weekend the CanvasText hatch, a ghost a
+ * dashed CanvasText outline, a moved-to cell a Highlight fill with a double
+ * bottom edge, and a pick a Highlight ring. Frames, cards, chips and plates
+ * hold text, so they take a CanvasText border and never opt out.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-holiday-frame,
+  .gmt-holiday-card,
+  .gmt-holiday-chip {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  .gmt-holiday-cell,
+  .gmt-holiday-swatch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-holiday-cell[data-blank] {
+    border-color: transparent;
+  }
+
+  .gmt-holiday-cell[data-weekend],
+  .gmt-holiday-swatch[data-kind="weekend"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+
+  .gmt-holiday-cell[data-kinds~="closed"],
+  .gmt-holiday-swatch[data-kind="closed"],
+  .gmt-holiday-swatch[data-kind="moved-to"] {
+    background-image: none;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+
+  .gmt-holiday-cell[data-kinds~="moved-from"],
+  .gmt-holiday-swatch[data-kind="moved-from"] {
+    border: 1px dashed CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-holiday-swatch[data-kind="moved-to"] {
+    border-bottom: 4px double CanvasText;
+  }
+
+  .gmt-holiday-cell[data-kinds~="pick"],
+  .gmt-holiday-swatch[data-kind="pick"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .gmt-holiday-chip {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
+}
+
+/* =======================================================================
+ * Holiday tools, forced-colors (gmt-holiday-rule-builder.css,
+ * gmt-observance-comparator.css, gmt-moving-feasts.css; the family part is
+ * above). Each state keeps a mark that is not a colour: a pressed cell has a
+ * Highlight ring, a disagreeing year keeps its words and its CanvasText hatch,
+ * a NO SIGNAL block keeps its brackets and a CanvasText border, and the legend
+ * swatches that stand for a second and third series keep their hatches in
+ * CanvasText.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-obs-cell[aria-pressed="true"] {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    background: Canvas;
+  }
+
+  .gmt-obs-colbtn[aria-pressed="true"] {
+    text-decoration-color: Highlight;
+  }
+
+  .gmt-obs-table tr[data-disagree] th.gmt-obs-year {
+    background: repeating-linear-gradient(
+      135deg,
+      transparent 0 5px,
+      CanvasText 5px 6px
+    );
+  }
+
+  .gmt-obs-reason,
+  .gmt-obs-hol.gmt-obs-nosignal,
+  .gmt-obs-lane-none,
+  .gmt-moving-feasts [data-signal] {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-moving-feasts [data-signal] .gmt-punct-hero-value,
+  .gmt-moving-feasts [data-signal] .gmt-punct-hero-cap,
+  .gmt-obs-nosignal,
+  .gmt-feasts-note[data-state="sentinel"] {
+    color: CanvasText;
+  }
+
+  .gmt-feasts-legend .gmt-holiday-swatch[data-series="2"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 3px,
+      transparent 3px,
+      transparent 7px
+    );
+  }
+
+  .gmt-feasts-legend .gmt-holiday-swatch[data-series="3"] {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        CanvasText 0,
+        CanvasText 2px,
+        transparent 2px,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        CanvasText 0,
+        CanvasText 2px,
+        transparent 2px,
+        transparent 7px
+      );
+  }
+
+  .gmt-moving-feasts .gmt-button[aria-disabled="true"],
+  .gmt-obs-addrow .gmt-button:disabled {
+    border-style: dashed;
+    color: GrayText;
+  }
+}

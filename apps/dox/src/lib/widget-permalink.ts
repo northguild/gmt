@@ -64,7 +64,10 @@ export type WidgetKind =
   | "rollover"
   | "leapline"
   | "elapsed"
-  | "storedaudit";
+  | "storedaudit"
+  | "holidays"
+  | "observance"
+  | "feasts";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -111,6 +114,9 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   leapline: "/tools/leap-second-timeline/",
   elapsed: "/tools/elapsed-vs-clock-difference/",
   storedaudit: "/tools/stored-time-audit/",
+  holidays: "/tools/holiday-rule-builder/",
+  observance: "/tools/observance-comparator/",
+  feasts: "/tools/moving-feasts/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -162,9 +168,17 @@ export function decodeWidgetPermalink(
 
 /**
  * Keys whose value is a list of lines, so 64 characters would drop all but one
- * short line. Each bound is the chat schema's own (`showStoredTimeAuditInput`).
+ * short line. `values` is the chat schema's own bound (`showStoredTimeAuditInput`);
+ * `rules` and `holidays` hold a year's rules or closing dates.
  */
-const LONG_STRING_KEYS: Readonly<Record<string, number>> = { values: 1000 };
+const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
+  values: 1000,
+  // A rule per line (the Holiday Rule Builder), and a calendar's dates (the
+  // Free Time Ledger and the Cut-off Stack read `holidays` too: a year of
+  // closures runs past 64 characters, six dates).
+  rules: 1000,
+  holidays: 1000,
+};
 
 /**
  * Read this page's own permalink, if it carries one for `kind`.

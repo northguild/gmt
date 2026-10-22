@@ -1,0 +1,42 @@
+---
+title: Observance Comparator
+description: Put a holiday that falls on a weekend under several observance policies and see which day each one closes, and where they disagree.
+industries: [core]
+---
+
+import ObservanceComparator from "../../../components/ObservanceComparator.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Where a weekend holiday is observed">
+
+<Fragment slot="keypoint">
+
+No policy is the default. The same holiday lands on different days under different policies, and two holidays side by side can push each other.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A holiday that falls on a weekend can stay where it is, move to the Friday before, move to the Monday after, or move to the next day the calendar is open. Each choice is a policy, and none of them is the default.
+
+Pick one to three holidays, a run of years and two to four policies. The table has a row for each year and a column for each policy, and each cell gives the day the library observes each holiday. A row where two columns put a holiday on different days says "policies disagree". Pick a cell to see that year's weeks, one lane per policy, with the date a holiday started on and the day it moved to.
+
+</Fragment>
+
+<ObservanceComparator fullbleed />
+
+<Fragment slot="after">
+
+**One column is one calendar.** Each column builds a calendar from the holidays in the order shown, each with that column's policy, with [`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar/). The date in each cell comes from [`observedDate`](/reference/calendar/rules/observedDate/) run against the calendar so far. That is why two holidays side by side can push each other: when the first moves to the next working day, the second finds that day closed and moves one day further.
+
+**A shift can cross a year.** The row is the year of the date the holiday started on, so a 1 January that moves back to the Friday before shows in its own year's row with the date in the year before, and the cell says why.
+
+**When there is no result.** A policy the library calls invalid, such as one that moves Saturday to Saturday, shows `NO SIGNAL` in every cell of its column, and the column header gives the reason. A policy that leaves a holiday where it is gives that day, not NO SIGNAL. The columns that show NO SIGNAL are left out of the comparison.
+
+**Worth trying:** [Two adjacent holidays](/tools/observance-comparator/?w=observance&wa=%7B%22preset%22%3A%22adjacent%22%2C%22year%22%3A%222021%22%7D) — the 2021 row puts the pair of days in different places under different policies. [A holiday that moves into the year before](/tools/observance-comparator/?w=observance&wa=%7B%22preset%22%3A%22new-year%22%2C%22year%22%3A%222028%22%7D) — the 2028 row shows a date in 2027. [A Friday and Saturday weekend](/tools/observance-comparator/?w=observance&wa=%7B%22preset%22%3A%22fri-sat%22%7D). [A policy the library rejects](/tools/observance-comparator/?w=observance&wa=%7B%22preset%22%3A%22adjacent%22%2C%22column1%22%3A%22none%22%2C%22column2%22%3A%22custom%3A6%3E6%22%2C%22column3%22%3A%22mon-mon%22%2C%22column4%22%3A%22next-working%22%7D) — column 2 moves Saturday to Saturday and shows NO SIGNAL.
+
+**Reference:** [`observedDate`](/reference/calendar/rules/observedDate/), [`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar/), [`holidayDates`](/reference/calendar/rules/holidayDates/) and [`isValidHolidayRule`](/reference/calendar/validate/isValidHolidayRule/). The guide is [Business calendars and roll conventions](/guides/core-date-operations/business-calendars/).
+
+</Fragment>
+
+</ToolLayout>

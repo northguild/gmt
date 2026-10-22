@@ -31,6 +31,11 @@ describe("widget permalinks", () => {
     expect(handoffHref(null)).toBeNull();
   });
 
+  /* A permalink kind may be registered before its page is built. List it here
+     until the page exists; a page listed here must still be absent, so the entry
+     cannot outlive its page. */
+  const PAGES_NOT_YET_BUILT: ReadonlySet<WidgetKind> = new Set<WidgetKind>();
+
   it("targets /tools pages that actually exist", () => {
     /* The same rule as a citation: a link Dox produces must resolve. These are
        not in `route-manifest.ts` — that generator only covers `/reference` — so
@@ -54,6 +59,12 @@ describe("widget permalinks", () => {
       const path = WIDGET_PAGE_PATHS[kind];
       expect(path.startsWith("/tools/"), path).toBe(true);
       const slug = path.replace("/tools/", "").replace(/\/$/, "");
+      if (PAGES_NOT_YET_BUILT.has(kind)) {
+        expect(slugs.has(slug), `${path} exists: drop it from the set`).toBe(
+          false,
+        );
+        continue;
+      }
       expect(slugs.has(slug), `no content file for ${path}`).toBe(true);
     }
   });
@@ -136,5 +147,43 @@ describe("widget permalinks", () => {
     const url = encodeWidgetPermalink("storedaudit", { values, line: "5" });
     const seeded = seedFromLocation("storedaudit", url.slice(url.indexOf("?")));
     expect(seeded).toEqual({ values, line: "5" });
+  });
+
+  it("registers the three holiday tools at their own pages", () => {
+    expect(WIDGET_PAGE_PATHS.holidays).toBe("/tools/holiday-rule-builder/");
+    expect(WIDGET_PAGE_PATHS.observance).toBe("/tools/observance-comparator/");
+    expect(WIDGET_PAGE_PATHS.feasts).toBe("/tools/moving-feasts/");
+  });
+
+  it("keeps a 30-date calendar in `holidays` and a 12-line `rules` past the 64-character cap", () => {
+    const holidays = Array.from(
+      { length: 30 },
+      (_, i) =>
+        `2026-${String(1 + (i % 12)).padStart(2, "0")}-${String(1 + i).padStart(2, "0")}`,
+    ).join(",");
+    expect(holidays.length).toBeGreaterThan(64);
+    const rules = Array.from(
+      { length: 12 },
+      (_, i) => `Day ${i + 1};f;01-${String(i + 1).padStart(2, "0")}`,
+    ).join("\n");
+    expect(rules.length).toBeGreaterThan(64);
+    for (const kind of ["freetime", "cutoffstack", "holidays"] as const) {
+      const url = encodeWidgetPermalink(kind, { holidays });
+      const seeded = seedFromLocation(kind, url.slice(url.indexOf("?")));
+      expect(seeded, kind).toEqual({ holidays });
+    }
+    const url = encodeWidgetPermalink("holidays", { rules });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      rules,
+    });
+  });
+
+  it("still drops a `holidays` value over its own cap", () => {
+    const holidays = "2026-01-01,".repeat(100);
+    expect(holidays.length).toBeGreaterThan(1000);
+    const url = encodeWidgetPermalink("freetime", { holidays });
+    expect(seedFromLocation("freetime", url.slice(url.indexOf("?")))).toEqual(
+      {},
+    );
   });
 });

@@ -138,6 +138,16 @@ const PAGES = [
     path: "/tools/elapsed-vs-clock-difference/",
   },
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
+  { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
+  {
+    slug: "tool-observance-comparator",
+    path: "/tools/observance-comparator/",
+  },
+  { slug: "tool-moving-feasts", path: "/tools/moving-feasts/" },
+  {
+    slug: "guide-business-calendars",
+    path: "/guides/core-date-operations/business-calendars/",
+  },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },

@@ -62,6 +62,9 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showHolidayRuleBuilderInput,
+  showObservanceComparatorInput,
+  showMovingFeastsInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -461,6 +464,21 @@ export function buildWorkerTools(
       description: docFor("showStoredTimeAudit"),
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
+    }),
+    showHolidayRuleBuilder: tool({
+      description: docFor("showHolidayRuleBuilder"),
+      inputSchema: showHolidayRuleBuilderInput,
+      execute: () => accept("holiday-rule-builder"),
+    }),
+    showObservanceComparator: tool({
+      description: docFor("showObservanceComparator"),
+      inputSchema: showObservanceComparatorInput,
+      execute: () => accept("observance-comparator"),
+    }),
+    showMovingFeasts: tool({
+      description: docFor("showMovingFeasts"),
+      inputSchema: showMovingFeastsInput,
+      execute: () => accept("moving-feasts"),
     }),
   };
 
