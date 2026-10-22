@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * "Check saved times" in the checker's mount. The Worker's answer is built by the real
+ * "Did your saved events move?" in the checker's mount. The Worker's answer is built by the real
  * Worker code in this test runtime, so every row is the library's own reading here.
  */
 import { getUtcNow } from "@northguild/gmt/utc/get";
@@ -130,7 +130,7 @@ describe("the stored-times section", () => {
   it("is server-rendered with its purpose, three steps, labelled form and compact controls", () => {
     document.body.innerHTML = renderCanadaClockChangeTemplate();
     const section = document.querySelector(".gmt-canada-stored")!;
-    expect(text(section.querySelector("h4"))).toBe("Did your saved appointments move?");
+    expect(text(section.querySelector("h4"))).toBe("Did your saved events move?");
     expect(text(section.querySelector(".gmt-canada-stored-lead"))).toBe(
       "Apps often save a future event with the UTC offset that applied when it was booked. Where the rules changed, that saved offset is wrong, and the app shows the event an hour off.",
     );
@@ -139,12 +139,12 @@ describe("the stored-times section", () => {
     expect(steps[0]).toContain("Booked before the change");
     expect(steps[0]).toContain("9:00, 15 Nov, Vancouver, saved as 09:00 −08:00");
     expect(steps[1]).toContain("Vancouver stays on −07:00");
-    expect(steps[2]).toContain("The saved time shows as 10:00.");
+    expect(steps[2]).toContain("The saved event shows as 10:00.");
     expect(steps[2]).toContain("Fix: store 09:00 −07:00");
     const textarea = section.querySelector("textarea")!;
     expect(textarea.rows).toBe(8);
     expect(textarea.value).toBe(STORED_EXAMPLE);
-    expect(text(section.querySelector("label[for]"))).toBe("Saved times, one per line");
+    expect(text(section.querySelector("label[for]"))).toBe("Saved events, one per line");
     expect(text(section.querySelector(".gmt-canada-stored-help"))).toBe(
       `Paste values like ${SAVED_EXAMPLE.saved}. Up to ${STORED_MAX_LINES} lines.`,
     );

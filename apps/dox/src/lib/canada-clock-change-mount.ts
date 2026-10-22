@@ -25,7 +25,6 @@ import {
   SERVERS_LINE,
   SERVERS_TITLE,
   expectedProbeOutput,
-  PROBE_ZONES,
   STOPPED_ZONES,
   TABLE_ZONES,
   STORED_MAX_BYTES,
@@ -63,7 +62,7 @@ import {
 } from "./canada-stored-times";
 import {
   HELP_HEADING,
-  HELP_BLOCKS,
+  HELP,
   KEY_POINTS,
   KEY_POINTS_HEADING,
   partsHtml,
@@ -83,7 +82,6 @@ import {
 import {
   escapeAttr,
   escapeHtml,
-  labelTextHtml,
   wireCopyButtons,
 } from "./widget-ui";
 
@@ -238,14 +236,29 @@ function minimumsCardHtml(idPrefix: string): string {
 /** The "How gmt helps" card: same panel as the other cards, no alert colour. */
 function helpCardHtml(idPrefix: string): string {
   const href = (value: string): string => (value.startsWith("/") ? withBase(value) : value);
+  const cases = HELP.cases
+    .map(
+      (item) =>
+        `<li class="gmt-canada-help-case">` +
+        `<span class="gmt-canada-help-tag">${escapeHtml(item.tag)}</span>` +
+        `<div class="gmt-canada-help-io">` +
+        `<code class="gmt-canada-help-in">${escapeHtml(item.input)}</code>` +
+        `<span class="gmt-canada-help-arrow" aria-hidden="true">\u2192</span>` +
+        `<code class="gmt-canada-help-out">${escapeHtml(item.output)}</code>` +
+        (item.outputNote ? `<span class="gmt-canada-help-note">${escapeHtml(item.outputNote)}</span>` : "") +
+        `</div>` +
+        `<p class="gmt-canada-help-why">${partsHtml(item.why, href)}</p>` +
+        `</li>`,
+    )
+    .join("");
   return (
     `<section class="gmt-canada-help" aria-labelledby="${idPrefix}-help-title">` +
     `<h4 id="${idPrefix}-help-title">${escapeHtml(HELP_HEADING)}</h4>` +
-    HELP_BLOCKS.map((block) =>
-      block.kind === "p"
-        ? `<p>${partsHtml(block.parts, href)}</p>`
-        : `<ul class="gmt-canada-help-list">${block.items.map((item) => `<li>${partsHtml(item, href)}</li>`).join("")}</ul>`,
-    ).join("") +
+    `<p class="gmt-canada-help-lede">${partsHtml(HELP.lede, href)}</p>` +
+    `<p class="gmt-canada-help-verified"><span class="gmt-canada-help-badge"><span aria-hidden="true">\u2713</span> Verified</span> <span>${partsHtml(HELP.verified, href)}</span></p>` +
+    `<p class="gmt-canada-help-intro">${escapeHtml(HELP.intro)}</p>` +
+    `<ul class="gmt-canada-help-cases">${cases}</ul>` +
+    `<p class="gmt-canada-help-cta"><span>${escapeHtml(HELP.cta.lead)}</span> <a class="gmt-canada-help-btn" href="${escapeAttr(href(HELP.cta.href))}">${escapeHtml(HELP.cta.link)} <span aria-hidden="true">\u2193</span></a></p>` +
     `</section>`
   );
 }
@@ -323,7 +336,7 @@ export function renderCanadaClockChangeTemplate({
     `</section>` +
     helpCardHtml(idPrefix) +
     `</div>` +
-    // Row 5: the saved times, the form on the left and the answers on the right.
+    // Row 5: the saved events, the form on the left and the answers on the right.
     storedSectionHtml(storedId) +
     `</div>` +
     `</div>`
@@ -451,7 +464,7 @@ function browserCardHtml(titleId: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Which stored times moved?
+// Which saved events moved?
 // ---------------------------------------------------------------------------
 
 const STORED_BYTES_TEXT = STORED_MAX_BYTES.toLocaleString("en-US");
@@ -480,7 +493,7 @@ function storedStepsHtml(): string {
     `<li class="gmt-canada-step gmt-canada-step--rule"><span class="gmt-canada-step-head">New rule</span>` +
     `<span>${escapeHtml(ex.city)} stays on ${chip(signedOffset(ex.newOffset))}</span></li>` +
     `<li class="gmt-canada-step gmt-canada-step--now"><span class="gmt-canada-step-head">Result</span>` +
-    `<span>The saved time shows as ${chip(ex.shownHm)}. ${MARK_BAD} Fix: store ${chip(at(ex.newOffset))}</span></li>` +
+    `<span>The saved event shows as ${chip(ex.shownHm)}. ${MARK_BAD} Fix: store ${chip(at(ex.newOffset))}</span></li>` +
     `</ol>`
   );
 }
@@ -488,12 +501,12 @@ function storedStepsHtml(): string {
 function storedSectionHtml(titleId: string): string {
   return (
     `<section class="gmt-widget-section gmt-canada-stored" aria-labelledby="${titleId}">` +
-    `<h4 id="${titleId}">Did your saved appointments move?</h4>` +
+    `<h4 id="${titleId}">Did your saved events move?</h4>` +
     `<p class="gmt-canada-stored-lead">Apps often save a future event with the UTC offset that applied when it was booked. Where the rules changed, that saved offset is wrong, and the app shows the event an hour off.</p>` +
     storedStepsHtml() +
     `<div class="gmt-canada-stored-body">` +
     `<form class="gmt-canada-stored-form" data-role="stored-form" novalidate>` +
-    `<label class="gmt-canada-stored-label" for="${titleId}-lines">Saved times, one per line</label>` +
+    `<label class="gmt-canada-stored-label" for="${titleId}-lines">Saved events, one per line</label>` +
     `<textarea id="${titleId}-lines" class="gmt-input gmt-canada-stored-lines" name="lines" data-role="stored-lines" rows="8" spellcheck="false" autocomplete="off" autocapitalize="off">${escapeHtml(STORED_EXAMPLE)}</textarea>` +
     `<p class="gmt-canada-stored-help">Paste values like <code>${escapeHtml(SAVED_EXAMPLE.saved)}</code>. Up to ${STORED_MAX_LINES} lines.</p>` +
     `<details class="gmt-canada-formats"><summary>Accepted formats</summary>` +
@@ -594,7 +607,7 @@ function storedTableHtml(
 ): string {
   return (
     `<table class="gmt-canada-stored-table"><thead><tr>` +
-    `<th scope="col">Status</th><th scope="col">Saved value</th><th scope="col">What to do</th></tr></thead>` +
+    `<th scope="col">Status</th><th scope="col">Saved event</th><th scope="col">What to do</th></tr></thead>` +
     `<tbody>${rows.map((row) => storedRowHtml(row, audit, staleZones)).join("")}</tbody></table>` +
     `<p class="gmt-widget-hint" data-role="stored-none" hidden>No line is left with this filter.</p>`
   );
@@ -655,7 +668,7 @@ export function storedSummaryText(
   const moved = judged.filter((row) => !storedAdvice(row.value, row.result).ok);
   const tail = unknown.length === 0 ? "" : ` · ${unknown.length} can’t be checked yet`;
   if (judged.length === 0) {
-    return unknown.length > 0 ? "No saved time can be checked yet" : "Nothing checked";
+    return unknown.length > 0 ? "No saved event can be checked yet" : "Nothing checked";
   }
   const movedText = moved.length === 0 ? "none moved" : `${moved.length} moved`;
   return `${judged.length} checked · ${movedText}${tail}`;

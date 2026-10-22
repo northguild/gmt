@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * "Did your saved appointments move?" stability gate (CORE-88).
+ * "Did your saved events move?" stability gate (CORE-88).
  *
  * The form must not move or resize when an answer arrives, and the page must not scroll sideways
  * at 375 px. jsdom has no layout, so this runs in a browser against the built site.

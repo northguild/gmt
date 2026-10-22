@@ -845,6 +845,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
       style when `null`) and, for a `stopped-2026` probe zone, the tzdb release; every row reserves
       its height, so pinning another zone moves nothing.
+    - **Row of three.** From 57 rem of section width the map, the zone list and the clocks sit in one
+      row (`1.6fr 1fr 1fr`; `tableOfContents: false` on the page widens the stack). In that range
+      the pin panel holds three lines for the zone name and the long values and four for the class,
+      so it is one box for every zone (`canada-clock-still.mjs` pins all 23); the zone button
+      stacks id, offset and class, and the clock card lets its offset drop under the time.
+    - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource()`
+      once the table is parsed, so the verdict and the Yours column are final before first paint.
+      `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
+      The page lists it in `mdx-jsx.ts`'s dropped components.
     - **Narrow fallback.** Below 520 px of section width (`@container gmt-canada-map`) the map and
       legend are hidden, the boundary file is not fetched, and the panel moves under the pressed
       button. The file is fetched once, when the map nears the viewport.
@@ -856,7 +865,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       without awaiting it, pins `zone` once the answer is drawn (an id not on the map leaves the
       widget unpinned), reads and writes no `?zone=` on the chat's URL, and ends every timer on
       destroy. On the page, `?w=canadaclock&wa=…` pins the same zone through `seedFromLocation`.
-    - **Did your saved appointments move?** (section 5 of the same markup, so page and chat share
+    - **Did your saved events move?** (section 5 of the same markup, so page and chat share
       it). It opens with one lead sentence and a three-step worked example (booked before the
       change, new rule, result) derived from the Vancouver `PROBE_ZONES` fact
       (`lib/canada-saved-example.ts`: 09:00, -08:00, -07:00, shown 10:00), so it cannot drift from
@@ -894,8 +903,21 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         answer moves nothing above it. `scripts/canada-stored-still.mjs` measures the form against
         a build, in document coordinates, after the section's handlers attach, and presses
         Option+Tab in WebKit. `scripts/canada-layout-check.mjs` measures the map row.
-      - **No function names in the page text** except the key-points step 3 (`classifyStoredZoned`,
-        `resolveLocal`) and the How gmt helps list. The stored section links nowhere to the audit.
+      - **One term: "saved events".** Key points check 3 defines it (appointments, bookings and
+        shifts the app saved) and every link to `#canada-stored-title` uses the heading's words
+        (`canada-help-card.test.ts` asserts it). `Saved with an offset` and `Saved as UTC only` say
+        how an event was saved.
+      - **Function names in the page text** only in key-points step 3 (`classifyStoredZoned`,
+        `convertPlainDateTimeToZoned`) and the How gmt helps card, each linked to its reference
+        page. The stored section links nowhere to the audit; the Related list names it.
+    - **The How gmt helps card** (`HELP` in `data/canada-key-points.ts`, drawn by `helpCardHtml`).
+      Shaped like the home page's fault cards: a lede, a Verified strip (the tests run on the
+      newest release of each supported Node, the hosted server is checked daily) with an absolute
+      link to `oh-canada.test.ts`, which `withBase` leaves alone, then one case card per kind of
+      saved event (tag, `input -> output`, one line of why) and a button-styled link to the
+      checker. It uses cyan tokens (amber stays the sentinel's) and `align-self: start`, so it
+      does not stretch to the taller list beside it. `canada-help-card.test.ts` runs its claims
+      against the real library using values no tzdb release changes.
     - **The Upgrade to at least card** (`data/canada-runtime-minimums.ts`) ends with `MINIMUMS_NOTE`,
       one plain line (a `<p class="gmt-canada-minimums-note">` after the footer, and the last line of
       `minimumsMarkdown`): gmt uses the time-zone rules of the device it runs on, and a device

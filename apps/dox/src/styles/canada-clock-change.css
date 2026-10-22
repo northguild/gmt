@@ -345,8 +345,13 @@
   text-underline-offset: 0.15em;
 }
 
-/* "How gmt helps": the panel style of the other cards, no alert colour. */
+/* "How gmt helps": the panel style of the other cards, with the home page's fault cards inside it:
+   a tag, `input -> output`, one line of why. Amber stays the sentinel's. The card keeps its own height, so it does not stretch
+   to the taller list beside it. Full borders only. */
 .gmt-canada-help {
+  align-self: start;
+  display: grid;
+  gap: var(--gmt-space-3);
   margin: 0;
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -354,28 +359,94 @@
   corner-shape: bevel;
   background: var(--gmt-surface);
   font-size: 0.8125rem;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+.gmt-canada-help > * {
+  min-width: 0;
+  margin: 0;
 }
 
 .gmt-canada-help h4 {
-  margin: 0 0 var(--gmt-space-2);
   font-size: 0.9375rem;
   color: var(--gmt-cyan-ink);
 }
 
 .gmt-canada-help p {
-  margin: 0 0 var(--gmt-space-2);
+  margin: 0;
 }
 
-.gmt-canada-help p:last-child {
-  margin-bottom: 0;
+.gmt-canada-help-lede {
+  max-width: 68ch;
+  color: var(--gmt-ice-dim);
 }
 
-.gmt-canada-help-list {
+.gmt-canada-help-verified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-canada-help-badge {
+  flex: none;
+  padding: 0.1em 0.6em;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+  white-space: nowrap;
+}
+
+.gmt-canada-help-verified > span:last-child {
+  flex: 1 1 14rem;
+}
+
+.gmt-canada-help-cases {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-canada-help-case {
   display: grid;
   gap: var(--gmt-space-2);
-  margin: 0 0 var(--gmt-space-2);
-  padding-inline-start: 1.25rem;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-canada-help-case::before {
+  display: none;
+}
+
+.gmt-canada-help-tag {
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-canada-help-io {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
 }
 
 .gmt-canada-help code {
@@ -383,9 +454,57 @@
   font-size: 0.75rem;
 }
 
+.gmt-canada-help-case code {
+  background: var(--gmt-surface-2);
+}
+
+.gmt-canada-help-arrow {
+  font-weight: 700;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-canada-help-out {
+  font-weight: 600;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-canada-help-note {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-canada-help-why {
+  color: var(--gmt-ice);
+}
+
+.gmt-canada-help-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+}
+
 .gmt-canada-help a {
   color: var(--gmt-cyan-bright);
   text-underline-offset: 0.15em;
+}
+
+/* A link, drawn as the page's button: a full border and the bevel. */
+.gmt-canada-help a.gmt-canada-help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-canada-help a.gmt-canada-help-btn:is(:hover, :focus-visible) {
+  background: var(--gmt-surface-2);
 }
 
 .gmt-canada-mark {
@@ -1219,6 +1338,23 @@
   min-height: 2.8em;
 }
 
+/* In the narrow columns of the row of three the long values wrap to a third line (the zone name, the
+   class, the last and next change, the data source), so the panel holds three lines for them and stays one
+   box for every zone. */
+@container gmt-canada-map (min-width: 57rem) and (max-width: 80rem) {
+  .gmt-canada-pin-title dd[data-role="pin-zone"] {
+    min-block-size: 4.2em;
+  }
+
+  .gmt-canada-pin-title dd[data-role="pin-class"] {
+    min-block-size: 5.6em;
+  }
+
+  .gmt-canada-pin-row--wide dd {
+    min-height: 4.2em;
+  }
+}
+
 .gmt-canada-pin .gmt-playground-sentinel {
   padding: 0;
   border: 0;
@@ -1239,7 +1375,7 @@
   }
 }
 
-/* --- Did your saved appointments move? ------------------------------------ */
+/* --- Did your saved events move? ------------------------------------ */
 
 /* Title, one line of purpose and a three-step example run across the top. Under them the form and
    the answers sit side by side from 72rem, stacked below. Kinds are words and pills, never a

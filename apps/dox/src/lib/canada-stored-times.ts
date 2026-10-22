@@ -179,7 +179,7 @@ export function storedVerdict(result: {
   }
 }
 
-/** One checked line for the "Check saved times" table: the Result and the What to do cells. */
+/** One checked line for the "Did your saved events move?" table: the Result and the What to do cells. */
 export interface StoredAdvice {
   /** True when nothing needs fixing. */
   ok: boolean;
@@ -227,8 +227,8 @@ export function storedAdvice(
   if (result === null) {
     return {
       ok: false,
-      label: "Not a saved time",
-      todo: "Not a saved time with an offset and a place.",
+      label: "Not a saved event",
+      todo: "Not a saved event with an offset and a place.",
       city: null,
     };
   }
@@ -315,7 +315,7 @@ export function storedBadge(
   result: AdviceResult | null,
   stale: boolean,
 ): { tone: BadgeTone; label: string; mark: string } {
-  if (result === null) return { tone: "none", label: "Not a saved time", mark: "" };
+  if (result === null) return { tone: "none", label: "Not a saved event", mark: "" };
   if (stale) return { tone: "unknown", label: "Can\u2019t check yet", mark: "" };
   switch (result.kind) {
     case "valid":

@@ -79,8 +79,8 @@ export const KEY_POINTS: KeyCard[] = [
             "Your users\u2019 browsers: you can\u2019t update them, and some will lag behind for weeks. If your web page works out times in these four places in the browser, work them out on your updated server and send the result instead.",
           ],
           [
-            "Your saved data: future events saved before you updated may be an hour off in these places. Find them with ",
-            { link: "Check saved times", href: "#canada-stored-title" },
+            "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off in these places. Find them with ",
+            { link: "Did your saved events move?", href: "#canada-stored-title" },
             " below, or ",
             { code: "classifyStoredZoned" },
             " in your code. To fix one, keep its local time and place and convert them again with ",
@@ -93,31 +93,54 @@ export const KEY_POINTS: KeyCard[] = [
   },
 ];
 
-/** The "How gmt helps" card: what the library does about old data, and which saved times can be wrong. */
+/**
+ * The "How gmt helps" card: a lede, a verified line with a link to the tests, one case card per
+ * kind of saved event that can be wrong, and a call to the checker. Shaped like the home page's
+ * fault cards (`date-faults.ts`): a tag, `input → output`, then one line of why.
+ */
 export const HELP_HEADING = "How gmt helps";
 const CLASSIFY_HREF = "/reference/zoned/classify/classifyStoredZoned/";
 const CONVERT_HREF = "/reference/zoned/convert/convertPlainDateTimeToZoned/";
-export type HelpBlock =
-  | { kind: "p"; parts: KeyPart[] }
-  | { kind: "ul"; items: KeyPart[][] };
-export const HELP_BLOCKS: HelpBlock[] = [
-  {
-    kind: "p",
-    parts: [
-      "Once your runtime is updated, every gmt zoned function gives the right time for these places. Use them as usual with the zone name, such as ",
-      { code: "America/Vancouver" },
-      ". Nothing extra is needed.",
-    ],
-  },
-  { kind: "p", parts: ["Only times saved before the update can be wrong:"] },
-  {
-    kind: "ul",
-    items: [
-      [
-        { strong: "Saved with an offset" },
-        ", like ",
-        { code: "2026-11-15T09:00:00-08:00[America/Vancouver]" },
-        ": the zoned functions return ",
+const TESTS_HREF =
+  "https://github.com/northguild/gmt/blob/main/packages/gmt/src/test/oh-canada.test.ts";
+
+export interface HelpCase {
+  tag: string;
+  input: string;
+  output: string;
+  /** Said beside the output, such as "an hour late". */
+  outputNote?: string;
+  why: KeyPart[];
+}
+
+export interface HelpCard {
+  lede: KeyPart[];
+  verified: KeyPart[];
+  intro: string;
+  cases: HelpCase[];
+  /** The call to action: a sentence, then a link styled as a button. */
+  cta: { lead: string; link: string; href: string };
+}
+
+export const HELP: HelpCard = {
+  lede: [
+    "Once your runtime is updated, every gmt zoned function gives the right time for these places. Use them as usual with the zone name, such as ",
+    { code: "America/Vancouver" },
+    ". Nothing extra is needed.",
+  ],
+  verified: [
+    "gmt’s tests run on the newest release of every Node.js version gmt supports, and fail if any of them is missing this change. The server behind this page is checked for it every day. ",
+    { link: "See the tests", href: TESTS_HREF },
+    ".",
+  ],
+  intro: "Only events saved before the update can be wrong.",
+  cases: [
+    {
+      tag: "Saved with an offset",
+      input: "2026-11-15T09:00:00-08:00[America/Vancouver]",
+      output: '""',
+      why: [
+        "The zoned functions return ",
         { code: '""' },
         " for it, because ",
         { code: "-08:00" },
@@ -125,25 +148,25 @@ export const HELP_BLOCKS: HelpBlock[] = [
         { fn: "classifyStoredZoned", href: CLASSIFY_HREF },
         " says why and gives both fixes: keep 9:00 local, or keep the old moment (10:00 local).",
       ],
-      [
-        { strong: "Saved as UTC only" },
-        ", like ",
-        { code: "2026-11-15T17:00:00Z" },
-        ": it reads with no error but shows 10:00, an hour late. If you kept the local time and place, convert them again with ",
+    },
+    {
+      tag: "Saved as UTC only",
+      input: "2026-11-15T17:00:00Z",
+      output: "10:00",
+      outputNote: "an hour late",
+      why: [
+        "It reads with no error but shows 10:00 in Vancouver. If you kept the local time and place, convert them again with ",
         { fn: "convertPlainDateTimeToZoned", href: CONVERT_HREF },
         ".",
       ],
-    ],
+    },
+  ],
+  cta: {
+    lead: "To check your saved events without writing code:",
+    link: "Did your saved events move?",
+    href: "#canada-stored-title",
   },
-  {
-    kind: "p",
-    parts: [
-      "To check saved times without writing code, use ",
-      { link: "Check saved times", href: "#canada-stored-title" },
-      " below.",
-    ],
-  },
-];
+};
 
 const escapeText = (text: string) =>
   text
@@ -174,15 +197,26 @@ export function partsHtml(
 
 /** The help card as Markdown, for the `.md` twin and the llms files. */
 export function helpMarkdown(): string {
-  const lines = ["", `## ${HELP_HEADING}`, ""];
-  for (const block of HELP_BLOCKS) {
-    if (block.kind === "p") lines.push(partsMarkdown(block.parts), "");
-    else {
-      for (const item of block.items) lines.push(`- ${partsMarkdown(item)}`);
-      lines.push("");
-    }
+  const lines = ["", `## ${HELP_HEADING}`, "", partsMarkdown(HELP.lede), "", partsMarkdown(HELP.verified), "", HELP.intro, ""];
+  for (const item of HELP.cases) {
+    lines.push(`### ${item.tag}`, "");
+    lines.push(`\`${item.input}\` \u2192 \`${item.output}\`${item.outputNote ? ` (${item.outputNote})` : ""}`, "");
+    lines.push(partsMarkdown(item.why), "");
   }
+  lines.push(`${HELP.cta.lead} [${HELP.cta.link}](${HELP.cta.href})`, "");
   return lines.join("\n");
+}
+
+/** The whole help card as plain text, for a test to search. */
+export function helpText(): string {
+  return [
+    HELP_HEADING,
+    partsText(HELP.lede),
+    partsText(HELP.verified),
+    HELP.intro,
+    ...HELP.cases.flatMap((c) => [c.tag, c.input, c.output, c.outputNote ?? "", partsText(c.why)]),
+    `${HELP.cta.lead} ${HELP.cta.link}`,
+  ].join("\n");
 }
 
 /** The parts as plain text (what a screen-reader-free surface such as a test compares). */

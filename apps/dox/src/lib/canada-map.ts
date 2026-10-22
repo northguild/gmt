@@ -116,7 +116,7 @@ export function isDataStale(zones: readonly MapZone[]): boolean {
 
 /**
  * The zones this runtime has wrong: those that stop changing their clocks in 2026 and still come back
- * as ones that change. A check run on this data cannot judge a saved time in any of them.
+ * as ones that change. A check run on this data cannot judge a saved event in any of them.
  */
 export function staleZoneIds(zones: readonly MapZone[]): string[] {
   return zones

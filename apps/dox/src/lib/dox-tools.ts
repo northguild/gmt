@@ -901,7 +901,7 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showCanadaClockChange",
     purpose:
-      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved times, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Check saved times form, pre-filled with an example and run on load, that reads up to 50 pasted saved times and says which are out of date and what to do about each.",
+      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
     when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
     args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
   },

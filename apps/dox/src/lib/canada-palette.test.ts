@@ -71,7 +71,7 @@ describe("the servers card and the key points on the text surfaces", () => {
     expect(md).toContain("node -e");
     expect(md).toContain("`Vancouver` -07:00");
   });
-  it("puts the cards in reading order: key points, browser, map, clocks, servers, minimums, changes, help, saved times", () => {
+  it("puts the cards in reading order: key points, browser, map, clocks, servers, minimums, changes, help, saved events", () => {
     const html = renderCanadaClockChangeTemplate({ keyPoints: true });
     expect(html.match(/id="canada-servers-title"/g)).toHaveLength(1);
     const order = [
@@ -101,7 +101,7 @@ describe("the servers card and the key points on the text surfaces", () => {
     }
     expect(KEY_POINTS).toHaveLength(2);
     expect(md).toContain("[Test your own servers](#canada-servers-title)");
-    expect(md).toContain("[Check saved times](#canada-stored-title)");
+    expect(md).toContain("[Did your saved events move?](#canada-stored-title)");
     expect(md).toContain("For developers: three checks");
   });
 });
