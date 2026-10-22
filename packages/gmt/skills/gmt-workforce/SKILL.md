@@ -5,9 +5,9 @@ description: >
   evaluateDutyLog and dutyViolations for cumulative caps, rolling and fixed-
   period caps, rest requirements, free periods, quotas and patterns over the
   caller's own status words, dutyDayFor for the operator day, dutyTotals,
-  longestRun, qualifyingRests, qualifyingRestPairs, isValidDutyLog. Every
-  limit is the caller's; GMT names no regulation. Reads the docs site
-  (llms.txt) and the installed package's JSDoc; a routing pointer.
+  longestRun, qualifyingRests, qualifyingRestPairs, isValidDutyLog. Every limit
+  is the caller's; GMT names no regulation. Reads the docs site (llms.txt) and
+  the installed package's JSDoc; a routing pointer.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/workforce-hours-of-work.mdx'
   - 'northguild/gmt:packages/gmt/src/workforce/index.ts'

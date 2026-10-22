@@ -4,7 +4,7 @@ description: >
   Contribute improvements to @northguild/gmt via pull requests, including new
   methods, bug fixes, and documentation updates.
 metadata:
-  library_version: 1.19.0
+  library_version: 1.20.0
 ---
 
 # PR Contribution
